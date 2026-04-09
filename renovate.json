@@ -1,0 +1,28 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "npm:unpublishSafe",
+    "schedule:daily",
+    ":maintainLockFilesWeekly",
+    ":disableDependencyDashboard",
+    ":automergeMinor",
+    ":automergePr",
+    ":automergeRequireAllStatusChecks",
+    ":label(area: dependencies)"
+  ],
+  "prHourlyLimit": 20,
+  "docker-compose": {
+    "fileMatch": ["^docker/[^/]*\\.ya?ml$", "^docker-compose\\.ya?ml$"]
+  },
+  "gradle": {
+    "fileMatch": [
+      "^backend/build\\.gradle\\.kts$",
+      "^backend/settings\\.gradle\\.kts$",
+      "^backend/gradle\\.properties$"
+    ]
+  },
+  "npm": {
+    "fileMatch": ["^frontend/package\\.json$"]
+  }
+}

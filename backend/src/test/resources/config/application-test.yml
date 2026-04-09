@@ -1,0 +1,28 @@
+logging:
+  config: classpath:logback.xml
+spring:
+  main:
+    banner-mode: 'off'
+    allow-bean-definition-overriding: true
+  datasource:
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+    hikari:
+      maximum-pool-size: 2
+    password: ''
+    url: jdbc:tc:postgresql:18.3:///cbsnova?TC_TMPFS=/testtmpfs:rw
+    username: cbsnova
+  security:
+    oauth2:
+      client:
+        provider:
+          oidc:
+            issuer-uri: http://DO_NOT_CALL:9080/realms/cbsnova
+server:
+  port: 0
+springdoc:
+  oauth2:
+    authorization-url: http://localhost:9080/realms/cbsnova/protocol/openid-connect/auth
+  swagger-ui:
+    oauth:
+      client-id: web_app
+      realm: cbsnova
