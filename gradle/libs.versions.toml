@@ -1,16 +1,11 @@
 [versions]
 kotlin = "2.3.0"
 kotlinx-coroutines = "1.10.2"
-postgresql = "42.7.7"
-flyway = "12.3.0"
-flyway-postgres = "12.1.1"
 lombok = "1.18.44"
 mapstruct = "1.6.3"
 avaje-validator = "2.15"
 testcontainers = "2.0.4"
 springdoc-openapi = "2.8.0"
-spring-cloud = "2025.0.0"
-openfeign = "13.5"
 
 # plugins
 spring-boot = "4.0.4"
@@ -27,18 +22,17 @@ spring-boot-starter-security = { module = "org.springframework.boot:spring-boot-
 spring-boot-starter-oauth2-resource-server = { module = "org.springframework.boot:spring-boot-starter-oauth2-resource-server" }
 spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
-#spring-boot-starter-flyway = { module = "org.springframework.boot:spring-boot-starter-flyway" }
+spring-boot-starter-flyway = { module = "org.springframework.boot:spring-boot-starter-flyway" }
 spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
 
 # -- Spring Security test --
 spring-security-test = { module = "org.springframework.security:spring-security-test" }
 
 # -- Persistence --
-postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+postgresql = { module = "org.postgresql:postgresql" }
 
 # -- Flyway --
-flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
-flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway-postgres" }
+flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql" }
 
 # -- Validation (Avaje) --
 avaje-validator-spring-starter = { module = "io.avaje:avaje-validator-spring-starter", version.ref = "avaje-validator" }
@@ -71,7 +65,7 @@ spring-cloud-starter-openfeign = { module = "org.springframework.cloud:spring-cl
 
 [bundles]
 spring-web = ["spring-boot-starter-web", "spring-boot-starter-actuator", "spring-boot-starter-validation"]
-spring-data = ["spring-boot-starter-data-jpa", "postgresql"]
+spring-data = ["spring-boot-starter-data-jpa", "postgresql", "spring-boot-starter-flyway", "flyway-database-postgresql"]
 spring-security = ["spring-boot-starter-security", "spring-boot-starter-oauth2-resource-server"]
 #mapstruct-lombok = ["mapstruct", "mapstruct-processor", "lombok"]
 #testcontainers = ["testcontainers-bom", "testcontainers-postgresql"]
