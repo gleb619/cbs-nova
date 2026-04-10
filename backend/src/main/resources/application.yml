@@ -1,13 +1,44 @@
+server:
+  port: 7070
+  tomcat:
+    threads:
+      max: 100
+      min-spare: 10
+    connection-timeout: 20000
+    max-connections: 10000
+    accept-count: 100
+
 spring:
   application:
-    name: cbs-nove
+    name: cbs-nova
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cbsnova
+    username: cbsnova
+    password: cbsnova
+    driver-class-name: org.postgresql.Driver
   jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
     hibernate:
       ddl-auto: validate
     properties:
       hibernate:
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+        generate_statistics: false
+        use_sql_comments: false
+        format_sql: false
+        connection:
+          autocommit: false
+        cache:
+          use_second_level_cache: false
+          use_query_cache: false
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  sql:
+    init:
+      mode: never
   flyway:
     enabled: true
     baseline-on-migrate: true
@@ -19,10 +50,10 @@ spring:
         jwt:
           # TODO: Set KEYCLOAK_ISSUER_URI environment variable to your Keycloak realm OIDC issuer URL
           # Example: https://auth.example.com/realms/cbs
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/cbs}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:9080/realms/cbs}
 
-server:
-  port: 7070
+keycloak:
+  enabled: false
 
 management:
   endpoints:

@@ -12,12 +12,12 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("test")
 class CbsAppUnitTest {
 
-    @Autowired
-    private ApplicationContext context;
+  @Autowired
+  private ApplicationContext context;
 
-    @Test
-    void contextLoads() {
-        assertThat(context).isNotNull();
-        assertThat(context.getApplicationName()).isNotNull();
-    }
+  @Test
+  void contextLoads() {
+    assertThat(context).isNotNull();
+    assertThat(context.getApplicationName()).isNotNull();
+  }
 }

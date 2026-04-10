@@ -1,0 +1,29 @@
+plugins {
+  id 'idea'
+  alias(libs.plugins.spring.boot) apply false
+  alias(libs.plugins.spring.dm) apply false
+  alias(libs.plugins.spotless) apply false
+  alias(libs.plugins.test.logger) apply false
+}
+
+allprojects {
+  group = 'cbs'
+  version = '0.0.1-SNAPSHOT'
+
+  repositories {
+    mavenLocal()
+    mavenCentral()
+  }
+}
+
+tasks.register('generateAllClients') {
+  group = 'codegen'
+  description = 'Generate all API clients (TypeScript + Java Feign)'
+  dependsOn ':starter:generateTsClient', ':client:generateFeignClient'
+}
+
+idea {
+  module {
+    name = "cbs-nova"
+  }
+}

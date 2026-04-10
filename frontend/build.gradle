@@ -1,0 +1,44 @@
+plugins {
+  id 'base'
+}
+
+def pnpmCommand = System.getProperty('os.name').toLowerCase().contains('win') ? 'pnpm.cmd' : 'pnpm'
+
+def pnpmInstall = tasks.register("pnpmInstall", Exec) {
+  description = 'Install frontend dependencies with pnpm'
+  group = 'build'
+  workingDir = projectDir
+  commandLine pnpmCommand, 'install'
+}
+
+def viteBuild = tasks.register("viteBuild", Exec) {
+  description = 'Build frontend with Vite'
+  group = 'build'
+  dependsOn pnpmInstall
+  workingDir = projectDir
+  commandLine pnpmCommand, 'run', 'build'
+}
+
+def nuxtBuild = tasks.register("nuxtBuild", Exec) {
+  description = 'Build Nuxt.js BFF'
+  group = 'build'
+  workingDir = file("${projectDir}/nuxt")
+  commandLine pnpmCommand, 'run', 'build'
+}
+
+def lint = tasks.register("lint", Exec) {
+  description = 'Lint frontend with Biome'
+  group = 'verification'
+  workingDir = projectDir
+  commandLine pnpmCommand, 'run', 'lint'
+}
+
+tasks.named('assemble') {
+  dependsOn viteBuild
+  dependsOn nuxtBuild
+  dependsOn project(':frontend-plugin').tasks.named('assemble')
+}
+
+tasks.named('check') {
+  dependsOn lint
+}

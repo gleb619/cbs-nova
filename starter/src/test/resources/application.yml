@@ -1,0 +1,51 @@
+server:
+  port: 7070
+
+spring:
+  application:
+    name: cbs-nova-starter
+  
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cbsnova
+    username: cbsnova
+    password: cbsnova
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:9080/realms/cbsnova
+          jwk-set-uri: http://localhost:9080/realms/cbsnova/protocol/openid-connect/certs
+
+# Keycloak Configuration
+keycloak:
+  auth-server-url: http://localhost:9080
+  realm: cbsnova
+  resource: cbs-nova-frontend
+  credentials:
+    secret: cbs-nova-secret
+  use-resource-role-mappings: true
+  bearer-only: true
+  ssl-required: external
+
+# Logging
+logging:
+  level:
+    cbs.nova: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: DEBUG
+    org.springframework.web: DEBUG

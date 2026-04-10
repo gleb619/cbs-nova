@@ -1,0 +1,14 @@
+rootProject.name = 'cbs-nova'
+
+include 'backend'
+include 'starter'
+include 'client'
+include 'frontend-plugin'
+include 'frontend'
+
+dependencyResolutionManagement {
+  repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+  repositories {
+    mavenCentral()
+  }
+}
