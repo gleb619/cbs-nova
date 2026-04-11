@@ -12,17 +12,10 @@ def pnpmInstall = tasks.register("pnpmInstall", Exec) {
 }
 
 def viteBuild = tasks.register("viteBuild", Exec) {
-  description = 'Build frontend with Vite'
+  description = 'Build frontend (vue-tsc + nuxt build)'
   group = 'build'
   dependsOn pnpmInstall
   workingDir = projectDir
-  commandLine pnpmCommand, 'run', 'build'
-}
-
-def nuxtBuild = tasks.register("nuxtBuild", Exec) {
-  description = 'Build Nuxt.js BFF'
-  group = 'build'
-  workingDir = file("${projectDir}/nuxt")
   commandLine pnpmCommand, 'run', 'build'
 }
 
@@ -34,9 +27,8 @@ def lint = tasks.register("lint", Exec) {
 }
 
 tasks.named('assemble') {
-  dependsOn viteBuild
-  dependsOn nuxtBuild
   dependsOn project(':frontend-plugin').tasks.named('assemble')
+  dependsOn viteBuild
 }
 
 tasks.named('check') {

@@ -45,6 +45,7 @@ replay_pid*
 /backend/bin/
 /backend/src/main/resources/local-jwt.pem
 /backend/src/main/resources/local-jwt-public.pem
+/backend/src/main/resources/local-jwt-pkcs8.pem
 /starter/build/
 /starter/.classpath
 /starter/.factorypath
@@ -59,3 +60,10 @@ replay_pid*
 /build/
 /.kiro/specs/
 /.vscode/settings.json
+node_modules
+/client/build/
+/client/.classpath
+/client/.factorypath
+/client/.project
+/client/.settings/
+/client/bin/

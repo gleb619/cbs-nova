@@ -1,34 +1,29 @@
 package cbs.nova.model;
 
-import io.swagger.v3.oas.annotations.media.Schema;
+import cbs.nova.model.openapi.SettingOpenApi;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Getter
-@Setter
-@NoArgsConstructor
+@Data
 @AllArgsConstructor
-@Builder
-@Schema(description = "Setting data transfer object")
-public class SettingDto {
+@Builder(toBuilder = true)
+@NoArgsConstructor(access = AccessLevel.PUBLIC)
+public class SettingDto implements SettingOpenApi<Long> {
 
-  @Schema(description = "Unique identifier of the setting", example = "1")
   private Long id;
 
-  @Schema(
-      description = "Unique code for the setting",
-      example = "max_login_attempts",
-      required = true)
+  @NotBlank
+  @Size(max = 100)
   private String code;
 
-  @Schema(description = "Value of the setting", example = "5", required = true)
+  @NotBlank
   private String value;
 
-  @Schema(
-      description = "Description of what the setting controls",
-      example = "Maximum number of login attempts before account lockout")
+  @Size(max = 255)
   private String description;
 }

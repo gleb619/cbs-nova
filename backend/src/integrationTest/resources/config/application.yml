@@ -1,7 +1,10 @@
+server:
+  port: 0
+
 spring:
-  main:
-    banner-mode: 'off'
-    allow-bean-definition-overriding: true
+  application:
+    name: cbs-nova-sample
+
   datasource:
     driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
     hikari:
@@ -9,14 +12,31 @@ spring:
     password: ''
     url: jdbc:tc:postgresql:18.3:///cbsnova?TC_TMPFS=/testtmpfs:rw
     username: cbsnova
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
   security:
     oauth2:
       client:
         provider:
           oidc:
             issuer-uri: http://DO_NOT_CALL:9080/realms/cbsnova
-server:
-  port: 0
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:9080/realms/cbsnova
+          jwk-set-uri: http://localhost:9080/realms/cbsnova/protocol/openid-connect/certs
+
 springdoc:
   oauth2:
     authorization-url: http://localhost:9080/realms/cbsnova/protocol/openid-connect/auth
@@ -24,3 +44,21 @@ springdoc:
     oauth:
       client-id: web_app
       realm: cbsnova
+
+keycloak:
+  enabled: false
+  auth-server-url: http://localhost:9080
+  realm: cbsnova
+  resource: cbs-nova-frontend
+  credentials:
+    secret: cbs-nova-secret
+  use-resource-role-mappings: true
+  bearer-only: true
+  ssl-required: external
+
+logging:
+  level:
+    root: INFO
+    cbs.nova: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG

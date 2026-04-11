@@ -55,6 +55,15 @@ spring:
 keycloak:
   enabled: false
 
+local-auth:
+  users:
+    - username: admin1
+      password: "{noop}admin1"
+      roles: ADMIN,USER
+    - username: user1
+      password: "{noop}user1"
+      roles: USER
+
 management:
   endpoints:
     web:

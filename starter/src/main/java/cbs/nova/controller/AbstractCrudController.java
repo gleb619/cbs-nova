@@ -1,11 +1,13 @@
 package cbs.nova.controller;
 
+import cbs.nova.model.AbstractCrudDto;
+import cbs.nova.model.AbstractCrudDto.AbstractCreateDto;
+import cbs.nova.model.AbstractCrudDto.AbstractUpdateDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,9 +17,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@Tag(name = "CRUD Operations", description = "Generic CRUD operations")
 @SecurityRequirement(name = "bearerAuth")
-public interface AbstractCrudController<T, C, ID> {
+public interface AbstractCrudController<
+    T extends AbstractCrudDto<ID>, C extends AbstractCreateDto, U extends AbstractUpdateDto, ID> {
 
   @GetMapping
   @Operation(summary = "Get all entities", description = "Retrieve a list of all entities")
@@ -59,8 +61,7 @@ public interface AbstractCrudController<T, C, ID> {
       @ApiResponse(responseCode = "500", description = "Internal server error"),
       @ApiResponse(responseCode = "503", description = "Service unavailable")
   })
-  ResponseEntity<T> create(
-      @Parameter(description = "Entity data to create") @RequestBody C dto);
+  ResponseEntity<T> create(@Parameter(description = "Entity data to create") @RequestBody C dto);
 
   @PutMapping("/{id}")
   @Operation(summary = "Update entity", description = "Update an existing entity")
@@ -78,7 +79,7 @@ public interface AbstractCrudController<T, C, ID> {
   })
   ResponseEntity<T> update(
       @Parameter(description = "ID of the entity to update") @PathVariable ID id,
-      @Parameter(description = "Updated entity data") @RequestBody C dto);
+      @Parameter(description = "Updated entity data") @RequestBody U dto);
 
   @DeleteMapping("/{id}")
   @Operation(summary = "Delete entity", description = "Delete a specific entity by its ID")

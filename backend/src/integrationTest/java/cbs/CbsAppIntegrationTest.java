@@ -30,6 +30,7 @@ class CbsAppIntegrationTest {
 
   @LocalServerPort
   private int port;
+
   @Autowired
   private ApplicationContext context;
 

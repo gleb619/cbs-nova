@@ -1,4 +1,5 @@
 apply plugin: 'java'
+apply plugin: "io.freefair.lombok"
 
 java {
   toolchain {
@@ -14,6 +15,7 @@ def libs = versionCatalogs.named('libs')
 
 dependencies {
   compileOnly libs.findLibrary('lombok').get()
+  compileOnly libs.findLibrary('jspecify').get()
   implementation libs.findLibrary('mapstruct').get()
   annotationProcessor libs.findLibrary('lombok').get()
   annotationProcessor libs.findLibrary('mapstruct-processor').get()

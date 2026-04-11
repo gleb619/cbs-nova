@@ -1,6 +1,5 @@
-package cbs;
+package cbs.app;
 
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -10,7 +9,7 @@ import org.testcontainers.utility.DockerImageName;
  *
  * <p>Usage: {@code SpringApplication.from(CbsApp::main).with(TestApp.class).run(args)}
  */
-@TestConfiguration
+// @TestConfiguration
 public class TestApp {
 
   @Bean(destroyMethod = "stop")

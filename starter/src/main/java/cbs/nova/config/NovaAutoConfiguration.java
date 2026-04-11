@@ -9,6 +9,6 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @ComponentScan(basePackages = {"cbs.nova.service", "cbs.nova.controller", "cbs.nova.mapper"})
 @EntityScan(basePackages = "cbs.nova.entity")
 @EnableJpaRepositories(basePackages = "cbs.nova.repository")
-public class SettingAutoConfiguration {
+public class NovaAutoConfiguration {
 
 }

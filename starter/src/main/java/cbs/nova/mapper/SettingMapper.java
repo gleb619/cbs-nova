@@ -1,8 +1,9 @@
 package cbs.nova.mapper;
 
-import cbs.nova.entity.Setting;
+import cbs.nova.entity.SettingEntity;
 import cbs.nova.model.SettingCreateDto;
 import cbs.nova.model.SettingDto;
+import cbs.nova.model.SettingUpdateDto;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -12,11 +13,15 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 @Mapper(componentModel = "spring")
 public interface SettingMapper {
 
-  SettingDto toDto(Setting entity);
+  SettingDto toDto(SettingEntity entity);
 
   @Mapping(target = "id", ignore = true)
-  Setting toEntity(SettingCreateDto dto);
+  SettingEntity toEntity(SettingCreateDto dto);
 
+  @Mapping(target = "id", source = "id")
+  @Mapping(target = "code", source = "dto.code")
+  @Mapping(target = "value", source = "dto.value")
+  @Mapping(target = "description", source = "dto.description")
   @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-  void update(SettingCreateDto dto, @MappingTarget Setting entity);
+  void update(SettingUpdateDto source, @MappingTarget SettingEntity entity);
 }

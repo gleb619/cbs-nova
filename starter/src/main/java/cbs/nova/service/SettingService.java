@@ -1,10 +1,11 @@
 package cbs.nova.service;
 
-import cbs.nova.entity.Setting;
+import cbs.nova.entity.SettingEntity;
 import cbs.nova.mapper.SettingMapper;
 import cbs.nova.model.SettingCreateDto;
 import cbs.nova.model.SettingDto;
-import cbs.nova.model.exception.SettingNotFoundException;
+import cbs.nova.model.SettingUpdateDto;
+import cbs.nova.model.exception.EntityNotFoundException;
 import cbs.nova.repository.SettingRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -27,25 +28,26 @@ public class SettingService {
     return repository
         .findById(id)
         .map(mapper::toDto)
-        .orElseThrow(() -> new SettingNotFoundException(id));
+        .orElseThrow(() -> new EntityNotFoundException("Entity", id));
   }
 
   public SettingDto findByCode(String code) {
     return repository
         .findByCode(code)
         .map(mapper::toDto)
-        .orElseThrow(() -> new SettingNotFoundException(code));
+        .orElseThrow(() -> new EntityNotFoundException("Entity", code));
   }
 
   @Transactional
   public SettingDto create(SettingCreateDto dto) {
-    Setting entity = mapper.toEntity(dto);
+    SettingEntity entity = mapper.toEntity(dto);
     return mapper.toDto(repository.save(entity));
   }
 
   @Transactional
-  public SettingDto update(Long id, SettingCreateDto dto) {
-    Setting entity = repository.findById(id).orElseThrow(() -> new SettingNotFoundException(id));
+  public SettingDto update(Long id, SettingUpdateDto dto) {
+    SettingEntity entity =
+        repository.findById(id).orElseThrow(() -> new EntityNotFoundException("Entity", id));
     mapper.update(dto, entity);
     return mapper.toDto(repository.save(entity));
   }

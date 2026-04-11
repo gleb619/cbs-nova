@@ -1,6 +1,6 @@
 package cbs.nova.controller;
 
-import cbs.nova.model.exception.SettingNotFoundException;
+import cbs.nova.model.exception.EntityNotFoundException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -8,8 +8,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class SettingExceptionHandler {
 
-  @ExceptionHandler(SettingNotFoundException.class)
-  public ResponseEntity<Void> handleNotFound(SettingNotFoundException ex) {
+  @ExceptionHandler(EntityNotFoundException.class)
+  public ResponseEntity<Void> handleNotFound(EntityNotFoundException ex) {
     return ResponseEntity.notFound().build();
   }
 }
