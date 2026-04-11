@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 public class TestConventions {
 
   @ArchTest
-  static final ArchRule testMethodsMustHaveDisplayName = methods()
+  static final ArchRule TEST_METHODS_MUST_HAVE_DISPLAY_NAME = methods()
       .that()
       .areAnnotatedWith(Test.class)
       .should()
@@ -24,7 +24,7 @@ public class TestConventions {
       .because("Every test method must have a @DisplayName for readability");
 
   @ArchTest
-  static final ArchRule testMethodsMustStartWithShould = methods()
+  static final ArchRule TEST_METHODS_MUST_START_WITH_SHOULD = methods()
       .that()
       .areAnnotatedWith(Test.class)
       .should(new HaveNameMatchingCondition("^should[A-Z][a-zA-Z0-9_]*$"))

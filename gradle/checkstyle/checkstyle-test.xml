@@ -4,6 +4,10 @@
   "https://checkstyle.org/dtds/configuration_1_3.dtd">
 
 <module name="Checker">
+  <module name="SuppressWarningsFilter"/>
+  <module name="SuppressionFilter">
+    <property name="file" value="${suppressionsFile}"/>
+  </module>
   <module name="NewlineAtEndOfFile">
     <property name="lineSeparator" value="lf"/>
   </module>
@@ -19,18 +23,19 @@
 
   <!-- Newline at end of file -->
   <module name="TreeWalker">
+    <module name="SuppressWarningsHolder"/>
+    <module name="SuppressionCommentFilter"/>
 
     <!-- IMPORTS -->
     <module name="UnusedImports"/>
     <module name="RedundantImport"/>
     <module name="IllegalImport"/>
     <module name="AvoidStarImport"/>
-    <module name="AvoidFullyQualifiedName"/>
     <module name="ImportOrder">
-      <property name="groups" value="*,/javax\./,/java\./"/>
+      <property name="groups" value="*,/java\./"/>
       <property name="ordered" value="true"/>
       <property name="separated" value="true"/>
-      <property name="option" value="bottom"/>
+      <property name="option" value="top"/>
       <property name="sortStaticImportsAlphabetically" value="true"/>
     </module>
 
@@ -48,7 +53,6 @@
     <!-- Javadoc not required on test methods/classes/fields -->
     <module name="JavadocStyle">
       <property name="checkFirstSentence" value="true"/>
-      <property name="scope" value="public"/>
     </module>
 
     <!-- WHITESPACE -->

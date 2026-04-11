@@ -25,12 +25,11 @@
     <module name="RedundantImport"/>
     <module name="IllegalImport"/>
     <module name="AvoidStarImport"/>
-    <module name="AvoidFullyQualifiedName"/>
     <module name="ImportOrder">
-      <property name="groups" value="*,/javax\./,/java\./"/>
+      <property name="groups" value="*,/java\./"/>
       <property name="ordered" value="true"/>
       <property name="separated" value="true"/>
-      <property name="option" value="bottom"/>
+      <property name="option" value="top"/>
       <property name="sortStaticImportsAlphabetically" value="true"/>
     </module>
 
@@ -55,7 +54,7 @@
       <property name="endOfSentenceFormat" value="([.?!][ \t\n\r\f&lt;])|([.?!]$)"/>
     </module>
     <module name="JavadocVariable">
-      <property name="scope" value="public"/>
+      <property name="accessModifiers" value="public"/>
     </module>
     <module name="NonEmptyAtclauseDescription"/>
     <module name="AtclauseOrder">

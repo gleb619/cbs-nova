@@ -22,7 +22,7 @@ public class MainConventions {
   // Naming Conventions
 
   @ArchTest
-  static final ArchRule controllersShouldBeSuffixed = classes()
+  static final ArchRule CONTROLLERS_SHOULD_BE_SUFFIXED = classes()
       .that()
       .resideInAPackage(ROOT + ".controller..")
       .and()
@@ -38,7 +38,7 @@ public class MainConventions {
           "All classes in 'controller' package must end with 'Controller' or 'ExceptionHandler'");
 
   @ArchTest
-  static final ArchRule servicesShouldBeSuffixed = classes()
+  static final ArchRule SERVICES_SHOULD_BE_SUFFIXED = classes()
       .that()
       .resideInAPackage(ROOT + ".service..")
       .should()
@@ -49,7 +49,7 @@ public class MainConventions {
       .because("All classes in 'service' package must end with 'Service' or 'ServiceImpl'");
 
   @ArchTest
-  static final ArchRule repositoriesShouldBeSuffixed = classes()
+  static final ArchRule REPOSITORIES_SHOULD_BE_SUFFIXED = classes()
       .that()
       .resideInAPackage(ROOT + ".repository..")
       .should()
@@ -58,7 +58,7 @@ public class MainConventions {
       .because("All classes in 'repository' package must end with 'Repository'");
 
   @ArchTest
-  static final ArchRule entitiesShouldBeSuffixed = classes()
+  static final ArchRule ENTITIES_SHOULD_BE_SUFFIXED = classes()
       .that()
       .resideInAPackage(ROOT + ".entity..")
       .and()
@@ -69,7 +69,7 @@ public class MainConventions {
       .because("All classes in 'entity' package must end with 'Entity'");
 
   @ArchTest
-  static final ArchRule mappersShouldBeSuffixed = classes()
+  static final ArchRule MAPPERS_SHOULD_BE_SUFFIXED = classes()
       .that()
       .resideInAPackage(ROOT + ".mapper..")
       .should()
@@ -81,7 +81,7 @@ public class MainConventions {
           "All classes in 'mapper' package must end with 'Mapper' or 'MapperImpl' (MapStruct-generated)");
 
   @ArchTest
-  static final ArchRule dtosShouldBeSuffixed = classes()
+  static final ArchRule DTOS_SHOULD_BE_SUFFIXED = classes()
       .that()
       .resideInAPackage(ROOT + ".dto..")
       .or()
@@ -104,7 +104,7 @@ public class MainConventions {
   // Annotation → Package Enforcement
 
   @ArchTest
-  static final ArchRule controllerAnnotationOnlyInControllerPackage = classes()
+  static final ArchRule CONTROLLER_ANNOTATION_ONLY_IN_CONTROLLER_PACKAGE = classes()
       .that()
       .areAnnotatedWith(RestController.class)
       .or()
@@ -115,7 +115,7 @@ public class MainConventions {
       .because("@Controller/@RestController must only exist in the 'controller' package");
 
   @ArchTest
-  static final ArchRule serviceAnnotationOnlyInServicePackage = classes()
+  static final ArchRule SERVICE_ANNOTATION_ONLY_IN_SERVICE_PACKAGE = classes()
       .that()
       .areAnnotatedWith(Service.class)
       .should()
@@ -124,7 +124,7 @@ public class MainConventions {
       .because("@Service must only exist in the 'service' package");
 
   @ArchTest
-  static final ArchRule entityAnnotationOnlyInEntityPackage = classes()
+  static final ArchRule ENTITY_ANNOTATION_ONLY_IN_ENTITY_PACKAGE = classes()
       .that()
       .areAnnotatedWith(Entity.class)
       .should()
@@ -133,7 +133,7 @@ public class MainConventions {
       .because("@Entity must only exist in the 'entity' package");
 
   @ArchTest
-  static final ArchRule mapperAnnotationOnlyInMapperPackage = classes()
+  static final ArchRule MAPPER_ANNOTATION_ONLY_IN_MAPPER_PACKAGE = classes()
       .that()
       .areAnnotatedWith(Mapper.class)
       .should()
@@ -142,7 +142,7 @@ public class MainConventions {
       .because("@Mapper must only exist in the 'mapper' package");
 
   @ArchTest
-  static final ArchRule repositoriesOnlyInRepositoryPackage = classes()
+  static final ArchRule REPOSITORIES_ONLY_IN_REPOSITORY_PACKAGE = classes()
       .that()
       .areAssignableTo(JpaRepository.class)
       .should()
@@ -153,7 +153,7 @@ public class MainConventions {
   // Layer Dependency Rules
 
   @ArchTest
-  static final ArchRule layerDependencies = layeredArchitecture()
+  static final ArchRule LAYER_DEPENDENCIES = layeredArchitecture()
       .consideringOnlyDependenciesInAnyPackage(ROOT + "..")
       .layer("Controller")
       .definedBy(ROOT + ".controller..")
@@ -184,7 +184,7 @@ public class MainConventions {
   // Extra Guards
 
   @ArchTest
-  static final ArchRule controllersShouldNotAccessRepositoriesDirectly = noClasses()
+  static final ArchRule CONTROLLERS_SHOULD_NOT_ACCESS_REPOSITORIES_DIRECTLY = noClasses()
       .that()
       .resideInAPackage(ROOT + ".controller..")
       .should()
@@ -194,7 +194,7 @@ public class MainConventions {
       .because("Controllers must not access repositories directly — go through a Service");
 
   @ArchTest
-  static final ArchRule controllersShouldNotUseEntitiesDirectly = noClasses()
+  static final ArchRule CONTROLLERS_SHOULD_NOT_USE_ENTITIES_DIRECTLY = noClasses()
       .that()
       .resideInAPackage(ROOT + ".controller..")
       .should()
@@ -204,7 +204,7 @@ public class MainConventions {
       .because("Controllers must not use entities directly — use DTOs instead");
 
   @ArchTest
-  static final ArchRule mappersShouldNotCallServices = noClasses()
+  static final ArchRule MAPPERS_SHOULD_NOT_CALL_SERVICES = noClasses()
       .that()
       .resideInAPackage(ROOT + ".mapper..")
       .should()

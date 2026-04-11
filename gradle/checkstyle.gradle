@@ -17,8 +17,18 @@ checkstyleTest {
   configFile = file("${rootDir}/gradle/checkstyle/checkstyle-test.xml")
   configProperties = [
       'configDir' : file("${rootDir}/gradle/checkstyle"),
-      'projectDir': rootDir
+      'projectDir'      : rootDir,
+      'suppressionsFile': file("${rootDir}/gradle/checkstyle/suppressions-test.xml")
   ]
 }
 
-check.dependsOn checkstyleMain, checkstyleTest
+checkstyleIntegrationTest {
+  configFile = file("${rootDir}/gradle/checkstyle/checkstyle-test.xml")
+  configProperties = [
+      'configDir'       : file("${rootDir}/gradle/checkstyle"),
+      'projectDir'      : rootDir,
+      'suppressionsFile': file("${rootDir}/gradle/checkstyle/suppressions-test.xml")
+  ]
+}
+
+check.dependsOn checkstyleMain, checkstyleTest, checkstyleIntegrationTest
