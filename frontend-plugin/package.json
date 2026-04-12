@@ -1,0 +1,48 @@
+{
+  "name": "@cbs/admin-plugin",
+  "version": "0.1.0",
+  "main": "./nuxt.config.ts",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "nuxt prepare",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write ."
+  },
+  "peerDependencies": {
+    "@vue/tsconfig": ">=0.9.0",
+    "nuxt": ">=3.15.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "@tailwindcss/vite": "4.2.2",
+    "@vitejs/plugin-vue": "6.0.5",
+    "@vitest/coverage-istanbul": "4.1.2",
+    "@vue/test-utils": "2.4.6",
+    "fast-check": "3.23.2",
+    "jsdom": "28.1.0",
+    "tailwindcss": "4.2.2",
+    "sass": "1.89.2",
+    "typescript": "5.9.3",
+    "vite": "7.3.2",
+    "vite-tsconfig-paths": "6.1.1",
+    "vitest": "4.1.2",
+    "vitest-sonar-reporter": "3.0.0",
+    "vue-tsc": "3.2.6"
+  },
+  "type": "module",
+  "dependencies": {
+    "axios": "1.14.0",
+    "i18next": "25.10.10",
+    "i18next-browser-languagedetector": "8.2.1",
+    "i18next-vue": "5.4.0",
+    "keycloak-js": "26.2.3",
+    "nuxt": "^3.15.0",
+    "piqure": "2.2.0",
+    "vue": "3.5.32"
+  }
+}

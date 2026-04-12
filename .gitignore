@@ -37,6 +37,15 @@ replay_pid*
 /frontend/.project
 /frontend/.nuxt/
 /frontend/.output/
+/frontend-plugin/node_modules/
+/frontend-plugin/nuxt/.nuxt/
+/frontend-plugin/nuxt/.output/
+/frontend-plugin/nuxt/node_modules/
+/frontend-plugin/target/
+/frontend-plugin/.settings
+/frontend-plugin/.project
+/frontend-plugin/.nuxt/
+/frontend-plugin/.output/
 /backend/build/
 /backend/.classpath
 /backend/.factorypath
@@ -67,3 +76,4 @@ node_modules
 /client/.project
 /client/.settings/
 /client/bin/
+/.kiro/settings/mcp.json

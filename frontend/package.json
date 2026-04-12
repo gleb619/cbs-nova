@@ -1,0 +1,60 @@
+{
+  "name": "cbs-nova",
+  "version": "0.0.1",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "NUXT_PUBLIC_LOCAL_AUTH=true nuxt dev",
+    "serve": "nuxt dev",
+    "dev:keycloak": "nuxt dev",
+    "build": "pnpm run build:tsc && nuxt build",
+    "build:tsc": "vue-tsc -p tsconfig.build.json --noEmit",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "e2e": "playwright test --ui --config src/e2e/playwright.config.ts",
+    "e2e:headless": "playwright test --config src/e2e/playwright.config.ts",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "@pinia/testing": "1.0.3",
+    "@playwright/test": "1.59.1",
+    "@tailwindcss/vite": "4.2.2",
+    "@types/node": "25.6.0",
+    "@vitejs/plugin-vue": "6.0.5",
+    "@vitest/coverage-istanbul": "4.1.2",
+    "@vue/test-utils": "2.4.6",
+    "@vue/tsconfig": "0.9.1",
+    "h3": "2.0.1-rc.20",
+    "jsdom": "28.1.0",
+    "tailwindcss": "4.2.2",
+    "typescript": "5.9.3",
+    "vite": "7.3.2",
+    "vite-tsconfig-paths": "6.1.1",
+    "vitest": "4.1.2",
+    "vitest-sonar-reporter": "3.0.0",
+    "vue-tsc": "3.2.6"
+  },
+  "type": "module",
+  "dependencies": {
+    "@cbs/admin-plugin": "workspace:*",
+    "arch-unit-ts": "1.0.9",
+    "axios": "1.14.0",
+    "i18next": "25.10.10",
+    "i18next-browser-languagedetector": "8.2.1",
+    "i18next-vue": "5.4.0",
+    "keycloak-js": "26.2.3",
+    "nuxt": "^3.15.0",
+    "pinia": "3.0.4",
+    "pinia-plugin-persistedstate": "4.7.1",
+    "piqure": "2.2.0",
+    "vue": "3.5.32",
+    "vue-router": "5.0.4"
+  }
+}

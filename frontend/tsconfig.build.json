@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": [
+      "vitest/globals",
+      "node"
+    ]
+  },
+  "include": [
+    "src/**/*",
+    "nuxt.config.ts",
+    "app.vue",
+    ".nuxt/nuxt.d.ts"
+  ],
+  "exclude": [
+    "src/e2e/**/*",
+    "src/unit/**/*"
+  ]
+}

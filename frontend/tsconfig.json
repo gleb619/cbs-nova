@@ -1,0 +1,24 @@
+{
+  "extends": "@vue/tsconfig/tsconfig.dom.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "sourceMap": true,
+    "types": [
+      "vitest/globals"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/app/*"
+      ],
+      "@shared/*": [
+        "./src/shared/*"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "nuxt.config.ts",
+    "app.vue"
+  ]
+}
