@@ -58,10 +58,10 @@ keycloak:
 local-auth:
   users:
     - username: admin1
-      password: "{noop}admin1"
+      password: admin1
       roles: ADMIN,USER
     - username: user1
-      password: "{noop}user1"
+      password: user1
       roles: USER
 
 management:

@@ -33,13 +33,13 @@ public class SettingController
 
   @Override
   public ResponseEntity<List<SettingDto>> findAll() {
-    logger.info("Fetching all settings");
+    log.info("Fetching all settings");
     return ResponseEntity.ok(service.findAll());
   }
 
   @Override
   public ResponseEntity<SettingDto> findById(@PathVariable Long id) {
-    logger.info("Fetching setting with id: {}", id);
+    log.info("Fetching setting with id: {}", id);
     return ResponseEntity.ok(service.findById(id));
   }
 
@@ -59,27 +59,27 @@ public class SettingController
   public ResponseEntity<SettingDto> findByCode(
       @Parameter(description = "Unique code of the setting to retrieve") @PathVariable
       String code) {
-    logger.info("Fetching setting with code: {}", code);
+    log.info("Fetching setting with code: {}", code);
     return ResponseEntity.ok(service.findByCode(code));
   }
 
   @PostMapping
   @Override
   public ResponseEntity<SettingDto> create(@RequestBody SettingCreateDto dto) {
-    logger.info("Creating new setting: {}", dto);
+    log.info("Creating new setting: {}", dto);
     return ResponseEntity.status(HttpStatus.CREATED).body(service.create(dto));
   }
 
   @Override
   public ResponseEntity<SettingDto> update(
       @PathVariable Long id, @RequestBody SettingUpdateDto dto) {
-    logger.info("Updating setting with id: {} with data: {}", id, dto);
+    log.info("Updating setting with id: {} with data: {}", id, dto);
     return ResponseEntity.ok(service.update(id, dto));
   }
 
   @Override
   public ResponseEntity<Void> delete(@PathVariable Long id) {
-    logger.info("Deleting setting with id: {}", id);
+    log.info("Deleting setting with id: {}", id);
     service.delete(id);
     return ResponseEntity.noContent().build();
   }
