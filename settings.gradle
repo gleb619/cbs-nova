@@ -9,6 +9,10 @@ include 'frontend'
 dependencyResolutionManagement {
   repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
   repositories {
+    mavenLocal()
     mavenCentral()
   }
 }
+
+// Faster configuration caching
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")

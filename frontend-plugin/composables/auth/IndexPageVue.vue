@@ -29,7 +29,7 @@
         <router-link to="/help" class="px-8 py-4 border border-neutral-200 text-neutral-900 font-bold rounded-xl hover:bg-neutral-50 hover:border-neutral-300 transition-all shadow-sm active:scale-[0.98] text-center">
           View Documentation
         </router-link>
-        <router-link to="/home" class="px-8 py-4 border border-neutral-200 text-white font-bold rounded-xl
+        <router-link to="/home" class="px-8 py-4 border border-neutral-200 text-primary-600 font-bold rounded-xl
         hover:bg-neutral-50 hover:border-neutral-300 transition-all shadow-xl shadow-neutral-200 active:scale-[0.98] flex items-center justify-center gap-2">
           Launch Dashboard
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
