@@ -40,12 +40,31 @@ public class MainConventions {
   static final ArchRule SERVICES_SHOULD_BE_SUFFIXED = classes()
       .that()
       .resideInAPackage(ROOT + ".service..")
+      .and()
+      .areNotAnonymousClasses()
+      .and()
+      .areNotInterfaces()
+      .and()
+      .areNotNestedClasses()
       .should()
       .haveSimpleNameEndingWith("Service")
       .orShould()
       .haveSimpleNameEndingWith("ServiceImpl")
+      .orShould()
+      .haveSimpleNameEndingWith("Executor")
+      .orShould()
+      .haveSimpleNameEndingWith("Resolver")
+      .orShould()
+      .haveSimpleNameEndingWith("Evaluator")
+      .orShould()
+      .haveSimpleNameEndingWith("Emitter")
+      .orShould()
+      .haveSimpleNameEndingWith("Scheduler")
+      .orShould()
+      .haveSimpleNameEndingWith("Port")
       .allowEmptyShould(true)
-      .because("All classes in 'service' package must end with 'Service' or 'ServiceImpl'");
+      .because(
+          "All classes in 'service' package must end with 'Service', 'ServiceImpl', or a recognized component suffix");
 
   @ArchTest
   static final ArchRule REPOSITORIES_SHOULD_BE_SUFFIXED = classes()

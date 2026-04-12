@@ -11,6 +11,7 @@ import io.swagger.v3.oas.models.security.Scopes;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
+import io.swagger.v3.oas.models.tags.Tag;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,13 +33,17 @@ public class OpenApiConfig {
         .info(new Info()
             .title("CBS Nova API")
             .description(
-                "CBS Nova Backend API for settings management with Keycloak authentication")
+                "CBS Nova Backend API for settings management with Keycloak authentication. "
+                + "MassOperations: Mass operation execution API for batch processing.")
             .version("1.0.0")
             .contact(new Contact().name("CBS Nova Team").email("team@cbs-nova.com"))
             .license(new License().name("MIT").url("https://opensource.org/licenses/MIT")))
         .servers(List.of(
             new Server().url("http://localhost:7070").description("Development server"),
             new Server().url("http://localhost:3000").description("Development admin-ui")))
+        .tags(List.of(
+            new Tag().name("MassOperations").description("Mass operation execution API"),
+            new Tag().name("Events").description("Business event execution API")))
         .addSecurityItem(new SecurityRequirement().addList("%sJwt".formatted(securitySchemeName)))
         .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
         .components(new Components()

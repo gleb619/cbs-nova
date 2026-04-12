@@ -31,6 +31,11 @@ dependencies {
 
   api libs.springdoc.openapi.starter.webmvc.ui
 
+  api project(':dsl')
+
+  compileOnly libs.temporal.sdk
+  testImplementation libs.temporal.sdk
+
   // -- Testing --
   testImplementation libs.bundles.spring.test
   testImplementation libs.archunit.junit5
