@@ -74,7 +74,7 @@ CSS v4 · piqure DI · i18next · Biome · Gradle multi-module
     - Security tests for authentication changes
     - API contract tests for OpenAPI changes
 
-8. **Save the plan to ./plans/<feature-name>.md**
+8. **Save the plan to ./docs/plans/<feature-name>.md**
     - Use clear, descriptive plan names
     - Include all sections above
     - Make it actionable for implementation

@@ -25,8 +25,8 @@ security (local RSA + Keycloak)
     - Agent will analyze CBS-Nova codebase and architecture
     - Plan includes complexity estimates and risk assessment
 
-2. **Wait for the plan file to appear in ./plans/**
-    - Look for `./plans/<feature-name>.md`
+2. **Wait for the plan file to appear in ./docs/plans/**
+    - Look for `./docs/plans/<feature-name>.md`
     - Verify plan contains all required sections
     - Check that CBS-Nova specific considerations are addressed
 

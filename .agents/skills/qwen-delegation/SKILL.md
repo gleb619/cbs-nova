@@ -75,8 +75,7 @@ root/
       │
       ▼
 [3. Gemini: Invoke Qwen via CLI]
-      │   source ~/.nvm/nvm.sh && nvm use v22.20.0 && \
-      │   qwen -y "Read docs/tasks/{task-name}.md and follow all instructions
+      │   qwen-run {task-name} -y "Read docs/tasks/{task-name}.md and follow all instructions
       │            inside. Write your result to docs/results/{task-name}.result.md"
       │            --output-format text
       ▼
@@ -87,7 +86,7 @@ root/
       │
       ├── PASS ──► Done ✅
       │
-      └── FAIL ──► [6. Gemini: Amend task file with Retry Notes, re-invoke Qwen]
+      └── FAIL ──► [6. Gemini: Amend task file with Retry Notes, re-invoke Qwen via qwen-run]
                          │
                          ▼
                    [7. Gemini: Verify again]

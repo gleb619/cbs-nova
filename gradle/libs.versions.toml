@@ -8,6 +8,7 @@ avaje-validator = "2.15"
 testcontainers = "2.0.4"
 springdoc-openapi = "2.8.0"
 archunit = "1.4.1"
+temporal = "1.27.0"
 # Used in `gradle/checkstyle.gradle`
 checkstyle = "13.4.0"
 
@@ -40,6 +41,7 @@ spring-cloud-dependencies = { module = "org.springframework.cloud:spring-cloud-d
 # -- Kotlin runtime --
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 
 # -- Persistence --
@@ -71,6 +73,9 @@ spring-security-test = { module = "org.springframework.security:spring-security-
 testcontainers-bom = { module = "org.testcontainers:testcontainers-bom", version.ref = "testcontainers" }
 testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }
 testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-junit-jupiter", version.ref = "testcontainers" }
+
+# -- Temporal --
+temporal-sdk = { module = "io.temporal:temporal-sdk", version.ref = "temporal" }
 
 # -- Test Architecture --
 archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }

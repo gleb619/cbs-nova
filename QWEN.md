@@ -31,7 +31,7 @@ This project has a 4-phase development workflow with specialized agents for plan
 - **New feature / major change**: "Use the dev-workflow skill to add user role management"
   → orchestrates planner → implement → code-reviewer → tester → commit
 - **Planning only**: "planner agent, create a plan for adding audit logging"
-  → produces `./plans/<feature>.md` without modifying code
+  → produces `./docs/plans/<feature>.md` without modifying code
 - **Code review**: "code-reviewer agent, review these changed files"
   → evaluates regressions, security, quality, patterns, test coverage
 - **Testing**: "tester agent, run full suite and add missing tests"
@@ -39,7 +39,8 @@ This project has a 4-phase development workflow with specialized agents for plan
 
 ### Workflow Phases
 
-1. **PLAN** — `planner` agent analyzes codebase, produces numbered plan saved to `./plans/`. User approval required.
+1. **PLAN** — `planner` agent analyzes codebase, produces numbered plan saved to `./docs/plans/`. User approval
+   required.
 2. **IMPLEMENT** — Execute plan step-by-step. Tests run after each step. Git checkpoint before medium/large steps.
 3. **REVIEW** — `code-reviewer` evaluates changes across 5 dimensions. Verdict: PASS or NEEDS WORK.
 4. **TEST & COMMIT** — `tester` runs full suite. Only if ALL GREEN: final commit with conventional message.

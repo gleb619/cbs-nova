@@ -16,7 +16,7 @@ This skill orchestrates development across 4 sequential phases. It coordinates t
 PHASE 1 — PLAN
 
 - Invoke the `planner` agent.
-- Wait for the plan file to appear in `./plans/<feature-name>.md`.
+- Wait for the plan file to appear in `./docs/plans/<feature-name>.md`.
 - Present the plan to the user and request explicit approval.
 - DO NOT proceed to Phase 2 without explicit user confirmation.
 

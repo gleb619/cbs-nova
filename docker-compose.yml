@@ -1,3 +1,5 @@
 include:
   - docker/postgresql.yml
   - docker/keycloak.yml
+  - docker/temporal.yml
+  - docker/gitea.yml

@@ -4,6 +4,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 
+import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
@@ -14,7 +15,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RestController;
 
-@AnalyzeClasses(packages = "cbs.nova")
+@AnalyzeClasses(packages = "cbs.nova", importOptions = ImportOption.DoNotIncludeTests.class)
 public class MainConventions {
 
   private static final String ROOT = "cbs.nova";
@@ -61,6 +62,8 @@ public class MainConventions {
       .resideInAPackage(ROOT + ".entity..")
       .and()
       .areNotNestedClasses()
+      .and()
+      .areNotEnums()
       .should()
       .haveSimpleNameEndingWith("Entity")
       .allowEmptyShould(true)

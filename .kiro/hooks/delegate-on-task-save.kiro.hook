@@ -6,7 +6,7 @@
   "when": {
     "type": "fileEdited",
     "patterns": [
-      "docs/tasks/*.md"
+      "docs/tasks-depricated/*.md"
     ]
   },
   "then": {

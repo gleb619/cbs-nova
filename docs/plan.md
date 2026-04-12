@@ -33,23 +33,23 @@ from [task-template.md](task-template.md), delegate to Qwen (see `/qwen-delegati
 
 | ID  | Title                                                                                                       | Phase    | Status | Blocked By    | Blocks             |
 |-----|-------------------------------------------------------------------------------------------------------------|----------|--------|---------------|--------------------|
-| T01 | Temporal + Temporal UI in Docker Compose                                                                    | 0-Infra  | TODO   | —             | T09                |
-| T02 | Gitea in Docker Compose + examples/cbs-rules                                                                | 0-Infra  | TODO   | —             | T06                |
-| T03 | Create `dsl` Gradle module (Kotlin)                                                                         | 0-Infra  | TODO   | —             | T04                |
-| T04 | DSL API: Kotlin interfaces & context types                                                                  | 1-DSL    | TODO   | T03           | T05                |
-| T05 | DSL Runtime: builders, registry, stub workflow                                                              | 1-DSL    | TODO   | T04           | T06, T10, T14, T18 |
+| T01 | Temporal + Temporal UI in Docker Compose                                                                    | 0-Infra  | DONE   | —             | T09                |
+| T02 | Gitea in Docker Compose + examples/cbs-rules                                                                | 0-Infra  | DONE   | —             | T06                |
+| T03 | Create `dsl` Gradle module (Kotlin)                                                                         | 0-Infra  | DONE   | —             | T04                |
+| T04 | DSL API: Kotlin interfaces & context types                                                                  | 1-DSL    | DONE   | T03           | T05                |
+| T05 | DSL Runtime: builders, registry, stub workflow                                                              | 1-DSL    | DONE   | T04           | T06, T10, T14, T18 |
 | T06 | DSL Compiler: Gradle tasks + semantic validator                                                             | 1-DSL    | TODO   | T02, T05      | T20                |
-| T07 | Flyway: workflow_execution, event_execution, transition_log                                                 | 2-DB     | TODO   | —             | T12                |
-| T08 | Flyway: mass_operation_execution, mass_operation_item                                                       | 2-DB     | TODO   | —             | T17                |
-| T09 | Temporal client + worker config in backend                                                                  | 3-Engine | TODO   | T01           | T10, T14           |
+| T07 | Flyway: workflow_execution, event_execution, transition_log                                                 | 2-DB     | DONE   | —             | T12                |
+| T08 | Flyway: mass_operation_execution, mass_operation_item                                                       | 2-DB     | DONE   | —             | T17                |
+| T09 | Temporal client + worker config in backend                                                                  | 3-Engine | DONE   | T01           | T10, T14           |
 | T10 | EventWorkflow + TransactionActivity (Temporal)                                                              | 3-Engine | TODO   | T05, T07, T09 | T11                |
 | T11 | Core services: EventService, WorkflowResolver, WorkflowExecutor, ContextEvaluator, ContextEncryptionService | 3-Engine | TODO   | T10, T12      | T13                |
-| T12 | State repos + entities: WorkflowExecution, EventExecution, TransitionLog                                    | 3-Engine | TODO   | T07           | T11                |
+| T12 | State repos + entities: WorkflowExecution, EventExecution, TransitionLog                                    | 3-Engine | DONE   | T07           | T11                |
 | T13 | EventController: POST /api/events/execute + DslLoader                                                       | 3-Engine | TODO   | T11           | T21                |
 | T14 | MassOpWorkflow + MassOpItemActivity (Temporal)                                                              | 4-MassOp | TODO   | T05, T08, T09 | T15                |
 | T15 | MassOp services: MassOperationService, MassOperationScheduler, SignalEmitter                                | 4-MassOp | TODO   | T14, T17      | T16                |
 | T16 | MassOperationController: trigger, status, items, retry                                                      | 4-MassOp | TODO   | T15           | T23                |
-| T17 | MassOp repos + entities: MassOperationExecution, MassOperationItem                                          | 4-MassOp | TODO   | T08           | T15                |
+| T17 | MassOp repos + entities: MassOperationExecution, MassOperationItem                                          | 4-MassOp | DONE   | T08           | T15                |
 | T18 | BPMN: StaticBpmnGenerator + BpmnExporter                                                                    | 5-BPMN   | TODO   | T05           | T19                |
 | T19 | BpmnController: GET /api/workflows/{code}/bpmn                                                              | 5-BPMN   | TODO   | T18           | T22                |
 | T20 | DevDslController: POST /dev/dsl/execute @Profile("dev")                                                     | 6-Dev    | TODO   | T05, T06      | —                  |
