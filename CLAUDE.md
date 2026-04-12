@@ -299,12 +299,3 @@ explicitly.
 **DSL:** Kotlin Script `.kts` files in `cbs-rules` Gitea repo. Compile to JAR via Gradle; dev uses JSR-223.
 **Versioning:** `{semver}-{gitCommitShort}`, instances locked to their start version.
 **Single API endpoint:** `POST /api/events/execute` (hides workflow/event distinction, callers use `eventNumber`).
-
-## 18. Known Issues
-
-- **4 TypeScript build errors** in `pnpm build`: `$t` not typed (i18n), missing `@/BusinessContext`, `defineNuxtPlugin`
-  not found (run `nuxt prepare` / `pnpm postinstall`)
-- **TokenStorage migration:** `LocalAuthRepository` + `SettingHttp` still use old `TokenStore` (localStorage) — migrate
-  to `TokenStorage`
-- **Keycloak:** `KeycloakHttp.ts` missing `baseURL` on axios instance
-- **Homepage:** `HomepageVue.vue` is legacy placeholder, needs Tailwind redesign matching `IndexPageVue.vue` styling

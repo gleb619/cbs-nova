@@ -14,6 +14,7 @@ checkstyle = "13.4.0"
 # plugins
 spring-boot = "4.0.4"
 spring-dm = "1.1.7"
+spring-cloud = "2025.0.0"
 test-logger = "4.0.0"
 spotless = "8.3.0"
 openapi-generator = "7.12.0"
@@ -34,7 +35,7 @@ springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openap
 
 # -- Spring Cloud --
 spring-cloud-starter-openfeign = { module = "org.springframework.cloud:spring-cloud-starter-openfeign" }
-#spring-cloud-dependencies = { module = "org.springframework.cloud:spring-cloud-dependencies" }
+spring-cloud-dependencies = { module = "org.springframework.cloud:spring-cloud-dependencies", version.ref = "spring-cloud" }
 
 # -- Kotlin runtime --
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib" }

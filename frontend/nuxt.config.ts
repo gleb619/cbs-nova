@@ -55,7 +55,7 @@ export default defineNuxtConfig({
   },
 
   hooks: {
-    'listen'(server) {
+    listen(server) {
       server.on('listening', () => {
         const addr = server.address();
         const port = typeof addr === 'object' && addr ? addr.port : 3000;
