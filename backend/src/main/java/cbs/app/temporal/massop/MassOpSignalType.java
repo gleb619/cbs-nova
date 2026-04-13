@@ -5,8 +5,6 @@ public enum MassOpSignalType {
    * Lock the mass operation.
    */
   LOCK,
-  /**
-   * Unlock the mass operation.
-   */
+  /** Unlock the mass operation. */
   UNLOCK
 }

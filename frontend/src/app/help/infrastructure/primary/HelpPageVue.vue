@@ -27,7 +27,7 @@
         <h2 class="text-sm font-semibold text-neutral-500 uppercase tracking-wide mb-3">Quick Navigation</h2>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <a
-            href="/"
+            href="/home"
             class="group flex items-center gap-3 p-4 bg-white border border-neutral-200 rounded-lg hover:border-primary-300 hover:shadow-sm transition-all text-left"
           >
             <div class="w-10 h-10 bg-primary-50 rounded-sm flex items-center justify-center group-hover:bg-primary-100 transition-colors">

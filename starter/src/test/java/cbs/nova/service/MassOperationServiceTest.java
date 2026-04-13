@@ -12,6 +12,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import cbs.dsl.api.MassOperationDefinition;
+import cbs.dsl.api.TriggerDefinition.CronTrigger;
+import cbs.dsl.api.TriggerDefinition.EveryTrigger;
 import cbs.dsl.runtime.DslRegistry;
 import cbs.nova.entity.MassOperationExecutionEntity;
 import cbs.nova.entity.MassOperationItemEntity;
@@ -286,8 +288,8 @@ class MassOperationServiceTest {
   @DisplayName("shouldFireCronWhenExpressionMatchesWithinLast60Seconds")
   void shouldFireCronWhenExpressionMatchesWithinLast60Seconds() {
     // Use a cron that runs every minute: "0 * * * * *"
-    cbs.dsl.api.TriggerDefinition.CronTrigger cronTrigger =
-        mock(cbs.dsl.api.TriggerDefinition.CronTrigger.class);
+    CronTrigger cronTrigger =
+        mock(CronTrigger.class);
     when(cronTrigger.getExpression()).thenReturn("0 * * * * *");
 
     boolean result = massOperationService.shouldFireCron(cronTrigger);
@@ -300,8 +302,8 @@ class MassOperationServiceTest {
   @Test
   @DisplayName("shouldNotFireCronWhenExpressionIsInvalid")
   void shouldNotFireCronWhenExpressionIsInvalid() {
-    cbs.dsl.api.TriggerDefinition.CronTrigger cronTrigger =
-        mock(cbs.dsl.api.TriggerDefinition.CronTrigger.class);
+    CronTrigger cronTrigger =
+        mock(CronTrigger.class);
     when(cronTrigger.getExpression()).thenReturn("invalid-cron");
 
     boolean result = massOperationService.shouldFireCron(cronTrigger);
@@ -312,8 +314,8 @@ class MassOperationServiceTest {
   @Test
   @DisplayName("shouldFireEveryWhenNoPreviousExecutionExists")
   void shouldFireEveryWhenNoPreviousExecutionExists() {
-    cbs.dsl.api.TriggerDefinition.EveryTrigger everyTrigger =
-        mock(cbs.dsl.api.TriggerDefinition.EveryTrigger.class);
+    EveryTrigger everyTrigger =
+        mock(EveryTrigger.class);
     when(everyTrigger.getDays()).thenReturn(0);
     when(everyTrigger.getHours()).thenReturn(0);
     when(everyTrigger.getMinutes()).thenReturn(30);
@@ -327,8 +329,8 @@ class MassOperationServiceTest {
   @Test
   @DisplayName("shouldFireEveryWhenLastExecutionIsOlderThanInterval")
   void shouldFireEveryWhenLastExecutionIsOlderThanInterval() {
-    cbs.dsl.api.TriggerDefinition.EveryTrigger everyTrigger =
-        mock(cbs.dsl.api.TriggerDefinition.EveryTrigger.class);
+    EveryTrigger everyTrigger =
+        mock(EveryTrigger.class);
     when(everyTrigger.getDays()).thenReturn(0);
     when(everyTrigger.getHours()).thenReturn(0);
     when(everyTrigger.getMinutes()).thenReturn(30);
@@ -348,8 +350,8 @@ class MassOperationServiceTest {
   @Test
   @DisplayName("shouldNotFireEveryWhenLastExecutionIsWithinInterval")
   void shouldNotFireEveryWhenLastExecutionIsWithinInterval() {
-    cbs.dsl.api.TriggerDefinition.EveryTrigger everyTrigger =
-        mock(cbs.dsl.api.TriggerDefinition.EveryTrigger.class);
+    EveryTrigger everyTrigger =
+        mock(EveryTrigger.class);
     when(everyTrigger.getDays()).thenReturn(0);
     when(everyTrigger.getHours()).thenReturn(0);
     when(everyTrigger.getMinutes()).thenReturn(30);

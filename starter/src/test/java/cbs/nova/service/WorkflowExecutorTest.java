@@ -10,9 +10,8 @@ import static org.mockito.Mockito.when;
 
 import cbs.dsl.runtime.DslRegistry;
 import cbs.nova.model.EventExecutionRequest;
-import cbs.nova.temporal.workflow.EventWorkflow;
-import cbs.nova.temporal.workflow.EventWorkflowInput;
-import cbs.nova.temporal.workflow.WorkflowExecutionResult;
+import cbs.nova.model.EventWorkflowInput;
+import cbs.nova.model.WorkflowExecutionResult;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import org.junit.jupiter.api.BeforeEach;

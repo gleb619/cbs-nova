@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<!DOCTYPE import-control PUBLIC
+  "-//Checkstyle//DTD ImportControl Configuration 1.4//EN"
+  "https://checkstyle.org/dtds/import_control_1_4.dtd">
+<import-control pkg="cbs" strategyOnMismatch="allowed">
+  <disallow class="com.fasterxml.jackson.databind.ObjectMapper"/>
+  <disallow class="com.fasterxml.jackson.core.JsonProcessingException"/>
+  <disallow class="com.fasterxml.jackson.core.type.TypeReference"/>
+
+  <!-- Controllers must not import Spring Data domain classes (Page, Pageable, etc.) -->
+  <subpackage name="nova.controller">
+    <disallow class="org.springframework.data.domain.Page"/>
+    <disallow class="org.springframework.data.domain.Pageable"/>
+    <disallow class="org.springframework.data.domain.PageImpl"/>
+    <disallow class="org.springframework.data.domain.PageRequest"/>
+    <disallow class="org.springframework.data.domain.Sort"/>
+    <disallow class="org.springframework.data.web.PageableDefault"/>
+  </subpackage>
+  <subpackage name="app.controller">
+    <disallow class="org.springframework.data.domain.Page"/>
+    <disallow class="org.springframework.data.domain.Pageable"/>
+    <disallow class="org.springframework.data.domain.PageImpl"/>
+    <disallow class="org.springframework.data.domain.PageRequest"/>
+    <disallow class="org.springframework.data.domain.Sort"/>
+    <disallow class="org.springframework.data.web.PageableDefault"/>
+  </subpackage>
+</import-control>

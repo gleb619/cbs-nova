@@ -1,10 +1,8 @@
 package cbs.nova.service;
 
-import cbs.dsl.runtime.DslRegistry;
 import cbs.nova.model.EventExecutionRequest;
-import cbs.nova.temporal.workflow.EventWorkflow;
-import cbs.nova.temporal.workflow.EventWorkflowInput;
-import cbs.nova.temporal.workflow.WorkflowExecutionResult;
+import cbs.nova.model.EventWorkflowInput;
+import cbs.nova.model.WorkflowExecutionResult;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import lombok.RequiredArgsConstructor;
@@ -20,9 +18,8 @@ import java.util.UUID;
 public class WorkflowExecutor {
 
   private final WorkflowClient workflowClient;
-  private final DslRegistry dslRegistry;
 
-  @Value("${temporal.task-queue:WORKFLOW_TASK_QUEUE}")
+  @Value("${app.temporal.task-queue}")
   private String taskQueue;
 
   public WorkflowExecutionResult start(EventExecutionRequest request, String contextJson) {

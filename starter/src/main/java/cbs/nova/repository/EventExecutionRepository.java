@@ -8,5 +8,4 @@ import java.util.List;
 
 public interface EventExecutionRepository extends JpaRepository<EventExecutionEntity, Long> {
 
-  List<EventExecutionEntity> findByWorkflowExecution(WorkflowExecutionEntity workflowExecution);
 }

@@ -9,6 +9,7 @@ import cbs.dsl.api.EventDefinition;
 import cbs.dsl.api.context.EnrichmentContext;
 import cbs.dsl.runtime.DslRegistry;
 import cbs.nova.model.EventExecutionRequest;
+import kotlin.Unit;
 import kotlin.jvm.functions.Function1;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,9 +37,9 @@ class ContextEvaluatorTest {
     EventExecutionRequest request =
         new EventExecutionRequest("loan", "submit", "user1", Map.of("amount", 5000));
 
-    when(eventDef.getContextBlock()).thenReturn((Function1<EnrichmentContext, kotlin.Unit>) ctx -> {
+    when(eventDef.getContextBlock()).thenReturn(ctx -> {
       ctx.set("enrichedField", "enrichedValue");
-      return kotlin.Unit.INSTANCE;
+      return Unit.INSTANCE;
     });
 
     Map<String, Object> result = contextEvaluator.evaluate(eventDef, request);
@@ -55,9 +56,9 @@ class ContextEvaluatorTest {
     EventExecutionRequest request =
         new EventExecutionRequest("loan", "submit", "user1", Map.of("amount", 5000));
 
-    when(eventDef.getContextBlock()).thenReturn((Function1<EnrichmentContext, kotlin.Unit>) ctx -> {
+    when(eventDef.getContextBlock()).thenReturn(ctx -> {
       ctx.set("amount", 9999);
-      return kotlin.Unit.INSTANCE;
+      return Unit.INSTANCE;
     });
 
     Map<String, Object> result = contextEvaluator.evaluate(eventDef, request);

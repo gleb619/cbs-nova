@@ -46,6 +46,7 @@
     "@cbs/admin-plugin": "workspace:*",
     "arch-unit-ts": "1.0.9",
     "axios": "1.14.0",
+    "bpmn-js": "18.14.0",
     "i18next": "25.10.10",
     "i18next-browser-languagedetector": "8.2.1",
     "i18next-vue": "5.4.0",

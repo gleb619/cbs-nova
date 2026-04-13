@@ -232,4 +232,15 @@ public class MainConventions {
       .resideInAPackage(ROOT + ".service..")
       .allowEmptyShould(true)
       .because("Mappers must not depend on services");
+
+  @ArchTest
+  static final ArchRule CONTROLLERS_SHOULD_NOT_USE_SPRING_DATA_PAGE = noClasses()
+      .that()
+      .resideInAPackage(ROOT + ".controller..")
+      .should()
+      .dependOnClassesThat()
+      .resideInAnyPackage("org.springframework.data.domain..")
+      .allowEmptyShould(true)
+      .because(
+          "Controllers must not use Spring Data Page/Pageable — return List with pagination headers");
 }

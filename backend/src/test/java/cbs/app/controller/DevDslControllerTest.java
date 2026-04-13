@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cbs.app.controller.DevDslController.DevDslExecuteRequest;
 import cbs.dsl.api.EventDefinition;
 import cbs.dsl.api.MassOperationDefinition;
 import cbs.dsl.api.TransactionDefinition;
@@ -13,8 +14,10 @@ import cbs.dsl.compiler.DslScriptHost;
 import cbs.dsl.compiler.DslValidator;
 import cbs.dsl.compiler.ValidationError;
 import cbs.dsl.runtime.DslRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
@@ -24,6 +27,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Map;
 
 @WebMvcTest(DevDslController.class)
 @ActiveProfiles("dev")
@@ -40,6 +44,8 @@ class DevDslControllerTest {
 
   @MockitoBean
   private DslValidator validator;
+
+  private ObjectMapper objectMapper = new ObjectMapper();
 
   @Test
   @DisplayName("Should return 200 with OK status when script compiles and validates successfully")
@@ -67,15 +73,20 @@ class DevDslControllerTest {
     when(scriptHost.eval(validScript, "input")).thenReturn(registry);
     when(validator.validate(registry, "input")).thenReturn(List.of());
 
+    DevDslExecuteRequest request = new DevDslExecuteRequest(validScript, null, null, null, null);
+
     // Act & Assert
     mockMvc
-        .perform(post("/dev/dsl/execute").contentType(MediaType.TEXT_PLAIN).content(validScript))
+        .perform(post("/dev/dsl/execute")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("OK"))
         .andExpect(jsonPath("$.workflows").isArray())
         .andExpect(jsonPath("$.workflows[0].code").value("loan-approval"))
         .andExpect(jsonPath("$.events[0].code").value("approve-event"))
-        .andExpect(jsonPath("$.transactions[0].code").value("approve-tx"));
+        .andExpect(jsonPath("$.transactions[0].code").value("approve-tx"))
+        .andExpect(jsonPath("$.executionSimulation").doesNotExist());
   }
 
   @Test
@@ -87,8 +98,12 @@ class DevDslControllerTest {
     when(scriptHost.eval(emptyScript, "input")).thenReturn(registry);
     when(validator.validate(registry, "input")).thenReturn(List.of());
 
+    DevDslExecuteRequest request = new DevDslExecuteRequest(emptyScript, null, null, null, null);
+
     mockMvc
-        .perform(post("/dev/dsl/execute").contentType(MediaType.TEXT_PLAIN).content(emptyScript))
+        .perform(post("/dev/dsl/execute")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("OK"))
         .andExpect(jsonPath("$.workflows").isEmpty())
@@ -112,9 +127,13 @@ class DevDslControllerTest {
         .thenReturn(List.of(
             new ValidationError("input", "Workflow 'bad': initial state 'MISSING' not in states")));
 
+    DevDslExecuteRequest request = new DevDslExecuteRequest(invalidScript, null, null, null, null);
+
     // Act & Assert
     mockMvc
-        .perform(post("/dev/dsl/execute").contentType(MediaType.TEXT_PLAIN).content(invalidScript))
+        .perform(post("/dev/dsl/execute")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isUnprocessableEntity())
         .andExpect(jsonPath("$.status").value("INVALID"))
         .andExpect(jsonPath("$.errors").isArray())
@@ -133,10 +152,14 @@ class DevDslControllerTest {
         .thenThrow(
             new IllegalStateException("Script evaluation failed for 'input': unexpected token"));
 
+    DevDslExecuteRequest request =
+        new DevDslExecuteRequest(badSyntaxScript, null, null, null, null);
+
     // Act & Assert
     mockMvc
-        .perform(
-            post("/dev/dsl/execute").contentType(MediaType.TEXT_PLAIN).content(badSyntaxScript))
+        .perform(post("/dev/dsl/execute")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isUnprocessableEntity())
         .andExpect(jsonPath("$.status").value("INVALID"))
         .andExpect(jsonPath("$.errors[0].file").value("input"))
@@ -159,9 +182,13 @@ class DevDslControllerTest {
         .thenReturn(List.of(
             new ValidationError("input", "Error 1"), new ValidationError("input", "Error 2")));
 
+    DevDslExecuteRequest request = new DevDslExecuteRequest(script, null, null, null, null);
+
     // Act & Assert
     mockMvc
-        .perform(post("/dev/dsl/execute").contentType(MediaType.TEXT_PLAIN).content(script))
+        .perform(post("/dev/dsl/execute")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isUnprocessableEntity())
         .andExpect(jsonPath("$.status").value("INVALID"))
         .andExpect(jsonPath("$.errors").isArray())
@@ -181,17 +208,69 @@ class DevDslControllerTest {
     when(scriptHost.eval(script, "input")).thenReturn(registry);
     when(validator.validate(registry, "input")).thenReturn(List.of());
 
+    DevDslExecuteRequest request = new DevDslExecuteRequest(script, null, null, null, null);
+
     // Act & Assert
     mockMvc
-        .perform(post("/dev/dsl/execute").contentType(MediaType.TEXT_PLAIN).content(script))
+        .perform(post("/dev/dsl/execute")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.massOperations[0].code").value("bulk-notify"));
+  }
+
+  @Test
+  @DisplayName("Should return 400 when dslContent is blank")
+  void shouldReturn400WhenDslContentIsBlank() throws Exception {
+    // Arrange
+    DevDslExecuteRequest request =
+        new DevDslExecuteRequest("", "TEST", "SUBMIT", Map.of("amount", 1000), "dev-user");
+
+    // Act & Assert
+    mockMvc
+        .perform(post("/dev/dsl/execute")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.status").value("INVALID"))
+        .andExpect(
+            jsonPath("$.errors[0].message").value("dslContent is required and must not be blank"));
+  }
+
+  @Test
+  @DisplayName("Should include executionSimulation when eventCode is provided")
+  void shouldIncludeExecutionSimulationWhenEventCodeProvided() throws Exception {
+    // Arrange
+    String script = "event(\"approve-event\") { }";
+
+    DslRegistry registry = new DslRegistry();
+    EventDefinition evt = mockEvent("approve-event");
+    registry.register(evt);
+
+    when(scriptHost.eval(script, "input")).thenReturn(registry);
+    when(validator.validate(registry, "input")).thenReturn(List.of());
+
+    DevDslExecuteRequest request = new DevDslExecuteRequest(
+        script, "approve-event", "SUBMIT", Map.of("amount", 1000), "dev-user");
+
+    // Act & Assert
+    mockMvc
+        .perform(post("/dev/dsl/execute")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("OK"))
+        .andExpect(jsonPath("$.executionSimulation.eventCode").value("approve-event"))
+        .andExpect(jsonPath("$.executionSimulation.action").value("SUBMIT"))
+        .andExpect(jsonPath("$.executionSimulation.userId").value("dev-user"))
+        .andExpect(jsonPath("$.executionSimulation.parameters.amount").value(1000))
+        .andExpect(jsonPath("$.executionSimulation.status").value("SIMULATED"));
   }
 
   // -- Test helpers --
 
   private WorkflowDefinition mockWorkflow(String code) {
-    WorkflowDefinition wf = org.mockito.Mockito.mock(WorkflowDefinition.class);
+    WorkflowDefinition wf = Mockito.mock(WorkflowDefinition.class);
     when(wf.getCode()).thenReturn(code);
     when(wf.getStates()).thenReturn(List.of("PENDING", "APPROVED", "REJECTED"));
     when(wf.getInitial()).thenReturn("PENDING");
@@ -201,7 +280,7 @@ class DevDslControllerTest {
   }
 
   private WorkflowDefinition mockWorkflowWithBadInitial(String code) {
-    WorkflowDefinition wf = org.mockito.Mockito.mock(WorkflowDefinition.class);
+    WorkflowDefinition wf = Mockito.mock(WorkflowDefinition.class);
     when(wf.getCode()).thenReturn(code);
     when(wf.getStates()).thenReturn(List.of("A", "B"));
     when(wf.getInitial()).thenReturn("MISSING");
@@ -211,19 +290,19 @@ class DevDslControllerTest {
   }
 
   private EventDefinition mockEvent(String code) {
-    EventDefinition evt = org.mockito.Mockito.mock(EventDefinition.class);
+    EventDefinition evt = Mockito.mock(EventDefinition.class);
     when(evt.getCode()).thenReturn(code);
     return evt;
   }
 
   private TransactionDefinition mockTransaction(String code) {
-    TransactionDefinition tx = org.mockito.Mockito.mock(TransactionDefinition.class);
+    TransactionDefinition tx = Mockito.mock(TransactionDefinition.class);
     when(tx.getCode()).thenReturn(code);
     return tx;
   }
 
   private MassOperationDefinition mockMassOperation(String code) {
-    MassOperationDefinition massOp = org.mockito.Mockito.mock(MassOperationDefinition.class);
+    MassOperationDefinition massOp = Mockito.mock(MassOperationDefinition.class);
     when(massOp.getCode()).thenReturn(code);
     return massOp;
   }

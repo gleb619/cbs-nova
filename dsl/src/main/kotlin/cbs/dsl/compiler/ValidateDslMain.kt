@@ -1,5 +1,6 @@
 package cbs.dsl.compiler
 
+//TODO: Create in gradle special task and make it depends on assemble/check/test or what ever to validate what we have
 fun main() {
   val source = GiteaRulesSource(
     gitUrl = System.getenv("GITEA_URL") ?: "http://localhost:3001/cbs/cbs-rules.git",

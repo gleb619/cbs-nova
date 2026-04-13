@@ -5,9 +5,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Spring configuration class that wires BPMN-related beans. This approach is used instead of annotating
- * {@link BpmnExporter} with {@code @Service} to avoid violating the ArchUnit rule that {@code @Service} must only live
- * in {@code cbs.nova.service..}.
+ * Spring configuration class that wires BPMN-related beans. This approach is used instead of
+ * annotating {@link BpmnExporter} with {@code @Service} to avoid violating the ArchUnit rule that
+ * {@code @Service} must only live in {@code cbs.nova.service..}.
  */
 @Configuration
 public class BpmnConfig {

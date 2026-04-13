@@ -21,18 +21,20 @@ import cbs.nova.entity.WorkflowTransitionLogEntity;
 import cbs.nova.repository.EventExecutionRepository;
 import cbs.nova.repository.WorkflowExecutionRepository;
 import cbs.nova.repository.WorkflowTransitionLogRepository;
-import cbs.nova.temporal.workflow.EventWorkflow;
-import cbs.nova.temporal.workflow.EventWorkflowInput;
-import cbs.nova.temporal.workflow.WorkflowExecutionResult;
+import cbs.nova.service.EventWorkflow;
+import cbs.nova.model.EventWorkflowInput;
+import cbs.nova.model.WorkflowExecutionResult;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowFailedException;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.worker.Worker;
+import kotlin.Unit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.Map;
@@ -81,7 +83,8 @@ class EventWorkflowImplTest {
             workflowExecutionRepository,
             eventExecutionRepository,
             transitionLogRepository));
-    worker.registerActivitiesImplementations(new TransactionActivityImpl(dslRegistry));
+    worker.registerActivitiesImplementations(
+        new TransactionActivityImpl(dslRegistry, new ObjectMapper()));
     testEnv.start();
     client = testEnv.getWorkflowClient();
   }
@@ -102,10 +105,10 @@ class EventWorkflowImplTest {
 
     EventDefinition eventDef = mock(EventDefinition.class);
     when(eventDef.getCode()).thenReturn("TEST_EVENT");
-    when(eventDef.getContextBlock()).thenReturn(ctx -> kotlin.Unit.INSTANCE);
-    when(eventDef.getDisplayBlock()).thenReturn(ctx -> kotlin.Unit.INSTANCE);
+    when(eventDef.getContextBlock()).thenReturn(ctx -> Unit.INSTANCE);
+    when(eventDef.getDisplayBlock()).thenReturn(ctx -> Unit.INSTANCE);
     when(eventDef.getTransactionsBlock()).thenReturn(List.of(txDef));
-    when(eventDef.getFinishBlock()).thenReturn(ctx -> kotlin.Unit.INSTANCE);
+    when(eventDef.getFinishBlock()).thenReturn(ctx -> Unit.INSTANCE);
 
     TransitionRule rule = new TransitionRule("INIT", "DONE", Action.CLOSE, eventDef, "FAULTED");
 
@@ -147,10 +150,10 @@ class EventWorkflowImplTest {
 
     EventDefinition eventDef = mock(EventDefinition.class);
     when(eventDef.getCode()).thenReturn("TEST_EVENT");
-    when(eventDef.getContextBlock()).thenReturn(ctx -> kotlin.Unit.INSTANCE);
-    when(eventDef.getDisplayBlock()).thenReturn(ctx -> kotlin.Unit.INSTANCE);
+    when(eventDef.getContextBlock()).thenReturn(ctx -> Unit.INSTANCE);
+    when(eventDef.getDisplayBlock()).thenReturn(ctx -> Unit.INSTANCE);
     when(eventDef.getTransactionsBlock()).thenReturn(List.of(failingTx));
-    when(eventDef.getFinishBlock()).thenReturn(ctx -> kotlin.Unit.INSTANCE);
+    when(eventDef.getFinishBlock()).thenReturn(ctx -> Unit.INSTANCE);
 
     TransitionRule rule = new TransitionRule("INIT", "DONE", Action.CLOSE, eventDef, "FAULTED");
 

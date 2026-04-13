@@ -1,16 +1,16 @@
 ---
 name: kiro-task-planner
-description: Use when the user wants to plan, spec, or scaffold a new feature or task for CBS-Nova. Invokes the kiro CLI to scan the codebase and generate a structured task spec at docs/tasks/{T##-slug}.md using the project's canonical task template.
+description: Use when the user wants to plan, spec, or scaffold a new feature or task for CBS-Nova. Invokes the kiro MCP tool to scan the codebase and generate a structured task spec at docs/tasks/{T##-slug}.md using the project's canonical task template.
 ---
 
 # Skill: Kiro Task Planner
 
 ## Overview
 
-Claude invokes `~/.local/bin/kiro-cli` to scan the CBS-Nova codebase and produce a
+Gemini invokes the `kiro_run` MCP tool to scan the CBS-Nova codebase and produce a
 fully-populated task spec file following the project's canonical template.
 The result is saved to `docs/tasks/{T##-slug}.md` and is ready to hand off
-to Qwen (via `qwen-delegation` claude skill) for implementation.
+to Qwen (via `qwen-delegation` Gemini skill) for implementation.
 
 ---
 
@@ -42,153 +42,39 @@ Do not proceed until the user confirms.
 
 ---
 
-## Step 3 — Invoke Kiro CLI
+## Step 3 — Invoke Kiro CLI via MCP Tool
 
-Run the following command (replace all `{…}` placeholders with real values):
+Invoke the `kiro_run` MCP tool:
 
-```bash
-~/.local/bin/kiro-cli chat --no-interactive --trust-all-tools "You are generating a CBS-Nova task specification.
-
-Target file: docs/tasks/{T##-slug}.md
-
-Scan the entire project codebase before writing. Use real file paths — do not hallucinate paths that do not exist. Mark files that will be created as [NEW].
-
-The project uses a Gradle multi-module structure:
-- backend/         — Spring Boot app (Java 25, Lombok, MapStruct)
-- starter/         — Library JAR (auto-configured, JPA entities, Flyway migrations)
-- client/          — Generated Feign + TypeScript clients
-- frontend/        — Nuxt 3 SPA (Vue 3, Tailwind v4, piqure DI)
-- frontend-plugin/ — Nuxt layer (shared domain types, ports, presentational components)
-- dsl/             — Kotlin Script DSL module
-
-Read the existing task template at docs/task-template.md.
-Read 2–3 existing task files in docs/tasks/ to learn the format and naming conventions.
-Then write the spec for:
-
-Feature: {Feature Name}
-
-The output markdown file MUST follow this exact structure:
-
-# Task: {T##} — {Feature Name}
-
-> This file is the spec for implementation. Be exhaustive — you have no other context beyond this file.
-
----
-
-## Identity
-
-| Field      | Value                        |
-|------------|------------------------------|
-| Task ID    | {T##}                        |
-| Title      | {Feature Name}               |
-| Phase      | 0-Infra / 1-DSL / 2-DB / 3-Engine / 4-MassOp / 5-BPMN / 6-Dev / 7-FE |
-| Blocked By | T__, T__ (must be DONE before starting) |
-| Modules    | backend / starter / dsl / frontend / frontend-plugin / infra |
-
----
-
-## Context
-
-2–4 sentences explaining WHY this task exists. Reference any relevant existing task IDs.
-
-**Current state:** What already exists that this task builds on.
-
-**After this task:** What capabilities are unlocked.
-
----
-
-## Scope
-
-### Files to Create
-
-\`\`\`
-path/to/NewFile.java   — purpose [NEW]
-\`\`\`
-
-### Files to Modify
-
-\`\`\`
-path/to/ExistingFile.java   — what changes (one line description)
-\`\`\`
-
-### Files NOT to Touch
-
-\`\`\`
-# List sensitive files that must not be changed
-\`\`\`
-
----
-
-## Requirements
-
-### Functional Requirements
-
-1. (concrete, verifiable behavior)
-2.
-3.
-
-### Non-Functional Requirements
-
-- **Testing:** Unit tests in backend/src/test/ using @WebMvcTest or @SpringBootTest
-- **Code style:** Google Java Format (./gradlew spotlessApply); Kotlin: standard formatting
-- **No new external deps** unless listed below
-
-### Dependencies to Add
-
-\`\`\`toml
-# gradle/libs.versions.toml — only if new libraries are needed
-\`\`\`
-
----
-
-## Implementation Notes
-
-### Key Classes / Interfaces
-
-| Class | Package | Extends / Implements | Notes |
-|-------|---------|----------------------|-------|
-
-### Method Signatures (critical ones)
-
-\`\`\`java
-// Exact signatures for the most important methods
-\`\`\`
-
-### Error Cases
-
-| Condition | Expected behavior |
-|-----------|-------------------|
-
-### Conventions to Follow
-
-- Naming: *Entity, *Repository, *Service, *Controller, *Dto (ArchUnit rules in MainConventions.java)
-- Test method naming: shouldXxxWhenYyy + @DisplayName required
-- Use @MockitoBean NOT @MockBean (Spring Boot 4.x)
-- Entities detected via NovaAutoConfiguration @EntityScan(\"cbs.nova.entity\")
-
----
-
-## Acceptance Criteria
-
-- [ ] ./gradlew :backend:build passes (no compile errors)
-- [ ] ./gradlew :backend:test passes (all unit tests green)
-- [ ] ./gradlew spotlessApply && ./gradlew checkstyleMain passes
-- [ ] (task-specific) curl or test output demonstrating the feature works
-
----
-
-## Out of Scope
-
-- (list what this task explicitly does NOT include)
-
-Output ONLY the markdown file at docs/tasks/{T##-slug}.md. No preamble, no explanation, no extra text."
 ```
+Tool: kiro_run
+Arguments:
+  args: [
+    "chat",
+    "--no-interactive",
+    "--trust-all-tools",
+    "<full prompt as a single string>"
+  ]
+  task_id: "{T##-slug}"
+```
+
+The prompt string should instruct Kiro to:
+
+1. Scan the entire project codebase before writing.
+2. Use real file paths — do not hallucinate paths that do not exist. Mark files that will be created as `[NEW]`.
+3. Read the existing task template at `docs/task-template.md`.
+4. Read 2–3 existing task files in `docs/tasks/` to learn the format and naming conventions.
+5. Write the spec for the requested feature following the canonical task template structure.
+
+> The `kiro_run` MCP tool spawns `~/.local/bin/kiro-cli` directly and streams output.
+> It returns the full stdout/stderr of the Kiro execution as its result.
+> If `~/.local/bin/kiro-cli` is not found, the tool will return an error.
 
 ---
 
 ## Step 4 — Verify Output
 
-After kiro writes the file:
+After Gemini writes the file:
 
 - [ ] File exists at `docs/tasks/{T##-slug}.md`
 - [ ] All listed file paths exist in the repo OR are explicitly marked `[NEW]`

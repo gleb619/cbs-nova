@@ -10,7 +10,7 @@ import cbs.nova.model.EventExecutionRequest;
 import cbs.nova.model.EventExecutionResponse;
 import cbs.nova.model.exception.EntityNotFoundException;
 import cbs.nova.service.EventService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,10 +22,9 @@ import org.springframework.http.MediaType;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.ObjectMapper;
 
-import java.util.Map;
-
-@WebMvcTest({EventController.class, EventExceptionHandler.class})
+@WebMvcTest({EventController.class})
 @Import(EventControllerTest.TestConfig.class)
 class EventControllerTest {
 

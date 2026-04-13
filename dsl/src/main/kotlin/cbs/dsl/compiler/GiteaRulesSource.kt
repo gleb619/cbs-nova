@@ -2,6 +2,8 @@ package cbs.dsl.compiler
 
 import java.io.File
 
+//@depricated We doesnt need to handle git logic here, only pure dsl work allowed
+@Deprecated(message = "For removal", level = DeprecationLevel.WARNING)
 class GiteaRulesSource(
   private val gitUrl: String,
   private val branch: String,

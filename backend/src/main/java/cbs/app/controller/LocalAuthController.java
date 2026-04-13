@@ -35,7 +35,7 @@ import java.util.Objects;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/public/auth")
-@ConditionalOnProperty(name = "keycloak.enabled", havingValue = "false")
+@ConditionalOnProperty(name = "app.keycloak.enabled", havingValue = "false")
 public class LocalAuthController {
 
   /**

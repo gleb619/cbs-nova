@@ -53,10 +53,10 @@ from [task-template.md](task-template.md), delegate to Qwen (see `/qwen-delegati
 | T18 | BPMN: StaticBpmnGenerator + BpmnExporter                                                                    | 5-BPMN   | DONE   | T05           | T19                |
 | T19 | BpmnController: GET /api/workflows/{code}/bpmn                                                              | 5-BPMN   | DONE   | T18           | T22                |
 | T20 | DevDslController: POST /dev/dsl/execute @Profile("dev")                                                     | 6-Dev    | DONE   | T05, T06      | —                  |
-| T21 | Frontend: execution list + detail page                                                                      | 7-FE     | TODO   | T13           | T22, T24           |
-| T22 | Frontend: BPMN viewer (bpmn-js integration)                                                                 | 7-FE     | TODO   | T19, T21      | —                  |
-| T23 | Frontend: MassOperation report UI                                                                           | 7-FE     | TODO   | T16           | —                  |
-| T24 | Frontend: Navigation ABAC (sidebar roles, route guard)                                                      | 7-FE     | TODO   | T21           | —                  |
+| T21 | Frontend: execution list + detail page                                                                      | 7-FE     | DONE   | T13           | T22, T24           |
+| T22 | Frontend: BPMN viewer (bpmn-js integration)                                                                 | 7-FE     | DONE   | T19, T21      | —                  |
+| T23 | Frontend: MassOperation report UI                                                                           | 7-FE     | DONE   | T16           | —                  |
+| T24 | Frontend: Navigation ABAC (sidebar roles, route guard)                                                      | 7-FE     | DONE   | T21           | —                  |
 
 ---
 

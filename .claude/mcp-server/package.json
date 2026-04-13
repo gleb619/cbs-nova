@@ -1,0 +1,14 @@
+{
+  "name": "cbs-nova-agent-tools",
+  "version": "1.0.0",
+  "description": "MCP server exposing qwen_run and kiro_run tools for CBS-Nova agent orchestration",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.1",
+    "zod": "^3.22.0"
+  }
+}

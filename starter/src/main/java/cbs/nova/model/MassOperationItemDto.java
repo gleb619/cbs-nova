@@ -6,7 +6,7 @@ import lombok.Value;
 import java.time.OffsetDateTime;
 
 @Value
-@Builder
+@Builder(toBuilder = true)
 public class MassOperationItemDto {
 
   Long id;

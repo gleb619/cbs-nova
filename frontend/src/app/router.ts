@@ -4,6 +4,7 @@ import { homeRoutes } from '@/home/application/HomeRouter';
 import IndexPageVue from '@cbs/admin-plugin/composables/auth/IndexPageVue.vue';
 import LoginPageVue from '@cbs/admin-plugin/composables/auth/LoginPageVue.vue';
 import { useAuth } from '@cbs/admin-plugin/composables/auth/useAuth';
+import { useAbac } from '@/home/infrastructure/primary/sidebar/useAbac';
 import { createRouter, createWebHistory } from 'vue-router';
 
 export const routes = [
@@ -58,6 +59,13 @@ router.beforeEach(async to => {
     }
     await auth.login();
     return false;
+  }
+
+  // ABAC: check required roles for the route
+  const abac = useAbac();
+  const requiredRoles = to.meta.requiredRoles as string[] | undefined;
+  if (requiredRoles && !abac.hasRole(requiredRoles)) {
+    return { name: 'Homepage' };
   }
 
   return true;

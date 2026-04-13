@@ -7,8 +7,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Generates a static BPMN 2.0 XML representation from a {@link WorkflowDefinition}. No Spring annotations — plain
- * function wired via {@link BpmnConfig}.
+ * Generates a static BPMN 2.0 XML representation from a {@link WorkflowDefinition}. No Spring
+ * annotations — plain function wired via {@link BpmnConfig}.
  */
 public class StaticBpmnGenerator {
 

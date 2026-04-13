@@ -17,6 +17,7 @@ import AppVue from './src/app/AppVue.vue';
 const ready = ref(false);
 
 onMounted(async () => {
+  // Import main.ts to initialize i18next and pinia
   await import('./src/app/main');
   ready.value = true;
 });

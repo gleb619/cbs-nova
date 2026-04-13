@@ -1,20 +1,18 @@
 package cbs.nova.bpmn;
 
 import cbs.dsl.runtime.DslRegistry;
+import lombok.RequiredArgsConstructor;
 
 /**
- * Spring bean that looks up a workflow by code and exports it as BPMN 2.0 XML. No Spring annotations — wired via
- * {@link BpmnConfig}.
+ * Spring bean that looks up a workflow by code and exports it as BPMN 2.0 XML. No Spring
+ * annotations — wired via {@link BpmnConfig}.
  */
+@RequiredArgsConstructor
 public class BpmnExporter {
 
   private final DslRegistry registry;
   private final StaticBpmnGenerator generator;
 
-  public BpmnExporter(DslRegistry registry, StaticBpmnGenerator generator) {
-    this.registry = registry;
-    this.generator = generator;
-  }
 
   /**
    * Exports the workflow with the given code as BPMN 2.0 XML.

@@ -1,6 +1,11 @@
 apply plugin: 'java'
 apply plugin: "io.freefair.lombok"
 
+configurations.configureEach {
+  // Use Jackson 3 (tools.jackson.*) instead
+  exclude group: "com.fasterxml.jackson"
+}
+
 java {
   toolchain {
     languageVersion = JavaLanguageVersion.of(25)

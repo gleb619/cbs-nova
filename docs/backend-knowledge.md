@@ -119,7 +119,7 @@ other app → client → backend (implementation project(":client"))
 | [`SecurityConfig.java`](../backend/src/main/java/cbs/app/config/SecurityConfig.java)               | Security filter chain, JWT decoders, CORS, local user config    |
 | [`LocalAuthController.java`](../backend/src/main/java/cbs/app/controller/LocalAuthController.java) | `POST /api/public/auth/token` — local JWT auth with RSA signing |
 | [`OpenApiConfig.java`](../backend/src/main/java/cbs/app/config/OpenApiConfig.java)                 | OpenAPI/Swagger metadata, security schemes (JWT + OAuth2)       |
-| [`application.yml`](../backend/src/main/resources/application.yml)                                 | Datasource, JPA, Flyway, logging, local-auth users              |
+| [`application.yml`](../backend/src/main/resources/application.yml)                                 | Datasource, JPA, Flyway, logging, app.local-auth users          |
 
 ### `starter/` — Reusable Library
 
@@ -153,7 +153,7 @@ other app → client → backend (implementation project(":client"))
 
 ### Local Mode (Development)
 
-When `keycloak.enabled=false` (default):
+When `app.keycloak.enabled=false` (default):
 
 1. **RSA Key Pair** — Loaded from classpath resources:
     - Private key: `classpath:local-jwt-pkcs8.pem` (PKCS#8 format)
@@ -173,7 +173,7 @@ When `keycloak.enabled=false` (default):
 
 4. **Local Users** (from [`application.yml`](../backend/src/main/resources/application.yml)):
    ```yaml
-   local-auth:
+   app.local-auth:
      users:
        - username: admin1
          password: admin1
@@ -185,7 +185,7 @@ When `keycloak.enabled=false` (default):
 
 ### Keycloak Mode (Production)
 
-When `keycloak.enabled=true`:
+When `app.keycloak.enabled=true`:
 
 - `JwtDecoder` is configured via `keycloak.auth-server-url` + `keycloak.realm`
 - `NimbusJwtDecoder` fetches JWKS from Keycloak issuer URL
@@ -206,20 +206,20 @@ These endpoints do **not** require authentication:
 
 [`SecurityConfig.java`](../backend/src/main/java/cbs/app/config/SecurityConfig.java) breakdown:
 
-| Bean                      | Condition                | Purpose                                                              |
-|---------------------------|--------------------------|----------------------------------------------------------------------|
-| `securityFilterChain`     | Always                   | Disables CSRF, enables CORS, stateless sessions, JWT resource server |
-| `corsConfigurationSource` | Always                   | Allows `http://localhost:3000` with credentials                      |
-| `jwtDecoderKeycloak`      | `keycloak.enabled=true`  | Fetches JWKS from Keycloak                                           |
-| `jwtDecoderLocal`         | `keycloak.enabled=false` | Loads RSA public key from classpath                                  |
-| `userDetailsService`      | `keycloak.enabled=false` | In-memory users from `local-auth.users`                              |
-| `authenticationManager`   | `keycloak.enabled=false` | `DaoAuthenticationProvider` with in-memory UDS                       |
-| `passwordEncoder`         | `keycloak.enabled=false` | `NoOpPasswordEncoder` (plaintext passwords for local dev)            |
+| Bean                      | Condition                    | Purpose                                                              |
+|---------------------------|------------------------------|----------------------------------------------------------------------|
+| `securityFilterChain`     | Always                       | Disables CSRF, enables CORS, stateless sessions, JWT resource server |
+| `corsConfigurationSource` | Always                       | Allows `http://localhost:3000` with credentials                      |
+| `jwtDecoderKeycloak`      | `app.keycloak.enabled=true`  | Fetches JWKS from Keycloak                                           |
+| `jwtDecoderLocal`         | `app.keycloak.enabled=false` | Loads RSA public key from classpath                                  |
+| `userDetailsService`      | `app.keycloak.enabled=false` | In-memory users from `app.local-auth.users`                          |
+| `authenticationManager`   | `app.keycloak.enabled=false` | `DaoAuthenticationProvider` with in-memory UDS                       |
+| `passwordEncoder`         | `app.keycloak.enabled=false` | `NoOpPasswordEncoder` (plaintext passwords for local dev)            |
 
 **Key decisions:**
 
 - **Stateless sessions** — no HTTP session, every request requires JWT
-- **`@ConditionalOnProperty`** — switch between local/Keycloak via `keycloak.enabled`
+- **`@ConditionalOnProperty`** — switch between local/Keycloak via `app.keycloak.enabled`
 - **No password encoding in dev** — `NoOpPasswordEncoder` for simplicity
 
 ---

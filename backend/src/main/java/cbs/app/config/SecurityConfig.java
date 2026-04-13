@@ -70,7 +70,7 @@ public class SecurityConfig {
   }
 
   @Bean("jwtDecoder")
-  @ConditionalOnProperty(name = "keycloak.enabled", havingValue = "true", matchIfMissing = true)
+  @ConditionalOnProperty(name = "app.keycloak.enabled", havingValue = "true", matchIfMissing = true)
   public JwtDecoder jwtDecoderKeycloak(
       @Value("${keycloak.auth-server-url:http://localhost:9080}") String keycloakServerUrl,
       @Value("${keycloak.realm:cbsnova}") String keycloakRealm) {
@@ -89,7 +89,7 @@ public class SecurityConfig {
    * @return the configured JwtDecoder
    */
   @Bean("jwtDecoder")
-  @ConditionalOnProperty(name = "keycloak.enabled", havingValue = "false")
+  @ConditionalOnProperty(name = "app.keycloak.enabled", havingValue = "false")
   public JwtDecoder jwtDecoderLocal(
       @Value("classpath:local-jwt-public.pem") Resource publicKeyResource) throws Exception {
     String key = new String(publicKeyResource.getInputStream().readAllBytes())
@@ -105,7 +105,7 @@ public class SecurityConfig {
   }
 
   @Bean
-  @ConditionalOnProperty(name = "keycloak.enabled", havingValue = "false")
+  @ConditionalOnProperty(name = "app.keycloak.enabled", havingValue = "false")
   public UserDetailsService userDetailsService(LocalAuthProperties props) {
     var users = props.users().stream()
         .map(u -> User.withUsername(u.username())
@@ -117,7 +117,7 @@ public class SecurityConfig {
   }
 
   @Bean
-  @ConditionalOnProperty(name = "keycloak.enabled", havingValue = "false")
+  @ConditionalOnProperty(name = "app.keycloak.enabled", havingValue = "false")
   public AuthenticationManager authenticationManager(
       UserDetailsService uds, PasswordEncoder encoder) {
     var provider = new DaoAuthenticationProvider(uds);
@@ -126,12 +126,12 @@ public class SecurityConfig {
   }
 
   @Bean
-  @ConditionalOnProperty(name = "keycloak.enabled", havingValue = "false")
+  @ConditionalOnProperty(name = "app.keycloak.enabled", havingValue = "false")
   public PasswordEncoder passwordEncoder() {
     return NoOpPasswordEncoder.getInstance();
   }
 
-  @ConfigurationProperties(prefix = "local-auth")
+  @ConfigurationProperties(prefix = "app.local-auth")
   public record LocalAuthProperties(List<LocalUser> users) {
 
   }

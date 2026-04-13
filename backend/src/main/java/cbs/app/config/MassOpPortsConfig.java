@@ -9,6 +9,7 @@ import cbs.nova.service.MassOpTriggerPort;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -19,11 +20,11 @@ public class MassOpPortsConfig {
   private final WorkflowClient workflowClient;
 
   @Bean
-  public MassOpTriggerPort massOpTriggerPort() {
+  public MassOpTriggerPort massOpTriggerPort(@Value("${app.temporal.task-queue}") String taskQueue) {
     return (massOpCode, performedBy, dslVersion, contextJson, workflowId) -> {
       WorkflowOptions options = WorkflowOptions.newBuilder()
           .setWorkflowId(workflowId)
-          .setTaskQueue("WORKFLOW_TASK_QUEUE")
+          .setTaskQueue(taskQueue)
           .build();
       MassOpWorkflow stub = workflowClient.newWorkflowStub(MassOpWorkflow.class, options);
       WorkflowClient.start(

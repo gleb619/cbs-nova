@@ -11,6 +11,7 @@ archunit = "1.4.1"
 temporal = "1.27.0"
 # Used in `gradle/checkstyle.gradle`
 checkstyle = "13.4.0"
+pmd = "6.55.0"
 
 # plugins
 spring-boot = "4.0.4"
@@ -24,6 +25,7 @@ freefair = "9.2.0"
 [libraries]
 # -- Spring Boot starters (managed by Spring Boot BOM) --
 spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
+spring-boot-starter-json = { module = "org.springframework.boot:spring-boot-starter-json" }
 spring-boot-starter-data-jpa = { module = "org.springframework.boot:spring-boot-starter-data-jpa" }
 spring-boot-starter-security = { module = "org.springframework.boot:spring-boot-starter-security" }
 spring-boot-starter-oauth2-resource-server = { module = "org.springframework.boot:spring-boot-starter-oauth2-resource-server" }
@@ -86,7 +88,7 @@ archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref
 
 
 [bundles]
-spring-web = ["spring-boot-starter-web", "spring-boot-starter-actuator", "spring-boot-starter-validation"]
+spring-web = ["spring-boot-starter-web", "spring-boot-starter-actuator", "spring-boot-starter-validation", "spring-boot-starter-json"]
 spring-data = ["spring-boot-starter-data-jpa", "postgresql", "spring-boot-starter-flyway", "flyway-database-postgresql"]
 spring-security = ["spring-boot-starter-security", "spring-boot-starter-oauth2-resource-server"]
 spring-test = ["spring-boot-starter-test", "spring-boot-starter-restclient-test", "spring-boot-starter-webmvc-test", "spring-security-test"]

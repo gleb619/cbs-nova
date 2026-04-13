@@ -33,6 +33,7 @@ replay_pid*
 /build/
 /.vscode/settings.json
 node_modules
+/.kotlin/
 
 # project
 /.kilo/
@@ -41,6 +42,8 @@ node_modules
 /.qwen/settings.json
 /.qwen/settings.json.orig
 /.claude/settings.json
+/.mcp.json
+/arms_cache/config/
 
 /docs/results/*
 /docs/tasks/*
@@ -91,4 +94,3 @@ node_modules
 /dsl/.project
 /dsl/.settings/
 /dsl/bin/
-

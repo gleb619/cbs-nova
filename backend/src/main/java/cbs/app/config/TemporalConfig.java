@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class TemporalConfig {
 
-  @Value("${temporal.service-address:127.0.0.1:7233}")
+  @Value("${app.temporal.service-address:127.0.0.1:7233}")
   private String serviceAddress;
 
   @Bean(destroyMethod = "shutdown")

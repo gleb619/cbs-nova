@@ -9,7 +9,7 @@
         <div class="px-7 py-8">
           <!-- Logo + Title -->
           <div class="mb-7 flex flex-col items-center text-center gap-1">
-            <div class="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center shadow shadow-primary-300 mb-2">
+            <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow shadow-primary-300 mb-2">
               <img src="/app-icon-64.png" alt="CBS Nova" class="w-10 h-10 object-contain non-touchable" draggable="false" />
             </div>
             <h1 class="text-xl font-extrabold text-neutral-900 tracking-tight">CBS Nova</h1>

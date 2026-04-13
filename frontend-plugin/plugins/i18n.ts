@@ -1,7 +1,7 @@
-import { defineNuxtPlugin } from 'nuxt/app';
 import i18next from 'i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import I18NextVue from 'i18next-vue';
+import { defineNuxtPlugin } from 'nuxt/app';
 
 export default defineNuxtPlugin(nuxtApp => {
   void i18next.use(LanguageDetector).init({

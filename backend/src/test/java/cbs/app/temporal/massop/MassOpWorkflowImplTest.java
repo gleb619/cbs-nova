@@ -21,12 +21,14 @@ import io.temporal.client.WorkflowFailedException;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.worker.Worker;
+import kotlin.Unit;
 import kotlin.jvm.functions.Function1;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.Map;
@@ -56,9 +58,10 @@ class MassOpWorkflowImplTest {
     Worker worker = testEnv.newWorker(TASK_QUEUE);
     worker.registerWorkflowImplementationFactory(
         MassOpWorkflow.class,
-        () -> new MassOpWorkflowImpl(dslRegistry, executionRepository, itemRepository));
-    worker.registerActivitiesImplementations(
-        new MassOpItemActivityImpl(dslRegistry, new com.fasterxml.jackson.databind.ObjectMapper()));
+        () -> new MassOpWorkflowImpl(
+            dslRegistry, executionRepository, itemRepository, new ObjectMapper()));
+    worker.registerActivitiesImplementations(new MassOpItemActivityImpl(
+        dslRegistry, new ObjectMapper(), executionRepository, itemRepository));
     testEnv.start();
   }
 
@@ -87,18 +90,18 @@ class MassOpWorkflowImplTest {
     when(def.getLock()).thenReturn(lock);
 
     @SuppressWarnings("unchecked")
-    Function1<MassOperationContext, kotlin.Unit> contextBlock =
-        (Function1<MassOperationContext, kotlin.Unit>) mock(Function1.class);
+    Function1<MassOperationContext, Unit> contextBlock =
+        (Function1<MassOperationContext, Unit>) mock(Function1.class);
     when(def.getContextBlock()).thenReturn(contextBlock);
 
     @SuppressWarnings("unchecked")
-    Function1<MassOperationContext, kotlin.Unit> itemBlock =
-        (Function1<MassOperationContext, kotlin.Unit>) mock(Function1.class);
+    Function1<MassOperationContext, Unit> itemBlock =
+        (Function1<MassOperationContext, Unit>) mock(Function1.class);
     if (itemBlockThrows) {
       when(itemBlock.invoke(any(MassOperationContext.class)))
           .thenThrow(new RuntimeException("item failed"));
     } else {
-      when(itemBlock.invoke(any(MassOperationContext.class))).thenReturn(kotlin.Unit.INSTANCE);
+      when(itemBlock.invoke(any(MassOperationContext.class))).thenReturn(Unit.INSTANCE);
     }
     when(def.getItemBlock()).thenReturn(itemBlock);
 
@@ -177,7 +180,8 @@ class MassOpWorkflowImplTest {
 
     // Register a custom activity that fails on the second item
     MassOpItemActivityImpl failingActivity =
-        new MassOpItemActivityImpl(dslRegistry, new com.fasterxml.jackson.databind.ObjectMapper()) {
+        new MassOpItemActivityImpl(
+            dslRegistry, new ObjectMapper(), executionRepository, itemRepository) {
           private int callCount = 0;
 
           @Override
@@ -193,7 +197,8 @@ class MassOpWorkflowImplTest {
     Worker worker = testEnv.newWorker(TASK_QUEUE);
     worker.registerWorkflowImplementationFactory(
         MassOpWorkflow.class,
-        () -> new MassOpWorkflowImpl(dslRegistry, executionRepository, itemRepository));
+        () -> new MassOpWorkflowImpl(
+            dslRegistry, executionRepository, itemRepository, new ObjectMapper()));
     worker.registerActivitiesImplementations(failingActivity);
     testEnv.start();
 

@@ -1,8 +1,8 @@
 package cbs.nova.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.security.SecureRandom;
+import java.util.Map.Entry;
+import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -15,12 +15,13 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class ContextEncryptionService {
 
-  static final Set<String> SENSITIVE_FIELD_NAMES =
-      Set.of("pan", "cvv", "pin", "password", "secret");
   private static final String AES_GCM_NO_PADDING = "AES/GCM/NoPadding";
   private static final int GCM_IV_LENGTH_BYTES = 12;
   private static final int GCM_TAG_LENGTH_BITS = 128;
@@ -38,17 +39,19 @@ public class ContextEncryptionService {
   }
 
   public String encrypt(Map<String, Object> context) {
-    Map<String, Object> mutableContext = new HashMap<>(context);
-    for (String fieldName : SENSITIVE_FIELD_NAMES) {
-      if (mutableContext.containsKey(fieldName)
-          && mutableContext.get(fieldName) != null
-          && mutableContext.get(fieldName) instanceof String value) {
-        mutableContext.put(fieldName, encryptValue(value));
+    Map<String, Object> mutableContext = new HashMap<>();
+    for (Map.Entry<String, Object> item : context.entrySet()) {
+      Object value = item.getValue();
+      if (value instanceof String s) {
+        mutableContext.put(item.getKey(), encryptValue(s));
+      } else {
+        //TODO: use jackson here
+        mutableContext.put(item.getKey(), encryptValue(value.toString()));
       }
     }
     try {
       return objectMapper.writeValueAsString(mutableContext);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new IllegalStateException("Failed to serialize context to JSON", e);
     }
   }
@@ -58,15 +61,17 @@ public class ContextEncryptionService {
     try {
       context = objectMapper.readValue(contextJson, new TypeReference<>() {
       });
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new IllegalStateException("Failed to deserialize context from JSON", e);
     }
-    Map<String, Object> decrypted = new HashMap<>(context);
-    for (String fieldName : SENSITIVE_FIELD_NAMES) {
-      if (decrypted.containsKey(fieldName)
-          && decrypted.get(fieldName) instanceof String value
-          && value.startsWith(ENC_PREFIX)) {
-        decrypted.put(fieldName, decryptValue(value));
+    Map<String, Object> decrypted = new HashMap<>();
+    for (Map.Entry<String, Object> item : context.entrySet()) {
+      Object value = item.getValue();
+      if (value instanceof String s) {
+        decrypted.put(item.getKey(), decryptValue(s));
+      } else {
+        //TODO: use jackson here
+        decrypted.put(item.getKey(), decryptValue(value.toString()));
       }
     }
     return decrypted;
@@ -79,7 +84,7 @@ public class ContextEncryptionService {
     initKeyIfNeeded();
     try {
       byte[] iv = new byte[GCM_IV_LENGTH_BYTES];
-      java.security.SecureRandom random = new java.security.SecureRandom();
+      SecureRandom random = new SecureRandom();
       random.nextBytes(iv);
 
       Cipher cipher = Cipher.getInstance(AES_GCM_NO_PADDING);
@@ -130,7 +135,7 @@ public class ContextEncryptionService {
       if (keyBytes.length != 32) {
         throw new IllegalStateException("Invalid encryption key: must be 32-byte Base64");
       }
-      secretKey = new javax.crypto.spec.SecretKeySpec(keyBytes, "AES");
+      secretKey = new SecretKeySpec(keyBytes, "AES");
       keyInitialized = true;
     } catch (IllegalArgumentException e) {
       throw new IllegalStateException("Invalid encryption key: must be 32-byte Base64", e);

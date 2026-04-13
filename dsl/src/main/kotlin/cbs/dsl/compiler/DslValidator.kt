@@ -6,6 +6,7 @@ import cbs.dsl.api.TransitionRule
 import cbs.dsl.api.WorkflowDefinition
 import cbs.dsl.runtime.DslRegistry
 
+//TODO: Call method on gradle compilation stage
 class DslValidator {
   fun validate(registry: DslRegistry, fileName: String): List<ValidationError> {
     val errors = mutableListOf<ValidationError>()

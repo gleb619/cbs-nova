@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Profile("dev")
@@ -28,12 +29,17 @@ public class DevDslController {
 
   @PostMapping(
       value = "/execute",
-      consumes = MediaType.TEXT_PLAIN_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<?> execute(@RequestBody String scriptContent) {
+  public ResponseEntity<?> execute(@RequestBody DevDslExecuteRequest request) {
+    if (request.dslContent() == null || request.dslContent().isBlank()) {
+      var error = new ValidationErrorDto("input", "dslContent is required and must not be blank");
+      return ResponseEntity.badRequest().body(new DslExecuteErrorDto("INVALID", List.of(error)));
+    }
+
     DslRegistry registry;
     try {
-      registry = scriptHost.eval(scriptContent, "input");
+      registry = scriptHost.eval(request.dslContent(), "input");
     } catch (IllegalStateException e) {
       log.warn("DSL script evaluation failed: {}", e.getMessage());
       var error = new ValidationErrorDto("input", e.getMessage());
@@ -48,6 +54,21 @@ public class DevDslController {
           .toList();
       return ResponseEntity.unprocessableEntity()
           .body(new DslExecuteErrorDto("INVALID", errorDtos));
+    }
+
+    ExecutionSimulationDto executionSimulation = null;
+    if (request.eventCode() != null && !request.eventCode().isBlank()) {
+      executionSimulation = new ExecutionSimulationDto(
+          request.eventCode(),
+          request.action(),
+          request.userId(),
+          request.eventParameters(),
+          "SIMULATED");
+      log.info(
+          "DSL execution simulated: eventCode={}, action={}, userId={}",
+          request.eventCode(),
+          request.action(),
+          request.userId());
     }
 
     List<WorkflowSummaryDto> workflows = registry.getWorkflows().values().stream()
@@ -67,8 +88,17 @@ public class DevDslController {
         .map(m -> new CodeDto(m.getCode()))
         .toList();
 
-    return ResponseEntity.ok(
-        new DslExecuteResultDto("OK", workflows, events, transactions, massOperations));
+    return ResponseEntity.ok(new DslExecuteResultDto(
+        "OK", workflows, events, transactions, massOperations, executionSimulation));
+  }
+
+  record DevDslExecuteRequest(
+      String dslContent,
+      String eventCode,
+      String action,
+      Map<String, Object> eventParameters,
+      String userId) {
+
   }
 
   record DslExecuteResultDto(
@@ -76,7 +106,8 @@ public class DevDslController {
       List<WorkflowSummaryDto> workflows,
       List<CodeDto> events,
       List<CodeDto> transactions,
-      List<CodeDto> massOperations) {
+      List<CodeDto> massOperations,
+      ExecutionSimulationDto executionSimulation) {
 
   }
 
@@ -86,6 +117,15 @@ public class DevDslController {
   }
 
   record CodeDto(String code) {
+
+  }
+
+  record ExecutionSimulationDto(
+      String eventCode,
+      String action,
+      String userId,
+      Map<String, Object> parameters,
+      String status) {
 
   }
 

@@ -4,7 +4,7 @@ import cbs.dsl.api.EventDefinition;
 import cbs.dsl.api.WorkflowDefinition;
 import cbs.nova.model.EventExecutionRequest;
 import cbs.nova.model.EventExecutionResponse;
-import cbs.nova.temporal.workflow.WorkflowExecutionResult;
+import cbs.nova.model.WorkflowExecutionResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -14,6 +14,8 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+//TODO: incorrectly implemented
+@Deprecated(forRemoval = true)
 public class EventService {
 
   private final WorkflowResolver workflowResolver;
@@ -21,6 +23,8 @@ public class EventService {
   private final ContextEncryptionService contextEncryptionService;
   private final WorkflowExecutor workflowExecutor;
 
+  //TODO: incorrectly implemented
+  @Deprecated(forRemoval = true)
   public EventExecutionResponse execute(EventExecutionRequest request) {
     log.debug(
         "Executing event: workflow={}, event={}", request.workflowCode(), request.eventCode());
