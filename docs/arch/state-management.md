@@ -112,6 +112,19 @@ Temporal holds only:
 
 All real state lives in PostgreSQL.
 
+## 8.2.1 DSL Artifact Provenance (Narrative)
+
+No schema changes are required for this step. Provenance is tracked through existing `dsl_version` fields and
+runtime metadata.
+
+- `dsl_version` in execution tables remains the primary persisted reference.
+- Runtime metadata must additionally include:
+    - DSL source repository URL (Gitea),
+    - resolved source ref (branch/tag/commit),
+    - compiled artifact coordinates/version used by strict mode.
+- In lenient development mode, executions should be marked as non-compiled source execution in logs/telemetry while
+  preserving the same `dsl_version` compatibility contract.
+
 ## 8.3 Context Evaluation (Pre-Temporal)
 
 1. Load accumulated `workflow_execution.context` (decrypt, deserialize)

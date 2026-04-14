@@ -1,15 +1,11 @@
 <script lang="ts" setup>
-import { ref, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import Navbar from './Navbar.vue';
 import Sidebar from './Sidebar.vue';
 
 const route = useRoute();
 const sidebarCollapsed = ref(false);
-
-watch(() => route.fullPath, (newVal) => {
-  console.log('[HomepageVue] route.fullPath changed to:', newVal);
-}, { immediate: true });
 
 const currentRouteName = (): string | null => {
   if (route.name === 'Settings') return 'Settings';
