@@ -400,7 +400,7 @@ cbs-rules Gitea: push to branch
         ├─ backend: downloadDsl (JGit)
         │    └─ Clone/pull DSL branch from cbs-rules (fallback to main)
         │
-        ├─ dsl/dsl-compiler: compileDsl
+        ├─ dsl: compileDsl
         │    ├─ Compile all .kts files
         │    ├─ Resolve all #import declarations
         │    ├─ Semantic validation:
@@ -410,9 +410,6 @@ cbs-rules Gitea: push to branch
         │    │    ├─ All condition references resolve
         │    │    └─ All transaction references resolve to known beans or DSL objects
         │    └─ Produce: dsl-rules-{version}.jar
-        │
-        ├─ dsl/dsl-compiler: publishDslToMavenLocal
-        │    └─ Publish dsl-rules-{version}.jar to local Maven cache
         │
         ├─ backend: buildApp
         │    └─ Resolve dsl-rules artifact as runtimeOnly dependency
@@ -543,15 +540,14 @@ Terminal states map to `<endEvent>`. FAULTED state maps to `<boundaryErrorEvent>
 
 ## 14. Module Structure
 
-| Module                | Description                                                                                                                                                         |
-|-----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `app`                 | Spring Boot entry point (Java 25). Controllers, services, repositories, Temporal client wiring.                                                                     |
-| `dsl/dsl-api`         | Shared DSL contracts and context interfaces used by both compiled runtime and lenient dev execution paths.                                                          |
-| `dsl/dsl-compiler`    | Compiler/validator module: `.kts` → Java classes/JAR. Provides `compileDsl` and publish-to-local tasks used by backend build/runtime pipeline.                      |
-| `dsl/dsl-runtime`     | Runtime integration module. In production it loads compiled DSL artifacts; in development it provides lenient non-compiled `.kts` execution path for fast feedback. |
-| `temporal-core`       | Temporal workflow and activity base classes (Java). `EventWorkflow`, `TransactionActivity`, `MassOpWorkflow`, `MassOpItemActivity`.                                 |
-| `bpmn-export`         | Static BPMN XML generation from DSL model (`BpmnExporter`, `StaticBpmnGenerator`, `DynamicBpmnGenerator`).                                                          |
-| `mass-operation-core` | MassOperation Temporal workflow + activity + scheduler. Extracted as a separate module in v0.5.                                                                     |
+| Module                | Description                                                                                                                         |
+|-----------------------|-------------------------------------------------------------------------------------------------------------------------------------|
+| `app`                 | Spring Boot entry point (Java 25). Controllers, services, repositories, Temporal client wiring.                                     |
+| `dsl-api`             | Java interfaces, records, and POJOs — shared contract between `dsl` and `backend`. No Kotlin, no runtime logic.                     |
+| `dsl`                 | Kotlin DSL logic: builders, registry, stub workflow generator, lenient dev evaluator. Implements `dsl-api` contracts.               |
+| `temporal-core`       | Temporal workflow and activity base classes (Java). `EventWorkflow`, `TransactionActivity`, `MassOpWorkflow`, `MassOpItemActivity`. |
+| `bpmn-export`         | Static BPMN XML generation from DSL model (`BpmnExporter`, `StaticBpmnGenerator`, `DynamicBpmnGenerator`).                          |
+| `mass-operation-core` | MassOperation Temporal workflow + activity + scheduler.                                                                             |
 
 → Full file tree: [arch/module-structure.md](arch/module-structure.md)
 

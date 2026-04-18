@@ -7,10 +7,10 @@ description: Use when the user wants to plan, spec, or scaffold a new feature or
 
 ## Overview
 
-Gemini invokes the `kiro_run` MCP tool to scan the CBS-Nova codebase and produce a
+Claude invokes the `kiro_run` MCP tool to scan the CBS-Nova codebase and produce a
 fully-populated task spec file following the project's canonical template.
 The result is saved to `docs/tasks/{T##-slug}.md` and is ready to hand off
-to Qwen (via `qwen-delegation` Gemini skill) for implementation.
+to User (via `executor-delegation` Claude skill) for implementation.
 
 ---
 
@@ -74,7 +74,7 @@ The prompt string should instruct Kiro to:
 
 ## Step 4 — Verify Output
 
-After Gemini writes the file:
+After Claude writes the file:
 
 - [ ] File exists at `docs/tasks/{T##-slug}.md`
 - [ ] All listed file paths exist in the repo OR are explicitly marked `[NEW]`
@@ -95,7 +95,7 @@ If any check fails:
 ## Step 5 — Announce Result
 
 Tell the user:
-> "Task spec created at `docs/tasks/{T##-slug}.md`. Ready to delegate to Qwen with the `qwen-delegation` skill."
+> "Task spec created at `docs/tasks/{T##-slug}.md`. Ready to delegate to User with the `executor-delegation` skill."
 
 ---
 

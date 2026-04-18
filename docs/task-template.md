@@ -1,7 +1,7 @@
 # Task: {task-id}-{slug}
 
 > Copy this file to `docs/tasks/{task-id}-{slug}.md` and fill in all sections.
-> This file is the spec handed to Qwen for implementation. Be exhaustive — Qwen has no other context.
+> This file is the spec handed to User for implementation. Be exhaustive — User has no other context.
 
 ---
 
@@ -120,7 +120,7 @@ public ExecutionResult execute(EventExecutionRequest request);
 
 ## Acceptance Criteria
 
-> Qwen MUST verify each of these before marking done. Paste terminal output as evidence.
+> User MUST verify each of these before marking done. Paste terminal output as evidence.
 
 - [ ] `./gradlew :backend:build` passes (no compile errors)
 - [ ] `./gradlew :backend:test` passes (all unit tests green)

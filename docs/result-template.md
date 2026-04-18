@@ -1,6 +1,6 @@
 # Result: {task-id}-{slug}
 
-> Copy this file to `docs/results/{task-id}-{slug}.result.md` after Qwen completes the task.
+> Copy this file to `docs/results/{task-id}-{slug}.result.md` after User completes the task.
 > Fill in all sections. This is the record that allows the next session to start cleanly.
 
 ---
@@ -46,7 +46,7 @@
 
 ## Deviations from Spec
 
-> List any places where Qwen did something different from the task spec, and why.
+> List any places where User did something different from the task spec, and why.
 > If none, write "None."
 
 ---

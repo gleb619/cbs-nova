@@ -54,8 +54,7 @@ repo-root/
 ├── backend/
 │   ├── app/
 │   ├── dsl-api/
-│   ├── dsl-runtime/
-│   ├── dsl-compiler/
+│   ├── dsl/
 │   ├── temporal-core/
 │   ├── bpmn-export/
 │   └── ...
