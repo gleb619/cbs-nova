@@ -1,8 +1,7 @@
 package cbs.nova.model;
 
-import lombok.Builder;
-
 import java.time.OffsetDateTime;
+import lombok.Builder;
 
 @Builder(toBuilder = true)
 public record WorkflowExecutionDto(
@@ -15,6 +14,4 @@ public record WorkflowExecutionDto(
     String displayData,
     String performedBy,
     OffsetDateTime createdAt,
-    OffsetDateTime updatedAt) {
-
-}
+    OffsetDateTime updatedAt) {}

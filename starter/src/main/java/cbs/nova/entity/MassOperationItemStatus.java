@@ -1,8 +1,6 @@
 package cbs.nova.entity;
 
-/**
- * Represents the status of an individual item within a mass operation.
- */
+/** Represents the status of an individual item within a mass operation. */
 public enum MassOperationItemStatus {
   /** Item is waiting to be processed. */
   PENDING,

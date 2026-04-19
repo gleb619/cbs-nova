@@ -4,6 +4,8 @@ import cbs.dsl.compiler.DslScriptHost;
 import cbs.dsl.compiler.DslValidator;
 import cbs.dsl.compiler.ValidationError;
 import cbs.dsl.runtime.DslRegistry;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
@@ -13,9 +15,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Profile("dev")
@@ -97,9 +96,7 @@ public class DevDslController {
       String eventCode,
       String action,
       Map<String, Object> eventParameters,
-      String userId) {
-
-  }
+      String userId) {}
 
   record DslExecuteResultDto(
       String status,
@@ -107,33 +104,21 @@ public class DevDslController {
       List<CodeDto> events,
       List<CodeDto> transactions,
       List<CodeDto> massOperations,
-      ExecutionSimulationDto executionSimulation) {
-
-  }
+      ExecutionSimulationDto executionSimulation) {}
 
   record WorkflowSummaryDto(
-      String code, String name, List<String> states, String initial, List<String> terminalStates) {
+      String code, String name, List<String> states, String initial, List<String> terminalStates) {}
 
-  }
-
-  record CodeDto(String code) {
-
-  }
+  record CodeDto(String code) {}
 
   record ExecutionSimulationDto(
       String eventCode,
       String action,
       String userId,
       Map<String, Object> parameters,
-      String status) {
+      String status) {}
 
-  }
+  record DslExecuteErrorDto(String status, List<ValidationErrorDto> errors) {}
 
-  record DslExecuteErrorDto(String status, List<ValidationErrorDto> errors) {
-
-  }
-
-  record ValidationErrorDto(String file, String message) {
-
-  }
+  record ValidationErrorDto(String file, String message) {}
 }

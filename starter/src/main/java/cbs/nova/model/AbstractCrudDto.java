@@ -4,11 +4,7 @@ public interface AbstractCrudDto<T> {
 
   T getId();
 
-  interface AbstractCreateDto {
+  interface AbstractCreateDto {}
 
-  }
-
-  interface AbstractUpdateDto {
-
-  }
+  interface AbstractUpdateDto {}
 }

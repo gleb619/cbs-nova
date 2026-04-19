@@ -28,14 +28,14 @@ public class EventController {
   @PostMapping("/execute")
   @Operation(summary = "Execute a business event")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "Event executed successfully"),
-      @ApiResponse(responseCode = "400", description = "Bad request"),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "404", description = "Workflow or event definition not found"),
-      @ApiResponse(
-          responseCode = "422",
-          description = "Validation error or context evaluation failed"),
-      @ApiResponse(responseCode = "500", description = "Internal execution error")
+    @ApiResponse(responseCode = "200", description = "Event executed successfully"),
+    @ApiResponse(responseCode = "400", description = "Bad request"),
+    @ApiResponse(responseCode = "401", description = "Unauthorized"),
+    @ApiResponse(responseCode = "404", description = "Workflow or event definition not found"),
+    @ApiResponse(
+        responseCode = "422",
+        description = "Validation error or context evaluation failed"),
+    @ApiResponse(responseCode = "500", description = "Internal execution error")
   })
   public ResponseEntity<EventExecutionResponse> execute(
       @Valid @RequestBody EventExecutionRequest request) {

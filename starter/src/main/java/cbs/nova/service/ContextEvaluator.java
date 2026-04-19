@@ -25,7 +25,7 @@ public class ContextEvaluator {
         0L,
         request.performedBy(),
         "dev", // TODO(T06): replace with DslRegistry.getDslVersion()
-        (Map<String, Object>) request.parameters());
+        request.parameters());
 
     eventDef.getContextBlock().invoke(enrichmentContext);
 

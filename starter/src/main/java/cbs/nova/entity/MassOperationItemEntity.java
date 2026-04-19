@@ -32,9 +32,7 @@ public class MassOperationItemEntity {
   @Column(name = "mass_operation_execution_id")
   private Long massOperationExecutionId;
 
-  /**
-   * @deprecated use #{@link #massOperationExecutionId} instead
-   */
+  /** @deprecated use #{@link #massOperationExecutionId} instead */
   @Transient
   @Deprecated(forRemoval = true)
   private transient MassOperationExecutionEntity massOperationExecution;

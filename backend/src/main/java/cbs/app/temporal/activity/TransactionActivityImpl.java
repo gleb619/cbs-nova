@@ -3,14 +3,13 @@ package cbs.app.temporal.activity;
 import cbs.dsl.api.TransactionDefinition;
 import cbs.dsl.api.context.TransactionContext;
 import cbs.dsl.runtime.DslRegistry;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
-
-import java.util.Map;
 
 @Slf4j
 @Component
@@ -60,8 +59,7 @@ public class TransactionActivityImpl implements TransactionActivity {
   @SuppressWarnings("unchecked")
   private Map<String, Object> parseContextJson(String contextJson) {
     try {
-      return objectMapper.readValue(contextJson, new TypeReference<>() {
-      });
+      return objectMapper.readValue(contextJson, new TypeReference<>() {});
     } catch (JacksonException e) {
       return Map.of();
     }

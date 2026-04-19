@@ -7,6 +7,4 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * JAR and has no @SpringBootApplication, so tests need their own bootstrap class.
  */
 @SpringBootApplication(scanBasePackages = "cbs.nova")
-class TestApplication {
-
-}
+class TestApplication {}

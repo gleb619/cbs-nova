@@ -42,7 +42,5 @@ public class AppExceptionHandler {
   }
 
   // TODO: redo to normal error response
-  record ErrorDto(String error) {
-
-  }
+  record ErrorDto(String error) {}
 }

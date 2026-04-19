@@ -29,12 +29,12 @@ public class WorkflowExecutionController {
   @GetMapping
   @Operation(summary = "List all workflow executions")
   @ApiResponses({
-      @ApiResponse(
-          responseCode = "200",
-          description =
-              "List of executions with pagination headers (X-Total-Count, X-Page-Number, X-Page-Size, X-Total-Pages)"),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "500", description = "Internal error")
+    @ApiResponse(
+        responseCode = "200",
+        description =
+            "List of executions with pagination headers (X-Total-Count, X-Page-Number, X-Page-Size, X-Total-Pages)"),
+    @ApiResponse(responseCode = "401", description = "Unauthorized"),
+    @ApiResponse(responseCode = "500", description = "Internal error")
   })
   public ResponseEntity<List<WorkflowExecutionDto>> findAll(
       @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
@@ -50,10 +50,10 @@ public class WorkflowExecutionController {
   @GetMapping("/{id}")
   @Operation(summary = "Get workflow execution by ID")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "Execution found"),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "404", description = "Execution not found"),
-      @ApiResponse(responseCode = "500", description = "Internal error")
+    @ApiResponse(responseCode = "200", description = "Execution found"),
+    @ApiResponse(responseCode = "401", description = "Unauthorized"),
+    @ApiResponse(responseCode = "404", description = "Execution not found"),
+    @ApiResponse(responseCode = "500", description = "Internal error")
   })
   public ResponseEntity<WorkflowExecutionDto> findById(@PathVariable Long id) {
     return ResponseEntity.ok(workflowExecutionService.findById(id));

@@ -1,6 +1,11 @@
 package cbs.app.config;
 
 import cbs.app.config.SecurityConfig.LocalAuthProperties;
+import java.security.KeyFactory;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -26,12 +31,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.security.KeyFactory;
-import java.security.interfaces.RSAPublicKey;
-import java.security.spec.X509EncodedKeySpec;
-import java.util.Base64;
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -110,7 +109,7 @@ public class SecurityConfig {
     var users = props.users().stream()
         .map(u -> User.withUsername(u.username())
             .password(u.password())
-            .roles(u.roles() != null ? u.roles().toArray(String[]::new) : new String[]{"USER"})
+            .roles(u.roles() != null ? u.roles().toArray(String[]::new) : new String[] {"USER"})
             .build())
         .toList();
     return new InMemoryUserDetailsManager(users);
@@ -132,11 +131,7 @@ public class SecurityConfig {
   }
 
   @ConfigurationProperties(prefix = "app.local-auth")
-  public record LocalAuthProperties(List<LocalUser> users) {
+  public record LocalAuthProperties(List<LocalUser> users) {}
 
-  }
-
-  public record LocalUser(String username, String password, List<String> roles) {
-
-  }
+  public record LocalUser(String username, String password, List<String> roles) {}
 }

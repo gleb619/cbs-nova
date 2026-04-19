@@ -1,8 +1,6 @@
 package cbs.nova.entity;
 
-/**
- * Represents the lifecycle status of a mass operation execution.
- */
+/** Represents the lifecycle status of a mass operation execution. */
 public enum MassOperationStatus {
   /** Mass operation is currently running. */
   RUNNING,

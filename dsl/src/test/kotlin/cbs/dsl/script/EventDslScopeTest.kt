@@ -19,8 +19,8 @@ class EventDslScopeTest {
 
     assertNotNull(event)
     assertEquals("TEST_EVENT", event.code)
-    assertEquals(1, scope.registeredEvents.size)
-    assertEquals(event, scope.registeredEvents[0])
+    assertEquals(1, scope.getRegisteredEvents().size)
+    assertEquals(event, scope.getRegisteredEvents()[0])
   }
 
   @Test
@@ -40,9 +40,9 @@ class EventDslScopeTest {
     assertNotNull(event2)
     assertEquals("EVENT_1", event1.code)
     assertEquals("EVENT_2", event2.code)
-    assertEquals(2, scope.registeredEvents.size)
-    assertEquals(event1, scope.registeredEvents[0])
-    assertEquals(event2, scope.registeredEvents[1])
+    assertEquals(2, scope.getRegisteredEvents().size)
+    assertEquals(event1, scope.getRegisteredEvents()[0])
+    assertEquals(event2, scope.getRegisteredEvents()[1])
   }
 
   @Test

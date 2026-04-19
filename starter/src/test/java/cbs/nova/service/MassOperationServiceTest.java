@@ -243,7 +243,7 @@ class MassOperationServiceTest {
   void shouldReturnZeroWhenNoFailedItemsToRetry() {
     when(executionRepository.findById(1L)).thenReturn(Optional.of(sampleExecution));
     when(itemRepository.findByMassOperationExecutionAndStatus(
-        sampleExecution, MassOperationItemStatus.FAILED))
+            sampleExecution, MassOperationItemStatus.FAILED))
         .thenReturn(List.of());
 
     int result = massOperationService.retryFailedItems(1L);
@@ -263,7 +263,7 @@ class MassOperationServiceTest {
 
     when(executionRepository.findById(1L)).thenReturn(Optional.of(sampleExecution));
     when(itemRepository.findByMassOperationExecutionAndStatus(
-        sampleExecution, MassOperationItemStatus.FAILED))
+            sampleExecution, MassOperationItemStatus.FAILED))
         .thenReturn(List.of(failedItem));
     when(triggerPort.trigger(anyString(), anyString(), anyString(), anyString(), anyString()))
         .thenReturn("massop-retry-1-20");
