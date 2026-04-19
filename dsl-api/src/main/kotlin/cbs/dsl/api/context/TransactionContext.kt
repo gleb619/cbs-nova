@@ -11,4 +11,6 @@ open class TransactionContext(
   val isResumed: Boolean,
 ) : EnrichmentContext(eventCode, workflowExecutionId, performedBy, dslVersion, eventParameters) {
   fun prolong(action: Action): Unit = Unit
+
+  open fun delegate(): Unit = Unit
 }

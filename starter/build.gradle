@@ -1,9 +1,32 @@
 plugins {
   id 'java-library'
   id 'maven-publish'
+  alias(libs.plugins.kotlin.jvm)
+  alias(libs.plugins.kotlin.spring)
   alias(libs.plugins.spring.boot)
   alias(libs.plugins.spring.dm)
 }
+
+kotlin {
+  jvmToolchain(25)
+  compilerOptions {
+    freeCompilerArgs.add('-Xjsr305=strict')
+  }
+}
+
+sourceSets {
+  main {
+    java {
+      srcDirs('src/main/java', 'src/main/kotlin')
+    }
+  }
+  test {
+    java {
+      srcDirs('src/test/java', 'src/test/kotlin')
+    }
+  }
+}
+
 
 apply(from: "${rootDir}/gradle/java.gradle")
 apply(from: "${rootDir}/gradle/test.gradle")
@@ -34,8 +57,7 @@ dependencies {
   api project(':dsl-api')
   api project(':dsl')
 
-  compileOnly libs.temporal.sdk
-  testImplementation libs.temporal.sdk
+  api libs.temporal.sdk
 
   // -- Testing --
   testImplementation libs.bundles.spring.test
@@ -43,5 +65,13 @@ dependencies {
   testImplementation platform(libs.testcontainers.bom)
   testImplementation libs.testcontainers.postgresql
   testImplementation libs.testcontainers.junit.jupiter
+
   //testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
+  compilerOptions {
+    jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.fromTarget('25'))
+    freeCompilerArgs.add('-Xjsr305=strict')
+  }
 }

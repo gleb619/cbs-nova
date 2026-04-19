@@ -41,8 +41,12 @@ public class ContextEncryptionService {
       if (value instanceof String s) {
         mutableContext.put(item.getKey(), encryptValue(s));
       } else {
-        // TODO: use jackson here
-        mutableContext.put(item.getKey(), encryptValue(value.toString()));
+        try {
+          String jsonValue = objectMapper.writeValueAsString(value);
+          mutableContext.put(item.getKey(), encryptValue(jsonValue));
+        } catch (JacksonException e) {
+          throw new IllegalStateException("Failed to serialize value to JSON", e);
+        }
       }
     }
     try {
@@ -65,8 +69,13 @@ public class ContextEncryptionService {
       if (value instanceof String s) {
         decrypted.put(item.getKey(), decryptValue(s));
       } else {
-        // TODO: use jackson here
-        decrypted.put(item.getKey(), decryptValue(value.toString()));
+        String decryptedJson = decryptValue(value.toString());
+        try {
+          Object parsedValue = objectMapper.readValue(decryptedJson, Object.class);
+          decrypted.put(item.getKey(), parsedValue);
+        } catch (JacksonException e) {
+          decrypted.put(item.getKey(), decryptedJson);
+        }
       }
     }
     return decrypted;

@@ -7,67 +7,70 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class EventDslScopeTest {
+    @Test
+    @DisplayName("shouldRegisterEventWhenEventFunctionCalled")
+    fun `should register event when event function called`() {
+        val scope = TestEventDslScope()
 
-  @Test
-  @DisplayName("shouldRegisterEventWhenEventFunctionCalled")
-  fun `should register event when event function called`() {
-    val scope = TestEventDslScope()
+        val event =
+            scope.event("TEST_EVENT") {
+                // Event definition block
+            }
 
-    val event = scope.event("TEST_EVENT") {
-      // Event definition block
+        assertNotNull(event)
+        assertEquals("TEST_EVENT", event.code)
+        assertEquals(1, scope.getRegisteredEvents().size)
+        assertEquals(event, scope.getRegisteredEvents()[0])
     }
 
-    assertNotNull(event)
-    assertEquals("TEST_EVENT", event.code)
-    assertEquals(1, scope.getRegisteredEvents().size)
-    assertEquals(event, scope.getRegisteredEvents()[0])
-  }
+    @Test
+    @DisplayName("shouldRegisterMultipleEventsWhenCalledTwice")
+    fun `should register multiple events when called twice`() {
+        val scope = TestEventDslScope()
 
-  @Test
-  @DisplayName("shouldRegisterMultipleEventsWhenCalledTwice")
-  fun `should register multiple events when called twice`() {
-    val scope = TestEventDslScope()
+        val event1 =
+            scope.event("EVENT_1") {
+                // First event definition block
+            }
 
-    val event1 = scope.event("EVENT_1") {
-      // First event definition block
+        val event2 =
+            scope.event("EVENT_2") {
+                // Second event definition block
+            }
+
+        assertNotNull(event1)
+        assertNotNull(event2)
+        assertEquals("EVENT_1", event1.code)
+        assertEquals("EVENT_2", event2.code)
+        assertEquals(2, scope.getRegisteredEvents().size)
+        assertEquals(event1, scope.getRegisteredEvents()[0])
+        assertEquals(event2, scope.getRegisteredEvents()[1])
     }
 
-    val event2 = scope.event("EVENT_2") {
-      // Second event definition block
+    @Test
+    @DisplayName("shouldReturnEventDefinitionFromEventFunction")
+    fun `should return event definition from event function`() {
+        val scope = TestEventDslScope()
+
+        val event =
+            scope.event("TEST_EVENT") {
+                context { ctx -> }
+                display { ctx -> }
+                transactions { }
+                finish { ctx, ex -> }
+            }
+
+        assertNotNull(event)
+        assertEquals("TEST_EVENT", event.code)
+        assertNotNull(event.contextBlock)
+        assertNotNull(event.displayBlock)
+        assertNotNull(event.transactionsBlock)
+        assertNotNull(event.finishBlock)
     }
 
-    assertNotNull(event1)
-    assertNotNull(event2)
-    assertEquals("EVENT_1", event1.code)
-    assertEquals("EVENT_2", event2.code)
-    assertEquals(2, scope.getRegisteredEvents().size)
-    assertEquals(event1, scope.getRegisteredEvents()[0])
-    assertEquals(event2, scope.getRegisteredEvents()[1])
-  }
-
-  @Test
-  @DisplayName("shouldReturnEventDefinitionFromEventFunction")
-  fun `should return event definition from event function`() {
-    val scope = TestEventDslScope()
-
-    val event = scope.event("TEST_EVENT") {
-      context { ctx -> }
-      display { ctx -> }
-      transactions { }
-      finish { ctx -> }
+    // Test implementation of EventDslScope
+    private class TestEventDslScope : EventDslScope() {
+        // Expose registeredEvents for testing
+        fun getRegisteredEvents(): List<EventDefinition> = registeredEvents.toList()
     }
-
-    assertNotNull(event)
-    assertEquals("TEST_EVENT", event.code)
-    assertNotNull(event.contextBlock)
-    assertNotNull(event.displayBlock)
-    assertNotNull(event.transactionsBlock)
-    assertNotNull(event.finishBlock)
-  }
-
-  // Test implementation of EventDslScope
-  private class TestEventDslScope : EventDslScope() {
-    // Expose registeredEvents for testing
-    fun getRegisteredEvents(): List<EventDefinition> = registeredEvents.toList()
-  }
 }

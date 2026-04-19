@@ -3,7 +3,7 @@ package cbs.nova.model;
 import lombok.Builder;
 
 @Builder(toBuilder = true)
-public record EventWorkflowInput(
+public record EventWorkflowRequest(
     String workflowCode,
     String eventCode,
     String contextJson,

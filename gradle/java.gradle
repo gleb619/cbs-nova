@@ -1,5 +1,5 @@
 apply plugin: 'java'
-apply plugin: "io.freefair.lombok"
+apply plugin: 'io.freefair.lombok'
 
 configurations.configureEach {
   // Use Jackson 3 (tools.jackson.*) instead

@@ -1,16 +1,15 @@
 package cbs.nova.service;
 
 import cbs.nova.model.EventExecutionRequest;
-import cbs.nova.model.EventWorkflowInput;
-import cbs.nova.model.WorkflowExecutionResult;
+import cbs.nova.model.EventWorkflowRequest;
+import cbs.nova.model.WorkflowExecutionResponse;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -22,8 +21,8 @@ public class WorkflowExecutor {
   @Value("${app.temporal.task-queue}")
   private String taskQueue;
 
-  public WorkflowExecutionResult start(EventExecutionRequest request, String contextJson) {
-    EventWorkflowInput input = new EventWorkflowInput(
+  public WorkflowExecutionResponse start(EventExecutionRequest request, String contextJson) {
+    EventWorkflowRequest input = new EventWorkflowRequest(
         request.workflowCode(),
         request.eventCode(),
         contextJson,

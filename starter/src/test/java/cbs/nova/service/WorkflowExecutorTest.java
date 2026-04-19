@@ -10,10 +10,11 @@ import static org.mockito.Mockito.when;
 
 import cbs.dsl.runtime.DslRegistry;
 import cbs.nova.model.EventExecutionRequest;
-import cbs.nova.model.EventWorkflowInput;
-import cbs.nova.model.WorkflowExecutionResult;
+import cbs.nova.model.EventWorkflowRequest;
+import cbs.nova.model.WorkflowExecutionResponse;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,8 +25,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import java.util.Map;
 
 @ExtendWith(MockitoExtension.class)
 class WorkflowExecutorTest {
@@ -40,7 +39,7 @@ class WorkflowExecutorTest {
   private WorkflowExecutor workflowExecutor;
 
   @Captor
-  private ArgumentCaptor<EventWorkflowInput> inputCaptor;
+  private ArgumentCaptor<EventWorkflowRequest> inputCaptor;
 
   @Captor
   private ArgumentCaptor<WorkflowOptions> optionsCaptor;
@@ -57,13 +56,13 @@ class WorkflowExecutorTest {
         new EventExecutionRequest("loan", "submit", "user1", Map.of("amount", 1000));
     String contextJson = "{\"amount\":1000}";
     EventWorkflow workflowStub = mock(EventWorkflow.class);
-    WorkflowExecutionResult expectedResult = new WorkflowExecutionResult(42L, "ACTIVE");
+    WorkflowExecutionResponse expectedResult = new WorkflowExecutionResponse(42L, "ACTIVE");
 
     when(workflowClient.newWorkflowStub(eq(EventWorkflow.class), any(WorkflowOptions.class)))
         .thenReturn(workflowStub);
-    when(workflowStub.execute(any(EventWorkflowInput.class))).thenReturn(expectedResult);
+    when(workflowStub.execute(any(EventWorkflowRequest.class))).thenReturn(expectedResult);
 
-    WorkflowExecutionResult result = workflowExecutor.start(request, contextJson);
+    WorkflowExecutionResponse result = workflowExecutor.start(request, contextJson);
 
     assertEquals(42L, result.executionId());
     assertEquals("ACTIVE", result.status());
@@ -73,7 +72,7 @@ class WorkflowExecutorTest {
     assertEquals("WORKFLOW_TASK_QUEUE", capturedOptions.getTaskQueue());
 
     verify(workflowStub).execute(inputCaptor.capture());
-    EventWorkflowInput capturedInput = inputCaptor.getValue();
+    EventWorkflowRequest capturedInput = inputCaptor.getValue();
     assertEquals("loan", capturedInput.workflowCode());
     assertEquals("submit", capturedInput.eventCode());
     assertEquals(contextJson, capturedInput.contextJson());
@@ -88,7 +87,7 @@ class WorkflowExecutorTest {
 
     when(workflowClient.newWorkflowStub(eq(EventWorkflow.class), any(WorkflowOptions.class)))
         .thenReturn(workflowStub);
-    when(workflowStub.execute(any(EventWorkflowInput.class)))
+    when(workflowStub.execute(any(EventWorkflowRequest.class)))
         .thenThrow(new RuntimeException("temporal failure"));
 
     assertThrows(RuntimeException.class, () -> workflowExecutor.start(request, "{}"));

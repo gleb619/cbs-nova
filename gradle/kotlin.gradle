@@ -1,0 +1,11 @@
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(25)
+  }
+}
+
+afterEvaluate {
+  kotlin {
+    jvmToolchain(25)
+  }
+}

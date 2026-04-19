@@ -9,105 +9,116 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class TransactionsScopeTest {
+    private val testTransaction =
+        object : TransactionDefinition {
+            override val code: String = "TEST_TX"
 
-  private val testTransaction = object : TransactionDefinition {
-    override val code: String = "TEST_TX"
+            override fun preview(ctx: cbs.dsl.api.context.TransactionContext) {}
 
-    override fun preview(ctx: cbs.dsl.api.context.TransactionContext) {}
-    override fun execute(ctx: cbs.dsl.api.context.TransactionContext) {}
-    override fun rollback(ctx: cbs.dsl.api.context.TransactionContext) {}
-  }
+            override fun execute(ctx: cbs.dsl.api.context.TransactionContext) {}
 
-  private val anotherTransaction = object : TransactionDefinition {
-    override val code: String = "ANOTHER_TX"
+            override fun rollback(ctx: cbs.dsl.api.context.TransactionContext) {}
+        }
 
-    override fun preview(ctx: cbs.dsl.api.context.TransactionContext) {}
-    override fun execute(ctx: cbs.dsl.api.context.TransactionContext) {}
-    override fun rollback(ctx: cbs.dsl.api.context.TransactionContext) {}
-  }
+    private val anotherTransaction =
+        object : TransactionDefinition {
+            override val code: String = "ANOTHER_TX"
 
-  @Test
-  @DisplayName("shouldRecordDirectStepWhenStepCalled")
-  fun `should record direct step when step called`() = runBlocking {
-    val scope = TransactionsScopeImpl()
+            override fun preview(ctx: cbs.dsl.api.context.TransactionContext) {}
 
-    val handle = scope.step(testTransaction)
+            override fun execute(ctx: cbs.dsl.api.context.TransactionContext) {}
 
-    assertNotNull(handle)
-    assertEquals(1, scope.steps.size)
-    assertTrue(scope.steps[0] is StepNode.Direct)
-    assertEquals(testTransaction, (scope.steps[0] as StepNode.Direct).tx)
-  }
+            override fun rollback(ctx: cbs.dsl.api.context.TransactionContext) {}
+        }
 
-  @Test
-  @DisplayName("shouldChainStepsWhenThenCalled")
-  fun `should chain steps when then called`() = runBlocking {
-    val scope = TransactionsScopeImpl()
+    @Test
+    @DisplayName("shouldRecordDirectStepWhenStepCalled")
+    fun `should record direct step when step called`() =
+        runBlocking {
+            val scope = TransactionsScopeImpl()
 
-    val firstHandle = scope.step(testTransaction)
-    val secondHandle = firstHandle.then(anotherTransaction)
+            val handle = scope.step(testTransaction)
 
-    assertNotNull(secondHandle)
-    assertEquals(1, scope.steps.size)
-    assertTrue(scope.steps[0] is StepNode.Chain)
+            assertNotNull(handle)
+            assertEquals(1, scope.steps.size)
+            assertTrue(scope.steps[0] is StepNode.Direct)
+            assertEquals(testTransaction, (scope.steps[0] as StepNode.Direct).tx)
+        }
 
-    val chain = scope.steps[0] as StepNode.Chain
-    assertTrue(chain.head is StepNode.Direct)
-    assertTrue(chain.tail is StepNode.Direct)
-    assertEquals(testTransaction, (chain.head as StepNode.Direct).tx)
-    assertEquals(anotherTransaction, (chain.tail as StepNode.Direct).tx)
-  }
+    @Test
+    @DisplayName("shouldChainStepsWhenThenCalled")
+    fun `should chain steps when then called`() =
+        runBlocking {
+            val scope = TransactionsScopeImpl()
 
-  @Test
-  @DisplayName("shouldRecordBarrierWhenAwaitCalled")
-  fun `should record barrier when await called`() = runBlocking {
-    val scope = TransactionsScopeImpl()
+            val firstHandle = scope.step(testTransaction)
+            val secondHandle = firstHandle.then(anotherTransaction)
 
-    val handle1 = scope.step(testTransaction)
-    val handle2 = scope.step(anotherTransaction)
+            assertNotNull(secondHandle)
+            assertEquals(1, scope.steps.size)
+            assertTrue(scope.steps[0] is StepNode.Chain)
 
-    scope.await(handle1, handle2)
+            val chain = scope.steps[0] as StepNode.Chain
+            assertTrue(chain.head is StepNode.Direct)
+            assertTrue(chain.tail is StepNode.Direct)
+            assertEquals(testTransaction, (chain.head as StepNode.Direct).tx)
+            assertEquals(anotherTransaction, (chain.tail as StepNode.Direct).tx)
+        }
 
-    assertEquals(3, scope.steps.size)
-    assertTrue(scope.steps[2] is StepNode.Barrier)
+    @Test
+    @DisplayName("shouldRecordBarrierWhenAwaitCalled")
+    fun `should record barrier when await called`() =
+        runBlocking {
+            val scope = TransactionsScopeImpl()
 
-    val barrier = scope.steps[2] as StepNode.Barrier
-    assertEquals(2, barrier.handles.size)
-  }
+            val handle1 = scope.step(testTransaction)
+            val handle2 = scope.step(anotherTransaction)
 
-  @Test
-  @DisplayName("shouldRecordConditionalStepWhenStepWithBlockCalled")
-  fun `should record conditional step when step with block called`() = runBlocking {
-    val scope = TransactionsScopeImpl()
+            scope.await(handle1, handle2)
 
-    val handle = scope.step {
-      `when`({ true }) then {
-        transaction(testTransaction)
-      } otherwise {
-        transaction(anotherTransaction)
-      }
-    }
+            assertEquals(3, scope.steps.size)
+            assertTrue(scope.steps[2] is StepNode.Barrier)
 
-    assertNotNull(handle)
-    assertEquals(1, scope.steps.size)
-    assertTrue(scope.steps[0] is StepNode.Conditional)
+            val barrier = scope.steps[2] as StepNode.Barrier
+            assertEquals(2, barrier.handles.size)
+        }
 
-    val conditional = scope.steps[0] as StepNode.Conditional
-    assertEquals(1, conditional.branches.size)
-    assertNotNull(conditional.otherwise)
-    assertEquals(testTransaction, (conditional.branches[0].node as StepNode.Direct).tx)
-    assertEquals(anotherTransaction, (conditional.otherwise as StepNode.Direct).tx)
-  }
+    @Test
+    @DisplayName("shouldRecordConditionalStepWhenStepWithBlockCalled")
+    fun `should record conditional step when step with block called`() =
+        runBlocking {
+            val scope = TransactionsScopeImpl()
 
-  @Test
-  @DisplayName("shouldManageContextMap")
-  fun `should manage context map`() = runBlocking {
-    val scope = TransactionsScopeImpl()
+            val handle =
+                scope.step {
+                    `when`({ true }) then {
+                        transaction(testTransaction)
+                    } otherwise {
+                        transaction(anotherTransaction)
+                    }
+                }
 
-    scope["testKey"] = "testValue"
-    assertEquals("testValue", scope["testKey"])
+            assertNotNull(handle)
+            assertEquals(1, scope.steps.size)
+            assertTrue(scope.steps[0] is StepNode.Conditional)
 
-    scope["numberKey"] = 42
-    assertEquals(42, scope["numberKey"])
-  }
+            val conditional = scope.steps[0] as StepNode.Conditional
+            assertEquals(1, conditional.branches.size)
+            assertNotNull(conditional.otherwise)
+            assertEquals(testTransaction, (conditional.branches[0].node as StepNode.Direct).tx)
+            assertEquals(anotherTransaction, (conditional.otherwise as StepNode.Direct).tx)
+        }
+
+    @Test
+    @DisplayName("shouldManageContextMap")
+    fun `should manage context map`() =
+        runBlocking {
+            val scope = TransactionsScopeImpl()
+
+            scope["testKey"] = "testValue"
+            assertEquals("testValue", scope["testKey"])
+
+            scope["numberKey"] = 42
+            assertEquals(42, scope["numberKey"])
+        }
 }

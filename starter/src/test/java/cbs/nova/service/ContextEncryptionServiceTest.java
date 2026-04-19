@@ -27,7 +27,8 @@ class ContextEncryptionServiceTest {
 
     String result = service.encrypt(context);
 
-    assertTrue(result.contains("\"name\":\"John\""));
+    // All fields encrypted with ENC: prefix
+    assertTrue(result.contains("\"name\":\"ENC:"));
     // Encrypted fields should have ENC: prefix in the JSON value
     assertTrue(result.contains("\"pan\":\"ENC:"));
     assertTrue(result.contains("\"cvv\":\"ENC:"));
@@ -44,8 +45,10 @@ class ContextEncryptionServiceTest {
 
     String result = service.encrypt(context);
 
-    assertTrue(result.contains("\"name\":\"John\""));
-    assertTrue(result.contains("\"amount\":5000"));
+    // All fields encrypted with ENC: prefix
+    assertTrue(result.contains("\"name\":\"ENC:"));
+    assertTrue(result.contains("\"amount\":\"ENC:"));
+    assertTrue(result.contains("\"pan\":\"ENC:"));
   }
 
   @Test

@@ -11,6 +11,12 @@ spotless {
     endWithNewline()
     leadingTabsToSpaces(2)
   }
+  kotlin {
+    ktlint()
+    trimTrailingWhitespace()
+    endWithNewline()
+    leadingTabsToSpaces(2)
+  }
   kotlinGradle {
     trimTrailingWhitespace()
     endWithNewline()
