@@ -13,7 +13,6 @@ public class BpmnExporter {
   private final DslRegistry registry;
   private final StaticBpmnGenerator generator;
 
-
   /**
    * Exports the workflow with the given code as BPMN 2.0 XML.
    *

@@ -33,6 +33,7 @@ sourceSets {
 
 dependencies {
   implementation project(":starter")
+  implementation project(":dsl-api")
   implementation project(":dsl")
   implementation libs.temporal.sdk
 

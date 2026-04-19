@@ -9,12 +9,11 @@ import cbs.dsl.api.TransitionRule;
 import cbs.dsl.api.WorkflowDefinition;
 import cbs.dsl.api.context.EnrichmentContext;
 import cbs.dsl.api.context.FinishContext;
+import java.util.List;
 import kotlin.Unit;
 import kotlin.jvm.functions.Function1;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
 
 class StaticBpmnGeneratorTest {
 
@@ -80,8 +79,8 @@ class StaticBpmnGeneratorTest {
 
       @Override
       public List<TransitionRule> getTransitions() {
-        return List.of(new TransitionRule(
-            "PENDING", "DONE", Action.APPROVE, approveEvent, "FAULTED"));
+        return List.of(
+            new TransitionRule("PENDING", "DONE", Action.APPROVE, approveEvent, "FAULTED"));
       }
     };
 
@@ -206,10 +205,8 @@ class StaticBpmnGeneratorTest {
       @Override
       public List<TransitionRule> getTransitions() {
         return List.of(
-            new TransitionRule(
-                "PENDING", "APPROVED", Action.APPROVE, approveEvent, "FAULTED"),
-            new TransitionRule(
-                "PENDING", "REJECTED", Action.REJECT, rejectEvent, "FAULTED"));
+            new TransitionRule("PENDING", "APPROVED", Action.APPROVE, approveEvent, "FAULTED"),
+            new TransitionRule("PENDING", "REJECTED", Action.REJECT, rejectEvent, "FAULTED"));
       }
     };
 

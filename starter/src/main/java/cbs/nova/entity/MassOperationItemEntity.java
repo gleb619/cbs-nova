@@ -4,21 +4,17 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
+import java.time.OffsetDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "mass_operation_item")
@@ -56,9 +52,7 @@ public class MassOperationItemEntity {
   @Column(name = "workflow_execution_id")
   private Long workflowExecutionId;
 
-  /**
-   * @deprecated use #{@link #workflowExecutionId} instead
-   */
+  /** @deprecated use #{@link #workflowExecutionId} instead */
   @Transient
   @Deprecated(forRemoval = true)
   private WorkflowExecutionEntity workflowExecution;
@@ -75,9 +69,7 @@ public class MassOperationItemEntity {
   @Column(name = "retry_of")
   private Long retryOfId;
 
-  /**
-   * @deprecated use #{@link #workflowExecutionId} instead
-   */
+  /** @deprecated use #{@link #workflowExecutionId} instead */
   @Transient
   @Deprecated(forRemoval = true)
   private MassOperationItemEntity retryOf;

@@ -94,3 +94,9 @@ node_modules
 /dsl/.project
 /dsl/.settings/
 /dsl/bin/
+/dsl-api/build/
+/dsl-api/.classpath
+/dsl-api/.factorypath
+/dsl-api/.project
+/dsl-api/.settings/
+/dsl-api/bin/

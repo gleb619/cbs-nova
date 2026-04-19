@@ -7,8 +7,6 @@ import cbs.nova.model.MassOperationItemDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-import java.util.List;
-
 @Mapper(componentModel = "spring")
 public interface MassOperationMapper {
 
@@ -17,5 +15,4 @@ public interface MassOperationMapper {
 
   @Mapping(target = "status", expression = "java(entity.getStatus().name())")
   MassOperationItemDto toItemDto(MassOperationItemEntity entity);
-
 }

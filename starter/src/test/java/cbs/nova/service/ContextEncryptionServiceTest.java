@@ -3,14 +3,13 @@ package cbs.nova.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.security.SecureRandom;
+import java.util.Base64;
+import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import java.security.SecureRandom;
-import java.util.Base64;
-import java.util.Map;
 import tools.jackson.databind.ObjectMapper;
 
 class ContextEncryptionServiceTest {
@@ -105,8 +104,8 @@ class ContextEncryptionServiceTest {
 
     Map<String, Object> context = Map.of("pan", "4111111111111111");
 
-    IllegalStateException ex = Assertions.assertThrows(
-        IllegalStateException.class, () -> service.encrypt(context));
+    IllegalStateException ex =
+        Assertions.assertThrows(IllegalStateException.class, () -> service.encrypt(context));
 
     assertTrue(ex.getMessage().contains("Invalid encryption key"));
   }

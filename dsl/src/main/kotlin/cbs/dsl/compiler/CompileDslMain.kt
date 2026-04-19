@@ -3,7 +3,6 @@ package cbs.dsl.compiler
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import java.io.File
 
@@ -13,7 +12,7 @@ fun main() {
     branch = System.getenv("DSL_BRANCH") ?: "main",
     localCloneDir = File("build/dsl-clone"),
   )
-  val result = DslCompiler(source, DslValidator(), DslScriptHost()).compile()
+  val result = DslCompiler(source, DslValidator()).compile()
   if (result is CompileResult.Failure) {
     result.errors.forEach { System.err.println("[${it.file}] ${it.message}") }
     throw RuntimeException("DSL compilation failed with ${result.errors.size} error(s)")

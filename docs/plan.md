@@ -47,8 +47,8 @@
 | T22  | Frontend: BPMN viewer (bpmn-js integration)                  | `done` | frontend | T19, T21      | —                  |
 | T23  | Frontend: MassOperation report UI                            | `done` | frontend | T16           | —                  |
 | T24  | Frontend: Navigation ABAC (sidebar roles, route guard)       | `done` | frontend | T21           | —                  |
-| T25  | Create `dsl-api` Gradle module (shared contract)             | `todo` | dsl-api  | —             | T26a               |
-| T26a | `@KotlinScript` host (replace JSR-223)                       | `todo` | dsl      | T25           | T26b               |
+| T25  | Create `dsl-api` Gradle module (shared contract)             | `done` | dsl-api  | —             | T26a               |
+| T26a | `@KotlinScript` host (replace JSR-223)                       | `done` | dsl      | T25           | T26b               |
 | T26b | `EventDslScope` + `TransactionsScope`                        | `todo` | dsl      | T26a          | T26c               |
 | T26c | `WorkflowBuilder` closure-based transitions                  | `todo` | dsl      | T26b          | T26d               |
 | T26d | E2E test (Testcontainers + Temporal)                         | `todo` | dsl      | T26c, T01     | T27                |

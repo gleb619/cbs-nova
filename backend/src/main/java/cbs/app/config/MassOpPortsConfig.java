@@ -20,7 +20,8 @@ public class MassOpPortsConfig {
   private final WorkflowClient workflowClient;
 
   @Bean
-  public MassOpTriggerPort massOpTriggerPort(@Value("${app.temporal.task-queue}") String taskQueue) {
+  public MassOpTriggerPort massOpTriggerPort(
+      @Value("${app.temporal.task-queue}") String taskQueue) {
     return (massOpCode, performedBy, dslVersion, contextJson, workflowId) -> {
       WorkflowOptions options = WorkflowOptions.newBuilder()
           .setWorkflowId(workflowId)
