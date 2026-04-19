@@ -1,49 +1,79 @@
-# Backend Knowledge Base — CBS Nova
+# Backend Knowledge
 
-This knowledge base covers the modular Spring Boot architecture, security configurations, and development workflows for
-the CBS Nova backend.
+## Stack
 
-## Document Directory
+- **JDK:** 25 · **Framework:** Spring Boot 4.x · **DB:** PostgreSQL + Flyway
+- **Security:** JWT (RSA local dev / Keycloak prod) · **API:** OpenAPI 3 + Swagger UI
 
-1. **[Quick Start Guide](./backend/01-quickstart.md)**
-    * Starting PostgreSQL and the Application.
-    * Login & JWT acquisition demo.
+## Modules
 
-2. **[Project Structure](./backend/02-structure.md)**
-    * Module definitions: `backend`, `starter`, and `client`.
-    * Dependency graph and deep dive into modular responsibilities.
+| Module    | Type            | Purpose                                                        |
+|-----------|-----------------|----------------------------------------------------------------|
+| `backend` | Spring Boot app | Entry point, security, OpenAPI, local auth                     |
+| `starter` | Library JAR     | Settings CRUD, auto-configured via `AutoConfiguration.imports` |
+| `client`  | Library JAR     | Generated Feign + TypeScript clients from OpenAPI spec         |
 
-3. **[Security & Authentication](./backend/03-security.md)**
-    * Local Auth mode vs Keycloak (production) mode.
-    * Public endpoints and SecurityConfig breakdown.
+## Quick Start
 
-4. **[API Specification & Generation](./backend/04-api-spec.md)**
-    * Settings API endpoints and error response codes.
-    * Swagger UI and client code generation (TypeScript/Feign).
+```bash
+docker compose up -d                    # PostgreSQL
+./gradlew :backend:bootRun              # :7070
 
-5. **[Development Guide](./backend/05-development.md)**
-    * Shared Gradle scripts and version catalog.
-    * Essential commands for build, format, and testing.
+# Get JWT (admin1/admin1 or user1/user1)
+curl -X POST http://localhost:7070/api/public/auth/token \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin1","password":"admin1"}'
+```
 
-6. **[Testing Documentation](./backend/06-testing.md)**
-    * JUnit 5, Testcontainers, and MockMvc conventions.
-    * ArchUnit rules for architecture enforcement.
+Swagger UI: http://localhost:7070/swagger-ui.html
 
-7. **[Database Documentation](./backend/07-database.md)**
-    * PostgreSQL configuration and Flyway migrations.
-    * Schema definition and infrastructure setup.
+## Authentication
 
-8. **[Internals & Design Decisions](./backend/08-internals.md)**
-    * Spring Boot auto-configuration mechanisms.
-    * Rationale for key technical choices (e.g., `ddl-auto: validate`).
+| Mode                | Config                       | Details                                    |
+|---------------------|------------------------------|--------------------------------------------|
+| **Local** (dev)     | `app.keycloak.enabled=false` | RSA-signed JWT, users in `application.yml` |
+| **Keycloak** (prod) | `app.keycloak.enabled=true`  | JWKS from Keycloak, local auth disabled    |
 
----
+**Public endpoints:** `/api/public/**`, `/actuator/health`, `/swagger-ui/**`, `/v3/api-docs/**`, all `OPTIONS`
 
-## Technical Stack Summary
+## API
 
-- **JDK:** 25
-- **Framework:** Spring Boot 4.x
-- **Persistence:** PostgreSQL + Hibernate + Flyway
-- **Security:** Spring Security + JWT (Keycloak/RSA)
-- **API Spec:** OpenAPI 3 / Swagger
-- **Versioning:** Gradle + Version Catalog
+**Settings CRUD:** `GET /api/settings`, `GET /api/settings/{id}`, `GET /api/settings/code/{code}`, `POST /api/settings`, `PUT /api/settings/{id}`, `DELETE /api/settings/{id}`
+
+**Generate clients:** `./gradlew generateAllClients` (TypeScript → `starter/generated-ts/`, Feign → `client/`)
+
+## Dev Commands
+
+| Command                              | Purpose                            |
+|--------------------------------------|------------------------------------|
+| `./gradlew spotlessApply`            | Format code (Google Java Format)   |
+| `./gradlew check`                    | All checks: compile + test + style |
+| `./gradlew build`                    | Full assembly                      |
+| `./gradlew :backend:integrationTest` | Integration tests (needs Docker)   |
+
+## Testing
+
+- **Naming:** `*Test` (unit), `*IntegrationTest` (integration)
+- **Methods:** `shouldXxxWhenYyy` + `@DisplayName` required
+- **Mocking:** `@MockitoBean` (not `@MockBean`) — Spring Boot 4.x
+- **Controllers:** `@WebMvcTest` + `@MockitoBean SecurityFilterChain`
+- **Integration:** `@SpringBootTest(RANDOM_PORT)` + `jdbc:tc:postgresql:18.3:///cbsnova`
+
+**ArchUnit rules** in `MainConventions.java`: Controller→Service→Repository layering, naming enforcement, no direct Controller→Repository access.
+
+## Database
+
+- **DDL:** `ddl-auto: validate` (schema validated against Flyway migrations)
+- **Migrations:** `starter/src/main/resources/db/migration/`
+- **Integration:** Testcontainers `jdbc:tc:postgresql:18.3:///cbsnova`
+
+## Design Decisions
+
+| Decision                                           | Rationale                                    |
+|----------------------------------------------------|----------------------------------------------|
+| No `@EntityScan` in backend                        | Delegated to modular starter auto-config     |
+| `bootJar` disabled in starter                      | Starter is a library, not standalone service |
+| `ddl-auto: validate`                               | Enforces Flyway as source of truth           |
+| `NoOpPasswordEncoder`                              | Simplifies local development                 |
+| `@MockitoBean`                                     | Spring Boot 4.x migration                    |
+| Auto-configuration via `AutoConfiguration.imports` | Clean module separation                      |

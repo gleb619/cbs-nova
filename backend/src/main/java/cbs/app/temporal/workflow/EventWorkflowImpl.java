@@ -1,10 +1,7 @@
 package cbs.app.temporal.workflow;
 
 import cbs.app.temporal.activity.TransactionActivity;
-import cbs.app.temporal.activity.TransactionActivityInput;
-import cbs.app.temporal.activity.TransactionResult;
 import cbs.dsl.api.EventDefinition;
-import cbs.dsl.api.TransactionDefinition;
 import cbs.dsl.api.TransitionRule;
 import cbs.dsl.api.WorkflowDefinition;
 import cbs.dsl.runtime.DslRegistry;
@@ -156,24 +153,22 @@ public class EventWorkflowImpl implements EventWorkflow {
       EventWorkflowInput input,
       Long workflowExecutionId,
       TransactionActivity activityStub) {
-    for (TransactionDefinition txDef : eventDefinition.getTransactionsBlock()) {
-      log.debug("Executing transaction: code={}", txDef.getCode());
-      TransactionActivityInput txInput = new TransactionActivityInput(
-          txDef.getCode(),
-          input.contextJson(),
-          workflowExecutionId,
-          input.performedBy(),
-          input.dslVersion());
-
-      TransactionResult txResult = activityStub.executeTransaction(txInput);
-
-      if (!txResult.success()) {
-        log.debug("Transaction {} failed: {}", txDef.getCode(), txResult.errorMessage());
-        return new TransactionExecutionResult(false, txResult.errorMessage());
-      }
-      log.debug("Transaction {} succeeded", txDef.getCode());
+    if (eventDefinition.getTransactionsBlock() == null) {
+      return new TransactionExecutionResult(true, null);
     }
-    return new TransactionExecutionResult(true, null);
+
+    log.debug("Executing transactions block for event: {}", eventDefinition.getCode());
+
+    TemporalTransactionsScope scope = new TemporalTransactionsScope(
+        activityStub,
+        workflowExecutionId,
+        input.performedBy(),
+        input.dslVersion(),
+        input.contextJson());
+
+    TemporalTransactionsScope.executeBlock(eventDefinition.getTransactionsBlock(), scope);
+
+    return new TransactionExecutionResult(!scope.getFailed(), scope.getErrorMessage());
   }
 
   private void handleSuccessOutcome(

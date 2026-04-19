@@ -1,51 +1,56 @@
-# Frontend Knowledge Base — CBS Nova
+# Frontend Knowledge — CBS Nova
 
-This knowledge base covers the architecture, stack, and development patterns of the CBS Nova frontend.
+**Stack:** Nuxt 3.15 SPA (`ssr: false`), Vue 3.5, Tailwind CSS v4, TypeScript, piqure DI, Pinia 3, i18next 25, Axios, Biome, Vitest (100% coverage), Playwright.
 
-## Document Directory
+**Workspaces:**
+- `frontend/` — App shell, HTTP adapters, routing, DI wiring
+- `frontend-plugin/` — Domain types, port interfaces, presentational Vue. **Never import from `frontend/` into plugin**
 
-1. **[Overview & Structure](./frontend/01-overview.md)**
-    * Nuxt 3 SPA + Tailwind CSS v4 stack overview.
-    * Workspace organization: `frontend/` vs `frontend-plugin/`.
+**Hexagonal Layers:**
+| Layer | Location | Responsibility |
+|-------|----------|----------------|
+| Domain | `frontend-plugin/composables/<feature>/` | Types, ports, components |
+| Application | `frontend/src/app/<feature>/application/` | Use cases, routing |
+| Primary | `frontend/src/app/<feature>/infrastructure/primary/` | Page Vue components |
+| Secondary | `frontend/src/app/<feature>/infrastructure/secondary/` | HTTP adapters |
+| DI Wiring | `frontend/src/app/plugins/*.ts` | Nuxt plugins connecting adapters → ports |
 
-2. **[Architecture & Dependency Injection](./frontend/02-architecture.md)**
-    * Hexagonal (Ports and Adapters) architecture rules.
-    * DI context management with `piqure`.
+**DI Critical Rule (piqure):**
+```typescript
+const { provide, inject } = piqureWrapper(window, 'piqure');
+// provide/inject MUST come from same wrapper instance
+```
 
-3. **[Framework: Plugins & Routing](./frontend/03-framework.md)**
-    * Nuxt 3 plugin discovery and initialization flow.
-    * Centralized and feature-based routing with auth guards.
+**Auth:**
+- **Local (dev):** `POST /api/public/auth/token` → sessionStorage. Creds: `admin1/admin1` (ADMIN), `user1/user1` (USER)
+- **Keycloak (prod):** JWKS from realm
 
-4. **[Authentication Flow](./frontend/04-authentication.md)**
-    * Local Auth (development) vs Keycloak (production).
-    * Token persistence strategy and storage migration.
+**Routing/Guards:**
+- Routes defined per-feature, spread in `router.ts`: `...featureRoutes()`
+- Guard logic: Public paths allow → `/login` redirects if auth → others require auth
 
-5. **[Styling, State & i18n](./frontend/05-ux-styling.md)**
-    * Tailwind v4 design tokens and CSS import chain.
-    * State management with Pinia and i18next registration.
+**Styling:** Primary `#D4532D`, Secondary `#1A1A2E`, compact spacing (~25% smaller), base font 0.75rem
 
-6. **[HTTP Layer & API Proxy](./frontend/06-api-http.md)**
-    * Dev proxy configuration and Axios base URL setup.
-    * Bearer token injection and runtime environment variables.
+**Dev Commands:**
+```bash
+pnpm dev              # :3000, local auth
+pnpm test             # Vitest 100% coverage enforced
+pnpm e2e              # Playwright UI
+pnpm lint:fix         # Biome auto-fix
+./gradlew :backend:bootRun  # :7070
+```
 
-7. **[Tooling & Commands Reference](./frontend/07-development.md)**
-    * Biome (Lint/Format), Vitest (Unit), and Playwright (E2E) configs.
-    * Essential pnpm and Gradle commands for development.
+**8-Step Feature Pattern:**
+1. Domain types & ports in `frontend-plugin/composables/<feature>/`
+2. DI Provider with `piqureWrapper`
+3. HTTP adapter in `frontend/src/app/<feature>/infrastructure/secondary/`
+4. Page component (injects repository)
+5. Router in `application/<Feature>Router.ts`
+6. Register route in `frontend/src/app/router.ts`
+7. Nuxt plugin in `frontend/src/app/plugins/<feature>.ts`
+8. Add navigation link
 
-8. **[Adding a New Feature](./frontend/08-adding-features.md)**
-    * Step-by-step guide to implementing a new domain feature.
-
-9. **[Maintenance & Troubleshooting](./frontend/09-maintenance.md)**
-    * Known issues, TODOs, and common development roadblocks.
-    * Browser verification guides and UI screenshots.
-
----
-
-## Core Stack Summary
-
-- **Framework:** Nuxt 3.15 (SPA mode)
-- **Styling:** Tailwind CSS v4
-- **Language:** TypeScript
-- **Architecture:** Hexagonal (Split Workspace)
-- **DI:** piqure
-- **Build Tool:** Gradle + pnpm
+**Troubleshooting:**
+- `inject()` undefined → separate piqureWrapper instances
+- API 404 → check `baseURL` in nuxt.config.ts or `SPRING_BOOT_URL`
+- Build errors → run `npx nuxt prepare`

@@ -9,9 +9,14 @@ import cbs.dsl.api.TransitionRule;
 import cbs.dsl.api.WorkflowDefinition;
 import cbs.dsl.api.context.EnrichmentContext;
 import cbs.dsl.api.context.FinishContext;
+import cbs.dsl.api.context.TransactionsScope;
 import java.util.List;
 import kotlin.Unit;
+import kotlin.coroutines.Continuation;
 import kotlin.jvm.functions.Function1;
+import kotlin.jvm.functions.Function2;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -39,8 +44,8 @@ class StaticBpmnGeneratorTest {
       }
 
       @Override
-      public List<TransactionDefinition> getTransactionsBlock() {
-        return NO_TX;
+      public @Nullable Function2<@NotNull TransactionsScope, @NotNull Continuation<? super Unit>, Object> getTransactionsBlock() {
+        return (_, _) -> null;
       }
 
       @Override
@@ -57,6 +62,7 @@ class StaticBpmnGeneratorTest {
     EventDefinition approveEvent = simpleEvent("approve");
 
     WorkflowDefinition workflow = new WorkflowDefinition() {
+
       @Override
       public String getCode() {
         return "loan-approval";
@@ -80,8 +86,9 @@ class StaticBpmnGeneratorTest {
       @Override
       public List<TransitionRule> getTransitions() {
         return List.of(
-            new TransitionRule("PENDING", "DONE", Action.APPROVE, approveEvent, "FAULTED"));
+            new TransitionRule("PENDING", "DONE", Action.APPROVE, approveEvent, "FAULTED", null));
       }
+
     };
 
     // When
@@ -205,8 +212,8 @@ class StaticBpmnGeneratorTest {
       @Override
       public List<TransitionRule> getTransitions() {
         return List.of(
-            new TransitionRule("PENDING", "APPROVED", Action.APPROVE, approveEvent, "FAULTED"),
-            new TransitionRule("PENDING", "REJECTED", Action.REJECT, rejectEvent, "FAULTED"));
+            new TransitionRule("PENDING", "APPROVED", Action.APPROVE, approveEvent, "FAULTED", null),
+            new TransitionRule("PENDING", "REJECTED", Action.REJECT, rejectEvent, "FAULTED", null));
       }
     };
 

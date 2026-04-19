@@ -1,6 +1,5 @@
 package cbs.app.dsl;
 
-import cbs.dsl.compiler.DslScriptHost;
 import cbs.dsl.runtime.DslRegistry;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,7 +17,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class DslLoader implements ApplicationListener<ApplicationReadyEvent> {
 
-  private final DslScriptHost dslScriptHost;
+  // private final DslScriptHost dslScriptHost;
   private final DslRegistry dslRegistry;
 
   @Value("${cbs.dsl.scripts-dir:}")
@@ -64,8 +63,8 @@ public class DslLoader implements ApplicationListener<ApplicationReadyEvent> {
     String fileName = path.getFileName().toString();
     try {
       String content = Files.readString(path);
-      DslRegistry loaded = dslScriptHost.eval(content, fileName);
-      mergeRegistry(loaded, sharedRegistry);
+      //      DslRegistry loaded = dslScriptHost.eval(content, fileName);
+      //      mergeRegistry(loaded, sharedRegistry);
       successCount[0]++;
       log.info("Loaded DSL script: {}", fileName);
     } catch (Exception e) {
