@@ -1,7 +1,8 @@
 package cbs.nova.model;
 
-import java.util.List;
 import lombok.Builder;
+
+import java.util.List;
 
 /** Paginated result returned by service layer, decoupled from Spring Data {@code Page}. */
 @Builder(toBuilder = true)
