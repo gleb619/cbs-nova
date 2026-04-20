@@ -1,0 +1,4 @@
+root = true
+
+[*.kt]
+ktlint_standard_backing-property-naming = disabled

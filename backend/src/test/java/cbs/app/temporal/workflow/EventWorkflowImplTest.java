@@ -109,7 +109,8 @@ class EventWorkflowImplTest {
     when(eventDef.getTransactionsBlock()).thenReturn(TestTransactionBlocks.singleStepAwait(txDef));
     when(eventDef.getFinishBlock()).thenReturn((ctx, ex) -> Unit.INSTANCE);
 
-    TransitionRule rule = new TransitionRule("INIT", "DONE", Action.CLOSE, eventDef, "FAULTED", null);
+    TransitionRule rule =
+        new TransitionRule("INIT", "DONE", Action.CLOSE, eventDef, "FAULTED", null);
 
     WorkflowDefinition wfDef = mock(WorkflowDefinition.class);
     when(wfDef.getCode()).thenReturn("TEST_WF");
@@ -155,7 +156,8 @@ class EventWorkflowImplTest {
         .thenReturn(TestTransactionBlocks.singleStepAwait(failingTx));
     when(eventDef.getFinishBlock()).thenReturn((ctx, ex) -> Unit.INSTANCE);
 
-    TransitionRule rule = new TransitionRule("INIT", "DONE", Action.CLOSE, eventDef, "FAULTED", null);
+    TransitionRule rule =
+        new TransitionRule("INIT", "DONE", Action.CLOSE, eventDef, "FAULTED", null);
 
     WorkflowDefinition wfDef = mock(WorkflowDefinition.class);
     when(wfDef.getCode()).thenReturn("TEST_WF");

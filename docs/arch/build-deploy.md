@@ -23,8 +23,10 @@ cbs-rules Gitea: push to branch
         │    └─ Clone DSL branch from cbs-rules (fallback to main)
         │
         ├─ Gradle: compileDsl
-        │    ├─ Compile all .kts files
-        │    ├─ Resolve all #import declarations
+        │    ├─ Pass 1: eval all .kts files → build merged DslRegistry (no import injection)
+        │    ├─ Pass 2: re-eval files with // #import directives → inject ImportScope map
+        │    │    └─ ImportParser → ImportResolver → ScriptHost.eval(..., providedImports)
+        │    ├─ Resolve all // #import declarations (comment-directive syntax, valid Kotlin)
         │    ├─ Semantic validation:
         │    │    ├─ All referenced events exist in registry
         │    │    ├─ All referenced helpers exist (code or inline)

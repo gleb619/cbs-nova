@@ -44,6 +44,7 @@ node_modules
 /.claude/settings.json
 /.mcp.json
 /arms_cache/config/
+/.codebuddy/settings.local.json
 
 /docs/results/*
 /docs/tasks/*
@@ -100,3 +101,4 @@ node_modules
 /dsl-api/.project
 /dsl-api/.settings/
 /dsl-api/bin/
+/examples/cbs-rules/

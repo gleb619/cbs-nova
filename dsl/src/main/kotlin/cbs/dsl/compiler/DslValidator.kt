@@ -8,9 +8,11 @@ import cbs.dsl.runtime.TransactionBuilder
 
 // TODO: Call method on gradle compilation stage
 class DslValidator {
+    @JvmOverloads
     fun validate(
         registry: DslRegistry,
         fileName: String,
+        scriptContent: String = "",
     ): List<ValidationError> {
         val errors = mutableListOf<ValidationError>()
 
@@ -34,6 +36,22 @@ class DslValidator {
             for ((code, tx) in registry.transactions) {
                 if (tx is TransactionBuilder && !tx.hasExecute) {
                     errors += ValidationError(fileName, "Transaction '$code' has no execute block defined")
+                }
+            }
+        }
+
+        if (scriptContent.isNotEmpty()) {
+            val allCodes =
+                registry.workflows.keys + registry.events.keys + registry.transactions.keys +
+                    registry.massOperations.keys + registry.helpers.keys + registry.conditions.keys
+            for (directive in ImportParser.parse(scriptContent)) {
+                val matched = allCodes.any { it.contains(directive.path, ignoreCase = true) }
+                if (!matched) {
+                    errors +=
+                        ValidationError(
+                            fileName,
+                            "Import '${directive.path}' in '$fileName' resolved to 0 definitions (warning)",
+                        )
                 }
             }
         }

@@ -49,26 +49,62 @@ them to the compiler. All other conventions (one folder per unit, collocated hel
 Each DSL file declares imports. Imports resolve to other DSL files or framework interfaces. Import aliases are supported
 with `as`. The `compileDsl` Gradle task validates all imports — missing references fail the build.
 
+> **Implementation note (T34):** The bare `#import` syntax shown below is not valid Kotlin. In the actual
+> implementation, imports are written as `// #import` comments. This keeps `.kts` files syntactically valid Kotlin —
+> IDEs show no errors, no preprocessor stripping is needed. The `ImportParser` scans for lines matching
+> `^\s*//\s*#import\s+(\S+)(?:\s+as\s+(\S+))?`. `framework.*` imports are no-ops (types are already on the classpath
+> via `defaultImports`). See `dsl/src/main/kotlin/cbs/dsl/compiler/ImportParser.kt`.
+
 ```kotlin
 // Import all objects from an event folder
-#import loan-disbursement.* as disb
+// #import loan-disbursement.* as disb
 
 // Import a specific helper file
-#import global.banking-helpers
+// #import global.banking-helpers
 
-// Import framework types
-#import framework.ExecutionContext
-#import framework.Action
+// Import framework types (no-op — already on classpath)
+// #import framework.ExecutionContext
+// #import framework.Action
 ```
 
-Mass operation DSL files use the same `#import` syntax, with additional framework imports:
+Mass operation DSL files use the same `// #import` syntax, with additional framework imports:
 
 ```kotlin
-#import mass-operations.interest-charge.* as ic
-#import loan-disbursement.* as disb
-#import global.banking-helpers
-#import framework.Action
-#import framework.Signal
+// #import mass-operations.interest-charge.* as ic
+// #import loan-disbursement.* as disb
+// #import global.banking-helpers
+// #import framework.Action
+// #import framework.Signal
+```
+
+### Two-pass compilation
+
+Because imports reference definitions from *other* files, `DslCompiler` uses a two-pass strategy
+(see `dsl/src/main/kotlin/cbs/dsl/compiler/DslCompiler.kt`):
+
+```
+Pass 1 — build registry
+  Eval all .kts files with no import injection.
+  Each file's scope (EventDslScope, TransactionDslScope, HelperDslScope,
+  ConditionDslScope, MassOperationDslScope, WorkflowDslScope) is extracted
+  and its definitions registered into a merged DslRegistry.
+
+Pass 2 — inject imports
+  For each file that contains at least one // #import line:
+    1. ImportParser.parse(content)  → List<ImportDirective>
+    2. ImportResolver(mergedRegistry).resolve(directives) → Map<String, ImportScope>
+    3. ScriptHost.eval(content, fileName, providedImports)
+       injects a single top-level property `imports: Map<String, ImportScope>`
+    4. Merged registry updated with new definitions (overwrite by code).
+```
+
+Script usage after injection:
+
+```kotlin
+// #import loan-disbursement.* as disb
+
+val disb = imports["disb"]!!          // ImportScope
+val event = disb["LOAN_DISBURSEMENT"] // EventDefinition
 ```
 
 ---
