@@ -6,7 +6,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -33,16 +32,6 @@ public class WorkflowTransitionLogEntity {
 
   @Column(name = "event_execution_id")
   private Long eventExecutionId;
-
-  /** @deprecated use #{@link #workflowExecutionId} instead */
-  @Transient
-  @Deprecated(forRemoval = true)
-  private WorkflowExecutionEntity workflowExecution;
-
-  /** @deprecated use #{@link #eventExecutionId} instead */
-  @Transient
-  @Deprecated(forRemoval = true)
-  private EventExecutionEntity eventExecution;
 
   @Column(nullable = false, length = 20)
   private String action;

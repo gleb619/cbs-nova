@@ -1,6 +1,9 @@
 package cbs.app.dsl;
 
 import cbs.dsl.runtime.DslRegistry;
+import cbs.dsl.script.DslScopeExtractor;
+import cbs.dsl.script.EvalResult;
+import cbs.dsl.script.ScriptHost;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,7 +21,7 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class DslLoader implements ApplicationListener<ApplicationReadyEvent> {
 
-  // private final DslScriptHost dslScriptHost;
+  private final ScriptHost scriptHost;
   private final DslRegistry dslRegistry;
 
   @Value("${cbs.dsl.scripts-dir:}")
@@ -64,10 +67,18 @@ public class DslLoader implements ApplicationListener<ApplicationReadyEvent> {
     String fileName = path.getFileName().toString();
     try {
       String content = Files.readString(path);
-      //      DslRegistry loaded = dslScriptHost.eval(content, fileName);
-      //      mergeRegistry(loaded, sharedRegistry);
-      successCount[0]++;
-      log.info("Loaded DSL script: {}", fileName);
+      EvalResult result = DslScopeExtractor.evalAndExtract(scriptHost, content, fileName);
+      if (result instanceof EvalResult.Success success) {
+        mergeRegistry(success.getRegistry(), sharedRegistry);
+        successCount[0]++;
+        log.info("Loaded DSL script: {}", fileName);
+      } else {
+        failCount[0]++;
+        log.warn(
+            "Failed to load DSL script '{}': {}",
+            fileName,
+            ((EvalResult.Failure) result).getMessage());
+      }
     } catch (Exception e) {
       failCount[0]++;
       log.warn("Failed to load DSL script '{}': {}", fileName, e.getMessage());

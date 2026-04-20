@@ -48,6 +48,13 @@ class MassOpBuilder(
         _source = s
     }
 
+    fun source(block: (MassOperationContext) -> List<Map<String, Any>>) {
+        _source =
+            object : SourceDefinition {
+                override fun load(ctx: MassOperationContext) = block(ctx)
+            }
+    }
+
     fun lock(l: LockDefinition) {
         _lock = l
     }

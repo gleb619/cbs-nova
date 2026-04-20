@@ -8,7 +8,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -53,11 +52,6 @@ public class EventExecutionEntity {
 
   @Column(name = "workflow_execution_id")
   private Long workflowExecutionId;
-
-  /** @deprecated use #{@link #workflowExecutionId} instead */
-  @Transient
-  @Deprecated(forRemoval = true)
-  private transient WorkflowExecutionEntity workflowExecution;
 
   @Column(name = "performed_by", nullable = false, length = 200)
   private String performedBy;

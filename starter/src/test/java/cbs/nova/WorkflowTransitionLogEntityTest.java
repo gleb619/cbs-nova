@@ -2,10 +2,6 @@ package cbs.nova;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.entity.EventExecutionEntity;
-import cbs.nova.entity.EventStatus;
-import cbs.nova.entity.WorkflowExecutionEntity;
-import cbs.nova.entity.WorkflowStatus;
 import cbs.nova.entity.WorkflowTransitionLogEntity;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,39 +14,11 @@ class WorkflowTransitionLogEntityTest {
   @DisplayName("Should create WorkflowTransitionLogEntity via builder with all fields")
   void shouldCreateWorkflowTransitionLogEntityViaBuilderWithAllFields() {
     var now = OffsetDateTime.now();
-    var workflowExecution = WorkflowExecutionEntity.builder()
-        .id(1L)
-        .workflowCode("loan-approval")
-        .dslVersion("1.0.0-abc1234")
-        .currentState("INITIATED")
-        .status(WorkflowStatus.ACTIVE)
-        .context("{}")
-        .displayData("{}")
-        .performedBy("admin1")
-        .createdAt(now)
-        .updatedAt(now)
-        .build();
-
-    var eventExecution = EventExecutionEntity.builder()
-        .id(1L)
-        .eventCode("approve-loan")
-        .dslVersion("1.0.0-abc1234")
-        .action("execute")
-        .status(EventStatus.COMPLETED)
-        .context("{}")
-        .executedTransactions("[]")
-        .temporalWorkflowId("wf-123")
-        .workflowExecution(workflowExecution)
-        .performedBy("admin1")
-        .createdAt(now)
-        .updatedAt(now)
-        .completedAt(now)
-        .build();
 
     var entity = WorkflowTransitionLogEntity.builder()
         .id(1L)
-        .workflowExecution(workflowExecution)
-        .eventExecution(eventExecution)
+        .workflowExecutionId(1L)
+        .eventExecutionId(1L)
         .action("approve")
         .fromState("INITIATED")
         .toState("APPROVED")
@@ -63,8 +31,8 @@ class WorkflowTransitionLogEntityTest {
         .build();
 
     assertThat(entity.getId()).isEqualTo(1L);
-    assertThat(entity.getWorkflowExecution()).isEqualTo(workflowExecution);
-    assertThat(entity.getEventExecution()).isEqualTo(eventExecution);
+    assertThat(entity.getWorkflowExecutionId()).isEqualTo(1L);
+    assertThat(entity.getEventExecutionId()).isEqualTo(1L);
     assertThat(entity.getAction()).isEqualTo("approve");
     assertThat(entity.getFromState()).isEqualTo("INITIATED");
     assertThat(entity.getToState()).isEqualTo("APPROVED");
@@ -77,26 +45,14 @@ class WorkflowTransitionLogEntityTest {
   }
 
   @Test
-  @DisplayName("Should create WorkflowTransitionLogEntity with null eventExecution and toState")
+  @DisplayName("Should create WorkflowTransitionLogEntity with null eventExecutionId and toState")
   void shouldCreateWorkflowTransitionLogEntityWithNullEventExecutionAndToState() {
     var now = OffsetDateTime.now();
-    var workflowExecution = WorkflowExecutionEntity.builder()
-        .id(1L)
-        .workflowCode("loan-approval")
-        .dslVersion("1.0.0-abc1234")
-        .currentState("INITIATED")
-        .status(WorkflowStatus.ACTIVE)
-        .context("{}")
-        .displayData("{}")
-        .performedBy("admin1")
-        .createdAt(now)
-        .updatedAt(now)
-        .build();
 
     var entity = WorkflowTransitionLogEntity.builder()
         .id(2L)
-        .workflowExecution(workflowExecution)
-        .eventExecution(null)
+        .workflowExecutionId(1L)
+        .eventExecutionId(null)
         .action("start")
         .fromState("INIT")
         .toState(null)
@@ -108,7 +64,7 @@ class WorkflowTransitionLogEntityTest {
         .completedAt(null)
         .build();
 
-    assertThat(entity.getEventExecution()).isNull();
+    assertThat(entity.getEventExecutionId()).isNull();
     assertThat(entity.getToState()).isNull();
     assertThat(entity.getFaultMessage()).isEqualTo("Something went wrong");
     assertThat(entity.getCompletedAt()).isNull();

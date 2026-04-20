@@ -9,7 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import cbs.nova.model.EventExecutionRequest;
 import cbs.nova.model.EventExecutionResponse;
 import cbs.nova.model.exception.EntityNotFoundException;
-import cbs.nova.service.EventService;
+import cbs.nova.service.EventExecutionService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +39,7 @@ class EventControllerTest {
   private SecurityFilterChain securityFilterChain;
 
   @MockitoBean
-  private EventService eventService;
+  private EventExecutionService eventExecutionService;
 
   @Test
   @DisplayName("Should return 200 with execution response when event is executed successfully")
@@ -48,7 +48,7 @@ class EventControllerTest {
     EventExecutionRequest request =
         new EventExecutionRequest("loan-approval", "approve", "admin1", Map.of("amount", 1000));
     EventExecutionResponse response = new EventExecutionResponse(1L, "ACTIVE");
-    when(eventService.execute(any(EventExecutionRequest.class))).thenReturn(response);
+    when(eventExecutionService.execute(any(EventExecutionRequest.class))).thenReturn(response);
 
     // Act & Assert
     mockMvc
@@ -66,7 +66,7 @@ class EventControllerTest {
     // Arrange
     EventExecutionRequest request =
         new EventExecutionRequest("unknown-workflow", "approve", "admin1", Map.of());
-    when(eventService.execute(any(EventExecutionRequest.class)))
+    when(eventExecutionService.execute(any(EventExecutionRequest.class)))
         .thenThrow(new EntityNotFoundException("Workflow", "unknown-workflow"));
 
     // Act & Assert
@@ -84,7 +84,7 @@ class EventControllerTest {
     // Arrange
     EventExecutionRequest request =
         new EventExecutionRequest("loan-approval", "approve", "admin1", Map.of());
-    when(eventService.execute(any(EventExecutionRequest.class)))
+    when(eventExecutionService.execute(any(EventExecutionRequest.class)))
         .thenThrow(new IllegalArgumentException("Context evaluation failed"));
 
     // Act & Assert
@@ -103,7 +103,7 @@ class EventControllerTest {
     EventExecutionRequest request =
         new EventExecutionRequest("loan-approval", "approve", "admin1", Map.of());
     EventExecutionResponse response = new EventExecutionResponse(1L, "ACTIVE");
-    when(eventService.execute(any(EventExecutionRequest.class))).thenReturn(response);
+    when(eventExecutionService.execute(any(EventExecutionRequest.class))).thenReturn(response);
 
     // Act & Assert — 200 because SecurityFilterChain is a mock (no auth enforcement)
     mockMvc

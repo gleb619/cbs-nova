@@ -7,7 +7,6 @@ import cbs.dsl.api.MassOperationDefinition
 import cbs.dsl.api.TransactionDefinition
 import cbs.dsl.api.WorkflowDefinition
 
-@Deprecated(message = "For removal", level = DeprecationLevel.WARNING)
 class DslRegistry {
     private val _workflows = mutableMapOf<String, WorkflowDefinition>()
     private val _events = mutableMapOf<String, EventDefinition>()

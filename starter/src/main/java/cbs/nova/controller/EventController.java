@@ -2,7 +2,7 @@ package cbs.nova.controller;
 
 import cbs.nova.model.EventExecutionRequest;
 import cbs.nova.model.EventExecutionResponse;
-import cbs.nova.service.EventService;
+import cbs.nova.service.EventExecutionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Events", description = "Business event execution API")
 public class EventController {
 
-  private final EventService eventService;
+  private final EventExecutionService eventExecutionService;
 
   @PostMapping("/execute")
   @Operation(summary = "Execute a business event")
@@ -44,7 +44,7 @@ public class EventController {
         request.workflowCode(),
         request.eventCode(),
         request.performedBy());
-    EventExecutionResponse response = eventService.execute(request);
+    EventExecutionResponse response = eventExecutionService.execute(request);
     return ResponseEntity.ok(response);
   }
 }

@@ -142,7 +142,7 @@ public class EventWorkflowImpl implements EventWorkflow {
     entity.setContext(input.contextJson());
     entity.setExecutedTransactions("[]");
     entity.setTemporalWorkflowId(temporalWorkflowId);
-    entity.setWorkflowExecution(workflowExecution);
+    entity.setWorkflowExecutionId(workflowExecution.getId());
     entity.setPerformedBy(input.performedBy());
     entity.setCreatedAt(OffsetDateTime.now());
     entity.setUpdatedAt(OffsetDateTime.now());
@@ -239,8 +239,8 @@ public class EventWorkflowImpl implements EventWorkflow {
       String faultMessage,
       EventWorkflowRequest input) {
     WorkflowTransitionLogEntity entity = new WorkflowTransitionLogEntity();
-    entity.setWorkflowExecution(workflowExecution);
-    entity.setEventExecution(eventExecution);
+    entity.setWorkflowExecutionId(workflowExecution.getId());
+    entity.setEventExecutionId(eventExecution.getId());
     entity.setAction(transitionRule.getOn().name());
     entity.setFromState(fromState);
     entity.setToState(toState);
