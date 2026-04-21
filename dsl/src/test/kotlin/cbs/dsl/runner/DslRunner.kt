@@ -7,9 +7,9 @@ import cbs.dsl.impl.ImplRegistry
 import cbs.dsl.impl.populateFrom
 import cbs.dsl.runtime.AnyHelperOutput
 import cbs.dsl.runtime.DslRegistry
+import cbs.dsl.runtime.HelperBuilder
 import cbs.dsl.runtime.MapHelperInput
 import cbs.dsl.runtime.StepNode
-import cbs.dsl.runtime.TransactionsScopeImpl
 import kotlinx.coroutines.runBlocking
 
 class DslRunner(
@@ -29,7 +29,7 @@ class DslRunner(
 
         val txResults = mutableListOf<String>()
         if (event.transactionsBlock != null) {
-            val scope = TransactionsScopeImpl()
+            val scope = InMemoryTransactionsScope(registry)
             runBlocking { event.transactionsBlock!!(scope) }
             val txCtx = RunnableTransactionContext(enrichCtx)
             executeSteps(scope.steps, txCtx, txResults)
@@ -108,8 +108,14 @@ class DslRunner(
                 implRegistry.resolveHelper(name)
                     ?: registry.helpers[name]
                     ?: error("Helper '$name' not found")
-            val output = def.execute(MapHelperInput(params, this)) as AnyHelperOutput
-            return output.value
+            return if (def is HelperBuilder) {
+                def.executeWithResolver(params, this) { innerName, innerParams ->
+                    helper(innerName, innerParams)
+                }
+            } else {
+                val output = def.execute(MapHelperInput(params, this)) as AnyHelperOutput
+                output.value
+            }
         }
     }
 
@@ -128,8 +134,14 @@ class DslRunner(
                 implRegistry.resolveHelper(name)
                     ?: registry.helpers[name]
                     ?: error("Helper '$name' not found")
-            val output = def.execute(MapHelperInput(params, this)) as AnyHelperOutput
-            return output.value
+            return if (def is HelperBuilder) {
+                def.executeWithResolver(params, this) { innerName, innerParams ->
+                    helper(innerName, innerParams)
+                }
+            } else {
+                val output = def.execute(MapHelperInput(params, this)) as AnyHelperOutput
+                output.value
+            }
         }
     }
 }
