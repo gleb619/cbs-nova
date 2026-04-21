@@ -3,6 +3,7 @@ package cbs.app.temporal.workflow
 import cbs.app.temporal.activity.TransactionResult
 import cbs.dsl.api.TransactionDefinition
 import cbs.dsl.api.context.StepHandle
+import cbs.temporal.TemporalTransactionsScope
 import io.temporal.workflow.Promise
 
 /**

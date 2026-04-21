@@ -11,5 +11,5 @@ object EventScriptCompilationConfiguration : ScriptCompilationConfiguration({
     jvm {
         dependenciesFromCurrentContext(wholeClasspath = true)
     }
-    defaultImports("cbs.dsl.api.*", "cbs.dsl.script.*", "cbs.dsl.runtime.*")
+    defaultImports("cbs.dsl.api.*", "cbs.dsl.script.*", "cbs.dsl.runtime.*", "cbs.dsl.compiler.*")
 })

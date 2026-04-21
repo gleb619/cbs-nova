@@ -16,6 +16,7 @@ import cbs.nova.repository.EventExecutionRepository;
 import cbs.nova.repository.WorkflowExecutionRepository;
 import cbs.nova.repository.WorkflowTransitionLogRepository;
 import cbs.nova.service.EventWorkflow;
+import cbs.temporal.TemporalTransactionsScope;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.failure.ApplicationFailure;
 import io.temporal.workflow.Workflow;

@@ -1,4 +1,4 @@
-package cbs.app.temporal.workflow
+package cbs.temporal
 
 import cbs.app.temporal.activity.TransactionResult
 import cbs.dsl.api.TransactionDefinition

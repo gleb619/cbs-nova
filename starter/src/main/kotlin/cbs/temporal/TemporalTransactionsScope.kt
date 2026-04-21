@@ -1,4 +1,4 @@
-package cbs.app.temporal.workflow
+package cbs.temporal
 
 import cbs.app.temporal.activity.TransactionActivity
 import cbs.app.temporal.activity.TransactionActivityInput

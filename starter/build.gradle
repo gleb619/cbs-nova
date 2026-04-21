@@ -59,6 +59,8 @@ dependencies {
 
   api libs.temporal.sdk
 
+  api libs.jgit
+
   // -- Testing --
   testImplementation libs.bundles.spring.test
   testImplementation libs.archunit.junit5

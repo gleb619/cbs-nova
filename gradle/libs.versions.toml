@@ -9,6 +9,7 @@ testcontainers = "2.0.4"
 springdoc-openapi = "2.8.0"
 archunit = "1.4.1"
 temporal = "1.27.0"
+jgit = "7.2.0.202503040940-r"
 # Used in `gradle/checkstyle.gradle`
 checkstyle = "13.4.0"
 pmd = "6.55.0"
@@ -87,6 +88,7 @@ temporal-testing = { module = "io.temporal:temporal-testing", version.ref = "tem
 
 # -- Test Architecture --
 archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
+jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit" }
 
 
 [bundles]

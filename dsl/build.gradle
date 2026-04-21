@@ -21,25 +21,3 @@ dependencies {
   testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
   testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
 }
-
-//@depricated
-tasks.register('validateDsl', JavaExec) {
-  group = 'dsl'
-  description = 'Validate .kts DSL files from Gitea without compiling to JAR.'
-  dependsOn compileKotlin
-  classpath = sourceSets.main.runtimeClasspath
-  mainClass = 'cbs.dsl.compiler.ValidateDslMainKt'
-  environment 'GITEA_URL', System.getenv('GITEA_URL') ?: 'http://localhost:3001/cbs/cbs-rules.git'
-  environment 'DSL_BRANCH', System.getenv('DSL_BRANCH') ?: 'main'
-}
-
-//@depricated
-tasks.register('compileDsl', JavaExec) {
-  group = 'dsl'
-  description = 'Compile .kts DSL files from Gitea into registry JSON.'
-  dependsOn validateDsl
-  classpath = sourceSets.main.runtimeClasspath
-  mainClass = 'cbs.dsl.compiler.CompileDslMainKt'
-  environment 'GITEA_URL', System.getenv('GITEA_URL') ?: 'http://localhost:3001/cbs/cbs-rules.git'
-  environment 'DSL_BRANCH', System.getenv('DSL_BRANCH') ?: 'main'
-}

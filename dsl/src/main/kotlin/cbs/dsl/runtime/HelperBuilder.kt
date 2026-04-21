@@ -18,7 +18,14 @@ data class AnyHelperOutput(
 class HelperBuilder(
     override val code: String,
 ) : HelperDefinition {
+    private var _name: String? = null
     private var executeBlock: ((HelperContext) -> Any)? = null
+
+    override val name: String? get() = _name
+
+    fun name(value: String) {
+        _name = value
+    }
 
     fun execute(block: (HelperContext) -> Any) {
         executeBlock = block

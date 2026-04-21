@@ -1,4 +1,5 @@
 transaction("CREDIT_SCORING") {
+    name("TestCreditScoring")
     preview { ctx ->
         ctx["scoringPreview"] = "pending"
     }
