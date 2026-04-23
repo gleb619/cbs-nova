@@ -6,10 +6,14 @@ import kotlin.script.experimental.api.defaultImports
 import kotlin.script.experimental.jvm.dependenciesFromCurrentContext
 import kotlin.script.experimental.jvm.jvm
 
-object ConditionScriptCompilationConfiguration : ScriptCompilationConfiguration({
-    baseClass(ConditionDslScope::class)
-    jvm {
-        dependenciesFromCurrentContext(wholeClasspath = true)
-    }
-    defaultImports("cbs.dsl.api.*", "cbs.dsl.api.context.*", "cbs.dsl.script.*", "cbs.dsl.runtime.*")
-})
+object ConditionScriptCompilationConfiguration :
+    ScriptCompilationConfiguration({
+      baseClass(ConditionDslScope::class)
+      jvm { dependenciesFromCurrentContext(wholeClasspath = true) }
+      defaultImports(
+          "cbs.dsl.api.*",
+          "cbs.dsl.api.context.*",
+          "cbs.dsl.script.*",
+          "cbs.dsl.runtime.*",
+      )
+    })

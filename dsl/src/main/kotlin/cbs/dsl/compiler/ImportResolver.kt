@@ -1,22 +1,54 @@
 package cbs.dsl.compiler
 
+import cbs.dsl.api.ConditionDefinition
+import cbs.dsl.api.HelperDefinition
+import cbs.dsl.api.ImportType
+import cbs.dsl.api.TransactionDefinition
 import cbs.dsl.runtime.DslRegistry
 
 class ImportResolver(
     private val registry: DslRegistry,
+    private val codeImportResolver: CodeImportResolver = CodeImportResolver(),
 ) {
-    fun resolve(directives: List<ImportDirective>): Map<String, ImportScope> {
-        if (directives.isEmpty()) return emptyMap()
-        val allDefs: Map<String, Any> =
+  fun resolve(directives: List<ImportDirective>): Map<String, ImportScope> {
+    if (directives.isEmpty()) return emptyMap()
+
+    val scopes = mutableMapOf<String, ImportScope>()
+
+    for (directive in directives) {
+      val alias = directive.alias ?: directive.path.substringAfterLast('.')
+
+      val definitions =
+          if (directive.type == ImportType.CODE) {
+            val codeDefs = codeImportResolver.resolve(directive)
+            codeDefs.forEach { def ->
+              when (def) {
+                is TransactionDefinition -> registry.register(def)
+                is HelperDefinition -> registry.register(def)
+                is ConditionDefinition -> registry.register(def)
+              }
+            }
+            codeDefs.associateBy { def ->
+              when (def) {
+                is TransactionDefinition -> def.code
+                is HelperDefinition -> def.code
+                is ConditionDefinition -> def.code
+                else -> error("Unsupported code definition type: ${def::class}")
+              }
+            }
+          } else {
+            // DSL imports - existing logic of flattening registry
             registry.workflows +
                 registry.events +
                 registry.transactions +
                 registry.massOperations +
                 registry.helpers +
                 registry.conditions
-        return directives.associate { directive ->
-            val alias = directive.alias ?: directive.path.substringAfterLast('.')
-            alias to ImportScope(alias, allDefs)
-        }
+          }
+
+      scopes[alias] = ImportScope(alias, definitions)
     }
+
+    return scopes
+  }
 }

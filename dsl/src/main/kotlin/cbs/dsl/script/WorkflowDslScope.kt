@@ -4,14 +4,11 @@ import cbs.dsl.api.WorkflowDefinition
 import cbs.dsl.runtime.WorkflowBuilder
 
 abstract class WorkflowDslScope {
-    internal val registeredWorkflows: MutableList<WorkflowDefinition> = mutableListOf()
+  internal val registeredWorkflows: MutableList<WorkflowDefinition> = mutableListOf()
 
-    fun workflow(
-        code: String,
-        block: WorkflowBuilder.() -> Unit,
-    ): WorkflowDefinition {
-        val def = WorkflowBuilder(code).apply(block)
-        registeredWorkflows += def
-        return def
-    }
+  fun workflow(code: String, block: WorkflowBuilder.() -> Unit): WorkflowDefinition {
+    val def = WorkflowBuilder(code).apply(block)
+    registeredWorkflows += def
+    return def
+  }
 }

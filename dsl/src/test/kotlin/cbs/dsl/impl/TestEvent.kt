@@ -11,8 +11,8 @@ import cbs.dsl.api.context.TransactionsScope
  * Test implementation of [EventDefinition] for use in DSL integration tests.
  *
  * This class provides a simple, configurable event that can be used to test DSL execution without
- * requiring Spring beans or external dependencies. It wraps the standard [EventBuilder] pattern
- * but can be constructed programmatically for testing.
+ * requiring Spring beans or external dependencies. It wraps the standard [EventBuilder] pattern but
+ * can be constructed programmatically for testing.
  *
  * Example usage:
  * ```kotlin

@@ -7,6 +7,12 @@ open class HelperContext(
   dslVersion: String,
   val params: Map<String, Any>,
 ) : BaseContext(eventCode, workflowExecutionId, performedBy, dslVersion) {
+  val enrichment: MutableMap<String, Any> = mutableMapOf()
+
+  operator fun set(key: String, value: Any) {
+    enrichment[key] = value
+  }
+
   open fun helper(name: String, params: Map<String, Any>): Any = Unit
 
   open fun <T : Any> resolve(clazz: kotlin.reflect.KClass<T>): T =

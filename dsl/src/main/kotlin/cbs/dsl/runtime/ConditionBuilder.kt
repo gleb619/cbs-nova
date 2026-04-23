@@ -1,17 +1,39 @@
 package cbs.dsl.runtime
 
 import cbs.dsl.api.ConditionDefinition
+import cbs.dsl.api.ParameterDefinition
 import cbs.dsl.api.context.TransactionContext
 
-class ConditionBuilder(
-    override val code: String,
-) : ConditionDefinition {
-    private var _predicate: ((TransactionContext) -> Boolean)? = null
+class ConditionBuilder(override val code: String) : ConditionDefinition {
+  private val _parameters = mutableListOf<ParameterDefinition>()
+  private var _predicate: ((TransactionContext) -> Boolean)? = null
+  private var _contextBlock: (TransactionContext) -> Unit = {}
 
-    fun predicate(block: (TransactionContext) -> Boolean) {
-        _predicate = block
+  fun parameters(block: ParametersScope.() -> Unit) {
+    ParametersScope().apply(block).definitions.let { _parameters.addAll(it) }
+  }
+
+  fun context(block: (TransactionContext) -> Unit) {
+    _contextBlock = block
+  }
+
+  fun predicate(block: (TransactionContext) -> Boolean) {
+    _predicate = block
+  }
+
+  override val parameters: List<ParameterDefinition>
+    get() = _parameters.toList()
+
+  override val contextBlock: (TransactionContext) -> Unit
+    get() = _contextBlock
+
+  override val predicate: (TransactionContext) -> Boolean
+    get() = { ctx ->
+      _contextBlock(ctx)
+      _predicate?.invoke(ctx)
+          ?: throw IllegalStateException("Condition '$code' has no predicate block defined")
     }
-
-    override val predicate: (TransactionContext) -> Boolean
-        get() = _predicate ?: throw IllegalStateException("Condition '$code' has no predicate block defined")
 }
+
+fun condition(code: String, block: ConditionBuilder.() -> Unit): ConditionDefinition =
+    ConditionBuilder(code).apply(block)

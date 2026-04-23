@@ -7,11 +7,7 @@ import cbs.dsl.runtime.DslRegistry
  * (failure).
  */
 sealed class EvalResult {
-    data class Success(
-        val registry: DslRegistry,
-    ) : EvalResult()
+  data class Success(val registry: DslRegistry) : EvalResult()
 
-    data class Failure(
-        val message: String,
-    ) : EvalResult()
+  data class Failure(val message: String) : EvalResult()
 }
