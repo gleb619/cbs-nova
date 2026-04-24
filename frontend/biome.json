@@ -45,21 +45,7 @@
     }
   },
   "files": {
-    "ignore": [
-      "build/",
-      "node_modules/",
-      "dist/",
-      ".output/",
-      ".nuxt/",
-      ".gradle/"
-    ],
-    "include": [
-      "src/**/*.ts",
-      "src/**/*.vue",
-      "src/**/*.js",
-      "*.ts",
-      "*.js",
-      "*.json"
-    ]
+    "ignore": ["build/", "node_modules/", "dist/", ".output/", ".nuxt/", ".gradle/"],
+    "include": ["src/**/*.ts", "src/**/*.vue", "src/**/*.js", "*.ts", "*.js", "*.json"]
   }
 }

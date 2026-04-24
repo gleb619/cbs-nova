@@ -1,7 +1,7 @@
+import { executionRoutes } from '@/execution/application/ExecutionRouter';
 import DashboardView from '@/home/infrastructure/primary/DashboardView.vue';
 import HomepageVue from '@/home/infrastructure/primary/HomepageVue.vue';
 import SettingsPageVue from '@/home/infrastructure/primary/SettingsPageVue.vue';
-import { executionRoutes } from '@/execution/application/ExecutionRouter';
 import { massOpRoutes } from '@/mass-operation/application/MassOpRouter';
 import type { RouteRecordRaw } from 'vue-router';
 

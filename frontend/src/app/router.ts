@@ -1,11 +1,11 @@
 import { isLocalAuthMode } from '@/auth/application/AuthConfig';
 import { helpRoutes } from '@/help/application/HelpRouter';
 import { homeRoutes } from '@/home/application/HomeRouter';
+import { useAbac } from '@/home/infrastructure/primary/sidebar/useAbac';
 import IndexPageVue from '@cbs/admin-plugin/composables/auth/IndexPageVue.vue';
 import LoginPageVue from '@cbs/admin-plugin/composables/auth/LoginPageVue.vue';
 import { useAuth } from '@cbs/admin-plugin/composables/auth/useAuth';
-import { useAbac } from '@/home/infrastructure/primary/sidebar/useAbac';
-import { createRouter, createWebHistory, type Router } from 'vue-router';
+import { type Router, createRouter, createWebHistory } from 'vue-router';
 
 export const routes = [
   // Landing page - accessible without authentication

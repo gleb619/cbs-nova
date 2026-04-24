@@ -77,10 +77,7 @@ class MassOperationDslScopeTest {
         }
 
     assertEquals(
-        listOf(
-            ParameterDefinition("clientId", required = true),
-            ParameterDefinition("note", required = false),
-        ),
+        listOf(ParameterDefinition("clientId", true), ParameterDefinition("note", false)),
         result.parameters,
     )
   }

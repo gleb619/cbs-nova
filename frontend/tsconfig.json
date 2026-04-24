@@ -3,22 +3,12 @@
   "compilerOptions": {
     "allowJs": true,
     "sourceMap": true,
-    "types": [
-      "vitest/globals"
-    ],
+    "types": ["vitest/globals"],
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/app/*"
-      ],
-      "@shared/*": [
-        "./src/shared/*"
-      ]
+      "@/*": ["./src/app/*"],
+      "@shared/*": ["./src/shared/*"]
     }
   },
-  "include": [
-    "src/**/*",
-    "nuxt.config.ts",
-    "app.vue"
-  ]
+  "include": ["src/**/*", "nuxt.config.ts", "app.vue"]
 }

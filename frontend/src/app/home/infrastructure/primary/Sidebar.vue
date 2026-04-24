@@ -53,10 +53,9 @@
 </template>
 
 <script lang="ts">
+import { defineComponent } from 'vue';
 import SidebarGroupVue from './sidebar/SidebarGroupVue.vue';
 import { sidebarGroups } from './sidebar/sidebarConfig';
-import { useAbac } from './sidebar/useAbac.ts';
-import { defineComponent } from 'vue';
 
 export default defineComponent({
   name: 'Sidebar',

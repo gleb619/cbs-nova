@@ -2,6 +2,7 @@ package cbs.dsl
 
 import cbs.dsl.api.RulesSource
 import java.io.File
+import java.util.AbstractMap
 import org.eclipse.jgit.api.Git
 
 /**
@@ -13,7 +14,7 @@ class GiteaRulesSource(
     private val branch: String,
     private val localCloneDir: File,
 ) : RulesSource {
-  override fun fetch(): List<Pair<String, String>> {
+  override fun fetch(): List<Map.Entry<String, String>> {
     if (!localCloneDir.exists()) {
       cloneRepository()
     } else {
@@ -22,7 +23,7 @@ class GiteaRulesSource(
     return localCloneDir
         .walkTopDown()
         .filter { it.isFile && it.name.endsWith(".kts") }
-        .map { it.relativeTo(localCloneDir).path to it.readText() }
+        .map { AbstractMap.SimpleEntry(it.relativeTo(localCloneDir).path, it.readText()) }
         .toList()
   }
 
