@@ -2,7 +2,6 @@ package cbs.dsl.codegen;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import javax.tools.SimpleJavaFileObject;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -11,6 +10,7 @@ import javax.lang.model.element.Element;
 import javax.tools.FileObject;
 import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
+import javax.tools.SimpleJavaFileObject;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -66,8 +66,7 @@ class RegistrationGeneratorTest {
     }
   }
 
-  static class TestWriter extends SimpleJavaFileObject
-      implements JavaFileObject, FileObject {
+  static class TestWriter extends SimpleJavaFileObject implements JavaFileObject, FileObject {
     final StringWriterWithClose writer = new StringWriterWithClose();
 
     TestWriter(String name) {

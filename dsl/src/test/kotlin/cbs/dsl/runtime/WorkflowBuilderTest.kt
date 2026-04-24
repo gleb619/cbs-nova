@@ -2,7 +2,10 @@ package cbs.dsl.runtime
 
 import cbs.dsl.api.Action
 import cbs.dsl.api.EventDefinition
+import cbs.dsl.api.EventInput
+import cbs.dsl.api.EventOutput
 import cbs.dsl.api.ParameterDefinition
+import cbs.dsl.api.WorkflowInput
 import cbs.dsl.api.context.DisplayScope
 import cbs.dsl.api.context.EnrichmentContext
 import cbs.dsl.api.context.FinishContext
@@ -11,6 +14,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class WorkflowBuilderTest {
   // Stub EventDefinition for testing deprecated transition method
@@ -22,6 +26,9 @@ class WorkflowBuilderTest {
         override val displayBlock: (DisplayScope) -> Unit = {}
         override val transactionsBlock: (suspend TransactionsScope.() -> Unit)? = null
         override val finishBlock: (FinishContext, Throwable?) -> Unit = { _, _ -> }
+
+        override fun execute(input: EventInput): EventOutput =
+            EventOutput(context = emptyMap(), transactionResults = emptyMap())
       }
 
   @Test
@@ -187,5 +194,52 @@ class WorkflowBuilderTest {
     assertEquals("ENTERED", transition.to)
     assertEquals(Action.SUBMIT, transition.on)
     assertEquals("FAULTED", transition.onFault)
+  }
+
+  @Test
+  @DisplayName("execute should return next state and event for matching transition")
+  fun execute_shouldReturnNextStateAndEventForMatchingTransition() {
+    val wf =
+        workflow("test-wf") {
+          transitions {
+            ("DRAFT" to "ENTERED" on Action.SUBMIT) {}
+            ("ENTERED" to "APPROVED" on Action.APPROVE) {}
+          }
+        }
+
+    val input = WorkflowInput(currentState = "DRAFT", action = "SUBMIT")
+    val output = wf.execute(input)
+
+    assertEquals("ENTERED", output.nextState)
+    assertEquals(listOf("DRAFT_ENTERED_SUBMIT"), output.events)
+    assertEquals("SUCCESS", output.status)
+  }
+
+  @Test
+  @DisplayName("execute should throw when no matching transition found")
+  fun execute_shouldThrowWhenNoMatchingTransitionFound() {
+    val wf = workflow("test-wf") { transitions { ("DRAFT" to "ENTERED" on Action.SUBMIT) {} } }
+
+    val input = WorkflowInput(currentState = "DRAFT", action = "APPROVE")
+
+    val ex = assertThrows<IllegalStateException> { wf.execute(input) }
+    assertEquals("No transition from DRAFT on APPROVE", ex.message)
+  }
+
+  @Test
+  @DisplayName("execute should support deprecated transition method")
+  @Suppress("DEPRECATION")
+  fun execute_shouldSupportDeprecatedTransitionMethod() {
+    val wf =
+        workflow("test-wf") {
+          transition(from = "DRAFT", to = "ENTERED", on = Action.SUBMIT, event = stubEvent)
+        }
+
+    val input = WorkflowInput(currentState = "DRAFT", action = "SUBMIT")
+    val output = wf.execute(input)
+
+    assertEquals("ENTERED", output.nextState)
+    assertEquals(listOf("STUB"), output.events)
+    assertEquals("SUCCESS", output.status)
   }
 }

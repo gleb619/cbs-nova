@@ -4,6 +4,8 @@ import cbs.dsl.api.Action
 import cbs.dsl.api.EventDefinition
 import cbs.dsl.api.TransitionRule
 import cbs.dsl.api.WorkflowDefinition
+import cbs.dsl.api.WorkflowInput
+import cbs.dsl.api.WorkflowOutput
 
 class WorkflowBuilder(override val code: String) : WorkflowDefinition {
   private val _states = mutableListOf<String>()
@@ -72,6 +74,14 @@ class WorkflowBuilder(override val code: String) : WorkflowDefinition {
 
   override val terminalStates: List<String>
     get() = inferredTerminal()
+
+  override fun execute(input: WorkflowInput): WorkflowOutput {
+    val rule =
+        transitions.find { it.from == input.currentState && it.on.name == input.action }
+            ?: error("No transition from ${input.currentState} on ${input.action}")
+
+    return WorkflowOutput(nextState = rule.to, events = listOf(rule.event.code))
+  }
 }
 
 fun workflow(code: String, block: WorkflowBuilder.() -> Unit): WorkflowDefinition =

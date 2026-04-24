@@ -1,12 +1,10 @@
 package cbs.dsl.impl
 
 import cbs.dsl.api.HelperDefinition
-import cbs.dsl.api.HelperInput
-import cbs.dsl.api.HelperOutput
+import cbs.dsl.api.HelperTypes.HelperInput
+import cbs.dsl.api.HelperTypes.HelperOutput
 import cbs.dsl.api.ParameterDefinition
 import cbs.dsl.api.context.HelperContext
-import cbs.dsl.runtime.AnyHelperOutput
-import cbs.dsl.runtime.MapHelperInput
 
 /**
  * Test implementation of [HelperDefinition] for use in DSL integration tests and sample `.kts`
@@ -34,20 +32,18 @@ class TestHelper(
     private val executeBlock: (Map<String, Any>) -> Any,
 ) : HelperDefinition {
   override fun execute(input: HelperInput): HelperOutput {
-    val mapInput = input as? MapHelperInput ?: error("TestHelper input must be MapHelperInput")
-
     val ctx =
         HelperContext(
-            eventCode = mapInput.baseContext.eventCode,
-            workflowExecutionId = mapInput.baseContext.workflowExecutionId,
-            performedBy = mapInput.baseContext.performedBy,
-            dslVersion = mapInput.baseContext.dslVersion,
-            params = mapInput.params,
+            eventCode = input.eventCode() ?: "",
+            workflowExecutionId = input.workflowExecutionId() ?: 0L,
+            performedBy = "",
+            dslVersion = "",
+            params = input.params(),
         )
 
     contextBlock(ctx)
 
-    val result = executeBlock(mapInput.params)
-    return AnyHelperOutput(result)
+    val result = executeBlock(input.params())
+    return HelperOutput(result)
   }
 }

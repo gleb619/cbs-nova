@@ -1,15 +1,13 @@
 package cbs.dsl.runner
 
 import cbs.dsl.api.HelperDefinition
-import cbs.dsl.api.HelperInput
-import cbs.dsl.api.HelperOutput
+import cbs.dsl.api.HelperTypes.HelperInput
+import cbs.dsl.api.HelperTypes.HelperOutput
 import cbs.dsl.compiler.CompileResult
 import cbs.dsl.compiler.DslCompiler
 import cbs.dsl.compiler.DslValidator
 import cbs.dsl.compiler.InMemoryRulesSource
-import cbs.dsl.runtime.AnyHelperOutput
 import cbs.dsl.runtime.EventBuilder
-import cbs.dsl.runtime.MapHelperInput
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -104,15 +102,20 @@ class DslExecutionIntegrationTest {
           override val code = "ENRICH_CUSTOMER"
 
           override fun execute(input: HelperInput): HelperOutput {
-            val mapInput = input as MapHelperInput
             val findDef = registry.helpers["FIND_CUSTOMER"]!!
 
             @Suppress("UNCHECKED_CAST")
             val base =
-                (findDef.execute(MapHelperInput(mapInput.params, mapInput.baseContext))
-                        as AnyHelperOutput)
-                    .value as Map<String, Any>
-            return AnyHelperOutput(base + mapOf("enriched" to true))
+                findDef
+                    .execute(
+                        HelperInput(
+                            input.params(),
+                            input.eventCode() ?: "",
+                            input.workflowExecutionId() ?: 0L,
+                        )
+                    )
+                    .value() as Map<String, Any>
+            return HelperOutput(base + mapOf("enriched" to true))
           }
         }
     registry.register(enrichHelper)

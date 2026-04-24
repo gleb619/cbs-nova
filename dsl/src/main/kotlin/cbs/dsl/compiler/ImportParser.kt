@@ -1,6 +1,6 @@
 package cbs.dsl.compiler
 
-import cbs.dsl.api.ImportType
+import cbs.dsl.api.DslTypes.ImportType
 
 object ImportParser {
   private val IMPORT_REGEX = Regex("""^\s*//\s*#import\s+(?:(code):)?(\S+)(?:\s+as\s+(\S+))?\s*$""")

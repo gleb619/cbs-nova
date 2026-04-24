@@ -1,6 +1,6 @@
 package cbs.dsl.compiler
 
-import cbs.dsl.api.ImportType
+import cbs.dsl.api.DslTypes.ImportType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

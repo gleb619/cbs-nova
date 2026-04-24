@@ -1,9 +1,11 @@
 package cbs.dsl.runtime
 
+import cbs.dsl.api.EventInput
 import cbs.dsl.api.ParameterDefinition
 import cbs.dsl.api.context.DisplayScope
 import cbs.dsl.api.context.EnrichmentContext
 import cbs.dsl.api.context.FinishContext
+import cbs.dsl.impl.TestTransaction
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -187,5 +189,78 @@ class EventBuilderTest {
     assertNotNull(event.displayBlock)
     assertNotNull(event.transactionsBlock)
     assertNotNull(event.finishBlock)
+  }
+
+  @Test
+  @DisplayName("shouldReturnEmptyTransactionResultsWhenTransactionsBlockIsNull")
+  fun `should return empty transaction results when transactions block is null`() {
+    val evt = event("TEST_EVENT") { context { ctx -> ctx["enriched"] = "value" } }
+
+    val output =
+        evt.execute(EventInput(params = mapOf("accountId" to "A1"), eventCode = "TEST_EVENT"))
+
+    assertEquals("SUCCESS", output.status)
+    assertEquals(mapOf("enriched" to "value"), output.context)
+    assertTrue(output.transactionResults.isEmpty())
+  }
+
+  @Test
+  @DisplayName("shouldReturnEnrichedContextAfterExecutingContextBlock")
+  fun `should return enriched context after executing context block`() {
+    val evt =
+        event("TEST_EVENT") {
+          context { ctx ->
+            ctx["customerId"] = "CUST-42"
+            ctx["amount"] = 1000.0
+          }
+        }
+
+    val output =
+        evt.execute(EventInput(params = mapOf("accountId" to "A1"), eventCode = "TEST_EVENT"))
+
+    assertEquals("SUCCESS", output.status)
+    assertEquals("CUST-42", output.context["customerId"])
+    assertEquals(1000.0, output.context["amount"])
+    assertTrue(output.transactionResults.isEmpty())
+  }
+
+  @Test
+  @DisplayName("shouldExecuteTransactionsAndCollectResultsInEventOutput")
+  fun `should execute transactions and collect results in event output`() {
+    val tx1 = TestTransaction(code = "TX_KYC", executeBlock = { ctx -> ctx["kycVerified"] = true })
+    val tx2 =
+        TestTransaction(code = "TX_AMOUNT_CHECK", executeBlock = { ctx -> ctx["amountOk"] = true })
+
+    val evt =
+        event("TEST_EVENT") {
+          transactions {
+            step(tx1)
+            step(tx2)
+          }
+        }
+
+    val output =
+        evt.execute(EventInput(params = mapOf("accountId" to "A1"), eventCode = "TEST_EVENT"))
+
+    assertEquals("SUCCESS", output.status)
+    assertEquals(mapOf("kycVerified" to true), output.transactionResults["TX_KYC"])
+    assertEquals(mapOf("amountOk" to true), output.transactionResults["TX_AMOUNT_CHECK"])
+  }
+
+  @Test
+  @DisplayName("shouldReturnFaultedStatusWhenFinishBlockThrows")
+  fun `should return faulted status when finish block throws`() {
+    val evt =
+        event("TEST_EVENT") {
+          context { ctx -> ctx["enriched"] = "value" }
+          finish { _, _ -> throw RuntimeException("finish failed") }
+        }
+
+    val output =
+        evt.execute(EventInput(params = mapOf("accountId" to "A1"), eventCode = "TEST_EVENT"))
+
+    assertEquals("FAULTED", output.status)
+    assertEquals(mapOf("enriched" to "value"), output.context)
+    assertTrue(output.transactionResults.isEmpty())
   }
 }

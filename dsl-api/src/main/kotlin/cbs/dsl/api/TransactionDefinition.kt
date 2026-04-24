@@ -7,8 +7,8 @@ interface TransactionDefinition {
 
   /**
    * Optional display name for this transaction. Used to distinguish DSL overrides from the
-   * underlying implementation class/bean identified by [code]. When set, the DSL block is
-   * treated as a named override of the bean registered under [code].
+   * underlying implementation class/bean identified by [code]. When set, the DSL block is treated
+   * as a named override of the bean registered under [code].
    *
    * Example:
    * ```kotlin
@@ -22,15 +22,15 @@ interface TransactionDefinition {
     get() = null
 
   /**
-   * List of parameter definitions declared in the `parameters { }` block.
-   * Used for validation and documentation purposes.
+   * List of parameter definitions declared in the `parameters { }` block. Used for validation and
+   * documentation purposes.
    */
   val parameters: List<ParameterDefinition>
     get() = emptyList()
 
   /**
-   * Optional context enrichment block that runs before each phase block (preview, execute, rollback).
-   * Allows transactions to enrich the context with additional data before execution.
+   * Optional context enrichment block that runs before each phase block (preview, execute,
+   * rollback). Allows transactions to enrich the context with additional data before execution.
    *
    * Example:
    * ```kotlin
@@ -45,9 +45,9 @@ interface TransactionDefinition {
   val contextBlock: (TransactionContext) -> Unit
     get() = {}
 
-  fun preview(ctx: TransactionContext)
+  fun preview(input: TransactionInput): TransactionOutput
 
-  fun execute(ctx: TransactionContext)
+  fun execute(input: TransactionInput): TransactionOutput
 
-  fun rollback(ctx: TransactionContext)
+  fun rollback(input: TransactionInput): TransactionOutput
 }

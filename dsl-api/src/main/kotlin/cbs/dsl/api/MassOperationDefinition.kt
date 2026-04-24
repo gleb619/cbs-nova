@@ -11,6 +11,6 @@ interface MassOperationDefinition {
   val lock: LockDefinition?
   val contextBlock: (MassOperationContext) -> Unit
   val itemBlock: (MassOperationContext) -> Unit
-  val onPartial: ((Signal) -> Unit)?
-  val onCompleted: ((Signal) -> Unit)?
+  val onPartial: ((SignalTypes.Signal) -> Unit)?
+  val onCompleted: ((SignalTypes.Signal) -> Unit)?
 }

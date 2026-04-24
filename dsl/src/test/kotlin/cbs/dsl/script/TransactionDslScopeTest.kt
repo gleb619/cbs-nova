@@ -1,7 +1,7 @@
 package cbs.dsl.script
 
 import cbs.dsl.api.TransactionDefinition
-import cbs.dsl.api.context.TransactionContext
+import cbs.dsl.api.TransactionInput
 import cbs.dsl.runtime.TransactionBuilder
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -35,11 +35,10 @@ class TransactionDslScopeTest {
         }
 
     assertNotNull(tx)
-    // Check if internal fields are set (via reflection or by just executing them)
-    val ctx = TransactionContext("EVT", 1L, "user", "v1", emptyMap(), false)
-    tx.preview(ctx)
-    tx.execute(ctx)
-    tx.rollback(ctx)
+    val input = TransactionInput(params = emptyMap(), eventCode = "EVT", eventNumber = 1L)
+    tx.preview(input)
+    tx.execute(input)
+    tx.rollback(input)
   }
 
   @Test
@@ -48,8 +47,8 @@ class TransactionDslScopeTest {
     val scope = TestTransactionDslScope()
     val tx = scope.transaction("TX_NO_EXEC") { preview {} }
 
-    val ctx = TransactionContext("EVT", 1L, "user", "v1", emptyMap(), false)
-    val exception = org.junit.jupiter.api.assertThrows<IllegalStateException> { tx.execute(ctx) }
+    val input = TransactionInput(params = emptyMap(), eventCode = "EVT", eventNumber = 1L)
+    val exception = org.junit.jupiter.api.assertThrows<IllegalStateException> { tx.execute(input) }
     assertTrue(exception.message!!.contains("has no execute block defined"))
   }
 
@@ -74,9 +73,8 @@ class TransactionDslScopeTest {
         scope.transaction("TX_NO_TARGET") { execute { ctx -> ctx.delegate() } }
             as TransactionBuilder
 
-    val ctx = TransactionContext("EVT", 1L, "user", "v1", emptyMap(), false)
-    // Should not throw
-    tx.execute(ctx)
+    val input = TransactionInput(params = emptyMap(), eventCode = "EVT", eventNumber = 1L)
+    tx.execute(input)
   }
 
   @Test
@@ -89,12 +87,13 @@ class TransactionDslScopeTest {
         object : TransactionDefinition {
           override val code: String = "BASE"
 
-          override fun preview(ctx: TransactionContext) {}
+          override fun preview(input: TransactionInput) = cbs.dsl.api.TransactionOutput()
 
-          override fun execute(ctx: TransactionContext) {}
+          override fun execute(input: TransactionInput) = cbs.dsl.api.TransactionOutput()
 
-          override fun rollback(ctx: TransactionContext) {
+          override fun rollback(input: TransactionInput): cbs.dsl.api.TransactionOutput {
             delegateCalled = true
+            return cbs.dsl.api.TransactionOutput()
           }
         }
 
@@ -105,8 +104,8 @@ class TransactionDslScopeTest {
         } as TransactionBuilder
     tx.delegateTarget = baseTx
 
-    val ctx = TransactionContext("EVT", 1L, "user", "v1", emptyMap(), false)
-    tx.rollback(ctx)
+    val input = TransactionInput(params = emptyMap(), eventCode = "EVT", eventNumber = 1L)
+    tx.rollback(input)
 
     assertTrue(
         delegateCalled,
@@ -124,13 +123,14 @@ class TransactionDslScopeTest {
         object : TransactionDefinition {
           override val code: String = "BASE"
 
-          override fun preview(ctx: TransactionContext) {
+          override fun preview(input: TransactionInput): cbs.dsl.api.TransactionOutput {
             delegateCalled = true
+            return cbs.dsl.api.TransactionOutput()
           }
 
-          override fun execute(ctx: TransactionContext) {}
+          override fun execute(input: TransactionInput) = cbs.dsl.api.TransactionOutput()
 
-          override fun rollback(ctx: TransactionContext) {}
+          override fun rollback(input: TransactionInput) = cbs.dsl.api.TransactionOutput()
         }
 
     val tx =
@@ -140,8 +140,8 @@ class TransactionDslScopeTest {
         } as TransactionBuilder
     tx.delegateTarget = baseTx
 
-    val ctx = TransactionContext("EVT", 1L, "user", "v1", emptyMap(), false)
-    tx.preview(ctx)
+    val input = TransactionInput(params = emptyMap(), eventCode = "EVT", eventNumber = 1L)
+    tx.preview(input)
 
     assertTrue(
         delegateCalled,
@@ -181,11 +181,11 @@ class TransactionDslScopeTest {
           execute { ctx -> ctx.enrichment["enriched"] as Boolean }
         }
 
-    val ctx = TransactionContext("EVT", 1L, "user", "v1", emptyMap(), false)
-    tx.execute(ctx)
+    val input = TransactionInput(params = emptyMap(), eventCode = "EVT", eventNumber = 1L)
+    val output = tx.execute(input)
 
     assertTrue(
-        ctx.enrichment["enriched"] as Boolean,
+        output.result["enriched"] as Boolean,
         "Context should have been enriched with 'enriched' key",
     )
   }

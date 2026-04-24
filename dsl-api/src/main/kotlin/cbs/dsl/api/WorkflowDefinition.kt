@@ -6,4 +6,6 @@ interface WorkflowDefinition {
   val initial: String
   val terminalStates: List<String>
   val transitions: List<TransitionRule>
+
+  fun execute(input: WorkflowInput): WorkflowOutput
 }

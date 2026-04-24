@@ -1,6 +1,6 @@
 package cbs.dsl.compiler
 
-import cbs.dsl.api.ImportType
+import cbs.dsl.api.DslTypes.ImportType
 
 data class ImportDirective(
     val path: String,

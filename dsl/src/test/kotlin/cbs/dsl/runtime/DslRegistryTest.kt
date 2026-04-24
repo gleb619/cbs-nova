@@ -2,8 +2,8 @@ package cbs.dsl.runtime
 
 import cbs.dsl.api.ConditionDefinition
 import cbs.dsl.api.HelperDefinition
-import cbs.dsl.api.HelperInput
-import cbs.dsl.api.HelperOutput
+import cbs.dsl.api.HelperTypes.HelperInput
+import cbs.dsl.api.HelperTypes.HelperOutput
 import cbs.dsl.api.context.TransactionContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -68,7 +68,7 @@ class DslRegistryTest {
         object : HelperDefinition {
           override val code: String = "helper-1"
 
-          override fun execute(input: HelperInput): HelperOutput = object : HelperOutput {}
+          override fun execute(input: HelperInput): HelperOutput = HelperOutput(Unit)
         }
 
     val condition =

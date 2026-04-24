@@ -2,6 +2,8 @@ package cbs.dsl.impl
 
 import cbs.dsl.api.ParameterDefinition
 import cbs.dsl.api.TransactionDefinition
+import cbs.dsl.api.TransactionInput
+import cbs.dsl.api.TransactionOutput
 import cbs.dsl.api.context.TransactionContext
 
 /**
@@ -31,18 +33,35 @@ class TestTransaction(
     private val executeBlock: ((TransactionContext) -> Unit)? = null,
     private val rollbackBlock: ((TransactionContext) -> Unit)? = null,
 ) : TransactionDefinition {
-  override fun preview(ctx: TransactionContext) {
+
+  private fun buildContext(input: TransactionInput): TransactionContext =
+      TransactionContext(
+          input.eventCode ?: "UNKNOWN",
+          input.workflowExecutionId?.toLongOrNull() ?: 0L,
+          "system",
+          "1.0",
+          input.nonNullParams(),
+          false,
+      )
+
+  override fun preview(input: TransactionInput): TransactionOutput {
+    val ctx = buildContext(input)
     contextBlock(ctx)
     previewBlock?.invoke(ctx)
+    return TransactionOutput(ctx.enrichment.toMap())
   }
 
-  override fun execute(ctx: TransactionContext) {
+  override fun execute(input: TransactionInput): TransactionOutput {
+    val ctx = buildContext(input)
     contextBlock(ctx)
     executeBlock?.invoke(ctx) ?: error("TestTransaction '$code' has no execute block defined")
+    return TransactionOutput(ctx.enrichment.toMap())
   }
 
-  override fun rollback(ctx: TransactionContext) {
+  override fun rollback(input: TransactionInput): TransactionOutput {
+    val ctx = buildContext(input)
     contextBlock(ctx)
     rollbackBlock?.invoke(ctx)
+    return TransactionOutput(ctx.enrichment.toMap())
   }
 }

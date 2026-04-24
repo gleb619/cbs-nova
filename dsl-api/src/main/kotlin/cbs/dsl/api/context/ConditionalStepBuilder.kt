@@ -10,6 +10,8 @@ interface ConditionalStepBuilder {
   }
 
   infix fun orWhen(predicate: () -> Boolean): WhenClause
+
   infix fun otherwise(block: ConditionalStepBuilder.() -> Unit)
+
   fun transaction(tx: TransactionDefinition)
 }

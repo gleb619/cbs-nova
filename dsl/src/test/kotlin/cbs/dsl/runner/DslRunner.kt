@@ -1,14 +1,14 @@
 package cbs.dsl.runner
 
+import cbs.dsl.api.HelperTypes.HelperInput
+import cbs.dsl.api.TransactionInput
 import cbs.dsl.api.context.EnrichmentContext
 import cbs.dsl.api.context.FinishContext
 import cbs.dsl.api.context.TransactionContext
 import cbs.dsl.impl.ImplRegistry
 import cbs.dsl.impl.populateFrom
-import cbs.dsl.runtime.AnyHelperOutput
 import cbs.dsl.runtime.DslRegistry
 import cbs.dsl.runtime.HelperBuilder
-import cbs.dsl.runtime.MapHelperInput
 import cbs.dsl.runtime.StepNode
 import kotlinx.coroutines.runBlocking
 
@@ -78,7 +78,15 @@ class DslRunner(
             } else {
               tx
             }
-        impl.execute(ctx)
+        val input =
+            TransactionInput(
+                params = ctx.enrichment.filterValues { it != null }.mapValues { it.value as Any },
+                eventCode = ctx.eventCode,
+                workflowExecutionId = ctx.workflowExecutionId.toString(),
+            )
+        @Suppress("UNCHECKED_CAST")
+        val output = impl.execute(input) as cbs.dsl.api.TransactionOutput
+        (output.result as Map<String, Any>).forEach { (k, v) -> ctx.enrichment[k] = v }
         results.add(tx.code)
       }
 
@@ -115,14 +123,16 @@ class DslRunner(
           helper(innerName, innerParams)
         }
       } else {
-        val output = def.execute(MapHelperInput(params, this)) as AnyHelperOutput
-        output.value
+        val output = def.execute(HelperInput(params, this.eventCode, this.workflowExecutionId))
+        output.value()
       }
     }
   }
 
   private inner class RunnableTransactionContext(source: RunnableEnrichmentContext) :
       TransactionContext(source.eventCode, 0L, "test", "test", source.eventParameters, false) {
+    private val parent = source
+
     init {
       enrichment.putAll(source.enrichment)
     }
@@ -139,8 +149,8 @@ class DslRunner(
           helper(innerName, innerParams)
         }
       } else {
-        val output = def.execute(MapHelperInput(params, this)) as AnyHelperOutput
-        output.value
+        val output = def.execute(HelperInput(params, parent.eventCode, parent.workflowExecutionId))
+        output.value()
       }
     }
   }

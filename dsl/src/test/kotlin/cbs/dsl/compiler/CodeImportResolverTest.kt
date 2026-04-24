@@ -2,11 +2,10 @@ package cbs.dsl.compiler
 
 import cbs.dsl.api.DslComponent
 import cbs.dsl.api.DslImplType
+import cbs.dsl.api.DslTypes.ImportType
 import cbs.dsl.api.HelperDefinition
-import cbs.dsl.api.HelperInput
-import cbs.dsl.api.HelperOutput
-import cbs.dsl.api.ImportType
-import cbs.dsl.runtime.AnyHelperOutput
+import cbs.dsl.api.HelperTypes.HelperInput
+import cbs.dsl.api.HelperTypes.HelperOutput
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -16,7 +15,7 @@ import org.junit.jupiter.api.DisplayName
 class TestCodeHelper : HelperDefinition {
   override val code = "TEST_HELPER"
 
-  override fun execute(input: HelperInput): HelperOutput = AnyHelperOutput("test")
+  override fun execute(input: HelperInput): HelperOutput = HelperOutput("test")
 }
 
 class CodeImportResolverTest {

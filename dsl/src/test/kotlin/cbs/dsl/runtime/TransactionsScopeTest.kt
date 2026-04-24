@@ -1,6 +1,8 @@
 package cbs.dsl.runtime
 
 import cbs.dsl.api.TransactionDefinition
+import cbs.dsl.api.TransactionInput
+import cbs.dsl.api.TransactionOutput
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -13,22 +15,22 @@ class TransactionsScopeTest {
       object : TransactionDefinition {
         override val code: String = "TEST_TX"
 
-        override fun preview(ctx: cbs.dsl.api.context.TransactionContext) {}
+        override fun preview(input: TransactionInput) = TransactionOutput()
 
-        override fun execute(ctx: cbs.dsl.api.context.TransactionContext) {}
+        override fun execute(input: TransactionInput) = TransactionOutput()
 
-        override fun rollback(ctx: cbs.dsl.api.context.TransactionContext) {}
+        override fun rollback(input: TransactionInput) = TransactionOutput()
       }
 
   private val anotherTransaction =
       object : TransactionDefinition {
         override val code: String = "ANOTHER_TX"
 
-        override fun preview(ctx: cbs.dsl.api.context.TransactionContext) {}
+        override fun preview(input: TransactionInput) = TransactionOutput()
 
-        override fun execute(ctx: cbs.dsl.api.context.TransactionContext) {}
+        override fun execute(input: TransactionInput) = TransactionOutput()
 
-        override fun rollback(ctx: cbs.dsl.api.context.TransactionContext) {}
+        override fun rollback(input: TransactionInput) = TransactionOutput()
       }
 
   @Test
@@ -37,7 +39,6 @@ class TransactionsScopeTest {
     val scope = TransactionsScopeImpl()
 
     val handle = scope.step(testTransaction)
-
     assertNotNull(handle)
     assertEquals(1, scope.steps.size)
     assertTrue(scope.steps[0] is StepNode.Direct)
@@ -70,7 +71,6 @@ class TransactionsScopeTest {
 
     val handle1 = scope.step(testTransaction)
     val handle2 = scope.step(anotherTransaction)
-
     scope.await(handle1, handle2)
 
     assertEquals(3, scope.steps.size)
@@ -114,7 +114,6 @@ class TransactionsScopeTest {
 
     scope["testKey"] = "testValue"
     assertEquals("testValue", scope["testKey"])
-
     scope["numberKey"] = 42
     assertEquals(42, scope["numberKey"])
   }
