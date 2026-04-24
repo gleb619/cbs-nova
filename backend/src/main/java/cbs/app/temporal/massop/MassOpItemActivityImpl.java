@@ -43,12 +43,7 @@ public class MassOpItemActivityImpl implements MassOpItemActivity {
       return new MassOpItemResult(false, "Invalid item data JSON: " + e.getMessage());
     }
 
-    MassOperationContext ctx = new MassOperationContext(
-        input.itemId(),
-        itemData,
-        input.massOperationExecutionId(),
-        input.performedBy(),
-        input.dslVersion());
+    MassOperationContext ctx = new MassOperationContext(input.performedBy(), input.dslVersion());
 
     // 5c. Call itemBlock
     try {

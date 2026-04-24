@@ -5,6 +5,7 @@ plugins {
   alias(libs.plugins.kotlin.spring)
   alias(libs.plugins.spring.boot)
   alias(libs.plugins.spring.dm)
+  alias(libs.plugins.ksp)
 }
 
 kotlin {
@@ -60,6 +61,9 @@ dependencies {
   api libs.temporal.sdk
 
   api libs.jgit
+
+  // KSP for compile-time DSL component registration
+  ksp project(':dsl-codegen')
 
   // -- Testing --
   testImplementation libs.bundles.spring.test

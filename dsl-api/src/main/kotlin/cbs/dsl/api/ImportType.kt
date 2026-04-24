@@ -10,7 +10,7 @@ enum class ImportType {
     DSL,
 
     /**
-     * Imported from compiled Kotlin/Java code (classes annotated with @DslImpl).
+     * Imported from compiled Kotlin/Java code (classes annotated with @DslComponent).
      */
     CODE,
 }

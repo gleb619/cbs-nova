@@ -69,7 +69,7 @@ BaseContext(eventCode, workflowExecutionId, performedBy, dslVersion)
 - `LENIENT` (dev, `@Profile("dev")`) — raw `.kts` interpreted directly via `DevDslEvaluator`
 
 **Key Files:**
-- `dsl-api/src/main/kotlin/cbs/dsl/api/` — interfaces, annotations (`@DslImpl`), context types
+- `dsl-api/src/main/kotlin/cbs/dsl/api/` — interfaces, annotations (`@DslComponent`), context types
 - `dsl/src/main/kotlin/cbs/dsl/script/` — script scope classes (`*DslScope`), `ScriptHost`, `DslCompiler`
 - `dsl/src/main/kotlin/cbs/dsl/runtime/` — builders (`*Builder`), `DslRegistry`, step orchestration
 - `dsl/src/main/kotlin/cbs/dsl/compiler/` — `ImportParser`, `ImportResolver`, `DslValidator`

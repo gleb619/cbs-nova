@@ -129,7 +129,6 @@ class EventBuilderTest {
             performedBy = "test",
             dslVersion = "1.0",
             eventParameters = emptyMap(),
-            displayData = emptyMap(),
         )
     event.finishBlock(testContext, null)
 
@@ -160,7 +159,6 @@ class EventBuilderTest {
             performedBy = "test",
             dslVersion = "1.0",
             eventParameters = emptyMap(),
-            displayData = emptyMap(),
         )
     event.finishBlock(testContext, testException)
 

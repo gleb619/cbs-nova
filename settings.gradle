@@ -5,6 +5,7 @@ include 'starter'
 include 'client'
 include 'dsl-api'
 include 'dsl'
+include 'dsl-codegen'
 include 'frontend-plugin'
 include 'frontend'
 

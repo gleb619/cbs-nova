@@ -108,8 +108,7 @@ public class MassOpWorkflowImpl implements MassOpWorkflow {
   }
 
   private MassOperationContext buildContext(MassOpInput input, MassOperationDefinition massOpDef) {
-    MassOperationContext ctx =
-        new MassOperationContext("", Map.of(), 0L, input.performedBy(), input.dslVersion());
+    MassOperationContext ctx = new MassOperationContext(input.performedBy(), input.dslVersion());
     massOpDef.getContextBlock().invoke(ctx);
     return ctx;
   }

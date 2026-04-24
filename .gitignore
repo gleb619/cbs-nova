@@ -101,6 +101,12 @@ node_modules
 /dsl-api/.project
 /dsl-api/.settings/
 /dsl-api/bin/
+/dsl-codegen/build/
+/dsl-codegen/.classpath
+/dsl-codegen/.factorypath
+/dsl-codegen/.project
+/dsl-codegen/.settings/
+/dsl-codegen/bin/
 /examples/cbs-rules/
 /docs/papers/phase1/*
 /docs/papers/phase2/*

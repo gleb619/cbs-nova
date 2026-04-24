@@ -41,7 +41,7 @@
 | T38  | Standard event `.kts` file + complete loan-disbursement scenario in `dsl`                           | `done`   | dsl      | T37                     | T38b               |
 | T38b | Add `name` field to DSL builders + `TestHelper`/`TestTransaction`/`TestCondition`/`TestEvent` impls | `done`   | dsl      | T38                     | T38c               |
 | T38c | `ImplRegistry` — runtime dispatch from DSL code/name to `TestXxx` impl classes + `.kts` wiring      | `done`   | dsl      | T38b                    | T38d, T39          |
-| T38d | Annotation processor + compile-time `ImplRegistry` population — `@DslImpl` annotation + design doc  | `done`   | dsl-api  | T38c                    | T41                |
+| T38d | Annotation processor + compile-time `ImplRegistry` population — `@DslComponent` annotation + design doc  | `done`   | dsl-api  | T38c                    | T41                |
 | T39  | In-memory transaction/helper execution impl (no Temporal) in `dsl`                                  | `done`   | dsl      | T38c                    | T41                |
 | T40  | Move `EventWorkflowImpl` + Temporal wiring to `starter`                                             | `done`   | starter  | T37                     | T41                |
 
