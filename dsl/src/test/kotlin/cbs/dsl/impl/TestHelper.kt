@@ -8,7 +8,7 @@ import cbs.dsl.api.HelperFunction.HelperResult
 import cbs.dsl.impl.TestHelper.TestArg
 import cbs.dsl.impl.TestHelper.TestResult
 
-@DslComponent(code = "TEST_HELPER", type = DslImplType.HELPER)
+@DslComponent(code = "TestHelper", type = DslImplType.HELPER)
 class TestHelper : HelperFunction<TestArg, TestResult> {
 
   data class TestArg(val value: String) : HelperArg
