@@ -8,18 +8,18 @@ import cbs.dsl.api.context.BaseContext
 import cbs.dsl.api.context.HelperContext
 import java.util.function.Consumer
 
-class HelperBuilder(override val code: String) : HelperDefinition {
+class HelperBuilder(val helperCode: String) : HelperDefinition {
   private var _name: String? = null
-  override val name: String?
-    get() = _name
 
   private val _parameters = mutableListOf<ParameterDefinition>()
-  override val parameters: List<ParameterDefinition>
-    get() = _parameters.toList()
+  override fun getParameters(): List<ParameterDefinition> = _parameters.toList()
 
   private var _contextBlock: Consumer<HelperContext> = Consumer { }
-  override val contextBlock: Consumer<HelperContext>
-    get() = _contextBlock
+  override fun getContextBlock(): Consumer<HelperContext> = _contextBlock
+
+  override fun getCode(): String = helperCode
+
+  override fun getName(): String? = _name
 
   private var executeBlock: ((HelperContext) -> Any)? = null
 
@@ -49,7 +49,7 @@ class HelperBuilder(override val code: String) : HelperDefinition {
           .build()
     _contextBlock.accept(ctx)
 
-    val result = executeBlock?.invoke(ctx) ?: error("Helper '$code' has no execute block defined")
+    val result = executeBlock?.invoke(ctx) ?: error("Helper '$helperCode' has no execute block defined")
 
     return HelperOutput(result)
   }
@@ -69,7 +69,7 @@ class HelperBuilder(override val code: String) : HelperDefinition {
 
     _contextBlock.accept(ctx)
 
-    val result = executeBlock?.invoke(ctx) ?: error("Helper '$code' has no execute block defined")
+    val result = executeBlock?.invoke(ctx) ?: error("Helper '$helperCode' has no execute block defined")
 
     return result
   }

@@ -1,8 +1,8 @@
 package cbs.dsl.runtime
 
 import cbs.dsl.api.TransactionDefinition
-import cbs.dsl.api.TransactionInput
-import cbs.dsl.api.TransactionOutput
+import cbs.dsl.api.TransactionTypes.TransactionInput
+import cbs.dsl.api.TransactionTypes.TransactionOutput
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -13,24 +13,24 @@ import org.junit.jupiter.api.Test
 class TransactionsScopeTest {
   private val testTransaction =
       object : TransactionDefinition {
-        override val code: String = "TEST_TX"
+        override fun getCode(): String = "TEST_TX"
 
-        override fun preview(input: TransactionInput) = TransactionOutput()
+        override fun preview(input: TransactionInput) = TransactionOutput.empty()
 
-        override fun execute(input: TransactionInput) = TransactionOutput()
+        override fun execute(input: TransactionInput) = TransactionOutput.empty()
 
-        override fun rollback(input: TransactionInput) = TransactionOutput()
+        override fun rollback(input: TransactionInput) = TransactionOutput.empty()
       }
 
   private val anotherTransaction =
       object : TransactionDefinition {
-        override val code: String = "ANOTHER_TX"
+        override fun getCode(): String = "ANOTHER_TX"
 
-        override fun preview(input: TransactionInput) = TransactionOutput()
+        override fun preview(input: TransactionInput) = TransactionOutput.empty()
 
-        override fun execute(input: TransactionInput) = TransactionOutput()
+        override fun execute(input: TransactionInput) = TransactionOutput.empty()
 
-        override fun rollback(input: TransactionInput) = TransactionOutput()
+        override fun rollback(input: TransactionInput) = TransactionOutput.empty()
       }
 
   @Test
@@ -38,7 +38,7 @@ class TransactionsScopeTest {
   fun `should record direct step when step called`() = runBlocking {
     val scope = TransactionsScopeImpl()
 
-    val handle = scope.step(testTransaction)
+    val handle = scope.step(testTransaction).get()
     assertNotNull(handle)
     assertEquals(1, scope.steps.size)
     assertTrue(scope.steps[0] is StepNode.Direct)
@@ -50,8 +50,8 @@ class TransactionsScopeTest {
   fun `should chain steps when then called`() = runBlocking {
     val scope = TransactionsScopeImpl()
 
-    val firstHandle = scope.step(testTransaction)
-    val secondHandle = firstHandle.then(anotherTransaction)
+    val firstHandle = scope.step(testTransaction).get()
+    val secondHandle = firstHandle.then(anotherTransaction).get()
 
     assertNotNull(secondHandle)
     assertEquals(1, scope.steps.size)
@@ -69,8 +69,8 @@ class TransactionsScopeTest {
   fun `should record barrier when await called`() = runBlocking {
     val scope = TransactionsScopeImpl()
 
-    val handle1 = scope.step(testTransaction)
-    val handle2 = scope.step(anotherTransaction)
+    val handle1 = scope.step(testTransaction).get()
+    val handle2 = scope.step(anotherTransaction).get()
     scope.await(handle1, handle2)
 
     assertEquals(3, scope.steps.size)
@@ -86,15 +86,9 @@ class TransactionsScopeTest {
     val scope = TransactionsScopeImpl()
 
     val handle =
-        scope.step {
-          `when`({ true }) then
-              {
-                transaction(testTransaction)
-              } otherwise
-              {
-                transaction(anotherTransaction)
-              }
-        }
+        scope.step { builder ->
+          builder.`when` { true } then { transaction(testTransaction) } otherwise { transaction(anotherTransaction) }
+        }.get()
 
     assertNotNull(handle)
     assertEquals(1, scope.steps.size)

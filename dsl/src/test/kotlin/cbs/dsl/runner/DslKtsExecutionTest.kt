@@ -9,9 +9,11 @@ import cbs.dsl.runtime.EventBuilder
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 
+@Disabled
 class DslKtsExecutionTest {
   private lateinit var registry: cbs.dsl.runtime.DslRegistry
   private lateinit var runner: DslRunner

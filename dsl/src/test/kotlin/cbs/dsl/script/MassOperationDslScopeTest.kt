@@ -8,6 +8,7 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class MassOperationDslScopeTest {
   @Test
@@ -38,9 +39,9 @@ class MassOperationDslScopeTest {
     scope.massOperation("MASS_1") { item {} }
 
     val exception =
-        org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
-          scope.massOperation("MASS_2") { item {} }
-        }
+      assertThrows<IllegalArgumentException> {
+        scope.massOperation("MASS_2") { item {} }
+      }
     assertTrue(exception.message!!.contains("Only one massOperation block"))
   }
 
@@ -49,7 +50,7 @@ class MassOperationDslScopeTest {
   fun `should throw when item block missing`() {
     val builder = MassOpBuilder("NO_ITEM")
 
-    val exception = org.junit.jupiter.api.assertThrows<IllegalStateException> { builder.itemBlock }
+    val exception = assertThrows<IllegalStateException> { builder.itemBlock }
     assertTrue(exception.message!!.contains("has no item block defined"))
   }
 
@@ -58,7 +59,7 @@ class MassOperationDslScopeTest {
   fun `should throw when source missing`() {
     val builder = MassOpBuilder("NO_SOURCE")
 
-    val exception = org.junit.jupiter.api.assertThrows<IllegalStateException> { builder.source }
+    val exception = assertThrows<IllegalStateException> { builder.source }
     assertTrue(exception.message!!.contains("has no source defined"))
   }
 

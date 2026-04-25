@@ -11,7 +11,7 @@ import cbs.app.temporal.activity.TransactionActivityImpl;
 import cbs.dsl.api.Action;
 import cbs.dsl.api.EventDefinition;
 import cbs.dsl.api.TransactionDefinition;
-import cbs.dsl.api.TransactionInput;
+import cbs.dsl.api.TransactionTypes.TransactionInput;
 import cbs.dsl.api.TransitionRuleDefinition;
 import cbs.dsl.api.WorkflowDefinition;
 import cbs.dsl.runtime.DslRegistry;

@@ -11,7 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import cbs.dsl.api.TransactionDefinition;
-import cbs.dsl.api.TransactionInput;
+import cbs.dsl.api.TransactionTypes.TransactionInput;
 import cbs.dsl.runtime.DslRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -3,9 +3,7 @@ package cbs.dsl.api;
 import io.avaje.jsonb.Json;
 import java.util.Map;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)

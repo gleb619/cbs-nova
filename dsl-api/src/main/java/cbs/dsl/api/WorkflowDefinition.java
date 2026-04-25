@@ -1,5 +1,7 @@
 package cbs.dsl.api;
 
+import cbs.dsl.api.WorkflowTypes.WorkflowInput;
+import cbs.dsl.api.WorkflowTypes.WorkflowOutput;
 import java.util.List;
 
 /**

@@ -1,7 +1,8 @@
 package cbs.dsl.runner
 
 import cbs.dsl.api.HelperTypes.HelperInput
-import cbs.dsl.api.TransactionInput
+import cbs.dsl.api.TransactionTypes
+import cbs.dsl.api.TransactionTypes.TransactionInput
 import cbs.dsl.api.context.EnrichmentContext
 import cbs.dsl.api.context.FinishContext
 import cbs.dsl.api.context.TransactionContext
@@ -33,14 +34,13 @@ class DslRunner(
       enrichCtx.enrichment.putAll(txCtx.enrichment)
     }
 
-    val finishCtx =
-        FinishContext(
-            eventCode = eventCode,
-            workflowExecutionId = 0L,
-            performedBy = "test",
-            dslVersion = "test",
-            eventParameters = params,
-        )
+    val finishCtx = FinishContext.finishBuilder()
+      .eventCode(eventCode)
+      .workflowExecutionId(0L)
+      .performedBy("test")
+      .dslVersion("test")
+      .eventParameters(params)
+      .build()
     finishCtx.enrichment.putAll(enrichCtx.enrichment)
     event.finishBlock(finishCtx, null)
 
@@ -84,14 +84,14 @@ class DslRunner(
               it.value as Any
             }
         val input =
-            TransactionInput(
-                params = inputParams,
-                eventCode = ctx.eventCode,
-                eventNumber = ctx.workflowExecutionId,
-                workflowExecutionId = ctx.workflowExecutionId.toString(),
-            )
+          TransactionInput.builder()
+            .params(inputParams)
+            .eventCode(ctx.eventCode)
+            .eventNumber(ctx.workflowExecutionId)
+            .workflowExecutionId(ctx.workflowExecutionId.toString())
+            .build()
         @Suppress("UNCHECKED_CAST")
-        val output = impl.execute(input) as cbs.dsl.api.TransactionOutput
+        val output = impl.execute(input) as TransactionTypes.TransactionOutput
         (output.result as Map<String, Any>).forEach { (k, v) -> ctx.enrichment[k] = v }
         results.add(tx.code)
       }
@@ -102,7 +102,7 @@ class DslRunner(
       }
 
       is StepNode.Conditional -> {
-        val match = node.branches.firstOrNull { it.predicate() }
+        val match = node.branches.firstOrNull { it.predicate.asBoolean }
         when {
           match != null -> executeNode(match.node, ctx, results)
           node.otherwise != null -> executeNode(node.otherwise, ctx, results)

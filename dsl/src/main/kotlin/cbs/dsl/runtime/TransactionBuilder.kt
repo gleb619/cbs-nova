@@ -2,29 +2,28 @@ package cbs.dsl.runtime
 
 import cbs.dsl.api.ParameterDefinition
 import cbs.dsl.api.TransactionDefinition
-import cbs.dsl.api.TransactionInput
-import cbs.dsl.api.TransactionOutput
+import cbs.dsl.api.TransactionTypes.TransactionInput
+import cbs.dsl.api.TransactionTypes.TransactionOutput
 import cbs.dsl.api.context.TransactionContext
 import cbs.dsl.api.context.TransactionDslContext
 import cbs.dsl.api.context.TransactionPhase
 import java.util.function.Consumer
 
-class TransactionBuilder(override val code: String) : TransactionDefinition {
+class TransactionBuilder(val transactionCode: String) : TransactionDefinition {
   private var _name: String? = null
   private val _parameters = mutableListOf<ParameterDefinition>()
-  override val parameters: List<ParameterDefinition>
-    get() = _parameters.toList()
+  override fun getParameters(): List<ParameterDefinition> = _parameters.toList()
 
   private var _contextBlock: Consumer<TransactionContext> = Consumer { }
-  override val contextBlock: Consumer<TransactionContext>
-    get() = _contextBlock
+  override fun getContextBlock(): Consumer<TransactionContext> = _contextBlock
 
   private var _preview: ((TransactionContext) -> Unit)? = null
   private var _execute: ((TransactionContext) -> Unit)? = null
   private var _rollback: ((TransactionContext) -> Unit)? = null
 
-  override val name: String?
-    get() = _name
+  override fun getCode(): String = transactionCode
+
+  override fun getName(): String? = _name
 
   val hasExecute: Boolean
     get() = _execute != null
@@ -43,7 +42,7 @@ class TransactionBuilder(override val code: String) : TransactionDefinition {
     val ctx = buildContext(input)
     _contextBlock.accept(ctx)
     val dslCtx = TransactionDslContext(ctx, delegateTarget, TransactionPhase.EXECUTE)
-    _execute?.invoke(dslCtx) ?: error("Transaction '$code' has no execute block defined")
+    _execute?.invoke(dslCtx) ?: error("Transaction '$transactionCode' has no execute block defined")
     ctx.enrichment.putAll(dslCtx.enrichment)
     return TransactionOutput(dslCtx.enrichment.toMap())
   }

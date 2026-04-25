@@ -18,6 +18,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor(access = AccessLevel.PUBLIC)
 public class DisplayScope {
 
+  // TODO: replace with `dsl-api/src/main/java/cbs/dsl/api/context/Pair.java`
   private List<Map.Entry<String, Object>> labels = new ArrayList<>();
 
   public void label(String key, Object value) {

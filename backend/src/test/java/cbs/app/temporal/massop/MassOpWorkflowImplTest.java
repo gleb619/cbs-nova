@@ -96,10 +96,6 @@ class MassOpWorkflowImplTest {
     @SuppressWarnings("unchecked")
     Consumer<MassOperationContext> itemBlock =
         mock(Consumer.class);
-    if (itemBlockThrows) {
-      when(itemBlock.accept(any(MassOperationContext.class)))
-          .thenThrow(new RuntimeException("item failed"));
-    }
     when(def.getItemBlock()).thenReturn(itemBlock);
 
     return def;

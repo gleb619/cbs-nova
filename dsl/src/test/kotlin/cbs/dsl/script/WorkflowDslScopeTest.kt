@@ -90,7 +90,7 @@ class WorkflowDslScopeTest {
   }
 
   @Test
-  @DisplayName("should return same instance in registeredWorkflows and return value")
+  @DisplayName("should return same instance in registeredWorkflows and return getValue")
   fun shouldReturnSameInstanceInRegisteredWorkflowsAndReturnValue() {
     val scope = TestWorkflowDslScope()
 

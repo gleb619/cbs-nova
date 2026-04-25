@@ -1,50 +1,22 @@
 package cbs.dsl.impl
 
-import cbs.dsl.api.HelperDefinition
-import cbs.dsl.api.HelperTypes.HelperInput
-import cbs.dsl.api.HelperTypes.HelperOutput
-import cbs.dsl.api.ParameterDefinition
-import cbs.dsl.api.context.HelperContext
-import java.util.function.Consumer
+import cbs.dsl.api.DslComponent
+import cbs.dsl.api.DslImplType
+import cbs.dsl.api.HelperFunction
+import cbs.dsl.api.HelperFunction.HelperArg
+import cbs.dsl.api.HelperFunction.HelperResult
+import cbs.dsl.impl.TestHelper.TestArg
+import cbs.dsl.impl.TestHelper.TestResult
 
-/**
- * Test implementation of [HelperDefinition] for use in DSL integration tests and sample `.kts`
- * files.
- *
- * This class provides a simple, configurable helper that can be used to test DSL execution without
- * requiring Spring beans or external dependencies.
- *
- * Example usage in `.kts`:
- * ```kotlin
- * helper("FIND_CUSTOMER_CODE_BY_ID") {
- *     name("TestFindCustomerCode")
- *     execute { ctx -> "CUST-${ctx.params["id"]}" }
- * }
- * ```
- *
- * The `name` field distinguishes this test implementation from a production bean with the same
- * `code`.
- */
-class TestHelper(
-    override val code: String,
-    override val name: String? = null,
-    override val parameters: List<ParameterDefinition> = emptyList(),
-    override val contextBlock: Consumer<HelperContext> = Consumer { },
-    private val executeBlock: (Map<String, Any>) -> Any,
-) : HelperDefinition {
-  override fun execute(input: HelperInput): HelperOutput {
-    val ctx =
-        HelperContext(
-            eventCode = input.eventCode() ?: "",
-            workflowExecutionId = input.workflowExecutionId() ?: 0L,
-            performedBy = "",
-            dslVersion = "",
-            params = input.params(),
-        )
+@DslComponent(code = "TEST_HELPER", type = DslImplType.HELPER)
+class TestHelper : HelperFunction<TestArg, TestResult> {
 
-    contextBlock.accept(ctx)
+  data class TestArg(val value: String) : HelperArg
 
-    val result = executeBlock(input.params())
-    return HelperOutput(result)
+  data class TestResult(val value: String) : HelperResult
+
+  override fun execute(input: TestArg): TestResult {
+    return TestResult(value = input.value + "-test")
   }
+
 }

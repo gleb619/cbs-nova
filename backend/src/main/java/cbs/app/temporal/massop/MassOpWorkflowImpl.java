@@ -11,6 +11,7 @@ import cbs.nova.repository.MassOperationItemRepository;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.failure.ApplicationFailure;
 import io.temporal.workflow.Workflow;
+import java.util.Collections;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tools.jackson.core.JacksonException;
@@ -108,7 +109,7 @@ public class MassOpWorkflowImpl implements MassOpWorkflow {
   }
 
   private MassOperationContext buildContext(MassOpInput input, MassOperationDefinition massOpDef) {
-    MassOperationContext ctx = new MassOperationContext(input.performedBy(), input.dslVersion());
+    MassOperationContext ctx = new MassOperationContext(input.performedBy(), input.dslVersion(), Collections.emptyMap());
     massOpDef.getContextBlock().accept(ctx);
     return ctx;
   }

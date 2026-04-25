@@ -1,8 +1,8 @@
 package cbs.dsl.runtime
 
 import cbs.dsl.api.TransactionDefinition
-import cbs.dsl.api.TransactionInput
-import cbs.dsl.api.TransactionOutput
+import cbs.dsl.api.TransactionTypes.TransactionInput
+import cbs.dsl.api.TransactionTypes.TransactionOutput
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -13,35 +13,35 @@ import org.junit.jupiter.api.Test
 class ConditionalStepBuilderTest {
   private val testTransaction =
       object : TransactionDefinition {
-        override val code: String = "TEST_TX"
+        override fun getCode(): String = "TEST_TX"
 
-        override fun preview(input: TransactionInput) = TransactionOutput()
+        override fun preview(input: TransactionInput) = TransactionOutput.empty()
 
-        override fun execute(input: TransactionInput) = TransactionOutput()
+        override fun execute(input: TransactionInput) = TransactionOutput.empty()
 
-        override fun rollback(input: TransactionInput) = TransactionOutput()
+        override fun rollback(input: TransactionInput) = TransactionOutput.empty()
       }
 
   private val anotherTransaction =
       object : TransactionDefinition {
-        override val code: String = "ANOTHER_TX"
+        override fun getCode(): String = "ANOTHER_TX"
 
-        override fun preview(input: TransactionInput) = TransactionOutput()
+        override fun preview(input: TransactionInput) = TransactionOutput.empty()
 
-        override fun execute(input: TransactionInput) = TransactionOutput()
+        override fun execute(input: TransactionInput) = TransactionOutput.empty()
 
-        override fun rollback(input: TransactionInput) = TransactionOutput()
+        override fun rollback(input: TransactionInput) = TransactionOutput.empty()
       }
 
   private val fallbackTransaction =
       object : TransactionDefinition {
-        override val code: String = "FALLBACK_TX"
+        override fun getCode(): String = "FALLBACK_TX"
 
-        override fun preview(input: TransactionInput) = TransactionOutput()
+        override fun preview(input: TransactionInput) = TransactionOutput.empty()
 
-        override fun execute(input: TransactionInput) = TransactionOutput()
+        override fun execute(input: TransactionInput) = TransactionOutput.empty()
 
-        override fun rollback(input: TransactionInput) = TransactionOutput()
+        override fun rollback(input: TransactionInput) = TransactionOutput.empty()
       }
 
   @Test

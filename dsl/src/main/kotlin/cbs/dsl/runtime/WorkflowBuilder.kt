@@ -4,17 +4,18 @@ import cbs.dsl.api.Action
 import cbs.dsl.api.EventDefinition
 import cbs.dsl.api.TransitionRuleDefinition
 import cbs.dsl.api.WorkflowDefinition
-import cbs.dsl.api.WorkflowInput
-import cbs.dsl.api.WorkflowOutput
+import cbs.dsl.api.WorkflowTypes.WorkflowInput
+import cbs.dsl.api.WorkflowTypes.WorkflowOutput
 
-class WorkflowBuilder(override val code: String) : WorkflowDefinition {
+class WorkflowBuilder(val workflowCode: String) : WorkflowDefinition {
   private val _states = mutableListOf<String>()
   private var _initial: String = ""
   private val _terminalStates = mutableListOf<String>()
   private val _transitions = mutableListOf<TransitionRuleDefinition>()
 
-  override val transitions: List<TransitionRuleDefinition>
-    get() = _transitions.toList()
+  override fun getCode(): String = workflowCode
+
+  override fun getTransitions(): List<TransitionRuleDefinition> = _transitions.toList()
 
   fun states(vararg s: String) {
     _states.addAll(s)
@@ -66,14 +67,11 @@ class WorkflowBuilder(override val code: String) : WorkflowDefinition {
     return inferredStates().filter { it !in sources }
   }
 
-  override val states: List<String>
-    get() = inferredStates()
+  override fun getStates(): List<String> = inferredStates()
 
-  override val initial: String
-    get() = inferredInitial()
+  override fun getInitial(): String = inferredInitial()
 
-  override val terminalStates: List<String>
-    get() = inferredTerminal()
+  override fun getTerminalStates(): List<String> = inferredTerminal()
 
   override fun execute(input: WorkflowInput): WorkflowOutput {
     val rule =

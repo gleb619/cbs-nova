@@ -8,7 +8,7 @@ import cbs.dsl.api.context.TransactionContext
 import java.util.function.Consumer
 import java.util.function.Predicate
 
-class ConditionBuilder(override val code: String) : ConditionDefinition {
+class ConditionBuilder(val conditionCode: String) : ConditionDefinition {
   private val _parameters = mutableListOf<ParameterDefinition>()
   private var _predicate: Predicate<TransactionContext>? = null
   private var _contextBlock: Consumer<TransactionContext> = Consumer { }
@@ -25,18 +25,17 @@ class ConditionBuilder(override val code: String) : ConditionDefinition {
     _predicate = Predicate { block(it) }
   }
 
-  override val parameters: List<ParameterDefinition>
-    get() = _parameters.toList()
+  override fun getCode(): String = conditionCode
 
-  override val contextBlock: Consumer<TransactionContext>
-    get() = _contextBlock
+  override fun getParameters(): List<ParameterDefinition> = _parameters.toList()
 
-  override val predicate: Predicate<TransactionContext>
-    get() = Predicate { ctx ->
-      _contextBlock.accept(ctx)
-      _predicate?.test(ctx)
-          ?: throw IllegalStateException("Condition '$code' has no predicate block defined")
-    }
+  override fun getContextBlock(): Consumer<TransactionContext> = _contextBlock
+
+  override fun getPredicate(): Predicate<TransactionContext> = Predicate { ctx ->
+    _contextBlock.accept(ctx)
+    _predicate?.test(ctx)
+        ?: throw IllegalStateException("Condition '$conditionCode' has no predicate block defined")
+  }
 
   override fun evaluate(input: ConditionInput): ConditionOutput {
     val ctx =

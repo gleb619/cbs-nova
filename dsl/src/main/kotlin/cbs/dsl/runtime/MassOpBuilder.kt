@@ -11,42 +11,35 @@ import cbs.dsl.api.TriggerDefinition
 import cbs.dsl.api.context.MassOperationContext
 import java.util.function.Consumer
 
-class MassOpBuilder(override val code: String) : MassOperationDefinition {
+class MassOpBuilder(val massOpCode: String) : MassOperationDefinition {
   private val _parameters = mutableListOf<ParameterDefinition>()
-  override val parameters: List<ParameterDefinition>
-    get() = _parameters.toList()
+  override fun getParameters(): List<ParameterDefinition> = _parameters.toList()
 
   private var _category: String = ""
-  override val category: String
-    get() = _category
+  override fun getCategory(): String = _category
 
   private val _triggers = mutableListOf<TriggerDefinition>()
-  override val triggers: List<TriggerDefinition>
-    get() = _triggers.toList()
+  override fun getTriggers(): List<TriggerDefinition> = _triggers.toList()
 
   private var _source: SourceDefinition? = null
-  override val source: SourceDefinition
-    get() = _source ?: error("MassOperation '$code' has no source defined")
+  override fun getSource(): SourceDefinition = _source ?: error("MassOperation '$massOpCode' has no source defined")
 
   private var _lock: LockDefinition? = null
-  override val lock: LockDefinition?
-    get() = _lock
+  override fun getLock(): LockDefinition? = _lock
 
   private var _contextBlock: Consumer<MassOperationContext> = Consumer { }
-  override val contextBlock: Consumer<MassOperationContext>
-    get() = _contextBlock
+  override fun getContextBlock(): Consumer<MassOperationContext> = _contextBlock
 
   private var _item: Consumer<MassOperationContext>? = null
-  override val itemBlock: Consumer<MassOperationContext>
-    get() = _item ?: error("MassOperation '$code' has no item block defined")
+  override fun getItemBlock(): Consumer<MassOperationContext> = _item ?: error("MassOperation '$massOpCode' has no item block defined")
 
   private var _onPartial: Consumer<Signal>? = null
-  override val onPartial: Consumer<Signal>?
-    get() = _onPartial
+  override fun getOnPartial(): Consumer<Signal>? = _onPartial
 
   private var _onCompleted: Consumer<Signal>? = null
-  override val onCompleted: Consumer<Signal>?
-    get() = _onCompleted
+  override fun getOnCompleted(): Consumer<Signal>? = _onCompleted
+
+  override fun getCode(): String = massOpCode
 
   fun category(c: String) {
     _category = c

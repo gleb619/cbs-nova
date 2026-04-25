@@ -1,5 +1,7 @@
 package cbs.dsl.api;
 
+import cbs.dsl.api.TransactionTypes.TransactionInput;
+import cbs.dsl.api.TransactionTypes.TransactionOutput;
 import cbs.dsl.api.context.TransactionContext;
 import java.util.Collections;
 import java.util.List;

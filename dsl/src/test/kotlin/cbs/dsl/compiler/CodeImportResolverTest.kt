@@ -13,7 +13,7 @@ import org.junit.jupiter.api.DisplayName
 
 @DslComponent(code = "TEST_HELPER", type = DslImplType.HELPER)
 class TestCodeHelper : HelperDefinition {
-  override val code = "TEST_HELPER"
+  override fun getCode(): String = "TEST_HELPER"
 
   override fun execute(input: HelperInput): HelperOutput = HelperOutput("test")
 }

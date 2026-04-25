@@ -13,6 +13,10 @@ public interface TransactionsScope {
 
   void await(StepHandle... handles);
 
+  default void await(CompletableFuture<StepHandle>... handles) {
+    throw new IllegalStateException("Not implemented yet!");
+  }
+
   Object get(String key);
 
   void set(String key, Object value);

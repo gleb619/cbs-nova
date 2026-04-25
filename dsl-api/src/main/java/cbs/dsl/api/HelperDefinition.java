@@ -1,5 +1,7 @@
 package cbs.dsl.api;
 
+import cbs.dsl.api.HelperTypes.HelperInput;
+import cbs.dsl.api.HelperTypes.HelperOutput;
 import cbs.dsl.api.context.HelperContext;
 import java.util.Collections;
 import java.util.List;
@@ -42,5 +44,5 @@ public interface HelperDefinition {
   }
 
   /** Executes this helper with the given typed input. */
-  HelperTypes.HelperOutput execute(HelperTypes.HelperInput input);
+  HelperOutput execute(HelperInput input);
 }
