@@ -23,6 +23,7 @@ test-logger = "4.0.0"
 spotless = "8.3.0"
 openapi-generator = "7.12.0"
 freefair = "9.2.0"
+kotlin-lombok = "1.9.0"
 
 [libraries]
 # -- Spring Boot starters (managed by Spring Boot BOM) --
@@ -113,3 +114,4 @@ test-logger = { id = "com.adarshr.test-logger", version.ref = "test-logger" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 openapi-generator = { id = "org.openapi.generator", version.ref = "openapi-generator" }
 freefair-lombok = { id = "io.freefair.lombok", version.ref = "freefair" }
+kotlin-lombok = { id = "org.jetbrains.kotlin.plugin.lombok", version.ref = "kotlin-lombok" }

@@ -6,12 +6,15 @@ import cbs.dsl.api.EventOutput
 import cbs.dsl.api.ParameterDefinition
 import cbs.dsl.api.TransactionDefinition
 import cbs.dsl.api.TransactionInput
+import cbs.dsl.api.context.ConditionalStepBuilder
 import cbs.dsl.api.context.DisplayScope
 import cbs.dsl.api.context.EnrichmentContext
 import cbs.dsl.api.context.FinishContext
 import cbs.dsl.api.context.StepHandle
 import cbs.dsl.api.context.TransactionsScope
 import kotlinx.coroutines.runBlocking
+import java.util.concurrent.CompletableFuture
+import java.util.function.Consumer
 
 class EventBuilder(override val code: String) : EventDefinition {
   private val _parameters = mutableListOf<ParameterDefinition>()
@@ -59,13 +62,13 @@ class EventBuilder(override val code: String) : EventDefinition {
     val params: Map<String, Any> =
         input.params.filterValues { it != null }.mapValues { it.value as Any }
     val ctx =
-        EnrichmentContext(
-            eventCode = input.eventCode,
-            workflowExecutionId = input.eventNumber ?: 0L,
-            performedBy = "",
-            dslVersion = "",
-            eventParameters = params,
-        )
+        EnrichmentContext.enrichmentBuilder()
+          .eventCode(input.eventCode)
+          .workflowExecutionId(input.eventNumber ?: 0L)
+          .performedBy("")
+          .dslVersion("")
+          .eventParameters(params)
+          .build()
 
     // Run context enrichment block
     contextBlock(ctx)
@@ -79,23 +82,19 @@ class EventBuilder(override val code: String) : EventDefinition {
 
     // Build FinishContext and run finish block
     val finishCtx =
-        FinishContext(
-            eventCode = input.eventCode,
-            workflowExecutionId = input.eventNumber ?: 0L,
-            performedBy = "",
-            dslVersion = "",
-            eventParameters = params,
-        )
+        FinishContext.finishBuilder()
+          .eventCode(input.eventCode)
+          .workflowExecutionId(input.eventNumber ?: 0L)
+          .performedBy("")
+          .dslVersion("")
+          .eventParameters(params)
+          .build()
 
     return try {
       finishBlock(finishCtx, null)
-      EventOutput(context = ctx.enrichment.toMap(), transactionResults = collectedResults.toMap())
+      EventOutput(ctx.enrichment.toMap(), collectedResults.toMap())
     } catch (e: Throwable) {
-      EventOutput(
-          context = ctx.enrichment.toMap(),
-          transactionResults = collectedResults.toMap(),
-          status = "FAULTED",
-      )
+      EventOutput(ctx.enrichment.toMap(), collectedResults.toMap(), "FAULTED")
     }
   }
 
@@ -108,21 +107,19 @@ class EventBuilder(override val code: String) : EventDefinition {
   ) : TransactionsScope {
     private val scopeContext = mutableMapOf<String, Any>()
 
-    override suspend fun step(tx: TransactionDefinition): StepHandle {
-      val input = TransactionInput(params = emptyMap(), eventCode = code, workflowExecutionId = "0")
+    override fun step(tx: TransactionDefinition): CompletableFuture<StepHandle> {
+      val input = TransactionInput(emptyMap(), code, null, "0")
       val output = tx.execute(input)
       results[tx.code] = output.result
-      return StepHandleDummy
+      return CompletableFuture.completedFuture(StepHandleDummy)
     }
 
-    override suspend fun step(
-        block: cbs.dsl.api.context.ConditionalStepBuilder.() -> Unit
-    ): StepHandle {
+    override fun step(block: Consumer<ConditionalStepBuilder>): CompletableFuture<StepHandle> {
       // Deferred to T58 — treat as no-op for now
-      return StepHandleDummy
+      return CompletableFuture.completedFuture(StepHandleDummy)
     }
 
-    override suspend fun await(vararg handles: StepHandle) {
+    override fun await(vararg handles: StepHandle) {
       // Sequential execution — no-op
     }
 
@@ -135,9 +132,10 @@ class EventBuilder(override val code: String) : EventDefinition {
 
   /** Minimal StepHandle stub for in-process sequential execution. */
   private object StepHandleDummy : StepHandle {
-    override suspend fun then(tx: TransactionDefinition): StepHandle = this
+    override fun then(tx: TransactionDefinition): CompletableFuture<StepHandle> =
+        CompletableFuture.completedFuture(this)
 
-    override suspend fun join() {
+    override fun join() {
       // Sequential execution — no-op
     }
   }

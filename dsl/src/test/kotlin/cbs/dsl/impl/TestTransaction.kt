@@ -5,6 +5,7 @@ import cbs.dsl.api.TransactionDefinition
 import cbs.dsl.api.TransactionInput
 import cbs.dsl.api.TransactionOutput
 import cbs.dsl.api.context.TransactionContext
+import java.util.function.Consumer
 
 /**
  * Test implementation of [TransactionDefinition] for use in DSL integration tests and sample `.kts`
@@ -28,7 +29,7 @@ class TestTransaction(
     override val code: String,
     override val name: String? = null,
     override val parameters: List<ParameterDefinition> = emptyList(),
-    override val contextBlock: (TransactionContext) -> Unit = {},
+    override val contextBlock: Consumer<TransactionContext> = Consumer { },
     private val previewBlock: ((TransactionContext) -> Unit)? = null,
     private val executeBlock: ((TransactionContext) -> Unit)? = null,
     private val rollbackBlock: ((TransactionContext) -> Unit)? = null,
@@ -46,21 +47,21 @@ class TestTransaction(
 
   override fun preview(input: TransactionInput): TransactionOutput {
     val ctx = buildContext(input)
-    contextBlock(ctx)
+    contextBlock.accept(ctx)
     previewBlock?.invoke(ctx)
     return TransactionOutput(ctx.enrichment.toMap())
   }
 
   override fun execute(input: TransactionInput): TransactionOutput {
     val ctx = buildContext(input)
-    contextBlock(ctx)
+    contextBlock.accept(ctx)
     executeBlock?.invoke(ctx) ?: error("TestTransaction '$code' has no execute block defined")
     return TransactionOutput(ctx.enrichment.toMap())
   }
 
   override fun rollback(input: TransactionInput): TransactionOutput {
     val ctx = buildContext(input)
-    contextBlock(ctx)
+    contextBlock.accept(ctx)
     rollbackBlock?.invoke(ctx)
     return TransactionOutput(ctx.enrichment.toMap())
   }

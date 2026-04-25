@@ -6,6 +6,7 @@ import cbs.dsl.api.HelperTypes.HelperOutput
 import cbs.dsl.api.ParameterDefinition
 import cbs.dsl.api.context.BaseContext
 import cbs.dsl.api.context.HelperContext
+import java.util.function.Consumer
 
 class HelperBuilder(override val code: String) : HelperDefinition {
   private var _name: String? = null
@@ -16,8 +17,8 @@ class HelperBuilder(override val code: String) : HelperDefinition {
   override val parameters: List<ParameterDefinition>
     get() = _parameters.toList()
 
-  private var _contextBlock: (HelperContext) -> Unit = {}
-  override val contextBlock: (HelperContext) -> Unit
+  private var _contextBlock: Consumer<HelperContext> = Consumer { }
+  override val contextBlock: Consumer<HelperContext>
     get() = _contextBlock
 
   private var executeBlock: ((HelperContext) -> Any)? = null
@@ -31,7 +32,7 @@ class HelperBuilder(override val code: String) : HelperDefinition {
   }
 
   fun context(block: (HelperContext) -> Unit) {
-    _contextBlock = block
+    _contextBlock = Consumer { block(it) }
   }
 
   fun execute(block: (HelperContext) -> Any) {
@@ -39,15 +40,14 @@ class HelperBuilder(override val code: String) : HelperDefinition {
   }
 
   override fun execute(input: HelperInput): HelperOutput {
-    val ctx =
-        HelperContext(
-            eventCode = input.eventCode() ?: "",
-            workflowExecutionId = input.workflowExecutionId() ?: 0L,
-            performedBy = "",
-            dslVersion = "",
-            params = input.params(),
-        )
-    _contextBlock(ctx)
+    val ctx = HelperContext.helperBuilder()
+          .eventCode(input.eventCode() ?: "")
+          .workflowExecutionId(input.workflowExecutionId() ?: 0L)
+          .performedBy("")
+          .dslVersion("")
+          .params(input.params())
+          .build()
+    _contextBlock.accept(ctx)
 
     val result = executeBlock?.invoke(ctx) ?: error("Helper '$code' has no execute block defined")
 
@@ -59,19 +59,15 @@ class HelperBuilder(override val code: String) : HelperDefinition {
       baseCtx: BaseContext,
       resolver: (String, Map<String, Any>) -> Any,
   ): Any {
-    val ctx =
-        object :
-            HelperContext(
-                eventCode = baseCtx.eventCode,
-                workflowExecutionId = baseCtx.workflowExecutionId,
-                performedBy = baseCtx.performedBy,
-                dslVersion = baseCtx.dslVersion,
-                params = params,
-            ) {
-          override fun helper(name: String, params: Map<String, Any>): Any = resolver(name, params)
-        }
+    val ctx = HelperContext.helperBuilder()
+      .eventCode(baseCtx.eventCode)
+      .workflowExecutionId(baseCtx.workflowExecutionId)
+      .performedBy(baseCtx.performedBy)
+      .dslVersion(baseCtx.dslVersion)
+      .params(params)
+      .build()
 
-    _contextBlock(ctx)
+    _contextBlock.accept(ctx)
 
     val result = executeBlock?.invoke(ctx) ?: error("Helper '$code' has no execute block defined")
 

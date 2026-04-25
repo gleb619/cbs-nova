@@ -2,20 +2,22 @@ package cbs.dsl.runtime
 
 import cbs.dsl.api.TransactionDefinition
 import cbs.dsl.api.context.ConditionalStepBuilder
+import java.util.function.BooleanSupplier
+import java.util.function.Consumer
 
 class ConditionalStepBuilderImpl : ConditionalStepBuilder {
   private val branches: MutableList<StepNode.Conditional.Branch> = mutableListOf()
   private var otherwiseNode: StepNode? = null
   private var currentBranchBody: StepNode? = null
 
-  override fun `when`(predicate: () -> Boolean): ConditionalStepBuilder.WhenClause =
+  override fun `when`(predicate: BooleanSupplier): ConditionalStepBuilder.WhenClause =
       WhenClauseImpl(predicate)
 
-  override infix fun orWhen(predicate: () -> Boolean): ConditionalStepBuilder.WhenClause =
+  override fun orWhen(predicate: BooleanSupplier): ConditionalStepBuilder.WhenClause =
       WhenClauseImpl(predicate)
 
-  override infix fun otherwise(block: ConditionalStepBuilder.() -> Unit) {
-    block()
+  override fun otherwise(block: Consumer<ConditionalStepBuilder>) {
+    block.accept(this)
     otherwiseNode = currentBranchBody
   }
 
@@ -25,10 +27,10 @@ class ConditionalStepBuilderImpl : ConditionalStepBuilder {
 
   fun build(): StepNode = StepNode.Conditional(branches.toList(), otherwiseNode)
 
-  private inner class WhenClauseImpl(private val predicate: () -> Boolean) :
+  private inner class WhenClauseImpl(private val predicate: BooleanSupplier) :
       ConditionalStepBuilder.WhenClause {
-    override infix fun then(block: ConditionalStepBuilder.() -> Unit): ConditionalStepBuilder {
-      block()
+    override fun then(block: Consumer<ConditionalStepBuilder>): ConditionalStepBuilder {
+      block.accept(this@ConditionalStepBuilderImpl)
       currentBranchBody?.let { body ->
         branches.add(StepNode.Conditional.Branch(predicate, body))
         currentBranchBody = null

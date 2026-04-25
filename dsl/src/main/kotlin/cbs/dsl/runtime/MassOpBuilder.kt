@@ -2,11 +2,14 @@ package cbs.dsl.runtime
 
 import cbs.dsl.api.LockDefinition
 import cbs.dsl.api.MassOperationDefinition
+import cbs.dsl.api.MassOperationTypes.MassOperationInput
+import cbs.dsl.api.MassOperationTypes.MassOperationOutput
 import cbs.dsl.api.ParameterDefinition
 import cbs.dsl.api.SignalTypes.Signal
 import cbs.dsl.api.SourceDefinition
 import cbs.dsl.api.TriggerDefinition
 import cbs.dsl.api.context.MassOperationContext
+import java.util.function.Consumer
 
 class MassOpBuilder(override val code: String) : MassOperationDefinition {
   private val _parameters = mutableListOf<ParameterDefinition>()
@@ -29,20 +32,20 @@ class MassOpBuilder(override val code: String) : MassOperationDefinition {
   override val lock: LockDefinition?
     get() = _lock
 
-  private var _contextBlock: (MassOperationContext) -> Unit = {}
-  override val contextBlock: (MassOperationContext) -> Unit
+  private var _contextBlock: Consumer<MassOperationContext> = Consumer { }
+  override val contextBlock: Consumer<MassOperationContext>
     get() = _contextBlock
 
-  private var _item: ((MassOperationContext) -> Unit)? = null
-  override val itemBlock: (MassOperationContext) -> Unit
+  private var _item: Consumer<MassOperationContext>? = null
+  override val itemBlock: Consumer<MassOperationContext>
     get() = _item ?: error("MassOperation '$code' has no item block defined")
 
-  private var _onPartial: ((Signal) -> Unit)? = null
-  override val onPartial: ((Signal) -> Unit)?
+  private var _onPartial: Consumer<Signal>? = null
+  override val onPartial: Consumer<Signal>?
     get() = _onPartial
 
-  private var _onCompleted: ((Signal) -> Unit)? = null
-  override val onCompleted: ((Signal) -> Unit)?
+  private var _onCompleted: Consumer<Signal>? = null
+  override val onCompleted: Consumer<Signal>?
     get() = _onCompleted
 
   fun category(c: String) {
@@ -73,19 +76,43 @@ class MassOpBuilder(override val code: String) : MassOperationDefinition {
   }
 
   fun context(block: (MassOperationContext) -> Unit) {
-    _contextBlock = block
+    _contextBlock = Consumer { block(it) }
   }
 
   fun item(block: (MassOperationContext) -> Unit) {
-    _item = block
+    _item = Consumer { block(it) }
   }
 
   fun onPartial(block: (Signal) -> Unit) {
-    _onPartial = block
+    _onPartial = Consumer { block(it) }
   }
 
   fun onCompleted(block: (Signal) -> Unit) {
-    _onCompleted = block
+    _onCompleted = Consumer { block(it) }
+  }
+
+  override fun execute(input: MassOperationInput): MassOperationOutput {
+    val ctx = MassOperationContext.builder()
+      .performedBy("")
+      .dslVersion("")
+      .build()
+    _contextBlock.accept(ctx)
+
+    val items = source.load(ctx)
+    var processed = 0
+    var failed = 0
+
+    items.forEach { item ->
+      try {
+        ctx["item"] = item
+        _item!!.accept(ctx)
+        processed++
+      } catch (e: Exception) {
+        failed++
+      }
+    }
+
+    return MassOperationOutput(processed, failed, "COMPLETED")
   }
 }
 

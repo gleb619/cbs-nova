@@ -2,7 +2,7 @@ package cbs.dsl.compiler
 
 import cbs.dsl.api.DslTypes.ImportType.*
 import cbs.dsl.api.EventDefinition
-import cbs.dsl.api.TransitionRule
+import cbs.dsl.api.TransitionRuleDefinition
 import cbs.dsl.api.WorkflowDefinition
 import cbs.dsl.runtime.DslRegistry
 import cbs.dsl.runtime.TransactionBuilder
@@ -103,7 +103,7 @@ class DslValidator {
   }
 
   private fun validateTransition(
-      transition: TransitionRule,
+      transition: TransitionRuleDefinition,
       workflowCode: String,
       stateSet: Set<String>,
       registeredEvents: Map<String, EventDefinition>,

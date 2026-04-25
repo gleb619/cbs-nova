@@ -2,7 +2,7 @@ package cbs.dsl.runtime
 
 import cbs.dsl.api.Action
 import cbs.dsl.api.EventDefinition
-import cbs.dsl.api.TransitionRule
+import cbs.dsl.api.TransitionRuleDefinition
 import cbs.dsl.api.WorkflowDefinition
 import cbs.dsl.api.WorkflowInput
 import cbs.dsl.api.WorkflowOutput
@@ -11,9 +11,9 @@ class WorkflowBuilder(override val code: String) : WorkflowDefinition {
   private val _states = mutableListOf<String>()
   private var _initial: String = ""
   private val _terminalStates = mutableListOf<String>()
-  private val _transitions = mutableListOf<TransitionRule>()
+  private val _transitions = mutableListOf<TransitionRuleDefinition>()
 
-  override val transitions: List<TransitionRule>
+  override val transitions: List<TransitionRuleDefinition>
     get() = _transitions.toList()
 
   fun states(vararg s: String) {
@@ -45,7 +45,7 @@ class WorkflowBuilder(override val code: String) : WorkflowDefinition {
       event: EventDefinition,
       onFault: String = "FAULTED",
   ) {
-    _transitions += TransitionRule(from, to, on, event, onFault)
+    _transitions += TransitionRuleDefinition(from, to, on, event, onFault)
   }
 
   // Auto-inference methods
@@ -80,7 +80,7 @@ class WorkflowBuilder(override val code: String) : WorkflowDefinition {
         transitions.find { it.from == input.currentState && it.on.name == input.action }
             ?: error("No transition from ${input.currentState} on ${input.action}")
 
-    return WorkflowOutput(nextState = rule.to, events = listOf(rule.event.code))
+    return WorkflowOutput(rule.to, listOf(rule.event.code), "SUCCESS")
   }
 }
 

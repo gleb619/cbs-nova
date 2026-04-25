@@ -11,7 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import cbs.dsl.api.TransactionDefinition;
-import cbs.dsl.api.context.TransactionContext;
+import cbs.dsl.api.TransactionInput;
 import cbs.dsl.runtime.DslRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -42,8 +42,8 @@ class TransactionActivityImplTest {
 
     // Assert
     assertTrue(result.success());
-    verify(txDef, times(1)).preview(any(TransactionContext.class));
-    verify(txDef, times(1)).execute(any(TransactionContext.class));
+    verify(txDef, times(1)).preview(any(TransactionInput.class));
+    verify(txDef, times(1)).execute(any(TransactionInput.class));
   }
 
   @Test
@@ -54,7 +54,7 @@ class TransactionActivityImplTest {
     when(txDef.getCode()).thenReturn("FAIL_TX");
     doThrow(new RuntimeException("Execute failed"))
         .when(txDef)
-        .execute(any(TransactionContext.class));
+        .execute(any(TransactionInput.class));
 
     when(dslRegistry.getTransactions()).thenReturn(Map.of("FAIL_TX", txDef));
 
@@ -67,9 +67,9 @@ class TransactionActivityImplTest {
     // Assert
     assertFalse(result.success());
     assertEquals("Execute failed", result.errorMessage());
-    verify(txDef, times(1)).preview(any(TransactionContext.class));
-    verify(txDef, times(1)).execute(any(TransactionContext.class));
-    verify(txDef, times(1)).rollback(any(TransactionContext.class));
+    verify(txDef, times(1)).preview(any(TransactionInput.class));
+    verify(txDef, times(1)).execute(any(TransactionInput.class));
+    verify(txDef, times(1)).rollback(any(TransactionInput.class));
   }
 
   @Test

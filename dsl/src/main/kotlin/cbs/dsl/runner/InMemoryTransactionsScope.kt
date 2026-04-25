@@ -8,6 +8,8 @@ import cbs.dsl.runtime.ConditionalStepBuilderImpl
 import cbs.dsl.runtime.DslRegistry
 import cbs.dsl.runtime.StepHandleImpl
 import cbs.dsl.runtime.StepNode
+import java.util.concurrent.CompletableFuture
+import java.util.function.Consumer
 
 class InMemoryTransactionsScope(val registry: DslRegistry) : TransactionsScope {
   private val _steps = mutableListOf<StepNode>()
@@ -16,23 +18,23 @@ class InMemoryTransactionsScope(val registry: DslRegistry) : TransactionsScope {
   val steps: List<StepNode>
     get() = _steps.toList()
 
-  override suspend fun step(tx: TransactionDefinition): StepHandle {
+  override fun step(tx: TransactionDefinition): CompletableFuture<StepHandle> {
     val node = StepNode.Direct(tx)
     val index = _steps.size
     _steps.add(node)
-    return StepHandleImpl(node, _steps, index)
+    return CompletableFuture.completedFuture(StepHandleImpl(node, _steps, index))
   }
 
-  override suspend fun step(block: ConditionalStepBuilder.() -> Unit): StepHandle {
+  override fun step(block: Consumer<ConditionalStepBuilder>): CompletableFuture<StepHandle> {
     val builder = ConditionalStepBuilderImpl()
-    builder.block()
+    block.accept(builder)
     val node = builder.build()
     val index = _steps.size
     _steps.add(node)
-    return StepHandleImpl(node, _steps, index)
+    return CompletableFuture.completedFuture(StepHandleImpl(node, _steps, index))
   }
 
-  override suspend fun await(vararg handles: StepHandle) {
+  override fun await(vararg handles: StepHandle) {
     _steps.add(StepNode.Barrier(handles.toList()))
   }
 

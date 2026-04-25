@@ -47,7 +47,7 @@ public class MassOpItemActivityImpl implements MassOpItemActivity {
 
     // 5c. Call itemBlock
     try {
-      massOpDef.getItemBlock().invoke(ctx);
+      massOpDef.getItemBlock().accept(ctx);
       // 5e. On success
       return new MassOpItemResult(true, null);
     } catch (Exception e) {

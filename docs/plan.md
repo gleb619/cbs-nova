@@ -33,13 +33,13 @@
 | T48 | Redesign `TestHelper` as real executable implementation with optional `execute` override                   | `todo`   | dsl          | -              | -        |
 | T49 | Replace `CodeImportResolver` runtime classpath scanning with compile-time generated SPI                    | `done`   | dsl          | -              | -        |
 | T50 | Integrate Avaje Jsonb and document JSON-native DSL parameters                                              | `done`   | dsl-api      | T49            | T51-T58  |
-| T51 | Consolidate `dsl-api` types by domain to reduce file count                                                 | `todo`   | dsl-api      | T49            | T52-T58  |
-| T52 | Unify `HelperDefinition` — merge `HelperFunction`, add parameter-aware `HelperInput`                       | `todo`   | dsl-api, dsl | T51            | T58      |
-| T53 | Add `TransactionInput`/`TransactionOutput` and unify `TransactionDefinition`                               | `todo`   | dsl-api, dsl | T51            | T58      |
-| T54 | Add `EventInput`/`EventOutput` and unify `EventDefinition`                                                 | `todo`   | dsl-api, dsl | T51            | T58      |
-| T55 | Add `ConditionInput`/`ConditionOutput` and unify `ConditionDefinition`                                     | `todo`   | dsl-api, dsl | T51            | T58      |
-| T56 | Add `WorkflowInput`/`WorkflowOutput` and unify `WorkflowDefinition`                                        | `todo`   | dsl-api, dsl | T51            | T58      |
-| T57 | Add `MassOperationInput`/`MassOperationOutput` and unify `MassOperationDefinition`                         | `todo`   | dsl-api, dsl | T51            | T58      |
+| T51 | Consolidate `dsl-api` types by domain to reduce file count                                                 | `done`   | dsl-api      | T49            | T52-T58  |
+| T52 | Unify `HelperDefinition` — merge `HelperFunction`, add parameter-aware `HelperInput`                       | `done`   | dsl-api, dsl | T51            | T58      |
+| T53 | Add `TransactionInput`/`TransactionOutput` and unify `TransactionDefinition`                               | `done`   | dsl-api, dsl | T51            | T58      |
+| T54 | Add `EventInput`/`EventOutput` and unify `EventDefinition`                                                 | `done`   | dsl-api, dsl | T51            | T58      |
+| T55 | Add `ConditionInput`/`ConditionOutput` and unify `ConditionDefinition`                                     | `done`   | dsl-api, dsl | T51            | T58      |
+| T56 | Add `WorkflowInput`/`WorkflowOutput` and unify `WorkflowDefinition`                                        | `done`   | dsl-api, dsl | T51            | T58      |
+| T57 | Add `MassOperationInput`/`MassOperationOutput` and unify `MassOperationDefinition`                         | `done`   | dsl-api, dsl | T51            | T58      |
 | T58 | Extend `dsl-codegen` processor to extract required/optional parameter metadata from Input types            | `todo`   | dsl-codegen  | T52-T57        | -        |
 
 ---
