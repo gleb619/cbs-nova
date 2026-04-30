@@ -1,8 +1,9 @@
 # CBS Nova — Product Overview
 
 CBS Nova is a **business process orchestration engine** for core banking operations. It replaces Spring-bean
-orchestration with a Temporal + PostgreSQL backend and a Kotlin Script DSL for business rules. Non-developers author
-rules in `.kts` files; the engine compiles and executes them.
+orchestration with a Temporal + PostgreSQL backend and a Java DSL for business rules. Non-developers author rules in
+`.java` DSL files; the engine generates Temporal workflows/activities from them (production) or executes them via
+reflection (development).
 
 ## Core Concepts
 

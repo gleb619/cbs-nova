@@ -14,7 +14,6 @@ import static org.mockito.Mockito.when;
 import cbs.dsl.api.MassOperationDefinition;
 import cbs.dsl.api.TriggerDefinition.CronTrigger;
 import cbs.dsl.api.TriggerDefinition.EveryTrigger;
-import cbs.dsl.runtime.DslRegistry;
 import cbs.nova.entity.MassOperationExecutionEntity;
 import cbs.nova.entity.MassOperationItemEntity;
 import cbs.nova.entity.MassOperationItemStatus;
@@ -24,6 +23,7 @@ import cbs.nova.model.MassOperationDto;
 import cbs.nova.model.MassOperationItemDto;
 import cbs.nova.model.MassOperationTriggerRequest;
 import cbs.nova.model.exception.EntityNotFoundException;
+import cbs.nova.registry.DslRegistry;
 import cbs.nova.repository.MassOperationExecutionRepository;
 import cbs.nova.repository.MassOperationItemRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -222,7 +222,7 @@ class MassOperationServiceTest {
         .build();
 
     when(executionRepository.findById(1L)).thenReturn(Optional.of(sampleExecution));
-    when(itemRepository.findByMassOperationExecution(sampleExecution)).thenReturn(List.of(item));
+    when(itemRepository.findByMassOperationExecutionId(1L)).thenReturn(List.of(item));
     when(mapper.toItemDto(item)).thenReturn(itemDto);
 
     List<MassOperationItemDto> result = massOperationService.findItems(1L);
@@ -243,8 +243,7 @@ class MassOperationServiceTest {
   @DisplayName("shouldReturnZeroWhenNoFailedItemsToRetry")
   void shouldReturnZeroWhenNoFailedItemsToRetry() {
     when(executionRepository.findById(1L)).thenReturn(Optional.of(sampleExecution));
-    when(itemRepository.findByMassOperationExecutionAndStatus(
-            sampleExecution, MassOperationItemStatus.FAILED))
+    when(itemRepository.findByMassOperationExecutionIdAndStatus(1L, MassOperationItemStatus.FAILED))
         .thenReturn(List.of());
 
     int result = massOperationService.retryFailedItems(1L);
@@ -263,8 +262,7 @@ class MassOperationServiceTest {
         .build();
 
     when(executionRepository.findById(1L)).thenReturn(Optional.of(sampleExecution));
-    when(itemRepository.findByMassOperationExecutionAndStatus(
-            sampleExecution, MassOperationItemStatus.FAILED))
+    when(itemRepository.findByMassOperationExecutionIdAndStatus(1L, MassOperationItemStatus.FAILED))
         .thenReturn(List.of(failedItem));
     when(triggerPort.trigger(anyString(), anyString(), anyString(), anyString(), anyString()))
         .thenReturn("massop-retry-1-20");

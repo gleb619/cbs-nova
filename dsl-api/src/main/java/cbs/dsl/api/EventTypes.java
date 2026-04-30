@@ -1,10 +1,11 @@
 package cbs.dsl.api;
 
 import io.avaje.jsonb.Json;
-import java.util.Map;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
+
+import java.util.Map;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class EventTypes {
@@ -12,11 +13,7 @@ public class EventTypes {
   @Json
   @Builder(toBuilder = true)
   public record EventInput(
-    Map<String, Object> params,
-    String eventCode,
-    Long eventNumber,
-    String workflowExecutionId
-  ) {
+      Map<String, Object> params, String eventCode, Long eventNumber, String workflowExecutionId) {
 
     public EventInput(Map<String, Object> params, String eventCode) {
       this(params, eventCode, null, null);
@@ -59,10 +56,9 @@ public class EventTypes {
   @Json
   @Builder(toBuilder = true)
   public record EventOutput(
-    Map<String, Object> context,
-    Map<String, Map<String, Object>> transactionResults,
-    String status
-  ) {
+      Map<String, Object> context,
+      Map<String, Map<String, Object>> transactionResults,
+      String status) {
 
     public EventOutput(
         Map<String, Object> context, Map<String, Map<String, Object>> transactionResults) {
@@ -94,5 +90,4 @@ public class EventTypes {
       return status;
     }
   }
-  
 }

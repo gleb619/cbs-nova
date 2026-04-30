@@ -1,12 +1,12 @@
 package cbs.dsl.api.context;
 
 import lombok.Builder;
-
-import java.util.Map;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+
+import java.util.Map;
 
 @Getter
 @Setter

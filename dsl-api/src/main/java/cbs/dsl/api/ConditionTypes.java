@@ -20,7 +20,8 @@ public class ConditionTypes {
   /** ConditionInput carries the raw parameters and event metadata for evaluating a condition. */
   @Json
   @Builder(toBuilder = true)
-  public record ConditionInput(Map<String, Object> params, String eventCode, Long eventNumber) {
+  public record ConditionInput(Map<String, Object> params, String eventCode, Long eventNumber)
+      implements ConditionFunction.ConditionArg {
 
     /**
      * Returns parameters with nulls filtered out, suitable for TransactionContext.
@@ -37,5 +38,10 @@ public class ConditionTypes {
   /** ConditionOutput wraps the boolean result of the evaluation. */
   @Json
   @Builder(toBuilder = true)
-  public record ConditionOutput(boolean result) {}
+  public record ConditionOutput(boolean result) implements ConditionFunction.ConditionResult {
+    @Override
+    public boolean getValue() {
+      return result;
+    }
+  }
 }

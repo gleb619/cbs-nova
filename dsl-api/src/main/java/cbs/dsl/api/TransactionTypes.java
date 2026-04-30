@@ -1,12 +1,13 @@
 package cbs.dsl.api;
 
 import io.avaje.jsonb.Json;
-import java.util.Collections;
-import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
+
+import java.util.Collections;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class TransactionTypes {
@@ -14,11 +15,8 @@ public class TransactionTypes {
   @Json
   @Builder(toBuilder = true)
   public record TransactionInput(
-    Map<String, Object> params,
-    String eventCode,
-    Long eventNumber,
-    String workflowExecutionId
-  ) {
+      Map<String, Object> params, String eventCode, Long eventNumber, String workflowExecutionId)
+      implements TransactionFunction.TransactionArg {
 
     public TransactionInput(Map<String, Object> params) {
       this(params, null, null, null);
@@ -34,7 +32,10 @@ public class TransactionTypes {
     }
 
     public TransactionInput(
-        Map<String, Object> params, String eventCode, Long eventNumber, String workflowExecutionId) {
+        Map<String, Object> params,
+        String eventCode,
+        Long eventNumber,
+        String workflowExecutionId) {
       this.params = params;
       this.eventCode = eventCode;
       this.eventNumber = eventNumber;
@@ -88,10 +89,8 @@ public class TransactionTypes {
 
   @Json
   @Builder(toBuilder = true)
-  public record TransactionOutput(
-    Map<String, Object> result,
-    String status
-  ) {
+  public record TransactionOutput(Map<String, Object> result, String status)
+      implements TransactionFunction.TransactionResult {
 
     public static TransactionOutput empty() {
       return new TransactionOutput(Collections.emptyMap());
@@ -123,6 +122,4 @@ public class TransactionTypes {
       return status;
     }
   }
-
-
 }

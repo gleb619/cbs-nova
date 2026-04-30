@@ -1,6 +1,6 @@
 package cbs.nova.bpmn;
 
-import cbs.dsl.runtime.DslRegistry;
+import cbs.nova.registry.DslRegistry;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

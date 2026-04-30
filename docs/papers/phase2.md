@@ -1,4 +1,6 @@
 # CBS-Nova — Phase 2: DSL Round 2 & 3, E2E Foundation
+> **⚠️ v0.7 Pivot (2026-04-29):** Kotlin Script (.kts) DSL has been abandoned. The project now uses a **Java DSL** with dual execution modes: `GENERATED` (compile-time code generation of Temporal workflows/activities) and `REFLECTED` (reflection-based runtime for dev). This historical document describes the Kotlin-era implementation. See [docs/tdd.md](../tdd.md) and [docs/arch/dsl-design.md](../arch/dsl-design.md) for the current Java DSL design.
+
 
 > **Scope:** T25–T40 (Phases 8–10)
 > Covers DSL rewrites with `@KotlinScript`, comprehensive scopes for all DSL types, in-memory execution, and Temporal workflow migration to `starter`.

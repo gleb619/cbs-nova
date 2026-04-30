@@ -13,7 +13,7 @@
 | Title      |                                                                      |
 | Phase      | 0-Infra / 1-DSL / 2-DB / 3-Engine / 4-MassOp / 5-BPMN / 6-Dev / 7-FE |
 | Blocked By | T__, T__ (must be DONE before starting)                              |
-| Modules    | backend / starter / dsl / frontend / frontend-plugin / infra         |
+| Modules    | backend / starter / dsl / dsl-codegen / frontend / frontend-plugin / infra |
 
 ---
 
@@ -35,7 +35,7 @@ See: [docs/tdd.md](../tdd.md) §__, [docs/arch/__.md](../arch/__.md)
 
 ```
 path/to/NewFile.java
-path/to/AnotherFile.kt
+path/to/AnotherFile.java
 ```
 
 ### Files to Modify
@@ -66,7 +66,7 @@ path/to/build.gradle        — add dependency X
 ### Non-Functional Requirements
 
 - **Testing:** What tests are required (unit / integration / `@WebMvcTest` / `TestWorkflowEnvironment`)
-- **Code style:** Follow Google Java Format (run `./gradlew spotlessApply`); Kotlin: standard formatting
+- **Code style:** Follow Google Java Format (run `./gradlew spotlessApply`)
 - **No new external deps** unless explicitly listed below
 
 ### Dependencies to Add

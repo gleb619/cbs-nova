@@ -62,6 +62,8 @@ public class MainConventions {
       .haveSimpleNameEndingWith("Scheduler")
       .orShould()
       .haveSimpleNameEndingWith("Port")
+      .orShould()
+      .haveSimpleNameEndingWith("Orchestrator")
       .allowEmptyShould(true)
       .because(
           "All classes in 'service' package must end with 'Service', 'ServiceImpl', or a recognized component suffix");

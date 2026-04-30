@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -12,10 +13,9 @@ import static org.mockito.Mockito.when;
 import cbs.dsl.api.MassOperationDefinition;
 import cbs.dsl.api.SourceDefinition;
 import cbs.dsl.api.context.MassOperationContext;
-import cbs.dsl.runtime.DslRegistry;
+import cbs.nova.registry.DslRegistry;
 import cbs.nova.repository.MassOperationExecutionRepository;
 import cbs.nova.repository.MassOperationItemRepository;
-import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,6 +23,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 class MassOpItemActivityImplTest {
 
@@ -47,8 +48,7 @@ class MassOpItemActivityImplTest {
     // Given
     String massOpCode = "TEST_MASS_OP";
     @SuppressWarnings("unchecked")
-    Consumer<MassOperationContext> itemBlock =
-        mock(Consumer.class);
+    Consumer<MassOperationContext> itemBlock = mock(Consumer.class);
 
     MassOperationDefinition def = mock(MassOperationDefinition.class);
     when(def.getCode()).thenReturn(massOpCode);
@@ -78,10 +78,10 @@ class MassOpItemActivityImplTest {
     // Given
     String massOpCode = "TEST_MASS_OP_FAIL";
     @SuppressWarnings("unchecked")
-    Consumer<MassOperationContext> itemBlock =
-        mock(Consumer.class);
-    when(itemBlock.accept(any(MassOperationContext.class)))
-        .thenThrow(new RuntimeException("item processing failed"));
+    Consumer<MassOperationContext> itemBlock = mock(Consumer.class);
+    doThrow(new RuntimeException("item processing failed"))
+        .when(itemBlock)
+        .accept(any(MassOperationContext.class));
 
     MassOperationDefinition def = mock(MassOperationDefinition.class);
     when(def.getCode()).thenReturn(massOpCode);
@@ -127,8 +127,7 @@ class MassOpItemActivityImplTest {
     // Given
     String massOpCode = "TEST_MASS_OP";
     @SuppressWarnings("unchecked")
-    Consumer<MassOperationContext> itemBlock =
-        mock(Consumer.class);
+    Consumer<MassOperationContext> itemBlock = mock(Consumer.class);
 
     MassOperationDefinition def = mock(MassOperationDefinition.class);
     when(def.getCode()).thenReturn(massOpCode);

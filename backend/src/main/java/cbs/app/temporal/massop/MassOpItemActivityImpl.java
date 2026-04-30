@@ -2,12 +2,11 @@ package cbs.app.temporal.massop;
 
 import cbs.dsl.api.MassOperationDefinition;
 import cbs.dsl.api.context.MassOperationContext;
-import cbs.dsl.runtime.DslRegistry;
 import cbs.nova.entity.MassOperationExecutionEntity;
 import cbs.nova.entity.MassOperationItemEntity;
+import cbs.nova.registry.DslRegistry;
 import cbs.nova.repository.MassOperationExecutionRepository;
 import cbs.nova.repository.MassOperationItemRepository;
-import java.util.Collections;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -15,8 +14,11 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.OffsetDateTime;
+import java.util.Collections;
 import java.util.Map;
 
+// TODO: move main logic to starter module
+@Deprecated(forRemoval = true)
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -44,7 +46,8 @@ public class MassOpItemActivityImpl implements MassOpItemActivity {
       return new MassOpItemResult(false, "Invalid item data JSON: " + e.getMessage());
     }
 
-    MassOperationContext ctx = new MassOperationContext(input.performedBy(), input.dslVersion(), Collections.emptyMap());
+    MassOperationContext ctx =
+        new MassOperationContext(input.performedBy(), input.dslVersion(), Collections.emptyMap());
 
     // 5c. Call itemBlock
     try {

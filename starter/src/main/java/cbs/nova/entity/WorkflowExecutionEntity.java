@@ -13,6 +13,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 
@@ -42,9 +44,11 @@ public class WorkflowExecutionEntity {
   @Column(nullable = false, length = 20)
   private WorkflowStatus status;
 
+  @JdbcTypeCode(SqlTypes.JSON)
   @Column(nullable = false, columnDefinition = "jsonb")
   private String context;
 
+  @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "display_data", nullable = false, columnDefinition = "jsonb")
   private String displayData;
 

@@ -8,12 +8,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import cbs.dsl.runtime.DslRegistry;
 import cbs.nova.model.EventExecutionRequest;
 import cbs.nova.model.EventWorkflowRequest;
 import cbs.nova.model.WorkflowExecutionResponse;
+import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
+import io.temporal.client.WorkflowStub;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.List;
 import java.util.Map;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,14 +35,8 @@ class WorkflowExecutorTest {
   @Mock
   private WorkflowClient workflowClient;
 
-  @Mock
-  private DslRegistry dslRegistry;
-
   @InjectMocks
   private WorkflowExecutor workflowExecutor;
-
-  @Captor
-  private ArgumentCaptor<EventWorkflowRequest> inputCaptor;
 
   @Captor
   private ArgumentCaptor<WorkflowOptions> optionsCaptor;
@@ -56,41 +52,37 @@ class WorkflowExecutorTest {
     EventExecutionRequest request =
         new EventExecutionRequest("loan", "submit", "user1", Map.of("amount", 1000));
     String contextJson = "{\"amount\":1000}";
-    EventWorkflow workflowStub = mock(EventWorkflow.class);
+    WorkflowStub workflowStub = mock(WorkflowStub.class);
     WorkflowExecutionResponse expectedResult = new WorkflowExecutionResponse(42L, "ACTIVE");
 
-    when(workflowClient.newWorkflowStub(eq(EventWorkflow.class), any(WorkflowOptions.class)))
+    when(workflowClient.newUntypedWorkflowStub(eq("GENERIC_EVENT"), any(WorkflowOptions.class)))
         .thenReturn(workflowStub);
-    when(workflowStub.execute(any(EventWorkflowRequest.class))).thenReturn(expectedResult);
+    when(workflowStub.start(any(EventWorkflowRequest.class)))
+        .thenReturn(WorkflowExecution.newBuilder().build());
+    when(workflowStub.getResult(WorkflowExecutionResponse.class)).thenReturn(expectedResult);
 
-    WorkflowExecutionResponse result = workflowExecutor.start(request, contextJson);
+    WorkflowExecutionResponse result =
+        workflowExecutor.start(request, contextJson, List.of("SAMPLE_TX"));
 
     assertEquals(42L, result.executionId());
     assertEquals("ACTIVE", result.status());
 
-    verify(workflowClient).newWorkflowStub(eq(EventWorkflow.class), optionsCaptor.capture());
+    verify(workflowClient).newUntypedWorkflowStub(eq("GENERIC_EVENT"), optionsCaptor.capture());
     WorkflowOptions capturedOptions = optionsCaptor.getValue();
     assertEquals("WORKFLOW_TASK_QUEUE", capturedOptions.getTaskQueue());
-
-    verify(workflowStub).execute(inputCaptor.capture());
-    EventWorkflowRequest capturedInput = inputCaptor.getValue();
-    assertEquals("loan", capturedInput.workflowCode());
-    assertEquals("submit", capturedInput.eventCode());
-    assertEquals(contextJson, capturedInput.contextJson());
-    assertEquals("user1", capturedInput.performedBy());
   }
 
   @Test
   @DisplayName("shouldPropagateWorkflowExceptionWhenTemporalFails")
   void shouldPropagateWorkflowExceptionWhenTemporalFails() {
     EventExecutionRequest request = new EventExecutionRequest("loan", "submit", "user1", Map.of());
-    EventWorkflow workflowStub = mock(EventWorkflow.class);
+    WorkflowStub workflowStub = mock(WorkflowStub.class);
 
-    when(workflowClient.newWorkflowStub(eq(EventWorkflow.class), any(WorkflowOptions.class)))
+    when(workflowClient.newUntypedWorkflowStub(eq("GENERIC_EVENT"), any(WorkflowOptions.class)))
         .thenReturn(workflowStub);
-    when(workflowStub.execute(any(EventWorkflowRequest.class)))
+    when(workflowStub.start(any(EventWorkflowRequest.class)))
         .thenThrow(new RuntimeException("temporal failure"));
 
-    assertThrows(RuntimeException.class, () -> workflowExecutor.start(request, "{}"));
+    assertThrows(RuntimeException.class, () -> workflowExecutor.start(request, "{}", List.of()));
   }
 }

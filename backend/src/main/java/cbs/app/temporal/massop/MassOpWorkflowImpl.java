@@ -2,16 +2,15 @@ package cbs.app.temporal.massop;
 
 import cbs.dsl.api.MassOperationDefinition;
 import cbs.dsl.api.context.MassOperationContext;
-import cbs.dsl.runtime.DslRegistry;
 import cbs.nova.entity.MassOperationExecutionEntity;
 import cbs.nova.entity.MassOperationItemStatus;
 import cbs.nova.entity.MassOperationStatus;
+import cbs.nova.registry.DslRegistry;
 import cbs.nova.repository.MassOperationExecutionRepository;
 import cbs.nova.repository.MassOperationItemRepository;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.failure.ApplicationFailure;
 import io.temporal.workflow.Workflow;
-import java.util.Collections;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tools.jackson.core.JacksonException;
@@ -19,9 +18,12 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+// TODO: move main logic to starter module
+@Deprecated(forRemoval = true)
 @Slf4j
 @RequiredArgsConstructor
 public class MassOpWorkflowImpl implements MassOpWorkflow {
@@ -109,7 +111,8 @@ public class MassOpWorkflowImpl implements MassOpWorkflow {
   }
 
   private MassOperationContext buildContext(MassOpInput input, MassOperationDefinition massOpDef) {
-    MassOperationContext ctx = new MassOperationContext(input.performedBy(), input.dslVersion(), Collections.emptyMap());
+    MassOperationContext ctx =
+        new MassOperationContext(input.performedBy(), input.dslVersion(), Collections.emptyMap());
     massOpDef.getContextBlock().accept(ctx);
     return ctx;
   }

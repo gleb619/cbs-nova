@@ -5,7 +5,7 @@ package cbs.dsl.api;
  *
  * <p>This interface is extracted to {@code dsl-api} to break the circular dependency between
  * {@code dsl-codegen} and {@code dsl}. Annotation processors in {@code dsl-codegen} generate code
- * against this interface, while the runtime implementation {@link cbs.dsl.impl.ImplRegistry}
+ * against this interface, while the runtime implementation {@link cbs.nova.registry.DslRegistry}
  * implements it.
  */
 public interface WritableRegistry {
@@ -43,4 +43,11 @@ public interface WritableRegistry {
    * @param m the mass operation definition to register
    */
   void register(MassOperationDefinition m);
+
+  /**
+   * Registers an event definition.
+   *
+   * @param e the event definition to register
+   */
+  void register(EventDefinition e);
 }

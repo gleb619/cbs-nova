@@ -14,7 +14,5 @@ public interface ConditionFunction<I extends ConditionArg, O extends ConditionRe
   interface ConditionResult {
 
     boolean getValue();
-
   }
-
 }
