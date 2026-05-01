@@ -24,4 +24,22 @@ public enum DslImplType {
    * implementing {@link ConditionFunction}.
    */
   CONDITION,
+
+  /**
+   * An event implementation that will be registered in the event registry. Used for classes
+   * implementing {@link EventFunction}.
+   */
+  EVENT,
+
+  /**
+   * A workflow implementation that will be registered in the workflow registry. Used for classes
+   * implementing {@link WorkflowFunction}.
+   */
+  WORKFLOW,
+
+  /**
+   * A mass operation implementation that will be registered in the mass operation registry. Used
+   * for classes implementing {@link MassOperationFunction}.
+   */
+  MASS_OPERATION,
 }

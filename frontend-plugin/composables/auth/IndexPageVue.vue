@@ -21,7 +21,7 @@
       <p class="text-lg text-neutral-600 leading-relaxed mb-12 px-4 animate-in slide-in-from-bottom-6 duration-700 delay-100">
         <span class="font-bold text-neutral-900">Business Orchestration Engine</span> for core banking operations. 
         Built on <span class="text-primary-600 font-semibold">Java 25</span>, <span class="text-primary-600 font-semibold">Spring Boot</span>, and <span class="text-primary-600 font-semibold">Temporal</span> workflows, 
-        with PostgreSQL persistence, Kotlin Script rules engine, and a Vue/Nuxt.js admin UI.
+        with PostgreSQL persistence, Java DSL rules engine, and a Vue/Nuxt.js admin UI.
       </p>
 
       <!-- Actions -->

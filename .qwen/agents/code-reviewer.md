@@ -15,7 +15,7 @@ You are a senior code reviewer acting as the REVIEWER agent. You analyze recent 
 <project_context>
 CBS-Nova is a business process orchestration engine for core banking.
 
-**Stack:** Java 25 · Spring Boot · Temporal · PostgreSQL · Kotlin Script (.kts) · Vue 3 admin UI · Nuxt 3 SPA · Tailwind
+**Stack:** Java 25 · Spring Boot · Temporal · PostgreSQL · Java dsl scripts · Vue 3 admin UI · Nuxt 3 SPA · Tailwind
 CSS v4 · piqure DI · i18next · Biome · Gradle multi-module
 
 **Critical Architecture Rules:**

@@ -2,8 +2,11 @@ package cbs.dsl.codegen;
 
 import cbs.dsl.api.ConditionFunction;
 import cbs.dsl.api.DslComponent;
+import cbs.dsl.api.EventFunction;
 import cbs.dsl.api.HelperFunction;
+import cbs.dsl.api.MassOperationFunction;
 import cbs.dsl.api.TransactionFunction;
+import cbs.dsl.api.WorkflowFunction;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
@@ -22,7 +25,10 @@ public class DslComponentProcessor extends AbstractProcessor {
   private static final Map<String, DslInterfaceType> INTERFACE_TYPE_MAP = Map.of(
       TransactionFunction.class.getName(), DslInterfaceType.TRANSACTION,
       HelperFunction.class.getName(), DslInterfaceType.HELPER,
-      ConditionFunction.class.getName(), DslInterfaceType.CONDITION);
+      ConditionFunction.class.getName(), DslInterfaceType.CONDITION,
+      EventFunction.class.getName(), DslInterfaceType.EVENT,
+      WorkflowFunction.class.getName(), DslInterfaceType.WORKFLOW,
+      MassOperationFunction.class.getName(), DslInterfaceType.MASS_OPERATION);
 
   private boolean processed = false;
 
@@ -50,6 +56,38 @@ public class DslComponentProcessor extends AbstractProcessor {
       if (!registrations.isEmpty()) {
         new DefinitionWrapperGenerator(processingEnv.getFiler()).generate(registrations);
         new RegistrationGenerator(processingEnv.getFiler()).generate(registrations);
+
+        // Layer 3a: Generate Temporal workflow interfaces + implementations for EVENT types
+        List<EventWorkflowSpec> eventSpecs = registrations.stream()
+            .filter(r -> r.interfaceType() == DslInterfaceType.EVENT)
+            .map(r ->
+                new EventWorkflowSpec(r.code(), r.packageName() + "." + r.className(), List.of()))
+            .toList();
+        if (!eventSpecs.isEmpty()) {
+          new EventWorkflowGenerator(processingEnv.getFiler()).generate(eventSpecs);
+          new WorkflowRegistryGenerator(processingEnv.getFiler()).generate(eventSpecs);
+        }
+
+        // Layer 3b: Generate Temporal activities for TRANSACTION types
+        List<RegistrationSpec> txSpecs = registrations.stream()
+            .filter(r -> r.interfaceType() == DslInterfaceType.TRANSACTION)
+            .toList();
+        if (!txSpecs.isEmpty()) {
+          new TransactionActivityGenerator(processingEnv.getFiler()).generate(txSpecs);
+        }
+
+        // Layer 3c: Generate Temporal activities for HELPER types
+        List<RegistrationSpec> helperSpecs = registrations.stream()
+            .filter(r -> r.interfaceType() == DslInterfaceType.HELPER)
+            .toList();
+        if (!helperSpecs.isEmpty()) {
+          new HelperActivityGenerator(processingEnv.getFiler()).generate(helperSpecs);
+        }
+
+        // Layer 3d: Generate activity registry if any activities exist
+        if (!txSpecs.isEmpty() || !helperSpecs.isEmpty()) {
+          new ActivityRegistryGenerator(processingEnv.getFiler()).generate(txSpecs, helperSpecs);
+        }
       }
       processed = true;
     } catch (IOException e) {

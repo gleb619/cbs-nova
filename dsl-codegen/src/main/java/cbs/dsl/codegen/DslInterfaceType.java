@@ -3,5 +3,8 @@ package cbs.dsl.codegen;
 public enum DslInterfaceType {
   TRANSACTION,
   HELPER,
-  CONDITION
+  CONDITION,
+  EVENT,
+  WORKFLOW,
+  MASS_OPERATION
 }

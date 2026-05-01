@@ -81,23 +81,23 @@ Request flow: `Browser → Vite (9000) → Nuxt BFF (3000) → Backend (7070)`
 
 ### DSL Execution Modes
 
-| Mode         | Environment                          | Mechanism                                                     | Artifact                    |
-|--------------|--------------------------------------|---------------------------------------------------------------|-----------------------------|
-| `GENERATED`  | production / CI / non-dev backend    | 3-layer codegen: Function→Definition, DSL→Definition, Definition→Temporal | Compiled workflow/activity  |
-| `REFLECTED`  | development only (`@Profile("dev")`) | Layer 1+2 compile; Layer 3 replaced by reflective wrappers    | Generic interpreter wrapper |
+| Mode        | Environment                          | Mechanism                                                                 | Artifact                    |
+|-------------|--------------------------------------|---------------------------------------------------------------------------|-----------------------------|
+| `GENERATED` | production / CI / non-dev backend    | 3-layer codegen: Function→Definition, DSL→Definition, Definition→Temporal | Compiled workflow/activity  |
+| `REFLECTED` | development only (`@Profile("dev")`) | Layer 1+2 compile; Layer 3 replaced by reflective wrappers                | Generic interpreter wrapper |
 
 ---
 
 ## 3. Core Entities
 
-| Entity            | Description                                                                                                  |
-|-------------------|--------------------------------------------------------------------------------------------------------------|
-| **Workflow**      | State machine: `states`, `initial`, `terminalStates`, `transitions`. All fields optional (inferred).         |
-| **Event**         | Triggered operation: `context {}`, `display {}`, `transactions {}`, `finish {}`. Standalone → stub workflow. |
-| **Transaction**   | Temporal Activity. Code: `TransactionFunction<I,O>` with `@DslComponent` → generated `TransactionDefinition`. Rollback is a compensating ledger entry. |
-| **Helper**        | Reusable computation. Code: `HelperFunction<I,O>` with `@DslComponent` → generated `HelperDefinition`. Used in `context {}` and `transactions {}`.     |
+| Entity            | Description                                                                                                                                             |
+|-------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Workflow**      | State machine: `states`, `initial`, `terminalStates`, `transitions`. All fields optional (inferred).                                                    |
+| **Event**         | Triggered operation: `context {}`, `display {}`, `transactions {}`, `finish {}`. Standalone → stub workflow.                                            |
+| **Transaction**   | Temporal Activity. Code: `TransactionFunction<I,O>` with `@DslComponent` → generated `TransactionDefinition`. Rollback is a compensating ledger entry.  |
+| **Helper**        | Reusable computation. Code: `HelperFunction<I,O>` with `@DslComponent` → generated `HelperDefinition`. Used in `context {}` and `transactions {}`.      |
 | **Condition**     | Reusable boolean predicate. Code: `ConditionFunction<I,O>` with `@DslComponent` → generated `ConditionDefinition`. Referenced in `when/then/otherwise`. |
-| **MassOperation** | Batch orchestration: data source, triggers, business lock, per-item execution, PARTIAL/COMPLETED signals.    |
+| **MassOperation** | Batch orchestration: data source, triggers, business lock, per-item execution, PARTIAL/COMPLETED signals.                                               |
 
 **Action enum:** `PREVIEW` · `SUBMIT` · `APPROVE` · `REJECT` · `CANCEL` · `CLOSE` · `ROLLBACK`
 
@@ -113,7 +113,7 @@ Request flow: `Browser → Vite (9000) → Nuxt BFF (3000) → Backend (7070)`
 
 | Document                                                 | Contents                                                                                                      |
 |----------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
-| [arch/dsl-design.md](arch/dsl-design.md)                 | Full DSL reference, entity interfaces, `.java` file/folder conventions, code generation vs reflection          |
+| [arch/dsl-design.md](arch/dsl-design.md)                 | Full DSL reference, entity interfaces, `.java` file/folder conventions, code generation vs reflection         |
 | [arch/execution-model.md](arch/execution-model.md)       | Execution flow, `runEvent` vs `resumeEvent`, context hierarchy                                                |
 | [arch/workflow-lifecycle.md](arch/workflow-lifecycle.md) | State machine concepts, `prolong()`, example lifecycle                                                        |
 | [arch/mass-operation.md](arch/mass-operation.md)         | Full MassOperation model, lock, triggers, signals, retry                                                      |

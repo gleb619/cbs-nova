@@ -4,7 +4,7 @@
 
 ```
 cbs-nova/
-├── backend/          # Spring Boot application (Java 25 + Kotlin, port :7070)
+├── backend/          # Spring Boot application (Java 25 + Java dsl, port :7070)
 ├── starter/          # Reusable library — Setting CRUD, auto-configured via Spring Boot
 ├── client/           # Generated Java Feign client (publishable library)
 ├── frontend/         # Nuxt 3 SPA + BFF (port :3000)

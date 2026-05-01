@@ -1,6 +1,4 @@
 plugins {
-  alias(libs.plugins.kotlin.jvm)
-  alias(libs.plugins.kotlin.spring)
   alias(libs.plugins.spring.boot)
   alias(libs.plugins.spring.dm)
   alias(libs.plugins.openapi.generator)
@@ -11,32 +9,10 @@ apply(from: "${rootDir}/gradle/test.gradle")
 apply(from: "${rootDir}/gradle/code-style.gradle")
 apply(from: "${rootDir}/gradle/checkstyle.gradle")
 
-kotlin {
-  jvmToolchain(25)
-  compilerOptions {
-    freeCompilerArgs.add('-Xjsr305=strict')
-  }
-}
-
-sourceSets {
-  main {
-    java {
-      srcDirs('src/main/java', 'src/main/kotlin')
-    }
-  }
-  test {
-    java {
-      srcDirs('src/test/java', 'src/test/kotlin')
-    }
-  }
-}
-
 dependencies {
   implementation project(":starter")
   implementation project(":dsl-api")
-  implementation project(":dsl")
   implementation libs.temporal.sdk
-  implementation libs.kotlinx.coroutines.core
 
   // -- Testing --
   testImplementation libs.bundles.spring.test
@@ -45,6 +21,7 @@ dependencies {
   testImplementation platform(libs.testcontainers.bom)
   testImplementation libs.testcontainers.postgresql
   testImplementation libs.testcontainers.junit.jupiter
+  testImplementation project(':dsl-codegen')
   //testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
@@ -52,13 +29,6 @@ dependencies {
 //  useJUnitPlatform()
 //  environment('TESTCONTAINERS_REUSE_ENABLE', 'true')
 //}
-
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
-  compilerOptions {
-    jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.fromTarget('25'))
-    freeCompilerArgs.add('-Xjsr305=strict')
-  }
-}
 
 // Generates starter/build/openapi.json via a deterministic
 tasks.register('exportOpenApi', Test) {

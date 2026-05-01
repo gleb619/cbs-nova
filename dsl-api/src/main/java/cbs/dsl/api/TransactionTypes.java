@@ -1,5 +1,7 @@
 package cbs.dsl.api;
 
+import cbs.dsl.api.TransactionFunction.TransactionArg;
+import cbs.dsl.api.TransactionFunction.TransactionResult;
 import io.avaje.jsonb.Json;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -16,7 +18,7 @@ public class TransactionTypes {
   @Builder(toBuilder = true)
   public record TransactionInput(
       Map<String, Object> params, String eventCode, Long eventNumber, String workflowExecutionId)
-      implements TransactionFunction.TransactionArg {
+      implements TransactionArg {
 
     public TransactionInput(Map<String, Object> params) {
       this(params, null, null, null);
@@ -40,6 +42,11 @@ public class TransactionTypes {
       this.eventCode = eventCode;
       this.eventNumber = eventNumber;
       this.workflowExecutionId = workflowExecutionId;
+    }
+
+    @Override
+    public Map<String, Object> toMap() {
+      return params;
     }
 
     public Map<String, Object> params() {
@@ -90,7 +97,7 @@ public class TransactionTypes {
   @Json
   @Builder(toBuilder = true)
   public record TransactionOutput(Map<String, Object> result, String status)
-      implements TransactionFunction.TransactionResult {
+      implements TransactionResult {
 
     public static TransactionOutput empty() {
       return new TransactionOutput(Collections.emptyMap());
@@ -103,6 +110,11 @@ public class TransactionTypes {
     public TransactionOutput(Map<String, Object> result, String status) {
       this.result = result;
       this.status = status;
+    }
+
+    @Override
+    public Map<String, Object> toMap() {
+      return result;
     }
 
     public Map<String, Object> result() {

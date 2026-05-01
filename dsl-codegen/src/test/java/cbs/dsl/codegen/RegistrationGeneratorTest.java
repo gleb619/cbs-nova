@@ -118,8 +118,20 @@ class RegistrationGeneratorTest {
   void shouldGenerateImplRegistrationsClassWithRegisterCalls() throws Exception {
     FakeFiler filer = new FakeFiler();
     List<RegistrationSpec> specs = List.of(
-        new RegistrationSpec("com.example", "TxOne", "TX_1", DslInterfaceType.TRANSACTION),
-        new RegistrationSpec("com.example", "HelperOne", "H_1", DslInterfaceType.HELPER));
+        new RegistrationSpec(
+            "com.example",
+            "TxOne",
+            "TX_1",
+            DslInterfaceType.TRANSACTION,
+            "cbs.dsl.api.TransactionTypes.TransactionInput",
+            "cbs.dsl.api.TransactionTypes.TransactionOutput"),
+        new RegistrationSpec(
+            "com.example",
+            "HelperOne",
+            "H_1",
+            DslInterfaceType.HELPER,
+            "cbs.dsl.api.HelperTypes.HelperInput",
+            "cbs.dsl.api.HelperTypes.HelperOutput"));
 
     new RegistrationGenerator(filer).generate(specs);
 
@@ -150,11 +162,11 @@ class RegistrationGeneratorTest {
         content.contains("class GeneratedImplRegistrations implements ImplRegistrationProvider"),
         "Content should contain class declaration: " + content);
     assertTrue(
-        content.contains("registry.register(new TxOne())"),
-        "Content should register TxOne: " + content);
+        content.contains("registry.register(new TxOneDefinition())"),
+        "Content should register TxOneDefinition: " + content);
     assertTrue(
-        content.contains("registry.register(new HelperOne())"),
-        "Content should register HelperOne: " + content);
+        content.contains("registry.register(new HelperOneDefinition())"),
+        "Content should register HelperOneDefinition: " + content);
   }
 
   @Test

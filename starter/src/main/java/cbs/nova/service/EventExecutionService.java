@@ -1,5 +1,6 @@
 package cbs.nova.service;
 
+import cbs.dsl.api.ConditionTypes.ConditionInput;
 import cbs.dsl.api.EventDefinition;
 import cbs.dsl.api.HelperTypes.HelperInput;
 import cbs.dsl.api.WorkflowDefinition;
@@ -36,10 +37,8 @@ public class EventExecutionService {
 
     EnrichmentContext enrichmentContext = new EnrichmentContext(
         request.eventCode(), 0L, request.performedBy(), "dev", request.parameters());
-    enrichmentContext.setHelperResolver((name, params) -> dslRegistry
-        .resolveHelper(name)
-        .execute(new HelperInput(params, request.eventCode(), null))
-        .value());
+    enrichmentContext.setHelperResolver(
+        (name, params) -> resolveByCode(name, params, request.eventCode()));
     eventDef.getContextBlock().accept(enrichmentContext);
 
     Map<String, Object> enrichedContext = new HashMap<>(request.parameters());
@@ -50,5 +49,31 @@ public class EventExecutionService {
     WorkflowExecutionResponse result =
         workflowExecutor.start(request, encryptedContextJson, eventDef.getTransactionCodes());
     return new EventExecutionResponse(result.executionId(), result.status());
+  }
+
+  /**
+   * Resolves a named DSL component: tries helpers first, then conditions. Returns the result value
+   * (for helpers: the {@code value()} of the output; for conditions: the boolean result).
+   */
+  private Object resolveByCode(String code, Map<String, Object> params, String eventCode) {
+    // Try helper first
+    try {
+      return dslRegistry
+          .resolveHelper(code)
+          .execute(new HelperInput(params, eventCode, null))
+          .value();
+    } catch (IllegalArgumentException e) {
+      log.trace("No helper '{}', trying condition", code);
+    }
+    // Try condition
+    try {
+      return dslRegistry
+          .resolveCondition(code)
+          .evaluate(new ConditionInput(params, eventCode, null))
+          .result();
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException(
+          "DSL component '" + code + "' not found as helper or condition");
+    }
   }
 }

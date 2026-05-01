@@ -1,5 +1,7 @@
 package cbs.dsl.api;
 
+import cbs.dsl.api.EventTypes.EventInput;
+import cbs.dsl.api.EventTypes.EventOutput;
 import cbs.dsl.api.context.DisplayScope;
 import cbs.dsl.api.context.EnrichmentContext;
 import cbs.dsl.api.context.FinishContext;
@@ -85,5 +87,18 @@ public interface EventDefinition {
    */
   default BiConsumer<FinishContext, Throwable> getFinishBlock() {
     return (ctx, ex) -> {};
+  }
+
+  /**
+   * Executes this event with the given input.
+   *
+   * <p>The default implementation returns an empty output. Generated Definition wrappers delegate
+   * to the underlying {@link EventFunction}.
+   *
+   * @param input the event input
+   * @return the event output
+   */
+  default EventOutput execute(EventInput input) {
+    return new EventOutput(Collections.emptyMap());
   }
 }

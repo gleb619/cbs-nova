@@ -14,7 +14,7 @@ comprehensive test coverage and prevent regressions across the full technology s
 
 ## PROJECT TESTING CONTEXT
 
-**CBS-Nova Stack:** Java 25 · Spring Boot · Temporal · PostgreSQL · Kotlin Script (.kts) · Vue 3 admin UI · Nuxt 3 SPA ·
+**CBS-Nova Stack:** Java 25 · Spring Boot · Temporal · PostgreSQL · Java dsl scripts · Vue 3 admin UI · Nuxt 3 SPA ·
 Tailwind CSS v4 · piqure DI · i18next · Biome · Gradle multi-module
 
 **Testing Commands:**

@@ -22,6 +22,12 @@ public class DefinitionWrapperGenerator {
   private static final String HL_OUTPUT = "cbs.dsl.api.HelperTypes.HelperOutput";
   private static final String CN_INPUT = "cbs.dsl.api.ConditionTypes.ConditionInput";
   private static final String CN_OUTPUT = "cbs.dsl.api.ConditionTypes.ConditionOutput";
+  private static final String EV_INPUT = "cbs.dsl.api.EventTypes.EventInput";
+  private static final String EV_OUTPUT = "cbs.dsl.api.EventTypes.EventOutput";
+  private static final String WF_INPUT = "cbs.dsl.api.WorkflowTypes.WorkflowInput";
+  private static final String WF_OUTPUT = "cbs.dsl.api.WorkflowTypes.WorkflowOutput";
+  private static final String MO_INPUT = "cbs.dsl.api.MassOperationTypes.MassOperationInput";
+  private static final String MO_OUTPUT = "cbs.dsl.api.MassOperationTypes.MassOperationOutput";
 
   private final Filer filer;
 
@@ -41,6 +47,9 @@ public class DefinitionWrapperGenerator {
           case TRANSACTION -> generateTransactionWrapper(spec, wrapperClassName);
           case HELPER -> generateHelperWrapper(spec, wrapperClassName);
           case CONDITION -> generateConditionWrapper(spec, wrapperClassName);
+          case EVENT -> generateEventWrapper(spec, wrapperClassName);
+          case WORKFLOW -> generateWorkflowWrapper(spec, wrapperClassName);
+          case MASS_OPERATION -> generateMassOperationWrapper(spec, wrapperClassName);
         };
 
     try (PrintWriter writer = new PrintWriter(file.openWriter())) {
@@ -55,19 +64,15 @@ public class DefinitionWrapperGenerator {
 
     String inputConversion = inputIsRuntime
         ? "input"
-        : "JSONB.type(%s.class).fromJson(JSONB.toJson(input.params()))"
-            .formatted(simpleName(spec.inputType()));
+        : "JsonPayload.fromMap(input.params(), %s.class)".formatted(simpleName(spec.inputType()));
 
-    String outputConversion = outputIsRuntime
-        ? "out"
-        : "new TransactionOutput(JSONB.type(Map.class).fromJson(JSONB.toJson(out)))";
+    String outputConversion =
+        outputIsRuntime ? "out" : "new TransactionOutput(JsonPayload.toMap(out))";
 
-    String jsonbField = (inputIsRuntime && outputIsRuntime)
-        ? ""
-        : "\n    private static final Jsonb JSONB = Jsonb.builder().build();";
-    String jsonbImport =
-        (inputIsRuntime && outputIsRuntime) ? "" : "import io.avaje.jsonb.Jsonb;\n";
-    String mapImport = outputIsRuntime ? "" : "import java.util.Map;\n";
+    String jsonPayloadImport =
+        (inputIsRuntime && outputIsRuntime) ? "" : "import cbs.dsl.api.JsonPayload;\n";
+    String inputTypeImport = inputIsRuntime ? "" : "import " + spec.inputType() + ";\n";
+    String outputTypeImport = outputIsRuntime ? "" : "import " + spec.outputType() + ";\n";
 
     return """
         package %s;
@@ -75,10 +80,8 @@ public class DefinitionWrapperGenerator {
         import cbs.dsl.api.TransactionDefinition;
         import cbs.dsl.api.TransactionTypes.TransactionInput;
         import cbs.dsl.api.TransactionTypes.TransactionOutput;
-        %s%s        import %s.%s;
-        import %s;
-        import %s;
-
+        %s        import %s.%s;
+        %s%s
         /**
          * Generated TransactionDefinition wrapper for %s.
          * <strong>WARNING:</strong> Auto-generated — do not edit.
@@ -89,7 +92,7 @@ public class DefinitionWrapperGenerator {
         )
         public class %s implements TransactionDefinition {
 
-            private final %s function = new %s();%s
+            private final %s function = new %s();
 
             @Override
             public String getCode() {
@@ -119,18 +122,16 @@ public class DefinitionWrapperGenerator {
         }
         """.formatted(
             GENERATED_PACKAGE,
-            jsonbImport,
-            mapImport,
+            jsonPayloadImport,
             spec.packageName(),
             spec.className(),
-            spec.inputType(),
-            spec.outputType(),
+            inputTypeImport,
+            outputTypeImport,
             spec.className(),
             timestamp,
             wrapperClassName,
             spec.className(),
             spec.className(),
-            jsonbField,
             spec.code(),
             simpleName(spec.inputType()),
             inputConversion,
@@ -153,15 +154,14 @@ public class DefinitionWrapperGenerator {
 
     String inputConversion = inputIsRuntime
         ? "input"
-        : "JSONB.type(%s.class).fromJson(JSONB.toJson(input.params()))"
-            .formatted(simpleName(spec.inputType()));
+        : "JsonPayload.fromMap(input.params(), %s.class)".formatted(simpleName(spec.inputType()));
 
-    String outputConversion = outputIsRuntime ? "out" : "new HelperOutput(out)";
+    String outputConversion = outputIsRuntime ? "out" : "new HelperOutput(JsonPayload.toMap(out))";
 
-    String jsonbField = (inputIsRuntime && outputIsRuntime)
-        ? ""
-        : "\n    private static final Jsonb JSONB = Jsonb.builder().build();";
-    String jsonbImport = inputIsRuntime ? "" : "import io.avaje.jsonb.Jsonb;\n";
+    String jsonPayloadImport =
+        (inputIsRuntime && outputIsRuntime) ? "" : "import cbs.dsl.api.JsonPayload;\n";
+    String inputTypeImport = inputIsRuntime ? "" : "import " + spec.inputType() + ";\n";
+    String outputTypeImport = outputIsRuntime ? "" : "import " + spec.outputType() + ";\n";
 
     return """
         package %s;
@@ -170,9 +170,7 @@ public class DefinitionWrapperGenerator {
         import cbs.dsl.api.HelperTypes.HelperInput;
         import cbs.dsl.api.HelperTypes.HelperOutput;
         %s        import %s.%s;
-        import %s;
-        import %s;
-
+        %s%s
         /**
          * Generated HelperDefinition wrapper for %s.
          * <strong>WARNING:</strong> Auto-generated — do not edit.
@@ -183,7 +181,7 @@ public class DefinitionWrapperGenerator {
         )
         public class %s implements HelperDefinition {
 
-            private final %s function = new %s();%s
+            private final %s function = new %s();
 
             @Override
             public String getCode() {
@@ -199,17 +197,16 @@ public class DefinitionWrapperGenerator {
         }
         """.formatted(
             GENERATED_PACKAGE,
-            jsonbImport,
+            jsonPayloadImport,
             spec.packageName(),
             spec.className(),
-            spec.inputType(),
-            spec.outputType(),
+            inputTypeImport,
+            outputTypeImport,
             spec.className(),
             timestamp,
             wrapperClassName,
             spec.className(),
             spec.className(),
-            jsonbField,
             spec.code(),
             simpleName(spec.inputType()),
             inputConversion,
@@ -223,12 +220,10 @@ public class DefinitionWrapperGenerator {
 
     String inputConversion = inputIsRuntime
         ? "input"
-        : "JSONB.type(%s.class).fromJson(JSONB.toJson(input.params()))"
-            .formatted(simpleName(spec.inputType()));
+        : "JsonPayload.fromMap(input.params(), %s.class)".formatted(simpleName(spec.inputType()));
 
-    String jsonbField =
-        inputIsRuntime ? "" : "\n    private static final Jsonb JSONB = Jsonb.builder().build();";
-    String jsonbImport = inputIsRuntime ? "" : "import io.avaje.jsonb.Jsonb;\n";
+    String jsonPayloadImport = inputIsRuntime ? "" : "import cbs.dsl.api.JsonPayload;\n";
+    String inputTypeImport = inputIsRuntime ? "" : "import " + spec.inputType() + ";\n";
 
     return """
         package %s;
@@ -238,8 +233,7 @@ public class DefinitionWrapperGenerator {
         import cbs.dsl.api.ConditionTypes.ConditionOutput;
         import cbs.dsl.api.context.TransactionContext;
         %s        import %s.%s;
-        import %s;
-        import %s;
+        %s        import %s;
         import java.util.function.Predicate;
 
         /**
@@ -252,7 +246,7 @@ public class DefinitionWrapperGenerator {
         )
         public class %s implements ConditionDefinition {
 
-            private final %s function = new %s();%s
+            private final %s function = new %s();
 
             @Override
             public String getCode() {
@@ -273,21 +267,271 @@ public class DefinitionWrapperGenerator {
         }
         """.formatted(
             GENERATED_PACKAGE,
-            jsonbImport,
+            jsonPayloadImport,
             spec.packageName(),
             spec.className(),
-            spec.inputType(),
+            inputTypeImport,
             spec.outputType(),
             spec.className(),
             timestamp,
             wrapperClassName,
             spec.className(),
             spec.className(),
-            jsonbField,
             spec.code(),
             simpleName(spec.inputType()),
             inputConversion,
             simpleName(spec.outputType()));
+  }
+
+  private String generateEventWrapper(RegistrationSpec spec, String wrapperClassName) {
+    String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
+    boolean inputIsRuntime = spec.inputType().equals(EV_INPUT);
+    boolean outputIsRuntime = spec.outputType().equals(EV_OUTPUT);
+
+    String inputConversion = inputIsRuntime
+        ? "input"
+        : "JsonPayload.fromMap(input.params(), %s.class)".formatted(simpleName(spec.inputType()));
+
+    String outputConversion = outputIsRuntime ? "out" : "new EventOutput(JsonPayload.toMap(out))";
+
+    String jsonPayloadImport =
+        (inputIsRuntime && outputIsRuntime) ? "" : "import cbs.dsl.api.JsonPayload;\n";
+    String inputTypeImport = inputIsRuntime ? "" : "import " + spec.inputType() + ";\n";
+    String outputTypeImport = outputIsRuntime ? "" : "import " + spec.outputType() + ";\n";
+
+    return """
+        package %s;
+
+        import cbs.dsl.api.EventDefinition;
+        import cbs.dsl.api.EventTypes.EventInput;
+        import cbs.dsl.api.EventTypes.EventOutput;
+        %s        import %s.%s;
+        %s%s
+        /**
+         * Generated EventDefinition wrapper for %s.
+         * <strong>WARNING:</strong> Auto-generated — do not edit.
+         */
+        @javax.annotation.processing.Generated(
+            value = "cbs.dsl.codegen.DefinitionWrapperGenerator",
+            date = "%s"
+        )
+        public class %s implements EventDefinition {
+
+            private final %s function = new %s();
+
+            @Override
+            public String getCode() {
+                return "%s";
+            }
+
+            @Override
+            public EventOutput execute(EventInput input) {
+                %s typed = %s;
+                %s out = function.execute(typed);
+                return %s;
+            }
+        }
+        """.formatted(
+            GENERATED_PACKAGE,
+            jsonPayloadImport,
+            spec.packageName(),
+            spec.className(),
+            inputTypeImport,
+            outputTypeImport,
+            spec.className(),
+            timestamp,
+            wrapperClassName,
+            spec.className(),
+            spec.className(),
+            spec.code(),
+            simpleName(spec.inputType()),
+            inputConversion,
+            simpleName(spec.outputType()),
+            outputConversion);
+  }
+
+  private String generateWorkflowWrapper(RegistrationSpec spec, String wrapperClassName) {
+    String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
+    boolean inputIsRuntime = spec.inputType().equals(WF_INPUT);
+    boolean outputIsRuntime = spec.outputType().equals(WF_OUTPUT);
+
+    String inputConversion = inputIsRuntime
+        ? "input"
+        : "JsonPayload.fromMap(input.params(), %s.class)".formatted(simpleName(spec.inputType()));
+
+    String outputConversion =
+        outputIsRuntime ? "out" : "new WorkflowOutput(out.nextState(), out.events(), out.status())";
+
+    String jsonPayloadImport = inputIsRuntime ? "" : "import cbs.dsl.api.JsonPayload;\n";
+    String inputTypeImport = inputIsRuntime ? "" : "import " + spec.inputType() + ";\n";
+    String outputTypeImport = outputIsRuntime ? "" : "import " + spec.outputType() + ";\n";
+
+    return """
+        package %s;
+
+        import cbs.dsl.api.WorkflowDefinition;
+        import cbs.dsl.api.WorkflowTypes.WorkflowInput;
+        import cbs.dsl.api.WorkflowTypes.WorkflowOutput;
+        import cbs.dsl.api.TransitionRuleDefinition;
+        import cbs.dsl.api.ParameterDefinition;
+        %s        import %s.%s;
+        %s%s        import java.util.List;
+
+        /**
+         * Generated WorkflowDefinition wrapper for %s.
+         * <strong>WARNING:</strong> Auto-generated — do not edit.
+         */
+        @javax.annotation.processing.Generated(
+            value = "cbs.dsl.codegen.DefinitionWrapperGenerator",
+            date = "%s"
+        )
+        public class %s implements WorkflowDefinition {
+
+            private final %s function = new %s();
+
+            @Override
+            public String getCode() {
+                return "%s";
+            }
+
+            @Override
+            public WorkflowOutput execute(WorkflowInput input) {
+                %s typed = %s;
+                %s out = function.execute(typed);
+                return %s;
+            }
+
+            @Override
+            public List<String> getStates() {
+                return List.of();
+            }
+
+            @Override
+            public String getInitial() {
+                return "";
+            }
+
+            @Override
+            public List<String> getTerminalStates() {
+                return List.of();
+            }
+
+            @Override
+            public List<TransitionRuleDefinition> getTransitions() {
+                return List.of();
+            }
+        }
+        """.formatted(
+            GENERATED_PACKAGE,
+            jsonPayloadImport,
+            spec.packageName(),
+            spec.className(),
+            inputTypeImport,
+            outputTypeImport,
+            spec.className(),
+            timestamp,
+            wrapperClassName,
+            spec.className(),
+            spec.className(),
+            spec.code(),
+            simpleName(spec.inputType()),
+            inputConversion,
+            simpleName(spec.outputType()),
+            outputConversion);
+  }
+
+  private String generateMassOperationWrapper(RegistrationSpec spec, String wrapperClassName) {
+    String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
+    boolean inputIsRuntime = spec.inputType().equals(MO_INPUT);
+    boolean outputIsRuntime = spec.outputType().equals(MO_OUTPUT);
+
+    String inputConversion = inputIsRuntime
+        ? "input"
+        : "JsonPayload.fromMap(input.params(), %s.class)".formatted(simpleName(spec.inputType()));
+
+    String outputConversion = outputIsRuntime
+        ? "out"
+        : "new MassOperationOutput(out.processedCount(), out.failedCount(), out.status())";
+
+    String jsonPayloadImport = inputIsRuntime ? "" : "import cbs.dsl.api.JsonPayload;\n";
+    String inputTypeImport = inputIsRuntime ? "" : "import " + spec.inputType() + ";\n";
+    String outputTypeImport = outputIsRuntime ? "" : "import " + spec.outputType() + ";\n";
+
+    return """
+        package %s;
+
+        import cbs.dsl.api.MassOperationDefinition;
+        import cbs.dsl.api.MassOperationTypes.MassOperationInput;
+        import cbs.dsl.api.MassOperationTypes.MassOperationOutput;
+        import cbs.dsl.api.LockDefinition;
+        import cbs.dsl.api.TriggerDefinition;
+        import cbs.dsl.api.SourceDefinition;
+        %s        import %s.%s;
+        %s%s        import java.util.List;
+        import java.util.function.Consumer;
+        import cbs.dsl.api.context.MassOperationContext;
+
+        /**
+         * Generated MassOperationDefinition wrapper for %s.
+         * <strong>WARNING:</strong> Auto-generated — do not edit.
+         */
+        @javax.annotation.processing.Generated(
+            value = "cbs.dsl.codegen.DefinitionWrapperGenerator",
+            date = "%s"
+        )
+        public class %s implements MassOperationDefinition {
+
+            private final %s function = new %s();
+
+            @Override
+            public String getCode() {
+                return "%s";
+            }
+
+            @Override
+            public String getCategory() {
+                return "DEFAULT";
+            }
+
+            @Override
+            public List<TriggerDefinition> getTriggers() {
+                return List.of();
+            }
+
+            @Override
+            public SourceDefinition getSource() {
+                return null;
+            }
+
+            @Override
+            public Consumer<MassOperationContext> getItemBlock() {
+                return ctx -> {};
+            }
+
+            @Override
+            public MassOperationOutput execute(MassOperationInput input) {
+                %s typed = %s;
+                %s out = function.execute(typed);
+                return %s;
+            }
+        }
+        """.formatted(
+            GENERATED_PACKAGE,
+            jsonPayloadImport,
+            spec.packageName(),
+            spec.className(),
+            inputTypeImport,
+            outputTypeImport,
+            spec.className(),
+            timestamp,
+            wrapperClassName,
+            spec.className(),
+            spec.className(),
+            spec.code(),
+            simpleName(spec.inputType()),
+            inputConversion,
+            simpleName(spec.outputType()),
+            outputConversion);
   }
 
   private String simpleName(String fullyQualifiedName) {

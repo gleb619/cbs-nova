@@ -8,6 +8,6 @@ import io.temporal.workflow.WorkflowMethod;
 @WorkflowInterface
 public interface EventWorkflow {
 
-  @WorkflowMethod
+  @WorkflowMethod(name = "GENERIC_EVENT")
   WorkflowExecutionResponse execute(EventWorkflowRequest request);
 }
