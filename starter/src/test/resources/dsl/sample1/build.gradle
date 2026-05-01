@@ -1,0 +1,34 @@
+plugins {
+  id 'java'
+}
+
+group = 'cbs.nova.dsl.sample1'
+version = '1.0.0'
+
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(25)
+  }
+}
+
+repositories {
+  mavenCentral()
+}
+
+sourceSets {
+  main {
+    java {
+      srcDirs = ['.']
+      excludes = ['build/**', '.gradle/**', 'libs/**', '*.gradle']
+    }
+    resources.srcDirs = []
+  }
+}
+
+dependencies {
+  implementation files('libs/dsl-api.jar')
+}
+
+compileJava {
+  options.compilerArgs += ['-Xlint:none']
+}
