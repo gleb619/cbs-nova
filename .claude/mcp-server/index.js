@@ -82,11 +82,12 @@ function spawnWithNvm(cmd, args, timeoutSec) {
  * Spawn a command directly (no NVM wrapper).
  * Used for binaries like kiro-cli that don't need Node version switching.
  */
-function spawnDirect(cmd, args) {
+function spawnDirect(cmd, args, timeoutSec) {
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, {
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+    const spawnOpts = { stdio: ["ignore", "pipe", "pipe"] };
+    if (timeoutSec) spawnOpts.timeout = timeoutSec * 1000;
+
+    const child = spawn(cmd, args, spawnOpts);
 
     let stdout = "";
     let stderr = "";
@@ -106,6 +107,11 @@ function spawnDirect(cmd, args) {
 
     child.on("close", (code) => {
       resolve({ code, stdout, stderr });
+    });
+
+    child.on("timeout", () => {
+      child.kill("SIGTERM");
+      reject(new Error(`Process timed out after ${timeoutSec}s`));
     });
   });
 }
@@ -263,7 +269,7 @@ server.registerTool(
         const defaultPrompt = `Read the file docs/tasks/${task_name}.md carefully and follow all instructions inside it exactly. After completing all work, write your result summary to docs/results/${task_name}.result.md as instructed.`;
         const resolvedPrompt = prompt || defaultPrompt;
 
-        const opencodeArgs = ["run", ...extraArgs, resolvedPrompt];
+        const opencodeArgs = ["run", "--dangerously-skip-permissions", ...extraArgs, resolvedPrompt];
 
         // Check opencode path exists
         if (!fs.existsSync(OPENCODE_PATH)) {
@@ -272,7 +278,7 @@ server.registerTool(
           );
         }
 
-        const result = await spawnDirect(OPENCODE_PATH, opencodeArgs);
+        const result = await spawnDirect(OPENCODE_PATH, opencodeArgs, timeout);
 
         const endMsg = `[${timestamp()}] END opencode task=${task_name} exit_code=${result.code}`;
         logStream.write(endMsg + "\n");

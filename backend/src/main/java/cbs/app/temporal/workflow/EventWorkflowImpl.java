@@ -10,8 +10,8 @@ import cbs.nova.entity.EventStatus;
 import cbs.nova.entity.WorkflowExecutionEntity;
 import cbs.nova.entity.WorkflowStatus;
 import cbs.nova.entity.WorkflowTransitionLogEntity;
-import cbs.nova.model.EventWorkflowInput;
-import cbs.nova.model.WorkflowExecutionResult;
+import cbs.nova.model.EventWorkflowRequest;
+import cbs.nova.model.WorkflowExecutionResponse;
 import cbs.nova.repository.EventExecutionRepository;
 import cbs.nova.repository.WorkflowExecutionRepository;
 import cbs.nova.repository.WorkflowTransitionLogRepository;
@@ -35,7 +35,7 @@ public class EventWorkflowImpl implements EventWorkflow {
   private final WorkflowTransitionLogRepository transitionLogRepository;
 
   @Override
-  public WorkflowExecutionResult execute(EventWorkflowInput input) {
+  public WorkflowExecutionResponse execute(EventWorkflowRequest input) {
     log.debug(
         "Starting workflow execution: workflowCode={}, eventCode={}, performedBy={}",
         input.workflowCode(),
@@ -91,7 +91,7 @@ public class EventWorkflowImpl implements EventWorkflow {
           txResult.errorMessage());
     }
 
-    WorkflowExecutionResult result = new WorkflowExecutionResult(
+    WorkflowExecutionResponse result = new WorkflowExecutionResponse(
         workflowExecution.getId(), workflowExecution.getStatus().name());
     log.debug(
         "Workflow execution finished: workflowId={}, status={}",
@@ -114,7 +114,7 @@ public class EventWorkflowImpl implements EventWorkflow {
   }
 
   private WorkflowExecutionEntity createWorkflowExecution(
-      EventWorkflowInput input, WorkflowDefinition workflowDefinition) {
+      EventWorkflowRequest input, WorkflowDefinition workflowDefinition) {
     WorkflowExecutionEntity entity = new WorkflowExecutionEntity();
     entity.setWorkflowCode(input.workflowCode());
     entity.setDslVersion(input.dslVersion());
@@ -129,7 +129,7 @@ public class EventWorkflowImpl implements EventWorkflow {
   }
 
   private EventExecutionEntity createEventExecution(
-      EventWorkflowInput input,
+      EventWorkflowRequest input,
       WorkflowExecutionEntity workflowExecution,
       TransitionRule transitionRule,
       String temporalWorkflowId) {
@@ -150,7 +150,7 @@ public class EventWorkflowImpl implements EventWorkflow {
 
   private TransactionExecutionResult executeTransactions(
       EventDefinition eventDefinition,
-      EventWorkflowInput input,
+      EventWorkflowRequest input,
       Long workflowExecutionId,
       TransactionActivity activityStub) {
     if (eventDefinition.getTransactionsBlock() == null) {
@@ -176,7 +176,7 @@ public class EventWorkflowImpl implements EventWorkflow {
       EventExecutionEntity eventExecution,
       TransitionRule transitionRule,
       WorkflowDefinition workflowDefinition,
-      EventWorkflowInput input) {
+      EventWorkflowRequest input) {
     eventExecution.setStatus(EventStatus.COMPLETED);
     eventExecution.setCompletedAt(OffsetDateTime.now());
     eventExecution.setUpdatedAt(OffsetDateTime.now());
@@ -206,7 +206,7 @@ public class EventWorkflowImpl implements EventWorkflow {
       EventExecutionEntity eventExecution,
       TransitionRule transitionRule,
       String faultMessage,
-      EventWorkflowInput input) {
+      EventWorkflowRequest input) {
     eventExecution.setStatus(EventStatus.FAULTED);
     eventExecution.setUpdatedAt(OffsetDateTime.now());
     eventExecutionRepository.save(eventExecution);
@@ -236,7 +236,7 @@ public class EventWorkflowImpl implements EventWorkflow {
       String toState,
       String status,
       String faultMessage,
-      EventWorkflowInput input) {
+      EventWorkflowRequest input) {
     WorkflowTransitionLogEntity entity = new WorkflowTransitionLogEntity();
     entity.setWorkflowExecution(workflowExecution);
     entity.setEventExecution(eventExecution);

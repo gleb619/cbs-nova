@@ -10,7 +10,7 @@ import cbs.dsl.api.EventDefinition;
 import cbs.dsl.api.WorkflowDefinition;
 import cbs.nova.model.EventExecutionRequest;
 import cbs.nova.model.EventExecutionResponse;
-import cbs.nova.model.WorkflowExecutionResult;
+import cbs.nova.model.WorkflowExecutionResponse;
 import cbs.nova.model.exception.EntityNotFoundException;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -53,7 +53,7 @@ class EventServiceTest {
     when(contextEncryptionService.encrypt(Map.of("amount", 1000, "enriched", true)))
         .thenReturn("{\"amount\":1000,\"enriched\":true}");
     when(workflowExecutor.start(request, "{\"amount\":1000,\"enriched\":true}"))
-        .thenReturn(new WorkflowExecutionResult(1L, "ACTIVE"));
+        .thenReturn(new WorkflowExecutionResponse(1L, "ACTIVE"));
 
     EventExecutionResponse response = eventService.execute(request);
 

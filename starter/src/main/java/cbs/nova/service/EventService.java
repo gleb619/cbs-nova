@@ -4,7 +4,7 @@ import cbs.dsl.api.EventDefinition;
 import cbs.dsl.api.WorkflowDefinition;
 import cbs.nova.model.EventExecutionRequest;
 import cbs.nova.model.EventExecutionResponse;
-import cbs.nova.model.WorkflowExecutionResult;
+import cbs.nova.model.WorkflowExecutionResponse;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,7 +41,7 @@ public class EventService {
     String encryptedContextJson = contextEncryptionService.encrypt(enrichedContext);
 
     // 5. Launch Temporal workflow
-    WorkflowExecutionResult result = workflowExecutor.start(request, encryptedContextJson);
+    WorkflowExecutionResponse result = workflowExecutor.start(request, encryptedContextJson);
 
     // 6. Build response
     return new EventExecutionResponse(result.executionId(), result.status());

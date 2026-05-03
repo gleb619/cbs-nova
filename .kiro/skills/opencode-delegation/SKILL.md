@@ -194,7 +194,7 @@ After completing the task, write a result file to:
 After writing the task file, Kiro runs OpenCode using `executeBash` with a **long timeout** (600000 ms minimum):
 
 ```bash
-~/.opencode/bin/opencode run "Read the file docs/tasks/{task-name}.md carefully and follow all instructions inside it exactly. After completing all work, write your result summary to docs/results/{task-name}.result.md as instructed."
+~/.opencode/bin/opencode run --dangerously-skip-permissions "Read the file docs/tasks/{task-name}.md carefully and follow all instructions inside it exactly. After completing all work, write your result summary to docs/results/{task-name}.result.md as instructed."
 ```
 
 **Critical rules for this step:**
@@ -210,7 +210,7 @@ which opencode 2>/dev/null || ls ~/.opencode/bin/ 2>/dev/null || ls ~/bin/openco
 
 Pass `--continue` to resume OpenCode's last session (useful for retries):
 ```bash
-~/.opencode/bin/opencode run --continue "Read the updated docs/tasks/{task-name}.md..."
+~/.opencode/bin/opencode run --dangerously-skip-permissions --continue "Read the updated docs/tasks/{task-name}.md..."
 ```
 
 ---
@@ -280,7 +280,7 @@ Please fix these specifically before re-running verification.
 
 Then re-run with `--continue`:
 ```bash
-~/.opencode/bin/opencode run --continue "Read the updated docs/tasks/{task-name}.md. Pay attention to the Retry Notes section. Fix the listed issues and update docs/results/{task-name}.result.md."
+~/.opencode/bin/opencode run --dangerously-skip-permissions --continue "Read the updated docs/tasks/{task-name}.md. Pay attention to the Retry Notes section. Fix the listed issues and update docs/results/{task-name}.result.md."
 ```
 
 ---

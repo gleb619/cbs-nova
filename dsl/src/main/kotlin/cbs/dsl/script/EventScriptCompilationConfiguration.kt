@@ -6,8 +6,8 @@ import kotlin.script.experimental.jvm.dependenciesFromCurrentContext
 import kotlin.script.experimental.jvm.jvm
 
 object EventScriptCompilationConfiguration : ScriptCompilationConfiguration({
-  jvm {
-    dependenciesFromCurrentContext(wholeClasspath = true)
-  }
-  defaultImports("cbs.dsl.api.*", "cbs.dsl.script.*", "cbs.dsl.runtime.*")
+    jvm {
+        dependenciesFromCurrentContext(wholeClasspath = true)
+    }
+    defaultImports("cbs.dsl.api.*", "cbs.dsl.script.*", "cbs.dsl.runtime.*")
 })

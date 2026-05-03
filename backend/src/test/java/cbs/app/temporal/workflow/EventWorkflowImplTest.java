@@ -18,8 +18,8 @@ import cbs.dsl.runtime.DslRegistry;
 import cbs.nova.entity.EventExecutionEntity;
 import cbs.nova.entity.WorkflowExecutionEntity;
 import cbs.nova.entity.WorkflowTransitionLogEntity;
-import cbs.nova.model.EventWorkflowInput;
-import cbs.nova.model.WorkflowExecutionResult;
+import cbs.nova.model.EventWorkflowRequest;
+import cbs.nova.model.WorkflowExecutionResponse;
 import cbs.nova.repository.EventExecutionRepository;
 import cbs.nova.repository.WorkflowExecutionRepository;
 import cbs.nova.repository.WorkflowTransitionLogRepository;
@@ -105,9 +105,9 @@ class EventWorkflowImplTest {
     EventDefinition eventDef = mock(EventDefinition.class);
     when(eventDef.getCode()).thenReturn("TEST_EVENT");
     when(eventDef.getContextBlock()).thenReturn(ctx -> Unit.INSTANCE);
-    when(eventDef.getDisplayBlock()).thenReturn(ctx -> Unit.INSTANCE);
+    when(eventDef.getDisplayBlock()).thenReturn(scope -> Unit.INSTANCE);
     when(eventDef.getTransactionsBlock()).thenReturn(TestTransactionBlocks.singleStepAwait(txDef));
-    when(eventDef.getFinishBlock()).thenReturn(ctx -> Unit.INSTANCE);
+    when(eventDef.getFinishBlock()).thenReturn((ctx, ex) -> Unit.INSTANCE);
 
     TransitionRule rule = new TransitionRule("INIT", "DONE", Action.CLOSE, eventDef, "FAULTED", null);
 
@@ -125,9 +125,9 @@ class EventWorkflowImplTest {
         WorkflowOptions.newBuilder().setTaskQueue("TEST_QUEUE").build());
 
     // Act
-    EventWorkflowInput input =
-        new EventWorkflowInput("TEST_WF", "TEST_EVENT", "{}", "testUser", "1.0.0");
-    WorkflowExecutionResult result = workflow.execute(input);
+    EventWorkflowRequest input =
+        new EventWorkflowRequest("TEST_WF", "TEST_EVENT", "{}", "testUser", "1.0.0");
+    WorkflowExecutionResponse result = workflow.execute(input);
 
     // Assert
     assertEquals("CLOSED", result.status());
@@ -150,10 +150,10 @@ class EventWorkflowImplTest {
     EventDefinition eventDef = mock(EventDefinition.class);
     when(eventDef.getCode()).thenReturn("TEST_EVENT");
     when(eventDef.getContextBlock()).thenReturn(ctx -> Unit.INSTANCE);
-    when(eventDef.getDisplayBlock()).thenReturn(ctx -> Unit.INSTANCE);
+    when(eventDef.getDisplayBlock()).thenReturn(scope -> Unit.INSTANCE);
     when(eventDef.getTransactionsBlock())
         .thenReturn(TestTransactionBlocks.singleStepAwait(failingTx));
-    when(eventDef.getFinishBlock()).thenReturn(ctx -> Unit.INSTANCE);
+    when(eventDef.getFinishBlock()).thenReturn((ctx, ex) -> Unit.INSTANCE);
 
     TransitionRule rule = new TransitionRule("INIT", "DONE", Action.CLOSE, eventDef, "FAULTED", null);
 
@@ -171,9 +171,9 @@ class EventWorkflowImplTest {
         WorkflowOptions.newBuilder().setTaskQueue("TEST_QUEUE").build());
 
     // Act
-    EventWorkflowInput input =
-        new EventWorkflowInput("TEST_WF", "TEST_EVENT", "{}", "testUser", "1.0.0");
-    WorkflowExecutionResult result = workflow.execute(input);
+    EventWorkflowRequest input =
+        new EventWorkflowRequest("TEST_WF", "TEST_EVENT", "{}", "testUser", "1.0.0");
+    WorkflowExecutionResponse result = workflow.execute(input);
 
     // Assert
     assertEquals("FAULTED", result.status());
@@ -190,8 +190,8 @@ class EventWorkflowImplTest {
         WorkflowOptions.newBuilder().setTaskQueue("TEST_QUEUE").build());
 
     // Act & Assert
-    EventWorkflowInput input =
-        new EventWorkflowInput("UNKNOWN_WF", "TEST_EVENT", "{}", "testUser", "1.0.0");
+    EventWorkflowRequest input =
+        new EventWorkflowRequest("UNKNOWN_WF", "TEST_EVENT", "{}", "testUser", "1.0.0");
     assertThrows(WorkflowFailedException.class, () -> workflow.execute(input));
   }
 
@@ -213,8 +213,8 @@ class EventWorkflowImplTest {
         WorkflowOptions.newBuilder().setTaskQueue("TEST_QUEUE").build());
 
     // Act & Assert
-    EventWorkflowInput input =
-        new EventWorkflowInput("TEST_WF", "UNKNOWN_EVENT", "{}", "testUser", "1.0.0");
+    EventWorkflowRequest input =
+        new EventWorkflowRequest("TEST_WF", "UNKNOWN_EVENT", "{}", "testUser", "1.0.0");
     assertThrows(WorkflowFailedException.class, () -> workflow.execute(input));
   }
 }

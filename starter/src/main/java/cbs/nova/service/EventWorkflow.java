@@ -1,7 +1,7 @@
 package cbs.nova.service;
 
-import cbs.nova.model.EventWorkflowInput;
-import cbs.nova.model.WorkflowExecutionResult;
+import cbs.nova.model.EventWorkflowRequest;
+import cbs.nova.model.WorkflowExecutionResponse;
 import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
 
@@ -9,5 +9,5 @@ import io.temporal.workflow.WorkflowMethod;
 public interface EventWorkflow {
 
   @WorkflowMethod
-  WorkflowExecutionResult execute(EventWorkflowInput input);
+  WorkflowExecutionResponse execute(EventWorkflowRequest input);
 }
