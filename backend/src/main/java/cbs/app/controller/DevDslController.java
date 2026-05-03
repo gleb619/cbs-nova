@@ -1,6 +1,5 @@
 package cbs.app.controller;
 
-import cbs.dsl.compiler.DslScriptHost;
 import cbs.dsl.compiler.DslValidator;
 import cbs.dsl.compiler.ValidationError;
 import cbs.dsl.runtime.DslRegistry;
@@ -23,7 +22,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/dev/dsl")
 public class DevDslController {
 
-  private final DslScriptHost scriptHost;
   private final DslValidator validator;
 
   @PostMapping(
@@ -38,7 +36,8 @@ public class DevDslController {
 
     DslRegistry registry;
     try {
-      registry = scriptHost.eval(request.dslContent(), "input");
+      //      registry = scriptHost.eval(request.dslContent(), "input");
+      registry = null;
     } catch (IllegalStateException e) {
       log.warn("DSL script evaluation failed: {}", e.getMessage());
       var error = new ValidationErrorDto("input", e.getMessage());

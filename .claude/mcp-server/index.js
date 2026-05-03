@@ -263,7 +263,6 @@ server.registerTool(
         const defaultPrompt = `Read the file docs/tasks/${task_name}.md carefully and follow all instructions inside it exactly. After completing all work, write your result summary to docs/results/${task_name}.result.md as instructed.`;
         const resolvedPrompt = prompt || defaultPrompt;
 
-        // opencode run --dangerously-skip-permissions --model <default> [extra_args] "prompt"
         const opencodeArgs = ["run", ...extraArgs, resolvedPrompt];
 
         // Check opencode path exists

@@ -36,6 +36,7 @@ dependencies {
   implementation project(":dsl-api")
   implementation project(":dsl")
   implementation libs.temporal.sdk
+  implementation libs.kotlinx.coroutines.core
 
   // -- Testing --
   testImplementation libs.bundles.spring.test
