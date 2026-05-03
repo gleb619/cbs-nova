@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: cbs-nove
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: "0"
+    locations: classpath:db/migration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # TODO: Set KEYCLOAK_ISSUER_URI environment variable to your Keycloak realm OIDC issuer URL
+          # Example: https://auth.example.com/realms/cbs
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/cbs}
+
+server:
+  port: 7070
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    root: INFO
+    cbs: DEBUG
