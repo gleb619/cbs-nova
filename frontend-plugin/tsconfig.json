@@ -1,0 +1,16 @@
+{
+  "extends": "@vue/tsconfig/tsconfig.dom.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "sourceMap": true,
+    "types": [
+      "vitest/globals"
+    ],
+    "baseUrl": "."
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.vue",
+    "nuxt.config.ts"
+  ]
+}

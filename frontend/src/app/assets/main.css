@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@import "../../../../frontend-plugin/assets/main.scss";
+
+@source "../../../../frontend-plugin/**/*.vue";
+@source "./**/*.vue";
+@source "./**/*.ts";
