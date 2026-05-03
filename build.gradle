@@ -4,6 +4,7 @@ plugins {
   alias(libs.plugins.spring.dm) apply false
   alias(libs.plugins.spotless) apply false
   alias(libs.plugins.test.logger) apply false
+  alias(libs.plugins.freefair.lombok) apply false
 }
 
 allprojects {

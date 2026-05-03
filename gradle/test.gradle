@@ -16,7 +16,7 @@ configurations {
 
 tasks.withType(Test).configureEach {
   useJUnitPlatform()
-  environment('TESTCONTAINERS_REUSE_ENABLE', 'true')
+  //environment('TESTCONTAINERS_REUSE_ENABLE', 'true')
 
   testLogging {
     events('failed')
@@ -31,10 +31,6 @@ tasks.register('integrationTest', Test) {
   group = 'verification'
   testClassesDirs = sourceSets.integrationTest.output.classesDirs
   classpath = sourceSets.integrationTest.runtimeClasspath
-  jvmArgs('-Xshare:off')
-  jvmArgs('-XX:+EnableDynamicAgentLoading')
-  systemProperty('user.timezone', 'GMT+5')
-  systemProperty('isCI', getProperty('isCI') ?: 'false')
 }
 
 testlogger {

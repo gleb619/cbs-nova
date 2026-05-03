@@ -1,0 +1,24 @@
+apply plugin: 'checkstyle'
+
+def libs = versionCatalogs.named('libs')
+
+checkstyle {
+  toolVersion = libs.findVersion('checkstyle').get().toString()
+  configFile = file("${rootDir}/gradle/checkstyle/checkstyle.xml")
+  configProperties = [
+      'configDir' : file("${rootDir}/gradle/checkstyle"),
+      'projectDir': rootDir
+  ]
+  maxWarnings = 0
+  maxErrors = 0
+}
+
+checkstyleTest {
+  configFile = file("${rootDir}/gradle/checkstyle/checkstyle-test.xml")
+  configProperties = [
+      'configDir' : file("${rootDir}/gradle/checkstyle"),
+      'projectDir': rootDir
+  ]
+}
+
+check.dependsOn checkstyleMain, checkstyleTest

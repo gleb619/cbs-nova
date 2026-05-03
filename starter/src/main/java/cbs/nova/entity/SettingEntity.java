@@ -21,7 +21,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 @Schema(description = "Setting entity")
-public class Setting {
+public class SettingEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -1,31 +1,27 @@
 package cbs.nova.model;
 
-import io.swagger.v3.oas.annotations.media.Schema;
+import cbs.nova.model.AbstractCrudDto.AbstractCreateDto;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Getter
-@Setter
-@NoArgsConstructor
+@Data
 @AllArgsConstructor
-@Builder
-@Schema(description = "Setting creation data transfer object")
-public class SettingCreateDto {
+@Builder(toBuilder = true)
+@NoArgsConstructor(access = AccessLevel.PUBLIC)
+public class SettingCreateDto implements AbstractCreateDto {
 
-  @Schema(
-      description = "Unique code for the setting",
-      example = "max_login_attempts",
-      required = true)
+  @NotBlank
+  @Size(max = 100)
   private String code;
 
-  @Schema(description = "Value of the setting", example = "5", required = true)
+  @NotBlank
   private String value;
 
-  @Schema(
-      description = "Description of what the setting controls",
-      example = "Maximum number of login attempts before account lockout")
+  @Size(max = 255)
   private String description;
 }
