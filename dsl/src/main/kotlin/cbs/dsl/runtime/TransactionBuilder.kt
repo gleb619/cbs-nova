@@ -8,9 +8,12 @@ import cbs.dsl.api.context.TransactionPhase
 class TransactionBuilder(
     override val code: String,
 ) : TransactionDefinition {
+    private var _name: String? = null
     private var _preview: ((TransactionContext) -> Unit)? = null
     private var _execute: ((TransactionContext) -> Unit)? = null
     private var _rollback: ((TransactionContext) -> Unit)? = null
+
+    override val name: String? get() = _name
 
     val hasExecute: Boolean get() = _execute != null
 
@@ -31,6 +34,10 @@ class TransactionBuilder(
     override fun rollback(ctx: TransactionContext) {
         val dslCtx = TransactionDslContext(ctx, delegateTarget, TransactionPhase.ROLLBACK)
         _rollback?.invoke(dslCtx)
+    }
+
+    fun name(value: String) {
+        _name = value
     }
 
     fun preview(block: (TransactionContext) -> Unit) {

@@ -3,8 +3,6 @@ package cbs.dsl.script
 import cbs.dsl.compiler.ImportScope
 import kotlin.script.experimental.api.EvaluationResult
 import kotlin.script.experimental.api.ResultWithDiagnostics
-import kotlin.script.experimental.api.ScriptEvaluationConfiguration
-import kotlin.script.experimental.api.providedProperties
 import kotlin.script.experimental.host.toScriptSource
 import kotlin.script.experimental.jvmhost.BasicJvmScriptingHost
 
@@ -30,14 +28,10 @@ class ScriptHost {
                 fileName.endsWith(".workflow.kts") -> WorkflowScriptCompilationConfiguration
                 else -> EventScriptCompilationConfiguration
             }
-        val evalConfig =
-            if (providedImports.isEmpty()) {
-                null
-            } else {
-                ScriptEvaluationConfiguration {
-                    providedProperties("imports" to providedImports)
-                }
-            }
-        return host.eval(scriptContent.toScriptSource(fileName), compilationConfig, evalConfig)
+        var result: ResultWithDiagnostics<EvaluationResult>? = null
+        EventDslScope.withImports(providedImports) {
+            result = host.eval(scriptContent.toScriptSource(fileName), compilationConfig, null)
+        }
+        return result!!
     }
 }

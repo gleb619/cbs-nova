@@ -7,6 +7,8 @@ import cbs.dsl.api.TransactionDefinition
 import cbs.dsl.api.context.ConditionalStepBuilder
 import cbs.dsl.api.context.StepHandle
 import cbs.dsl.api.context.TransactionsScope
+import cbs.temporal.TemporalStepHandle
+import cbs.temporal.TemporalTransactionsScope
 import io.temporal.workflow.Async
 import io.temporal.workflow.Promise
 import kotlinx.coroutines.Dispatchers

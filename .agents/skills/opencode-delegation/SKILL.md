@@ -1,21 +1,24 @@
 ---
 name: opencode-delegation
 description: >
-  The agent acts as thinking center: analyzes requirements, writes a task spec,
-  then delegates execution to a secondary agent (e.g. OpenCode). The secondary
-  agent reads the task file, performs the work, and writes a result file. The
-  orchestrating agent verifies the result. Use for any backend/frontend/build/infra
-  implementation task where a secondary agent is the executor.
+  Delegate implementation tasks to OpenCode via MCP tool. The agent acts as
+  orchestrator: analyzes requirements, writes a task spec, invokes the opencode_run
+  MCP tool, then verifies the result. Use for any backend/frontend/build/infra
+  implementation task.
 ---
 
-# Skill: Orchestrated Task Delegation
+# Skill: OpenCode Delegation via MCP
 
-## Roles
+## Overview
 
-| Actor          | Role         | Responsibility                                            |
-|----------------|--------------|-----------------------------------------------------------|
-| Agent          | Orchestrator | Analyze, plan, write task spec, invoke executor, verify   |
-| Executor Agent | Executor     | Read task file, implement, run verification, write result |
+This skill delegates implementation tasks to OpenCode through the `opencode_run` MCP tool.
+
+**MCP Tool:** `opencode_run`  
+**Parameters:**
+- `task_name` (required): Task identifier (kebab-case, without .md extension)
+- `timeout_sec` (optional): Timeout in seconds (default: 300)
+- `args` (optional): Additional CLI arguments (e.g., `['-c']` to continue session)
+- `prompt` (optional): Override prompt (rarely needed)
 
 ---
 
@@ -25,53 +28,58 @@ description: >
 [User describes feature/task]
 │
 ▼
-[1. Agent: Analyze & plan]
+[1. Agent: Analyze & Plan]
+│   - Identify affected modules
+│   - Determine verification commands
+│   - Choose task-name (kebab-case)
 │
 ▼
 [2. Agent: Write docs/tasks/{task-name}.md]
 │
 ▼
-[3. Agent: Delegate to executor agent]
-│   Instruct executor to read docs/tasks/{task-name}.md,
-│   follow all instructions, and write result to
-│   docs/results/{task-name}.result.md
-▼
-[4. Executor: Implement task, run verification, write result file]
+[3. Agent: Call MCP tool opencode_run]
+│   Tool: opencode_run
+│   Args: { task_name: "{task-name}", timeout_sec: 300 }
 │
 ▼
-[5. Agent: Verify result file + re-run verification commands]
+[4. OpenCode: Reads task, implements, writes result file]
+│   Output: docs/results/{task-name}.result.md
+│
+▼
+[5. Agent: Verify result]
+│   - Check result file exists
+│   - Re-run verification commands
+│   - Validate conventions
 │
 ├── PASS ──► Done ✅
 │
-└── FAIL ──► [6. Agent: Append Retry Notes to task file, re-delegate]
+└── FAIL ──► [6. Agent: Add Retry Notes to task file]
                  │
                  ▼
-           [7. Agent: Verify again]
+           [7. Re-invoke opencode_run with same task_name]
                  │
                  ├── PASS ──► Done ✅
-                 └── FAIL ──► Escalate to user ❌ (max retries reached)
+                 └── FAIL ──► Escalate to user ❌
 ```
 
 ---
 
 ## Step 1 — Analyze & Plan
 
-Before writing the task file, the agent must:
+Before writing the task file:
 
 - Understand the full scope of the request
 - Identify affected modules: `backend`, `starter`, `client`, `frontend`, `frontend-plugin`
 - Identify files to create/modify following the hexagonal structure
 - Determine new packages, DB migrations, or OpenAPI changes needed
-- Decide on the exact verification method (tests, lint, build, grep)
-- Choose a `task-name` in `kebab-case` (e.g., `add-auth-middleware`)
-
-**Do not write the task file until analysis is complete.**
+- Decide on verification methods (tests, lint, build)
+- Choose `task-name` in `kebab-case` (e.g., `add-auth-middleware`)
 
 ---
 
-## Step 2 — Task File
+## Step 2 — Write Task File
 
-File path: `docs/tasks/{task-name}.md`
+**Path:** `docs/tasks/{task-name}.md`
 
 ````markdown
 # Task: {task-name}
@@ -211,95 +219,55 @@ After completing the task, write a result file to:
 
 ---
 
-## Step 3 — Delegate to Executor
+## Step 3 — Invoke MCP Tool
 
-After writing the task file, the agent delegates execution to the secondary agent.
+After writing the task file, invoke the `opencode_run` MCP tool:
 
-The delegation prompt must include:
+**Tool:** `opencode_run`  
+**Parameters:**
+```json
+{
+  "task_name": "{task-name}",
+  "timeout_sec": 300
+}
+```
 
-> Read the file `docs/tasks/{task-name}.md` carefully and follow all instructions
-> inside it exactly. After completing all work, write your result summary to
-> `docs/results/{task-name}.result.md` as instructed.
+The tool will:
+1. Read `docs/tasks/{task-name}.md`
+2. Execute OpenCode with the task instructions
+3. Wait for completion
+4. Return the result output
 
-The exact invocation mechanism depends on the executor agent's tooling (MCP tool,
-CLI command, or manual handoff). The orchestrating agent must adapt accordingly.
+**Default prompt behavior:** The tool automatically constructs the prompt:
+> "Read the file docs/tasks/{task-name}.md carefully and follow all instructions inside it exactly. After completing all work, write your result summary to docs/results/{task-name}.result.md as instructed."
 
 ---
 
-## Step 4 — Result File Format (Executor must produce this)
+## Step 4 — Verify Result
 
-File path: `docs/results/{task-name}.result.md`
+After the MCP tool returns:
 
-````markdown
-# Result: {task-name}
-
-## Status
-
-<!-- DONE | PARTIAL | FAILED -->
-
-## Summary
-
-<!-- What was done, briefly -->
-
-## Files Changed
-
-| File | Action |
-|------|--------|
-| `path/to/file` | created / modified / deleted |
-
-## Verification Output
-
-### Command: `./gradlew check`
-
-exit code: 0
-
-```
-<stdout here>
-```
-
-### Command: `pnpm test`
-
-exit code: 0
-
-```
-<stdout here>
-```
-
-## Issues Encountered
-
-<!-- Any blockers, assumptions made, deviations from spec -->
-
-## Self-Assessment
-
-<!-- PASS or FAIL, and why -->
-````
+1. **Check result file exists:** `docs/results/{task-name}.result.md`
+2. **Parse the result file:**
+   - Read the **Status** section (DONE | PARTIAL | FAILED)
+   - Read the **Self-Assessment** section
+   - Review **Files Changed** table
+3. **Re-run verification commands independently** to confirm
+4. **Check expected outcomes** from task file:
+   - All verification commands exit 0
+   - All "Files to Create" exist on disk
+   - No `frontend-plugin` → `frontend` imports
+   - Naming conventions followed
+5. **Make PASS/FAIL decision**
 
 ---
 
-## Step 5 — Verification by Agent
-
-After the executor finishes, the agent must:
-
-1. **Check the result file exists** at `docs/results/{task-name}.result.md`
-2. **Read the Self-Assessment** section — note if executor flagged issues
-3. **Re-run verification commands independently** to confirm exit codes
-4. **Check expected outcomes** from the task file one by one
-5. **Check CBS-Nova conventions:**
-    - All verification commands exited 0
-    - All listed "Files to Create" confirmed present
-    - Naming/layer conventions followed (ArchUnit, Biome, Checkstyle)
-    - DB migration file named correctly (`V{timestamp}__...sql`)
-    - No `frontend-plugin` → `frontend` imports
-6. **Make a final PASS/FAIL decision**
-
----
-
-## Step 6 — Retry Logic
+## Step 5 — Retry Logic
 
 - Maximum **2 total runs** (1 retry allowed)
-- Before retrying, the agent **must amend the task file**:
-    - Append a `## Retry Notes` section at the bottom
-    - Describe exactly what failed and what to do differently
+- Before retrying:
+  - Append `## Retry Notes` section to `docs/tasks/{task-name}.md`
+  - Describe exactly what failed and what to fix
 
 ```markdown
 ## Retry Notes (Attempt 2)
@@ -312,19 +280,19 @@ The following issues were found in attempt 1:
 Please fix these specifically before re-running verification.
 ```
 
-- Then re-delegate with an updated prompt referencing the Retry Notes section.
+- Re-invoke `opencode_run` with the same `task_name` — OpenCode will read the updated task file
 
 ---
 
-## Step 7 — Escalation
+## Step 6 — Escalation
 
-If the task still fails after retry #1, the agent must:
+If the task still fails after retry #1:
 
-1. **Not attempt further retries**
-2. Report to the user with:
-    - Summary of what was tried
-    - Exact failure reason
-    - Suggestion for how to proceed manually
+1. **Do not attempt further retries**
+2. Report to user with:
+   - Summary of what was tried
+   - Exact failure reason from result file
+   - Suggestion for manual intervention
 
 ---
 
@@ -336,27 +304,24 @@ If the task still fails after retry #1, the agent must:
 | Result    | `docs/results/{task-name}.result.md` |
 
 `task-name` rules:
-
 - `kebab-case`
 - Descriptive but concise (3–6 words max)
 - Examples: `add-auth-middleware`, `refactor-user-service`, `fix-pagination-bug`
 
 ---
 
-## Quick Reference Checklist (Agent internal)
+## Quick Reference
 
-Before delegating to executor:
-
-- [ ] Task file written to correct path
+**Before invoking MCP tool:**
+- [ ] Task file written to `docs/tasks/{task-name}.md`
 - [ ] Description is clear and unambiguous
 - [ ] Requirements are numbered and concrete
 - [ ] Module scope checkboxes marked
-- [ ] Verification section has runnable commands + expected outcomes
-- [ ] Result file path is stated inside the task file
+- [ ] Verification section has runnable commands
+- [ ] Result file path is stated in task file
 
-After executor finishes:
-
-- [ ] Result file exists
+**After MCP tool returns:**
+- [ ] Result file exists at `docs/results/{task-name}.result.md`
 - [ ] Verification commands re-run independently
 - [ ] All expected outcomes checked
 - [ ] CBS-Nova conventions verified

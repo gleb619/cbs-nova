@@ -271,14 +271,7 @@ server.registerTool(
 
         const opencodeArgs = ["run", "--dangerously-skip-permissions", ...extraArgs, resolvedPrompt];
 
-        // Check opencode path exists
-        if (!fs.existsSync(OPENCODE_PATH)) {
-          throw new Error(
-            `opencode binary not found at ${OPENCODE_PATH}. Please ensure it is installed.`
-          );
-        }
-
-        const result = await spawnDirect(OPENCODE_PATH, opencodeArgs, timeout);
+        const result = await spawnWithNvm("opencode", opencodeArgs, timeout);
 
         const endMsg = `[${timestamp()}] END opencode task=${task_name} exit_code=${result.code}`;
         logStream.write(endMsg + "\n");

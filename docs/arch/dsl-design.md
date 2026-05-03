@@ -581,6 +581,39 @@ ctx["fundingAccount"] = accountName
 
 ## 4.8 Helper DSL Files
 
+### Helper code → implementation lookup
+
+When the DSL calls `ctx.helper("LOAN_CONDITIONS_BY_ID", mapOf(...))`, the runtime looks up the registered
+`HelperDefinition` whose `code == "LOAN_CONDITIONS_BY_ID"`. In production this resolves to a Spring bean
+(or compiled class) annotated/registered with that code. In tests and sample `.kts` files, the definition
+is declared inline using the `helper("CODE") { ... }` DSL block.
+
+The optional `name` field on a helper (or transaction) lets you give the DSL override a human-readable
+label that distinguishes it from the underlying production bean. This is especially useful in test scenarios
+where you want to override a production bean with a test stub:
+
+```kotlin
+helpers {
+    helper("LOAN_CONDITIONS_BY_ID") {
+        name("TestLoanConditionsById")   // identifies this as the test stub
+        execute { ctx -> mapOf("loanId" to ctx.params["loanId"], "currency" to "USD") }
+    }
+}
+```
+
+Later, the engine can call: `ctx.helper("TestLoanConditionsById", mapOf(...))` to invoke the named override
+directly, bypassing the production bean lookup. The `code` field is always the primary lookup key; `name`
+is a secondary label for overrides and control-flow disambiguation.
+
+The same `name` field applies to transactions:
+
+```kotlin
+transaction("KYC_CHECK") {
+    name("TestKycCheck")   // identifies this as the test override of the KYC_CHECK bean
+    execute { ctx -> ctx["kycVerified"] = true }
+}
+```
+
 ```kotlin
 // loan-disbursement/loan-helpers.helper.kts
 #import loan-disbursement.* as disb
@@ -708,5 +741,130 @@ condition("BORROWER_ACCOUNT_READY") { ctx ->
     val account = ctx.helper("FIND_BANK_ACCOUNT",
         mapOf("iban" to ctx["accountCode"]))
     account != null && account["status"] == "ACTIVE"
+}
+```
+
+---
+
+## 4.11 Annotation Processor & Compile-Time Registration
+
+### Overview
+
+In production, DSL implementations (transactions, helpers, conditions) are Spring beans or compiled
+Kotlin classes. The engine resolves `ctx.helper("LOAN_CONDITIONS_BY_ID", ...)` by looking up the
+`HelperDefinition` registered under code `"LOAN_CONDITIONS_BY_ID"` in the `ImplRegistry`.
+
+To avoid manual wiring, the `@DslImpl` annotation (in `dsl-api`) marks a class as a DSL implementation.
+An annotation processor (or Spring `@Configuration` scanner) reads these annotations at compile time
+(or startup) and generates/populates the `ImplRegistry`.
+
+### `@DslImpl` annotation
+
+```kotlin
+@DslImpl(code = "KYC_CHECK", type = DslImplType.TRANSACTION)
+class KycCheckTransaction : TransactionDefinition {
+    override val code = "KYC_CHECK"
+    override fun execute(ctx: TransactionContext) { /* ... */ }
+    override fun preview(ctx: TransactionContext) {}
+    override fun rollback(ctx: TransactionContext) {}
+}
+```
+
+The `code` must match the string used in `.kts` files. The `type` tells the processor which registry
+map to populate (`TRANSACTION`, `HELPER`, `CONDITION`, or `EVENT`).
+
+### Compile-time code generation (planned)
+
+The annotation processor generates a `GeneratedImplRegistrations.kt` file in the same package:
+
+```kotlin
+// Generated — do not edit
+object GeneratedImplRegistrations {
+    fun register(registry: ImplRegistry) {
+        registry.register(KycCheckTransaction())
+        registry.register(LoanConditionsHelper())
+        registry.register(BorrowerAccountReadyCondition())
+    }
+}
+```
+
+At startup, `ImplRegistryAutoConfiguration` calls `GeneratedImplRegistrations.register(implRegistry)`.
+This is zero-reflection, zero-classpath-scanning — all wiring is resolved at compile time.
+
+### Runtime fallback (current implementation — T38c)
+
+Until the annotation processor is implemented, `ImplRegistry.populateFrom(DslRegistry)` provides a
+runtime fallback: it scans all definitions compiled from `.kts` files and registers them by code and name.
+Test setups pre-register `TestXxx` instances manually.
+
+### Test impl registration
+
+Test classes in `dsl/src/main/kotlin/cbs/dsl/impl/` (`TestTransaction`, `TestHelper`, `TestCondition`,
+`TestEvent`) can be annotated with `@DslImpl` to participate in compile-time registration in test
+source sets. The annotation processor generates a `GeneratedTestImplRegistrations.kt` for the test
+classpath.
+
+### Lookup priority in `ImplRegistry`
+
+| Priority | Lookup Key           | Source                              | Use Case                                    |
+|----------|----------------------|-------------------------------------|---------------------------------------------|
+| 1        | Name-keyed entry     | `definition.name`                   | Test overrides, named DSL stubs             |
+| 2        | Code-keyed entry     | `definition.code`                   | Production beans, compiled `.kts` definitions |
+
+This means a `TestTransaction` registered under `name = "TestKycCheck"` takes precedence over the
+production `KycCheckTransaction` registered under `code = "KYC_CHECK"` when the DSL calls
+`ctx.helper("TestKycCheck", ...)`. The production bean is still reachable via `"KYC_CHECK"`.
+
+### Annotation usage examples
+
+**Transaction implementation:**
+```kotlin
+@DslImpl(code = "KYC_CHECK", type = DslImplType.TRANSACTION)
+class KycCheckTransaction : TransactionDefinition {
+    override val code = "KYC_CHECK"
+    override val name: String? get() = "ProductionKycCheck"
+    
+    override fun preview(ctx: TransactionContext) {
+        // Preview logic
+    }
+    
+    override fun execute(ctx: TransactionContext) {
+        ctx["kycVerified"] = true
+    }
+    
+    override fun rollback(ctx: TransactionContext) {
+        // Rollback logic
+    }
+}
+```
+
+**Helper implementation:**
+```kotlin
+@DslImpl(code = "LOAN_CONDITIONS_BY_ID", type = DslImplType.HELPER)
+class LoanConditionsHelper : HelperDefinition {
+    override val code = "LOAN_CONDITIONS_BY_ID"
+    override val name: String? get() = "ProductionLoanConditions"
+    
+    override fun execute(input: HelperInput): HelperOutput {
+        val loanId = (input as MapHelperInput).params["loanId"]
+        return AnyHelperOutput(mapOf("loanId" to loanId, "currency" to "USD"))
+    }
+}
+```
+
+**Test implementation (override):**
+```kotlin
+@DslImpl(code = "KYC_CHECK", type = DslImplType.TRANSACTION)
+class TestKycCheck : TransactionDefinition {
+    override val code = "KYC_CHECK"
+    override val name: String? get() = "TestKycCheck"
+    
+    override fun execute(ctx: TransactionContext) {
+        ctx["kycVerified"] = true
+        ctx["_implClass"] = "TestTransaction"  // Marker for test assertions
+    }
+    
+    override fun preview(ctx: TransactionContext) {}
+    override fun rollback(ctx: TransactionContext) {}
 }
 ```
