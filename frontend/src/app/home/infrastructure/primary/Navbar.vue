@@ -37,12 +37,13 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
+import type { PropType } from 'vue';
 
 export default defineComponent({
   name: 'Navbar',
   props: {
     currentRouteName: {
-      type: String,
+      type: String as PropType<string | null>,
       default: null,
     },
   },

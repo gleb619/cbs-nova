@@ -13,6 +13,57 @@ Gradle
 
 ---
 
+## Development Workflow
+
+This project has a 4-phase development workflow with specialized agents for planning, review, and testing.
+
+### Available Resources
+
+| Resource  | Path                                 | Purpose                                                                  |
+|-----------|--------------------------------------|--------------------------------------------------------------------------|
+| **Skill** | `.qwen/skills/dev-workflow/SKILL.md` | 4-phase orchestration: plan → implement → review → test                  |
+| **Agent** | `.qwen/agents/planner.md`            | Senior architect — maps codebase, produces implementation plans          |
+| **Agent** | `.qwen/agents/code-reviewer.md`      | Senior reviewer — 5-dimension review (security, quality, patterns, etc.) |
+| **Agent** | `.qwen/agents/tester.md`             | QA engineer — writes tests, runs full suite, prevents regressions        |
+
+### When to Use
+
+- **New feature / major change**: "Use the dev-workflow skill to add user role management"
+  → orchestrates planner → implement → code-reviewer → tester → commit
+- **Planning only**: "planner agent, create a plan for adding audit logging"
+  → produces `./plans/<feature>.md` without modifying code
+- **Code review**: "code-reviewer agent, review these changed files"
+  → evaluates regressions, security, quality, patterns, test coverage
+- **Testing**: "tester agent, run full suite and add missing tests"
+  → runs backend + frontend tests, writes new tests following project patterns
+
+### Workflow Phases
+
+1. **PLAN** — `planner` agent analyzes codebase, produces numbered plan saved to `./plans/`. User approval required.
+2. **IMPLEMENT** — Execute plan step-by-step. Tests run after each step. Git checkpoint before medium/large steps.
+3. **REVIEW** — `code-reviewer` evaluates changes across 5 dimensions. Verdict: PASS or NEEDS WORK.
+4. **TEST & COMMIT** — `tester` runs full suite. Only if ALL GREEN: final commit with conventional message.
+
+### Test Commands (used by workflow)
+
+| Step | Command                                   |
+|------|-------------------------------------------|
+| 1    | `./gradlew :backend:test`                 |
+| 2    | `./gradlew :backend:integrationTest`      |
+| 3    | `cd frontend && pnpm test`                |
+| 4    | `cd frontend && pnpm e2e` (if applicable) |
+
+### Abort Conditions
+
+The workflow stops and asks for guidance if:
+
+- CRITICAL security finding detected
+- More than 3 consecutive test failures on same step
+- Planner requires a file marked "MUST NOT be modified"
+- Frontend-plugin boundary or hexagonal architecture violations
+
+---
+
 ## Browser Testing & Debugging
 
 This project has Chrome DevTools MCP configured for browser-based debugging, performance analysis, and E2E testing.

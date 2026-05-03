@@ -1,7 +1,7 @@
 import type { LocalAuthHttp } from '@/auth/infrastructure/secondary/LocalAuthHttp';
 import type { AuthRepository, Credentials } from '@cbs/admin-plugin/composables/auth/AuthRepository';
 import type { AuthenticatedUser } from '@cbs/admin-plugin/composables/auth/AuthenticatedUser';
-import { TokenStore } from '@cbs/admin-plugin/composables/auth/TokenStore';
+import { TokenStorage } from '@cbs/admin-plugin/composables/auth/TokenStorage';
 
 export class LocalAuthRepository implements AuthRepository {
   constructor(private readonly localAuthHttp: LocalAuthHttp) {}
@@ -12,7 +12,7 @@ export class LocalAuthRepository implements AuthRepository {
     }
     try {
       const token = await this.localAuthHttp.login(credentials.username, credentials.password);
-      TokenStore.set(token);
+      TokenStorage.set(token);
     } catch (error: unknown) {
       if (error instanceof Error && 'response' in error && (error as any).response?.status === 401) {
         throw new Error('invalid_credentials');
@@ -22,11 +22,11 @@ export class LocalAuthRepository implements AuthRepository {
   }
 
   async logout(): Promise<void> {
-    TokenStore.clear();
+    TokenStorage.clear();
   }
 
   async currentUser(): Promise<AuthenticatedUser> {
-    const token = TokenStore.get();
+    const token = TokenStorage.get();
     if (!token) {
       return { isAuthenticated: false, username: '', token: '' };
     }
@@ -40,7 +40,7 @@ export class LocalAuthRepository implements AuthRepository {
   }
 
   async authenticated(): Promise<boolean> {
-    const token = TokenStore.get();
+    const token = TokenStorage.get();
     if (!token) {
       return false;
     }
@@ -48,18 +48,18 @@ export class LocalAuthRepository implements AuthRepository {
       const payload = this.decodeJwt(token);
       const exp = payload.exp as number | undefined;
       if (exp && Date.now() >= exp * 1000) {
-        TokenStore.clear();
+        TokenStorage.clear();
         return false;
       }
       return true;
     } catch {
-      TokenStore.clear();
+      TokenStorage.clear();
       return false;
     }
   }
 
   async refreshToken(): Promise<string> {
-    const token = TokenStore.get();
+    const token = TokenStorage.get();
     if (!token) {
       throw new Error('no_token');
     }
@@ -67,7 +67,7 @@ export class LocalAuthRepository implements AuthRepository {
   }
 
   getToken(): string | null {
-    return TokenStore.get();
+    return TokenStorage.get();
   }
 
   private decodeJwt(token: string): Record<string, unknown> {

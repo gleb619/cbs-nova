@@ -763,18 +763,15 @@ Add `<router-link to="/users">Users</router-link>` to `HomepageVue.vue` or `Help
 | # | File                                                                                      | Error                                                | Fix                                      |
 |---|-------------------------------------------------------------------------------------------|------------------------------------------------------|------------------------------------------|
 | 1 | [`HomepageVue.vue:9`](../frontend/src/app/home/infrastructure/primary/HomepageVue.vue#L9) | `Property '$t' does not exist` — i18n `$t` not typed | Add i18n Vue component type augmentation |
-| 2 | [`home/package-info.ts:1`](../frontend/src/app/home/package-info.ts)                      | `Cannot find module '@/BusinessContext'`             | Create file or remove import             |
-| 3 | [`setting.ts:6`](../frontend/src/app/plugins/setting.ts#L6)                               | `Cannot find name 'defineNuxtPlugin'`                | Nuxt types should be in `.nuxt/types/`   |
-| 4 | [`translations.ts:4`](../frontend/src/app/plugins/translations.ts#L4)                     | `Cannot find name 'defineNuxtPlugin'`                | Same as #3                               |
 
 **Root cause:** `tsconfig.build.json` needs proper Nuxt type references. The `.nuxt/nuxt.d.ts` is included but may not
 generate all types during `vue-tsc`.
 
 ### TokenStorage Migration (from frontend-login-feature)
 
-- [ ] Update `LocalAuthRepository.ts` — replace all `TokenStore.*` calls with `TokenStorage.*` (5 locations)
-- [ ] Update `SettingHttp.ts` — replace `TokenStore.get()` with `TokenStorage.get()`
-- [ ] Delete old `TokenStore.ts`
+- [x] Update `LocalAuthRepository.ts` — replace all `TokenStore.*` calls with `TokenStorage.*` (5 locations)
+- [x] Update `SettingHttp.ts` — replace `TokenStore.get()` with `TokenStorage.get()`
+- [x] Delete old `TokenStore.ts`
 - [ ] Update `LocalAuthRepository.spec.ts` — replace imports
 
 ### Keycloak Integration
