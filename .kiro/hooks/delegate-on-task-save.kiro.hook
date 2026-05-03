@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Delegate to Qwen on Task Save",
+  "description": "When a task spec file is saved in docs/tasks/, Kiro analyzes the task, completes planning (Step 1), then invokes Qwen to execute it.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "docs/tasks/*.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A task spec file was just saved in docs/tasks/. Activate the qwen-delegation skill. Complete Step 1 (analyze codebase context and plan), then proceed through the full workflow: write or update the task file if needed, invoke Qwen via CLI, wait for the result file, verify, and report back."
+  }
+}

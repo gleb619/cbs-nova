@@ -16,6 +16,11 @@ export const routes = [
   // Help route - accessible without authentication
   ...helpRoutes(),
   ...homeRoutes(),
+  // Backward compatibility: redirect /settings to /home/settings
+  {
+    path: '/settings',
+    redirect: { name: 'Settings' },
+  },
   {
     path: '/login',
     name: 'login',
