@@ -7,15 +7,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import cbs.dsl.api.Action;
+import cbs.dsl.api.DslDefinition;
+import cbs.dsl.api.DslDefinitionCollector;
 import cbs.dsl.api.EventDefinition;
 import cbs.dsl.api.HelperTypes.HelperInput;
 import cbs.dsl.api.TransactionDefinition;
 import cbs.dsl.api.TransactionTypes.TransactionInput;
-import cbs.dsl.api.TransitionRuleDefinition;
 import cbs.dsl.api.WorkflowDefinition;
-import cbs.dsl.api.WorkflowTypes.WorkflowInput;
-import cbs.dsl.api.WorkflowTypes.WorkflowOutput;
 import cbs.dsl.api.context.EnrichmentContext;
+import cbs.dsl.builder.WorkflowDsl;
 import cbs.nova.model.EventExecutionRequest;
 import cbs.nova.model.EventExecutionResponse;
 import cbs.nova.model.WorkflowExecutionResponse;
@@ -29,6 +29,7 @@ import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.client.WorkflowStub;
+import java.lang.reflect.Method;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -43,12 +44,10 @@ import org.testcontainers.utility.MountableFile;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.InputStream;
-import java.lang.reflect.Field;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 
@@ -57,8 +56,8 @@ import java.util.function.BiFunction;
  *
  * <ol>
  *   <li>Compiles Java 25 implicit-class DSL files in a Gradle Testcontainer.
- *   <li>Loads the compiled {@link EventDefinition} and {@link TransactionDefinition} via
- *       reflection.
+ *   <li>Loads the compiled classes, invokes {@code main()}, and drains the
+ *       {@link DslDefinitionCollector}.
  *   <li>Registers them in the {@link DslRegistry} alongside SPI-discovered components.
  *   <li>Executes the event context block (with helper resolution) directly.
  *   <li>Executes the DSL transaction directly.
@@ -69,9 +68,9 @@ import java.util.function.BiFunction;
 class ShowcaseIntegrationTest {
 
   @Container
-  static GenericContainer<?> gradleContainer =
-      new GenericContainer<>(DockerImageName.parse("gradle:jdk25"))
-          .withCommand("tail", "-f", "/dev/null");
+  static GenericContainer<?> gradleContainer = new GenericContainer<>(
+          DockerImageName.parse("gradle:jdk25"))
+      .withCommand("tail", "-f", "/dev/null");
 
   @TempDir
   static Path sharedTempDir;
@@ -81,6 +80,7 @@ class ShowcaseIntegrationTest {
 
   @BeforeEach
   void setUp() throws Exception {
+    DslDefinitionCollector.clear();
     dslRegistry = new DslRegistry();
     SpiImplRegistryLoader.loadInto(dslRegistry);
 
@@ -104,8 +104,8 @@ class ShowcaseIntegrationTest {
 
     ContextEncryptionService encryptionService = new ContextEncryptionService(new ObjectMapper());
 
-    eventExecutionService =
-        new EventExecutionService(workflowResolver, workflowExecutor, encryptionService, dslRegistry);
+    eventExecutionService = new EventExecutionService(
+        workflowResolver, workflowExecutor, encryptionService, dslRegistry);
   }
 
   private void compileDslAndRegister() throws Exception {
@@ -113,7 +113,7 @@ class ShowcaseIntegrationTest {
     try {
       prepareDslProject(tempDir);
       runGradleCompilation(tempDir);
-      loadAndRegisterDefinitions(tempDir);
+      loadAndRegisterDefinitions(tempDir, new String[]{"SampleEventDsl", "SampleTransactionDsl"});
     } finally {
       deleteRecursively(tempDir);
     }
@@ -130,6 +130,9 @@ class ShowcaseIntegrationTest {
 
     Path dslApiJar = resolveDslApiJar();
     Files.copy(dslApiJar, libsDir.resolve("dsl-api.jar"));
+
+    Path dslCodegenJar = resolveDslCodegenJar();
+    Files.copy(dslCodegenJar, libsDir.resolve("dsl-codegen.jar"));
   }
 
   private void copyResource(String resourcePath, Path target) throws Exception {
@@ -141,16 +144,27 @@ class ShowcaseIntegrationTest {
 
   private Path resolveDslApiJar() throws Exception {
     Path projectRoot = findProjectRoot();
-    Path jar =
-        projectRoot.resolve("dsl-api/build/libs/dsl-api-0.0.1-SNAPSHOT.jar");
+    Path jar = projectRoot.resolve("dsl-api/build/libs/dsl-api-0.0.1-SNAPSHOT.jar");
     if (!Files.exists(jar)) {
       ProcessBuilder pb = new ProcessBuilder("./gradlew", ":dsl-api:jar");
       pb.directory(projectRoot.toFile());
       pb.inheritIO();
       int exitCode = pb.start().waitFor();
-      assertThat(exitCode)
-          .withFailMessage("Failed to build dsl-api JAR")
-          .isZero();
+      assertThat(exitCode).withFailMessage("Failed to build dsl-api JAR").isZero();
+    }
+    assertThat(jar).exists();
+    return jar;
+  }
+
+  private Path resolveDslCodegenJar() throws Exception {
+    Path projectRoot = findProjectRoot();
+    Path jar = projectRoot.resolve("dsl-codegen/build/libs/dsl-codegen-0.0.1-SNAPSHOT.jar");
+    if (!Files.exists(jar)) {
+      ProcessBuilder pb = new ProcessBuilder("./gradlew", ":dsl-codegen:jar");
+      pb.directory(projectRoot.toFile());
+      pb.inheritIO();
+      int exitCode = pb.start().waitFor();
+      assertThat(exitCode).withFailMessage("Failed to build dsl-codegen JAR").isZero();
     }
     assertThat(jar).exists();
     return jar;
@@ -164,10 +178,9 @@ class ShowcaseIntegrationTest {
       }
       current = current.getParent();
     }
-    throw new IllegalStateException(
-        "Could not find project root (no gradlew found in ancestors of "
-            + System.getProperty("user.dir")
-            + ")");
+    throw new IllegalStateException("Could not find project root (no gradlew found in ancestors of "
+        + System.getProperty("user.dir")
+        + ")");
   }
 
   private void runGradleCompilation(Path tempDir) throws Exception {
@@ -185,9 +198,12 @@ class ShowcaseIntegrationTest {
     gradleContainer.copyFileToContainer(
         MountableFile.forHostPath(tempDir.resolve("libs/dsl-api.jar").toString()),
         "/project/libs/dsl-api.jar");
+    gradleContainer.copyFileToContainer(
+        MountableFile.forHostPath(tempDir.resolve("libs/dsl-codegen.jar").toString()),
+        "/project/libs/dsl-codegen.jar");
 
     ExecResult result =
-        gradleContainer.execInContainer("sh", "-c", "cd /project && gradle compileJava");
+        gradleContainer.execInContainer("sh", "-c", "cd /project && gradle compileDsl");
 
     assertThat(result.getExitCode())
         .withFailMessage(
@@ -198,85 +214,54 @@ class ShowcaseIntegrationTest {
     Path outputDir = tempDir.resolve("build-output");
     Files.createDirectories(outputDir);
 
-    // Copy each .class file individually — Testcontainers copies directories as tar archives,
-    // so we enumerate files in the container and copy them one by one.
     ExecResult lsResult =
-        gradleContainer.execInContainer(
-            "find", "/project/build/classes/java/main", "-name", "*.class");
+        gradleContainer.execInContainer("find", "/project/build/dsl-classes", "-name", "*.class");
     String[] files = lsResult.getStdout().split("\n");
     for (String file : files) {
       if (file.trim().isEmpty()) continue;
-      String relative = file.replace("/project/build/classes/java/main/", "");
+      String relative = file.replace("/project/build/dsl-classes/", "");
       Path dest = outputDir.resolve(relative);
       Files.createDirectories(dest.getParent());
       gradleContainer.copyFileFromContainer(file, dest.toString());
     }
   }
 
-  private void loadAndRegisterDefinitions(Path tempDir) throws Exception {
+  private void loadAndRegisterDefinitions(Path tempDir, String[] dslFiles) throws Exception {
     Path outputDir = tempDir.resolve("build-output");
-    // docker cp copies the *contents* of the source dir into the destination dir
     Path classDir = Files.exists(outputDir.resolve("main")) ? outputDir.resolve("main") : outputDir;
 
     URLClassLoader classLoader =
         new URLClassLoader(new URL[] {classDir.toUri().toURL()}, getClass().getClassLoader());
 
-    // Load event definition
-    Class<?> eventClass = classLoader.loadClass("SampleEventDsl");
-    Field eventField = eventClass.getDeclaredField("SAMPLE_EVENT_DSL");
-    eventField.setAccessible(true);
-    EventDefinition eventDef = (EventDefinition) eventField.get(null);
+    for (String className : dslFiles) {
+      DslDefinitionCollector.clear();
+      Class<?> clazz = classLoader.loadClass(className);
+      Method mainMethod = clazz.getDeclaredMethod("main", String[].class);
+      mainMethod.invoke(null, (Object) new String[0]);
 
-    // Load transaction definition
-    Class<?> txClass = classLoader.loadClass("SampleTransactionDsl");
-    Field txField = txClass.getDeclaredField("SAMPLE_TRANSACTION_DSL");
-    txField.setAccessible(true);
-    TransactionDefinition txDef = (TransactionDefinition) txField.get(null);
-
-    // Register idempotently
-    if (!dslRegistry.getEvents().containsKey(eventDef.getCode())) {
-      dslRegistry.register(eventDef);
+      for (DslDefinition def : DslDefinitionCollector.drain()) {
+        if (def instanceof EventDefinition event
+            && !dslRegistry.getEvents().containsKey(event.getCode())) {
+          dslRegistry.register(event);
+        } else if (def instanceof TransactionDefinition tx
+            && !dslRegistry.getTransactions().containsKey(tx.getCode())) {
+          dslRegistry.register(tx);
+        } else if (def instanceof WorkflowDefinition wf
+            && !dslRegistry.getWorkflows().containsKey(wf.getCode())) {
+          dslRegistry.register(wf);
+        }
+      }
     }
-    if (!dslRegistry.getTransactions().containsKey(txDef.getCode())) {
-      dslRegistry.register(txDef);
-    }
 
-    // Register a workflow that can transition on the DSL event
     if (!dslRegistry.getWorkflows().containsKey("DSL_TEST_WF")) {
-      WorkflowDefinition workflow =
-          new WorkflowDefinition() {
-            @Override
-            public String getCode() {
-              return "DSL_TEST_WF";
-            }
-
-            @Override
-            public List<String> getStates() {
-              return List.of("START", "DONE");
-            }
-
-            @Override
-            public String getInitial() {
-              return "START";
-            }
-
-            @Override
-            public List<String> getTerminalStates() {
-              return List.of("DONE");
-            }
-
-            @Override
-            public List<TransitionRuleDefinition> getTransitions() {
-              return List.of(
-                  new TransitionRuleDefinition(
-                      "START", "DONE", Action.SUBMIT, eventDef, "FAULTED"));
-            }
-
-            @Override
-            public WorkflowOutput execute(WorkflowInput input) {
-              return new WorkflowOutput("DONE");
-            }
-          };
+      EventDefinition registeredEvent = dslRegistry.resolveEvent("SAMPLE_EVENT_DSL");
+      //TODO: move to `starter/src/test/resources/dsl/sample1/SampleWorkflowDsl.java` instead and use codegeneration
+      WorkflowDefinition workflow = WorkflowDsl.workflow("DSL_TEST_WF")
+          .states("START", "DONE")
+          .initial("START")
+          .terminal("DONE")
+          .transition("START", "DONE", Action.SUBMIT, registeredEvent)
+          .build();
       dslRegistry.register(workflow);
     }
   }
@@ -308,8 +293,7 @@ class ShowcaseIntegrationTest {
     EventDefinition eventDef = dslRegistry.resolveEvent("SAMPLE_EVENT_DSL");
 
     EnrichmentContext ctx =
-        new EnrichmentContext(
-            "SAMPLE_EVENT_DSL", 0L, "testUser", "dev", Map.of("name", "PoC"));
+        new EnrichmentContext("SAMPLE_EVENT_DSL", 0L, "testUser", "dev", Map.of("name", "PoC"));
     ctx.setHelperResolver(helperResolver());
 
     eventDef.getContextBlock().accept(ctx);
@@ -333,9 +317,8 @@ class ShowcaseIntegrationTest {
   @Test
   @DisplayName("Should execute DSL event through EventExecutionService")
   void shouldExecuteDslEventThroughEventExecutionService() {
-    EventExecutionRequest request =
-        new EventExecutionRequest(
-            "DSL_TEST_WF", "SAMPLE_EVENT_DSL", "testUser", Map.of("name", "PoC"));
+    EventExecutionRequest request = new EventExecutionRequest(
+        "DSL_TEST_WF", "SAMPLE_EVENT_DSL", "testUser", Map.of("name", "PoC"));
 
     EventExecutionResponse response = eventExecutionService.execute(request);
 
@@ -345,10 +328,9 @@ class ShowcaseIntegrationTest {
   }
 
   private BiFunction<String, Map<String, Object>, Object> helperResolver() {
-    return (name, params) ->
-        dslRegistry
-            .resolveHelper(name)
-            .execute(new HelperInput(params, "SAMPLE_EVENT_DSL", null))
-            .value();
+    return (name, params) -> dslRegistry
+        .resolveHelper(name)
+        .execute(new HelperInput(params, "SAMPLE_EVENT_DSL", null))
+        .value();
   }
 }

@@ -14,7 +14,7 @@ import java.util.function.Consumer;
  * <p>Implementations are typically created via the Kotlin DSL {@code transaction { }} block or
  * annotated with {@link DslComponent} for compile-time registration.
  */
-public interface TransactionDefinition {
+public interface TransactionDefinition extends DslDefinition {
 
   /**
    * Canonical code used to look up this transaction in the registry.

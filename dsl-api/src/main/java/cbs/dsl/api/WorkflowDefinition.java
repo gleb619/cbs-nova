@@ -11,7 +11,7 @@ import java.util.List;
  * <p>Implementations are typically created via the Kotlin DSL {@code workflow { }} block or
  * annotated with {@link DslComponent} for compile-time registration.
  */
-public interface WorkflowDefinition {
+public interface WorkflowDefinition extends DslDefinition {
 
   /**
    * Canonical code used to look up this workflow in the registry.

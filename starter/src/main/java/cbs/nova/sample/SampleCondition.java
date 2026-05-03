@@ -6,12 +6,12 @@ import cbs.dsl.api.DslComponent;
 import cbs.dsl.api.DslImplType;
 import cbs.nova.sample.SampleCondition.SampleConditionInput;
 import io.avaje.jsonb.Json;
+
 import java.util.Map;
 
 /** Sample condition for the PoC. Always returns {@code true}. */
 @DslComponent(code = "SAMPLE_CONDITION", type = DslImplType.CONDITION)
-public class SampleCondition
-    implements ConditionFunction<SampleConditionInput, ConditionOutput> {
+public class SampleCondition implements ConditionFunction<SampleConditionInput, ConditionOutput> {
 
   @Override
   public ConditionOutput evaluate(SampleConditionInput input) {
@@ -26,5 +26,4 @@ public class SampleCondition
       return Map.of("name", name);
     }
   }
-
 }

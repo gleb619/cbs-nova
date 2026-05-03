@@ -15,20 +15,15 @@ repositories {
   mavenCentral()
 }
 
-sourceSets {
-  main {
-    java {
-      srcDirs = ['.']
-      excludes = ['build/**', '.gradle/**', 'libs/**', '*.gradle']
-    }
-    resources.srcDirs = []
-  }
-}
-
 dependencies {
   implementation files('libs/dsl-api.jar')
 }
 
-compileJava {
-  options.compilerArgs += ['-Xlint:none']
+tasks.register('compileDsl', JavaExec) {
+  classpath = files('libs/dsl-api.jar', 'libs/dsl-codegen.jar')
+  mainClass = 'cbs.dsl.codegen.DslCompiler'
+  args '.', 'build/dsl-classes'
+  javaLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(25)
+  }
 }

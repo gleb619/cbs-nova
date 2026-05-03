@@ -37,7 +37,7 @@ public class WorkflowExecutor {
    * Lazy-cached set of generated workflow type names (event codes that have a generated Temporal
    * workflow class).
    */
-  //TODO: it's forbidden to store state in spring beans, redo
+  // TODO: it's forbidden to store state in spring beans, redo
   @Deprecated(forRemoval = true)
   private volatile Set<String> generatedWorkflowTypes;
 
@@ -68,7 +68,7 @@ public class WorkflowExecutor {
     return workflowStub.getResult(WorkflowExecutionResponse.class);
   }
 
-  //TODO: it's forbidden to store state in spring beans, redo
+  // TODO: it's forbidden to store state in spring beans, redo
   @Deprecated(forRemoval = true)
   private String resolveWorkflowType(String eventCode) {
     if (generatedWorkflowTypes == null) {

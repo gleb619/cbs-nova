@@ -19,7 +19,7 @@ import java.util.function.Consumer;
  * order, but it does <strong>not</strong> execute anything itself. Execution is performed by
  * generated Temporal workflow classes or by the runtime engine in the {@code starter} module.
  */
-public interface EventDefinition {
+public interface EventDefinition extends DslDefinition {
 
   /**
    * Canonical code used to identify this event in workflow transitions.

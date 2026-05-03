@@ -1,5 +1,6 @@
 package cbs.dsl.builder;
 
+import cbs.dsl.api.DslDefinitionCollector;
 import cbs.dsl.api.EventDefinition;
 import cbs.dsl.api.ParameterDefinition;
 import cbs.dsl.api.context.DisplayScope;
@@ -118,7 +119,7 @@ public class EventBuilder {
               }
             };
 
-    return new EventDefinition() {
+    EventDefinition def = new EventDefinition() {
       @Override
       public String getCode() {
         return code;
@@ -154,5 +155,7 @@ public class EventBuilder {
         return finishBlock;
       }
     };
+    DslDefinitionCollector.register(def);
+    return def;
   }
 }
