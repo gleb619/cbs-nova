@@ -2,28 +2,52 @@ plugins {
   id 'base'
 }
 
-def pnpmCommand = System.getProperty('os.name').toLowerCase().contains('win') ? 'pnpm.cmd' : 'pnpm'
+ext.pnpmBin = {
+  def which = new ProcessBuilder('bash', '-lc', 'which pnpm')
+      .redirectErrorStream(true).start()
+  which.waitFor()
+  def path = which.inputStream.text.trim()
+  if (path) {
+    return path
+  }
+
+  def nvmPnpm = new ProcessBuilder('bash', '-lc', 'source ~/.nvm/nvm.sh && which pnpm')
+      .redirectErrorStream(true).start()
+  nvmPnpm.waitFor()
+  path = nvmPnpm.inputStream.text.trim()
+  if (path) {
+    return path
+  }
+
+  throw new GradleException("pnpm not found via PATH or nvm")
+}()
+
+ext.nodeBinDir = new File(pnpmBin).parentFile.absolutePath
+ext.augmentedPath = "${nodeBinDir}:${System.getenv('PATH')}"
 
 def pnpmInstall = tasks.register("pnpmInstall", Exec) {
   description = 'Install frontend dependencies with pnpm'
   group = 'build'
   workingDir = projectDir
-  commandLine pnpmCommand, 'install'
+  environment 'PATH', augmentedPath
+  commandLine pnpmBin, 'install'
 }
 
 def viteBuild = tasks.register("viteBuild", Exec) {
-  description = 'Build frontend (vue-tsc + nuxt build)'
+  description = 'Build frontend'
   group = 'build'
   dependsOn pnpmInstall
   workingDir = projectDir
-  commandLine pnpmCommand, 'run', 'build'
+  environment 'PATH', augmentedPath
+  commandLine pnpmBin, 'run', 'build'
 }
 
 def lint = tasks.register("lint", Exec) {
   description = 'Lint frontend with Biome'
   group = 'verification'
   workingDir = projectDir
-  commandLine pnpmCommand, 'run', 'lint'
+  environment 'PATH', augmentedPath
+  commandLine pnpmBin, 'run', 'lint'
 }
 
 tasks.named('assemble') {

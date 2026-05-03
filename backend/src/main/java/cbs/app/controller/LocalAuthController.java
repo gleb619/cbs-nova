@@ -8,12 +8,14 @@ import com.nimbusds.jwt.SignedJWT;
 import java.security.KeyFactory;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.text.SimpleDateFormat;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.Resource;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/public/auth")
@@ -51,6 +54,7 @@ public class LocalAuthController {
   @PostMapping("/token")
   public ResponseEntity<?> token(@RequestBody LoginRequest request) {
     try {
+      log.info("Prepare to create a access token for local user: {}", request);
       Authentication auth = authenticationManager.authenticate(
           new UsernamePasswordAuthenticationToken(request.username(), request.password()));
 
@@ -60,11 +64,13 @@ public class LocalAuthController {
           .map(a -> a.getAuthority().replace("ROLE_", ""))
           .toList();
 
+      // 1 hour
+      Date expirationTime = new Date(now + 1000 * 60 * 60);
       JWTClaimsSet claims = new JWTClaimsSet.Builder()
           .subject(auth.getName())
           .issuer(appName)
           .issueTime(new Date(now))
-          .expirationTime(new Date(now + 1000 * 60 * 60)) // 1 hour
+          .expirationTime(expirationTime)
           .claim("preferred_username", auth.getName())
           .claim("realm_access", Map.of("roles", roles))
           .build();
@@ -72,11 +78,16 @@ public class LocalAuthController {
       SignedJWT jwt = new SignedJWT(new JWSHeader(JWSAlgorithm.RS256), claims);
       jwt.sign(new RSASSASigner(loadPrivateKey()));
 
+      log.info("Created token for for local user: {}, till {}", request,
+          new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(expirationTime));
+
       return ResponseEntity.ok(new TokenResponse(jwt.serialize(), "Bearer", 3600L));
     } catch (AuthenticationException e) {
+      log.error("Invalid username or password", e);
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
           .body(Map.of("error", "invalid_credentials", "message", "Invalid username or password"));
     } catch (Exception e) {
+      log.error("Failed to generate token", e);
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
           .body(Map.of("error", "token_generation_failed", "message", "Failed to generate token"));
     }
@@ -92,9 +103,20 @@ public class LocalAuthController {
 
   record LoginRequest(String username, String password) {
 
+    @Override
+    public String toString() {
+      return username;
+    }
   }
 
   record TokenResponse(String access_token, String token_type, long expires_in) {
 
+    @Override
+    public String toString() {
+      return "TokenResponse{" +
+             "token_type='" + token_type + '\'' +
+             ", expires_in=" + expires_in +
+             '}';
+    }
   }
 }
