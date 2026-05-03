@@ -26,7 +26,7 @@ class TemporalTransactionsScope(
     private val dslVersion: String,
     private val contextJson: String,
 ) : TransactionsScope {
-    private val _contextMap: MutableMap<String, Any> = mutableMapOf()
+    private val contextMap: MutableMap<String, Any> = mutableMapOf()
 
     var failed: Boolean = false
         private set
@@ -83,13 +83,13 @@ class TemporalTransactionsScope(
         }
     }
 
-    override fun get(key: String): Any? = _contextMap[key]
+    override fun get(key: String): Any? = contextMap[key]
 
     override fun set(
         key: String,
         value: Any,
     ) {
-        _contextMap[key] = value
+        contextMap[key] = value
     }
 
     companion object {
