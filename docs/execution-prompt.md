@@ -22,7 +22,7 @@ Before touching anything, read these files in order:
 
 Scan the task table in `plan.md`. An **eligible task** must satisfy ALL of:
 
-- Status is `TODO`
+- Status is `todo`
 - Every task listed in its `Blocked By` column has status `DONE`
 
 **Selection priority (if multiple eligible):**
@@ -33,22 +33,22 @@ Scan the task table in `plan.md`. An **eligible task** must satisfy ALL of:
 
 **Hard rules:**
 
-- Never pick a task with status `IN_PROGRESS` — another session may be running it
-- Never pick a task with status `BLOCKED` — its blockers aren't resolved
+- Never pick a task with status `in-progress` — another session may be running it
+- Never pick a task with status `blocked` — its blockers aren't resolved
 - Phase 7 (Frontend) tasks are only eligible when ALL of T01–T20 are `DONE`
 
 **If no eligible tasks exist:** Report what is blocking progress and stop.
 
 ---
 
-## Step 2 — Mark IN_PROGRESS
+## Step 2 — Mark in-progress
 
-Edit `docs/plan.md`: change the picked task's status from `TODO` → `IN_PROGRESS`.
+Edit `docs/plan.md`: change the picked task's status from `todo` → `in-progress`.
 
 Do this **before** writing the task file. This is the "lock" that prevents concurrent work on the same task.
 
 ```
-| T03 | Create `dsl` Gradle module (Kotlin)  | 0-Infra | IN_PROGRESS | — | T04 |
+| T03 | Create `dsl` Gradle module (Kotlin)  | 0-Infra | in-progress | — | T04 |
 ```
 
 ---
@@ -126,13 +126,13 @@ The skill will guide you through preparing the delegation. Key points:
 - Tell User to run all acceptance criteria commands and paste output in the result file
 - Tell User NOT to modify `docs/plan.md` — that is your job
 
-**While Qwen works:** Do not touch `plan.md` or other shared files. You are the thinking center; Qwen is the executor.
+**While User works:** Do not touch `plan.md` or other shared files. You are the thinking center; User is the executor.
 
 ---
 
 ## Step 5 — Analyze the Result
 
-When Qwen finishes, read `docs/results/{id}-{slug}.result.md` carefully.
+When User finishes, read `docs/results/{id}-{slug}.result.md` carefully.
 
 ### Decision tree
 
@@ -144,24 +144,24 @@ Result status == DONE?
       │    ├─ Failure is minor / fixable → create a follow-up patch task,
       │    │   keep original as DONE, add known issue to result file
       │    └─ Failure is critical (build broken, wrong architecture) →
-      │         mark task back to TODO, add failure notes to task file,
+      │         mark task back to todo, add failure notes to task file,
       │         re-delegate in next session
-      └─ FAILED (Qwen couldn't complete it)
+      └─ FAILED (User couldn't complete it)
            ├─ Diagnose root cause from result file
            ├─ Add specific guidance to the task file (what went wrong, what to avoid)
-           └─ Mark task back to TODO
+           └─ Mark task back to todo
 ```
 
 ### What to check in the result
 
 1. **Acceptance evidence** — are all build/test commands shown as passing? If any are missing, treat as PARTIAL.
-2. **Deviations** — did Qwen do something architecturally different from the spec? Evaluate if it's acceptable.
+2. **Deviations** — did User do something architecturally different from the spec? Evaluate if it's acceptable.
 3. **Known issues** — read every checkbox. If critical issues are listed, factor them into dependent tasks.
 4. **Notes for Next Session** — copy important notes into the next task file's Context section.
 
 ### Verify independently (when in doubt)
 
-Run acceptance commands yourself via Bash tool to confirm. Do not trust Qwen's reported output if the result file seems
+Run acceptance commands yourself via Bash tool to confirm. Do not trust User's reported output if the result file seems
 inconsistent.
 
 ---
@@ -170,7 +170,7 @@ inconsistent.
 
 Edit `docs/plan.md`:
 
-1. Change the completed task's status: `IN_PROGRESS` → `DONE`
+1. Change the completed task's status: `in-progress` → `DONE`
 2. Scan every other task whose `Blocked By` included the completed task ID
 3. Check if ALL their blockers are now `DONE` — if so, they are newly eligible (no status change needed; the table
    reflects this automatically)
@@ -203,13 +203,13 @@ review:
 
 ### Multiple tasks can run in parallel
 
-If 2+ tasks have no blockers AND no shared files, you may delegate them to Qwen concurrently
-(use the `superpowers:dispatching-parallel-agents` skill). Mark all as `IN_PROGRESS` before delegating.
+If 2+ tasks have no blockers AND no shared files, you may delegate them to User concurrently
+(use the `superpowers:dispatching-parallel-agents` skill). Mark all as `in-progress` before delegating.
 Collect and analyze all results before updating statuses.
 
 ### A task reveals a missing dependency
 
-If Qwen reports that a task needs something that was assumed to exist but doesn't:
+If User reports that a task needs something that was assumed to exist but doesn't:
 
 1. Do NOT mark the task DONE
 2. Identify which earlier task should have produced the missing piece
@@ -219,7 +219,7 @@ If Qwen reports that a task needs something that was assumed to exist but doesn'
 
 ### A deviation from the spec is architecturally significant
 
-If Qwen used a different class structure or module assignment than specified:
+If User used a different class structure or module assignment than specified:
 
 1. Evaluate if it's compatible with dependent tasks in `plan.md`
 2. If yes: accept the deviation, update the relevant dependent task files to reflect the new structure
@@ -227,7 +227,7 @@ If Qwen used a different class structure or module assignment than specified:
 
 ### Gradle / build system tasks (T01, T02, T03, T06)
 
-These are infrastructure tasks. After Qwen completes them:
+These are infrastructure tasks. After User completes them:
 
 - Run `docker compose up -d` yourself and verify services start
 - Run `./gradlew build` from repo root to confirm the multi-module build is intact
@@ -240,10 +240,10 @@ These are infrastructure tasks. After Qwen completes them:
 | Action           | Command                                               |
 |------------------|-------------------------------------------------------|
 | Start a session  | Read `plan.md`, find eligible tasks                   |
-| Lock a task      | Edit `plan.md` status → `IN_PROGRESS`                 |
+| Lock a task      | Edit `plan.md` status → `in-progress`                 |
 | Create task spec | Copy `task-template.md` → `docs/tasks/{id}-{slug}.md` |
 | Delegate         | `/executor-delegation` → point to task file           |
-| Save result      | Qwen writes `docs/results/{id}-{slug}.result.md`      |
+| Save result      | User writes `docs/results/{id}-{slug}.result.md`      |
 | Mark done        | Edit `plan.md` status → `DONE`                        |
 | Verify build     | `./gradlew build` (all modules)                       |
 | Verify tests     | `./gradlew check`                                     |
@@ -253,10 +253,10 @@ These are infrastructure tasks. After Qwen completes them:
 
 ## Invariants (Never Violate)
 
-1. A task is only `DONE` when acceptance criteria are confirmed passing — not when Qwen says so
+1. A task is only `DONE` when acceptance criteria are confirmed passing — not when User says so
 2. `plan.md` is the single source of truth for task status — update it first, not last
 3. Task files in `docs/tasks/` are immutable once delegated — create a new task for amendments
 4. Result files in `docs/results/` are append-only — never edit a result, add a follow-up task instead
-5. `IN_PROGRESS` tasks are never picked up by a second session — if a session crashed, manually reset to `TODO`
-6. Never modify `docs/plan.md` task IDs or Blocked By columns based on Qwen's suggestion — only the thinking center (
+5. `in-progress` tasks are never picked up by a second session — if a session crashed, manually reset to `todo`
+6. Never modify `docs/plan.md` task IDs or Blocked By columns based on User's suggestion — only the thinking center (
    you) changes the plan

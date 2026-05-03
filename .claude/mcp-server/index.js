@@ -223,6 +223,93 @@ server.registerTool(
   }
 );
 
+// ── Tool: opencode_run ─────────────────────────────────────────────────────
+
+server.registerTool(
+  "opencode_run",
+  {
+    description:
+      "Execute a task by invoking the OpenCode CLI executor. Reads a task file from docs/tasks/{task_name}.md and runs OpenCode to implement it.",
+    inputSchema: {
+      task_name: z.string().describe(
+        "Name of the task (without .md extension). The task file must exist at docs/tasks/{task_name}.md"
+      ),
+      timeout_sec: z.number().optional().describe("Timeout in seconds. Defaults to 300."),
+      args: z.array(z.string()).optional().describe(
+        "Additional CLI arguments to pass to opencode (e.g. ['-c'] to continue last session)"
+      ),
+      prompt: z.string().optional().describe(
+        "Optional prompt override. Defaults to instructing OpenCode to read and execute the task file."
+      ),
+    },
+  },
+  async ({ task_name, timeout_sec, args, prompt }) => {
+    ensureLogDir();
+    const timeout = timeout_sec ?? 300;
+    const extraArgs = args ?? [];
+    const logFile = logPath(task_name);
+
+    const startMsg = `[${timestamp()}] START opencode task=${task_name} timeout=${timeout}s`;
+    process.stderr.write(startMsg + "\n");
+
+    const logStream = fs.createWriteStream(logFile, { flags: "a" });
+    logStream.write(startMsg + "\n");
+
+    let output;
+    try {
+      output = await withPidFile(task_name, async () => {
+        const defaultPrompt = `Read the file docs/tasks/${task_name}.md carefully and follow all instructions inside it exactly. After completing all work, write your result summary to docs/results/${task_name}.result.md as instructed.`;
+        const resolvedPrompt = prompt || defaultPrompt;
+
+        // opencode run --dangerously-skip-permissions --model <default> [extra_args] "prompt"
+        const opencodeArgs = ["run", "--dangerously-skip-permissions", "--model", "opencode/minimax-m2.5-free", ...extraArgs, resolvedPrompt];
+
+        const result = await spawnWithNvm("opencode", opencodeArgs, timeout);
+
+        const endMsg = `[${timestamp()}] END opencode task=${task_name} exit_code=${result.code}`;
+        logStream.write(endMsg + "\n");
+        process.stderr.write(endMsg + "\n");
+
+        if (result.code !== 0) {
+          logStream.write(`STDERR: ${result.stderr}\n`);
+          throw new Error(
+            `OpenCode exited with code ${result.code}\n\nOutput:\n${result.stdout}\n\nErrors:\n${result.stderr}`
+          );
+        }
+
+        return result.stdout;
+      });
+    } catch (err) {
+      const errMsg = err.message || String(err);
+      const failMsg = `[${timestamp()}] FAILED opencode task=${task_name} error=${errMsg}`;
+      logStream.write(failMsg + "\n");
+      process.stderr.write(failMsg + "\n");
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `## OpenCode Execution Failed: ${task_name}\n\n**Error:** ${errMsg}`,
+          },
+        ],
+        isError: true,
+      };
+    } finally {
+      logStream.end();
+    }
+
+    const truncatedOutput = output.length > 3000 ? output.substring(0, 3000) + "\n... (truncated)" : output;
+    return {
+      content: [
+        {
+          type: "text",
+          text: `## OpenCode Execution: ${task_name}\n\nCompleted successfully. Check logs at ${logFile} for full output.\n\n**Output:**\n${truncatedOutput}`,
+        },
+      ],
+    };
+  }
+);
+
 // ── Tool: kiro_run ──────────────────────────────────────────────────────────
 
 server.registerTool(

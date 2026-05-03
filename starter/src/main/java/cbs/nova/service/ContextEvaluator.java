@@ -2,24 +2,22 @@ package cbs.nova.service;
 
 import cbs.dsl.api.EventDefinition;
 import cbs.dsl.api.context.EnrichmentContext;
-import cbs.dsl.runtime.DslRegistry;
 import cbs.nova.model.EventExecutionRequest;
+import java.util.HashMap;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.Map;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
-//TODO: incorrectly implemented
+// TODO: incorrectly implemented
 @Deprecated(forRemoval = true)
 public class ContextEvaluator {
 
   @SuppressWarnings("unchecked")
-  //TODO: incorrectly implemented
+  // TODO: incorrectly implemented
   @Deprecated(forRemoval = true)
   public Map<String, Object> evaluate(EventDefinition eventDef, EventExecutionRequest request) {
     EnrichmentContext enrichmentContext = new EnrichmentContext(
@@ -27,7 +25,7 @@ public class ContextEvaluator {
         0L,
         request.performedBy(),
         "dev", // TODO(T06): replace with DslRegistry.getDslVersion()
-        (Map<String, Object>) (Map<?, ?>) request.parameters());
+        (Map<String, Object>) request.parameters());
 
     eventDef.getContextBlock().invoke(enrichmentContext);
 

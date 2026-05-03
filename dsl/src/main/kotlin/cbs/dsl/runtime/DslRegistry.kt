@@ -7,7 +7,6 @@ import cbs.dsl.api.MassOperationDefinition
 import cbs.dsl.api.TransactionDefinition
 import cbs.dsl.api.WorkflowDefinition
 
-//@depricated We need to use gradle to get compile a jar, to later use normal classes at `backend module`
 @Deprecated(message = "For removal", level = DeprecationLevel.WARNING)
 class DslRegistry {
   private val _workflows = mutableMapOf<String, WorkflowDefinition>()

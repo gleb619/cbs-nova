@@ -41,9 +41,8 @@ public class AppExceptionHandler {
         .body(new ErrorDto("Internal error"));
   }
 
-  //TODO: redo to normal error response
+  // TODO: redo to normal error response
   record ErrorDto(String error) {
 
   }
-
 }

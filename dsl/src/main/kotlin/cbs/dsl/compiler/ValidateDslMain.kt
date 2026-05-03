@@ -7,7 +7,7 @@ fun main() {
     branch = System.getenv("DSL_BRANCH") ?: "main",
     localCloneDir = java.io.File("build/dsl-clone"),
   )
-  val result = DslCompiler(source, DslValidator(), DslScriptHost()).compile()
+  val result = DslCompiler(source, DslValidator()).compile()
   if (result is CompileResult.Failure) {
     result.errors.forEach { System.err.println("[${it.file}] ${it.message}") }
     throw RuntimeException("DSL validation failed with ${result.errors.size} error(s)")

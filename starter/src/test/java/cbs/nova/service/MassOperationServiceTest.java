@@ -26,6 +26,10 @@ import cbs.nova.model.MassOperationTriggerRequest;
 import cbs.nova.model.exception.EntityNotFoundException;
 import cbs.nova.repository.MassOperationExecutionRepository;
 import cbs.nova.repository.MassOperationItemRepository;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,11 +37,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 @ExtendWith(MockitoExtension.class)
 class MassOperationServiceTest {
@@ -288,8 +287,7 @@ class MassOperationServiceTest {
   @DisplayName("shouldFireCronWhenExpressionMatchesWithinLast60Seconds")
   void shouldFireCronWhenExpressionMatchesWithinLast60Seconds() {
     // Use a cron that runs every minute: "0 * * * * *"
-    CronTrigger cronTrigger =
-        mock(CronTrigger.class);
+    CronTrigger cronTrigger = mock(CronTrigger.class);
     when(cronTrigger.getExpression()).thenReturn("0 * * * * *");
 
     boolean result = massOperationService.shouldFireCron(cronTrigger);
@@ -302,8 +300,7 @@ class MassOperationServiceTest {
   @Test
   @DisplayName("shouldNotFireCronWhenExpressionIsInvalid")
   void shouldNotFireCronWhenExpressionIsInvalid() {
-    CronTrigger cronTrigger =
-        mock(CronTrigger.class);
+    CronTrigger cronTrigger = mock(CronTrigger.class);
     when(cronTrigger.getExpression()).thenReturn("invalid-cron");
 
     boolean result = massOperationService.shouldFireCron(cronTrigger);
@@ -314,8 +311,7 @@ class MassOperationServiceTest {
   @Test
   @DisplayName("shouldFireEveryWhenNoPreviousExecutionExists")
   void shouldFireEveryWhenNoPreviousExecutionExists() {
-    EveryTrigger everyTrigger =
-        mock(EveryTrigger.class);
+    EveryTrigger everyTrigger = mock(EveryTrigger.class);
     when(everyTrigger.getDays()).thenReturn(0);
     when(everyTrigger.getHours()).thenReturn(0);
     when(everyTrigger.getMinutes()).thenReturn(30);
@@ -329,8 +325,7 @@ class MassOperationServiceTest {
   @Test
   @DisplayName("shouldFireEveryWhenLastExecutionIsOlderThanInterval")
   void shouldFireEveryWhenLastExecutionIsOlderThanInterval() {
-    EveryTrigger everyTrigger =
-        mock(EveryTrigger.class);
+    EveryTrigger everyTrigger = mock(EveryTrigger.class);
     when(everyTrigger.getDays()).thenReturn(0);
     when(everyTrigger.getHours()).thenReturn(0);
     when(everyTrigger.getMinutes()).thenReturn(30);
@@ -350,8 +345,7 @@ class MassOperationServiceTest {
   @Test
   @DisplayName("shouldNotFireEveryWhenLastExecutionIsWithinInterval")
   void shouldNotFireEveryWhenLastExecutionIsWithinInterval() {
-    EveryTrigger everyTrigger =
-        mock(EveryTrigger.class);
+    EveryTrigger everyTrigger = mock(EveryTrigger.class);
     when(everyTrigger.getDays()).thenReturn(0);
     when(everyTrigger.getHours()).thenReturn(0);
     when(everyTrigger.getMinutes()).thenReturn(30);

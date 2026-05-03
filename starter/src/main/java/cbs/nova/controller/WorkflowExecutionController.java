@@ -37,8 +37,7 @@ public class WorkflowExecutionController {
       @ApiResponse(responseCode = "500", description = "Internal error")
   })
   public ResponseEntity<List<WorkflowExecutionDto>> findAll(
-      @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "20") int size) {
+      @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
     PaginatedResponse<WorkflowExecutionDto> result = workflowExecutionService.findAll(page, size);
     return ResponseEntity.ok()
         .header("X-Total-Count", String.valueOf(result.totalElements()))

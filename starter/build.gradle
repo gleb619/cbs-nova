@@ -31,6 +31,7 @@ dependencies {
 
   api libs.springdoc.openapi.starter.webmvc.ui
 
+  api project(':dsl-api')
   api project(':dsl')
 
   compileOnly libs.temporal.sdk

@@ -1,15 +1,16 @@
 package cbs.dsl.compiler
 
+import cbs.dsl.api.RulesSource
 import java.io.File
 
-//@depricated We doesnt need to handle git logic here, only pure dsl work allowed
+//@deprecated We don't need to handle git logic here, only pure dsl work allowed
 @Deprecated(message = "For removal", level = DeprecationLevel.WARNING)
 class GiteaRulesSource(
   private val gitUrl: String,
   private val branch: String,
   private val localCloneDir: File,
-) {
-  fun fetch(): List<Pair<String, String>> {
+) : RulesSource {
+  override fun fetch(): List<Pair<String, String>> {
     if (!localCloneDir.exists()) {
       runGit("clone", "--branch", branch, "--depth", "1", gitUrl, localCloneDir.absolutePath)
     } else {

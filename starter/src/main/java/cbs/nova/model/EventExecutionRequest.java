@@ -1,7 +1,6 @@
 package cbs.nova.model;
 
 import jakarta.validation.constraints.NotBlank;
-
 import java.util.Map;
 import lombok.Builder;
 

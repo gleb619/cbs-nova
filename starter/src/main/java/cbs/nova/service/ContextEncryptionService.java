@@ -1,20 +1,16 @@
 package cbs.nova.service;
 
-import java.security.SecureRandom;
-import java.util.Map.Entry;
-import javax.crypto.spec.SecretKeySpec;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
-import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.GCMParameterSpec;
-
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
@@ -45,7 +41,7 @@ public class ContextEncryptionService {
       if (value instanceof String s) {
         mutableContext.put(item.getKey(), encryptValue(s));
       } else {
-        //TODO: use jackson here
+        // TODO: use jackson here
         mutableContext.put(item.getKey(), encryptValue(value.toString()));
       }
     }
@@ -70,7 +66,7 @@ public class ContextEncryptionService {
       if (value instanceof String s) {
         decrypted.put(item.getKey(), decryptValue(s));
       } else {
-        //TODO: use jackson here
+        // TODO: use jackson here
         decrypted.put(item.getKey(), decryptValue(value.toString()));
       }
     }

@@ -1,9 +1,9 @@
 package cbs.dsl.runtime
 
 import cbs.dsl.api.EventDefinition
-import cbs.dsl.api.TransactionDefinition
 import cbs.dsl.api.context.EnrichmentContext
 import cbs.dsl.api.context.FinishContext
+import cbs.dsl.api.context.TransactionsScope
 
 class EventBuilder(override val code: String) : EventDefinition {
   private var _contextBlock: (EnrichmentContext) -> Unit = {}
@@ -12,8 +12,8 @@ class EventBuilder(override val code: String) : EventDefinition {
   private var _displayBlock: (FinishContext) -> Unit = {}
   override val displayBlock: (FinishContext) -> Unit get() = _displayBlock
 
-  private var _transactionsBlock: List<TransactionDefinition> = emptyList()
-  override val transactionsBlock: List<TransactionDefinition> get() = _transactionsBlock
+  private var _transactionsBlock: (suspend TransactionsScope.() -> Unit)? = null
+  override val transactionsBlock: (suspend TransactionsScope.() -> Unit)? get() = _transactionsBlock
 
   private var _finishBlock: (FinishContext) -> Unit = {}
   override val finishBlock: (FinishContext) -> Unit get() = _finishBlock
@@ -26,8 +26,8 @@ class EventBuilder(override val code: String) : EventDefinition {
     _displayBlock = block
   }
 
-  fun transactions(vararg tx: TransactionDefinition) {
-    _transactionsBlock = tx.toList()
+  fun transactions(block: suspend TransactionsScope.() -> Unit) {
+    _transactionsBlock = block
   }
 
   fun finish(block: (FinishContext) -> Unit) {

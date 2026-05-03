@@ -1,28 +1,46 @@
 package cbs.dsl.compiler
 
+import cbs.dsl.api.RulesSource
 import cbs.dsl.runtime.DslRegistry
+import cbs.dsl.script.EventDslScope
+import cbs.dsl.script.ScriptHost
+import kotlin.script.experimental.api.EvaluationResult
+import kotlin.script.experimental.api.ResultWithDiagnostics
 
 sealed class CompileResult {
   data class Success(val registry: DslRegistry) : CompileResult()
   data class Failure(val errors: List<ValidationError>) : CompileResult()
 }
 
-//@depricated We need to use gradle here to get jar, to later use it in `backend module`
-@Deprecated(message = "For removal", level = DeprecationLevel.WARNING)
 class DslCompiler(
-  private val source: GiteaRulesSource,
+  private val source: RulesSource,
   private val validator: DslValidator,
-  private val host: DslScriptHost,
 ) {
   fun compile(): CompileResult {
     val files = source.fetch()
     val allErrors = mutableListOf<ValidationError>()
     val registries = mutableListOf<Pair<String, DslRegistry>>()
+    val host = ScriptHost()
 
     // Step 1 & 2: fetch and eval each file
     for ((path, content) in files) {
       val registry = try {
-        host.eval(content, path)
+        val evalResult = host.eval(content, path)
+        when (evalResult) {
+          is ResultWithDiagnostics.Success -> {
+            val scope =
+              (evalResult.value as? EvaluationResult)?.returnValue?.scriptInstance as? EventDslScope
+                ?: error("Script '$path' did not produce an EventDslScope instance")
+            val registry = DslRegistry()
+            scope.registeredEvents.forEach { registry.register(it) }
+            registry
+          }
+
+          is ResultWithDiagnostics.Failure -> {
+            val msg = evalResult.reports.joinToString("; ") { it.message }
+            throw IllegalStateException("Script evaluation failed for '$path': $msg")
+          }
+        }
       } catch (e: IllegalStateException) {
         allErrors += ValidationError(path, e.message ?: "Unknown evaluation error")
         continue
