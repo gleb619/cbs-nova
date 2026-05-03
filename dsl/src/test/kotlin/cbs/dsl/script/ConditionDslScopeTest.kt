@@ -9,6 +9,7 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class ConditionDslScopeTest {
   @Test
@@ -39,9 +40,9 @@ class ConditionDslScopeTest {
     scope.condition("COND_1") { predicate { true } }
 
     val exception =
-        org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
-          scope.condition("COND_2") { predicate { false } }
-        }
+      assertThrows<IllegalArgumentException> {
+        scope.condition("COND_2") { predicate { false } }
+      }
     assertTrue(exception.message!!.contains("Only one condition block"))
   }
 
@@ -52,7 +53,7 @@ class ConditionDslScopeTest {
 
     val ctx = TransactionContext("EVT", 1L, "user", "v1", emptyMap(), false)
     val exception =
-        org.junit.jupiter.api.assertThrows<IllegalStateException> { builder.predicate.test(ctx) }
+      assertThrows<IllegalStateException> { builder.predicate.test(ctx) }
     assertTrue(exception.message!!.contains("has no predicate block defined"))
   }
 

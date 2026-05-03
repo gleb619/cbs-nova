@@ -7,6 +7,7 @@ import cbs.nova.entity.MassOperationExecutionEntity;
 import cbs.nova.entity.MassOperationItemEntity;
 import cbs.nova.repository.MassOperationExecutionRepository;
 import cbs.nova.repository.MassOperationItemRepository;
+import java.util.Collections;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -43,7 +44,7 @@ public class MassOpItemActivityImpl implements MassOpItemActivity {
       return new MassOpItemResult(false, "Invalid item data JSON: " + e.getMessage());
     }
 
-    MassOperationContext ctx = new MassOperationContext(input.performedBy(), input.dslVersion());
+    MassOperationContext ctx = new MassOperationContext(input.performedBy(), input.dslVersion(), Collections.emptyMap());
 
     // 5c. Call itemBlock
     try {

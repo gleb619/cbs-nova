@@ -56,7 +56,6 @@ BaseContext(eventCode, workflowExecutionId, performedBy, dslVersion)
 | `TestHelper`      | Real helper with built-in logic; `executeBlock` optional — omitted → built-in logic runs |
 | `TestTransaction` | Configurable preview/execute/rollback blocks; `execute` required if no delegate          |
 | `TestCondition`   | Simple predicate over `TransactionContext`                                               |
-| `TestEvent`       | Programmatic event construction for tests                                                |
 
 **DSL Builder Rules:**
 - `EventBuilder`, `HelperBuilder`, `WorkflowBuilder` → multiple definitions per script allowed

@@ -13,6 +13,6 @@ public interface RulesSource {
    *
    * @return List of path to content mappings for .kts files
    */
-  // TODO: replace with some other internal class, not map entry
+  // TODO: replace with `dsl-api/src/main/java/cbs/dsl/api/context/Pair.java`
   List<Map.Entry<String, String>> fetch();
 }

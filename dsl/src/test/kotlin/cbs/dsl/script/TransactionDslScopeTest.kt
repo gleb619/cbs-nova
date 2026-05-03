@@ -1,13 +1,16 @@
 package cbs.dsl.script
 
 import cbs.dsl.api.TransactionDefinition
-import cbs.dsl.api.TransactionInput
+import cbs.dsl.api.TransactionTypes
+import cbs.dsl.api.TransactionTypes.TransactionInput
+import cbs.dsl.api.TransactionTypes.TransactionOutput
 import cbs.dsl.runtime.TransactionBuilder
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class TransactionDslScopeTest {
   @Test
@@ -35,7 +38,7 @@ class TransactionDslScopeTest {
         }
 
     assertNotNull(tx)
-    val input = TransactionInput(params = emptyMap(), eventCode = "EVT", eventNumber = 1L)
+    val input = TransactionInput(emptyMap(), "EVT", "1")
     tx.preview(input)
     tx.execute(input)
     tx.rollback(input)
@@ -47,8 +50,8 @@ class TransactionDslScopeTest {
     val scope = TestTransactionDslScope()
     val tx = scope.transaction("TX_NO_EXEC") { preview {} }
 
-    val input = TransactionInput(params = emptyMap(), eventCode = "EVT", eventNumber = 1L)
-    val exception = org.junit.jupiter.api.assertThrows<IllegalStateException> { tx.execute(input) }
+    val input = TransactionInput(emptyMap(), "EVT", "1")
+    val exception = assertThrows<IllegalStateException> { tx.execute(input) }
     assertTrue(exception.message!!.contains("has no execute block defined"))
   }
 
@@ -59,9 +62,9 @@ class TransactionDslScopeTest {
     scope.transaction("TX_1") { execute {} }
 
     val exception =
-        org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
-          scope.transaction("TX_2") { execute {} }
-        }
+      assertThrows<IllegalArgumentException> {
+        scope.transaction("TX_2") { execute {} }
+      }
     assertTrue(exception.message!!.contains("Only one transaction block is allowed"))
   }
 
@@ -73,7 +76,7 @@ class TransactionDslScopeTest {
         scope.transaction("TX_NO_TARGET") { execute { ctx -> ctx.delegate() } }
             as TransactionBuilder
 
-    val input = TransactionInput(params = emptyMap(), eventCode = "EVT", eventNumber = 1L)
+    val input = TransactionInput(emptyMap(), "EVT", "1")
     tx.execute(input)
   }
 
@@ -85,15 +88,15 @@ class TransactionDslScopeTest {
 
     val baseTx =
         object : TransactionDefinition {
-          override val code: String = "BASE"
+          override fun getCode(): String = "BASE"
 
-          override fun preview(input: TransactionInput) = cbs.dsl.api.TransactionOutput()
+          override fun preview(input: TransactionInput) = TransactionOutput.empty()
 
-          override fun execute(input: TransactionInput) = cbs.dsl.api.TransactionOutput()
+          override fun execute(input: TransactionInput) = TransactionOutput.empty()
 
-          override fun rollback(input: TransactionInput): cbs.dsl.api.TransactionOutput {
+          override fun rollback(input: TransactionInput): TransactionOutput {
             delegateCalled = true
-            return cbs.dsl.api.TransactionOutput()
+            return TransactionOutput.empty()
           }
         }
 
@@ -104,7 +107,7 @@ class TransactionDslScopeTest {
         } as TransactionBuilder
     tx.delegateTarget = baseTx
 
-    val input = TransactionInput(params = emptyMap(), eventCode = "EVT", eventNumber = 1L)
+    val input = TransactionInput(emptyMap(), "EVT", "1")
     tx.rollback(input)
 
     assertTrue(
@@ -121,16 +124,16 @@ class TransactionDslScopeTest {
 
     val baseTx =
         object : TransactionDefinition {
-          override val code: String = "BASE"
+          override fun getCode(): String = "BASE"
 
-          override fun preview(input: TransactionInput): cbs.dsl.api.TransactionOutput {
+          override fun preview(input: TransactionInput): TransactionOutput {
             delegateCalled = true
-            return cbs.dsl.api.TransactionOutput()
+            return TransactionOutput.empty()
           }
 
-          override fun execute(input: TransactionInput) = cbs.dsl.api.TransactionOutput()
+          override fun execute(input: TransactionInput) = TransactionOutput.empty()
 
-          override fun rollback(input: TransactionInput) = cbs.dsl.api.TransactionOutput()
+          override fun rollback(input: TransactionInput) = TransactionOutput.empty()
         }
 
     val tx =
@@ -140,7 +143,7 @@ class TransactionDslScopeTest {
         } as TransactionBuilder
     tx.delegateTarget = baseTx
 
-    val input = TransactionInput(params = emptyMap(), eventCode = "EVT", eventNumber = 1L)
+    val input = TransactionInput(emptyMap(), "EVT", "1")
     tx.preview(input)
 
     assertTrue(
@@ -181,7 +184,7 @@ class TransactionDslScopeTest {
           execute { ctx -> ctx.enrichment["enriched"] as Boolean }
         }
 
-    val input = TransactionInput(params = emptyMap(), eventCode = "EVT", eventNumber = 1L)
+    val input = TransactionInput(emptyMap(), "EVT", "1")
     val output = tx.execute(input)
 
     assertTrue(

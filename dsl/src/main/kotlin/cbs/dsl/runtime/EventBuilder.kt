@@ -1,11 +1,11 @@
 package cbs.dsl.runtime
 
 import cbs.dsl.api.EventDefinition
-import cbs.dsl.api.EventInput
-import cbs.dsl.api.EventOutput
+import cbs.dsl.api.EventTypes.EventInput
+import cbs.dsl.api.EventTypes.EventOutput
 import cbs.dsl.api.ParameterDefinition
 import cbs.dsl.api.TransactionDefinition
-import cbs.dsl.api.TransactionInput
+import cbs.dsl.api.TransactionTypes.TransactionInput
 import cbs.dsl.api.context.ConditionalStepBuilder
 import cbs.dsl.api.context.DisplayScope
 import cbs.dsl.api.context.EnrichmentContext

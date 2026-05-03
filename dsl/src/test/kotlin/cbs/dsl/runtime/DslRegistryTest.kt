@@ -67,15 +67,15 @@ class DslRegistryTest {
 
     val helper =
         object : HelperDefinition {
-          override val code: String = "helper-1"
+          override fun getCode(): String = "helper-1"
 
           override fun execute(input: HelperInput): HelperOutput = HelperOutput(Unit)
         }
 
     val condition =
         object : ConditionDefinition {
-          override val code: String = "cond-1"
-          override val predicate: Predicate<TransactionContext> = Predicate { true }
+          override fun getCode(): String = "cond-1"
+          override fun getPredicate(): Predicate<TransactionContext> = Predicate { true }
         }
 
     registry.register(wf)

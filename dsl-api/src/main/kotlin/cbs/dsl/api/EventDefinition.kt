@@ -1,5 +1,7 @@
 package cbs.dsl.api
 
+import cbs.dsl.api.EventTypes.EventInput
+import cbs.dsl.api.EventTypes.EventOutput
 import cbs.dsl.api.context.DisplayScope
 import cbs.dsl.api.context.EnrichmentContext
 import cbs.dsl.api.context.FinishContext

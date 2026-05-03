@@ -2,10 +2,10 @@ package cbs.dsl.runtime
 
 import cbs.dsl.api.Action
 import cbs.dsl.api.EventDefinition
-import cbs.dsl.api.EventInput
-import cbs.dsl.api.EventOutput
+import cbs.dsl.api.EventTypes.EventInput
+import cbs.dsl.api.EventTypes.EventOutput
 import cbs.dsl.api.ParameterDefinition
-import cbs.dsl.api.WorkflowInput
+import cbs.dsl.api.WorkflowTypes.WorkflowInput
 import cbs.dsl.api.context.DisplayScope
 import cbs.dsl.api.context.EnrichmentContext
 import cbs.dsl.api.context.FinishContext
@@ -28,7 +28,7 @@ class WorkflowBuilderTest {
         override val finishBlock: (FinishContext, Throwable?) -> Unit = { _, _ -> }
 
         override fun execute(input: EventInput): EventOutput =
-            EventOutput(context = emptyMap(), transactionResults = emptyMap())
+            EventOutput(emptyMap(), emptyMap())
       }
 
   @Test
@@ -207,7 +207,7 @@ class WorkflowBuilderTest {
           }
         }
 
-    val input = WorkflowInput(currentState = "DRAFT", action = "SUBMIT")
+    val input = WorkflowInput("DRAFT", "SUBMIT")
     val output = wf.execute(input)
 
     assertEquals("ENTERED", output.nextState)
@@ -220,7 +220,7 @@ class WorkflowBuilderTest {
   fun execute_shouldThrowWhenNoMatchingTransitionFound() {
     val wf = workflow("test-wf") { transitions { ("DRAFT" to "ENTERED" on Action.SUBMIT) {} } }
 
-    val input = WorkflowInput(currentState = "DRAFT", action = "APPROVE")
+    val input = WorkflowInput("DRAFT", "APPROVE")
 
     val ex = assertThrows<IllegalStateException> { wf.execute(input) }
     assertEquals("No transition from DRAFT on APPROVE", ex.message)
@@ -235,7 +235,7 @@ class WorkflowBuilderTest {
           transition(from = "DRAFT", to = "ENTERED", on = Action.SUBMIT, event = stubEvent)
         }
 
-    val input = WorkflowInput(currentState = "DRAFT", action = "SUBMIT")
+    val input = WorkflowInput("DRAFT", "SUBMIT")
     val output = wf.execute(input)
 
     assertEquals("ENTERED", output.nextState)

@@ -9,25 +9,19 @@ package cbs.dsl.api;
 public enum DslImplType {
   /**
    * A transaction implementation that will be registered in the transaction registry. Used for
-   * classes implementing {@link TransactionDefinition}.
+   * classes implementing {@link TransactionFunction}.
    */
   TRANSACTION,
 
   /**
    * A helper implementation that will be registered in the helper registry. Used for classes
-   * implementing {@link HelperDefinition}.
+   * implementing {@link HelperFunction}.
    */
   HELPER,
 
   /**
    * A condition implementation that will be registered in the condition registry. Used for classes
-   * implementing {@link ConditionDefinition}.
+   * implementing {@link ConditionFunction}.
    */
   CONDITION,
-
-  /**
-   * An event implementation that will be registered in the event registry. Used for classes
-   * implementing {@link EventDefinition}.
-   */
-  EVENT,
 }

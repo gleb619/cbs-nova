@@ -1,6 +1,7 @@
 package cbs.dsl.api;
 
 import io.avaje.jsonb.Json;
+import java.util.Collections;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
@@ -91,6 +92,10 @@ public class TransactionTypes {
     Map<String, Object> result,
     String status
   ) {
+
+    public static TransactionOutput empty() {
+      return new TransactionOutput(Collections.emptyMap());
+    }
 
     public TransactionOutput(Map<String, Object> result) {
       this(result, "SUCCESS");

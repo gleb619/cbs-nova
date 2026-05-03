@@ -9,6 +9,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class HelperDslScopeTest {
   @Test
@@ -78,7 +79,7 @@ class HelperDslScopeTest {
     val input = HelperInput(emptyMap(), baseContext.eventCode, baseContext.workflowExecutionId)
 
     val exception =
-        org.junit.jupiter.api.assertThrows<IllegalStateException> { builder.execute(input) }
+      assertThrows<IllegalStateException> { builder.execute(input) }
     assertTrue(exception.message!!.contains("has no execute block defined"))
   }
 

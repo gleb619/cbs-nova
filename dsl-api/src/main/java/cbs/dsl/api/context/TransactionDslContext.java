@@ -1,7 +1,7 @@
 package cbs.dsl.api.context;
 
 import cbs.dsl.api.TransactionDefinition;
-import cbs.dsl.api.TransactionInput;
+import cbs.dsl.api.TransactionTypes.TransactionInput;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

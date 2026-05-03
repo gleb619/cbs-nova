@@ -2,6 +2,7 @@ package cbs.dsl.api;
 
 import io.avaje.jsonb.Json;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.NoArgsConstructor;
 
 import java.util.Map;
@@ -11,9 +12,11 @@ import java.util.Map;
 public class HelperTypes {
 
   @Json
+  @Builder(toBuilder = true)
   public record HelperInput(
       Map<String, Object> params, String eventCode, Long workflowExecutionId) {}
 
   @Json
+  @Builder(toBuilder = true)
   public record HelperOutput(Object value) {}
 }

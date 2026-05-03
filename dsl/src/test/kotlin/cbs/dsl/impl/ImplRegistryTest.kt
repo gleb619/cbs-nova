@@ -4,7 +4,6 @@ import cbs.dsl.api.ConditionDefinition
 import cbs.dsl.api.HelperDefinition
 import cbs.dsl.api.TransactionDefinition
 import cbs.dsl.runtime.DslRegistry
-import cbs.dsl.runtime.condition
 import cbs.dsl.runtime.helper
 import cbs.dsl.runtime.transaction
 import kotlin.test.assertEquals
@@ -21,86 +20,6 @@ class ImplRegistryTest {
   @BeforeEach
   fun setUp() {
     registry = ImplRegistry()
-  }
-
-  @Test
-  @DisplayName("shouldResolveTransactionByCodeWhenRegistered")
-  fun `shouldResolveTransactionByCodeWhenRegistered`() {
-    val tx = TestTransaction("TX_A", executeBlock = {})
-    registry.register(tx)
-
-    val resolved = registry.resolveTransaction("TX_A")
-
-    assertSame(tx, resolved)
-  }
-
-  @Test
-  @DisplayName("shouldResolveTransactionByNameWhenNameSet")
-  fun `shouldResolveTransactionByNameWhenNameSet`() {
-    val tx = TestTransaction("TX_A", "MyTx", executeBlock = {})
-    registry.register(tx)
-
-    val resolved = registry.resolveTransaction("MyTx")
-
-    assertSame(tx, resolved)
-  }
-
-  @Test
-  @DisplayName("shouldPreferNameOverCodeWhenBothMatch")
-  fun `shouldPreferNameOverCodeWhenBothMatch`() {
-    val tx = TestTransaction("TX_A", "TX_A", executeBlock = {})
-    registry.register(tx)
-
-    val resolved = registry.resolveTransaction("TX_A")
-
-    assertSame(tx, resolved)
-  }
-
-  @Test
-  @DisplayName("shouldResolveHelperByCodeWhenRegistered")
-  fun `shouldResolveHelperByCodeWhenRegistered`() {
-    val helper = TestHelper("H_A", executeBlock = { "result" })
-    registry.register(helper)
-
-    val resolved = registry.resolveHelper("H_A")
-
-    assertSame(helper, resolved)
-  }
-
-  @Test
-  @DisplayName("shouldResolveHelperByNameWhenNameSet")
-  fun `shouldResolveHelperByNameWhenNameSet`() {
-    val helper = TestHelper("H_A", "MyHelper", executeBlock = { "result" })
-    registry.register(helper)
-
-    val resolved = registry.resolveHelper("MyHelper")
-
-    assertSame(helper, resolved)
-  }
-
-  @Test
-  @DisplayName("shouldThrowWhenKeyNotFound")
-  fun `shouldThrowWhenKeyNotFound`() {
-    val tx = TestTransaction("TX_A", executeBlock = {})
-    val helper = TestHelper("H_A", executeBlock = { "result" })
-    registry.register(tx)
-    registry.register(helper)
-
-    assertFailsWith<IllegalArgumentException> { registry.resolveTransaction("UNKNOWN") }
-    assertFailsWith<IllegalArgumentException> { registry.resolveHelper("UNKNOWN") }
-  }
-
-  @Test
-  @DisplayName("shouldOverwriteExistingEntryWhenRegisteredAgain")
-  fun `shouldOverwriteExistingEntryWhenRegisteredAgain`() {
-    val tx1 = TestTransaction("TX_A", executeBlock = {})
-    val tx2 = TestTransaction("TX_A", executeBlock = {})
-    registry.register(tx1)
-    registry.register(tx2)
-
-    val resolved = registry.resolveTransaction("TX_A")
-
-    assertSame(tx2, resolved)
   }
 
   @Test

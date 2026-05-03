@@ -11,6 +11,8 @@ import io.temporal.workflow.Async
 import io.temporal.workflow.Promise
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import java.util.concurrent.CompletableFuture
+import java.util.function.Consumer
 
 /**
  * Temporal implementation of TransactionsScope that orchestrates transaction execution via
@@ -40,18 +42,18 @@ class TemporalTransactionsScope(
     errorMessage = message
   }
 
-  override suspend fun step(tx: TransactionDefinition): StepHandle {
+  override fun step(tx: TransactionDefinition): CompletableFuture<StepHandle> {
     val input =
         TransactionActivityInput(tx.code, contextJson, workflowExecutionId, performedBy, dslVersion)
     val promise: Promise<TransactionResult> =
         Async.function(activityStub::executeTransaction, input)
-    return TemporalStepHandle(promise, this)
+    return CompletableFuture.completedFuture(TemporalStepHandle(promise, this))
   }
 
-  override suspend fun step(block: ConditionalStepBuilder.() -> Unit): StepHandle =
+  override fun step(block: Consumer<ConditionalStepBuilder>): CompletableFuture<StepHandle> =
       throw UnsupportedOperationException("Conditional steps not yet supported")
 
-  override suspend fun await(vararg handles: StepHandle) {
+  override fun await(vararg handles: StepHandle) {
     if (handles.isEmpty()) {
       return
     }

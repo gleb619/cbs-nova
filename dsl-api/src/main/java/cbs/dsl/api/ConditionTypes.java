@@ -2,6 +2,7 @@ package cbs.dsl.api;
 
 import io.avaje.jsonb.Json;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.NoArgsConstructor;
 
 import java.util.Map;
@@ -18,6 +19,7 @@ public class ConditionTypes {
 
   /** ConditionInput carries the raw parameters and event metadata for evaluating a condition. */
   @Json
+  @Builder(toBuilder = true)
   public record ConditionInput(Map<String, Object> params, String eventCode, Long eventNumber) {
 
     /**
@@ -34,5 +36,6 @@ public class ConditionTypes {
 
   /** ConditionOutput wraps the boolean result of the evaluation. */
   @Json
+  @Builder(toBuilder = true)
   public record ConditionOutput(boolean result) {}
 }
