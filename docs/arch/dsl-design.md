@@ -755,7 +755,7 @@ Kotlin classes. The engine resolves `ctx.helper("LOAN_CONDITIONS_BY_ID", ...)` b
 `HelperDefinition` registered under code `"LOAN_CONDITIONS_BY_ID"` in the `ImplRegistry`.
 
 To avoid manual wiring and runtime classpath scanning, the `@DslComponent` annotation (in `dsl-api`)
-marks a class as a DSL implementation. The KSP annotation processor (`dsl-codegen` module) reads
+marks a class as a DSL implementation. The Java APT annotation processor (`dsl-codegen` module) reads
 these annotations at compile time and generates an `ImplRegistrationProvider` implementation that
 registers all discovered components via SPI (Service Provider Interface).
 
@@ -798,21 +798,23 @@ map to populate (`TRANSACTION`, `HELPER`, `CONDITION`, `WORKFLOW`, or `MASS_OPER
 
 ### Compile-time code generation (T47)
 
-The KSP annotation processor generates a `GeneratedImplRegistrations.kt` file in the package
+The Java APT annotation processor generates a `GeneratedImplRegistrations.java` file in the package
 `cbs.dsl.codegen.generated`:
 
-```kotlin
+```java
 // Generated — do not edit
-package cbs.dsl.codegen.generated
+package cbs.dsl.codegen.generated;
 
-import cbs.dsl.api.ImplRegistrationProvider
-import cbs.dsl.api.WritableRegistry
+import cbs.dsl.api.ImplRegistrationProvider;
+import cbs.dsl.api.WritableRegistry;
 
-object GeneratedImplRegistrations : ImplRegistrationProvider {
-  override fun register(registry: WritableRegistry) {
-    registry.register(KycCheckTransaction())
-    registry.register(LoanConditionsHelper())
-    registry.register(BorrowerAccountReadyCondition())
+public class GeneratedImplRegistrations implements ImplRegistrationProvider {
+
+  @Override
+  public void register(WritableRegistry registry) {
+    registry.register(new KycCheckTransaction());
+    registry.register(new LoanConditionsHelper());
+    registry.register(new BorrowerAccountReadyCondition());
   }
 }
 ```
@@ -886,11 +888,11 @@ production `KycCheckTransaction` registered under `code = "KYC_CHECK"` when the 
 ### Module dependencies
 
 ```
-dsl-api  ←  dsl-codegen (KSP processor, depends only on dsl-api)
+dsl-api  ←  dsl-codegen (Java APT processor, depends only on dsl-api)
    ↑
   dsl    ←  ImplRegistry implements WritableRegistry (from dsl-api)
    ↑
-starter  ←  ImplRegistryAutoConfiguration + KSP (dsl-codegen) for compile-time registration
+starter  ←  ImplRegistryAutoConfiguration + Java APT (dsl-codegen) for compile-time registration
 ```
 
 The `WritableRegistry` interface in `dsl-api` breaks the circular dependency: `dsl-codegen` no longer
@@ -949,3 +951,118 @@ class TestKycCheck : TransactionDefinition {
     override fun rollback(ctx: TransactionContext) {}
 }
 ```
+
+---
+
+## 4.12 JSON-Native Parameters & Avaje Jsonb
+
+### Philosophy
+
+All parameters flowing into and out of DSL components are **JSON-native**. This means:
+
+- Every `XxxInput` and `XxxOutput` type is a plain data structure that serializes cleanly to JSON.
+- No non-JSON types (e.g. raw `Map<String, Any>`, `java.sql.ResultSet`, or opaque Spring beans) cross DSL boundaries.
+- Parameters are validated and bound via reflection-free generated adapters.
+
+This design guarantees that DSL definitions can be:
+- Stored in PostgreSQL as JSONB columns.
+- Sent over HTTP or MQ without custom serializers.
+- Audited, logged, and replayed from plain JSON snapshots.
+
+### Avaje Jsonb
+
+CBS-Nova uses **Avaje Jsonb** for JSON binding. Unlike Jackson or Gson, Avaje Jsonb is reflection-free: an annotation processor generates `JsonAdapter` source code at compile time. This improves startup time, reduces memory footprint, and eliminates runtime reflection surprises.
+
+**Key characteristics:**
+
+| Trait | Value |
+|-------|-------|
+| Size | ~200 KB + generated adapters |
+| Dependencies | Zero |
+| Performance | One of the fastest Java JSON libraries |
+| Standard support | Jakarta JSON-B annotations |
+| Modern Java | Records, generics, `java.time` supported |
+
+**Dependency Coordinates:**
+- `io.avaje:avaje-jsonb:3.11` (Runtime API)
+- `io.avaje:avaje-jsonb-generator:3.11` (KAPT Annotation Processor — `dsl-api` uses `kapt` because its test sources are Kotlin)
+
+### Input/Output Types
+
+Every DSL definition interface declares a typed `execute(input)` (or `evaluate(input)`) method. The input and output types are annotated with `@Json` so Avaje can generate adapters:
+
+```kotlin
+@Json
+ data class TransactionInput(
+  val agreementId: String,
+  val amount: BigDecimal,
+  val currency: String,
+  val accountNumber: String?   // nullable = optional parameter
+) : DslInput
+
+@Json
+ data class TransactionOutput(
+  val transactionId: String,
+  val status: String
+) : DslOutput
+```
+
+The same pattern applies to **all** definition kinds:
+
+| Definition | Input Type | Output Type | Method |
+|------------|------------|-------------|--------|
+| `HelperDefinition` | `HelperInput` | `HelperOutput` | `execute(input)` |
+| `TransactionDefinition` | `TransactionInput` | `TransactionOutput` | `execute(input)` |
+| `EventDefinition` | `EventInput` | `EventOutput` | `execute(input)` |
+| `ConditionDefinition` | `ConditionInput` | `ConditionOutput` | `evaluate(input)` |
+| `WorkflowDefinition` | `WorkflowInput` | `WorkflowOutput` | `execute(input)` |
+| `MassOperationDefinition` | `MassOperationInput` | `MassOperationOutput` | `execute(input)` |
+
+### Required vs Optional Parameters
+
+Kotlin nullability determines whether a parameter is required or optional:
+
+- **Required:** non-nullable type (`String`, `BigDecimal`, `Long`)
+- **Optional:** nullable type (`String?`, `BigDecimal?`) or field with a default value
+
+At compile time, the `dsl-codegen` Java APT processor inspects the `Input` class referenced by each `@DslComponent` and derives `List<ParameterDefinition>` from the class properties. This metadata is registered alongside the component so the engine can validate parameter presence before execution.
+
+```kotlin
+@Json
+ data class KycCheckInput(
+  val customerId: String,        // required
+  val documentType: String?      // optional
+) : TransactionInput
+
+@DslComponent(code = "KYC_CHECK", type = DslImplType.TRANSACTION)
+class KycCheckTransaction : TransactionDefinition {
+    override val code = "KYC_CHECK"
+
+    override fun execute(input: KycCheckInput): TransactionOutput {
+        // input.customerId is guaranteed non-null
+        // input.documentType may be null
+        return TransactionOutput(verified = true)
+    }
+
+    override fun preview(input: KycCheckInput): TransactionOutput { ... }
+    override fun rollback(input: KycCheckInput): TransactionOutput { ... }
+}
+```
+
+### Module Dependencies
+
+```
+dsl-api  ←  avaje-jsonb (API only, no runtime reflection)
+   ↑
+dsl-codegen  ←  inspects @Json classes, generates ParameterDefinition metadata
+   ↑
+  dsl    ←  runtime uses Jsonb.builder() to adapt Map<String, Any?> → typed Input
+   ↑
+starter  ←  provides Jsonb bean
+```
+
+### Migration Notes
+
+- `MapHelperInput` and `AnyHelperOutput` are deprecated in favor of typed `@Json` classes.
+- `HelperFunction<I, O>` is removed; `HelperDefinition` directly declares `fun execute(input: HelperInput): HelperOutput`.
+- Builders in `dsl/runtime/` continue to work but wrap raw `Map<String, Any?>` into the typed `Input` via Avaje before invoking `execute`.

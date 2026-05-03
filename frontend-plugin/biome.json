@@ -43,21 +43,7 @@
     }
   },
   "files": {
-    "ignore": [
-      "build/",
-      "node_modules/",
-      "dist/",
-      ".nuxt/"
-    ],
-    "include": [
-      "src/**/*.ts",
-      "src/**/*.vue",
-      "src/**/*.js",
-      "src/**/*.scss",
-      "*.ts",
-      "*.js",
-      "*.json",
-      "*.scss"
-    ]
+    "ignore": ["build/", "node_modules/", "dist/", ".nuxt/"],
+    "include": ["src/**/*.ts", "src/**/*.vue", "src/**/*.js", "src/**/*.scss", "*.ts", "*.js", "*.json", "*.scss"]
   }
 }

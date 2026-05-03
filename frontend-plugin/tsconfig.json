@@ -3,15 +3,8 @@
   "compilerOptions": {
     "allowJs": true,
     "sourceMap": true,
-    "types": [
-      "vitest/globals"
-    ],
+    "types": ["vitest/globals"],
     "baseUrl": "."
   },
-  "include": [
-    "**/*.ts",
-    "**/*.vue",
-    "nuxt.config.ts",
-    ".nuxt/nuxt.d.ts"
-  ]
+  "include": ["**/*.ts", "**/*.vue", "nuxt.config.ts", ".nuxt/nuxt.d.ts"]
 }

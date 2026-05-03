@@ -5,6 +5,7 @@ lombok = "1.18.44"
 jspecify = "1.0.0"
 mapstruct = "1.6.3"
 avaje-validator = "2.15"
+avaje-jsonb = "3.11"
 testcontainers = "2.0.4"
 springdoc-openapi = "2.8.0"
 archunit = "1.4.1"
@@ -60,6 +61,8 @@ flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql
 
 # -- Validation (Avaje) --
 avaje-validator-spring-starter = { module = "io.avaje:avaje-validator-spring-starter", version.ref = "avaje-validator" }
+avaje-jsonb = { module = "io.avaje:avaje-jsonb", version.ref = "avaje-jsonb" }
+avaje-jsonb-generator = { module = "io.avaje:avaje-jsonb-generator", version.ref = "avaje-jsonb" }
 
 # -- Lombok --
 # Used in `gradle/java.gradle`
@@ -90,9 +93,6 @@ temporal-testing = { module = "io.temporal:temporal-testing", version.ref = "tem
 archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
 jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit" }
 
-# -- KSP (Kotlin Symbol Processing) --
-ksp = { module = "com.google.devtools.ksp:symbol-processing-api", version = "2.3.7" }
-
 
 [bundles]
 spring-web = ["spring-boot-starter-web", "spring-boot-starter-actuator", "spring-boot-starter-validation", "spring-boot-starter-json"]
@@ -113,4 +113,3 @@ test-logger = { id = "com.adarshr.test-logger", version.ref = "test-logger" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 openapi-generator = { id = "org.openapi.generator", version.ref = "openapi-generator" }
 freefair-lombok = { id = "io.freefair.lombok", version.ref = "freefair" }
-ksp = { id = "com.google.devtools.ksp", version = "2.3.7" }

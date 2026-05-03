@@ -1,8 +1,6 @@
 <script lang="ts" setup>
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import { useRoute } from 'vue-router';
-import Navbar from './Navbar.vue';
-import Sidebar from './Sidebar.vue';
 
 const route = useRoute();
 const sidebarCollapsed = ref(false);

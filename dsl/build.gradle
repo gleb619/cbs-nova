@@ -1,14 +1,13 @@
 plugins {
   alias(libs.plugins.kotlin.jvm)
   alias(libs.plugins.kotlin.serialization)
-  alias(libs.plugins.ksp)
 }
 
 apply(from: "${rootDir}/gradle/kotlin.gradle")
 apply(from: "${rootDir}/gradle/code-style.gradle")
 apply(from: "${rootDir}/gradle/test.gradle")
 
-// Exclude generated KSP files from spotless
+// Exclude generated files from spotless
 spotless {
   kotlin {
     targetExclude('build/generated/**')
@@ -28,6 +27,4 @@ dependencies {
   testImplementation libs.kotlin.test
   testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
   testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
-  testImplementation project(':dsl-codegen')
-  kspTest project(':dsl-codegen')
 }

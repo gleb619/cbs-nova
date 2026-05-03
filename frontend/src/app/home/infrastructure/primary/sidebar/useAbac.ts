@@ -15,9 +15,9 @@ export function useAbac() {
    */
   function hasRole(requiredRoles?: string[]): boolean {
     if (!requiredRoles || requiredRoles.length === 0) return true;
-    const normalizedUserRoles = roles.map((r) => normalizeRole(r));
-    const normalizedRequired = requiredRoles.map((r) => normalizeRole(r));
-    return normalizedRequired.some((r) => normalizedUserRoles.includes(r));
+    const normalizedUserRoles = roles.map(r => normalizeRole(r));
+    const normalizedRequired = requiredRoles.map(r => normalizeRole(r));
+    return normalizedRequired.some(r => normalizedUserRoles.includes(r));
   }
 
   /**
@@ -27,12 +27,12 @@ export function useAbac() {
    */
   function visibleGroups(groups: SidebarGroup[]): SidebarGroup[] {
     return groups
-      .filter((g) => hasRole(g.roles))
-      .map((g) => ({
+      .filter(g => hasRole(g.roles))
+      .map(g => ({
         ...g,
-        items: g.items.filter((item) => hasRole(item.roles)),
+        items: g.items.filter(item => hasRole(item.roles)),
       }))
-      .filter((g) => g.items.length > 0);
+      .filter(g => g.items.length > 0);
   }
 
   /**
