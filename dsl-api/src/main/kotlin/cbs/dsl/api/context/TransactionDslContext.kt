@@ -1,11 +1,12 @@
 package cbs.dsl.api.context
 
 import cbs.dsl.api.TransactionDefinition
+import cbs.dsl.api.TransactionInput
 
 enum class TransactionPhase {
-    PREVIEW,
-    EXECUTE,
-    ROLLBACK,
+  PREVIEW,
+  EXECUTE,
+  ROLLBACK,
 }
 
 class TransactionDslContext(
@@ -17,29 +18,45 @@ class TransactionDslContext(
     isResumed: Boolean,
     private val delegateTarget: TransactionDefinition?,
     private val currentPhase: TransactionPhase,
-) : TransactionContext(eventCode, workflowExecutionId, performedBy, dslVersion, eventParameters, isResumed) {
-    constructor(
-        source: TransactionContext,
-        delegateTarget: TransactionDefinition?,
-        phase: TransactionPhase,
-    ) : this(
-        source.eventCode,
-        source.workflowExecutionId,
-        source.performedBy,
-        source.dslVersion,
-        source.eventParameters,
-        source.isResumed,
-        delegateTarget,
-        phase,
+) :
+    TransactionContext(
+        eventCode,
+        workflowExecutionId,
+        performedBy,
+        dslVersion,
+        eventParameters,
+        isResumed,
     ) {
-        enrichment.putAll(source.enrichment)
-    }
+  constructor(
+      source: TransactionContext,
+      delegateTarget: TransactionDefinition?,
+      phase: TransactionPhase,
+  ) : this(
+      source.eventCode,
+      source.workflowExecutionId,
+      source.performedBy,
+      source.dslVersion,
+      source.eventParameters,
+      source.isResumed,
+      delegateTarget,
+      phase,
+  ) {
+    enrichment.putAll(source.enrichment)
+  }
 
-    override fun delegate() {
-        when (currentPhase) {
-            TransactionPhase.PREVIEW -> delegateTarget?.preview(this)
-            TransactionPhase.EXECUTE -> delegateTarget?.execute(this)
-            TransactionPhase.ROLLBACK -> delegateTarget?.rollback(this)
-        }
+  private fun toInput(): TransactionInput =
+      TransactionInput(
+          params = eventParameters,
+          eventCode = eventCode,
+          workflowExecutionId = workflowExecutionId.toString(),
+      )
+
+  override fun delegate() {
+    val input = toInput()
+    when (currentPhase) {
+      TransactionPhase.PREVIEW -> delegateTarget?.preview(input)
+      TransactionPhase.EXECUTE -> delegateTarget?.execute(input)
+      TransactionPhase.ROLLBACK -> delegateTarget?.rollback(input)
     }
+  }
 }

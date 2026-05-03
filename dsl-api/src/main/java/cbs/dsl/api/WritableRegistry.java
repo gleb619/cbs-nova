@@ -3,24 +3,44 @@ package cbs.dsl.api;
 /**
  * Writable registry interface for registering DSL definitions.
  *
- * This interface is extracted to {@code dsl-api} to break the circular dependency between
- * {@code dsl-codegen} and {@code dsl}. Annotation processors in {@code dsl-codegen} generate
- * code against this interface, while the runtime implementation {@link cbs.dsl.impl.ImplRegistry}
+ * <p>This interface is extracted to {@code dsl-api} to break the circular dependency between
+ * {@code dsl-codegen} and {@code dsl}. Annotation processors in {@code dsl-codegen} generate code
+ * against this interface, while the runtime implementation {@link cbs.dsl.impl.ImplRegistry}
  * implements it.
  */
 public interface WritableRegistry {
-  /** Register a transaction definition */
+  /**
+   * Registers a transaction definition.
+   *
+   * @param t the transaction definition to register
+   */
   void register(TransactionDefinition t);
 
-  /** Register a helper definition */
+  /**
+   * Registers a helper definition.
+   *
+   * @param h the helper definition to register
+   */
   void register(HelperDefinition h);
 
-  /** Register a condition definition */
+  /**
+   * Registers a condition definition.
+   *
+   * @param c the condition definition to register
+   */
   void register(ConditionDefinition c);
 
-  /** Register a workflow definition */
+  /**
+   * Registers a workflow definition.
+   *
+   * @param w the workflow definition to register
+   */
   void register(WorkflowDefinition w);
 
-  /** Register a mass operation definition */
+  /**
+   * Registers a mass operation definition.
+   *
+   * @param m the mass operation definition to register
+   */
   void register(MassOperationDefinition m);
 }

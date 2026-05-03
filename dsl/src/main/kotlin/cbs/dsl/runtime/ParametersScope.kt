@@ -6,10 +6,10 @@ class ParametersScope {
   internal val definitions: MutableList<ParameterDefinition> = mutableListOf()
 
   fun required(name: String) {
-    definitions += ParameterDefinition(name, required = true)
+    definitions += ParameterDefinition(name, true)
   }
 
   fun optional(name: String) {
-    definitions += ParameterDefinition(name, required = false)
+    definitions += ParameterDefinition(name, false)
   }
 }

@@ -1,7 +1,6 @@
 package cbs.dsl.api;
 
-public record ParameterDefinition(
-  String name,
-  boolean required
-) {
-}
+import lombok.Builder;
+
+@Builder
+public record ParameterDefinition(String name, boolean required) {}

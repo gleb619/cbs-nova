@@ -1,5 +1,6 @@
 package cbs.dsl.compiler
 
+import cbs.dsl.api.DslTypes.ImportType.*
 import cbs.dsl.api.EventDefinition
 import cbs.dsl.api.TransitionRule
 import cbs.dsl.api.WorkflowDefinition
@@ -57,7 +58,7 @@ class DslValidator {
               registry.helpers.keys +
               registry.conditions.keys
       for (directive in ImportParser.parse(scriptContent)) {
-        if (directive.type == cbs.dsl.api.ImportType.CODE) continue
+        if (directive.type == CODE) continue
         val matched = allCodes.any { it.contains(directive.path, ignoreCase = true) }
         if (!matched) {
           errors +=

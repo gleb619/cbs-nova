@@ -1,9 +1,19 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
   alias(libs.plugins.kotlin.jvm)
+  id 'java-library'
 }
+
+apply(from: "${rootDir}/gradle/java.gradle")
+apply(from: "${rootDir}/gradle/test.gradle")
+apply(from: "${rootDir}/gradle/code-style.gradle")
+apply(from: "${rootDir}/gradle/checkstyle.gradle")
 
 dependencies {
   implementation libs.kotlin.stdlib
+  api libs.avaje.jsonb
 }
 
 java {
@@ -12,8 +22,8 @@ java {
   }
 }
 
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
+tasks.withType(KotlinCompile) {
   compilerOptions {
-    jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.fromTarget('25'))
+    jvmTarget.set(JvmTarget.fromTarget('25'))
   }
 }

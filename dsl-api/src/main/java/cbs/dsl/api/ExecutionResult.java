@@ -1,8 +1,6 @@
 package cbs.dsl.api;
 
-public record ExecutionResult(
-  String status,
-  long eventExecutionId,
-  long workflowExecutionId
-) {
-}
+import lombok.Builder;
+
+@Builder
+public record ExecutionResult(String status, long eventExecutionId, long workflowExecutionId) {}

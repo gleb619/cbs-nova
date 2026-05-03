@@ -4,8 +4,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Abstraction for fetching DSL script sources.
- * Implementations may fetch from git, filesystem, or memory.
+ * Abstraction for fetching DSL script sources. Implementations may fetch from git, filesystem, or
+ * memory.
  */
 public interface RulesSource {
   /**
@@ -13,5 +13,6 @@ public interface RulesSource {
    *
    * @return List of path to content mappings for .kts files
    */
+  // TODO: replace with some other internal class, not map entry
   List<Map.Entry<String, String>> fetch();
 }

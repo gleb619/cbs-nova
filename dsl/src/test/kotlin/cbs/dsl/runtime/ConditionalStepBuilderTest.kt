@@ -1,6 +1,8 @@
 package cbs.dsl.runtime
 
 import cbs.dsl.api.TransactionDefinition
+import cbs.dsl.api.TransactionInput
+import cbs.dsl.api.TransactionOutput
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -13,33 +15,33 @@ class ConditionalStepBuilderTest {
       object : TransactionDefinition {
         override val code: String = "TEST_TX"
 
-        override fun preview(ctx: cbs.dsl.api.context.TransactionContext) {}
+        override fun preview(input: TransactionInput) = TransactionOutput()
 
-        override fun execute(ctx: cbs.dsl.api.context.TransactionContext) {}
+        override fun execute(input: TransactionInput) = TransactionOutput()
 
-        override fun rollback(ctx: cbs.dsl.api.context.TransactionContext) {}
+        override fun rollback(input: TransactionInput) = TransactionOutput()
       }
 
   private val anotherTransaction =
       object : TransactionDefinition {
         override val code: String = "ANOTHER_TX"
 
-        override fun preview(ctx: cbs.dsl.api.context.TransactionContext) {}
+        override fun preview(input: TransactionInput) = TransactionOutput()
 
-        override fun execute(ctx: cbs.dsl.api.context.TransactionContext) {}
+        override fun execute(input: TransactionInput) = TransactionOutput()
 
-        override fun rollback(ctx: cbs.dsl.api.context.TransactionContext) {}
+        override fun rollback(input: TransactionInput) = TransactionOutput()
       }
 
   private val fallbackTransaction =
       object : TransactionDefinition {
         override val code: String = "FALLBACK_TX"
 
-        override fun preview(ctx: cbs.dsl.api.context.TransactionContext) {}
+        override fun preview(input: TransactionInput) = TransactionOutput()
 
-        override fun execute(ctx: cbs.dsl.api.context.TransactionContext) {}
+        override fun execute(input: TransactionInput) = TransactionOutput()
 
-        override fun rollback(ctx: cbs.dsl.api.context.TransactionContext) {}
+        override fun rollback(input: TransactionInput) = TransactionOutput()
       }
 
   @Test

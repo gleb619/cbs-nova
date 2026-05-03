@@ -3,7 +3,7 @@ package cbs.dsl.runtime
 import cbs.dsl.api.LockDefinition
 import cbs.dsl.api.MassOperationDefinition
 import cbs.dsl.api.ParameterDefinition
-import cbs.dsl.api.Signal
+import cbs.dsl.api.SignalTypes.Signal
 import cbs.dsl.api.SourceDefinition
 import cbs.dsl.api.TriggerDefinition
 import cbs.dsl.api.context.MassOperationContext

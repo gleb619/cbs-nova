@@ -133,7 +133,7 @@ class DslSampleParameterizedTest {
                         """
                         massOperation("SIGNAL_OP") {
                             category("CREDITS")
-                            trigger(TriggerDefinition.SignalTrigger(Signal.completed("INTEREST_CHARGE", emptyMap())))
+                            trigger(TriggerDefinition.SignalTrigger(cbs.dsl.api.SignalTypes.Signal.completed("INTEREST_CHARGE", emptyMap())))
                             source(object : SourceDefinition {
                                 override fun load(ctx: MassOperationContext): List<Map<String, Any>> = emptyList()
                             })

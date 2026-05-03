@@ -12,4 +12,6 @@ interface EventDefinition {
   val displayBlock: (DisplayScope) -> Unit
   val transactionsBlock: (suspend TransactionsScope.() -> Unit)?
   val finishBlock: (FinishContext, Throwable?) -> Unit
+
+  fun execute(input: EventInput): EventOutput
 }

@@ -1,9 +1,9 @@
 package cbs.dsl.script
 
 import cbs.dsl.api.HelperDefinition
+import cbs.dsl.api.HelperTypes.HelperInput
 import cbs.dsl.api.context.BaseContext
 import cbs.dsl.runtime.HelperBuilder
-import cbs.dsl.runtime.MapHelperInput
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -75,7 +75,7 @@ class HelperDslScopeTest {
     val builder = HelperBuilder("NO_EXEC_HELPER")
 
     val baseContext = BaseContext("EVT", 1L, "user", "v1")
-    val input = MapHelperInput(emptyMap(), baseContext)
+    val input = HelperInput(emptyMap(), baseContext.eventCode, baseContext.workflowExecutionId)
 
     val exception =
         org.junit.jupiter.api.assertThrows<IllegalStateException> { builder.execute(input) }
@@ -116,10 +116,10 @@ class HelperDslScopeTest {
         }
 
     val baseContext = BaseContext("EVT", 1L, "user", "v1")
-    val input = MapHelperInput(emptyMap(), baseContext)
+    val input = HelperInput(emptyMap(), baseContext.eventCode, baseContext.workflowExecutionId)
     val output = helper.execute(input)
 
-    assertEquals(true, (output as cbs.dsl.runtime.AnyHelperOutput).value)
+    assertEquals(true, output.value())
   }
 
   private class TestHelperDslScope : HelperDslScope() {

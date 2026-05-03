@@ -1,6 +1,6 @@
 package cbs.dsl.compiler
 
-import cbs.dsl.api.DslMode
+import cbs.dsl.api.DslTypes.DslMode
 import cbs.dsl.api.RulesSource
 import cbs.dsl.impl.ImplRegistry
 import cbs.dsl.runtime.DslRegistry

@@ -1,6 +1,8 @@
 package cbs.dsl.compiler
 
 import cbs.dsl.api.EventDefinition
+import cbs.dsl.api.EventInput
+import cbs.dsl.api.EventOutput
 import cbs.dsl.api.ParameterDefinition
 import cbs.dsl.api.context.DisplayScope
 import cbs.dsl.api.context.EnrichmentContext
@@ -24,6 +26,9 @@ class ImportResolverTest {
             override val displayBlock: (DisplayScope) -> Unit = {}
             override val transactionsBlock: (suspend TransactionsScope.() -> Unit)? = null
             override val finishBlock: (FinishContext, Throwable?) -> Unit = { _, _ -> }
+
+            override fun execute(input: EventInput): EventOutput =
+                EventOutput(context = emptyMap(), transactionResults = emptyMap())
           }
       )
     }

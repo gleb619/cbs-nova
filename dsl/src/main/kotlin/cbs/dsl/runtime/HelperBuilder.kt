@@ -1,15 +1,11 @@
 package cbs.dsl.runtime
 
 import cbs.dsl.api.HelperDefinition
-import cbs.dsl.api.HelperInput
-import cbs.dsl.api.HelperOutput
+import cbs.dsl.api.HelperTypes.HelperInput
+import cbs.dsl.api.HelperTypes.HelperOutput
 import cbs.dsl.api.ParameterDefinition
 import cbs.dsl.api.context.BaseContext
 import cbs.dsl.api.context.HelperContext
-
-data class MapHelperInput(val params: Map<String, Any>, val baseContext: BaseContext) : HelperInput
-
-data class AnyHelperOutput(val value: Any) : HelperOutput
 
 class HelperBuilder(override val code: String) : HelperDefinition {
   private var _name: String? = null
@@ -43,22 +39,19 @@ class HelperBuilder(override val code: String) : HelperDefinition {
   }
 
   override fun execute(input: HelperInput): HelperOutput {
-    val mapInput = input as? MapHelperInput ?: error("Helper input must be MapHelperInput")
-
     val ctx =
         HelperContext(
-            eventCode = mapInput.baseContext.eventCode,
-            workflowExecutionId = mapInput.baseContext.workflowExecutionId,
-            performedBy = mapInput.baseContext.performedBy,
-            dslVersion = mapInput.baseContext.dslVersion,
-            params = mapInput.params,
+            eventCode = input.eventCode() ?: "",
+            workflowExecutionId = input.workflowExecutionId() ?: 0L,
+            performedBy = "",
+            dslVersion = "",
+            params = input.params(),
         )
-
     _contextBlock(ctx)
 
     val result = executeBlock?.invoke(ctx) ?: error("Helper '$code' has no execute block defined")
 
-    return AnyHelperOutput(result)
+    return HelperOutput(result)
   }
 
   fun executeWithResolver(

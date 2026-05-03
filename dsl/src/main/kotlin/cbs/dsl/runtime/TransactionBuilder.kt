@@ -2,6 +2,8 @@ package cbs.dsl.runtime
 
 import cbs.dsl.api.ParameterDefinition
 import cbs.dsl.api.TransactionDefinition
+import cbs.dsl.api.TransactionInput
+import cbs.dsl.api.TransactionOutput
 import cbs.dsl.api.context.TransactionContext
 import cbs.dsl.api.context.TransactionDslContext
 import cbs.dsl.api.context.TransactionPhase
@@ -28,24 +30,40 @@ class TransactionBuilder(override val code: String) : TransactionDefinition {
 
   var delegateTarget: TransactionDefinition? = null
 
-  override fun preview(ctx: TransactionContext) {
+  override fun preview(input: TransactionInput): TransactionOutput {
+    val ctx = buildContext(input)
     _contextBlock(ctx)
     val dslCtx = TransactionDslContext(ctx, delegateTarget, TransactionPhase.PREVIEW)
     _preview?.invoke(dslCtx)
+    return TransactionOutput(dslCtx.enrichment.toMap())
   }
 
-  override fun execute(ctx: TransactionContext) {
+  override fun execute(input: TransactionInput): TransactionOutput {
+    val ctx = buildContext(input)
     _contextBlock(ctx)
     val dslCtx = TransactionDslContext(ctx, delegateTarget, TransactionPhase.EXECUTE)
     _execute?.invoke(dslCtx) ?: error("Transaction '$code' has no execute block defined")
     ctx.enrichment.putAll(dslCtx.enrichment)
+    return TransactionOutput(dslCtx.enrichment.toMap())
   }
 
-  override fun rollback(ctx: TransactionContext) {
+  override fun rollback(input: TransactionInput): TransactionOutput {
+    val ctx = buildContext(input)
     _contextBlock(ctx)
     val dslCtx = TransactionDslContext(ctx, delegateTarget, TransactionPhase.ROLLBACK)
     _rollback?.invoke(dslCtx)
+    return TransactionOutput(dslCtx.enrichment.toMap())
   }
+
+  private fun buildContext(input: TransactionInput): TransactionContext =
+      TransactionContext(
+          input.eventCode ?: "UNKNOWN",
+          input.workflowExecutionId?.toLongOrNull() ?: 0L,
+          "system",
+          "1.0",
+          input.nonNullParams(),
+          false,
+      )
 
   fun name(value: String) {
     _name = value
