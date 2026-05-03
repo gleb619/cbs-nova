@@ -8,7 +8,7 @@ public interface HelperFunction<I extends HelperArg, O extends HelperResult> {
 
   O execute(I input);
 
-  interface HelperArg {}
+  interface HelperArg extends DslPayload {}
 
-  interface HelperResult {}
+  interface HelperResult extends DslPayload {}
 }

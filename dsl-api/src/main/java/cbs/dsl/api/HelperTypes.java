@@ -1,5 +1,7 @@
 package cbs.dsl.api;
 
+import cbs.dsl.api.HelperFunction.HelperArg;
+import cbs.dsl.api.HelperFunction.HelperResult;
 import io.avaje.jsonb.Json;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -14,9 +16,21 @@ public class HelperTypes {
   @Json
   @Builder(toBuilder = true)
   public record HelperInput(Map<String, Object> params, String eventCode, Long workflowExecutionId)
-      implements HelperFunction.HelperArg {}
+      implements HelperArg {
+
+    @Override
+    public Map<String, Object> toMap() {
+      return params;
+    }
+  }
 
   @Json
   @Builder(toBuilder = true)
-  public record HelperOutput(Object value) implements HelperFunction.HelperResult {}
+  public record HelperOutput(Object value) implements HelperResult {
+
+    @Override
+    public Map<String, Object> toMap() {
+      return Map.of("value", value);
+    }
+  }
 }

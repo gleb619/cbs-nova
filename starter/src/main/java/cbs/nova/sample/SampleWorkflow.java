@@ -1,47 +1,20 @@
 package cbs.nova.sample;
 
-import cbs.dsl.api.Action;
-import cbs.dsl.api.TransitionRuleDefinition;
-import cbs.dsl.api.WorkflowDefinition;
+import cbs.dsl.api.DslComponent;
+import cbs.dsl.api.DslImplType;
+import cbs.dsl.api.WorkflowFunction;
 import cbs.dsl.api.WorkflowTypes.WorkflowInput;
 import cbs.dsl.api.WorkflowTypes.WorkflowOutput;
 
-import java.util.List;
-
 /**
- * Sample workflow definition for PoC testing.
+ * Sample workflow implementation for the PoC.
  *
- * <p>Defines a simple two-state workflow (INIT → DONE) triggered by {@code SAMPLE_EVENT}. In the
- * new architecture, workflows are defined via DSL files and processed by Layer 2 (DslCompiler), not
- * by {@code @DslComponent}.
+ * <p>Implements {@link WorkflowFunction} with {@link DslComponent @DslComponent}. The annotation
+ * processor generates a {@code SampleWorkflowDefinition} wrapper and SPI registration at compile
+ * time.
  */
-public class SampleWorkflow implements WorkflowDefinition {
-
-  @Override
-  public String getCode() {
-    return "SAMPLE_WF";
-  }
-
-  @Override
-  public List<String> getStates() {
-    return List.of("INIT", "DONE");
-  }
-
-  @Override
-  public String getInitial() {
-    return "INIT";
-  }
-
-  @Override
-  public List<String> getTerminalStates() {
-    return List.of("DONE");
-  }
-
-  @Override
-  public List<TransitionRuleDefinition> getTransitions() {
-    return List.of(
-        new TransitionRuleDefinition("INIT", "DONE", Action.CLOSE, new SampleEvent(), "FAULTED"));
-  }
+@DslComponent(code = "SAMPLE_WF", type = DslImplType.WORKFLOW)
+public class SampleWorkflow implements WorkflowFunction<WorkflowInput, WorkflowOutput> {
 
   @Override
   public WorkflowOutput execute(WorkflowInput input) {

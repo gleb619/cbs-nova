@@ -89,7 +89,7 @@
             </div>
             <div>
               <h3 class="text-xs font-medium text-neutral-400 uppercase mb-1.5">Backend Stack</h3>
-              <p class="text-sm text-neutral-800">Spring Boot 4, Temporal, Kotlin DSL</p>
+              <p class="text-sm text-neutral-800">Spring Boot 4, Temporal, Java DSL</p>
             </div>
             <div>
               <h3 class="text-xs font-medium text-neutral-400 uppercase mb-1.5">Authentication</h3>

@@ -28,7 +28,6 @@ dependencies {
   api libs.springdoc.openapi.starter.webmvc.ui
 
   api project(':dsl-api')
-  api project(':dsl')
 
   api libs.temporal.sdk
 
@@ -44,6 +43,7 @@ dependencies {
   testImplementation platform(libs.testcontainers.bom)
   testImplementation libs.testcontainers.postgresql
   testImplementation libs.testcontainers.junit.jupiter
+  testImplementation libs.testcontainers.core
 
   //testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

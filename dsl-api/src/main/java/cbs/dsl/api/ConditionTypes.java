@@ -23,6 +23,11 @@ public class ConditionTypes {
   public record ConditionInput(Map<String, Object> params, String eventCode, Long eventNumber)
       implements ConditionFunction.ConditionArg {
 
+    @Override
+    public Map<String, Object> toMap() {
+      return params;
+    }
+
     /**
      * Returns parameters with nulls filtered out, suitable for TransactionContext.
      *

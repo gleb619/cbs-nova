@@ -16,7 +16,7 @@ public interface TransactionFunction<I extends TransactionArg, O extends Transac
     throw new IllegalStateException("Not implemented!");
   }
 
-  interface TransactionArg {}
+  interface TransactionArg extends DslPayload {}
 
-  interface TransactionResult {}
+  interface TransactionResult extends DslPayload {}
 }

@@ -8,7 +8,7 @@ public interface ConditionFunction<I extends ConditionArg, O extends ConditionRe
 
   O evaluate(I input);
 
-  interface ConditionArg {}
+  interface ConditionArg extends DslPayload {}
 
   @FunctionalInterface
   interface ConditionResult {

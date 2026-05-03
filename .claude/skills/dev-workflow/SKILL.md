@@ -8,7 +8,7 @@ high-quality, secure, and well-tested code that follows CBS-Nova's architectural
 
 ## CBS-NOVA PROJECT CONTEXT
 
-**Stack:** Java 25 · Spring Boot · Temporal · PostgreSQL · Kotlin Script (.kts) · Vue 3 admin UI · Nuxt 3 SPA · Tailwind
+**Stack:** Java 25 · Spring Boot · Temporal · PostgreSQL · Java dsl scripts · Vue 3 admin UI · Nuxt 3 SPA · Tailwind
 CSS v4 · piqure DI · i18next · Biome · Gradle multi-module
 
 **Modules:** backend · starter · client · frontend · frontend-plugin

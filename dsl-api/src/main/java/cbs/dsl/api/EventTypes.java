@@ -1,5 +1,7 @@
 package cbs.dsl.api;
 
+import cbs.dsl.api.EventFunction.EventArg;
+import cbs.dsl.api.EventFunction.EventResult;
 import io.avaje.jsonb.Json;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -7,16 +9,27 @@ import lombok.NoArgsConstructor;
 
 import java.util.Map;
 
+/** Consolidated event DSL types. */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class EventTypes {
 
   @Json
   @Builder(toBuilder = true)
   public record EventInput(
-      Map<String, Object> params, String eventCode, Long eventNumber, String workflowExecutionId) {
+      Map<String, Object> params, String eventCode, Long eventNumber, String workflowExecutionId)
+      implements EventArg {
+
+    public EventInput(Map<String, Object> params) {
+      this(params, null, null, null);
+    }
 
     public EventInput(Map<String, Object> params, String eventCode) {
       this(params, eventCode, null, null);
+    }
+
+    @Override
+    public Map<String, Object> toMap() {
+      return params;
     }
 
     public Map<String, Object> params() {
@@ -55,22 +68,19 @@ public class EventTypes {
 
   @Json
   @Builder(toBuilder = true)
-  public record EventOutput(
-      Map<String, Object> context,
-      Map<String, Map<String, Object>> transactionResults,
-      String status) {
+  public record EventOutput(Map<String, Object> result, String status) implements EventResult {
 
-    public EventOutput(
-        Map<String, Object> context, Map<String, Map<String, Object>> transactionResults) {
-      this(context, transactionResults, "SUCCESS");
+    public EventOutput(Map<String, Object> result) {
+      this(result, "SUCCESS");
     }
 
-    public Map<String, Object> context() {
-      return context;
+    @Override
+    public Map<String, Object> toMap() {
+      return result;
     }
 
-    public Map<String, Map<String, Object>> transactionResults() {
-      return transactionResults;
+    public Map<String, Object> result() {
+      return result;
     }
 
     public String status() {
@@ -78,12 +88,8 @@ public class EventTypes {
     }
 
     // JavaBean-style getters for Kotlin property access
-    public Map<String, Object> getContext() {
-      return context;
-    }
-
-    public Map<String, Map<String, Object>> getTransactionResults() {
-      return transactionResults;
+    public Map<String, Object> getResult() {
+      return result;
     }
 
     public String getStatus() {

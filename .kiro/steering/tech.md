@@ -4,7 +4,7 @@
 
 | Layer       | Technology                                                           |
 |-------------|----------------------------------------------------------------------|
-| Language    | Java 25 + Kotlin (mixed)                                             |
+| Language    | Java 25 + Java dsl (mixed)                                           |
 | Framework   | Spring Boot 4.x                                                      |
 | Workflows   | Temporal                                                             |
 | Persistence | PostgreSQL + Spring Data JPA + Flyway                                |
@@ -60,7 +60,7 @@ docker compose up -d          # Start PostgreSQL + Keycloak
 ./gradlew check                               # Compile + test + checkstyle + spotless
 ./gradlew test                                # Unit tests
 ./gradlew :backend:integrationTest            # Integration tests (requires Docker)
-./gradlew spotlessApply                       # Auto-format Java/Kotlin code
+./gradlew spotlessApply                       # Auto-format Java/Dsl code
 ./gradlew :backend:test --tests "*MyTest"     # Run single test class or method
 ```
 
@@ -103,7 +103,7 @@ pnpm e2e:headless                     # Headless E2E (CI)
 
 ## Code Style Rules
 
-### Java/Kotlin
+### Java/Dsl
 
 - Google Java Format (enforced by Spotless — run `./gradlew spotlessApply`)
 - Checkstyle with custom rules in `gradle/checkstyle/`

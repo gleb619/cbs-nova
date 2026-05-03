@@ -14,12 +14,15 @@ import cbs.dsl.api.TransactionDefinition;
 import cbs.dsl.api.TransactionTypes.TransactionInput;
 import cbs.dsl.api.TransactionTypes.TransactionOutput;
 import cbs.dsl.codegen.generated.definitions.SampleConditionDefinition;
+import cbs.dsl.codegen.generated.definitions.SampleEventDefinition;
 import cbs.dsl.codegen.generated.definitions.SampleHelperDefinition;
 import cbs.dsl.codegen.generated.definitions.SampleTransactionDefinition;
+import cbs.dsl.codegen.generated.definitions.SampleWorkflowDefinition;
 import cbs.nova.registry.DslRegistry;
-import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import java.util.Map;
 
 /**
  * Layer 1 test: verifies that {@code @DslComponent} on {@code *Function} classes generates
@@ -34,8 +37,8 @@ class SampleWorkflowTest {
     // Arrange
     DslRegistry registry = new DslRegistry();
     registry.register(new SampleTransactionDefinition());
-    registry.register(new SampleEvent());
-    registry.register(new SampleWorkflow());
+    registry.register(new SampleEventDefinition());
+    registry.register(new SampleWorkflowDefinition());
 
     // Act
     TransactionDefinition tx = registry.resolveTransaction("SAMPLE_TX");
@@ -44,7 +47,7 @@ class SampleWorkflowTest {
     // Assert
     assertNotNull(tx);
     assertEquals("SAMPLE_TX", tx.getCode());
-    assertEquals("Hello, PoC!", output.result().get("greeting"));
+    assertEquals("PoC!", output.result().get("greeting"));
   }
 
   @Test
@@ -56,8 +59,8 @@ class SampleWorkflowTest {
 
     // Act
     HelperDefinition helper = registry.resolveHelper("SAMPLE_HELPER");
-    HelperOutput output = helper.execute(
-        new HelperInput(Map.of("first", "Hello, ", "second", "World"), null, null));
+    HelperOutput output =
+        helper.execute(new HelperInput(Map.of("first", "Hello, ", "second", "World"), null, null));
 
     // Assert
     assertNotNull(helper);

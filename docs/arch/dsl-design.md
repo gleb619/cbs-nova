@@ -45,7 +45,24 @@ collocated helpers) apply identically.
 
 ---
 
-## 4.2 Import System
+## 4.2 Java 25 Implicit Classes & DSL Execution
+
+CBS-Nova DSL files leverage **Java 25 implicit classes** (JEP 445/463). Each `.java` file contains only `import`
+statements followed by top-level fluent builder calls — no explicit `class` declaration, no `main` method. The
+compiler wraps the code in an unnamed class automatically, treating top-level statements as the entry point.
+
+This eliminates boilerplate: DSL authors focus purely on business logic. Each file runs as a standalone script:
+
+```
+java LoanDisbursementEvent.java
+```
+
+The imports bring in the DSL builder types (`EventDsl`, `WorkflowDsl`, `TransactionDsl`, `HelperDsl`,
+`ConditionDsl`, `MassOperationDsl`) and the framework's API types (`Action`, `Signal`, `ExecutionContext`, etc.).
+
+---
+
+## 4.2.1 Import System
 
 Each DSL file declares regular Java imports. Imports resolve to other DSL files or framework interfaces. Import
 aliases are not supported — use standard Java `import` statements.
@@ -91,14 +108,14 @@ Pass 2 — resolve imports
 
 ---
 
-## 4.2.1 Execution Modes
+## 4.2.2 Execution Modes
 
 DSL supports two execution modes with a shared contract surface from `dsl-api`.
 
-| Mode        | Environment                          | Source of definitions              | Primary module | Notes                                   |
-|-------------|--------------------------------------|------------------------------------|----------------|-----------------------------------------|
-| `GENERATED` | production / CI / non-dev backend    | compiled generated Java classes    | `dsl-codegen`  | required default mode                   |
-| `REFLECTED` | development only (`@Profile("dev")`) | raw `.java` interpreted via reflection | `dsl`        | skips compile/package for fast feedback |
+| Mode        | Environment                          | Source of definitions                  | Primary module | Notes                                   |
+|-------------|--------------------------------------|----------------------------------------|----------------|-----------------------------------------|
+| `GENERATED` | production / CI / non-dev backend    | compiled generated Java classes        | `dsl-codegen`  | required default mode                   |
+| `REFLECTED` | development only (`@Profile("dev")`) | raw `.java` interpreted via reflection | `dsl`          | skips compile/package for fast feedback |
 
 ### Generated Mode (Production)
 
@@ -138,8 +155,6 @@ and re-runs `finish {}` and `display {}` without recalculating `context {}` or `
 
 ```java
 // LoanContractWorkflow.java
-package workflow;
-
 import loan.onboarding.*;
 import loan.disbursement.*;
 import loan.cancellation.*;
@@ -148,64 +163,59 @@ import global.BankingHelpers;
 import cbs.dsl.api.Action;
 import cbs.dsl.api.WorkflowDsl;
 
-public class LoanContractWorkflow {
+workflow("LOAN_CONTRACT")
+    .states("DRAFT", "ENTERED", "ACTIVE", "CANCELLED", "CLOSED", "FAULTED")
+    .initial("ENTERED")
+    .terminal("CLOSED", "CANCELLED")
 
-    public static void define(WorkflowDsl dsl) {
-        dsl.workflow("LOAN_CONTRACT")
-            .states("DRAFT", "ENTERED", "ACTIVE", "CANCELLED", "CLOSED", "FAULTED")
-            .initial("ENTERED")
-            .terminal("CLOSED", "CANCELLED")
+    .transition("DRAFT", "ENTERED", Action.SUBMIT, ctx -> {
+        // Multiple events per transition — async by default
+        var agreement = ctx.runEvent("LOAN_CREATE_AGREEMENT");
+        var notify = ctx.runEvent("LOAN_ONBOARDING_NOTIFICATION");
+        ctx.await(agreement, notify);     // explicit barrier if needed
+    })
+    .onFault(ctx -> {
+        ctx.setStatus("FAULTED");
+        ctx.runEvent("LOAN_FAULT_NOTIFICATION");
+    })
 
-            .transition("DRAFT", "ENTERED", Action.SUBMIT, ctx -> {
-                // Multiple events per transition — async by default
-                var agreement = ctx.runEvent("LOAN_CREATE_AGREEMENT");
-                var notify = ctx.runEvent("LOAN_ONBOARDING_NOTIFICATION");
-                ctx.await(agreement, notify);     // explicit barrier if needed
-            })
-            .onFault(ctx -> {
-                ctx.setStatus("FAULTED");
-                ctx.runEvent("LOAN_FAULT_NOTIFICATION");
-            })
+    .transition("ENTERED", "ACTIVE", Action.APPROVE, ctx -> {
+        // resumeEvent: loads saved context from PG, re-runs finish/display only.
+        // ctx.isResumed = true inside the event DSL for branching.
+        ctx.resumeEvent("LOAN_DISBURSEMENT");
+    })
+    .onFault(ctx -> {
+        ctx.setStatus("FAULTED");
+    })
 
-            .transition("ENTERED", "ACTIVE", Action.APPROVE, ctx -> {
-                // resumeEvent: loads saved context from PG, re-runs finish/display only.
-                // ctx.isResumed = true inside the event DSL for branching.
-                ctx.resumeEvent("LOAN_DISBURSEMENT");
-            })
-            .onFault(ctx -> {
-                ctx.setStatus("FAULTED");
-            })
+    .transition("ENTERED", "CANCELLED", Action.CANCEL, ctx -> {
+        ctx.runEvent("LOAN_CANCELLATION");
+    })
+    .onFault(ctx -> {
+        ctx.setStatus("FAULTED");
+    })
 
-            .transition("ENTERED", "CANCELLED", Action.CANCEL, ctx -> {
-                ctx.runEvent("LOAN_CANCELLATION");
-            })
-            .onFault(ctx -> {
-                ctx.setStatus("FAULTED");
-            })
+    .transition("ENTERED", "ENTERED", Action.REJECT, ctx -> {
+        ctx.runEvent("LOAN_REJECTION_NOTICE");
+    })
 
-            .transition("ENTERED", "ENTERED", Action.REJECT, ctx -> {
-                ctx.runEvent("LOAN_REJECTION_NOTICE");
-            })
+    .transition("ACTIVE", "CLOSED", Action.CLOSE, ctx -> {
+        ctx.runEvent("LOAN_CLOSURE");
+    })
+    .onFault(ctx -> {
+        ctx.setStatus("FAULTED");
+    })
 
-            .transition("ACTIVE", "CLOSED", Action.CLOSE, ctx -> {
-                ctx.runEvent("LOAN_CLOSURE");
-            })
-            .onFault(ctx -> {
-                ctx.setStatus("FAULTED");
-            })
+    .transition("ACTIVE", "CANCELLED", Action.CANCEL, ctx -> {
+        ctx.runEvent("LOAN_EARLY_TERMINATION");
+    })
+    .onFault(ctx -> {
+        ctx.setStatus("FAULTED");
+    })
 
-            .transition("ACTIVE", "CANCELLED", Action.CANCEL, ctx -> {
-                ctx.runEvent("LOAN_EARLY_TERMINATION");
-            })
-            .onFault(ctx -> {
-                ctx.setStatus("FAULTED");
-            })
-
-            .transition("FAULTED", "ENTERED", Action.ROLLBACK, ctx -> {
-                ctx.runEvent("LOAN_FAULT_COMPENSATION");
-            });
-    }
-}
+    .transition("FAULTED", "ENTERED", Action.ROLLBACK, ctx -> {
+        ctx.runEvent("LOAN_FAULT_COMPENSATION");
+    });
 ```
 
 **`runEvent` vs `resumeEvent`:**
@@ -221,112 +231,105 @@ public class LoanContractWorkflow {
 
 ```java
 // mass-operations/interest-charge/InterestChargeMassOperation.java
-package mass.operations.interest.charge;
-
 import global.BankingHelpers;
 import cbs.dsl.api.Action;
 import cbs.dsl.api.Signal;
 import cbs.dsl.api.MassOperationDsl;
 
-public class InterestChargeMassOperation {
+massOperation("INTEREST_CHARGE")
+    .category("CREDITS")
 
-    public static void define(MassOperationDsl dsl) {
-        dsl.massOperation("INTEREST_CHARGE")
-            .category("CREDITS")
+    // --- Triggers (one or more, at least one required) ---
+    .cron("0 1 * * *")
+    .once("2025-12-31T23:59:00")
+    .onSignal(Signal.external("INTEREST_CHARGE_TRIGGER"))
+    .onSignal(Signal.from("PENALTY_ACCRUAL", Signal.COMPLETED))
+    .onSignal(Signal.from("PENALTY_ACCRUAL", Signal.PARTIAL))
 
-            // --- Triggers (one or more, at least one required) ---
-            .cron("0 1 * * *")
-            .once("2025-12-31T23:59:00")
-            .onSignal(Signal.external("INTEREST_CHARGE_TRIGGER"))
-            .onSignal(Signal.from("PENALTY_ACCRUAL", Signal.COMPLETED))
-            .onSignal(Signal.from("PENALTY_ACCRUAL", Signal.PARTIAL))
+    // --- Shared context for all items (evaluated once before processing starts) ---
+    .context(ctx -> {
+        ctx.put("businessDate", ctx.getOrDefault("date",
+            ctx.helper("CURRENT_BUSINESS_DATE", Map.of())));
+        ctx.put("interestRates", ctx.helper("LOAD_INTEREST_RATE_TABLE", Map.of(
+            "date", ctx.get("businessDate")
+        )));
+    })
 
-            // --- Shared context for all items (evaluated once before processing starts) ---
-            .context(ctx -> {
-                ctx.put("businessDate", ctx.getOrDefault("date",
-                    ctx.helper("CURRENT_BUSINESS_DATE", Map.of())));
-                ctx.put("interestRates", ctx.helper("LOAD_INTEREST_RATE_TABLE", Map.of(
-                    "date", ctx.get("businessDate")
-                )));
-            })
+    // --- Data source: returns a collection of items to process ---
+    .source(ctx -> ctx.helper("SQL_CLIENT", Map.of(
+        "QUERY", """
+            SELECT agreement_id, customer_id, outstanding_balance, currency
+            FROM credit_agreements
+            WHERE status = 'ACTIVE' AND next_interest_date <= :businessDate
+            """,
+        "PARAMS", Map.of("businessDate", ctx.get("businessDate"))
+    )))
 
-            // --- Data source: returns a collection of items to process ---
-            .source(ctx -> ctx.helper("SQL_CLIENT", Map.of(
-                "QUERY", """
-                    SELECT agreement_id, customer_id, outstanding_balance, currency
-                    FROM credit_agreements
-                    WHERE status = 'ACTIVE' AND next_interest_date <= :businessDate
-                    """,
-                "PARAMS", Map.of("businessDate", ctx.get("businessDate"))
-            )))
+    // --- Business lock: prevents concurrent runs ---
+    .lock(ctx -> {
+        var running = (Long) ctx.helper("SQL_CLIENT", Map.of(
+            "QUERY", """
+                SELECT COUNT(*) FROM mass_operation_execution
+                WHERE code = 'INTEREST_CHARGE'
+                  AND status = 'RUNNING'
+                  AND started_at > NOW() - INTERVAL '24 hours'
+                """,
+            "PARAMS", Map.of()
+        ));
+        return running == 0L;   // true = allowed to start, false = locked
+    })
 
-            // --- Business lock: prevents concurrent runs ---
-            .lock(ctx -> {
-                var running = (Long) ctx.helper("SQL_CLIENT", Map.of(
-                    "QUERY", """
-                        SELECT COUNT(*) FROM mass_operation_execution
-                        WHERE code = 'INTEREST_CHARGE'
-                          AND status = 'RUNNING'
-                          AND started_at > NOW() - INTERVAL '24 hours'
-                        """,
-                    "PARAMS", Map.of()
-                ));
-                return running == 0L;   // true = allowed to start, false = locked
-            })
+    // --- Per-item execution ---
+    .item(ctx -> {
+        // ctx.get("item") contains the current source row
+        var agreementId = (String) ((Map<?,?>) ctx.get("item")).get("agreement_id");
 
-            // --- Per-item execution ---
-            .item(ctx -> {
-                // ctx.get("item") contains the current source row
-                var agreementId = (String) ((Map<?,?>) ctx.get("item")).get("agreement_id");
+        // Decide: run a workflow transition or a pure event
+        if (Boolean.TRUE.equals(((Map<?,?>) ctx.get("item")).get("has_workflow"))) {
+            ctx.runWorkflow(
+                "LOAN_CONTRACT",
+                Action.APPROVE,
+                (Long) ((Map<?,?>) ctx.get("item")).get("event_number"),
+                Map.of(
+                    "agreementId", agreementId,
+                    "businessDate", ctx.get("businessDate"),
+                    "rate", ((Map<?,?>) ctx.get("interestRates")).get(
+                        ((Map<?,?>) ctx.get("item")).get("currency"))
+                )
+            );
+        } else {
+            ctx.runEvent("INTEREST_CHARGE_EVENT", Map.of(
+                "agreementId", agreementId,
+                "businessDate", ctx.get("businessDate"),
+                "rate", ((Map<?,?>) ctx.get("interestRates")).get(
+                    ((Map<?,?>) ctx.get("item")).get("currency"))
+            ));
+        }
+    })
 
-                // Decide: run a workflow transition or a pure event
-                if (Boolean.TRUE.equals(((Map<?,?>) ctx.get("item")).get("has_workflow"))) {
-                    ctx.runWorkflow(
-                        "LOAN_CONTRACT",
-                        Action.APPROVE,
-                        (Long) ((Map<?,?>) ctx.get("item")).get("event_number"),
-                        Map.of(
-                            "agreementId", agreementId,
-                            "businessDate", ctx.get("businessDate"),
-                            "rate", ((Map<?,?>) ctx.get("interestRates")).get(
-                                ((Map<?,?>) ctx.get("item")).get("currency"))
-                        )
-                    );
-                } else {
-                    ctx.runEvent("INTEREST_CHARGE_EVENT", Map.of(
-                        "agreementId", agreementId,
-                        "businessDate", ctx.get("businessDate"),
-                        "rate", ((Map<?,?>) ctx.get("interestRates")).get(
-                            ((Map<?,?>) ctx.get("item")).get("currency"))
-                    ));
-                }
-            })
+    // --- Signals emitted during execution ---
+    .partial(1000, ctx -> {
+        ctx.put("processedSoFar", ctx.processedCount());
+        ctx.put("failedSoFar", ctx.failedCount());
+    })
 
-            // --- Signals emitted during execution ---
-            .partial(1000, ctx -> {
-                ctx.put("processedSoFar", ctx.processedCount());
-                ctx.put("failedSoFar", ctx.failedCount());
-            })
+    .completed(ctx -> {
+        ctx.put("totalProcessed", ctx.processedCount());
+        ctx.put("totalFailed", ctx.failedCount());
+        ctx.put("businessDate", ctx.get("businessDate"));
+    })
 
-            .completed(ctx -> {
-                ctx.put("totalProcessed", ctx.processedCount());
-                ctx.put("totalFailed", ctx.failedCount());
-                ctx.put("businessDate", ctx.get("businessDate"));
-            })
-
-            // --- Post-execution hook (runs after all items, success or failure) ---
-            .finish((ctx, ex) -> {
-                if (ctx.failedCount() > 0) {
-                    ctx.helper("SEND_BATCH_FAILURE_REPORT", Map.of(
-                        "operation", "INTEREST_CHARGE",
-                        "failed", ctx.failedCount(),
-                        "total", ctx.processedCount(),
-                        "date", ctx.get("businessDate")
-                    ));
-                }
-            });
-    }
-}
+    // --- Post-execution hook (runs after all items, success or failure) ---
+    .finish((ctx, ex) -> {
+        if (ctx.failedCount() > 0) {
+            ctx.helper("SEND_BATCH_FAILURE_REPORT", Map.of(
+                "operation", "INTEREST_CHARGE",
+                "failed", ctx.failedCount(),
+                "total", ctx.processedCount(),
+                "date", ctx.get("businessDate")
+            ));
+        }
+    });
 ```
 
 ---
@@ -335,93 +338,86 @@ public class InterestChargeMassOperation {
 
 ```java
 // loan-disbursement/LoanDisbursementEvent.java
-package loan.disbursement;
-
 import global.BankingHelpers;
 import cbs.dsl.api.EventDsl;
 
-public class LoanDisbursementEvent {
+event("LOAN_DISBURSEMENT")
+    .requiredParam("customerId")
+    .requiredParam("loanId")
+    .requiredParam("amount")
+    .optionalParam("accountNumber")
 
-    public static void define(EventDsl dsl) {
-        dsl.event("LOAN_DISBURSEMENT")
-            .requiredParam("customerId")
-            .requiredParam("loanId")
-            .requiredParam("amount")
-            .optionalParam("accountNumber")
+    // Pre-Temporal enrichment. ctx already has all parameters.
+    // Faults immediately if any line throws.
+    .context(ctx -> {
+        ctx.put("customerCode", ctx.helper("FIND_CUSTOMER_CODE_BY_ID",
+            Map.of("id", ctx.get("customerId"))));
+        ctx.put("accountCode", ctx.getOrDefault("accountNumber", "nil"));
+        ctx.put("loanConditions", ctx.helper("LOAN_CONDITIONS_BY_ID",
+            Map.of("loanId", ctx.get("loanId"))));
+    })
 
-            // Pre-Temporal enrichment. ctx already has all parameters.
-            // Faults immediately if any line throws.
-            .context(ctx -> {
-                ctx.put("customerCode", ctx.helper("FIND_CUSTOMER_CODE_BY_ID",
-                    Map.of("id", ctx.get("customerId"))));
-                ctx.put("accountCode", ctx.getOrDefault("accountNumber", "nil"));
-                ctx.put("loanConditions", ctx.helper("LOAN_CONDITIONS_BY_ID",
-                    Map.of("loanId", ctx.get("loanId"))));
-            })
+    // Optional. If omitted, everything in context is shown.
+    .display(ctx -> {
+        ctx.label("Customer ID", ctx.get("customerId"));
+        ctx.label("Loan ID", ctx.get("loanId"));
+        ctx.label("Amount", ctx.get("amount"));
+        ctx.label("Account", ctx.get("accountCode"));
+    })
 
-            // Optional. If omitted, everything in context is shown.
-            .display(ctx -> {
-                ctx.label("Customer ID", ctx.get("customerId"));
-                ctx.label("Loan ID", ctx.get("loanId"));
-                ctx.label("Amount", ctx.get("amount"));
-                ctx.label("Account", ctx.get("accountCode"));
-            })
+    .transactions(ctx -> {
+        // All steps launch as Temporal CompletablePromises immediately.
+        // .then() chains a step that starts after its predecessor completes.
+        // await() is an explicit barrier for a group.
 
-            .transactions(ctx -> {
-                // All steps launch as Temporal CompletablePromises immediately.
-                // .then() chains a step that starts after its predecessor completes.
-                // await() is an explicit barrier for a group.
+        var compliance = ctx.step("KYC_CHECK")
+            .then("BLACKLIST_CHECK");   // starts after KYC completes
 
-                var compliance = ctx.step("KYC_CHECK")
-                    .then("BLACKLIST_CHECK");   // starts after KYC completes
+        var scoring = ctx.step("CREDIT_SCORING");
 
-                var scoring = ctx.step("CREDIT_SCORING");
+        ctx.await(compliance, scoring);              // wait for both chains
 
-                ctx.await(compliance, scoring);              // wait for both chains
+        // Conditional step — when/then/otherwise
+        var debit = ctx.stepWhen(ctx.get("loanConditions") != null)
+            .then("DEBIT_FUNDING_ACCOUNT")
+            .otherwise("DEBIT_FALLBACK_ACCOUNT");
 
-                // Conditional step — when/then/otherwise
-                var debit = ctx.stepWhen(ctx.get("loanConditions") != null)
-                    .then("DEBIT_FUNDING_ACCOUNT")
-                    .otherwise("DEBIT_FALLBACK_ACCOUNT");
+        // Named condition reference (see section 4.10)
+        var credit = ctx.stepWhen(ctx.condition("BORROWER_ACCOUNT_READY"))
+            .then("CREDIT_BORROWER_ACCOUNT");
 
-                // Named condition reference (see section 4.10)
-                var credit = ctx.stepWhen(ctx.condition("BORROWER_ACCOUNT_READY"))
-                    .then("CREDIT_BORROWER_ACCOUNT");
+        ctx.await(debit);
+        ctx.await(credit);
 
-                ctx.await(debit);
-                ctx.await(credit);
+        var posting = ctx.step("POST_DISBURSEMENT_ENTRY");
+        ctx.await(posting);
 
-                var posting = ctx.step("POST_DISBURSEMENT_ENTRY");
-                ctx.await(posting);
+        // Passing variables into a step
+        ctx.step("NOTIFICATION", Map.of("channel", "SMS"));
 
-                // Passing variables into a step
-                ctx.step("NOTIFICATION", Map.of("channel", "SMS"));
+        // display inside transactions — controls what this step shows in UI
+        ctx.displayStep(step -> {
+            step.label("Debit TX", ctx.transactionResult("DEBIT_FUNDING_ACCOUNT").get("txId"));
+            step.label("Credit TX", ctx.transactionResult("CREDIT_BORROWER_ACCOUNT").get("txId"));
+        });
+    })
 
-                // display inside transactions — controls what this step shows in UI
-                ctx.displayStep(step -> {
-                    step.label("Debit TX", ctx.transactionResult("DEBIT_FUNDING_ACCOUNT").get("txId"));
-                    step.label("Credit TX", ctx.transactionResult("CREDIT_BORROWER_ACCOUNT").get("txId"));
-                });
-            })
-
-            // Runs on both success and failure. ex is null on success.
-            .finish((ctx, ex) -> {
-                if (ex != null) {
-                    ctx.helper("SEND_FAULT_NOTIFICATION", Map.of(
-                        "customerId", ctx.get("customerId"),
-                        "error", ex.getMessage()
-                    ));
-                } else {
-                    ctx.helper("SEND_DISBURSEMENT_NOTIFICATION", Map.of(
-                        "customerId", ctx.get("customerId"),
-                        "amount", ctx.get("amount")
-                    ));
-                    // Triggers next workflow transition internally, no external API call
-                    ctx.prolong(Action.APPROVE);
-                }
-            });
-    }
-}
+    // Runs on both success and failure. ex is null on success.
+    .finish((ctx, ex) -> {
+        if (ex != null) {
+            ctx.helper("SEND_FAULT_NOTIFICATION", Map.of(
+                "customerId", ctx.get("customerId"),
+                "error", ex.getMessage()
+            ));
+        } else {
+            ctx.helper("SEND_DISBURSEMENT_NOTIFICATION", Map.of(
+                "customerId", ctx.get("customerId"),
+                "amount", ctx.get("amount")
+            ));
+            // Triggers next workflow transition internally, no external API call
+            ctx.prolong(Action.APPROVE);
+        }
+    });
 ```
 
 ---
@@ -430,13 +426,13 @@ public class LoanDisbursementEvent {
 
 When a mass operation calls an event or workflow per item, the following context variables are automatically injected:
 
-| Variable                   | Description                                         |
-|----------------------------|-----------------------------------------------------|
-| `ctx.get("item")`          | The source row for this item (Map from data source) |
-| `ctx.isMassOperation()`    | `true` when called from a mass operation            |
-| `ctx.get("massOperationCode")` | Code of the parent mass operation               |
-| `ctx.get("businessDate")`  | From mass operation context block                   |
-| `ctx.isResumed()`          | `true` when called via `ctx.resumeEvent()`          |
+| Variable                       | Description                                         |
+|--------------------------------|-----------------------------------------------------|
+| `ctx.get("item")`              | The source row for this item (Map from data source) |
+| `ctx.isMassOperation()`        | `true` when called from a mass operation            |
+| `ctx.get("massOperationCode")` | Code of the parent mass operation                   |
+| `ctx.get("businessDate")`      | From mass operation context block                   |
+| `ctx.isResumed()`              | `true` when called via `ctx.resumeEvent()`          |
 
 These are available in event/workflow DSL via `when/then/otherwise` for mass-operation-specific branching. Events remain
 unaware of whether they are called from a single execution or a mass operation — `ctx.isMassOperation()` is the only
@@ -448,9 +444,11 @@ signal of that distinction.
 
 Transactions are units of work with `preview()`, `execute()`, and `rollback()` phases.
 
-**Code-based transactions** (recommended for reusable business logic) are Java classes implementing
-`TransactionFunction<I extends TransactionArg, O extends TransactionResult>` and annotated with `@DslComponent`.
-The Layer 1 annotation processor generates a `TransactionDefinition` wrapper and registers it via SPI.
+### Code-based transactions (recommended for reusable business logic)
+
+Java classes implementing `TransactionFunction<I extends TransactionArg, O extends TransactionResult>` and annotated
+with `@DslComponent`. The Layer 1 annotation processor generates a `TransactionDefinition` wrapper and registers it
+via SPI.
 
 ```java
 @DslComponent(code = "DEBIT_FUNDING_ACCOUNT", type = DslImplType.TRANSACTION)
@@ -475,68 +473,62 @@ public class DebitFundingAccountTransaction
 }
 ```
 
-**DSL inline transactions** (for event-scoped or ad-hoc rules in `cbs-rules`) use the builder syntax inside a
-`.java` DSL file. Preview and rollback closures are optional. If omitted, the framework delegates to the
-registered `TransactionDefinition` directly. When declared, `ctx.delegate()` explicitly calls the interface
-method in addition to the closure body — giving fine-grained control over whether to extend or replace the
-bean's default behavior.
+### DSL inline transactions
+
+For event-scoped or ad-hoc rules in `cbs-rules`, use the builder syntax inside a `.java` DSL file. Preview and
+rollback closures are optional. If omitted, the framework delegates to the registered `TransactionDefinition`
+directly. When declared, `ctx.delegate()` explicitly calls the interface method in addition to the closure body —
+giving fine-grained control over whether to extend or replace the bean's default behavior.
 
 ```java
 // loan-disbursement/DebitFundingAccountTransaction.java
-package loan.disbursement;
-
 import global.BankingHelpers;
 import cbs.dsl.api.TransactionDsl;
 import cbs.dsl.api.ExecutionResult;
 
-public class DebitFundingAccountTransaction {
+transaction("DEBIT_FUNDING_ACCOUNT")
 
-    public static void define(TransactionDsl dsl) {
-        dsl.transaction("DEBIT_FUNDING_ACCOUNT")
+    // Optional. If omitted, calls DebitFundingAccountTransaction.preview()
+    .preview(ctx -> {
+        var account = (Map<?,?>) ctx.helper("FIND_BANK_ACCOUNT",
+            Map.of("iban", ctx.get("accountCode")));
+        return ExecutionResult.success("DEBIT_FUNDING_ACCOUNT", Map.of(
+            "description", "Will debit " + account.get("iban"),
+            "amount", ctx.get("amount"),
+            "currency", ((Map<?,?>) ctx.get("loanConditions")).get("currency")
+        ));
+    })
 
-            // Optional. If omitted, calls DebitFundingAccountTransaction.preview()
-            .preview(ctx -> {
-                var account = (Map<?,?>) ctx.helper("FIND_BANK_ACCOUNT",
-                    Map.of("iban", ctx.get("accountCode")));
-                return ExecutionResult.success("DEBIT_FUNDING_ACCOUNT", Map.of(
-                    "description", "Will debit " + account.get("iban"),
-                    "amount", ctx.get("amount"),
-                    "currency", ((Map<?,?>) ctx.get("loanConditions")).get("currency")
-                ));
-            })
+    .execute(ctx -> {
+        // ctx.get("...") reads from required/optional parameters
+        var amount = ctx.get("amount");
+        var currency = ((Map<?,?>) ctx.get("loanConditions")).get("currency");
 
-            .execute(ctx -> {
-                // ctx.get("...") reads from required/optional parameters
-                var amount = ctx.get("amount");
-                var currency = ((Map<?,?>) ctx.get("loanConditions")).get("currency");
+        // Reading output from an earlier transaction in same event
+        var kycVerified = ctx.transactionResult("KYC_CHECK").get("verified");
 
-                // Reading output from an earlier transaction in same event
-                var kycVerified = ctx.transactionResult("KYC_CHECK").get("verified");
+        // Resolve Spring bean directly — no field injection in DSL
+        var result = ctx.resolve(DebitFundingAccountService.class)
+            .debit((String) ctx.get("accountCode"), amount, (String) currency);
 
-                // Resolve Spring bean directly — no field injection in DSL
-                var result = ctx.resolve(DebitFundingAccountService.class)
-                    .debit((String) ctx.get("accountCode"), amount, (String) currency);
+        ctx.put("debitTxId", result.get("transactionId"));
 
-                ctx.put("debitTxId", result.get("transactionId"));
+        return ExecutionResult.success("DEBIT_FUNDING_ACCOUNT", result);
+    })
 
-                return ExecutionResult.success("DEBIT_FUNDING_ACCOUNT", result);
-            })
+    // Optional. If omitted, calls DebitFundingAccountTransaction.rollback()
+    .rollback(ctx -> {
+        // ctx.delegate() calls the interface method first, then continues below.
+        // Omit ctx.delegate() to fully replace the interface method.
+        ctx.delegate();
 
-            // Optional. If omitted, calls DebitFundingAccountTransaction.rollback()
-            .rollback(ctx -> {
-                // ctx.delegate() calls the interface method first, then continues below.
-                // Omit ctx.delegate() to fully replace the interface method.
-                ctx.delegate();
-
-                // Additional compensating logic on top of the default implementation
-                ctx.resolve(DebitFundingAccountService.class)
-                    .postCompensatingEntry(
-                        (String) ctx.get("debitTxId"),
-                        true   // swapAccounts
-                    );
-            });
-    }
-}
+        // Additional compensating logic on top of the default implementation
+        ctx.resolve(DebitFundingAccountService.class)
+            .postCompensatingEntry(
+                (String) ctx.get("debitTxId"),
+                true   // swapAccounts
+            );
+    });
 ```
 
 **Reading values in DSL — reference table:**
@@ -591,9 +583,10 @@ ctx.put("fundingAccount", accountName);
 
 ## 4.8 Helper DSL Files
 
-**Code-based helpers** (recommended for reusable business logic) are Java classes implementing
-`HelperFunction<I extends HelperArg, O extends HelperResult>` and annotated with `@DslComponent`.
-The Layer 1 annotation processor generates a `HelperDefinition` wrapper and registers it via SPI.
+### Code-based helpers (recommended for reusable business logic)
+
+Java classes implementing `HelperFunction<I extends HelperArg, O extends HelperResult>` and annotated with
+`@DslComponent`. The Layer 1 annotation processor generates a `HelperDefinition` wrapper and registers it via SPI.
 
 ```java
 @DslComponent(code = "LOAN_CONDITIONS_BY_ID", type = DslImplType.HELPER)
@@ -619,7 +612,7 @@ label that distinguishes it from the underlying production bean. This is especia
 where you want to override a production bean with a test stub:
 
 ```java
-dsl.helpers()
+helpers()
     .helper("LOAN_CONDITIONS_BY_ID")
     .name("TestLoanConditionsById")   // identifies this as the test stub
     .execute(ctx -> Map.of("loanId", ctx.params().get("loanId"), "currency", "USD"));
@@ -632,76 +625,64 @@ is a secondary label for overrides and control-flow disambiguation.
 The same `name` field applies to transactions:
 
 ```java
-dsl.transaction("KYC_CHECK")
+transaction("KYC_CHECK")
     .name("TestKycCheck")   // identifies this as the test override of the KYC_CHECK bean
     .execute(ctx -> ctx.put("kycVerified", true));
 ```
 
+### Inline DSL helper files
+
 ```java
 // loan-disbursement/LoanHelpers.helper.java
-package loan.disbursement;
-
 import cbs.dsl.api.HelperDsl;
 
-public class LoanHelpers {
-
-    public static void define(HelperDsl dsl) {
-        dsl.helpers()
-            // Inline helper using SQL_CLIENT helper (no ctx.db.query — use helper instead)
-            .helper("LOAN_CONDITIONS_BY_ID", ctx -> {
-                var myLoanId = ctx.params().get("loanId");
-                return ctx.helper("CURRENCY_BY_AGREEMENT", Map.of(
-                    "agreementId", ctx.params().get("agreementId"),
-                    "userLoanId", myLoanId,
-                    "amount", ctx.resolve(AccountService.class).calculateAmount(
-                        ctx.helper("SQL_CLIENT", Map.of(
-                            "QUERY", "SELECT * FROM loan_conditions WHERE loan_id = :loanId",
-                            "PARAMS", Map.of("loanId", myLoanId)
-                        ))
-                    )
-                ));
-                // Last expression is implicitly returned
-            })
-
-            // Inline HTTP helper
-            .helper("KYC_STATUS_BY_CUSTOMER", ctx ->
-                ctx.helper("HTTP_GET", Map.of(
-                    "url", "https://kyc-service/api/status/" + ctx.params().get("customerId")
+helpers()
+    // Inline helper using SQL_CLIENT helper (no ctx.db.query — use helper instead)
+    .helper("LOAN_CONDITIONS_BY_ID", ctx -> {
+        var myLoanId = ctx.params().get("loanId");
+        return ctx.helper("CURRENCY_BY_AGREEMENT", Map.of(
+            "agreementId", ctx.params().get("agreementId"),
+            "userLoanId", myLoanId,
+            "amount", ctx.resolve(AccountService.class).calculateAmount(
+                ctx.helper("SQL_CLIENT", Map.of(
+                    "QUERY", "SELECT * FROM loan_conditions WHERE loan_id = :loanId",
+                    "PARAMS", Map.of("loanId", myLoanId)
                 ))
-            );
-    }
-}
+            )
+        ));
+        // Last expression is implicitly returned
+    })
+
+    // Inline HTTP helper
+    .helper("KYC_STATUS_BY_CUSTOMER", ctx ->
+        ctx.helper("HTTP_GET", Map.of(
+            "url", "https://kyc-service/api/status/" + ctx.params().get("customerId")
+        ))
+    );
 ```
 
 ```java
 // global/BankingHelpers.helper.java
-package global;
-
 import banking.AccountRepository;
 import banking.LoanProductRepository;
 import banking.CustomerRepository;
 import cbs.dsl.api.HelperDsl;
 
-public class BankingHelpers {
+helpers()
+    // Reference existing Spring beans — same declaration syntax as local helpers
+    // The only difference: these are available to all events
+    .helper("FIND_BANK_ACCOUNT", ctx ->
+        ctx.resolve(AccountRepository.class).findByIban((String) ctx.params().get("iban"))
+    )
 
-    public static void define(HelperDsl dsl) {
-        dsl.helpers()
-            // Reference existing Spring beans — same declaration syntax as local helpers
-            // The only difference: these are available to all events
-            .helper("FIND_BANK_ACCOUNT", ctx ->
-                ctx.resolve(AccountRepository.class).findByIban((String) ctx.params().get("iban"))
-            )
+    .helper("FIND_CUSTOMER_CODE_BY_ID", ctx ->
+        ctx.resolve(CustomerRepository.class).findCodeById((String) ctx.params().get("id"))
+    )
 
-            .helper("FIND_CUSTOMER_CODE_BY_ID", ctx ->
-                ctx.resolve(CustomerRepository.class).findCodeById((String) ctx.params().get("id"))
-            )
-
-            .helper("CURRENCY_BY_AGREEMENT", ctx ->
-                ctx.resolve(LoanProductRepository.class)
-                    .findCurrencyByAgreement((String) ctx.params().get("agreementId"))
-            );
-    }
-}
+    .helper("CURRENCY_BY_AGREEMENT", ctx ->
+        ctx.resolve(LoanProductRepository.class)
+            .findCurrencyByAgreement((String) ctx.params().get("agreementId"))
+    );
 ```
 
 ---
@@ -754,9 +735,10 @@ reused.
 
 Named conditions are declared as standalone DSL objects and referenced in `when { ctx.condition(...) }`.
 
-**Code-based conditions** (recommended for reusable business logic) are Java classes implementing
-`ConditionFunction<I extends ConditionArg, O extends ConditionResult>` and annotated with `@DslComponent`.
-The Layer 1 annotation processor generates a `ConditionDefinition` wrapper and registers it via SPI.
+### Code-based conditions (recommended for reusable business logic)
+
+Java classes implementing `ConditionFunction<I extends ConditionArg, O extends ConditionResult>` and annotated with
+`@DslComponent`. The Layer 1 annotation processor generates a `ConditionDefinition` wrapper and registers it via SPI.
 
 ```java
 @DslComponent(code = "BORROWER_ACCOUNT_READY", type = DslImplType.CONDITION)
@@ -771,26 +753,48 @@ public class BorrowerAccountReadyCondition
 }
 ```
 
-**DSL inline conditions** (for event-scoped or ad-hoc rules in `cbs-rules`) use the builder syntax:
+### DSL inline conditions
+
+For event-scoped or ad-hoc rules in `cbs-rules`, use the builder syntax:
 
 ```java
 // loan-disbursement/BorrowerAccountReadyCondition.java
-package loan.disbursement;
-
 import global.BankingHelpers;
 import cbs.dsl.api.ConditionDsl;
 
-public class BorrowerAccountReadyCondition {
-
-    public static void define(ConditionDsl dsl) {
-        dsl.condition("BORROWER_ACCOUNT_READY", ctx -> {
-            var account = (Map<?,?>) ctx.helper("FIND_BANK_ACCOUNT",
-                Map.of("iban", ctx.get("accountCode")));
-            return account != null && "ACTIVE".equals(account.get("status"));
-        });
-    }
-}
+condition("BORROWER_ACCOUNT_READY", ctx -> {
+    var account = (Map<?,?>) ctx.helper("FIND_BANK_ACCOUNT",
+        Map.of("iban", ctx.get("accountCode")));
+    return account != null && "ACTIVE".equals(account.get("status"));
+});
 ```
+
+---
+
+## 4.10.1 Function Interface Reference
+
+Code-based implementations use one of these `@FunctionalInterface` types with `@DslComponent`. The annotation
+processor generates a matching `*Definition` wrapper and SPI registration.
+
+| `*Function` Interface          | Generated `*Definition`     | Method(s)                                  | `DslImplType`     |
+|--------------------------------|-----------------------------|--------------------------------------------|-------------------|
+| `TransactionFunction<I, O>`    | `TransactionDefinition`     | `preview(I)`, `execute(I)`, `rollback(I)`  | `TRANSACTION`     |
+| `HelperFunction<I, O>`         | `HelperDefinition`          | `execute(I)`                               | `HELPER`          |
+| `ConditionFunction<I, O>`      | `ConditionDefinition`       | `evaluate(I)`                              | `CONDITION`       |
+| `EventFunction<I, O>`          | `EventDefinition`           | `execute(I)`                               | `EVENT`           |
+| `WorkflowFunction<I, O>`       | `WorkflowDefinition`        | `execute(I)`                               | `WORKFLOW`        |
+| `MassOperationFunction<I, O>`  | `MassOperationDefinition`   | `execute(I)`                               | `MASS_OPERATION`  |
+
+**`@DslComponent` is only valid on:**
+- `TransactionFunction<I extends TransactionArg, O extends TransactionResult>`
+- `HelperFunction<I extends HelperArg, O extends HelperResult>`
+- `ConditionFunction<I extends ConditionArg, O extends ConditionResult>`
+- `EventFunction<I extends EventArg, O extends EventResult>`
+- `WorkflowFunction<I extends WorkflowArg, O extends WorkflowResult>`
+- `MassOperationFunction<I extends MassOperationArg, O extends MassOperationResult>`
+
+Events, workflows, and mass operations can also be defined in `.java` DSL files and processed by Layer 2. When
+defined as DSL files, they use top-level fluent builders and do **not** implement `*Function` interfaces.
 
 ---
 
@@ -800,7 +804,8 @@ CBS-Nova uses a three-layer compile-time code generation pipeline. Each layer co
 
 #### Layer 1 — Function → Definition (`@DslComponent` processor)
 
-**User input:** Java classes implementing `TransactionFunction`, `HelperFunction`, or `ConditionFunction`, annotated with `@DslComponent`.
+**User input:** Java classes implementing `TransactionFunction`, `HelperFunction`, `ConditionFunction`, `EventFunction`,
+`WorkflowFunction`, or `MassOperationFunction`, annotated with `@DslComponent`.
 
 ```java
 @DslComponent(code = "KYC_CHECK", type = DslImplType.TRANSACTION)
@@ -814,7 +819,8 @@ public class KycCheckTransaction implements TransactionFunction<KycCheckInput, K
 **Validation:** The processor validates each `@DslComponent` annotated class at compile time:
 - Must be a class (not interface)
 - Must have a public no-arg constructor
-- Must implement exactly one of: `TransactionFunction`, `HelperFunction`, `ConditionFunction`
+- Must implement exactly one of: `TransactionFunction`, `HelperFunction`, `ConditionFunction`, `EventFunction`,
+  `WorkflowFunction`, `MassOperationFunction`
 - `code` attribute must not be blank
 
 **Generated output:** A `*Definition` implementation that wraps the function and carries metadata (code, name, parameters). The processor also generates an SPI registration file.
@@ -823,7 +829,7 @@ public class KycCheckTransaction implements TransactionFunction<KycCheckInput, K
 // Generated — do not edit
 package cbs.dsl.codegen.generated.definitions;
 
-public class KycCheckTransactionDefinition implements TransactionDefinition {
+public class KycCheckTransactionDefinition implements TransactionFunction {
     private final KycCheckTransaction function = new KycCheckTransaction();
 
     @Override public String getCode() { return "KYC_CHECK"; }
@@ -848,27 +854,18 @@ public class GeneratedImplRegistrations implements ImplRegistrationProvider {
 }
 ```
 
-`@DslComponent` is **only** valid on:
-- `TransactionFunction<I extends TransactionArg, O extends TransactionResult>`
-- `HelperFunction<I extends HelperArg, O extends HelperResult>`
-- `ConditionFunction<I extends ConditionArg, O extends ConditionResult>`
-
-Events, workflows, and mass operations are **not** annotated with `@DslComponent`. They are defined in `.java` DSL files and processed by Layer 2.
-
 #### Layer 2 — DSL File → Definition (`DslCompiler`)
 
 **User input:** `.java` DSL files in `cbs-rules` repository.
 
 ```java
 // loan-disbursement/LoanDisbursementEvent.java
-public class LoanDisbursementEvent {
-    public static void define(EventDsl dsl) {
-        dsl.event("LOAN_DISBURSEMENT")
-            .requiredParam("customerId")
-            .transactions(ctx -> { ... })
-            .finish((ctx, ex) -> { ... });
-    }
-}
+import cbs.dsl.api.EventDsl;
+
+event("LOAN_DISBURSEMENT")
+    .requiredParam("customerId")
+    .transactions(ctx -> { ... })
+    .finish((ctx, ex) -> { ... });
 ```
 
 **Compilation passes:**
@@ -889,7 +886,7 @@ Pass 2 — Resolve imports & validate
 // Generated — do not edit
 package cbs.dsl.codegen.generated.definitions;
 
-public class LoanDisbursementEventDefinition implements EventDefinition {
+public class LoanDisbursementEventDefinition implements EventFunction {
     @Override public String getCode() { return "LOAN_DISBURSEMENT"; }
     @Override public List<ParameterDefinition> getParameters() { ... }
     @Override public Consumer<EnrichmentContext> getContextBlock() { ... }
@@ -1040,6 +1037,32 @@ public class BorrowerAccountReadyCondition implements ConditionFunction<Borrower
 }
 ```
 
+**Event implementation (code-based, Layer 1):**
+```java
+@DslComponent(code = "LOAN_DISBURSEMENT", type = DslImplType.EVENT)
+public class LoanDisbursementEventFunction implements EventFunction<DisbursementInput, DisbursementOutput> {
+    @Override public DisbursementOutput execute(DisbursementInput input) { ... }
+}
+```
+
+**Workflow implementation (code-based, Layer 1):**
+```java
+@DslComponent(code = "LOAN_CONTRACT", type = DslImplType.WORKFLOW)
+public class LoanContractWorkflowFunction
+    implements WorkflowFunction<ContractInput, ContractOutput> {
+    @Override public ContractOutput execute(ContractInput input) { ... }
+}
+```
+
+**Mass operation implementation (code-based, Layer 1):**
+```java
+@DslComponent(code = "INTEREST_CHARGE", type = DslImplType.MASS_OPERATION)
+public class InterestChargeMassOperationFunction
+    implements MassOperationFunction<InterestChargeInput, InterestChargeOutput> {
+    @Override public InterestChargeOutput execute(InterestChargeInput input) { ... }
+}
+```
+
 **Test implementation (override):**
 ```java
 @DslComponent(code = "KYC_CHECK", type = DslImplType.TRANSACTION)
@@ -1075,13 +1098,13 @@ CBS-Nova uses **Avaje Jsonb** for JSON binding. Unlike Jackson or Gson, Avaje Js
 
 **Key characteristics:**
 
-| Trait | Value |
-|-------|-------|
-| Size | ~200 KB + generated adapters |
-| Dependencies | Zero |
-| Performance | One of the fastest Java JSON libraries |
-| Standard support | Jakarta JSON-B annotations |
-| Modern Java | Records, generics, `java.time` supported |
+| Trait            | Value                                    |
+|------------------|------------------------------------------|
+| Size             | ~200 KB + generated adapters             |
+| Dependencies     | Zero                                     |
+| Performance      | One of the fastest Java JSON libraries   |
+| Standard support | Jakarta JSON-B annotations               |
+| Modern Java      | Records, generics, `java.time` supported |
 
 **Dependency Coordinates:**
 - `io.avaje:avaje-jsonb:3.11` (Runtime API)
@@ -1135,7 +1158,7 @@ public record KycCheckInput(
 ) implements TransactionInput {}
 
 @DslComponent(code = "KYC_CHECK", type = DslImplType.TRANSACTION)
-public class KycCheckTransaction implements TransactionDefinition {
+public class KycCheckTransaction implements TransactionFunction {
     @Override public String getCode() { return "KYC_CHECK"; }
 
     @Override public TransactionOutput execute(KycCheckInput input) {
