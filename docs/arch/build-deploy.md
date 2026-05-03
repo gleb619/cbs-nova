@@ -6,11 +6,11 @@
 
 ### 8.1 Gitea: cbs-rules
 
-- Stores `.kts` files only. No build logic, no app config.
+- Stores `.java` DSL files only. No build logic, no app config.
 - Repository: `cbs-rules`
 - Branch strategy: `main` = production. Feature branches for new/changed rules.
 - Import resolution and semantic validation enforced at compile time — broken imports, missing referenced
-  events/helpers, undeclared transition target states all fail the build.
+events/helpers, undeclared transition target states all fail the build.
 
 ### 8.2 CI/CD Flow
 
@@ -23,17 +23,20 @@ cbs-rules Gitea: push to branch
         │    └─ Clone DSL branch from cbs-rules (fallback to main)
         │
         ├─ Gradle: compileDsl
-        │    ├─ Pass 1: eval all .kts files → build merged DslRegistry (no import injection)
-        │    ├─ Pass 2: re-eval files with // #import directives → inject ImportScope map
-        │    │    └─ ImportParser → ImportResolver → ScriptHost.eval(..., providedImports)
-        │    ├─ Resolve all // #import declarations (comment-directive syntax, valid Kotlin)
+        │    ├─ Pass 1: Layer 1 — process @DslComponent on *Function classes
+        │    │    └─ Generates *Definition wrappers + SPI registration (dsl-codegen)
+        │    ├─ Pass 2: Layer 2 — parse all .java DSL files → build merged DslRegistry
+        │    │    └─ Generates Event/Workflow/MassOp Definition implementations
+        │    ├─ Pass 3: resolve Java imports against merged registry
+        │    │    └─ ImportResolver validates all cross-references
         │    ├─ Semantic validation:
         │    │    ├─ All referenced events exist in registry
         │    │    ├─ All referenced helpers exist (code or inline)
         │    │    ├─ All transition target states declared in workflow states
         │    │    ├─ All condition references resolve
         │    │    └─ All transaction references resolve to known beans or DSL objects
-        │    └─ Produce: dsl-rules-{version}.jar
+        │    ├─ Layer 3: Annotation processor (dsl-codegen) generates Temporal workflow/activity classes
+        │    └─ Produce: dsl-rules-{version}.jar (contains both DSL definitions and generated Temporal classes)
         │
         ├─ Gradle: buildApp
         │    └─ Bundle dsl-rules JAR into application
@@ -44,8 +47,8 @@ cbs-rules Gitea: push to branch
 ### 8.3 Dev Mode
 
 Dev mode changes **compilation only** — Temporal is still required and running. The dev endpoint skips the CI/CD compile
-step and uses `javax.script` to evaluate `.kts` at runtime for fast feedback. State is persisted normally. Temporal is
-invoked normally.
+step and uses reflection to execute `.java` DSL definitions at runtime for fast feedback. State is persisted normally.
+Temporal is invoked normally through generic `ReflectiveWorkflow` / `ReflectiveActivity` wrappers.
 
 ```
 POST /dev/dsl/execute   (@Profile("dev") only)
@@ -64,7 +67,7 @@ Content-Type: application/json
 
 ---
 
-Mass operation `.mass.kts` files are compiled by the same `compileDsl` Gradle task. Semantic validation is extended to
+Mass operation `.mass.java` files are compiled by the same `compileDsl` Gradle task. Semantic validation is extended to
 cover: all events referenced in `item { ctx -> }` exist in registry; all workflows referenced in `ctx.runWorkflow()`
-exist in registry; all helpers used in `source {}`, `lock {}`, `context {}` resolve correctly; signal references (
-`Signal.from("OP_CODE", ...)`) resolve to a known mass operation code.
+exist in registry; all helpers used in `source {}`, `lock {}`, `context {}` resolve correctly; signal references
+(`Signal.from("OP_CODE", ...)`) resolve to a known mass operation code.

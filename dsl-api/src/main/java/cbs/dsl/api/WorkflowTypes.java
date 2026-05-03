@@ -1,11 +1,12 @@
 package cbs.dsl.api;
 
 import io.avaje.jsonb.Json;
-import java.util.List;
-import java.util.Map;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
+import java.util.Map;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class WorkflowTypes {
@@ -13,11 +14,7 @@ public class WorkflowTypes {
   @Json
   @Builder(toBuilder = true)
   public record WorkflowInput(
-    String currentState,
-    String action,
-    Map<String, Object> params,
-    String workflowInstanceId
-  ) {
+      String currentState, String action, Map<String, Object> params, String workflowInstanceId) {
 
     public WorkflowInput(String currentState, String action) {
       this(currentState, action, Map.of(), null);
@@ -67,11 +64,7 @@ public class WorkflowTypes {
 
   @Json
   @Builder(toBuilder = true)
-  public record WorkflowOutput(
-    String nextState,
-    List<String> events,
-    String status
-  ) {
+  public record WorkflowOutput(String nextState, List<String> events, String status) {
 
     public WorkflowOutput(String nextState) {
       this(nextState, List.of(), "SUCCESS");
@@ -108,5 +101,4 @@ public class WorkflowTypes {
       return status;
     }
   }
-
 }

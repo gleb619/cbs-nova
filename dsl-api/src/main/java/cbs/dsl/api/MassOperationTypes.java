@@ -2,9 +2,7 @@ package cbs.dsl.api;
 
 import io.avaje.jsonb.Json;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Map;

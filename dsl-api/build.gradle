@@ -1,9 +1,4 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
-  alias(libs.plugins.kotlin.jvm)
-  alias(libs.plugins.kotlin.lombok)
   id 'java-library'
 }
 
@@ -13,18 +8,11 @@ apply(from: "${rootDir}/gradle/code-style.gradle")
 apply(from: "${rootDir}/gradle/checkstyle.gradle")
 
 dependencies {
-  implementation libs.kotlin.stdlib
   api libs.avaje.jsonb
 }
 
 java {
   toolchain {
     languageVersion = JavaLanguageVersion.of(25)
-  }
-}
-
-tasks.withType(KotlinCompile) {
-  compilerOptions {
-    jvmTarget.set(JvmTarget.fromTarget('25'))
   }
 }

@@ -2,18 +2,13 @@ package cbs.dsl.api.context;
 
 import cbs.dsl.api.TransactionDefinition;
 import cbs.dsl.api.TransactionTypes.TransactionInput;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-
-import java.util.Map;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import lombok.experimental.SuperBuilder;
+
+import java.util.Map;
 
 @Getter
 @Setter

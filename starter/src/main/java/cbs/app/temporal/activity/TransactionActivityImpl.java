@@ -2,7 +2,7 @@ package cbs.app.temporal.activity;
 
 import cbs.dsl.api.TransactionDefinition;
 import cbs.dsl.api.TransactionTypes.TransactionInput;
-import cbs.dsl.runtime.DslRegistry;
+import cbs.nova.registry.DslRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

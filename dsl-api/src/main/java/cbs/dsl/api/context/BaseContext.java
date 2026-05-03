@@ -16,4 +16,8 @@ public class BaseContext {
   private Long workflowExecutionId;
   private String performedBy;
   private String dslVersion;
+
+  public void println(String message) {
+    System.out.println("[DSL] " + message);
+  }
 }

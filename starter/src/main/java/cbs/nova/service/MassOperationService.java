@@ -2,7 +2,6 @@ package cbs.nova.service;
 
 import cbs.dsl.api.MassOperationDefinition;
 import cbs.dsl.api.TriggerDefinition;
-import cbs.dsl.runtime.DslRegistry;
 import cbs.nova.entity.MassOperationExecutionEntity;
 import cbs.nova.entity.MassOperationItemEntity;
 import cbs.nova.entity.MassOperationItemStatus;
@@ -12,6 +11,7 @@ import cbs.nova.model.MassOperationDto;
 import cbs.nova.model.MassOperationItemDto;
 import cbs.nova.model.MassOperationTriggerRequest;
 import cbs.nova.model.exception.EntityNotFoundException;
+import cbs.nova.registry.DslRegistry;
 import cbs.nova.repository.MassOperationExecutionRepository;
 import cbs.nova.repository.MassOperationItemRepository;
 import lombok.RequiredArgsConstructor;
@@ -95,7 +95,7 @@ public class MassOperationService {
     MassOperationExecutionEntity execution = executionRepository
         .findById(executionId)
         .orElseThrow(() -> new EntityNotFoundException("MassOperationExecution", executionId));
-    return itemRepository.findByMassOperationExecution(execution).stream()
+    return itemRepository.findByMassOperationExecutionId(execution.getId()).stream()
         .sorted(Comparator.comparing(MassOperationItemEntity::getId))
         .map(mapper::toItemDto)
         .toList();
@@ -109,8 +109,8 @@ public class MassOperationService {
         .orElseThrow(() -> new EntityNotFoundException("MassOperationExecution", executionId));
 
     List<MassOperationItemEntity> failedItems =
-        itemRepository.findByMassOperationExecutionAndStatus(
-            execution, MassOperationItemStatus.FAILED);
+        itemRepository.findByMassOperationExecutionIdAndStatus(
+            execution.getId(), MassOperationItemStatus.FAILED);
 
     if (failedItems.isEmpty()) {
       log.debug("No failed items to retry for execution id: {}", executionId);

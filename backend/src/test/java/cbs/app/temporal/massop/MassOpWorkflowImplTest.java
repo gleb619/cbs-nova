@@ -3,6 +3,7 @@ package cbs.app.temporal.massop;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -11,17 +12,16 @@ import cbs.dsl.api.LockDefinition;
 import cbs.dsl.api.MassOperationDefinition;
 import cbs.dsl.api.SourceDefinition;
 import cbs.dsl.api.context.MassOperationContext;
-import cbs.dsl.runtime.DslRegistry;
 import cbs.nova.entity.MassOperationExecutionEntity;
 import cbs.nova.entity.MassOperationItemEntity;
 import cbs.nova.entity.MassOperationStatus;
+import cbs.nova.registry.DslRegistry;
 import cbs.nova.repository.MassOperationExecutionRepository;
 import cbs.nova.repository.MassOperationItemRepository;
 import io.temporal.client.WorkflowFailedException;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.worker.Worker;
-import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,6 +31,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 class MassOpWorkflowImplTest {
 
@@ -89,13 +90,16 @@ class MassOpWorkflowImplTest {
     when(def.getLock()).thenReturn(lock);
 
     @SuppressWarnings("unchecked")
-    Consumer<MassOperationContext> contextBlock =
-        mock(Consumer.class);
+    Consumer<MassOperationContext> contextBlock = mock(Consumer.class);
     when(def.getContextBlock()).thenReturn(contextBlock);
 
     @SuppressWarnings("unchecked")
-    Consumer<MassOperationContext> itemBlock =
-        mock(Consumer.class);
+    Consumer<MassOperationContext> itemBlock = mock(Consumer.class);
+    if (itemBlockThrows) {
+      doThrow(new RuntimeException("item block failure"))
+          .when(itemBlock)
+          .accept(any(MassOperationContext.class));
+    }
     when(def.getItemBlock()).thenReturn(itemBlock);
 
     return def;

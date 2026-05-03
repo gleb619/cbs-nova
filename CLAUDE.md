@@ -5,10 +5,10 @@ Guidance for AI coding agents working in this repository.
 ## 1. Project Overview
 
 CBS-Nova is a **business process orchestration engine** for core banking. It replaces Spring-bean orchestration with
-a Temporal + PostgreSQL backend and a Kotlin Script DSL for business rules. Non-developers author rules in `.kts` files;
+a Temporal + PostgreSQL backend and a Java DSL for business rules. Non-developers author rules in `.java` DSL files;
 the engine compiles and executes them.
 
-**Stack:** Java 25 · Spring Boot 4 · Temporal · PostgreSQL · Kotlin Script (.kts) · Vue 3 · Nuxt 3 SPA · Tailwind
+**Stack:** Java 25 · Spring Boot 4 · Temporal · PostgreSQL · Java DSL · Vue 3 · Nuxt 3 SPA · Tailwind
 CSS v4 · piqure DI · i18next · Biome · Gradle multi-module
 
 > Design phase: `docs/` contains Technical Design Documents. Implementation is in progress (see `docs/plan.md`).
@@ -132,7 +132,7 @@ mixing instances returns `undefined`.
 | **MassOperation** | Batch orchestration. Per-item isolation. Emits `PARTIAL`/`COMPLETED` signals.          |
 | **Condition**     | Reusable boolean DSL block across events.                                              |
 
-**DSL:** Kotlin Script `.kts` in `cbs-rules` Gitea repo. Compiled to JAR; dev uses JSR-223.
+**DSL:** Java DSL `.java` in `cbs-rules` Gitea repo. Prod: code generation of Temporal workflows/activities; Dev: reflection-based runtime.
 **Versioning:** `{semver}-{gitCommitShort}`, instances locked to start version.
 **Single API:** `POST /api/events/execute` — callers use `eventNumber`, not workflow IDs.
 

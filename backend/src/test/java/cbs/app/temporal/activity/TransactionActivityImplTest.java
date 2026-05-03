@@ -12,7 +12,7 @@ import static org.mockito.Mockito.when;
 
 import cbs.dsl.api.TransactionDefinition;
 import cbs.dsl.api.TransactionTypes.TransactionInput;
-import cbs.dsl.runtime.DslRegistry;
+import cbs.nova.registry.DslRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;

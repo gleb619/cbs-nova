@@ -1,4 +1,6 @@
 # CBS-Nova Phase 1 Implementation Summary
+> **⚠️ v0.7 Pivot (2026-04-29):** Kotlin Script (.kts) DSL has been abandoned. The project now uses a **Java DSL** with dual execution modes: `GENERATED` (compile-time code generation of Temporal workflows/activities) and `REFLECTED` (reflection-based runtime for dev). This historical document describes the Kotlin-era implementation. See [docs/tdd.md](../tdd.md) and [docs/arch/dsl-design.md](../arch/dsl-design.md) for the current Java DSL design.
+
 
 **Version:** 1.0 | **Date:** 2026-04-12 | **Status:** COMPLETED
 

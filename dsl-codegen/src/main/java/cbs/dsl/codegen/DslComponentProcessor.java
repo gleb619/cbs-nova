@@ -1,11 +1,9 @@
 package cbs.dsl.codegen;
 
-import cbs.dsl.api.ConditionDefinition;
+import cbs.dsl.api.ConditionFunction;
 import cbs.dsl.api.DslComponent;
-import cbs.dsl.api.HelperDefinition;
-import cbs.dsl.api.MassOperationDefinition;
-import cbs.dsl.api.TransactionDefinition;
-import cbs.dsl.api.WorkflowDefinition;
+import cbs.dsl.api.HelperFunction;
+import cbs.dsl.api.TransactionFunction;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
@@ -22,10 +20,9 @@ import java.util.*;
 public class DslComponentProcessor extends AbstractProcessor {
 
   private static final Map<String, DslInterfaceType> INTERFACE_TYPE_MAP = Map.of(
-      TransactionDefinition.class.getName(), DslInterfaceType.TRANSACTION,
-      HelperDefinition.class.getName(), DslInterfaceType.HELPER,
-      ConditionDefinition.class.getName(), DslInterfaceType.CONDITION
-  );
+      TransactionFunction.class.getName(), DslInterfaceType.TRANSACTION,
+      HelperFunction.class.getName(), DslInterfaceType.HELPER,
+      ConditionFunction.class.getName(), DslInterfaceType.CONDITION);
 
   private boolean processed = false;
 
@@ -49,15 +46,16 @@ public class DslComponentProcessor extends AbstractProcessor {
       validateAndCollect(typeElement, registrations);
     }
 
-    if (!registrations.isEmpty()) {
-      try {
+    try {
+      if (!registrations.isEmpty()) {
+        new DefinitionWrapperGenerator(processingEnv.getFiler()).generate(registrations);
         new RegistrationGenerator(processingEnv.getFiler()).generate(registrations);
-        processed = true;
-      } catch (IOException e) {
-        processingEnv
-            .getMessager()
-            .printMessage(Diagnostic.Kind.ERROR, "Code generation failed: " + e.getMessage());
       }
+      processed = true;
+    } catch (IOException e) {
+      processingEnv
+          .getMessager()
+          .printMessage(Diagnostic.Kind.ERROR, "Code generation failed: " + e.getMessage());
     }
 
     return true;
@@ -82,17 +80,19 @@ public class DslComponentProcessor extends AbstractProcessor {
           .getMessager()
           .printMessage(
               Diagnostic.Kind.ERROR,
-              "Class '%s' annotated with @DslComponent must have a public no-arg constructor".formatted(className),
+              "Class '%s' annotated with @DslComponent must have a public no-arg constructor"
+                  .formatted(className),
               typeElement);
       return;
     }
 
     // Find implemented allowed interface
-    List<String> implementedAllowed = new ArrayList<>();
+    List<DeclaredType> implementedAllowed = new ArrayList<>();
     for (TypeMirror iface : typeElement.getInterfaces()) {
-      String ifaceName = ((DeclaredType) iface).asElement().toString();
+      DeclaredType declaredType = (DeclaredType) iface;
+      String ifaceName = declaredType.asElement().toString();
       if (INTERFACE_TYPE_MAP.containsKey(ifaceName)) {
-        implementedAllowed.add(ifaceName);
+        implementedAllowed.add(declaredType);
       }
     }
 
@@ -101,7 +101,8 @@ public class DslComponentProcessor extends AbstractProcessor {
           .getMessager()
           .printMessage(
               Diagnostic.Kind.ERROR,
-              "Class '%s' must implement exactly one of: %s".formatted(className, INTERFACE_TYPE_MAP.keySet()),
+              "Class '%s' must implement exactly one of: %s"
+                  .formatted(className, INTERFACE_TYPE_MAP.keySet()),
               typeElement);
       return;
     }
@@ -111,8 +112,8 @@ public class DslComponentProcessor extends AbstractProcessor {
           .getMessager()
           .printMessage(
               Diagnostic.Kind.ERROR,
-              "Class '%s' implements multiple DSL definition interfaces; must implement exactly one".formatted(
-                  className),
+              "Class '%s' implements multiple DSL function interfaces; must implement exactly one"
+                  .formatted(className),
               typeElement);
       return;
     }
@@ -128,13 +129,29 @@ public class DslComponentProcessor extends AbstractProcessor {
       return;
     }
 
-    String implementedInterface = implementedAllowed.get(0);
-    DslInterfaceType interfaceType = INTERFACE_TYPE_MAP.get(implementedInterface);
+    DeclaredType implementedInterface = implementedAllowed.get(0);
+    DslInterfaceType interfaceType =
+        INTERFACE_TYPE_MAP.get(implementedInterface.asElement().toString());
     if (interfaceType == null) {
       throw new IllegalStateException("Unsupported interface: " + implementedInterface);
     }
 
-    registrations.add(
-        new RegistrationSpec(packageName, className, annotation.code(), interfaceType));
+    List<? extends TypeMirror> typeArgs = implementedInterface.getTypeArguments();
+    if (typeArgs.size() != 2) {
+      processingEnv
+          .getMessager()
+          .printMessage(
+              Diagnostic.Kind.ERROR,
+              "Class '%s' must declare exactly two type arguments for %s"
+                  .formatted(className, implementedInterface),
+              typeElement);
+      return;
+    }
+
+    String inputType = typeArgs.get(0).toString();
+    String outputType = typeArgs.get(1).toString();
+
+    registrations.add(new RegistrationSpec(
+        packageName, className, annotation.code(), interfaceType, inputType, outputType));
   }
 }

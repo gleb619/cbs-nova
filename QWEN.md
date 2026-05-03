@@ -6,7 +6,7 @@ This file provides guidance to Qwen Code when working with code in this reposito
 
 CBS-Nova is a **business process orchestration engine** for core banking. See `AGENTS.md` for full architecture details.
 
-**Stack:** Java 25 · Spring Boot · Temporal · PostgreSQL · Kotlin Script (.kts) · Vue 3 admin UI · Nuxt.js BFF · Biome ·
+**Stack:** Java 25 · Spring Boot · Temporal · PostgreSQL · Java DSL · Vue 3 admin UI · Nuxt.js BFF · Biome ·
 Gradle
 
 > This repo is currently in design phase. `docs/` contains TDDs; no implementation code exists yet.

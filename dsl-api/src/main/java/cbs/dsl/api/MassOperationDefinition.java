@@ -1,6 +1,7 @@
 package cbs.dsl.api;
 
 import cbs.dsl.api.context.MassOperationContext;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
@@ -14,52 +15,93 @@ import java.util.function.Consumer;
  */
 public interface MassOperationDefinition {
 
-  /** Canonical code used to look up this mass operation in the registry. */
+  /**
+   * Canonical code used to look up this mass operation in the registry.
+   *
+   * @return the mass operation code
+   */
   String getCode();
 
   /**
    * List of parameter definitions declared in the {@code parameters { }} block. Used for validation
    * and documentation purposes.
+   *
+   * @return the parameter definitions
    */
   default List<ParameterDefinition> getParameters() {
     return Collections.emptyList();
   }
 
-  /** Category used for grouping and scheduling. */
+  /**
+   * Category used for grouping and scheduling.
+   *
+   * @return the category
+   */
   String getCategory();
 
-  /** Triggers that determine when this mass operation runs. */
+  /**
+   * Triggers that determine when this mass operation runs.
+   *
+   * @return the triggers
+   */
   List<TriggerDefinition> getTriggers();
 
-  /** Source that loads the dataset to process. */
+  /**
+   * Source that loads the dataset to process.
+   *
+   * @return the source definition
+   */
   SourceDefinition getSource();
 
   /**
-   * Optional lock definition. When present and {@link LockDefinition#isLocked} returns {@code
-   * true}, the operation is deferred until the lock is released.
+   * Optional lock definition. When present and {@link LockDefinition#isLocked} returns
+   * {@code true}, the operation is deferred until the lock is released.
+   *
+   * @return the lock definition, or {@code null}
    */
   default LockDefinition getLock() {
     return null;
   }
 
-  /** Optional context enrichment block that runs before loading the dataset. */
+  /**
+   * Optional context enrichment block that runs before loading the dataset.
+   *
+   * @return the context block
+   */
   default Consumer<MassOperationContext> getContextBlock() {
     return ctx -> {};
   }
 
-  /** Block executed for each item in the dataset. */
+  /**
+   * Block executed for each item in the dataset.
+   *
+   * @return the item block
+   */
   Consumer<MassOperationContext> getItemBlock();
 
-  /** Callback invoked when a partial completion signal is received. */
+  /**
+   * Callback invoked when a partial completion signal is received.
+   *
+   * @return the partial callback, or {@code null}
+   */
   default Consumer<SignalTypes.Signal> getOnPartial() {
     return null;
   }
 
-  /** Callback invoked when the operation is fully completed. */
+  /**
+   * Callback invoked when the operation is fully completed.
+   *
+   * @return the completed callback, or {@code null}
+   */
   default Consumer<SignalTypes.Signal> getOnCompleted() {
     return null;
   }
 
-  /** Executes the mass operation with the given input. */
+  /**
+   * Executes the mass operation with the given input.
+   *
+   * @param input the operation input
+   * @return the operation output
+   */
   MassOperationTypes.MassOperationOutput execute(MassOperationTypes.MassOperationInput input);
 }

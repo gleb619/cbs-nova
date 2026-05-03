@@ -48,7 +48,7 @@ Edit `docs/plan.md`: change the picked task's status from `todo` → `in-progres
 Do this **before** writing the task file. This is the "lock" that prevents concurrent work on the same task.
 
 ```
-| T03 | Create `dsl` Gradle module (Kotlin)  | 0-Infra | in-progress | — | T04 |
+| T03 | Create `dsl` Gradle module (Java)  | 0-Infra | in-progress | — | T04 |
 ```
 
 ---
@@ -93,7 +93,7 @@ Create `docs/tasks/{id}-{slug}.md` by copying [`docs/task-template.md`](task-tem
 - Naming: *Entity, *Repository, *Service, *Controller, *Dto (ArchUnit enforced)
 - Test methods: shouldXxxWhenYyy + @DisplayName on every test
 - Use @MockitoBean NOT @MockBean (Spring Boot 4.x)
-- Kotlin files in dsl module: standard Kotlin formatting
+- Java files: Google Java Format (run ./gradlew spotlessApply)
 - Run ./gradlew spotlessApply before submitting
 ```
 
@@ -178,7 +178,7 @@ Edit `docs/plan.md`:
    entry
 
 ```markdown
-| T04 | DSL API: Kotlin interfaces & context types | 1-DSL | DONE | T03 | T05 |
+| T04 | DSL API: Java interfaces & context types | 1-DSL | DONE | T03 | T05 |
 ```
 
 ---

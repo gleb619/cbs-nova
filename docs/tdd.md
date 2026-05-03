@@ -1,8 +1,8 @@
 # Technical Design Document: CBS-Nova Business Orchestration Engine
 
-**Version:** v0.6.2 | **Date:** 2026-04-19 | **Status:** For team review
+**Version:** v0.7.0 | **Date:** 2026-04-29 | **Status:** For team review
 
-**Stack:** Java 25 · Spring Boot · Temporal · PostgreSQL · Kotlin Script (.kts) · Gradle 9.x · Vue 3 + Nuxt 3 (admin UI)
+**Stack:** Java 25 · Spring Boot · Temporal · PostgreSQL · Java DSL · Gradle 9.x · Vue 3 + Nuxt 3 (admin UI)
 
 ---
 
@@ -17,8 +17,9 @@
 
 ## 1. Overview & Goals
 
-CBS-Nova replaces a Spring-bean orchestration engine with Temporal + PostgreSQL for state and Kotlin Script (`.kts`) for
-business-editable rules. Non-developers author rules in `.kts` files; the engine compiles and executes them.
+CBS-Nova replaces a Spring-bean orchestration engine with Temporal + PostgreSQL for state and a **Java DSL** for
+business-editable rules. Non-developers author rules in `.java` DSL files; the engine either generates Temporal
+workflows/activities from them (production) or executes them via reflection (development).
 
 **Key goals:**
 
@@ -28,6 +29,13 @@ business-editable rules. Non-developers author rules in `.kts` files; the engine
 - Full observability — every execution produces a `workflow_execution` artifact (context, display data, transition log)
 - Resilience — per-item failure isolation in batch operations; failed items are re-runnable
 - Unified model — workflowless events use an auto-generated stub workflow; `workflow_execution_id` is never null
+
+**v0.7 pivot:** Kotlin Script (.kts) is abandoned in favor of a Java DSL with dual execution modes:
+- **Production:** 3-layer compile-time code generation → Temporal workflows/activities → Spring beans
+  - Layer 1: `@DslComponent` `*Function` → `*Definition` wrappers + SPI registration
+  - Layer 2: `.java` DSL files → `EventDefinition` / `WorkflowDefinition` / `MassOperationDefinition`
+  - Layer 3: `*Definition` → Temporal workflow/activity classes
+- **Development:** Layer 1 + Layer 2 compile normally; Layer 3 replaced by generic `ReflectiveWorkflow` / `ReflectiveActivity` wrappers
 
 **v0.5 additions:** MassOperation (batch orchestration with signal-driven chaining) + refined transitions (multi-event
 closures, `ctx.runEvent()` / `ctx.resumeEvent()` / `ctx.await()`).
@@ -49,7 +57,7 @@ Spring Boot Application
   MassOperationController / MassOperationService / MassOperationScheduler / SignalEmitter
   ContextEncryptionService
   └─ DSL Runtime (WorkflowDefinition, EventDefinition, TransactionDefinition,
-                  HelperDefinition, MassOperationDefinition, SignalDefinition)
+                  HelperDefinition, ConditionDefinition, MassOperationDefinition)
   │                                    │
   ▼                                    ▼
 Temporal Server                    PostgreSQL
@@ -71,6 +79,13 @@ call — bad input is rejected before a workflow instance is created.
 
 Request flow: `Browser → Vite (9000) → Nuxt BFF (3000) → Backend (7070)`
 
+### DSL Execution Modes
+
+| Mode         | Environment                          | Mechanism                                                     | Artifact                    |
+|--------------|--------------------------------------|---------------------------------------------------------------|-----------------------------|
+| `GENERATED`  | production / CI / non-dev backend    | 3-layer codegen: Function→Definition, DSL→Definition, Definition→Temporal | Compiled workflow/activity  |
+| `REFLECTED`  | development only (`@Profile("dev")`) | Layer 1+2 compile; Layer 3 replaced by reflective wrappers    | Generic interpreter wrapper |
+
 ---
 
 ## 3. Core Entities
@@ -79,10 +94,10 @@ Request flow: `Browser → Vite (9000) → Nuxt BFF (3000) → Backend (7070)`
 |-------------------|--------------------------------------------------------------------------------------------------------------|
 | **Workflow**      | State machine: `states`, `initial`, `terminalStates`, `transitions`. All fields optional (inferred).         |
 | **Event**         | Triggered operation: `context {}`, `display {}`, `transactions {}`, `finish {}`. Standalone → stub workflow. |
-| **Transaction**   | Temporal Activity: `preview()`, `execute()`, `rollback()`. Rollback is a compensating ledger entry.          |
-| **Helper**        | `HelperFunction<I, O>` — Spring bean or inline DSL (SQL/HTTP). Used in `context {}` and `transactions {}`.   |
+| **Transaction**   | Temporal Activity. Code: `TransactionFunction<I,O>` with `@DslComponent` → generated `TransactionDefinition`. Rollback is a compensating ledger entry. |
+| **Helper**        | Reusable computation. Code: `HelperFunction<I,O>` with `@DslComponent` → generated `HelperDefinition`. Used in `context {}` and `transactions {}`.     |
+| **Condition**     | Reusable boolean predicate. Code: `ConditionFunction<I,O>` with `@DslComponent` → generated `ConditionDefinition`. Referenced in `when/then/otherwise`. |
 | **MassOperation** | Batch orchestration: data source, triggers, business lock, per-item execution, PARTIAL/COMPLETED signals.    |
-| **Condition**     | Reusable boolean DSL block, referenced in `when/then/otherwise` inside `transactions {}`.                    |
 
 **Action enum:** `PREVIEW` · `SUBMIT` · `APPROVE` · `REJECT` · `CANCEL` · `CLOSE` · `ROLLBACK`
 
@@ -98,7 +113,7 @@ Request flow: `Browser → Vite (9000) → Nuxt BFF (3000) → Backend (7070)`
 
 | Document                                                 | Contents                                                                                                      |
 |----------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
-| [arch/dsl-design.md](arch/dsl-design.md)                 | Full DSL reference, entity interfaces, `.kts` file/folder conventions                                         |
+| [arch/dsl-design.md](arch/dsl-design.md)                 | Full DSL reference, entity interfaces, `.java` file/folder conventions, code generation vs reflection          |
 | [arch/execution-model.md](arch/execution-model.md)       | Execution flow, `runEvent` vs `resumeEvent`, context hierarchy                                                |
 | [arch/workflow-lifecycle.md](arch/workflow-lifecycle.md) | State machine concepts, `prolong()`, example lifecycle                                                        |
 | [arch/mass-operation.md](arch/mass-operation.md)         | Full MassOperation model, lock, triggers, signals, retry                                                      |
@@ -136,7 +151,7 @@ Request flow: `Browser → Vite (9000) → Nuxt BFF (3000) → Backend (7070)`
 - [Temporal Java SDK — Workflow Versioning](https://docs.temporal.io/dev-guide/java/versioning)
 - [Temporal Web UI — Self-Hosted Deployment](https://docs.temporal.io/web-ui)
 - [Saga Pattern & Compensating Transactions](https://learn.microsoft.com/en-us/azure/architecture/reference-architectures/saga/saga)
-- [Kotlin DSL Design Patterns](https://blog.jetbrains.com/kotlin/2021/10/kotlin-dsl-best-practices/)
+- [Java Annotation Processing API](https://docs.oracle.com/en/java/javase/25/docs/api/java.compiler/javax/annotation/processing/package-summary.html)
 - [bpmn-js](https://bpmn.io/toolkit/bpmn-js/)
 - [Как мы строили оркестрацию на Temporal (Habr)](https://habr.com/ru/articles/970730/)
 - [Temporal: практика применения в продакшене (Habr)](https://habr.com/ru/articles/966972/)

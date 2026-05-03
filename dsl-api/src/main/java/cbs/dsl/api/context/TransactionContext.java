@@ -1,11 +1,9 @@
 package cbs.dsl.api.context;
 
-import lombok.Builder;
 import lombok.Data;
-import lombok.Getter;
+import lombok.experimental.SuperBuilder;
 
 import java.util.Map;
-import lombok.experimental.SuperBuilder;
 
 @Data
 @SuperBuilder(builderMethodName = "transactionBuilder")

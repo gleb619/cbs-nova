@@ -2,6 +2,7 @@ package cbs.dsl.api;
 
 import cbs.dsl.api.WorkflowTypes.WorkflowInput;
 import cbs.dsl.api.WorkflowTypes.WorkflowOutput;
+
 import java.util.List;
 
 /**
@@ -12,21 +13,46 @@ import java.util.List;
  */
 public interface WorkflowDefinition {
 
-  /** Canonical code used to look up this workflow in the registry. */
+  /**
+   * Canonical code used to look up this workflow in the registry.
+   *
+   * @return the workflow code
+   */
   String getCode();
 
-  /** All states in this workflow. */
+  /**
+   * All states in this workflow.
+   *
+   * @return the states
+   */
   List<String> getStates();
 
-  /** The initial state when a workflow instance is created. */
+  /**
+   * The initial state when a workflow instance is created.
+   *
+   * @return the initial state
+   */
   String getInitial();
 
-  /** States that terminate the workflow. */
+  /**
+   * States that terminate the workflow.
+   *
+   * @return the terminal states
+   */
   List<String> getTerminalStates();
 
-  /** Transition rules governing state changes. */
+  /**
+   * Transition rules governing state changes.
+   *
+   * @return the transition rules
+   */
   List<TransitionRuleDefinition> getTransitions();
 
-  /** Executes a state transition based on the current state and action. */
+  /**
+   * Executes a state transition based on the current state and action.
+   *
+   * @param input the workflow input
+   * @return the workflow output
+   */
   WorkflowOutput execute(WorkflowInput input);
 }

@@ -13,6 +13,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 
@@ -41,9 +43,11 @@ public class EventExecutionEntity {
   @Column(nullable = false, length = 20)
   private EventStatus status;
 
+  @JdbcTypeCode(SqlTypes.JSON)
   @Column(nullable = false, columnDefinition = "jsonb")
   private String context;
 
+  @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "executed_transactions", nullable = false, columnDefinition = "jsonb")
   private String executedTransactions;
 

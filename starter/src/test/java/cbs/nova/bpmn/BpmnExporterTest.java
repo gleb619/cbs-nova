@@ -6,7 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import cbs.dsl.api.WorkflowDefinition;
-import cbs.dsl.runtime.DslRegistry;
+import cbs.nova.registry.DslRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
