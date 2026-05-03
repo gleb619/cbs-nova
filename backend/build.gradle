@@ -33,6 +33,8 @@ sourceSets {
 
 dependencies {
   implementation project(":starter")
+  implementation project(":dsl")
+  implementation libs.temporal.sdk
 
   // -- Testing --
   testImplementation libs.bundles.spring.test

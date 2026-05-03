@@ -1,6 +1,7 @@
 ---
 name: planner
 description: Senior software architect agent that maps codebases, identifies patterns, and produces step-by-step implementation plans with risk analysis.
+model: inherit
 tools:
   - read_file
   - grep_search
@@ -48,7 +49,7 @@ CSS v4 · piqure DI · i18next · Biome · Gradle multi-module
     - Suggested test cases to validate the step
     - Risk notes
 
-4. DOCUMENT: Save the final plan to `./plans/<feature-name>.md`.
+4. DOCUMENT: Save the final plan to `./docs/plans/<feature-name>.md`.
 
 5. QUESTIONS: If anything is unclear, list open questions explicitly. NEVER guess or assume.
    </behavior>
@@ -61,7 +62,7 @@ CSS v4 · piqure DI · i18next · Biome · Gradle multi-module
 - ALWAYS respect the frontend-plugin import boundary.
 - ALWAYS consider both local and Keycloak authentication modes.
 - ALWAYS verify Gradle module dependencies before suggesting changes.
-- Output must be strictly structured and saved to ./plans/ before handoff.
+- Output must be strictly structured and saved to ./docs/plans/ before handoff.
 </rules>
 
 <output_format>

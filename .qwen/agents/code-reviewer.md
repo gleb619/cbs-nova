@@ -1,6 +1,7 @@
 ---
 name: code-reviewer
 description: Senior code reviewer agent that evaluates changes across security, quality, patterns, regression risk, and test coverage.
+model: inherit
 tools:
   - read_file
   - grep_search

@@ -77,3 +77,7 @@ logging:
   level:
     root: INFO
     cbs: DEBUG
+
+temporal:
+  service-address: 127.0.0.1:7233
+  task-queue: WORKFLOW_TASK_QUEUE

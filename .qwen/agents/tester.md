@@ -1,6 +1,7 @@
 ---
 name: tester
 description: QA engineer agent specialized in regression prevention, test pattern matching, and full-suite validation.
+model: inherit
 tools:
   - read_file
   - write_file

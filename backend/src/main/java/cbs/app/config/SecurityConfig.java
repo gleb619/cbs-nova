@@ -1,11 +1,6 @@
 package cbs.app.config;
 
 import cbs.app.config.SecurityConfig.LocalAuthProperties;
-import java.security.KeyFactory;
-import java.security.interfaces.RSAPublicKey;
-import java.security.spec.X509EncodedKeySpec;
-import java.util.Base64;
-import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -32,20 +27,26 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.security.KeyFactory;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
+import java.util.List;
+
 @Configuration
 @EnableWebSecurity
 @EnableConfigurationProperties(LocalAuthProperties.class)
 public class SecurityConfig {
 
   @Bean
-  public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtDecoder jwtDecoder,
-      CorsConfigurationSource corsConfigurationSource)
+  public SecurityFilterChain securityFilterChain(
+      HttpSecurity http, JwtDecoder jwtDecoder, CorsConfigurationSource corsConfigurationSource)
       throws Exception {
     return http.csrf(csrf -> csrf.disable())
         .cors(cors -> cors.configurationSource(corsConfigurationSource))
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .authorizeHttpRequests(auth -> auth.requestMatchers(
-                HttpMethod.OPTIONS, "/**").permitAll()
+        .authorizeHttpRequests(auth -> auth.requestMatchers(HttpMethod.OPTIONS, "/**")
+            .permitAll()
             .requestMatchers(
                 "/api/public/**", "/actuator/health",
                 "/swagger-ui/**", "/v3/api-docs/**")

@@ -35,6 +35,7 @@ Qwen acts as the **executor**: it reads a task file and performs the work.
       │
       ▼
 [3. Claude: Invoke Qwen via CLI]
+      │   source ~/.nvm/nvm.sh && nvm use v22.20.0 && \
       │   qwen -y "Read docs/tasks/{task-name}.md and follow all instructions
       │            inside. Write your result to docs/results/{task-name}.result.md"
       │            --output-format text
@@ -130,11 +131,15 @@ After completing the task, write a result file to:
 After writing the task file, Claude runs:
 
 ```bash
-qwen -y "Read the file docs/tasks/{task-name}.md carefully and follow all instructions inside it exactly. After completing all work, write your result summary to docs/results/{task-name}.result.md as instructed." --output-format text
+qwen-run {task-name} -y "Read the file docs/tasks/{task-name}.md carefully and follow all instructions inside it exactly. After completing all work, write your result summary to docs/results/{task-name}.result.md as instructed." --output-format text
 ```
 
 > **Note:** `-y` enables yolo mode (auto-approves file edits — required for unattended execution).
 > `--output-format text` produces clean output for Claude to parse.
+> **`qwen-run`** is a wrapper at `~/.local/bin/qwen-run` that handles nvm setup automatically.
+> It supports an optional `--timeout <sec>` argument before `{task-name}` (default: 300s).
+> Output is streamed directly to stdout, and also logged to `/tmp/logs/{task-name}.log`.
+> If you need to verify it's still running in the background, check if `/tmp/logs/{task-name}.pid` exists.
 
 ---
 
@@ -216,7 +221,7 @@ Please fix these specifically before re-running verification.
 - Then re-invoke:
 
 ```bash
-qwen -y "Read the updated file docs/tasks/{task-name}.md carefully. Pay attention to the 'Retry Notes' section at the bottom. Fix the listed issues and update docs/results/{task-name}.result.md with a fresh result." --output-format text
+qwen-run {task-name} -y "Read the updated file docs/tasks/{task-name}.md carefully. Pay attention to the 'Retry Notes' section at the bottom. Fix the listed issues and update docs/results/{task-name}.result.md with a fresh result." --output-format text
 ```
 
 ---
