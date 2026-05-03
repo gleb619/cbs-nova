@@ -7,6 +7,7 @@
 ## 4.1 File & Folder Convention
 
 Each event owns a folder. All DSL objects for that event live in the same folder — analogous to a Java package.
+The repository also includes a minimal `build.gradle.kts` to run DSL validation and development checks.
 
 ```
 cbs-rules/
@@ -69,6 +70,38 @@ Mass operation DSL files use the same `#import` syntax, with additional framewor
 #import framework.Action
 #import framework.Signal
 ```
+
+---
+
+## 4.2.1 Execution Modes
+
+DSL supports two execution modes with a shared contract surface from `dsl/dsl-api`.
+
+| Mode      | Environment                          | Source of definitions                 | Primary module                         | Notes                                   |
+|-----------|--------------------------------------|---------------------------------------|----------------------------------------|-----------------------------------------|
+| `STRICT`  | production / CI / non-dev backend    | compiled Java classes/JAR from `.kts` | `dsl/dsl-compiler` + `dsl/dsl-runtime` | required default mode                   |
+| `LENIENT` | development only (`@Profile("dev")`) | raw `.kts` interpreted directly       | `dsl/dsl-runtime`                      | skips compile/package for fast feedback |
+
+### Strict Mode
+
+- Backend syncs DSL sources from Gitea (JGit), invokes compiler flow, and consumes produced DSL artifact as
+  `runtimeOnly`.
+- Runtime execution uses compiled classes/JAR only.
+- Semantic validation is enforced by compiler tasks before runtime usage.
+
+### Lenient Mode
+
+- `DevDslController` uses JGit sync and `dsl/dsl-runtime` interpreter path to execute `.kts` without compile/package.
+- Intended for local iteration speed and diagnostics.
+- Must not be used as production execution path.
+
+### Shared API Contract Strategy
+
+- Both strict and lenient paths bind to the same interfaces in `dsl/dsl-api` (`WorkflowDefinition`, `EventDefinition`,
+  `TransactionDefinition`, `MassOperationDefinition`, context types).
+- This keeps DSL semantics consistent while allowing separate implementations:
+  - compiled implementation for stable runtime,
+  - interpreted implementation for fast development loop.
 
 ---
 

@@ -7,9 +7,10 @@
 ```
 root/
 ├── app/
-├── dsl-api/
-├── dsl-runtime/
-├── dsl-compiler/
+├── dsl/
+│   ├── dsl-api/
+│   ├── dsl-compiler/
+│   └── dsl-runtime/
 ├── temporal-core/
 ├── bpmn-export/
 ├── mass-operation-core/          ← NEW: MassOp workflow + activity + scheduler
@@ -49,7 +50,7 @@ app/src/main/java/
 └── dsl/
     └── DslLoader.java
 
-dsl-api/src/main/kotlin/
+dsl/dsl-api/src/main/kotlin/
 ├── WorkflowDefinition.kt
 ├── TransitionRule.kt
 ├── TransitionContext.kt                  // NEW: ctx for transition closures
@@ -81,7 +82,7 @@ dsl-api/src/main/kotlin/
 ├── SignalType.kt                        // NEW
 └── Action.kt
 
-dsl-runtime/src/main/kotlin/
+dsl/dsl-runtime/src/main/kotlin/
 ├── WorkflowBuilder.kt
 ├── EventBuilder.kt
 ├── TransactionBuilder.kt
@@ -103,9 +104,10 @@ dsl-runtime/src/main/kotlin/
 ```
 root/
 ├── app/                         ← Spring Boot (Java 25)
-├── dsl-api/                     ← DSL interfaces (Kotlin)
-├── dsl-runtime/                 ← Builder DSL for .kts (Kotlin)
-├── dsl-compiler/                ← Gradle tasks: download, compile, validate
+├── dsl/
+│   ├── dsl-api/                 ← DSL interfaces (Kotlin)
+│   ├── dsl-compiler/            ← Gradle tasks: download, compile, validate, publish
+│   └── dsl-runtime/             ← runtime loader + lenient dev-mode execution
 ├── temporal-core/               ← Workflow + Activity base classes (Java)
 ├── bpmn-export/                 ← BPMN 2.0 XML generation from DSL model
 └── build.gradle.kts
@@ -135,7 +137,7 @@ app/src/main/java/
 └── dsl/
     └── DslLoader.java
 
-dsl-api/src/main/kotlin/
+dsl/dsl-api/src/main/kotlin/
 ├── WorkflowDefinition.kt
 ├── TransitionRule.kt
 ├── EventDefinition.kt
@@ -157,22 +159,18 @@ dsl-api/src/main/kotlin/
 ├── HelperFunction.kt
 └── Action.kt
 
-dsl-runtime/src/main/kotlin/
-├── WorkflowBuilder.kt
-├── EventBuilder.kt
-├── TransactionBuilder.kt
-├── HelperBuilder.kt
-├── ConditionBuilder.kt
-├── StubWorkflowGenerator.kt
-├── ConditionDsl.kt                            // when/then/orWhen/otherwise
-├── StepHandle.kt                              // .then() chaining
-└── DslRegistry.kt
+dsl/dsl-runtime/src/main/kotlin/
+├── DslArtifactLoader.kt                        // load compiled DSL JAR/classes for prod runtime
+├── DevDslEvaluator.kt                          // lenient dev execution of raw .kts (no compile/package)
+├── DevDslRegistryAdapter.kt                    // adapter shared with API contracts
+└── ExecutionMode.kt                            // STRICT / LENIENT mode handling
 
-dsl-compiler/src/main/kotlin/
+dsl/dsl-compiler/src/main/kotlin/
 ├── tasks/
 │   ├── DownloadDslTask.kt
 │   ├── CompileDslTask.kt
-│   └── ValidateDslTask.kt
+│   ├── ValidateDslTask.kt
+│   └── PublishDslToMavenLocalTask.kt
 ├── ImportResolver.kt
 ├── SemanticValidator.kt
 └── KtsCompiler.kt
@@ -187,3 +185,13 @@ temporal-core/src/main/java/
 ├── BaseTransactionActivity.java
 └── WorkflowContextBridge.java
 ```
+
+---
+
+## Migration Notes (hard rename)
+
+- `dsl` root module is split into nested Gradle submodules: `dsl/dsl-api`, `dsl/dsl-compiler`, `dsl/dsl-runtime`.
+- Existing legacy package locations under old `dsl/src/main/kotlin/` are deprecated and should be removed once imports
+  are switched.
+- Deprecated runtime-builder classes (`WorkflowBuilder`, `EventBuilder`, `TransactionBuilder`, `DslRegistry`) should be
+  migrated to `dsl/dsl-api` contracts + `dsl/dsl-runtime` adapters, then deleted from legacy paths.

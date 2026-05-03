@@ -28,4 +28,5 @@ pinia.use(piniaPersist);
 app.use(pinia);
 
 app.use(router);
-app.mount('#app');
+
+export { app };

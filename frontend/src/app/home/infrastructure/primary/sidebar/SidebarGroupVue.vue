@@ -118,17 +118,24 @@ export default defineComponent({
     },
     isRouteActive(routeName: string | undefined): boolean {
       if (!routeName) return false;
-      return this.$route.name === routeName;
+      const currentName = this.$route.name;
+      const currentPath = this.$route.path;
+      // Exact name match
+      if (currentName === routeName) return true;
+      // For routes with params (e.g., executions/:id), check if current path starts with the base path
+      const targetRoute = this.$router.getRoutes().find(r => r.name === routeName);
+      if (targetRoute?.path) {
+        const basePath = targetRoute.path.startsWith('/') ? targetRoute.path : `/${targetRoute.path}`;
+        const pathBase = basePath.split(':')[0];
+        if (pathBase.length > 1 && currentPath.startsWith(pathBase)) return true;
+      }
+      return false;
     },
     /** Navigate to a route by name, safely catching errors for unregistered routes */
     navigateTo(routeName: string) {
-      try {
-        this.$router.push({ name: routeName }).catch(() => {
-          // Route doesn't exist — silently ignore (TBD feature)
-        });
-      } catch {
-        // $router may not be available in all contexts
-      }
+      this.$router.push({ name: routeName }).catch(() => {
+        // Route doesn't exist — silently ignore (TBD feature)
+      });
     },
   },
 });

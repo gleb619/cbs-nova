@@ -195,9 +195,10 @@ touching Temporal — bad input is rejected before any Temporal invocation, avoi
 
 ### File & Folder Convention
 
-DSL files are stored in the `cbs-rules` Gitea repository. Each event owns a folder. All DSL objects for that event —
-event definition, transactions, helpers — live in the same folder, analogous to a Java package. Workflow definitions
-live at the repository root. Mass operation definitions live under `mass-operations/`.
+DSL files are stored in the `cbs-rules` Gitea repository. The repository also contains a minimal
+`build.gradle.kts` used for local validation and development tooling entrypoints. Each event owns a folder. All DSL
+objects for that event — event definition, transactions, helpers — live in the same folder, analogous to a Java
+package. Workflow definitions live at the repository root. Mass operation definitions live under `mass-operations/`.
 
 ```
 cbs-rules/
@@ -387,18 +388,19 @@ A companion `mass_operation_item` table holds one row per item per run, with `it
 
 ## 9. Build & Deploy Pipeline
 
-The `cbs-rules` Gitea repository stores `.kts` files only — no build logic, no application config. The `main` branch is
-production; feature branches are used for new or changed rules. All changes flow through CI before deployment.
+The `cbs-rules` Gitea repository stores DSL sources (`.kts`) plus a minimal `build.gradle.kts` for validation/dev
+execution. It does not store application runtime configuration. The `main` branch is production; feature branches are
+used for new or changed rules. All changes flow through CI before deployment.
 
 ```
 cbs-rules Gitea: push to branch
   │
   └─► GitLab CI / Jenkins
         │
-        ├─ Gradle: downloadDsl
-        │    └─ Clone DSL branch from cbs-rules (fallback to main)
+        ├─ backend: downloadDsl (JGit)
+        │    └─ Clone/pull DSL branch from cbs-rules (fallback to main)
         │
-        ├─ Gradle: compileDsl
+        ├─ dsl/dsl-compiler: compileDsl
         │    ├─ Compile all .kts files
         │    ├─ Resolve all #import declarations
         │    ├─ Semantic validation:
@@ -409,8 +411,11 @@ cbs-rules Gitea: push to branch
         │    │    └─ All transaction references resolve to known beans or DSL objects
         │    └─ Produce: dsl-rules-{version}.jar
         │
-        ├─ Gradle: buildApp
-        │    └─ Bundle dsl-rules JAR into application
+        ├─ dsl/dsl-compiler: publishDslToMavenLocal
+        │    └─ Publish dsl-rules-{version}.jar to local Maven cache
+        │
+        ├─ backend: buildApp
+        │    └─ Resolve dsl-rules artifact as runtimeOnly dependency
         │
         └─ Docker build → push → deploy
 ```
@@ -419,8 +424,10 @@ Semantic validation in v0.5 is extended to cover mass operation DSL: all events 
 exist in the registry; all workflows referenced in `ctx.runWorkflow()` must exist; all helpers used in `source {}`,
 `lock {}`, and `context {}` must resolve; `Signal.from("OP_CODE", ...)` must reference a known mass operation code.
 
-A dev-mode endpoint (`POST /dev/dsl/execute`, `@Profile("dev")`) skips the compile step and uses `javax.script` to
-evaluate `.kts` at runtime for fast feedback. Temporal is still required and running; state is persisted normally.
+A dev-mode endpoint (`POST /dev/dsl/execute`, `@Profile("dev")`) provides lenient execution via `dsl/dsl-runtime`:
+it uses JGit to sync DSL sources from Gitea and evaluates `.kts` without compile/package for fast feedback. This mode
+is development-only. Production runtime must use compiled DSL classes/JAR. Temporal is still required and running;
+state is persisted normally.
 
 → Details: [arch/build-deploy.md](arch/build-deploy.md)
 
@@ -441,7 +448,7 @@ All endpoints require `Authorization: Bearer {token}`. `userId` is resolved from
 | `GET`  | `/api/workflows/{code}/bpmn`                              | Export static BPMN XML for a workflow definition                                                                 |
 | `GET`  | `/api/workflows/{code}/bpmn/{eventNumber}`                | Export dynamic BPMN XML for a specific workflow instance                                                         |
 | `GET`  | `/api/workflows/{code}/bpmn/aggregate`                    | Export heatmap BPMN XML across all instances of a workflow                                                       |
-| `POST` | `/dev/dsl/execute`                                        | (`@Profile("dev")`) Evaluate inline DSL content without CI compile step                                          |
+| `POST` | `/dev/dsl/execute`                                        | (`@Profile("dev")`) Lenient mode: JGit sync + direct `.kts` execution without compile/package                    |
 
 Fault responses use structured error codes: `INVALID_TRANSITION`, `MISSING_PARAMETERS`, `CONTEXT_FAULT`. Mass operation lock rejection returns `LOCKED` status in the response body.
 
@@ -536,15 +543,15 @@ Terminal states map to `<endEvent>`. FAULTED state maps to `<boundaryErrorEvent>
 
 ## 14. Module Structure
 
-| Module                | Description                                                                                                                                                                                                     |
-|-----------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `app`                 | Spring Boot entry point (Java 25). Controllers, services, repositories, Temporal client wiring.                                                                                                                 |
-| `dsl-api`             | DSL interfaces and annotations (Kotlin). Defines `WorkflowDefinition`, `EventDefinition`, `TransactionDefinition`, `HelperFunction`, `MassOperationDefinition`, `Signal`, `Action`, and all context interfaces. |
-| `dsl-runtime`         | Builder DSL for `.kts` files (Kotlin). Implements `workflow {}`, `event {}`, `massOperation {}` builder functions. Includes `StubWorkflowGenerator`, `DslRegistry`, and `StepHandle` for `.then()` chaining.    |
-| `dsl-compiler`        | Gradle plugin: `.kts` → JAR. Tasks: `downloadDsl`, `compileDsl` (with semantic validation), `buildApp`. Covers mass operation DSL validation in v0.5.                                                           |
-| `temporal-core`       | Temporal workflow and activity base classes (Java). `EventWorkflow`, `TransactionActivity`, `MassOpWorkflow`, `MassOpItemActivity`.                                                                             |
-| `bpmn-export`         | Static BPMN XML generation from DSL model (`BpmnExporter`, `StaticBpmnGenerator`, `DynamicBpmnGenerator`).                                                                                                      |
-| `mass-operation-core` | MassOperation Temporal workflow + activity + scheduler. Extracted as a separate module in v0.5.                                                                                                                 |
+| Module                | Description                                                                                                                                                         |
+|-----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `app`                 | Spring Boot entry point (Java 25). Controllers, services, repositories, Temporal client wiring.                                                                     |
+| `dsl/dsl-api`         | Shared DSL contracts and context interfaces used by both compiled runtime and lenient dev execution paths.                                                          |
+| `dsl/dsl-compiler`    | Compiler/validator module: `.kts` → Java classes/JAR. Provides `compileDsl` and publish-to-local tasks used by backend build/runtime pipeline.                      |
+| `dsl/dsl-runtime`     | Runtime integration module. In production it loads compiled DSL artifacts; in development it provides lenient non-compiled `.kts` execution path for fast feedback. |
+| `temporal-core`       | Temporal workflow and activity base classes (Java). `EventWorkflow`, `TransactionActivity`, `MassOpWorkflow`, `MassOpItemActivity`.                                 |
+| `bpmn-export`         | Static BPMN XML generation from DSL model (`BpmnExporter`, `StaticBpmnGenerator`, `DynamicBpmnGenerator`).                                                          |
+| `mass-operation-core` | MassOperation Temporal workflow + activity + scheduler. Extracted as a separate module in v0.5.                                                                     |
 
 → Full file tree: [arch/module-structure.md](arch/module-structure.md)
 
