@@ -1,0 +1,75 @@
+plugins {
+  alias(libs.plugins.kotlin.jvm)
+  alias(libs.plugins.kotlin.spring)
+  alias(libs.plugins.spring.boot)
+  alias(libs.plugins.spring.dm)
+}
+
+apply(from: "${rootDir}/gradle/java.gradle")
+apply(from: "${rootDir}/gradle/test.gradle")
+apply(from: "${rootDir}/gradle/code-style.gradle")
+
+kotlin {
+  jvmToolchain(25)
+  compilerOptions {
+    freeCompilerArgs.add('-Xjsr305=strict')
+  }
+}
+
+sourceSets {
+  main {
+    java {
+      srcDirs('src/main/java', 'src/main/kotlin')
+    }
+  }
+  test {
+    java {
+      srcDirs('src/test/java', 'src/test/kotlin')
+    }
+  }
+}
+
+dependencies {
+  implementation project(":starter")
+  //runtimeOnly libs.spring.boot.starter.flyway
+//  runtimeOnly libs.flyway.core
+//  runtimeOnly libs.flyway.database.postgresql
+//  implementation libs.bundles.spring.web
+//  implementation libs.bundles.spring.data
+//  implementation libs.bundles.spring.security
+//
+//  runtimeOnly libs.flyway.core
+//  runtimeOnly libs.flyway.database.postgresql
+//
+//  implementation libs.avaje.validator.spring.starter
+//
+//  implementation libs.kotlin.stdlib
+//  implementation libs.kotlin.reflect
+//  implementation libs.kotlinx.coroutines.core
+
+  // Lombok and MapStruct provided by gradle/java.gradle
+  // compileOnly libs.lombok
+  // implementation libs.mapstruct
+  // annotationProcessor libs.lombok
+  // annotationProcessor libs.mapstruct.processor
+
+  // -- Testing --
+  testImplementation libs.spring.boot.starter.test
+  testImplementation libs.spring.security.test
+  testImplementation platform(libs.testcontainers.bom)
+  testImplementation libs.testcontainers.postgresql
+  testImplementation libs.testcontainers.junit.jupiter
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+//tasks.test {
+//  useJUnitPlatform()
+//  environment('TESTCONTAINERS_REUSE_ENABLE', 'true')
+//}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
+  compilerOptions {
+    jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.fromTarget('25'))
+    freeCompilerArgs.add('-Xjsr305=strict')
+  }
+}

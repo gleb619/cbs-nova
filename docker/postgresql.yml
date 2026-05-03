@@ -5,6 +5,7 @@ services:
     # volumes:
     #   - ~/volumes/seed4j/cbsnova/postgresql/:/var/lib/postgresql/data/
     environment:
+      - POSTGRES_DB=cbsnova
       - POSTGRES_USER=cbsnova
       - POSTGRES_PASSWORD=cbsnova
       - POSTGRES_HOST_AUTH_METHOD=trust

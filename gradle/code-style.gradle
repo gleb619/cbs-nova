@@ -1,0 +1,23 @@
+apply plugin: 'com.diffplug.spotless'
+
+spotless {
+  java {
+    palantirJavaFormat()
+        .style('GOOGLE')
+        .formatJavadoc(true)
+    importOrder()
+    removeUnusedImports()
+    trimTrailingWhitespace()
+    endWithNewline()
+    leadingTabsToSpaces(2)
+  }
+  kotlinGradle {
+    trimTrailingWhitespace()
+    endWithNewline()
+  }
+  format('misc') {
+    target('*.md', '.gitignore')
+    trimTrailingWhitespace()
+    endWithNewline()
+  }
+}

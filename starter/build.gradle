@@ -1,0 +1,145 @@
+plugins {
+  id 'java-library'
+  id 'maven-publish'
+  alias(libs.plugins.spring.boot) apply false
+  alias(libs.plugins.spring.dm)
+  alias(libs.plugins.openapi.generator)
+}
+
+apply plugin: 'org.springframework.boot'
+
+apply(from: "${rootDir}/gradle/java.gradle")
+apply(from: "${rootDir}/gradle/test.gradle")
+apply(from: "${rootDir}/gradle/code-style.gradle")
+
+bootJar {
+  enabled = false
+}
+
+jar {
+  enabled = true
+}
+
+dependencies {
+  api libs.bundles.spring.web
+  api libs.bundles.spring.data
+  api libs.bundles.spring.security
+  api libs.bundles.spring.security
+
+  runtimeOnly libs.flyway.core
+  runtimeOnly libs.flyway.database.postgresql
+
+  api libs.avaje.validator.spring.starter
+
+  api libs.kotlin.stdlib
+  api libs.kotlin.reflect
+  api libs.kotlinx.coroutines.core
+
+  api libs.springdoc.openapi.starter.webmvc.ui
+
+  // -- Testing --
+  testImplementation libs.spring.boot.starter.test
+  testImplementation libs.spring.security.test
+  testImplementation platform(libs.testcontainers.bom)
+  testImplementation libs.testcontainers.postgresql
+  testImplementation libs.testcontainers.junit.jupiter
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// Generates starter/build/openapi.json via a deterministic, no-Docker test.
+tasks.register('exportOpenApi', Test) {
+  group = 'documentation'
+  description = 'Export OpenAPI JSON to starter/build/openapi.json.'
+  useJUnitPlatform()
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  environment 'TESTCONTAINERS_HOST_OVERRIDE', 'localhost'
+  filter {
+    includeTestsMatching 'cbs.nova.zdocs.Z_CbsOpenapiExportTest'
+  }
+}
+
+// -----------------------------------------------------------------------------
+// OpenAPI TypeScript Client Generation
+// -----------------------------------------------------------------------------
+
+def openApiSpecFile = layout.buildDirectory.file('openapi.json').get().asFile
+def openApiOutputDir = file("$projectDir/generated-ts")
+
+openApiGenerate {
+  inputSpec = openApiSpecFile.absolutePath
+  outputDir = openApiOutputDir.absolutePath
+  ignoreFileOverride = file("$projectDir/.openapi-generator-ignore").absolutePath
+  generatorName = "typescript-axios"
+  configOptions = [
+      supportsES6              : "true",
+      withInterfaces           : "true",
+      nullSafeAdditionalProps  : "true",
+      useSingleRequestParameter: "true",
+      withSeparateModelsAndApi : "true",
+      apiPackage               : "api",
+      modelPackage             : "models",
+      npmName                  : "@cbs-nova/api-client",
+      npmRepository            : "https://npm.pkg.github.com",
+  ]
+  globalProperties = [
+      generateModelTests: "false",
+      generateApiTests  : "false",
+      skipValidateSpec  : "false",
+  ]
+  openapiGeneratorIgnoreList = [
+      "README.md",
+      "docs/**",
+      "pom.xml",
+      "git_push.sh",
+      ".openapi-generator/**",
+  ]
+}
+
+tasks.register('generateTsClient') {
+  group = 'codegen'
+  description = 'Generate TypeScript Axios client from OpenAPI spec. Fetches from running app if spec not found.'
+
+  doLast {
+    if (!openApiSpecFile.exists()) {
+      def serverUrl = "http://localhost:7070"
+      def docsUrl = "$serverUrl/v3/api-docs"
+      logger.warn("OpenAPI spec not found at ${openApiSpecFile}. Attempting to fetch from $docsUrl ...")
+
+      try {
+        def conn = new URL(docsUrl).openConnection()
+        conn.setRequestMethod("GET")
+        conn.setConnectTimeout(10000)
+        conn.setReadTimeout(30000)
+        def rc = conn.getResponseCode()
+        if (rc != 200) {
+          throw new GradleException("Failed to fetch OpenAPI spec: HTTP $rc. Is the app running on $serverUrl?")
+        }
+        def content = conn.inputStream.text
+        openApiSpecFile.parentFile.mkdirs()
+        openApiSpecFile.text = content
+        logger.lifecycle("OpenAPI spec fetched and saved to ${openApiSpecFile}")
+      } catch (Exception e) {
+        throw new GradleException(
+            "Could not fetch OpenAPI spec from $docsUrl. Start the app on port 7070 first, or run the integration test to export the spec. Cause: ${e.message}",
+            e)
+      }
+    }
+
+    logger.lifecycle("Generating TypeScript Axios client from ${openApiSpecFile} ...")
+    tasks.openApiGenerate.execute()
+    logger.lifecycle("TypeScript client generated to ${openApiOutputDir}")
+  }
+}
+
+// Cleanup helper: remove generated files except source
+tasks.register('cleanGeneratedTs') {
+  group = 'codegen'
+  description = 'Clean TypeScript generated files, keeping only source.'
+
+  doLast {
+    delete fileTree(openApiOutputDir) {
+      exclude "tsconfig.json"
+    }
+  }
+}

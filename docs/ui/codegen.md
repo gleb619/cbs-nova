@@ -47,7 +47,7 @@ const formMode = formFieldCount > 8 ? 'page' : 'drawer';
 
 ```typescript
 export async function parseEntityFromOpenApi(entityName: string): Promise<EntityGenerationConfig> {
-  const spec = await fetchOpenApiSpec('http://localhost:8080/v3/api-docs');
+  const spec = await fetchOpenApiSpec('http://localhost:7070/v3/api-docs');
   const schema = spec.components.schemas[entityName];
 
   const fields: AdminFieldConfig[] = Object.entries(schema.properties)

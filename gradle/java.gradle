@@ -1,0 +1,20 @@
+apply plugin: 'java'
+
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(25)
+  }
+}
+
+tasks.withType(JavaCompile).configureEach {
+  options.encoding = 'UTF-8'
+}
+
+def libs = versionCatalogs.named('libs')
+
+dependencies {
+  compileOnly libs.findLibrary('lombok').get()
+  implementation libs.findLibrary('mapstruct').get()
+  annotationProcessor libs.findLibrary('lombok').get()
+  annotationProcessor libs.findLibrary('mapstruct-processor').get()
+}

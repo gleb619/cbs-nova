@@ -15,13 +15,13 @@ CBS-Nova: Business Orchestration Engine for core banking operations. Built on Ja
 
 The application runs as three separate services during development:
 
-| Service | Port | Description |
-|---------|------|-------------|
-| Backend (Spring Boot) | `:8080` | Java API server + Temporal workflows |
-| Nuxt.js BFF | `:3000` | Backend-for-Frontend, proxies `/api/**` to backend |
-| Vite Admin UI | `:9000` | Vue 3 SPA, proxies `/api/**` to Nuxt BFF |
+| Service               | Port    | Description                                        |
+|-----------------------|---------|----------------------------------------------------|
+| Backend (Spring Boot) | `:7070` | Java API server + Temporal workflows               |
+| Nuxt.js BFF           | `:3000` | Backend-for-Frontend, proxies `/api/**` to backend |
+| Vite Admin UI         | `:9000` | Vue 3 SPA, proxies `/api/**` to Nuxt BFF           |
 
-Request flow: `Browser → Vite (9000) → Nuxt BFF (3000) → Backend (8080)`
+Request flow: `Browser → Vite (9000) → Nuxt BFF (3000) → Backend (7070)`
 
 ### Quick Start
 
