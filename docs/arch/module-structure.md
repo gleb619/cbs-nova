@@ -6,174 +6,91 @@
 
 ```
 root/
-├── app/
-├── dsl/
-│   ├── dsl-api/
-│   ├── dsl-compiler/
-│   └── dsl-runtime/
-├── temporal-core/
-├── bpmn-export/
-├── mass-operation-core/          ← NEW: MassOp workflow + activity + scheduler
+├── app/                         ← Spring Boot (Java 25)
+├── dsl/                         ← Kotlin DSL logic (builders, registry, runtime execution)
+├── dsl-api/                     ← Java interfaces, records, POJOs shared by dsl and backend
+├── temporal-core/               ← Workflow + Activity base classes (Java)
+├── bpmn-export/                 ← BPMN 2.0 XML generation from DSL model
+├── mass-operation-core/         ← MassOp workflow + activity + scheduler
 └── build.gradle.kts
+```
 
+---
+
+### File Trees
+
+```
 app/src/main/java/
 ├── api/
 │   ├── EventController.java
-│   ├── MassOperationController.java      // NEW
+│   ├── MassOperationController.java
 │   ├── BpmnController.java
-│   └── DevDslController.java
+│   └── DevDslController.java              // @Profile("dev")
 ├── service/
 │   ├── EventService.java
 │   ├── WorkflowResolver.java
 │   ├── WorkflowExecutor.java
 │   ├── ContextEvaluator.java
 │   ├── ContextEncryptionService.java
-│   ├── MassOperationService.java         // NEW
-│   ├── MassOperationScheduler.java       // NEW: cron + trigger management
-│   ├── SignalEmitter.java                // NEW
+│   ├── MassOperationService.java
+│   ├── MassOperationScheduler.java
+│   ├── SignalEmitter.java
 │   └── DslVersionService.java
 ├── temporal/
 │   ├── EventWorkflow.java
 │   ├── EventWorkflowImpl.java
 │   ├── TransactionActivity.java
 │   ├── TransactionActivityImpl.java
-│   ├── MassOpWorkflow.java               // NEW
-│   ├── MassOpWorkflowImpl.java           // NEW
-│   └── MassOpItemActivity.java           // NEW
+│   ├── MassOpWorkflow.java
+│   ├── MassOpWorkflowImpl.java
+│   └── MassOpItemActivity.java
 ├── state/
 │   ├── WorkflowExecutionRepository.java
 │   ├── EventExecutionRepository.java
 │   ├── WorkflowTransitionLogRepository.java
-│   ├── MassOperationExecutionRepository.java  // NEW
-│   ├── MassOperationItemRepository.java       // NEW
+│   ├── MassOperationExecutionRepository.java
+│   ├── MassOperationItemRepository.java
 │   └── ExecutionContextImpl.java
 └── dsl/
     └── DslLoader.java
 
-dsl/dsl-api/src/main/kotlin/
-├── WorkflowDefinition.kt
-├── TransitionRule.kt
-├── TransitionContext.kt                  // NEW: ctx for transition closures
-├── EventDefinition.kt
-├── TransactionDefinition.kt
-├── HelperDefinition.kt
-├── ConditionDefinition.kt
-├── MassOperationDefinition.kt           // NEW
-├── SignalDefinition.kt                  // NEW
-├── TriggerDefinition.kt                 // NEW
-├── SourceDefinition.kt                  // NEW
-├── LockDefinition.kt                    // NEW
-├── ItemDefinition.kt                    // NEW
-├── ContextBlock.kt
-├── DisplayBlock.kt
-├── FinishBlock.kt
-├── context/
-│   ├── BaseContext.kt
-│   ├── ParameterContext.kt
-│   ├── EnrichmentContext.kt
-│   ├── TransactionContext.kt
-│   ├── FinishContext.kt
-│   └── MassOperationContext.kt          // NEW
-├── ExecutionResult.kt
-├── HelperInput.kt
-├── HelperOutput.kt
-├── HelperFunction.kt
-├── Signal.kt                            // NEW
-├── SignalType.kt                        // NEW
-└── Action.kt
+dsl-api/src/main/java/
+├── WorkflowDefinition.java        // interface
+├── EventDefinition.java           // interface
+├── TransactionDefinition.java     // interface
+├── HelperDefinition.java          // interface
+├── ConditionDefinition.java       // interface
+├── MassOperationDefinition.java   // interface
+├── TransitionRule.java            // record
+├── ExecutionResult.java           // record
+├── HelperInput.java               // interface
+├── HelperOutput.java              // interface
+├── HelperFunction.java            // interface
+├── Signal.java                    // record
+├── SignalType.java                // enum
+├── Action.java                    // enum
+└── context/
+    ├── BaseContext.java           // interface
+    ├── ParameterContext.java      // interface
+    ├── EnrichmentContext.java     // interface
+    ├── TransactionContext.java    // interface
+    ├── FinishContext.java         // interface
+    └── MassOperationContext.java  // interface
 
-dsl/dsl-runtime/src/main/kotlin/
+dsl/src/main/kotlin/
 ├── WorkflowBuilder.kt
 ├── EventBuilder.kt
 ├── TransactionBuilder.kt
 ├── HelperBuilder.kt
 ├── ConditionBuilder.kt
-├── MassOperationBuilder.kt              // NEW
-├── SignalBuilder.kt                     // NEW
-├── TriggerBuilder.kt                    // NEW
+├── MassOperationBuilder.kt
+├── SignalBuilder.kt
+├── TriggerBuilder.kt
 ├── StubWorkflowGenerator.kt
 ├── ConditionDsl.kt
 ├── StepHandle.kt
-└── DslRegistry.kt
-```
-
----
-
-### Detailed File Trees (v0.4 baseline)
-
-```
-root/
-├── app/                         ← Spring Boot (Java 25)
-├── dsl/
-│   ├── dsl-api/                 ← DSL interfaces (Kotlin)
-│   ├── dsl-compiler/            ← Gradle tasks: download, compile, validate, publish
-│   └── dsl-runtime/             ← runtime loader + lenient dev-mode execution
-├── temporal-core/               ← Workflow + Activity base classes (Java)
-├── bpmn-export/                 ← BPMN 2.0 XML generation from DSL model
-└── build.gradle.kts
-
-app/src/main/java/
-├── api/
-│   ├── EventController.java
-│   ├── BpmnController.java
-│   └── DevDslController.java                  // @Profile("dev")
-├── service/
-│   ├── EventService.java
-│   ├── WorkflowResolver.java
-│   ├── WorkflowExecutor.java
-│   ├── ContextEvaluator.java
-│   ├── ContextEncryptionService.java          // encrypt/decrypt JSONB fields
-│   └── DslVersionService.java
-├── temporal/
-│   ├── EventWorkflow.java
-│   ├── EventWorkflowImpl.java
-│   ├── TransactionActivity.java
-│   └── TransactionActivityImpl.java
-├── state/
-│   ├── WorkflowExecutionRepository.java
-│   ├── EventExecutionRepository.java
-│   ├── WorkflowTransitionLogRepository.java
-│   └── ExecutionContextImpl.java
-└── dsl/
-    └── DslLoader.java
-
-dsl/dsl-api/src/main/kotlin/
-├── WorkflowDefinition.kt
-├── TransitionRule.kt
-├── EventDefinition.kt
-├── TransactionDefinition.kt
-├── HelperDefinition.kt
-├── ConditionDefinition.kt
-├── ContextBlock.kt
-├── DisplayBlock.kt
-├── FinishBlock.kt
-├── context/
-│   ├── BaseContext.kt
-│   ├── ParameterContext.kt
-│   ├── EnrichmentContext.kt
-│   ├── TransactionContext.kt
-│   └── FinishContext.kt
-├── ExecutionResult.kt
-├── HelperInput.kt
-├── HelperOutput.kt
-├── HelperFunction.kt
-└── Action.kt
-
-dsl/dsl-runtime/src/main/kotlin/
-├── DslArtifactLoader.kt                        // load compiled DSL JAR/classes for prod runtime
-├── DevDslEvaluator.kt                          // lenient dev execution of raw .kts (no compile/package)
-├── DevDslRegistryAdapter.kt                    // adapter shared with API contracts
-└── ExecutionMode.kt                            // STRICT / LENIENT mode handling
-
-dsl/dsl-compiler/src/main/kotlin/
-├── tasks/
-│   ├── DownloadDslTask.kt
-│   ├── CompileDslTask.kt
-│   ├── ValidateDslTask.kt
-│   └── PublishDslToMavenLocalTask.kt
-├── ImportResolver.kt
-├── SemanticValidator.kt
-└── KtsCompiler.kt
+├── DslRegistry.kt
+└── DevDslEvaluator.kt             // lenient dev execution of raw .kts
 
 bpmn-export/src/main/java/
 ├── BpmnExporter.java
@@ -188,10 +105,6 @@ temporal-core/src/main/java/
 
 ---
 
-## Migration Notes (hard rename)
+## Dependency Graph
 
-- `dsl` root module is split into nested Gradle submodules: `dsl/dsl-api`, `dsl/dsl-compiler`, `dsl/dsl-runtime`.
-- Existing legacy package locations under old `dsl/src/main/kotlin/` are deprecated and should be removed once imports
-  are switched.
-- Deprecated runtime-builder classes (`WorkflowBuilder`, `EventBuilder`, `TransactionBuilder`, `DslRegistry`) should be
-  migrated to `dsl/dsl-api` contracts + `dsl/dsl-runtime` adapters, then deleted from legacy paths.
+`app → dsl → dsl-api` · `app → dsl-api` · `app → temporal-core` · `app → bpmn-export` · `app → mass-operation-core`

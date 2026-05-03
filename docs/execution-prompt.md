@@ -1,7 +1,7 @@
 # Execution Prompt — CBS-Nova Development Orchestrator
 
 You are the **thinking center** for CBS-Nova development. Your job is to drive the implementation plan forward:
-pick a task, prepare a complete spec, delegate implementation to Qwen, verify the result, and update the plan.
+pick a task, prepare a complete spec, delegate implementation to User, verify the result, and update the plan.
 
 This document is the single source of truth for how sessions run. Follow it exactly.
 
@@ -57,7 +57,7 @@ Do this **before** writing the task file. This is the "lock" that prevents concu
 
 Create `docs/tasks/{id}-{slug}.md` by copying [`docs/task-template.md`](task-template.md) and filling every section.
 
-**The task file must be self-contained.** Qwen has zero context beyond what you write. This means:
+**The task file must be self-contained.** User has zero context beyond what you write. This means:
 
 ### What to include in the task file
 
@@ -72,7 +72,7 @@ Create `docs/tasks/{id}-{slug}.md` by copying [`docs/task-template.md`](task-tem
 
 - Exact list of files to create (full paths from repo root)
 - Exact list of files to modify (with one-line description of the change)
-- Explicit list of files NOT to touch (prevents Qwen from refactoring unrelated code)
+- Explicit list of files NOT to touch (prevents User from refactoring unrelated code)
 
 **Requirements section:**
 
@@ -83,7 +83,7 @@ Create `docs/tasks/{id}-{slug}.md` by copying [`docs/task-template.md`](task-tem
 
 **Acceptance criteria section:**
 
-- Every acceptance check must be a shell command Qwen can run and paste output from
+- Every acceptance check must be a shell command User can run and paste output from
 - At minimum: `./gradlew :module:build`, `./gradlew :module:test`, `./gradlew spotlessApply`
 - Add task-specific checks: `curl` commands, log snippets, DB queries
 
@@ -110,21 +110,21 @@ If the answer to any is "no", add more detail.
 
 ---
 
-## Step 4 — Delegate to Qwen
+## Step 4 — Delegate
 
-Invoke the `qwen-delegation` skill:
+Invoke the `executor-delegation` skill:
 
 ```
-/qwen-delegation
+/executor-delegation
 ```
 
 The skill will guide you through preparing the delegation. Key points:
 
-- Point Qwen to `docs/tasks/{id}-{slug}.md` as the spec
-- Tell Qwen the result must be written to `docs/results/{id}-{slug}.result.md` using [
+- Point User to `docs/tasks/{id}-{slug}.md` as the spec
+- Tell User the result must be written to `docs/results/{id}-{slug}.result.md` using [
   `docs/result-template.md`](result-template.md)
-- Tell Qwen to run all acceptance criteria commands and paste output in the result file
-- Tell Qwen NOT to modify `docs/plan.md` — that is your job
+- Tell User to run all acceptance criteria commands and paste output in the result file
+- Tell User NOT to modify `docs/plan.md` — that is your job
 
 **While Qwen works:** Do not touch `plan.md` or other shared files. You are the thinking center; Qwen is the executor.
 
@@ -242,7 +242,7 @@ These are infrastructure tasks. After Qwen completes them:
 | Start a session  | Read `plan.md`, find eligible tasks                   |
 | Lock a task      | Edit `plan.md` status → `IN_PROGRESS`                 |
 | Create task spec | Copy `task-template.md` → `docs/tasks/{id}-{slug}.md` |
-| Delegate         | `/qwen-delegation` → point to task file               |
+| Delegate         | `/executor-delegation` → point to task file           |
 | Save result      | Qwen writes `docs/results/{id}-{slug}.result.md`      |
 | Mark done        | Edit `plan.md` status → `DONE`                        |
 | Verify build     | `./gradlew build` (all modules)                       |
