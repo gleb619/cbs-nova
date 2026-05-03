@@ -8,7 +8,4 @@ import java.util.List;
 
 public interface WorkflowExecutionRepository extends JpaRepository<WorkflowExecutionEntity, Long> {
 
-  List<WorkflowExecutionEntity> findByWorkflowCode(String workflowCode);
-
-  List<WorkflowExecutionEntity> findByStatus(WorkflowStatus status);
 }

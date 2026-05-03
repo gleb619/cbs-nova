@@ -7,6 +7,8 @@ sealed class CompileResult {
   data class Failure(val errors: List<ValidationError>) : CompileResult()
 }
 
+//@depricated We need to use gradle here to get jar, to later use it in `backend module`
+@Deprecated(message = "For removal", level = DeprecationLevel.WARNING)
 class DslCompiler(
   private val source: GiteaRulesSource,
   private val validator: DslValidator,

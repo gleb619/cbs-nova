@@ -99,7 +99,7 @@ pnpm e2e:headless                     # Headless E2E (CI)
 |--------------------------|-------------------------|---------------------------------------|
 | `SPRING_BOOT_URL`        | `http://localhost:7070` | Backend URL for axios + devProxy      |
 | `NUXT_PUBLIC_LOCAL_AUTH` | `false`                 | Enable Local Auth mode when `true`    |
-| `keycloak.enabled`       | `false`                 | Switch between local JWT and Keycloak |
+| `app.keycloak.enabled`   | `false`                 | Switch between local JWT and Keycloak |
 
 ## Code Style Rules
 

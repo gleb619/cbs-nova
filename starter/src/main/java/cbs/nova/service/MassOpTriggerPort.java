@@ -1,8 +1,8 @@
 package cbs.nova.service;
 
 /**
- * Port interface for triggering mass operation workflows. Implemented in the backend module using Temporal
- * WorkflowClient.
+ * Port interface for triggering mass operation workflows. Implemented in the backend module using
+ * Temporal WorkflowClient.
  */
 @FunctionalInterface
 public interface MassOpTriggerPort {

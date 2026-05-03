@@ -8,11 +8,13 @@ import static org.mockito.Mockito.when;
 
 import cbs.dsl.api.MassOperationDefinition;
 import cbs.dsl.api.TriggerDefinition;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Map;
@@ -31,7 +33,7 @@ class MassOperationSchedulerTest {
   void shouldTriggerCronMassOpWhenCronFiresAndNoRunningExecution() {
     MassOperationDefinition massOpDef = mock(MassOperationDefinition.class);
     TriggerDefinition.CronTrigger cronTrigger = mock(TriggerDefinition.CronTrigger.class);
-    when(massOpDef.getTriggers()).thenReturn(java.util.List.of(cronTrigger));
+    when(massOpDef.getTriggers()).thenReturn(List.of(cronTrigger));
 
     when(massOperationService.getAllMassOpDefinitions())
         .thenReturn(Map.of("DAILY_INTEREST", massOpDef));
@@ -48,7 +50,7 @@ class MassOperationSchedulerTest {
   void shouldNotTriggerCronMassOpWhenRunningExecutionExists() {
     MassOperationDefinition massOpDef = mock(MassOperationDefinition.class);
     TriggerDefinition.CronTrigger cronTrigger = mock(TriggerDefinition.CronTrigger.class);
-    when(massOpDef.getTriggers()).thenReturn(java.util.List.of(cronTrigger));
+    when(massOpDef.getTriggers()).thenReturn(List.of(cronTrigger));
 
     when(massOperationService.getAllMassOpDefinitions())
         .thenReturn(Map.of("DAILY_INTEREST", massOpDef));
@@ -65,7 +67,7 @@ class MassOperationSchedulerTest {
   void shouldTriggerEveryMassOpWhenIntervalElapsed() {
     MassOperationDefinition massOpDef = mock(MassOperationDefinition.class);
     TriggerDefinition.EveryTrigger everyTrigger = mock(TriggerDefinition.EveryTrigger.class);
-    when(massOpDef.getTriggers()).thenReturn(java.util.List.of(everyTrigger));
+    when(massOpDef.getTriggers()).thenReturn(List.of(everyTrigger));
 
     when(massOperationService.getAllMassOpDefinitions())
         .thenReturn(Map.of("HOURLY_REPORT", massOpDef));
@@ -82,7 +84,7 @@ class MassOperationSchedulerTest {
   void shouldNotTriggerEveryMassOpWhenIntervalNotElapsed() {
     MassOperationDefinition massOpDef = mock(MassOperationDefinition.class);
     TriggerDefinition.EveryTrigger everyTrigger = mock(TriggerDefinition.EveryTrigger.class);
-    when(massOpDef.getTriggers()).thenReturn(java.util.List.of(everyTrigger));
+    when(massOpDef.getTriggers()).thenReturn(List.of(everyTrigger));
 
     when(massOperationService.getAllMassOpDefinitions())
         .thenReturn(Map.of("HOURLY_REPORT", massOpDef));
@@ -99,7 +101,7 @@ class MassOperationSchedulerTest {
     MassOperationDefinition massOpDef = mock(MassOperationDefinition.class);
     TriggerDefinition.OnceTrigger onceTrigger = mock(TriggerDefinition.OnceTrigger.class);
     TriggerDefinition.SignalTrigger signalTrigger = mock(TriggerDefinition.SignalTrigger.class);
-    when(massOpDef.getTriggers()).thenReturn(java.util.List.of(onceTrigger, signalTrigger));
+    when(massOpDef.getTriggers()).thenReturn(List.of(onceTrigger, signalTrigger));
 
     when(massOperationService.getAllMassOpDefinitions()).thenReturn(Map.of("ONE_TIME", massOpDef));
 
@@ -113,11 +115,11 @@ class MassOperationSchedulerTest {
   void shouldContinuePollingWhenSingleMassOpTriggerFails() {
     MassOperationDefinition failingDef = mock(MassOperationDefinition.class);
     TriggerDefinition.CronTrigger cronTrigger = mock(TriggerDefinition.CronTrigger.class);
-    when(failingDef.getTriggers()).thenReturn(java.util.List.of(cronTrigger));
+    when(failingDef.getTriggers()).thenReturn(List.of(cronTrigger));
 
     MassOperationDefinition successDef = mock(MassOperationDefinition.class);
     TriggerDefinition.EveryTrigger everyTrigger = mock(TriggerDefinition.EveryTrigger.class);
-    when(successDef.getTriggers()).thenReturn(java.util.List.of(everyTrigger));
+    when(successDef.getTriggers()).thenReturn(List.of(everyTrigger));
 
     when(massOperationService.getAllMassOpDefinitions())
         .thenReturn(Map.of("FAILING_OP", failingDef, "SUCCESS_OP", successDef));
@@ -132,7 +134,7 @@ class MassOperationSchedulerTest {
 
     // Should have attempted to trigger both — the exception from FAILING_OP should not stop
     // SUCCESS_OP
-    verify(massOperationService, org.mockito.Mockito.times(2)).trigger(any());
+    verify(massOperationService, Mockito.times(2)).trigger(any());
   }
 
   @Test

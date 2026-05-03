@@ -11,7 +11,4 @@ public interface MassOperationExecutionRepository
 
   List<MassOperationExecutionEntity> findByCode(String code);
 
-  List<MassOperationExecutionEntity> findByStatus(MassOperationStatus status);
-
-  List<MassOperationExecutionEntity> findByCategory(String category);
 }

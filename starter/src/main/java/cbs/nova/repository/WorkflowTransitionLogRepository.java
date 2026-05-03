@@ -9,6 +9,4 @@ import java.util.List;
 public interface WorkflowTransitionLogRepository
     extends JpaRepository<WorkflowTransitionLogEntity, Long> {
 
-  List<WorkflowTransitionLogEntity> findByWorkflowExecution(
-      WorkflowExecutionEntity workflowExecution);
 }

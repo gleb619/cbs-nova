@@ -14,11 +14,13 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+//TODO: incorrectly implemented
+@Deprecated(forRemoval = true)
 public class ContextEvaluator {
 
-  private final DslRegistry dslRegistry;
-
   @SuppressWarnings("unchecked")
+  //TODO: incorrectly implemented
+  @Deprecated(forRemoval = true)
   public Map<String, Object> evaluate(EventDefinition eventDef, EventExecutionRequest request) {
     EnrichmentContext enrichmentContext = new EnrichmentContext(
         request.eventCode(),

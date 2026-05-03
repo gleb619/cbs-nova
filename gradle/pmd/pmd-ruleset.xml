@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<ruleset xmlns:xsi="http://w3.org"
+  name="Custom PMD Rules"
+  xmlns="http://sourceforge.net"
+  xsi:schemaLocation="http://sourceforge.net http://sourceforge.net">
+
+  <description>
+    Custom ruleset containing unnecessary fully qualified name check.
+  </description>
+
+  <!-- Import the rule -->
+  <rule ref="category/java/codestyle.xml/UnnecessaryFullyQualifiedName"/>
+
+</ruleset>

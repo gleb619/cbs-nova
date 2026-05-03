@@ -55,6 +55,10 @@
     </module>
     <module name="SingleLineJavadoc"/>
 
+    <module name="ImportControl">
+      <property name="file" value="${importControlFile}"/>
+    </module>
+
     <!-- WHITESPACE -->
     <module name="WhitespaceAround">
       <property name="allowEmptyConstructors" value="true"/>

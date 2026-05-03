@@ -6,7 +6,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,6 +23,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.Map;
@@ -32,11 +32,11 @@ import java.util.Map;
 @Import(LocalAuthControllerTest.TestConfig.class)
 @TestPropertySource(
     properties = {
-        "keycloak.enabled=false",
+        "app.keycloak.enabled=false",
         "spring.application.name=test-app",
-        "local-auth.users[0].username=admin",
-        "local-auth.users[0].password=secret",
-        "local-auth.users[0].roles[0]=ADMIN"
+        "app.local-auth.users[0].username=admin",
+        "app.local-auth.users[0].password=secret",
+        "app.local-auth.users[0].roles[0]=ADMIN"
     })
 class LocalAuthControllerTest {
 

@@ -15,13 +15,15 @@ import cbs.dsl.api.context.TransactionContext;
 import cbs.dsl.runtime.DslRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.Map;
 
 class TransactionActivityImplTest {
 
   private final DslRegistry dslRegistry = mock(DslRegistry.class);
-  private final TransactionActivityImpl activity = new TransactionActivityImpl(dslRegistry);
+  private final TransactionActivityImpl activity =
+      new TransactionActivityImpl(dslRegistry, new ObjectMapper());
 
   @Test
   @DisplayName("Should call preview and execute and return success when transaction succeeds")

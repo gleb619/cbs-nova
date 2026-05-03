@@ -52,18 +52,6 @@ spring:
           # Example: https://auth.example.com/realms/cbs
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:9080/realms/cbs}
 
-keycloak:
-  enabled: false
-
-local-auth:
-  users:
-    - username: admin1
-      password: admin1
-      roles: ADMIN,USER
-    - username: user1
-      password: user1
-      roles: USER
-
 management:
   endpoints:
     web:
@@ -78,6 +66,20 @@ logging:
     root: INFO
     cbs: DEBUG
 
-temporal:
-  service-address: 127.0.0.1:7233
-  task-queue: WORKFLOW_TASK_QUEUE
+app:
+  cbs:
+    dsl:
+      scripts-dir: examples/cbs-rules
+  temporal:
+    service-address: 127.0.0.1:7233
+    task-queue: WORKFLOW_TASK_QUEUE
+  keycloak:
+    enabled: false
+  local-auth:
+    users:
+      - username: admin1
+        password: admin1
+        roles: ADMIN,USER
+      - username: user1
+        password: user1
+        roles: USER

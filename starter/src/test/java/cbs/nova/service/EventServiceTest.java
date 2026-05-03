@@ -11,7 +11,7 @@ import cbs.dsl.api.WorkflowDefinition;
 import cbs.nova.model.EventExecutionRequest;
 import cbs.nova.model.EventExecutionResponse;
 import cbs.nova.model.exception.EntityNotFoundException;
-import cbs.nova.temporal.workflow.WorkflowExecutionResult;
+import cbs.nova.model.WorkflowExecutionResult;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

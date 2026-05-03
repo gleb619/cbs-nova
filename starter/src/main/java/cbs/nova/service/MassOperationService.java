@@ -6,6 +6,7 @@ import cbs.dsl.runtime.DslRegistry;
 import cbs.nova.entity.MassOperationExecutionEntity;
 import cbs.nova.entity.MassOperationItemEntity;
 import cbs.nova.entity.MassOperationItemStatus;
+import cbs.nova.entity.MassOperationStatus;
 import cbs.nova.mapper.MassOperationMapper;
 import cbs.nova.model.MassOperationDto;
 import cbs.nova.model.MassOperationItemDto;
@@ -15,6 +16,7 @@ import cbs.nova.repository.MassOperationExecutionRepository;
 import cbs.nova.repository.MassOperationItemRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -136,8 +138,8 @@ public class MassOperationService {
    */
   boolean shouldFireCron(TriggerDefinition.CronTrigger cronTrigger) {
     try {
-      org.springframework.scheduling.support.CronExpression cron =
-          org.springframework.scheduling.support.CronExpression.parse(cronTrigger.getExpression());
+      CronExpression cron =
+          CronExpression.parse(cronTrigger.getExpression());
       LocalDateTime now = LocalDateTime.now();
       LocalDateTime prev = now.minusSeconds(60);
       LocalDateTime next = cron.next(prev);
@@ -148,9 +150,7 @@ public class MassOperationService {
     }
   }
 
-  /**
-   * Checks whether an every trigger should fire based on the last execution time.
-   */
+  /** Checks whether an every trigger should fire based on the last execution time. */
   boolean shouldFireEvery(TriggerDefinition.EveryTrigger everyTrigger, String code) {
     Duration interval = Duration.ofDays(everyTrigger.getDays())
         .plusHours(everyTrigger.getHours())
@@ -168,24 +168,18 @@ public class MassOperationService {
         .orElse(true);
   }
 
-  /**
-   * Checks whether there is a currently running execution for the given code.
-   */
+  /** Checks whether there is a currently running execution for the given code. */
   boolean hasRunningExecution(String code) {
     return executionRepository.findByCode(code).stream()
-        .anyMatch(e -> e.getStatus() == cbs.nova.entity.MassOperationStatus.RUNNING);
+        .anyMatch(e -> e.getStatus() == MassOperationStatus.RUNNING);
   }
 
-  /**
-   * Get all DSL mass operation definitions.
-   */
+  /** Get all DSL mass operation definitions. */
   Map<String, MassOperationDefinition> getAllMassOpDefinitions() {
     return dslRegistry.getMassOperations();
   }
 
-  /**
-   * Get the DSL mass operation definition for the given code.
-   */
+  /** Get the DSL mass operation definition for the given code. */
   MassOperationDefinition getMassOpDefinition(String code) {
     return dslRegistry.getMassOperations().get(code);
   }

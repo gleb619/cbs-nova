@@ -1,5 +1,5 @@
-import { defineNuxtPlugin } from 'nuxt/app';
 import Keycloak from 'keycloak-js';
+import { defineNuxtPlugin } from 'nuxt/app';
 import { provideForAuth } from '../composables/auth/AuthProvider';
 import { KeycloakAuthRepository } from '../infrastructure/secondary/KeycloakAuthRepository';
 import { KeycloakHttp } from '../infrastructure/secondary/KeycloakHttp';

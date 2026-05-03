@@ -11,8 +11,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -21,11 +24,10 @@ import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "event_execution")
-@Getter
-@Setter
-@NoArgsConstructor
+@Data
 @AllArgsConstructor
-@Builder
+@Builder(toBuilder = true)
+@NoArgsConstructor(access = AccessLevel.PUBLIC)
 public class EventExecutionEntity {
 
   @Id
@@ -54,9 +56,15 @@ public class EventExecutionEntity {
   @Column(name = "temporal_workflow_id", length = 200)
   private String temporalWorkflowId;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "workflow_execution_id", nullable = false)
-  private WorkflowExecutionEntity workflowExecution;
+  @Column(name = "workflow_execution_id")
+  private Long workflowExecutionId;
+
+  /**
+   * @deprecated use #{@link #workflowExecutionId} instead
+   */
+  @Transient
+  @Deprecated(forRemoval = true)
+  private transient WorkflowExecutionEntity workflowExecution;
 
   @Column(name = "performed_by", nullable = false, length = 200)
   private String performedBy;

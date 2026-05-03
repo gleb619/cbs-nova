@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -30,12 +31,24 @@ public class WorkflowTransitionLogEntity {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "workflow_execution_id", nullable = false)
+  @Column(name = "workflow_execution_id")
+  private Long workflowExecutionId;
+
+  @Column(name = "event_execution_id")
+  private Long eventExecutionId;
+
+  /**
+   * @deprecated use #{@link #workflowExecutionId} instead
+   */
+  @Transient
+  @Deprecated(forRemoval = true)
   private WorkflowExecutionEntity workflowExecution;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "event_execution_id")
+  /**
+   * @deprecated use #{@link #eventExecutionId} instead
+   */
+  @Transient
+  @Deprecated(forRemoval = true)
   private EventExecutionEntity eventExecution;
 
   @Column(nullable = false, length = 20)

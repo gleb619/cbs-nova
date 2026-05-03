@@ -18,7 +18,4 @@ public interface MassOperationMapper {
   @Mapping(target = "status", expression = "java(entity.getStatus().name())")
   MassOperationItemDto toItemDto(MassOperationItemEntity entity);
 
-  List<MassOperationDto> toDtoList(List<MassOperationExecutionEntity> entities);
-
-  List<MassOperationItemDto> toItemDtoList(List<MassOperationItemEntity> entities);
 }

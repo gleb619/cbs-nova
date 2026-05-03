@@ -181,6 +181,28 @@ html, body {
   margin: 0;
 }
 
+/* ── Sidebar layout variables (global scope for child components) ── */
+:root {
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 64px;
+  --navbar-height: 56px;
+  --color-bg: #f0f2f5;
+  --color-sidebar: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  --color-sidebar-hover: rgba(255, 255, 255, 0.08);
+  --color-sidebar-active: rgba(99, 102, 241, 0.25);
+  --color-text-sidebar: #cbd5e1;
+  --color-text-sidebar-active: #e0e7ff;
+  --color-navbar: rgba(255, 255, 255, 0.82);
+  --color-accent: #6366f1;
+  --color-accent-light: #818cf8;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.12);
+  --radius: 10px;
+  --font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 *,
 *::before,
 *::after {

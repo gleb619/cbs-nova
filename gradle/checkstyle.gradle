@@ -1,4 +1,5 @@
 apply plugin: 'checkstyle'
+apply plugin: 'pmd'
 
 def libs = versionCatalogs.named('libs')
 
@@ -7,7 +8,8 @@ checkstyle {
   configFile = file("${rootDir}/gradle/checkstyle/checkstyle.xml")
   configProperties = [
       'configDir' : file("${rootDir}/gradle/checkstyle"),
-      'projectDir': rootDir
+      'projectDir'       : rootDir,
+      'importControlFile': file("${rootDir}/gradle/checkstyle/import-control-main.xml")
   ]
   maxWarnings = 0
   maxErrors = 0
@@ -31,4 +33,11 @@ checkstyleIntegrationTest {
   ]
 }
 
-check.dependsOn checkstyleMain, checkstyleTest, checkstyleIntegrationTest
+pmd {
+  toolVersion = libs.findVersion('pmd').get().toString()
+  ignoreFailures = true
+  ruleSetFiles = files("${rootDir}/gradle/pmd/pmd-ruleset.xml")
+  ruleSets = []
+}
+
+check.dependsOn checkstyleMain, checkstyleTest, checkstyleIntegrationTest, pmdMain

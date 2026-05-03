@@ -1,8 +1,8 @@
 package cbs.nova.service;
 
 /**
- * Port interface for sending signals to running MassOpWorkflow instances. Implemented in the backend module using
- * Temporal WorkflowClient.
+ * Port interface for sending signals to running MassOpWorkflow instances. Implemented in the
+ * backend module using Temporal WorkflowClient.
  */
 @FunctionalInterface
 public interface MassOpSignalPort {

@@ -13,11 +13,14 @@ import cbs.dsl.api.MassOperationDefinition;
 import cbs.dsl.api.SourceDefinition;
 import cbs.dsl.api.context.MassOperationContext;
 import cbs.dsl.runtime.DslRegistry;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import cbs.nova.repository.MassOperationExecutionRepository;
+import cbs.nova.repository.MassOperationItemRepository;
+import kotlin.Unit;
 import kotlin.jvm.functions.Function1;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.Map;
@@ -32,7 +35,11 @@ class MassOpItemActivityImplTest {
   void setUp() {
     dslRegistry = mock(DslRegistry.class);
     objectMapper = new ObjectMapper();
-    activity = new MassOpItemActivityImpl(dslRegistry, objectMapper);
+    MassOperationExecutionRepository executionRepository =
+        mock(MassOperationExecutionRepository.class);
+    MassOperationItemRepository itemRepository = mock(MassOperationItemRepository.class);
+    activity =
+        new MassOpItemActivityImpl(dslRegistry, objectMapper, executionRepository, itemRepository);
   }
 
   @Test
@@ -41,9 +48,9 @@ class MassOpItemActivityImplTest {
     // Given
     String massOpCode = "TEST_MASS_OP";
     @SuppressWarnings("unchecked")
-    Function1<MassOperationContext, kotlin.Unit> itemBlock =
-        (Function1<MassOperationContext, kotlin.Unit>) mock(Function1.class);
-    when(itemBlock.invoke(any(MassOperationContext.class))).thenReturn(kotlin.Unit.INSTANCE);
+    Function1<MassOperationContext, Unit> itemBlock =
+        (Function1<MassOperationContext, Unit>) mock(Function1.class);
+    when(itemBlock.invoke(any(MassOperationContext.class))).thenReturn(Unit.INSTANCE);
 
     MassOperationDefinition def = mock(MassOperationDefinition.class);
     when(def.getCode()).thenReturn(massOpCode);
@@ -73,8 +80,8 @@ class MassOpItemActivityImplTest {
     // Given
     String massOpCode = "TEST_MASS_OP_FAIL";
     @SuppressWarnings("unchecked")
-    Function1<MassOperationContext, kotlin.Unit> itemBlock =
-        (Function1<MassOperationContext, kotlin.Unit>) mock(Function1.class);
+    Function1<MassOperationContext, Unit> itemBlock =
+        (Function1<MassOperationContext, Unit>) mock(Function1.class);
     when(itemBlock.invoke(any(MassOperationContext.class)))
         .thenThrow(new RuntimeException("item processing failed"));
 
@@ -122,8 +129,8 @@ class MassOpItemActivityImplTest {
     // Given
     String massOpCode = "TEST_MASS_OP";
     @SuppressWarnings("unchecked")
-    Function1<MassOperationContext, kotlin.Unit> itemBlock =
-        (Function1<MassOperationContext, kotlin.Unit>) mock(Function1.class);
+    Function1<MassOperationContext, Unit> itemBlock =
+        (Function1<MassOperationContext, Unit>) mock(Function1.class);
 
     MassOperationDefinition def = mock(MassOperationDefinition.class);
     when(def.getCode()).thenReturn(massOpCode);

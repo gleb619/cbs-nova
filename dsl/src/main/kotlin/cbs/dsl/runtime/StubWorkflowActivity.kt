@@ -4,6 +4,8 @@ import cbs.dsl.api.EventDefinition
 import cbs.dsl.api.context.EnrichmentContext
 import cbs.dsl.api.context.FinishContext
 
+//@depricated Unused
+@Deprecated(message = "For removal", level = DeprecationLevel.WARNING)
 class StubWorkflowActivity(val event: EventDefinition) {
   fun execute(contextSupplier: () -> Any): Any {
     val enrichCtx = EnrichmentContext(

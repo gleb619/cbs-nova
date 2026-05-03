@@ -47,14 +47,18 @@ invoked normally.
 
 ```
 POST /dev/dsl/execute   (@Profile("dev") only)
+Content-Type: application/json
 {
   "dslContent": "event(\"TEST\") { ... }",
-  "eventCode": "TEST",
-  "action": "SUBMIT",
-  "eventParameters": {},
-  "userId": "dev-user"
+  "eventCode": "TEST",           // optional: simulate event execution
+  "action": "SUBMIT",            // optional: action type for simulation
+  "eventParameters": {},         // optional: event parameters for simulation
+  "userId": "dev-user"           // optional: dev user identifier
 }
 ```
+
+**Notes:** `dslContent` is the only required field. When `eventCode` is provided, the response includes an
+`executionSimulation` block with the simulated execution details. `Content-Type: application/json` is required.
 
 ---
 

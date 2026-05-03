@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -32,9 +33,15 @@ public class MassOperationItemEntity {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "mass_operation_execution_id", nullable = false)
-  private MassOperationExecutionEntity massOperationExecution;
+  @Column(name = "mass_operation_execution_id")
+  private Long massOperationExecutionId;
+
+  /**
+   * @deprecated use #{@link #massOperationExecutionId} instead
+   */
+  @Transient
+  @Deprecated(forRemoval = true)
+  private transient MassOperationExecutionEntity massOperationExecution;
 
   @Column(name = "item_key", nullable = false)
   private String itemKey;
@@ -46,8 +53,14 @@ public class MassOperationItemEntity {
   @Column(nullable = false)
   private MassOperationItemStatus status;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "workflow_execution_id")
+  @Column(name = "workflow_execution_id")
+  private Long workflowExecutionId;
+
+  /**
+   * @deprecated use #{@link #workflowExecutionId} instead
+   */
+  @Transient
+  @Deprecated(forRemoval = true)
   private WorkflowExecutionEntity workflowExecution;
 
   @Column(name = "error_message")
@@ -59,7 +72,13 @@ public class MassOperationItemEntity {
   @Column(name = "completed_at")
   private OffsetDateTime completedAt;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "retry_of")
+  @Column(name = "retry_of")
+  private Long retryOfId;
+
+  /**
+   * @deprecated use #{@link #workflowExecutionId} instead
+   */
+  @Transient
+  @Deprecated(forRemoval = true)
   private MassOperationItemEntity retryOf;
 }

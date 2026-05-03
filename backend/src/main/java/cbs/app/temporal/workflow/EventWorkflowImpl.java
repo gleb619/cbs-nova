@@ -16,20 +16,20 @@ import cbs.nova.entity.WorkflowTransitionLogEntity;
 import cbs.nova.repository.EventExecutionRepository;
 import cbs.nova.repository.WorkflowExecutionRepository;
 import cbs.nova.repository.WorkflowTransitionLogRepository;
-import cbs.nova.temporal.workflow.EventWorkflow;
-import cbs.nova.temporal.workflow.EventWorkflowInput;
-import cbs.nova.temporal.workflow.WorkflowExecutionResult;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import cbs.nova.service.EventWorkflow;
+import cbs.nova.model.EventWorkflowInput;
+import cbs.nova.model.WorkflowExecutionResult;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.failure.ApplicationFailure;
 import io.temporal.workflow.Workflow;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.util.Map;
 
+@Slf4j
+@RequiredArgsConstructor
 public class EventWorkflowImpl implements EventWorkflow {
 
   // TODO(T11): move to activity for replay safety
@@ -38,143 +38,70 @@ public class EventWorkflowImpl implements EventWorkflow {
   private final EventExecutionRepository eventExecutionRepository;
   private final WorkflowTransitionLogRepository transitionLogRepository;
 
-  private final ObjectMapper objectMapper = new ObjectMapper();
-
-  public EventWorkflowImpl(
-      DslRegistry dslRegistry,
-      WorkflowExecutionRepository workflowExecutionRepository,
-      EventExecutionRepository eventExecutionRepository,
-      WorkflowTransitionLogRepository transitionLogRepository) {
-    this.dslRegistry = dslRegistry;
-    this.workflowExecutionRepository = workflowExecutionRepository;
-    this.eventExecutionRepository = eventExecutionRepository;
-    this.transitionLogRepository = transitionLogRepository;
-  }
-
   @Override
   public WorkflowExecutionResult execute(EventWorkflowInput input) {
+    log.debug(
+        "Starting workflow execution: workflowCode={}, eventCode={}, performedBy={}",
+        input.workflowCode(),
+        input.eventCode(),
+        input.performedBy());
+
     // 1. Look up workflow definition
     WorkflowDefinition workflowDefinition = dslRegistry.getWorkflows().get(input.workflowCode());
     if (workflowDefinition == null) {
       throw ApplicationFailure.newFailure(
           "Workflow not found: " + input.workflowCode(), "NOT_FOUND");
     }
+    log.debug("Found workflow definition: {}", workflowDefinition.getCode());
 
-    // 2. Persist workflow execution entity (ACTIVE, initial state)
-    WorkflowExecutionEntity workflowExecution = new WorkflowExecutionEntity();
-    workflowExecution.setWorkflowCode(input.workflowCode());
-    workflowExecution.setDslVersion(input.dslVersion());
-    workflowExecution.setCurrentState(workflowDefinition.getInitial());
-    workflowExecution.setStatus(WorkflowStatus.ACTIVE);
-    workflowExecution.setContext(input.contextJson());
-    workflowExecution.setDisplayData("{}");
-    workflowExecution.setPerformedBy(input.performedBy());
-    workflowExecution.setCreatedAt(OffsetDateTime.now());
-    workflowExecution.setUpdatedAt(OffsetDateTime.now());
-    workflowExecutionRepository.save(workflowExecution);
+    // 2. Persist workflow execution entity
+    WorkflowExecutionEntity workflowExecution = createWorkflowExecution(input, workflowDefinition);
+    log.debug("Created workflow execution entity: id={}", workflowExecution.getId());
 
     // 3. Find matching transition rule
     TransitionRule transitionRule = findTransitionRule(workflowDefinition, input.eventCode());
 
-    // 4. Look up event definition
-    EventDefinition eventDefinition = transitionRule.getEvent();
-
-    // 5. Persist event execution entity (RUNNING)
-    EventExecutionEntity eventExecution = new EventExecutionEntity();
-    eventExecution.setEventCode(input.eventCode());
-    eventExecution.setDslVersion(input.dslVersion());
-    eventExecution.setAction(transitionRule.getOn().name());
-    eventExecution.setStatus(EventStatus.RUNNING);
-    eventExecution.setContext(input.contextJson());
-    eventExecution.setExecutedTransactions("[]");
+    // 4. Persist event execution entity
     String temporalWorkflowId = Workflow.getInfo().getWorkflowId();
-    eventExecution.setTemporalWorkflowId(temporalWorkflowId);
-    eventExecution.setWorkflowExecution(workflowExecution);
-    eventExecution.setPerformedBy(input.performedBy());
-    eventExecution.setCreatedAt(OffsetDateTime.now());
-    eventExecution.setUpdatedAt(OffsetDateTime.now());
-    eventExecutionRepository.save(eventExecution);
+    EventExecutionEntity eventExecution =
+        createEventExecution(input, workflowExecution, transitionRule, temporalWorkflowId);
+    log.debug("Created event execution entity: id={}", eventExecution.getId());
 
-    // 6. Create activity stub and execute transactions
+    // 5. Create activity stub and execute transactions
     TransactionActivity activityStub = Workflow.newActivityStub(
         TransactionActivity.class,
         ActivityOptions.newBuilder()
             .setStartToCloseTimeout(Duration.ofSeconds(30))
             .build());
 
-    boolean allTransactionsSucceeded = true;
-    String faultMessage = null;
+    TransactionExecutionResult txResult = executeTransactions(
+        transitionRule.getEvent(), input, workflowExecution.getId(), activityStub);
 
-    for (TransactionDefinition txDef : eventDefinition.getTransactionsBlock()) {
-      TransactionActivityInput txInput = new TransactionActivityInput(
-          txDef.getCode(),
-          input.contextJson(),
+    // 6. Update entities based on outcome
+    if (txResult.allSucceeded()) {
+      handleSuccessOutcome(
+          workflowExecution, eventExecution, transitionRule, workflowDefinition, input);
+      log.debug(
+          "Workflow completed successfully: workflowId={}, newState={}",
           workflowExecution.getId(),
-          input.performedBy(),
-          input.dslVersion());
-
-      TransactionResult txResult = activityStub.executeTransaction(txInput);
-
-      if (!txResult.success()) {
-        allTransactionsSucceeded = false;
-        faultMessage = txResult.errorMessage();
-        break;
-      }
-    }
-
-    // 7. Update entities based on outcome
-    if (allTransactionsSucceeded) {
-      // Success path
-      eventExecution.setStatus(EventStatus.COMPLETED);
-      eventExecution.setCompletedAt(OffsetDateTime.now());
-      eventExecution.setUpdatedAt(OffsetDateTime.now());
-      eventExecutionRepository.save(eventExecution);
-
-      String toState = transitionRule.getTo();
-      boolean isTerminal = workflowDefinition.getTerminalStates().contains(toState);
-      workflowExecution.setCurrentState(toState);
-      workflowExecution.setStatus(isTerminal ? WorkflowStatus.CLOSED : WorkflowStatus.ACTIVE);
-      workflowExecution.setUpdatedAt(OffsetDateTime.now());
-      workflowExecutionRepository.save(workflowExecution);
-
-      WorkflowTransitionLogEntity transitionLog = new WorkflowTransitionLogEntity();
-      transitionLog.setWorkflowExecution(workflowExecution);
-      transitionLog.setEventExecution(eventExecution);
-      transitionLog.setAction(transitionRule.getOn().name());
-      transitionLog.setFromState(workflowDefinition.getInitial());
-      transitionLog.setToState(toState);
-      transitionLog.setStatus("COMPLETED");
-      transitionLog.setDslVersion(input.dslVersion());
-      transitionLog.setPerformedBy(input.performedBy());
-      transitionLog.setCreatedAt(OffsetDateTime.now());
-      transitionLogRepository.save(transitionLog);
+          transitionRule.getTo());
     } else {
-      // Fault path
-      eventExecution.setStatus(EventStatus.FAULTED);
-      eventExecution.setUpdatedAt(OffsetDateTime.now());
-      eventExecutionRepository.save(eventExecution);
-
-      workflowExecution.setCurrentState(transitionRule.getOnFault());
-      workflowExecution.setStatus(WorkflowStatus.FAULTED);
-      workflowExecution.setUpdatedAt(OffsetDateTime.now());
-      workflowExecutionRepository.save(workflowExecution);
-
-      WorkflowTransitionLogEntity transitionLog = new WorkflowTransitionLogEntity();
-      transitionLog.setWorkflowExecution(workflowExecution);
-      transitionLog.setEventExecution(eventExecution);
-      transitionLog.setAction(transitionRule.getOn().name());
-      transitionLog.setFromState(workflowDefinition.getInitial());
-      transitionLog.setToState(transitionRule.getOnFault());
-      transitionLog.setStatus("FAULTED");
-      transitionLog.setFaultMessage(faultMessage);
-      transitionLog.setDslVersion(input.dslVersion());
-      transitionLog.setPerformedBy(input.performedBy());
-      transitionLog.setCreatedAt(OffsetDateTime.now());
-      transitionLogRepository.save(transitionLog);
+      handleFaultOutcome(
+          workflowExecution, eventExecution, transitionRule, txResult.errorMessage(), input);
+      log.debug(
+          "Workflow faulted: workflowId={}, faultState={}, message={}",
+          workflowExecution.getId(),
+          transitionRule.getOnFault(),
+          txResult.errorMessage());
     }
 
-    return new WorkflowExecutionResult(
+    WorkflowExecutionResult result = new WorkflowExecutionResult(
         workflowExecution.getId(), workflowExecution.getStatus().name());
+    log.debug(
+        "Workflow execution finished: workflowId={}, status={}",
+        workflowExecution.getId(),
+        result.status());
+    return result;
   }
 
   private TransitionRule findTransitionRule(
@@ -190,12 +117,147 @@ public class EventWorkflowImpl implements EventWorkflow {
         "INVALID_TRANSITION");
   }
 
-  private Map<String, Object> parseContextJson(String contextJson) {
-    try {
-      return objectMapper.readValue(contextJson, new TypeReference<>() {
-      });
-    } catch (JsonProcessingException e) {
-      return Map.of();
+  private WorkflowExecutionEntity createWorkflowExecution(
+      EventWorkflowInput input, WorkflowDefinition workflowDefinition) {
+    WorkflowExecutionEntity entity = new WorkflowExecutionEntity();
+    entity.setWorkflowCode(input.workflowCode());
+    entity.setDslVersion(input.dslVersion());
+    entity.setCurrentState(workflowDefinition.getInitial());
+    entity.setStatus(WorkflowStatus.ACTIVE);
+    entity.setContext(input.contextJson());
+    entity.setDisplayData("{}");
+    entity.setPerformedBy(input.performedBy());
+    entity.setCreatedAt(OffsetDateTime.now());
+    entity.setUpdatedAt(OffsetDateTime.now());
+    return workflowExecutionRepository.save(entity);
+  }
+
+  private EventExecutionEntity createEventExecution(
+      EventWorkflowInput input,
+      WorkflowExecutionEntity workflowExecution,
+      TransitionRule transitionRule,
+      String temporalWorkflowId) {
+    EventExecutionEntity entity = new EventExecutionEntity();
+    entity.setEventCode(input.eventCode());
+    entity.setDslVersion(input.dslVersion());
+    entity.setAction(transitionRule.getOn().name());
+    entity.setStatus(EventStatus.RUNNING);
+    entity.setContext(input.contextJson());
+    entity.setExecutedTransactions("[]");
+    entity.setTemporalWorkflowId(temporalWorkflowId);
+    entity.setWorkflowExecution(workflowExecution);
+    entity.setPerformedBy(input.performedBy());
+    entity.setCreatedAt(OffsetDateTime.now());
+    entity.setUpdatedAt(OffsetDateTime.now());
+    return eventExecutionRepository.save(entity);
+  }
+
+  private TransactionExecutionResult executeTransactions(
+      EventDefinition eventDefinition,
+      EventWorkflowInput input,
+      Long workflowExecutionId,
+      TransactionActivity activityStub) {
+    for (TransactionDefinition txDef : eventDefinition.getTransactionsBlock()) {
+      log.debug("Executing transaction: code={}", txDef.getCode());
+      TransactionActivityInput txInput = new TransactionActivityInput(
+          txDef.getCode(),
+          input.contextJson(),
+          workflowExecutionId,
+          input.performedBy(),
+          input.dslVersion());
+
+      TransactionResult txResult = activityStub.executeTransaction(txInput);
+
+      if (!txResult.success()) {
+        log.debug("Transaction {} failed: {}", txDef.getCode(), txResult.errorMessage());
+        return new TransactionExecutionResult(false, txResult.errorMessage());
+      }
+      log.debug("Transaction {} succeeded", txDef.getCode());
     }
+    return new TransactionExecutionResult(true, null);
+  }
+
+  private void handleSuccessOutcome(
+      WorkflowExecutionEntity workflowExecution,
+      EventExecutionEntity eventExecution,
+      TransitionRule transitionRule,
+      WorkflowDefinition workflowDefinition,
+      EventWorkflowInput input) {
+    eventExecution.setStatus(EventStatus.COMPLETED);
+    eventExecution.setCompletedAt(OffsetDateTime.now());
+    eventExecution.setUpdatedAt(OffsetDateTime.now());
+    eventExecutionRepository.save(eventExecution);
+
+    String toState = transitionRule.getTo();
+    boolean isTerminal = workflowDefinition.getTerminalStates().contains(toState);
+    String fromState = workflowExecution.getCurrentState();
+    workflowExecution.setCurrentState(toState);
+    workflowExecution.setStatus(isTerminal ? WorkflowStatus.CLOSED : WorkflowStatus.ACTIVE);
+    workflowExecution.setUpdatedAt(OffsetDateTime.now());
+    workflowExecutionRepository.save(workflowExecution);
+
+    createTransitionLog(
+        workflowExecution,
+        eventExecution,
+        transitionRule,
+        fromState,
+        toState,
+        "COMPLETED",
+        null,
+        input);
+  }
+
+  private void handleFaultOutcome(
+      WorkflowExecutionEntity workflowExecution,
+      EventExecutionEntity eventExecution,
+      TransitionRule transitionRule,
+      String faultMessage,
+      EventWorkflowInput input) {
+    eventExecution.setStatus(EventStatus.FAULTED);
+    eventExecution.setUpdatedAt(OffsetDateTime.now());
+    eventExecutionRepository.save(eventExecution);
+
+    String fromState = workflowExecution.getCurrentState();
+    workflowExecution.setCurrentState(transitionRule.getOnFault());
+    workflowExecution.setStatus(WorkflowStatus.FAULTED);
+    workflowExecution.setUpdatedAt(OffsetDateTime.now());
+    workflowExecutionRepository.save(workflowExecution);
+
+    createTransitionLog(
+        workflowExecution,
+        eventExecution,
+        transitionRule,
+        fromState,
+        transitionRule.getOnFault(),
+        "FAULTED",
+        faultMessage,
+        input);
+  }
+
+  private void createTransitionLog(
+      WorkflowExecutionEntity workflowExecution,
+      EventExecutionEntity eventExecution,
+      TransitionRule transitionRule,
+      String fromState,
+      String toState,
+      String status,
+      String faultMessage,
+      EventWorkflowInput input) {
+    WorkflowTransitionLogEntity entity = new WorkflowTransitionLogEntity();
+    entity.setWorkflowExecution(workflowExecution);
+    entity.setEventExecution(eventExecution);
+    entity.setAction(transitionRule.getOn().name());
+    entity.setFromState(fromState);
+    entity.setToState(toState);
+    entity.setStatus(status);
+    entity.setFaultMessage(faultMessage);
+    entity.setDslVersion(input.dslVersion());
+    entity.setPerformedBy(input.performedBy());
+    entity.setCreatedAt(OffsetDateTime.now());
+    transitionLogRepository.save(entity);
+  }
+
+  private record TransactionExecutionResult(boolean allSucceeded, String errorMessage) {
+
   }
 }

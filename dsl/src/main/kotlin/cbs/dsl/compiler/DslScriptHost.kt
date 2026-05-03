@@ -3,6 +3,8 @@ package cbs.dsl.compiler
 import cbs.dsl.runtime.DslRegistry
 import javax.script.ScriptEngineManager
 
+//@depricated We need to use gradle to compile project to executable java classes and call them from `backend module`
+@Deprecated(message = "For removal", level = DeprecationLevel.WARNING)
 class DslScriptHost {
   fun eval(scriptContent: String, fileName: String): DslRegistry {
     val engine = ScriptEngineManager().getEngineByExtension("kts")

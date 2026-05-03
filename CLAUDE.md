@@ -59,22 +59,22 @@ cd frontend && pnpm dev
 | `backend/src/main/java/cbs/app/config/SecurityConfig.java`          | JWT decoders, CORS, security filter chain, conditional local/Keycloak beans        |
 | `backend/src/main/java/cbs/app/controller/LocalAuthController.java` | `POST /api/public/auth/token` — local RSA JWT auth                                 |
 | `backend/src/main/java/cbs/app/config/OpenApiConfig.java`           | OpenAPI/Swagger metadata, JWT + OAuth2 security schemes                            |
-| `backend/src/main/resources/application.yml`                        | Datasource, JPA, Flyway, logging, `local-auth` users                               |
+| `backend/src/main/resources/application.yml`                        | Datasource, JPA, Flyway, logging, `app.local-auth` users                           |
 | `starter/src/main/java/cbs/nova/config/NovaAutoConfiguration.java`  | `@AutoConfiguration` + `@ComponentScan` + `@EntityScan` + `@EnableJpaRepositories` |
 | `starter/.../META-INF/spring/...AutoConfiguration.imports`          | Spring Boot auto-discovery registration                                            |
 
 ## 5. Authentication
 
-Two modes controlled by `keycloak.enabled` in `application.yml`:
+Two modes controlled by `app.keycloak.enabled` in `application.yml`:
 
-**Local (dev, default `keycloak.enabled=false`):**
+**Local (dev, default `app.keycloak.enabled=false`):**
 
 - RSA key pair from classpath: `local-jwt-pkcs8.pem` (private), `local-jwt-public.pem` (public)
 - `POST /api/public/auth/token` → validate via in-memory users → return JWT (RSA-signed, 1h)
 - JWT issuer claim must match `spring.application.name` = `"cbs-nova"`
 - `NoOpPasswordEncoder` for plaintext dev passwords
 
-**Keycloak (prod, `keycloak.enabled=true`):**
+**Keycloak (prod, `app.keycloak.enabled=true`):**
 
 - `NimbusJwtDecoder` fetches JWKS from `keycloak.auth-server-url` + `keycloak.realm`
 - Local auth controller disabled via `@ConditionalOnProperty`

@@ -7,7 +7,7 @@ description: Use when delegating implementation work to Qwen as an executor agen
 
 ## Overview
 
-Claude acts as the **thinking center**: it plans, decomposes, writes task
+Gemini acts as the **thinking center**: it plans, decomposes, writes task
 specifications, delegates execution to Qwen, then verifies results.
 Qwen acts as the **executor**: it reads a task file and performs the work.
 
@@ -17,7 +17,7 @@ Qwen acts as the **executor**: it reads a task file and performs the work.
 
 | Agent    | Role         | Responsibility                                    |
 |----------|--------------|---------------------------------------------------|
-| `claude` | Orchestrator | Plan, write task spec, invoke Qwen, verify result |
+| `gemini` | Orchestrator | Plan, write task spec, invoke Qwen, verify result |
 | `qwen`   | Executor     | Read task file, perform work, write result file   |
 
 ---
@@ -28,29 +28,29 @@ Qwen acts as the **executor**: it reads a task file and performs the work.
 [User Request]
       │
       ▼
-[1. Claude: Analyze & Plan]
+[1. Gemini: Analyze & Plan]
       │
       ▼
-[2. Claude: Write docs/tasks/{task-name}.md]
+[2. Gemini: Write docs/tasks/{task-name}.md]
       │
       ▼
-[3. Claude: Invoke Qwen via CLI]
-      │   source ~/.nvm/nvm.sh && nvm use v22.20.0 && \
-      │   qwen -y "Read docs/tasks/{task-name}.md and follow all instructions
-      │            inside. Write your result to docs/results/{task-name}.result.md"
-      │            --output-format text
+[3. Gemini: Invoke Qwen via MCP tool]
+      │   qwen_run(task_name="{task-name}", timeout_sec=300,
+      │            prompt="Read the file docs/tasks/{task-name}.md carefully...",
+      │            args=["-y", "--output-format", "text"])
+      │   → Instructs Qwen to follow all instructions, writing result to docs/results/{task-name}.result.md
       ▼
 [4. Qwen: Execute task, write result file]
       │
       ▼
-[5. Claude: Verify result file + run verification commands]
+[5. Gemini: Verify result file + run verification commands]
       │
       ├── PASS ──► Done ✅
       │
-      └── FAIL ──► [6. Claude: Amend task file, re-invoke Qwen (retry #1)]
+      └── FAIL ──► [6. Gemini: Amend task file, re-invoke Qwen (retry #1)]
                          │
                          ▼
-                   [7. Claude: Verify again]
+                   [7. Gemini: Verify again]
                          │
                          ├── PASS ──► Done ✅
                          └── FAIL ──► Escalate to user ❌ (max retries reached)
@@ -60,7 +60,7 @@ Qwen acts as the **executor**: it reads a task file and performs the work.
 
 ## Step 1 — Analyze & Plan
 
-Before writing the task file, Claude must:
+Before writing the task file, Gemini must:
 
 - Understand the full scope of the request
 - Identify affected files, directories, dependencies
@@ -128,18 +128,22 @@ After completing the task, write a result file to:
 
 ## Step 3 — Invoking Qwen
 
-After writing the task file, Claude runs:
+After writing the task file, Gemini invokes the `qwen_run` MCP tool:
 
-```bash
-qwen-run {task-name} -y "Read the file docs/tasks/{task-name}.md carefully and follow all instructions inside it exactly. After completing all work, write your result summary to docs/results/{task-name}.result.md as instructed." --output-format text
+```
+Tool: qwen_run
+Arguments:
+  task_name: "{task-name}"
+  timeout_sec: 300
+  prompt: "Read the file docs/tasks/{task-name}.md carefully and follow all instructions inside it exactly. After completing all work, write your result summary to docs/results/{task-name}.result.md as instructed."
+  args: ["-y", "--output-format", "text"]
 ```
 
-> **Note:** `-y` enables yolo mode (auto-approves file edits — required for unattended execution).
+> **Note:** The `qwen_run` MCP tool handles nvm setup automatically, streams output to stdout,
+> and logs to `/tmp/logs/{task-name}.log`. A PID file is created at `/tmp/logs/{task-name}.pid`
+> while running. The tool returns the full stdout/stderr of the Qwen execution as its result.
+> `-y` enables yolo mode (auto-approves file edits — required for unattended execution).
 > `--output-format text` produces clean output for Claude to parse.
-> **`qwen-run`** is a wrapper at `~/.local/bin/qwen-run` that handles nvm setup automatically.
-> It supports an optional `--timeout <sec>` argument before `{task-name}` (default: 300s).
-> Output is streamed directly to stdout, and also logged to `/tmp/logs/{task-name}.log`.
-> If you need to verify it's still running in the background, check if `/tmp/logs/{task-name}.pid` exists.
 
 ---
 
@@ -192,7 +196,7 @@ exit code: 0
 
 ## Step 5 — Verification by Claude
 
-After Qwen finishes, Claude must:
+After Qwen finishes, Gemini must:
 
 1. **Check the result file exists** at `docs/results/{task-name}.result.md`
 2. **Read the Self-Assessment** section — note if Qwen flagged issues
@@ -205,7 +209,7 @@ After Qwen finishes, Claude must:
 ## Step 6 — Retry Logic
 
 - Maximum **2 total runs** (1 retry allowed)
-- Before retrying, Claude **must amend the task file**:
+- Before retrying, Gemini **must amend the task file**:
   - Add a `## Retry Notes` section at the bottom
   - Describe exactly what failed and what to do differently
 
@@ -220,15 +224,23 @@ Please fix these specifically before re-running verification.
 
 - Then re-invoke:
 
-```bash
-qwen-run {task-name} -y "Read the updated file docs/tasks/{task-name}.md carefully. Pay attention to the 'Retry Notes' section at the bottom. Fix the listed issues and update docs/results/{task-name}.result.md with a fresh result." --output-format text
 ```
+Tool: qwen_run
+Arguments:
+  task_name: "{task-name}"
+  timeout_sec: 300
+  prompt: "Read the updated file docs/tasks/{task-name}.md carefully. Pay attention to the 'Retry Notes' section at the bottom. Fix the listed issues and update docs/results/{task-name}.result.md with a fresh result."
+  args: ["-y", "--output-format", "text"]
+```
+
+> The `prompt` parameter is explicitly defined here to override the default text, directing Qwen specifically to focus
+> on the `Retry Notes`.
 
 ---
 
 ## Step 7 — Escalation
 
-If the task still fails after retry #1, Claude must:
+If the task still fails after retry #1, Gemini must:
 
 1. **Not attempt further retries**
 2. Report to the user with:

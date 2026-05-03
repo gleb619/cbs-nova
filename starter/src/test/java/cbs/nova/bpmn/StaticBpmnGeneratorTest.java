@@ -2,6 +2,7 @@ package cbs.nova.bpmn;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.dsl.api.Action;
 import cbs.dsl.api.EventDefinition;
 import cbs.dsl.api.TransactionDefinition;
 import cbs.dsl.api.TransitionRule;
@@ -80,7 +81,7 @@ class StaticBpmnGeneratorTest {
       @Override
       public List<TransitionRule> getTransitions() {
         return List.of(new TransitionRule(
-            "PENDING", "DONE", cbs.dsl.api.Action.APPROVE, approveEvent, "FAULTED"));
+            "PENDING", "DONE", Action.APPROVE, approveEvent, "FAULTED"));
       }
     };
 
@@ -206,9 +207,9 @@ class StaticBpmnGeneratorTest {
       public List<TransitionRule> getTransitions() {
         return List.of(
             new TransitionRule(
-                "PENDING", "APPROVED", cbs.dsl.api.Action.APPROVE, approveEvent, "FAULTED"),
+                "PENDING", "APPROVED", Action.APPROVE, approveEvent, "FAULTED"),
             new TransitionRule(
-                "PENDING", "REJECTED", cbs.dsl.api.Action.REJECT, rejectEvent, "FAULTED"));
+                "PENDING", "REJECTED", Action.REJECT, rejectEvent, "FAULTED"));
       }
     };
 

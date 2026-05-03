@@ -6,17 +6,20 @@ import piniaPersist from 'pinia-plugin-persistedstate';
 import { createApp } from 'vue';
 import AppVue from './AppVue.vue';
 import router from './router';
+import { homeTranslations } from './home/HomeTranslations';
+import { toTranslationResources } from '@cbs/admin-plugin/composables/i18n/Translations';
 
-const app = createApp(AppVue);
-
-// Initialize i18next
+// Initialize i18next with translations
 void i18next.use(LanguageDetector).init({
   fallbackLng: 'en',
   debug: false,
   interpolation: {
     escapeValue: false,
   },
+  resources: toTranslationResources(homeTranslations),
 });
+
+const app = createApp(AppVue);
 
 app.use(I18NextVue, { i18next });
 
