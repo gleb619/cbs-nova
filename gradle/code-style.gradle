@@ -5,7 +5,7 @@ spotless {
     palantirJavaFormat()
         .style('GOOGLE')
         .formatJavadoc(true)
-    importOrder()
+    importOrder('', 'javax', 'java')
     removeUnusedImports()
     trimTrailingWhitespace()
     endWithNewline()

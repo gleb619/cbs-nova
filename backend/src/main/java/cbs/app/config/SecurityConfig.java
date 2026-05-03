@@ -58,8 +58,14 @@ public class SecurityConfig {
   }
 
   /**
-   * openssl genrsa -out backend/src/main/resources/local-jwt.pem 2048 openssl rsa -in
-   * backend/src/main/resources/local-jwt.pem -pubout -out backend/src/main/resources/local-jwt-public.pem
+   * Generates a JwtDecoder for local JWT authentication using an RSA public key.
+   *
+   * <p>openssl genrsa -out backend/src/main/resources/local-jwt.pem 2048 openssl rsa -in
+   * backend/src/main/resources/local-jwt.pem -pubout -out
+   * backend/src/main/resources/local-jwt-public.pem
+   *
+   * @param publicKeyResource the RSA public key resource
+   * @return the configured JwtDecoder
    */
   @Bean("jwtDecoder")
   @ConditionalOnProperty(name = "keycloak.enabled", havingValue = "false")

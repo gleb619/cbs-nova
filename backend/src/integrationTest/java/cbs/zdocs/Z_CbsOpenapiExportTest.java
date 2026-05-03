@@ -24,8 +24,12 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * Run via `./gradlew :backend:exportOpenApi`
+ * Exports the OpenAPI specification to the build directory.
+ *
+ * <p>Run via {@code ./gradlew :backend:exportOpenApi}.
  */
+// CHECKSTYLE:OFF
+@SuppressWarnings("checkstyle:TypeName")
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     classes = Z_CbsOpenapiExportTest.OpenApiExportTestApplication.class,
@@ -37,6 +41,7 @@ import org.springframework.security.web.SecurityFilterChain;
         org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration,\
         org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration"""})
 class Z_CbsOpenapiExportTest {
+  // CHECKSTYLE:ON
 
   @LocalServerPort
   private int port;
@@ -83,7 +88,6 @@ class Z_CbsOpenapiExportTest {
   @SpringBootConfiguration
   @EnableAutoConfiguration
   @Import({OpenApiConfig.class, OpenApiExportTestSecurity.class})
-  //  @Import({OpenApiConfig.class, SettingController.class, OpenApiExportTestSecurity.class})
   static class OpenApiExportTestApplication {}
 
   @TestConfiguration

@@ -35,8 +35,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class LocalAuthController {
 
   /**
-   * openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt \ -in backend/src/main/resources/local-jwt.pem \ -out
-   * backend/src/main/resources/local-jwt-pkcs8.pem
+   * Generates a PKCS#8 formatted RSA private key from the configured resource.
+   *
+   * <p>openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt \ -in
+   * backend/src/main/resources/local-jwt.pem \ -out backend/src/main/resources/local-jwt-pkcs8.pem
    */
   @Value("classpath:local-jwt-pkcs8.pem")
   private final Resource privateKeyResource;
