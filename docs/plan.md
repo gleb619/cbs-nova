@@ -60,7 +60,7 @@
 | T32  | `ConditionDslScope`: named condition declarations                               | `done`   | dsl      | T30, T31                | T33                |
 | T33  | `MassOperationDslScope`: triggers, context, source, lock, item, signals, finish | `done`   | dsl      | T26d                    | T34                |
 | T34  | DSL import system: `#import` resolver + scope injection                         | `done`   | dsl      | T28,T29,T30,T31,T32,T33 | T35                |
-| T35  | DSL integration test: full loan-contract scenario (all types)                   | `todo`   | dsl      | T34                     | T36                |
+| T35  | DSL integration test: full loan-contract scenario (all types)                   | `done`   | dsl      | T34                     | T36                |
 | T36  | Backend integration: wire all new DSL scopes, remove deprecated                 | `todo`   | backend  | T35                     | —                  |
 
 ---

@@ -41,13 +41,39 @@ class DslCompiler(
                             val scriptInstance = evalResult.value.returnValue.scriptInstance
                             val registry = DslRegistry()
                             when (scriptInstance) {
-                                is EventDslScope -> scriptInstance.registeredEvents.forEach { registry.register(it) }
-                                is TransactionDslScope -> scriptInstance.registeredTransaction?.let { registry.register(it) }
-                                is HelperDslScope -> scriptInstance.registeredHelpers.forEach { registry.register(it) }
-                                is ConditionDslScope -> scriptInstance.registeredCondition?.let { registry.register(it) }
-                                is MassOperationDslScope -> scriptInstance.registeredMassOperation?.let { registry.register(it) }
-                                is WorkflowDslScope -> scriptInstance.registeredWorkflows.forEach { registry.register(it) }
-                                else -> error("Script '$path' did not produce a valid DslScope instance")
+                                is EventDslScope -> {
+                                    if (scriptInstance.registeredEvents.isEmpty()) {
+                                        error("Script '$path' did not produce a valid DslScope instance")
+                                    }
+                                    scriptInstance.registeredEvents.forEach { registry.register(it) }
+                                }
+
+                                is TransactionDslScope -> {
+                                    scriptInstance.registeredTransaction?.let { registry.register(it) }
+                                }
+
+                                is HelperDslScope -> {
+                                    scriptInstance.registeredHelpers.forEach { registry.register(it) }
+                                }
+
+                                is ConditionDslScope -> {
+                                    scriptInstance.registeredCondition?.let { registry.register(it) }
+                                }
+
+                                is MassOperationDslScope -> {
+                                    scriptInstance.registeredMassOperation?.let { registry.register(it) }
+                                }
+
+                                is WorkflowDslScope -> {
+                                    scriptInstance.registeredWorkflows.forEach {
+                                        registry.register(it)
+                                        it.transitions.forEach { tr -> registry.register(tr.event) }
+                                    }
+                                }
+
+                                else -> {
+                                    error("Script '$path' did not produce a valid DslScope instance")
+                                }
                             }
                             registry
                         }
@@ -96,13 +122,36 @@ class DslCompiler(
                         val scriptInstance = evalResult.value.returnValue.scriptInstance
                         val updated = DslRegistry()
                         when (scriptInstance) {
-                            is EventDslScope -> scriptInstance.registeredEvents.forEach { updated.register(it) }
-                            is TransactionDslScope -> scriptInstance.registeredTransaction?.let { updated.register(it) }
-                            is HelperDslScope -> scriptInstance.registeredHelpers.forEach { updated.register(it) }
-                            is ConditionDslScope -> scriptInstance.registeredCondition?.let { updated.register(it) }
-                            is MassOperationDslScope -> scriptInstance.registeredMassOperation?.let { updated.register(it) }
-                            is WorkflowDslScope -> scriptInstance.registeredWorkflows.forEach { updated.register(it) }
-                            else -> continue
+                            is EventDslScope -> {
+                                scriptInstance.registeredEvents.forEach { updated.register(it) }
+                            }
+
+                            is TransactionDslScope -> {
+                                scriptInstance.registeredTransaction?.let { updated.register(it) }
+                            }
+
+                            is HelperDslScope -> {
+                                scriptInstance.registeredHelpers.forEach { updated.register(it) }
+                            }
+
+                            is ConditionDslScope -> {
+                                scriptInstance.registeredCondition?.let { updated.register(it) }
+                            }
+
+                            is MassOperationDslScope -> {
+                                scriptInstance.registeredMassOperation?.let { updated.register(it) }
+                            }
+
+                            is WorkflowDslScope -> {
+                                scriptInstance.registeredWorkflows.forEach {
+                                    updated.register(it)
+                                    it.transitions.forEach { tr -> updated.register(tr.event) }
+                                }
+                            }
+
+                            else -> {
+                                continue
+                            }
                         }
                         overwriteInto(merged, updated)
                     }

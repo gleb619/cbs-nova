@@ -3,14 +3,15 @@ package cbs.nova.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.security.SecureRandom;
-import java.util.Base64;
-import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 import tools.jackson.databind.ObjectMapper;
+
+import java.security.SecureRandom;
+import java.util.Base64;
+import java.util.Map;
 
 class ContextEncryptionServiceTest {
 

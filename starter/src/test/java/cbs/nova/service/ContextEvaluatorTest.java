@@ -8,7 +8,6 @@ import static org.mockito.Mockito.when;
 import cbs.dsl.api.EventDefinition;
 import cbs.dsl.runtime.DslRegistry;
 import cbs.nova.model.EventExecutionRequest;
-import java.util.Map;
 import kotlin.Unit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,6 +15,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Map;
 
 @ExtendWith(MockitoExtension.class)
 class ContextEvaluatorTest {

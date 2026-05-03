@@ -27,6 +27,7 @@ class ScriptHost {
                 fileName.endsWith(".helper.kts") -> HelperScriptCompilationConfiguration
                 fileName.endsWith(".condition.kts") -> ConditionScriptCompilationConfiguration
                 fileName.endsWith(".mass.kts") -> MassOperationScriptCompilationConfiguration
+                fileName.endsWith(".workflow.kts") -> WorkflowScriptCompilationConfiguration
                 else -> EventScriptCompilationConfiguration
             }
         val evalConfig =

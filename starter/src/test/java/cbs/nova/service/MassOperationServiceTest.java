@@ -26,10 +26,6 @@ import cbs.nova.model.MassOperationTriggerRequest;
 import cbs.nova.model.exception.EntityNotFoundException;
 import cbs.nova.repository.MassOperationExecutionRepository;
 import cbs.nova.repository.MassOperationItemRepository;
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,6 +33,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @ExtendWith(MockitoExtension.class)
 class MassOperationServiceTest {

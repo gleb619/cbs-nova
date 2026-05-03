@@ -1,7 +1,8 @@
 package cbs.nova.model;
 
-import java.time.OffsetDateTime;
 import lombok.Builder;
+
+import java.time.OffsetDateTime;
 
 @Builder(toBuilder = true)
 public record WorkflowExecutionDto(

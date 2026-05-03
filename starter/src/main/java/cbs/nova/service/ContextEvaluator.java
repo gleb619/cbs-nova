@@ -3,11 +3,12 @@ package cbs.nova.service;
 import cbs.dsl.api.EventDefinition;
 import cbs.dsl.api.context.EnrichmentContext;
 import cbs.nova.model.EventExecutionRequest;
-import java.util.HashMap;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 @Service
