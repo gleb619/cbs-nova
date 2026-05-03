@@ -31,7 +31,9 @@ class TransactionDslContext(
         source.isResumed,
         delegateTarget,
         phase,
-    )
+    ) {
+        enrichment.putAll(source.enrichment)
+    }
 
     override fun delegate() {
         when (currentPhase) {

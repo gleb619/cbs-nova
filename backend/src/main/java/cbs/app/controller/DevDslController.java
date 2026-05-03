@@ -3,6 +3,9 @@ package cbs.app.controller;
 import cbs.dsl.compiler.DslValidator;
 import cbs.dsl.compiler.ValidationError;
 import cbs.dsl.runtime.DslRegistry;
+import cbs.dsl.script.DslScopeExtractor;
+import cbs.dsl.script.EvalResult;
+import cbs.dsl.script.ScriptHost;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
@@ -24,6 +27,7 @@ import java.util.Map;
 public class DevDslController {
 
   private final DslValidator validator;
+  private final ScriptHost scriptHost;
 
   @PostMapping(
       value = "/execute",
@@ -37,8 +41,12 @@ public class DevDslController {
 
     DslRegistry registry;
     try {
-      //      registry = scriptHost.eval(request.dslContent(), "input");
-      registry = null;
+      EvalResult evalResult =
+          DslScopeExtractor.evalAndExtract(scriptHost, request.dslContent(), "input.event.kts");
+      if (evalResult instanceof EvalResult.Failure failure) {
+        throw new IllegalStateException(failure.getMessage());
+      }
+      registry = ((EvalResult.Success) evalResult).getRegistry();
     } catch (IllegalStateException e) {
       log.warn("DSL script evaluation failed: {}", e.getMessage());
       var error = new ValidationErrorDto("input", e.getMessage());

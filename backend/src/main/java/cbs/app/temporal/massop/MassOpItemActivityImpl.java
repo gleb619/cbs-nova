@@ -66,7 +66,7 @@ public class MassOpItemActivityImpl implements MassOpItemActivity {
     log.debug("Persisting mass operation item: key={}, status={}", input.itemKey(), input.status());
 
     MassOperationItemEntity item = new MassOperationItemEntity();
-    item.setMassOperationExecution(input.execution());
+    item.setMassOperationExecutionId(input.execution().getId());
     item.setItemKey(input.itemKey());
     item.setItemData(input.itemDataJson());
     item.setStatus(input.status());

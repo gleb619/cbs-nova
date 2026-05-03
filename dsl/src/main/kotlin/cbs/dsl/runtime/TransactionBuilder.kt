@@ -25,6 +25,7 @@ class TransactionBuilder(
         val dslCtx = TransactionDslContext(ctx, delegateTarget, TransactionPhase.EXECUTE)
         _execute?.invoke(dslCtx)
             ?: error("Transaction '$code' has no execute block defined")
+        ctx.enrichment.putAll(dslCtx.enrichment)
     }
 
     override fun rollback(ctx: TransactionContext) {

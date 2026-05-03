@@ -8,7 +8,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -33,11 +32,6 @@ public class MassOperationItemEntity {
   @Column(name = "mass_operation_execution_id")
   private Long massOperationExecutionId;
 
-  /** @deprecated use #{@link #massOperationExecutionId} instead */
-  @Transient
-  @Deprecated(forRemoval = true)
-  private transient MassOperationExecutionEntity massOperationExecution;
-
   @Column(name = "item_key", nullable = false)
   private String itemKey;
 
@@ -51,11 +45,6 @@ public class MassOperationItemEntity {
   @Column(name = "workflow_execution_id")
   private Long workflowExecutionId;
 
-  /** @deprecated use #{@link #workflowExecutionId} instead */
-  @Transient
-  @Deprecated(forRemoval = true)
-  private WorkflowExecutionEntity workflowExecution;
-
   @Column(name = "error_message")
   private String errorMessage;
 
@@ -67,9 +56,4 @@ public class MassOperationItemEntity {
 
   @Column(name = "retry_of")
   private Long retryOfId;
-
-  /** @deprecated use #{@link #workflowExecutionId} instead */
-  @Transient
-  @Deprecated(forRemoval = true)
-  private MassOperationItemEntity retryOf;
 }

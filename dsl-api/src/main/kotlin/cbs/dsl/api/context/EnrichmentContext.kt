@@ -12,4 +12,6 @@ open class EnrichmentContext(
   operator fun set(key: String, value: Any) {
     enrichment[key] = value
   }
+
+  open fun helper(name: String, params: Map<String, Any>): Any = Unit
 }
