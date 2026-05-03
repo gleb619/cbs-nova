@@ -1,13 +1,17 @@
 package cbs.dsl.compiler
 
 import cbs.dsl.api.ConditionDefinition
+import cbs.dsl.api.DslMode
 import cbs.dsl.api.HelperDefinition
 import cbs.dsl.api.ImportType
 import cbs.dsl.api.TransactionDefinition
+import cbs.dsl.impl.ImplRegistry
 import cbs.dsl.runtime.DslRegistry
 
 class ImportResolver(
     private val registry: DslRegistry,
+    private val implRegistry: ImplRegistry? = null,
+    private val mode: DslMode = DslMode.STRICT,
     private val codeImportResolver: CodeImportResolver = CodeImportResolver(),
 ) {
   fun resolve(directives: List<ImportDirective>): Map<String, ImportScope> {
@@ -20,7 +24,21 @@ class ImportResolver(
 
       val definitions =
           if (directive.type == ImportType.CODE) {
-            val codeDefs = codeImportResolver.resolve(directive)
+            val codeDefs =
+                if (implRegistry != null) {
+                  // STRICT mode: use SPI-registered ImplRegistry for lookup
+                  if (directive.wildcard) {
+                    implRegistry.resolveByPackagePrefix(directive.path)
+                  } else {
+                    implRegistry.resolveByClassName(directive.path)?.let { listOf(it) }
+                        ?: emptyList()
+                  }
+                } else if (mode == DslMode.LENIENT) {
+                  // LENIENT mode: fallback to runtime classpath scanning
+                  codeImportResolver.resolve(directive)
+                } else {
+                  emptyList()
+                }
             codeDefs.forEach { def ->
               when (def) {
                 is TransactionDefinition -> registry.register(def)

@@ -90,6 +90,9 @@ temporal-testing = { module = "io.temporal:temporal-testing", version.ref = "tem
 archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
 jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit" }
 
+# -- KSP (Kotlin Symbol Processing) --
+ksp = { module = "com.google.devtools.ksp:symbol-processing-api", version = "2.3.7" }
+
 
 [bundles]
 spring-web = ["spring-boot-starter-web", "spring-boot-starter-actuator", "spring-boot-starter-validation", "spring-boot-starter-json"]
@@ -110,3 +113,4 @@ test-logger = { id = "com.adarshr.test-logger", version.ref = "test-logger" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 openapi-generator = { id = "org.openapi.generator", version.ref = "openapi-generator" }
 freefair-lombok = { id = "io.freefair.lombok", version.ref = "freefair" }
+ksp = { id = "com.google.devtools.ksp", version = "2.3.7" }

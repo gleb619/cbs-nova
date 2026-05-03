@@ -4,28 +4,28 @@ package cbs.dsl.api
  * Marks a class as a DSL implementation registered under a specific [code].
  *
  * The annotation processor (or Spring auto-configuration) scans for classes annotated with
- * `@DslImpl` and registers them into the `ImplRegistry` at startup. The [code] must match
+ * `@DslComponent` and registers them into the `ImplRegistry` at startup. The [code] must match
  * the string used in DSL files: `transaction("KYC_CHECK")`, `helper("LOAN_CONDITIONS_BY_ID")`, etc.
  *
  * Example:
  * ```kotlin
- * @DslImpl(code = "KYC_CHECK", type = DslImplType.TRANSACTION)
+ * @DslComponent(code = "KYC_CHECK", type = DslImplType.TRANSACTION)
  * class KycCheckTransaction : TransactionDefinition {
  *     override val code = "KYC_CHECK"
  *     override fun execute(ctx: TransactionContext) { ... }
  * }
  * ```
  *
- * In tests, `TestTransaction` / `TestHelper` / `TestCondition` can be annotated with `@DslImpl`
+ * In tests, `TestTransaction` / `TestHelper` / `TestCondition` can be annotated with `@DslComponent`
  * to participate in compile-time registration:
  * ```kotlin
- * @DslImpl(code = "KYC_CHECK", type = DslImplType.TRANSACTION)
+ * @DslComponent(code = "KYC_CHECK", type = DslImplType.TRANSACTION)
  * class TestKycCheck : TransactionDefinition { ... }
  * ```
  */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class DslImpl(
+annotation class DslComponent(
     val code: String,
     val type: DslImplType,
 )

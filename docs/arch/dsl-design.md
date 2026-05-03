@@ -746,7 +746,7 @@ condition("BORROWER_ACCOUNT_READY") { ctx ->
 
 ---
 
-## 4.11 Annotation Processor & Compile-Time Registration
+## 4.11 Annotation Processor & Compile-Time Registration (SPI)
 
 ### Overview
 
@@ -754,14 +754,37 @@ In production, DSL implementations (transactions, helpers, conditions) are Sprin
 Kotlin classes. The engine resolves `ctx.helper("LOAN_CONDITIONS_BY_ID", ...)` by looking up the
 `HelperDefinition` registered under code `"LOAN_CONDITIONS_BY_ID"` in the `ImplRegistry`.
 
-To avoid manual wiring, the `@DslImpl` annotation (in `dsl-api`) marks a class as a DSL implementation.
-An annotation processor (or Spring `@Configuration` scanner) reads these annotations at compile time
-(or startup) and generates/populates the `ImplRegistry`.
+To avoid manual wiring and runtime classpath scanning, the `@DslComponent` annotation (in `dsl-api`)
+marks a class as a DSL implementation. The KSP annotation processor (`dsl-codegen` module) reads
+these annotations at compile time and generates an `ImplRegistrationProvider` implementation that
+registers all discovered components via SPI (Service Provider Interface).
 
-### `@DslImpl` annotation
+At application startup, `SpiImplRegistryLoader` loads all `ImplRegistrationProvider` implementations
+via `ServiceLoader` and invokes `register(registry)` on each to populate the `ImplRegistry`. This is
+zero-reflection, zero-classpath-scanning — all wiring is resolved at compile time.
+
+### Execution Modes: STRICT vs LENIENT
+
+DSL compilation supports two modes controlled by `app.cbs.dsl.mode` in `application.yml`:
+
+| Mode      | Default | Environment                          | Code Import Resolution                          |
+|-----------|---------|--------------------------------------|-------------------------------------------------|
+| `STRICT`  | Yes     | Production / CI / non-dev backend    | SPI-registered `ImplRegistry` only (no scanning) |
+| `LENIENT` | No      | Development only (`@Profile("dev")`) | Falls back to runtime classpath scanning        |
+
+**STRICT mode (production default):**
+- `CodeImportResolver` is disabled
+- `// #import code:...` directives resolve from `ImplRegistry.resolveByClassName()` / `resolveByPackagePrefix()`
+- Fast startup, deterministic, zero reflection
+
+**LENIENT mode (development):**
+- Falls back to `CodeImportResolver` runtime classpath scanning when SPI registry unavailable
+- Slower startup but supports ad-hoc `.kts` development without recompilation
+
+### `@DslComponent` annotation
 
 ```kotlin
-@DslImpl(code = "KYC_CHECK", type = DslImplType.TRANSACTION)
+@DslComponent(code = "KYC_CHECK", type = DslImplType.TRANSACTION)
 class KycCheckTransaction : TransactionDefinition {
     override val code = "KYC_CHECK"
     override fun execute(ctx: TransactionContext) { /* ... */ }
@@ -771,38 +794,82 @@ class KycCheckTransaction : TransactionDefinition {
 ```
 
 The `code` must match the string used in `.kts` files. The `type` tells the processor which registry
-map to populate (`TRANSACTION`, `HELPER`, `CONDITION`, or `EVENT`).
+map to populate (`TRANSACTION`, `HELPER`, `CONDITION`, `WORKFLOW`, or `MASS_OPERATION`).
 
-### Compile-time code generation (planned)
+### Compile-time code generation (T47)
 
-The annotation processor generates a `GeneratedImplRegistrations.kt` file in the same package:
+The KSP annotation processor generates a `GeneratedImplRegistrations.kt` file in the package
+`cbs.dsl.codegen.generated`:
 
 ```kotlin
 // Generated — do not edit
-object GeneratedImplRegistrations {
-    fun register(registry: ImplRegistry) {
-        registry.register(KycCheckTransaction())
-        registry.register(LoanConditionsHelper())
-        registry.register(BorrowerAccountReadyCondition())
-    }
+package cbs.dsl.codegen.generated
+
+import cbs.dsl.api.ImplRegistrationProvider
+import cbs.dsl.api.WritableRegistry
+
+object GeneratedImplRegistrations : ImplRegistrationProvider {
+  override fun register(registry: WritableRegistry) {
+    registry.register(KycCheckTransaction())
+    registry.register(LoanConditionsHelper())
+    registry.register(BorrowerAccountReadyCondition())
+  }
 }
 ```
 
-At startup, `ImplRegistryAutoConfiguration` calls `GeneratedImplRegistrations.register(implRegistry)`.
-This is zero-reflection, zero-classpath-scanning — all wiring is resolved at compile time.
+The processor also generates an SPI service file
+`META-INF/services/cbs.dsl.api.ImplRegistrationProvider` containing the fully-qualified name
+`cbs.dsl.codegen.generated.GeneratedImplRegistrations`.
 
-### Runtime fallback (current implementation — T38c)
+**Validation:** The processor validates each `@DslComponent` annotated class at compile time:
+- Must be a class (not interface or object)
+- Must have a public no-arg constructor
+- Must implement exactly one of: `TransactionDefinition`, `HelperDefinition`, `ConditionDefinition`,
+  `WorkflowDefinition`, `MassOperationDefinition`
+- `code` attribute must not be blank
 
-Until the annotation processor is implemented, `ImplRegistry.populateFrom(DslRegistry)` provides a
-runtime fallback: it scans all definitions compiled from `.kts` files and registers them by code and name.
-Test setups pre-register `TestXxx` instances manually.
+### SPI-based loading at startup (T49)
+
+`SpiImplRegistryLoader` (in `dsl` module) loads all providers:
+
+```kotlin
+object SpiImplRegistryLoader {
+  fun loadInto(registry: ImplRegistry) {
+    ServiceLoader.load(ImplRegistrationProvider::class.java).forEach { provider ->
+      provider.register(registry)
+    }
+  }
+}
+```
+
+`ImplRegistryAutoConfiguration` (in `starter` module) creates the Spring bean:
+
+```kotlin
+@AutoConfiguration
+class ImplRegistryAutoConfiguration {
+  @Bean
+  fun implRegistry(): ImplRegistry {
+    val registry = ImplRegistry()
+    SpiImplRegistryLoader.loadInto(registry)
+    return registry
+  }
+}
+```
+
+**Duplicate detection:** If two providers register DSL components with the same `code`, an
+`IllegalStateException` is thrown with a clear message identifying the conflicting providers.
+
+### Runtime fallback for .kts files
+
+`ImplRegistry.populateFrom(DslRegistry)` provides a runtime fallback for definitions compiled from
+`.kts` files at runtime. It scans and registers them by code and name. Test setups may still
+pre-register `TestXxx` instances manually.
 
 ### Test impl registration
 
-Test classes in `dsl/src/main/kotlin/cbs/dsl/impl/` (`TestTransaction`, `TestHelper`, `TestCondition`,
-`TestEvent`) can be annotated with `@DslImpl` to participate in compile-time registration in test
-source sets. The annotation processor generates a `GeneratedTestImplRegistrations.kt` for the test
-classpath.
+Test classes annotated with `@DslComponent` (e.g., `TestTransaction`, `TestHelper`, `TestCondition`)
+participate in compile-time registration when the `dsl-codegen` processor is applied to the test
+source set. The processor generates `GeneratedImplRegistrations` for both main and test classpaths.
 
 ### Lookup priority in `ImplRegistry`
 
@@ -810,28 +877,42 @@ classpath.
 |----------|----------------------|-------------------------------------|---------------------------------------------|
 | 1        | Name-keyed entry     | `definition.name`                   | Test overrides, named DSL stubs             |
 | 2        | Code-keyed entry     | `definition.code`                   | Production beans, compiled `.kts` definitions |
+| 3        | Class-name lookup    | `ImplRegistry.resolveByClassName()` | STRICT mode CODE imports                    |
 
 This means a `TestTransaction` registered under `name = "TestKycCheck"` takes precedence over the
 production `KycCheckTransaction` registered under `code = "KYC_CHECK"` when the DSL calls
 `ctx.helper("TestKycCheck", ...)`. The production bean is still reachable via `"KYC_CHECK"`.
 
+### Module dependencies
+
+```
+dsl-api  ←  dsl-codegen (KSP processor, depends only on dsl-api)
+   ↑
+  dsl    ←  ImplRegistry implements WritableRegistry (from dsl-api)
+   ↑
+starter  ←  ImplRegistryAutoConfiguration + KSP (dsl-codegen) for compile-time registration
+```
+
+The `WritableRegistry` interface in `dsl-api` breaks the circular dependency: `dsl-codegen` no longer
+depends on `dsl`, only on `dsl-api`.
+
 ### Annotation usage examples
 
 **Transaction implementation:**
 ```kotlin
-@DslImpl(code = "KYC_CHECK", type = DslImplType.TRANSACTION)
+@DslComponent(code = "KYC_CHECK", type = DslImplType.TRANSACTION)
 class KycCheckTransaction : TransactionDefinition {
     override val code = "KYC_CHECK"
     override val name: String? get() = "ProductionKycCheck"
-    
+
     override fun preview(ctx: TransactionContext) {
         // Preview logic
     }
-    
+
     override fun execute(ctx: TransactionContext) {
         ctx["kycVerified"] = true
     }
-    
+
     override fun rollback(ctx: TransactionContext) {
         // Rollback logic
     }
@@ -840,11 +921,11 @@ class KycCheckTransaction : TransactionDefinition {
 
 **Helper implementation:**
 ```kotlin
-@DslImpl(code = "LOAN_CONDITIONS_BY_ID", type = DslImplType.HELPER)
+@DslComponent(code = "LOAN_CONDITIONS_BY_ID", type = DslImplType.HELPER)
 class LoanConditionsHelper : HelperDefinition {
     override val code = "LOAN_CONDITIONS_BY_ID"
     override val name: String? get() = "ProductionLoanConditions"
-    
+
     override fun execute(input: HelperInput): HelperOutput {
         val loanId = (input as MapHelperInput).params["loanId"]
         return AnyHelperOutput(mapOf("loanId" to loanId, "currency" to "USD"))
@@ -854,16 +935,16 @@ class LoanConditionsHelper : HelperDefinition {
 
 **Test implementation (override):**
 ```kotlin
-@DslImpl(code = "KYC_CHECK", type = DslImplType.TRANSACTION)
+@DslComponent(code = "KYC_CHECK", type = DslImplType.TRANSACTION)
 class TestKycCheck : TransactionDefinition {
     override val code = "KYC_CHECK"
     override val name: String? get() = "TestKycCheck"
-    
+
     override fun execute(ctx: TransactionContext) {
         ctx["kycVerified"] = true
         ctx["_implClass"] = "TestTransaction"  // Marker for test assertions
     }
-    
+
     override fun preview(ctx: TransactionContext) {}
     override fun rollback(ctx: TransactionContext) {}
 }

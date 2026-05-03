@@ -40,7 +40,6 @@ class DslRunner(
             performedBy = "test",
             dslVersion = "test",
             eventParameters = params,
-            displayData = emptyMap(),
         )
     finishCtx.enrichment.putAll(enrichCtx.enrichment)
     event.finishBlock(finishCtx, null)

@@ -1,6 +1,6 @@
 package cbs.dsl.compiler
 
-import cbs.dsl.api.DslImpl
+import cbs.dsl.api.DslComponent
 import cbs.dsl.api.DslImplType
 import cbs.dsl.api.HelperDefinition
 import cbs.dsl.api.HelperInput
@@ -12,7 +12,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.DisplayName
 
-@DslImpl(code = "TEST_HELPER", type = DslImplType.HELPER)
+@DslComponent(code = "TEST_HELPER", type = DslImplType.HELPER)
 class TestCodeHelper : HelperDefinition {
   override val code = "TEST_HELPER"
 

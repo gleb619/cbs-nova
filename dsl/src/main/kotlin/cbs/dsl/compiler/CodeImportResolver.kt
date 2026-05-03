@@ -1,14 +1,26 @@
 package cbs.dsl.compiler
 
 import cbs.dsl.api.ConditionDefinition
-import cbs.dsl.api.DslImpl
+import cbs.dsl.api.DslComponent
 import cbs.dsl.api.HelperDefinition
+import cbs.dsl.api.MassOperationDefinition
 import cbs.dsl.api.TransactionDefinition
+import cbs.dsl.api.WorkflowDefinition
 import java.io.File
 import java.net.URL
 import java.util.jar.JarFile
 
-/** Resolves code-based imports by scanning the classpath for classes annotated with @DslImpl. */
+/**
+ * Resolves code-based imports by scanning the classpath for classes annotated with @DslComponent.
+ *
+ * @deprecated Use SPI-based [cbs.dsl.impl.ImplRegistry] in STRICT mode. This resolver is retained
+ *   only for LENIENT mode (development) as a fallback when SPI registry is unavailable. Runtime
+ *   classpath scanning is I/O-heavy and unacceptable for production startup performance.
+ */
+@Deprecated(
+    "Use SPI-based ImplRegistry in STRICT mode. Retained for LENIENT mode fallback only.",
+    ReplaceWith("ImplRegistry.resolveByClassName", "cbs.dsl.impl.ImplRegistry"),
+)
 class CodeImportResolver(
     private val classLoader: ClassLoader = Thread.currentThread().contextClassLoader
 ) {
@@ -78,14 +90,16 @@ class CodeImportResolver(
   }
 
   private fun instantiateIfAnnotated(clazz: Class<*>): Any? {
-    if (!clazz.isAnnotationPresent(DslImpl::class.java)) return null
+    if (!clazz.isAnnotationPresent(DslComponent::class.java)) return null
 
     return try {
       val instance = clazz.getDeclaredConstructor().newInstance()
       if (
           instance is TransactionDefinition ||
               instance is HelperDefinition ||
-              instance is ConditionDefinition
+              instance is ConditionDefinition ||
+              instance is WorkflowDefinition ||
+              instance is MassOperationDefinition
       ) {
         instance
       } else {

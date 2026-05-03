@@ -1,6 +1,8 @@
 package cbs.dsl.compiler
 
+import cbs.dsl.api.DslMode
 import cbs.dsl.api.RulesSource
+import cbs.dsl.impl.ImplRegistry
 import cbs.dsl.runtime.DslRegistry
 import cbs.dsl.script.ConditionDslScope
 import cbs.dsl.script.EventDslScope
@@ -17,7 +19,12 @@ sealed class CompileResult {
   data class Failure(val errors: List<ValidationError>) : CompileResult()
 }
 
-class DslCompiler(private val source: RulesSource, private val validator: DslValidator) {
+class DslCompiler(
+    private val source: RulesSource,
+    private val validator: DslValidator,
+    private val implRegistry: ImplRegistry? = null,
+    private val mode: DslMode = DslMode.STRICT,
+) {
   fun compile(): CompileResult {
     val files = source.fetch()
     val allErrors = mutableListOf<ValidationError>()
@@ -104,7 +111,7 @@ class DslCompiler(private val source: RulesSource, private val validator: DslVal
     // Step 6: pass 2 — re-eval files with // #import directives, inject resolved scopes
     val filesWithImports = files.filter { (_, content) -> content.contains("// #import") }
     if (filesWithImports.isNotEmpty()) {
-      val resolver = ImportResolver(merged)
+      val resolver = ImportResolver(merged, implRegistry, mode)
       for ((path, content) in filesWithImports) {
         try {
           val directives = ImportParser.parse(content)

@@ -1,0 +1,28 @@
+plugins {
+  alias(libs.plugins.kotlin.jvm)
+}
+
+apply(from: "${rootDir}/gradle/kotlin.gradle")
+apply(from: "${rootDir}/gradle/code-style.gradle")
+apply(from: "${rootDir}/gradle/test.gradle")
+
+// Exclude generated KSP files from spotless
+spotless {
+  kotlin {
+    targetExclude('build/generated/**')
+  }
+}
+
+dependencies {
+    implementation project(':dsl-api')
+    implementation libs.ksp
+    testImplementation libs.kotlin.test
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+  compilerOptions {
+    freeCompilerArgs.add("-Xexpect-actual-classes")
+    freeCompilerArgs.add("-Xskip-prerelease-check")
+  }
+}

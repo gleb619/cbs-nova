@@ -1,1 +1,2 @@
 cbs.nova.config.NovaAutoConfiguration
+cbs.nova.config.ImplRegistryAutoConfiguration

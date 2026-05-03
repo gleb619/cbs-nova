@@ -6,5 +6,4 @@ open class FinishContext(
   performedBy: String,
   dslVersion: String,
   eventParameters: Map<String, Any>,
-  val displayData: Map<String, Any>,
 ) : EnrichmentContext(eventCode, workflowExecutionId, performedBy, dslVersion, eventParameters)

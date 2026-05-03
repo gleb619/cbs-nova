@@ -20,7 +20,8 @@ class DslKtsExecutionTest {
   fun setUp() {
     val scripts = loadSamples()
     val source = InMemoryRulesSource(scripts)
-    val result = DslCompiler(source, DslValidator()).compile()
+    // Use LENIENT mode for tests to allow runtime classpath scanning for code imports
+    val result = DslCompiler(source, DslValidator(), mode = cbs.dsl.api.DslMode.LENIENT).compile()
     assertTrue(
         result is CompileResult.Success,
         "Compile failed: ${(result as? CompileResult.Failure)?.errors}",
