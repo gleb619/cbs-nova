@@ -21,6 +21,30 @@ interface TransactionDefinition {
   val name: String?
     get() = null
 
+  /**
+   * List of parameter definitions declared in the `parameters { }` block.
+   * Used for validation and documentation purposes.
+   */
+  val parameters: List<ParameterDefinition>
+    get() = emptyList()
+
+  /**
+   * Optional context enrichment block that runs before each phase block (preview, execute, rollback).
+   * Allows transactions to enrich the context with additional data before execution.
+   *
+   * Example:
+   * ```kotlin
+   * transaction("KYC_CHECK") {
+   *     context { ctx ->
+   *         ctx["kycProvider"] = "internal"
+   *     }
+   *     execute { ctx -> ctx["kycVerified"] = true }
+   * }
+   * ```
+   */
+  val contextBlock: (TransactionContext) -> Unit
+    get() = {}
+
   fun preview(ctx: TransactionContext)
 
   fun execute(ctx: TransactionContext)

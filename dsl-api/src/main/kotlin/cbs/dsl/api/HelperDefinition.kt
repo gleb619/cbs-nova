@@ -18,4 +18,28 @@ interface HelperDefinition : HelperFunction<HelperInput, HelperOutput> {
    */
   val name: String?
     get() = null
+
+  /**
+   * List of parameter definitions declared in the `parameters { }` block.
+   * Used for validation and documentation purposes.
+   */
+  val parameters: List<ParameterDefinition>
+    get() = emptyList()
+
+  /**
+   * Optional context enrichment block that runs before the execute block.
+   * Allows helpers to enrich the context with additional data before execution.
+   *
+   * Example:
+   * ```kotlin
+   * helper("LOAN_HELPER") {
+   *     context { ctx ->
+   *         ctx["defaultCurrency"] = "USD"
+   *     }
+   *     execute { ctx -> mapOf("currency" to ctx["defaultCurrency"]) }
+   * }
+   * ```
+   */
+  val contextBlock: (cbs.dsl.api.context.HelperContext) -> Unit
+    get() = {}
 }

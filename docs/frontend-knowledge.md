@@ -7,13 +7,14 @@
 - `frontend-plugin/` — Domain types, port interfaces, presentational Vue. **Never import from `frontend/` into plugin**
 
 **Hexagonal Layers:**
-| Layer | Location | Responsibility |
-|-------|----------|----------------|
-| Domain | `frontend-plugin/composables/<feature>/` | Types, ports, components |
-| Application | `frontend/src/app/<feature>/application/` | Use cases, routing |
-| Primary | `frontend/src/app/<feature>/infrastructure/primary/` | Page Vue components |
-| Secondary | `frontend/src/app/<feature>/infrastructure/secondary/` | HTTP adapters |
-| DI Wiring | `frontend/src/app/plugins/*.ts` | Nuxt plugins connecting adapters → ports |
+
+| Layer       | Location                                               | Responsibility                           |
+|-------------|--------------------------------------------------------|------------------------------------------|
+| Domain      | `frontend-plugin/composables/<feature>/`               | Types, ports, components                 |
+| Application | `frontend/src/app/<feature>/application/`              | Use cases, routing                       |
+| Primary     | `frontend/src/app/<feature>/infrastructure/primary/`   | Page Vue components                      |
+| Secondary   | `frontend/src/app/<feature>/infrastructure/secondary/` | HTTP adapters                            |
+| DI Wiring   | `frontend/src/app/plugins/*.ts`                        | Nuxt plugins connecting adapters → ports |
 
 **DI Critical Rule (piqure):**
 ```typescript

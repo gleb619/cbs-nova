@@ -4,6 +4,7 @@ import cbs.dsl.api.context.MassOperationContext
 
 interface MassOperationDefinition {
   val code: String
+  val parameters: List<ParameterDefinition>
   val category: String
   val triggers: List<TriggerDefinition>
   val source: SourceDefinition

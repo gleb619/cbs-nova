@@ -12,7 +12,14 @@ spotless {
     leadingTabsToSpaces(2)
   }
   kotlin {
-    ktlint()
+    ktfmt()
+      .googleStyle()
+      .configure { options ->
+        options.setMaxWidth(100)
+        options.setBlockIndent(2)
+        options.setContinuationIndent(4)
+        options.setRemoveUnusedImports(true)
+      }
     trimTrailingWhitespace()
     endWithNewline()
     leadingTabsToSpaces(2)

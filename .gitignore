@@ -102,3 +102,5 @@ node_modules
 /dsl-api/.settings/
 /dsl-api/bin/
 /examples/cbs-rules/
+/docs/papers/phase1/*
+/docs/papers/phase2/*
