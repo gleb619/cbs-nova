@@ -35,6 +35,7 @@ dependencies {
 
   // Java APT for compile-time DSL component registration
   annotationProcessor project(':dsl-codegen')
+  annotationProcessor libs.avaje.jsonb.generator
 
   // -- Testing --
   testImplementation libs.bundles.spring.test
