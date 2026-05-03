@@ -1,0 +1,36 @@
+package cbs.nova.service;
+
+import cbs.dsl.api.EventDefinition;
+import cbs.dsl.api.context.EnrichmentContext;
+import cbs.dsl.runtime.DslRegistry;
+import cbs.nova.model.EventExecutionRequest;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class ContextEvaluator {
+
+  private final DslRegistry dslRegistry;
+
+  @SuppressWarnings("unchecked")
+  public Map<String, Object> evaluate(EventDefinition eventDef, EventExecutionRequest request) {
+    EnrichmentContext enrichmentContext = new EnrichmentContext(
+        request.eventCode(),
+        0L,
+        request.performedBy(),
+        "dev", // TODO(T06): replace with DslRegistry.getDslVersion()
+        (Map<String, Object>) (Map<?, ?>) request.parameters());
+
+    eventDef.getContextBlock().invoke(enrichmentContext);
+
+    Map<String, Object> result = new HashMap<>(request.parameters());
+    result.putAll(enrichmentContext.getEnrichment());
+    return result;
+  }
+}

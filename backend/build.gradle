@@ -39,6 +39,7 @@ dependencies {
   // -- Testing --
   testImplementation libs.bundles.spring.test
   testImplementation libs.archunit.junit5
+  testImplementation libs.temporal.testing
   testImplementation platform(libs.testcontainers.bom)
   testImplementation libs.testcontainers.postgresql
   testImplementation libs.testcontainers.junit.jupiter

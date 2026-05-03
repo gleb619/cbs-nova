@@ -42,7 +42,10 @@ spring-cloud-dependencies = { module = "org.springframework.cloud:spring-cloud-d
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+kotlin-scripting-jsr223 = { module = "org.jetbrains.kotlin:kotlin-scripting-jsr223", version.ref = "kotlin" }
+kotlin-scripting-compiler-embeddable = { module = "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable", version.ref = "kotlin" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version = "1.8.1" }
 
 # -- Persistence --
 postgresql = { module = "org.postgresql:postgresql" }
@@ -76,6 +79,7 @@ testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-jun
 
 # -- Temporal --
 temporal-sdk = { module = "io.temporal:temporal-sdk", version.ref = "temporal" }
+temporal-testing = { module = "io.temporal:temporal-testing", version.ref = "temporal" }
 
 # -- Test Architecture --
 archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
@@ -95,6 +99,7 @@ spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
 spring-dm = { id = "io.spring.dependency-management", version.ref = "spring-dm" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 test-logger = { id = "com.adarshr.test-logger", version.ref = "test-logger" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 openapi-generator = { id = "org.openapi.generator", version.ref = "openapi-generator" }
