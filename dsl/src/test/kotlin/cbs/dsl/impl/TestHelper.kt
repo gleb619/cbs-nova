@@ -5,6 +5,7 @@ import cbs.dsl.api.HelperTypes.HelperInput
 import cbs.dsl.api.HelperTypes.HelperOutput
 import cbs.dsl.api.ParameterDefinition
 import cbs.dsl.api.context.HelperContext
+import java.util.function.Consumer
 
 /**
  * Test implementation of [HelperDefinition] for use in DSL integration tests and sample `.kts`
@@ -28,7 +29,7 @@ class TestHelper(
     override val code: String,
     override val name: String? = null,
     override val parameters: List<ParameterDefinition> = emptyList(),
-    override val contextBlock: (HelperContext) -> Unit = {},
+    override val contextBlock: Consumer<HelperContext> = Consumer { },
     private val executeBlock: (Map<String, Any>) -> Any,
 ) : HelperDefinition {
   override fun execute(input: HelperInput): HelperOutput {
@@ -41,7 +42,7 @@ class TestHelper(
             params = input.params(),
         )
 
-    contextBlock(ctx)
+    contextBlock.accept(ctx)
 
     val result = executeBlock(input.params())
     return HelperOutput(result)

@@ -78,10 +78,16 @@ class DslRunner(
             } else {
               tx
             }
+        // Merge eventParameters with enrichment, enrichment takes precedence
+        val inputParams =
+            (ctx.eventParameters + ctx.enrichment.filterValues { it != null }).mapValues {
+              it.value as Any
+            }
         val input =
             TransactionInput(
-                params = ctx.enrichment.filterValues { it != null }.mapValues { it.value as Any },
+                params = inputParams,
                 eventCode = ctx.eventCode,
+                eventNumber = ctx.workflowExecutionId,
                 workflowExecutionId = ctx.workflowExecutionId.toString(),
             )
         @Suppress("UNCHECKED_CAST")

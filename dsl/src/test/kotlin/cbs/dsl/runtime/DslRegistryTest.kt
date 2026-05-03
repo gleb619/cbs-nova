@@ -5,6 +5,7 @@ import cbs.dsl.api.HelperDefinition
 import cbs.dsl.api.HelperTypes.HelperInput
 import cbs.dsl.api.HelperTypes.HelperOutput
 import cbs.dsl.api.context.TransactionContext
+import java.util.function.Predicate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -74,7 +75,7 @@ class DslRegistryTest {
     val condition =
         object : ConditionDefinition {
           override val code: String = "cond-1"
-          override val predicate: (TransactionContext) -> Boolean = { true }
+          override val predicate: Predicate<TransactionContext> = Predicate { true }
         }
 
     registry.register(wf)

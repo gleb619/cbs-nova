@@ -1,6 +1,11 @@
 package cbs.dsl.codegen;
 
+import cbs.dsl.api.ConditionDefinition;
 import cbs.dsl.api.DslComponent;
+import cbs.dsl.api.HelperDefinition;
+import cbs.dsl.api.MassOperationDefinition;
+import cbs.dsl.api.TransactionDefinition;
+import cbs.dsl.api.WorkflowDefinition;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
@@ -16,12 +21,12 @@ import java.util.*;
 @SupportedSourceVersion(SourceVersion.RELEASE_25)
 public class DslComponentProcessor extends AbstractProcessor {
 
-  private static final Set<String> ALLOWED_INTERFACES = Set.of(
-      "cbs.dsl.api.TransactionDefinition",
-      "cbs.dsl.api.HelperDefinition",
-      "cbs.dsl.api.ConditionDefinition",
-      "cbs.dsl.api.WorkflowDefinition",
-      "cbs.dsl.api.MassOperationDefinition");
+  private static final Map<String, DslInterfaceType> INTERFACE_TYPE_MAP = Map.of(
+      TransactionDefinition.class.getName(), DslInterfaceType.TRANSACTION,
+      HelperDefinition.class.getName(), DslInterfaceType.HELPER,
+      ConditionDefinition.class.getName(), DslInterfaceType.CONDITION,
+      WorkflowDefinition.class.getName(), DslInterfaceType.WORKFLOW,
+      MassOperationDefinition.class.getName(), DslInterfaceType.MASS_OPERATION);
 
   private boolean processed = false;
 
@@ -78,8 +83,7 @@ public class DslComponentProcessor extends AbstractProcessor {
           .getMessager()
           .printMessage(
               Diagnostic.Kind.ERROR,
-              "Class '" + className
-                  + "' annotated with @DslComponent must have a public no-arg constructor",
+              "Class '%s' annotated with @DslComponent must have a public no-arg constructor".formatted(className),
               typeElement);
       return;
     }
@@ -88,7 +92,7 @@ public class DslComponentProcessor extends AbstractProcessor {
     List<String> implementedAllowed = new ArrayList<>();
     for (TypeMirror iface : typeElement.getInterfaces()) {
       String ifaceName = ((DeclaredType) iface).asElement().toString();
-      if (ALLOWED_INTERFACES.contains(ifaceName)) {
+      if (INTERFACE_TYPE_MAP.containsKey(ifaceName)) {
         implementedAllowed.add(ifaceName);
       }
     }
@@ -98,7 +102,7 @@ public class DslComponentProcessor extends AbstractProcessor {
           .getMessager()
           .printMessage(
               Diagnostic.Kind.ERROR,
-              "Class '" + className + "' must implement exactly one of: " + ALLOWED_INTERFACES,
+              "Class '%s' must implement exactly one of: %s".formatted(className, INTERFACE_TYPE_MAP.keySet()),
               typeElement);
       return;
     }
@@ -108,8 +112,8 @@ public class DslComponentProcessor extends AbstractProcessor {
           .getMessager()
           .printMessage(
               Diagnostic.Kind.ERROR,
-              "Class '" + className
-                  + "' implements multiple DSL definition interfaces; must implement exactly one",
+              "Class '%s' implements multiple DSL definition interfaces; must implement exactly one".formatted(
+                  className),
               typeElement);
       return;
     }
@@ -120,22 +124,16 @@ public class DslComponentProcessor extends AbstractProcessor {
           .getMessager()
           .printMessage(
               Diagnostic.Kind.ERROR,
-              "@DslComponent.code must not be blank for class '" + className + "'",
+              "@DslComponent.code must not be blank for class '%s'".formatted(className),
               typeElement);
       return;
     }
 
     String implementedInterface = implementedAllowed.get(0);
-    DslInterfaceType interfaceType =
-        switch (implementedInterface) {
-          case "cbs.dsl.api.TransactionDefinition" -> DslInterfaceType.TRANSACTION;
-          case "cbs.dsl.api.HelperDefinition" -> DslInterfaceType.HELPER;
-          case "cbs.dsl.api.ConditionDefinition" -> DslInterfaceType.CONDITION;
-          case "cbs.dsl.api.WorkflowDefinition" -> DslInterfaceType.WORKFLOW;
-          case "cbs.dsl.api.MassOperationDefinition" -> DslInterfaceType.MASS_OPERATION;
-          default ->
-            throw new IllegalStateException("Unsupported interface: " + implementedInterface);
-        };
+    DslInterfaceType interfaceType = INTERFACE_TYPE_MAP.get(implementedInterface);
+    if (interfaceType == null) {
+      throw new IllegalStateException("Unsupported interface: " + implementedInterface);
+    }
 
     registrations.add(
         new RegistrationSpec(packageName, className, annotation.code(), interfaceType));

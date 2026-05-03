@@ -2,6 +2,7 @@ package cbs.dsl.script
 
 import cbs.dsl.api.context.TransactionContext
 import cbs.dsl.runtime.ConditionBuilder
+import java.util.function.Predicate
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
@@ -51,7 +52,7 @@ class ConditionDslScopeTest {
 
     val ctx = TransactionContext("EVT", 1L, "user", "v1", emptyMap(), false)
     val exception =
-        org.junit.jupiter.api.assertThrows<IllegalStateException> { builder.predicate(ctx) }
+        org.junit.jupiter.api.assertThrows<IllegalStateException> { builder.predicate.test(ctx) }
     assertTrue(exception.message!!.contains("has no predicate block defined"))
   }
 
@@ -62,7 +63,7 @@ class ConditionDslScopeTest {
     val cond = scope.condition("COND_1") { predicate { true } }
 
     val ctx = TransactionContext("EVT", 1L, "user", "v1", emptyMap(), false)
-    assertTrue(cond.predicate(ctx))
+    assertTrue(cond.predicate.test(ctx))
   }
 
   @Test
@@ -96,7 +97,7 @@ class ConditionDslScopeTest {
         }
 
     val ctx = TransactionContext("EVT", 1L, "user", "v1", emptyMap(), false)
-    assertTrue(cond.predicate(ctx))
+    assertTrue(cond.predicate.test(ctx))
   }
 
   private class TestConditionDslScope : ConditionDslScope()

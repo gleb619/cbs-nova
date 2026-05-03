@@ -2,7 +2,7 @@ package cbs.app.temporal.workflow;
 
 import cbs.app.temporal.activity.TransactionActivity;
 import cbs.dsl.api.EventDefinition;
-import cbs.dsl.api.TransitionRule;
+import cbs.dsl.api.TransitionRuleDefinition;
 import cbs.dsl.api.WorkflowDefinition;
 import cbs.dsl.runtime.DslRegistry;
 import cbs.nova.entity.EventExecutionEntity;
@@ -57,7 +57,7 @@ public class EventWorkflowImpl implements EventWorkflow {
     log.debug("Created workflow execution entity: id={}", workflowExecution.getId());
 
     // 3. Find matching transition rule
-    TransitionRule transitionRule = findTransitionRule(workflowDefinition, input.eventCode());
+    TransitionRuleDefinition transitionRule = findTransitionRule(workflowDefinition, input.eventCode());
 
     // 4. Persist event execution entity
     String temporalWorkflowId = Workflow.getInfo().getWorkflowId();
@@ -102,10 +102,10 @@ public class EventWorkflowImpl implements EventWorkflow {
     return result;
   }
 
-  private TransitionRule findTransitionRule(
+  private TransitionRuleDefinition findTransitionRule(
       WorkflowDefinition workflowDefinition, String eventCode) {
     String currentState = workflowDefinition.getInitial();
-    for (TransitionRule rule : workflowDefinition.getTransitions()) {
+    for (TransitionRuleDefinition rule : workflowDefinition.getTransitions()) {
       if (rule.getFrom().equals(currentState) && rule.getEvent().getCode().equals(eventCode)) {
         return rule;
       }
@@ -133,7 +133,7 @@ public class EventWorkflowImpl implements EventWorkflow {
   private EventExecutionEntity createEventExecution(
       EventWorkflowRequest input,
       WorkflowExecutionEntity workflowExecution,
-      TransitionRule transitionRule,
+      TransitionRuleDefinition transitionRule,
       String temporalWorkflowId) {
     EventExecutionEntity entity = new EventExecutionEntity();
     entity.setEventCode(input.eventCode());
@@ -176,7 +176,7 @@ public class EventWorkflowImpl implements EventWorkflow {
   private void handleSuccessOutcome(
       WorkflowExecutionEntity workflowExecution,
       EventExecutionEntity eventExecution,
-      TransitionRule transitionRule,
+      TransitionRuleDefinition transitionRule,
       WorkflowDefinition workflowDefinition,
       EventWorkflowRequest input) {
     eventExecution.setStatus(EventStatus.COMPLETED);
@@ -206,7 +206,7 @@ public class EventWorkflowImpl implements EventWorkflow {
   private void handleFaultOutcome(
       WorkflowExecutionEntity workflowExecution,
       EventExecutionEntity eventExecution,
-      TransitionRule transitionRule,
+      TransitionRuleDefinition transitionRule,
       String faultMessage,
       EventWorkflowRequest input) {
     eventExecution.setStatus(EventStatus.FAULTED);
@@ -233,7 +233,7 @@ public class EventWorkflowImpl implements EventWorkflow {
   private void createTransitionLog(
       WorkflowExecutionEntity workflowExecution,
       EventExecutionEntity eventExecution,
-      TransitionRule transitionRule,
+      TransitionRuleDefinition transitionRule,
       String fromState,
       String toState,
       String status,

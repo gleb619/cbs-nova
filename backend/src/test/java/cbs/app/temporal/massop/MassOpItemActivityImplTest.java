@@ -15,8 +15,7 @@ import cbs.dsl.api.context.MassOperationContext;
 import cbs.dsl.runtime.DslRegistry;
 import cbs.nova.repository.MassOperationExecutionRepository;
 import cbs.nova.repository.MassOperationItemRepository;
-import kotlin.Unit;
-import kotlin.jvm.functions.Function1;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -48,9 +47,8 @@ class MassOpItemActivityImplTest {
     // Given
     String massOpCode = "TEST_MASS_OP";
     @SuppressWarnings("unchecked")
-    Function1<MassOperationContext, Unit> itemBlock =
-        (Function1<MassOperationContext, Unit>) mock(Function1.class);
-    when(itemBlock.invoke(any(MassOperationContext.class))).thenReturn(Unit.INSTANCE);
+    Consumer<MassOperationContext> itemBlock =
+        mock(Consumer.class);
 
     MassOperationDefinition def = mock(MassOperationDefinition.class);
     when(def.getCode()).thenReturn(massOpCode);
@@ -71,7 +69,7 @@ class MassOpItemActivityImplTest {
     // Then
     assertTrue(result.success());
     assertNull(result.errorMessage());
-    verify(itemBlock).invoke(any(MassOperationContext.class));
+    verify(itemBlock).accept(any(MassOperationContext.class));
   }
 
   @Test
@@ -80,9 +78,9 @@ class MassOpItemActivityImplTest {
     // Given
     String massOpCode = "TEST_MASS_OP_FAIL";
     @SuppressWarnings("unchecked")
-    Function1<MassOperationContext, Unit> itemBlock =
-        (Function1<MassOperationContext, Unit>) mock(Function1.class);
-    when(itemBlock.invoke(any(MassOperationContext.class)))
+    Consumer<MassOperationContext> itemBlock =
+        mock(Consumer.class);
+    when(itemBlock.accept(any(MassOperationContext.class)))
         .thenThrow(new RuntimeException("item processing failed"));
 
     MassOperationDefinition def = mock(MassOperationDefinition.class);
@@ -129,8 +127,8 @@ class MassOpItemActivityImplTest {
     // Given
     String massOpCode = "TEST_MASS_OP";
     @SuppressWarnings("unchecked")
-    Function1<MassOperationContext, Unit> itemBlock =
-        (Function1<MassOperationContext, Unit>) mock(Function1.class);
+    Consumer<MassOperationContext> itemBlock =
+        mock(Consumer.class);
 
     MassOperationDefinition def = mock(MassOperationDefinition.class);
     when(def.getCode()).thenReturn(massOpCode);

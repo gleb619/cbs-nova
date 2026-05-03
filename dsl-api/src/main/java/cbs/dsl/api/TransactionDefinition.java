@@ -1,0 +1,52 @@
+package cbs.dsl.api;
+
+import cbs.dsl.api.context.TransactionContext;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Consumer;
+
+/**
+ * Defines a transaction — a unit of work with preview, execute, and rollback phases.
+ *
+ * <p>Implementations are typically created via the Kotlin DSL {@code transaction { }} block or
+ * annotated with {@link DslComponent} for compile-time registration.
+ */
+public interface TransactionDefinition {
+
+  /** Canonical code used to look up this transaction in the registry. */
+  String getCode();
+
+  /**
+   * Optional display name for this transaction. Used to distinguish DSL overrides from the
+   * underlying implementation class/bean identified by {@link #getCode()}. When set, the DSL block
+   * is treated as a named override of the bean registered under the code.
+   */
+  default String getName() {
+    return null;
+  }
+
+  /**
+   * List of parameter definitions declared in the {@code parameters { }} block. Used for validation
+   * and documentation purposes.
+   */
+  default List<ParameterDefinition> getParameters() {
+    return Collections.emptyList();
+  }
+
+  /**
+   * Optional context enrichment block that runs before each phase block (preview, execute,
+   * rollback). Allows transactions to enrich the context with additional data before execution.
+   */
+  default Consumer<TransactionContext> getContextBlock() {
+    return ctx -> {};
+  }
+
+  /** Preview phase — validates inputs without mutating state. */
+  TransactionOutput preview(TransactionInput input);
+
+  /** Execute phase — performs the business logic. */
+  TransactionOutput execute(TransactionInput input);
+
+  /** Rollback phase — compensates a previously executed transaction. */
+  TransactionOutput rollback(TransactionInput input);
+}

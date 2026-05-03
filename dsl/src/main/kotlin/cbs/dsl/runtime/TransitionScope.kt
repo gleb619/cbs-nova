@@ -2,7 +2,7 @@ package cbs.dsl.runtime
 
 import cbs.dsl.api.Action
 import cbs.dsl.api.EventDefinition
-import cbs.dsl.api.TransitionRule
+import cbs.dsl.api.TransitionRuleDefinition
 import cbs.dsl.api.context.TransactionsScope
 
 /** Intermediate builder: holds from+to+action, waiting for event closure */
@@ -20,7 +20,7 @@ data class TransitionBuilder(
 
 /** DSL scope for the transitions { } block */
 class TransitionScope {
-  internal val rules = mutableListOf<TransitionRule>()
+  internal val rules = mutableListOf<TransitionRuleDefinition>()
 
   /** "DRAFT" to "ENTERED" on Action.SUBMIT → TransitionActionBuilder */
   infix fun Pair<String, String>.on(action: Action): TransitionActionBuilder =
@@ -45,6 +45,6 @@ class TransitionScope {
     return copy(onFaultBlock = block)
   }
 
-  private fun TransitionBuilder.build(): TransitionRule =
-      TransitionRule(from, to, on, event, onFaultState, onFaultBlock)
+  private fun TransitionBuilder.build(): TransitionRuleDefinition =
+      TransitionRuleDefinition(from, to, on, event, onFaultState, onFaultBlock)
 }

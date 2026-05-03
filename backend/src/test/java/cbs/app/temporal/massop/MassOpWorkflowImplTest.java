@@ -21,8 +21,7 @@ import io.temporal.client.WorkflowFailedException;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.worker.Worker;
-import kotlin.Unit;
-import kotlin.jvm.functions.Function1;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -90,18 +89,16 @@ class MassOpWorkflowImplTest {
     when(def.getLock()).thenReturn(lock);
 
     @SuppressWarnings("unchecked")
-    Function1<MassOperationContext, Unit> contextBlock =
-        (Function1<MassOperationContext, Unit>) mock(Function1.class);
+    Consumer<MassOperationContext> contextBlock =
+        mock(Consumer.class);
     when(def.getContextBlock()).thenReturn(contextBlock);
 
     @SuppressWarnings("unchecked")
-    Function1<MassOperationContext, Unit> itemBlock =
-        (Function1<MassOperationContext, Unit>) mock(Function1.class);
+    Consumer<MassOperationContext> itemBlock =
+        mock(Consumer.class);
     if (itemBlockThrows) {
-      when(itemBlock.invoke(any(MassOperationContext.class)))
+      when(itemBlock.accept(any(MassOperationContext.class)))
           .thenThrow(new RuntimeException("item failed"));
-    } else {
-      when(itemBlock.invoke(any(MassOperationContext.class))).thenReturn(Unit.INSTANCE);
     }
     when(def.getItemBlock()).thenReturn(itemBlock);
 

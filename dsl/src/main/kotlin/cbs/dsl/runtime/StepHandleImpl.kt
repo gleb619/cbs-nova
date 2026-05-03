@@ -2,6 +2,7 @@ package cbs.dsl.runtime
 
 import cbs.dsl.api.TransactionDefinition
 import cbs.dsl.api.context.StepHandle
+import java.util.concurrent.CompletableFuture
 
 class StepHandleImpl
 internal constructor(
@@ -9,15 +10,15 @@ internal constructor(
     private val steps: MutableList<StepNode>,
     private val index: Int,
 ) : StepHandle {
-  override suspend fun then(tx: TransactionDefinition): StepHandle {
+  override fun then(tx: TransactionDefinition): CompletableFuture<StepHandle> {
     val nextNode = StepNode.Direct(tx)
     val chainNode = StepNode.Chain(node, nextNode)
     steps[index] = chainNode
     node = chainNode
-    return StepHandleImpl(chainNode, steps, index)
+    return CompletableFuture.completedFuture(StepHandleImpl(chainNode, steps, index))
   }
 
-  override suspend fun join() {
+  override fun join() {
     // No-op — execution deferred to T26c
   }
 }

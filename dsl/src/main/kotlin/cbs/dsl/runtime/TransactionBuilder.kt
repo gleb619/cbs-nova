@@ -7,6 +7,7 @@ import cbs.dsl.api.TransactionOutput
 import cbs.dsl.api.context.TransactionContext
 import cbs.dsl.api.context.TransactionDslContext
 import cbs.dsl.api.context.TransactionPhase
+import java.util.function.Consumer
 
 class TransactionBuilder(override val code: String) : TransactionDefinition {
   private var _name: String? = null
@@ -14,8 +15,8 @@ class TransactionBuilder(override val code: String) : TransactionDefinition {
   override val parameters: List<ParameterDefinition>
     get() = _parameters.toList()
 
-  private var _contextBlock: (TransactionContext) -> Unit = {}
-  override val contextBlock: (TransactionContext) -> Unit
+  private var _contextBlock: Consumer<TransactionContext> = Consumer { }
+  override val contextBlock: Consumer<TransactionContext>
     get() = _contextBlock
 
   private var _preview: ((TransactionContext) -> Unit)? = null
@@ -32,7 +33,7 @@ class TransactionBuilder(override val code: String) : TransactionDefinition {
 
   override fun preview(input: TransactionInput): TransactionOutput {
     val ctx = buildContext(input)
-    _contextBlock(ctx)
+    _contextBlock.accept(ctx)
     val dslCtx = TransactionDslContext(ctx, delegateTarget, TransactionPhase.PREVIEW)
     _preview?.invoke(dslCtx)
     return TransactionOutput(dslCtx.enrichment.toMap())
@@ -40,7 +41,7 @@ class TransactionBuilder(override val code: String) : TransactionDefinition {
 
   override fun execute(input: TransactionInput): TransactionOutput {
     val ctx = buildContext(input)
-    _contextBlock(ctx)
+    _contextBlock.accept(ctx)
     val dslCtx = TransactionDslContext(ctx, delegateTarget, TransactionPhase.EXECUTE)
     _execute?.invoke(dslCtx) ?: error("Transaction '$code' has no execute block defined")
     ctx.enrichment.putAll(dslCtx.enrichment)
@@ -49,7 +50,7 @@ class TransactionBuilder(override val code: String) : TransactionDefinition {
 
   override fun rollback(input: TransactionInput): TransactionOutput {
     val ctx = buildContext(input)
-    _contextBlock(ctx)
+    _contextBlock.accept(ctx)
     val dslCtx = TransactionDslContext(ctx, delegateTarget, TransactionPhase.ROLLBACK)
     _rollback?.invoke(dslCtx)
     return TransactionOutput(dslCtx.enrichment.toMap())
@@ -74,7 +75,7 @@ class TransactionBuilder(override val code: String) : TransactionDefinition {
   }
 
   fun context(block: (TransactionContext) -> Unit) {
-    _contextBlock = block
+    _contextBlock = Consumer { block(it) }
   }
 
   fun preview(block: (TransactionContext) -> Unit) {

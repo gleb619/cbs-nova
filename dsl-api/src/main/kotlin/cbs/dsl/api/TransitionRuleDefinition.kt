@@ -2,7 +2,7 @@ package cbs.dsl.api
 
 import cbs.dsl.api.context.TransactionsScope
 
-data class TransitionRule(
+data class TransitionRuleDefinition(
     val from: String,
     val to: String,
     val on: Action,

@@ -11,9 +11,9 @@ import cbs.app.temporal.activity.TransactionActivityImpl;
 import cbs.dsl.api.Action;
 import cbs.dsl.api.EventDefinition;
 import cbs.dsl.api.TransactionDefinition;
-import cbs.dsl.api.TransitionRule;
+import cbs.dsl.api.TransactionInput;
+import cbs.dsl.api.TransitionRuleDefinition;
 import cbs.dsl.api.WorkflowDefinition;
-import cbs.dsl.api.context.TransactionContext;
 import cbs.dsl.runtime.DslRegistry;
 import cbs.nova.entity.EventExecutionEntity;
 import cbs.nova.entity.WorkflowExecutionEntity;
@@ -110,8 +110,8 @@ class EventWorkflowImplTest {
     when(eventDef.getTransactionsBlock()).thenReturn(TestTransactionBlocks.singleStepAwait(txDef));
     when(eventDef.getFinishBlock()).thenReturn((ctx, ex) -> Unit.INSTANCE);
 
-    TransitionRule rule =
-        new TransitionRule("INIT", "DONE", Action.CLOSE, eventDef, "FAULTED", null);
+    TransitionRuleDefinition rule =
+        new TransitionRuleDefinition("INIT", "DONE", Action.CLOSE, eventDef, "FAULTED", null);
 
     WorkflowDefinition wfDef = mock(WorkflowDefinition.class);
     when(wfDef.getCode()).thenReturn("TEST_WF");
@@ -144,10 +144,10 @@ class EventWorkflowImplTest {
     when(dslRegistry.getTransactions()).thenReturn(Map.of("FAIL_TX", failingTx));
     doThrow(new RuntimeException("Transaction failed"))
         .when(failingTx)
-        .execute(any(TransactionContext.class));
+        .execute(any(TransactionInput.class));
     doThrow(new RuntimeException("Rollback also fails"))
         .when(failingTx)
-        .rollback(any(TransactionContext.class));
+        .rollback(any(TransactionInput.class));
 
     EventDefinition eventDef = mock(EventDefinition.class);
     when(eventDef.getCode()).thenReturn("TEST_EVENT");
@@ -157,8 +157,8 @@ class EventWorkflowImplTest {
         .thenReturn(TestTransactionBlocks.singleStepAwait(failingTx));
     when(eventDef.getFinishBlock()).thenReturn((ctx, ex) -> Unit.INSTANCE);
 
-    TransitionRule rule =
-        new TransitionRule("INIT", "DONE", Action.CLOSE, eventDef, "FAULTED", null);
+    TransitionRuleDefinition rule =
+        new TransitionRuleDefinition("INIT", "DONE", Action.CLOSE, eventDef, "FAULTED", null);
 
     WorkflowDefinition wfDef = mock(WorkflowDefinition.class);
     when(wfDef.getCode()).thenReturn("TEST_WF");

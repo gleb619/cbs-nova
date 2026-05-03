@@ -178,16 +178,16 @@ class DslSampleParameterizedTest {
                                     `when`({ true }) then {
                                         transaction(object : cbs.dsl.api.TransactionDefinition {
                                             override val code = "BRANCH_A"
-                                            override fun preview(ctx: cbs.dsl.api.context.TransactionContext) {}
-                                            override fun execute(ctx: cbs.dsl.api.context.TransactionContext) {}
-                                            override fun rollback(ctx: cbs.dsl.api.context.TransactionContext) {}
+                                            override fun preview(input: cbs.dsl.api.TransactionInput): cbs.dsl.api.TransactionOutput = cbs.dsl.api.TransactionOutput()
+                                            override fun execute(input: cbs.dsl.api.TransactionInput): cbs.dsl.api.TransactionOutput = cbs.dsl.api.TransactionOutput()
+                                            override fun rollback(input: cbs.dsl.api.TransactionInput): cbs.dsl.api.TransactionOutput = cbs.dsl.api.TransactionOutput()
                                         })
                                     } otherwise {
                                         transaction(object : cbs.dsl.api.TransactionDefinition {
                                             override val code = "BRANCH_B"
-                                            override fun preview(ctx: cbs.dsl.api.context.TransactionContext) {}
-                                            override fun execute(ctx: cbs.dsl.api.context.TransactionContext) {}
-                                            override fun rollback(ctx: cbs.dsl.api.context.TransactionContext) {}
+                                            override fun preview(input: cbs.dsl.api.TransactionInput): cbs.dsl.api.TransactionOutput = cbs.dsl.api.TransactionOutput()
+                                            override fun execute(input: cbs.dsl.api.TransactionInput): cbs.dsl.api.TransactionOutput = cbs.dsl.api.TransactionOutput()
+                                            override fun rollback(input: cbs.dsl.api.TransactionInput): cbs.dsl.api.TransactionOutput = cbs.dsl.api.TransactionOutput()
                                         })
                                     }
                                 }

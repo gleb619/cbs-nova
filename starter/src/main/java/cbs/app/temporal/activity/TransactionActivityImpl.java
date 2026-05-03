@@ -1,7 +1,7 @@
 package cbs.app.temporal.activity;
 
 import cbs.dsl.api.TransactionDefinition;
-import cbs.dsl.api.context.TransactionContext;
+import cbs.dsl.api.TransactionInput;
 import cbs.dsl.runtime.DslRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,24 +28,19 @@ public class TransactionActivityImpl implements TransactionActivity {
       return new TransactionResult(false, "Transaction not found: " + input.transactionCode());
     }
 
-    // 2. Build TransactionContext
+    // 2. Build TransactionInput
     Map<String, Object> contextMap = parseContextJson(input.contextJson());
-    TransactionContext ctx = new TransactionContext(
-        input.transactionCode(),
-        input.workflowExecutionId(),
-        input.performedBy(),
-        input.dslVersion(),
-        contextMap,
-        false);
+    TransactionInput txnInput = new TransactionInput(
+        contextMap, input.transactionCode(), null, String.valueOf(input.workflowExecutionId()));
 
     // 3. Execute preview + execute, with rollback on failure
     try {
-      txDef.preview(ctx);
-      txDef.execute(ctx);
+      txDef.preview(txnInput);
+      txDef.execute(txnInput);
       return new TransactionResult(true, null);
     } catch (Exception e) {
       try {
-        txDef.rollback(ctx);
+        txDef.rollback(txnInput);
       } catch (Exception rollbackEx) {
         log.warn(
             "Rollback failed for transaction '{}': {}",

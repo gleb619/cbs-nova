@@ -1,6 +1,6 @@
 package cbs.nova.bpmn;
 
-import cbs.dsl.api.TransitionRule;
+import cbs.dsl.api.TransitionRuleDefinition;
 import cbs.dsl.api.WorkflowDefinition;
 
 import java.util.HashSet;
@@ -45,7 +45,7 @@ public class StaticBpmnGenerator {
     }
 
     // Transitions as sequence flows
-    for (TransitionRule t : workflow.getTransitions()) {
+    for (TransitionRuleDefinition t : workflow.getTransitions()) {
       sb.append(
           "    <bpmn:sequenceFlow id=\"sf-%s-%s-%s\" sourceRef=\"%s\" targetRef=\"%s\" name=\"%s\"/>\n"
               .formatted(
