@@ -40,7 +40,7 @@
 | T55 | Add `ConditionInput`/`ConditionOutput` and unify `ConditionDefinition`                                     | `done`   | dsl-api, dsl | T51            | T58      |
 | T56 | Add `WorkflowInput`/`WorkflowOutput` and unify `WorkflowDefinition`                                        | `done`   | dsl-api, dsl | T51            | T58      |
 | T57 | Add `MassOperationInput`/`MassOperationOutput` and unify `MassOperationDefinition`                         | `done`   | dsl-api, dsl | T51            | T58      |
-| T58 | Extend `dsl-codegen` processor to extract required/optional parameter metadata from Input types            | `todo`   | dsl-codegen  | T52-T57        | -        |
+| T58 | Extend `dsl-codegen` processor to extract required/optional parameter metadata from Input types            | `parked` | dsl-codegen  | T52-T57        | -        |
 
 ---
 

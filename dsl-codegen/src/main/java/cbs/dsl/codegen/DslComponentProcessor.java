@@ -24,9 +24,8 @@ public class DslComponentProcessor extends AbstractProcessor {
   private static final Map<String, DslInterfaceType> INTERFACE_TYPE_MAP = Map.of(
       TransactionDefinition.class.getName(), DslInterfaceType.TRANSACTION,
       HelperDefinition.class.getName(), DslInterfaceType.HELPER,
-      ConditionDefinition.class.getName(), DslInterfaceType.CONDITION,
-      WorkflowDefinition.class.getName(), DslInterfaceType.WORKFLOW,
-      MassOperationDefinition.class.getName(), DslInterfaceType.MASS_OPERATION);
+      ConditionDefinition.class.getName(), DslInterfaceType.CONDITION
+  );
 
   private boolean processed = false;
 

@@ -17,10 +17,10 @@ class HelperDslScopeTest {
   fun `should register helper when helper function called`() {
     val scope = TestHelperDslScope()
 
-    val helper = scope.helper("TEST_HELPER") { execute { ctx -> "result" } }
+    val helper = scope.helper("TestHelper") { execute { ctx -> "result" } }
 
     assertNotNull(helper)
-    assertEquals("TEST_HELPER", helper.code)
+    assertEquals("TestHelper", helper.code)
     assertEquals(1, scope.getRegisteredHelpers().size)
     assertEquals(helper, scope.getRegisteredHelpers()[0])
   }
@@ -48,10 +48,10 @@ class HelperDslScopeTest {
   fun `should return helper definition from helper function`() {
     val scope = TestHelperDslScope()
 
-    val helper = scope.helper("TEST_HELPER") { execute { ctx -> "result" } }
+    val helper = scope.helper("TestHelper") { execute { ctx -> "result" } }
 
     assertNotNull(helper)
-    assertEquals("TEST_HELPER", helper.code)
+    assertEquals("TestHelper", helper.code)
     assertTrue(helper is HelperDefinition)
   }
 

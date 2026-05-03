@@ -88,3 +88,5 @@ BaseContext(eventCode, workflowExecutionId, performedBy, dslVersion)
 - Import scope empty → verify `// #import` syntax and Pass 2 re-evaluation
 - Kotlin script eval fails → check `ScriptHost.eval()` return type: `evalResult.value.returnValue.scriptInstance`
 - `TestHelper` returns `"NO_PARAMS"` → called with empty params and no `executeBlock` override
+
+> More info can be found here [dsl-design.md](arch/dsl-design.md)

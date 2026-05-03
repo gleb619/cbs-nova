@@ -11,9 +11,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.DisplayName
 
-@DslComponent(code = "TEST_HELPER", type = DslImplType.HELPER)
+@DslComponent(code = "TestHelper", type = DslImplType.HELPER)
 class TestCodeHelper : HelperDefinition {
-  override fun getCode(): String = "TEST_HELPER"
+  override fun getCode(): String = "TestHelper"
 
   override fun execute(input: HelperInput): HelperOutput = HelperOutput("test")
 }
@@ -29,7 +29,7 @@ class CodeImportResolverTest {
 
     assertEquals(1, result.size)
     assertTrue(result[0] is TestCodeHelper)
-    assertEquals("TEST_HELPER", (result[0] as TestCodeHelper).code)
+    assertEquals("TestHelper", (result[0] as TestCodeHelper).code)
   }
 
   @Test
