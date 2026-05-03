@@ -6,6 +6,7 @@ import cbs.dsl.api.HelperFunction;
 import cbs.nova.sample.SampleHelper.SampleHelperInput;
 import cbs.nova.sample.SampleHelper.SampleHelperOutput;
 import io.avaje.jsonb.Json;
+
 import java.util.Map;
 
 /** Sample helper for the PoC. Concatenates two string parameters. */
@@ -34,5 +35,4 @@ public class SampleHelper implements HelperFunction<SampleHelperInput, SampleHel
       return Map.of("result", result);
     }
   }
-
 }

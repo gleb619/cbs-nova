@@ -47,8 +47,8 @@ class SampleWorkflowTest {
     // Assert
     assertNotNull(tx);
     assertEquals("SAMPLE_TX", tx.getCode());
-    assertEquals("PoC!", output.result().get("greeting"));
-  }
+    assertEquals("Hello, PoC", output.result().get("greeting"));
+}
 
   @Test
   @DisplayName("Should resolve generated SampleHelperDefinition and execute via wrapper")
@@ -60,13 +60,13 @@ class SampleWorkflowTest {
     // Act
     HelperDefinition helper = registry.resolveHelper("SAMPLE_HELPER");
     HelperOutput output =
-        helper.execute(new HelperInput(Map.of("first", "Hello, ", "second", "World"), null, null));
+        helper.execute(new HelperInput(Map.of("someVal", "Hello, World"), null, null));
 
     // Assert
     assertNotNull(helper);
     assertEquals("SAMPLE_HELPER", helper.getCode());
-    assertEquals("Hello, World", ((Map<?, ?>) output.value()).get("result"));
-  }
+    assertEquals("Hello, World!", ((Map<?, ?>) output.value()).get("result"));
+}
 
   @Test
   @DisplayName("Should resolve generated SampleConditionDefinition and evaluate via wrapper")

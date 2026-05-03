@@ -1,6 +1,5 @@
 package cbs.dsl.codegen;
 
-import java.util.stream.Stream;
 import javax.annotation.processing.Filer;
 import javax.tools.JavaFileObject;
 
@@ -10,6 +9,7 @@ import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ActivityRegistryGenerator {
 
@@ -75,7 +75,6 @@ public class ActivityRegistryGenerator {
 
   private static List<RegistrationSpec> allSpecs(
       List<RegistrationSpec> txSpecs, List<RegistrationSpec> helperSpecs) {
-    return Stream.concat(txSpecs.stream(), helperSpecs.stream())
-        .toList();
+    return Stream.concat(txSpecs.stream(), helperSpecs.stream()).toList();
   }
 }

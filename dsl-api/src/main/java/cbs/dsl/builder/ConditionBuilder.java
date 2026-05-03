@@ -3,6 +3,7 @@ package cbs.dsl.builder;
 import cbs.dsl.api.ConditionDefinition;
 import cbs.dsl.api.ConditionTypes.ConditionInput;
 import cbs.dsl.api.ConditionTypes.ConditionOutput;
+import cbs.dsl.api.DslDefinitionCollector;
 import cbs.dsl.api.ParameterDefinition;
 import cbs.dsl.api.context.TransactionContext;
 
@@ -54,7 +55,7 @@ public class ConditionBuilder {
 
   public ConditionDefinition build() {
     List<ParameterDefinition> params = Collections.unmodifiableList(new ArrayList<>(parameters));
-    return new ConditionDefinition() {
+    ConditionDefinition def = new ConditionDefinition() {
       @Override
       public String getCode() {
         return code;
@@ -90,5 +91,7 @@ public class ConditionBuilder {
         return evaluateBlock.apply(ctx);
       }
     };
+    DslDefinitionCollector.register(def);
+    return def;
   }
 }

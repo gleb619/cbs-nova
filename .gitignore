@@ -45,6 +45,7 @@ node_modules
 /.mcp.json
 /arms_cache/config/
 /.codebuddy/settings.local.json
+/.plans/*
 
 /docs/results/*
 /docs/tasks/*
@@ -110,3 +111,4 @@ node_modules
 /examples/cbs-rules/
 /docs/papers/phase1/*
 /docs/papers/phase2/*
+/docs/papers/phase3/*

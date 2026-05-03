@@ -2,12 +2,12 @@ package cbs.nova.sample;
 
 import cbs.dsl.api.Action;
 import cbs.dsl.api.EventDefinition;
-import cbs.dsl.api.TransitionRuleDefinition;
 import cbs.dsl.api.WorkflowDefinition;
 import cbs.dsl.api.WorkflowTypes.WorkflowInput;
 import cbs.dsl.api.WorkflowTypes.WorkflowOutput;
 import cbs.dsl.api.context.FinishContext;
 import cbs.dsl.builder.EventDsl;
+import cbs.dsl.builder.WorkflowDsl;
 import cbs.nova.registry.DslRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -68,42 +68,15 @@ public class ShowcaseConfig implements ApplicationRunner {
     registry.register(event);
   }
 
-  //TODO: redo, add a Workflow dsl instead
   private void registerShowcaseWorkflow() {
     EventDefinition showcaseEvent = registry.resolveEvent("SHOWCASE_EVENT");
 
-    WorkflowDefinition workflow = new WorkflowDefinition() {
-      @Override
-      public String getCode() {
-        return "SHOWCASE_WF";
-      }
-
-      @Override
-      public List<String> getStates() {
-        return List.of("START", "DONE", "FAULTED");
-      }
-
-      @Override
-      public String getInitial() {
-        return "START";
-      }
-
-      @Override
-      public List<String> getTerminalStates() {
-        return List.of("DONE");
-      }
-
-      @Override
-      public List<TransitionRuleDefinition> getTransitions() {
-        return List.of(
-            new TransitionRuleDefinition("START", "DONE", Action.SUBMIT, showcaseEvent, "FAULTED"));
-      }
-
-      @Override
-      public WorkflowOutput execute(WorkflowInput input) {
-        return new WorkflowOutput("DONE", List.of(), "ACTIVE");
-      }
-    };
+    WorkflowDefinition workflow = WorkflowDsl.workflow("SHOWCASE_WF")
+        .states("START", "DONE", "FAULTED")
+        .initial("START")
+        .terminal("DONE")
+        .transition("START", "DONE", Action.SUBMIT, showcaseEvent)
+        .build();
 
     registry.register(workflow);
   }

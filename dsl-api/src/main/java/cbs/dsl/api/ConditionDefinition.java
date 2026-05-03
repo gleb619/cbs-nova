@@ -14,7 +14,7 @@ import java.util.function.Predicate;
  * <p>Implementations are typically created via the Kotlin DSL {@code condition { }} block or
  * annotated with {@link DslComponent} for compile-time registration.
  */
-public interface ConditionDefinition {
+public interface ConditionDefinition extends DslDefinition {
 
   /**
    * Canonical code used to look up this condition in the registry.

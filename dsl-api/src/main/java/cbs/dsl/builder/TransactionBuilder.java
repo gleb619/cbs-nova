@@ -1,5 +1,6 @@
 package cbs.dsl.builder;
 
+import cbs.dsl.api.DslDefinitionCollector;
 import cbs.dsl.api.ParameterDefinition;
 import cbs.dsl.api.TransactionDefinition;
 import cbs.dsl.api.TransactionTypes.TransactionInput;
@@ -75,7 +76,7 @@ public class TransactionBuilder {
 
   public TransactionDefinition build() {
     List<ParameterDefinition> params = Collections.unmodifiableList(new ArrayList<>(parameters));
-    return new TransactionDefinition() {
+    TransactionDefinition def = new TransactionDefinition() {
       @Override
       public String getCode() {
         return code;
@@ -136,5 +137,7 @@ public class TransactionBuilder {
             false);
       }
     };
+    DslDefinitionCollector.register(def);
+    return def;
   }
 }

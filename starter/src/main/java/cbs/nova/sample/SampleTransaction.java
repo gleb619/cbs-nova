@@ -6,6 +6,7 @@ import cbs.dsl.api.TransactionFunction;
 import cbs.nova.sample.SampleTransaction.SampleTxInput;
 import cbs.nova.sample.SampleTransaction.SampleTxOutput;
 import io.avaje.jsonb.Json;
+
 import java.util.Map;
 
 /** Sample transaction for the PoC. Produces a greeting from the {@code name} parameter. */
@@ -44,5 +45,4 @@ public class SampleTransaction implements TransactionFunction<SampleTxInput, Sam
       return Map.of("greeting", greeting);
     }
   }
-
 }

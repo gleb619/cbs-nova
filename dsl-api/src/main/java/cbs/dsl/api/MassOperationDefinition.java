@@ -13,7 +13,7 @@ import java.util.function.Consumer;
  * <p>Implementations are typically created via the Kotlin DSL {@code massOperation { }} block or
  * annotated with {@link DslComponent} for compile-time registration.
  */
-public interface MassOperationDefinition {
+public interface MassOperationDefinition extends DslDefinition {
 
   /**
    * Canonical code used to look up this mass operation in the registry.
