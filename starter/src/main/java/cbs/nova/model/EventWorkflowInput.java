@@ -8,6 +8,4 @@ public record EventWorkflowInput(
     String eventCode,
     String contextJson,
     String performedBy,
-    String dslVersion) {
-
-}
+    String dslVersion) {}

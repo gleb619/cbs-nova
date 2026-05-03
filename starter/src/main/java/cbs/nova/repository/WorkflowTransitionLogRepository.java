@@ -4,6 +4,4 @@ import cbs.nova.entity.WorkflowTransitionLogEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface WorkflowTransitionLogRepository
-    extends JpaRepository<WorkflowTransitionLogEntity, Long> {
-
-}
+    extends JpaRepository<WorkflowTransitionLogEntity, Long> {}

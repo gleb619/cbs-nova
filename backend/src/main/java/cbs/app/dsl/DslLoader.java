@@ -2,17 +2,16 @@ package cbs.app.dsl;
 
 import cbs.dsl.compiler.DslScriptHost;
 import cbs.dsl.runtime.DslRegistry;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.stream.Stream;
 
 @Slf4j
 @Component
@@ -29,7 +28,7 @@ public class DslLoader implements ApplicationListener<ApplicationReadyEvent> {
   public void onApplicationEvent(ApplicationReadyEvent event) {
     if (scriptsDir == null || scriptsDir.isBlank()) {
       log.warn("DSL scripts directory is not configured. Set 'cbs.dsl.scripts-dir' to load .kts "
-               + "files on startup.");
+          + "files on startup.");
       return;
     }
 

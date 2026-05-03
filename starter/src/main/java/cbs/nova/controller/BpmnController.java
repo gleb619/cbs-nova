@@ -26,9 +26,9 @@ public class BpmnController {
   @GetMapping(value = "/{code}/bpmn", produces = MediaType.APPLICATION_XML_VALUE)
   @Operation(summary = "Export workflow as BPMN 2.0 XML")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "BPMN 2.0 XML"),
-      @ApiResponse(responseCode = "404", description = "Workflow not found"),
-      @ApiResponse(responseCode = "501", description = "SVG format not implemented")
+    @ApiResponse(responseCode = "200", description = "BPMN 2.0 XML"),
+    @ApiResponse(responseCode = "404", description = "Workflow not found"),
+    @ApiResponse(responseCode = "501", description = "SVG format not implemented")
   })
   public ResponseEntity<String> getBpmn(
       @PathVariable String code, @RequestParam(required = false) String format) {

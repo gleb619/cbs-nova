@@ -9,6 +9,4 @@ public record EventExecutionRequest(
     @NotBlank String workflowCode,
     @NotBlank String eventCode,
     @NotBlank String performedBy,
-    Map<String, Object> parameters) {
-
-}
+    Map<String, Object> parameters) {}

@@ -57,7 +57,7 @@ class MassOperationControllerTest {
         .build();
 
     when(massOperationService.trigger(
-        new MassOperationTriggerRequest("daily-interest", "admin1", "1.0.0", null, null, null)))
+            new MassOperationTriggerRequest("daily-interest", "admin1", "1.0.0", null, null, null)))
         .thenReturn(response);
 
     mockMvc

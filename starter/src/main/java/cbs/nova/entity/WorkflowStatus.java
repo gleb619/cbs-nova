@@ -1,8 +1,6 @@
 package cbs.nova.entity;
 
-/**
- * Represents the lifecycle status of a workflow execution.
- */
+/** Represents the lifecycle status of a workflow execution. */
 public enum WorkflowStatus {
   /** Workflow is currently running. */
   ACTIVE,

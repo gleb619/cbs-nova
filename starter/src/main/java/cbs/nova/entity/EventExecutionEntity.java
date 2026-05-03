@@ -53,9 +53,7 @@ public class EventExecutionEntity {
   @Column(name = "workflow_execution_id")
   private Long workflowExecutionId;
 
-  /**
-   * @deprecated use #{@link #workflowExecutionId} instead
-   */
+  /** @deprecated use #{@link #workflowExecutionId} instead */
   @Transient
   @Deprecated(forRemoval = true)
   private transient WorkflowExecutionEntity workflowExecution;

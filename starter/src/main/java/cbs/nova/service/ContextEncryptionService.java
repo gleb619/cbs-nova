@@ -55,8 +55,7 @@ public class ContextEncryptionService {
   public Map<String, Object> decrypt(String contextJson) {
     Map<String, Object> context;
     try {
-      context = objectMapper.readValue(contextJson, new TypeReference<>() {
-      });
+      context = objectMapper.readValue(contextJson, new TypeReference<>() {});
     } catch (JacksonException e) {
       throw new IllegalStateException("Failed to deserialize context from JSON", e);
     }

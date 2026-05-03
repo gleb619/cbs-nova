@@ -132,9 +132,7 @@ public class MassOperationService {
     return retriedCount;
   }
 
-  /**
-   * Checks whether a cron trigger should fire based on the last 60 seconds.
-   */
+  /** Checks whether a cron trigger should fire based on the last 60 seconds. */
   boolean shouldFireCron(TriggerDefinition.CronTrigger cronTrigger) {
     try {
       CronExpression cron = CronExpression.parse(cronTrigger.getExpression());

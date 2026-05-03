@@ -5,6 +5,4 @@ public record TransactionActivityInput(
     String contextJson,
     Long workflowExecutionId,
     String performedBy,
-    String dslVersion) {
-
-}
+    String dslVersion) {}

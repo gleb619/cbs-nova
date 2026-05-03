@@ -1,8 +1,6 @@
 package cbs.nova.entity;
 
-/**
- * Represents the execution status of an event.
- */
+/** Represents the execution status of an event. */
 public enum EventStatus {
   /** Event is currently executing. */
   RUNNING,

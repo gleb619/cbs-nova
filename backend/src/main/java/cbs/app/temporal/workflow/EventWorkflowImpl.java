@@ -256,7 +256,5 @@ public class EventWorkflowImpl implements EventWorkflow {
     transitionLogRepository.save(entity);
   }
 
-  private record TransactionExecutionResult(boolean allSucceeded, String errorMessage) {
-
-  }
+  private record TransactionExecutionResult(boolean allSucceeded, String errorMessage) {}
 }

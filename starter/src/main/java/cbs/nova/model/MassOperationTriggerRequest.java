@@ -10,6 +10,4 @@ public record MassOperationTriggerRequest(
     @NotBlank String dslVersion,
     String contextJson,
     String triggerType,
-    String triggerSource) {
-
-}
+    String triggerSource) {}

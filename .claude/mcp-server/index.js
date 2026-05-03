@@ -16,6 +16,8 @@ import * as z from "zod";
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const LOG_DIR = path.join(os.tmpdir(), "logs");
+const KIRO_PATH = path.join(os.homedir(), ".local", "bin", "kiro-cli");
+const OPENCODE_PATH = path.join(os.homedir(), ".opencode", "bin", "opencode");
 
 function ensureLogDir() {
   if (!fs.existsSync(LOG_DIR)) {
@@ -262,9 +264,16 @@ server.registerTool(
         const resolvedPrompt = prompt || defaultPrompt;
 
         // opencode run --dangerously-skip-permissions --model <default> [extra_args] "prompt"
-        const opencodeArgs = ["run", "--dangerously-skip-permissions", "--model", "opencode/minimax-m2.5-free", ...extraArgs, resolvedPrompt];
+        const opencodeArgs = ["run", ...extraArgs, resolvedPrompt];
 
-        const result = await spawnWithNvm("opencode", opencodeArgs, timeout);
+        // Check opencode path exists
+        if (!fs.existsSync(OPENCODE_PATH)) {
+          throw new Error(
+            `opencode binary not found at ${OPENCODE_PATH}. Please ensure it is installed.`
+          );
+        }
+
+        const result = await spawnDirect(OPENCODE_PATH, opencodeArgs);
 
         const endMsg = `[${timestamp()}] END opencode task=${task_name} exit_code=${result.code}`;
         logStream.write(endMsg + "\n");
@@ -334,19 +343,17 @@ server.registerTool(
     const logStream = fs.createWriteStream(logFile, { flags: "a" });
     logStream.write(startMsg + "\n");
 
-    const kiroPath = path.join(os.homedir(), ".local", "bin", "kiro-cli");
-
     let output;
     try {
       // Check kiro-cli exists
-      if (!fs.existsSync(kiroPath)) {
+      if (!fs.existsSync(KIRO_PATH)) {
         throw new Error(
-          `kiro-cli not found at ${kiroPath}. Please ensure it is installed.`
+          `kiro-cli not found at ${KIRO_PATH}. Please ensure it is installed.`
         );
       }
 
       output = await withPidFile(taskLabel, async () => {
-        const result = await spawnDirect(kiroPath, kiroArgs);
+        const result = await spawnDirect(KIRO_PATH, kiroArgs);
 
         const endMsg = `[${timestamp()}] END kiro_run task_id=${taskLabel} exit_code=${result.code}`;
         logStream.write(endMsg + "\n");

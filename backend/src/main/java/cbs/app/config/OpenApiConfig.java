@@ -12,11 +12,10 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 import io.swagger.v3.oas.models.tags.Tag;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import java.util.List;
 
 @Configuration
 public class OpenApiConfig {
@@ -34,7 +33,7 @@ public class OpenApiConfig {
             .title("CBS Nova API")
             .description(
                 "CBS Nova Backend API for settings management with Keycloak authentication. "
-                + "MassOperations: Mass operation execution API for batch processing.")
+                    + "MassOperations: Mass operation execution API for batch processing.")
             .version("1.0.0")
             .contact(new Contact().name("CBS Nova Team").email("team@cbs-nova.com"))
             .license(new License().name("MIT").url("https://opensource.org/licenses/MIT")))

@@ -6,6 +6,4 @@ public record MassOpItemInput(
     String massOpCode,
     Long massOperationExecutionId,
     String performedBy,
-    String dslVersion) {
-
-}
+    String dslVersion) {}

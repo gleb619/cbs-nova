@@ -10,6 +10,4 @@ public record MassOpExecutionCreateInput(
     String contextJson,
     long totalItems,
     String performedBy,
-    String temporalWorkflowId) {
-
-}
+    String temporalWorkflowId) {}

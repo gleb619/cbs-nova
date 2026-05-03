@@ -8,6 +8,4 @@ public record MassOpItemPersistInput(
     String itemKey,
     String itemDataJson,
     MassOperationItemStatus status,
-    String errorMessage) {
-
-}
+    String errorMessage) {}
