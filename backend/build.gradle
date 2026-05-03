@@ -31,27 +31,6 @@ sourceSets {
 
 dependencies {
   implementation project(":starter")
-  //runtimeOnly libs.spring.boot.starter.flyway
-//  runtimeOnly libs.flyway.core
-//  runtimeOnly libs.flyway.database.postgresql
-//  implementation libs.bundles.spring.web
-//  implementation libs.bundles.spring.data
-//  implementation libs.bundles.spring.security
-//
-//  runtimeOnly libs.flyway.core
-//  runtimeOnly libs.flyway.database.postgresql
-//
-//  implementation libs.avaje.validator.spring.starter
-//
-//  implementation libs.kotlin.stdlib
-//  implementation libs.kotlin.reflect
-//  implementation libs.kotlinx.coroutines.core
-
-  // Lombok and MapStruct provided by gradle/java.gradle
-  // compileOnly libs.lombok
-  // implementation libs.mapstruct
-  // annotationProcessor libs.lombok
-  // annotationProcessor libs.mapstruct.processor
 
   // -- Testing --
   testImplementation libs.spring.boot.starter.test
