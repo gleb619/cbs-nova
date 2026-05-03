@@ -51,6 +51,33 @@ class HelperBuilder(
 
         return AnyHelperOutput(result)
     }
+
+    fun executeWithResolver(
+        params: Map<String, Any>,
+        baseCtx: BaseContext,
+        resolver: (String, Map<String, Any>) -> Any,
+    ): Any {
+        val ctx =
+            object :
+                HelperContext(
+                    eventCode = baseCtx.eventCode,
+                    workflowExecutionId = baseCtx.workflowExecutionId,
+                    performedBy = baseCtx.performedBy,
+                    dslVersion = baseCtx.dslVersion,
+                    params = params,
+                ) {
+                override fun helper(
+                    name: String,
+                    params: Map<String, Any>,
+                ): Any = resolver(name, params)
+            }
+
+        val result =
+            executeBlock?.invoke(ctx)
+                ?: error("Helper '$code' has no execute block defined")
+
+        return result
+    }
 }
 
 fun helper(
