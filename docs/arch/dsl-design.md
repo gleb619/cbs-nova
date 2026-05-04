@@ -119,6 +119,9 @@ DSL supports two execution modes with a shared contract surface from `dsl-api`.
 
 ### Generated Mode (Production)
 
+> For the complete architectural description of the three-layer pipeline, generated bridge classes,
+> and runtime execution flow, see [code-generation.md](code-generation.md).
+
 - **Layer 1:** The `dsl-codegen` annotation processor reads `@DslComponent` annotated `*Function` classes at compile time and generates `*Definition` wrappers + SPI registration.
 - **Layer 2:** The `DslCompiler` parses `.java` DSL files (events, workflows, mass operations) and generates `*Definition` implementations.
 - **Layer 3:** `dsl-codegen` reads all compiled `*Definition` classes and generates Temporal `Workflow` and `Activity` implementations in `generated-sources/`.

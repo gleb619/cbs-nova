@@ -74,8 +74,12 @@ public class TransactionBuilder {
     return this;
   }
 
+  @Deprecated(forRemoval = true)
+  //TODO: Change `TransactionDefinition` registration, we just can use anonymous classes here
   public TransactionDefinition build() {
     List<ParameterDefinition> params = Collections.unmodifiableList(new ArrayList<>(parameters));
+
+    @Deprecated(forRemoval = true)
     TransactionDefinition def = new TransactionDefinition() {
       @Override
       public String getCode() {

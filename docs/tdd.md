@@ -123,6 +123,7 @@ Request flow: `Browser → Vite (9000) → Nuxt BFF (3000) → Backend (7070)`
 | [arch/versioning.md](arch/versioning.md)                 | Strict isolation, Temporal workflow ID format, worker drain                                                   |
 | [arch/bpmn-export.md](arch/bpmn-export.md)               | Static and dynamic BPMN, `bpmn-js` frontend integration                                                       |
 | [arch/module-structure.md](arch/module-structure.md)     | Full Gradle module file tree (`app`, `dsl-api`, `dsl`, `temporal-core`, `bpmn-export`, `mass-operation-core`) |
+| [arch/code-generation.md](arch/code-generation.md)       | 3-layer compile-time codegen, generated bridges, runner pattern, execution flow                               |
 | [arch/risks.md](arch/risks.md)                           | Risk register, resolved decisions, open questions                                                             |
 
 ### UI

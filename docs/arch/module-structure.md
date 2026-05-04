@@ -141,6 +141,9 @@ mass-operation-core → dsl-api
 
 **Code generation pipeline (compile time only):**
 
+See [code-generation.md](code-generation.md) for the full architectural description of the
+three-layer pipeline, the Bridge/Adapter/Composite pattern, and the runtime execution flow.
+
 ```
 @DslComponent *Function classes  ──►  dsl-codegen (Layer 1)
                                       generates *Definition + SPI registration

@@ -38,6 +38,9 @@ cbs-rules Gitea: push to branch
         │    ├─ Layer 3: Annotation processor (dsl-codegen) generates Temporal workflow/activity classes
         │    └─ Produce: dsl-rules-{version}.jar (contains both DSL definitions and generated Temporal classes)
         │
+
+> See [code-generation.md](code-generation.md) for the full architectural description of the
+> generated bridge classes and dual-mode DSL execution pattern.
         ├─ Gradle: buildApp
         │    └─ Bundle dsl-rules JAR into application
         │

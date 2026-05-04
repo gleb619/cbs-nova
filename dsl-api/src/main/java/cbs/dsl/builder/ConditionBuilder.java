@@ -53,8 +53,12 @@ public class ConditionBuilder {
     return this;
   }
 
+  @Deprecated(forRemoval = true)
+  //TODO: Change `ConditionDefinition` registration, we just can use anonymous classes here
   public ConditionDefinition build() {
     List<ParameterDefinition> params = Collections.unmodifiableList(new ArrayList<>(parameters));
+
+    @Deprecated(forRemoval = true)
     ConditionDefinition def = new ConditionDefinition() {
       @Override
       public String getCode() {

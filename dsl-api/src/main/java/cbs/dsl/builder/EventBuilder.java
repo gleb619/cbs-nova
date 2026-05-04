@@ -105,6 +105,8 @@ public class EventBuilder {
    *
    * @return the built event definition
    */
+  @Deprecated(forRemoval = true)
+  //TODO: Change `EventDefinition` registration, we just can use anonymous classes here
   public EventDefinition build() {
     List<String> txCodes = Collections.unmodifiableList(new ArrayList<>(transactionCodes));
     List<ParameterDefinition> params = Collections.unmodifiableList(new ArrayList<>(parameters));
@@ -119,6 +121,7 @@ public class EventBuilder {
               }
             };
 
+    @Deprecated(forRemoval = true)
     EventDefinition def = new EventDefinition() {
       @Override
       public String getCode() {

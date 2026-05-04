@@ -8,8 +8,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Static collector for {@link DslDefinition} instances built during DSL file execution.
  *
  * <p>Builders' {@code build()} methods auto-register into this collector. After executing a DSL
- * file's implicit {@code main()}, the compiler or test harness drains the collector to retrieve
- * all definitions produced by that file.
+ * file's implicit {@code main()}, the compiler or test harness drains the collector to retrieve all
+ * definitions produced by that file.
  */
 public final class DslDefinitionCollector {
 

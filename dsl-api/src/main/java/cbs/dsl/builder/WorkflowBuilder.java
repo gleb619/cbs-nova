@@ -53,18 +53,21 @@ public class WorkflowBuilder {
     return this;
   }
 
-  public WorkflowBuilder transition(
-      String from, String to, Action action, EventDefinition event) {
+  public WorkflowBuilder transition(String from, String to, Action action, EventDefinition event) {
     this.transitions.add(new TransitionRuleDefinition(from, to, action, event));
     return this;
   }
 
+  @Deprecated(forRemoval = true)
+  //TODO: Change `WorkflowDefinition` registration, we just can use anonymous classes here
   public WorkflowDefinition build() {
     List<String> st = Collections.unmodifiableList(new ArrayList<>(states));
     List<String> terminal = Collections.unmodifiableList(new ArrayList<>(terminalStates));
     List<TransitionRuleDefinition> tx = Collections.unmodifiableList(new ArrayList<>(transitions));
-    String ini = initial != null && !initial.isEmpty() ? initial : st.isEmpty() ? null : st.getFirst();
+    String ini =
+        initial != null && !initial.isEmpty() ? initial : st.isEmpty() ? null : st.getFirst();
 
+    @Deprecated(forRemoval = true)
     WorkflowDefinition def = new WorkflowDefinition() {
       @Override
       public String getCode() {

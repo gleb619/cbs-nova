@@ -3,7 +3,6 @@ package cbs.dsl.codegen;
 import cbs.dsl.api.DslDefinition;
 import cbs.dsl.api.DslDefinitionCollector;
 
-import java.util.stream.Collectors;
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaCompiler;
@@ -11,6 +10,7 @@ import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.StandardLocation;
 import javax.tools.ToolProvider;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -34,6 +34,7 @@ import java.util.List;
  *   <li>Loads the compiled implicit class and invokes its {@code main(String[])} method
  *   <li>Drains the collector to retrieve all definitions produced by the file
  *   <li>Validates each definition and prints a summary line
+ *   <li>Generates Java source from each {@link DslDefinition} using JavaPoet
  * </ol>
  */
 public class DslCompiler {
@@ -67,9 +68,11 @@ public class DslCompiler {
     }
 
     List<File> sourceFiles = new ArrayList<>();
+    Path outputDirAbs = outputDir.toAbsolutePath().normalize();
     try (var stream = Files.walk(sourceDir)) {
       stream
           .filter(p -> p.toString().endsWith(".java"))
+          .filter(p -> !p.toAbsolutePath().normalize().startsWith(outputDirAbs))
           .map(Path::toFile)
           .forEach(sourceFiles::add);
     } catch (IOException e) {
@@ -78,9 +81,11 @@ public class DslCompiler {
     }
 
     if (sourceFiles.isEmpty()) {
-      System.out.println("No Java source files found in " + sourceDir);
+      logInfo("No Java source files found in " + sourceDir);
       System.exit(0);
     }
+
+    DslCodeGenerator codeGenerator = new DslCodeGenerator();
 
     Path wrapDir;
     List<File> wrappedFiles;
@@ -94,17 +99,9 @@ public class DslCompiler {
           Path wrapped = wrapDir.resolve(f.getName());
           String[] parts = splitImportsAndBody(content);
           String importBlock = parts[0].trim();
-          String body = indent(parts[1].trim(), 4);
-          StringBuilder sb = new StringBuilder();
-          if (!importBlock.isEmpty()) {
-            sb.append(importBlock).append("\n\n");
-          }
-          sb.append("public class ").append(className).append(" {\n")
-              .append("  public static void main(String[] args) throws Exception {\n")
-              .append(body).append("\n")
-              .append("  }\n")
-              .append("}\n");
-          Files.writeString(wrapped, sb.toString());
+          String body = parts[1].trim();
+          String generated = codeGenerator.generateWrapper(className, importBlock, body);
+          Files.writeString(wrapped, generated);
           wrappedFiles.add(wrapped.toFile());
         } else {
           wrappedFiles.add(f);
@@ -172,11 +169,17 @@ public class DslCompiler {
 
         List<DslDefinition> definitions = DslDefinitionCollector.drain();
         for (DslDefinition def : definitions) {
-          System.out.println("Compiled and validated: "
-              + def.getCode()
-              + " ("
-              + def.getClass().getInterfaces()[0].getSimpleName()
-              + ")");
+          logInfo("Compiled and validated: %s (%s)", def.getCode(),
+              def.getClass().getInterfaces()[0].getSimpleName());
+
+          try {
+            codeGenerator.generate(def, outputDir);
+            logInfo("Generated code for: ", def.getCode());
+          } catch (IOException e) {
+            System.err.println(
+                "Failed to generate code for " + def.getCode() + ": " + e.getMessage());
+            validationFailed = true;
+          }
         }
         if (definitions.isEmpty()) {
           System.err.println("No DslDefinition collected from " + className);
@@ -199,7 +202,7 @@ public class DslCompiler {
       // ignore
     }
 
-    System.out.println("DSL compilation completed successfully. Output: " + outputDir);
+    logInfo("DSL compilation completed successfully. Output: %s%n", outputDir);
   }
 
   private static void invokeMain(ClassLoader classLoader, String className) throws Exception {
@@ -231,13 +234,6 @@ public class DslCompiler {
     return new String[] {imports.toString(), body.toString()};
   }
 
-  private static String indent(String text, int spaces) {
-    String prefix = " ".repeat(spaces);
-    return text.lines()
-        .map(line -> line.isBlank() ? line : prefix + line)
-        .collect(Collectors.joining("\n"));
-  }
-
   private static void deleteRecursively(Path path) throws IOException {
     if (Files.isDirectory(path)) {
       try (var entries = Files.list(path)) {
@@ -250,5 +246,9 @@ public class DslCompiler {
       }
     }
     Files.deleteIfExists(path);
+  }
+
+  private static void logInfo(String message, Object... args) {
+    System.out.printf(message, args);
   }
 }

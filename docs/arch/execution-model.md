@@ -2,6 +2,9 @@
 
 ← [Back to TDD](../tdd.md)
 
+> For the generated bridge layer that turns DSL definitions into Temporal Workflows and Activities,
+> see [code-generation.md](code-generation.md).
+
 ## 5.1 Action Enum
 
 ```java

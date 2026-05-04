@@ -2,6 +2,9 @@
 
 ← [Back to TDD](../tdd.md)
 
+> For how workflow lifecycle transitions are executed by generated Temporal classes,
+> see [code-generation.md](code-generation.md) §13.3 (Event → Workflow Bridge) and §13.4 (Runtime Execution Flow).
+
 ## 6.1 State Machine Concepts
 
 | Concept          | Description                                                                    |

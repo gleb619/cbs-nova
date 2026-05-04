@@ -132,4 +132,7 @@ runtime metadata.
 3. Evaluate each `ctx[key] = ...` in the `context {}` block in order
 4. Helper calls in `context {}` are synchronous Spring bean calls (no Temporal)
 5. Persist enriched context back to `workflow_execution.context` (encrypt, serialize)
+
+> For the generated workflow orchestration pattern and how `context {}` blocks are inlined
+> into Temporal workflows, see [code-generation.md](code-generation.md) §13.3.3.
 6. On failure → `FAULTED` status, HTTP `CONTEXT_FAULT` error, stop

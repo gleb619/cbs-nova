@@ -48,7 +48,7 @@ class SampleWorkflowTest {
     assertNotNull(tx);
     assertEquals("SAMPLE_TX", tx.getCode());
     assertEquals("Hello, PoC", output.result().get("greeting"));
-}
+  }
 
   @Test
   @DisplayName("Should resolve generated SampleHelperDefinition and execute via wrapper")
@@ -66,7 +66,7 @@ class SampleWorkflowTest {
     assertNotNull(helper);
     assertEquals("SAMPLE_HELPER", helper.getCode());
     assertEquals("Hello, World!", ((Map<?, ?>) output.value()).get("result"));
-}
+  }
 
   @Test
   @DisplayName("Should resolve generated SampleConditionDefinition and evaluate via wrapper")

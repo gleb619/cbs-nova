@@ -15,6 +15,11 @@ import java.util.Map;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+//TODO: We need a code generation based on some abstract service. For example in
+// `dsl-codegen/src/main/java/cbs/dsl/codegen/DslCodeGenerator.java` we generate some new service that extends from
+// some our service, and call a some `dsl-api/src/main/java/cbs/dsl/api/TransactionFunction.java` implementation
+// so Temporal used here as an intermediary for the service mesh things, like fault tolerance, retrays, queues, etc.
+@Deprecated(forRemoval = true)
 public class TransactionActivityImpl implements TransactionActivity {
 
   private final DslRegistry dslRegistry;
@@ -35,7 +40,8 @@ public class TransactionActivityImpl implements TransactionActivity {
 
     // 3. Execute preview + execute, with rollback on failure
     try {
-      txDef.preview(txnInput);
+      //TODO: preview must be called in some other method, only to show user possible work option result
+      //txDef.preview(txnInput);
       txDef.execute(txnInput);
       return new TransactionResult(true, null);
     } catch (Exception e) {

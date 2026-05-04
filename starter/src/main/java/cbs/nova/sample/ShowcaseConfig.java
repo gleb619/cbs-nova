@@ -3,8 +3,6 @@ package cbs.nova.sample;
 import cbs.dsl.api.Action;
 import cbs.dsl.api.EventDefinition;
 import cbs.dsl.api.WorkflowDefinition;
-import cbs.dsl.api.WorkflowTypes.WorkflowInput;
-import cbs.dsl.api.WorkflowTypes.WorkflowOutput;
 import cbs.dsl.api.context.FinishContext;
 import cbs.dsl.builder.EventDsl;
 import cbs.dsl.builder.WorkflowDsl;
@@ -15,7 +13,6 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.Map;
 
 /**

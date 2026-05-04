@@ -17,10 +17,13 @@ repositories {
 
 dependencies {
   implementation files('libs/dsl-api.jar')
+  implementation files('libs/dsl-codegen.jar')
+  implementation 'com.palantir.javapoet:javapoet:0.11.0'
 }
 
 tasks.register('compileDsl', JavaExec) {
-  classpath = files('libs/dsl-api.jar', 'libs/dsl-codegen.jar')
+  dependsOn configurations.runtimeClasspath
+  classpath = files('libs/dsl-api.jar', 'libs/dsl-codegen.jar') + configurations.runtimeClasspath
   mainClass = 'cbs.dsl.codegen.DslCompiler'
   args '.', 'build/dsl-classes'
   javaLauncher = javaToolchains.launcherFor {
