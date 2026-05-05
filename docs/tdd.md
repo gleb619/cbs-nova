@@ -53,11 +53,15 @@ Client / API Gateway
   │  POST /api/mass-operations/trigger
   ▼
 Spring Boot Application
-  EventController / EventService / WorkflowResolver / WorkflowExecutor / ContextEvaluator
-  MassOperationController / MassOperationService / MassOperationScheduler / SignalEmitter
+  EventController / EventService / EventRunner
+  MassOperationController / MassOperationService / MassOpRunner
+  WorkflowController / WorkflowService / WorkflowRunner
   ContextEncryptionService
   └─ DSL Runtime (WorkflowDefinition, EventDefinition, TransactionDefinition,
                   HelperDefinition, ConditionDefinition, MassOperationDefinition)
+     └─ Runner layer (EventRunner, TransactionRunner, HelperRunner,
+                      ConditionRunner, WorkflowRunner, MassOpRunner)
+     └─ PreviewRunner (dev/QA dry-run — calls preview() on registries, no DB, no Temporal)
   │                                    │
   ▼                                    ▼
 Temporal Server                    PostgreSQL
@@ -81,10 +85,11 @@ Request flow: `Browser → Vite (9000) → Nuxt BFF (3000) → Backend (7070)`
 
 ### DSL Execution Modes
 
-| Mode        | Environment                          | Mechanism                                                                 | Artifact                    |
-|-------------|--------------------------------------|---------------------------------------------------------------------------|-----------------------------|
-| `GENERATED` | production / CI / non-dev backend    | 3-layer codegen: Function→Definition, DSL→Definition, Definition→Temporal | Compiled workflow/activity  |
-| `REFLECTED` | development only (`@Profile("dev")`) | Layer 1+2 compile; Layer 3 replaced by reflective wrappers                | Generic interpreter wrapper |
+| Mode        | Environment                          | Mechanism                                                                     | Artifact                    |
+|-------------|--------------------------------------|-------------------------------------------------------------------------------|-----------------------------|
+| `GENERATED` | production / CI / non-dev backend    | 3-layer codegen: Function→Definition, DSL→Definition, Definition→Temporal     | Compiled workflow/activity  |
+| `REFLECTED` | development only (`@Profile("dev")`) | Layer 1+2 compile; Layer 3 replaced by reflective wrappers                    | Generic interpreter wrapper |
+| `PREVIEW`   | any (test, dev, BA lint)             | Direct registry call via `*Runner.preview()` — no codegen, no Temporal, no DB | In-memory result only       |
 
 ---
 

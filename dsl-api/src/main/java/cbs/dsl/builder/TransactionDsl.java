@@ -6,7 +6,7 @@ package cbs.dsl.builder;
  * <p>Usage:
  *
  * <pre>{@code
- * TransactionDefinition tx = TransactionDsl.transaction("DEBIT_ACCOUNT")
+ * DslObject tx = TransactionDsl.transaction("DEBIT_ACCOUNT")
  *     .requiredParam("accountCode")
  *     .execute(ctx -> new TransactionOutput(Map.of("txId", "123")))
  *     .build();

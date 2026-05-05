@@ -1,6 +1,7 @@
 package cbs.nova.registry;
 
 import cbs.dsl.api.ConditionDefinition;
+import cbs.dsl.api.DslComponentResolver;
 import cbs.dsl.api.EventDefinition;
 import cbs.dsl.api.HelperDefinition;
 import cbs.dsl.api.MassOperationDefinition;
@@ -32,6 +33,8 @@ public class DslRegistry implements WritableRegistry {
   private final Map<String, HelperDefinition> helpers = new HashMap<>();
   private final Map<String, ConditionDefinition> conditions = new HashMap<>();
 
+  private DslComponentResolver componentResolver;
+
   @Override
   public void register(WorkflowDefinition w) {
     registerChecked(workflows, w.getCode(), w);
@@ -60,6 +63,20 @@ public class DslRegistry implements WritableRegistry {
   @Override
   public void register(ConditionDefinition c) {
     registerChecked(conditions, c.getCode(), c);
+  }
+
+  /**
+   * Sets the component resolver used by generated wrappers to obtain Spring-managed beans.
+   *
+   * @param resolver the resolver; may be {@code null} for plain-construction mode
+   */
+  public void setComponentResolver(DslComponentResolver resolver) {
+    this.componentResolver = resolver;
+  }
+
+  @Override
+  public DslComponentResolver getComponentResolver() {
+    return componentResolver;
   }
 
   public Map<String, WorkflowDefinition> getWorkflows() {

@@ -27,14 +27,21 @@ app/src/main/java/
 │   ├── MassOperationController.java
 │   ├── BpmnController.java
 │   └── DevDslController.java              // @Profile("dev")
+├── runner/
+│   ├── EventRunner.java
+│   ├── WorkflowRunner.java
+│   ├── TransactionRunner.java
+│   ├── HelperRunner.java
+│   ├── ConditionRunner.java
+│   └── MassOpRunner.java
 ├── service/
 │   ├── EventService.java
-│   ├── WorkflowResolver.java
-│   ├── WorkflowExecutor.java
-│   ├── ContextEvaluator.java
-│   ├── ContextEncryptionService.java
+│   ├── WorkflowService.java
+│   ├── TransactionService.java
+│   ├── HelperService.java
+│   ├── ConditionService.java
 │   ├── MassOperationService.java
-│   ├── MassOperationScheduler.java
+│   ├── ContextEncryptionService.java
 │   ├── SignalEmitter.java
 │   └── DslVersionService.java
 ├── temporal/

@@ -11,6 +11,16 @@ import java.lang.annotation.Target;
  * <p>The annotation processor reads this annotation at compile time and generates a
  * {@code *Definition} wrapper plus SPI registration code. Valid only on classes implementing
  * {@link TransactionFunction}, {@link HelperFunction}, or {@link ConditionFunction}.
+ *
+ * <p>The {@link #componentModel()} attribute controls how the generated wrapper obtains the
+ * component instance at runtime:
+ *
+ * <ul>
+ *   <li>{@link DslComponentModel#SIMPLE} — plain constructor {@code new}.
+ *   <li>{@link DslComponentModel#SPRING} — looked up from Spring {@code ApplicationContext}.
+ *   <li>{@link DslComponentModel#AUTO} — inspect class for Spring annotations at compile time
+ *       (default).
+ * </ul>
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
@@ -29,4 +39,35 @@ public @interface DslComponent {
    * @return the component type
    */
   DslImplType type();
+
+  /**
+   * Component instantiation model — SIMPLE (plain constructor), SPRING (bean lookup), or AUTO
+   * (detect Spring annotations at compile time, default).
+   *
+   * @return the component model
+   */
+  DslComponentModel componentModel() default DslComponentModel.AUTO;
+
+  /**
+   * Determines how the generated {@code *Definition} wrapper obtains the underlying component
+   * instance at runtime.
+   *
+   * <ul>
+   *   <li>{@code SIMPLE} — plain constructor {@code new MyClass()} (no Spring container required).
+   *   <li>{@code SPRING} — resolved from the Spring {@code ApplicationContext} via
+   *       {@link DslComponentResolver}.
+   *   <li>{@code AUTO} — inspect the annotated class at compile time; if it carries any
+   *       {@code org.springframework.*} annotation → {@code SPRING}, otherwise {@code SIMPLE}.
+   * </ul>
+   */
+  enum DslComponentModel {
+    /** Plain constructor instantiation — no Spring container required. */
+    SIMPLE,
+
+    /** Resolved from Spring {@code ApplicationContext} via {@link DslComponentResolver}. */
+    SPRING,
+
+    /** Inspect class for Spring annotations at compile time to choose SIMPLE or SPRING. */
+    AUTO
+  }
 }

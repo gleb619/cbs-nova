@@ -1,15 +1,15 @@
 package cbs.dsl.codegen;
 
-import cbs.dsl.api.DslDefinition;
 import cbs.dsl.api.DslDefinitionCollector;
+import cbs.dsl.api.DslObject;
+import com.github.javaparser.JavaParser;
+import com.github.javaparser.ParseResult;
+import com.github.javaparser.ParserConfiguration;
+import com.github.javaparser.StaticJavaParser;
+import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.body.MethodDeclaration;
 
-import javax.tools.Diagnostic;
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaCompiler;
-import javax.tools.JavaFileObject;
-import javax.tools.StandardJavaFileManager;
-import javax.tools.StandardLocation;
-import javax.tools.ToolProvider;
+import javax.tools.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,190 +19,353 @@ import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 
-/**
- * Compiles JEP 512 implicit-class DSL files and collects their {@link DslDefinition} instances.
- *
- * <p>Usage: {@code DslCompiler <source-dir> <output-dir>}
- *
- * <p>For each {@code *.java} source under {@code source-dir} the compiler:
- *
- * <ol>
- *   <li>Compiles with {@code --source 25} and the current {@code java.class.path}
- *   <li>Clears the {@link DslDefinitionCollector}
- *   <li>Loads the compiled implicit class and invokes its {@code main(String[])} method
- *   <li>Drains the collector to retrieve all definitions produced by the file
- *   <li>Validates each definition and prints a summary line
- *   <li>Generates Java source from each {@link DslDefinition} using JavaPoet
- * </ol>
- */
+/** Compiles JEP 512 implicit-class DSL files and collects their {@link DslObject} instances. */
 public class DslCompiler {
+
+  private static final JavaCompiler COMPILER = ToolProvider.getSystemJavaCompiler();
+  private static final DslCodeGenerator CODE_GENERATOR = new DslCodeGenerator();
+  private static final int PARALLEL_THREADS =
+      Math.max(1, Runtime.getRuntime().availableProcessors() - 1);
+  private static final Map<String, ParsedDsl> PARSED_DSL_MAP = new HashMap<>();
 
   public static void main(String[] args) {
     if (args.length != 2) {
-      System.err.println("Usage: DslCompiler <source-dir> <output-dir>");
+      logError("Usage: DslCompiler <source-dir> <output-dir>%n");
       System.exit(1);
     }
 
     Path sourceDir = Path.of(args[0]);
     Path outputDir = Path.of(args[1]);
 
-    if (!Files.isDirectory(sourceDir)) {
-      System.err.println("Source directory does not exist: " + sourceDir);
-      System.exit(1);
-    }
+    validateDirectories(sourceDir);
+    ensureOutputDirectoryExists(outputDir);
+    ensureCompilerAvailable();
 
-    try {
-      Files.createDirectories(outputDir);
-    } catch (IOException e) {
-      System.err.println("Failed to create output directory: " + outputDir);
-      e.printStackTrace();
-      System.exit(1);
-    }
-
-    JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-    if (compiler == null) {
-      System.err.println("No Java compiler available. Ensure a JDK (not JRE) is used.");
-      System.exit(1);
-    }
-
-    List<File> sourceFiles = new ArrayList<>();
-    Path outputDirAbs = outputDir.toAbsolutePath().normalize();
-    try (var stream = Files.walk(sourceDir)) {
-      stream
-          .filter(p -> p.toString().endsWith(".java"))
-          .filter(p -> !p.toAbsolutePath().normalize().startsWith(outputDirAbs))
-          .map(Path::toFile)
-          .forEach(sourceFiles::add);
-    } catch (IOException e) {
-      System.err.println("Failed to list source files: " + e.getMessage());
-      System.exit(1);
-    }
-
+    List<File> sourceFiles = collectSourceFiles(sourceDir, outputDir);
     if (sourceFiles.isEmpty()) {
       logInfo("No Java source files found in " + sourceDir);
       System.exit(0);
     }
 
-    DslCodeGenerator codeGenerator = new DslCodeGenerator();
-
-    Path wrapDir;
-    List<File> wrappedFiles;
     try {
-      wrapDir = Files.createTempDirectory("dsl-wrap");
-      wrappedFiles = new ArrayList<>();
-      for (File f : sourceFiles) {
-        String content = Files.readString(f.toPath());
-        String className = f.getName().replace(".java", "");
-        if (!containsExplicitTypeDeclaration(content)) {
-          Path wrapped = wrapDir.resolve(f.getName());
-          String[] parts = splitImportsAndBody(content);
-          String importBlock = parts[0].trim();
-          String body = parts[1].trim();
-          String generated = codeGenerator.generateWrapper(className, importBlock, body);
-          Files.writeString(wrapped, generated);
-          wrappedFiles.add(wrapped.toFile());
-        } else {
-          wrappedFiles.add(f);
-        }
-      }
-    } catch (IOException e) {
-      System.err.println("Failed to wrap DSL source files: " + e.getMessage());
+      List<File> wrappedFiles = wrapImplicitClasses(sourceFiles);
+      compileWrappedFiles(wrappedFiles, outputDir);
+      validateAndGenerate(sourceFiles, outputDir);
+    } catch (Exception e) {
+      logError("Compilation failed: %s%n", e.getMessage());
       e.printStackTrace();
       System.exit(1);
-      return;
     }
 
-    StandardJavaFileManager fileManager = compiler.getStandardFileManager(null, null, null);
-    try {
-      fileManager.setLocation(StandardLocation.CLASS_OUTPUT, List.of(outputDir.toFile()));
-    } catch (IOException e) {
-      System.err.println("Failed to set class output location: " + e.getMessage());
+    logInfo("DSL compilation completed successfully. Output: %s%n", outputDir);
+  }
+
+  private static void validateDirectories(Path sourceDir) {
+    if (!Files.isDirectory(sourceDir)) {
+      logError("Source directory does not exist: %s%n", sourceDir);
       System.exit(1);
     }
+  }
 
+  private static void ensureOutputDirectoryExists(Path outputDir) {
+    try {
+      Files.createDirectories(outputDir);
+    } catch (IOException e) {
+      logError("Failed to create output directory: %s%n", outputDir);
+      e.printStackTrace();
+      System.exit(1);
+    }
+  }
+
+  private static void ensureCompilerAvailable() {
+    if (COMPILER == null) {
+      logError("No Java compiler available. Ensure a JDK (not JRE) is used.%n");
+      System.exit(1);
+    }
+  }
+
+  private static List<File> collectSourceFiles(Path sourceDir, Path outputDir) {
+    List<File> sourceFiles = new ArrayList<>();
+    try (var stream = Files.walk(sourceDir)) {
+      stream
+          .filter(p -> p.toString().endsWith(".java"))
+          .filter(p -> !p.toAbsolutePath()
+              .normalize()
+              .startsWith(outputDir.toAbsolutePath().normalize()))
+          .map(Path::toFile)
+          .forEach(sourceFiles::add);
+    } catch (IOException e) {
+      logError("Failed to list source files: %s%n", e.getMessage());
+      System.exit(1);
+    }
+    return sourceFiles;
+  }
+
+  private static List<File> wrapImplicitClasses(List<File> sourceFiles) throws IOException {
+    Path wrapDir = Files.createTempDirectory("dsl-wrap");
+    List<File> wrappedFiles = new ArrayList<>();
+
+    for (File sourceFile : sourceFiles) {
+      File wrappedFile = wrapIfImplicitClass(wrapDir, sourceFile);
+      wrappedFiles.add(wrappedFile);
+    }
+
+    return wrappedFiles;
+  }
+
+  private static File wrapIfImplicitClass(Path wrapDir, File sourceFile) throws IOException {
+    String content = Files.readString(sourceFile.toPath());
+    String className = sourceFile.getName().replace(".java", "");
+
+    if (!containsExplicitTypeDeclaration(content)) {
+      Path wrappedPath = wrapDir.resolve(sourceFile.getName());
+      ParsedDsl parsed = parseImplicitClassWithJavaParser(content);
+      PARSED_DSL_MAP.put(className, parsed);
+      String wrappedContent =
+          CODE_GENERATOR.generateWrapper(className, parsed.imports(), parsed.body());
+      Files.writeString(wrappedPath, wrappedContent);
+      return wrappedPath.toFile();
+    } else {
+      return sourceFile;
+    }
+  }
+
+  record ParsedDsl(String imports, String body) {}
+
+  static ParsedDsl parseImplicitClassWithJavaParser(String content) {
+    // Step 1: split imports and body with a lightweight line scan so imports stay
+    // at compilation-unit level when we wrap the body in a temporary class.
+    StringBuilder imports = new StringBuilder();
+    StringBuilder body = new StringBuilder();
+    boolean inImports = true;
+    for (String line : content.lines().toList()) {
+      if (inImports && line.trim().startsWith("import ")) {
+        imports.append(line).append("\n");
+      } else {
+        if (line.trim().isEmpty() && inImports && !imports.isEmpty()) {
+          imports.append("\n");
+        } else {
+          inImports = false;
+          body.append(line).append("\n");
+        }
+      }
+    }
+
+    // Step 2: wrap only the body in a temporary class and parse with JavaParser.
+    String tempWrapper = (imports.isEmpty() ? "" : imports.toString().trim() + "\n\n")
+        + "class __Temp__ {\n"
+        + "    public static void main(String[] args) throws Exception {\n"
+        + body
+        + "\n    }\n"
+        + "}";
+
+    ParserConfiguration config = new ParserConfiguration();
+    config.setAttributeComments(false);
+    JavaParser parser = new JavaParser(config);
+    ParseResult<CompilationUnit> result = parser.parse(tempWrapper);
+    if (!result.isSuccessful()) {
+      throw new IllegalStateException("Failed to parse wrapped DSL: " + result.getProblems());
+    }
+    CompilationUnit cu = result.getResult().orElseThrow();
+
+    // Step 3: extract clean imports and body from the AST (comments already stripped).
+    StringBuilder importBlock = new StringBuilder();
+    cu.getImports().forEach(imp -> importBlock.append(imp.toString()).append("\n"));
+
+    MethodDeclaration mainMethod = cu.findFirst(
+            MethodDeclaration.class,
+            m -> "main".equals(m.getName().asString())
+                && m.getParameters().size() == 1
+                && m.getParameter(0).getType().asString().contains("String[]"))
+        .orElseThrow(() -> new IllegalStateException(
+            "Could not locate synthetic main method in temporary wrapper"));
+
+    StringBuilder cleanBody = new StringBuilder();
+    mainMethod.getBody().ifPresent(blockStmt -> blockStmt
+        .getStatements()
+        .forEach(stmt -> cleanBody.append(stmt.toString()).append("\n")));
+
+    return new ParsedDsl(importBlock.toString().trim(), cleanBody.toString().trim());
+  }
+
+  private static void compileWrappedFiles(List<File> files, Path outputDir) {
+    int batchSize = Math.max(1, files.size() / PARALLEL_THREADS);
+    List<List<File>> batches = new ArrayList<>();
+    for (int i = 0; i < files.size(); i += batchSize) {
+      batches.add(files.subList(i, Math.min(i + batchSize, files.size())));
+    }
+
+    List<CompletableFuture<List<Diagnostic<? extends JavaFileObject>>>> futures = new ArrayList<>();
+    for (List<File> batch : batches) {
+      CompletableFuture<List<Diagnostic<? extends JavaFileObject>>> future =
+          CompletableFuture.supplyAsync(() -> compileBatch(batch, outputDir));
+      futures.add(future);
+    }
+
+    List<Diagnostic<? extends JavaFileObject>> allDiagnostics = new ArrayList<>();
+    boolean compilationFailed = false;
+    for (CompletableFuture<List<Diagnostic<? extends JavaFileObject>>> future : futures) {
+      List<Diagnostic<? extends JavaFileObject>> diagnostics = future.join();
+      allDiagnostics.addAll(diagnostics);
+      if (!diagnostics.isEmpty()) {
+        compilationFailed = true;
+      }
+    }
+
+    if (compilationFailed) {
+      reportCompilationErrors(allDiagnostics);
+      logError("Compilation errors found — see above.%n");
+      System.exit(1);
+    }
+  }
+
+  private static List<Diagnostic<? extends JavaFileObject>> compileBatch(
+      List<File> batch, Path outputDir) {
+    DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
+    try (StandardJavaFileManager fileManager =
+        COMPILER.getStandardFileManager(diagnostics, null, null)) {
+      fileManager.setLocation(StandardLocation.CLASS_OUTPUT, List.of(outputDir.toFile()));
+      Iterable<? extends JavaFileObject> compilationUnits =
+          fileManager.getJavaFileObjectsFromFiles(batch);
+      List<String> options = getCompilationOptions();
+      JavaCompiler.CompilationTask task =
+          COMPILER.getTask(null, fileManager, diagnostics, options, null, compilationUnits);
+      boolean failed = !task.call();
+      return failed ? new ArrayList<>(diagnostics.getDiagnostics()) : List.of();
+    } catch (IOException e) {
+      logError("Failed to configure file manager: %s%n", e.getMessage());
+      e.printStackTrace();
+      System.exit(1);
+      return List.of();
+    }
+  }
+
+  private static List<String> getCompilationOptions() {
     List<String> options = new ArrayList<>();
-    options.add("--source");
-    options.add("25");
+    options.add("-implicit:class");
     String classPath = System.getProperty("java.class.path");
     if (classPath != null && !classPath.isEmpty()) {
       options.add("-classpath");
       options.add(classPath);
     }
+    return options;
+  }
 
-    Iterable<? extends JavaFileObject> compilationUnits =
-        fileManager.getJavaFileObjectsFromFiles(wrappedFiles);
-    DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
-    JavaCompiler.CompilationTask task =
-        compiler.getTask(null, fileManager, diagnostics, options, null, compilationUnits);
-
-    boolean success = task.call();
-    if (!success) {
-      for (Diagnostic<? extends JavaFileObject> d : diagnostics.getDiagnostics()) {
-        System.err.format(
-            "%s:%d: %s: %s%n",
-            d.getSource() != null ? d.getSource().getName() : "-",
-            d.getLineNumber(),
-            d.getKind(),
-            d.getMessage(null));
-      }
-      System.exit(1);
+  private static void reportCompilationErrors(
+      List<Diagnostic<? extends JavaFileObject>> diagnostics) {
+    for (Diagnostic<? extends JavaFileObject> d : diagnostics) {
+      logError(
+          "%s:%d: %s: %s%n",
+          d.getSource() != null ? d.getSource().getName() : "-",
+          d.getLineNumber(),
+          d.getKind(),
+          d.getMessage(null));
     }
+  }
 
-    try {
-      deleteRecursively(wrapDir);
-    } catch (IOException ignored) {
-    }
-
-    try {
-      URLClassLoader classLoader = new URLClassLoader(
-          new URL[] {outputDir.toUri().toURL()}, DslCompiler.class.getClassLoader());
-      boolean validationFailed = false;
-
-      for (File f : sourceFiles) {
-        String fileName = f.getName();
-        String className = fileName.substring(0, fileName.lastIndexOf('.'));
-
-        DslDefinitionCollector.clear();
-        invokeMain(classLoader, className);
-
-        List<DslDefinition> definitions = DslDefinitionCollector.drain();
-        for (DslDefinition def : definitions) {
-          logInfo("Compiled and validated: %s (%s)", def.getCode(),
-              def.getClass().getInterfaces()[0].getSimpleName());
-
-          try {
-            codeGenerator.generate(def, outputDir);
-            logInfo("Generated code for: ", def.getCode());
-          } catch (IOException e) {
-            System.err.println(
-                "Failed to generate code for " + def.getCode() + ": " + e.getMessage());
-            validationFailed = true;
-          }
+  private static void validateAndGenerate(List<File> sourceFiles, Path outputDir) throws Exception {
+    Path tempWrapDir = resolveTempWrapDir();
+    withClassLoader(outputDir, classLoader -> {
+      try (ExecutorService executor = Executors.newFixedThreadPool(PARALLEL_THREADS)) {
+        List<CompletableFuture<Boolean>> futures = new ArrayList<>();
+        for (File sourceFile : sourceFiles) {
+          CompletableFuture<Boolean> future = CompletableFuture.supplyAsync(
+              () -> processSourceFile(classLoader, sourceFile, outputDir), executor);
+          futures.add(future);
         }
-        if (definitions.isEmpty()) {
-          System.err.println("No DslDefinition collected from " + className);
-          validationFailed = true;
+
+        boolean validationFailed =
+            futures.stream().map(CompletableFuture::join).reduce(false, (a, b) -> a || b);
+
+        if (validationFailed) {
+          System.exit(1);
         }
       }
+    });
+    cleanupTempWrapDir(tempWrapDir);
+  }
 
-      if (validationFailed) {
-        System.exit(1);
-      }
-    } catch (Exception e) {
-      System.err.println("Validation failed: " + e.getMessage());
-      e.printStackTrace();
-      System.exit(1);
-    }
-
+  private static Path resolveTempWrapDir() {
     try {
-      fileManager.close();
+      return Files.createTempDirectory("dsl-wrap");
     } catch (IOException e) {
-      // ignore
+      logError("Failed to create temporary directory: %s%n", e.getMessage());
+      System.exit(1);
+      return null;
+    }
+  }
+
+  private static void cleanupTempWrapDir(Path tempWrapDir) {
+    if (tempWrapDir != null) {
+      try {
+        deleteRecursively(tempWrapDir);
+      } catch (IOException ignored) {
+      }
+    }
+  }
+
+  private static void withClassLoader(Path outputDir, Consumer<URLClassLoader> action)
+      throws Exception {
+    try (URLClassLoader classLoader = new URLClassLoader(
+        new URL[] {outputDir.toUri().toURL()}, DslCompiler.class.getClassLoader())) {
+      action.accept(classLoader);
+    }
+  }
+
+  private static boolean processSourceFile(
+      URLClassLoader classLoader, File sourceFile, Path outputDir) {
+    String className = extractClassName(sourceFile);
+    DslDefinitionCollector.clear();
+
+    try {
+      invokeMain(classLoader, className);
+    } catch (Exception e) {
+      logError("Failed to invoke main for %s: %s%n", className, e.getMessage());
+      return true;
     }
 
-    logInfo("DSL compilation completed successfully. Output: %s%n", outputDir);
+    List<DslObject> objects = DslDefinitionCollector.drain();
+    if (objects.isEmpty()) {
+      logError("No DslObject collected from %s%n", className);
+      return true;
+    }
+
+    boolean hasError = false;
+    ParsedDsl parsed = PARSED_DSL_MAP.get(className);
+    for (DslObject obj : objects) {
+      logInfo(
+          "Compiled and validated: %s (%s)",
+          obj.getCode(),
+          obj.getClass().getEnclosingClass() != null
+              ? obj.getClass().getEnclosingClass().getSimpleName()
+              : obj.getClass().getSimpleName());
+      try {
+        CODE_GENERATOR.generate(
+            obj,
+            parsed != null ? parsed.body() : null,
+            parsed != null ? parsed.imports() : null,
+            outputDir);
+        logInfo("Generated code for: %s%n", obj.getCode());
+      } catch (IOException e) {
+        logError("Failed to generate code for %s: %s%n", obj.getCode(), e.getMessage());
+        hasError = true;
+      }
+    }
+
+    return hasError;
+  }
+
+  private static String extractClassName(File sourceFile) {
+    String fileName = sourceFile.getName();
+    return fileName.substring(0, fileName.lastIndexOf('.'));
   }
 
   private static void invokeMain(ClassLoader classLoader, String className) throws Exception {
@@ -211,44 +374,32 @@ public class DslCompiler {
     mainMethod.invoke(null, (Object) new String[0]);
   }
 
-  private static boolean containsExplicitTypeDeclaration(String source) {
-    return source.matches("(?s).*\\b(class|interface|enum|record)\\s+\\w+.*");
-  }
-
-  private static String[] splitImportsAndBody(String source) {
-    StringBuilder imports = new StringBuilder();
-    StringBuilder body = new StringBuilder();
-    boolean inImports = true;
-    for (String line : source.lines().toList()) {
-      if (inImports && line.trim().startsWith("import ")) {
-        imports.append(line).append("\n");
-      } else {
-        if (line.trim().isEmpty() && inImports && imports.length() > 0) {
-          imports.append("\n");
-        } else {
-          inImports = false;
-          body.append(line).append("\n");
-        }
-      }
+  static boolean containsExplicitTypeDeclaration(String source) {
+    try {
+      CompilationUnit cu = StaticJavaParser.parse(source);
+      return !cu.getTypes().isEmpty();
+    } catch (Exception e) {
+      return source.matches("(?s).*\\b(class|interface|enum|record)\\s+\\w+.*");
     }
-    return new String[] {imports.toString(), body.toString()};
   }
 
   private static void deleteRecursively(Path path) throws IOException {
     if (Files.isDirectory(path)) {
       try (var entries = Files.list(path)) {
-        entries.forEach(p -> {
-          try {
-            deleteRecursively(p);
-          } catch (IOException ignored) {
-          }
-        });
+        for (Path entry : (Iterable<Path>) entries::iterator) {
+          deleteRecursively(entry);
+        }
       }
     }
+
     Files.deleteIfExists(path);
   }
 
   private static void logInfo(String message, Object... args) {
     System.out.printf(message, args);
+  }
+
+  private static void logError(String message, Object... args) {
+    System.err.printf(message, args);
   }
 }

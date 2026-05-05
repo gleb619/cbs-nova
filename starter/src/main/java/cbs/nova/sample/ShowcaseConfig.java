@@ -38,7 +38,7 @@ public class ShowcaseConfig implements ApplicationRunner {
   }
 
   private void registerShowcaseEvent() {
-    EventDefinition event = EventDsl.event("SHOWCASE_EVENT")
+    EventDefinition event = (EventDefinition) EventDsl.event("SHOWCASE_EVENT")
         .requiredParam("name")
         .requiredParam("value")
         .context(ctx -> {
@@ -68,7 +68,7 @@ public class ShowcaseConfig implements ApplicationRunner {
   private void registerShowcaseWorkflow() {
     EventDefinition showcaseEvent = registry.resolveEvent("SHOWCASE_EVENT");
 
-    WorkflowDefinition workflow = WorkflowDsl.workflow("SHOWCASE_WF")
+    WorkflowDefinition workflow = (WorkflowDefinition) WorkflowDsl.workflow("SHOWCASE_WF")
         .states("START", "DONE", "FAULTED")
         .initial("START")
         .terminal("DONE")

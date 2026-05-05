@@ -2,12 +2,9 @@ package cbs.nova.showcase;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.dsl.api.DslDefinition;
 import cbs.dsl.api.DslDefinitionCollector;
-import cbs.dsl.api.EventDefinition;
+import cbs.dsl.api.DslObject;
 import cbs.dsl.api.HelperTypes.HelperInput;
-import cbs.dsl.api.TransactionDefinition;
-import cbs.dsl.api.WorkflowDefinition;
 import cbs.nova.registry.DslRegistry;
 import cbs.nova.registry.SpiImplRegistryLoader;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,8 +26,8 @@ import java.util.Map;
 import java.util.function.BiFunction;
 
 /**
- * Abstract base for showcase tests that compile DSL files in a Gradle Testcontainer
- * and register the resulting definitions in a {@link DslRegistry}.
+ * Abstract base for showcase tests that compile DSL files in a Gradle Testcontainer and register
+ * the resulting objects in a {@link DslRegistry}.
  */
 @Testcontainers
 abstract class ShowcaseTestBase {
@@ -155,38 +152,41 @@ abstract class ShowcaseTestBase {
       Method mainMethod = clazz.getDeclaredMethod("main", String[].class);
       mainMethod.invoke(null, (Object) new String[0]);
 
-      for (DslDefinition def : DslDefinitionCollector.drain()) {
-        if (def instanceof EventDefinition event
-            && !dslRegistry.getEvents().containsKey(event.getCode())) {
-          dslRegistry.register(event);
-        } else if (def instanceof TransactionDefinition tx
-            && !dslRegistry.getTransactions().containsKey(tx.getCode())) {
-          dslRegistry.register(tx);
-        } else if (def instanceof WorkflowDefinition wf
-            && !dslRegistry.getWorkflows().containsKey(wf.getCode())) {
-          dslRegistry.register(wf);
-        }
+      for (DslObject obj : DslDefinitionCollector.drain()) {
+        dslRegistry.register(obj);
       }
     }
   }
 
-  protected void deleteRecursively(Path path) {
-    try {
-      if (Files.isDirectory(path)) {
-        try (var entries = Files.list(path)) {
-          entries.forEach(this::deleteRecursively);
+  protected void deleteRecursively(Path path) throws Exception {
+    if (Files.isDirectory(path)) {
+      try (var entries = Files.list(path)) {
+        for (Path entry : (Iterable<Path>) entries::iterator) {
+          deleteRecursively(entry);
         }
       }
-      Files.deleteIfExists(path);
-    } catch (Exception e) {
-      // Best-effort cleanup of temp directory
     }
+    Files.deleteIfExists(path);
   }
 
-  protected BiFunction<String, Map<String, Object>, Object> helperResolver() {
-    return (name, params) -> dslRegistry
-        .resolveHelper(name)
-        .execute(new HelperInput(params, "SAMPLE_EVENT_DSL", null))
-        .value();
+  protected void runTestInGradleContainer(String taskName, String... extraArgs) throws Exception {
+    String[] args = new String[extraArgs.length + 2];
+    args[0] = "bash";
+    args[1] = "-c";
+    args[2] = "cd /project && gradle " + taskName + " " + String.join(" ", extraArgs);
+    ExecResult result = gradleContainer.execInContainer(args);
+    assertThat(result.getExitCode())
+        .withFailMessage(
+            "Gradle %s failed. Stdout: %s%nStderr: %s",
+            taskName, result.getStdout(), result.getStderr())
+        .isZero();
+  }
+
+  protected Map<String, Object> wrapHelperInput(HelperInput input) {
+    return input.params();
+  }
+
+  protected BiFunction<Map<String, Object>, Map<String, Object>, Boolean> helperAssertion() {
+    return (expected, actual) -> expected.equals(actual);
   }
 }

@@ -2,6 +2,7 @@ package cbs.dsl.codegen;
 
 import cbs.dsl.api.ConditionFunction;
 import cbs.dsl.api.DslComponent;
+import cbs.dsl.api.DslComponent.DslComponentModel;
 import cbs.dsl.api.EventFunction;
 import cbs.dsl.api.HelperFunction;
 import cbs.dsl.api.MassOperationFunction;
@@ -54,34 +55,54 @@ public class DslComponentProcessor extends AbstractProcessor {
 
     try {
       if (!registrations.isEmpty()) {
-        new DefinitionWrapperGenerator(processingEnv.getFiler()).generate(registrations);
-        new RegistrationGenerator(processingEnv.getFiler()).generate(registrations);
-
-        // Layer 3a: Generate Temporal workflow interfaces + implementations for EVENT types
-        List<EventWorkflowSpec> eventSpecs = registrations.stream()
-            .filter(r -> r.interfaceType() == DslInterfaceType.EVENT)
-            .map(r ->
-                new EventWorkflowSpec(r.code(), r.packageName() + "." + r.className(), List.of()))
-            .toList();
-        if (!eventSpecs.isEmpty()) {
-          new EventWorkflowGenerator(processingEnv.getFiler()).generate(eventSpecs);
-          new WorkflowRegistryGenerator(processingEnv.getFiler()).generate(eventSpecs);
-        }
-
-        // Layer 3b: Generate Temporal activities for TRANSACTION types
         List<RegistrationSpec> txSpecs = registrations.stream()
             .filter(r -> r.interfaceType() == DslInterfaceType.TRANSACTION)
             .toList();
-        if (!txSpecs.isEmpty()) {
-          new TransactionActivityGenerator(processingEnv.getFiler()).generate(txSpecs);
-        }
-
-        // Layer 3c: Generate Temporal activities for HELPER types
         List<RegistrationSpec> helperSpecs = registrations.stream()
             .filter(r -> r.interfaceType() == DslInterfaceType.HELPER)
             .toList();
+        List<RegistrationSpec> eventSpecs = registrations.stream()
+            .filter(r -> r.interfaceType() == DslInterfaceType.EVENT)
+            .toList();
+        List<RegistrationSpec> workflowSpecs = registrations.stream()
+            .filter(r -> r.interfaceType() == DslInterfaceType.WORKFLOW)
+            .toList();
+        List<RegistrationSpec> conditionSpecs = registrations.stream()
+            .filter(r -> r.interfaceType() == DslInterfaceType.CONDITION)
+            .toList();
+        List<RegistrationSpec> massOpSpecs = registrations.stream()
+            .filter(r -> r.interfaceType() == DslInterfaceType.MASS_OPERATION)
+            .toList();
+
+        // Domain-oriented code generation: one generator per domain type
+        if (!txSpecs.isEmpty()) {
+          new TransactionCodeGenerator(processingEnv.getFiler()).generate(txSpecs);
+        }
         if (!helperSpecs.isEmpty()) {
-          new HelperActivityGenerator(processingEnv.getFiler()).generate(helperSpecs);
+          new HelperCodeGenerator(processingEnv.getFiler()).generate(helperSpecs);
+        }
+        if (!eventSpecs.isEmpty()) {
+          new EventCodeGenerator(processingEnv.getFiler()).generate(eventSpecs);
+        }
+        if (!workflowSpecs.isEmpty()) {
+          new WorkflowCodeGenerator(processingEnv.getFiler()).generate(workflowSpecs);
+        }
+        if (!conditionSpecs.isEmpty()) {
+          new ConditionCodeGenerator(processingEnv.getFiler()).generate(conditionSpecs);
+        }
+        if (!massOpSpecs.isEmpty()) {
+          new MassOperationCodeGenerator(processingEnv.getFiler()).generate(massOpSpecs);
+        }
+
+        new RegistrationGenerator(processingEnv.getFiler()).generate(registrations);
+
+        // Layer 3a: Generate workflow registry for EVENT types
+        List<EventWorkflowSpec> eventWorkflowSpecs = eventSpecs.stream()
+            .map(r ->
+                new EventWorkflowSpec(r.code(), r.packageName() + "." + r.className(), List.of()))
+            .toList();
+        if (!eventWorkflowSpecs.isEmpty()) {
+          new WorkflowRegistryGenerator(processingEnv.getFiler()).generate(eventWorkflowSpecs);
         }
 
         // Layer 3d: Generate activity registry if any activities exist
@@ -189,7 +210,32 @@ public class DslComponentProcessor extends AbstractProcessor {
     String inputType = typeArgs.get(0).toString();
     String outputType = typeArgs.get(1).toString();
 
+    DslComponentModel componentModel = resolveComponentModel(annotation, typeElement);
+
     registrations.add(new RegistrationSpec(
-        packageName, className, annotation.code(), interfaceType, inputType, outputType));
+        packageName,
+        className,
+        annotation.code(),
+        interfaceType,
+        inputType,
+        outputType,
+        componentModel));
+  }
+
+  /**
+   * Resolves the component model for the given type. If the annotation specifies {@code AUTO},
+   * inspect the class for any Spring annotation and return {@code SPRING} if found, otherwise
+   * {@code SIMPLE}.
+   */
+  private DslComponentModel resolveComponentModel(
+      DslComponent annotation, TypeElement typeElement) {
+    if (annotation.componentModel() != DslComponentModel.AUTO) {
+      return annotation.componentModel();
+    }
+    boolean hasSpringAnnotation = typeElement.getAnnotationMirrors().stream().anyMatch(a -> {
+      String name = a.getAnnotationType().asElement().toString();
+      return name.startsWith("org.springframework.");
+    });
+    return hasSpringAnnotation ? DslComponentModel.SPRING : DslComponentModel.SIMPLE;
   }
 }

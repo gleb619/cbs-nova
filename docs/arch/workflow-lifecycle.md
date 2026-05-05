@@ -20,7 +20,7 @@
 ## 6.2 Example Lifecycle: Loan Contract
 
 ```
-  [PREVIEW — no persisted state]
+  [PREVIEW — no persisted state]  (see [code-generation.md](code-generation.md) §13.9 for the preview runner path)
         │
         │ SUBMIT
         ▼

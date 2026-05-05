@@ -2,6 +2,7 @@ package cbs.dsl.api;
 
 import cbs.dsl.api.WorkflowFunction.WorkflowArg;
 import cbs.dsl.api.WorkflowFunction.WorkflowResult;
+import cbs.dsl.api.context.WorkflowContext;
 
 /**
  * A code-based workflow implementation executed via {@link DslComponent @DslComponent} annotation
@@ -27,7 +28,7 @@ public interface WorkflowFunction<I extends WorkflowArg, O extends WorkflowResul
    * @param input the workflow input
    * @return the workflow output
    */
-  O execute(I input);
+  WorkflowContext<O> execute(WorkflowContext<I> input);
 
   /** Marker interface for typed workflow input records. */
   interface WorkflowArg extends DslPayload {}

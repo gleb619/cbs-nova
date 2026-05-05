@@ -1,26 +1,17 @@
 package cbs.dsl.api.context;
 
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
-
 import java.util.Map;
+import java.util.function.BiFunction;
+import lombok.Builder;
 
-@Getter
-@Setter
-@ToString
-@EqualsAndHashCode
-public class FinishContext extends EnrichmentContext {
+@Builder
+public record FinishContext(
+    String eventCode,
+    Long workflowExecutionId,
+    String performedBy,
+    String dslVersion,
+    Map<String, Object> eventParameters,
+    Map<String, Object> enrichment,
+    BiFunction<String, Map<String, Object>, Object> helperResolver) {
 
-  @Builder(builderMethodName = "finishBuilder")
-  public FinishContext(
-      String eventCode,
-      Long workflowExecutionId,
-      String performedBy,
-      String dslVersion,
-      Map<String, Object> eventParameters) {
-    super(eventCode, workflowExecutionId, performedBy, dslVersion, eventParameters);
-  }
 }

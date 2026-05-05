@@ -2,11 +2,12 @@ package cbs.dsl.api;
 
 import cbs.dsl.api.ConditionFunction.ConditionArg;
 import cbs.dsl.api.ConditionFunction.ConditionResult;
+import cbs.dsl.api.context.ConditionContext;
 
 @FunctionalInterface
 public interface ConditionFunction<I extends ConditionArg, O extends ConditionResult> {
 
-  O evaluate(I input);
+  ConditionContext<O> evaluate(ConditionContext<I> input);
 
   interface ConditionArg extends DslPayload {}
 

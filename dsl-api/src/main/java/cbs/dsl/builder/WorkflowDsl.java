@@ -6,7 +6,7 @@ package cbs.dsl.builder;
  * <p>Usage:
  *
  * <pre>{@code
- * WorkflowDefinition wf = WorkflowDsl.workflow("LOAN_CONTRACT")
+ * DslObject wf = WorkflowDsl.workflow("LOAN_CONTRACT")
  *     .states("DRAFT", "ENTERED", "ACTIVE", "CLOSED")
  *     .initial("ENTERED")
  *     .terminal("CLOSED")

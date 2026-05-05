@@ -3,6 +3,7 @@ package cbs.nova.sample;
 import cbs.dsl.api.DslComponent;
 import cbs.dsl.api.DslImplType;
 import cbs.dsl.api.TransactionFunction;
+import cbs.dsl.api.context.TransactionContext;
 import cbs.nova.sample.SampleTransaction.SampleTxInput;
 import cbs.nova.sample.SampleTransaction.SampleTxOutput;
 import io.avaje.jsonb.Json;
@@ -14,17 +15,17 @@ import java.util.Map;
 public class SampleTransaction implements TransactionFunction<SampleTxInput, SampleTxOutput> {
 
   @Override
-  public SampleTxOutput preview(SampleTxInput input) {
+  public TransactionContext<SampleTxOutput> preview(TransactionContext<SampleTxInput> input) {
     return new SampleTxOutput("preview: " + input.name());
   }
 
   @Override
-  public SampleTxOutput execute(SampleTxInput input) {
+  public TransactionContext<SampleTxOutput> execute(TransactionContext<SampleTxInput> input) {
     return new SampleTxOutput("Hello, " + input.name());
   }
 
   @Override
-  public SampleTxOutput rollback(SampleTxInput input) {
+  public TransactionContext<SampleTxOutput> rollback(TransactionContext<SampleTxInput> input) {
     return new SampleTxOutput("rollback: " + input.name());
   }
 

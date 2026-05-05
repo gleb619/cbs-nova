@@ -7,6 +7,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import cbs.dsl.api.EventDefinition;
+import cbs.dsl.api.HelperDefinition;
+import cbs.dsl.api.HelperTypes.HelperInput;
 import cbs.dsl.api.TransactionDefinition;
 import cbs.dsl.api.TransactionTypes.TransactionInput;
 import cbs.dsl.api.context.EnrichmentContext;
@@ -28,6 +30,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.Map;
+import java.util.function.BiFunction;
 
 /**
  * Unit-style tests that verify the DSL → registry → execution chain with a mocked Temporal client.
@@ -89,8 +92,7 @@ class ShowcaseUnitTest extends ShowcaseTestBase {
   void shouldExecuteDslTransactionDirectly() {
     TransactionDefinition txDef = dslRegistry.resolveTransaction("SAMPLE_TRANSACTION_DSL");
 
-    var input = new TransactionInput(
-        Map.of("name", "PoC"), "SAMPLE_TRANSACTION_DSL", null, "dev");
+    var input = new TransactionInput(Map.of("name", "PoC"), "SAMPLE_TRANSACTION_DSL", null, "dev");
     var output = txDef.execute(input);
 
     assertThat(output.result()).containsEntry("greeting", "DSL TX says hello to PoC");
@@ -107,5 +109,73 @@ class ShowcaseUnitTest extends ShowcaseTestBase {
     assertThat(response).isNotNull();
     assertThat(response.executionId()).isEqualTo(42L);
     assertThat(response.status()).isEqualTo("DONE");
+  }
+
+  @Test
+  @DisplayName("Should preview DSL event context block using preview on helpers")
+  void shouldPreviewDslEventContextBlockWithHelperPreviewResolution() {
+    EventDefinition eventDef = dslRegistry.resolveEvent("SAMPLE_EVENT_DSL");
+
+    EnrichmentContext ctx =
+        new EnrichmentContext("SAMPLE_EVENT_DSL", 0L, "testUser", "dev", Map.of("name", "PoC"));
+    ctx.setHelperResolver(previewHelperResolver());
+
+    // preview() evaluates context block using preview() on underlying helpers/transactions
+    eventDef.getContextBlock().accept(ctx);
+
+    assertThat(ctx.getEnrichment()).containsKey("enriched");
+    assertThat(ctx.getEnrichment().get("enriched")).isEqualTo(Map.of("result", "PoC!"));
+  }
+
+  @Test
+  @DisplayName("Should preview generated transaction definition via distinct preview method")
+  void shouldPreviewGeneratedTransactionDefinition() {
+    TransactionDefinition txDef = dslRegistry.resolveTransaction("SAMPLE_TX");
+
+    var input = new TransactionInput(Map.of("name", "PoC"), "SAMPLE_TX", null, "dev");
+    var previewOutput = txDef.preview(input);
+    var executeOutput = txDef.execute(input);
+
+    assertThat(previewOutput.result()).containsEntry("greeting", "preview: PoC");
+    assertThat(executeOutput.result()).containsEntry("greeting", "Hello, PoC");
+    assertThat(previewOutput.result()).isNotEqualTo(executeOutput.result());
+  }
+
+  @Test
+  @DisplayName("Should preview generated helper definition delegating to execute")
+  void shouldPreviewGeneratedHelperDefinition() {
+    HelperDefinition helperDef = dslRegistry.resolveHelper("SAMPLE_HELPER");
+
+    var input = new HelperInput(Map.of("someVal", "PoC"), null, null);
+    var previewOutput = helperDef.preview(input);
+    var executeOutput = helperDef.execute(input);
+
+    assertThat(previewOutput.value()).isEqualTo(executeOutput.value());
+    assertThat(((Map<?, ?>) previewOutput.value()).get("result")).isEqualTo("PoC!");
+  }
+
+  @Test
+  @DisplayName("Should preview DSL inline transaction returning empty when no preview block")
+  void shouldPreviewDslTransactionDirectly() {
+    TransactionDefinition txDef = dslRegistry.resolveTransaction("SAMPLE_TRANSACTION_DSL");
+
+    var input = new TransactionInput(Map.of("name", "PoC"), "SAMPLE_TRANSACTION_DSL", null, "dev");
+    var previewOutput = txDef.preview(input);
+    var executeOutput = txDef.execute(input);
+
+    // DSL inline transaction without .preview() returns empty; execute returns the real result
+    assertThat(previewOutput.result()).isEmpty();
+    assertThat(executeOutput.result()).containsEntry("greeting", "DSL TX says hello to PoC");
+  }
+
+  private BiFunction<String, Map<String, Object>, Object> previewHelperResolver() {
+    return helperResolver();
+  }
+
+  private BiFunction<String, Map<String, Object>, Object> helperResolver() {
+    return (name, params) -> dslRegistry
+        .resolveHelper(name)
+        .execute(new HelperInput(params, "SAMPLE_EVENT_DSL", null))
+        .value();
   }
 }

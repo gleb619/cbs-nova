@@ -24,17 +24,6 @@ public interface TransactionDefinition extends DslDefinition {
   String getCode();
 
   /**
-   * Optional display name for this transaction. Used to distinguish DSL overrides from the
-   * underlying implementation class/bean identified by {@link #getCode()}. When set, the DSL block
-   * is treated as a named override of the bean registered under the code.
-   *
-   * @return the display name, or {@code null}
-   */
-  default String getName() {
-    return null;
-  }
-
-  /**
    * List of parameter definitions declared in the {@code parameters { }} block. Used for validation
    * and documentation purposes.
    *
@@ -42,16 +31,6 @@ public interface TransactionDefinition extends DslDefinition {
    */
   default List<ParameterDefinition> getParameters() {
     return Collections.emptyList();
-  }
-
-  /**
-   * Optional context enrichment block that runs before each phase block (preview, execute,
-   * rollback). Allows transactions to enrich the context with additional data before execution.
-   *
-   * @return the context block
-   */
-  default Consumer<TransactionContext> getContextBlock() {
-    return ctx -> {};
   }
 
   /**
@@ -77,4 +56,13 @@ public interface TransactionDefinition extends DslDefinition {
    * @return the transaction output
    */
   TransactionOutput rollback(TransactionInput input);
+
+  /**
+   * Returns the DSL object representing this definition.
+   *
+   * @return the DSL object, or {@code null} if not available
+   */
+  default DslObject dsl() {
+    throw new NullPointerException("Dsl object not added");
+  }
 }

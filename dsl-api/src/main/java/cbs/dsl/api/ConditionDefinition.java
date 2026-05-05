@@ -34,23 +34,6 @@ public interface ConditionDefinition extends DslDefinition {
   }
 
   /**
-   * Optional context enrichment block that runs before the predicate is evaluated. Allows
-   * conditions to enrich the context with additional data before evaluation.
-   *
-   * @return the context block
-   */
-  default Consumer<TransactionContext> getContextBlock() {
-    return ctx -> {};
-  }
-
-  /**
-   * The predicate that determines whether this condition holds.
-   *
-   * @return the predicate
-   */
-  Predicate<TransactionContext> getPredicate();
-
-  /**
    * Evaluates this condition with the given typed input.
    *
    * <p>The default implementation builds a {@link TransactionContext} from the input, runs the
@@ -60,17 +43,14 @@ public interface ConditionDefinition extends DslDefinition {
    * @param input the condition input
    * @return the condition output
    */
-  default ConditionTypes.ConditionOutput evaluate(ConditionTypes.ConditionInput input) {
-    TransactionContext ctx = TransactionContext.transactionBuilder()
-        .eventCode(input.eventCode() != null ? input.eventCode() : "")
-        .workflowExecutionId(input.eventNumber() != null ? input.eventNumber() : 0L)
-        .performedBy("")
-        .dslVersion("")
-        .eventParameters(input.nonNullParams())
-        .isResumed(false)
-        .build();
-    getContextBlock().accept(ctx);
-    boolean result = getPredicate().test(ctx);
-    return new ConditionTypes.ConditionOutput(result);
+  ConditionTypes.ConditionOutput evaluate(ConditionTypes.ConditionInput input);
+
+  /**
+   * Returns the DSL object representing this definition.
+   *
+   * @return the DSL object, or {@code null} if not available
+   */
+  default DslObject dsl() {
+    throw new NullPointerException("Dsl object not added");
   }
 }

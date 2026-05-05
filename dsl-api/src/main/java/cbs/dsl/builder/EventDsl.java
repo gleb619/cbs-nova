@@ -6,7 +6,7 @@ package cbs.dsl.builder;
  * <p>Usage:
  *
  * <pre>{@code
- * EventDefinition event = EventDsl.event("LOAN_SUBMIT")
+ * DslObject event = EventDsl.event("LOAN_SUBMIT")
  *     .transaction("VALIDATE_CUSTOMER")
  *     .transaction("CHECK_CREDIT_SCORE")
  *     .build();

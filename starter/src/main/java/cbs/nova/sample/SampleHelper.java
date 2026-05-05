@@ -3,6 +3,7 @@ package cbs.nova.sample;
 import cbs.dsl.api.DslComponent;
 import cbs.dsl.api.DslImplType;
 import cbs.dsl.api.HelperFunction;
+import cbs.dsl.api.context.HelperContext;
 import cbs.nova.sample.SampleHelper.SampleHelperInput;
 import cbs.nova.sample.SampleHelper.SampleHelperOutput;
 import io.avaje.jsonb.Json;
@@ -14,7 +15,7 @@ import java.util.Map;
 public class SampleHelper implements HelperFunction<SampleHelperInput, SampleHelperOutput> {
 
   @Override
-  public SampleHelperOutput execute(SampleHelperInput input) {
+  public HelperContext<SampleHelperOutput> execute(HelperContext<SampleHelperInput> input) {
     return new SampleHelperOutput(input.someVal() + "!");
   }
 

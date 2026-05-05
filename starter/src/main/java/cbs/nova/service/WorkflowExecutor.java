@@ -1,6 +1,5 @@
 package cbs.nova.service;
 
-import cbs.dsl.codegen.generated.GeneratedWorkflowRegistry;
 import cbs.nova.model.EventExecutionRequest;
 import cbs.nova.model.EventWorkflowRequest;
 import cbs.nova.model.WorkflowExecutionResponse;
@@ -74,7 +73,7 @@ public class WorkflowExecutor {
     if (generatedWorkflowTypes == null) {
       synchronized (this) {
         if (generatedWorkflowTypes == null) {
-          generatedWorkflowTypes = Set.copyOf(GeneratedWorkflowRegistry.workflowTypes());
+          //generatedWorkflowTypes = Set.copyOf(GeneratedWorkflowRegistry.workflowTypes());
         }
       }
     }

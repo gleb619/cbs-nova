@@ -55,4 +55,17 @@ public interface WorkflowDefinition extends DslDefinition {
    * @return the workflow output
    */
   WorkflowOutput execute(WorkflowInput input);
+
+  default WorkflowOutput preview(WorkflowInput input) {
+    return execute(input);
+  }
+
+  /**
+   * Returns the DSL object representing this definition.
+   *
+   * @return the DSL object, or {@code null} if not available
+   */
+  default DslObject dsl() {
+    throw new NullPointerException("Dsl object not added");
+  }
 }

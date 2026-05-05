@@ -9,7 +9,7 @@ package cbs.dsl.api;
  *
  * <p>Each implementation should register its DSL definitions into the provided
  * {@link WritableRegistry}. The {@link WritableRegistry} interface is used instead of the concrete
- * {@link cbs.dsl.impl.ImplRegistry} to avoid circular dependencies between modules.
+ * {@link cbs.nova.registry.DslRegistry} to avoid circular dependencies between modules.
  */
 public interface ImplRegistrationProvider {
   /**
@@ -18,4 +18,19 @@ public interface ImplRegistrationProvider {
    * @param registry the writable registry to populate with DSL definitions
    */
   void register(WritableRegistry registry);
+
+  /**
+   * Register DSL definitions into the provided registry, using the supplied resolver for
+   * {@link DslComponentModel#SPRING} components.
+   *
+   * <p>The default implementation delegates to {@link #register(WritableRegistry)} so existing
+   * generated code remains compatible. New generated code overrides this method and passes the
+   * resolver to wrapper constructors.
+   *
+   * @param registry the writable registry to populate with DSL definitions
+   * @param resolver the component resolver; may be {@code null}
+   */
+  default void register(WritableRegistry registry, DslComponentResolver resolver) {
+    register(registry);
+  }
 }

@@ -104,4 +104,18 @@ public interface MassOperationDefinition extends DslDefinition {
    * @return the operation output
    */
   MassOperationTypes.MassOperationOutput execute(MassOperationTypes.MassOperationInput input);
+
+  default MassOperationTypes.MassOperationOutput preview(
+      MassOperationTypes.MassOperationInput input) {
+    return execute(input);
+  }
+
+  /**
+   * Returns the DSL object representing this definition.
+   *
+   * @return the DSL object, or {@code null} if not available
+   */
+  default DslObject dsl() {
+    return null;
+  }
 }

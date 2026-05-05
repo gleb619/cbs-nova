@@ -1,8 +1,9 @@
 package cbs.dsl.builder;
 
 import cbs.dsl.api.DslDefinitionCollector;
-import cbs.dsl.api.ParameterDefinition;
+import cbs.dsl.api.DslObject;
 import cbs.dsl.api.TransactionDefinition;
+import cbs.dsl.api.ParameterDefinition;
 import cbs.dsl.api.TransactionTypes.TransactionInput;
 import cbs.dsl.api.TransactionTypes.TransactionOutput;
 import cbs.dsl.api.context.TransactionContext;
@@ -13,18 +14,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-/**
- * Builder for creating inline {@link TransactionDefinition} instances from DSL files.
- *
- * <p>Usage:
- *
- * <pre>{@code
- * TransactionDefinition tx = TransactionDsl.transaction("DEBIT_ACCOUNT")
- *     .requiredParam("accountCode")
- *     .execute(ctx -> new TransactionOutput(Map.of("txId", "123")))
- *     .build();
- * }</pre>
- */
+/** Builder for creating transaction objects from DSL files. */
 public class TransactionBuilder {
 
   private final String code;
@@ -74,74 +64,46 @@ public class TransactionBuilder {
     return this;
   }
 
-  @Deprecated(forRemoval = true)
-  //TODO: Change `TransactionDefinition` registration, we just can use anonymous classes here
-  public TransactionDefinition build() {
+  public String getCode() {
+    return code;
+  }
+
+  public String getName() {
+    return name;
+  }
+
+  public List<ParameterDefinition> getParameters() {
+    return Collections.unmodifiableList(new ArrayList<>(parameters));
+  }
+
+  public Consumer<TransactionContext> context() {
+    return contextBlock;
+  }
+
+  public Function<TransactionContext, TransactionOutput> preview() {
+    return previewBlock;
+  }
+
+  public Function<TransactionContext, TransactionOutput> execute() {
+    return executeBlock;
+  }
+
+  public Function<TransactionContext, TransactionOutput> rollback() {
+    return rollbackBlock;
+  }
+
+  public DslObject build() {
     List<ParameterDefinition> params = Collections.unmodifiableList(new ArrayList<>(parameters));
 
-    @Deprecated(forRemoval = true)
-    TransactionDefinition def = new TransactionDefinition() {
-      @Override
-      public String getCode() {
-        return code;
-      }
-
-      @Override
-      public String getName() {
-        return name;
-      }
-
-      @Override
-      public List<ParameterDefinition> getParameters() {
-        return params;
-      }
-
-      @Override
-      public Consumer<TransactionContext> getContextBlock() {
-        return contextBlock;
-      }
-
-      @Override
-      public TransactionOutput preview(TransactionInput input) {
-        if (previewBlock == null) {
-          return TransactionOutput.empty();
-        }
-        TransactionContext ctx = toContext(input);
-        contextBlock.accept(ctx);
-        return previewBlock.apply(ctx);
-      }
-
-      @Override
-      public TransactionOutput execute(TransactionInput input) {
-        if (executeBlock == null) {
-          return TransactionOutput.empty();
-        }
-        TransactionContext ctx = toContext(input);
-        contextBlock.accept(ctx);
-        return executeBlock.apply(ctx);
-      }
-
-      @Override
-      public TransactionOutput rollback(TransactionInput input) {
-        if (rollbackBlock == null) {
-          return TransactionOutput.empty();
-        }
-        TransactionContext ctx = toContext(input);
-        contextBlock.accept(ctx);
-        return rollbackBlock.apply(ctx);
-      }
-
-      private TransactionContext toContext(TransactionInput input) {
-        return new TransactionContext(
-            input.eventCode(),
-            input.eventNumber(),
-            null,
-            "dev",
-            input.params() != null ? input.params() : Collections.emptyMap(),
-            false);
-      }
-    };
-    DslDefinitionCollector.register(def);
-    return def;
+    DslObject obj = new TransactionDslObject(
+        code,
+        name,
+        params,
+        contextBlock,
+        previewBlock,
+        executeBlock,
+        rollbackBlock);
+    DslDefinitionCollector.register(obj);
+    return obj;
   }
 }

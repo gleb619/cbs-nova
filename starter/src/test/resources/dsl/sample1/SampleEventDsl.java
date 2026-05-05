@@ -1,6 +1,12 @@
 import cbs.dsl.builder.EventDsl;
 import java.util.Map;
 
+// comment
+/* comment */
+/**
+ * long comment
+ */
+
 EventDsl.event("SAMPLE_EVENT_DSL")
     .requiredParam("name")
     .context(ctx -> {

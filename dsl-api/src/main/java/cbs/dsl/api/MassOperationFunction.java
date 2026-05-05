@@ -2,6 +2,7 @@ package cbs.dsl.api;
 
 import cbs.dsl.api.MassOperationFunction.MassOperationArg;
 import cbs.dsl.api.MassOperationFunction.MassOperationResult;
+import cbs.dsl.api.context.MassOperationContext;
 
 /**
  * A code-based mass operation implementation executed via {@link DslComponent @DslComponent}
@@ -27,7 +28,7 @@ public interface MassOperationFunction<I extends MassOperationArg, O extends Mas
    * @param input the mass operation input
    * @return the mass operation output
    */
-  O execute(I input);
+  MassOperationContext<O> execute(MassOperationContext<I> input);
 
   /** Marker interface for typed mass operation input records. */
   interface MassOperationArg extends DslPayload {}

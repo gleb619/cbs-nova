@@ -6,6 +6,7 @@ import cbs.dsl.api.EventFunction;
 import cbs.dsl.api.EventTypes.EventInput;
 import cbs.dsl.api.EventTypes.EventOutput;
 
+import cbs.dsl.api.context.EventContext;
 import java.util.Map;
 
 /**
@@ -18,7 +19,7 @@ import java.util.Map;
 public class SampleEvent implements EventFunction<EventInput, EventOutput> {
 
   @Override
-  public EventOutput execute(EventInput input) {
+  public EventContext<EventOutput> execute(EventContext<EventInput> input) {
     String name = input.params().getOrDefault("name", "World").toString();
     return new EventOutput(Map.of("greeting", "Hello, " + name + "!"));
   }

@@ -2,9 +2,11 @@ package cbs.dsl.builder;
 
 import cbs.dsl.api.Action;
 import cbs.dsl.api.DslDefinitionCollector;
-import cbs.dsl.api.EventDefinition;
-import cbs.dsl.api.TransitionRuleDefinition;
+import cbs.dsl.api.DslObject;
 import cbs.dsl.api.WorkflowDefinition;
+import cbs.dsl.api.EventDefinition;
+import cbs.dsl.api.ParameterDefinition;
+import cbs.dsl.api.TransitionRuleDefinition;
 import cbs.dsl.api.WorkflowTypes.WorkflowInput;
 import cbs.dsl.api.WorkflowTypes.WorkflowOutput;
 
@@ -12,25 +14,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * Builder for creating {@link WorkflowDefinition} instances.
- *
- * <p>Usage:
- *
- * <pre>{@code
- * WorkflowDefinition wf = WorkflowDsl.workflow("LOAN_CONTRACT")
- *     .states("DRAFT", "ENTERED", "ACTIVE", "CLOSED")
- *     .initial("ENTERED")
- *     .terminal("CLOSED")
- *     .transition("ENTERED", "ACTIVE", Action.APPROVE, eventDef)
- *     .build();
- * }</pre>
- */
+/** Builder for creating workflow objects from DSL files. */
 public class WorkflowBuilder {
 
   private final String code;
   private final List<String> states = new ArrayList<>();
-  private String initial;
+  private String initialState;
   private final List<String> terminalStates = new ArrayList<>();
   private final List<TransitionRuleDefinition> transitions = new ArrayList<>();
 
@@ -44,7 +33,7 @@ public class WorkflowBuilder {
   }
 
   public WorkflowBuilder initial(String initial) {
-    this.initial = initial;
+    this.initialState = initial;
     return this;
   }
 
@@ -58,48 +47,50 @@ public class WorkflowBuilder {
     return this;
   }
 
-  @Deprecated(forRemoval = true)
-  //TODO: Change `WorkflowDefinition` registration, we just can use anonymous classes here
-  public WorkflowDefinition build() {
-    List<String> st = Collections.unmodifiableList(new ArrayList<>(states));
-    List<String> terminal = Collections.unmodifiableList(new ArrayList<>(terminalStates));
-    List<TransitionRuleDefinition> tx = Collections.unmodifiableList(new ArrayList<>(transitions));
-    String ini =
-        initial != null && !initial.isEmpty() ? initial : st.isEmpty() ? null : st.getFirst();
-
-    @Deprecated(forRemoval = true)
-    WorkflowDefinition def = new WorkflowDefinition() {
+  public WorkflowBuilder transition(String from, String to, Action action, String eventCode) {
+    EventDefinition proxy = new EventDefinition() {
       @Override
       public String getCode() {
-        return code;
+        return eventCode;
       }
 
       @Override
-      public List<String> getStates() {
-        return st;
-      }
-
-      @Override
-      public String getInitial() {
-        return ini;
-      }
-
-      @Override
-      public List<String> getTerminalStates() {
-        return terminal;
-      }
-
-      @Override
-      public List<TransitionRuleDefinition> getTransitions() {
-        return tx;
-      }
-
-      @Override
-      public WorkflowOutput execute(WorkflowInput input) {
-        return new WorkflowOutput("DONE", List.of(), "ACTIVE");
+      public List<ParameterDefinition> getParameters() {
+        return Collections.emptyList();
       }
     };
-    DslDefinitionCollector.register(def);
-    return def;
+    this.transitions.add(new TransitionRuleDefinition(from, to, action, proxy));
+    return this;
+  }
+
+  public String getCode() {
+    return code;
+  }
+
+  public List<String> states() {
+    return Collections.unmodifiableList(new ArrayList<>(states));
+  }
+
+  public String initial() {
+    return initialState;
+  }
+
+  public List<String> terminalStates() {
+    return Collections.unmodifiableList(new ArrayList<>(terminalStates));
+  }
+
+  public List<TransitionRuleDefinition> transitions() {
+    return Collections.unmodifiableList(new ArrayList<>(transitions));
+  }
+
+  public DslObject build() {
+    DslObject obj = new WorkflowDslObject(
+        code,
+        Collections.unmodifiableList(new ArrayList<>(states)),
+        initialState,
+        Collections.unmodifiableList(new ArrayList<>(terminalStates)),
+        Collections.unmodifiableList(new ArrayList<>(transitions)));
+    DslDefinitionCollector.register(obj);
+    return obj;
   }
 }

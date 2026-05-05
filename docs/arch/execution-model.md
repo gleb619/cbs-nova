@@ -9,7 +9,7 @@
 
 ```java
 public enum Action {
-    PREVIEW,   // Dry run — no state change, no execution
+    PREVIEW,   // Dry run — runner calls preview() on registries, no DB, no Temporal, no state change
     SUBMIT,    // First execution or any forward transition
     APPROVE,   // Advance to approved/active state
     REJECT,    // Operator or system rejection
@@ -18,6 +18,19 @@ public enum Action {
     ROLLBACK   // Manual compensating action
 }
 ```
+
+### 5.1.1 Preview Action Semantics
+
+When `Action.PREVIEW` is passed to a runner, the engine:
+1. Skips `*Service` entirely (no persistence envelope).
+2. Resolves the component from the registry via `*Runner`.
+3. Calls `preview(input)` on the resolved `*Definition` / `Executable*`.
+4. Returns the result directly without writing to PostgreSQL or starting a Temporal workflow.
+
+For transactions, `preview()` is expected to validate inputs and return a description of what
+*would* happen, without mutating ledger state.  For helpers, events, workflows, and mass
+operations the default `preview()` delegates to `execute()`, but DSL authors may override it
+to provide lighter, read-only behaviour.
 
 ## 5.2 Signal Types
 

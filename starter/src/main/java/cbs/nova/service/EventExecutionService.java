@@ -35,20 +35,21 @@ public class EventExecutionService {
 
     EventDefinition eventDef = workflowResolver.resolveEvent(request.eventCode());
 
-    EnrichmentContext enrichmentContext = new EnrichmentContext(
-        request.eventCode(), 0L, request.performedBy(), "dev", request.parameters());
-    enrichmentContext.setHelperResolver(
-        (name, params) -> resolveByCode(name, params, request.eventCode()));
-    eventDef.getContextBlock().accept(enrichmentContext);
+//    EnrichmentContext enrichmentContext = new EnrichmentContext(
+//        request.eventCode(), 0L, request.performedBy(), "dev", request.parameters());
+//    enrichmentContext.setHelperResolver(
+//        (name, params) -> resolveByCode(name, params, request.eventCode()));
+//    eventDef.getContextBlock().accept(enrichmentContext);
 
-    Map<String, Object> enrichedContext = new HashMap<>(request.parameters());
-    enrichedContext.putAll(enrichmentContext.getEnrichment());
+//    Map<String, Object> enrichedContext = new HashMap<>(request.parameters());
+//    enrichedContext.putAll(enrichmentContext.getEnrichment());
 
-    String encryptedContextJson = contextEncryptionService.encrypt(enrichedContext);
-
-    WorkflowExecutionResponse result =
-        workflowExecutor.start(request, encryptedContextJson, eventDef.getTransactionCodes());
-    return new EventExecutionResponse(result.executionId(), result.status());
+//    String encryptedContextJson = contextEncryptionService.encrypt(enrichedContext);
+//
+//    WorkflowExecutionResponse result =
+//        workflowExecutor.start(request, encryptedContextJson, eventDef.getTransactionCodes());
+//    return new EventExecutionResponse(result.executionId(), result.status());
+    return null;
   }
 
   /**

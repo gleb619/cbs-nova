@@ -1,9 +1,9 @@
 package cbs.dsl.builder;
 
-import cbs.dsl.api.ConditionDefinition;
-import cbs.dsl.api.ConditionTypes.ConditionInput;
 import cbs.dsl.api.ConditionTypes.ConditionOutput;
 import cbs.dsl.api.DslDefinitionCollector;
+import cbs.dsl.api.DslObject;
+import cbs.dsl.api.ConditionDefinition;
 import cbs.dsl.api.ParameterDefinition;
 import cbs.dsl.api.context.TransactionContext;
 
@@ -13,21 +13,7 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-/**
- * Builder for creating inline {@link ConditionDefinition} instances from DSL files.
- *
- * <p>Usage:
- *
- * <pre>{@code
- * ConditionDefinition condition = ConditionDsl.condition("ACCOUNT_ACTIVE")
- *     .requiredParam("accountCode")
- *     .evaluate(ctx -> {
- *         var account = ctx.resolve(AccountService.class).findByCode(ctx.get("accountCode"));
- *         return new ConditionOutput(account != null && account.isActive());
- *     })
- *     .build();
- * }</pre>
- */
+/** Builder for creating inline condition objects from DSL files. */
 public class ConditionBuilder {
 
   private final String code;
@@ -53,49 +39,35 @@ public class ConditionBuilder {
     return this;
   }
 
-  @Deprecated(forRemoval = true)
-  //TODO: Change `ConditionDefinition` registration, we just can use anonymous classes here
-  public ConditionDefinition build() {
+  public String getCode() {
+    return code;
+  }
+
+  public List<ParameterDefinition> getParameters() {
+    return Collections.unmodifiableList(new ArrayList<>(parameters));
+  }
+
+  public Function<TransactionContext, ConditionOutput> evaluate() {
+    return evaluateBlock;
+  }
+
+  public Predicate<TransactionContext> getPredicate() {
+    return ctx -> {
+      if (evaluateBlock == null) {
+        return false;
+      }
+      return evaluateBlock.apply(ctx).result();
+    };
+  }
+
+  public DslObject build() {
     List<ParameterDefinition> params = Collections.unmodifiableList(new ArrayList<>(parameters));
 
-    @Deprecated(forRemoval = true)
-    ConditionDefinition def = new ConditionDefinition() {
-      @Override
-      public String getCode() {
-        return code;
-      }
-
-      @Override
-      public List<ParameterDefinition> getParameters() {
-        return params;
-      }
-
-      @Override
-      public Predicate<TransactionContext> getPredicate() {
-        return ctx -> {
-          if (evaluateBlock == null) {
-            return false;
-          }
-          return evaluateBlock.apply(ctx).result();
-        };
-      }
-
-      @Override
-      public ConditionOutput evaluate(ConditionInput input) {
-        if (evaluateBlock == null) {
-          return new ConditionOutput(false);
-        }
-        TransactionContext ctx = new TransactionContext(
-            input.eventCode(),
-            input.eventNumber(),
-            null,
-            "dev",
-            input.params() != null ? input.params() : Collections.emptyMap(),
-            false);
-        return evaluateBlock.apply(ctx);
-      }
-    };
-    DslDefinitionCollector.register(def);
-    return def;
+    DslObject obj = new ConditionDslObject(
+        code,
+        params,
+        evaluateBlock);
+    DslDefinitionCollector.register(obj);
+    return obj;
   }
 }

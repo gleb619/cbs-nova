@@ -1,5 +1,0 @@
-docs/arch/bpmn-export.md
-docs/arch/build-deploy.md
-docs/arch/dsl-design.md
-docs/arch/module-structure.md
-docs/tdd.md

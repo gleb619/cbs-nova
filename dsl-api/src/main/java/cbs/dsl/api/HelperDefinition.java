@@ -25,16 +25,6 @@ public interface HelperDefinition extends DslDefinition {
   String getCode();
 
   /**
-   * Optional display name for this helper. Used to distinguish DSL overrides from the underlying
-   * implementation class/bean identified by {@link #getCode()}.
-   *
-   * @return the display name, or {@code null}
-   */
-  default String getName() {
-    return null;
-  }
-
-  /**
    * List of parameter definitions declared in the {@code parameters { }} block. Used for validation
    * and documentation purposes.
    *
@@ -45,20 +35,23 @@ public interface HelperDefinition extends DslDefinition {
   }
 
   /**
-   * Optional context enrichment block that runs before the execute block. Allows helpers to enrich
-   * the context with additional data before execution.
-   *
-   * @return the context block
-   */
-  default Consumer<HelperContext> getContextBlock() {
-    return ctx -> {};
-  }
-
-  /**
    * Executes this helper with the given typed input.
    *
    * @param input the helper input
    * @return the helper output
    */
   HelperOutput execute(HelperInput input);
+
+  default HelperOutput preview(HelperInput input) {
+    return execute(input);
+  }
+
+  /**
+   * Returns the DSL object representing this definition.
+   *
+   * @return the DSL object, or {@code null} if not available
+   */
+  default DslObject dsl() {
+    throw new NullPointerException("Dsl object not added");
+  }
 }

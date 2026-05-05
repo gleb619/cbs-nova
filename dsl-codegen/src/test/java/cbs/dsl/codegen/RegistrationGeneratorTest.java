@@ -2,6 +2,7 @@ package cbs.dsl.codegen;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import cbs.dsl.api.DslComponent.DslComponentModel;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -124,14 +125,16 @@ class RegistrationGeneratorTest {
             "TX_1",
             DslInterfaceType.TRANSACTION,
             "cbs.dsl.api.TransactionTypes.TransactionInput",
-            "cbs.dsl.api.TransactionTypes.TransactionOutput"),
+            "cbs.dsl.api.TransactionTypes.TransactionOutput",
+            DslComponentModel.SIMPLE),
         new RegistrationSpec(
             "com.example",
             "HelperOne",
             "H_1",
             DslInterfaceType.HELPER,
             "cbs.dsl.api.HelperTypes.HelperInput",
-            "cbs.dsl.api.HelperTypes.HelperOutput"));
+            "cbs.dsl.api.HelperTypes.HelperOutput",
+            DslComponentModel.SIMPLE));
 
     new RegistrationGenerator(filer).generate(specs);
 
@@ -162,11 +165,11 @@ class RegistrationGeneratorTest {
         content.contains("class GeneratedImplRegistrations implements ImplRegistrationProvider"),
         "Content should contain class declaration: " + content);
     assertTrue(
-        content.contains("registry.register(new TxOneDefinition())"),
-        "Content should register TxOneDefinition: " + content);
+        content.contains("registry.register(new TxOneDefinition(resolver))"),
+        "Content should register TxOneDefinition with resolver: " + content);
     assertTrue(
-        content.contains("registry.register(new HelperOneDefinition())"),
-        "Content should register HelperOneDefinition: " + content);
+        content.contains("registry.register(new HelperOneDefinition(resolver))"),
+        "Content should register HelperOneDefinition with resolver: " + content);
   }
 
   @Test

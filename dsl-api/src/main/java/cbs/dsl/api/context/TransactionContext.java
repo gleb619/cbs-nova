@@ -1,26 +1,19 @@
 package cbs.dsl.api.context;
 
-import lombok.Data;
-import lombok.experimental.SuperBuilder;
-
 import java.util.Map;
+import java.util.function.BiFunction;
+import lombok.Builder;
 
-@Data
-@SuperBuilder(builderMethodName = "transactionBuilder")
-public class TransactionContext extends EnrichmentContext {
+@Builder
+public record TransactionContext<T>(
+    String eventCode,
+    Long workflowExecutionId,
+    String performedBy,
+    String dslVersion,
+    Map<String, Object> eventParameters,
+    Map<String, Object> enrichment,
+    BiFunction<String, Map<String, Object>, Object> helperResolver,
+    boolean isResumed,
+    T payload) {
 
-  private boolean isResumed;
-
-  public TransactionContext(
-      String eventCode,
-      Long workflowExecutionId,
-      String performedBy,
-      String dslVersion,
-      Map<String, Object> eventParameters,
-      boolean isResumed) {
-    super(eventCode, workflowExecutionId, performedBy, dslVersion, eventParameters);
-    this.isResumed = isResumed;
-  }
-
-  public void delegate() {}
 }

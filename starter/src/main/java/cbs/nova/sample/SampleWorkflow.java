@@ -5,6 +5,7 @@ import cbs.dsl.api.DslImplType;
 import cbs.dsl.api.WorkflowFunction;
 import cbs.dsl.api.WorkflowTypes.WorkflowInput;
 import cbs.dsl.api.WorkflowTypes.WorkflowOutput;
+import cbs.dsl.api.context.WorkflowContext;
 
 /**
  * Sample workflow implementation for the PoC.
@@ -17,7 +18,7 @@ import cbs.dsl.api.WorkflowTypes.WorkflowOutput;
 public class SampleWorkflow implements WorkflowFunction<WorkflowInput, WorkflowOutput> {
 
   @Override
-  public WorkflowOutput execute(WorkflowInput input) {
+  public WorkflowContext<WorkflowOutput> execute(WorkflowContext<WorkflowInput> input) {
     return new WorkflowOutput(input.getCurrentState());
   }
 }

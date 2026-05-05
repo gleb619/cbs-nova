@@ -1,10 +1,13 @@
 package cbs.dsl.codegen;
 
+import lombok.RequiredArgsConstructor;
+
 import javax.annotation.processing.Filer;
 import javax.tools.JavaFileObject;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.text.MessageFormat;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -18,13 +21,10 @@ import java.util.stream.Collectors;
  * {@code registerWorkflowImplementationFactory}. This eliminates reflection-based scanning at
  * runtime.
  */
+@RequiredArgsConstructor
 public class WorkflowRegistryGenerator {
 
   private final Filer filer;
-
-  public WorkflowRegistryGenerator(Filer filer) {
-    this.filer = filer;
-  }
 
   public void generate(List<EventWorkflowSpec> specs) throws IOException {
     if (specs.isEmpty()) {
@@ -38,31 +38,39 @@ public class WorkflowRegistryGenerator {
     JavaFileObject file = filer.createSourceFile(fqcn);
     String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
 
-    String imports = specs.stream()
-        .map(s -> "import %s.%s;".formatted(packageName, toInterfaceName(s.eventCode())))
+    String interfaceImports = specs.stream()
+        .map(s -> MessageFormat.format("import {0}.{1};", packageName, toInterfaceName(s.eventCode())))
         .collect(Collectors.joining("\n"));
+
+    String implImports = specs.stream()
+        .map(
+            s -> MessageFormat.format("import {0}.definitions.{1};", packageName, toImplName(s.eventClassName())))
+        .collect(Collectors.joining("\n"));
+
+    String imports = interfaceImports + (implImports.isBlank() ? "" : "\n" + implImports);
 
     String factories = specs.stream()
         .map(s -> {
           String iface = toInterfaceName(s.eventCode());
-          String impl = toImplName(s.eventCode());
-          return """
+          String impl = toImplName(s.eventClassName());
+          String factoryTemplate = """
                   worker.registerWorkflowImplementationFactory(
-                      %s.class,
-                      () -> new %s(orchestrator));""".formatted(iface, impl);
+                      {0}.class,
+                      () -> new {1}(orchestrator));""";
+          return MessageFormat.format(factoryTemplate, iface, impl);
         })
         .collect(Collectors.joining("\n\n"));
 
     String workflowTypes =
         specs.stream().map(s -> "\"" + s.eventCode() + "\"").collect(Collectors.joining(", "));
 
-    String source = """
-        package %s;
+    String sourceTemplate = """
+        package {0};
 
         import cbs.nova.service.EventWorkflowOrchestrator;
         import io.temporal.worker.Worker;
         import java.util.List;
-        %s
+        {1}
 
         /**
          * Generated registry for all APT-discovered event workflows.
@@ -72,11 +80,11 @@ public class WorkflowRegistryGenerator {
          */
         @javax.annotation.processing.Generated(
             value = "cbs.dsl.codegen.WorkflowRegistryGenerator",
-            date = "%s"
+            date = "{2}"
         )
-        public final class %s {
+        public final class {3} {
 
-            private %s() {}
+            private {3}() {}
 
             /**
              * Registers all generated workflow implementations with the given worker.
@@ -85,7 +93,7 @@ public class WorkflowRegistryGenerator {
              * @param orchestrator the orchestrator instance to inject into workflow implementations
              */
             public static void registerAll(Worker worker, EventWorkflowOrchestrator orchestrator) {
-        %s
+        {4}
             }
 
             /**
@@ -94,10 +102,12 @@ public class WorkflowRegistryGenerator {
              * @return list of event codes used as workflow type names
              */
             public static List<String> workflowTypes() {
-                return List.of(%s);
+                return List.of({5});
             }
         }
-        """.formatted(
+        """;
+
+    String source = MessageFormat.format(sourceTemplate,
             packageName,
             imports.isBlank() ? "" : "\n" + imports,
             timestamp,
@@ -115,8 +125,10 @@ public class WorkflowRegistryGenerator {
     return toClassName(eventCode) + "Workflow";
   }
 
-  private static String toImplName(String eventCode) {
-    return toClassName(eventCode) + "EventWorkflow";
+  private static String toImplName(String eventClassName) {
+    int lastDot = eventClassName.lastIndexOf('.');
+    String simpleName = lastDot >= 0 ? eventClassName.substring(lastDot + 1) : eventClassName;
+    return simpleName + "Definition";
   }
 
   private static String toClassName(String code) {

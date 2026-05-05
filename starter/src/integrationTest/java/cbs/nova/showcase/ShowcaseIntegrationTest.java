@@ -29,8 +29,8 @@ import java.time.Duration;
 import java.util.Map;
 
 /**
- * Integration test that verifies the full DSL → compile → registry → Temporal execution chain
- * using an in-memory real Temporal server via {@link TestWorkflowEnvironment}.
+ * Integration test that verifies the full DSL → compile → registry → Temporal execution chain using
+ * an in-memory real Temporal server via {@link TestWorkflowEnvironment}.
  */
 class ShowcaseIntegrationTest extends ShowcaseITBase {
 
@@ -43,7 +43,9 @@ class ShowcaseIntegrationTest extends ShowcaseITBase {
     Worker worker = testEnv.newWorker("TEST_TASK_QUEUE");
     worker.registerWorkflowImplementationTypes(
         ShowcaseTxWorkflowImpl.class,
-        ShowcaseCtxWorkflowImpl.class);
+        ShowcaseCtxWorkflowImpl.class,
+        ShowcasePreviewTxWorkflowImpl.class,
+        ShowcasePreviewCtxWorkflowImpl.class);
     worker.registerActivitiesImplementations(new ShowcaseTestActivityImpl(dslRegistry));
     testEnv.start();
     workflowClient = testEnv.getWorkflowClient();
@@ -66,7 +68,7 @@ class ShowcaseIntegrationTest extends ShowcaseITBase {
             .setWorkflowId("showcase-test-tx")
             .build());
 
-    //TODO: We need a new service/method at
+    // TODO: We need a new service/method at
     WorkflowExecutionResponse response = workflow.execute(
         new EventWorkflowRequest("DSL_TEST_WF", "SAMPLE_EVENT_DSL", "{}", "testUser", "dev", null));
 
@@ -93,9 +95,47 @@ class ShowcaseIntegrationTest extends ShowcaseITBase {
     assertThat(response.status()).isEqualTo("enriched");
   }
 
+  @Test
+  @DisplayName("Should preview DSL transaction through real Temporal workflow")
+  void shouldPreviewDslTransactionThroughRealTemporalWorkflow() {
+    ShowcasePreviewTxWorkflow workflow = workflowClient.newWorkflowStub(
+        ShowcasePreviewTxWorkflow.class,
+        WorkflowOptions.newBuilder()
+            .setTaskQueue("TEST_TASK_QUEUE")
+            .setWorkflowId("showcase-preview-tx")
+            .build());
+
+    WorkflowExecutionResponse response = workflow.execute(
+        new EventWorkflowRequest("DSL_TEST_WF", "SAMPLE_EVENT_DSL", "{}", "testUser", "dev", null));
+
+    assertThat(response).isNotNull();
+    assertThat(response.executionId()).isEqualTo(1L);
+    // DSL inline transaction without .preview() returns empty result
+    assertThat(response.status()).isNull();
+  }
+
+  @Test
+  @DisplayName("Should preview DSL event context through real Temporal activity")
+  void shouldPreviewDslEventContextThroughRealTemporalActivity() {
+    ShowcasePreviewCtxWorkflow workflow = workflowClient.newWorkflowStub(
+        ShowcasePreviewCtxWorkflow.class,
+        WorkflowOptions.newBuilder()
+            .setTaskQueue("TEST_TASK_QUEUE")
+            .setWorkflowId("showcase-preview-ctx")
+            .build());
+
+    WorkflowExecutionResponse response = workflow.execute(
+        new EventWorkflowRequest("DSL_TEST_WF", "SAMPLE_EVENT_DSL", "{}", "testUser", "dev", null));
+
+    assertThat(response).isNotNull();
+    assertThat(response.executionId()).isEqualTo(1L);
+    assertThat(response.status()).isEqualTo("enriched");
+  }
+
   /* ============= */
 
-  //TODO: next classes must be codegenerated at `dsl-codegen/src/main/java/cbs/dsl/codegen/DslCodeGenerator.java` and
+  // TODO: next classes must be codegenerated at
+  // `dsl-codegen/src/main/java/cbs/dsl/codegen/DslCodeGenerator.java` and
   // not hardcoded in test itself.
 
   @WorkflowInterface
@@ -106,6 +146,18 @@ class ShowcaseIntegrationTest extends ShowcaseITBase {
 
   @WorkflowInterface
   public interface ShowcaseCtxWorkflow {
+    @WorkflowMethod
+    WorkflowExecutionResponse execute(EventWorkflowRequest input);
+  }
+
+  @WorkflowInterface
+  public interface ShowcasePreviewTxWorkflow {
+    @WorkflowMethod
+    WorkflowExecutionResponse execute(EventWorkflowRequest input);
+  }
+
+  @WorkflowInterface
+  public interface ShowcasePreviewCtxWorkflow {
     @WorkflowMethod
     WorkflowExecutionResponse execute(EventWorkflowRequest input);
   }
@@ -138,6 +190,34 @@ class ShowcaseIntegrationTest extends ShowcaseITBase {
     }
   }
 
+  public static class ShowcasePreviewTxWorkflowImpl implements ShowcasePreviewTxWorkflow {
+
+    private final ShowcaseTestActivity activity = Workflow.newActivityStub(
+        ShowcaseTestActivity.class,
+        ActivityOptions.newBuilder()
+            .setStartToCloseTimeout(Duration.ofSeconds(5))
+            .build());
+
+    @Override
+    public WorkflowExecutionResponse execute(EventWorkflowRequest input) {
+      return activity.previewDslTransaction(input);
+    }
+  }
+
+  public static class ShowcasePreviewCtxWorkflowImpl implements ShowcasePreviewCtxWorkflow {
+
+    private final ShowcaseTestActivity activity = Workflow.newActivityStub(
+        ShowcaseTestActivity.class,
+        ActivityOptions.newBuilder()
+            .setStartToCloseTimeout(Duration.ofSeconds(5))
+            .build());
+
+    @Override
+    public WorkflowExecutionResponse execute(EventWorkflowRequest input) {
+      return activity.previewDslContext(input);
+    }
+  }
+
   @ActivityInterface
   public interface ShowcaseTestActivity {
 
@@ -147,12 +227,19 @@ class ShowcaseIntegrationTest extends ShowcaseITBase {
     @ActivityMethod
     WorkflowExecutionResponse runDslContext(EventWorkflowRequest input);
 
+    @ActivityMethod
+    WorkflowExecutionResponse previewDslTransaction(EventWorkflowRequest input);
+
+    @ActivityMethod
+    WorkflowExecutionResponse previewDslContext(EventWorkflowRequest input);
   }
 
-  //TODO: For current flow, our business entity `Event` must be mapped to Temporal `Workflow`
+  // TODO: For current flow, our business entity `Event` must be mapped to Temporal `Workflow`
   // For business entity `Transaction` must be mapped to Temporal `Activity`
-  // For `Transaction` we just need to generate code for sequential code execution, for each parameter(e.g. a context
-  // closure evaluation) and pass to `TransactionFunction`(dsl-api/src/main/java/cbs/dsl/api/TransactionFunction.java)
+  // For `Transaction` we just need to generate code for sequential code execution, for each
+  // parameter(e.g. a context
+  // closure evaluation) and pass to
+  // `TransactionFunction`(dsl-api/src/main/java/cbs/dsl/api/TransactionFunction.java)
   public static class ShowcaseTestActivityImpl implements ShowcaseTestActivity {
 
     private final DslRegistry dslRegistry;
@@ -164,8 +251,8 @@ class ShowcaseIntegrationTest extends ShowcaseITBase {
     @Override
     public WorkflowExecutionResponse runDslTransaction(EventWorkflowRequest input) {
       TransactionDefinition txDef = dslRegistry.resolveTransaction("SAMPLE_TRANSACTION_DSL");
-      var txInput = new TransactionInput(
-          Map.of("name", "PoC"), "SAMPLE_TRANSACTION_DSL", null, "dev");
+      var txInput =
+          new TransactionInput(Map.of("name", "PoC"), "SAMPLE_TRANSACTION_DSL", null, "dev");
       var output = txDef.execute(txInput);
       return new WorkflowExecutionResponse(1L, (String) output.result().get("greeting"));
     }
@@ -173,15 +260,40 @@ class ShowcaseIntegrationTest extends ShowcaseITBase {
     @Override
     public WorkflowExecutionResponse runDslContext(EventWorkflowRequest input) {
       EventDefinition eventDef = dslRegistry.resolveEvent("SAMPLE_EVENT_DSL");
-      EnrichmentContext ctx = new EnrichmentContext(
-          "SAMPLE_EVENT_DSL", 0L, "testUser", "dev", Map.of("name", "PoC"));
-      ctx.setHelperResolver((name, params) -> dslRegistry
-          .resolveHelper(name)
-          .execute(new HelperInput(params, "SAMPLE_EVENT_DSL", null))
-          .value());
-      eventDef.getContextBlock().accept(ctx);
-      return new WorkflowExecutionResponse(
-          1L, ctx.getEnrichment().containsKey("enriched") ? "enriched" : "not-enriched");
+//      EnrichmentContext ctx =
+//          new EnrichmentContext("SAMPLE_EVENT_DSL", 0L, "testUser", "dev", Map.of("name", "PoC"));
+//      ctx.setHelperResolver((name, params) -> dslRegistry
+//          .resolveHelper(name)
+//          .execute(new HelperInput(params, "SAMPLE_EVENT_DSL", null))
+//          .value());
+//      eventDef.getContextBlock().accept(ctx);
+//      return new WorkflowExecutionResponse(
+//          1L, ctx.getEnrichment().containsKey("enriched") ? "enriched" : "not-enriched");
+      return null;
+    }
+
+    @Override
+    public WorkflowExecutionResponse previewDslTransaction(EventWorkflowRequest input) {
+      TransactionDefinition txDef = dslRegistry.resolveTransaction("SAMPLE_TRANSACTION_DSL");
+      var txInput =
+          new TransactionInput(Map.of("name", "PoC"), "SAMPLE_TRANSACTION_DSL", null, "dev");
+      var output = txDef.preview(txInput);
+      return new WorkflowExecutionResponse(1L, (String) output.result().get("greeting"));
+    }
+
+    @Override
+    public WorkflowExecutionResponse previewDslContext(EventWorkflowRequest input) {
+      EventDefinition eventDef = dslRegistry.resolveEvent("SAMPLE_EVENT_DSL");
+//      EnrichmentContext ctx =
+//          new EnrichmentContext("SAMPLE_EVENT_DSL", 0L, "testUser", "dev", Map.of("name", "PoC"));
+//      ctx.setHelperResolver((name, params) -> dslRegistry
+//          .resolveHelper(name)
+//          .preview(new HelperInput(params, "SAMPLE_EVENT_DSL", null))
+//          .value());
+//      eventDef.getContextBlock().accept(ctx);
+//      return new WorkflowExecutionResponse(
+//          1L, ctx.getEnrichment().containsKey("enriched") ? "enriched" : "not-enriched");
+      return null;
     }
   }
 }

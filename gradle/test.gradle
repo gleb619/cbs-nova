@@ -3,7 +3,7 @@ apply plugin: 'com.adarshr.test-logger'
 sourceSets {
   integrationTest {
     java.srcDirs = ['src/integrationTest/java']
-    resources.srcDirs = ['src/integrationTest/resources']
+    resources.srcDirs = ['src/integrationTest/resources', 'src/test/resources']
     compileClasspath += sourceSets.main.output
     runtimeClasspath += sourceSets.main.output
   }
