@@ -26,8 +26,8 @@ class TransactionActivityImplTest {
       new TransactionActivityImpl(dslRegistry, new ObjectMapper());
 
   @Test
-  @DisplayName("Should call preview and execute and return success when transaction succeeds")
-  void shouldCallPreviewAndExecuteAndReturnSuccessWhenTransactionSucceeds() {
+  @DisplayName("Should execute and return success when transaction succeeds")
+  void shouldExecuteAndReturnSuccessWhenTransactionSucceeds() {
     // Arrange
     TransactionDefinition txDef = mock(TransactionDefinition.class);
     when(txDef.getCode()).thenReturn("SUCCESS_TX");
@@ -42,8 +42,9 @@ class TransactionActivityImplTest {
 
     // Assert
     assertTrue(result.success());
-    verify(txDef, times(1)).preview(any(TransactionInput.class));
+    assertEquals(null, result.errorMessage());
     verify(txDef, times(1)).execute(any(TransactionInput.class));
+    verify(txDef, times(0)).preview(any(TransactionInput.class));
   }
 
   @Test
@@ -67,14 +68,61 @@ class TransactionActivityImplTest {
     // Assert
     assertFalse(result.success());
     assertEquals("Execute failed", result.errorMessage());
-    verify(txDef, times(1)).preview(any(TransactionInput.class));
     verify(txDef, times(1)).execute(any(TransactionInput.class));
     verify(txDef, times(1)).rollback(any(TransactionInput.class));
   }
 
   @Test
-  @DisplayName("Should return failure when transaction code is not found")
-  void shouldReturnFailureWhenTransactionCodeIsNotFound() {
+  @DisplayName("Should preview and return success when transaction preview succeeds")
+  void shouldPreviewAndReturnSuccessWhenTransactionPreviewSucceeds() {
+    // Arrange
+    TransactionDefinition txDef = mock(TransactionDefinition.class);
+    when(txDef.getCode()).thenReturn("SUCCESS_TX");
+
+    when(dslRegistry.getTransactions()).thenReturn(Map.of("SUCCESS_TX", txDef));
+
+    TransactionActivityInput input =
+        new TransactionActivityInput("SUCCESS_TX", "{}", 1L, "testUser", "1.0.0");
+
+    // Act
+    TransactionResult result = activity.previewTransaction(input);
+
+    // Assert
+    assertTrue(result.success());
+    assertEquals(null, result.errorMessage());
+    verify(txDef, times(1)).preview(any(TransactionInput.class));
+    verify(txDef, times(0)).execute(any(TransactionInput.class));
+  }
+
+  @Test
+  @DisplayName("Should return failure when preview throws")
+  void shouldReturnFailureWhenPreviewThrows() {
+    // Arrange
+    TransactionDefinition txDef = mock(TransactionDefinition.class);
+    when(txDef.getCode()).thenReturn("FAIL_TX");
+    doThrow(new RuntimeException("Preview failed"))
+        .when(txDef)
+        .preview(any(TransactionInput.class));
+
+    when(dslRegistry.getTransactions()).thenReturn(Map.of("FAIL_TX", txDef));
+
+    TransactionActivityInput input =
+        new TransactionActivityInput("FAIL_TX", "{}", 1L, "testUser", "1.0.0");
+
+    // Act
+    TransactionResult result = activity.previewTransaction(input);
+
+    // Assert
+    assertFalse(result.success());
+    assertEquals("Preview failed", result.errorMessage());
+    verify(txDef, times(1)).preview(any(TransactionInput.class));
+    verify(txDef, times(0)).execute(any(TransactionInput.class));
+    verify(txDef, times(0)).rollback(any(TransactionInput.class));
+  }
+
+  @Test
+  @DisplayName("Should return failure when transaction code is not found for execute")
+  void shouldReturnFailureWhenTransactionCodeIsNotFoundForExecute() {
     // Arrange
     when(dslRegistry.getTransactions()).thenReturn(Map.of());
 
@@ -83,6 +131,23 @@ class TransactionActivityImplTest {
 
     // Act
     TransactionResult result = activity.executeTransaction(input);
+
+    // Assert
+    assertFalse(result.success());
+    assertEquals("Transaction not found: UNKNOWN_TX", result.errorMessage());
+  }
+
+  @Test
+  @DisplayName("Should return failure when transaction code is not found for preview")
+  void shouldReturnFailureWhenTransactionCodeIsNotFoundForPreview() {
+    // Arrange
+    when(dslRegistry.getTransactions()).thenReturn(Map.of());
+
+    TransactionActivityInput input =
+        new TransactionActivityInput("UNKNOWN_TX", "{}", 1L, "testUser", "1.0.0");
+
+    // Act
+    TransactionResult result = activity.previewTransaction(input);
 
     // Assert
     assertFalse(result.success());

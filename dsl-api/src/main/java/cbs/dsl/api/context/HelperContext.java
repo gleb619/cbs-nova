@@ -3,7 +3,7 @@ package cbs.dsl.api.context;
 import java.util.Map;
 import lombok.Builder;
 
-@Builder
+@Builder(toBuilder = true)
 public record HelperContext<T>(
     String eventCode,
     Long workflowExecutionId,

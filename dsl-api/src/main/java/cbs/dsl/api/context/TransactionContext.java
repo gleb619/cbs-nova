@@ -4,7 +4,7 @@ import java.util.Map;
 import java.util.function.BiFunction;
 import lombok.Builder;
 
-@Builder
+@Builder(toBuilder = true)
 public record TransactionContext<T>(
     String eventCode,
     Long workflowExecutionId,

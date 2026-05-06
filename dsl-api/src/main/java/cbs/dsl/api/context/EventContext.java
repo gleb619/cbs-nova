@@ -6,7 +6,7 @@ import java.util.function.BiFunction;
 import lombok.Builder;
 
 //TODO: replace with real impl context in correspondent classes
-@Builder
+@Builder(toBuilder = true)
 public record EventContext<T>(
     String eventCode,
     Long workflowExecutionId,

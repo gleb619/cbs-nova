@@ -2,6 +2,7 @@ package cbs.dsl.api;
 
 import cbs.dsl.api.context.MassOperationContext;
 
+import cbs.dsl.builder.MassOperationDslObject;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
@@ -13,7 +14,7 @@ import java.util.function.Consumer;
  * <p>Implementations are typically created via the Kotlin DSL {@code massOperation { }} block or
  * annotated with {@link DslComponent} for compile-time registration.
  */
-public interface MassOperationDefinition extends DslDefinition {
+public interface MassOperationDefinition extends DslDefinition<MassOperationDslObject> {
 
   /**
    * Canonical code used to look up this mass operation in the registry.
@@ -115,7 +116,7 @@ public interface MassOperationDefinition extends DslDefinition {
    *
    * @return the DSL object, or {@code null} if not available
    */
-  default DslObject dsl() {
-    return null;
+  default MassOperationDslObject dsl() {
+    throw new NullPointerException("Dsl object not added");
   }
 }

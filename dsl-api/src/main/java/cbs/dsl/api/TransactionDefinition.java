@@ -4,6 +4,7 @@ import cbs.dsl.api.TransactionTypes.TransactionInput;
 import cbs.dsl.api.TransactionTypes.TransactionOutput;
 import cbs.dsl.api.context.TransactionContext;
 
+import cbs.dsl.builder.TransactionDslObject;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
@@ -14,7 +15,7 @@ import java.util.function.Consumer;
  * <p>Implementations are typically created via the Kotlin DSL {@code transaction { }} block or
  * annotated with {@link DslComponent} for compile-time registration.
  */
-public interface TransactionDefinition extends DslDefinition {
+public interface TransactionDefinition extends DslDefinition<TransactionDslObject> {
 
   /**
    * Canonical code used to look up this transaction in the registry.
@@ -62,7 +63,7 @@ public interface TransactionDefinition extends DslDefinition {
    *
    * @return the DSL object, or {@code null} if not available
    */
-  default DslObject dsl() {
+  default TransactionDslObject dsl() {
     throw new NullPointerException("Dsl object not added");
   }
 }

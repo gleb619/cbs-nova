@@ -45,12 +45,11 @@ public class ConditionCodeGenerator {
 
     String inputConversion = inputIsRuntime
         ? "input"
-        : MessageFormat.format(
-            "JsonPayload.fromMap(input.params(), {0}.class)", simpleName(spec.inputType()));
+        : formatTemplate("JsonPayload.fromMap(input.params(), {0}.class)", simpleName(spec.inputType()));
 
     String jsonPayloadImport = inputIsRuntime ? "" : "import cbs.dsl.api.JsonPayload;\n";
     String inputTypeImport =
-        inputIsRuntime ? "" : MessageFormat.format("import {0};\n", spec.inputType());
+        inputIsRuntime ? "" : formatTemplate("import {0};\n", spec.inputType());
 
     String dslBodyOrFallback = (spec.dslBody() != null && !spec.dslBody().isBlank())
         ? spec.dslBody()
@@ -117,8 +116,7 @@ public class ConditionCodeGenerator {
         }
         """;
 
-    String source = MessageFormat.format(
-        sourceTemplate,
+    String source = formatTemplate(sourceTemplate,
         DEFINITIONS_PACKAGE,           // {0}
         jsonPayloadImport,             // {1}
         spec.packageName(),            // {2}
@@ -143,6 +141,14 @@ public class ConditionCodeGenerator {
     try (PrintWriter writer = new PrintWriter(file.openWriter())) {
       writer.print(source);
     }
+  }
+
+  private static String formatTemplate(String template, Object... args) {
+    String result = template;
+    for (int i = args.length - 1; i >= 0; i--) {
+      result = result.replace("{" + i + "}", String.valueOf(args[i]));
+    }
+    return result;
   }
 
   private static String simpleName(String fullyQualifiedName) {

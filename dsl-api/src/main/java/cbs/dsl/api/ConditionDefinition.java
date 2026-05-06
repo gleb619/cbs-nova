@@ -2,6 +2,7 @@ package cbs.dsl.api;
 
 import cbs.dsl.api.context.TransactionContext;
 
+import cbs.dsl.builder.ConditionDslObject;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
@@ -14,7 +15,7 @@ import java.util.function.Predicate;
  * <p>Implementations are typically created via the Kotlin DSL {@code condition { }} block or
  * annotated with {@link DslComponent} for compile-time registration.
  */
-public interface ConditionDefinition extends DslDefinition {
+public interface ConditionDefinition extends DslDefinition<ConditionDslObject> {
 
   /**
    * Canonical code used to look up this condition in the registry.
@@ -50,7 +51,7 @@ public interface ConditionDefinition extends DslDefinition {
    *
    * @return the DSL object, or {@code null} if not available
    */
-  default DslObject dsl() {
+  default ConditionDslObject dsl() {
     throw new NullPointerException("Dsl object not added");
   }
 }

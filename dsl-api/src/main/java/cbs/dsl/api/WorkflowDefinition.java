@@ -3,6 +3,7 @@ package cbs.dsl.api;
 import cbs.dsl.api.WorkflowTypes.WorkflowInput;
 import cbs.dsl.api.WorkflowTypes.WorkflowOutput;
 
+import cbs.dsl.builder.WorkflowDslObject;
 import java.util.List;
 
 /**
@@ -11,7 +12,7 @@ import java.util.List;
  * <p>Implementations are typically created via the Kotlin DSL {@code workflow { }} block or
  * annotated with {@link DslComponent} for compile-time registration.
  */
-public interface WorkflowDefinition extends DslDefinition {
+public interface WorkflowDefinition extends DslDefinition<WorkflowDslObject> {
 
   /**
    * Canonical code used to look up this workflow in the registry.
@@ -65,7 +66,7 @@ public interface WorkflowDefinition extends DslDefinition {
    *
    * @return the DSL object, or {@code null} if not available
    */
-  default DslObject dsl() {
+  default WorkflowDslObject dsl() {
     throw new NullPointerException("Dsl object not added");
   }
 }

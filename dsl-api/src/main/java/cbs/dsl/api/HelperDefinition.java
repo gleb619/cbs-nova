@@ -4,6 +4,7 @@ import cbs.dsl.api.HelperTypes.HelperInput;
 import cbs.dsl.api.HelperTypes.HelperOutput;
 import cbs.dsl.api.context.HelperContext;
 
+import cbs.dsl.builder.HelperDslObject;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
@@ -15,7 +16,7 @@ import java.util.function.Consumer;
  * <p>Implementations are typically created via the Kotlin DSL {@code helper { }} block or annotated
  * with {@link DslComponent} for compile-time registration.
  */
-public interface HelperDefinition extends DslDefinition {
+public interface HelperDefinition extends DslDefinition<HelperDslObject> {
 
   /**
    * Canonical code used to look up this helper in the registry.
@@ -51,7 +52,7 @@ public interface HelperDefinition extends DslDefinition {
    *
    * @return the DSL object, or {@code null} if not available
    */
-  default DslObject dsl() {
+  default HelperDslObject dsl() {
     throw new NullPointerException("Dsl object not added");
   }
 }

@@ -2,6 +2,7 @@ package cbs.dsl.api;
 
 import cbs.dsl.api.EventTypes.EventInput;
 import cbs.dsl.api.EventTypes.EventOutput;
+import cbs.dsl.builder.EventDslObject;
 import java.util.Collections;
 import java.util.List;
 
@@ -12,7 +13,7 @@ import java.util.List;
  * <p>Implementations are typically created via the Kotlin DSL {@code event { }} block or annotated
  * with {@link DslComponent} for compile-time registration.
  */
-public interface EventDefinition extends DslDefinition {
+public interface EventDefinition extends DslDefinition<EventDslObject> {
 
   /**
    * Canonical code used to look up this event in the registry.
@@ -53,7 +54,7 @@ public interface EventDefinition extends DslDefinition {
    *
    * @return the DSL object, or {@code null} if not available
    */
-  default DslObject dsl() {
+  default EventDslObject dsl() {
     throw new NullPointerException("Dsl object not added");
   }
 }
