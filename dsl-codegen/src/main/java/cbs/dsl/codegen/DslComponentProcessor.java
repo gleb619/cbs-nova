@@ -15,6 +15,8 @@ import javax.lang.model.element.*;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
+import javax.tools.FileObject;
+import javax.tools.StandardLocation;
 
 import java.io.IOException;
 import java.util.*;
@@ -212,6 +214,21 @@ public class DslComponentProcessor extends AbstractProcessor {
 
     DslComponentModel componentModel = resolveComponentModel(annotation, typeElement);
 
+    String dslBody = null;
+    String dslImports = null;
+    try {
+      FileObject sourceFile = processingEnv.getFiler().getResource(
+          StandardLocation.SOURCE_PATH, packageName, className + ".java");
+      String content = sourceFile.getCharContent(true).toString();
+      if (!DslCompiler.containsExplicitTypeDeclaration(content)) {
+        DslCompiler.ParsedDsl parsed = DslCompiler.parseImplicitClassWithJavaParser(content);
+        dslBody = parsed.body();
+        dslImports = parsed.imports();
+      }
+    } catch (IOException e) {
+      // Source file not available or not readable — ignore
+    }
+
     registrations.add(new RegistrationSpec(
         packageName,
         className,
@@ -219,7 +236,9 @@ public class DslComponentProcessor extends AbstractProcessor {
         interfaceType,
         inputType,
         outputType,
-        componentModel));
+        componentModel,
+        dslBody,
+        dslImports));
   }
 
   /**
