@@ -1,11 +1,12 @@
 package cbs.dsl.codegen;
 
+import java.text.MessageFormat;
 import javax.annotation.processing.Filer;
 import javax.tools.JavaFileObject;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.text.MessageFormat;
+
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -51,7 +52,15 @@ public class ConditionCodeGenerator {
     String inputTypeImport =
         inputIsRuntime ? "" : MessageFormat.format("import {0};\n", spec.inputType());
 
-    String sourceTemplate = """
+    String dslBodyOrFallback = (spec.dslBody() != null && !spec.dslBody().isBlank())
+        ? spec.dslBody()
+        : "return ConditionDsl.condition(\"" + spec.code() + "\").build();";
+    String dslImportsBlock = (spec.dslImports() != null && !spec.dslImports().isBlank())
+        ? spec.dslImports().trim() + "\n"
+        : ((spec.dslBody() == null || spec.dslBody().isBlank()) ? "import cbs.dsl.builder.ConditionDsl;\n" : "");
+
+    String sourceTemplate = //language=java
+        """
         package {0};
 
         import cbs.dsl.api.ConditionDefinition;
@@ -62,7 +71,7 @@ public class ConditionCodeGenerator {
         import cbs.dsl.api.context.TransactionContext;
         {1}        import {2}.{3};
         {4}        import {5};
-        import java.util.function.Predicate;
+        {19}        import java.util.function.Predicate;
 
         /**
          * Generated ConditionDefinition wrapper for {6}.
@@ -81,12 +90,12 @@ public class ConditionCodeGenerator {
             }
 
             public {10}(DslComponentResolver resolver) {
-                this.function = resolver != null ? resolver.resolve({9}.class) : new {9}();
+                this.function = resolver != null ? resolver.resolve({11}.class) : new {12}();
             }
 
             @Override
             public String getCode() {
-                return "{11}";
+                return "{13}";
             }
 
             @Override
@@ -96,43 +105,40 @@ public class ConditionCodeGenerator {
 
             @Override
             public ConditionOutput evaluate(ConditionInput input) {
-                {12} typed = {13};
-                {14} out = function.evaluate(typed);
+                {14} typed = {15};
+                {16} out = function.evaluate(typed);
                 return new ConditionOutput(out.getValue());
             }
 
             @Override
             public DslObject dsl() {
-                return new cbs.dsl.builder.ConditionDslObject(
-                    getCode(),
-                    getParameters(),
-                    ctx -> evaluate(new ConditionInput(
-                        ctx.getEventParameters(), ctx.getEventCode(), ctx.getWorkflowExecutionId()))
-                );
+                {17}
             }
         }
         """;
 
     String source = MessageFormat.format(
         sourceTemplate,
-        DEFINITIONS_PACKAGE,
-        jsonPayloadImport,
-        spec.packageName(),
-        spec.className(),
-        inputTypeImport,
-        spec.outputType(),
-        spec.className(),
-        timestamp,
-        wrapperClassName,
-        spec.className(),
-        wrapperClassName,
-        wrapperClassName,
-        spec.className(),
-        spec.className(),
-        spec.code(),
-        simpleName(spec.inputType()),
-        inputConversion,
-        simpleName(spec.outputType()));
+        DEFINITIONS_PACKAGE,           // {0}
+        jsonPayloadImport,             // {1}
+        spec.packageName(),            // {2}
+        spec.className(),              // {3}
+        inputTypeImport,               // {4}
+        spec.outputType(),             // {5}
+        spec.className(),              // {6}
+        timestamp,                     // {7}
+        wrapperClassName,              // {8}
+        spec.className(),              // {9}
+        wrapperClassName,              // {10}
+        spec.className(),              // {11}
+        spec.className(),              // {12}
+        spec.code(),                   // {13}
+        simpleName(spec.inputType()),  // {14}
+        inputConversion,               // {15}
+        simpleName(spec.outputType()), // {16}
+        dslBodyOrFallback,             // {17}
+        "",                            // {18} unused
+        dslImportsBlock);              // {19}
 
     try (PrintWriter writer = new PrintWriter(file.openWriter())) {
       writer.print(source);

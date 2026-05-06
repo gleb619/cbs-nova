@@ -1,5 +1,6 @@
 package cbs.dsl.codegen;
 
+import java.text.MessageFormat;
 import lombok.RequiredArgsConstructor;
 
 import javax.annotation.processing.Filer;
@@ -7,7 +8,7 @@ import javax.tools.JavaFileObject;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.text.MessageFormat;
+
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -48,7 +49,8 @@ public class TransactionCodeGenerator {
     JavaFileObject file = filer.createSourceFile(fqcn);
     String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
 
-    String sourceTemplate = """
+    String sourceTemplate = //language=java
+            """
             package {0};
             
             import cbs.dsl.api.TransactionTypes.TransactionInput;
@@ -99,7 +101,15 @@ public class TransactionCodeGenerator {
     String outputTypeImport =
         outputIsRuntime ? "" : MessageFormat.format("import {0};\n", spec.outputType());
 
-    String sourceTemplate = """
+    String dslBodyOrFallback = (spec.dslBody() != null && !spec.dslBody().isBlank())
+        ? spec.dslBody()
+        : "return TransactionDsl.transaction(\"" + spec.code() + "\").build();";
+    String dslImportsBlock = (spec.dslImports() != null && !spec.dslImports().isBlank())
+        ? spec.dslImports().trim() + "\n"
+        : ((spec.dslBody() == null || spec.dslBody().isBlank()) ? "import cbs.dsl.builder.TransactionDsl;\n" : "");
+
+    String sourceTemplate = //language=java
+        """
         package {0};
 
         import cbs.dsl.api.DslComponentResolver;
@@ -111,7 +121,7 @@ public class TransactionCodeGenerator {
         import {1}.{2};
         {3}        import {4}.{5};
         {6}{7}
-        import java.util.function.Consumer;
+        {19}        import java.util.function.Consumer;
         import java.util.function.Function;
 
         /**
@@ -143,71 +153,52 @@ public class TransactionCodeGenerator {
             public TransactionOutput preview(TransactionInput input) {
                 {16} typed = {17};
                 {18} out = function.preview(typed);
-                return {19};
+                return {20};
             }
 
             @Override
             public TransactionOutput execute(TransactionInput input) {
                 {16} typed = {17};
                 {18} out = function.execute(typed);
-                return {19};
+                return {20};
             }
 
             @Override
             public TransactionOutput rollback(TransactionInput input) {
                 {16} typed = {17};
                 {18} out = function.rollback(typed);
-                return {19};
+                return {20};
             }
 
             @Override
             public DslObject dsl() {
-                return new cbs.dsl.builder.TransactionDslObject(
-                    getCode(),
-                    getName(),
-                    getParameters(),
-                    ctx -> {},
-                    ctx -> {
-                        cbs.dsl.api.TransactionTypes.TransactionInput typed = new cbs.dsl.api.TransactionTypes.TransactionInput(
-                            ctx.getEventParameters(), ctx.getEventCode(), ctx.getWorkflowExecutionId(), null);
-                        return preview(typed);
-                    },
-                    ctx -> {
-                        cbs.dsl.api.TransactionTypes.TransactionInput typed = new cbs.dsl.api.TransactionTypes.TransactionInput(
-                            ctx.getEventParameters(), ctx.getEventCode(), ctx.getWorkflowExecutionId(), null);
-                        return execute(typed);
-                    },
-                    ctx -> {
-                        cbs.dsl.api.TransactionTypes.TransactionInput typed = new cbs.dsl.api.TransactionTypes.TransactionInput(
-                            ctx.getEventParameters(), ctx.getEventCode(), ctx.getWorkflowExecutionId(), null);
-                        return rollback(typed);
-                    }
-                );
+                {21}
             }
         }
         """;
     String source = MessageFormat.format(sourceTemplate,
-        DEFINITIONS_PACKAGE,
-        GENERATED_PACKAGE,
-        activityInterfaceName,
-        jsonPayloadImport,
-        spec.packageName(),
-        spec.className(),
-        inputTypeImport,
-        outputTypeImport,
-        spec.className(),
-        timestamp,
-        wrapperClassName,
-        activityInterfaceName,
-        spec.className(),
-        wrapperClassName,
-        wrapperClassName,
-        spec.className(),
-        spec.code(),
-        simpleName(spec.inputType()),
-        inputConversion,
-        simpleName(spec.outputType()),
-        outputConversion);
+        DEFINITIONS_PACKAGE,           // {0}
+        GENERATED_PACKAGE,             // {1}
+        activityInterfaceName,         // {2}
+        jsonPayloadImport,             // {3}
+        spec.packageName(),            // {4}
+        spec.className(),              // {5}
+        inputTypeImport,               // {6}
+        outputTypeImport,              // {7}
+        spec.className(),              // {8}
+        timestamp,                     // {9}
+        wrapperClassName,              // {10}
+        activityInterfaceName,         // {11}
+        spec.className(),              // {12}
+        wrapperClassName,              // {13}
+        spec.className(),              // {14}
+        spec.code(),                   // {15}
+        simpleName(spec.inputType()),  // {16}
+        inputConversion,               // {17}
+        simpleName(spec.outputType()), // {18}
+        dslImportsBlock,               // {19}
+        outputConversion,              // {20}
+        dslBodyOrFallback);            // {21}
 
     try (PrintWriter writer = new PrintWriter(file.openWriter())) {
       writer.print(source);

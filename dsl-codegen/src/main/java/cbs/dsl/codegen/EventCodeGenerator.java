@@ -1,11 +1,12 @@
 package cbs.dsl.codegen;
 
+import java.text.MessageFormat;
 import javax.annotation.processing.Filer;
 import javax.tools.JavaFileObject;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.text.MessageFormat;
+
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -51,7 +52,8 @@ public class EventCodeGenerator {
     JavaFileObject file = filer.createSourceFile(fqcn);
     String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
 
-    String sourceTemplate = """
+    String sourceTemplate = //language=java
+        """
         package {0};
 
         import cbs.nova.model.EventWorkflowRequest;
@@ -103,7 +105,15 @@ public class EventCodeGenerator {
     String outputTypeImport =
         outputIsRuntime ? "" : MessageFormat.format("import {0};\n", spec.outputType());
 
-    String sourceTemplate = """
+    String dslBodyOrFallback = (spec.dslBody() != null && !spec.dslBody().isBlank())
+        ? spec.dslBody()
+        : "return EventDsl.event(\"" + spec.code() + "\").build();";
+    String dslImportsBlock = (spec.dslImports() != null && !spec.dslImports().isBlank())
+        ? spec.dslImports().trim() + "\n"
+        : ((spec.dslBody() == null || spec.dslBody().isBlank()) ? "import cbs.dsl.builder.EventDsl;\n" : "");
+
+    String sourceTemplate = //language=java
+        """
         package {0};
 
         import cbs.dsl.api.DslComponentResolver;
@@ -121,7 +131,7 @@ public class EventCodeGenerator {
         import {1}.{2};
         {3}        import {4}.{5};
         {6}{7}
-        import java.util.Collections;
+        {19}        import java.util.Collections;
         import java.util.List;
         import java.util.function.BiConsumer;
         import java.util.function.Consumer;
@@ -207,24 +217,7 @@ public class EventCodeGenerator {
 
             @Override
             public DslObject dsl() {
-                return new cbs.dsl.builder.EventDslObject(
-                    getCode(),
-                    getParameters(),
-                    getContextBlock(),
-                    getDisplayBlock(),
-                    getTransactionsBlock(),
-                    getTransactionCodes(),
-                    getFinishBlock()
-                ) {
-                    @Override
-                    public cbs.dsl.api.EventTypes.EventOutput execute(cbs.dsl.api.EventTypes.EventInput input) {
-                        return {19}.this.execute(input);
-                    }
-                    @Override
-                    public cbs.dsl.api.EventTypes.EventOutput preview(cbs.dsl.api.EventTypes.EventInput input) {
-                        return {19}.this.preview(input);
-                    }
-                };
+                {20}
             }
 
             @Override
@@ -239,35 +232,27 @@ public class EventCodeGenerator {
 
     String source = MessageFormat.format(
         sourceTemplate,
-        DEFINITIONS_PACKAGE,
-        GENERATED_PACKAGE,
-        workflowInterfaceName,
-        jsonPayloadImport,
-        spec.packageName(),
-        spec.className(),
-        inputTypeImport,
-        outputTypeImport,
-        spec.className(),
-        timestamp,
-        wrapperClassName,
-        workflowInterfaceName,
-        spec.className(),
-        wrapperClassName,
-        wrapperClassName,
-        wrapperClassName,
-        spec.className(),
-        spec.className(),
-        spec.code(),
-        simpleName(spec.inputType()),
-        inputConversion,
-        simpleName(spec.outputType()),
-        outputConversion,
-        simpleName(spec.inputType()),
-        inputConversion,
-        simpleName(spec.outputType()),
-        outputConversion,
-        wrapperClassName,
-        wrapperClassName);
+        DEFINITIONS_PACKAGE,           // {0}
+        GENERATED_PACKAGE,             // {1}
+        workflowInterfaceName,         // {2}
+        jsonPayloadImport,             // {3}
+        spec.packageName(),            // {4}
+        spec.className(),              // {5}
+        inputTypeImport,               // {6}
+        outputTypeImport,              // {7}
+        spec.className(),              // {8}
+        timestamp,                     // {9}
+        wrapperClassName,              // {10}
+        workflowInterfaceName,         // {11}
+        spec.className(),              // {12}
+        wrapperClassName,              // {13}
+        spec.code(),                   // {14}
+        simpleName(spec.inputType()),  // {15}
+        inputConversion,               // {16}
+        simpleName(spec.outputType()), // {17}
+        outputConversion,              // {18}
+        dslImportsBlock,               // {19}
+        dslBodyOrFallback);            // {20}
 
     try (PrintWriter writer = new PrintWriter(file.openWriter())) {
       writer.print(source);

@@ -1,5 +1,6 @@
 package cbs.dsl.codegen;
 
+import java.text.MessageFormat;
 import lombok.RequiredArgsConstructor;
 
 import javax.annotation.processing.Filer;
@@ -7,7 +8,7 @@ import javax.tools.JavaFileObject;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.text.MessageFormat;
+
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -57,7 +58,15 @@ public class WorkflowCodeGenerator {
     String outputTypeImport =
         outputIsRuntime ? "" : MessageFormat.format("import {0};\n", spec.outputType());
 
-    String sourceTemplate = """
+    String dslBodyOrFallback = (spec.dslBody() != null && !spec.dslBody().isBlank())
+        ? spec.dslBody()
+        : "return WorkflowDsl.workflow(\"" + spec.code() + "\").build();";
+    String dslImportsBlock = (spec.dslImports() != null && !spec.dslImports().isBlank())
+        ? spec.dslImports().trim() + "\n"
+        : ((spec.dslBody() == null || spec.dslBody().isBlank()) ? "import cbs.dsl.builder.WorkflowDsl;\n" : "");
+
+    String sourceTemplate = //language=java
+        """
         package {0};
 
         import cbs.dsl.api.DslComponentResolver;
@@ -68,7 +77,7 @@ public class WorkflowCodeGenerator {
         import cbs.dsl.api.TransitionRuleDefinition;
         import cbs.dsl.api.ParameterDefinition;
         {1}        import {2}.{3};
-        {4}{5}        import java.util.Collections;
+        {4}{5}        {19}        import java.util.Collections;
         import java.util.List;
 
         /**
@@ -125,18 +134,7 @@ public class WorkflowCodeGenerator {
 
             @Override
             public DslObject dsl() {
-                return new cbs.dsl.builder.WorkflowDslObject(
-                    getCode(),
-                    getStates(),
-                    getInitial(),
-                    getTerminalStates(),
-                    getTransitions()
-                ) {
-                    @Override
-                    public cbs.dsl.api.WorkflowTypes.WorkflowOutput execute(cbs.dsl.api.WorkflowTypes.WorkflowInput input) {
-                        return {16}.this.execute(input);
-                    }
-                };
+                {16}
             }
         }
         """;
@@ -154,15 +152,15 @@ public class WorkflowCodeGenerator {
         wrapperClassName,
         spec.className(),
         wrapperClassName,
-        wrapperClassName,
-        spec.className(),
-        spec.className(),
         spec.code(),
         simpleName(spec.inputType()),
         inputConversion,
         simpleName(spec.outputType()),
         outputConversion,
-        wrapperClassName);
+        dslBodyOrFallback,             // {16}
+        "",                            // {17} unused
+        "",                            // {18} unused
+        dslImportsBlock);              // {19}
 
     try (PrintWriter writer = new PrintWriter(file.openWriter())) {
       writer.print(source);

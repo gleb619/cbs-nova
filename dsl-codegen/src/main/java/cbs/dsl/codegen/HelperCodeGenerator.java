@@ -1,5 +1,6 @@
 package cbs.dsl.codegen;
 
+import java.text.MessageFormat;
 import lombok.RequiredArgsConstructor;
 
 import javax.annotation.processing.Filer;
@@ -7,7 +8,7 @@ import javax.tools.JavaFileObject;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.text.MessageFormat;
+
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -48,7 +49,8 @@ public class HelperCodeGenerator {
     JavaFileObject file = filer.createSourceFile(fqcn);
     String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
 
-    String sourceTemplate = """
+    String sourceTemplate = //language=java
+        """
         package {0};
 
         import cbs.dsl.api.HelperTypes.HelperInput;
@@ -99,7 +101,15 @@ public class HelperCodeGenerator {
     String outputTypeImport =
         outputIsRuntime ? "" : MessageFormat.format("import {0};\n", spec.outputType());
 
-    String sourceTemplate = """
+    String dslBodyOrFallback = (spec.dslBody() != null && !spec.dslBody().isBlank())
+        ? spec.dslBody()
+        : "return HelperDsl.helper(\"" + spec.code() + "\").build();";
+    String dslImportsBlock = (spec.dslImports() != null && !spec.dslImports().isBlank())
+        ? spec.dslImports().trim() + "\n"
+        : ((spec.dslBody() == null || spec.dslBody().isBlank()) ? "import cbs.dsl.builder.HelperDsl;\n" : "");
+
+    String sourceTemplate = //language=java
+        """
         package {0};
 
         import cbs.dsl.api.DslComponentResolver;
@@ -110,7 +120,7 @@ public class HelperCodeGenerator {
         import {1}.{2};
         {3}        import {4}.{5};
         {6}{7}
-        import java.util.function.Function;
+        {19}        import java.util.function.Function;
 
         /**
          * Generated HelperDefinition wrapper + Activity implementation for {8}.
@@ -153,44 +163,34 @@ public class HelperCodeGenerator {
 
             @Override
             public DslObject dsl() {
-                return new cbs.dsl.builder.HelperDslObject(
-                    getCode(),
-                    getParameters(),
-                    input -> preview(input),
-                    input -> execute(input)
-                );
+                {20}
             }
         }
         """;
 
     String source = MessageFormat.format(
         sourceTemplate,
-        DEFINITIONS_PACKAGE,
-        GENERATED_PACKAGE,
-        activityInterfaceName,
-        jsonPayloadImport,
-        spec.packageName(),
-        spec.className(),
-        inputTypeImport,
-        outputTypeImport,
-        spec.className(),
-        timestamp,
-        wrapperClassName,
-        activityInterfaceName,
-        spec.className(),
-        wrapperClassName,
-        wrapperClassName,
-        spec.className(),
-        spec.className(),
-        spec.code(),
-        simpleName(spec.inputType()),
-        inputConversion,
-        simpleName(spec.outputType()),
-        outputConversion,
-        simpleName(spec.inputType()),
-        inputConversion,
-        simpleName(spec.outputType()),
-        outputConversion);
+        DEFINITIONS_PACKAGE,           // {0}
+        GENERATED_PACKAGE,             // {1}
+        activityInterfaceName,         // {2}
+        jsonPayloadImport,             // {3}
+        spec.packageName(),            // {4}
+        spec.className(),              // {5}
+        inputTypeImport,               // {6}
+        outputTypeImport,              // {7}
+        spec.className(),              // {8}
+        timestamp,                     // {9}
+        wrapperClassName,              // {10}
+        activityInterfaceName,         // {11}
+        spec.className(),              // {12}
+        wrapperClassName,              // {13}
+        spec.code(),                   // {14}
+        simpleName(spec.inputType()),  // {15}
+        inputConversion,               // {16}
+        simpleName(spec.outputType()), // {17}
+        outputConversion,              // {18}
+        dslImportsBlock,               // {19}
+        dslBodyOrFallback);            // {20}
 
     try (PrintWriter writer = new PrintWriter(file.openWriter())) {
       writer.print(source);
