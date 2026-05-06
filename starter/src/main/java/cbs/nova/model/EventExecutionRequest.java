@@ -5,6 +5,8 @@ import lombok.Builder;
 
 import java.util.Map;
 
+//TODO: remove file, instead use another api
+@Deprecated(forRemoval = true)
 @Builder(toBuilder = true)
 public record EventExecutionRequest(
     @NotBlank String workflowCode,

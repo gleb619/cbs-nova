@@ -40,8 +40,8 @@ class EventCodeGeneratorTest {
 
     assertTrue(content.contains("class MyEventDefinition"), "Should contain class name");
     assertTrue(
-        content.contains("implements EventDefinition, MyEventWorkflow"),
-        "Should implement EventDefinition and MyEventWorkflow");
+        content.contains("implements EventDefinition, Evt1Workflow"),
+        "Should implement EventDefinition and Evt1Workflow");
     assertTrue(
         content.contains("return EventDsl.event(\"EVT_1\").build();"),
         "Should contain fallback dsl body");

@@ -1,6 +1,5 @@
 package cbs.dsl.codegen;
 
-import java.text.MessageFormat;
 import lombok.RequiredArgsConstructor;
 
 import javax.annotation.processing.Filer;
@@ -12,6 +11,7 @@ import java.io.PrintWriter;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Domain-oriented generator for {@code @DslComponent(type = MASS_OPERATION)} components.
@@ -45,8 +45,8 @@ public class MassOperationCodeGenerator {
 
     String inputConversion = inputIsRuntime
         ? "input"
-        : MessageFormat.format(
-            "JsonPayload.fromMap(input.params(), {0}.class)", simpleName(spec.inputType()));
+        : Substitutor.format(
+            "JsonPayload.fromMap(input.params(), {{inputType}}.class)", Map.of("inputType", simpleName(spec.inputType())));
 
     String outputConversion = outputIsRuntime
         ? "out"
@@ -54,9 +54,9 @@ public class MassOperationCodeGenerator {
 
     String jsonPayloadImport = inputIsRuntime ? "" : "import cbs.dsl.api.JsonPayload;\n";
     String inputTypeImport =
-        inputIsRuntime ? "" : MessageFormat.format("import {0};\n", spec.inputType());
+        inputIsRuntime ? "" : Substitutor.format("import {{type}};\n", Map.of("type", spec.inputType()));
     String outputTypeImport =
-        outputIsRuntime ? "" : MessageFormat.format("import {0};\n", spec.outputType());
+        outputIsRuntime ? "" : Substitutor.format("import {{type}};\n", Map.of("type", spec.outputType()));
 
     String dslBodyOrFallback = (spec.dslBody() != null && !spec.dslBody().isBlank())
         ? spec.dslBody()
@@ -67,8 +67,8 @@ public class MassOperationCodeGenerator {
 
     String sourceTemplate = //language=java
         """
-        package {0};
-
+        package {{package}};
+        
         import cbs.dsl.api.DslComponentResolver;
         import cbs.dsl.api.DslObject;
         import cbs.dsl.api.LockDefinition;
@@ -79,92 +79,89 @@ public class MassOperationCodeGenerator {
         import cbs.dsl.api.SourceDefinition;
         import cbs.dsl.api.TriggerDefinition;
         import cbs.dsl.api.context.MassOperationContext;
-        {1}        import {2}.{3};
-        {4}{5}        {19}        import java.util.Collections;
+        {{jsonPayloadImport}}        import {{packageName}}.{{className}};
+        {{inputTypeImport}}{{outputTypeImport}}        {{dslImports}}        import java.util.Collections;
         import java.util.List;
         import java.util.function.Consumer;
-
+        import javax.annotation.processing.Generated;
+        
         /**
-         * Generated MassOperationDefinition wrapper for {6}.
+         * Generated MassOperationDefinition wrapper for {{className}}.
          * <strong>WARNING:</strong> Auto-generated — do not edit.
          */
-        @javax.annotation.processing.Generated(
+        @Generated(
             value = "cbs.dsl.codegen.MassOperationCodeGenerator",
-            date = "{7}"
+            date = "{{timestamp}}"
         )
-        public class {8} implements MassOperationDefinition {
-
-            private final {9} function;
-
-            public {10}() {
+        public class {{wrapperClassName}} implements MassOperationDefinition {
+        
+            private final {{className}} function;
+        
+            public {{wrapperClassName}}() {
                 this(null);
             }
-
-            public {10}(DslComponentResolver resolver) {
-                this.function = resolver != null ? resolver.resolve({9}.class) : new {9}();
+        
+            public {{wrapperClassName}}(DslComponentResolver resolver) {
+                this.function = resolver != null ? resolver.resolve({{className}}.class) : new {{className}}();
             }
-
+        
             @Override
             public String getCode() {
-                return "{11}";
+                return "{{code}}";
             }
-
+        
             @Override
             public String getCategory() {
                 return "DEFAULT";
             }
-
+        
             @Override
             public List<TriggerDefinition> getTriggers() {
                 return Collections.emptyList();
             }
-
+        
             @Override
             public SourceDefinition getSource() {
                 return null;
             }
-
+        
             @Override
             public Consumer<MassOperationContext> getItemBlock() {
                 return ctx -> {};
             }
-
+        
             @Override
             public MassOperationOutput execute(MassOperationInput input) {
-                {12} typed = {13};
-                {14} out = function.execute(typed);
-                return {15};
+                {{inputType}} typed = {{inputConversion}};
+                {{outputType}} out = function.execute(typed);
+                return {{outputConversion}};
             }
-
+        
             @Override
             public DslObject dsl() {
-                {16}
+                {{dslBody}}
             }
         }
         """;
 
-    String source = MessageFormat.format(
+    String source = Substitutor.format(
         sourceTemplate,
-        DEFINITIONS_PACKAGE,           // {0}
-        jsonPayloadImport,             // {1}
-        spec.packageName(),            // {2}
-        spec.className(),              // {3}
-        inputTypeImport,               // {4}
-        outputTypeImport,              // {5}
-        spec.className(),              // {6}
-        timestamp,                     // {7}
-        wrapperClassName,              // {8}
-        spec.className(),              // {9}
-        wrapperClassName,              // {10}
-        spec.code(),                   // {11}
-        simpleName(spec.inputType()),  // {12}
-        inputConversion,               // {13}
-        simpleName(spec.outputType()), // {14}
-        outputConversion,              // {15}
-        dslBodyOrFallback,             // {16}
-        "",                            // {17} unused
-        "",                            // {18} unused
-        dslImportsBlock);              // {19}
+        Map.ofEntries(
+            Map.entry("package", DEFINITIONS_PACKAGE),
+            Map.entry("jsonPayloadImport", jsonPayloadImport),
+            Map.entry("packageName", spec.packageName()),
+            Map.entry("className", spec.className()),
+            Map.entry("inputTypeImport", inputTypeImport),
+            Map.entry("outputTypeImport", outputTypeImport),
+            Map.entry("timestamp", timestamp),
+            Map.entry("wrapperClassName", wrapperClassName),
+            Map.entry("code", spec.code()),
+            Map.entry("inputType", simpleName(spec.inputType())),
+            Map.entry("inputConversion", inputConversion),
+            Map.entry("outputType", simpleName(spec.outputType())),
+            Map.entry("outputConversion", outputConversion),
+            Map.entry("dslBody", dslBodyOrFallback),
+            Map.entry("dslImports", dslImportsBlock)));
 
     try (PrintWriter writer = new PrintWriter(file.openWriter())) {
       writer.print(source);

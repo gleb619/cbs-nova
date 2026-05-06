@@ -30,22 +30,14 @@ public class TransactionActivityImpl implements TransactionActivity {
 
   @Override
   public TransactionResult executeTransaction(TransactionActivityInput input) {
-    // 1. Look up transaction definition
     TransactionDefinition txDef = dslRegistry.getTransactions().get(input.transactionCode());
     if (txDef == null) {
       return new TransactionResult(false, "Transaction not found: " + input.transactionCode());
     }
 
-    // 2. Build TransactionInput
-    Map<String, Object> contextMap = parseContextJson(input.contextJson());
-    TransactionInput txnInput = new TransactionInput(
-        contextMap, input.transactionCode(), null, String.valueOf(input.workflowExecutionId()));
+    TransactionInput txnInput = buildTransactionInput(input);
 
-    // 3. Execute preview + execute, with rollback on failure
     try {
-      // TODO: preview must be called in some other method, only to show user possible work option
-      // result
-      // txDef.preview(txnInput);
       txDef.execute(txnInput);
       return new TransactionResult(true, null);
     } catch (Exception e) {
@@ -60,6 +52,29 @@ public class TransactionActivityImpl implements TransactionActivity {
       }
       return new TransactionResult(false, e.getMessage());
     }
+  }
+
+  @Override
+  public TransactionResult previewTransaction(TransactionActivityInput input) {
+    TransactionDefinition txDef = dslRegistry.getTransactions().get(input.transactionCode());
+    if (txDef == null) {
+      return new TransactionResult(false, "Transaction not found: " + input.transactionCode());
+    }
+
+    TransactionInput txnInput = buildTransactionInput(input);
+
+    try {
+      txDef.preview(txnInput);
+      return new TransactionResult(true, null);
+    } catch (Exception e) {
+      return new TransactionResult(false, e.getMessage());
+    }
+  }
+
+  private TransactionInput buildTransactionInput(TransactionActivityInput input) {
+    Map<String, Object> contextMap = parseContextJson(input.contextJson());
+    return new TransactionInput(
+        contextMap, input.transactionCode(), null, String.valueOf(input.workflowExecutionId()));
   }
 
   @SuppressWarnings("unchecked")

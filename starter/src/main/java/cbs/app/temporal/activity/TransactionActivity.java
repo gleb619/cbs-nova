@@ -8,4 +8,7 @@ public interface TransactionActivity {
 
   @ActivityMethod
   TransactionResult executeTransaction(TransactionActivityInput input);
+
+  @ActivityMethod
+  TransactionResult previewTransaction(TransactionActivityInput input);
 }

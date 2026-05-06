@@ -3,37 +3,31 @@ package cbs.nova.sample;
 import cbs.dsl.api.DslComponent;
 import cbs.dsl.api.DslImplType;
 import cbs.dsl.api.HelperFunction;
+import cbs.dsl.api.HelperTypes.HelperInput;
+import cbs.dsl.api.HelperTypes.HelperOutput;
 import cbs.dsl.api.context.HelperContext;
-import cbs.nova.sample.SampleHelper.SampleHelperInput;
-import cbs.nova.sample.SampleHelper.SampleHelperOutput;
 import io.avaje.jsonb.Json;
 
 import java.util.Map;
 
-/** Sample helper for the PoC. Concatenates two string parameters. */
+/**
+ * Sample helper for the PoC. Returns a simple greeting.
+ */
 @DslComponent(code = "SAMPLE_HELPER", type = DslImplType.HELPER)
-public class SampleHelper implements HelperFunction<SampleHelperInput, SampleHelperOutput> {
+public class SampleHelper implements HelperFunction<HelperInput, HelperOutput> {
 
   @Override
-  public HelperContext<SampleHelperOutput> execute(HelperContext<SampleHelperInput> input) {
-    return new SampleHelperOutput(input.someVal() + "!");
+  public HelperContext<HelperOutput> execute(HelperContext<HelperInput> input) {
+    String name = (String) input.payload().params().getOrDefault("name", "World");
+    return input.toBuilder().payload(new HelperOutput(Map.of("greeting", "Hello, " + name + "!"))).build();
   }
 
   @Json
-  public record SampleHelperInput(String someVal) implements HelperArg {
+  public record SampleHelperInput(String name) implements HelperArg {
 
     @Override
     public Map<String, Object> toMap() {
-      return Map.of("someVal", someVal);
-    }
-  }
-
-  @Json
-  public record SampleHelperOutput(String result) implements HelperResult {
-
-    @Override
-    public Map<String, Object> toMap() {
-      return Map.of("result", result);
+      return Map.of("name", name);
     }
   }
 }

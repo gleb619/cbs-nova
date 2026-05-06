@@ -1,6 +1,5 @@
 package cbs.dsl.codegen;
 
-import java.text.MessageFormat;
 import lombok.RequiredArgsConstructor;
 
 import javax.annotation.processing.Filer;
@@ -12,6 +11,7 @@ import java.io.PrintWriter;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Domain-oriented generator for {@code @DslComponent(type = HELPER)} components.
@@ -51,26 +51,30 @@ public class HelperCodeGenerator {
 
     String sourceTemplate = //language=java
         """
-        package {0};
-
+        package {{GENERATED_PACKAGE}};
+        
         import cbs.dsl.api.HelperTypes.HelperInput;
         import cbs.dsl.api.HelperTypes.HelperOutput;
         import io.temporal.activity.ActivityInterface;
         import io.temporal.activity.ActivityMethod;
-
-        @javax.annotation.processing.Generated(
+        import javax.annotation.processing.Generated;
+        
+        @Generated(
             value = "cbs.dsl.codegen.HelperCodeGenerator",
-            date = "{1}"
+            date = "{{timestamp}}"
         )
         @ActivityInterface
-        public interface {2} {
-
+        public interface {{className}} {
+        
             @ActivityMethod
             HelperOutput execute(HelperInput input);
         }
         """;
 
-    String source = formatTemplate(sourceTemplate, GENERATED_PACKAGE, timestamp, className);
+    String source = Substitutor.format(sourceTemplate, Map.ofEntries(
+        Map.entry("GENERATED_PACKAGE", GENERATED_PACKAGE),
+        Map.entry("timestamp", timestamp),
+        Map.entry("className", className)));
 
     try (PrintWriter writer = new PrintWriter(file.openWriter())) {
       writer.print(source);
@@ -89,16 +93,19 @@ public class HelperCodeGenerator {
 
     String inputConversion = inputIsRuntime
         ? "input"
-        : formatTemplate("JsonPayload.fromMap(input.params(), {0}.class)", simpleName(spec.inputType()));
+        : Substitutor.format("JsonPayload.fromMap(input.params(), {{inputType}}.class)",
+            Map.of("inputType", simpleName(spec.inputType())));
 
     String outputConversion = outputIsRuntime ? "out" : "new HelperOutput(JsonPayload.toMap(out))";
 
     String jsonPayloadImport =
         (inputIsRuntime && outputIsRuntime) ? "" : "import cbs.dsl.api.JsonPayload;\n";
     String inputTypeImport =
-        inputIsRuntime ? "" : formatTemplate("import {0};\n", spec.inputType());
+        inputIsRuntime ? "" : Substitutor.format("import {{inputType}};\n",
+            Map.of("inputType", spec.inputType()));
     String outputTypeImport =
-        outputIsRuntime ? "" : formatTemplate("import {0};\n", spec.outputType());
+        outputIsRuntime ? "" : Substitutor.format("import {{outputType}};\n",
+            Map.of("outputType", spec.outputType()));
 
     String dslBodyOrFallback = (spec.dslBody() != null && !spec.dslBody().isBlank())
         ? spec.dslBody()
@@ -109,98 +116,87 @@ public class HelperCodeGenerator {
 
     String sourceTemplate = //language=java
         """
-        package {0};
-
+        package {{DEFINITIONS_PACKAGE}};
+        
         import cbs.dsl.api.DslComponentResolver;
         import cbs.dsl.api.DslObject;
         import cbs.dsl.api.HelperDefinition;
         import cbs.dsl.api.HelperTypes.HelperInput;
         import cbs.dsl.api.HelperTypes.HelperOutput;
-        import {1}.{2};
-        {3}        import {4}.{5};
-        {6}{7}
-        {19}        import java.util.function.Function;
-
+        import {{GENERATED_PACKAGE}}.{{activityInterfaceName}};
+        {{jsonPayloadImport}}        import {{specPackage}}.{{specClass}};
+        {{inputTypeImport}}        {{outputTypeImport}}
+        {{dslImportsBlock}}        import java.util.function.Function;
+        import javax.annotation.processing.Generated;
+        
         /**
-         * Generated HelperDefinition wrapper + Activity implementation for {8}.
+         * Generated HelperDefinition wrapper + Activity implementation for {{specClass}}.
          * <strong>WARNING:</strong> Auto-generated — do not edit.
          */
-        @javax.annotation.processing.Generated(
+        @Generated(
             value = "cbs.dsl.codegen.HelperCodeGenerator",
-            date = "{9}"
+            date = "{{timestamp}}"
         )
-        public class {10} implements HelperDefinition, {11} {
-
-            private final {12} function;
-
-            public {13}() {
+        public class {{wrapperClass}} implements HelperDefinition, {{activityInterfaceName}} {
+        
+            private final {{specClass}} function;
+        
+            public {{wrapperClass}}() {
                 this(null);
             }
-
-            public {13}(DslComponentResolver resolver) {
-                this.function = resolver != null ? resolver.resolve({12}.class) : new {12}();
+        
+            public {{wrapperClass}}(DslComponentResolver resolver) {
+                this.function = resolver != null ? resolver.resolve({{specClass}}.class) : new {{specClass}}();
             }
-
+        
             @Override
             public String getCode() {
-                return "{14}";
+                return "{{code}}";
             }
-
+        
             @Override
             public HelperOutput preview(HelperInput input) {
-                {15} typed = {16};
-                {17} out = function.preview(typed);
-                return {18};
+                {{inputTypeName}} typed = {{inputConversion}};
+                {{outputTypeName}} out = function.preview(typed);
+                return {{outputConversion}};
             }
-
+        
             @Override
             public HelperOutput execute(HelperInput input) {
-                {15} typed = {16};
-                {17} out = function.execute(typed);
-                return {18};
+                {{inputTypeName}} typed = {{inputConversion}};
+                {{outputTypeName}} out = function.execute(typed);
+                return {{outputConversion}};
             }
-
+        
             @Override
             public DslObject dsl() {
-                {20}
+                {{dslBody}}
             }
         }
         """;
 
-    String source = formatTemplate(sourceTemplate,
-        DEFINITIONS_PACKAGE,           // {0}
-        GENERATED_PACKAGE,             // {1}
-        activityInterfaceName,         // {2}
-        jsonPayloadImport,             // {3}
-        spec.packageName(),            // {4}
-        spec.className(),              // {5}
-        inputTypeImport,               // {6}
-        outputTypeImport,              // {7}
-        spec.className(),              // {8}
-        timestamp,                     // {9}
-        wrapperClassName,              // {10}
-        activityInterfaceName,         // {11}
-        spec.className(),              // {12}
-        wrapperClassName,              // {13}
-        spec.code(),                   // {14}
-        simpleName(spec.inputType()),  // {15}
-        inputConversion,               // {16}
-        simpleName(spec.outputType()), // {17}
-        outputConversion,              // {18}
-        dslImportsBlock,               // {19}
-        dslBodyOrFallback);            // {20}
+    String source = Substitutor.format(sourceTemplate, Map.ofEntries(
+        Map.entry("DEFINITIONS_PACKAGE", DEFINITIONS_PACKAGE),
+        Map.entry("GENERATED_PACKAGE", GENERATED_PACKAGE),
+        Map.entry("activityInterfaceName", activityInterfaceName),
+        Map.entry("jsonPayloadImport", jsonPayloadImport),
+        Map.entry("specPackage", spec.packageName()),
+        Map.entry("specClass", spec.className()),
+        Map.entry("inputTypeImport", inputTypeImport),
+        Map.entry("outputTypeImport", outputTypeImport),
+        Map.entry("dslImportsBlock", dslImportsBlock),
+        Map.entry("timestamp", timestamp),
+        Map.entry("wrapperClass", wrapperClassName),
+        Map.entry("code", spec.code()),
+        Map.entry("inputTypeName", simpleName(spec.inputType())),
+        Map.entry("inputConversion", inputConversion),
+        Map.entry("outputTypeName", simpleName(spec.outputType())),
+        Map.entry("outputConversion", outputConversion),
+        Map.entry("dslBody", dslBodyOrFallback)));
 
     try (PrintWriter writer = new PrintWriter(file.openWriter())) {
       writer.print(source);
     }
-  }
-
-  private static String formatTemplate(String template, Object... args) {
-    String result = template;
-    for (int i = args.length - 1; i >= 0; i--) {
-      result = result.replace("{" + i + "}", String.valueOf(args[i]));
-    }
-    return result;
   }
 
   private static String simpleName(String fullyQualifiedName) {

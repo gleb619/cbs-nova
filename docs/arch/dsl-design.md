@@ -146,17 +146,19 @@ Transactions are units of work with `preview()`, `execute()`, and `rollback()` p
 public class DebitFundingAccountTransaction
     implements TransactionFunction<DebitInput, DebitOutput> {
 
-    @Override public DebitOutput preview(DebitInput input) { ... }
+    @Override public TransactionContext<DebitOutput> preview(TransactionContext<DebitInput> ctx) { ... }
 
-    @Override public DebitOutput execute(DebitInput input) {
+    @Override public TransactionContext<DebitOutput> execute(TransactionContext<DebitInput> ctx) {
         var result = AppContext.resolve(DebitFundingAccountService.class)
             .debit(input.accountCode(), input.amount(), input.currency());
+        //TODO: fix next line
         return new DebitOutput(result);
     }
 
-    @Override public DebitOutput rollback(DebitInput input) {
+    @Override public TransactionContext<DebitOutput> rollback(TransactionContext<DebitInput> ctx) {
         AppContext.resolve(DebitFundingAccountService.class)
             .postCompensatingEntry(input.txId(), true);
+        //TODO: fix next line
         return new DebitOutput(Map.of("compensated", true));
     }
 }
@@ -209,7 +211,8 @@ Helpers are `HelperFunction<I, O>` called via `ctx.helper("NAME", Map.of(...))` 
 public class LoanConditionsHelper
     implements HelperFunction<LoanConditionsInput, LoanConditionsOutput> {
 
-    @Override public LoanConditionsOutput execute(LoanConditionsInput input) {
+    @Override public HelperContext<LoanConditionsOutput> execute(HelperContext<LoanConditionsInput> ctx) {
+        //TODO: fix next line
         return new LoanConditionsOutput(Map.of("loanId", input.loanId(), "currency", "USD"));
     }
 }
@@ -255,9 +258,10 @@ helpers()
 public class BorrowerAccountReadyCondition
     implements ConditionFunction<BorrowerAccountInput, BorrowerAccountOutput> {
 
-    @Override public BorrowerAccountOutput evaluate(BorrowerAccountInput input) {
+    @Override public ConditionContext<BorrowerAccountOutput> evaluate(ConditionContext<BorrowerAccountInput> ctx) {
         var account = (Map<?,?>) ctx.helper("FIND_BANK_ACCOUNT",
             Map.of("iban", input.accountCode()));
+        //TODO: fix next line
         return new BorrowerAccountOutput(account != null && "ACTIVE".equals(account.get("status")));
     }
 }
@@ -293,6 +297,8 @@ condition("BORROWER_ACCOUNT_READY", ctx -> {
 ---
 
 ## Function Interface Reference
+
+//TODO: Fix next table, due new changes, we added *Context to executable methods
 
 | `*Function` Interface         | Generated `*Definition`   | Method(s)                                 |
 |-------------------------------|---------------------------|-------------------------------------------|

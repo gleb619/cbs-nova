@@ -16,14 +16,6 @@ The generator produces an **intermediate layer** — a set of Temporal `Workflow
 2. Wraps BA-authored DSL orchestration rules (event sequencing, state transitions, conditions).
 3. Delegates to the actual business implementation without embedding framework concerns inside it.
 
-This follows the **Bridge / Adapter / Composite** pattern family:
-
-| Pattern       | Role in CBS-Nova                                                                                                                                                                              |
-|---------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Bridge**    | Decouples the DSL abstraction (`EventDefinition`, `TransactionDefinition`) from the Temporal platform implementation. Both can evolve independently.                                          |
-| **Adapter**   | Generated `*ActivityImpl` classes adapt the DSL type system (`TransactionInput` / `TransactionOutput`) to the developer's typed records, performing JSON ↔ POJO conversion via `JsonPayload`. |
-| **Composite** | Generated `*EventWorkflow` classes compose multiple transactions, helpers, and conditions into a single Temporal workflow without hard-coding the composition in business logic.              |
-
 ---
 
 ### 13.2 Three-Layer Generation Pipeline
@@ -67,9 +59,9 @@ For every DSL component discovered at compile time, the following classes are ge
 
 #### 13.3.1 Transaction → Activity Bridge
 
-| Generated Class                | Type                    | Purpose                                                                                                                                                                                 |
-|----------------------|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `{Code}Activity`     | `@ActivityInterface`    | Temporal contract. One `@ActivityMethod` named `execute`.                                                                                                                               |
+| Generated Class               | Type                       | Purpose                                                                                                                                                                                                                                                                          |
+|-------------------------------|----------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `{Code}Activity`              | `@ActivityInterface`       | Temporal contract. One `@ActivityMethod` named `execute`.                                                                                                                                                                                                                        |
 | `{Code}TransactionDefinition` | Definition + Activity impl | **Adapter:** implements both `TransactionDefinition` and `{Code}Activity`. Receives generic `TransactionInput`, converts to developer's typed input via `JsonPayload`, invokes the `@DslComponent` bean, converts output back to `TransactionOutput`. Hosts the DSL via `dsl()`. |
 
 Example mapping for a transaction coded `KYC_CHECK`:
@@ -79,39 +71,49 @@ Example mapping for a transaction coded `KYC_CHECK`:
 @DslComponent(code = "KYC_CHECK", type = DslImplType.TRANSACTION)
 public class KycCheckTransaction implements TransactionFunction<KycCheckInput, KycCheckOutput> {
     @Override
-    public KycCheckOutput execute(KycCheckInput input) { ... }
+    public TransactionContext<KycCheckOutput> execute(TransactionContext<KycCheckInput> ctx) { ... }
 }
 
 // Layer 3 generates this — purely infrastructure, no business logic
 @ActivityInterface
 public interface KycCheckActivity {
     @ActivityMethod
-    TransactionOutput execute(TransactionInput input);
+    TransactionContext<TransactionOutput> execute(TransactionContext<TransactionInput> ctx);
 }
 
 public class KycCheckTransactionDefinition implements TransactionDefinition, KycCheckActivity {
+
     private final KycCheckTransaction function;
 
     public KycCheckTransactionDefinition(DslComponentResolver resolver) {
-        this.function = resolver != null ? resolver.resolve(KycCheckTransaction.class) : new KycCheckTransaction();
+        //TODO: old way
+        //this.function = resolver != null ? resolver.resolve(KycCheckTransaction.class) : new KycCheckTransaction();
+        //TODO: new way
+        this.function = resolver.resolve(KycCheckTransaction.class);
     }
 
     @Override
     public String getCode() { return "KYC_CHECK"; }
 
     @Override
-    public TransactionOutput execute(TransactionInput input) {
+    public TransactionContext<TransactionOutput> execute(TransactionContext<TransactionInput> input) {
+        TransactionInput input = ctx.payload();
         KycCheckInput typed = JsonPayload.fromMap(input.params(), KycCheckInput.class);
         KycCheckOutput out = function.execute(typed);
+
+        //TODO: we need to merge here dsl/transactionEvaluator/KycCheckTransaction call
+
         return new TransactionOutput(JsonPayload.toMap(out));
     }
 
     @Override
     public DslObject dsl() {
-        return this;
+        //TODO: Use `ParsedDsl` from `DslCompiler` and set whole dsl here
     }
 }
 ```
+
+//TODO: dsl for transacitons used for override/overload features, but sometimes we want create dsl for transaction but still call it from an event dsl. For this cases we need to create another codeGenerator to create Definition for transactions without dsl. They worked as is, a direct call.
 
 The activity is never invoked directly by application code. It is called by the **generated workflow**
 inside a `TransactionsScope.step(...)` block (see §13.3.3). The `dsl()` method exposes the original DSL
@@ -125,6 +127,9 @@ Helpers follow the same adapter pattern as transactions but use `HelperInput` / 
 They are typically invoked from the `context {}` block of an event, although they may also appear inside
 `transactions {}` when a transaction needs pre-flight data.
 
+//TODO: Redo next table, only Events/Transactions will have a temporal support, other entities not. Events become a temporal workflow, a transactions become a temporal activities.
+//TODO: Helpers doesnt got a support of temporal at all, thewy just a simple code to evaluate.
+
 | Generated Class          | Type                       | Purpose                                                                                                                                               |
 |--------------------------|----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `{Code}Activity`         | `@ActivityInterface`       | Temporal contract for helper execution.                                                                                                               |
@@ -137,39 +142,10 @@ Consider a helper that fetches an exchange rate:
 @DslComponent(code = "GET_EXCHANGE_RATE", type = DslImplType.HELPER)
 public class GetExchangeRateHelper implements HelperFunction<RateInput, RateOutput> {
     @Override
-    public RateOutput execute(RateInput input) { ... }
+    public HelperContext<RateOutput> execute(HelperContext<RateInput> input) { ... }
 }
 
-// Generated activity
-@ActivityInterface
-public interface GetExchangeRateActivity {
-    @ActivityMethod
-    HelperOutput execute(HelperInput input);
-}
-
-public class GetExchangeRateHelperDefinition implements HelperDefinition, GetExchangeRateActivity {
-    private final GetExchangeRateHelper function;
-
-    public GetExchangeRateHelperDefinition(DslComponentResolver resolver) {
-        this.function = resolver != null ? resolver.resolve(GetExchangeRateHelper.class) : new GetExchangeRateHelper();
-    }
-
-    @Override
-    public String getCode() { return "GET_EXCHANGE_RATE"; }
-
-    @Override
-    public HelperOutput execute(HelperInput input) {
-        RateInput typed = JsonPayload.fromMap(input.params(), RateInput.class);
-        RateOutput out = function.execute(typed);
-        return new HelperOutput(JsonPayload.toMap(out));
-    }
-
-    @Override
-    public DslObject dsl() {
-        return this;
-    }
-}
-```
+//TODO add here generated definition here, without any temporal stuff
 
 **Helper invocation from a `context` block**
 
@@ -185,6 +161,8 @@ EventDsl.event("LOAN_DISBURSEMENT")
     })
     ...
 ```
+
+//TODO: work here too, due new changes, next block is outdated
 
 The generator copies the lambda body into the generated workflow. At runtime `ctx` is backed by
 `TemporalEnrichmentContext`, which routes `ctx.helper(...)` to the generated activity stub:
@@ -207,12 +185,14 @@ private Map<String, Object> evaluateContext(EventWorkflowRequest request) {
 
 #### 13.3.3 Event → Workflow Bridge
 
-Events become Temporal **Workflows** because they orchestrate multiple activities (transactions, helpers, conditions)
-and must survive process restarts.
+Events become Temporal **Workflows** because they orchestrate multiple activities (transactions), transactions itself must do business(call helpers, evaluate conditions)
+and must survive process restarts. So if app will crash, temporal restore state, and continue execution. The code generated code must fit requirement of deterministic execution of helpers/conditions.
 
 The key insight of the CBS-Nova generator is that **the DSL itself is executable Java code**.  The BA writes
 `.java` files containing lambdas (`context {}`, `transactions {}`, `finish {}`).  These lambdas are
 **re-used in two modes**:
+
+//TODO: Check again that block, that Context exists, and we have interfaces for them
 
 | Mode                | When it runs    | `ctx` / `scope` implementation | Purpose                                                                                |
 |---------------------|-----------------|--------------------------------|----------------------------------------------------------------------------------------|
@@ -222,6 +202,8 @@ The key insight of the CBS-Nova generator is that **the DSL itself is executable
 Because the lambda body is pure Java that only invokes methods on `ctx` or `scope`, the **same source text**
 can be copied into the generated workflow class unchanged.  Only the backing implementation of the
 context/scope object differs.
+
+//TODO: We thought to create one interface and two different contexts, for compile time they just register execution to understand what will be called. In runtime another impl that really call business logic. It similar to mickot how it handle it's proxies, and verify that action was performed.
 
 **BA-authored DSL**
 
@@ -252,7 +234,7 @@ hosts the DSL via `dsl()` and also implements the Temporal workflow contract.
 @WorkflowInterface
 public interface LoanDisbursementWorkflow {
     @WorkflowMethod(name = "LOAN_DISBURSEMENT")
-    EventResult execute(EventInput input);
+    EventContext<EventResult> execute(EventContext<EventInput> ctx);
 }
 
 // Generated — do not edit
@@ -278,17 +260,13 @@ public class LoanDisbursementEventDefinition implements EventDefinition, LoanDis
     public String getCode() { return "LOAN_DISBURSEMENT"; }
 
     @Override
-    public EventOutput execute(EventInput input) { ... }
+    public EventContext<EventOutput> execute(EventContext<EventInput> ctx) { ... }
 
     @Override
     public DslObject dsl() {
-        return this;
+      //TODO: Use `ParsedDsl` from `DslCompiler` and set whole dsl here
     }
 
-    @Override
-    public WorkflowExecutionResponse execute(EventWorkflowRequest input) {
-        return orchestrator.execute(input, Collections.emptyList());
-    }
 }
 ```
 
@@ -305,6 +283,8 @@ This is critical for matching the original BA-authored configuration when runnin
 or previews.
 
 **Design notes**
+
+//TODO: next block is out of date, changes needd based on real code
 
 * `TemporalTransactionsScope` implements `TransactionsScope`. Its `step(...)` overloads accept
   lambdas that invoke activity stubs and return a `StepHandle` backed by a `Promise`.  `await(...)`
@@ -324,7 +304,7 @@ or previews.
 Layer 1 generates `*Definition` wrappers that implement the `dsl-api` contract interfaces
 (`TransactionDefinition`, `HelperDefinition`, `EventDefinition`, `WorkflowDefinition`,
 `ConditionDefinition`, `MassOperationDefinition`).  These wrappers are **not** Temporal-aware
-by themselves, but for transactions, helpers, and events they also implement the Temporal
+by themselves, but for transactions, and events they also implement the Temporal
 activity/workflow interface so that the definition class **is** the bridge implementation.
 
 All generated wrappers expose the original DSL blocks via `dsl()`, returning `DslObject`.
@@ -351,7 +331,8 @@ public class KycCheckTransactionDefinition implements TransactionDefinition, Kyc
     }
 
     @Override
-    public TransactionOutput execute(TransactionInput input) {
+    public TransactionContext<TransactionOutput> execute(TransactionContext<TransactionInput> ctx) {
+        TransactionInput input = ctx.payload()
         KycCheckInput typed = JsonPayload.fromMap(input.params(), KycCheckInput.class);
         KycCheckOutput out = function.execute(typed);
         return new TransactionOutput(JsonPayload.toMap(out));
@@ -359,8 +340,7 @@ public class KycCheckTransactionDefinition implements TransactionDefinition, Kyc
 
     @Override
     public DslObject dsl() {
-        //this is tottaly wrong, you can't just return itself
-        return this;
+      //TODO: Use `ParsedDsl` from `DslCompiler` and set whole dsl here
     }
 
     // ... preview(), rollback(), getCode()
@@ -372,11 +352,11 @@ public class KycCheckTransactionDefinition implements TransactionDefinition, Kyc
 The `@DslComponent` annotation has a `componentModel()` attribute that controls how the wrapper
 obtains the component instance at runtime:
 
-| Model  | Compile-time behaviour | Runtime behaviour |
-|--------|------------------------|-------------------|
-| `SIMPLE` | Annotation processor records `SIMPLE`. | Wrapper calls `new KycCheckTransaction()`. |
-| `SPRING` | Annotation processor records `SPRING`. | Wrapper delegates to `DslComponentResolver.resolve(KycCheckTransaction.class)`. |
-| `AUTO` (default) | Processor inspects the class for any `org.springframework.*` annotation. If found, resolves to `SPRING`; otherwise `SIMPLE`. | Same as the resolved model. |
+| Model            | Compile-time behaviour                                                                                                       | Runtime behaviour                                                               |
+|------------------|------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------|
+| `SIMPLE`         | Annotation processor records `SIMPLE`.                                                                                       | Wrapper calls `new KycCheckTransaction()`.                                      |
+| `SPRING`         | Annotation processor records `SPRING`.                                                                                       | Wrapper delegates to `DslComponentResolver.resolve(KycCheckTransaction.class)`. |
+| `AUTO` (default) | Processor inspects the class for any `org.springframework.*` annotation. If found, resolves to `SPRING`; otherwise `SIMPLE`. | Same as the resolved model.                                                     |
 
 `AUTO` means the developer does **not** need to think about `componentModel` for the common
 case: a plain POJO gets `SIMPLE`, a `@Service` or `@Component` gets `SPRING`.
@@ -417,14 +397,14 @@ HTTP POST /api/events/execute
 EventController
     │
     ▼
-EventService.execute(eventCode, input)
+EventService.execute(eventCode, ctx)
     │      1. Create workflow_execution / event_execution rows
     │      2. Delegate execution to EventRunner
     ▼
-EventRunner.run(eventCode, input)
+EventRunner.run(eventCode, ctx)
     │      lookup ExecutableEvent in EventRegistry by code
     ▼
-ExecutableEvent.execute(input)
+ExecutableEvent.execute(ctx)
     │      ├─ GENERATED mode: Temporal workflow (LoanDisbursementEventWorkflow)
     │      └─ REFLECTED mode: direct in-memory execution
     ▼
@@ -432,10 +412,10 @@ Generated workflow / reflective wrapper
     │      ├─ evaluateContext()  → calls HelperActivity stub → HelperRunner
     │      └─ executeTransactions() → calls TransactionActivity stub → TransactionRunner
     ▼
-TransactionRunner.run("KYC_CHECK", input)
+TransactionRunner.run("KYC_CHECK", ctx)
     │      lookup ExecutableTransaction in TransactionRegistry
     ▼
-ExecutableTransaction.execute(typedInput)
+ExecutableTransaction.execute(ctx)
     │      JSON → typed POJO adaptation
     ▼
 Developer-written @DslComponent class.execute(typedInput)
@@ -481,9 +461,11 @@ from the generated registry, then invoke it.
 public class TransactionRunner {
     private final TransactionRegistry registry;
 
-    public TransactionOutput run(String code, TransactionInput input) {
+    //TODO: we need to add some interfaces with @FunctionalInterface thing, to persistence servi9ces install some kind of listeners/interceptors to persist data to db(input/output/logs)
+    public TransactionOutput run(String code, TransactionContext<TransactionInput> ctx) {
         ExecutableTransaction executable = registry.resolve(code);
-        return executable.execute(input);
+        //TODO: it's only a concept, real implementation can be different
+        return executable.execute(ctx.payload());
     }
 }
 ```
@@ -508,13 +490,17 @@ public class EventService {
     private final WorkflowExecutionRepository workflowRepo;
     private final EventExecutionRepository eventRepo;
 
-    public EventResult execute(String eventCode, EventInput input) {
+    //TODO: to create ctx we need a `dsl-api/src/main/java/cbs/dsl/evaluator/ContextCreator.java`
+    public EventResult execute(String eventCode, EventContext<EventInput> ctx) {
         // 1. Persist execution shell
-        WorkflowExecution wf = workflowRepo.create(eventCode, input);
-        EventExecution ev = eventRepo.create(wf.getId(), eventCode, input);
+        WorkflowExecution wf = workflowRepo.create(eventCode, ctx);
+        EventExecution ev = eventRepo.create(wf.getId(), eventCode, ctx);
+        //TODO: add here some listeners/interceptors to context object
 
         // 2. Run (delegate to runner — no Temporal or DB logic here)
-        EventResult result = eventRunner.run(eventCode, input);
+        EventContext<EventResult> result = eventRunner.run(eventCode, ctx);
+
+        //TODO: we need to add a async support by default(a temporal promises for generated flow, and completable future for reflective)
 
         // 3. Persist result and status
         ev.setResult(result);
@@ -529,11 +515,11 @@ public class EventService {
 Because service and runner share the same execution contract, switching between them is transparent:
 
 ```java
-// QA unit test — no DB, no Temporal
-EventResult r = eventRunner.run("LOAN_DISBURSEMENT", input);
+// QA unit test — no DB, no Temporal, for a dry-run check
+EventContext<EventResult> r = eventRunner.run("LOAN_DISBURSEMENT", ctx);
 
 // Production endpoint — full audit trail
-EventResult r = eventService.execute("LOAN_DISBURSEMENT", input);
+EventContext<EventResult> r = eventService.execute("LOAN_DISBURSEMENT", ctx);
 ```
 
 The same split applies to every component kind:
@@ -550,6 +536,8 @@ The same split applies to every component kind:
 #### Contracts (`Executable*` interfaces)
 
 Code-generated classes must implement a contract so the registry can store them uniformly:
+
+//TODO: we need to check that correspondnet classes exists
 
 | Generated artifact     | Contract interface      | Registry              |
 |------------------------|-------------------------|-----------------------|
@@ -591,7 +579,7 @@ Gradle build → Layer 2 generates EventDefinition
   ▼
 QA / API consumer
   │
-  ├─ Test:  eventRunner.run("LOAN_DISBURSEMENT", input)      → no DB
+  ├─ TestEndpoint:  eventRunner.run("LOAN_DISBURSEMENT", input) → no DB
   └─ Endpoint: eventService.execute("LOAN_DISBURSEMENT", input) → DB records created
 ```
 
@@ -676,7 +664,7 @@ Temporal, while the engine gains retries, queues, sagas, and durable execution f
 ### 13.9 Preview / Dry-Run Execution
 
 Preview is a lightweight, **persistence-free** execution path used by business analysts and QA to
-validate DSL logic before production deployment.  It is intentionally simple:
+validate DSL logic before production deployment. It is intentionally simple:
 
 - **No Layer-3 codegen** — preview runs against `*Definition` instances directly (Layer 1 + 2 only).
 - **No Temporal** — there is no workflow stub, no activity stub, no task queue.
@@ -688,17 +676,19 @@ validate DSL logic before production deployment.  It is intentionally simple:
 
 **Execution chain**
 
+//TODO: Check next chain, read code and actualize flow with runners
+
 ```
 QA / BA / Linter
   |
   v
-EventRunner.preview(eventCode, input)      <-- no DB, no Temporal
+EventRunner.preview(eventCode, ctx)      <-- no DB, no Temporal
   |
   v
 EventRegistry.resolve(eventCode)
   |
   v
-ExecutableEvent.preview(input)
+ExecutableEvent.preview(ctx)
   |
   +- evaluateContext()  -> HelperRunner.preview()  -> HelperRegistry -> ExecutableHelper.preview()
   +- executeTransactions() -> TransactionRunner.preview() -> TransactionRegistry -> ExecutableTransaction.preview()

@@ -1,22 +1,6 @@
 package cbs.dsl.codegen;
 
 import cbs.dsl.api.DslObject;
-import cbs.dsl.api.EventTypes.EventInput;
-import cbs.dsl.api.EventTypes.EventOutput;
-import cbs.dsl.api.MassOperationTypes.MassOperationInput;
-import cbs.dsl.api.MassOperationTypes.MassOperationOutput;
-import cbs.dsl.api.TransactionTypes.TransactionInput;
-import cbs.dsl.api.TransactionTypes.TransactionOutput;
-import cbs.dsl.api.TransitionRuleDefinition;
-import cbs.dsl.api.WorkflowTypes.WorkflowInput;
-import cbs.dsl.api.WorkflowTypes.WorkflowOutput;
-import com.palantir.javapoet.ClassName;
-import com.palantir.javapoet.JavaFile;
-import com.palantir.javapoet.MethodSpec;
-import com.palantir.javapoet.ParameterizedTypeName;
-import com.palantir.javapoet.TypeSpec;
-
-import javax.lang.model.element.Modifier;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -24,12 +8,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
- * Generates Java source files using JavaPoet.
+ * Generates Java source files using text block templates.
  *
  * <p>Two generation modes are supported:
  *
@@ -42,6 +28,193 @@ public final class DslCodeGenerator {
 
   private static final Pattern CLASS_NAME_PATTERN = Pattern.compile("public\\s+class\\s+(\\w+)");
 
+  private static final String WRAPPER_TEMPLATE = //language=java
+      """
+      public class {{className}} {
+          public static void main(String[] args) throws Exception {
+      {{body}}
+          }
+      }
+      """;
+
+  private static final String EVENT_TEMPLATE = //language=java
+      """
+      package cbs.dsl.generated;
+
+      import cbs.dsl.api.EventDefinition;
+      import cbs.dsl.api.EventTypes.EventInput;
+      import cbs.dsl.api.EventTypes.EventOutput;
+      import cbs.dsl.builder.EventDsl;
+      import java.util.Collections;
+
+      public class {{className}} implements EventDefinition {
+
+          @Override
+          public String getCode() {
+              return "{{code}}";
+          }
+
+          @Override
+          public EventOutput execute(EventInput input) {
+              return new EventOutput(Collections.emptyMap(), "SUCCESS");
+          }
+
+          @Override
+          public DslObject dsl() {
+      {{dslMethodBody}}
+          }
+      }
+      """;
+
+  private static final String TRANSACTION_TEMPLATE = //language=java
+      """
+      package cbs.dsl.generated;
+
+      import cbs.dsl.api.TransactionDefinition;
+      import cbs.dsl.api.TransactionTypes.TransactionInput;
+      import cbs.dsl.api.TransactionTypes.TransactionOutput;
+      import cbs.dsl.builder.TransactionDsl;
+
+      public class {{className}} implements TransactionDefinition {
+
+          @Override
+          public String getCode() {
+              return "{{code}}";
+          }
+
+          @Override
+          public TransactionOutput execute(TransactionInput input) {
+              return TransactionOutput.empty();
+          }
+
+          @Override
+          public DslObject dsl() {
+      {{dslMethodBody}}
+          }
+      }
+      """;
+
+  private static final String WORKFLOW_TEMPLATE = //language=java
+      """
+      package cbs.dsl.generated;
+
+      import cbs.dsl.api.WorkflowDefinition;
+      import cbs.dsl.api.WorkflowTypes.WorkflowInput;
+      import cbs.dsl.api.WorkflowTypes.WorkflowOutput;
+      import cbs.dsl.api.TransitionRuleDefinition;
+      import cbs.dsl.builder.WorkflowDsl;
+      import java.util.Collections;
+      import java.util.List;
+
+      public class {{className}} implements WorkflowDefinition {
+
+          @Override
+          public String getCode() {
+              return "{{code}}";
+          }
+
+          @Override
+          public List<String> getStates() {
+              return {{states}};
+          }
+
+          @Override
+          public String getInitial() {
+              return "{{initial}}";
+          }
+
+          @Override
+          public List<String> getTerminalStates() {
+              return {{terminalStates}};
+          }
+
+          @Override
+          public List<TransitionRuleDefinition> getTransitions() {
+              return Collections.emptyList();
+          }
+
+          @Override
+          public WorkflowOutput execute(WorkflowInput input) {
+              return new WorkflowOutput("DONE");
+          }
+
+          @Override
+          public DslObject dsl() {
+      {{dslMethodBody}}
+          }
+      }
+      """;
+
+  private static final String CONDITION_TEMPLATE = //language=java
+      """
+      package cbs.dsl.generated;
+
+      import cbs.dsl.api.ConditionDefinition;
+      import cbs.dsl.builder.ConditionDsl;
+
+      public class {{className}} implements ConditionDefinition {
+
+          @Override
+          public String getCode() {
+              return "{{code}}";
+          }
+
+          @Override
+          public DslObject dsl() {
+      {{dslMethodBody}}
+          }
+      }
+      """;
+
+  private static final String HELPER_TEMPLATE = //language=java
+      """
+      package cbs.dsl.generated;
+
+      import cbs.dsl.api.HelperDefinition;
+      import cbs.dsl.builder.HelperDsl;
+
+      public class {{className}} implements HelperDefinition {
+
+          @Override
+          public String getCode() {
+              return "{{code}}";
+          }
+
+          @Override
+          public DslObject dsl() {
+      {{dslMethodBody}}
+          }
+      }
+      """;
+
+  private static final String MASS_OPERATION_TEMPLATE = //language=java
+      """
+      package cbs.dsl.generated;
+
+      import cbs.dsl.api.MassOperationDefinition;
+      import cbs.dsl.api.MassOperationTypes.MassOperationInput;
+      import cbs.dsl.api.MassOperationTypes.MassOperationOutput;
+      import cbs.dsl.builder.MassOperationDsl;
+
+      public class {{className}} implements MassOperationDefinition {
+
+          @Override
+          public String getCode() {
+              return "{{code}}";
+          }
+
+          @Override
+          public MassOperationOutput execute(MassOperationInput input) {
+              return new MassOperationOutput(0L, 0L, "SUCCESS");
+          }
+
+          @Override
+          public DslObject dsl() {
+      {{dslMethodBody}}
+          }
+      }
+      """;
+
   /**
    * Generates a wrapper class that embeds DSL body code inside a {@code main(String[])} method.
    *
@@ -51,26 +224,15 @@ public final class DslCodeGenerator {
    * @return the complete Java source including imports and wrapper class
    */
   public String generateWrapper(String className, String importBlock, String body) {
-    MethodSpec mainMethod = MethodSpec.methodBuilder("main")
-        .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-        .returns(void.class)
-        .addParameter(String[].class, "args")
-        .addException(Exception.class)
-        .addCode(body)
-        .build();
-
-    TypeSpec wrapperClass = TypeSpec.classBuilder(className)
-        .addModifiers(Modifier.PUBLIC)
-        .addMethod(mainMethod)
-        .build();
-
-    JavaFile javaFile = JavaFile.builder("", wrapperClass).build();
-    String generated = javaFile.toString();
+    String source = Substitutor.format(WRAPPER_TEMPLATE, Map.of(
+        "className", className,
+        "body", indent(body, 8)
+    ));
 
     if (importBlock != null && !importBlock.isBlank()) {
-      return importBlock.trim() + "\n\n" + generated;
+      return importBlock.trim() + "\n\n" + source;
     }
-    return generated;
+    return source;
   }
 
   /**
@@ -86,13 +248,8 @@ public final class DslCodeGenerator {
 
   public void generate(DslObject object, String dslBody, String dslImports, Path outputDir)
       throws IOException {
-    TypeSpec typeSpec = buildTypeSpec(object, dslBody, dslImports);
+    String source = buildSource(object, dslBody);
 
-    JavaFile javaFile = JavaFile.builder("cbs.dsl.generated", typeSpec)
-        .addFileComment("Generated by DslCodeGenerator — do not edit")
-        .build();
-
-    String source = javaFile.toString();
     if (dslImports != null && !dslImports.isBlank()) {
       int packageEnd = source.indexOf("\n\n", source.indexOf("package "));
       if (packageEnd > 0) {
@@ -109,304 +266,143 @@ public final class DslCodeGenerator {
     Files.writeString(outputPath, source);
   }
 
-  private TypeSpec buildTypeSpec(DslObject object, String dslBody, String dslImports) {
+  private String buildSource(DslObject object, String dslBody) {
     Class<?> enclosing = object.getClass().getEnclosingClass();
     String typeName = enclosing != null ? enclosing.getSimpleName() : "";
     String simpleName = object.getClass().getSimpleName();
 
-    return switch (typeName) {
-      case "EventBuilder" -> buildEventTypeSpec(object, dslBody, dslImports);
-      case "TransactionBuilder" -> buildTransactionTypeSpec(object, dslBody, dslImports);
-      case "WorkflowBuilder" -> buildWorkflowTypeSpec(object, dslBody, dslImports);
-      case "ConditionBuilder" -> buildConditionTypeSpec(object, dslBody, dslImports);
-      case "HelperBuilder" -> buildHelperTypeSpec(object, dslBody, dslImports);
-      case "MassOperationBuilder" -> buildMassOperationTypeSpec(object, dslBody, dslImports);
+    String dslMethodBody = buildDslMethodBody(object, dslBody);
+    String code = object.getCode();
+
+    String className = sanitizeClassName(code);
+    String states = "java.util.Collections.emptyList()";
+    String initial = "";
+    String terminalStates = "java.util.Collections.emptyList()";
+
+    String typeSuffix;
+    String template;
+
+    switch (typeName) {
+      case "EventBuilder":
+        typeSuffix = "EventDefinition";
+        template = EVENT_TEMPLATE;
+        break;
+      case "TransactionBuilder":
+        typeSuffix = "TransactionDefinition";
+        template = TRANSACTION_TEMPLATE;
+        break;
+      case "WorkflowBuilder":
+        typeSuffix = "WorkflowDefinition";
+        template = WORKFLOW_TEMPLATE;
+        List<String> wfStates = invokeList(object, "getStates");
+        String wfInitial = invokeString(object, "getInitial");
+        List<String> wfTerminalStates = invokeList(object, "getTerminalStates");
+        states = listOfLiterals(wfStates);
+        initial = wfInitial;
+        terminalStates = listOfLiterals(wfTerminalStates);
+        break;
+      case "ConditionBuilder":
+        typeSuffix = "ConditionDefinition";
+        template = CONDITION_TEMPLATE;
+        break;
+      case "HelperBuilder":
+        typeSuffix = "HelperDefinition";
+        template = HELPER_TEMPLATE;
+        break;
+      case "MassOperationBuilder":
+        typeSuffix = "MassOperationDefinition";
+        template = MASS_OPERATION_TEMPLATE;
+        break;
+      default:
+        switch (simpleName) {
+          case "EventDslObject":
+            typeSuffix = "EventDefinition";
+            template = EVENT_TEMPLATE;
+            break;
+          case "TransactionDslObject":
+            typeSuffix = "TransactionDefinition";
+            template = TRANSACTION_TEMPLATE;
+            break;
+          case "WorkflowDslObject":
+            typeSuffix = "WorkflowDefinition";
+            template = WORKFLOW_TEMPLATE;
+            List<String> wfdStates = invokeList(object, "getStates");
+            String wfdInitial = invokeString(object, "getInitial");
+            List<String> wfdTerminalStates = invokeList(object, "getTerminalStates");
+            states = listOfLiterals(wfdStates);
+            initial = wfdInitial;
+            terminalStates = listOfLiterals(wfdTerminalStates);
+            break;
+          case "ConditionDslObject":
+            typeSuffix = "ConditionDefinition";
+            template = CONDITION_TEMPLATE;
+            break;
+          case "HelperDslObject":
+            typeSuffix = "HelperDefinition";
+            template = HELPER_TEMPLATE;
+            break;
+          case "MassOperationDslObject":
+            typeSuffix = "MassOperationDefinition";
+            template = MASS_OPERATION_TEMPLATE;
+            break;
+          default:
+            throw new IllegalArgumentException(
+                "Unsupported builder type: %s / %s".formatted(typeName, simpleName));
+        }
+    }
+
+    Map<String, String> params = Map.of(
+        "className", className + typeSuffix,
+        "code", code,
+        "dslMethodBody", dslMethodBody,
+        "states", states,
+        "initial", initial,
+        "terminalStates", terminalStates
+    );
+
+    return Substitutor.format(template, params);
+  }
+
+  private String buildDslMethodBody(DslObject object, String dslBody) {
+    if (dslBody != null && !dslBody.isBlank()) {
+      return indent(dslBody.trim(), 14) + "\n";
+    }
+
+    Class<?> enclosing = object.getClass().getEnclosingClass();
+    String typeName = enclosing != null ? enclosing.getSimpleName() : "";
+    String simpleName = object.getClass().getSimpleName();
+    String code = object.getCode();
+
+    String dslBuilder = switch (typeName) {
+      case "EventBuilder" -> "EventDsl";
+      case "TransactionBuilder" -> "TransactionDsl";
+      case "WorkflowBuilder" -> "WorkflowDsl";
+      case "ConditionBuilder" -> "ConditionDsl";
+      case "HelperBuilder" -> "HelperDsl";
+      case "MassOperationBuilder" -> "MassOperationDsl";
       default ->
         switch (simpleName) {
-          case "EventDslObject" -> buildEventTypeSpec(object, dslBody, dslImports);
-          case "TransactionDslObject" -> buildTransactionTypeSpec(object, dslBody, dslImports);
-          case "WorkflowDslObject" -> buildWorkflowTypeSpec(object, dslBody, dslImports);
-          case "ConditionDslObject" -> buildConditionTypeSpec(object, dslBody, dslImports);
-          case "HelperDslObject" -> buildHelperTypeSpec(object, dslBody, dslImports);
-          case "MassOperationDslObject" -> buildMassOperationTypeSpec(object, dslBody, dslImports);
-          default ->
-            throw new IllegalArgumentException(
-                "Unsupported builder type: " + typeName + " / " + simpleName);
+          case "EventDslObject" -> "EventDsl";
+          case "TransactionDslObject" -> "TransactionDsl";
+          case "WorkflowDslObject" -> "WorkflowDsl";
+          case "ConditionDslObject" -> "ConditionDsl";
+          case "HelperDslObject" -> "HelperDsl";
+          case "MassOperationDslObject" -> "MassOperationDsl";
+          default -> throw new IllegalArgumentException("Unsupported type: %s / %s".formatted(typeName, simpleName));
         };
     };
-  }
 
-  private TypeSpec buildEventTypeSpec(DslObject event, String dslBody, String dslImports) {
-    String className = sanitizeClassName(event.getCode()) + "EventDefinition";
-    String code = event.getCode();
-
-    MethodSpec getCodeMethod = MethodSpec.methodBuilder("getCode")
-        .addAnnotation(Override.class)
-        .addModifiers(Modifier.PUBLIC)
-        .returns(String.class)
-        .addStatement("return $S", code)
-        .build();
-
-    MethodSpec executeMethod = MethodSpec.methodBuilder("execute")
-        .addAnnotation(Override.class)
-        .addModifiers(Modifier.PUBLIC)
-        .returns(EventOutput.class)
-        .addParameter(EventInput.class, "input")
-        .addStatement(
-            "return new $T($T.emptyMap(), $S)", EventOutput.class, Collections.class, "SUCCESS")
-        .build();
-
-    MethodSpec.Builder dslMethodBuilder = MethodSpec.methodBuilder("dsl")
-        .addAnnotation(Override.class)
-        .addModifiers(Modifier.PUBLIC)
-        .returns(DslObject.class);
-    if (dslBody != null && !dslBody.isBlank()) {
-      dslMethodBuilder.addCode(dslBody.trim() + "\n");
-    } else {
-      dslMethodBuilder.addStatement(
-          "return $T.event($S).build()", ClassName.get("cbs.dsl.builder", "EventDsl"), code);
-    }
-    MethodSpec dslMethod = dslMethodBuilder.build();
-
-    return TypeSpec.classBuilder(className)
-        .addModifiers(Modifier.PUBLIC)
-        .addSuperinterface(ClassName.get("cbs.dsl.api", "EventDefinition"))
-        .addMethod(getCodeMethod)
-        .addMethod(executeMethod)
-        .addMethod(dslMethod)
-        .build();
-  }
-
-  private TypeSpec buildTransactionTypeSpec(DslObject tx, String dslBody, String dslImports) {
-    String className = sanitizeClassName(tx.getCode()) + "TransactionDefinition";
-    String code = tx.getCode();
-
-    MethodSpec getCodeMethod = MethodSpec.methodBuilder("getCode")
-        .addAnnotation(Override.class)
-        .addModifiers(Modifier.PUBLIC)
-        .returns(String.class)
-        .addStatement("return $S", code)
-        .build();
-
-    MethodSpec executeMethod = MethodSpec.methodBuilder("execute")
-        .addAnnotation(Override.class)
-        .addModifiers(Modifier.PUBLIC)
-        .returns(TransactionOutput.class)
-        .addParameter(TransactionInput.class, "input")
-        .addStatement("return $T.empty()", TransactionOutput.class)
-        .build();
-
-    MethodSpec.Builder dslMethodBuilder = MethodSpec.methodBuilder("dsl")
-        .addAnnotation(Override.class)
-        .addModifiers(Modifier.PUBLIC)
-        .returns(DslObject.class);
-    if (dslBody != null && !dslBody.isBlank()) {
-      dslMethodBuilder.addCode(dslBody.trim() + "\n");
-    } else {
-      dslMethodBuilder.addStatement(
-          "return $T.transaction($S).build()",
-          ClassName.get("cbs.dsl.builder", "TransactionDsl"),
-          code);
-    }
-    MethodSpec dslMethod = dslMethodBuilder.build();
-
-    return TypeSpec.classBuilder(className)
-        .addModifiers(Modifier.PUBLIC)
-        .addSuperinterface(ClassName.get("cbs.dsl.api", "TransactionDefinition"))
-        .addMethod(getCodeMethod)
-        .addMethod(executeMethod)
-        .addMethod(dslMethod)
-        .build();
-  }
-
-  private TypeSpec buildWorkflowTypeSpec(DslObject wf, String dslBody, String dslImports) {
-    String className = sanitizeClassName(wf.getCode()) + "WorkflowDefinition";
-    String code = wf.getCode();
-    List<String> states = invokeList(wf, "getStates");
-    String initial = invokeString(wf, "getInitial");
-    List<String> terminalStates = invokeList(wf, "getTerminalStates");
-
-    MethodSpec getCodeMethod = MethodSpec.methodBuilder("getCode")
-        .addAnnotation(Override.class)
-        .addModifiers(Modifier.PUBLIC)
-        .returns(String.class)
-        .addStatement("return $S", code)
-        .build();
-
-    MethodSpec getStatesMethod = MethodSpec.methodBuilder("getStates")
-        .addAnnotation(Override.class)
-        .addModifiers(Modifier.PUBLIC)
-        .returns(ParameterizedTypeName.get(List.class, String.class))
-        .addStatement("return $L", listOfLiterals(states))
-        .build();
-
-    MethodSpec getInitialMethod = MethodSpec.methodBuilder("getInitial")
-        .addAnnotation(Override.class)
-        .addModifiers(Modifier.PUBLIC)
-        .returns(String.class)
-        .addStatement("return $S", initial)
-        .build();
-
-    MethodSpec getTerminalStatesMethod = MethodSpec.methodBuilder("getTerminalStates")
-        .addAnnotation(Override.class)
-        .addModifiers(Modifier.PUBLIC)
-        .returns(ParameterizedTypeName.get(List.class, String.class))
-        .addStatement("return $L", listOfLiterals(terminalStates))
-        .build();
-
-    MethodSpec getTransitionsMethod = MethodSpec.methodBuilder("getTransitions")
-        .addAnnotation(Override.class)
-        .addModifiers(Modifier.PUBLIC)
-        .returns(ParameterizedTypeName.get(List.class, TransitionRuleDefinition.class))
-        .addStatement("return $T.emptyList()", Collections.class)
-        .build();
-
-    MethodSpec executeMethod = MethodSpec.methodBuilder("execute")
-        .addAnnotation(Override.class)
-        .addModifiers(Modifier.PUBLIC)
-        .returns(WorkflowOutput.class)
-        .addParameter(WorkflowInput.class, "input")
-        .addStatement("return new $T($S)", WorkflowOutput.class, "DONE")
-        .build();
-
-    MethodSpec.Builder dslMethodBuilder = MethodSpec.methodBuilder("dsl")
-        .addAnnotation(Override.class)
-        .addModifiers(Modifier.PUBLIC)
-        .returns(DslObject.class);
-    if (dslBody != null && !dslBody.isBlank()) {
-      dslMethodBuilder.addCode(dslBody.trim() + "\n");
-    } else {
-      dslMethodBuilder.addStatement(
-          "return $T.workflow($S).build()", ClassName.get("cbs.dsl.builder", "WorkflowDsl"), code);
-    }
-    MethodSpec dslMethod = dslMethodBuilder.build();
-
-    return TypeSpec.classBuilder(className)
-        .addModifiers(Modifier.PUBLIC)
-        .addSuperinterface(ClassName.get("cbs.dsl.api", "WorkflowDefinition"))
-        .addMethod(getCodeMethod)
-        .addMethod(getStatesMethod)
-        .addMethod(getInitialMethod)
-        .addMethod(getTerminalStatesMethod)
-        .addMethod(getTransitionsMethod)
-        .addMethod(executeMethod)
-        .addMethod(dslMethod)
-        .build();
-  }
-
-  private TypeSpec buildConditionTypeSpec(DslObject cond, String dslBody, String dslImports) {
-    String className = sanitizeClassName(cond.getCode()) + "ConditionDefinition";
-    String code = cond.getCode();
-
-    MethodSpec getCodeMethod = MethodSpec.methodBuilder("getCode")
-        .addAnnotation(Override.class)
-        .addModifiers(Modifier.PUBLIC)
-        .returns(String.class)
-        .addStatement("return $S", code)
-        .build();
-
-    MethodSpec.Builder dslMethodBuilder = MethodSpec.methodBuilder("dsl")
-        .addAnnotation(Override.class)
-        .addModifiers(Modifier.PUBLIC)
-        .returns(DslObject.class);
-    if (dslBody != null && !dslBody.isBlank()) {
-      dslMethodBuilder.addCode(dslBody.trim() + "\n");
-    } else {
-      dslMethodBuilder.addStatement(
-          "return $T.condition($S).build()",
-          ClassName.get("cbs.dsl.builder", "ConditionDsl"),
-          code);
-    }
-    MethodSpec dslMethod = dslMethodBuilder.build();
-
-    return TypeSpec.classBuilder(className)
-        .addModifiers(Modifier.PUBLIC)
-        .addSuperinterface(ClassName.get("cbs.dsl.api", "ConditionDefinition"))
-        .addMethod(getCodeMethod)
-        .addMethod(dslMethod)
-        .build();
-  }
-
-  private TypeSpec buildHelperTypeSpec(DslObject helper, String dslBody, String dslImports) {
-    String className = sanitizeClassName(helper.getCode()) + "HelperDefinition";
-    String code = helper.getCode();
-
-    MethodSpec getCodeMethod = MethodSpec.methodBuilder("getCode")
-        .addAnnotation(Override.class)
-        .addModifiers(Modifier.PUBLIC)
-        .returns(String.class)
-        .addStatement("return $S", code)
-        .build();
-
-    MethodSpec.Builder dslMethodBuilder = MethodSpec.methodBuilder("dsl")
-        .addAnnotation(Override.class)
-        .addModifiers(Modifier.PUBLIC)
-        .returns(DslObject.class);
-    if (dslBody != null && !dslBody.isBlank()) {
-      dslMethodBuilder.addCode(dslBody.trim() + "\n");
-    } else {
-      dslMethodBuilder.addStatement(
-          "return $T.helper($S).build()", ClassName.get("cbs.dsl.builder", "HelperDsl"), code);
-    }
-    MethodSpec dslMethod = dslMethodBuilder.build();
-
-    return TypeSpec.classBuilder(className)
-        .addModifiers(Modifier.PUBLIC)
-        .addSuperinterface(ClassName.get("cbs.dsl.api", "HelperDefinition"))
-        .addMethod(getCodeMethod)
-        .addMethod(dslMethod)
-        .build();
-  }
-
-  private TypeSpec buildMassOperationTypeSpec(DslObject mo, String dslBody, String dslImports) {
-    String className = sanitizeClassName(mo.getCode()) + "MassOperationDefinition";
-    String code = mo.getCode();
-
-    MethodSpec getCodeMethod = MethodSpec.methodBuilder("getCode")
-        .addAnnotation(Override.class)
-        .addModifiers(Modifier.PUBLIC)
-        .returns(String.class)
-        .addStatement("return $S", code)
-        .build();
-
-    MethodSpec executeMethod = MethodSpec.methodBuilder("execute")
-        .addAnnotation(Override.class)
-        .addModifiers(Modifier.PUBLIC)
-        .returns(MassOperationOutput.class)
-        .addParameter(MassOperationInput.class, "input")
-        .addStatement("return new $T(0L, 0L, $S)", MassOperationOutput.class, "SUCCESS")
-        .build();
-
-    MethodSpec.Builder dslMethodBuilder = MethodSpec.methodBuilder("dsl")
-        .addAnnotation(Override.class)
-        .addModifiers(Modifier.PUBLIC)
-        .returns(DslObject.class);
-    if (dslBody != null && !dslBody.isBlank()) {
-      dslMethodBuilder.addCode(dslBody.trim() + "\n");
-    } else {
-      dslMethodBuilder.addStatement(
-          "return $T.massOperation($S).build()",
-          ClassName.get("cbs.dsl.builder", "MassOperationDsl"),
-          code);
-    }
-    MethodSpec dslMethod = dslMethodBuilder.build();
-
-    return TypeSpec.classBuilder(className)
-        .addModifiers(Modifier.PUBLIC)
-        .addSuperinterface(ClassName.get("cbs.dsl.api", "MassOperationDefinition"))
-        .addMethod(getCodeMethod)
-        .addMethod(executeMethod)
-        .addMethod(dslMethod)
-        .build();
+    String body = String.format("return %s.%s(\"%s\").build();", dslBuilder,
+        Character.toLowerCase(dslBuilder.charAt(0)) + dslBuilder.substring(1), code);
+    return indent(body, 14) + "\n";
   }
 
   private static String listOfLiterals(List<String> items) {
     if (items == null || items.isEmpty()) {
       return "java.util.Collections.emptyList()";
     }
-    return "java.util.List.of("
-        + items.stream().map(s -> "\"" + s + "\"").collect(Collectors.joining(", "))
-        + ")";
+    return "java.util.List.of(%s)".formatted(
+        items.stream().map("\"%s\""::formatted).collect(Collectors.joining(", ")));
   }
 
   @SuppressWarnings("unchecked")
@@ -434,10 +430,22 @@ public final class DslCodeGenerator {
   }
 
   private static String sanitizeClassName(String input) {
+    if (input == null || input.isEmpty()) {
+      return "GeneratedClass";
+    }
     String clean = input.replaceAll("[^a-zA-Z0-9_]", "_");
     if (clean.isEmpty()) {
       clean = "GeneratedClass";
     }
-    return Character.toUpperCase(clean.charAt(0)) + clean.substring(1);
+    String first = clean.substring(0, 1).toUpperCase();
+    String rest = clean.length() > 1 ? clean.substring(1) : "";
+    return first + rest;
+  }
+
+  private static String indent(String text, int spaces) {
+    String pad = " ".repeat(spaces);
+    return Stream.of(text.split("\n"))
+        .map(line -> pad + line)
+        .collect(Collectors.joining("\n"));
   }
 }

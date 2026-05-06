@@ -7,10 +7,10 @@ import javax.tools.JavaFileObject;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.text.MessageFormat;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -39,12 +39,12 @@ public class WorkflowRegistryGenerator {
     String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
 
     String interfaceImports = specs.stream()
-        .map(s -> MessageFormat.format("import {0}.{1};", packageName, toInterfaceName(s.eventCode())))
+        .map(s -> Substitutor.format("import {{package}}.{{iface}};", Map.of("package", packageName, "iface", toInterfaceName(s.eventCode()))))
         .collect(Collectors.joining("\n"));
 
     String implImports = specs.stream()
         .map(
-            s -> MessageFormat.format("import {0}.definitions.{1};", packageName, toImplName(s.eventClassName())))
+            s -> Substitutor.format("import {{package}}.definitions.{{impl}};", Map.of("package", packageName, "impl", toImplName(s.eventClassName()))))
         .collect(Collectors.joining("\n"));
 
     String imports = interfaceImports + (implImports.isBlank() ? "" : "\n" + implImports);
@@ -55,9 +55,9 @@ public class WorkflowRegistryGenerator {
           String impl = toImplName(s.eventClassName());
           String factoryTemplate = """
                   worker.registerWorkflowImplementationFactory(
-                      {0}.class,
-                      () -> new {1}(orchestrator));""";
-          return MessageFormat.format(factoryTemplate, iface, impl);
+                      {{iface}}.class,
+                      () -> new {{impl}}(orchestrator));""";
+          return Substitutor.format(factoryTemplate, Map.of("iface", iface, "impl", impl));
         })
         .collect(Collectors.joining("\n\n"));
 
@@ -65,12 +65,12 @@ public class WorkflowRegistryGenerator {
         specs.stream().map(s -> "\"" + s.eventCode() + "\"").collect(Collectors.joining(", "));
 
     String sourceTemplate = """
-        package {0};
+        package {{package}};
 
         import cbs.nova.service.EventWorkflowOrchestrator;
         import io.temporal.worker.Worker;
         import java.util.List;
-        {1}
+        {{imports}}
 
         /**
          * Generated registry for all APT-discovered event workflows.
@@ -80,11 +80,11 @@ public class WorkflowRegistryGenerator {
          */
         @javax.annotation.processing.Generated(
             value = "cbs.dsl.codegen.WorkflowRegistryGenerator",
-            date = "{2}"
+            date = "{{timestamp}}"
         )
-        public final class {3} {
+        public final class {{className}} {
 
-            private {3}() {}
+            private {{className}}() {}
 
             /**
              * Registers all generated workflow implementations with the given worker.
@@ -93,7 +93,7 @@ public class WorkflowRegistryGenerator {
              * @param orchestrator the orchestrator instance to inject into workflow implementations
              */
             public static void registerAll(Worker worker, EventWorkflowOrchestrator orchestrator) {
-        {4}
+{{factories}}
             }
 
             /**
@@ -102,19 +102,19 @@ public class WorkflowRegistryGenerator {
              * @return list of event codes used as workflow type names
              */
             public static List<String> workflowTypes() {
-                return List.of({5});
+                return List.of({{workflowTypes}});
             }
         }
         """;
 
-    String source = MessageFormat.format(sourceTemplate,
-            packageName,
-            imports.isBlank() ? "" : "\n" + imports,
-            timestamp,
-            className,
-            className,
-            factories,
-            workflowTypes);
+    String source = Substitutor.format(sourceTemplate,
+            Map.ofEntries(
+                Map.entry("package", packageName),
+                Map.entry("imports", imports.isBlank() ? "" : "\n" + imports),
+                Map.entry("timestamp", timestamp),
+                Map.entry("className", className),
+                Map.entry("factories", factories),
+                Map.entry("workflowTypes", workflowTypes)));
 
     try (PrintWriter writer = new PrintWriter(file.openWriter())) {
       writer.print(source);

@@ -1,6 +1,6 @@
 package cbs.dsl.codegen;
 
-import java.text.MessageFormat;
+
 import javax.annotation.processing.Filer;
 import javax.tools.JavaFileObject;
 
@@ -9,7 +9,9 @@ import java.io.PrintWriter;
 
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Domain-oriented generator for {@code @DslComponent(type = EVENT)} components.
@@ -54,26 +56,31 @@ public class EventCodeGenerator {
 
     String sourceTemplate = //language=java
         """
-        package {0};
-
+        package {{package}};
+        
         import cbs.nova.model.EventWorkflowRequest;
         import cbs.nova.model.WorkflowExecutionResponse;
         import io.temporal.workflow.WorkflowInterface;
         import io.temporal.workflow.WorkflowMethod;
-
-        @javax.annotation.processing.Generated(
+        import javax.annotation.processing.Generated;
+        
+        @Generated(
             value = "cbs.dsl.codegen.EventCodeGenerator",
-            date = "{1}"
+            date = "{{timestamp}}"
         )
         @WorkflowInterface
-        public interface {2} {
-
-            @WorkflowMethod(name = "{3}")
+        public interface {{className}} {
+        
+            @WorkflowMethod(name = "{{workflowMethodName}}")
             WorkflowExecutionResponse execute(EventWorkflowRequest input);
         }
         """;
 
-    String source = formatTemplate(sourceTemplate, packageName, timestamp, className, spec.code());
+    String source = Substitutor.format(sourceTemplate, Map.of(
+        "package", packageName,
+        "timestamp", timestamp,
+        "className", className,
+        "workflowMethodName", spec.code()));
 
     try (PrintWriter writer = new PrintWriter(file.openWriter())) {
       writer.print(source);
@@ -92,16 +99,16 @@ public class EventCodeGenerator {
 
     String inputConversion = inputIsRuntime
         ? "input"
-        : formatTemplate("JsonPayload.fromMap(input.params(), {0}.class)", simpleName(spec.inputType()));
+        : Substitutor.format("JsonPayload.fromMap(input.params(), {{inputSimpleName}}.class)", Map.of("inputSimpleName", simpleName(spec.inputType())));
 
     String outputConversion = outputIsRuntime ? "out" : "new EventOutput(JsonPayload.toMap(out))";
 
     String jsonPayloadImport =
         (inputIsRuntime && outputIsRuntime) ? "" : "import cbs.dsl.api.JsonPayload;\n";
     String inputTypeImport =
-        inputIsRuntime ? "" : formatTemplate("import {0};\n", spec.inputType());
+        inputIsRuntime ? "" : Substitutor.format("import {{inputType}};\n", Map.of("inputType", spec.inputType()));
     String outputTypeImport =
-        outputIsRuntime ? "" : formatTemplate("import {0};\n", spec.outputType());
+        outputIsRuntime ? "" : Substitutor.format("import {{outputType}};\n", Map.of("outputType", spec.outputType()));
 
     String dslBodyOrFallback = (spec.dslBody() != null && !spec.dslBody().isBlank())
         ? spec.dslBody()
@@ -112,112 +119,114 @@ public class EventCodeGenerator {
 
     String sourceTemplate = //language=java
         """
-        package {0};
-
+        package {{definitionsPackage}};
+        
         import cbs.dsl.api.DslComponentResolver;
         import cbs.dsl.api.DslObject;
         import cbs.dsl.api.EventDefinition;
         import cbs.dsl.api.EventTypes.EventInput;
         import cbs.dsl.api.EventTypes.EventOutput;
+        import cbs.dsl.api.ParameterDefinition;
         import cbs.dsl.api.context.DisplayScope;
         import cbs.dsl.api.context.EnrichmentContext;
         import cbs.dsl.api.context.FinishContext;
         import cbs.dsl.api.context.TransactionsScope;
         import cbs.nova.model.EventWorkflowRequest;
         import cbs.nova.model.WorkflowExecutionResponse;
-        import cbs.nova.service.EventWorkflowOrchestrator;
-        import {1}.{2};
-        {3}        import {4}.{5};
-        {6}{7}
-        {19}        import java.util.Collections;
+        import io.temporal.workflow.WorkflowInterface;
+        import io.temporal.workflow.WorkflowMethod;
+        import {{generatedPackage}}.{{workflowInterfaceName}};
+        {{jsonPayloadImport}}        import {{specPackageName}}.{{specClassName}};
+        {{inputTypeImport}}{{outputTypeImport}}
+        {{dslImportsBlock}}        import java.util.Collections;
         import java.util.List;
         import java.util.function.BiConsumer;
         import java.util.function.Consumer;
-
+        
         /**
-         * Generated EventDefinition wrapper + Workflow implementation for {8}.
+         * Generated EventDefinition wrapper + Workflow implementation for {{specClassName}}.
          * <strong>WARNING:</strong> Auto-generated — do not edit.
          */
         @javax.annotation.processing.Generated(
             value = "cbs.dsl.codegen.EventCodeGenerator",
-            date = "{9}"
+            date = "{{timestamp}}"
         )
-        public class {10} implements EventDefinition, {11} {
-
-            private final {12} function;
+        public class {{wrapperClassName}} implements EventDefinition, {{workflowInterfaceName}} {
+        
+            private final {{specClassName}} function;
             private final EventWorkflowOrchestrator orchestrator;
-
-            public {13}() {
+        
+            public {{wrapperClassName}}() {
                 this(null, null);
             }
-
-            public {13}(DslComponentResolver resolver) {
+        
+            public {{wrapperClassName}}(DslComponentResolver resolver) {
                 this(resolver, null);
             }
-
-            public {13}(EventWorkflowOrchestrator orchestrator) {
+        
+            public {{wrapperClassName}}(EventWorkflowOrchestrator orchestrator) {
                 this(null, orchestrator);
             }
-
-            public {13}(DslComponentResolver resolver, EventWorkflowOrchestrator orchestrator) {
-                this.function = resolver != null ? resolver.resolve({12}.class) : new {12}();
+        
+            public {{wrapperClassName}}(DslComponentResolver resolver, EventWorkflowOrchestrator orchestrator) {
+                this.function = resolver != null ? resolver.resolve({{specClassName}}.class) : new {{specClassName}}();
                 this.orchestrator = orchestrator;
             }
-
+        
             @Override
             public String getCode() {
-                return "{14}";
+                return "{{specCode}}";
             }
-
+        
             @Override
-            public List<cbs.dsl.api.ParameterDefinition> getParameters() {
+            public List<ParameterDefinition> getParameters() {
                 return Collections.emptyList();
             }
-
+        
             @Override
             public Consumer<EnrichmentContext> getContextBlock() {
                 return ctx -> {};
             }
-
+        
             @Override
             public Consumer<DisplayScope> getDisplayBlock() {
                 return scope -> {};
             }
-
+        
             @Override
             public Consumer<TransactionsScope> getTransactionsBlock() {
                 return null;
             }
-
+        
             @Override
             public List<String> getTransactionCodes() {
                 return Collections.emptyList();
             }
-
+        
             @Override
             public BiConsumer<FinishContext, Throwable> getFinishBlock() {
                 return (ctx, ex) -> {};
             }
-
+        
             @Override
             public EventOutput preview(EventInput input) {
-                {15} typed = {16};
-                {17} out = function.preview(typed);
-                return {18};
+                {{inputSimpleName}} typed = {{inputConversion}};
+                {{outputSimpleName}} out = function.preview(typed);
+                return {{outputConversion}};
             }
-
+        
             @Override
             public EventOutput execute(EventInput input) {
-                {15} typed = {16};
-                {17} out = function.execute(typed);
-                return {18};
+                {{inputSimpleName}} typed = {{inputConversion}};
+                {{outputSimpleName}} out = function.execute(typed);
+                return {{outputConversion}};
             }
-
+        
             @Override
             public DslObject dsl() {
-                {20}
+                {{dslBodyOrFallback}}
             }
-
+        
             @Override
             public WorkflowExecutionResponse execute(EventWorkflowRequest input) {
                 if (orchestrator == null) {
@@ -228,41 +237,29 @@ public class EventCodeGenerator {
         }
         """;
 
-    String source = formatTemplate(
-        sourceTemplate,
-        DEFINITIONS_PACKAGE,           // {0}
-        GENERATED_PACKAGE,             // {1}
-        workflowInterfaceName,         // {2}
-        jsonPayloadImport,             // {3}
-        spec.packageName(),            // {4}
-        spec.className(),              // {5}
-        inputTypeImport,               // {6}
-        outputTypeImport,              // {7}
-        spec.className(),              // {8}
-        timestamp,                     // {9}
-        wrapperClassName,              // {10}
-        workflowInterfaceName,         // {11}
-        spec.className(),              // {12}
-        wrapperClassName,              // {13}
-        spec.code(),                   // {14}
-        simpleName(spec.inputType()),  // {15}
-        inputConversion,               // {16}
-        simpleName(spec.outputType()), // {17}
-        outputConversion,              // {18}
-        dslImportsBlock,               // {19}
-        dslBodyOrFallback);            // {20}
+    Map<String, String> params = new HashMap<>();
+    params.put("definitionsPackage", DEFINITIONS_PACKAGE);
+    params.put("generatedPackage", GENERATED_PACKAGE);
+    params.put("workflowInterfaceName", workflowInterfaceName);
+    params.put("jsonPayloadImport", jsonPayloadImport);
+    params.put("specPackageName", spec.packageName());
+    params.put("specClassName", spec.className());
+    params.put("inputTypeImport", inputTypeImport);
+    params.put("outputTypeImport", outputTypeImport);
+    params.put("timestamp", timestamp);
+    params.put("wrapperClassName", wrapperClassName);
+    params.put("specCode", spec.code());
+    params.put("inputSimpleName", simpleName(spec.inputType()));
+    params.put("inputConversion", inputConversion);
+    params.put("outputSimpleName", simpleName(spec.outputType()));
+    params.put("outputConversion", outputConversion);
+    params.put("dslImportsBlock", dslImportsBlock);
+    params.put("dslBodyOrFallback", dslBodyOrFallback);
+    String source = Substitutor.format(sourceTemplate, params);
 
     try (PrintWriter writer = new PrintWriter(file.openWriter())) {
       writer.print(source);
     }
-  }
-
-  private static String formatTemplate(String template, Object... args) {
-    String result = template;
-    for (int i = args.length - 1; i >= 0; i--) {
-      result = result.replace("{" + i + "}", String.valueOf(args[i]));
-    }
-    return result;
   }
 
   private static String toClassName(String code) {

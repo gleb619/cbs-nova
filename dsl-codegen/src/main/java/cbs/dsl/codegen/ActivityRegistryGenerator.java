@@ -7,10 +7,11 @@ import javax.tools.JavaFileObject;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.text.MessageFormat;
+
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -34,41 +35,44 @@ public class ActivityRegistryGenerator {
     String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
 
     String imports = allSpecs(txSpecs, helperSpecs).stream()
-        .map(spec -> MessageFormat.format(
-            "import {0}.definitions.{1}Definition;", GENERATED_PACKAGE, spec.className()))
+        .map(spec -> Substitutor.format(
+            "import {{package}}.definitions.{{className}}Definition;",
+            Map.of("package", GENERATED_PACKAGE, "className", spec.className())))
         .collect(Collectors.joining("\n"));
 
     String registrations = allSpecs(txSpecs, helperSpecs).stream()
-        .map(spec -> MessageFormat.format(
-            "        worker.registerActivitiesImplementations(new {0}Definition());",
-            spec.className()))
+        .map(spec -> Substitutor.format(
+            "        worker.registerActivitiesImplementations(new {{className}}Definition());",
+            Map.of("className", spec.className())))
         .collect(Collectors.joining("\n"));
 
-    String source = MessageFormat.format(
+    String source = Substitutor.format(//language=java
         """
-        package {0};
-
+        package {{GENERATED_PACKAGE}};
+        
         import io.temporal.worker.Worker;
-        {1}
-
-        @javax.annotation.processing.Generated(
+        import javax.annotation.processing.Generated;
+        {{imports}}
+        
+        @Generated(
             value = "cbs.dsl.codegen.ActivityRegistryGenerator",
-            date = "{2}"
+            date = "{{timestamp}}"
         )
-        public final class {3} {
-
-            private {3}() {}
-
+        public final class {{className}} {
+        
+            private {{className}}() {}
+        
             public static void registerAll(Worker worker) {
-        {4}
+        {{registrations}}
             }
         }
         """,
-        GENERATED_PACKAGE,
-        imports.isBlank() ? "" : "\n" + imports,
-        timestamp,
-        className,
-        registrations);
+        Map.ofEntries(
+            Map.entry("GENERATED_PACKAGE", GENERATED_PACKAGE),
+            Map.entry("imports", imports.isBlank() ? "" : "\n" + imports),
+            Map.entry("timestamp", timestamp),
+            Map.entry("className", className),
+            Map.entry("registrations", registrations)));
 
     try (PrintWriter writer = new PrintWriter(file.openWriter())) {
       writer.print(source);

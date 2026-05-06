@@ -16,17 +16,17 @@ public class SampleTransaction implements TransactionFunction<SampleTxInput, Sam
 
   @Override
   public TransactionContext<SampleTxOutput> preview(TransactionContext<SampleTxInput> input) {
-    return new SampleTxOutput("preview: " + input.name());
+    return input.toBuilder().payload(new SampleTxOutput("preview: " + input.payload().name())).build();
   }
 
   @Override
   public TransactionContext<SampleTxOutput> execute(TransactionContext<SampleTxInput> input) {
-    return new SampleTxOutput("Hello, " + input.name());
+    return input.toBuilder().payload(new SampleTxOutput("Hello, " + input.payload().name())).build();
   }
 
   @Override
   public TransactionContext<SampleTxOutput> rollback(TransactionContext<SampleTxInput> input) {
-    return new SampleTxOutput("rollback: " + input.name());
+    return input.toBuilder().payload(new SampleTxOutput("rollback: " + input.payload().name())).build();
   }
 
   @Json

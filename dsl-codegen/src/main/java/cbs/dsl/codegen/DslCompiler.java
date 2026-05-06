@@ -138,7 +138,7 @@ public class DslCompiler {
     }
   }
 
-  record ParsedDsl(String imports, String body) {}
+    record ParsedDsl(String imports, String body) {}
 
   static ParsedDsl parseImplicitClassWithJavaParser(String content) {
     // Step 1: split imports and body with a lightweight line scan so imports stay
@@ -160,12 +160,13 @@ public class DslCompiler {
     }
 
     // Step 2: wrap only the body in a temporary class and parse with JavaParser.
-    String tempWrapper = (imports.isEmpty() ? "" : imports.toString().trim() + "\n\n")
-        + "class __Temp__ {\n"
-        + "    public static void main(String[] args) throws Exception {\n"
-        + body
-        + "\n    }\n"
-        + "}";
+    String tempWrapper = """
+        %sclass __Temp__ {
+            public static void main(String[] args) throws Exception {
+        %s
+            }
+        }""".formatted(
+        imports.isEmpty() ? "" : imports.toString().trim() + "\n\n", body);
 
     ParserConfiguration config = new ParserConfiguration();
     config.setAttributeComments(false);

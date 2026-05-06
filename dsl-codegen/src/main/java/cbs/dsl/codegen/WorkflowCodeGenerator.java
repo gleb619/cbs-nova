@@ -1,6 +1,5 @@
 package cbs.dsl.codegen;
 
-import java.text.MessageFormat;
 import lombok.RequiredArgsConstructor;
 
 import javax.annotation.processing.Filer;
@@ -11,7 +10,9 @@ import java.io.PrintWriter;
 
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Domain-oriented generator for {@code @DslComponent(type = WORKFLOW)} components.
@@ -45,8 +46,8 @@ public class WorkflowCodeGenerator {
 
     String inputConversion = inputIsRuntime
         ? "input"
-        : MessageFormat.format(
-            "JsonPayload.fromMap(input.params(), {0}.class)", simpleName(spec.inputType()));
+        : Substitutor.format(
+            "JsonPayload.fromMap(input.params(), {{inputSimpleName}}.class)", Map.of("inputSimpleName", simpleName(spec.inputType())));
 
     String outputConversion =
         outputIsRuntime ? "out" : "new WorkflowOutput(JsonPayload.toMap(out))";
@@ -54,9 +55,9 @@ public class WorkflowCodeGenerator {
     String jsonPayloadImport =
         (inputIsRuntime && outputIsRuntime) ? "" : "import cbs.dsl.api.JsonPayload;\n";
     String inputTypeImport =
-        inputIsRuntime ? "" : MessageFormat.format("import {0};\n", spec.inputType());
+        inputIsRuntime ? "" : Substitutor.format("import {{inputType}};\n", Map.of("inputType", spec.inputType()));
     String outputTypeImport =
-        outputIsRuntime ? "" : MessageFormat.format("import {0};\n", spec.outputType());
+        outputIsRuntime ? "" : Substitutor.format("import {{outputType}};\n", Map.of("outputType", spec.outputType()));
 
     String dslBodyOrFallback = (spec.dslBody() != null && !spec.dslBody().isBlank())
         ? spec.dslBody()
@@ -67,8 +68,8 @@ public class WorkflowCodeGenerator {
 
     String sourceTemplate = //language=java
         """
-        package {0};
-
+        package {{definitionsPackage}};
+        
         import cbs.dsl.api.DslComponentResolver;
         import cbs.dsl.api.DslObject;
         import cbs.dsl.api.WorkflowDefinition;
@@ -76,91 +77,87 @@ public class WorkflowCodeGenerator {
         import cbs.dsl.api.WorkflowTypes.WorkflowOutput;
         import cbs.dsl.api.TransitionRuleDefinition;
         import cbs.dsl.api.ParameterDefinition;
-        {1}        import {2}.{3};
-        {4}{5}        {19}        import java.util.Collections;
+        {{jsonPayloadImport}}        import {{specPackageName}}.{{specClassName}};
+        {{inputTypeImport}}{{outputTypeImport}}        {{dslImportsBlock}}        import java.util.Collections;
         import java.util.List;
-
+        import javax.annotation.processing.Generated;
+        
         /**
-         * Generated WorkflowDefinition wrapper for {6}.
+         * Generated WorkflowDefinition wrapper for {{specClassName}}.
          * <strong>WARNING:</strong> Auto-generated — do not edit.
          */
-        @javax.annotation.processing.Generated(
+        @Generated(
             value = "cbs.dsl.codegen.WorkflowCodeGenerator",
-            date = "{7}"
+            date = "{{timestamp}}"
         )
-        public class {8} implements WorkflowDefinition {
-
-            private final {9} function;
-
-            public {10}() {
+        public class {{wrapperClassName}} implements WorkflowDefinition {
+        
+            private final {{specClassName}} function;
+        
+            public {{wrapperClassName}}() {
                 this(null);
             }
-
-            public {10}(DslComponentResolver resolver) {
-                this.function = resolver != null ? resolver.resolve({9}.class) : new {9}();
+        
+            public {{wrapperClassName}}(DslComponentResolver resolver) {
+                this.function = resolver != null ? resolver.resolve({{specClassName}}.class) : new {{specClassName}}();
             }
-
+        
             @Override
             public String getCode() {
-                return "{11}";
+                return "{{specCode}}";
             }
-
+        
             @Override
             public List<String> getStates() {
                 return Collections.emptyList();
             }
-
+        
             @Override
             public String getInitial() {
                 return "";
             }
-
+        
             @Override
             public List<String> getTerminalStates() {
                 return Collections.emptyList();
             }
-
+        
             @Override
             public List<TransitionRuleDefinition> getTransitions() {
                 return Collections.emptyList();
             }
-
+        
             @Override
             public WorkflowOutput execute(WorkflowInput input) {
-                {12} typed = {13};
-                {14} out = function.execute(typed);
-                return {15};
+                {{inputSimpleName}} typed = {{inputConversion}};
+                {{outputSimpleName}} out = function.execute(typed);
+                return {{outputConversion}};
             }
-
+        
             @Override
             public DslObject dsl() {
-                {16}
+                {{dslBodyOrFallback}}
             }
         }
         """;
 
-    String source = MessageFormat.format(
-        sourceTemplate,
-        DEFINITIONS_PACKAGE,
-        jsonPayloadImport,
-        spec.packageName(),
-        spec.className(),
-        inputTypeImport,
-        outputTypeImport,
-        spec.className(),
-        timestamp,
-        wrapperClassName,
-        spec.className(),
-        wrapperClassName,
-        spec.code(),
-        simpleName(spec.inputType()),
-        inputConversion,
-        simpleName(spec.outputType()),
-        outputConversion,
-        dslBodyOrFallback,             // {16}
-        "",                            // {17} unused
-        "",                            // {18} unused
-        dslImportsBlock);              // {19}
+    Map<String, String> params = new HashMap<>();
+    params.put("definitionsPackage", DEFINITIONS_PACKAGE);
+    params.put("jsonPayloadImport", jsonPayloadImport);
+    params.put("specPackageName", spec.packageName());
+    params.put("specClassName", spec.className());
+    params.put("inputTypeImport", inputTypeImport);
+    params.put("outputTypeImport", outputTypeImport);
+    params.put("timestamp", timestamp);
+    params.put("wrapperClassName", wrapperClassName);
+    params.put("specCode", spec.code());
+    params.put("inputSimpleName", simpleName(spec.inputType()));
+    params.put("inputConversion", inputConversion);
+    params.put("outputSimpleName", simpleName(spec.outputType()));
+    params.put("outputConversion", outputConversion);
+    params.put("dslBodyOrFallback", dslBodyOrFallback);
+    params.put("dslImportsBlock", dslImportsBlock);
+    String source = Substitutor.format(sourceTemplate, params);
 
     try (PrintWriter writer = new PrintWriter(file.openWriter())) {
       writer.print(source);
