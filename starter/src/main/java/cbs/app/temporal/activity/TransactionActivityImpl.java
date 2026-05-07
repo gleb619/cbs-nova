@@ -74,7 +74,7 @@ public class TransactionActivityImpl implements TransactionActivity {
   private TransactionInput buildTransactionInput(TransactionActivityInput input) {
     Map<String, Object> contextMap = parseContextJson(input.contextJson());
     return new TransactionInput(
-        contextMap, input.transactionCode(), null, String.valueOf(input.workflowExecutionId()));
+        null, contextMap);
   }
 
   @SuppressWarnings("unchecked")

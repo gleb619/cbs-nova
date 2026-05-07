@@ -15,12 +15,12 @@ class WorkflowCodeGeneratorTest {
   private static final String WF_OUTPUT = "cbs.dsl.api.WorkflowTypes.WorkflowOutput";
 
   @Test
-  @DisplayName("shouldGenerateDefinitionWithFallbackDslWhenDslBodyIsNull")
-  void shouldGenerateDefinitionWithFallbackDslWhenDslBodyIsNull() throws Exception {
+  @DisplayName("shouldGenerateDefinitionWithUndefinedDslWhenLambdaReturnsUndefined")
+  void shouldGenerateDefinitionWithUndefinedDslWhenLambdaReturnsUndefined() throws Exception {
     FakeFiler filer = new FakeFiler();
     RegistrationSpec spec = new RegistrationSpec(
         "com.example",
-        "MyWf",
+        "MyWorkflow",
         "WF_1",
         DslInterfaceType.WORKFLOW,
         WF_INPUT,
@@ -29,22 +29,23 @@ class WorkflowCodeGeneratorTest {
         null,
         null);
 
-    new WorkflowCodeGenerator(filer).generate(List.of(spec));
+    new WorkflowCodeGenerator(filer, s -> "return UndefinedDslObject.create();").generate(List.of(spec));
 
-    String key = "cbs.dsl.codegen.generated.definitions.MyWfDefinition";
-    assertTrue(filer.files.containsKey(key), "Should generate MyWfDefinition");
-    String content = filer.files.get(key).getContent();
+    String definitionKey = "cbs.dsl.codegen.generated.definitions.MyWorkflowDefinition";
+    assertTrue(filer.files.containsKey(definitionKey), "Should generate MyWorkflowDefinition");
+    String content = filer.files.get(definitionKey).getContent();
     assertNotNull(content);
 
-    assertTrue(content.contains("class MyWfDefinition"), "Should contain class name");
+    assertTrue(content.contains("class MyWorkflowDefinition"), "Should contain class name");
     assertTrue(
-        content.contains("implements WorkflowDefinition"), "Should implement WorkflowDefinition");
+        content.contains("implements WorkflowDefinition"),
+        "Should implement WorkflowDefinition");
     assertTrue(
-        content.contains("return WorkflowDsl.workflow(\"WF_1\").build();"),
-        "Should contain fallback dsl body");
+        content.contains("return UndefinedDslObject.create();"),
+        "Should contain UndefinedDslObject dsl body");
     assertTrue(
-        content.contains("import cbs.dsl.builder.WorkflowDsl;"),
-        "Should contain WorkflowDsl import");
+        content.contains("import cbs.dsl.builder.UndefinedDslObject;"),
+        "Should contain UndefinedDslObject import");
   }
 
   @Test
@@ -53,30 +54,30 @@ class WorkflowCodeGeneratorTest {
     FakeFiler filer = new FakeFiler();
     RegistrationSpec spec = new RegistrationSpec(
         "com.example",
-        "MyWf",
+        "MyWorkflow",
         "WF_1",
         DslInterfaceType.WORKFLOW,
         WF_INPUT,
         WF_OUTPUT,
         DslComponentModel.SIMPLE,
-        "return CustomWfDsl.workflow(\"WF_1\").build();",
-        "import com.example.CustomWfDsl;");
+        "return CustomWorkflowDsl.workflow(\"WF_1\").build();",
+        "import com.example.CustomWorkflowDsl;");
 
-    new WorkflowCodeGenerator(filer).generate(List.of(spec));
+    new WorkflowCodeGenerator(filer, s -> s.dslBody()).generate(List.of(spec));
 
-    String key = "cbs.dsl.codegen.generated.definitions.MyWfDefinition";
-    assertTrue(filer.files.containsKey(key), "Should generate MyWfDefinition");
-    String content = filer.files.get(key).getContent();
+    String definitionKey = "cbs.dsl.codegen.generated.definitions.MyWorkflowDefinition";
+    assertTrue(filer.files.containsKey(definitionKey), "Should generate MyWorkflowDefinition");
+    String content = filer.files.get(definitionKey).getContent();
     assertNotNull(content);
 
     assertTrue(
-        content.contains("return CustomWfDsl.workflow(\"WF_1\").build();"),
+        content.contains("return CustomWorkflowDsl.workflow(\"WF_1\").build();"),
         "Should contain custom dsl body");
     assertTrue(
-        content.contains("import com.example.CustomWfDsl;"),
+        content.contains("import com.example.CustomWorkflowDsl;"),
         "Should contain custom dsl import");
     assertFalse(
-        content.contains("import cbs.dsl.builder.WorkflowDsl;"),
-        "Should not contain fallback import");
+        content.contains("import cbs.dsl.builder.UndefinedDslObject;"),
+        "Should not contain UndefinedDslObject fallback import");
   }
 }

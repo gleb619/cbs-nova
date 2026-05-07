@@ -15,8 +15,8 @@ class EventCodeGeneratorTest {
   private static final String EV_OUTPUT = "cbs.dsl.api.EventTypes.EventOutput";
 
   @Test
-  @DisplayName("shouldGenerateDefinitionWithFallbackDslWhenDslBodyIsNull")
-  void shouldGenerateDefinitionWithFallbackDslWhenDslBodyIsNull() throws Exception {
+  @DisplayName("shouldGenerateDefinitionWithUndefinedDslWhenLambdaReturnsUndefined")
+  void shouldGenerateDefinitionWithUndefinedDslWhenLambdaReturnsUndefined() throws Exception {
     FakeFiler filer = new FakeFiler();
     RegistrationSpec spec = new RegistrationSpec(
         "com.example",
@@ -29,7 +29,7 @@ class EventCodeGeneratorTest {
         null,
         null);
 
-    new EventCodeGenerator(filer).generate(List.of(spec));
+    new EventCodeGenerator(filer, s -> "return UndefinedDslObject.create();").generate(List.of(spec));
 
     String definitionKey = "cbs.dsl.codegen.generated.definitions.MyEventDefinition";
     String workflowKey = "cbs.dsl.codegen.generated.Evt1Workflow";
@@ -43,11 +43,11 @@ class EventCodeGeneratorTest {
         content.contains("implements EventDefinition, Evt1Workflow"),
         "Should implement EventDefinition and Evt1Workflow");
     assertTrue(
-        content.contains("return EventDsl.event(\"EVT_1\").build();"),
-        "Should contain fallback dsl body");
+        content.contains("return UndefinedDslObject.create();"),
+        "Should contain UndefinedDslObject dsl body");
     assertTrue(
-        content.contains("import cbs.dsl.builder.EventDsl;"),
-        "Should contain EventDsl import");
+        content.contains("import cbs.dsl.builder.UndefinedDslObject;"),
+        "Should contain UndefinedDslObject import");
   }
 
   @Test
@@ -65,7 +65,7 @@ class EventCodeGeneratorTest {
         "return CustomEventDsl.event(\"EVT_1\").build();",
         "import com.example.CustomEventDsl;");
 
-    new EventCodeGenerator(filer).generate(List.of(spec));
+    new EventCodeGenerator(filer, s -> s.dslBody()).generate(List.of(spec));
 
     String definitionKey = "cbs.dsl.codegen.generated.definitions.MyEventDefinition";
     assertTrue(filer.files.containsKey(definitionKey), "Should generate MyEventDefinition");
@@ -79,7 +79,7 @@ class EventCodeGeneratorTest {
         content.contains("import com.example.CustomEventDsl;"),
         "Should contain custom dsl import");
     assertFalse(
-        content.contains("import cbs.dsl.builder.EventDsl;"),
-        "Should not contain fallback import");
+        content.contains("import cbs.dsl.builder.UndefinedDslObject;"),
+        "Should not contain UndefinedDslObject fallback import");
   }
 }

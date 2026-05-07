@@ -15,11 +15,6 @@ import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-/**
- * Builder for creating event objects from DSL files.
- *
- * <p>This is a convenience DSL — it describes wiring but does not execute anything.
- */
 public class EventBuilder {
 
   private final String code;
@@ -34,8 +29,10 @@ public class EventBuilder {
     this.code = code;
   }
 
-  public EventBuilder requiredParam(String name) {
-    this.parameters.add(new ParameterDefinition(name, true));
+  public EventBuilder parameters(Consumer<ParametersBuilder> block) {
+    ParametersBuilder builder = new ParametersBuilder();
+    block.accept(builder);
+    this.parameters.addAll(builder.build());
     return this;
   }
 
@@ -83,8 +80,6 @@ public class EventBuilder {
             ? null
             : scope -> {
               for (String txCode : transactionCodes) {
-                // In a generated workflow, this would be replaced by hardcoded activity calls.
-                // The builder scope is for local/dev execution only.
               }
             };
   }
@@ -106,8 +101,6 @@ public class EventBuilder {
             ? null
             : scope -> {
               for (String txCode : txCodes) {
-                // In a generated workflow, this would be replaced by hardcoded activity calls.
-                // The builder scope is for local/dev execution only.
               }
             };
 

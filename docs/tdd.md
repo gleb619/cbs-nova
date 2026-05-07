@@ -26,7 +26,7 @@ workflows/activities from them (production) or executes them via reflection (dev
 - Business autonomy — analysts write/modify DSL without developer involvement
 - Correctness — every instance runs to completion on the DSL version it started with
 - Parallelism — all steps run as Temporal `CompletablePromise`s; `await()` marks sync points
-- Full observability — every execution produces a `workflow_execution` artifact (context, display data, transition log)
+- Full observability — every execution produces a `workflow_execution` artifact (context, transition log)
 - Resilience — per-item failure isolation in batch operations; failed items are re-runnable
 - Unified model — workflowless events use an auto-generated stub workflow; `workflow_execution_id` is never null
 
@@ -98,7 +98,7 @@ Request flow: `Browser → Vite (9000) → Nuxt BFF (3000) → Backend (7070)`
 | Entity            | Description                                                                                                                                             |
 |-------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Workflow**      | State machine: `states`, `initial`, `terminalStates`, `transitions`. All fields optional (inferred).                                                    |
-| **Event**         | Triggered operation: `context {}`, `display {}`, `transactions {}`, `finish {}`. Standalone → stub workflow.                                            |
+| **Event**         | Triggered operation: `context {}`, `transactions {}`, `finish {}`. Standalone → stub workflow.                                            |
 | **Transaction**   | Temporal Activity. Code: `TransactionFunction<I,O>` with `@DslComponent` → generated `TransactionDefinition`. Rollback is a compensating ledger entry.  |
 | **Helper**        | Reusable computation. Code: `HelperFunction<I,O>` with `@DslComponent` → generated `HelperDefinition`. Used in `context {}` and `transactions {}`.      |
 | **Condition**     | Reusable boolean predicate. Code: `ConditionFunction<I,O>` with `@DslComponent` → generated `ConditionDefinition`. Referenced in `when/then/otherwise`. |

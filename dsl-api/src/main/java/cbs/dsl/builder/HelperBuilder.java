@@ -10,6 +10,7 @@ import cbs.dsl.api.ParameterDefinition;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /** Builder for creating helper objects from DSL files. */
@@ -24,13 +25,10 @@ public class HelperBuilder {
     this.code = code;
   }
 
-  public HelperBuilder requiredParam(String name) {
-    this.parameters.add(new ParameterDefinition(name, true));
-    return this;
-  }
-
-  public HelperBuilder optionalParam(String name) {
-    this.parameters.add(new ParameterDefinition(name, false));
+  public HelperBuilder parameters(Consumer<ParametersBuilder> block) {
+    ParametersBuilder builder = new ParametersBuilder();
+    block.accept(builder);
+    this.parameters.addAll(builder.build());
     return this;
   }
 

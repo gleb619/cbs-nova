@@ -20,6 +20,7 @@ import javax.tools.StandardLocation;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Function;
 
 @SupportedAnnotationTypes("cbs.dsl.api.DslComponent")
 @SupportedSourceVersion(SourceVersion.RELEASE_25)
@@ -32,6 +33,9 @@ public class DslComponentProcessor extends AbstractProcessor {
       EventFunction.class.getName(), DslInterfaceType.EVENT,
       WorkflowFunction.class.getName(), DslInterfaceType.WORKFLOW,
       MassOperationFunction.class.getName(), DslInterfaceType.MASS_OPERATION);
+
+  private static final Function<RegistrationSpec, String> UNDEFINED_DSL_BODY_PROVIDER =
+      _ -> "return UndefinedDslObject.create();";
 
   private boolean processed = false;
 
@@ -78,22 +82,22 @@ public class DslComponentProcessor extends AbstractProcessor {
 
         // Domain-oriented code generation: one generator per domain type
         if (!txSpecs.isEmpty()) {
-          new TransactionCodeGenerator(processingEnv.getFiler()).generate(txSpecs);
+          new TransactionCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER).generate(txSpecs);
         }
         if (!helperSpecs.isEmpty()) {
-          new HelperCodeGenerator(processingEnv.getFiler()).generate(helperSpecs);
+          new HelperCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER).generate(helperSpecs);
         }
         if (!eventSpecs.isEmpty()) {
-          new EventCodeGenerator(processingEnv.getFiler()).generate(eventSpecs);
+          new EventCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER).generate(eventSpecs);
         }
         if (!workflowSpecs.isEmpty()) {
-          new WorkflowCodeGenerator(processingEnv.getFiler()).generate(workflowSpecs);
+          new WorkflowCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER).generate(workflowSpecs);
         }
         if (!conditionSpecs.isEmpty()) {
-          new ConditionCodeGenerator(processingEnv.getFiler()).generate(conditionSpecs);
+          new ConditionCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER).generate(conditionSpecs);
         }
         if (!massOpSpecs.isEmpty()) {
-          new MassOperationCodeGenerator(processingEnv.getFiler()).generate(massOpSpecs);
+          new MassOperationCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER).generate(massOpSpecs);
         }
 
         new RegistrationGenerator(processingEnv.getFiler()).generate(registrations);

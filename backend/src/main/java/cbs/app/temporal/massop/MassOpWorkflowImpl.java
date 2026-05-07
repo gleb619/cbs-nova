@@ -80,7 +80,7 @@ public class MassOpWorkflowImpl implements MassOpWorkflow {
     // 2i. Set final status
     finalizeExecutionStatus(execution, successCount, failureCount);
 
-    // 2j. Return result
+    // 2j. Return params
     MassOpResult result = new MassOpResult(
         execution.getId(),
         execution.getStatus().name(),
@@ -88,7 +88,7 @@ public class MassOpWorkflowImpl implements MassOpWorkflow {
         successCount,
         failureCount);
     log.debug(
-        "Completed mass operation execution with result: status={}, totalItems={}, successCount={}, failureCount={}",
+        "Completed mass operation execution with params: status={}, totalItems={}, successCount={}, failureCount={}",
         result.status(),
         result.totalItems(),
         result.successCount(),

@@ -115,12 +115,6 @@ Authorization: Bearer {token}
     "previousState": "ENTERED",
     "currentState":  "ACTIVE"
   },
-  "display": {
-    "Customer ID": "C-001",
-    "Loan ID":     "L-9981",
-    "Amount":      "500000",
-    "Account":     "KZ123456789"
-  },
   "results": [
     { "transaction": "KYC_CHECK",                "status": "EXECUTED" },
     { "transaction": "DEBIT_FUNDING_ACCOUNT",    "status": "EXECUTED" },

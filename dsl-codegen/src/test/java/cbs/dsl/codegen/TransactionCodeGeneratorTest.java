@@ -15,8 +15,8 @@ class TransactionCodeGeneratorTest {
   private static final String TX_OUTPUT = "cbs.dsl.api.TransactionTypes.TransactionOutput";
 
   @Test
-  @DisplayName("shouldGenerateDefinitionWithFallbackDslWhenDslBodyIsNull")
-  void shouldGenerateDefinitionWithFallbackDslWhenDslBodyIsNull() throws Exception {
+  @DisplayName("shouldGenerateDefinitionWithUndefinedDslWhenLambdaReturnsUndefined")
+  void shouldGenerateDefinitionWithUndefinedDslWhenLambdaReturnsUndefined() throws Exception {
     FakeFiler filer = new FakeFiler();
     RegistrationSpec spec = new RegistrationSpec(
         "com.example",
@@ -29,7 +29,7 @@ class TransactionCodeGeneratorTest {
         null,
         null);
 
-    new TransactionCodeGenerator(filer).generate(List.of(spec));
+    new TransactionCodeGenerator(filer, s -> "return UndefinedDslObject.create();").generate(List.of(spec));
 
     String definitionKey = "cbs.dsl.codegen.generated.definitions.MyTxDefinition";
     assertTrue(filer.files.containsKey(definitionKey), "Should generate MyTxDefinition");
@@ -41,11 +41,11 @@ class TransactionCodeGeneratorTest {
         content.contains("implements TransactionDefinition, MyTxActivity"),
         "Should implement TransactionDefinition and MyTxActivity");
     assertTrue(
-        content.contains("return TransactionDsl.transaction(\"TX_1\").build();"),
-        "Should contain fallback dsl body");
+        content.contains("return UndefinedDslObject.create();"),
+        "Should contain UndefinedDslObject dsl body");
     assertTrue(
-        content.contains("import cbs.dsl.builder.TransactionDsl;"),
-        "Should contain TransactionDsl import");
+        content.contains("import cbs.dsl.builder.UndefinedDslObject;"),
+        "Should contain UndefinedDslObject import");
   }
 
   @Test
@@ -63,7 +63,7 @@ class TransactionCodeGeneratorTest {
         "return CustomTxDsl.transaction(\"TX_1\").build();",
         "import com.example.CustomTxDsl;");
 
-    new TransactionCodeGenerator(filer).generate(List.of(spec));
+    new TransactionCodeGenerator(filer, s -> s.dslBody()).generate(List.of(spec));
 
     String definitionKey = "cbs.dsl.codegen.generated.definitions.MyTxDefinition";
     assertTrue(filer.files.containsKey(definitionKey), "Should generate MyTxDefinition");
@@ -77,7 +77,7 @@ class TransactionCodeGeneratorTest {
         content.contains("import com.example.CustomTxDsl;"),
         "Should contain custom dsl import");
     assertFalse(
-        content.contains("import cbs.dsl.builder.TransactionDsl;"),
-        "Should not contain fallback import");
+        content.contains("import cbs.dsl.builder.UndefinedDslObject;"),
+        "Should not contain UndefinedDslObject fallback import");
   }
 }

@@ -57,14 +57,14 @@ ctx.runEvent(event, params?)
   ├─ Creates new workflow_execution (or new event_execution on existing instance)
   ├─ Evaluates context {} fresh
   ├─ Executes all transactions {}
-  ├─ Runs finish {} and display {}
+  ├─ Runs finish {} 
   └─ ctx.isResumed = false inside the event
 
 ctx.resumeEvent(event, params?)
   ├─ Loads existing workflow_execution.context from PG (decrypted)
   ├─ Skips context {} evaluation
   ├─ Skips transactions {} execution
-  ├─ Runs finish {} and display {} only
+  ├─ Runs finish {} only
   └─ ctx.isResumed = true inside the event — branch on this for resume-specific logic
 ```
 

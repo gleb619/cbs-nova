@@ -3,10 +3,8 @@ package cbs.nova.showcase;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.dsl.api.EventDefinition;
-import cbs.dsl.api.HelperTypes.HelperInput;
 import cbs.dsl.api.TransactionDefinition;
 import cbs.dsl.api.TransactionTypes.TransactionInput;
-import cbs.dsl.api.context.EnrichmentContext;
 import cbs.nova.model.EventWorkflowRequest;
 import cbs.nova.model.WorkflowExecutionResponse;
 import cbs.nova.registry.DslRegistry;
@@ -110,7 +108,7 @@ class ShowcaseIntegrationTest extends ShowcaseITBase {
 
     assertThat(response).isNotNull();
     assertThat(response.executionId()).isEqualTo(1L);
-    // DSL inline transaction without .preview() returns empty result
+    // DSL inline transaction without .preview() returns empty params
     assertThat(response.status()).isNull();
   }
 
@@ -252,9 +250,9 @@ class ShowcaseIntegrationTest extends ShowcaseITBase {
     public WorkflowExecutionResponse runDslTransaction(EventWorkflowRequest input) {
       TransactionDefinition txDef = dslRegistry.resolveTransaction("SAMPLE_TRANSACTION_DSL");
       var txInput =
-          new TransactionInput(Map.of("name", "PoC"), "SAMPLE_TRANSACTION_DSL", null, "dev");
+          new TransactionInput(null, Map.of("name", "PoC"));
       var output = txDef.execute(txInput);
-      return new WorkflowExecutionResponse(1L, (String) output.result().get("greeting"));
+      return new WorkflowExecutionResponse(1L, (String) output.params().get("greeting"));
     }
 
     @Override
@@ -276,9 +274,9 @@ class ShowcaseIntegrationTest extends ShowcaseITBase {
     public WorkflowExecutionResponse previewDslTransaction(EventWorkflowRequest input) {
       TransactionDefinition txDef = dslRegistry.resolveTransaction("SAMPLE_TRANSACTION_DSL");
       var txInput =
-          new TransactionInput(Map.of("name", "PoC"), "SAMPLE_TRANSACTION_DSL", null, "dev");
+          new TransactionInput(null, Map.of("name", "PoC"));
       var output = txDef.preview(txInput);
-      return new WorkflowExecutionResponse(1L, (String) output.result().get("greeting"));
+      return new WorkflowExecutionResponse(1L, (String) output.params().get("greeting"));
     }
 
     @Override

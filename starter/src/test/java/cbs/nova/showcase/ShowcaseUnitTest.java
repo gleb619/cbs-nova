@@ -84,7 +84,7 @@ class ShowcaseUnitTest extends ShowcaseTestBase {
     eventDef.getContextBlock().accept(ctx);
 
     assertThat(ctx.getEnrichment()).containsKey("enriched");
-    assertThat(ctx.getEnrichment().get("enriched")).isEqualTo(Map.of("result", "PoC!"));
+    assertThat(ctx.getEnrichment().get("enriched")).isEqualTo(Map.of("params", "PoC!"));
   }
 
   @Test
@@ -92,10 +92,10 @@ class ShowcaseUnitTest extends ShowcaseTestBase {
   void shouldExecuteDslTransactionDirectly() {
     TransactionDefinition txDef = dslRegistry.resolveTransaction("SAMPLE_TRANSACTION_DSL");
 
-    var input = new TransactionInput(Map.of("name", "PoC"), "SAMPLE_TRANSACTION_DSL", null, "dev");
+    var input = new TransactionInput(null, Map.of("name", "PoC"));
     var output = txDef.execute(input);
 
-    assertThat(output.result()).containsEntry("greeting", "DSL TX says hello to PoC");
+    assertThat(output.params()).containsEntry("greeting", "DSL TX says hello to PoC");
   }
 
   @Test
@@ -124,7 +124,7 @@ class ShowcaseUnitTest extends ShowcaseTestBase {
     eventDef.getContextBlock().accept(ctx);
 
     assertThat(ctx.getEnrichment()).containsKey("enriched");
-    assertThat(ctx.getEnrichment().get("enriched")).isEqualTo(Map.of("result", "PoC!"));
+    assertThat(ctx.getEnrichment().get("enriched")).isEqualTo(Map.of("params", "PoC!"));
   }
 
   @Test
@@ -132,13 +132,13 @@ class ShowcaseUnitTest extends ShowcaseTestBase {
   void shouldPreviewGeneratedTransactionDefinition() {
     TransactionDefinition txDef = dslRegistry.resolveTransaction("SAMPLE_TX");
 
-    var input = new TransactionInput(Map.of("name", "PoC"), "SAMPLE_TX", null, "dev");
+    var input = new TransactionInput(null, Map.of("name", "PoC"));
     var previewOutput = txDef.preview(input);
     var executeOutput = txDef.execute(input);
 
-    assertThat(previewOutput.result()).containsEntry("greeting", "preview: PoC");
-    assertThat(executeOutput.result()).containsEntry("greeting", "Hello, PoC");
-    assertThat(previewOutput.result()).isNotEqualTo(executeOutput.result());
+    assertThat(previewOutput.params()).containsEntry("greeting", "preview: PoC");
+    assertThat(executeOutput.params()).containsEntry("greeting", "Hello, PoC");
+    assertThat(previewOutput.params()).isNotEqualTo(executeOutput.params());
   }
 
   @Test
@@ -151,7 +151,7 @@ class ShowcaseUnitTest extends ShowcaseTestBase {
     var executeOutput = helperDef.execute(input);
 
     assertThat(previewOutput.value()).isEqualTo(executeOutput.value());
-    assertThat(((Map<?, ?>) previewOutput.value()).get("result")).isEqualTo("PoC!");
+    assertThat(((Map<?, ?>) previewOutput.value()).get("params")).isEqualTo("PoC!");
   }
 
   @Test
@@ -159,13 +159,13 @@ class ShowcaseUnitTest extends ShowcaseTestBase {
   void shouldPreviewDslTransactionDirectly() {
     TransactionDefinition txDef = dslRegistry.resolveTransaction("SAMPLE_TRANSACTION_DSL");
 
-    var input = new TransactionInput(Map.of("name", "PoC"), "SAMPLE_TRANSACTION_DSL", null, "dev");
+    var input = new TransactionInput(null, Map.of("name", "PoC"));
     var previewOutput = txDef.preview(input);
     var executeOutput = txDef.execute(input);
 
-    // DSL inline transaction without .preview() returns empty; execute returns the real result
-    assertThat(previewOutput.result()).isEmpty();
-    assertThat(executeOutput.result()).containsEntry("greeting", "DSL TX says hello to PoC");
+    // DSL inline transaction without .preview() returns empty; execute returns the real params
+    assertThat(previewOutput.params()).isEmpty();
+    assertThat(executeOutput.params()).containsEntry("greeting", "DSL TX says hello to PoC");
   }
 
   private BiFunction<String, Map<String, Object>, Object> previewHelperResolver() {

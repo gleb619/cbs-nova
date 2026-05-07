@@ -32,9 +32,9 @@ class DslComponentModelTest {
     SampleTransactionDefinition def = new SampleTransactionDefinition();
 
     TransactionOutput output =
-        def.execute(new TransactionInput(Map.of("name", "test"), "SAMPLE_TX", null, "dev"));
+        def.execute(new TransactionInput(null, Map.of("name", "test")));
 
-    assertThat(output.result()).containsEntry("greeting", "Hello, test");
+    assertThat(output.params()).containsEntry("greeting", "Hello, test");
   }
 
   @Test
@@ -54,8 +54,8 @@ class DslComponentModelTest {
     verify(resolver).resolve(SampleTransaction.class);
 
     TransactionOutput output =
-        def.execute(new TransactionInput(Map.of("name", "test"), "SAMPLE_TX", null, "dev"));
-    assertThat(output.result()).containsEntry("greeting", "resolved: test");
+        def.execute(new TransactionInput(null, Map.of("name", "test")));
+    assertThat(output.params()).containsEntry("greeting", "resolved: test");
   }
 
   @Test
@@ -76,8 +76,8 @@ class DslComponentModelTest {
 
     TransactionDefinition txDef = registry.resolveTransaction("SAMPLE_TX");
     TransactionOutput output =
-        txDef.execute(new TransactionInput(Map.of("name", "test"), "SAMPLE_TX", null, "dev"));
+        txDef.execute(new TransactionInput(null, Map.of("name", "test")));
 
-    assertThat(output.result()).containsEntry("greeting", "spi-resolved: test");
+    assertThat(output.params()).containsEntry("greeting", "spi-resolved: test");
   }
 }

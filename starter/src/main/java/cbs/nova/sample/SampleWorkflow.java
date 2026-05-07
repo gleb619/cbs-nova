@@ -1,7 +1,7 @@
 package cbs.nova.sample;
 
 import cbs.dsl.api.DslComponent;
-import cbs.dsl.api.DslImplType;
+import cbs.dsl.api.DslComponent.DslImplType;
 import cbs.dsl.api.WorkflowFunction;
 import cbs.dsl.api.WorkflowTypes.WorkflowInput;
 import cbs.dsl.api.WorkflowTypes.WorkflowOutput;

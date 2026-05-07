@@ -6,7 +6,7 @@
 
 ## Workflow DSL — State Transitions
 
-Transitions are full closures receiving `ctx`. Each transition can run multiple events — async by default, or explicitly awaited. `ctx.resumeEvent()` loads existing context from PostgreSQL and re-runs `finish {}` and `display {}` only — it sets `ctx.isResumed = true` so DSL authors can branch on it.
+Transitions are full closures receiving `ctx`. Each transition can run multiple events — async by default, or explicitly awaited. `ctx.resumeEvent()` loads existing context from PostgreSQL and re-runs `finish {}` only — it sets `ctx.isResumed = true` so DSL authors can branch on it.
 
 `onFault {}` is a closure per transition. `states`, `initial`, and `terminal` are optional; defaults apply if omitted.
 
@@ -38,10 +38,10 @@ workflow("LOAN_CONTRACT")
 
 **`runEvent` vs `resumeEvent`:**
 
-| Method                   | context {}     | transactions {} | finish {} | display {} | ctx.isResumed |
-|--------------------------|----------------|-----------------|-----------|------------|---------------|
-| `ctx.runEvent(event)`    | recalculated   | executed        | executed  | executed   | false         |
-| `ctx.resumeEvent(event)` | loaded from PG | skipped         | executed  | executed   | true          |
+| Method                   | context {}     | transactions {} | finish {} | ctx.isResumed |
+|--------------------------|----------------|-----------------|-----------|---------------|
+| `ctx.runEvent(event)`    | recalculated   | executed        | executed  | false         |
+| `ctx.resumeEvent(event)` | loaded from PG | skipped         | executed  | true          |
 
 ---
 

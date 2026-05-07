@@ -1,7 +1,7 @@
 package cbs.nova.sample;
 
 import cbs.dsl.api.DslComponent;
-import cbs.dsl.api.DslImplType;
+import cbs.dsl.api.DslComponent.DslImplType;
 import cbs.dsl.api.TransactionFunction;
 import cbs.dsl.api.context.TransactionContext;
 import cbs.nova.sample.SampleTransaction.SampleTxInput;
@@ -33,7 +33,7 @@ public class SampleTransaction implements TransactionFunction<SampleTxInput, Sam
   public record SampleTxInput(String name) implements TransactionArg {
 
     @Override
-    public Map<String, Object> toMap() {
+    public Map<String, Object> params() {
       return Map.of("name", name);
     }
   }
@@ -42,7 +42,7 @@ public class SampleTransaction implements TransactionFunction<SampleTxInput, Sam
   public record SampleTxOutput(String greeting) implements TransactionResult {
 
     @Override
-    public Map<String, Object> toMap() {
+    public Map<String, Object> params() {
       return Map.of("greeting", greeting);
     }
   }

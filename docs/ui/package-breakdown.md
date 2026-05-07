@@ -159,7 +159,6 @@ export interface WorkflowExecution {
   dslVersion: string;
   currentState: string;
   status: 'ACTIVE' | 'CLOSED' | 'FAULTED';
-  displayData: Record<string, string>;   // from DSL display {} block
   performedBy: string;
   createdAt: string;
   updatedAt: string;
@@ -214,7 +213,6 @@ export interface WorkflowWidget {
   workflowCode: string;
   currentState: string;
   status: 'ACTIVE' | 'CLOSED' | 'FAULTED';
-  displayData: Record<string, string>;   // key display fields from DSL
   availableActions: Action[];            // actions valid for current state
 }
 ```

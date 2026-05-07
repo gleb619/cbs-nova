@@ -85,23 +85,19 @@ iteration only.
 
 ```java
 event("LOAN_DISBURSEMENT")
-    .requiredParam("customerId")
-    .requiredParam("loanId")
-    .requiredParam("amount")
-    .optionalParam("accountNumber")
-
+    .parameters(reg ->
+      reg.string("customerId")
+         .number("loanId")
+         .decimal("amount")
+         .string("accountNumber")
+    )
+  
     // Pre-Temporal enrichment
     .context(ctx -> {
         ctx.put("customerCode", ctx.helper("FIND_CUSTOMER_CODE_BY_ID",
             Map.of("id", ctx.get("customerId"))));
         ctx.put("loanConditions", ctx.helper("LOAN_CONDITIONS_BY_ID",
             Map.of("loanId", ctx.get("loanId"))));
-    })
-
-    // UI display
-    .display(ctx -> {
-        ctx.label("Customer ID", ctx.get("customerId"));
-        ctx.label("Amount", ctx.get("amount"));
     })
 
     // Transaction orchestration

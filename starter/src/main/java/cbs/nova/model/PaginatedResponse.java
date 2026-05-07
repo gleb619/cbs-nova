@@ -4,7 +4,7 @@ import lombok.Builder;
 
 import java.util.List;
 
-/** Paginated result returned by service layer, decoupled from Spring Data {@code Page}. */
+/** Paginated params returned by service layer, decoupled from Spring Data {@code Page}. */
 @Builder(toBuilder = true)
 public record PaginatedResponse<T>(
     List<T> content, long totalElements, int pageNumber, int pageSize, int totalPages) {

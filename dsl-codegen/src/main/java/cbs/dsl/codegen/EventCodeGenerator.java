@@ -1,6 +1,5 @@
 package cbs.dsl.codegen;
 
-
 import javax.annotation.processing.Filer;
 import javax.tools.JavaFileObject;
 
@@ -12,6 +11,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * Domain-oriented generator for {@code @DslComponent(type = EVENT)} components.
@@ -34,64 +34,70 @@ public class EventCodeGenerator {
   private static final String DEFINITIONS_PACKAGE = "cbs.dsl.codegen.generated.definitions";
 
   private final Filer filer;
+  private final Function<RegistrationSpec, String> dslBodyProvider;
 
-  public EventCodeGenerator(Filer filer) {
+  public EventCodeGenerator(Filer filer, Function<RegistrationSpec, String> dslBodyProvider) {
     this.filer = filer;
+    this.dslBodyProvider = dslBodyProvider;
   }
 
   public void generate(List<RegistrationSpec> specs) throws IOException {
     for (RegistrationSpec spec : specs) {
-      generateWorkflowInterface(spec);
-      generateDefinition(spec);
+      String workflowSource = generateWorkflowInterfaceCode(spec);
+      writeWorkflowInterface(spec, workflowSource);
+
+      String definitionSource = generateDefinitionCode(spec);
+      writeDefinition(spec, definitionSource);
     }
   }
 
-  private void generateWorkflowInterface(RegistrationSpec spec) throws IOException {
+  public String generateWorkflowInterfaceCode(RegistrationSpec spec) {
     String className = toClassName(spec.code()) + "Workflow";
     String packageName = GENERATED_PACKAGE;
-    String fqcn = packageName + "." + className;
 
-    JavaFileObject file = filer.createSourceFile(fqcn);
     String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
 
     String sourceTemplate = //language=java
         """
         package {{package}};
-        
+
         import cbs.nova.model.EventWorkflowRequest;
         import cbs.nova.model.WorkflowExecutionResponse;
         import io.temporal.workflow.WorkflowInterface;
         import io.temporal.workflow.WorkflowMethod;
         import javax.annotation.processing.Generated;
-        
+
         @Generated(
             value = "cbs.dsl.codegen.EventCodeGenerator",
             date = "{{timestamp}}"
         )
         @WorkflowInterface
         public interface {{className}} {
-        
+
             @WorkflowMethod(name = "{{workflowMethodName}}")
             WorkflowExecutionResponse execute(EventWorkflowRequest input);
         }
         """;
 
-    String source = Substitutor.format(sourceTemplate, Map.of(
+    return Substitutor.format(sourceTemplate, Map.of(
         "package", packageName,
         "timestamp", timestamp,
         "className", className,
         "workflowMethodName", spec.code()));
+  }
 
+  public void writeWorkflowInterface(RegistrationSpec spec, String source) throws IOException {
+    String className = toClassName(spec.code()) + "Workflow";
+    String fqcn = GENERATED_PACKAGE + "." + className;
+    JavaFileObject file = filer.createSourceFile(fqcn);
     try (PrintWriter writer = new PrintWriter(file.openWriter())) {
       writer.print(source);
     }
   }
 
-  private void generateDefinition(RegistrationSpec spec) throws IOException {
+  public String generateDefinitionCode(RegistrationSpec spec) {
     String wrapperClassName = spec.className() + "Definition";
     String workflowInterfaceName = toClassName(spec.code()) + "Workflow";
-    String qualifiedName = DEFINITIONS_PACKAGE + "." + wrapperClassName;
-    JavaFileObject file = filer.createSourceFile(qualifiedName);
 
     String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
     boolean inputIsRuntime = spec.inputType().equals(EV_INPUT);
@@ -101,7 +107,7 @@ public class EventCodeGenerator {
         ? "input"
         : Substitutor.format("JsonPayload.fromMap(input.params(), {{inputSimpleName}}.class)", Map.of("inputSimpleName", simpleName(spec.inputType())));
 
-    String outputConversion = outputIsRuntime ? "out" : "new EventOutput(JsonPayload.toMap(out))";
+    String outputConversion = outputIsRuntime ? "out" : "new EventOutput(JsonPayload.params(out))";
 
     String jsonPayloadImport =
         (inputIsRuntime && outputIsRuntime) ? "" : "import cbs.dsl.api.JsonPayload;\n";
@@ -110,129 +116,70 @@ public class EventCodeGenerator {
     String outputTypeImport =
         outputIsRuntime ? "" : Substitutor.format("import {{outputType}};\n", Map.of("outputType", spec.outputType()));
 
-    String dslBodyOrFallback = (spec.dslBody() != null && !spec.dslBody().isBlank())
-        ? spec.dslBody()
-        : "return EventDsl.event(\"" + spec.code() + "\").build();";
+    String dslBody = dslBodyProvider.apply(spec);
     String dslImportsBlock = (spec.dslImports() != null && !spec.dslImports().isBlank())
         ? spec.dslImports().trim() + "\n"
-        : ((spec.dslBody() == null || spec.dslBody().isBlank()) ? "import cbs.dsl.builder.EventDsl;\n" : "");
+        : "import cbs.dsl.builder.UndefinedDslObject;\n";
 
     String sourceTemplate = //language=java
         """
         package {{definitionsPackage}};
-        
+
         import cbs.dsl.api.DslComponentResolver;
         import cbs.dsl.api.DslObject;
         import cbs.dsl.api.EventDefinition;
         import cbs.dsl.api.EventTypes.EventInput;
         import cbs.dsl.api.EventTypes.EventOutput;
-        import cbs.dsl.api.ParameterDefinition;
-        import cbs.dsl.api.context.DisplayScope;
-        import cbs.dsl.api.context.EnrichmentContext;
-        import cbs.dsl.api.context.FinishContext;
-        import cbs.dsl.api.context.TransactionsScope;
-        import cbs.nova.model.EventWorkflowRequest;
-        import cbs.nova.model.WorkflowExecutionResponse;
-        import io.temporal.workflow.WorkflowInterface;
-        import io.temporal.workflow.WorkflowMethod;
+        import cbs.dsl.api.context.EventContext;
         import {{generatedPackage}}.{{workflowInterfaceName}};
         {{jsonPayloadImport}}        import {{specPackageName}}.{{specClassName}};
         {{inputTypeImport}}{{outputTypeImport}}
-        {{dslImportsBlock}}        import java.util.Collections;
-        import java.util.List;
-        import java.util.function.BiConsumer;
-        import java.util.function.Consumer;
-        
+        {{dslImportsBlock}}        import java.util.function.Consumer;
+        import java.util.function.Function;
+        import javax.annotation.processing.Generated;
+
         /**
          * Generated EventDefinition wrapper + Workflow implementation for {{specClassName}}.
          * <strong>WARNING:</strong> Auto-generated — do not edit.
          */
-        @javax.annotation.processing.Generated(
+        @Generated(
             value = "cbs.dsl.codegen.EventCodeGenerator",
             date = "{{timestamp}}"
         )
         public class {{wrapperClassName}} implements EventDefinition, {{workflowInterfaceName}} {
-        
+
             private final {{specClassName}} function;
-            private final EventWorkflowOrchestrator orchestrator;
-        
+
             public {{wrapperClassName}}() {
-                this(null, null);
+                this(null);
             }
-        
+
             public {{wrapperClassName}}(DslComponentResolver resolver) {
-                this(resolver, null);
-            }
-        
-            public {{wrapperClassName}}(EventWorkflowOrchestrator orchestrator) {
-                this(null, orchestrator);
-            }
-        
-            public {{wrapperClassName}}(DslComponentResolver resolver, EventWorkflowOrchestrator orchestrator) {
                 this.function = resolver != null ? resolver.resolve({{specClassName}}.class) : new {{specClassName}}();
-                this.orchestrator = orchestrator;
             }
-        
+
             @Override
             public String getCode() {
                 return "{{specCode}}";
             }
-        
-            @Override
-            public List<ParameterDefinition> getParameters() {
-                return Collections.emptyList();
-            }
-        
-            @Override
-            public Consumer<EnrichmentContext> getContextBlock() {
-                return ctx -> {};
-            }
-        
-            @Override
-            public Consumer<DisplayScope> getDisplayBlock() {
-                return scope -> {};
-            }
-        
-            @Override
-            public Consumer<TransactionsScope> getTransactionsBlock() {
-                return null;
-            }
-        
-            @Override
-            public List<String> getTransactionCodes() {
-                return Collections.emptyList();
-            }
-        
-            @Override
-            public BiConsumer<FinishContext, Throwable> getFinishBlock() {
-                return (ctx, ex) -> {};
-            }
-        
+
             @Override
             public EventOutput preview(EventInput input) {
                 {{inputSimpleName}} typed = {{inputConversion}};
                 {{outputSimpleName}} out = function.preview(typed);
                 return {{outputConversion}};
             }
-        
+
             @Override
             public EventOutput execute(EventInput input) {
                 {{inputSimpleName}} typed = {{inputConversion}};
                 {{outputSimpleName}} out = function.execute(typed);
                 return {{outputConversion}};
             }
-        
+
             @Override
             public DslObject dsl() {
-                {{dslBodyOrFallback}}
-            }
-        
-            @Override
-            public WorkflowExecutionResponse execute(EventWorkflowRequest input) {
-                if (orchestrator == null) {
-                    throw new IllegalStateException("EventWorkflowOrchestrator is required for workflow execution");
-                }
-                return orchestrator.execute(input, Collections.emptyList());
+                {{dslBody}}
             }
         }
         """;
@@ -246,6 +193,7 @@ public class EventCodeGenerator {
     params.put("specClassName", spec.className());
     params.put("inputTypeImport", inputTypeImport);
     params.put("outputTypeImport", outputTypeImport);
+    params.put("dslImportsBlock", dslImportsBlock);
     params.put("timestamp", timestamp);
     params.put("wrapperClassName", wrapperClassName);
     params.put("specCode", spec.code());
@@ -253,13 +201,22 @@ public class EventCodeGenerator {
     params.put("inputConversion", inputConversion);
     params.put("outputSimpleName", simpleName(spec.outputType()));
     params.put("outputConversion", outputConversion);
-    params.put("dslImportsBlock", dslImportsBlock);
-    params.put("dslBodyOrFallback", dslBodyOrFallback);
-    String source = Substitutor.format(sourceTemplate, params);
+    params.put("dslBody", dslBody);
+    return Substitutor.format(sourceTemplate, params);
+  }
 
+  public void writeDefinition(RegistrationSpec spec, String source) throws IOException {
+    String wrapperClassName = spec.className() + "Definition";
+    String qualifiedName = DEFINITIONS_PACKAGE + "." + wrapperClassName;
+    JavaFileObject file = filer.createSourceFile(qualifiedName);
     try (PrintWriter writer = new PrintWriter(file.openWriter())) {
       writer.print(source);
     }
+  }
+
+  private static String simpleName(String fullyQualifiedName) {
+    int lastDot = fullyQualifiedName.lastIndexOf('.');
+    return lastDot >= 0 ? fullyQualifiedName.substring(lastDot + 1) : fullyQualifiedName;
   }
 
   private static String toClassName(String code) {
@@ -276,10 +233,5 @@ public class EventCodeGenerator {
       }
     }
     return sb.toString();
-  }
-
-  private static String simpleName(String fullyQualifiedName) {
-    int lastDot = fullyQualifiedName.lastIndexOf('.');
-    return lastDot >= 0 ? fullyQualifiedName.substring(lastDot + 1) : fullyQualifiedName;
   }
 }

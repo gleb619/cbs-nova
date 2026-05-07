@@ -5,13 +5,13 @@
 
 **DSL File Types & Conventions:**
 
-| Suffix / Class Name      | Scope Class             | Builder              | Defines                                                    |
-|--------------------------|-------------------------|----------------------|------------------------------------------------------------|
-| `*Event.java`            | `EventDslScope`         | `EventBuilder`       | parameters, context, display, transactions, finish         |
-| `*Transaction.java`      | `TransactionDslScope`   | `TransactionBuilder` | parameters, context, preview, execute, rollback            |
-| `*.helper.java`          | `HelperDslScope`        | `HelperBuilder`      | parameters, context, execute                               |
-| `*Condition.java`        | `ConditionDslScope`     | `ConditionBuilder`   | parameters, context, predicate                             |
-| `*Workflow.java`         | `WorkflowDslScope`      | `WorkflowBuilder`    | states, initial, terminal, transitions                     |
+| Suffix / Class Name      | Scope Class             | Builder              | Defines                                                  |
+|--------------------------|-------------------------|----------------------|----------------------------------------------------------|
+| `*Event.java`            | `EventDslScope`         | `EventBuilder`       | parameters, context, transactions, finish         |
+| `*Transaction.java`      | `TransactionDslScope`   | `TransactionBuilder` | parameters, context, preview, execute, rollback          |
+| `*.helper.java`          | `HelperDslScope`        | `HelperBuilder`      | parameters, context, execute                             |
+| `*Condition.java`        | `ConditionDslScope`     | `ConditionBuilder`   | parameters, context, predicate                           |
+| `*Workflow.java`         | `WorkflowDslScope`      | `WorkflowBuilder`    | states, initial, terminal, transitions                   |
 | `*MassOperation.java`    | `MassOperationDslScope` | `MassOpBuilder`      | parameters, triggers, source, lock, context, item, signals |
 
 One folder per event/workflow. Mass ops live under `mass-operations/`. Helpers can be global or event-scoped.
@@ -38,7 +38,7 @@ BaseContext(eventCode, workflowExecutionId, performedBy, dslVersion)
         └── EnrichmentContext(enrichment: MutableMap)  ← put(key, value)
               ├── HelperContext(params)                 ← helper(name, params): Object
               ├── TransactionContext(isResumed)         ← prolong(Action), delegate()
-              └── FinishContext(displayData)
+              └── FinishContext()
 ```
 
 **Registries:**

@@ -46,15 +46,15 @@ public class EventExecutionService {
 
 //    String encryptedContextJson = contextEncryptionService.encrypt(enrichedContext);
 //
-//    WorkflowExecutionResponse result =
+//    WorkflowExecutionResponse params =
 //        workflowExecutor.start(request, encryptedContextJson, eventDef.getTransactionCodes());
-//    return new EventExecutionResponse(result.executionId(), result.status());
+//    return new EventExecutionResponse(params.executionId(), params.status());
     return null;
   }
 
   /**
-   * Resolves a named DSL component: tries helpers first, then conditions. Returns the result value
-   * (for helpers: the {@code value()} of the output; for conditions: the boolean result).
+   * Resolves a named DSL component: tries helpers first, then conditions. Returns the params value
+   * (for helpers: the {@code value()} of the output; for conditions: the boolean params).
    */
   private Object resolveByCode(String code, Map<String, Object> params, String eventCode) {
     // Try helper first

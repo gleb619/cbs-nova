@@ -153,8 +153,10 @@ The BA writes:
 
 ```java
 EventDsl.event("LOAN_DISBURSEMENT")
-    .requiredParam("amount")
-    .requiredParam("currency")
+    .parameters(reg -> {
+        reg.decimal("amount");
+        reg.string("currency");
+    })
     .context(ctx -> {
         Object rate = ctx.helper("GET_EXCHANGE_RATE", Map.of("currency", ctx.get("currency")));
         ctx.put("rate", rate);
@@ -209,8 +211,10 @@ context/scope object differs.
 
 ```java
 EventDsl.event("LOAN_DISBURSEMENT")
-    .requiredParam("amount")
-    .requiredParam("currency")
+    .parameters(reg -> {
+        reg.decimal("amount");
+        reg.string("currency");
+    })
     .context(ctx -> {
         Object rate = ctx.helper("GET_EXCHANGE_RATE", Map.of("currency", ctx.get("currency")));
         ctx.put("rate", rate);

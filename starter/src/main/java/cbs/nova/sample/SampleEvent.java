@@ -1,7 +1,7 @@
 package cbs.nova.sample;
 
 import cbs.dsl.api.DslComponent;
-import cbs.dsl.api.DslImplType;
+import cbs.dsl.api.DslComponent.DslImplType;
 import cbs.dsl.api.EventFunction;
 import cbs.dsl.api.EventTypes.EventInput;
 import cbs.dsl.api.EventTypes.EventOutput;

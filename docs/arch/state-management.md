@@ -15,7 +15,6 @@ CREATE TABLE workflow_execution (
     current_state     VARCHAR(100) NOT NULL,
     status            VARCHAR(20)  NOT NULL,        -- ACTIVE / CLOSED / FAULTED
     context           JSONB        NOT NULL DEFAULT '{}',        -- encrypted
-    display_data      JSONB        NOT NULL DEFAULT '{}',        -- encrypted
     performed_by      VARCHAR(200) NOT NULL,
     created_at        TIMESTAMPTZ  NOT NULL DEFAULT now(),
     updated_at        TIMESTAMPTZ  NOT NULL DEFAULT now()

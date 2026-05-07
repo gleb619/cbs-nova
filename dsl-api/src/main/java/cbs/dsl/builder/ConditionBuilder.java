@@ -10,6 +10,7 @@ import cbs.dsl.api.context.TransactionContext;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -24,13 +25,10 @@ public class ConditionBuilder {
     this.code = code;
   }
 
-  public ConditionBuilder requiredParam(String name) {
-    this.parameters.add(new ParameterDefinition(name, true));
-    return this;
-  }
-
-  public ConditionBuilder optionalParam(String name) {
-    this.parameters.add(new ParameterDefinition(name, false));
+  public ConditionBuilder parameters(Consumer<ParametersBuilder> block) {
+    ParametersBuilder builder = new ParametersBuilder();
+    block.accept(builder);
+    this.parameters.addAll(builder.build());
     return this;
   }
 

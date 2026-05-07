@@ -1,7 +1,5 @@
 package cbs.dsl.codegen;
 
-import lombok.RequiredArgsConstructor;
-
 import javax.annotation.processing.Filer;
 import javax.tools.JavaFileObject;
 
@@ -12,6 +10,7 @@ import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * Domain-oriented generator for {@code @DslComponent(type = MASS_OPERATION)} components.
@@ -19,7 +18,6 @@ import java.util.Map;
  * <p>Produces a single artifact per component: {@code {Code}MassOperationDefinition} — implements
  * {@code MassOperationDefinition} and hosts {@code dsl()} returning a {@code DslObject}.
  */
-@RequiredArgsConstructor
 public class MassOperationCodeGenerator {
 
   private static final String MO_INPUT = "cbs.dsl.api.MassOperationTypes.MassOperationInput";
@@ -27,17 +25,22 @@ public class MassOperationCodeGenerator {
   private static final String DEFINITIONS_PACKAGE = "cbs.dsl.codegen.generated.definitions";
 
   private final Filer filer;
+  private final Function<RegistrationSpec, String> dslBodyProvider;
+
+  public MassOperationCodeGenerator(Filer filer, Function<RegistrationSpec, String> dslBodyProvider) {
+    this.filer = filer;
+    this.dslBodyProvider = dslBodyProvider;
+  }
 
   public void generate(List<RegistrationSpec> specs) throws IOException {
     for (RegistrationSpec spec : specs) {
-      generateDefinition(spec);
+      String definitionSource = generateDefinitionCode(spec);
+      writeDefinition(spec, definitionSource);
     }
   }
 
-  private void generateDefinition(RegistrationSpec spec) throws IOException {
+  public String generateDefinitionCode(RegistrationSpec spec) {
     String wrapperClassName = spec.className() + "Definition";
-    String qualifiedName = DEFINITIONS_PACKAGE + "." + wrapperClassName;
-    JavaFileObject file = filer.createSourceFile(qualifiedName);
 
     String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
     boolean inputIsRuntime = spec.inputType().equals(MO_INPUT);
@@ -58,17 +61,15 @@ public class MassOperationCodeGenerator {
     String outputTypeImport =
         outputIsRuntime ? "" : Substitutor.format("import {{type}};\n", Map.of("type", spec.outputType()));
 
-    String dslBodyOrFallback = (spec.dslBody() != null && !spec.dslBody().isBlank())
-        ? spec.dslBody()
-        : "return MassOperationDsl.massOperation(\"" + spec.code() + "\").build();";
+    String dslBody = dslBodyProvider.apply(spec);
     String dslImportsBlock = (spec.dslImports() != null && !spec.dslImports().isBlank())
         ? spec.dslImports().trim() + "\n"
-        : ((spec.dslBody() == null || spec.dslBody().isBlank()) ? "import cbs.dsl.builder.MassOperationDsl;\n" : "");
+        : "import cbs.dsl.builder.UndefinedDslObject;\n";
 
     String sourceTemplate = //language=java
         """
         package {{package}};
-        
+
         import cbs.dsl.api.DslComponentResolver;
         import cbs.dsl.api.DslObject;
         import cbs.dsl.api.LockDefinition;
@@ -84,7 +85,7 @@ public class MassOperationCodeGenerator {
         import java.util.List;
         import java.util.function.Consumer;
         import javax.annotation.processing.Generated;
-        
+
         /**
          * Generated MassOperationDefinition wrapper for {{className}}.
          * <strong>WARNING:</strong> Auto-generated — do not edit.
@@ -94,49 +95,49 @@ public class MassOperationCodeGenerator {
             date = "{{timestamp}}"
         )
         public class {{wrapperClassName}} implements MassOperationDefinition {
-        
+
             private final {{className}} function;
-        
+
             public {{wrapperClassName}}() {
                 this(null);
             }
-        
+
             public {{wrapperClassName}}(DslComponentResolver resolver) {
                 this.function = resolver != null ? resolver.resolve({{className}}.class) : new {{className}}();
             }
-        
+
             @Override
             public String getCode() {
                 return "{{code}}";
             }
-        
+
             @Override
             public String getCategory() {
                 return "DEFAULT";
             }
-        
+
             @Override
             public List<TriggerDefinition> getTriggers() {
                 return Collections.emptyList();
             }
-        
+
             @Override
             public SourceDefinition getSource() {
                 return null;
             }
-        
+
             @Override
             public Consumer<MassOperationContext> getItemBlock() {
                 return ctx -> {};
             }
-        
+
             @Override
             public MassOperationOutput execute(MassOperationInput input) {
                 {{inputType}} typed = {{inputConversion}};
                 {{outputType}} out = function.execute(typed);
                 return {{outputConversion}};
             }
-        
+
             @Override
             public DslObject dsl() {
                 {{dslBody}}
@@ -144,7 +145,7 @@ public class MassOperationCodeGenerator {
         }
         """;
 
-    String source = Substitutor.format(
+    return Substitutor.format(
         sourceTemplate,
         Map.ofEntries(
             Map.entry("package", DEFINITIONS_PACKAGE),
@@ -160,9 +161,14 @@ public class MassOperationCodeGenerator {
             Map.entry("inputConversion", inputConversion),
             Map.entry("outputType", simpleName(spec.outputType())),
             Map.entry("outputConversion", outputConversion),
-            Map.entry("dslBody", dslBodyOrFallback),
+            Map.entry("dslBody", dslBody),
             Map.entry("dslImports", dslImportsBlock)));
+  }
 
+  public void writeDefinition(RegistrationSpec spec, String source) throws IOException {
+    String wrapperClassName = spec.className() + "Definition";
+    String qualifiedName = DEFINITIONS_PACKAGE + "." + wrapperClassName;
+    JavaFileObject file = filer.createSourceFile(qualifiedName);
     try (PrintWriter writer = new PrintWriter(file.openWriter())) {
       writer.print(source);
     }

@@ -1,7 +1,7 @@
 package cbs.nova.sample;
 
 import cbs.dsl.api.DslComponent;
-import cbs.dsl.api.DslImplType;
+import cbs.dsl.api.DslComponent.DslImplType;
 import cbs.dsl.api.HelperFunction;
 import cbs.dsl.api.HelperTypes.HelperInput;
 import cbs.dsl.api.HelperTypes.HelperOutput;
@@ -26,7 +26,7 @@ public class SampleHelper implements HelperFunction<HelperInput, HelperOutput> {
   public record SampleHelperInput(String name) implements HelperArg {
 
     @Override
-    public Map<String, Object> toMap() {
+    public Map<String, Object> params() {
       return Map.of("name", name);
     }
   }

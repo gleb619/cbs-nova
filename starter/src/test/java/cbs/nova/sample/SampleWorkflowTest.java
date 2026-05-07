@@ -47,7 +47,7 @@ class SampleWorkflowTest {
     // Assert
     assertNotNull(tx);
     assertEquals("SAMPLE_TX", tx.getCode());
-    assertEquals("Hello, PoC", output.result().get("greeting"));
+    assertEquals("Hello, PoC", output.params().get("greeting"));
   }
 
   @Test
@@ -65,11 +65,11 @@ class SampleWorkflowTest {
     // Assert
     assertNotNull(helper);
     assertEquals("SAMPLE_HELPER", helper.getCode());
-    assertEquals("Hello, World!", ((Map<?, ?>) output.value()).get("result"));
+    assertEquals("Hello, World!", ((Map<?, ?>) output.value()).get("params"));
   }
 
   @Test
-  @DisplayName("Should resolve generated SampleConditionDefinition and evaluate via wrapper")
+  @DisplayName("Should resolve generated SampleConditionDefinition and check via wrapper")
   void shouldResolveGeneratedSampleConditionDefinition() {
     // Arrange
     DslRegistry registry = new DslRegistry();

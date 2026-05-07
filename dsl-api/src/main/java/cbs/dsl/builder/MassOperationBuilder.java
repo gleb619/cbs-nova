@@ -42,13 +42,10 @@ public class MassOperationBuilder {
     return this;
   }
 
-  public MassOperationBuilder requiredParam(String name) {
-    this.parameters.add(new ParameterDefinition(name, true));
-    return this;
-  }
-
-  public MassOperationBuilder optionalParam(String name) {
-    this.parameters.add(new ParameterDefinition(name, false));
+  public MassOperationBuilder parameters(Consumer<ParametersBuilder> block) {
+    ParametersBuilder builder = new ParametersBuilder();
+    block.accept(builder);
+    this.parameters.addAll(builder.build());
     return this;
   }
 

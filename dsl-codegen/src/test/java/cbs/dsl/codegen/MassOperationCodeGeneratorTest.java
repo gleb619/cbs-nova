@@ -15,8 +15,8 @@ class MassOperationCodeGeneratorTest {
   private static final String MO_OUTPUT = "cbs.dsl.api.MassOperationTypes.MassOperationOutput";
 
   @Test
-  @DisplayName("shouldGenerateDefinitionWithFallbackDslWhenDslBodyIsNull")
-  void shouldGenerateDefinitionWithFallbackDslWhenDslBodyIsNull() throws Exception {
+  @DisplayName("shouldGenerateDefinitionWithUndefinedDslWhenLambdaReturnsUndefined")
+  void shouldGenerateDefinitionWithUndefinedDslWhenLambdaReturnsUndefined() throws Exception {
     FakeFiler filer = new FakeFiler();
     RegistrationSpec spec = new RegistrationSpec(
         "com.example",
@@ -29,7 +29,7 @@ class MassOperationCodeGeneratorTest {
         null,
         null);
 
-    new MassOperationCodeGenerator(filer).generate(List.of(spec));
+    new MassOperationCodeGenerator(filer, s -> "return UndefinedDslObject.create();").generate(List.of(spec));
 
     String key = "cbs.dsl.codegen.generated.definitions.MyMassOpDefinition";
     assertTrue(filer.files.containsKey(key), "Should generate MyMassOpDefinition");
@@ -40,11 +40,11 @@ class MassOperationCodeGeneratorTest {
     assertTrue(
         content.contains("implements MassOperationDefinition"), "Should implement MassOperationDefinition");
     assertTrue(
-        content.contains("return MassOperationDsl.massOperation(\"MOP_1\").build();"),
-        "Should contain fallback dsl body");
+        content.contains("return UndefinedDslObject.create();"),
+        "Should contain UndefinedDslObject dsl body");
     assertTrue(
-        content.contains("import cbs.dsl.builder.MassOperationDsl;"),
-        "Should contain MassOperationDsl import");
+        content.contains("import cbs.dsl.builder.UndefinedDslObject;"),
+        "Should contain UndefinedDslObject import");
   }
 
   @Test
@@ -62,7 +62,7 @@ class MassOperationCodeGeneratorTest {
         "return CustomMassOpDsl.massOperation(\"MOP_1\").build();",
         "import com.example.CustomMassOpDsl;");
 
-    new MassOperationCodeGenerator(filer).generate(List.of(spec));
+    new MassOperationCodeGenerator(filer, s -> s.dslBody()).generate(List.of(spec));
 
     String key = "cbs.dsl.codegen.generated.definitions.MyMassOpDefinition";
     assertTrue(filer.files.containsKey(key), "Should generate MyMassOpDefinition");
@@ -76,7 +76,7 @@ class MassOperationCodeGeneratorTest {
         content.contains("import com.example.CustomMassOpDsl;"),
         "Should contain custom dsl import");
     assertFalse(
-        content.contains("import cbs.dsl.builder.MassOperationDsl;"),
-        "Should not contain fallback import");
+        content.contains("import cbs.dsl.builder.UndefinedDslObject;"),
+        "Should not contain UndefinedDslObject fallback import");
   }
 }

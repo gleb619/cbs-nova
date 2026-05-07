@@ -15,8 +15,8 @@ class ConditionCodeGeneratorTest {
   private static final String CN_OUTPUT = "cbs.dsl.api.ConditionTypes.ConditionOutput";
 
   @Test
-  @DisplayName("shouldGenerateDefinitionWithFallbackDslWhenDslBodyIsNull")
-  void shouldGenerateDefinitionWithFallbackDslWhenDslBodyIsNull() throws Exception {
+  @DisplayName("shouldGenerateDefinitionWithUndefinedDslWhenLambdaReturnsUndefined")
+  void shouldGenerateDefinitionWithUndefinedDslWhenLambdaReturnsUndefined() throws Exception {
     FakeFiler filer = new FakeFiler();
     RegistrationSpec spec = new RegistrationSpec(
         "com.example",
@@ -29,7 +29,7 @@ class ConditionCodeGeneratorTest {
         null,
         null);
 
-    new ConditionCodeGenerator(filer).generate(List.of(spec));
+    new ConditionCodeGenerator(filer, s -> "return UndefinedDslObject.create();").generate(List.of(spec));
 
     String key = "cbs.dsl.codegen.generated.definitions.MyConditionDefinition";
     assertTrue(filer.files.containsKey(key), "Should generate MyConditionDefinition");
@@ -40,11 +40,11 @@ class ConditionCodeGeneratorTest {
     assertTrue(
         content.contains("implements ConditionDefinition"), "Should implement ConditionDefinition");
     assertTrue(
-        content.contains("return ConditionDsl.condition(\"COND_1\").build();"),
-        "Should contain fallback dsl body");
+        content.contains("return UndefinedDslObject.create();"),
+        "Should contain UndefinedDslObject dsl body");
     assertTrue(
-        content.contains("import cbs.dsl.builder.ConditionDsl;"),
-        "Should contain ConditionDsl import");
+        content.contains("import cbs.dsl.builder.UndefinedDslObject;"),
+        "Should contain UndefinedDslObject import");
   }
 
   @Test
@@ -62,7 +62,7 @@ class ConditionCodeGeneratorTest {
         "return CustomConditionDsl.condition(\"COND_1\").build();",
         "import com.example.CustomConditionDsl;");
 
-    new ConditionCodeGenerator(filer).generate(List.of(spec));
+    new ConditionCodeGenerator(filer, s -> s.dslBody()).generate(List.of(spec));
 
     String key = "cbs.dsl.codegen.generated.definitions.MyConditionDefinition";
     assertTrue(filer.files.containsKey(key), "Should generate MyConditionDefinition");
@@ -76,7 +76,7 @@ class ConditionCodeGeneratorTest {
         content.contains("import com.example.CustomConditionDsl;"),
         "Should contain custom dsl import");
     assertFalse(
-        content.contains("import cbs.dsl.builder.ConditionDsl;"),
-        "Should not contain fallback import");
+        content.contains("import cbs.dsl.builder.UndefinedDslObject;"),
+        "Should not contain UndefinedDslObject fallback import");
   }
 }

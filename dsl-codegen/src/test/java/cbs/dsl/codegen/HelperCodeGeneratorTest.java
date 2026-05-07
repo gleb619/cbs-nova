@@ -15,8 +15,8 @@ class HelperCodeGeneratorTest {
   private static final String HL_OUTPUT = "cbs.dsl.api.HelperTypes.HelperOutput";
 
   @Test
-  @DisplayName("shouldGenerateDefinitionWithFallbackDslWhenDslBodyIsNull")
-  void shouldGenerateDefinitionWithFallbackDslWhenDslBodyIsNull() throws Exception {
+  @DisplayName("shouldGenerateDefinitionWithUndefinedDslWhenLambdaReturnsUndefined")
+  void shouldGenerateDefinitionWithUndefinedDslWhenLambdaReturnsUndefined() throws Exception {
     FakeFiler filer = new FakeFiler();
     RegistrationSpec spec = new RegistrationSpec(
         "com.example",
@@ -29,7 +29,7 @@ class HelperCodeGeneratorTest {
         null,
         null);
 
-    new HelperCodeGenerator(filer).generate(List.of(spec));
+    new HelperCodeGenerator(filer, s -> "return UndefinedDslObject.create();").generate(List.of(spec));
 
     String definitionKey = "cbs.dsl.codegen.generated.definitions.MyHelperDefinition";
     String activityKey = "cbs.dsl.codegen.generated.MyHelperActivity";
@@ -43,11 +43,11 @@ class HelperCodeGeneratorTest {
         content.contains("implements HelperDefinition, MyHelperActivity"),
         "Should implement HelperDefinition and MyHelperActivity");
     assertTrue(
-        content.contains("return HelperDsl.helper(\"HLP_1\").build();"),
-        "Should contain fallback dsl body");
+        content.contains("return UndefinedDslObject.create();"),
+        "Should contain UndefinedDslObject dsl body");
     assertTrue(
-        content.contains("import cbs.dsl.builder.HelperDsl;"),
-        "Should contain HelperDsl import");
+        content.contains("import cbs.dsl.builder.UndefinedDslObject;"),
+        "Should contain UndefinedDslObject import");
   }
 
   @Test
@@ -65,7 +65,7 @@ class HelperCodeGeneratorTest {
         "return CustomHelperDsl.helper(\"HLP_1\").build();",
         "import com.example.CustomHelperDsl;");
 
-    new HelperCodeGenerator(filer).generate(List.of(spec));
+    new HelperCodeGenerator(filer, s -> s.dslBody()).generate(List.of(spec));
 
     String definitionKey = "cbs.dsl.codegen.generated.definitions.MyHelperDefinition";
     assertTrue(filer.files.containsKey(definitionKey), "Should generate MyHelperDefinition");
@@ -79,7 +79,7 @@ class HelperCodeGeneratorTest {
         content.contains("import com.example.CustomHelperDsl;"),
         "Should contain custom dsl import");
     assertFalse(
-        content.contains("import cbs.dsl.builder.HelperDsl;"),
-        "Should not contain fallback import");
+        content.contains("import cbs.dsl.builder.UndefinedDslObject;"),
+        "Should not contain UndefinedDslObject fallback import");
   }
 }

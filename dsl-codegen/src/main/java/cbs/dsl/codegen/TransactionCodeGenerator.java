@@ -1,7 +1,5 @@
 package cbs.dsl.codegen;
 
-import lombok.RequiredArgsConstructor;
-
 import javax.annotation.processing.Filer;
 import javax.tools.JavaFileObject;
 
@@ -13,6 +11,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * Domain-oriented generator for {@code @DslComponent(type = TRANSACTION)} components.
@@ -27,7 +26,6 @@ import java.util.Map;
  *       delegation, and the Temporal activity contract.
  * </ol>
  */
-@RequiredArgsConstructor
 public class TransactionCodeGenerator {
 
   private static final String TX_INPUT = "cbs.dsl.api.TransactionTypes.TransactionInput";
@@ -36,56 +34,66 @@ public class TransactionCodeGenerator {
   private static final String DEFINITIONS_PACKAGE = "cbs.dsl.codegen.generated.definitions";
 
   private final Filer filer;
+  private final Function<RegistrationSpec, String> dslBodyProvider;
+
+  public TransactionCodeGenerator(Filer filer, Function<RegistrationSpec, String> dslBodyProvider) {
+    this.filer = filer;
+    this.dslBodyProvider = dslBodyProvider;
+  }
 
   public void generate(List<RegistrationSpec> specs) throws IOException {
     for (RegistrationSpec spec : specs) {
-      generateActivityInterface(spec);
-      generateDefinition(spec);
+      String activitySource = generateActivityInterfaceCode(spec);
+      writeActivityInterface(spec, activitySource);
+
+      String definitionSource = generateDefinitionCode(spec);
+      writeDefinition(spec, definitionSource);
     }
   }
 
-  private void generateActivityInterface(RegistrationSpec spec) throws IOException {
+  public String generateActivityInterfaceCode(RegistrationSpec spec) {
     String className = spec.className() + "Activity";
-    String fqcn = GENERATED_PACKAGE + "." + className;
-    JavaFileObject file = filer.createSourceFile(fqcn);
     String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
 
     String sourceTemplate = //language=java
             """
             package {{package}};
-            
+
             import cbs.dsl.api.TransactionTypes.TransactionInput;
             import cbs.dsl.api.TransactionTypes.TransactionOutput;
             import io.temporal.activity.ActivityInterface;
             import io.temporal.activity.ActivityMethod;
             import javax.annotation.processing.Generated;
-            
+
             @Generated(
                 value = "cbs.dsl.codegen.TransactionCodeGenerator",
                 date = "{{timestamp}}"
             )
             @ActivityInterface
             public interface {{className}} {
-            
+
                 @ActivityMethod
                 TransactionOutput execute(TransactionInput input);
             }
             """;
-    String source = Substitutor.format(sourceTemplate, Map.of(
+    return Substitutor.format(sourceTemplate, Map.of(
         "package", GENERATED_PACKAGE,
         "timestamp", timestamp,
         "className", className));
+  }
 
+  public void writeActivityInterface(RegistrationSpec spec, String source) throws IOException {
+    String className = spec.className() + "Activity";
+    String fqcn = GENERATED_PACKAGE + "." + className;
+    JavaFileObject file = filer.createSourceFile(fqcn);
     try (PrintWriter writer = new PrintWriter(file.openWriter())) {
       writer.print(source);
     }
   }
 
-  private void generateDefinition(RegistrationSpec spec) throws IOException {
+  public String generateDefinitionCode(RegistrationSpec spec) {
     String wrapperClassName = spec.className() + "Definition";
     String activityInterfaceName = spec.className() + "Activity";
-    String qualifiedName = DEFINITIONS_PACKAGE + "." + wrapperClassName;
-    JavaFileObject file = filer.createSourceFile(qualifiedName);
 
     String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
     boolean inputIsRuntime = spec.inputType().equals(TX_INPUT);
@@ -96,7 +104,7 @@ public class TransactionCodeGenerator {
         : "JsonPayload.fromMap(input.params(), " + simpleName(spec.inputType()) + ".class)";
 
     String outputConversion =
-        outputIsRuntime ? "out" : "new TransactionOutput(JsonPayload.toMap(out))";
+        outputIsRuntime ? "out" : "new TransactionOutput(JsonPayload.params(out))";
 
     String jsonPayloadImport =
         (inputIsRuntime && outputIsRuntime) ? "" : "import cbs.dsl.api.JsonPayload;\n";
@@ -105,17 +113,15 @@ public class TransactionCodeGenerator {
     String outputTypeImport =
         outputIsRuntime ? "" : "import " + spec.outputType() + ";\n";
 
-    String dslBodyOrFallback = (spec.dslBody() != null && !spec.dslBody().isBlank())
-        ? spec.dslBody()
-        : "return TransactionDsl.transaction(\"" + spec.code() + "\").build();";
+    String dslBody = dslBodyProvider.apply(spec);
     String dslImportsBlock = (spec.dslImports() != null && !spec.dslImports().isBlank())
         ? spec.dslImports().trim() + "\n"
-        : ((spec.dslBody() == null || spec.dslBody().isBlank()) ? "import cbs.dsl.builder.TransactionDsl;\n" : "");
+        : "import cbs.dsl.builder.UndefinedDslObject;\n";
 
     String sourceTemplate = //language=java
         """
         package {{definitionsPackage}};
-        
+
         import cbs.dsl.api.DslComponentResolver;
         import cbs.dsl.api.DslObject;
         import cbs.dsl.api.TransactionDefinition;
@@ -128,7 +134,7 @@ public class TransactionCodeGenerator {
         {{dslImportsBlock}}        import java.util.function.Consumer;
         import java.util.function.Function;
         import javax.annotation.processing.Generated;
-        
+
         /**
          * Generated TransactionDefinition wrapper + Activity implementation for {{specClassName}}.
          * <strong>WARNING:</strong> Auto-generated — do not edit.
@@ -138,46 +144,46 @@ public class TransactionCodeGenerator {
             date = "{{timestamp}}"
         )
         public class {{wrapperClassName}} implements TransactionDefinition, {{activityInterfaceName}} {
-        
+
             private final {{specClassName}} function;
-        
+
             public {{wrapperClassName}}() {
                 this(null);
             }
-        
+
             public {{wrapperClassName}}(DslComponentResolver resolver) {
                 this.function = resolver != null ? resolver.resolve({{specClassName}}.class) : new {{specClassName}}();
             }
-        
+
             @Override
             public String getCode() {
                 return "{{specCode}}";
             }
-        
+
             @Override
             public TransactionOutput preview(TransactionInput input) {
                 {{inputSimpleName}} typed = {{inputConversion}};
                 {{outputSimpleName}} out = function.preview(typed);
                 return {{outputConversion}};
             }
-        
+
             @Override
             public TransactionOutput execute(TransactionInput input) {
                 {{inputSimpleName}} typed = {{inputConversion}};
                 {{outputSimpleName}} out = function.execute(typed);
                 return {{outputConversion}};
             }
-        
+
             @Override
             public TransactionOutput rollback(TransactionInput input) {
                 {{inputSimpleName}} typed = {{inputConversion}};
                 {{outputSimpleName}} out = function.rollback(typed);
                 return {{outputConversion}};
             }
-        
+
             @Override
             public DslObject dsl() {
-                {{dslBodyOrFallback}}
+                {{dslBody}}
             }
         }
         """;
@@ -199,9 +205,14 @@ public class TransactionCodeGenerator {
     params.put("outputSimpleName", simpleName(spec.outputType()));
     params.put("outputConversion", outputConversion);
     params.put("dslImportsBlock", dslImportsBlock);
-    params.put("dslBodyOrFallback", dslBodyOrFallback);
-    String source = Substitutor.format(sourceTemplate, params);
+    params.put("dslBody", dslBody);
+    return Substitutor.format(sourceTemplate, params);
+  }
 
+  public void writeDefinition(RegistrationSpec spec, String source) throws IOException {
+    String wrapperClassName = spec.className() + "Definition";
+    String qualifiedName = DEFINITIONS_PACKAGE + "." + wrapperClassName;
+    JavaFileObject file = filer.createSourceFile(qualifiedName);
     try (PrintWriter writer = new PrintWriter(file.openWriter())) {
       writer.print(source);
     }

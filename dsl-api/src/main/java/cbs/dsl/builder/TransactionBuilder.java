@@ -34,13 +34,10 @@ public class TransactionBuilder {
     return this;
   }
 
-  public TransactionBuilder requiredParam(String name) {
-    this.parameters.add(new ParameterDefinition(name, true));
-    return this;
-  }
-
-  public TransactionBuilder optionalParam(String name) {
-    this.parameters.add(new ParameterDefinition(name, false));
+  public TransactionBuilder parameters(Consumer<ParametersBuilder> block) {
+    ParametersBuilder builder = new ParametersBuilder();
+    block.accept(builder);
+    this.parameters.addAll(builder.build());
     return this;
   }
 

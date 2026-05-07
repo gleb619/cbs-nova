@@ -18,5 +18,5 @@ public interface DslPayload {
    *
    * @return the map representation
    */
-  Map<String, Object> toMap();
+  Map<String, Object> params();
 }
