@@ -3,6 +3,8 @@ package cbs.dsl.api.context;
 import java.util.Map;
 import lombok.Builder;
 
+//TODO: remove
+@Deprecated(forRemoval = true)
 @Builder
 public record ParameterContext<T>(
     String eventCode,

@@ -25,26 +25,24 @@ The pipeline runs entirely at **compile time** in the `dsl-codegen` module.
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │  LAYER 1 — @DslComponent Processor                                               │
-│  Input:  Developer-written @DslComponent classes (*Function, *Impl)            │
+│  Input:  Developer-written @DslComponent classes (Transaction, Helper, Condition)│
 │  Output: *Definition wrappers + SPI registration (ImplRegistrationProvider)      │
 │  Tool:   DslComponentProcessor (Java APT)                                        │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │  LAYER 2 — DSL Compiler                                                          │
-│  Input:  BA-authored .java DSL files (Event, Workflow, MassOperation)          │
-│  Output: *Definition implementations (EventDefinition, WorkflowDefinition, ...)  │
+│  Input:  BA-authored .java DSL files (Event, Workflow, MassOperation, and inline │
+│          Transaction, Helper, Condition definitions)                              │
+│  Output: *Definition implementations (EventDefinition, TransactionDefinition, ...) │
 │  Tool:   DslCompiler (two-pass: registry build → import resolution)              │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │  LAYER 3 — Temporal Class Generator                                              │
 │  Input:  Compiled *Definition classes from Layer 1 + Layer 2                     │
-│  Output: Temporal Workflow interfaces + implementations                            │
-│          Temporal Activity interfaces + implementations                            │
-│          Executable* contract implementations (ExecutableEvent, ExecutableTransaction, …) │
-│          Generated registries (EventRegistry, TransactionRegistry, HelperRegistry,    │
-│                               ConditionRegistry, WorkflowRegistry, MassOpRegistry)   │
-│  Tool:   TransactionCodeGenerator, EventCodeGenerator, HelperCodeGenerator,       │
-│          WorkflowCodeGenerator, ConditionCodeGenerator,                             │
-│          MassOperationCodeGenerator, WorkflowRegistryGenerator,                     │
-│          ActivityRegistryGenerator                                                │
+│  Output: Temporal Workflow  : EventWorkflow (Event only)                         │
+│          Temporal Activities : EventActivity, TransactionActivity, ConditionActivity│
+│          Executable* contracts (ExecutableEvent, ExecutableTransaction, …)            │
+│          Generated registries (EventRegistry, TransactionRegistry, ConditionRegistry)│
+│  Tool:   EventCodeGenerator, TransactionCodeGenerator, ConditionCodeGenerator,      │
+│          WorkflowRegistryGenerator, ActivityRegistryGenerator                       │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -121,91 +119,72 @@ blocks so they can be evaluated lazily at runtime (e.g. `transactionEvaluator.ev
 
 ---
 
-#### 13.3.2 Helper → Activity Bridge
+#### 13.3.2 Helper — Plain Logic (No Temporal Bridge)
 
-Helpers follow the same adapter pattern as transactions but use `HelperInput` / `HelperOutput` types.
-They are typically invoked from the `context {}` block of an event, although they may also appear inside
-`transactions {}` when a transaction needs pre-flight data.
+Helpers are **not Temporal activities**. They remain plain Java/DSL logic that is executed
+synchronously inside the calling Transaction or Condition activity (or inside the Event activity
+for `context {}` blocks). There is **no generated `HelperActivity`** and no Temporal stub for helpers.
 
-//TODO: Redo next table, only Events/Transactions will have a temporal support, other entities not. Events become a temporal workflow, a transactions become a temporal activities.
-//TODO: Helpers doesnt got a support of temporal at all, thewy just a simple code to evaluate.
-
-| Generated Class          | Type                       | Purpose                                                                                                                                               |
-|--------------------------|----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `{Code}Activity`         | `@ActivityInterface`       | Temporal contract for helper execution.                                                                                                               |
-| `{Code}HelperDefinition` | Definition + Activity impl | **Adapter:** implements both `HelperDefinition` and `{Code}Activity`. `HelperInput` → typed helper input → `HelperOutput`. Hosts the DSL via `dsl()`. |
-
-Consider a helper that fetches an exchange rate:
-
-```java
-// Developer writes this
-@DslComponent(code = "GET_EXCHANGE_RATE", type = DslImplType.HELPER)
-public class GetExchangeRateHelper implements HelperFunction<RateInput, RateOutput> {
-    @Override
-    public HelperContext<RateOutput> execute(HelperContext<RateInput> input) { ... }
-}
-
-//TODO add here generated definition here, without any temporal stuff
-
-**Helper invocation from a `context` block**
-
-The BA writes:
+When a BA writes:
 
 ```java
 EventDsl.event("LOAN_DISBURSEMENT")
-    .parameters(reg -> {
-        reg.decimal("amount");
-        reg.string("currency");
-    })
     .context(ctx -> {
         Object rate = ctx.helper("GET_EXCHANGE_RATE", Map.of("currency", ctx.get("currency")));
         ctx.put("rate", rate);
     })
-    ...
 ```
 
-//TODO: work here too, due new changes, next block is outdated
+The generator pastes this block into the generated `EventWorkflow`. At runtime `ctx.helper(...)`
+resolves the helper via the `HelperRegistry` and invokes it directly (synchronous, in-memory).
 
-The generator copies the lambda body into the generated workflow. At runtime `ctx` is backed by
-`TemporalEnrichmentContext`, which routes `ctx.helper(...)` to the generated activity stub:
-
-```java
-// Inside generated LoanDisbursementEventWorkflow
-private Map<String, Object> evaluateContext(EventWorkflowRequest request) {
-    TemporalEnrichmentContext ctx = new TemporalEnrichmentContext(request);
-    // --- copied DSL block starts ---
-    HelperOutput rateResult = getExchangeRateActivity.execute(
-        new HelperInput(Map.of("currency", request.params().get("currency")))
-    );
-    ctx.put("rate", rateResult.result().get("rate"));
-    // --- copied DSL block ends ---
-    return ctx.getEnrichment();
-}
-```
+Similarly, when a Transaction developer calls a helper inside their `@DslComponent` execute method,
+it is a plain Java method call — no Temporal activity stub is involved.
 
 ---
 
-#### 13.3.3 Event → Workflow Bridge
+#### 13.3.3 Condition → Activity Bridge
 
-Events become Temporal **Workflows** because they orchestrate multiple activities (transactions), transactions itself must do business(call helpers, evaluate conditions)
-and must survive process restarts. So if app will crash, temporal restore state, and continue execution. The code generated code must fit requirement of deterministic execution of helpers/conditions.
+Conditions are Temporal **Activities** because they may need to call external services or helpers
+to evaluate a boolean predicate, and they must be replay-safe.
 
-The key insight of the CBS-Nova generator is that **the DSL itself is executable Java code**.  The BA writes
-`.java` files containing lambdas (`context {}`, `transactions {}`, `finish {}`).  These lambdas are
-**re-used in two modes**:
+| Generated Class              | Type                       | Purpose                                                                                                                            |
+|------------------------------|----------------------------|------------------------------------------------------------------------------------------------------------------------------------|
+| `{Code}Activity`             | `@ActivityInterface`       | Temporal contract. One `@ActivityMethod` named `evaluate`.                                                                         |
+| `{Code}ConditionDefinition`  | Definition + Activity impl | **Adapter:** implements both `ConditionDefinition` and `{Code}Activity`. `ConditionInput` → typed input → boolean result.          |
 
-//TODO: Check again that block, that Context exists, and we have interfaces for them
+The generated activity is invoked from the Event workflow inside `when/then/otherwise` branches.
 
-| Mode                | When it runs    | `ctx` / `scope` implementation | Purpose                                                                                |
-|---------------------|-----------------|--------------------------------|----------------------------------------------------------------------------------------|
-| **Code-generation** | Compile time    | `CodegenEnrichmentContext`     | Records which helpers / transactions are referenced so Layer 3 knows what to generate. |
-| **Runtime**         | Temporal worker | `TemporalEnrichmentContext`    | Actually calls generated activity stubs.                                               |
+---
 
-Because the lambda body is pure Java that only invokes methods on `ctx` or `scope`, the **same source text**
-can be copied into the generated workflow class unchanged.  Only the backing implementation of the
-context/scope object differs.
+#### 13.3.4 Event → Workflow Bridge
 
-//TODO: We thought to create one interface and two different contexts, for compile time they just register execution to understand what will be called. In runtime another impl that really call business logic. It similar to mickot how it handle it's proxies, and verify that action was performed.
+Events are **DSL-only** and become Temporal **Workflows** because they orchestrate multiple
+Temporal activities (`TransactionActivity`, `ConditionActivity`). The workflow must survive
+process restarts — if the app crashes, Temporal restores state and continues execution.
+
+The generated code for an Event produces **two classes**:
+* **`{Code}EventWorkflow`** — `@WorkflowInterface` that drives the orchestration.
+* **`{Code}EventActivity`** — `@ActivityInterface` that evaluates the `context {}` block.
+
+**Execution flow inside the generated workflow**
+
+1. **Prepare context** — the workflow calls `eventActivity.prepareContext(inputParams)`.  
+   This evaluates the DSL `context {}` block (enrichment, helper calls, etc.) and returns a
+   prefilled context object.
+
+2. **Run transactions** — the DSL `transactions {}` block is **pasted as source text** into the
+   generated workflow. It runs inside the workflow thread and decides which steps to invoke:
+   * For each `scope.step("TX_CODE")` the workflow calls:
+     * `transactionActivity.prepareContext(currentCtx)`
+     * `transactionActivity.execute(preparedCtx)`
+   * For each `when/then/otherwise` branch the workflow calls:
+     * `conditionActivity.evaluate(currentCtx)`
+
+3. **Finish** — optional `finish {}` block is also pasted into the workflow.
+
+Helpers are **not Temporal activities** — they are resolved via `HelperRegistry` and invoked
+synchronously (plain Java method calls) inside the Event activity or Transaction activity.
 
 **BA-authored DSL**
 
@@ -223,87 +202,67 @@ EventDsl.event("LOAN_DISBURSEMENT")
         var kyc = scope.step("KYC_CHECK");
         var credit = scope.step("CREDIT_CHECK");
         scope.await(kyc, credit);
-        scope.step("DISBURSE");
+        var debit = scope.stepWhen(ctx.condition("BORROWER_ACCOUNT_READY"))
+            .then("DEBIT_FUNDING_ACCOUNT")
+            .otherwise("DEBIT_FALLBACK_ACCOUNT");
+        scope.await(debit);
     })
     .finish((ctx, ex) -> { /* optional */ })
     .build();
 ```
 
-**Generated workflow**
-
-The generator emits a workflow interface and a combined definition/workflow class. The definition class
-hosts the DSL via `dsl()` and also implements the Temporal workflow contract.
+**Generated workflow (simplified)**
 
 ```java
 @WorkflowInterface
 public interface LoanDisbursementWorkflow {
-    @WorkflowMethod(name = "LOAN_DISBURSEMENT")
-    EventContext<EventResult> execute(EventContext<EventInput> ctx);
+    @WorkflowMethod
+    EventResult execute(EventInput request);
 }
 
-// Generated — do not edit
-public class LoanDisbursementEventDefinition implements EventDefinition, LoanDisbursementWorkflow {
+public class LoanDisbursementEventWorkflow implements LoanDisbursementWorkflow {
 
-    private final LoanDisbursementEvent function;
-    private final EventWorkflowOrchestrator orchestrator;
-
-    public LoanDisbursementEventDefinition(DslComponentResolver resolver) {
-        this(resolver, null);
-    }
-
-    public LoanDisbursementEventDefinition(EventWorkflowOrchestrator orchestrator) {
-        this(null, orchestrator);
-    }
-
-    public LoanDisbursementEventDefinition(DslComponentResolver resolver, EventWorkflowOrchestrator orchestrator) {
-        this.function = resolver != null ? resolver.resolve(LoanDisbursementEvent.class) : new LoanDisbursementEvent();
-        this.orchestrator = orchestrator;
-    }
+    private final LoanDisbursementEventActivity eventActivity;
+    private final KycCheckTransactionActivity kycActivity;
+    private final CreditCheckTransactionActivity creditActivity;
+    private final DebitFundingAccountTransactionActivity debitActivity;
+    private final BorrowerAccountReadyConditionActivity conditionActivity;
 
     @Override
-    public String getCode() { return "LOAN_DISBURSEMENT"; }
+    public EventResult execute(EventInput request) {
+        // 1. Prepare context via EventActivity
+        EventContext ctx = eventActivity.prepareContext(request);
 
-    @Override
-    public EventContext<EventOutput> execute(EventContext<EventInput> ctx) { ... }
+        // 2. Evaluate transactions block (pasted from DSL)
+        var kyc = kycActivity.execute(kycActivity.prepareContext(ctx));
+        var credit = creditActivity.execute(creditActivity.prepareContext(ctx));
+        Workflow.await(() -> kyc.isDone() && credit.isDone());
 
-    @Override
-    public DslObject dsl() {
-      //TODO: Use `ParsedDsl` from `DslCompiler` and set whole dsl here
+        boolean ready = conditionActivity.evaluate(ctx);
+        if (ready) {
+            debitActivity.execute(debitActivity.prepareContext(ctx));
+        }
+
+        return new EventResult(ctx);
     }
-
 }
 ```
-
-At runtime, the `dsl()` method lets evaluators access the original DSL blocks without running the full
-lifecycle:
-
-```java
-TransactionDefinition txDef = registry.resolveTransaction("DEBIT_FUNDING_ACCOUNT");
-transactionEvaluator.evaluate(txDef.dsl().context(), ctx);
-```
-
-The `dsl()` config is a lazy object: it stores references to the DSL lambdas and evaluates them on demand.
-This is critical for matching the original BA-authored configuration when running partial evaluations
-or previews.
 
 **Design notes**
 
-//TODO: next block is out of date, changes needd based on real code
-
-* `TemporalTransactionsScope` implements `TransactionsScope`. Its `step(...)` overloads accept
-  lambdas that invoke activity stubs and return a `StepHandle` backed by a `Promise`.  `await(...)`
-  becomes `Promise.allOf(...).get()`.
-* `TemporalEnrichmentContext` implements `EnrichmentContext`. Its `helper(...)` method delegates
-  to the generated `HelperActivity` stub, which in turn delegates to `HelperRunner`.
-* Because the DSL block is copied **as source text**, the BA can use any local variables,
-  conditionals, or helper calls — the generator does not need to parse the AST beyond identifying
-  the block boundaries.
+* The DSL `transactions {}` block is copied **as source text** into the generated workflow.
+  The BA can use any local variables, conditionals, or helper calls — the generator does not need
+  to parse the AST beyond identifying the block boundaries.
+* `ctx.helper(...)` inside the workflow resolves the helper via `HelperRegistry` and calls it
+  synchronously (no Temporal stub, no activity retry).
+* Transaction activities receive the current context, call `prepareContext()` internally if needed,
+  then execute business logic.
 * The generated workflow is **persistence-agnostic**.  DB writes, version isolation, and transition
   logging are handled by `EventService` when it calls `EventRunner` (see §13.5).
 
 ---
 
-#### 13.3.4 Layer-1 Definition Wrappers and `componentModel`
+#### 13.3.5 Layer-1 Definition Wrappers and `componentModel`
 
 Layer 1 generates `*Definition` wrappers that implement the `dsl-api` contract interfaces
 (`TransactionDefinition`, `HelperDefinition`, `EventDefinition`, `WorkflowDefinition`,
@@ -391,39 +350,38 @@ Spring-managed bean receives the resolver.
 
 ### 13.4 Runtime Execution Flow
 
-When an API call `POST /api/events/execute` arrives, the engine follows the runner/service bridge.
-Business classes are never invoked directly by the controller.
+When an API call `POST /api/events/execute` arrives with an event `code` and a `params` HashMap,
+the engine registers the execution in the database and then delegates to the runner layer.
 
 ```
-HTTP POST /api/events/execute
+HTTP POST /api/events/execute  { code: "LOAN_DISBURSEMENT", params: { ... } }
     │
     ▼
 EventController
     │
     ▼
-EventService.execute(eventCode, ctx)
-    │      1. Create workflow_execution / event_execution rows
-    │      2. Delegate execution to EventRunner
+EventService.execute(eventCode, params)
+    │      1. Register execution in DB (id, code, performer, date, input params, status)
+    │      2. Build EventContext from params
+    │      3. Delegate to EventRunner
     ▼
 EventRunner.run(eventCode, ctx)
-    │      lookup ExecutableEvent in EventRegistry by code
+    │      lookup code-generated EventWorkflow in EventRegistry by code
     ▼
 ExecutableEvent.execute(ctx)
-    │      ├─ GENERATED mode: Temporal workflow (LoanDisbursementEventWorkflow)
+    │      ├─ GENERATED mode: start Temporal EventWorkflow
     │      └─ REFLECTED mode: direct in-memory execution
     ▼
-Generated workflow / reflective wrapper
-    │      ├─ evaluateContext()  → calls HelperActivity stub → HelperRunner
-    │      └─ executeTransactions() → calls TransactionActivity stub → TransactionRunner
+Generated EventWorkflow
+    │      1. Calls EventActivity.prepareContext(params) → enriched context
+    │      2. Evaluates transactions block (pasted DSL code)
+    │         ├─ For each transaction: TransactionActivity.prepareContext(ctx)
+    │         │                              TransactionActivity.execute(ctx)
+    │         └─ For conditions: ConditionActivity.evaluate(ctx)
     ▼
-TransactionRunner.run("KYC_CHECK", ctx)
-    │      lookup ExecutableTransaction in TransactionRegistry
-    ▼
-ExecutableTransaction.execute(ctx)
-    │      JSON → typed POJO adaptation
-    ▼
-Developer-written @DslComponent class.execute(typedInput)
-    │      pure business logic
+TransactionActivity.execute(ctx)
+    │      1. Calls Helper.prepareContext() / Helper.execute() synchronously (plain code)
+    │      2. Runs developer business logic
     ▼
 Result bubbles back up through the same layers.
 EventService persists the final result, logs, and transition state.
@@ -440,18 +398,18 @@ They are the primary execution API for both tests and services.
 ```
 starter/src/main/java/cbs/nova/runner/
 ├── EventRunner.java          ← resolves ExecutableEvent from EventRegistry and runs it
-├── WorkflowRunner.java       ← resolves ExecutableWorkflow from WorkflowRegistry
 ├── TransactionRunner.java    ← resolves ExecutableTransaction from TransactionRegistry
-├── HelperRunner.java         ← resolves ExecutableHelper from HelperRegistry
 ├── ConditionRunner.java      ← resolves ExecutableCondition from ConditionRegistry
-└── MassOpRunner.java         ← resolves ExecutableMassOp from MassOpRegistry
+├── HelperRunner.java         ← resolves ExecutableHelper from HelperRegistry (preview/reflective only)
+├── WorkflowRunner.java       ← resolves ExecutableWorkflow from WorkflowRegistry (preview/reflective only)
+└── MassOpRunner.java         ← resolves ExecutableMassOp from MassOpRegistry (preview/reflective only)
 
 starter/src/main/java/cbs/nova/service/
 ├── EventService.java         ← EventRunner + DB persistence (workflow_execution, event_execution, transition_log)
-├── WorkflowService.java      ← WorkflowRunner + DB persistence
 ├── TransactionService.java   ← TransactionRunner + execution artifact persistence
-├── HelperService.java        ← HelperRunner + invocation logging
 ├── ConditionService.java     ← ConditionRunner + evaluation logging
+├── HelperService.java        ← HelperRunner + invocation logging
+├── WorkflowService.java      ← WorkflowRunner + DB persistence
 └── MassOperationService.java ← MassOpRunner + mass_operation_execution / _item persistence
 ```
 
@@ -528,14 +486,14 @@ EventContext<EventResult> r = eventService.execute("LOAN_DISBURSEMENT", ctx);
 
 The same split applies to every component kind:
 
-| Component   | Runner (no persistence) | Service (with persistence) |
-|-------------|-------------------------|----------------------------|
-| Event       | `EventRunner`           | `EventService`             |
-| Workflow    | `WorkflowRunner`        | `WorkflowService`          |
-| Transaction | `TransactionRunner`     | `TransactionService`       |
-| Helper      | `HelperRunner`          | `HelperService`            |
-| Condition   | `ConditionRunner`       | `ConditionService`         |
-| MassOp      | `MassOpRunner`          | `MassOperationService`     |
+| Component   | Runner (no persistence) | Service (with persistence) | Temporal Artifact |
+|-------------|-------------------------|----------------------------|-------------------|
+| Event       | `EventRunner`           | `EventService`             | Workflow + Activity |
+| Transaction | `TransactionRunner`     | `TransactionService`       | Activity          |
+| Condition   | `ConditionRunner`       | `ConditionService`         | Activity          |
+| Helper      | `HelperRunner`          | `HelperService`            | **None** (plain code) |
+| Workflow    | `WorkflowRunner`        | `WorkflowService`          | **None** (DSL concept) |
+| MassOp      | `MassOpRunner`          | `MassOperationService`     | **None** (out of scope) |
 
 #### Contracts (`Executable*` interfaces)
 
@@ -543,14 +501,14 @@ Code-generated classes must implement a contract so the registry can store them 
 
 //TODO: we need to check that correspondnet classes exists
 
-| Generated artifact     | Contract interface      | Registry              |
-|------------------------|-------------------------|-----------------------|
-| Event workflow         | `ExecutableEvent`       | `EventRegistry`       |
-| Workflow orchestration | `ExecutableWorkflow`    | `WorkflowRegistry`    |
-| Transaction activity   | `ExecutableTransaction` | `TransactionRegistry` |
-| Helper activity        | `ExecutableHelper`      | `HelperRegistry`      |
-| Condition evaluator    | `ExecutableCondition`   | `ConditionRegistry`   |
-| Mass operation         | `ExecutableMassOp`      | `MassOpRegistry`      |
+| Generated artifact     | Contract interface      | Registry              | Temporal scope |
+|------------------------|-------------------------|-----------------------|----------------|
+| Event                  | `ExecutableEvent`       | `EventRegistry`       | Workflow + Activity |
+| Transaction            | `ExecutableTransaction` | `TransactionRegistry` | Activity       |
+| Condition              | `ExecutableCondition`   | `ConditionRegistry`   | Activity       |
+| Helper                 | `ExecutableHelper`      | `HelperRegistry`      | **None** (plain logic) |
+| Workflow               | `ExecutableWorkflow`    | `WorkflowRegistry`    | **None** (DSL concept) |
+| Mass operation         | `ExecutableMassOp`      | `MassOpRegistry`      | **None** (out of scope) |
 
 These contracts live in `dsl-api`.  The generated Layer-3 classes implement them, and the Layer-1
 `*Definition` wrappers also implement them (or adapt to them) so that `REFLECTED` mode uses the

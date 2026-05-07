@@ -23,21 +23,6 @@ public class ConditionTypes {
   public record ConditionInput(Map<String, Object> params, String eventCode, Long eventNumber)
       implements ConditionFunction.ConditionArg {
 
-    @Override
-    public Map<String, Object> toMap() {
-      return params;
-    }
-
-    /**
-     * Returns parameters with nulls filtered out, suitable for TransactionContext.
-     *
-     * @return map with null values excluded
-     */
-    public Map<String, Object> nonNullParams() {
-      return params.entrySet().stream()
-          .filter(e -> e.getValue() != null)
-          .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
   }
 
   /** ConditionOutput wraps the boolean result of the evaluation. */

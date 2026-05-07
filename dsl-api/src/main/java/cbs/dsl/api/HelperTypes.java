@@ -18,19 +18,11 @@ public class HelperTypes {
   public record HelperInput(Map<String, Object> params, String eventCode, Long workflowExecutionId)
       implements HelperArg {
 
-    @Override
-    public Map<String, Object> toMap() {
-      return params;
-    }
   }
 
   @Json
   @Builder(toBuilder = true)
-  public record HelperOutput(Object value) implements HelperResult {
+  public record HelperOutput(Map<String, Object> params) implements HelperResult {
 
-    @Override
-    public Map<String, Object> toMap() {
-      return Map.of("value", value);
-    }
   }
 }

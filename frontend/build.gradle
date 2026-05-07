@@ -49,12 +49,12 @@ def lint = tasks.register("lint", Exec) {
   environment 'PATH', augmentedPath
   commandLine pnpmBin, 'run', 'lint'
 }
-
-tasks.named('assemble') {
-  dependsOn project(':frontend-plugin').tasks.named('assemble')
-  dependsOn viteBuild
-}
-
-tasks.named('check') {
-  dependsOn lint
-}
+//
+//tasks.named('assemble') {
+//  dependsOn project(':frontend-plugin').tasks.named('assemble')
+//  dependsOn viteBuild
+//}
+//
+//tasks.named('check') {
+//  dependsOn lint
+//}

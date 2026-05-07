@@ -3,6 +3,8 @@ package cbs.dsl.api;
 import cbs.dsl.api.MassOperationFunction.MassOperationArg;
 import cbs.dsl.api.MassOperationFunction.MassOperationResult;
 import cbs.dsl.api.context.MassOperationContext;
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * A code-based mass operation implementation executed via {@link DslComponent @DslComponent}
@@ -31,8 +33,22 @@ public interface MassOperationFunction<I extends MassOperationArg, O extends Mas
   MassOperationContext<O> execute(MassOperationContext<I> input);
 
   /** Marker interface for typed mass operation input records. */
-  interface MassOperationArg extends DslPayload {}
+  interface MassOperationArg extends DslPayload {
+
+    @Override
+    default Map<String, Object> params() {
+      return Collections.emptyMap();
+    }
+
+  }
 
   /** Marker interface for typed mass operation output records. */
-  interface MassOperationResult extends DslPayload {}
+  interface MassOperationResult extends DslPayload {
+
+    @Override
+    default Map<String, Object> params() {
+      return Collections.emptyMap();
+    }
+
+  }
 }

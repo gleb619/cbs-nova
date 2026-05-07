@@ -4,6 +4,8 @@ import javax.annotation.processing.Filer;
 import javax.tools.JavaFileObject;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.io.PrintWriter;
 
 import java.time.Instant;
@@ -36,7 +38,12 @@ public class EventCodeGenerator {
   private final Filer filer;
   private final Function<RegistrationSpec, String> dslBodyProvider;
 
+  public EventCodeGenerator(Function<RegistrationSpec, String> dslBodyProvider) {
+    this(null, dslBodyProvider);
+  }
+
   public EventCodeGenerator(Filer filer, Function<RegistrationSpec, String> dslBodyProvider) {
+
     this.filer = filer;
     this.dslBodyProvider = dslBodyProvider;
   }
@@ -84,6 +91,13 @@ public class EventCodeGenerator {
         "timestamp", timestamp,
         "className", className,
         "workflowMethodName", spec.code()));
+  }
+
+  public void writeWorkflowInterfaceToPath(RegistrationSpec spec, String source, Path outputDir) throws IOException {
+    String className = toClassName(spec.code()) + "Workflow";
+    Path outputPath = outputDir.resolve("cbs/dsl/codegen/generated").resolve(className + ".java");
+    Files.createDirectories(outputPath.getParent());
+    Files.writeString(outputPath, source);
   }
 
   public void writeWorkflowInterface(RegistrationSpec spec, String source) throws IOException {
@@ -203,6 +217,13 @@ public class EventCodeGenerator {
     params.put("outputConversion", outputConversion);
     params.put("dslBody", dslBody);
     return Substitutor.format(sourceTemplate, params);
+  }
+
+  public void writeDefinitionToPath(RegistrationSpec spec, String source, Path outputDir) throws IOException {
+    String wrapperClassName = spec.className() + "Definition";
+    Path outputPath = outputDir.resolve("cbs/dsl/codegen/generated/definitions").resolve(wrapperClassName + ".java");
+    Files.createDirectories(outputPath.getParent());
+    Files.writeString(outputPath, source);
   }
 
   public void writeDefinition(RegistrationSpec spec, String source) throws IOException {

@@ -16,10 +16,11 @@ public class SampleCondition implements ConditionFunction<ConditionInput, Condit
 
   @Override
   public ConditionContext<ConditionOutput> check(ConditionContext<ConditionInput> input) {
-    return new ConditionContext<>(
-        input.eventCode(), input.workflowExecutionId(), input.performedBy(),
-        input.dslVersion(), input.eventParameters(), input.enrichment(),
-        input.helperResolver(), input.isResumed(),
-        new ConditionOutput(true));
+//    return new ConditionContext<>(
+//        input.eventCode(), input.workflowExecutionId(), input.performedBy(),
+//        input.dslVersion(), input.eventParameters(), input.enrichment(),
+//        input.helperResolver(), input.isResumed(),
+//        new ConditionOutput(true));
+    return null;
   }
 }

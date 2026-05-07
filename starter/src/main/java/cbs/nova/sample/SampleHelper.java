@@ -18,8 +18,9 @@ public class SampleHelper implements HelperFunction<HelperInput, HelperOutput> {
 
   @Override
   public HelperContext<HelperOutput> execute(HelperContext<HelperInput> input) {
-    String name = (String) input.payload().params().getOrDefault("name", "World");
-    return input.toBuilder().payload(new HelperOutput(Map.of("greeting", "Hello, " + name + "!"))).build();
+//    String name = (String) input.payload().params().getOrDefault("name", "World");
+//    return input.toBuilder().payload(new HelperOutput(Map.of("greeting", "Hello, " + name + "!"))).build();
+    return null;
   }
 
   @Json

@@ -22,6 +22,7 @@ import java.util.Map;
 // implementation
 // so Temporal used here as an intermediary for the service mesh things, like fault tolerance,
 // retrays, queues, etc.
+//TODO: Remove file
 @Deprecated(forRemoval = true)
 public class TransactionActivityImpl implements TransactionActivity {
 
@@ -74,7 +75,7 @@ public class TransactionActivityImpl implements TransactionActivity {
   private TransactionInput buildTransactionInput(TransactionActivityInput input) {
     Map<String, Object> contextMap = parseContextJson(input.contextJson());
     return new TransactionInput(
-        null, contextMap);
+        contextMap, null);
   }
 
   @SuppressWarnings("unchecked")

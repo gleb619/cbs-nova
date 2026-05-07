@@ -3,6 +3,8 @@ package cbs.dsl.api;
 import cbs.dsl.api.WorkflowFunction.WorkflowArg;
 import cbs.dsl.api.WorkflowFunction.WorkflowResult;
 import cbs.dsl.api.context.WorkflowContext;
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * A code-based workflow implementation executed via {@link DslComponent @DslComponent} annotation
@@ -31,8 +33,22 @@ public interface WorkflowFunction<I extends WorkflowArg, O extends WorkflowResul
   WorkflowContext<O> execute(WorkflowContext<I> input);
 
   /** Marker interface for typed workflow input records. */
-  interface WorkflowArg extends DslPayload {}
+  interface WorkflowArg extends DslPayload {
+
+    @Override
+    default Map<String, Object> params() {
+      return Collections.emptyMap();
+    }
+
+  }
 
   /** Marker interface for typed workflow output records. */
-  interface WorkflowResult extends DslPayload {}
+  interface WorkflowResult extends DslPayload {
+
+    @Override
+    default Map<String, Object> params() {
+      return Collections.emptyMap();
+    }
+
+  }
 }

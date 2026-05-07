@@ -6,6 +6,8 @@ import java.util.function.BiFunction;
 import lombok.Builder;
 
 //TODO: replace with real impl context in correspondent classes
+//TODO: remove
+@Deprecated(forRemoval = true)
 @Builder(toBuilder = true)
 public record EventContext<T>(
     String eventCode,

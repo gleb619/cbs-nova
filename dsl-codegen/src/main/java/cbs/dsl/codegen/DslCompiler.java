@@ -1,7 +1,10 @@
 package cbs.dsl.codegen;
 
+import cbs.dsl.api.DslComponent;
 import cbs.dsl.api.DslDefinitionCollector;
 import cbs.dsl.api.DslObject;
+import cbs.dsl.codegen.DslInterfaceType;
+import java.util.function.Function;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
 import com.github.javaparser.ParserConfiguration;
@@ -31,7 +34,14 @@ import java.util.function.Consumer;
 public class DslCompiler {
 
   private static final JavaCompiler COMPILER = ToolProvider.getSystemJavaCompiler();
-  private static final DslCodeGenerator CODE_GENERATOR = new DslCodeGenerator();
+  private static final String WRAPPER_TEMPLATE = //language=java
+      """
+      public class {{className}} {
+          public static void main(String[] args) throws Exception {
+      {{body}}
+          }
+      }
+      """;
   private static final int PARALLEL_THREADS =
       Math.max(1, Runtime.getRuntime().availableProcessors() - 1);
   private static final Map<String, ParsedDsl> PARSED_DSL_MAP = new HashMap<>();
@@ -130,7 +140,7 @@ public class DslCompiler {
       ParsedDsl parsed = parseImplicitClassWithJavaParser(content);
       PARSED_DSL_MAP.put(className, parsed);
       String wrappedContent =
-          CODE_GENERATOR.generateWrapper(className, parsed.imports(), parsed.body());
+          Substitutor.format(WRAPPER_TEMPLATE, Map.of("className", className, "body", parsed.body()));
       Files.writeString(wrappedPath, wrappedContent);
       return wrappedPath.toFile();
     } else {
@@ -349,11 +359,48 @@ public class DslCompiler {
               ? obj.getClass().getEnclosingClass().getSimpleName()
               : obj.getClass().getSimpleName());
       try {
-        CODE_GENERATOR.generate(
-            obj,
-            parsed != null ? parsed.body() : null,
-            parsed != null ? parsed.imports() : null,
-            outputDir);
+        RegistrationSpec spec = toRegistrationSpec(obj, className, parsed);
+        Function<RegistrationSpec, String> dslBodyProvider =
+            s -> parsed != null ? parsed.body() : "return UndefinedDslObject.create();";
+        switch (spec.interfaceType()) {
+          case EVENT -> {
+            EventCodeGenerator gen = new EventCodeGenerator(dslBodyProvider);
+            String defCode = gen.generateDefinitionCode(spec);
+            gen.writeDefinitionToPath(spec, defCode, outputDir);
+            String wfCode = gen.generateWorkflowInterfaceCode(spec);
+            gen.writeWorkflowInterfaceToPath(spec, wfCode, outputDir);
+          }
+          case TRANSACTION -> {
+            TransactionCodeGenerator gen = new TransactionCodeGenerator(dslBodyProvider);
+            String defCode = gen.generateDefinitionCode(spec);
+            gen.writeDefinitionToPath(spec, defCode, outputDir);
+            String actCode = gen.generateActivityInterfaceCode(spec);
+            gen.writeActivityInterfaceToPath(spec, actCode, outputDir);
+          }
+          case HELPER -> {
+            HelperCodeGenerator gen = new HelperCodeGenerator(dslBodyProvider);
+            String defCode = gen.generateDefinitionCode(spec);
+            gen.writeDefinitionToPath(spec, defCode, outputDir);
+            String actCode = gen.generateActivityInterfaceCode(spec);
+            gen.writeActivityInterfaceToPath(spec, actCode, outputDir);
+          }
+          case WORKFLOW -> {
+            WorkflowCodeGenerator gen = new WorkflowCodeGenerator(dslBodyProvider);
+            String defCode = gen.generateDefinitionCode(spec);
+            gen.writeDefinitionToPath(spec, defCode, outputDir);
+          }
+          case CONDITION -> {
+            ConditionCodeGenerator gen = new ConditionCodeGenerator(dslBodyProvider);
+            String defCode = gen.generateDefinitionCode(spec);
+            gen.writeDefinitionToPath(spec, defCode, outputDir);
+          }
+          case MASS_OPERATION -> {
+            MassOperationCodeGenerator gen = new MassOperationCodeGenerator(dslBodyProvider);
+            String defCode = gen.generateDefinitionCode(spec);
+            gen.writeDefinitionToPath(spec, defCode, outputDir);
+          }
+          default -> throw new IllegalStateException("Unknown interface type: " + spec.interfaceType());
+        }
         logInfo("Generated code for: %s%n", obj.getCode());
       } catch (IOException e) {
         logError("Failed to generate code for %s: %s%n", obj.getCode(), e.getMessage());
@@ -362,6 +409,69 @@ public class DslCompiler {
     }
 
     return hasError;
+  }
+
+  private static RegistrationSpec toRegistrationSpec(DslObject obj, String className, ParsedDsl parsed) {
+    DslInterfaceType interfaceType = resolveInterfaceType(obj);
+    String inputType = resolveInputType(interfaceType);
+    String outputType = resolveOutputType(interfaceType);
+    return new RegistrationSpec(
+        "",
+        className,
+        obj.getCode(),
+        interfaceType,
+        inputType,
+        outputType,
+        DslComponent.DslComponentModel.SIMPLE,
+        parsed != null ? parsed.body() : null,
+        parsed != null ? parsed.imports() : null);
+  }
+
+  private static DslInterfaceType resolveInterfaceType(DslObject obj) {
+    Class<?> clazz = obj.getClass();
+    String simpleName = clazz.getSimpleName();
+    return switch (simpleName) {
+      case "EventDslObject" -> DslInterfaceType.EVENT;
+      case "TransactionDslObject" -> DslInterfaceType.TRANSACTION;
+      case "HelperDslObject" -> DslInterfaceType.HELPER;
+      case "WorkflowDslObject" -> DslInterfaceType.WORKFLOW;
+      case "ConditionDslObject" -> DslInterfaceType.CONDITION;
+      case "MassOperationDslObject" -> DslInterfaceType.MASS_OPERATION;
+      default -> {
+        Class<?> enclosing = clazz.getEnclosingClass();
+        yield switch (enclosing != null ? enclosing.getSimpleName() : "") {
+          case "EventBuilder" -> DslInterfaceType.EVENT;
+          case "TransactionBuilder" -> DslInterfaceType.TRANSACTION;
+          case "HelperBuilder" -> DslInterfaceType.HELPER;
+          case "WorkflowBuilder" -> DslInterfaceType.WORKFLOW;
+          case "ConditionBuilder" -> DslInterfaceType.CONDITION;
+          case "MassOperationBuilder" -> DslInterfaceType.MASS_OPERATION;
+          default -> throw new IllegalArgumentException("Unsupported DslObject type: " + simpleName);
+        };
+      }
+    };
+  }
+
+  private static String resolveInputType(DslInterfaceType type) {
+    return switch (type) {
+      case EVENT -> "cbs.dsl.api.EventTypes.EventInput";
+      case TRANSACTION -> "cbs.dsl.api.TransactionTypes.TransactionInput";
+      case HELPER -> "cbs.dsl.api.HelperTypes.HelperInput";
+      case WORKFLOW -> "cbs.dsl.api.WorkflowTypes.WorkflowInput";
+      case CONDITION -> "cbs.dsl.api.ConditionTypes.ConditionInput";
+      case MASS_OPERATION -> "cbs.dsl.api.MassOperationTypes.MassOperationInput";
+    };
+  }
+
+  private static String resolveOutputType(DslInterfaceType type) {
+    return switch (type) {
+      case EVENT -> "cbs.dsl.api.EventTypes.EventOutput";
+      case TRANSACTION -> "cbs.dsl.api.TransactionTypes.TransactionOutput";
+      case HELPER -> "cbs.dsl.api.HelperTypes.HelperOutput";
+      case WORKFLOW -> "cbs.dsl.api.WorkflowTypes.WorkflowOutput";
+      case CONDITION -> "cbs.dsl.api.ConditionTypes.ConditionOutput";
+      case MASS_OPERATION -> "cbs.dsl.api.MassOperationTypes.MassOperationOutput";
+    };
   }
 
   private static String extractClassName(File sourceFile) {

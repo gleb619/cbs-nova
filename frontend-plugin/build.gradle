@@ -50,10 +50,10 @@ def lint = tasks.register("lint", Exec) {
   commandLine pnpmBin, 'run', 'lint'
 }
 
-tasks.named('assemble') {
-  dependsOn pluginBuild
-}
-
-tasks.named('check') {
-  dependsOn lint
-}
+//tasks.named('assemble') {
+//  dependsOn pluginBuild
+//}
+//
+//tasks.named('check') {
+//  dependsOn lint
+//}

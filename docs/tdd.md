@@ -54,22 +54,18 @@ Client / API Gateway
   ▼
 Spring Boot Application
   EventController / EventService / EventRunner
-  MassOperationController / MassOperationService / MassOpRunner
-  WorkflowController / WorkflowService / WorkflowRunner
   ContextEncryptionService
-  └─ DSL Runtime (WorkflowDefinition, EventDefinition, TransactionDefinition,
-                  HelperDefinition, ConditionDefinition, MassOperationDefinition)
-     └─ Runner layer (EventRunner, TransactionRunner, HelperRunner,
-                      ConditionRunner, WorkflowRunner, MassOpRunner)
+  └─ DSL Runtime (EventDefinition, TransactionDefinition,
+                  HelperDefinition, ConditionDefinition)
+     └─ Runner layer (EventRunner, TransactionRunner, ConditionRunner)
      └─ PreviewRunner (dev/QA dry-run — calls preview() on registries, no DB, no Temporal)
   │                                    │
   ▼                                    ▼
 Temporal Server                    PostgreSQL
   EventWorkflow                      workflow_execution   (JSONB, encrypted)
-  TransactionActivity                event_execution      (JSONB, encrypted)
-  MassOpWorkflow                     workflow_transition_log
-  MassOpItemActivity                 mass_operation_execution
-                                     mass_operation_item
+  EventActivity                      event_execution      (JSONB, encrypted)
+  TransactionActivity                workflow_transition_log
+  ConditionActivity
 
 Vue + Nuxt.js Admin Panel
   Execution detail + BPMN viewer · MassOperation report · Temporal UI link · cbs-rules VSCode link
@@ -78,8 +74,7 @@ Gitea (cbs-rules) → GitLab CI/Jenkins → Docker deploy
 MQ / Webhook → external triggers
 ```
 
-Temporal holds **only PKs**. All state lives in PostgreSQL. `context {}` is evaluated by Spring before any Temporal
-call — bad input is rejected before a workflow instance is created.
+Temporal holds **only execution references (PKs)**. All business state lives in PostgreSQL. The `context {}` block is evaluated **inside** the Temporal workflow via the generated `EventActivity` — enrichment happens durably within the workflow, not in the API layer.
 
 Request flow: `Browser → Vite (9000) → Nuxt BFF (3000) → Backend (7070)`
 
@@ -97,12 +92,12 @@ Request flow: `Browser → Vite (9000) → Nuxt BFF (3000) → Backend (7070)`
 
 | Entity            | Description                                                                                                                                             |
 |-------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Workflow**      | State machine: `states`, `initial`, `terminalStates`, `transitions`. All fields optional (inferred).                                                    |
-| **Event**         | Triggered operation: `context {}`, `transactions {}`, `finish {}`. Standalone → stub workflow.                                            |
-| **Transaction**   | Temporal Activity. Code: `TransactionFunction<I,O>` with `@DslComponent` → generated `TransactionDefinition`. Rollback is a compensating ledger entry.  |
-| **Helper**        | Reusable computation. Code: `HelperFunction<I,O>` with `@DslComponent` → generated `HelperDefinition`. Used in `context {}` and `transactions {}`.      |
-| **Condition**     | Reusable boolean predicate. Code: `ConditionFunction<I,O>` with `@DslComponent` → generated `ConditionDefinition`. Referenced in `when/then/otherwise`. |
-| **MassOperation** | Batch orchestration: data source, triggers, business lock, per-item execution, PARTIAL/COMPLETED signals.                                               |
+| **Event**         | **DSL-only** top-level orchestration: `context {}`, `transactions {}`, `finish {}`. Generates Temporal Workflow + Activity. The only entry point for execution. |
+| **Transaction**   | Temporal Activity. Code or DSL: `TransactionFunction<I,O>` with `@DslComponent` or inline DSL → generated `TransactionDefinition` + `TransactionActivity`. Rollback is a compensating entry. |
+| **Helper**        | Reusable computation. Code or DSL: `HelperFunction<I,O>` with `@DslComponent` or inline DSL. **Not a Temporal entity** — called synchronously from Transaction/Condition code. |
+| **Condition**     | Temporal Activity. Code or DSL: `ConditionFunction<I,O>` with `@DslComponent` or inline DSL → generated `ConditionDefinition` + `ConditionActivity`. Used in `when/then/otherwise`. |
+| **Workflow**      | State machine concept (DSL-only). Not a separate Temporal construct in this model. |
+| **MassOperation** | Batch orchestration concept. Out of Temporal integration scope for current phase. |
 
 **Action enum:** `PREVIEW` · `SUBMIT` · `APPROVE` · `REJECT` · `CANCEL` · `CLOSE` · `ROLLBACK`
 

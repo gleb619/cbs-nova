@@ -17,10 +17,6 @@ public class MassOperationTypes {
   public record MassOperationInput(Map<String, Object> params, String massOperationCode)
       implements MassOperationArg {
 
-    @Override
-    public Map<String, Object> toMap() {
-      return params;
-    }
   }
 
   @Json
@@ -28,12 +24,5 @@ public class MassOperationTypes {
   public record MassOperationOutput(long processedCount, long failedCount, String status)
       implements MassOperationResult {
 
-    @Override
-    public Map<String, Object> toMap() {
-      return Map.of(
-          "processedCount", processedCount,
-          "failedCount", failedCount,
-          "status", status);
-    }
   }
 }

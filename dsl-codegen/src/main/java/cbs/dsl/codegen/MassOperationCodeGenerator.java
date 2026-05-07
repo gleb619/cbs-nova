@@ -4,6 +4,8 @@ import javax.annotation.processing.Filer;
 import javax.tools.JavaFileObject;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.io.PrintWriter;
 
 import java.time.Instant;
@@ -27,7 +29,12 @@ public class MassOperationCodeGenerator {
   private final Filer filer;
   private final Function<RegistrationSpec, String> dslBodyProvider;
 
+  public MassOperationCodeGenerator(Function<RegistrationSpec, String> dslBodyProvider) {
+    this(null, dslBodyProvider);
+  }
+
   public MassOperationCodeGenerator(Filer filer, Function<RegistrationSpec, String> dslBodyProvider) {
+
     this.filer = filer;
     this.dslBodyProvider = dslBodyProvider;
   }
@@ -163,6 +170,13 @@ public class MassOperationCodeGenerator {
             Map.entry("outputConversion", outputConversion),
             Map.entry("dslBody", dslBody),
             Map.entry("dslImports", dslImportsBlock)));
+  }
+
+  public void writeDefinitionToPath(RegistrationSpec spec, String source, Path outputDir) throws IOException {
+    String wrapperClassName = spec.className() + "Definition";
+    Path outputPath = outputDir.resolve("cbs/dsl/codegen/generated/definitions").resolve(wrapperClassName + ".java");
+    Files.createDirectories(outputPath.getParent());
+    Files.writeString(outputPath, source);
   }
 
   public void writeDefinition(RegistrationSpec spec, String source) throws IOException {

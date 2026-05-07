@@ -8,7 +8,7 @@ package cbs.dsl.builder;
  * <pre>{@code
  * DslObject condition = ConditionDsl.condition("ACCOUNT_ACTIVE")
  *     .requiredParam("accountCode")
- *     .evaluate(ctx -> new ConditionOutput(true))
+ *     .check(ctx -> new ConditionOutput(true))
  *     .build();
  * }</pre>
  */

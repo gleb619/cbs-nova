@@ -6,7 +6,7 @@ import cbs.dsl.builder.ConditionDslObject;
 /**
  * Evaluates a {@link ConditionDslObject} DSL descriptor at runtime.
  *
- * <p>Interprets the evaluate block directly without generated wrappers.
+ * <p>Interprets the check block directly without generated wrappers.
  */
 public class ConditionEvaluator {
 

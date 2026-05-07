@@ -4,6 +4,8 @@ import java.util.Map;
 import java.util.function.BiFunction;
 import lombok.Builder;
 
+//TODO: remove
+@Deprecated(forRemoval = true)
 @Builder(toBuilder = true)
 public record TransactionContext<T>(
     String eventCode,

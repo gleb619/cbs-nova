@@ -27,23 +27,23 @@ public class EventExecutionService {
   private final DslRegistry dslRegistry;
 
   public EventExecutionResponse execute(EventExecutionRequest request) {
-    log.debug(
-        "Executing event: workflow={}, event={}", request.workflowCode(), request.eventCode());
-
-    WorkflowDefinition workflowDefinition = workflowResolver.resolve(request.workflowCode());
-    log.debug("Resolved workflow: {}", workflowDefinition.getCode());
-
-    EventDefinition eventDef = workflowResolver.resolveEvent(request.eventCode());
-
+//    log.debug(
+//        "Executing event: workflow={}, event={}", request.workflowCode(), request.eventCode());
+//
+//    WorkflowDefinition workflowDefinition = workflowResolver.resolve(request.workflowCode());
+//    log.debug("Resolved workflow: {}", workflowDefinition.getCode());
+//
+//    EventDefinition eventDef = workflowResolver.resolveEvent(request.eventCode());
+//
 //    EnrichmentContext enrichmentContext = new EnrichmentContext(
 //        request.eventCode(), 0L, request.performedBy(), "dev", request.parameters());
 //    enrichmentContext.setHelperResolver(
 //        (name, params) -> resolveByCode(name, params, request.eventCode()));
 //    eventDef.getContextBlock().accept(enrichmentContext);
-
+//
 //    Map<String, Object> enrichedContext = new HashMap<>(request.parameters());
 //    enrichedContext.putAll(enrichmentContext.getEnrichment());
-
+//
 //    String encryptedContextJson = contextEncryptionService.encrypt(enrichedContext);
 //
 //    WorkflowExecutionResponse params =
@@ -57,24 +57,25 @@ public class EventExecutionService {
    * (for helpers: the {@code value()} of the output; for conditions: the boolean params).
    */
   private Object resolveByCode(String code, Map<String, Object> params, String eventCode) {
-    // Try helper first
-    try {
-      return dslRegistry
-          .resolveHelper(code)
-          .execute(new HelperInput(params, eventCode, null))
-          .value();
-    } catch (IllegalArgumentException e) {
-      log.trace("No helper '{}', trying condition", code);
-    }
-    // Try condition
-    try {
-      return dslRegistry
-          .resolveCondition(code)
-          .evaluate(new ConditionInput(params, eventCode, null))
-          .result();
-    } catch (IllegalArgumentException e) {
-      throw new IllegalArgumentException(
-          "DSL component '" + code + "' not found as helper or condition");
-    }
+//    // Try helper first
+//    try {
+//      return dslRegistry
+//          .resolveHelper(code)
+//          .execute(new HelperInput(params, eventCode, null))
+//          .value();
+//    } catch (IllegalArgumentException e) {
+//      log.trace("No helper '{}', trying condition", code);
+//    }
+//    // Try condition
+//    try {
+//      return dslRegistry
+//          .resolveCondition(code)
+//          .check(new ConditionInput(params, eventCode, null))
+//          .result();
+//    } catch (IllegalArgumentException e) {
+//      throw new IllegalArgumentException(
+//          "DSL component '" + code + "' not found as helper or condition");
+//    }
+    return null;
   }
 }

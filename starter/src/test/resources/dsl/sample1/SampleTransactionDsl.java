@@ -4,5 +4,5 @@ import java.util.Map;
 
 TransactionDsl.transaction("SAMPLE_TRANSACTION_DSL")
     .requiredParam("name")
-    .execute(ctx -> new TransactionOutput(Map.of("greeting", "DSL TX says hello to " + ctx.get("name"))))
+    .execute(ctx -> TransactionOutput.success(Map.of("greeting", "DSL TX says hello to " + ctx.get("name"))))
     .build();

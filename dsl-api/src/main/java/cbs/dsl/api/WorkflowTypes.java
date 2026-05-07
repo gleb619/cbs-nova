@@ -19,55 +19,6 @@ public class WorkflowTypes {
       String currentState, String action, Map<String, Object> params, String workflowInstanceId)
       implements WorkflowArg {
 
-    public WorkflowInput(String currentState, String action) {
-      this(currentState, action, Map.of(), null);
-    }
-
-    public WorkflowInput(
-        String currentState, String action, Map<String, Object> params, String workflowInstanceId) {
-      this.currentState = currentState;
-      this.action = action;
-      this.params = params;
-      this.workflowInstanceId = workflowInstanceId;
-    }
-
-    @Override
-    public Map<String, Object> toMap() {
-      return params;
-    }
-
-    public String currentState() {
-      return currentState;
-    }
-
-    public String action() {
-      return action;
-    }
-
-    public Map<String, Object> params() {
-      return params;
-    }
-
-    public String workflowInstanceId() {
-      return workflowInstanceId;
-    }
-
-    // JavaBean-style getters for Kotlin property access
-    public String getCurrentState() {
-      return currentState;
-    }
-
-    public String getAction() {
-      return action;
-    }
-
-    public Map<String, Object> getParams() {
-      return params;
-    }
-
-    public String getWorkflowInstanceId() {
-      return workflowInstanceId;
-    }
   }
 
   @Json
@@ -79,40 +30,5 @@ public class WorkflowTypes {
       this(nextState, List.of(), "SUCCESS");
     }
 
-    public WorkflowOutput(String nextState, List<String> events, String status) {
-      this.nextState = nextState;
-      this.events = events;
-      this.status = status;
-    }
-
-    @Override
-    public Map<String, Object> toMap() {
-      return Map.of("nextState", nextState, "events", events, "status", status);
-    }
-
-    public String nextState() {
-      return nextState;
-    }
-
-    public List<String> events() {
-      return events;
-    }
-
-    public String status() {
-      return status;
-    }
-
-    // JavaBean-style getters for Kotlin property access
-    public String getNextState() {
-      return nextState;
-    }
-
-    public List<String> getEvents() {
-      return events;
-    }
-
-    public String getStatus() {
-      return status;
-    }
   }
 }

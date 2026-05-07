@@ -4,6 +4,8 @@ import java.util.Map;
 import java.util.function.BiFunction;
 import lombok.Builder;
 
+//TODO: remove
+@Deprecated(forRemoval = true)
 //TODO: replace with real impl context in correspondent classes
 @Builder(toBuilder = true)
 public record WorkflowContext<T>(
