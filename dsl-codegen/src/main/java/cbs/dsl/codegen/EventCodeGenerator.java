@@ -4,10 +4,9 @@ import javax.annotation.processing.Filer;
 import javax.tools.JavaFileObject;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.io.PrintWriter;
-
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -29,6 +28,12 @@ import java.util.function.Function;
  * </ol>
  */
 public class EventCodeGenerator {
+
+  public record GeneratedFile(Path path, String content) {
+    FileWrite toFileWrite() {
+      return new FileWrite(path, content);
+    }
+  }
 
   private static final String EV_INPUT = "cbs.dsl.api.EventTypes.EventInput";
   private static final String EV_OUTPUT = "cbs.dsl.api.EventTypes.EventOutput";
@@ -64,7 +69,7 @@ public class EventCodeGenerator {
 
     String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
 
-    String sourceTemplate = //language=java
+    String sourceTemplate = // language=java
         """
         package {{package}};
 
@@ -86,14 +91,17 @@ public class EventCodeGenerator {
         }
         """;
 
-    return Substitutor.format(sourceTemplate, Map.of(
-        "package", packageName,
-        "timestamp", timestamp,
-        "className", className,
-        "workflowMethodName", spec.code()));
+    return Substitutor.format(
+        sourceTemplate,
+        Map.of(
+            "package", packageName,
+            "timestamp", timestamp,
+            "className", className,
+            "workflowMethodName", spec.code()));
   }
 
-  public void writeWorkflowInterfaceToPath(RegistrationSpec spec, String source, Path outputDir) throws IOException {
+  public void writeWorkflowInterfaceToPath(RegistrationSpec spec, String source, Path outputDir)
+      throws IOException {
     String className = toClassName(spec.code()) + "Workflow";
     Path outputPath = outputDir.resolve("cbs/dsl/codegen/generated").resolve(className + ".java");
     Files.createDirectories(outputPath.getParent());
@@ -119,23 +127,27 @@ public class EventCodeGenerator {
 
     String inputConversion = inputIsRuntime
         ? "input"
-        : Substitutor.format("JsonPayload.fromMap(input.params(), {{inputSimpleName}}.class)", Map.of("inputSimpleName", simpleName(spec.inputType())));
+        : Substitutor.format(
+            "JsonPayload.fromMap(input.params(), {{inputSimpleName}}.class)",
+            Map.of("inputSimpleName", simpleName(spec.inputType())));
 
     String outputConversion = outputIsRuntime ? "out" : "new EventOutput(JsonPayload.params(out))";
 
     String jsonPayloadImport =
         (inputIsRuntime && outputIsRuntime) ? "" : "import cbs.dsl.api.JsonPayload;\n";
-    String inputTypeImport =
-        inputIsRuntime ? "" : Substitutor.format("import {{inputType}};\n", Map.of("inputType", spec.inputType()));
-    String outputTypeImport =
-        outputIsRuntime ? "" : Substitutor.format("import {{outputType}};\n", Map.of("outputType", spec.outputType()));
+    String inputTypeImport = inputIsRuntime
+        ? ""
+        : Substitutor.format("import {{inputType}};\n", Map.of("inputType", spec.inputType()));
+    String outputTypeImport = outputIsRuntime
+        ? ""
+        : Substitutor.format("import {{outputType}};\n", Map.of("outputType", spec.outputType()));
 
     String dslBody = dslBodyProvider.apply(spec);
     String dslImportsBlock = (spec.dslImports() != null && !spec.dslImports().isBlank())
         ? spec.dslImports().trim() + "\n"
         : "import cbs.dsl.builder.UndefinedDslObject;\n";
 
-    String sourceTemplate = //language=java
+    String sourceTemplate = // language=java
         """
         package {{definitionsPackage}};
 
@@ -219,11 +231,39 @@ public class EventCodeGenerator {
     return Substitutor.format(sourceTemplate, params);
   }
 
-  public void writeDefinitionToPath(RegistrationSpec spec, String source, Path outputDir) throws IOException {
+  public void writeDefinitionToPath(RegistrationSpec spec, String source, Path outputDir)
+      throws IOException {
     String wrapperClassName = spec.className() + "Definition";
-    Path outputPath = outputDir.resolve("cbs/dsl/codegen/generated/definitions").resolve(wrapperClassName + ".java");
+    Path outputPath = outputDir
+        .resolve("cbs/dsl/codegen/generated/definitions")
+        .resolve(wrapperClassName + ".java");
     Files.createDirectories(outputPath.getParent());
     Files.writeString(outputPath, source);
+  }
+
+  public List<GeneratedFile> generateFileSpecs(RegistrationSpec spec, Path outputDir) {
+    List<GeneratedFile> files = new ArrayList<>();
+    String workflowSource = generateWorkflowInterfaceCode(spec);
+    files.add(writeWorkflowInterfaceToSpec(spec, workflowSource, outputDir));
+    String definitionSource = generateDefinitionCode(spec);
+    files.add(writeDefinitionToSpec(spec, definitionSource, outputDir));
+    return files;
+  }
+
+  private GeneratedFile writeWorkflowInterfaceToSpec(
+      RegistrationSpec spec, String source, Path outputDir) {
+    String className = toClassName(spec.code()) + "Workflow";
+    Path outputPath = outputDir.resolve("cbs/dsl/codegen/generated").resolve(className + ".java");
+    return new GeneratedFile(outputPath, source);
+  }
+
+  private GeneratedFile writeDefinitionToSpec(
+      RegistrationSpec spec, String source, Path outputDir) {
+    String wrapperClassName = spec.className() + "Definition";
+    Path outputPath = outputDir
+        .resolve("cbs/dsl/codegen/generated/definitions")
+        .resolve(wrapperClassName + ".java");
+    return new GeneratedFile(outputPath, source);
   }
 
   public void writeDefinition(RegistrationSpec spec, String source) throws IOException {

@@ -73,7 +73,7 @@ public class WorkflowExecutor {
     if (generatedWorkflowTypes == null) {
       synchronized (this) {
         if (generatedWorkflowTypes == null) {
-          //generatedWorkflowTypes = Set.copyOf(GeneratedWorkflowRegistry.workflowTypes());
+          // generatedWorkflowTypes = Set.copyOf(GeneratedWorkflowRegistry.workflowTypes());
         }
       }
     }

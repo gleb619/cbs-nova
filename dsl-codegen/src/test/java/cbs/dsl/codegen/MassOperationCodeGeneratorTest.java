@@ -5,9 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import cbs.dsl.api.DslComponent.DslComponentModel;
-import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 class MassOperationCodeGeneratorTest {
 
@@ -29,7 +30,8 @@ class MassOperationCodeGeneratorTest {
         null,
         null);
 
-    new MassOperationCodeGenerator(filer, s -> "return UndefinedDslObject.create();").generate(List.of(spec));
+    new MassOperationCodeGenerator(filer, s -> "return UndefinedDslObject.create();")
+        .generate(List.of(spec));
 
     String key = "cbs.dsl.codegen.generated.definitions.MyMassOpDefinition";
     assertTrue(filer.files.containsKey(key), "Should generate MyMassOpDefinition");
@@ -38,7 +40,8 @@ class MassOperationCodeGeneratorTest {
 
     assertTrue(content.contains("class MyMassOpDefinition"), "Should contain class name");
     assertTrue(
-        content.contains("implements MassOperationDefinition"), "Should implement MassOperationDefinition");
+        content.contains("implements MassOperationDefinition"),
+        "Should implement MassOperationDefinition");
     assertTrue(
         content.contains("return UndefinedDslObject.create();"),
         "Should contain UndefinedDslObject dsl body");

@@ -249,8 +249,7 @@ class ShowcaseIntegrationTest extends ShowcaseITBase {
     @Override
     public WorkflowExecutionResponse runDslTransaction(EventWorkflowRequest input) {
       TransactionDefinition txDef = dslRegistry.resolveTransaction("SAMPLE_TRANSACTION_DSL");
-      var txInput =
-          new TransactionInput(null, Map.of("name", "PoC"));
+      var txInput = new TransactionInput(null, Map.of("name", "PoC"));
       var output = txDef.execute(txInput);
       return new WorkflowExecutionResponse(1L, (String) output.params().get("greeting"));
     }
@@ -258,23 +257,23 @@ class ShowcaseIntegrationTest extends ShowcaseITBase {
     @Override
     public WorkflowExecutionResponse runDslContext(EventWorkflowRequest input) {
       EventDefinition eventDef = dslRegistry.resolveEvent("SAMPLE_EVENT_DSL");
-//      EnrichmentContext ctx =
-//          new EnrichmentContext("SAMPLE_EVENT_DSL", 0L, "testUser", "dev", Map.of("name", "PoC"));
-//      ctx.setHelperResolver((name, params) -> dslRegistry
-//          .resolveHelper(name)
-//          .execute(new HelperInput(params, "SAMPLE_EVENT_DSL", null))
-//          .value());
-//      eventDef.getContextBlock().accept(ctx);
-//      return new WorkflowExecutionResponse(
-//          1L, ctx.getEnrichment().containsKey("enriched") ? "enriched" : "not-enriched");
+      //      EnrichmentContext ctx =
+      //          new EnrichmentContext("SAMPLE_EVENT_DSL", 0L, "testUser", "dev", Map.of("name",
+      // "PoC"));
+      //      ctx.setHelperResolver((name, params) -> dslRegistry
+      //          .resolveHelper(name)
+      //          .execute(new HelperInput(params, "SAMPLE_EVENT_DSL", null))
+      //          .value());
+      //      eventDef.getContextBlock().accept(ctx);
+      //      return new WorkflowExecutionResponse(
+      //          1L, ctx.getEnrichment().containsKey("enriched") ? "enriched" : "not-enriched");
       return null;
     }
 
     @Override
     public WorkflowExecutionResponse previewDslTransaction(EventWorkflowRequest input) {
       TransactionDefinition txDef = dslRegistry.resolveTransaction("SAMPLE_TRANSACTION_DSL");
-      var txInput =
-          new TransactionInput(null, Map.of("name", "PoC"));
+      var txInput = new TransactionInput(null, Map.of("name", "PoC"));
       var output = txDef.preview(txInput);
       return new WorkflowExecutionResponse(1L, (String) output.params().get("greeting"));
     }
@@ -282,15 +281,16 @@ class ShowcaseIntegrationTest extends ShowcaseITBase {
     @Override
     public WorkflowExecutionResponse previewDslContext(EventWorkflowRequest input) {
       EventDefinition eventDef = dslRegistry.resolveEvent("SAMPLE_EVENT_DSL");
-//      EnrichmentContext ctx =
-//          new EnrichmentContext("SAMPLE_EVENT_DSL", 0L, "testUser", "dev", Map.of("name", "PoC"));
-//      ctx.setHelperResolver((name, params) -> dslRegistry
-//          .resolveHelper(name)
-//          .preview(new HelperInput(params, "SAMPLE_EVENT_DSL", null))
-//          .value());
-//      eventDef.getContextBlock().accept(ctx);
-//      return new WorkflowExecutionResponse(
-//          1L, ctx.getEnrichment().containsKey("enriched") ? "enriched" : "not-enriched");
+      //      EnrichmentContext ctx =
+      //          new EnrichmentContext("SAMPLE_EVENT_DSL", 0L, "testUser", "dev", Map.of("name",
+      // "PoC"));
+      //      ctx.setHelperResolver((name, params) -> dslRegistry
+      //          .resolveHelper(name)
+      //          .preview(new HelperInput(params, "SAMPLE_EVENT_DSL", null))
+      //          .value());
+      //      eventDef.getContextBlock().accept(ctx);
+      //      return new WorkflowExecutionResponse(
+      //          1L, ctx.getEnrichment().containsKey("enriched") ? "enriched" : "not-enriched");
       return null;
     }
   }

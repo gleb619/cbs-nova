@@ -11,10 +11,12 @@ class WorkflowRegistryGeneratorTest {
 
   @Test
   @DisplayName("shouldGenerateRegistryWithRegisterWorkflowImplementationFactoryWhenSpecsProvided")
-  void shouldGenerateRegistryWithRegisterWorkflowImplementationFactoryWhenSpecsProvided() throws Exception {
+  void shouldGenerateRegistryWithRegisterWorkflowImplementationFactoryWhenSpecsProvided()
+      throws Exception {
     FakeFiler filer = new FakeFiler();
     List<EventWorkflowSpec> specs = List.of(
-        new EventWorkflowSpec("LOAN_SUBMIT", "com.example.LoanSubmitEvent", List.of("TX_1", "TX_2")),
+        new EventWorkflowSpec(
+            "LOAN_SUBMIT", "com.example.LoanSubmitEvent", List.of("TX_1", "TX_2")),
         new EventWorkflowSpec("DEPOSIT_OPEN", "com.example.DepositOpenEvent", List.of("TX_3")));
 
     new WorkflowRegistryGenerator(filer).generate(specs);
@@ -62,8 +64,6 @@ class WorkflowRegistryGeneratorTest {
   void shouldNotGenerateFileWhenSpecListIsEmpty() throws Exception {
     FakeFiler filer = new FakeFiler();
     new WorkflowRegistryGenerator(filer).generate(List.of());
-    assertTrue(
-        filer.files.isEmpty(),
-        "Should not generate any files when spec list is empty");
+    assertTrue(filer.files.isEmpty(), "Should not generate any files when spec list is empty");
   }
 }

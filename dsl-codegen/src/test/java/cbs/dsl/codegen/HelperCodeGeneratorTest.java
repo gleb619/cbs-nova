@@ -5,9 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import cbs.dsl.api.DslComponent.DslComponentModel;
-import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 class HelperCodeGeneratorTest {
 
@@ -29,7 +30,8 @@ class HelperCodeGeneratorTest {
         null,
         null);
 
-    new HelperCodeGenerator(filer, s -> "return UndefinedDslObject.create();").generate(List.of(spec));
+    new HelperCodeGenerator(filer, s -> "return UndefinedDslObject.create();")
+        .generate(List.of(spec));
 
     String definitionKey = "cbs.dsl.codegen.generated.definitions.MyHelperDefinition";
     String activityKey = "cbs.dsl.codegen.generated.MyHelperActivity";

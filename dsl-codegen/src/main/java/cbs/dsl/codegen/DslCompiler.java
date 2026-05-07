@@ -3,8 +3,7 @@ package cbs.dsl.codegen;
 import cbs.dsl.api.DslComponent;
 import cbs.dsl.api.DslDefinitionCollector;
 import cbs.dsl.api.DslObject;
-import cbs.dsl.codegen.DslInterfaceType;
-import java.util.function.Function;
+import cbs.dsl.builder.EventDslObject;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
 import com.github.javaparser.ParserConfiguration;
@@ -29,12 +28,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /** Compiles JEP 512 implicit-class DSL files and collects their {@link DslObject} instances. */
 public class DslCompiler {
 
   private static final JavaCompiler COMPILER = ToolProvider.getSystemJavaCompiler();
-  private static final String WRAPPER_TEMPLATE = //language=java
+  private static final String WRAPPER_TEMPLATE = // language=java
       """
       public class {{className}} {
           public static void main(String[] args) throws Exception {
@@ -139,8 +139,8 @@ public class DslCompiler {
       Path wrappedPath = wrapDir.resolve(sourceFile.getName());
       ParsedDsl parsed = parseImplicitClassWithJavaParser(content);
       PARSED_DSL_MAP.put(className, parsed);
-      String wrappedContent =
-          Substitutor.format(WRAPPER_TEMPLATE, Map.of("className", className, "body", parsed.body()));
+      String wrappedContent = Substitutor.format(
+          WRAPPER_TEMPLATE, Map.of("className", className, "body", parsed.body()));
       Files.writeString(wrappedPath, wrappedContent);
       return wrappedPath.toFile();
     } else {
@@ -148,7 +148,7 @@ public class DslCompiler {
     }
   }
 
-    record ParsedDsl(String imports, String body) {}
+  record ParsedDsl(String imports, String body) {}
 
   static ParsedDsl parseImplicitClassWithJavaParser(String content) {
     // Step 1: split imports and body with a lightweight line scan so imports stay
@@ -170,13 +170,13 @@ public class DslCompiler {
     }
 
     // Step 2: wrap only the body in a temporary class and parse with JavaParser.
-    String tempWrapper = """
+    String tempWrapper =
+        """
         %sclass __Temp__ {
             public static void main(String[] args) throws Exception {
         %s
             }
-        }""".formatted(
-        imports.isEmpty() ? "" : imports.toString().trim() + "\n\n", body);
+        }""".formatted(imports.isEmpty() ? "" : imports.toString().trim() + "\n\n", body);
 
     ParserConfiguration config = new ParserConfiguration();
     config.setAttributeComments(false);
@@ -285,23 +285,59 @@ public class DslCompiler {
   private static void validateAndGenerate(List<File> sourceFiles, Path outputDir) throws Exception {
     Path tempWrapDir = resolveTempWrapDir();
     withClassLoader(outputDir, classLoader -> {
-      try (ExecutorService executor = Executors.newFixedThreadPool(PARALLEL_THREADS)) {
-        List<CompletableFuture<Boolean>> futures = new ArrayList<>();
+      ExecutorService virtualExecutor = Executors.newVirtualThreadPerTask();
+      try {
+        List<CompletableFuture<GenerationResult>> futures = new ArrayList<>();
         for (File sourceFile : sourceFiles) {
-          CompletableFuture<Boolean> future = CompletableFuture.supplyAsync(
-              () -> processSourceFile(classLoader, sourceFile, outputDir), executor);
+          CompletableFuture<GenerationResult> future = CompletableFuture.supplyAsync(
+              () -> generateInVirtualThread(classLoader, sourceFile, outputDir), virtualExecutor);
           futures.add(future);
         }
 
-        boolean validationFailed =
-            futures.stream().map(CompletableFuture::join).reduce(false, (a, b) -> a || b);
+        List<FileWrite> allFiles = new ArrayList<>();
+        boolean hasError = false;
+        for (CompletableFuture<GenerationResult> future : futures) {
+          GenerationResult result = future.join();
+          if (result.hasError()) {
+            hasError = true;
+          }
+          allFiles.addAll(result.files());
+        }
 
-        if (validationFailed) {
+        if (hasError) {
           System.exit(1);
         }
+
+        for (FileWrite fw : allFiles) {
+          fw.writeToDisk();
+        }
+      } finally {
+        virtualExecutor.shutdown();
       }
     });
     cleanupTempWrapDir(tempWrapDir);
+  }
+
+  record FileWrite(Path path, String content) {
+    void writeToDisk() throws IOException {
+      Files.createDirectories(path.getParent());
+      Files.writeString(path, content);
+    }
+  }
+
+  record GenerationResult(List<FileWrite> files, boolean hasError) {}
+
+  private static GenerationResult generateInVirtualThread(
+      URLClassLoader classLoader, File sourceFile, Path outputDir) {
+    List<FileWrite> files = new ArrayList<>();
+    boolean hasError = false;
+    try {
+      files = generateFiles(classLoader, sourceFile, outputDir);
+    } catch (Exception e) {
+      logError("Failed to generate code for %s: %s%n", sourceFile.getName(), e.getMessage());
+      hasError = true;
+    }
+    return new GenerationResult(files, hasError);
   }
 
   private static Path resolveTempWrapDir() {
@@ -331,8 +367,8 @@ public class DslCompiler {
     }
   }
 
-  private static boolean processSourceFile(
-      URLClassLoader classLoader, File sourceFile, Path outputDir) {
+  private static List<FileWrite> generateFiles(
+      URLClassLoader classLoader, File sourceFile, Path outputDir) throws Exception {
     String className = extractClassName(sourceFile);
     DslDefinitionCollector.clear();
 
@@ -340,16 +376,16 @@ public class DslCompiler {
       invokeMain(classLoader, className);
     } catch (Exception e) {
       logError("Failed to invoke main for %s: %s%n", className, e.getMessage());
-      return true;
+      throw e;
     }
 
     List<DslObject> objects = DslDefinitionCollector.drain();
     if (objects.isEmpty()) {
       logError("No DslObject collected from %s%n", className);
-      return true;
+      throw new IllegalStateException("No DslObject collected from " + className);
     }
 
-    boolean hasError = false;
+    List<FileWrite> generatedFiles = new ArrayList<>();
     ParsedDsl parsed = PARSED_DSL_MAP.get(className);
     for (DslObject obj : objects) {
       logInfo(
@@ -358,60 +394,57 @@ public class DslCompiler {
           obj.getClass().getEnclosingClass() != null
               ? obj.getClass().getEnclosingClass().getSimpleName()
               : obj.getClass().getSimpleName());
+      RegistrationSpec spec = toRegistrationSpec(obj, className, parsed);
+      Function<RegistrationSpec, String> dslBodyProvider =
+          s -> parsed != null ? parsed.body() : "return UndefinedDslObject.create();";
       try {
-        RegistrationSpec spec = toRegistrationSpec(obj, className, parsed);
-        Function<RegistrationSpec, String> dslBodyProvider =
-            s -> parsed != null ? parsed.body() : "return UndefinedDslObject.create();";
         switch (spec.interfaceType()) {
           case EVENT -> {
+            EventDslWorkflowGenerator wfGen = new EventDslWorkflowGenerator();
+            List<String> txCodes = ((EventDslObject) obj).getTransactionCodes();
+            String wfImplClassName = "cbs.dsl.codegen.generated."
+                + EventDslWorkflowGenerator.toClassName(obj.getCode()) + "EventWorkflowImpl";
+            EventWorkflowSpec wfSpec =
+                new EventWorkflowSpec(obj.getCode(), className, txCodes, wfImplClassName);
+            generatedFiles.addAll(wfGen.generateFileSpecs(List.of(wfSpec), outputDir));
             EventCodeGenerator gen = new EventCodeGenerator(dslBodyProvider);
-            String defCode = gen.generateDefinitionCode(spec);
-            gen.writeDefinitionToPath(spec, defCode, outputDir);
-            String wfCode = gen.generateWorkflowInterfaceCode(spec);
-            gen.writeWorkflowInterfaceToPath(spec, wfCode, outputDir);
+            generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
           }
           case TRANSACTION -> {
             TransactionCodeGenerator gen = new TransactionCodeGenerator(dslBodyProvider);
-            String defCode = gen.generateDefinitionCode(spec);
-            gen.writeDefinitionToPath(spec, defCode, outputDir);
-            String actCode = gen.generateActivityInterfaceCode(spec);
-            gen.writeActivityInterfaceToPath(spec, actCode, outputDir);
+            generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
           }
           case HELPER -> {
             HelperCodeGenerator gen = new HelperCodeGenerator(dslBodyProvider);
-            String defCode = gen.generateDefinitionCode(spec);
-            gen.writeDefinitionToPath(spec, defCode, outputDir);
-            String actCode = gen.generateActivityInterfaceCode(spec);
-            gen.writeActivityInterfaceToPath(spec, actCode, outputDir);
+            generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
           }
           case WORKFLOW -> {
             WorkflowCodeGenerator gen = new WorkflowCodeGenerator(dslBodyProvider);
-            String defCode = gen.generateDefinitionCode(spec);
-            gen.writeDefinitionToPath(spec, defCode, outputDir);
+            generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
           }
           case CONDITION -> {
             ConditionCodeGenerator gen = new ConditionCodeGenerator(dslBodyProvider);
-            String defCode = gen.generateDefinitionCode(spec);
-            gen.writeDefinitionToPath(spec, defCode, outputDir);
+            generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
           }
           case MASS_OPERATION -> {
             MassOperationCodeGenerator gen = new MassOperationCodeGenerator(dslBodyProvider);
-            String defCode = gen.generateDefinitionCode(spec);
-            gen.writeDefinitionToPath(spec, defCode, outputDir);
+            generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
           }
-          default -> throw new IllegalStateException("Unknown interface type: " + spec.interfaceType());
+          default ->
+            throw new IllegalStateException("Unknown interface type: " + spec.interfaceType());
         }
         logInfo("Generated code for: %s%n", obj.getCode());
       } catch (IOException e) {
         logError("Failed to generate code for %s: %s%n", obj.getCode(), e.getMessage());
-        hasError = true;
+        throw e;
       }
     }
 
-    return hasError;
+    return generatedFiles;
   }
 
-  private static RegistrationSpec toRegistrationSpec(DslObject obj, String className, ParsedDsl parsed) {
+  private static RegistrationSpec toRegistrationSpec(
+      DslObject obj, String className, ParsedDsl parsed) {
     DslInterfaceType interfaceType = resolveInterfaceType(obj);
     String inputType = resolveInputType(interfaceType);
     String outputType = resolveOutputType(interfaceType);
@@ -446,7 +479,8 @@ public class DslCompiler {
           case "WorkflowBuilder" -> DslInterfaceType.WORKFLOW;
           case "ConditionBuilder" -> DslInterfaceType.CONDITION;
           case "MassOperationBuilder" -> DslInterfaceType.MASS_OPERATION;
-          default -> throw new IllegalArgumentException("Unsupported DslObject type: " + simpleName);
+          default ->
+            throw new IllegalArgumentException("Unsupported DslObject type: " + simpleName);
         };
       }
     };

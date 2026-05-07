@@ -11,29 +11,29 @@ import java.util.List;
 class ActivityRegistryGeneratorTest {
 
   @Test
-  @DisplayName("shouldGenerateRegistryWithRegisterActivitiesImplementationsWhenTxAndHelperSpecsProvided")
-  void shouldGenerateRegistryWithRegisterActivitiesImplementationsWhenTxAndHelperSpecsProvided() throws Exception {
+  @DisplayName(
+      "shouldGenerateRegistryWithRegisterActivitiesImplementationsWhenTxAndHelperSpecsProvided")
+  void shouldGenerateRegistryWithRegisterActivitiesImplementationsWhenTxAndHelperSpecsProvided()
+      throws Exception {
     FakeFiler filer = new FakeFiler();
-    List<RegistrationSpec> txSpecs = List.of(
-        new RegistrationSpec(
-            "com.example",
-            "TxOne",
-            "TX_1",
-            DslInterfaceType.TRANSACTION,
-            "cbs.dsl.api.TransactionTypes.TransactionInput",
-            "cbs.dsl.api.TransactionTypes.TransactionOutput",
-            DslComponentModel.SIMPLE));
-    List<RegistrationSpec> helperSpecs = List.of(
-        new RegistrationSpec(
-            "com.example",
-            "HelperOne",
-            "H_1",
-            DslInterfaceType.HELPER,
-            "cbs.dsl.api.HelperTypes.HelperInput",
-            "cbs.dsl.api.HelperTypes.HelperOutput",
-            DslComponentModel.SIMPLE));
+    List<RegistrationSpec> txSpecs = List.of(new RegistrationSpec(
+        "com.example",
+        "TxOne",
+        "TX_1",
+        DslInterfaceType.TRANSACTION,
+        "cbs.dsl.api.TransactionTypes.TransactionInput",
+        "cbs.dsl.api.TransactionTypes.TransactionOutput",
+        DslComponentModel.SIMPLE));
+    List<RegistrationSpec> helperSpecs = List.of(new RegistrationSpec(
+        "com.example",
+        "HelperOne",
+        "H_1",
+        DslInterfaceType.HELPER,
+        "cbs.dsl.api.HelperTypes.HelperInput",
+        "cbs.dsl.api.HelperTypes.HelperOutput",
+        DslComponentModel.SIMPLE));
 
-    new ActivityRegistryGenerator(filer).generate(txSpecs, helperSpecs);
+    new ActivityRegistryGenerator(filer).generate(txSpecs, helperSpecs, List.of(), List.of());
 
     String generatedClassKey = filer.files.keySet().stream()
         .filter(k -> k.contains("GeneratedActivityRegistry"))
@@ -53,12 +53,11 @@ class ActivityRegistryGeneratorTest {
   }
 
   @Test
-  @DisplayName("shouldNotGenerateFileWhenBothSpecListsAreEmpty")
-  void shouldNotGenerateFileWhenBothSpecListsAreEmpty() throws Exception {
+  @DisplayName("shouldNotGenerateFileWhenAllSpecListsAreEmpty")
+  void shouldNotGenerateFileWhenAllSpecListsAreEmpty() throws Exception {
     FakeFiler filer = new FakeFiler();
-    new ActivityRegistryGenerator(filer).generate(List.of(), List.of());
+    new ActivityRegistryGenerator(filer).generate(List.of(), List.of(), List.of(), List.of());
     assertTrue(
-        filer.files.isEmpty(),
-        "Should not generate any files when both spec lists are empty");
+        filer.files.isEmpty(), "Should not generate any files when all spec lists are empty");
   }
 }

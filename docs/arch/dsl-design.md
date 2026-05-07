@@ -129,7 +129,7 @@ event("LOAN_DISBURSEMENT")
     });
 ```
 
-> **Temporal Integration Note:** Events are **DSL-only** — they cannot be written as `@DslComponent` code classes. An Event is the only top-level Temporal Workflow; all execution starts as an `Event`.
+> **Temporal Integration Note:** Events are **DSL-only** — they cannot be written as `@DslComponent` code classes. An Event is the only top-level Temporal Workflow; all execution starts as an `Event`. An Event generates both a Temporal **Workflow** (`EventWorkflow`) and an **Activity** (`EventActivity`). It is the only top-level Temporal Workflow; all execution starts as an `Event`.
 
 ---
 
@@ -202,7 +202,7 @@ transaction("DEBIT_FUNDING_ACCOUNT")
 
 Helpers are reusable computations implementing `HelperFunction<I, O>`. They are invoked via `ctx.helper("NAME", Map.of(...))` and can be chained.
 
-> **Temporal Integration Note:** Helpers are **not Temporal activities**. They are plain Java/DSL logic executed synchronously inside Transaction or Condition activities. Only `Event`, `Transaction`, and `Condition` generate Temporal classes.
+> **Temporal Integration Note:** Helpers do **NOT** generate Temporal artifacts. They are plain Java/DSL logic executed synchronously inside Transaction or Condition activities. Only `Event`, `Transaction`, and `Condition` generate Temporal classes.
 
 ### Code-based (recommended)
 
@@ -302,11 +302,11 @@ condition("BORROWER_ACCOUNT_READY", ctx -> {
 
 | `*Function` Interface         | Source         | Generated `*Definition`   | Temporal Artifact | Method(s)                                 |
 |-------------------------------|----------------|---------------------------|-------------------|-------------------------------------------|
-| `TransactionFunction<I, O>`   | Code or DSL    | `TransactionDefinition`   | `TransactionActivity` | `preview(I)`, `execute(I)`, `rollback(I)` |
-| `HelperFunction<I, O>`        | Code or DSL    | `HelperDefinition`        | **None** (plain logic) | `preview(I)`, `execute(I)`                |
-| `ConditionFunction<I, O>`     | Code or DSL    | `ConditionDefinition`     | `ConditionActivity` | `evaluate(I)`                             |
-| `EventFunction<I, O>`         | DSL only       | `EventDefinition`         | `EventWorkflow` + `EventActivity` | `preview(I)`, `execute(I)`                |
-| `WorkflowFunction<I, O>`      | DSL only       | `WorkflowDefinition`      | **None** (state machine DSL) | `preview(I)`, `execute(I)`                |
+| `TransactionFunction<I, O>`   | Code or DSL    | `TransactionDefinition`   | `TransactionActivity` (Activity only) | `preview(I)`, `execute(I)`, `rollback(I)` |
+| `HelperFunction<I, O>`        | Code or DSL    | `HelperDefinition`        | **None** (plain logic, no Temporal artifact) | `preview(I)`, `execute(I)`                |
+| `ConditionFunction<I, O>`     | Code or DSL    | `ConditionDefinition`     | `ConditionActivity` (Activity only) | `evaluate(I)`                             |
+| `EventFunction<I, O>`         | DSL only       | `EventDefinition`         | `EventWorkflow` + `EventActivity` (Event only) | `preview(I)`, `execute(I)`                |
+| `WorkflowFunction<I, O>`      | DSL only       | `WorkflowDefinition`      | **None** (state machine DSL only) | `preview(I)`, `execute(I)`                |
 | `MassOperationFunction<I, O>` | DSL only       | `MassOperationDefinition` | **None** (out of scope) | `preview(I)`, `execute(I)`                |
 
 `@DslComponent` is only valid on `TransactionFunction`, `HelperFunction`, and `ConditionFunction`. `EventFunction`, `WorkflowFunction`, and `MassOperationFunction` are DSL-only and do not support `@DslComponent`.

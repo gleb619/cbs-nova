@@ -1,11 +1,11 @@
 package cbs.app.temporal;
 
-import cbs.app.temporal.activity.TransactionActivityImpl;
 import cbs.app.temporal.massop.MassOpItemActivityImpl;
 import cbs.app.temporal.massop.MassOpWorkflow;
 import cbs.app.temporal.massop.MassOpWorkflowImpl;
 import cbs.app.temporal.workflow.EventWorkflow;
 import cbs.app.temporal.workflow.GenericEventWorkflowImpl;
+import cbs.dsl.codegen.generated.GeneratedActivityRegistry;
 import cbs.dsl.codegen.generated.GeneratedWorkflowRegistry;
 import cbs.nova.registry.DslRegistry;
 import cbs.nova.repository.EventExecutionRepository;
@@ -13,7 +13,6 @@ import cbs.nova.repository.MassOperationExecutionRepository;
 import cbs.nova.repository.MassOperationItemRepository;
 import cbs.nova.repository.WorkflowExecutionRepository;
 import cbs.nova.repository.WorkflowTransitionLogRepository;
-import cbs.nova.service.EventWorkflowOrchestrator;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
 import lombok.RequiredArgsConstructor;
@@ -28,9 +27,9 @@ import tools.jackson.databind.ObjectMapper;
  * Registers Temporal workflow and activity implementations with the worker.
  *
  * <p>Generated event workflows are discovered via {@link GeneratedWorkflowRegistry} and registered
- * with a factory that injects the {@link EventWorkflowOrchestrator}. A generic fallback workflow
- * handles events without generated Temporal-specific implementations. Mass-operation workflows and
- * all activity implementations are registered explicitly.
+ * automatically. A generic fallback workflow handles events without generated Temporal-specific
+ * implementations. Mass-operation workflows and all activity implementations are registered
+ * explicitly.
  */
 @Slf4j
 @Component
@@ -42,7 +41,6 @@ public class TemporalWorkerRegistrar implements ApplicationRunner {
   private final WorkflowExecutionRepository workflowExecutionRepository;
   private final EventExecutionRepository eventExecutionRepository;
   private final WorkflowTransitionLogRepository transitionLogRepository;
-  private final TransactionActivityImpl transactionActivityImpl;
   private final MassOperationExecutionRepository massOpExecutionRepository;
   private final MassOperationItemRepository massOpItemRepository;
   private final MassOpItemActivityImpl massOpItemActivityImpl;
@@ -55,12 +53,7 @@ public class TemporalWorkerRegistrar implements ApplicationRunner {
     Worker worker = workerFactory.newWorker(taskQueue);
 
     // 1. Register generated event workflows (Layer 3 codegen)
-    EventWorkflowOrchestrator orchestrator = new EventWorkflowOrchestrator(
-        dslRegistry,
-        workflowExecutionRepository,
-        eventExecutionRepository,
-        transitionLogRepository);
-    GeneratedWorkflowRegistry.registerAll(worker, orchestrator);
+    GeneratedWorkflowRegistry.registerAll(worker);
     log.info("Registered generated event workflows via GeneratedWorkflowRegistry");
 
     // 2. Register generic event workflow as fallback for non-generated events
@@ -73,8 +66,8 @@ public class TemporalWorkerRegistrar implements ApplicationRunner {
             transitionLogRepository));
     log.info("Registered generic event workflow (fallback)");
 
-    // 3. Register activities and mass-operation workflow
-    worker.registerActivitiesImplementations(transactionActivityImpl);
+    // 3. Register generated activities and mass-operation workflow
+    GeneratedActivityRegistry.registerAll(worker);
     worker.registerWorkflowImplementationFactory(
         MassOpWorkflow.class,
         () -> new MassOpWorkflowImpl(

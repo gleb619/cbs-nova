@@ -5,9 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import cbs.dsl.api.DslComponent.DslComponentModel;
-import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 class ConditionCodeGeneratorTest {
 
@@ -29,7 +30,8 @@ class ConditionCodeGeneratorTest {
         null,
         null);
 
-    new ConditionCodeGenerator(filer, s -> "return UndefinedDslObject.create();").generate(List.of(spec));
+    new ConditionCodeGenerator(filer, s -> "return UndefinedDslObject.create();")
+        .generate(List.of(spec));
 
     String key = "cbs.dsl.codegen.generated.definitions.MyConditionDefinition";
     assertTrue(filer.files.containsKey(key), "Should generate MyConditionDefinition");

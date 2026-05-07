@@ -29,9 +29,8 @@ public class AppExceptionHandler {
       IllegalArgumentException ex, HttpServletRequest request) {
     log.error("Got wrong argument: {}", ex.getMessage());
     return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
-        .body(
-            buildErrorResponse(
-                HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request.getRequestURI()));
+        .body(buildErrorResponse(
+            HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request.getRequestURI()));
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -39,10 +38,9 @@ public class AppExceptionHandler {
       MethodArgumentNotValidException ex, HttpServletRequest request) {
     log.error("Data validation error: {}", ex.getMessage());
     var fieldError = ex.getBindingResult().getFieldError();
-    String message =
-        fieldError != null
-            ? "%s: %s".formatted(fieldError.getField(), fieldError.getDefaultMessage())
-            : "Validation failed";
+    String message = fieldError != null
+        ? "%s: %s".formatted(fieldError.getField(), fieldError.getDefaultMessage())
+        : "Validation failed";
     return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
         .body(
             buildErrorResponse(HttpStatus.UNPROCESSABLE_ENTITY, message, request.getRequestURI()));
@@ -53,10 +51,12 @@ public class AppExceptionHandler {
       RuntimeException ex, HttpServletRequest request) {
     log.error("Internal error: {}", ex.getMessage());
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-        .body(buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Internal error", request.getRequestURI()));
+        .body(buildErrorResponse(
+            HttpStatus.INTERNAL_SERVER_ERROR, "Internal error", request.getRequestURI()));
   }
 
   private ErrorResponse buildErrorResponse(HttpStatus status, String message, String path) {
-    return new ErrorResponse(Instant.now(), status.value(), status.getReasonPhrase(), message, path);
+    return new ErrorResponse(
+        Instant.now(), status.value(), status.getReasonPhrase(), message, path);
   }
 }

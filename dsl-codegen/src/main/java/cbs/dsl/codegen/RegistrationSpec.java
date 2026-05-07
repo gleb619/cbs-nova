@@ -21,6 +21,15 @@ public record RegistrationSpec(
       String inputType,
       String outputType,
       DslComponentModel componentModel) {
-    this(packageName, className, code, interfaceType, inputType, outputType, componentModel, null, null);
+    this(
+        packageName,
+        className,
+        code,
+        interfaceType,
+        inputType,
+        outputType,
+        componentModel,
+        null,
+        null);
   }
 }

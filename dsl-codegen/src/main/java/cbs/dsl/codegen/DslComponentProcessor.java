@@ -82,22 +82,28 @@ public class DslComponentProcessor extends AbstractProcessor {
 
         // Domain-oriented code generation: one generator per domain type
         if (!txSpecs.isEmpty()) {
-          new TransactionCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER).generate(txSpecs);
+          new TransactionCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER)
+              .generate(txSpecs);
         }
         if (!helperSpecs.isEmpty()) {
-          new HelperCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER).generate(helperSpecs);
+          new HelperCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER)
+              .generate(helperSpecs);
         }
         if (!eventSpecs.isEmpty()) {
-          new EventCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER).generate(eventSpecs);
+          new EventCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER)
+              .generate(eventSpecs);
         }
         if (!workflowSpecs.isEmpty()) {
-          new WorkflowCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER).generate(workflowSpecs);
+          new WorkflowCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER)
+              .generate(workflowSpecs);
         }
         if (!conditionSpecs.isEmpty()) {
-          new ConditionCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER).generate(conditionSpecs);
+          new ConditionCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER)
+              .generate(conditionSpecs);
         }
         if (!massOpSpecs.isEmpty()) {
-          new MassOperationCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER).generate(massOpSpecs);
+          new MassOperationCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER)
+              .generate(massOpSpecs);
         }
 
         new RegistrationGenerator(processingEnv.getFiler()).generate(registrations);
@@ -108,12 +114,17 @@ public class DslComponentProcessor extends AbstractProcessor {
                 new EventWorkflowSpec(r.code(), r.packageName() + "." + r.className(), List.of()))
             .toList();
         if (!eventWorkflowSpecs.isEmpty()) {
+          new EventDslWorkflowGenerator(processingEnv.getFiler()).generate(eventWorkflowSpecs);
           new WorkflowRegistryGenerator(processingEnv.getFiler()).generate(eventWorkflowSpecs);
         }
 
         // Layer 3d: Generate activity registry if any activities exist
-        if (!txSpecs.isEmpty() || !helperSpecs.isEmpty()) {
-          new ActivityRegistryGenerator(processingEnv.getFiler()).generate(txSpecs, helperSpecs);
+        if (!txSpecs.isEmpty()
+            || !helperSpecs.isEmpty()
+            || !conditionSpecs.isEmpty()
+            || !eventWorkflowSpecs.isEmpty()) {
+          new ActivityRegistryGenerator(processingEnv.getFiler())
+              .generate(txSpecs, helperSpecs, conditionSpecs, eventWorkflowSpecs);
         }
       }
       processed = true;
@@ -221,8 +232,9 @@ public class DslComponentProcessor extends AbstractProcessor {
     String dslBody = null;
     String dslImports = null;
     try {
-      FileObject sourceFile = processingEnv.getFiler().getResource(
-          StandardLocation.SOURCE_PATH, packageName, className + ".java");
+      FileObject sourceFile = processingEnv
+          .getFiler()
+          .getResource(StandardLocation.SOURCE_PATH, packageName, className + ".java");
       String content = sourceFile.getCharContent(true).toString();
       if (!DslCompiler.containsExplicitTypeDeclaration(content)) {
         DslCompiler.ParsedDsl parsed = DslCompiler.parseImplicitClassWithJavaParser(content);

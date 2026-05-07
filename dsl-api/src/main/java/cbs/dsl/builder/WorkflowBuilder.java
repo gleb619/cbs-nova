@@ -47,6 +47,7 @@ public class WorkflowBuilder {
     return this;
   }
 
+  @Deprecated(forRemoval = true)
   public WorkflowBuilder transition(String from, String to, Action action, String eventCode) {
     EventDefinition proxy = new EventDefinition() {
       @Override

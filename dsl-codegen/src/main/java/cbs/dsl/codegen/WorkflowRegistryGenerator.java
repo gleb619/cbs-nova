@@ -39,12 +39,19 @@ public class WorkflowRegistryGenerator {
     String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
 
     String interfaceImports = specs.stream()
-        .map(s -> Substitutor.format("import {{package}}.{{iface}};", Map.of("package", packageName, "iface", toInterfaceName(s.eventCode()))))
+        .map(s -> Substitutor.format(
+            "import {{package}}.{{iface}};",
+            Map.of("package", packageName, "iface", toInterfaceName(s.eventCode()))))
         .collect(Collectors.joining("\n"));
 
     String implImports = specs.stream()
-        .map(
-            s -> Substitutor.format("import {{package}}.definitions.{{impl}};", Map.of("package", packageName, "impl", toImplName(s.eventClassName()))))
+        .map(s -> {
+          String impl = resolveImplClassName(s);
+          String pkg = impl.contains(".") ? impl.substring(0, impl.lastIndexOf('.')) : packageName;
+          String simple = impl.contains(".") ? impl.substring(impl.lastIndexOf('.') + 1) : impl;
+          return Substitutor.format(
+              "import {{package}}.{{impl}};", Map.of("package", pkg, "impl", simple));
+        })
         .collect(Collectors.joining("\n"));
 
     String imports = interfaceImports + (implImports.isBlank() ? "" : "\n" + implImports);
@@ -52,12 +59,13 @@ public class WorkflowRegistryGenerator {
     String factories = specs.stream()
         .map(s -> {
           String iface = toInterfaceName(s.eventCode());
-          String impl = toImplName(s.eventClassName());
+          String impl = resolveImplClassName(s);
+          String simpleImpl = impl.contains(".") ? impl.substring(impl.lastIndexOf('.') + 1) : impl;
           String factoryTemplate = """
                   worker.registerWorkflowImplementationFactory(
                       {{iface}}.class,
-                      () -> new {{impl}}(orchestrator));""";
-          return Substitutor.format(factoryTemplate, Map.of("iface", iface, "impl", impl));
+                      () -> new {{impl}}());""";
+          return Substitutor.format(factoryTemplate, Map.of("iface", iface, "impl", simpleImpl));
         })
         .collect(Collectors.joining("\n\n"));
 
@@ -67,7 +75,6 @@ public class WorkflowRegistryGenerator {
     String sourceTemplate = """
         package {{package}};
 
-        import cbs.nova.service.EventWorkflowOrchestrator;
         import io.temporal.worker.Worker;
         import java.util.List;
         {{imports}}
@@ -90,9 +97,8 @@ public class WorkflowRegistryGenerator {
              * Registers all generated workflow implementations with the given worker.
              *
              * @param worker the Temporal worker to register workflows on
-             * @param orchestrator the orchestrator instance to inject into workflow implementations
              */
-            public static void registerAll(Worker worker, EventWorkflowOrchestrator orchestrator) {
+            public static void registerAll(Worker worker) {
 {{factories}}
             }
 
@@ -107,14 +113,15 @@ public class WorkflowRegistryGenerator {
         }
         """;
 
-    String source = Substitutor.format(sourceTemplate,
-            Map.ofEntries(
-                Map.entry("package", packageName),
-                Map.entry("imports", imports.isBlank() ? "" : "\n" + imports),
-                Map.entry("timestamp", timestamp),
-                Map.entry("className", className),
-                Map.entry("factories", factories),
-                Map.entry("workflowTypes", workflowTypes)));
+    String source = Substitutor.format(
+        sourceTemplate,
+        Map.ofEntries(
+            Map.entry("package", packageName),
+            Map.entry("imports", imports.isBlank() ? "" : "\n" + imports),
+            Map.entry("timestamp", timestamp),
+            Map.entry("className", className),
+            Map.entry("factories", factories),
+            Map.entry("workflowTypes", workflowTypes)));
 
     try (PrintWriter writer = new PrintWriter(file.openWriter())) {
       writer.print(source);
@@ -122,13 +129,18 @@ public class WorkflowRegistryGenerator {
   }
 
   private static String toInterfaceName(String eventCode) {
-    return toClassName(eventCode) + "Workflow";
+    return toClassName(eventCode) + "EventWorkflow";
   }
 
-  private static String toImplName(String eventClassName) {
+  private static String resolveImplClassName(EventWorkflowSpec spec) {
+    if (spec.workflowImplClassName() != null) {
+      return spec.workflowImplClassName();
+    }
+    // Fallback for code events: definitions.{SimpleName}Definition
+    String eventClassName = spec.eventClassName();
     int lastDot = eventClassName.lastIndexOf('.');
     String simpleName = lastDot >= 0 ? eventClassName.substring(lastDot + 1) : eventClassName;
-    return simpleName + "Definition";
+    return "definitions." + simpleName + "Definition";
   }
 
   private static String toClassName(String code) {

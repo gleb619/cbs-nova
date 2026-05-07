@@ -2,9 +2,7 @@ package cbs.dsl.codegen;
 
 import java.util.Map;
 
-/**
- * Simple string template substitutor using {{key}} syntax.
- */
+/** Simple string template substitutor using {{key}} syntax. */
 public class Substitutor {
   public static String format(String template, Map<String, String> params) {
     if (template == null || params == null) {

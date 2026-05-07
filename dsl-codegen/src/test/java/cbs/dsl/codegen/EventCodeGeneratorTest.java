@@ -5,9 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import cbs.dsl.api.DslComponent.DslComponentModel;
-import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 class EventCodeGeneratorTest {
 
@@ -29,7 +30,8 @@ class EventCodeGeneratorTest {
         null,
         null);
 
-    new EventCodeGenerator(filer, s -> "return UndefinedDslObject.create();").generate(List.of(spec));
+    new EventCodeGenerator(filer, s -> "return UndefinedDslObject.create();")
+        .generate(List.of(spec));
 
     String definitionKey = "cbs.dsl.codegen.generated.definitions.MyEventDefinition";
     String workflowKey = "cbs.dsl.codegen.generated.Evt1Workflow";
@@ -76,8 +78,7 @@ class EventCodeGeneratorTest {
         content.contains("return CustomEventDsl.event(\"EVT_1\").build();"),
         "Should contain custom dsl body");
     assertTrue(
-        content.contains("import com.example.CustomEventDsl;"),
-        "Should contain custom dsl import");
+        content.contains("import com.example.CustomEventDsl;"), "Should contain custom dsl import");
     assertFalse(
         content.contains("import cbs.dsl.builder.UndefinedDslObject;"),
         "Should not contain UndefinedDslObject fallback import");

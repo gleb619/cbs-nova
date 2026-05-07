@@ -18,6 +18,26 @@ The generator produces an **intermediate layer** — a set of Temporal `Workflow
 
 ---
 
+
+### 13.1a Temporal Integration Scope
+
+Code generation for Temporal is limited to three DSL component types:
+
+| DSL Component | Generated Temporal Artifact | Notes |
+|---------------|----------------------------|-------|
+| **Event**     | `EventWorkflow` + `EventActivity` | Event is the only top-level Temporal Workflow. All execution starts as an Event. |
+| **Transaction** | `TransactionActivity` (Activity only) | No workflow generated. Called from EventWorkflow. |
+| **Condition** | `ConditionActivity` (Activity only) | No workflow generated. Used inside EventWorkflow for branching decisions. |
+| **Helper**    | **None** (plain Spring bean) | Helpers are invoked synchronously inside TransactionActivity. No Temporal artifact. |
+| **Workflow**  | **None** (state machine DSL only) | Workflow definitions orchestrate events but do not generate Temporal workflows. |
+| **MassOperation** | **None** (out of scope) | Batch orchestration handled separately. |
+
+**Key rules:**
+- Events can be created **only via DSL** (not via `@DslComponent` code classes).
+- Transactions, Helpers, and Conditions can be created via **code** (`@DslComponent`) or **DSL**.
+- The generated `EventWorkflow` first calls `EventActivity.prepareContext()` to execute the event's `context{}` block, then iterates through the event's transaction codes, calling each `TransactionActivity`.
+- `TransactionActivity` internally calls helper `prepareContext()` / `execute()` as plain synchronous code before running the developer's business logic.
+
 ### 13.2 Three-Layer Generation Pipeline
 
 The pipeline runs entirely at **compile time** in the `dsl-codegen` module.

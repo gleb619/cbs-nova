@@ -5,9 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import cbs.dsl.api.DslComponent.DslComponentModel;
-import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 class WorkflowCodeGeneratorTest {
 
@@ -29,7 +30,8 @@ class WorkflowCodeGeneratorTest {
         null,
         null);
 
-    new WorkflowCodeGenerator(filer, s -> "return UndefinedDslObject.create();").generate(List.of(spec));
+    new WorkflowCodeGenerator(filer, s -> "return UndefinedDslObject.create();")
+        .generate(List.of(spec));
 
     String definitionKey = "cbs.dsl.codegen.generated.definitions.MyWorkflowDefinition";
     assertTrue(filer.files.containsKey(definitionKey), "Should generate MyWorkflowDefinition");
@@ -38,8 +40,7 @@ class WorkflowCodeGeneratorTest {
 
     assertTrue(content.contains("class MyWorkflowDefinition"), "Should contain class name");
     assertTrue(
-        content.contains("implements WorkflowDefinition"),
-        "Should implement WorkflowDefinition");
+        content.contains("implements WorkflowDefinition"), "Should implement WorkflowDefinition");
     assertTrue(
         content.contains("return UndefinedDslObject.create();"),
         "Should contain UndefinedDslObject dsl body");

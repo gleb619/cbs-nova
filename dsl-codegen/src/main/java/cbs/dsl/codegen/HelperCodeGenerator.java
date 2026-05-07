@@ -4,10 +4,9 @@ import javax.annotation.processing.Filer;
 import javax.tools.JavaFileObject;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.io.PrintWriter;
-
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -61,7 +60,7 @@ public class HelperCodeGenerator {
 
     String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
 
-    String sourceTemplate = //language=java
+    String sourceTemplate = // language=java
         """
         package {{GENERATED_PACKAGE}};
 
@@ -83,13 +82,16 @@ public class HelperCodeGenerator {
         }
         """;
 
-    return Substitutor.format(sourceTemplate, Map.ofEntries(
-        Map.entry("GENERATED_PACKAGE", GENERATED_PACKAGE),
-        Map.entry("timestamp", timestamp),
-        Map.entry("className", className)));
+    return Substitutor.format(
+        sourceTemplate,
+        Map.ofEntries(
+            Map.entry("GENERATED_PACKAGE", GENERATED_PACKAGE),
+            Map.entry("timestamp", timestamp),
+            Map.entry("className", className)));
   }
 
-  public void writeActivityInterfaceToPath(RegistrationSpec spec, String source, Path outputDir) throws IOException {
+  public void writeActivityInterfaceToPath(RegistrationSpec spec, String source, Path outputDir)
+      throws IOException {
     String className = spec.className() + "Activity";
     Path outputPath = outputDir.resolve("cbs/dsl/codegen/generated").resolve(className + ".java");
     Files.createDirectories(outputPath.getParent());
@@ -115,26 +117,27 @@ public class HelperCodeGenerator {
 
     String inputConversion = inputIsRuntime
         ? "input"
-        : Substitutor.format("JsonPayload.fromMap(input.params(), {{inputType}}.class)",
+        : Substitutor.format(
+            "JsonPayload.fromMap(input.params(), {{inputType}}.class)",
             Map.of("inputType", simpleName(spec.inputType())));
 
     String outputConversion = outputIsRuntime ? "out" : "new HelperOutput(JsonPayload.params(out))";
 
     String jsonPayloadImport =
         (inputIsRuntime && outputIsRuntime) ? "" : "import cbs.dsl.api.JsonPayload;\n";
-    String inputTypeImport =
-        inputIsRuntime ? "" : Substitutor.format("import {{inputType}};\n",
-            Map.of("inputType", spec.inputType()));
-    String outputTypeImport =
-        outputIsRuntime ? "" : Substitutor.format("import {{outputType}};\n",
-            Map.of("outputType", spec.outputType()));
+    String inputTypeImport = inputIsRuntime
+        ? ""
+        : Substitutor.format("import {{inputType}};\n", Map.of("inputType", spec.inputType()));
+    String outputTypeImport = outputIsRuntime
+        ? ""
+        : Substitutor.format("import {{outputType}};\n", Map.of("outputType", spec.outputType()));
 
     String dslBody = dslBodyProvider.apply(spec);
     String dslImportsBlock = (spec.dslImports() != null && !spec.dslImports().isBlank())
         ? spec.dslImports().trim() + "\n"
         : "import cbs.dsl.builder.UndefinedDslObject;\n";
 
-    String sourceTemplate = //language=java
+    String sourceTemplate = // language=java
         """
         package {{DEFINITIONS_PACKAGE}};
 
@@ -195,32 +198,64 @@ public class HelperCodeGenerator {
         }
         """;
 
-    return Substitutor.format(sourceTemplate, Map.ofEntries(
-        Map.entry("DEFINITIONS_PACKAGE", DEFINITIONS_PACKAGE),
-        Map.entry("GENERATED_PACKAGE", GENERATED_PACKAGE),
-        Map.entry("activityInterfaceName", activityInterfaceName),
-        Map.entry("jsonPayloadImport", jsonPayloadImport),
-        Map.entry("specPackage", spec.packageName()),
-        Map.entry("specClass", spec.className()),
-        Map.entry("inputTypeImport", inputTypeImport),
-        Map.entry("outputTypeImport", outputTypeImport),
-        Map.entry("dslImportsBlock", dslImportsBlock),
-        Map.entry("timestamp", timestamp),
-        Map.entry("wrapperClass", wrapperClassName),
-        Map.entry("code", spec.code()),
-        Map.entry("inputTypeName", simpleName(spec.inputType())),
-        Map.entry("inputConversion", inputConversion),
-        Map.entry("outputTypeName", simpleName(spec.outputType())),
-        Map.entry("outputConversion", outputConversion),
-        Map.entry("dslBody", dslBody)));
+    return Substitutor.format(
+        sourceTemplate,
+        Map.ofEntries(
+            Map.entry("DEFINITIONS_PACKAGE", DEFINITIONS_PACKAGE),
+            Map.entry("GENERATED_PACKAGE", GENERATED_PACKAGE),
+            Map.entry("activityInterfaceName", activityInterfaceName),
+            Map.entry("jsonPayloadImport", jsonPayloadImport),
+            Map.entry("specPackage", spec.packageName()),
+            Map.entry("specClass", spec.className()),
+            Map.entry("inputTypeImport", inputTypeImport),
+            Map.entry("outputTypeImport", outputTypeImport),
+            Map.entry("dslImportsBlock", dslImportsBlock),
+            Map.entry("timestamp", timestamp),
+            Map.entry("wrapperClass", wrapperClassName),
+            Map.entry("code", spec.code()),
+            Map.entry("inputTypeName", simpleName(spec.inputType())),
+            Map.entry("inputConversion", inputConversion),
+            Map.entry("outputTypeName", simpleName(spec.outputType())),
+            Map.entry("outputConversion", outputConversion),
+            Map.entry("dslBody", dslBody)));
   }
 
-  public void writeDefinitionToPath(RegistrationSpec spec, String source, Path outputDir) throws IOException {
+  public void writeDefinitionToPath(RegistrationSpec spec, String source, Path outputDir)
+      throws IOException {
     String wrapperClassName = spec.className() + "Definition";
-    Path outputPath = outputDir.resolve("cbs/dsl/codegen/generated/definitions").resolve(wrapperClassName + ".java");
+    Path outputPath = outputDir
+        .resolve("cbs/dsl/codegen/generated/definitions")
+        .resolve(wrapperClassName + ".java");
     Files.createDirectories(outputPath.getParent());
     Files.writeString(outputPath, source);
   }
+
+  public List<GeneratedFile> generateFileSpecs(RegistrationSpec spec, Path outputDir) {
+    List<GeneratedFile> files = new ArrayList<>();
+    String activitySource = generateActivityInterfaceCode(spec);
+    files.add(writeActivityInterfaceToSpec(spec, activitySource, outputDir));
+    String definitionSource = generateDefinitionCode(spec);
+    files.add(writeDefinitionToSpec(spec, definitionSource, outputDir));
+    return files;
+  }
+
+  private GeneratedFile writeActivityInterfaceToSpec(
+      RegistrationSpec spec, String source, Path outputDir) {
+    String className = spec.className() + "Activity";
+    Path outputPath = outputDir.resolve("cbs/dsl/codegen/generated").resolve(className + ".java");
+    return new GeneratedFile(outputPath, source);
+  }
+
+  private GeneratedFile writeDefinitionToSpec(
+      RegistrationSpec spec, String source, Path outputDir) {
+    String wrapperClassName = spec.className() + "Definition";
+    Path outputPath = outputDir
+        .resolve("cbs/dsl/codegen/generated/definitions")
+        .resolve(wrapperClassName + ".java");
+    return new GeneratedFile(outputPath, source);
+  }
+
+  public record GeneratedFile(Path path, String content) {}
 
   public void writeDefinition(RegistrationSpec spec, String source) throws IOException {
     String wrapperClassName = spec.className() + "Definition";

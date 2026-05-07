@@ -4,10 +4,9 @@ import javax.annotation.processing.Filer;
 import javax.tools.JavaFileObject;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.io.PrintWriter;
-
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -62,8 +61,8 @@ public class TransactionCodeGenerator {
     String className = spec.className() + "Activity";
     String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
 
-    String sourceTemplate = //language=java
-            """
+    String sourceTemplate = // language=java
+        """
             package {{package}};
 
             import cbs.dsl.api.TransactionTypes.TransactionInput;
@@ -83,13 +82,16 @@ public class TransactionCodeGenerator {
                 TransactionOutput execute(TransactionInput input);
             }
             """;
-    return Substitutor.format(sourceTemplate, Map.of(
-        "package", GENERATED_PACKAGE,
-        "timestamp", timestamp,
-        "className", className));
+    return Substitutor.format(
+        sourceTemplate,
+        Map.of(
+            "package", GENERATED_PACKAGE,
+            "timestamp", timestamp,
+            "className", className));
   }
 
-  public void writeActivityInterfaceToPath(RegistrationSpec spec, String source, Path outputDir) throws IOException {
+  public void writeActivityInterfaceToPath(RegistrationSpec spec, String source, Path outputDir)
+      throws IOException {
     String className = spec.className() + "Activity";
     Path outputPath = outputDir.resolve("cbs/dsl/codegen/generated").resolve(className + ".java");
     Files.createDirectories(outputPath.getParent());
@@ -122,17 +124,15 @@ public class TransactionCodeGenerator {
 
     String jsonPayloadImport =
         (inputIsRuntime && outputIsRuntime) ? "" : "import cbs.dsl.api.JsonPayload;\n";
-    String inputTypeImport =
-        inputIsRuntime ? "" : "import " + spec.inputType() + ";\n";
-    String outputTypeImport =
-        outputIsRuntime ? "" : "import " + spec.outputType() + ";\n";
+    String inputTypeImport = inputIsRuntime ? "" : "import " + spec.inputType() + ";\n";
+    String outputTypeImport = outputIsRuntime ? "" : "import " + spec.outputType() + ";\n";
 
     String dslBody = dslBodyProvider.apply(spec);
     String dslImportsBlock = (spec.dslImports() != null && !spec.dslImports().isBlank())
         ? spec.dslImports().trim() + "\n"
         : "import cbs.dsl.builder.UndefinedDslObject;\n";
 
-    String sourceTemplate = //language=java
+    String sourceTemplate = // language=java
         """
         package {{definitionsPackage}};
 
@@ -223,12 +223,48 @@ public class TransactionCodeGenerator {
     return Substitutor.format(sourceTemplate, params);
   }
 
-  public void writeDefinitionToPath(RegistrationSpec spec, String source, Path outputDir) throws IOException {
+  public void writeDefinitionToPath(RegistrationSpec spec, String source, Path outputDir)
+      throws IOException {
     String wrapperClassName = spec.className() + "Definition";
-    Path outputPath = outputDir.resolve("cbs/dsl/codegen/generated/definitions").resolve(wrapperClassName + ".java");
+    Path outputPath = outputDir
+        .resolve("cbs/dsl/codegen/generated/definitions")
+        .resolve(wrapperClassName + ".java");
     Files.createDirectories(outputPath.getParent());
     Files.writeString(outputPath, source);
   }
+
+  public List<GeneratedFile> generateFileSpecs(RegistrationSpec spec, Path outputDir) {
+    List<GeneratedFile> files = new ArrayList<>();
+    String activitySource = generateActivityInterfaceCode(spec);
+    files.add(writeActivityInterfaceToSpec(spec, activitySource, outputDir));
+    String definitionSource = generateDefinitionCode(spec);
+    files.add(writeDefinitionToSpec(spec, definitionSource, outputDir));
+    return files;
+  }
+
+  private GeneratedFile writeActivityInterfaceToSpec(
+      RegistrationSpec spec, String source, Path outputDir) {
+    String className = spec.className() + "Activity";
+    Path outputPath = outputDir.resolve("cbs/dsl/codegen/generated").resolve(className + ".java");
+    return new GeneratedFile(outputPath, source);
+  }
+
+  private GeneratedFile writeDefinitionToSpec(
+      RegistrationSpec spec, String source, Path outputDir) {
+    String wrapperClassName = spec.className() + "Definition";
+    Path outputPath = outputDir
+        .resolve("cbs/dsl/codegen/generated/definitions")
+        .resolve(wrapperClassName + ".java");
+    return new GeneratedFile(outputPath, source);
+  }
+
+  public record GeneratedFile(Path path, String content) {
+    FileWrite toFileWrite() {
+      return new FileWrite(path, content);
+    }
+  }
+
+  record FileWrite(Path path, String content) {}
 
   public void writeDefinition(RegistrationSpec spec, String source) throws IOException {
     String wrapperClassName = spec.className() + "Definition";

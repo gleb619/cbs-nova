@@ -64,9 +64,8 @@ class RegistrationGeneratorTest {
     new RegistrationGenerator(filer).generate(List.of());
 
     assertTrue(
-        filer.files.entrySet().stream()
-            .anyMatch(e -> e.getKey()
-                .contains("META-INF/services/cbs.dsl.api.ImplRegistrationProvider")),
+        filer.files.entrySet().stream().anyMatch(e -> e.getKey()
+            .contains("META-INF/services/cbs.dsl.api.ImplRegistrationProvider")),
         "Should contain SPI service file");
 
     String spiKey = filer.files.keySet().stream()
@@ -84,17 +83,16 @@ class RegistrationGeneratorTest {
   @DisplayName("shouldGenerateImplRegistrationsWhenDslBodyAndDslImportsAreNonNull")
   void shouldGenerateImplRegistrationsWhenDslBodyAndDslImportsAreNonNull() throws Exception {
     FakeFiler filer = new FakeFiler();
-    List<RegistrationSpec> specs = List.of(
-        new RegistrationSpec(
-            "com.example",
-            "TxWithBody",
-            "TX_BODY",
-            DslInterfaceType.TRANSACTION,
-            "cbs.dsl.api.TransactionTypes.TransactionInput",
-            "cbs.dsl.api.TransactionTypes.TransactionOutput",
-            DslComponentModel.SIMPLE,
-            "preview {} execute {} rollback {}",
-            "import java.util.List;"));
+    List<RegistrationSpec> specs = List.of(new RegistrationSpec(
+        "com.example",
+        "TxWithBody",
+        "TX_BODY",
+        DslInterfaceType.TRANSACTION,
+        "cbs.dsl.api.TransactionTypes.TransactionInput",
+        "cbs.dsl.api.TransactionTypes.TransactionOutput",
+        DslComponentModel.SIMPLE,
+        "preview {} execute {} rollback {}",
+        "import java.util.List;"));
 
     new RegistrationGenerator(filer).generate(specs);
 
@@ -116,17 +114,16 @@ class RegistrationGeneratorTest {
   @DisplayName("shouldGenerateSpiServiceFileWhenRegistrationsHaveDslBodyAndDslImports")
   void shouldGenerateSpiServiceFileWhenRegistrationsHaveDslBodyAndDslImports() throws Exception {
     FakeFiler filer = new FakeFiler();
-    List<RegistrationSpec> specs = List.of(
-        new RegistrationSpec(
-            "com.example",
-            "HelperWithImports",
-            "H_IMP",
-            DslInterfaceType.HELPER,
-            "cbs.dsl.api.HelperTypes.HelperInput",
-            "cbs.dsl.api.HelperTypes.HelperOutput",
-            DslComponentModel.SIMPLE,
-            "execute { sql {} }",
-            "import java.math.BigDecimal;"));
+    List<RegistrationSpec> specs = List.of(new RegistrationSpec(
+        "com.example",
+        "HelperWithImports",
+        "H_IMP",
+        DslInterfaceType.HELPER,
+        "cbs.dsl.api.HelperTypes.HelperInput",
+        "cbs.dsl.api.HelperTypes.HelperOutput",
+        DslComponentModel.SIMPLE,
+        "execute { sql {} }",
+        "import java.math.BigDecimal;"));
 
     new RegistrationGenerator(filer).generate(specs);
 
