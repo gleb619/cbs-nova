@@ -13,7 +13,7 @@ import java.util.List;
  * <p>Implementations are typically created via the Kotlin DSL {@code event { }} block or annotated
  * with {@link DslComponent} for compile-time registration.
  */
-public interface EventDefinition extends DslDefinition<EventDslObject> {
+public interface EventDefinition extends DslDefinition {
 
   /**
    * Canonical code used to look up this event in the registry.

@@ -20,6 +20,9 @@ import javax.tools.StandardLocation;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Function;
 
 @SupportedAnnotationTypes("cbs.dsl.api.DslComponent")
@@ -80,51 +83,102 @@ public class DslComponentProcessor extends AbstractProcessor {
             .filter(r -> r.interfaceType() == DslInterfaceType.MASS_OPERATION)
             .toList();
 
-        // Domain-oriented code generation: one generator per domain type
-        if (!txSpecs.isEmpty()) {
-          new TransactionCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER)
-              .generate(txSpecs);
-        }
-        if (!helperSpecs.isEmpty()) {
-          new HelperCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER)
-              .generate(helperSpecs);
-        }
-        if (!eventSpecs.isEmpty()) {
-          new EventCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER)
-              .generate(eventSpecs);
-        }
-        if (!workflowSpecs.isEmpty()) {
-          new WorkflowCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER)
-              .generate(workflowSpecs);
-        }
-        if (!conditionSpecs.isEmpty()) {
-          new ConditionCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER)
-              .generate(conditionSpecs);
-        }
-        if (!massOpSpecs.isEmpty()) {
-          new MassOperationCodeGenerator(processingEnv.getFiler(), UNDEFINED_DSL_BODY_PROVIDER)
-              .generate(massOpSpecs);
-        }
+        ExecutorService virtualExecutor = Executors.newVirtualThreadPerTaskExecutor();
+        try {
+          Map<RegistrationSpec, String> activitySources = Collections.synchronizedMap(new HashMap<>());
+          Map<RegistrationSpec, String> definitionSources = Collections.synchronizedMap(new HashMap<>());
+          Map<RegistrationSpec, String> genericSources = Collections.synchronizedMap(new HashMap<>());
 
-        new RegistrationGenerator(processingEnv.getFiler()).generate(registrations);
+          List<CompletableFuture<Void>> generationFutures = new ArrayList<>();
 
-        // Layer 3a: Generate workflow registry for EVENT types
-        List<EventWorkflowSpec> eventWorkflowSpecs = eventSpecs.stream()
-            .map(r ->
-                new EventWorkflowSpec(r.code(), r.packageName() + "." + r.className(), List.of()))
-            .toList();
-        if (!eventWorkflowSpecs.isEmpty()) {
-          new EventDslWorkflowGenerator(processingEnv.getFiler()).generate(eventWorkflowSpecs);
-          new WorkflowRegistryGenerator(processingEnv.getFiler()).generate(eventWorkflowSpecs);
-        }
+          for (RegistrationSpec spec : txSpecs) {
+            generationFutures.add(CompletableFuture.runAsync(
+                () -> {
+                  TransactionCodeGenerator gen = new TransactionCodeGenerator(UNDEFINED_DSL_BODY_PROVIDER);
+                  activitySources.put(spec, gen.generateActivityInterfaceCode(spec));
+                  definitionSources.put(spec, gen.generateDefinitionCode(spec));
+                }, virtualExecutor));
+          }
+          for (RegistrationSpec spec : helperSpecs) {
+            generationFutures.add(CompletableFuture.runAsync(
+                () -> {
+                  HelperCodeGenerator gen = new HelperCodeGenerator(UNDEFINED_DSL_BODY_PROVIDER);
+                  genericSources.put(spec, gen.generateDefinitionCode(spec));
+                }, virtualExecutor));
+          }
+          for (RegistrationSpec spec : eventSpecs) {
+            generationFutures.add(CompletableFuture.runAsync(
+                () -> {
+                  EventCodeGenerator gen = new EventCodeGenerator(UNDEFINED_DSL_BODY_PROVIDER);
+                  genericSources.put(spec, gen.generateDefinitionCode(spec));
+                }, virtualExecutor));
+          }
+          for (RegistrationSpec spec : workflowSpecs) {
+            generationFutures.add(CompletableFuture.runAsync(
+                () -> {
+                  WorkflowCodeGenerator gen = new WorkflowCodeGenerator(UNDEFINED_DSL_BODY_PROVIDER);
+                  genericSources.put(spec, gen.generateDefinitionCode(spec));
+                }, virtualExecutor));
+          }
+          for (RegistrationSpec spec : conditionSpecs) {
+            generationFutures.add(CompletableFuture.runAsync(
+                () -> {
+                  ConditionCodeGenerator gen = new ConditionCodeGenerator(UNDEFINED_DSL_BODY_PROVIDER);
+                  genericSources.put(spec, gen.generateDefinitionCode(spec));
+                }, virtualExecutor));
+          }
+          for (RegistrationSpec spec : massOpSpecs) {
+            generationFutures.add(CompletableFuture.runAsync(
+                () -> {
+                  MassOperationCodeGenerator gen = new MassOperationCodeGenerator(UNDEFINED_DSL_BODY_PROVIDER);
+                  genericSources.put(spec, gen.generateDefinitionCode(spec));
+                }, virtualExecutor));
+          }
 
-        // Layer 3d: Generate activity registry if any activities exist
-        if (!txSpecs.isEmpty()
-            || !helperSpecs.isEmpty()
-            || !conditionSpecs.isEmpty()
-            || !eventWorkflowSpecs.isEmpty()) {
-          new ActivityRegistryGenerator(processingEnv.getFiler())
-              .generate(txSpecs, helperSpecs, conditionSpecs, eventWorkflowSpecs);
+          CompletableFuture.allOf(generationFutures.toArray(new CompletableFuture[0])).join();
+
+          Filer filer = processingEnv.getFiler();
+          TransactionCodeGenerator txGen = new TransactionCodeGenerator(filer, UNDEFINED_DSL_BODY_PROVIDER);
+          for (RegistrationSpec spec : txSpecs) {
+            txGen.writeActivityInterface(spec, activitySources.get(spec));
+            txGen.writeDefinition(spec, definitionSources.get(spec));
+          }
+          for (RegistrationSpec spec : helperSpecs) {
+            new HelperCodeGenerator(filer, UNDEFINED_DSL_BODY_PROVIDER).writeDefinition(spec, genericSources.get(spec));
+          }
+          for (RegistrationSpec spec : eventSpecs) {
+            new EventCodeGenerator(filer, UNDEFINED_DSL_BODY_PROVIDER).writeDefinition(spec, genericSources.get(spec));
+          }
+          for (RegistrationSpec spec : workflowSpecs) {
+            new WorkflowCodeGenerator(filer, UNDEFINED_DSL_BODY_PROVIDER).writeDefinition(spec, genericSources.get(spec));
+          }
+          for (RegistrationSpec spec : conditionSpecs) {
+            new ConditionCodeGenerator(filer, UNDEFINED_DSL_BODY_PROVIDER).writeDefinition(spec, genericSources.get(spec));
+          }
+          for (RegistrationSpec spec : massOpSpecs) {
+            new MassOperationCodeGenerator(filer, UNDEFINED_DSL_BODY_PROVIDER).writeDefinition(spec, genericSources.get(spec));
+          }
+
+          new RegistrationGenerator(filer).generate(registrations);
+
+          List<EventWorkflowSpec> eventWorkflowSpecs = eventSpecs.stream()
+              .map(r ->
+                  new EventWorkflowSpec(r.code(), r.packageName() + "." + r.className(), List.of()))
+              .toList();
+          if (!eventWorkflowSpecs.isEmpty()) {
+            new EventDslWorkflowGenerator(filer).generate(eventWorkflowSpecs);
+            new WorkflowRegistryGenerator(filer).generate(eventWorkflowSpecs);
+          }
+
+          if (!txSpecs.isEmpty()
+              || !helperSpecs.isEmpty()
+              || !conditionSpecs.isEmpty()
+              || !eventWorkflowSpecs.isEmpty()) {
+            new ActivityRegistryGenerator(filer)
+                .generate(txSpecs, helperSpecs, conditionSpecs, eventWorkflowSpecs);
+          }
+        } finally {
+          virtualExecutor.shutdown();
         }
       }
       processed = true;
@@ -231,11 +285,13 @@ public class DslComponentProcessor extends AbstractProcessor {
 
     String dslBody = null;
     String dslImports = null;
+    String sourceCode = null;
     try {
       FileObject sourceFile = processingEnv
           .getFiler()
           .getResource(StandardLocation.SOURCE_PATH, packageName, className + ".java");
       String content = sourceFile.getCharContent(true).toString();
+      sourceCode = content;
       if (!DslCompiler.containsExplicitTypeDeclaration(content)) {
         DslCompiler.ParsedDsl parsed = DslCompiler.parseImplicitClassWithJavaParser(content);
         dslBody = parsed.body();
@@ -254,7 +310,8 @@ public class DslComponentProcessor extends AbstractProcessor {
         outputType,
         componentModel,
         dslBody,
-        dslImports));
+        dslImports,
+        sourceCode));
   }
 
   /**

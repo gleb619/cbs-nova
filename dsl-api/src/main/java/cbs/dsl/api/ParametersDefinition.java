@@ -6,7 +6,7 @@ import cbs.dsl.builder.ParametersDslObject;
 import java.util.Collections;
 import java.util.List;
 
-public interface ParametersDefinition extends DslDefinition<ParametersDslObject> {
+public interface ParametersDefinition extends DslDefinition {
 
   /**
    * Canonical code used to look up this helper in the registry.

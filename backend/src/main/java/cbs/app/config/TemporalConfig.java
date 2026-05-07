@@ -9,6 +9,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+//TODO: remove
+@Deprecated(forRemoval = true)
 @Configuration
 @ConditionalOnProperty(name = "app.temporal.enabled", havingValue = "true", matchIfMissing = true)
 public class TemporalConfig {

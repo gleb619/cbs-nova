@@ -3,7 +3,6 @@ package cbs.dsl.api;
 import cbs.dsl.api.HelperTypes.HelperInput;
 import cbs.dsl.api.HelperTypes.HelperOutput;
 import cbs.dsl.builder.ContextDslObject;
-import cbs.dsl.builder.HelperDslObject;
 import java.util.Collections;
 import java.util.List;
 
@@ -11,7 +10,7 @@ import java.util.List;
  * Defines a helper — a reusable computation that can be invoked from event context blocks or
  * transactions.
  */
-public interface ContextDefinition extends DslDefinition<ContextDslObject> {
+public interface ContextDefinition extends DslDefinition {
 
   /**
    * Canonical code used to look up this helper in the registry.

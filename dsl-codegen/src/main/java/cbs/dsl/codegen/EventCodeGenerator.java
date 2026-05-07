@@ -1,5 +1,7 @@
 package cbs.dsl.codegen;
 
+import cbs.dsl.codegen.DslCompiler.FileWrite;
+import java.util.ArrayList;
 import javax.annotation.processing.Filer;
 import javax.tools.JavaFileObject;
 
@@ -28,12 +30,6 @@ import java.util.function.Function;
  * </ol>
  */
 public class EventCodeGenerator {
-
-  public record GeneratedFile(Path path, String content) {
-    FileWrite toFileWrite() {
-      return new FileWrite(path, content);
-    }
-  }
 
   private static final String EV_INPUT = "cbs.dsl.api.EventTypes.EventInput";
   private static final String EV_OUTPUT = "cbs.dsl.api.EventTypes.EventOutput";
@@ -241,8 +237,8 @@ public class EventCodeGenerator {
     Files.writeString(outputPath, source);
   }
 
-  public List<GeneratedFile> generateFileSpecs(RegistrationSpec spec, Path outputDir) {
-    List<GeneratedFile> files = new ArrayList<>();
+  public List<FileWrite> generateFileSpecs(RegistrationSpec spec, Path outputDir) {
+    List<FileWrite> files = new ArrayList<>();
     String workflowSource = generateWorkflowInterfaceCode(spec);
     files.add(writeWorkflowInterfaceToSpec(spec, workflowSource, outputDir));
     String definitionSource = generateDefinitionCode(spec);
@@ -250,20 +246,20 @@ public class EventCodeGenerator {
     return files;
   }
 
-  private GeneratedFile writeWorkflowInterfaceToSpec(
+  private FileWrite writeWorkflowInterfaceToSpec(
       RegistrationSpec spec, String source, Path outputDir) {
     String className = toClassName(spec.code()) + "Workflow";
     Path outputPath = outputDir.resolve("cbs/dsl/codegen/generated").resolve(className + ".java");
-    return new GeneratedFile(outputPath, source);
+    return new FileWrite(outputPath, source);
   }
 
-  private GeneratedFile writeDefinitionToSpec(
+  private FileWrite writeDefinitionToSpec(
       RegistrationSpec spec, String source, Path outputDir) {
     String wrapperClassName = spec.className() + "Definition";
     Path outputPath = outputDir
         .resolve("cbs/dsl/codegen/generated/definitions")
         .resolve(wrapperClassName + ".java");
-    return new GeneratedFile(outputPath, source);
+    return new FileWrite(outputPath, source);
   }
 
   public void writeDefinition(RegistrationSpec spec, String source) throws IOException {

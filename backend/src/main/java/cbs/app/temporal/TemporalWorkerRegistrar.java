@@ -6,7 +6,6 @@ import cbs.app.temporal.massop.MassOpWorkflowImpl;
 import cbs.app.temporal.workflow.EventWorkflow;
 import cbs.app.temporal.workflow.GenericEventWorkflowImpl;
 import cbs.dsl.codegen.generated.GeneratedActivityRegistry;
-import cbs.dsl.codegen.generated.GeneratedWorkflowRegistry;
 import cbs.nova.registry.DslRegistry;
 import cbs.nova.repository.EventExecutionRepository;
 import cbs.nova.repository.MassOperationExecutionRepository;
@@ -34,6 +33,8 @@ import tools.jackson.databind.ObjectMapper;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+//TODO: remove
+@Deprecated(forRemoval = true)
 public class TemporalWorkerRegistrar implements ApplicationRunner {
 
   private final WorkerFactory workerFactory;
@@ -53,7 +54,7 @@ public class TemporalWorkerRegistrar implements ApplicationRunner {
     Worker worker = workerFactory.newWorker(taskQueue);
 
     // 1. Register generated event workflows (Layer 3 codegen)
-    GeneratedWorkflowRegistry.registerAll(worker);
+    //GeneratedWorkflowRegistry.registerAll(worker);
     log.info("Registered generated event workflows via GeneratedWorkflowRegistry");
 
     // 2. Register generic event workflow as fallback for non-generated events

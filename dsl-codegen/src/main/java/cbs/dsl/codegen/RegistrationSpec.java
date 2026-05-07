@@ -11,7 +11,21 @@ public record RegistrationSpec(
     String outputType,
     DslComponentModel componentModel,
     String dslBody,
-    String dslImports) {
+    String dslImports,
+    String sourceCode) {
+
+  public RegistrationSpec(
+      String packageName,
+      String className,
+      String code,
+      DslInterfaceType interfaceType,
+      String inputType,
+      String outputType,
+      DslComponentModel componentModel,
+      String dslBody,
+      String dslImports) {
+    this(packageName, className, code, interfaceType, inputType, outputType, componentModel, dslBody, dslImports, null);
+  }
 
   public RegistrationSpec(
       String packageName,
@@ -21,15 +35,6 @@ public record RegistrationSpec(
       String inputType,
       String outputType,
       DslComponentModel componentModel) {
-    this(
-        packageName,
-        className,
-        code,
-        interfaceType,
-        inputType,
-        outputType,
-        componentModel,
-        null,
-        null);
+    this(packageName, className, code, interfaceType, inputType, outputType, componentModel, null, null, null);
   }
 }

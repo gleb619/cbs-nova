@@ -1,12 +1,12 @@
 package cbs.dsl.api;
 
+import cbs.dsl.api.ParametersTypes.ParameterError;
+import cbs.dsl.api.ParametersTypes.ParametersInput;
 import cbs.dsl.api.context.TransactionContext;
 
 import cbs.dsl.builder.ConditionDslObject;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
 
 /**
  * Defines a condition — a reusable boolean predicate that can be referenced from workflow
@@ -15,24 +15,7 @@ import java.util.function.Predicate;
  * <p>Implementations are typically created via the Kotlin DSL {@code condition { }} block or
  * annotated with {@link DslComponent} for compile-time registration.
  */
-public interface ConditionDefinition extends DslDefinition<ConditionDslObject> {
-
-  /**
-   * Canonical code used to look up this condition in the registry.
-   *
-   * @return the condition code
-   */
-  String getCode();
-
-  /**
-   * List of parameter definitions declared in the {@code parameters { }} block. Used for validation
-   * and documentation purposes.
-   *
-   * @return the parameter definitions
-   */
-  default List<ParameterDefinition> getParameters() {
-    return Collections.emptyList();
-  }
+public interface ConditionDefinition extends DslDefinition {
 
   /**
    * Evaluates this condition with the given typed input.

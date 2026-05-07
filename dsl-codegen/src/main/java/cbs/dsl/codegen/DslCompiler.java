@@ -285,7 +285,7 @@ public class DslCompiler {
   private static void validateAndGenerate(List<File> sourceFiles, Path outputDir) throws Exception {
     Path tempWrapDir = resolveTempWrapDir();
     withClassLoader(outputDir, classLoader -> {
-      ExecutorService virtualExecutor = Executors.newVirtualThreadPerTask();
+      ExecutorService virtualExecutor = Executors.newVirtualThreadPerTaskExecutor();
       try {
         List<CompletableFuture<GenerationResult>> futures = new ArrayList<>();
         for (File sourceFile : sourceFiles) {
@@ -309,7 +309,11 @@ public class DslCompiler {
         }
 
         for (FileWrite fw : allFiles) {
-          fw.writeToDisk();
+          try {
+            fw.writeToDisk();
+          } catch (IOException e) {
+            throw new RuntimeException(e);
+          }
         }
       } finally {
         virtualExecutor.shutdown();
@@ -397,47 +401,42 @@ public class DslCompiler {
       RegistrationSpec spec = toRegistrationSpec(obj, className, parsed);
       Function<RegistrationSpec, String> dslBodyProvider =
           s -> parsed != null ? parsed.body() : "return UndefinedDslObject.create();";
-      try {
-        switch (spec.interfaceType()) {
-          case EVENT -> {
-            EventDslWorkflowGenerator wfGen = new EventDslWorkflowGenerator();
-            List<String> txCodes = ((EventDslObject) obj).getTransactionCodes();
-            String wfImplClassName = "cbs.dsl.codegen.generated."
-                + EventDslWorkflowGenerator.toClassName(obj.getCode()) + "EventWorkflowImpl";
-            EventWorkflowSpec wfSpec =
-                new EventWorkflowSpec(obj.getCode(), className, txCodes, wfImplClassName);
-            generatedFiles.addAll(wfGen.generateFileSpecs(List.of(wfSpec), outputDir));
-            EventCodeGenerator gen = new EventCodeGenerator(dslBodyProvider);
-            generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
-          }
-          case TRANSACTION -> {
-            TransactionCodeGenerator gen = new TransactionCodeGenerator(dslBodyProvider);
-            generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
-          }
-          case HELPER -> {
-            HelperCodeGenerator gen = new HelperCodeGenerator(dslBodyProvider);
-            generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
-          }
-          case WORKFLOW -> {
-            WorkflowCodeGenerator gen = new WorkflowCodeGenerator(dslBodyProvider);
-            generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
-          }
-          case CONDITION -> {
-            ConditionCodeGenerator gen = new ConditionCodeGenerator(dslBodyProvider);
-            generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
-          }
-          case MASS_OPERATION -> {
-            MassOperationCodeGenerator gen = new MassOperationCodeGenerator(dslBodyProvider);
-            generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
-          }
-          default ->
-            throw new IllegalStateException("Unknown interface type: " + spec.interfaceType());
+      switch (spec.interfaceType()) {
+        case EVENT -> {
+          EventDslWorkflowGenerator wfGen = new EventDslWorkflowGenerator();
+          List<String> txCodes = ((EventDslObject) obj).getTransactionCodes();
+          String wfImplClassName = "cbs.dsl.codegen.generated.%sEventWorkflowImpl".formatted(
+              EventDslWorkflowGenerator.toClassName(obj.getCode()));
+          EventWorkflowSpec wfSpec =
+              new EventWorkflowSpec(obj.getCode(), className, txCodes, wfImplClassName);
+          generatedFiles.addAll(wfGen.generateFileSpecs(List.of(wfSpec), outputDir));
+          EventCodeGenerator gen = new EventCodeGenerator(dslBodyProvider);
+          generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
         }
-        logInfo("Generated code for: %s%n", obj.getCode());
-      } catch (IOException e) {
-        logError("Failed to generate code for %s: %s%n", obj.getCode(), e.getMessage());
-        throw e;
+        case TRANSACTION -> {
+          TransactionCodeGenerator gen = new TransactionCodeGenerator(dslBodyProvider);
+          generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
+        }
+        case HELPER -> {
+          HelperCodeGenerator gen = new HelperCodeGenerator(dslBodyProvider);
+          generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
+        }
+        case WORKFLOW -> {
+          WorkflowCodeGenerator gen = new WorkflowCodeGenerator(dslBodyProvider);
+          generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
+        }
+        case CONDITION -> {
+          ConditionCodeGenerator gen = new ConditionCodeGenerator(dslBodyProvider);
+          generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
+        }
+        case MASS_OPERATION -> {
+          MassOperationCodeGenerator gen = new MassOperationCodeGenerator(dslBodyProvider);
+          generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
+        }
+        default ->
+          throw new IllegalStateException("Unknown interface type: " + spec.interfaceType());
       }
+      logInfo("Generated code for: %s%n", obj.getCode());
     }
 
     return generatedFiles;
@@ -547,4 +546,5 @@ public class DslCompiler {
   private static void logError(String message, Object... args) {
     System.err.printf(message, args);
   }
+
 }

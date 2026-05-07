@@ -12,5 +12,12 @@ public interface DslObject {
    *
    * @return the object code
    */
-  String getCode();
+  default String code() {
+    return this.getClass().getSimpleName();
+  }
+
+  default String version() {
+    return "0000000";
+  }
+
 }

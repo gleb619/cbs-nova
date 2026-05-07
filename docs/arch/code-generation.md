@@ -23,14 +23,14 @@ The generator produces an **intermediate layer** — a set of Temporal `Workflow
 
 Code generation for Temporal is limited to three DSL component types:
 
-| DSL Component | Generated Temporal Artifact | Notes |
-|---------------|----------------------------|-------|
-| **Event**     | `EventWorkflow` + `EventActivity` | Event is the only top-level Temporal Workflow. All execution starts as an Event. |
-| **Transaction** | `TransactionActivity` (Activity only) | No workflow generated. Called from EventWorkflow. |
-| **Condition** | `ConditionActivity` (Activity only) | No workflow generated. Used inside EventWorkflow for branching decisions. |
-| **Helper**    | **None** (plain Spring bean) | Helpers are invoked synchronously inside TransactionActivity. No Temporal artifact. |
-| **Workflow**  | **None** (state machine DSL only) | Workflow definitions orchestrate events but do not generate Temporal workflows. |
-| **MassOperation** | **None** (out of scope) | Batch orchestration handled separately. |
+| DSL Component     | Generated Temporal Artifact           | Notes                                                                               |
+|-------------------|---------------------------------------|-------------------------------------------------------------------------------------|
+| **Event**         | `EventWorkflow` + `EventActivity`     | Event is the only top-level Temporal Workflow. All execution starts as an Event.    |
+| **Transaction**   | `TransactionActivity` (Activity only) | No workflow generated. Called from EventWorkflow.                                   |
+| **Condition**     | `ConditionActivity` (Activity only)   | No workflow generated. Used inside EventWorkflow for branching decisions.           |
+| **Helper**        | **None** (plain Spring bean)          | Helpers are invoked synchronously inside TransactionActivity. No Temporal artifact. |
+| **Workflow**      | **None** (state machine DSL only)     | Workflow definitions orchestrate events but do not generate Temporal workflows.     |
+| **MassOperation** | **None** (out of scope)               | Batch orchestration handled separately.                                             |
 
 **Key rules:**
 - Events can be created **only via DSL** (not via `@DslComponent` code classes).
@@ -506,13 +506,13 @@ EventContext<EventResult> r = eventService.execute("LOAN_DISBURSEMENT", ctx);
 
 The same split applies to every component kind:
 
-| Component   | Runner (no persistence) | Service (with persistence) | Temporal Artifact |
-|-------------|-------------------------|----------------------------|-------------------|
-| Event       | `EventRunner`           | `EventService`             | Workflow + Activity |
-| Transaction | `TransactionRunner`     | `TransactionService`       | Activity          |
-| Condition   | `ConditionRunner`       | `ConditionService`         | Activity          |
-| Helper      | `HelperRunner`          | `HelperService`            | **None** (plain code) |
-| Workflow    | `WorkflowRunner`        | `WorkflowService`          | **None** (DSL concept) |
+| Component   | Runner (no persistence) | Service (with persistence) | Temporal Artifact       |
+|-------------|-------------------------|----------------------------|-------------------------|
+| Event       | `EventRunner`           | `EventService`             | Workflow + Activity     |
+| Transaction | `TransactionRunner`     | `TransactionService`       | Activity                |
+| Condition   | `ConditionRunner`       | `ConditionService`         | Activity                |
+| Helper      | `HelperRunner`          | `HelperService`            | **None** (plain code)   |
+| Workflow    | `WorkflowRunner`        | `WorkflowService`          | **None** (DSL concept)  |
 | MassOp      | `MassOpRunner`          | `MassOperationService`     | **None** (out of scope) |
 
 #### Contracts (`Executable*` interfaces)
@@ -521,14 +521,14 @@ Code-generated classes must implement a contract so the registry can store them 
 
 //TODO: we need to check that correspondnet classes exists
 
-| Generated artifact     | Contract interface      | Registry              | Temporal scope |
-|------------------------|-------------------------|-----------------------|----------------|
-| Event                  | `ExecutableEvent`       | `EventRegistry`       | Workflow + Activity |
-| Transaction            | `ExecutableTransaction` | `TransactionRegistry` | Activity       |
-| Condition              | `ExecutableCondition`   | `ConditionRegistry`   | Activity       |
-| Helper                 | `ExecutableHelper`      | `HelperRegistry`      | **None** (plain logic) |
-| Workflow               | `ExecutableWorkflow`    | `WorkflowRegistry`    | **None** (DSL concept) |
-| Mass operation         | `ExecutableMassOp`      | `MassOpRegistry`      | **None** (out of scope) |
+| Generated artifact | Contract interface      | Registry              | Temporal scope          |
+|--------------------|-------------------------|-----------------------|-------------------------|
+| Event              | `ExecutableEvent`       | `EventRegistry`       | Workflow + Activity     |
+| Transaction        | `ExecutableTransaction` | `TransactionRegistry` | Activity                |
+| Condition          | `ExecutableCondition`   | `ConditionRegistry`   | Activity                |
+| Helper             | `ExecutableHelper`      | `HelperRegistry`      | **None** (plain logic)  |
+| Workflow           | `ExecutableWorkflow`    | `WorkflowRegistry`    | **None** (DSL concept)  |
+| Mass operation     | `ExecutableMassOp`      | `MassOpRegistry`      | **None** (out of scope) |
 
 These contracts live in `dsl-api`.  The generated Layer-3 classes implement them, and the Layer-1
 `*Definition` wrappers also implement them (or adapt to them) so that `REFLECTED` mode uses the

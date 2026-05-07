@@ -1,5 +1,7 @@
 package cbs.dsl.codegen;
 
+import cbs.dsl.codegen.DslCompiler.FileWrite;
+import java.util.ArrayList;
 import javax.annotation.processing.Filer;
 import javax.tools.JavaFileObject;
 
@@ -65,25 +67,25 @@ public class EventDslWorkflowGenerator {
     }
   }
 
-  public List<GeneratedFile> generateFileSpecs(List<EventWorkflowSpec> specs, Path outputDir) {
-    List<GeneratedFile> files = new ArrayList<>();
+  public List<FileWrite> generateFileSpecs(List<EventWorkflowSpec> specs, Path outputDir) {
+    List<FileWrite> files = new ArrayList<>();
     for (EventWorkflowSpec spec : specs) {
-      files.add(new GeneratedFile(
+      files.add(new FileWrite(
           outputDir
               .resolve("cbs/dsl/codegen/generated")
               .resolve(toClassName(spec.eventCode()) + "EventWorkflow.java"),
           generateWorkflowInterfaceCode(spec)));
-      files.add(new GeneratedFile(
+      files.add(new FileWrite(
           outputDir
               .resolve("cbs/dsl/codegen/generated")
               .resolve(toClassName(spec.eventCode()) + "EventWorkflowImpl.java"),
           generateWorkflowImplCode(spec)));
-      files.add(new GeneratedFile(
+      files.add(new FileWrite(
           outputDir
               .resolve("cbs/dsl/codegen/generated")
               .resolve(toClassName(spec.eventCode()) + "EventActivity.java"),
           generateActivityInterfaceCode(spec)));
-      files.add(new GeneratedFile(
+      files.add(new FileWrite(
           outputDir
               .resolve("cbs/dsl/codegen/generated")
               .resolve(toClassName(spec.eventCode()) + "EventActivityImpl.java"),
@@ -91,8 +93,6 @@ public class EventDslWorkflowGenerator {
     }
     return files;
   }
-
-  public record GeneratedFile(Path path, String content) {}
 
   public void generateWorkflowInterface(EventWorkflowSpec spec) throws IOException {
     String source = generateWorkflowInterfaceCode(spec);

@@ -1,2 +1,3 @@
 cbs.nova.config.NovaAutoConfiguration
 cbs.nova.config.ImplRegistryAutoConfiguration
+cbs.nova.config.TemporalManagerAutoConfiguration

@@ -100,7 +100,7 @@ public @interface DslComponent {
    * instance at runtime.
    *
    * <ul>
-   *   <li>{@code SIMPLE} — plain constructor {@code new MyClass()} (no Spring container required).
+   *   <li>{@code SIMPLE} — plain constructor {@code new MyClass()} (no Spring container mandatory).
    *   <li>{@code SPRING} — resolved from the Spring {@code ApplicationContext} via
    *       {@link DslComponentResolver}.
    *   <li>{@code AUTO} — inspect the annotated class at compile time; if it carries any
@@ -111,7 +111,7 @@ public @interface DslComponent {
     /** Inspect class for Spring annotations at compile time to choose SIMPLE or SPRING. */
     AUTO,
 
-    /** Plain constructor instantiation — no Spring container required. */
+    /** Plain constructor instantiation — no Spring container mandatory. */
     SIMPLE,
 
     /** Resolved from Spring {@code ApplicationContext} via {@link DslComponentResolver}. */

@@ -3,6 +3,8 @@ package cbs.dsl.api;
 import cbs.dsl.api.TransactionFunction.TransactionArg;
 import cbs.dsl.api.TransactionFunction.TransactionResult;
 import cbs.dsl.api.context.TransactionContext;
+import io.avaje.jsonb.Jsonb;
+import java.util.Map;
 
 @FunctionalInterface
 public interface TransactionFunction<I extends TransactionArg, O extends TransactionResult> {
@@ -17,7 +19,21 @@ public interface TransactionFunction<I extends TransactionArg, O extends Transac
     throw new IllegalStateException("Not implemented!");
   }
 
-  interface TransactionArg extends DslPayload {}
+  interface TransactionArg extends DslPayload {
 
-  interface TransactionResult extends DslPayload {}
+    @Override
+    default Map<String, Object> params() {
+      return JsonPayload.toMap(this);
+    }
+
+  }
+
+  interface TransactionResult extends DslPayload {
+
+    @Override
+    default Map<String, Object> params() {
+      return JsonPayload.toMap(this);
+    }
+
+  }
 }

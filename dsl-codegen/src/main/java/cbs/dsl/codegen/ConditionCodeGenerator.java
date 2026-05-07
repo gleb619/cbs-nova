@@ -1,5 +1,6 @@
 package cbs.dsl.codegen;
 
+import cbs.dsl.codegen.DslCompiler.FileWrite;
 import javax.annotation.processing.Filer;
 import javax.tools.JavaFileObject;
 
@@ -66,19 +67,23 @@ public class ConditionCodeGenerator {
         ? spec.dslImports().trim() + "\n"
         : "import cbs.dsl.builder.UndefinedDslObject;\n";
 
-    String sourceTemplate = // language=java
+    return Substitutor.format(
+        // language=java
         """
         package {{DEFINITIONS_PACKAGE}};
 
         import cbs.dsl.api.ConditionDefinition;
         import cbs.dsl.api.DslObject;
+        import cbs.dsl.api.ParameterDefinition;
         import cbs.dsl.api.ConditionTypes.ConditionInput;
         import cbs.dsl.api.ConditionTypes.ConditionOutput;
         import cbs.dsl.api.DslComponentResolver;
         import cbs.dsl.api.context.TransactionContext;
         {{jsonPayloadImport}}        import {{specPackage}}.{{specClass}};
         {{inputTypeImport}}        import {{outputType}};
-        {{dslImportsBlock}}        import java.util.function.Predicate;
+        {{dslImportsBlock}}        import java.util.Collections;
+        import java.util.List;
+        import java.util.function.Predicate;
         import javax.annotation.processing.Generated;
 
         /**
@@ -112,7 +117,7 @@ public class ConditionCodeGenerator {
             }
 
             @Override
-            public ConditionOutput evaluate(ConditionInput input) {
+            public ConditionOutput check(ConditionInput input) {
                 {{inputTypeName}} typed = {{inputConversion}};
                 {{outputTypeName}} out = function.evaluate(typed);
                 return new ConditionOutput(out.getValue());
@@ -123,10 +128,7 @@ public class ConditionCodeGenerator {
                 {{dslBody}}
             }
         }
-        """;
-
-    return Substitutor.format(
-        sourceTemplate,
+        """,
         Map.ofEntries(
             Map.entry("DEFINITIONS_PACKAGE", DEFINITIONS_PACKAGE),
             Map.entry("jsonPayloadImport", jsonPayloadImport),
@@ -154,21 +156,19 @@ public class ConditionCodeGenerator {
     Files.writeString(outputPath, source);
   }
 
-  public List<GeneratedFile> generateFileSpecs(RegistrationSpec spec, Path outputDir) {
+  public List<FileWrite> generateFileSpecs(RegistrationSpec spec, Path outputDir) {
     String definitionSource = generateDefinitionCode(spec);
     return List.of(writeDefinitionToSpec(spec, definitionSource, outputDir));
   }
 
-  private GeneratedFile writeDefinitionToSpec(
+  private FileWrite writeDefinitionToSpec(
       RegistrationSpec spec, String source, Path outputDir) {
     String wrapperClassName = spec.className() + "Definition";
     Path outputPath = outputDir
         .resolve("cbs/dsl/codegen/generated/definitions")
         .resolve(wrapperClassName + ".java");
-    return new GeneratedFile(outputPath, source);
+    return new FileWrite(outputPath, source);
   }
-
-  public record GeneratedFile(Path path, String content) {}
 
   public void writeDefinition(RegistrationSpec spec, String source) throws IOException {
     String wrapperClassName = spec.className() + "Definition";

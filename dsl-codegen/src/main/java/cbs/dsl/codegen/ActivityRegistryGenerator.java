@@ -15,6 +15,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @RequiredArgsConstructor
+//TODO: remove file
+@Deprecated(forRemoval = true)
 public class ActivityRegistryGenerator {
 
   private static final String GENERATED_PACKAGE = "cbs.dsl.codegen.generated";
@@ -58,7 +60,7 @@ public class ActivityRegistryGenerator {
         .flatMap(s -> s)
         .toList();
 
-    String registrations = regLines.stream().collect(Collectors.joining("\n"));
+    String registrations = String.join("\n", regLines);
 
     String source = Substitutor.format( // language=java
         """

@@ -66,7 +66,8 @@ public class RegistrationGenerator {
     String javaVersion = System.getProperty("java.version", "unknown");
     String generatorVersion = "1.0.0";
 
-    String sourceTemplate = """
+    String sourceTemplate = //language=java
+        """
         package cbs.dsl.codegen.generated;
 
         import cbs.dsl.api.DslComponentResolver;
@@ -122,7 +123,7 @@ public class RegistrationGenerator {
              */
             @Override
             public void register(WritableRegistry registry, DslComponentResolver resolver) {
-{{registrations}}
+              {{registrations}}
             }
         }
         """;

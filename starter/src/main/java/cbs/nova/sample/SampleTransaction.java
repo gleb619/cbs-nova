@@ -38,20 +38,10 @@ public class SampleTransaction implements TransactionFunction<SampleTxInput, Sam
   @Json
   public record SampleTxInput(String name) implements TransactionArg {
 
-    @Override
-    // TODO: replace with avaje serialization
-    public Map<String, Object> params() {
-      return Map.of("name", name);
-    }
   }
 
   @Json
   public record SampleTxOutput(String greeting) implements TransactionResult {
 
-    @Override
-    // TODO: replace with avaje serialization
-    public Map<String, Object> params() {
-      return Map.of("greeting", greeting);
-    }
   }
 }

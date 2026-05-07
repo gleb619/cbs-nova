@@ -11,22 +11,22 @@ public class ParametersBuilder {
   private final List<ParameterDefinition> parameters = new ArrayList<>();
 
   public ParametersBuilder string(String name) {
-    this.parameters.add(new ParameterDefinition(name, ParameterType.STRING));
+    this.parameters.add(ParameterDefinition.mandatory(name, ParameterType.STRING));
     return this;
   }
 
   public ParametersBuilder number(String name) {
-    this.parameters.add(new ParameterDefinition(name, ParameterType.INTEGER));
+    this.parameters.add(ParameterDefinition.mandatory(name, ParameterType.INTEGER));
     return this;
   }
 
   public ParametersBuilder decimal(String name) {
-    this.parameters.add(new ParameterDefinition(name, ParameterType.DECIMAL));
+    this.parameters.add(ParameterDefinition.mandatory(name, ParameterType.DECIMAL));
     return this;
   }
 
   public ParametersBuilder bool(String name) {
-    this.parameters.add(new ParameterDefinition(name, ParameterType.BOOLEAN));
+    this.parameters.add(ParameterDefinition.mandatory(name, ParameterType.BOOLEAN));
     return this;
   }
 

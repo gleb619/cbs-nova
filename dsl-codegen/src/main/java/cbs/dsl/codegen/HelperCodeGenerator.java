@@ -1,5 +1,6 @@
 package cbs.dsl.codegen;
 
+import cbs.dsl.codegen.DslCompiler.FileWrite;
 import javax.annotation.processing.Filer;
 import javax.tools.JavaFileObject;
 
@@ -9,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -60,7 +62,8 @@ public class HelperCodeGenerator {
 
     String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
 
-    String sourceTemplate = // language=java
+    return Substitutor.format(
+        // language=java
         """
         package {{GENERATED_PACKAGE}};
 
@@ -80,10 +83,7 @@ public class HelperCodeGenerator {
             @ActivityMethod
             HelperOutput execute(HelperInput input);
         }
-        """;
-
-    return Substitutor.format(
-        sourceTemplate,
+        """,
         Map.ofEntries(
             Map.entry("GENERATED_PACKAGE", GENERATED_PACKAGE),
             Map.entry("timestamp", timestamp),
@@ -137,19 +137,23 @@ public class HelperCodeGenerator {
         ? spec.dslImports().trim() + "\n"
         : "import cbs.dsl.builder.UndefinedDslObject;\n";
 
-    String sourceTemplate = // language=java
+    return Substitutor.format(
+        // language=java
         """
         package {{DEFINITIONS_PACKAGE}};
 
         import cbs.dsl.api.DslComponentResolver;
         import cbs.dsl.api.DslObject;
         import cbs.dsl.api.HelperDefinition;
+        import cbs.dsl.api.ParameterDefinition;
         import cbs.dsl.api.HelperTypes.HelperInput;
         import cbs.dsl.api.HelperTypes.HelperOutput;
         import {{GENERATED_PACKAGE}}.{{activityInterfaceName}};
         {{jsonPayloadImport}}        import {{specPackage}}.{{specClass}};
         {{inputTypeImport}}        {{outputTypeImport}}
-        {{dslImportsBlock}}        import java.util.function.Function;
+        {{dslImportsBlock}}        import java.util.Collections;
+        import java.util.List;
+        import java.util.function.Function;
         import javax.annotation.processing.Generated;
 
         /**
@@ -196,10 +200,7 @@ public class HelperCodeGenerator {
                 {{dslBody}}
             }
         }
-        """;
-
-    return Substitutor.format(
-        sourceTemplate,
+        """,
         Map.ofEntries(
             Map.entry("DEFINITIONS_PACKAGE", DEFINITIONS_PACKAGE),
             Map.entry("GENERATED_PACKAGE", GENERATED_PACKAGE),
@@ -230,8 +231,8 @@ public class HelperCodeGenerator {
     Files.writeString(outputPath, source);
   }
 
-  public List<GeneratedFile> generateFileSpecs(RegistrationSpec spec, Path outputDir) {
-    List<GeneratedFile> files = new ArrayList<>();
+  public List<FileWrite> generateFileSpecs(RegistrationSpec spec, Path outputDir) {
+    List<FileWrite> files = new ArrayList<>();
     String activitySource = generateActivityInterfaceCode(spec);
     files.add(writeActivityInterfaceToSpec(spec, activitySource, outputDir));
     String definitionSource = generateDefinitionCode(spec);
@@ -239,23 +240,21 @@ public class HelperCodeGenerator {
     return files;
   }
 
-  private GeneratedFile writeActivityInterfaceToSpec(
+  private FileWrite writeActivityInterfaceToSpec(
       RegistrationSpec spec, String source, Path outputDir) {
     String className = spec.className() + "Activity";
     Path outputPath = outputDir.resolve("cbs/dsl/codegen/generated").resolve(className + ".java");
-    return new GeneratedFile(outputPath, source);
+    return new FileWrite(outputPath, source);
   }
 
-  private GeneratedFile writeDefinitionToSpec(
+  private FileWrite writeDefinitionToSpec(
       RegistrationSpec spec, String source, Path outputDir) {
     String wrapperClassName = spec.className() + "Definition";
     Path outputPath = outputDir
         .resolve("cbs/dsl/codegen/generated/definitions")
         .resolve(wrapperClassName + ".java");
-    return new GeneratedFile(outputPath, source);
+    return new FileWrite(outputPath, source);
   }
-
-  public record GeneratedFile(Path path, String content) {}
 
   public void writeDefinition(RegistrationSpec spec, String source) throws IOException {
     String wrapperClassName = spec.className() + "Definition";

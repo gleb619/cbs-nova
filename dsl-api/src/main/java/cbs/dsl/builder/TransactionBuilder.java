@@ -1,5 +1,6 @@
 package cbs.dsl.builder;
 
+import cbs.dsl.api.ContextTypes.ContextInput;
 import cbs.dsl.api.DslDefinitionCollector;
 import cbs.dsl.api.DslObject;
 import cbs.dsl.api.TransactionDefinition;
@@ -20,7 +21,7 @@ public class TransactionBuilder {
   private final String code;
   private String name;
   private final List<ParameterDefinition> parameters = new ArrayList<>();
-  private Consumer<TransactionContext> contextBlock = ctx -> {};
+  private Consumer<ContextInput> contextBlock = _ -> {};
   private Function<TransactionContext, TransactionOutput> previewBlock;
   private Function<TransactionContext, TransactionOutput> executeBlock;
   private Function<TransactionContext, TransactionOutput> rollbackBlock;
@@ -73,7 +74,7 @@ public class TransactionBuilder {
     return Collections.unmodifiableList(new ArrayList<>(parameters));
   }
 
-  public Consumer<TransactionContext> context() {
+  public Consumer<ContextInput> context() {
     return contextBlock;
   }
 
@@ -96,7 +97,7 @@ public class TransactionBuilder {
         code,
         name,
         params,
-        contextBlock,
+        ContextInput::asOutput,
         previewBlock,
         executeBlock,
         rollbackBlock);

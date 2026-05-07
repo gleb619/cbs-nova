@@ -8,7 +8,7 @@ import java.util.Map;
  */
 
 EventDsl.event("SAMPLE_EVENT_DSL")
-    .requiredParam("name")
+    .parameters(reg -> reg.string("name"))
     .context(ctx -> {
       Object helperResult = ctx.helper("SAMPLE_HELPER", Map.of("someVal", ctx.get("name")));
       ctx.put("enriched", helperResult);

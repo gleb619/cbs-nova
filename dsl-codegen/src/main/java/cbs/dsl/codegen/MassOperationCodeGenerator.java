@@ -1,5 +1,6 @@
 package cbs.dsl.codegen;
 
+import cbs.dsl.codegen.DslCompiler.FileWrite;
 import javax.annotation.processing.Filer;
 import javax.tools.JavaFileObject;
 
@@ -185,21 +186,19 @@ public class MassOperationCodeGenerator {
     Files.writeString(outputPath, source);
   }
 
-  public List<GeneratedFile> generateFileSpecs(RegistrationSpec spec, Path outputDir) {
+  public List<FileWrite> generateFileSpecs(RegistrationSpec spec, Path outputDir) {
     String definitionSource = generateDefinitionCode(spec);
     return List.of(writeDefinitionToSpec(spec, definitionSource, outputDir));
   }
 
-  private GeneratedFile writeDefinitionToSpec(
+  private FileWrite writeDefinitionToSpec(
       RegistrationSpec spec, String source, Path outputDir) {
     String wrapperClassName = spec.className() + "Definition";
     Path outputPath = outputDir
         .resolve("cbs/dsl/codegen/generated/definitions")
         .resolve(wrapperClassName + ".java");
-    return new GeneratedFile(outputPath, source);
+    return new FileWrite(outputPath, source);
   }
-
-  public record GeneratedFile(Path path, String content) {}
 
   public void writeDefinition(RegistrationSpec spec, String source) throws IOException {
     String wrapperClassName = spec.className() + "Definition";
