@@ -1,18 +1,13 @@
 package cbs.nova.config;
 
-import cbs.nova.temporal.ActivityStubManager;
-import cbs.nova.temporal.WorkflowClientWrapper;
-import cbs.nova.temporal.registry.ActivityConfig;
-import cbs.nova.temporal.registry.ActivityRegistry;
-import cbs.nova.temporal.registry.InMemoryActivityRegistry;
-import cbs.nova.temporal.registry.InMemoryWorkflowRegistry;
-import cbs.nova.temporal.registry.WorkflowConfig;
-import cbs.nova.temporal.registry.WorkflowRegistry;
+import cbs.dsl.api.SpecDefinitionRegistry;
+import cbs.nova.temporal.ActivityManager;
+import cbs.nova.temporal.WorkflowManager;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
-import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
+import java.util.Collections;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -20,25 +15,17 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.time.Duration;
-import java.util.Map;
-
 /**
- * Spring Boot auto-configuration for Temporal manager wrappers and registries.
+ * Spring Boot auto-configuration for Temporal managers and the generated specification registry.
  *
  * <p>This configuration:
  *
  * <ol>
  *   <li>Creates a {@link WorkflowClient} bean (if not already provided by the application).
- *   <li>Creates demo {@link WorkflowRegistry} and {@link ActivityRegistry} beans.
- *   <li>Creates the {@link WorkflowClientWrapper} bean.
- *   <li>Initialises the static {@link ActivityStubManager} before workers start.
+ *   <li>Creates the {@link SpecDefinitionRegistry} bean (produced by the annotation processor).
+ *   <li>Creates the {@link ActivityManager} bean.
+ *   <li>Creates the {@link WorkflowManager} bean.
  * </ol>
- *
- * <p>The {@link ActivityStubManager} is initialised via a {@link PostConstruct} callback on a
- * dedicated Spring bean. Because Spring context refresh completes before {@code ApplicationRunner}
- * beans (such as {@code TemporalWorkerRegistrar}) execute, the registry is guaranteed to be set
- * before any worker begins polling.
  */
 @Slf4j
 @Configuration
@@ -76,96 +63,59 @@ public class TemporalManagerAutoConfiguration {
   }
 
   /**
-   * Demo workflow registry with a single entry. Replace with a DSL-backed implementation in
-   * production.
+   * Creates the {@link SpecDefinitionRegistry} bean using the compile-time generated
+   * implementation.
    *
-   * @return an in-memory workflow registry
+   * <p>The generated class is produced by {@code dsl-codegen} and knows about every
+   * {@code @DslComponent} annotated activity and workflow discovered at compile time.
+   *
+   * @return the generated specification registry
    */
   @Bean
   @ConditionalOnMissingBean
-  public WorkflowRegistry workflowRegistry() {
-    String taskQueue = defaultTaskQueue.isBlank() ? "cbs-nova-task-queue" : defaultTaskQueue;
-
-    // Demo entry: a generic event workflow placeholder
-    Map<String, WorkflowConfig> configs = Map.of(
-        "GenericEventWorkflow",
-        new WorkflowConfig(
-            "GenericEventWorkflow",
-            null, // interface class can be resolved later via DSL metadata
-            taskQueue,
-            Duration.ofMinutes(5),
-            Duration.ofMinutes(5),
-            "event"));
-
-    log.info("Created InMemoryWorkflowRegistry with {} demo entry(ies)", configs.size());
-    return new InMemoryWorkflowRegistry(configs);
-  }
-
-  /**
-   * Demo activity registry with a single entry. Replace with a DSL-backed implementation in
-   * production.
-   *
-   * @return an in-memory activity registry
-   */
-  @Bean
-  @ConditionalOnMissingBean
-  public ActivityRegistry activityRegistry() {
-    String taskQueue = defaultTaskQueue.isBlank() ? "cbs-nova-task-queue" : defaultTaskQueue;
-
-    // Demo entry: a generic processing activity placeholder
-    Map<String, ActivityConfig> configs = Map.of(
-        "ExampleProcessInput",
-        new ActivityConfig(
-            "ExampleProcessInput",
-            null, // interface class can be resolved later via DSL metadata
-            taskQueue,
-            Duration.ofSeconds(60),
-            Duration.ofSeconds(120),
-            Duration.ofSeconds(30),
-            null));
-
-    log.info("Created InMemoryActivityRegistry with {} demo entry(ies)", configs.size());
-    return new InMemoryActivityRegistry(configs);
-  }
-
-  /**
-   * Creates the {@link WorkflowClientWrapper} bean.
-   *
-   * @param workflowClient the Temporal workflow client
-   * @param workflowRegistry the workflow registry
-   * @return the wrapper bean
-   */
-  @Bean
-  public WorkflowClientWrapper workflowClientWrapper(
-      WorkflowClient workflowClient, WorkflowRegistry workflowRegistry) {
-    return new WorkflowClientWrapper(workflowClient, workflowRegistry);
-  }
-
-  /**
-   * Bean whose sole purpose is to initialise the static {@link ActivityStubManager} during Spring
-   * context refresh.
-   *
-   * <p>Because this bean is instantiated eagerly, its {@link PostConstruct} method runs before any
-   * {@code ApplicationRunner} or {@code CommandLineRunner} beans.
-   */
-  @Bean
-  public ActivityStubManagerInitializer activityStubManagerInitializer(
-      ActivityRegistry activityRegistry) {
-    return new ActivityStubManagerInitializer(activityRegistry);
-  }
-
-  @Slf4j
-  @RequiredArgsConstructor
-  public static class ActivityStubManagerInitializer {
-
-    private final ActivityRegistry activityRegistry;
-
-    @PostConstruct
-    public void init() {
-      ActivityStubManager.initialize(activityRegistry);
-      log.info(
-          "ActivityStubManager initialised with registry: {}",
-          activityRegistry.getClass().getSimpleName());
+  public SpecDefinitionRegistry generatedSpecificationRegistry() {
+    try {
+      Class<?> clazz = Class.forName("cbs.dsl.codegen.generated.GeneratedSpecificationRegistry");
+      SpecDefinitionRegistry registry = (SpecDefinitionRegistry) clazz.getDeclaredConstructor().newInstance();
+      log.info("Created SpecDefinitionRegistry with {} activities and {} workflows",
+          registry.getActivityCodes().size(), registry.getWorkflowCodes().size());
+      return registry;
+    } catch (Exception e) {
+      log.warn("GeneratedSpecificationRegistry not found on classpath — returning empty registry");
+      return new SpecDefinitionRegistry() {
+        @Override public void registerActivity(String code, Class<?> activityInterface, Object implementation) {}
+        @Override public void registerWorkflow(String code, Class<?> workflowInterface, Object implementation) {}
+        @Override public Set<String> getActivityCodes() { return Collections.emptySet(); }
+        @Override public Set<String> getWorkflowCodes() { return Collections.emptySet(); }
+        @Override public Class<?> getActivityInterface(String code) { throw new IllegalArgumentException("No activities registered"); }
+        @Override public Class<?> getWorkflowInterface(String code) { throw new IllegalArgumentException("No workflows registered"); }
+        @Override public <T> T getActivity(String code, Class<T> activityInterface) { throw new IllegalArgumentException("No activities registered"); }
+        @Override public <T> T getWorkflow(String code, Class<T> workflowInterface) { throw new IllegalArgumentException("No workflows registered"); }
+      };
     }
+  }
+
+  /**
+   * Creates the {@link ActivityManager} bean.
+   *
+   * @param artifactRegistry the generated specification registry
+   * @return the activity manager
+   */
+  @Bean
+  public ActivityManager activityManager(SpecDefinitionRegistry artifactRegistry) {
+    return new ActivityManager(artifactRegistry);
+  }
+
+  /**
+   * Creates the {@link WorkflowManager} bean.
+   *
+   * @param artifactRegistry the generated specification registry
+   * @param workflowClient the Temporal workflow client
+   * @return the workflow manager
+   */
+  @Bean
+  public WorkflowManager workflowManager(
+      SpecDefinitionRegistry artifactRegistry, WorkflowClient workflowClient) {
+    return new WorkflowManager(artifactRegistry, workflowClient);
   }
 }

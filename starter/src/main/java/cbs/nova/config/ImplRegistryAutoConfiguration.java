@@ -1,5 +1,6 @@
 package cbs.nova.config;
 
+import cbs.dsl.api.DefinitionRegistryProvider;
 import cbs.nova.registry.DslRegistry;
 import cbs.nova.registry.SpiImplRegistryLoader;
 import cbs.nova.registry.SpringDslComponentResolver;
@@ -10,7 +11,7 @@ import org.springframework.context.annotation.Bean;
  * Auto-configuration for DSL implementation registry.
  *
  * <p>Creates a singleton {@link DslRegistry} bean and populates it by loading all
- * {@link cbs.dsl.api.ImplRegistrationProvider} implementations via SPI (ServiceLoader) at
+ * {@link DefinitionRegistryProvider} implementations via SPI (ServiceLoader) at
  * application startup. When a {@link SpringDslComponentResolver} is available it is injected into
  * the registry so that {@code SPRING} model components are resolved from the Spring context.
  */

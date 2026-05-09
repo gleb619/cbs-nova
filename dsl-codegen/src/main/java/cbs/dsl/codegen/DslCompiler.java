@@ -394,63 +394,63 @@ public class DslCompiler {
     for (DslObject obj : objects) {
       logInfo(
           "Compiled and validated: %s (%s)",
-          obj.getCode(),
+          obj.code(),
           obj.getClass().getEnclosingClass() != null
               ? obj.getClass().getEnclosingClass().getSimpleName()
               : obj.getClass().getSimpleName());
-      RegistrationSpec spec = toRegistrationSpec(obj, className, parsed);
-      Function<RegistrationSpec, String> dslBodyProvider =
+      RegistrationModel spec = toRegistrationSpec(obj, className, parsed);
+      Function<RegistrationModel, String> dslBodyProvider =
           s -> parsed != null ? parsed.body() : "return UndefinedDslObject.create();";
       switch (spec.interfaceType()) {
         case EVENT -> {
-          EventDslWorkflowGenerator wfGen = new EventDslWorkflowGenerator();
+          EventSpecificationGenerator wfGen = new EventSpecificationGenerator();
           List<String> txCodes = ((EventDslObject) obj).getTransactionCodes();
-          String wfImplClassName = "cbs.dsl.codegen.generated.%sEventWorkflowImpl".formatted(
-              EventDslWorkflowGenerator.toClassName(obj.getCode()));
-          EventWorkflowSpec wfSpec =
-              new EventWorkflowSpec(obj.getCode(), className, txCodes, wfImplClassName);
+          String wfImplClassName = "cbs.dsl.codegen.generated.%sEventWorkflowImpl"
+              .formatted(CodeGenUtil.toClassName(obj.code()));
+          EventWorkflowModel wfSpec =
+              new EventWorkflowModel(obj.code(), className, txCodes, wfImplClassName);
           generatedFiles.addAll(wfGen.generateFileSpecs(List.of(wfSpec), outputDir));
-          EventCodeGenerator gen = new EventCodeGenerator(dslBodyProvider);
+          EventDefinitionGenerator gen = new EventDefinitionGenerator(dslBodyProvider);
           generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
         }
         case TRANSACTION -> {
-          TransactionCodeGenerator gen = new TransactionCodeGenerator(dslBodyProvider);
+          TransactionDefinitionGenerator gen = new TransactionDefinitionGenerator(dslBodyProvider);
           generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
         }
         case HELPER -> {
-          HelperCodeGenerator gen = new HelperCodeGenerator(dslBodyProvider);
+          HelperDefinitionGenerator gen = new HelperDefinitionGenerator(dslBodyProvider);
           generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
         }
         case WORKFLOW -> {
-          WorkflowCodeGenerator gen = new WorkflowCodeGenerator(dslBodyProvider);
+          WorkflowDefinitionGenerator gen = new WorkflowDefinitionGenerator(dslBodyProvider);
           generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
         }
         case CONDITION -> {
-          ConditionCodeGenerator gen = new ConditionCodeGenerator(dslBodyProvider);
+          ConditionDefinitionGenerator gen = new ConditionDefinitionGenerator(dslBodyProvider);
           generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
         }
         case MASS_OPERATION -> {
-          MassOperationCodeGenerator gen = new MassOperationCodeGenerator(dslBodyProvider);
+          MassOperationDefinitionGenerator gen = new MassOperationDefinitionGenerator(dslBodyProvider);
           generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
         }
         default ->
           throw new IllegalStateException("Unknown interface type: " + spec.interfaceType());
       }
-      logInfo("Generated code for: %s%n", obj.getCode());
+      logInfo("Generated code for: %s%n", obj.code());
     }
 
     return generatedFiles;
   }
 
-  private static RegistrationSpec toRegistrationSpec(
+  private static RegistrationModel toRegistrationSpec(
       DslObject obj, String className, ParsedDsl parsed) {
     DslInterfaceType interfaceType = resolveInterfaceType(obj);
     String inputType = resolveInputType(interfaceType);
     String outputType = resolveOutputType(interfaceType);
-    return new RegistrationSpec(
+    return new RegistrationModel(
         "",
         className,
-        obj.getCode(),
+        obj.code(),
         interfaceType,
         inputType,
         outputType,
@@ -546,5 +546,4 @@ public class DslCompiler {
   private static void logError(String message, Object... args) {
     System.err.printf(message, args);
   }
-
 }

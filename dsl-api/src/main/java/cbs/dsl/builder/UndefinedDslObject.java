@@ -5,7 +5,7 @@ import cbs.dsl.api.DslObject;
 public class UndefinedDslObject implements DslObject {
 
   @Override
-  public String getCode() {
+  public String code() {
     return "undefined";
   }
 

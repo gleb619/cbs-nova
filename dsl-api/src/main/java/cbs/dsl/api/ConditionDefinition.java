@@ -15,7 +15,7 @@ import java.util.List;
  * <p>Implementations are typically created via the Kotlin DSL {@code condition { }} block or
  * annotated with {@link DslComponent} for compile-time registration.
  */
-public interface ConditionDefinition extends DslDefinition {
+public interface ConditionDefinition extends StandardDslDefinition {
 
   /**
    * Evaluates this condition with the given typed input.
@@ -29,12 +29,4 @@ public interface ConditionDefinition extends DslDefinition {
    */
   ConditionTypes.ConditionOutput evaluate(ConditionTypes.ConditionInput input);
 
-  /**
-   * Returns the DSL object representing this definition.
-   *
-   * @return the DSL object, or {@code null} if not available
-   */
-  default ConditionDslObject dsl() {
-    throw new NullPointerException("Dsl object not added");
-  }
 }

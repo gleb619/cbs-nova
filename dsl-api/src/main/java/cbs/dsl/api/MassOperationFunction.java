@@ -2,7 +2,6 @@ package cbs.dsl.api;
 
 import cbs.dsl.api.MassOperationFunction.MassOperationArg;
 import cbs.dsl.api.MassOperationFunction.MassOperationResult;
-import cbs.dsl.api.context.MassOperationContext;
 import java.util.Collections;
 import java.util.Map;
 
@@ -30,7 +29,7 @@ public interface MassOperationFunction<I extends MassOperationArg, O extends Mas
    * @param input the mass operation input
    * @return the mass operation output
    */
-  MassOperationContext<O> execute(MassOperationContext<I> input);
+  O execute(I input);
 
   /** Marker interface for typed mass operation input records. */
   interface MassOperationArg extends DslPayload {

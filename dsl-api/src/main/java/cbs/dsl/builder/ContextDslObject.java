@@ -13,7 +13,7 @@ public class ContextDslObject implements DslObject {
   private final List<Pair<String, Object>> parameters;
 
   @Override
-  public String getCode() {
+  public String code() {
     return "context";
   }
 

@@ -2,18 +2,32 @@ package cbs.dsl.api;
 
 import cbs.dsl.api.HelperFunction.HelperArg;
 import cbs.dsl.api.HelperFunction.HelperResult;
-import cbs.dsl.api.context.HelperContext;
+import java.util.Map;
 
 @FunctionalInterface
 public interface HelperFunction<I extends HelperArg, O extends HelperResult> {
 
-  HelperContext<O> execute(HelperContext<I> input);
+  O execute(I input);
 
-  default HelperContext<O> preview(HelperContext<I> input) {
+  default O preview(I input) {
     return execute(input);
   }
 
-  interface HelperArg extends DslPayload {}
+  interface HelperArg extends DslPayload {
 
-  interface HelperResult extends DslPayload {}
+    @Override
+    default Map<String, Object> params() {
+      return JsonPayload.toMap(this);
+    }
+
+  }
+
+  interface HelperResult extends DslPayload {
+
+    @Override
+    default Map<String, Object> params() {
+      return JsonPayload.toMap(this);
+    }
+
+  }
 }

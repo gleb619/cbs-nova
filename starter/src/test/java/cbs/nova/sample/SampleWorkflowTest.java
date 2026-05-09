@@ -47,7 +47,7 @@ class SampleWorkflowTest {
     // Assert
     assertNotNull(tx);
     assertEquals("SAMPLE_TX", tx.getCode());
-    assertEquals("Hello, PoC", output.params().get("greeting"));
+    assertEquals("Hello, PoC", output.params().get("name"));
   }
 
   @Test

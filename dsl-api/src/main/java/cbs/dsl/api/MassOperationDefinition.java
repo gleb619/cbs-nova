@@ -14,24 +14,7 @@ import java.util.function.Consumer;
  * <p>Implementations are typically created via the Kotlin DSL {@code massOperation { }} block or
  * annotated with {@link DslComponent} for compile-time registration.
  */
-public interface MassOperationDefinition extends DslDefinition {
-
-  /**
-   * Canonical code used to look up this mass operation in the registry.
-   *
-   * @return the mass operation code
-   */
-  String getCode();
-
-  /**
-   * List of parameter definitions declared in the {@code parameters { }} block. Used for validation
-   * and documentation purposes.
-   *
-   * @return the parameter definitions
-   */
-  default List<ParameterDefinition> getParameters() {
-    return Collections.emptyList();
-  }
+public interface MassOperationDefinition extends StandardDslDefinition {
 
   /**
    * Category used for grouping and scheduling.
@@ -111,12 +94,4 @@ public interface MassOperationDefinition extends DslDefinition {
     return execute(input);
   }
 
-  /**
-   * Returns the DSL object representing this definition.
-   *
-   * @return the DSL object, or {@code null} if not available
-   */
-  default MassOperationDslObject dsl() {
-    throw new NullPointerException("Dsl object not added");
-  }
 }

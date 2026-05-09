@@ -37,7 +37,7 @@ public class DslComponentProcessor extends AbstractProcessor {
       WorkflowFunction.class.getName(), DslInterfaceType.WORKFLOW,
       MassOperationFunction.class.getName(), DslInterfaceType.MASS_OPERATION);
 
-  private static final Function<RegistrationSpec, String> UNDEFINED_DSL_BODY_PROVIDER =
+  private static final Function<RegistrationModel, String> UNDEFINED_DSL_BODY_PROVIDER =
       _ -> "return UndefinedDslObject.create();";
 
   private boolean processed = false;
@@ -46,7 +46,7 @@ public class DslComponentProcessor extends AbstractProcessor {
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     if (processed) return true;
 
-    List<RegistrationSpec> registrations = new ArrayList<>();
+    List<RegistrationModel> registrations = new ArrayList<>();
 
     for (Element element : roundEnv.getElementsAnnotatedWith(DslComponent.class)) {
       if (element.getKind() != ElementKind.CLASS) {
@@ -64,118 +64,142 @@ public class DslComponentProcessor extends AbstractProcessor {
 
     try {
       if (!registrations.isEmpty()) {
-        List<RegistrationSpec> txSpecs = registrations.stream()
+        List<RegistrationModel> txSpecs = registrations.stream()
             .filter(r -> r.interfaceType() == DslInterfaceType.TRANSACTION)
             .toList();
-        List<RegistrationSpec> helperSpecs = registrations.stream()
+        List<RegistrationModel> helperSpecs = registrations.stream()
             .filter(r -> r.interfaceType() == DslInterfaceType.HELPER)
             .toList();
-        List<RegistrationSpec> eventSpecs = registrations.stream()
+        List<RegistrationModel> eventSpecs = registrations.stream()
             .filter(r -> r.interfaceType() == DslInterfaceType.EVENT)
             .toList();
-        List<RegistrationSpec> workflowSpecs = registrations.stream()
+        List<RegistrationModel> workflowSpecs = registrations.stream()
             .filter(r -> r.interfaceType() == DslInterfaceType.WORKFLOW)
             .toList();
-        List<RegistrationSpec> conditionSpecs = registrations.stream()
+        List<RegistrationModel> conditionSpecs = registrations.stream()
             .filter(r -> r.interfaceType() == DslInterfaceType.CONDITION)
             .toList();
-        List<RegistrationSpec> massOpSpecs = registrations.stream()
+        List<RegistrationModel> massOpSpecs = registrations.stream()
             .filter(r -> r.interfaceType() == DslInterfaceType.MASS_OPERATION)
             .toList();
 
         ExecutorService virtualExecutor = Executors.newVirtualThreadPerTaskExecutor();
         try {
-          Map<RegistrationSpec, String> activitySources = Collections.synchronizedMap(new HashMap<>());
-          Map<RegistrationSpec, String> definitionSources = Collections.synchronizedMap(new HashMap<>());
-          Map<RegistrationSpec, String> genericSources = Collections.synchronizedMap(new HashMap<>());
+          Map<RegistrationModel, String> activitySources =
+              Collections.synchronizedMap(new HashMap<>());
+          Map<RegistrationModel, String> definitionSources =
+              Collections.synchronizedMap(new HashMap<>());
+          Map<RegistrationModel, String> genericSources =
+              Collections.synchronizedMap(new HashMap<>());
 
           List<CompletableFuture<Void>> generationFutures = new ArrayList<>();
 
-          for (RegistrationSpec spec : txSpecs) {
+          for (RegistrationModel spec : txSpecs) {
             generationFutures.add(CompletableFuture.runAsync(
                 () -> {
-                  TransactionCodeGenerator gen = new TransactionCodeGenerator(UNDEFINED_DSL_BODY_PROVIDER);
+                  TransactionDefinitionGenerator gen =
+                      new TransactionDefinitionGenerator(UNDEFINED_DSL_BODY_PROVIDER);
                   activitySources.put(spec, gen.generateActivityInterfaceCode(spec));
                   definitionSources.put(spec, gen.generateDefinitionCode(spec));
-                }, virtualExecutor));
+                },
+                virtualExecutor));
           }
-          for (RegistrationSpec spec : helperSpecs) {
+          for (RegistrationModel spec : helperSpecs) {
             generationFutures.add(CompletableFuture.runAsync(
                 () -> {
-                  HelperCodeGenerator gen = new HelperCodeGenerator(UNDEFINED_DSL_BODY_PROVIDER);
+                  HelperDefinitionGenerator gen = new HelperDefinitionGenerator(UNDEFINED_DSL_BODY_PROVIDER);
                   genericSources.put(spec, gen.generateDefinitionCode(spec));
-                }, virtualExecutor));
+                },
+                virtualExecutor));
           }
-          for (RegistrationSpec spec : eventSpecs) {
+          for (RegistrationModel spec : eventSpecs) {
             generationFutures.add(CompletableFuture.runAsync(
                 () -> {
-                  EventCodeGenerator gen = new EventCodeGenerator(UNDEFINED_DSL_BODY_PROVIDER);
-                  genericSources.put(spec, gen.generateDefinitionCode(spec));
-                }, virtualExecutor));
+                  EventDefinitionGenerator gen = new EventDefinitionGenerator(UNDEFINED_DSL_BODY_PROVIDER);
+                  activitySources.put(spec, gen.generateActivityInterfaceCode(spec));
+                  definitionSources.put(spec, gen.generateDefinitionCode(spec));
+                },
+                virtualExecutor));
           }
-          for (RegistrationSpec spec : workflowSpecs) {
+          for (RegistrationModel spec : workflowSpecs) {
             generationFutures.add(CompletableFuture.runAsync(
                 () -> {
-                  WorkflowCodeGenerator gen = new WorkflowCodeGenerator(UNDEFINED_DSL_BODY_PROVIDER);
+                  WorkflowDefinitionGenerator gen =
+                      new WorkflowDefinitionGenerator(UNDEFINED_DSL_BODY_PROVIDER);
                   genericSources.put(spec, gen.generateDefinitionCode(spec));
-                }, virtualExecutor));
+                },
+                virtualExecutor));
           }
-          for (RegistrationSpec spec : conditionSpecs) {
+          for (RegistrationModel spec : conditionSpecs) {
             generationFutures.add(CompletableFuture.runAsync(
                 () -> {
-                  ConditionCodeGenerator gen = new ConditionCodeGenerator(UNDEFINED_DSL_BODY_PROVIDER);
-                  genericSources.put(spec, gen.generateDefinitionCode(spec));
-                }, virtualExecutor));
+                  ConditionDefinitionGenerator gen =
+                      new ConditionDefinitionGenerator(UNDEFINED_DSL_BODY_PROVIDER);
+                  activitySources.put(spec, gen.generateActivityInterfaceCode(spec));
+                  definitionSources.put(spec, gen.generateDefinitionCode(spec));
+                },
+                virtualExecutor));
           }
-          for (RegistrationSpec spec : massOpSpecs) {
+          for (RegistrationModel spec : massOpSpecs) {
             generationFutures.add(CompletableFuture.runAsync(
                 () -> {
-                  MassOperationCodeGenerator gen = new MassOperationCodeGenerator(UNDEFINED_DSL_BODY_PROVIDER);
+                  MassOperationDefinitionGenerator gen =
+                      new MassOperationDefinitionGenerator(UNDEFINED_DSL_BODY_PROVIDER);
                   genericSources.put(spec, gen.generateDefinitionCode(spec));
-                }, virtualExecutor));
+                },
+                virtualExecutor));
           }
 
-          CompletableFuture.allOf(generationFutures.toArray(new CompletableFuture[0])).join();
+          CompletableFuture.allOf(generationFutures.toArray(new CompletableFuture[0]))
+              .join();
 
           Filer filer = processingEnv.getFiler();
-          TransactionCodeGenerator txGen = new TransactionCodeGenerator(filer, UNDEFINED_DSL_BODY_PROVIDER);
-          for (RegistrationSpec spec : txSpecs) {
+          TransactionDefinitionGenerator txGen =
+              new TransactionDefinitionGenerator(filer, UNDEFINED_DSL_BODY_PROVIDER);
+          for (RegistrationModel spec : txSpecs) {
             txGen.writeActivityInterface(spec, activitySources.get(spec));
             txGen.writeDefinition(spec, definitionSources.get(spec));
           }
-          for (RegistrationSpec spec : helperSpecs) {
-            new HelperCodeGenerator(filer, UNDEFINED_DSL_BODY_PROVIDER).writeDefinition(spec, genericSources.get(spec));
+          for (RegistrationModel spec : helperSpecs) {
+            new HelperDefinitionGenerator(filer, UNDEFINED_DSL_BODY_PROVIDER)
+                .writeDefinition(spec, genericSources.get(spec));
           }
-          for (RegistrationSpec spec : eventSpecs) {
-            new EventCodeGenerator(filer, UNDEFINED_DSL_BODY_PROVIDER).writeDefinition(spec, genericSources.get(spec));
+          EventDefinitionGenerator eventGen = new EventDefinitionGenerator(filer, UNDEFINED_DSL_BODY_PROVIDER);
+          for (RegistrationModel spec : eventSpecs) {
+            // TODO: we need to use
+            // `dsl-codegen/src/main/java/cbs/dsl/codegen/EventSpecificationGenerator.java` instead
+            eventGen.writeActivityInterface(spec, activitySources.get(spec));
+            eventGen.writeDefinition(spec, definitionSources.get(spec));
           }
-          for (RegistrationSpec spec : workflowSpecs) {
-            new WorkflowCodeGenerator(filer, UNDEFINED_DSL_BODY_PROVIDER).writeDefinition(spec, genericSources.get(spec));
+          for (RegistrationModel spec : workflowSpecs) {
+            new WorkflowDefinitionGenerator(filer, UNDEFINED_DSL_BODY_PROVIDER)
+                .writeDefinition(spec, genericSources.get(spec));
           }
-          for (RegistrationSpec spec : conditionSpecs) {
-            new ConditionCodeGenerator(filer, UNDEFINED_DSL_BODY_PROVIDER).writeDefinition(spec, genericSources.get(spec));
+          ConditionDefinitionGenerator conditionGen =
+              new ConditionDefinitionGenerator(filer, UNDEFINED_DSL_BODY_PROVIDER);
+          for (RegistrationModel spec : conditionSpecs) {
+            conditionGen.writeActivityInterface(spec, activitySources.get(spec));
+            conditionGen.writeDefinition(spec, definitionSources.get(spec));
           }
-          for (RegistrationSpec spec : massOpSpecs) {
-            new MassOperationCodeGenerator(filer, UNDEFINED_DSL_BODY_PROVIDER).writeDefinition(spec, genericSources.get(spec));
+          for (RegistrationModel spec : massOpSpecs) {
+            new MassOperationDefinitionGenerator(filer, UNDEFINED_DSL_BODY_PROVIDER)
+                .writeDefinition(spec, genericSources.get(spec));
           }
 
-          new RegistrationGenerator(filer).generate(registrations);
+          new DefinitionRegistryGenerator(filer).generate(registrations);
 
-          List<EventWorkflowSpec> eventWorkflowSpecs = eventSpecs.stream()
+          List<EventWorkflowModel> eventWorkflowModels = eventSpecs.stream()
               .map(r ->
-                  new EventWorkflowSpec(r.code(), r.packageName() + "." + r.className(), List.of()))
+                  new EventWorkflowModel(r.code(), r.packageName() + "." + r.className(), List.of()))
               .toList();
-          if (!eventWorkflowSpecs.isEmpty()) {
-            new EventDslWorkflowGenerator(filer).generate(eventWorkflowSpecs);
-            new WorkflowRegistryGenerator(filer).generate(eventWorkflowSpecs);
+          if (!eventWorkflowModels.isEmpty()) {
+            new EventSpecificationGenerator(filer).generateAndWrite(eventWorkflowModels);
+            
           }
 
-          if (!txSpecs.isEmpty()
-              || !helperSpecs.isEmpty()
-              || !conditionSpecs.isEmpty()
-              || !eventWorkflowSpecs.isEmpty()) {
-            new ActivityRegistryGenerator(filer)
-                .generate(txSpecs, helperSpecs, conditionSpecs, eventWorkflowSpecs);
+          if (!txSpecs.isEmpty() || !conditionSpecs.isEmpty() || !eventWorkflowModels.isEmpty()) {
+            new SpecificationRegistryGenerator(filer)
+                .generate(txSpecs, conditionSpecs, eventWorkflowModels);
           }
         } finally {
           virtualExecutor.shutdown();
@@ -191,7 +215,7 @@ public class DslComponentProcessor extends AbstractProcessor {
     return true;
   }
 
-  private void validateAndCollect(TypeElement typeElement, List<RegistrationSpec> registrations) {
+  private void validateAndCollect(TypeElement typeElement, List<RegistrationModel> registrations) {
     String className = typeElement.getSimpleName().toString();
     String packageName = processingEnv
         .getElementUtils()
@@ -301,7 +325,7 @@ public class DslComponentProcessor extends AbstractProcessor {
       // Source file not available or not readable — ignore
     }
 
-    registrations.add(new RegistrationSpec(
+    registrations.add(new RegistrationModel(
         packageName,
         className,
         annotation.code(),

@@ -8,18 +8,18 @@ import lombok.RequiredArgsConstructor;
  */
 @Getter
 @RequiredArgsConstructor
-public abstract class ParameterDefinition {
+public class ParameterDefinition {
 
   public final String name;
   public final ParameterType type;
   public final Boolean required;
 
   public static ParameterDefinition mandatory(String name, ParameterType type) {
-    return new ParameterDefinition(name, type, true) {};
+    return new ParameterDefinition(name, type, true);
   }
 
   public static ParameterDefinition optional(String name, ParameterType type) {
-    return new ParameterDefinition(name, type, false) {};
+    return new ParameterDefinition(name, type, false);
   }
 
   public enum ParameterType {

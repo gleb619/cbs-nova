@@ -38,6 +38,8 @@ Code generation for Temporal is limited to three DSL component types:
 - The generated `EventWorkflow` first calls `EventActivity.prepareContext()` to execute the event's `context{}` block, then iterates through the event's transaction codes, calling each `TransactionActivity`.
 - `TransactionActivity` internally calls helper `prepareContext()` / `execute()` as plain synchronous code before running the developer's business logic.
 
+> **Terminology note:** Every generated artifact must have a `*Definition` wrapper, even for non-Temporal components. For Temporal workflows the registry layer uses the word **Specification** (produced by `SpecificationGenerator` as `GeneratedSpecificationRegistry`).
+
 ### 13.2 Three-Layer Generation Pipeline
 
 The pipeline runs entirely at **compile time** in the `dsl-codegen` module.
@@ -62,7 +64,7 @@ The pipeline runs entirely at **compile time** in the `dsl-codegen` module.
 │          Executable* contracts (ExecutableEvent, ExecutableTransaction, …)            │
 │          Generated registries (EventRegistry, TransactionRegistry, ConditionRegistry)│
 │  Tool:   EventCodeGenerator, TransactionCodeGenerator, ConditionCodeGenerator,      │
-│          WorkflowRegistryGenerator, ActivityRegistryGenerator                       │
+│          SpecificationGenerator                       │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -574,16 +576,17 @@ strictly separated.
 
 At application startup, the framework wires everything together without reflection-based classpath scanning.
 
-**Layer-3 Temporal registration**
+**Layer-3 Temporal Specification registration**
 
 ```java
-// GeneratedEventRegistry.registerAll(worker);
-// GeneratedTransactionRegistry.registerAll(worker);
-// GeneratedHelperRegistry.registerAll(worker);
+// SpecDefinitionRegistry registry = new GeneratedSpecificationRegistry();
+// activityManager = new ActivityManager(registry);
+// workflowManager = new WorkflowManager(registry, workflowClient);
 ```
 
-These generated registry classes enumerate every discovered workflow/activity class as explicit `register...`
-calls.  This is both faster than scanning and deterministic — the set of registered workflows exactly matches
+The generated `SpecificationGenerator` produces a single `GeneratedSpecificationRegistry` that implements
+`SpecDefinitionRegistry`. It enumerates every discovered workflow/activity as explicit `registerActivity` /
+`registerWorkflow` calls. This is both faster than scanning and deterministic — the set of registered workflows exactly matches
 the set of `@DslComponent` + DSL files present at compile time.
 
 **Layer-1 definition registration**
@@ -635,7 +638,7 @@ of generated classes.
 | Definition Wrapper | Generator (Layer 1/2) | `*Definition` interface impl                                  | **None**                                              |
 | Temporal Bridge    | Generator (Layer 3)   | `*Workflow`, `*Activity`                                      | **Full** — `@WorkflowInterface`, `@ActivityInterface` |
 | Execution Runner   | Framework Developer   | `EventRunner`, `TransactionRunner`, `HelperRunner`, `*Runner` | **None** — registry lookup, plain Java invocation     |
-| Registry Wiring    | Generator (Layer 3)   | `Generated*Registry` (Event, Transaction, Helper, …)          | **Full** — `Worker.register...`                       |
+| Registry Wiring    | Generator (Layer 3)   | `GeneratedSpecificationRegistry` via `SpecDefinitionRegistry` | **Full** — `Worker.register...`                       |
 
 The generated code is the **glue** that lets business authors and developers remain completely ignorant of
 Temporal, while the engine gains retries, queues, sagas, and durable execution for free.

@@ -5,14 +5,13 @@ import cbs.dsl.api.ConditionTypes.ConditionInput;
 import cbs.dsl.api.ConditionTypes.ConditionOutput;
 import cbs.dsl.api.DslComponent;
 import cbs.dsl.api.DslComponent.DslImplType;
-import cbs.dsl.api.context.ConditionContext;
 
 /** Sample condition for the PoC. Always returns {@code true}. */
 @DslComponent(code = "SAMPLE_CONDITION", type = DslImplType.CONDITION)
 public class SampleCondition implements ConditionFunction<ConditionInput, ConditionOutput> {
 
   @Override
-  public ConditionContext<ConditionOutput> check(ConditionContext<ConditionInput> input) {
+  public ConditionOutput check(ConditionInput input) {
     //    return new ConditionContext<>(
     //        input.eventCode(), input.workflowExecutionId(), input.performedBy(),
     //        input.dslVersion(), input.eventParameters(), input.enrichment(),

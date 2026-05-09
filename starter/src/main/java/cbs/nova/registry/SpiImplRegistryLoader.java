@@ -1,14 +1,14 @@
 package cbs.nova.registry;
 
+import cbs.dsl.api.DefinitionRegistry;
+import cbs.dsl.api.DefinitionRegistryProvider;
 import cbs.dsl.api.DslComponentResolver;
-import cbs.dsl.api.ImplRegistrationProvider;
-import cbs.dsl.api.WritableRegistry;
 
 import java.util.ServiceLoader;
 
 /**
- * Loads {@link ImplRegistrationProvider} implementations via SPI and registers them into a
- * {@link WritableRegistry}.
+ * Loads {@link DefinitionRegistryProvider} implementations via SPI and registers them into a
+ * {@link DefinitionRegistry}.
  */
 public class SpiImplRegistryLoader {
 
@@ -20,7 +20,7 @@ public class SpiImplRegistryLoader {
    *
    * @param registry the registry to populate
    */
-  public static void loadInto(WritableRegistry registry) {
+  public static void loadInto(DefinitionRegistry registry) {
     loadInto(registry, null);
   }
 
@@ -31,8 +31,8 @@ public class SpiImplRegistryLoader {
    * @param registry the registry to populate
    * @param resolver the component resolver; may be {@code null}
    */
-  public static void loadInto(WritableRegistry registry, DslComponentResolver resolver) {
-    ServiceLoader.load(ImplRegistrationProvider.class)
+  public static void loadInto(DefinitionRegistry registry, DslComponentResolver resolver) {
+    ServiceLoader.load(DefinitionRegistryProvider.class)
         .forEach(provider -> provider.register(registry, resolver));
   }
 }

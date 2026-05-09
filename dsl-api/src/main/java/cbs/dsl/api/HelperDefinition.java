@@ -30,12 +30,4 @@ public interface HelperDefinition extends StandardDslDefinition {
     return execute(input);
   }
 
-  /**
-   * Returns the DSL object representing this definition.
-   *
-   * @return the DSL object, or {@code null} if not available
-   */
-  default HelperDslObject dsl() {
-    throw new NullPointerException("Dsl object not added");
-  }
 }

@@ -15,6 +15,8 @@ import java.time.Duration;
  * @param workflowRunTimeout max run time for a single workflow attempt
  * @param defaultWorkflowIdPrefix optional prefix for auto-generated workflow IDs
  */
+//TODO: remove file
+@Deprecated(forRemoval = true)
 public record WorkflowConfig(
     String logicalName,
     Class<?> workflowInterface,

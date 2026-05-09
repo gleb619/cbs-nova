@@ -2,7 +2,6 @@ package cbs.dsl.api;
 
 import cbs.dsl.api.EventFunction.EventArg;
 import cbs.dsl.api.EventFunction.EventResult;
-import cbs.dsl.api.context.EventContext;
 
 /**
  * A code-based event implementation executed via {@link DslComponent @DslComponent} annotation
@@ -27,9 +26,9 @@ public interface EventFunction<I extends EventArg, O extends EventResult> {
    * @param input the event input
    * @return the event output
    */
-  EventContext<O> execute(EventContext<I> input);
+  O execute(I input);
 
-  default EventContext<O> preview(EventContext<I> input) {
+  default O preview(I input) {
     return execute(input);
   }
 

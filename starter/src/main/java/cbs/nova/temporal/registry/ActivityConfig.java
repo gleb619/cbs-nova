@@ -18,6 +18,8 @@ import java.time.Duration;
  * @param scheduleToStartTimeout max time to wait for a worker to pick up the activity
  * @param retryOptions optional retry policy; {@code null} means use Temporal defaults
  */
+//TODO: remove file
+@Deprecated(forRemoval = true)
 public record ActivityConfig(
     String logicalName,
     Class<?> activityInterface,

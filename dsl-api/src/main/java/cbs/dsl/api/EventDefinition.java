@@ -13,24 +13,7 @@ import java.util.List;
  * <p>Implementations are typically created via the Kotlin DSL {@code event { }} block or annotated
  * with {@link DslComponent} for compile-time registration.
  */
-public interface EventDefinition extends DslDefinition {
-
-  /**
-   * Canonical code used to look up this event in the registry.
-   *
-   * @return the event code
-   */
-  String getCode();
-
-  /**
-   * List of parameter definitions declared in the {@code parameters { }} block. Used for validation
-   * and documentation purposes.
-   *
-   * @return the parameter definitions
-   */
-  default List<ParameterDefinition> getParameters() {
-    return Collections.emptyList();
-  }
+public interface EventDefinition extends StandardDslDefinition {
 
   /**
    * Executes this event with the given input.
@@ -49,12 +32,4 @@ public interface EventDefinition extends DslDefinition {
     return execute(input);
   }
 
-  /**
-   * Returns the DSL object representing this definition.
-   *
-   * @return the DSL object, or {@code null} if not available
-   */
-  default EventDslObject dsl() {
-    throw new NullPointerException("Dsl object not added");
-  }
 }

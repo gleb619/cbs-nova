@@ -12,14 +12,7 @@ import java.util.List;
  * <p>Implementations are typically created via the Kotlin DSL {@code workflow { }} block or
  * annotated with {@link DslComponent} for compile-time registration.
  */
-public interface WorkflowDefinition extends DslDefinition {
-
-  /**
-   * Canonical code used to look up this workflow in the registry.
-   *
-   * @return the workflow code
-   */
-  String getCode();
+public interface WorkflowDefinition extends StandardDslDefinition {
 
   /**
    * All states in this workflow.
@@ -61,12 +54,4 @@ public interface WorkflowDefinition extends DslDefinition {
     return execute(input);
   }
 
-  /**
-   * Returns the DSL object representing this definition.
-   *
-   * @return the DSL object, or {@code null} if not available
-   */
-  default WorkflowDslObject dsl() {
-    throw new NullPointerException("Dsl object not added");
-  }
 }

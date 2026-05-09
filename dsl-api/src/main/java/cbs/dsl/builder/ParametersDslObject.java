@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 public class ParametersDslObject implements DslObject {
 
   @Override
-  public String getCode() {
+  public String code() {
     return null;
   }
 

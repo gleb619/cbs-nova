@@ -5,7 +5,6 @@ import cbs.app.temporal.massop.MassOpWorkflow;
 import cbs.app.temporal.massop.MassOpWorkflowImpl;
 import cbs.app.temporal.workflow.EventWorkflow;
 import cbs.app.temporal.workflow.GenericEventWorkflowImpl;
-import cbs.dsl.codegen.generated.GeneratedActivityRegistry;
 import cbs.nova.registry.DslRegistry;
 import cbs.nova.repository.EventExecutionRepository;
 import cbs.nova.repository.MassOperationExecutionRepository;
@@ -68,7 +67,7 @@ public class TemporalWorkerRegistrar implements ApplicationRunner {
     log.info("Registered generic event workflow (fallback)");
 
     // 3. Register generated activities and mass-operation workflow
-    GeneratedActivityRegistry.registerAll(worker);
+    // GeneratedActivityRegistry.registerAll(worker); // removed — use SpecDefinitionRegistry via ActivityManager
     worker.registerWorkflowImplementationFactory(
         MassOpWorkflow.class,
         () -> new MassOpWorkflowImpl(

@@ -3,36 +3,27 @@ package cbs.nova.sample;
 import cbs.dsl.api.DslComponent;
 import cbs.dsl.api.DslComponent.DslImplType;
 import cbs.dsl.api.TransactionFunction;
-import cbs.dsl.api.context.TransactionContext;
 import cbs.nova.sample.SampleTransaction.SampleTxInput;
 import cbs.nova.sample.SampleTransaction.SampleTxOutput;
 import io.avaje.jsonb.Json;
 
-import java.util.Map;
-
-/** Sample transaction for the PoC. Produces a greeting from the {@code name} parameter. */
+/** Sample transaction for the PoC. Produces a name from the {@code name} parameter. */
 @DslComponent(code = "SAMPLE_TX", type = DslImplType.TRANSACTION)
 public class SampleTransaction implements TransactionFunction<SampleTxInput, SampleTxOutput> {
 
   @Override
-  public TransactionContext<SampleTxOutput> preview(TransactionContext<SampleTxInput> input) {
-    //    return input.toBuilder().payload(new SampleTxOutput("preview: " +
-    // input.payload().name())).build();
-    return null;
+  public SampleTxOutput preview(SampleTxInput input) {
+    return new SampleTxOutput("preview-" + input.name());
   }
 
   @Override
-  public TransactionContext<SampleTxOutput> execute(TransactionContext<SampleTxInput> input) {
-    //    return input.toBuilder().payload(new SampleTxOutput("Hello, " +
-    // input.payload().name())).build();
-    return null;
+  public SampleTxOutput execute(SampleTxInput input) {
+    return new SampleTxOutput("execute-" + input.name());
   }
 
   @Override
-  public TransactionContext<SampleTxOutput> rollback(TransactionContext<SampleTxInput> input) {
-    //    return input.toBuilder().payload(new SampleTxOutput("rollback: " +
-    // input.payload().name())).build();
-    return null;
+  public SampleTxOutput rollback(SampleTxInput input) {
+    return new SampleTxOutput("rollback-" + input.name());
   }
 
   @Json
@@ -41,7 +32,7 @@ public class SampleTransaction implements TransactionFunction<SampleTxInput, Sam
   }
 
   @Json
-  public record SampleTxOutput(String greeting) implements TransactionResult {
+  public record SampleTxOutput(String name) implements TransactionResult {
 
   }
 }

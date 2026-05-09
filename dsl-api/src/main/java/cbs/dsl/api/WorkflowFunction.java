@@ -2,7 +2,6 @@ package cbs.dsl.api;
 
 import cbs.dsl.api.WorkflowFunction.WorkflowArg;
 import cbs.dsl.api.WorkflowFunction.WorkflowResult;
-import cbs.dsl.api.context.WorkflowContext;
 import java.util.Collections;
 import java.util.Map;
 
@@ -30,7 +29,7 @@ public interface WorkflowFunction<I extends WorkflowArg, O extends WorkflowResul
    * @param input the workflow input
    * @return the workflow output
    */
-  WorkflowContext<O> execute(WorkflowContext<I> input);
+  O execute(I input);
 
   /** Marker interface for typed workflow input records. */
   interface WorkflowArg extends DslPayload {

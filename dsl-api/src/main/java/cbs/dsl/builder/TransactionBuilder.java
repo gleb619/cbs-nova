@@ -21,7 +21,7 @@ public class TransactionBuilder {
   private final String code;
   private String name;
   private final List<ParameterDefinition> parameters = new ArrayList<>();
-  private Consumer<ContextInput> contextBlock = _ -> {};
+  private final Consumer<ContextInput> contextBlock = _ -> {};
   private Function<TransactionContext, TransactionOutput> previewBlock;
   private Function<TransactionContext, TransactionOutput> executeBlock;
   private Function<TransactionContext, TransactionOutput> rollbackBlock;
@@ -43,7 +43,7 @@ public class TransactionBuilder {
   }
 
   public TransactionBuilder context(Consumer<TransactionContext> block) {
-    this.contextBlock = block;
+    //this.contextBlock = block;
     return this;
   }
 

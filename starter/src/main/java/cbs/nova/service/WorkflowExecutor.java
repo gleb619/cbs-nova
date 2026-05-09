@@ -25,6 +25,8 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+//TODO: remove file
+@Deprecated(forRemoval = true)
 public class WorkflowExecutor {
 
   private final WorkflowClient workflowClient;

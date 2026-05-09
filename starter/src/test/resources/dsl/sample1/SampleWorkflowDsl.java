@@ -1,7 +1,7 @@
-import cbs.dsl.builder.WorkflowDsl;
+import cbs.dsl.builder.Dsl;
 import cbs.dsl.api.Action;
 
-WorkflowDsl.workflow("DSL_TEST_WF")
+Dsl.workflow("DSL_TEST_WF")
     .states("START", "DONE")
     .initial("START")
     .terminal("DONE")

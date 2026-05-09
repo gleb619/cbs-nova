@@ -17,11 +17,13 @@ import java.util.function.Predicate;
 
 /**
  * Adapts a runtime {@link DslObject} (produced by a builder) into a {@link DslDefinition} proxy so
- * it can be registered in a {@link WritableRegistry}.
+ * it can be registered in a {@link DefinitionRegistry}.
  *
  * <p>This bridge is used only in {@code REFLECTED} dev mode. Production code always works with
  * generated {@code *Definition} implementations.
  */
+//TODO: remove file
+@Deprecated(forRemoval = true)
 public final class DslObjectAdapter {
 
   private DslObjectAdapter() {}
@@ -46,7 +48,7 @@ public final class DslObjectAdapter {
 
       // getCode() is the only method guaranteed on DslObject
       if ("getCode".equals(name) && method.getParameterCount() == 0) {
-        return object.getCode();
+        return object.code();
       }
 
       // Try to find the method on the DslObject's concrete class
