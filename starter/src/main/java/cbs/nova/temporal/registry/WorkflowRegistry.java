@@ -6,7 +6,7 @@ package cbs.nova.temporal.registry;
  * <p>Implementations must be thread-safe and immutable after construction. The wrapper classes rely
  * on this immutability for deterministic behaviour during workflow replay.
  */
-//TODO: remove file
+// TODO: remove file
 @Deprecated(forRemoval = true)
 public interface WorkflowRegistry {
 

@@ -84,7 +84,8 @@ public class WorkflowManager {
   }
 
   /**
-   * Registers all generated workflow implementations from the registry with the given Temporal worker.
+   * Registers all generated workflow implementations from the registry with the given Temporal
+   * worker.
    *
    * @param worker the Temporal worker to register workflows with
    */

@@ -1,0 +1,21 @@
+plugins {
+  id 'java'
+}
+
+apply(from: "${rootDir}/gradle/java.gradle")
+apply(from: "${rootDir}/gradle/code-style.gradle")
+
+dependencies {
+  implementation project(':dsl-api')
+  implementation project(':dsl-codegen')
+}
+
+tasks.register('compileDsl', JavaExec) {
+  dependsOn configurations.runtimeClasspath
+  classpath = sourceSets.main.runtimeClasspath + sourceSets.main.compileClasspath
+  mainClass = 'cbs.dsl.codegen.DslCompiler'
+  args 'src/dsl', 'build/dsl-classes'
+  javaLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(25)
+  }
+}

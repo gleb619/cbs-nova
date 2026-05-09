@@ -1,14 +1,10 @@
 package cbs.dsl.builder;
 
 import cbs.dsl.api.Action;
-import cbs.dsl.api.DslDefinitionCollector;
 import cbs.dsl.api.DslObject;
-import cbs.dsl.api.WorkflowDefinition;
 import cbs.dsl.api.EventDefinition;
 import cbs.dsl.api.ParameterDefinition;
 import cbs.dsl.api.TransitionRuleDefinition;
-import cbs.dsl.api.WorkflowTypes.WorkflowInput;
-import cbs.dsl.api.WorkflowTypes.WorkflowOutput;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -85,13 +81,12 @@ public class WorkflowBuilder {
   }
 
   public DslObject build() {
-    DslObject obj = new WorkflowDslObject(
-        code,
-        Collections.unmodifiableList(new ArrayList<>(states)),
-        initialState,
-        Collections.unmodifiableList(new ArrayList<>(terminalStates)),
-        Collections.unmodifiableList(new ArrayList<>(transitions)));
-    DslDefinitionCollector.register(obj);
-    return obj;
+    return WorkflowDslObject.builder()
+        .code(code)
+        .states(Collections.unmodifiableList(new ArrayList<>(states)))
+        .initial(initialState)
+        .terminalStates(Collections.unmodifiableList(new ArrayList<>(terminalStates)))
+        .transitions(Collections.unmodifiableList(new ArrayList<>(transitions)))
+        .build();
   }
 }

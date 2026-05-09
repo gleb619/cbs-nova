@@ -5,9 +5,7 @@ import cbs.dsl.api.ParameterValidator;
 import cbs.dsl.api.ParametersTypes.ParameterError;
 import cbs.dsl.api.ParametersTypes.ParametersInput;
 
-/**
- * Default implementation of ParameterValidator.
- */
+/** Default implementation of ParameterValidator. */
 public class DefaultParameterValidator implements ParameterValidator {
 
   @Override
@@ -35,7 +33,7 @@ public class DefaultParameterValidator implements ParameterValidator {
           return ParameterError.nonBoolean(param.getName());
         }
       }
-      //TODO: replace with project related exception
+      // TODO: replace with project related exception
       default -> throw new IllegalStateException("Unexpected value: " + param.getType());
     }
     return null;

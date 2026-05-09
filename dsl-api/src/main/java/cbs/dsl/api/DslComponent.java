@@ -51,12 +51,12 @@ public @interface DslComponent {
   /**
    * Defines the type of DSL implementation being registered.
    *
-   * <p>This tells the annotation processor (or Spring scanner) which registry map to populate in the
-   * {@code ImplRegistry}.
+   * <p>This tells the annotation processor (or Spring scanner) which registry map to populate in
+   * the {@code ImplRegistry}.
    */
   enum DslImplType {
 
-    //TODO: add AUTO, detect type based on interface
+    // TODO: add AUTO, detect type based on interface
 
     /**
      * A transaction implementation that will be registered in the transaction registry. Used for
@@ -71,8 +71,8 @@ public @interface DslComponent {
     HELPER,
 
     /**
-     * A condition implementation that will be registered in the condition registry. Used for classes
-     * implementing {@link ConditionFunction}.
+     * A condition implementation that will be registered in the condition registry. Used for
+     * classes implementing {@link ConditionFunction}.
      */
     CONDITION,
 
@@ -116,6 +116,5 @@ public @interface DslComponent {
 
     /** Resolved from Spring {@code ApplicationContext} via {@link DslComponentResolver}. */
     SPRING,
-
   }
 }

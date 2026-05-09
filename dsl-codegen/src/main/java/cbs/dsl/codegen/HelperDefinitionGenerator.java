@@ -119,6 +119,7 @@ public class HelperDefinitionGenerator implements DefinitionGenerator {
         import cbs.dsl.api.DslObject;
         import cbs.dsl.api.HelperDefinition;
         import cbs.dsl.api.ParameterDefinition;
+        import cbs.dsl.evaluator.Evaluator;
         {{parameterScannerImports}}import cbs.dsl.api.HelperTypes.HelperInput;
         import cbs.dsl.api.HelperTypes.HelperOutput;
         {{jsonPayloadImport}}        import {{specPackage}}.{{specClass}};
@@ -139,11 +140,13 @@ public class HelperDefinitionGenerator implements DefinitionGenerator {
         public class {{wrapperClass}} implements HelperDefinition {
         
             private final {{specClass}} function;
+            private final Evaluator evaluator;
         
             {{parametersField}}
         
             public {{wrapperClass}}(DslComponentResolver resolver) {
                 this.function = resolver.resolve({{specClass}}.class)
+                this.evaluator = resolver.resolveEvaluator();
           }
         
             @Override
@@ -156,24 +159,34 @@ public class HelperDefinitionGenerator implements DefinitionGenerator {
             public ContextOutput prepare(Map<String, Object> params) {
                 return prepareContext(params);
             }
-        
+
             @Override
             public HelperOutput preview(HelperInput input) {
-                {{inputTypeName}} typed = {{inputConversion}};
-                {{outputTypeName}} out = function.preview(typed);
-                return {{outputConversion}};
+                if (dsl() instanceof StandardDslObject dsl) {
+                  return evaluator.previewHelper(dsl, input);
+                } else {
+                  {{inputTypeName}} typed = {{inputConversion}};
+                  {{outputTypeName}} out = function.preview(typed);
+                  
+                  return {{outputConversion}};
+                }
             }
         
             @Override
             public HelperOutput execute(HelperInput input) {
-                {{inputTypeName}} typed = {{inputConversion}};
-                {{outputTypeName}} out = function.execute(typed);
-                return {{outputConversion}};
+                if (dsl() instanceof StandardDslObject dsl) {
+                  return evaluator.executeHelper(dsl, input);
+                } else {
+                  {{inputTypeName}} typed = {{inputConversion}};
+                  {{outputTypeName}} out = function.preview(typed);
+                  
+                  return {{outputConversion}};
+                }
             }
-        
+
             @Override
             public DslObject dsl() {
-                {{dslBody}}
+                return {{dslBody}}
             }
         }
         """,

@@ -13,18 +13,6 @@ import java.util.ServiceLoader;
 public class SpiImplRegistryLoader {
 
   /**
-   * Loads all SPI-discovered providers into the given registry without a component resolver.
-   *
-   * <p>This is the backward-compatible entry point used by tests and non-Spring environments.
-   * Generated wrappers will fall back to plain constructor instantiation.
-   *
-   * @param registry the registry to populate
-   */
-  public static void loadInto(DefinitionRegistry registry) {
-    loadInto(registry, null);
-  }
-
-  /**
    * Loads all SPI-discovered providers into the given registry, passing the resolver to each
    * provider so that {@code SPRING} model components can be looked up from the Spring context.
    *

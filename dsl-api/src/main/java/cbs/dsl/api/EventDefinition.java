@@ -2,9 +2,8 @@ package cbs.dsl.api;
 
 import cbs.dsl.api.EventTypes.EventInput;
 import cbs.dsl.api.EventTypes.EventOutput;
-import cbs.dsl.builder.EventDslObject;
+
 import java.util.Collections;
-import java.util.List;
 
 /**
  * Defines an event — a triggered operation that orchestrates transactions and defines display,
@@ -31,5 +30,4 @@ public interface EventDefinition extends StandardDslDefinition {
   default EventOutput preview(EventInput input) {
     return execute(input);
   }
-
 }

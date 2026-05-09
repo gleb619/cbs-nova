@@ -11,8 +11,8 @@ import java.util.List;
 class SpecificationRegistryGeneratorTest {
 
   @Test
-  @DisplayName("shouldGenerateRegistryImplementingSpecDefinitionRegistryWhenSpecsProvided")
-  void shouldGenerateRegistryImplementingSpecDefinitionRegistryWhenSpecsProvided()
+  @DisplayName("shouldGenerateProviderImplementingSpecDefinitionRegistryProviderWhenSpecsProvided")
+  void shouldGenerateProviderImplementingSpecDefinitionRegistryProviderWhenSpecsProvided()
       throws Exception {
     FakeFiler filer = new FakeFiler();
     List<RegistrationModel> txSpecs = List.of(new RegistrationModel(
@@ -31,22 +31,22 @@ class SpecificationRegistryGeneratorTest {
         "cbs.dsl.api.ConditionTypes.ConditionInput",
         "cbs.dsl.api.ConditionTypes.ConditionOutput",
         DslComponentModel.SIMPLE));
-    List<EventWorkflowModel> eventSpecs =
-        List.of(new EventWorkflowModel("EVT_1", "com.example.MyEvent", List.of("TX_1")));
+    List<EventSpecificationModel> eventSpecs =
+        List.of(new EventSpecificationModel("EVT_1", "com.example.MyEvent", List.of("TX_1")));
 
     new SpecificationRegistryGenerator(filer).generate(txSpecs, conditionSpecs, eventSpecs);
 
     String generatedClassKey = filer.files.keySet().stream()
-        .filter(k -> k.contains("GeneratedSpecificationRegistry"))
+        .filter(k -> k.contains("SpecDefinitionRegistryProviderImpl"))
         .findFirst()
-        .orElseThrow(() -> new AssertionError("No GeneratedSpecificationRegistry found"));
+        .orElseThrow(() -> new AssertionError("No SpecDefinitionRegistryProviderImpl found"));
 
     String content = filer.files.get(generatedClassKey).getContent();
     assertNotNull(content);
 
     assertTrue(
-        content.contains("implements SpecDefinitionRegistry"),
-        "Content should implement SpecDefinitionRegistry: " + content);
+        content.contains("implements SpecDefinitionRegistryProvider"),
+        "Content should implement SpecDefinitionRegistryProvider: " + content);
     assertTrue(
         content.contains("registerActivity(\"TX_1\""),
         "Content should register TX_1 activity: " + content);
@@ -59,12 +59,13 @@ class SpecificationRegistryGeneratorTest {
     assertTrue(
         content.contains("registerWorkflow(\"EVT_1\""),
         "Content should register EVT_1 workflow: " + content);
+
+    String spiKey = "CLASS_OUTPUT/META-INF/services/cbs.dsl.api.SpecDefinitionRegistryProvider";
+    assertTrue(filer.files.containsKey(spiKey), "SPI resource file should be generated");
+    String spiContent = filer.files.get(spiKey).getContent();
     assertTrue(
-        content.contains("getActivityCodes()"),
-        "Content should contain getActivityCodes method: " + content);
-    assertTrue(
-        content.contains("getWorkflowCodes()"),
-        "Content should contain getWorkflowCodes method: " + content);
+        spiContent.contains("cbs.dsl.codegen.generated.SpecDefinitionRegistryProviderImpl"),
+        "SPI file should reference generated provider: " + spiContent);
   }
 
   @Test

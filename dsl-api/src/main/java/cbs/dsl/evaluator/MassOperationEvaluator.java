@@ -31,8 +31,7 @@ public class MassOperationEvaluator {
    * @param input the operation input
    * @return the operation output
    */
-  public static MassOperationOutput evaluate(
-      MassOperationDslObject dsl, MassOperationInput input) {
+  public static MassOperationOutput evaluate(MassOperationDslObject dsl, MassOperationInput input) {
     return new MassOperationOutput(0L, 0L, "SUCCESS");
   }
 }

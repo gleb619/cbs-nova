@@ -3,9 +3,7 @@ package cbs.dsl.api;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-/**
- * Defines a parameter with name, type, and optional flag.
- */
+/** Defines a parameter with name, type, and optional flag. */
 @Getter
 @RequiredArgsConstructor
 public class ParameterDefinition {
@@ -28,5 +26,4 @@ public class ParameterDefinition {
     DECIMAL,
     BOOLEAN
   }
-
 }

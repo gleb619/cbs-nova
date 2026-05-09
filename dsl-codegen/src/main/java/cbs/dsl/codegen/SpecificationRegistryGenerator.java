@@ -1,24 +1,25 @@
 package cbs.dsl.codegen;
 
-import cbs.dsl.api.DslComponentResolver;
 import cbs.dsl.api.SpecDefinitionRegistry;
+import cbs.dsl.api.SpecDefinitionRegistryProvider;
 import lombok.RequiredArgsConstructor;
 
 import javax.annotation.processing.Filer;
+import javax.tools.FileObject;
+import javax.tools.StandardLocation;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Generates a compile-time specification registry that implements {@link SpecDefinitionRegistry}.
+ * Generates a compile-time specification registry provider that implements {@link SpecDefinitionRegistryProvider}.
  *
- * <p>The produced class contains all known activity and workflow definitions baked into its
- * constructor. It can be instantiated directly or exposed as a Spring bean so that
- * {@link cbs.nova.temporal.ActivityManager} and {@link cbs.nova.temporal.WorkflowManager} can look
- * up generated artifacts without runtime classpath scanning.
+ * <p>The produced class registers all known activity and workflow definitions into the supplied
+ * {@link SpecDefinitionRegistry} via its {@code register} method.
  *
  * <p>Every generated code artifact must have a {@code Definition} wrapper (even for non-Temporal
  * components). For Temporal workflows the registry uses the term <em>Specification</em>.
@@ -33,14 +34,14 @@ public class SpecificationRegistryGenerator {
   public void generate(
       List<RegistrationModel> txSpecs,
       List<RegistrationModel> conditionSpecs,
-      List<EventWorkflowModel> eventSpecs)
+      List<EventSpecificationModel> eventSpecs)
       throws IOException {
 
     if (txSpecs.isEmpty() && conditionSpecs.isEmpty() && eventSpecs.isEmpty()) {
       return;
     }
 
-    String className = "GeneratedSpecificationRegistry";
+    String className = "SpecDefinitionRegistryProviderImpl";
     String fqcn = GENERATED_PACKAGE + "." + className;
     String timestamp = CodeGenUtil.currentTimestamp();
 
@@ -86,92 +87,23 @@ public class SpecificationRegistryGenerator {
         """
         package {{GENERATED_PACKAGE}};
 
-        import java.util.Collections;
-        import java.util.HashMap;
-        import java.util.Map;
-        import java.util.Set;
         import javax.annotation.processing.Generated;
         import cbs.dsl.api.DslComponentResolver;
         import cbs.dsl.api.SpecDefinitionRegistry;
+        import cbs.dsl.api.SpecDefinitionRegistryProvider;
         {{allImports}}
 
         @Generated(
             value = "cbs.dsl.codegen.SpecificationGenerator",
             date = "{{timestamp}}"
         )
-        public final class {{className}} implements SpecDefinitionRegistry {
+        public final class {{className}} implements SpecDefinitionRegistryProvider {
 
-            private final Map<String, ArtifactEntry> activities = new HashMap<>();
-            private final Map<String, ArtifactEntry> workflows = new HashMap<>();
-
-            public {{className}}(DslComponentResolver resolver) {
+            @Override
+            public void register(SpecDefinitionRegistry registry, DslComponentResolver resolver) {
         {{activityRegs}}
         {{workflowRegs}}
             }
-
-            @Override
-            public void registerActivity(String code, Class<?> activityInterface, Object implementation) {
-                activities.put(code, new ArtifactEntry(activityInterface, implementation));
-            }
-
-            @Override
-            public void registerWorkflow(String code, Class<?> workflowInterface, Object implementation) {
-                workflows.put(code, new ArtifactEntry(workflowInterface, implementation));
-            }
-
-            @Override
-            public Set<String> getActivityCodes() {
-                return Collections.unmodifiableSet(activities.keySet());
-            }
-
-            @Override
-            public Set<String> getWorkflowCodes() {
-                return Collections.unmodifiableSet(workflows.keySet());
-            }
-
-            @Override
-            public Class<?> getActivityInterface(String code) {
-                ArtifactEntry entry = activities.get(code);
-                if (entry == null) {
-                    throw new IllegalArgumentException(
-                        "Activity '%s' not found in %s".formatted(code, getClass().getSimpleName()));
-                }
-                return entry.interfaceClass();
-            }
-
-            @Override
-            public Class<?> getWorkflowInterface(String code) {
-                ArtifactEntry entry = workflows.get(code);
-                if (entry == null) {
-                    throw new IllegalArgumentException(
-                        "Workflow '%s' not found in %s".formatted(code, getClass().getSimpleName()));
-                }
-                return entry.interfaceClass();
-            }
-
-            @Override
-            @SuppressWarnings("unchecked")
-            public <T> T getActivity(String code, Class<T> activityInterface) {
-                ArtifactEntry entry = activities.get(code);
-                if (entry == null) {
-                    throw new IllegalArgumentException(
-                        "Activity '%s' not found in %s".formatted(code, getClass().getSimpleName()));
-                }
-                return activityInterface.cast(entry.implementation());
-            }
-
-            @Override
-            @SuppressWarnings("unchecked")
-            public <T> T getWorkflow(String code, Class<T> workflowInterface) {
-                ArtifactEntry entry = workflows.get(code);
-                if (entry == null) {
-                    throw new IllegalArgumentException(
-                        "Workflow '%s' not found in %s".formatted(code, getClass().getSimpleName()));
-                }
-                return workflowInterface.cast(entry.implementation());
-            }
-
-            private record ArtifactEntry(Class<?> interfaceClass, Object implementation) {}
         }
         """,
         Map.ofEntries(
@@ -187,6 +119,22 @@ public class SpecificationRegistryGenerator {
                 workflowRegs.isBlank() ? "        // No workflows\n" : workflowRegs)));
 
     CodeGenUtil.writeToFiler(filer, fqcn, source);
+    generateSpiFile(timestamp);
+  }
+
+  private void generateSpiFile(String timestamp) throws IOException {
+    FileObject spiFile = filer.createResource(
+        StandardLocation.CLASS_OUTPUT,
+        "",
+        "META-INF/services/cbs.dsl.api.SpecDefinitionRegistryProvider");
+    try (PrintWriter writer = new PrintWriter(spiFile.openWriter())) {
+      writer.println(Substitutor.format(
+          """
+          # Generated by SpecificationRegistryGenerator
+          # Date: {{date}}
+          cbs.dsl.codegen.generated.SpecDefinitionRegistryProviderImpl
+          """, Map.of("date", timestamp)));
+    }
   }
 
   private static String toActivityDefinitionImport(String className) {
@@ -216,28 +164,29 @@ public class SpecificationRegistryGenerator {
   }
 
   private static String toWorkflowInterfaceImport(String eventCode) {
-    return "import " + GENERATED_PACKAGE + "." + CodeGenUtil.toClassName(eventCode) + "Workflow;";
+    String className = CodeGenUtil.toClassName(eventCode);
+    return "import " + GENERATED_PACKAGE + "." + className + "Workflow;";
   }
 
   private static String toActivityRegistration(String code, String className) {
-    return "        registerActivity(\"" + code + "\", " + className + "Activity.class, new "
+    return "        registry.registerActivity(\"" + code + "\", " + className + "Activity.class, new "
         + className + "Definition(resolver));";
   }
 
   private static String toConditionRegistration(String code, String className) {
-    return "        registerActivity(\"" + code + "\", " + className
+    return "        registry.registerActivity(\"" + code + "\", " + className
         + "ConditionActivity.class, new " + className + "Definition(resolver));";
   }
 
   private static String toEventActivityRegistration(String eventCode) {
     String className = CodeGenUtil.toClassName(eventCode);
-    return "        registerActivity(\"" + eventCode + "\", " + className
+    return "        registry.registerActivity(\"" + eventCode + "\", " + className
         + "EventActivity.class, new " + className + "Definition(resolver));";
   }
 
   private static String toWorkflowRegistration(String eventCode) {
     String className = CodeGenUtil.toClassName(eventCode);
-    return "        registerWorkflow(\"" + eventCode + "\", " + className + "Workflow.class, new "
+    return "        registry.registerWorkflow(\"" + eventCode + "\", " + className + "Workflow.class, new "
         + className + "Definition(resolver));";
   }
 }

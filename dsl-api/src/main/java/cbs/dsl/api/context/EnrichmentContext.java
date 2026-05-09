@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
 
-//TODO: replace with real impl context in correspondent classes
+// TODO: replace with real impl context in correspondent classes
 @Deprecated(forRemoval = true)
 public record EnrichmentContext(
     String eventCode,

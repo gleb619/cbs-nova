@@ -2,6 +2,7 @@ package cbs.dsl.api;
 
 import cbs.dsl.api.HelperFunction.HelperArg;
 import cbs.dsl.api.HelperFunction.HelperResult;
+
 import java.util.Map;
 
 @FunctionalInterface
@@ -19,7 +20,6 @@ public interface HelperFunction<I extends HelperArg, O extends HelperResult> {
     default Map<String, Object> params() {
       return JsonPayload.toMap(this);
     }
-
   }
 
   interface HelperResult extends DslPayload {
@@ -28,6 +28,5 @@ public interface HelperFunction<I extends HelperArg, O extends HelperResult> {
     default Map<String, Object> params() {
       return JsonPayload.toMap(this);
     }
-
   }
 }

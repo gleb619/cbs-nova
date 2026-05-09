@@ -198,22 +198,8 @@ public class EventDefinitionGenerator implements DefinitionGenerator {
             }
 
             @Override
-            public EventOutput preview(EventInput input) {
-                {{inputSimpleName}} typed = {{inputConversion}};
-                {{outputSimpleName}} out = function.preview(typed);
-                return {{outputConversion}};
-            }
-
-            @Override
-            public EventOutput execute(EventInput input) {
-                {{inputSimpleName}} typed = {{inputConversion}};
-                {{outputSimpleName}} out = function.execute(typed);
-                return {{outputConversion}};
-            }
-
-            @Override
             public DslObject dsl() {
-                {{dslBody}}
+                return {{dslBody}}
             }
         }
         """;

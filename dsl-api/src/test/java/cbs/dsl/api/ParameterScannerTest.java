@@ -22,7 +22,8 @@ class ParameterScannerTest {
     ParameterScanner.ParameterScanResult result = ParameterScanner.scan(StringInput.class);
     assertEquals(1, result.definitions().size());
     assertEquals("name", result.definitions().get(0).getName());
-    assertEquals(ParameterDefinition.ParameterType.STRING, result.definitions().get(0).getType());
+    assertEquals(
+        ParameterDefinition.ParameterType.STRING, result.definitions().get(0).getType());
   }
 
   @Test
@@ -31,20 +32,28 @@ class ParameterScannerTest {
     ParameterScanner.ParameterScanResult result = ParameterScanner.scan(MultiInput.class);
     assertEquals(4, result.definitions().size());
     assertEquals("name", result.definitions().get(0).getName());
-    assertEquals(ParameterDefinition.ParameterType.STRING, result.definitions().get(0).getType());
+    assertEquals(
+        ParameterDefinition.ParameterType.STRING, result.definitions().get(0).getType());
     assertEquals("age", result.definitions().get(1).getName());
-    assertEquals(ParameterDefinition.ParameterType.INTEGER, result.definitions().get(1).getType());
+    assertEquals(
+        ParameterDefinition.ParameterType.INTEGER, result.definitions().get(1).getType());
     assertEquals("active", result.definitions().get(2).getName());
-    assertEquals(ParameterDefinition.ParameterType.BOOLEAN, result.definitions().get(2).getType());
+    assertEquals(
+        ParameterDefinition.ParameterType.BOOLEAN, result.definitions().get(2).getType());
     assertEquals("score", result.definitions().get(3).getName());
-    assertEquals(ParameterDefinition.ParameterType.DECIMAL, result.definitions().get(3).getType());
+    assertEquals(
+        ParameterDefinition.ParameterType.DECIMAL, result.definitions().get(3).getType());
   }
 
   @Test
-  @DisplayName("shouldCacheScanResults")
-  void shouldCacheScanResults() {
+  @DisplayName("shouldReturnIdenticalDefinitionsForSameClass")
+  void shouldReturnIdenticalDefinitionsForSameClass() {
     ParameterScanner.ParameterScanResult r1 = ParameterScanner.scan(StringInput.class);
     ParameterScanner.ParameterScanResult r2 = ParameterScanner.scan(StringInput.class);
-    assertEquals(r1, r2);
+    assertEquals(r1.definitions().size(), r2.definitions().size());
+    for (int i = 0; i < r1.definitions().size(); i++) {
+      assertEquals(r1.definitions().get(i).getName(), r2.definitions().get(i).getName());
+      assertEquals(r1.definitions().get(i).getType(), r2.definitions().get(i).getType());
+    }
   }
 }

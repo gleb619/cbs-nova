@@ -11,13 +11,13 @@ import java.util.List;
  * @param workflowImplClassName optional fully-qualified workflow impl class; if null, defaults to
  *     {@code definitions.{SimpleName}Definition}
  */
-public record EventWorkflowModel(
+public record EventSpecificationModel(
     String eventCode,
     String eventClassName,
     List<String> transactionCodes,
     String workflowImplClassName) {
 
-  public EventWorkflowModel(String eventCode, String eventClassName, List<String> transactionCodes) {
+  public EventSpecificationModel(String eventCode, String eventClassName, List<String> transactionCodes) {
     this(eventCode, eventClassName, transactionCodes, null);
   }
 }

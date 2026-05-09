@@ -31,5 +31,4 @@ public interface DslDefinition {
   default DslObject dsl() {
     return UndefinedDslObject.create();
   }
-
 }

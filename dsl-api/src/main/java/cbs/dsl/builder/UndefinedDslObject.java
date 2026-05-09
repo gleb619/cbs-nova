@@ -12,5 +12,4 @@ public class UndefinedDslObject implements DslObject {
   public static UndefinedDslObject create() {
     return new UndefinedDslObject();
   }
-
 }

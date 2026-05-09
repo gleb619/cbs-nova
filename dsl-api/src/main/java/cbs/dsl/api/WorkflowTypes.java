@@ -17,9 +17,7 @@ public class WorkflowTypes {
   @Builder(toBuilder = true)
   public record WorkflowInput(
       String currentState, String action, Map<String, Object> params, String workflowInstanceId)
-      implements WorkflowArg {
-
-  }
+      implements WorkflowArg {}
 
   @Json
   @Builder(toBuilder = true)
@@ -29,6 +27,5 @@ public class WorkflowTypes {
     public WorkflowOutput(String nextState) {
       this(nextState, List.of(), "SUCCESS");
     }
-
   }
 }

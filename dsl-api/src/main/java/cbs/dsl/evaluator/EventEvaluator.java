@@ -33,8 +33,7 @@ public class EventEvaluator {
    * @param ctx the enrichment context (after context block has run)
    * @return the event output
    */
-  public static EventOutput evaluate(
-      EventDslObject dsl, EventInput input, EnrichmentContext ctx) {
+  public static EventOutput evaluate(EventDslObject dsl, EventInput input, EnrichmentContext ctx) {
     evaluateContext(dsl, ctx);
     return new EventOutput(ctx.enrichment());
   }

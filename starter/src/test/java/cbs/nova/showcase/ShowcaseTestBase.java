@@ -2,7 +2,7 @@ package cbs.nova.showcase;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.dsl.api.DslDefinitionCollector;
+import cbs.dsl.api.DslCompilationUnit;
 import cbs.dsl.api.DslObject;
 import cbs.dsl.api.HelperTypes.HelperInput;
 import cbs.nova.registry.DslRegistry;
@@ -17,7 +17,6 @@ import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
 
 import java.io.InputStream;
-import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
@@ -44,7 +43,6 @@ abstract class ShowcaseTestBase {
 
   @BeforeEach
   void setUpBase() throws Exception {
-    DslDefinitionCollector.clear();
     dslRegistry = new DslRegistry();
     SpiImplRegistryLoader.loadInto(dslRegistry);
     compileDslAndRegister();
@@ -147,13 +145,12 @@ abstract class ShowcaseTestBase {
         new URLClassLoader(new URL[] {classDir.toUri().toURL()}, getClass().getClassLoader());
 
     for (String className : dslFiles) {
-      DslDefinitionCollector.clear();
       Class<?> clazz = classLoader.loadClass(className);
-      Method mainMethod = clazz.getDeclaredMethod("main", String[].class);
-      mainMethod.invoke(null, (Object) new String[0]);
-
-      for (DslObject obj : DslDefinitionCollector.drain()) {
-        dslRegistry.register(obj);
+      if (DslCompilationUnit.class.isAssignableFrom(clazz)) {
+        DslCompilationUnit unit = (DslCompilationUnit) clazz.getDeclaredConstructor().newInstance();
+        for (DslObject obj : unit.getDslObjects()) {
+          dslRegistry.register(obj);
+        }
       }
     }
   }

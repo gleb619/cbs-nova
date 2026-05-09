@@ -3,9 +3,7 @@ package cbs.dsl.api;
 import cbs.dsl.api.ParametersTypes.ParameterError;
 import cbs.dsl.api.ParametersTypes.ParametersInput;
 
-/**
- * Validator for parameter definitions.
- */
+/** Validator for parameter definitions. */
 @FunctionalInterface
 public interface ParameterValidator {
 
@@ -16,5 +14,4 @@ public interface ParameterValidator {
    * @return parameter error or null if valid
    */
   ParameterError validate(ParametersInput input, ParameterDefinition param);
-
 }

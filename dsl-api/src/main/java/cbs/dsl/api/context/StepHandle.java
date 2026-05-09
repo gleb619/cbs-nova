@@ -4,7 +4,7 @@ import cbs.dsl.api.TransactionDefinition;
 
 import java.util.concurrent.CompletableFuture;
 
-//TODO: remove
+// TODO: remove
 @Deprecated(forRemoval = true)
 public interface StepHandle {
 

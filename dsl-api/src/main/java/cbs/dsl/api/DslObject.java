@@ -19,5 +19,4 @@ public interface DslObject {
   default String version() {
     return "0000000";
   }
-
 }

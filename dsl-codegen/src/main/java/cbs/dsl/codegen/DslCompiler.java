@@ -1,7 +1,7 @@
 package cbs.dsl.codegen;
 
+import cbs.dsl.api.DslCompilationUnit;
 import cbs.dsl.api.DslComponent;
-import cbs.dsl.api.DslDefinitionCollector;
 import cbs.dsl.api.DslObject;
 import cbs.dsl.builder.EventDslObject;
 import com.github.javaparser.JavaParser;
@@ -10,6 +10,7 @@ import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.stmt.Statement;
 
 import javax.tools.*;
 
@@ -36,9 +37,17 @@ public class DslCompiler {
   private static final JavaCompiler COMPILER = ToolProvider.getSystemJavaCompiler();
   private static final String WRAPPER_TEMPLATE = // language=java
       """
-      public class {{className}} {
-          public static void main(String[] args) throws Exception {
-      {{body}}
+      import java.util.ArrayList;
+      import java.util.List;
+      import cbs.dsl.api.DslCompilationUnit;
+      import cbs.dsl.api.DslObject;
+
+      {{imports}}public class {{className}} implements DslCompilationUnit {
+          @Override
+          public List<DslObject> getDslObjects() {
+              List<DslObject> __objects = new ArrayList<>();
+      {{statements}}
+              return __objects;
           }
       }
       """;
@@ -139,8 +148,13 @@ public class DslCompiler {
       Path wrappedPath = wrapDir.resolve(sourceFile.getName());
       ParsedDsl parsed = parseImplicitClassWithJavaParser(content);
       PARSED_DSL_MAP.put(className, parsed);
+      String transformedBody = transformBodyForCollection(parsed.body());
+      String importsBlock = parsed.imports() != null && !parsed.imports().isEmpty()
+          ? parsed.imports() + "\n"
+          : "";
       String wrappedContent = Substitutor.format(
-          WRAPPER_TEMPLATE, Map.of("className", className, "body", parsed.body()));
+          WRAPPER_TEMPLATE,
+          Map.of("className", className, "statements", transformedBody, "imports", importsBlock));
       Files.writeString(wrappedPath, wrappedContent);
       return wrappedPath.toFile();
     } else {
@@ -149,6 +163,39 @@ public class DslCompiler {
   }
 
   record ParsedDsl(String imports, String body) {}
+
+  static String transformBodyForCollection(String body) {
+    String tempWrapper = """
+        class __TransformHelper {
+            void __method() {
+                %s
+            }
+        }
+        """.formatted(body);
+
+    CompilationUnit cu = StaticJavaParser.parse(tempWrapper);
+    MethodDeclaration method = cu.findFirst(MethodDeclaration.class,
+        m -> "__method".equals(m.getNameAsString())).orElseThrow();
+
+    StringBuilder result = new StringBuilder();
+    method.getBody().ifPresent(block -> {
+      for (Statement stmt : block.getStatements()) {
+        if (stmt.isExpressionStmt()) {
+          String expr = stmt.asExpressionStmt().getExpression().toString();
+          if (expr.contains(".build()")) {
+            boolean isAggregate = expr.contains("Dsl.helpers()");
+            String addMethod = isAggregate ? "__objects.addAll" : "__objects.add";
+            result.append(addMethod).append("(").append(expr).append(");\n");
+          } else {
+            result.append(expr).append(";\n");
+          }
+        } else {
+          result.append(stmt).append("\n");
+        }
+      }
+    });
+    return result.toString();
+  }
 
   static ParsedDsl parseImplicitClassWithJavaParser(String content) {
     // Step 1: split imports and body with a lightweight line scan so imports stay
@@ -374,16 +421,15 @@ public class DslCompiler {
   private static List<FileWrite> generateFiles(
       URLClassLoader classLoader, File sourceFile, Path outputDir) throws Exception {
     String className = extractClassName(sourceFile);
-    DslDefinitionCollector.clear();
 
+    List<DslObject> objects;
     try {
-      invokeMain(classLoader, className);
+      objects = getDslObjects(classLoader, className);
     } catch (Exception e) {
-      logError("Failed to invoke main for %s: %s%n", className, e.getMessage());
+      logError("Failed to load DSL objects for %s: %s%n", className, e.getMessage());
       throw e;
     }
 
-    List<DslObject> objects = DslDefinitionCollector.drain();
     if (objects.isEmpty()) {
       logError("No DslObject collected from %s%n", className);
       throw new IllegalStateException("No DslObject collected from " + className);
@@ -407,8 +453,8 @@ public class DslCompiler {
           List<String> txCodes = ((EventDslObject) obj).getTransactionCodes();
           String wfImplClassName = "cbs.dsl.codegen.generated.%sEventWorkflowImpl"
               .formatted(CodeGenUtil.toClassName(obj.code()));
-          EventWorkflowModel wfSpec =
-              new EventWorkflowModel(obj.code(), className, txCodes, wfImplClassName);
+          EventSpecificationModel wfSpec =
+              new EventSpecificationModel(obj.code(), className, txCodes, wfImplClassName);
           generatedFiles.addAll(wfGen.generateFileSpecs(List.of(wfSpec), outputDir));
           EventDefinitionGenerator gen = new EventDefinitionGenerator(dslBodyProvider);
           generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
@@ -512,10 +558,13 @@ public class DslCompiler {
     return fileName.substring(0, fileName.lastIndexOf('.'));
   }
 
-  private static void invokeMain(ClassLoader classLoader, String className) throws Exception {
+  @SuppressWarnings("unchecked")
+  private static List<DslObject> getDslObjects(URLClassLoader classLoader, String className)
+      throws Exception {
     Class<?> clazz = classLoader.loadClass(className);
-    Method mainMethod = clazz.getDeclaredMethod("main", String[].class);
-    mainMethod.invoke(null, (Object) new String[0]);
+    Object instance = clazz.getDeclaredConstructor().newInstance();
+    Method getter = clazz.getMethod("getDslObjects");
+    return (List<DslObject>) getter.invoke(instance);
   }
 
   static boolean containsExplicitTypeDeclaration(String source) {

@@ -2,6 +2,7 @@ package cbs.dsl.api;
 
 import cbs.dsl.api.WorkflowFunction.WorkflowArg;
 import cbs.dsl.api.WorkflowFunction.WorkflowResult;
+
 import java.util.Collections;
 import java.util.Map;
 
@@ -38,7 +39,6 @@ public interface WorkflowFunction<I extends WorkflowArg, O extends WorkflowResul
     default Map<String, Object> params() {
       return Collections.emptyMap();
     }
-
   }
 
   /** Marker interface for typed workflow output records. */
@@ -48,6 +48,5 @@ public interface WorkflowFunction<I extends WorkflowArg, O extends WorkflowResul
     default Map<String, Object> params() {
       return Collections.emptyMap();
     }
-
   }
 }

@@ -233,7 +233,7 @@ public class TransactionDefinitionGenerator implements DefinitionGenerator {
 
             @Override
             public DslObject dsl() {
-                {{dslBody}}
+                return {{dslBody}}
             }
         }
         """,

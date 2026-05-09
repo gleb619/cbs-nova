@@ -14,7 +14,7 @@ import java.util.Map;
  * <p>Because the map is copied and wrapped unmodifiable at construction time, this registry is
  * deterministic and safe for concurrent access.
  */
-//TODO: remove file
+// TODO: remove file
 @Deprecated(forRemoval = true)
 public class InMemoryActivityRegistry implements ActivityRegistry {
 

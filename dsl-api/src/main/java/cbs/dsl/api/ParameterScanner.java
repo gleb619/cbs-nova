@@ -5,41 +5,44 @@ import java.lang.reflect.RecordComponent;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * Scans a class (typically a record) for fields and maps them to {@link ParameterDefinition}.
- */
+/** Scans a class (typically a record) for fields and maps them to {@link ParameterDefinition}. */
 public final class ParameterScanner {
-
-  private static final Map<Class<?>, ParameterScanResult> CACHE = new ConcurrentHashMap<>();
 
   private ParameterScanner() {}
 
   public static ParameterScanResult scan(Class<?> clazz) {
-    return CACHE.computeIfAbsent(clazz, ParameterScanner::doScan);
+    AtomicReference<List<ParameterDefinition>> ref = new AtomicReference<>();
+    try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+      Future<List<ParameterDefinition>> future = executor.submit(() -> doScan(clazz));
+      try {
+        ref.set(future.get());
+      } catch (InterruptedException | ExecutionException e) {
+        Thread.currentThread().interrupt();
+        throw new RuntimeException(e);
+      }
+    }
+    return new ParameterScanResult(ref);
   }
 
-  private static ParameterScanResult doScan(Class<?> clazz) {
+  private static List<ParameterDefinition> doScan(Class<?> clazz) {
     if (clazz.isRecord()) {
       RecordComponent[] components = clazz.getRecordComponents();
-      List<ParameterDefinition> definitions =
-          Arrays.stream(components)
-              .map(
-                  c ->
-                      ParameterDefinition.mandatory(c.getName(), resolveType(c.getType())))
-              .toList();
-      return new ParameterScanResult(definitions);
+      return Arrays.stream(components)
+          .map(c -> ParameterDefinition.mandatory(c.getName(), resolveType(c.getType())))
+          .toList();
     }
 
-    List<ParameterDefinition> definitions =
-        Arrays.stream(clazz.getDeclaredFields())
-            .filter(f -> !Modifier.isStatic(f.getModifiers()))
-            .filter(f -> !f.isSynthetic())
-            .map(f -> ParameterDefinition.mandatory(f.getName(), resolveType(f.getType())))
-            .toList();
-    return new ParameterScanResult(definitions);
+    return Arrays.stream(clazz.getDeclaredFields())
+        .filter(f -> !Modifier.isStatic(f.getModifiers()))
+        .filter(f -> !f.isSynthetic())
+        .map(f -> ParameterDefinition.mandatory(f.getName(), resolveType(f.getType())))
+        .toList();
   }
 
   private static ParameterDefinition.ParameterType resolveType(Class<?> type) {
@@ -69,8 +72,10 @@ public final class ParameterScanner {
     return ParameterDefinition.ParameterType.STRING;
   }
 
-  /**
-   * Result of scanning a class for parameters.
-   */
-  public record ParameterScanResult(List<ParameterDefinition> definitions) {}
+  /** Result of scanning a class for parameters. */
+  public record ParameterScanResult(AtomicReference<List<ParameterDefinition>> ref) {
+    public List<ParameterDefinition> definitions() {
+      return ref.get();
+    }
+  }
 }

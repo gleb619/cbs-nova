@@ -1,6 +1,7 @@
 package cbs.nova.registry;
 
 import cbs.dsl.api.ConditionDefinition;
+import cbs.dsl.api.DefinitionRegistry;
 import cbs.dsl.api.DefinitionRegistryProvider;
 import cbs.dsl.api.DslComponentResolver;
 import cbs.dsl.api.EventDefinition;
@@ -8,7 +9,6 @@ import cbs.dsl.api.HelperDefinition;
 import cbs.dsl.api.MassOperationDefinition;
 import cbs.dsl.api.TransactionDefinition;
 import cbs.dsl.api.WorkflowDefinition;
-import cbs.dsl.api.DefinitionRegistry;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -18,13 +18,15 @@ import java.util.Map;
  * Runtime registry that maps string codes to DSL definition instances.
  *
  * <p>This is the single runtime registry for the execution engine. It is populated at startup by
- * loading all {@link DefinitionRegistryProvider} implementations via SPI (ServiceLoader),
- * which register {@code @DslComponent} annotated classes discovered at compile time.
+ * loading all {@link DefinitionRegistryProvider} implementations via SPI (ServiceLoader), which
+ * register {@code @DslComponent} annotated classes discovered at compile time.
  *
  * <p>Lookup is by exact match on {@code code}. Registration is additive — registering a definition
  * with the same code as an existing entry overwrites it (last-write-wins). This supports test
  * overrides of production beans.
  */
+//TODO: remove file
+@Deprecated(forRemoval = true)
 public class DslRegistry implements DefinitionRegistry {
 
   private final Map<String, WorkflowDefinition> workflows = new HashMap<>();

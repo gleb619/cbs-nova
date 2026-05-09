@@ -216,7 +216,7 @@ public class ConditionDefinitionGenerator implements DefinitionGenerator {
 
             @Override
             public DslObject dsl() {
-                {{dslBody}}
+                return {{dslBody}}
             }
         }
         """,

@@ -1,13 +1,10 @@
 package cbs.dsl.builder;
 
 import cbs.dsl.api.ContextTypes.ContextInput;
-import cbs.dsl.api.DslDefinitionCollector;
 import cbs.dsl.api.DslObject;
-import cbs.dsl.api.TransactionDefinition;
 import cbs.dsl.api.ParameterDefinition;
 import cbs.dsl.api.TransactionTypes.TransactionInput;
 import cbs.dsl.api.TransactionTypes.TransactionOutput;
-import cbs.dsl.api.context.TransactionContext;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -22,9 +19,9 @@ public class TransactionBuilder {
   private String name;
   private final List<ParameterDefinition> parameters = new ArrayList<>();
   private final Consumer<ContextInput> contextBlock = _ -> {};
-  private Function<TransactionContext, TransactionOutput> previewBlock;
-  private Function<TransactionContext, TransactionOutput> executeBlock;
-  private Function<TransactionContext, TransactionOutput> rollbackBlock;
+  private Function<TransactionInput, TransactionOutput> previewBlock;
+  private Function<TransactionInput, TransactionOutput> executeBlock;
+  private Function<TransactionInput, TransactionOutput> rollbackBlock;
 
   TransactionBuilder(String code) {
     this.code = code;
@@ -42,22 +39,22 @@ public class TransactionBuilder {
     return this;
   }
 
-  public TransactionBuilder context(Consumer<TransactionContext> block) {
-    //this.contextBlock = block;
+  public TransactionBuilder context(Consumer<TransactionInput> block) {
+    // this.contextBlock = block;
     return this;
   }
 
-  public TransactionBuilder preview(Function<TransactionContext, TransactionOutput> block) {
+  public TransactionBuilder preview(Function<TransactionInput, TransactionOutput> block) {
     this.previewBlock = block;
     return this;
   }
 
-  public TransactionBuilder execute(Function<TransactionContext, TransactionOutput> block) {
+  public TransactionBuilder execute(Function<TransactionInput, TransactionOutput> block) {
     this.executeBlock = block;
     return this;
   }
 
-  public TransactionBuilder rollback(Function<TransactionContext, TransactionOutput> block) {
+  public TransactionBuilder rollback(Function<TransactionInput, TransactionOutput> block) {
     this.rollbackBlock = block;
     return this;
   }
@@ -78,30 +75,27 @@ public class TransactionBuilder {
     return contextBlock;
   }
 
-  public Function<TransactionContext, TransactionOutput> preview() {
+  public Function<TransactionInput, TransactionOutput> preview() {
     return previewBlock;
   }
 
-  public Function<TransactionContext, TransactionOutput> execute() {
+  public Function<TransactionInput, TransactionOutput> execute() {
     return executeBlock;
   }
 
-  public Function<TransactionContext, TransactionOutput> rollback() {
+  public Function<TransactionInput, TransactionOutput> rollback() {
     return rollbackBlock;
   }
 
   public DslObject build() {
-    List<ParameterDefinition> params = Collections.unmodifiableList(new ArrayList<>(parameters));
-
-    DslObject obj = new TransactionDslObject(
-        code,
-        name,
-        params,
-        ContextInput::asOutput,
-        previewBlock,
-        executeBlock,
-        rollbackBlock);
-    DslDefinitionCollector.register(obj);
-    return obj;
+    return TransactionDslObject.builder()
+        .code(code)
+        .name(name)
+        .parameters(Collections.unmodifiableList(new ArrayList<>(parameters)))
+        .contextBlock(ContextInput::asOutput)
+        .previewBlock(previewBlock)
+        .executeBlock(executeBlock)
+        .rollbackBlock(rollbackBlock)
+        .build();
   }
 }

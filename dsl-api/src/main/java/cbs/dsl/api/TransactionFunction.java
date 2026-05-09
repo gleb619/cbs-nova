@@ -2,6 +2,7 @@ package cbs.dsl.api;
 
 import cbs.dsl.api.TransactionFunction.TransactionArg;
 import cbs.dsl.api.TransactionFunction.TransactionResult;
+
 import java.util.Map;
 
 @FunctionalInterface
@@ -23,7 +24,6 @@ public interface TransactionFunction<I extends TransactionArg, O extends Transac
     default Map<String, Object> params() {
       return JsonPayload.toMap(this);
     }
-
   }
 
   interface TransactionResult extends DslPayload {
@@ -32,6 +32,5 @@ public interface TransactionFunction<I extends TransactionArg, O extends Transac
     default Map<String, Object> params() {
       return JsonPayload.toMap(this);
     }
-
   }
 }

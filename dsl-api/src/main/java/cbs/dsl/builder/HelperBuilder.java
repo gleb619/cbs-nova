@@ -1,8 +1,6 @@
 package cbs.dsl.builder;
 
-import cbs.dsl.api.DslDefinitionCollector;
 import cbs.dsl.api.DslObject;
-import cbs.dsl.api.HelperDefinition;
 import cbs.dsl.api.HelperTypes.HelperInput;
 import cbs.dsl.api.HelperTypes.HelperOutput;
 import cbs.dsl.api.ParameterDefinition;
@@ -13,7 +11,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-/** Builder for creating helper objects from DSL files. */
+/** Builder for a single helper. Used internally by {@link HelpersBuilder}. */
 public class HelperBuilder {
 
   private final String code;
@@ -58,15 +56,12 @@ public class HelperBuilder {
     return executeBlock;
   }
 
-  public DslObject build() {
-    List<ParameterDefinition> params = Collections.unmodifiableList(new ArrayList<>(parameters));
-
-    DslObject obj = new HelperDslObject(
-        code,
-        params,
-        previewBlock,
-        executeBlock);
-    DslDefinitionCollector.register(obj);
-    return obj;
+  DslObject build() {
+    return HelperDslObject.builder()
+        .code(code)
+        .parameters(Collections.unmodifiableList(new ArrayList<>(parameters)))
+        .previewBlock(previewBlock)
+        .executeBlock(executeBlock)
+        .build();
   }
 }

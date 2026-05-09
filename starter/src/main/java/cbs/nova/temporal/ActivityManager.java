@@ -13,7 +13,7 @@ import java.util.Set;
  * Deterministic manager for working with generated Temporal activities inside workflows.
  *
  * <p>All state is backed by an immutable {@link SpecDefinitionRegistry} that is injected at
- * construction time.  Because the registry contains only pre-configured values, every call is
+ * construction time. Because the registry contains only pre-configured values, every call is
  * replay-safe and fully deterministic.
  *
  * <p>Typical usage inside a workflow implementation:
@@ -25,6 +25,8 @@ import java.util.Set;
  */
 @RequiredArgsConstructor
 public class ActivityManager {
+
+  private static ActivityManager instance;
 
   private final SpecDefinitionRegistry artifactRegistry;
 
@@ -94,22 +96,22 @@ public class ActivityManager {
   }
 
   /**
-   * Registers all generated activity implementations from the registry with the given Temporal worker.
+   * Registers all generated activity implementations from the registry with the given Temporal
+   * worker.
    *
    * @param worker the Temporal worker to register activities with
    */
   public void registerActivities(Worker worker) {
     Object[] implementations = artifactRegistry.getActivityCodes().stream()
-        .map(code -> artifactRegistry.getActivity(code, artifactRegistry.getActivityInterface(code)))
+        .map(
+            code -> artifactRegistry.getActivity(code, artifactRegistry.getActivityInterface(code)))
         .toArray();
     if (implementations.length > 0) {
       worker.registerActivitiesImplementations(implementations);
     }
   }
 
-  private static ActivityManager instance;
-
-  public static synchronized ActivityManager getInstance() {
+  public static ActivityManager getInstance() {
     if (instance == null) {
       throw new IllegalStateException(
           "ActivityManager not initialized. Call setInstance(ActivityManager) during startup.");

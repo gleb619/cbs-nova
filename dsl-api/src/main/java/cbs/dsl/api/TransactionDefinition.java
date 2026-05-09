@@ -17,5 +17,4 @@ public interface TransactionDefinition extends StandardDslDefinition {
   default TransactionOutput rollback(TransactionInput input) {
     return input.asOutput();
   }
-
 }

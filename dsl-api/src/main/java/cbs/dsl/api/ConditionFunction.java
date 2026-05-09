@@ -2,7 +2,7 @@ package cbs.dsl.api;
 
 import cbs.dsl.api.ConditionFunction.ConditionArg;
 import cbs.dsl.api.ConditionFunction.ConditionResult;
-import java.util.Collections;
+
 import java.util.Map;
 
 @FunctionalInterface
@@ -21,6 +21,5 @@ public interface ConditionFunction<I extends ConditionArg, O extends ConditionRe
     default Map<String, Object> params() {
       return Map.of("value", getValue());
     }
-
   }
 }

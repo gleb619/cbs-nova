@@ -22,7 +22,7 @@ import java.util.function.Predicate;
  * <p>This bridge is used only in {@code REFLECTED} dev mode. Production code always works with
  * generated {@code *Definition} implementations.
  */
-//TODO: remove file
+// TODO: remove file
 @Deprecated(forRemoval = true)
 public final class DslObjectAdapter {
 

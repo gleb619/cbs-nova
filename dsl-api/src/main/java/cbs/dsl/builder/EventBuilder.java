@@ -1,8 +1,6 @@
 package cbs.dsl.builder;
 
-import cbs.dsl.api.DslDefinitionCollector;
 import cbs.dsl.api.DslObject;
-import cbs.dsl.api.EventDefinition;
 import cbs.dsl.api.ParameterDefinition;
 import cbs.dsl.api.context.DisplayScope;
 import cbs.dsl.api.context.EnrichmentContext;
@@ -79,8 +77,7 @@ public class EventBuilder {
         : transactionCodes.isEmpty()
             ? null
             : scope -> {
-              for (String txCode : transactionCodes) {
-              }
+              for (String txCode : transactionCodes) {}
             };
   }
 
@@ -100,19 +97,17 @@ public class EventBuilder {
         : txCodes.isEmpty()
             ? null
             : scope -> {
-              for (String txCode : txCodes) {
-              }
+              for (String txCode : txCodes) {}
             };
 
-    DslObject obj = new EventDslObject(
-        code,
-        params,
-        contextBlock,
-        displayBlock,
-        txBlock,
-        txCodes,
-        finishBlock);
-    DslDefinitionCollector.register(obj);
-    return obj;
+    return EventDslObject.builder()
+        .code(code)
+        .parameters(params)
+        .contextBlock(contextBlock)
+        .displayBlock(displayBlock)
+        .transactionsBlock(txBlock)
+        .transactionCodes(txCodes)
+        .finishBlock(finishBlock)
+        .build();
   }
 }

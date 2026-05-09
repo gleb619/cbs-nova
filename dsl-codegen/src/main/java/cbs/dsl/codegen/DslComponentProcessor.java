@@ -188,18 +188,18 @@ public class DslComponentProcessor extends AbstractProcessor {
 
           new DefinitionRegistryGenerator(filer).generate(registrations);
 
-          List<EventWorkflowModel> eventWorkflowModels = eventSpecs.stream()
+          List<EventSpecificationModel> eventSpecificationModels = eventSpecs.stream()
               .map(r ->
-                  new EventWorkflowModel(r.code(), r.packageName() + "." + r.className(), List.of()))
+                  new EventSpecificationModel(r.code(), r.packageName() + "." + r.className(), List.of()))
               .toList();
-          if (!eventWorkflowModels.isEmpty()) {
-            new EventSpecificationGenerator(filer).generateAndWrite(eventWorkflowModels);
+          if (!eventSpecificationModels.isEmpty()) {
+            new EventSpecificationGenerator(filer).generateAndWrite(eventSpecificationModels);
             
           }
 
-          if (!txSpecs.isEmpty() || !conditionSpecs.isEmpty() || !eventWorkflowModels.isEmpty()) {
+          if (!txSpecs.isEmpty() || !conditionSpecs.isEmpty() || !eventSpecificationModels.isEmpty()) {
             new SpecificationRegistryGenerator(filer)
-                .generate(txSpecs, conditionSpecs, eventWorkflowModels);
+                .generate(txSpecs, conditionSpecs, eventSpecificationModels);
           }
         } finally {
           virtualExecutor.shutdown();

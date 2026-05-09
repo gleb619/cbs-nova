@@ -5,9 +5,10 @@ import java.util.Set;
 /**
  * Registry for code-generated Temporal artifacts (activities and workflows).
  *
- * <p>Generated implementations (e.g. {@code GeneratedSpecificationRegistry}) are produced at
- * compile time by the annotation processor and contain all known activity and workflow
- * definitions baked in.  They can be instantiated directly or exposed as a Spring bean.
+ * <p>Generated {@link SpecDefinitionRegistryProvider} implementations (e.g.
+ * {@code SpecDefinitionRegistryProviderImpl}) are produced at compile time by the annotation
+ * processor and contain all known activity and workflow definitions baked in. They are discovered
+ * via {@link java.util.ServiceLoader} and register into a runtime registry.
  *
  * <p>This interface is placed in {@code dsl-api} so that both generated code and the
  * {@code starter} managers can depend on it without creating a circular module dependency.

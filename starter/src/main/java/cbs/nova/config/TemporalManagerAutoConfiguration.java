@@ -1,13 +1,14 @@
 package cbs.nova.config;
 
+import cbs.dsl.api.DslComponentResolver;
 import cbs.dsl.api.SpecDefinitionRegistry;
+import cbs.nova.registry.DefaultSpecDefinitionRegistry;
+import cbs.nova.registry.SpiSpecDefinitionRegistryLoader;
 import cbs.nova.temporal.ActivityManager;
 import cbs.nova.temporal.WorkflowManager;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
-import java.util.Collections;
-import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -22,7 +23,7 @@ import org.springframework.context.annotation.Configuration;
  *
  * <ol>
  *   <li>Creates a {@link WorkflowClient} bean (if not already provided by the application).
- *   <li>Creates the {@link SpecDefinitionRegistry} bean (produced by the annotation processor).
+ *   <li>Creates the {@link SpecDefinitionRegistry} bean populated via SPI.
  *   <li>Creates the {@link ActivityManager} bean.
  *   <li>Creates the {@link WorkflowManager} bean.
  * </ol>
@@ -32,12 +33,6 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnProperty(name = "app.temporal.enabled", havingValue = "true", matchIfMissing = true)
 public class TemporalManagerAutoConfiguration {
 
-  @Value("${app.temporal.service-address:127.0.0.1:7233}")
-  private String serviceAddress;
-
-  @Value("${app.temporal.task-queue:}")
-  private String defaultTaskQueue;
-
   /**
    * Creates a {@link WorkflowServiceStubs} bean if the application has not already provided one.
    *
@@ -45,7 +40,8 @@ public class TemporalManagerAutoConfiguration {
    */
   @Bean(destroyMethod = "shutdown")
   @ConditionalOnMissingBean
-  public WorkflowServiceStubs workflowServiceStubs() {
+  public WorkflowServiceStubs workflowServiceStubs(@Value("${app.temporal.service-address:127.0.0.1:7233}")
+  String serviceAddress) {
     return WorkflowServiceStubs.newServiceStubs(
         WorkflowServiceStubsOptions.newBuilder().setTarget(serviceAddress).build());
   }
@@ -63,59 +59,62 @@ public class TemporalManagerAutoConfiguration {
   }
 
   /**
-   * Creates the {@link SpecDefinitionRegistry} bean using the compile-time generated
-   * implementation.
+   * Creates the {@link DefaultSpecDefinitionRegistry} bean and populates it by loading all
+   * {@link cbs.dsl.api.SpecDefinitionRegistryProvider} implementations via SPI.
    *
-   * <p>The generated class is produced by {@code dsl-codegen} and knows about every
-   * {@code @DslComponent} annotated activity and workflow discovered at compile time.
+   * @param resolver the component resolver for Spring-managed beans
+   * @return the populated specification registry
+   */
+  @Bean
+  public DefaultSpecDefinitionRegistry generatedSpecDefinitionRegistry(
+      DslComponentResolver resolver) {
+    DefaultSpecDefinitionRegistry registry = new DefaultSpecDefinitionRegistry();
+    SpiSpecDefinitionRegistryLoader.loadInto(registry, resolver);
+    log.info(
+        "Created SpecDefinitionRegistry with {} activities and {} workflows",
+        registry.getActivityCodes().size(),
+        registry.getWorkflowCodes().size());
+    return registry;
+  }
+
+  /**
+   * Exposes the generated {@link DefaultSpecDefinitionRegistry} as a {@link SpecDefinitionRegistry}
+   * bean.
    *
-   * @return the generated specification registry
+   * @param generatedSpecDefinitionRegistry the concrete registry instance
+   * @return the specification registry
    */
   @Bean
   @ConditionalOnMissingBean
-  public SpecDefinitionRegistry generatedSpecificationRegistry() {
-    try {
-      Class<?> clazz = Class.forName("cbs.dsl.codegen.generated.GeneratedSpecificationRegistry");
-      SpecDefinitionRegistry registry = (SpecDefinitionRegistry) clazz.getDeclaredConstructor().newInstance();
-      log.info("Created SpecDefinitionRegistry with {} activities and {} workflows",
-          registry.getActivityCodes().size(), registry.getWorkflowCodes().size());
-      return registry;
-    } catch (Exception e) {
-      log.warn("GeneratedSpecificationRegistry not found on classpath — returning empty registry");
-      return new SpecDefinitionRegistry() {
-        @Override public void registerActivity(String code, Class<?> activityInterface, Object implementation) {}
-        @Override public void registerWorkflow(String code, Class<?> workflowInterface, Object implementation) {}
-        @Override public Set<String> getActivityCodes() { return Collections.emptySet(); }
-        @Override public Set<String> getWorkflowCodes() { return Collections.emptySet(); }
-        @Override public Class<?> getActivityInterface(String code) { throw new IllegalArgumentException("No activities registered"); }
-        @Override public Class<?> getWorkflowInterface(String code) { throw new IllegalArgumentException("No workflows registered"); }
-        @Override public <T> T getActivity(String code, Class<T> activityInterface) { throw new IllegalArgumentException("No activities registered"); }
-        @Override public <T> T getWorkflow(String code, Class<T> workflowInterface) { throw new IllegalArgumentException("No workflows registered"); }
-      };
-    }
+  public SpecDefinitionRegistry specDefinitionRegistry(
+      DefaultSpecDefinitionRegistry generatedSpecDefinitionRegistry) {
+    return generatedSpecDefinitionRegistry;
   }
 
   /**
    * Creates the {@link ActivityManager} bean.
    *
-   * @param artifactRegistry the generated specification registry
+   * @param specDefinitionRegistry the generated specification registry
    * @return the activity manager
    */
   @Bean
-  public ActivityManager activityManager(SpecDefinitionRegistry artifactRegistry) {
-    return new ActivityManager(artifactRegistry);
+  public ActivityManager activityManager(SpecDefinitionRegistry specDefinitionRegistry) {
+    ActivityManager manager = new ActivityManager(specDefinitionRegistry);
+    ActivityManager.setInstance(manager);
+    log.info("ActivityManager static instance set");
+    return manager;
   }
 
   /**
    * Creates the {@link WorkflowManager} bean.
    *
-   * @param artifactRegistry the generated specification registry
+   * @param specDefinitionRegistry the generated specification registry
    * @param workflowClient the Temporal workflow client
    * @return the workflow manager
    */
   @Bean
   public WorkflowManager workflowManager(
-      SpecDefinitionRegistry artifactRegistry, WorkflowClient workflowClient) {
-    return new WorkflowManager(artifactRegistry, workflowClient);
+      SpecDefinitionRegistry specDefinitionRegistry, WorkflowClient workflowClient) {
+    return new WorkflowManager(specDefinitionRegistry, workflowClient);
   }
 }

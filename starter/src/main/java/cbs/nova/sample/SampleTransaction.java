@@ -27,12 +27,8 @@ public class SampleTransaction implements TransactionFunction<SampleTxInput, Sam
   }
 
   @Json
-  public record SampleTxInput(String name) implements TransactionArg {
-
-  }
+  public record SampleTxInput(String name) implements TransactionArg {}
 
   @Json
-  public record SampleTxOutput(String name) implements TransactionResult {
-
-  }
+  public record SampleTxOutput(String name) implements TransactionResult {}
 }

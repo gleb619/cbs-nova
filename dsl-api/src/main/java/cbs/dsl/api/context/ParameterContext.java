@@ -1,9 +1,10 @@
 package cbs.dsl.api.context;
 
-import java.util.Map;
 import lombok.Builder;
 
-//TODO: remove
+import java.util.Map;
+
+// TODO: remove
 @Deprecated(forRemoval = true)
 @Builder
 public record ParameterContext<T>(
@@ -12,6 +13,4 @@ public record ParameterContext<T>(
     String performedBy,
     String dslVersion,
     Map<String, Object> eventParameters,
-    T payload) {
-
-}
+    T payload) {}

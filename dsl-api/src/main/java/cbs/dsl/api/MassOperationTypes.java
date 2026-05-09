@@ -15,14 +15,10 @@ public class MassOperationTypes {
   @Json
   @Builder(toBuilder = true)
   public record MassOperationInput(Map<String, Object> params, String massOperationCode)
-      implements MassOperationArg {
-
-  }
+      implements MassOperationArg {}
 
   @Json
   @Builder(toBuilder = true)
   public record MassOperationOutput(long processedCount, long failedCount, String status)
-      implements MassOperationResult {
-
-  }
+      implements MassOperationResult {}
 }

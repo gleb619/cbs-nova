@@ -53,8 +53,8 @@ class ConditionDefinitionGeneratorTest {
     assertNotNull(activityContent);
     assertTrue(activityContent.contains("@ActivityInterface"), "Should have @ActivityInterface");
     assertTrue(
-        activityContent.contains("ConditionOutput evaluate(ConditionInput input)"),
-        "Should have evaluate method");
+        activityContent.contains("ConditionOutput check(ConditionInput input)"),
+        "Should have check method");
 
     String content = Files.readString(definitionPath);
     assertNotNull(content);

@@ -21,9 +21,9 @@ public class TransactionEvaluator {
    */
   public static TransactionOutput evaluatePreview(
       TransactionDslObject dsl, TransactionContext ctx) {
-//    if (dsl != null && dsl.getPreviewBlock() != null) {
-//      return dsl.getPreviewBlock().apply(ctx);
-//    }
+    //    if (dsl != null && dsl.getPreviewBlock() != null) {
+    //      return dsl.getPreviewBlock().apply(ctx);
+    //    }
     return TransactionOutput.empty();
   }
 
@@ -36,9 +36,9 @@ public class TransactionEvaluator {
    */
   public static TransactionOutput evaluateExecute(
       TransactionDslObject dsl, TransactionContext ctx) {
-//    if (dsl != null && dsl.getExecuteBlock() != null) {
-//      return dsl.getExecuteBlock().apply(ctx);
-//    }
+    //    if (dsl != null && dsl.getExecuteBlock() != null) {
+    //      return dsl.getExecuteBlock().apply(ctx);
+    //    }
     return TransactionOutput.empty();
   }
 
@@ -51,9 +51,9 @@ public class TransactionEvaluator {
    */
   public static TransactionOutput evaluateRollback(
       TransactionDslObject dsl, TransactionContext ctx) {
-//    if (dsl != null && dsl.getRollbackBlock() != null) {
-//      return dsl.getRollbackBlock().apply(ctx);
-//    }
+    //    if (dsl != null && dsl.getRollbackBlock() != null) {
+    //      return dsl.getRollbackBlock().apply(ctx);
+    //    }
     return TransactionOutput.empty();
   }
 }

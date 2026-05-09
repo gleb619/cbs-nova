@@ -11,9 +11,9 @@ import org.springframework.context.annotation.Bean;
  * Auto-configuration for DSL implementation registry.
  *
  * <p>Creates a singleton {@link DslRegistry} bean and populates it by loading all
- * {@link DefinitionRegistryProvider} implementations via SPI (ServiceLoader) at
- * application startup. When a {@link SpringDslComponentResolver} is available it is injected into
- * the registry so that {@code SPRING} model components are resolved from the Spring context.
+ * {@link DefinitionRegistryProvider} implementations via SPI (ServiceLoader) at application
+ * startup. When a {@link SpringDslComponentResolver} is available it is injected into the registry
+ * so that {@code SPRING} model components are resolved from the Spring context.
  */
 @AutoConfiguration
 public class ImplRegistryAutoConfiguration {

@@ -16,13 +16,9 @@ public class HelperTypes {
   @Json
   @Builder(toBuilder = true)
   public record HelperInput(Map<String, Object> params, String eventCode, Long workflowExecutionId)
-      implements HelperArg {
-
-  }
+      implements HelperArg {}
 
   @Json
   @Builder(toBuilder = true)
-  public record HelperOutput(Map<String, Object> params) implements HelperResult {
-
-  }
+  public record HelperOutput(Map<String, Object> params) implements HelperResult {}
 }

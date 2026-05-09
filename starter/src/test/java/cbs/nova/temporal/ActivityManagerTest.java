@@ -2,7 +2,6 @@ package cbs.nova.temporal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -11,8 +10,6 @@ import cbs.dsl.api.SpecDefinitionRegistry;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.worker.Worker;
 import io.temporal.workflow.Workflow;
-import java.time.Duration;
-import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,6 +19,9 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.Duration;
+import java.util.Set;
 
 @ExtendWith(MockitoExtension.class)
 class ActivityManagerTest {
@@ -50,7 +50,10 @@ class ActivityManagerTest {
         IllegalArgumentException.class,
         () -> activityManager.newActivityStub("SAMPLE_TX", Runnable.class, defaultOptions()));
 
-    assertThat(ex.getMessage()).contains("SAMPLE_TX").contains("SampleActivity").contains("Runnable");
+    assertThat(ex.getMessage())
+        .contains("SAMPLE_TX")
+        .contains("SampleActivity")
+        .contains("Runnable");
   }
 
   @Test
@@ -60,10 +63,12 @@ class ActivityManagerTest {
     when(artifactRegistry.getActivityInterface("SAMPLE_TX")).thenReturn(SampleActivity.class);
 
     try (MockedStatic<Workflow> workflow = Mockito.mockStatic(Workflow.class)) {
-      workflow.when(() -> Workflow.newActivityStub(SampleActivity.class, defaultOptions()))
+      workflow
+          .when(() -> Workflow.newActivityStub(SampleActivity.class, defaultOptions()))
           .thenReturn(expectedStub);
 
-      SampleActivity result = activityManager.newActivityStub("SAMPLE_TX", SampleActivity.class, defaultOptions());
+      SampleActivity result =
+          activityManager.newActivityStub("SAMPLE_TX", SampleActivity.class, defaultOptions());
       assertThat(result).isSameAs(expectedStub);
     }
   }
@@ -119,6 +124,8 @@ class ActivityManagerTest {
   }
 
   private static ActivityOptions defaultOptions() {
-    return ActivityOptions.newBuilder().setStartToCloseTimeout(Duration.ofSeconds(30)).build();
+    return ActivityOptions.newBuilder()
+        .setStartToCloseTimeout(Duration.ofSeconds(30))
+        .build();
   }
 }

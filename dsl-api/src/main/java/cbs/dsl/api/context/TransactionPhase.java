@@ -1,6 +1,6 @@
 package cbs.dsl.api.context;
 
-//TODO: remove
+// TODO: remove
 @Deprecated(forRemoval = true)
 public enum TransactionPhase {
   /** Preview phase — validates inputs without mutating state. */

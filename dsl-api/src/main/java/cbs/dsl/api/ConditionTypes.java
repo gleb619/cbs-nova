@@ -6,7 +6,6 @@ import lombok.Builder;
 import lombok.NoArgsConstructor;
 
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Consolidated condition DSL types.
@@ -21,9 +20,7 @@ public class ConditionTypes {
   @Json
   @Builder(toBuilder = true)
   public record ConditionInput(Map<String, Object> params, String eventCode, Long eventNumber)
-      implements ConditionFunction.ConditionArg {
-
-  }
+      implements ConditionFunction.ConditionArg {}
 
   /** ConditionOutput wraps the boolean result of the evaluation. */
   @Json

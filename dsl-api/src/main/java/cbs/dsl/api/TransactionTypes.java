@@ -15,8 +15,7 @@ public class TransactionTypes {
 
   @Json
   @Builder(toBuilder = true)
-  public record TransactionInput(
-      Map<String, Object> params, String eventNumber)
+  public record TransactionInput(Map<String, Object> params, String eventNumber)
       implements TransactionArg {
 
     public TransactionOutput asOutput() {
@@ -40,16 +39,12 @@ public class TransactionTypes {
     public static TransactionOutput empty() {
       return new TransactionOutput(Collections.emptyMap(), TransactionStatus.UNDEFINED);
     }
-
   }
 
-   public enum TransactionStatus {
-
+  public enum TransactionStatus {
     UNDEFINED,
     SUCCESS,
     PENDING,
     ERROR,
-   }
-
-
+  }
 }

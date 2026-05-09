@@ -2,6 +2,7 @@ package cbs.dsl.api;
 
 import cbs.dsl.api.MassOperationFunction.MassOperationArg;
 import cbs.dsl.api.MassOperationFunction.MassOperationResult;
+
 import java.util.Collections;
 import java.util.Map;
 
@@ -38,7 +39,6 @@ public interface MassOperationFunction<I extends MassOperationArg, O extends Mas
     default Map<String, Object> params() {
       return Collections.emptyMap();
     }
-
   }
 
   /** Marker interface for typed mass operation output records. */
@@ -48,6 +48,5 @@ public interface MassOperationFunction<I extends MassOperationArg, O extends Mas
     default Map<String, Object> params() {
       return Collections.emptyMap();
     }
-
   }
 }

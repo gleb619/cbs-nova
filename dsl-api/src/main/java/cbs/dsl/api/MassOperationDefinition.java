@@ -2,8 +2,6 @@ package cbs.dsl.api;
 
 import cbs.dsl.api.context.MassOperationContext;
 
-import cbs.dsl.builder.MassOperationDslObject;
-import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -93,5 +91,4 @@ public interface MassOperationDefinition extends StandardDslDefinition {
       MassOperationTypes.MassOperationInput input) {
     return execute(input);
   }
-
 }

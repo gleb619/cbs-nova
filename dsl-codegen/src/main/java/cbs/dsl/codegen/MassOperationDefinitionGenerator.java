@@ -169,7 +169,7 @@ public class MassOperationDefinitionGenerator implements DefinitionGenerator {
         
             @Override
             public DslObject dsl() {
-                {{dslBody}}
+                return {{dslBody}}
             }
         }
         """;

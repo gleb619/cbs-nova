@@ -1,21 +1,20 @@
 package cbs.dsl.api.context;
 
-import java.util.Map;
-import java.util.function.BiFunction;
 import lombok.Builder;
 
-//TODO: remove
-@Deprecated(forRemoval = true)
+import java.util.Map;
+import java.util.function.BiFunction;
+
 @Builder(toBuilder = true)
 public record TransactionContext<T>(
-    String eventCode,
-    Long workflowExecutionId,
+    String eventNumber,
     String performedBy,
-    String dslVersion,
-    Map<String, Object> eventParameters,
-    Map<String, Object> enrichment,
-    BiFunction<String, Map<String, Object>, Object> helperResolver,
-    boolean isResumed,
+    Map<String, Object> params,
+    HelperResolver helperResolver,
     T payload) {
+
+  @FunctionalInterface
+  public interface HelperResolver extends BiFunction<String, HelperContext<?>, HelperContext<?>> {}
+
 
 }

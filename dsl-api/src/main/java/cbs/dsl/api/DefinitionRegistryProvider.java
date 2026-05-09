@@ -10,8 +10,8 @@ import cbs.dsl.api.DslComponent.DslComponentModel;
  * classpath scanning.
  *
  * <p>Each implementation should register its DSL definitions into the provided
- * {@link DefinitionRegistry}. The {@link DefinitionRegistry} interface is used instead of the concrete
- * {@link DefinitionRegistry} to avoid circular dependencies between modules.
+ * {@link DefinitionRegistry}. The {@link DefinitionRegistry} interface is used instead of the
+ * concrete {@link DefinitionRegistry} to avoid circular dependencies between modules.
  */
 public interface DefinitionRegistryProvider {
 
@@ -23,5 +23,4 @@ public interface DefinitionRegistryProvider {
    * @param resolver the component resolver; may be {@code null}
    */
   void register(DefinitionRegistry registry, DslComponentResolver resolver);
-
 }

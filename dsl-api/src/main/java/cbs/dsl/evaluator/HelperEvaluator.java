@@ -2,7 +2,9 @@ package cbs.dsl.evaluator;
 
 import cbs.dsl.api.HelperTypes.HelperInput;
 import cbs.dsl.api.HelperTypes.HelperOutput;
+import cbs.dsl.api.context.HelperContext;
 import cbs.dsl.builder.HelperDslObject;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Evaluates a {@link HelperDslObject} DSL descriptor at runtime.
@@ -18,11 +20,13 @@ public class HelperEvaluator {
    * @param input the helper input
    * @return the helper output
    */
-  public static HelperOutput evaluatePreview(HelperDslObject dsl, HelperInput input) {
-    if (dsl != null && dsl.getPreviewBlock() != null) {
-      return dsl.getPreviewBlock().apply(input);
-    }
-    return evaluateExecute(dsl, input);
+  @NonNull
+  public HelperOutput evaluatePreview(@NonNull HelperDslObject dsl, @NonNull HelperInput input) {
+    var ctx = HelperContext.<HelperInput>builder()
+        .payload(input)
+        .build();
+    var result = dsl.previewBlock().apply(ctx);
+    return result.payload();
   }
 
   /**
@@ -32,10 +36,12 @@ public class HelperEvaluator {
    * @param input the helper input
    * @return the helper output
    */
-  public static HelperOutput evaluateExecute(HelperDslObject dsl, HelperInput input) {
-    if (dsl != null && dsl.getExecuteBlock() != null) {
-      return dsl.getExecuteBlock().apply(input);
-    }
-    return new HelperOutput(null);
+  @NonNull
+  public HelperOutput evaluateExecute(@NonNull HelperDslObject dsl, @NonNull HelperInput input) {
+    var ctx = HelperContext.<HelperInput>builder()
+        .payload(input)
+        .build();
+    var result = dsl.executeBlock().apply(ctx);
+    return result.payload();
   }
 }

@@ -3,7 +3,6 @@ package cbs.dsl.api;
 import cbs.dsl.api.WorkflowTypes.WorkflowInput;
 import cbs.dsl.api.WorkflowTypes.WorkflowOutput;
 
-import cbs.dsl.builder.WorkflowDslObject;
 import java.util.List;
 
 /**
@@ -53,5 +52,4 @@ public interface WorkflowDefinition extends StandardDslDefinition {
   default WorkflowOutput preview(WorkflowInput input) {
     return execute(input);
   }
-
 }

@@ -2,20 +2,19 @@ package cbs.dsl.api;
 
 import cbs.dsl.api.ParametersFunction.ParametersArg;
 import cbs.dsl.api.ParametersFunction.ParametersResult;
-import cbs.dsl.api.ParameterDefinition.ParameterType;
 import io.avaje.jsonb.Json;
-import java.math.BigDecimal;
-import java.util.Map;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.util.Map;
 
 /** Consolidated Parameters DSL types. */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class ParametersTypes {
 
   @Json
-  public record ParametersInput(Map<String, Object> params)
-      implements ParametersArg {
+  public record ParametersInput(Map<String, Object> params) implements ParametersArg {
 
     public static ParametersInput from(Map<String, Object> input) {
       return new ParametersInput(input);
@@ -34,8 +33,10 @@ public class ParametersTypes {
     }
 
     public boolean isDecimal(String key) {
-      return params.containsKey(key) && (params.get(key) instanceof BigDecimal
-          || params.get(key) instanceof Double || params.get(key) instanceof Float);
+      return params.containsKey(key)
+          && (params.get(key) instanceof BigDecimal
+              || params.get(key) instanceof Double
+              || params.get(key) instanceof Float);
     }
 
     public boolean isBoolean(String key) {
@@ -78,10 +79,9 @@ public class ParametersTypes {
   }
 
   @Json
-  //TODO: remove record
+  // TODO: remove record
   @Deprecated(forRemoval = true)
-  public record ParametersOutput(Map<String, Object> params)
-      implements ParametersResult {
+  public record ParametersOutput(Map<String, Object> params) implements ParametersResult {
 
     public static ParametersOutput from(Map<String, Object> params) {
       return new ParametersOutput(params);
@@ -91,32 +91,40 @@ public class ParametersTypes {
   public record ParameterError(String name, String code, String message) {
 
     public static ParameterError missing(String name) {
-      return new ParameterError(name, "parameter.missing", "Parameter '%s' is required".formatted(name));
+      return new ParameterError(
+          name, "parameter.missing", "Parameter '%s' is required".formatted(name));
     }
 
     public static ParameterError nonString(String name) {
-      return new ParameterError(name, "parameter.non-string", "Parameter '%s' must be a string".formatted(name));
+      return new ParameterError(
+          name, "parameter.non-string", "Parameter '%s' must be a string".formatted(name));
     }
 
     public static ParameterError nonNumber(String name) {
-      return new ParameterError(name, "parameter.non-number", "Parameter '%s' must be a number".formatted(name));
+      return new ParameterError(
+          name, "parameter.non-number", "Parameter '%s' must be a number".formatted(name));
     }
 
     public static ParameterError nonDecimal(String name) {
-      return new ParameterError(name, "parameter.non-decimal", "Parameter '%s' must be a decimal".formatted(name));
+      return new ParameterError(
+          name, "parameter.non-decimal", "Parameter '%s' must be a decimal".formatted(name));
     }
 
     public static ParameterError nonBoolean(String name) {
-      return new ParameterError(name, "parameter.non-boolean", "Parameter '%s' must be a boolean".formatted(name));
+      return new ParameterError(
+          name, "parameter.non-boolean", "Parameter '%s' must be a boolean".formatted(name));
     }
 
     public static ParameterError unexpected(String name) {
-      return new ParameterError(name, "parameter.unexpected", "Parameter '%s' is not expected".formatted(name));
+      return new ParameterError(
+          name, "parameter.unexpected", "Parameter '%s' is not expected".formatted(name));
     }
 
     public static ParameterError typeMismatch(String name, String expectedType) {
-      return new ParameterError(name, "parameter.type-mismatch", "Parameter '%s' must be of type %s".formatted(name, expectedType));
+      return new ParameterError(
+          name,
+          "parameter.type-mismatch",
+          "Parameter '%s' must be of type %s".formatted(name, expectedType));
     }
   }
-
-  }
+}

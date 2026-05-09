@@ -1,11 +1,9 @@
 package cbs.dsl.builder;
 
+import cbs.dsl.api.ConditionTypes.ConditionInput;
 import cbs.dsl.api.ConditionTypes.ConditionOutput;
-import cbs.dsl.api.DslDefinitionCollector;
 import cbs.dsl.api.DslObject;
-import cbs.dsl.api.ConditionDefinition;
 import cbs.dsl.api.ParameterDefinition;
-import cbs.dsl.api.context.TransactionContext;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,7 +17,7 @@ public class ConditionBuilder {
 
   private final String code;
   private final List<ParameterDefinition> parameters = new ArrayList<>();
-  private Function<TransactionContext, ConditionOutput> evaluateBlock;
+  private Function<ConditionInput, ConditionOutput> evaluateBlock;
 
   ConditionBuilder(String code) {
     this.code = code;
@@ -32,7 +30,7 @@ public class ConditionBuilder {
     return this;
   }
 
-  public ConditionBuilder evaluate(Function<TransactionContext, ConditionOutput> block) {
+  public ConditionBuilder evaluate(Function<ConditionInput, ConditionOutput> block) {
     this.evaluateBlock = block;
     return this;
   }
@@ -45,11 +43,11 @@ public class ConditionBuilder {
     return Collections.unmodifiableList(new ArrayList<>(parameters));
   }
 
-  public Function<TransactionContext, ConditionOutput> evaluate() {
+  public Function<ConditionInput, ConditionOutput> evaluate() {
     return evaluateBlock;
   }
 
-  public Predicate<TransactionContext> getPredicate() {
+  public Predicate<ConditionInput> getPredicate() {
     return ctx -> {
       if (evaluateBlock == null) {
         return false;
@@ -59,13 +57,10 @@ public class ConditionBuilder {
   }
 
   public DslObject build() {
-    List<ParameterDefinition> params = Collections.unmodifiableList(new ArrayList<>(parameters));
-
-    DslObject obj = new ConditionDslObject(
-        code,
-        params,
-        evaluateBlock);
-    DslDefinitionCollector.register(obj);
-    return obj;
+    return ConditionDslObject.builder()
+        .code(code)
+        .parameters(Collections.unmodifiableList(new ArrayList<>(parameters)))
+        .evaluateBlock(evaluateBlock)
+        .build();
   }
 }

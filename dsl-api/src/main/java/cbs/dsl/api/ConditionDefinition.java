@@ -1,12 +1,8 @@
 package cbs.dsl.api;
 
-import cbs.dsl.api.ParametersTypes.ParameterError;
-import cbs.dsl.api.ParametersTypes.ParametersInput;
+import cbs.dsl.api.ConditionTypes.ConditionInput;
+import cbs.dsl.api.ConditionTypes.ConditionOutput;
 import cbs.dsl.api.context.TransactionContext;
-
-import cbs.dsl.builder.ConditionDslObject;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Defines a condition — a reusable boolean predicate that can be referenced from workflow
@@ -22,11 +18,10 @@ public interface ConditionDefinition extends StandardDslDefinition {
    *
    * <p>The default implementation builds a {@link TransactionContext} from the input, runs the
    * {@link #getContextBlock()}, invokes {@link #getPredicate()}, and wraps the result in a
-   * {@link ConditionTypes.ConditionOutput}.
+   * {@link ConditionOutput}.
    *
    * @param input the condition input
    * @return the condition output
    */
-  ConditionTypes.ConditionOutput evaluate(ConditionTypes.ConditionInput input);
-
+  ConditionOutput check(ConditionInput input);
 }

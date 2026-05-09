@@ -17,9 +17,7 @@ public class EventTypes {
   @Builder(toBuilder = true)
   public record EventInput(
       Map<String, Object> params, String eventCode, Long eventNumber, String workflowExecutionId)
-      implements EventArg {
-
-  }
+      implements EventArg {}
 
   @Json
   @Builder(toBuilder = true)
@@ -28,6 +26,5 @@ public class EventTypes {
     public EventOutput(Map<String, Object> result) {
       this(result, "SUCCESS");
     }
-
   }
 }

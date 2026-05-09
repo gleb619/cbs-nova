@@ -1,10 +1,11 @@
 package cbs.dsl.api.context;
 
-import java.util.Map;
-import java.util.function.BiFunction;
 import lombok.Builder;
 
-//TODO: remove
+import java.util.Map;
+import java.util.function.BiFunction;
+
+// TODO: remove
 @Deprecated(forRemoval = true)
 @Builder
 public record FinishContext(
@@ -14,6 +15,4 @@ public record FinishContext(
     String dslVersion,
     Map<String, Object> eventParameters,
     Map<String, Object> enrichment,
-    BiFunction<String, Map<String, Object>, Object> helperResolver) {
-
-}
+    BiFunction<String, Map<String, Object>, Object> helperResolver) {}

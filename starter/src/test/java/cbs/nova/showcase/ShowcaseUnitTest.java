@@ -18,6 +18,6 @@ class ShowcaseUnitTest extends ShowcaseTestBase {
     assertThat(dslRegistry.getWorkflows()).containsKey("DSL_TEST_WF");
   }
 
-  //TODO: Write new UnitTests for DSL with Temporal mock
+  // TODO: Write new UnitTests for DSL with Temporal mock
 
 }

@@ -7,7 +7,7 @@ package cbs.nova.temporal.registry;
  * {@link cbs.nova.temporal.ActivityStubManager} reads from this registry inside workflows; because
  * the registry is static and immutable, the lookup is deterministic and replay-safe.
  */
-//TODO: remove file
+// TODO: remove file
 @Deprecated(forRemoval = true)
 public interface ActivityRegistry {
 

@@ -1,28 +1,16 @@
 package cbs.dsl.builder;
 
 import cbs.dsl.api.DslObject;
-import cbs.dsl.api.HelperDefinition;
+import cbs.dsl.api.context.Pair;
+import lombok.Builder;
+
 import java.util.List;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
-@Getter
-@RequiredArgsConstructor
-public class ContextDslObject implements DslObject {
-
-  private final List<Pair<String, Object>> parameters;
+@Builder(toBuilder = true)
+public record ContextDslObject(List<Pair<String, Object>> parameters) implements DslObject {
 
   @Override
   public String code() {
     return "context";
   }
-
-  public record Pair<K, V>(K key, V value) {
-
-    public static <A, B> Pair<A, B> of(A key, B value) {
-      return new Pair<>(key, value);
-    }
-
-  }
-
 }

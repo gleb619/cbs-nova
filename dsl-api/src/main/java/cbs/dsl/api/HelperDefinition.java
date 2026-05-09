@@ -2,12 +2,6 @@ package cbs.dsl.api;
 
 import cbs.dsl.api.HelperTypes.HelperInput;
 import cbs.dsl.api.HelperTypes.HelperOutput;
-import cbs.dsl.api.ParametersTypes.ParameterError;
-import cbs.dsl.api.ParametersTypes.ParametersInput;
-
-import cbs.dsl.builder.HelperDslObject;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Defines a helper — a reusable computation that can be invoked from event context blocks or
@@ -29,5 +23,4 @@ public interface HelperDefinition extends StandardDslDefinition {
   default HelperOutput preview(HelperInput input) {
     return execute(input);
   }
-
 }
