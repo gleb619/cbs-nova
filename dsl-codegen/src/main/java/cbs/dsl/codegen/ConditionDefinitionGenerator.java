@@ -95,7 +95,7 @@ public class ConditionDefinitionGenerator implements DefinitionGenerator {
         public interface {{className}} {
 
             @ActivityMethod
-            ConditionOutput evaluate(ConditionInput input);
+            ConditionOutput check(ConditionInput input);
         }
         """,
         Map.of(
@@ -198,26 +198,19 @@ public class ConditionDefinitionGenerator implements DefinitionGenerator {
             }
 
             {{getParametersOverride}}
-            @Override
             public ContextOutput prepare(Map<String, Object> params) {
                 return prepareContext(params);
             }
 
-            @Override
             public Predicate<TransactionContext> getPredicate() {
                 return ctx -> false;
             }
 
             @Override
-            public ConditionOutput evaluate(ConditionInput input) {
-                {{inputTypeName}} typed = {{inputConversion}};
-                {{outputTypeName}} out = function.evaluate(typed);
-                return new ConditionOutput(out.getValue());
-            }
-
-            @Override
             public ConditionOutput check(ConditionInput input) {
-                return evaluate(input);
+                {{inputTypeName}} typed = {{inputConversion}};
+                {{outputTypeName}} out = function.check(typed);
+                return new ConditionOutput(out.getValue());
             }
 
             @Override

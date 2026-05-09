@@ -142,12 +142,15 @@ public class HelperDefinitionGenerator implements DefinitionGenerator {
 
     String dslBody = buildDslBody(spec, hasSharedClass);
 
-    String dslImportsBlock = "";
+    String dslImportsBlock;
     if (!hasSharedClass
-        && spec.dslGenerated()
         && spec.dslImports() != null
         && !spec.dslImports().isBlank()) {
       dslImportsBlock = spec.dslImports().trim() + "\n";
+    } else if (!hasSharedClass) {
+      dslImportsBlock = "import cbs.dsl.builder.UndefinedDslObject;\n";
+    } else {
+      dslImportsBlock = "";
     }
 
     String specImport =

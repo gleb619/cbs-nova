@@ -57,6 +57,7 @@ public interface DefinitionRegistry {
    *
    * @param obj the DSL object to register
    */
+  @Deprecated(forRemoval = true)
   default void register(DslObject obj) {
     Class<?> enclosing = obj.getClass().getEnclosingClass();
     String typeName = enclosing != null ? enclosing.getSimpleName() : "";
