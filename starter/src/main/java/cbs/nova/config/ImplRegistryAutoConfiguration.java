@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Bean;
  * startup. When a {@link SpringDslComponentResolver} is available it is injected into the registry
  * so that {@code SPRING} model components are resolved from the Spring context.
  */
-//TODO: remove file
+// TODO: remove file
 @Deprecated(forRemoval = true)
 @AutoConfiguration
 public class ImplRegistryAutoConfiguration {

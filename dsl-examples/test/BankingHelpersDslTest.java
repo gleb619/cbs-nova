@@ -2,7 +2,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import cbs.dsl.api.DslObject;
 import cbs.dsl.api.HelperTypes.HelperInput;
-import cbs.dsl.api.HelperTypes.HelperOutput;
 import cbs.dsl.api.context.HelperContext;
 import cbs.dsl.builder.Dsl;
 import cbs.dsl.builder.HelperDslObject;
@@ -21,24 +20,17 @@ class BankingHelpersDslTest {
   void shouldBuildFindCustomerCodeHelperWhenGivenValidId() {
     List<DslObject> helpers = Dsl.helpers()
         .helper("FIND_CUSTOMER_CODE", h -> h.parameters(reg -> reg.string("id"))
-            .execute(input -> HelperContext.builder()
-                .params(input.params())
-                .payload(new HelperOutput(
-                    Map.of("customerCode", "CUST-" + input.params().get("id"))))
-                .build()))
+            .execute(input -> HelperContext.builder().params(input.params()).build()))
         .build();
 
     HelperDslObject helper = (HelperDslObject) helpers.getFirst();
     assertEquals("FIND_CUSTOMER_CODE", helper.code());
 
     HelperInput payload = HelperInput.builder().params(Map.of("id", "123")).build();
-    HelperContext<HelperInput> ctx = HelperContext.builder()
-        .params(Map.of("id", "123"))
-        .payload(payload)
-        .build();
+    HelperContext ctx = HelperContext.builder().params(Map.of("id", "123")).build();
 
-    HelperContext<HelperOutput> result = helper.executeBlock().apply(ctx);
-    assertEquals("CUST-123", result.payload().params().get("customerCode"));
+    HelperContext result = helper.executeBlock().apply(ctx);
+    assertEquals("CUST-123", result.params().get("customerCode"));
   }
 
   @Test
@@ -46,28 +38,19 @@ class BankingHelpersDslTest {
   void shouldBuildLoanConditionsByIdHelperWhenGivenValidLoanId() {
     List<DslObject> helpers = Dsl.helpers()
         .helper("LOAN_CONDITIONS_BY_ID", h -> h.parameters(reg -> reg.number("loanId"))
-            .execute(input -> HelperContext.builder()
-                .params(input.params())
-                .payload(new HelperOutput(Map.of(
-                    "loanId", input.params().get("loanId"),
-                    "currency", "USD",
-                    "interestRate", "5.5")))
-                .build()))
+            .execute(input -> HelperContext.builder().params(input.params()).build()))
         .build();
 
     HelperDslObject helper = (HelperDslObject) helpers.getFirst();
     assertEquals("LOAN_CONDITIONS_BY_ID", helper.code());
 
     HelperInput payload = HelperInput.builder().params(Map.of("loanId", 42L)).build();
-    HelperContext<HelperInput> ctx = HelperContext.builder()
-        .params(Map.of("loanId", 42L))
-        .payload(payload)
-        .build();
+    HelperContext ctx = HelperContext.builder().params(Map.of("loanId", 42L)).build();
 
-    HelperContext<HelperOutput> result = helper.executeBlock().apply(ctx);
-    assertEquals(42L, result.payload().params().get("loanId"));
-    assertEquals("USD", result.payload().params().get("currency"));
-    assertEquals("5.5", result.payload().params().get("interestRate"));
+    HelperContext result = helper.executeBlock().apply(ctx);
+    assertEquals(42L, result.params().get("loanId"));
+    assertEquals("USD", result.params().get("currency"));
+    assertEquals("5.5", result.params().get("interestRate"));
   }
 
   @Test
@@ -76,10 +59,7 @@ class BankingHelpersDslTest {
     List<DslObject> helpers = Dsl.helpers()
         .helper("SEND_FAULT_NOTIFICATION", h -> h.parameters(
                 reg -> reg.string("customerId").string("error"))
-            .execute(input -> HelperContext.builder()
-                .params(input.params())
-                .payload(new HelperOutput(Map.of("sent", true, "channel", "EMAIL")))
-                .build()))
+            .execute(input -> HelperContext.builder().params(input.params()).build()))
         .build();
 
     HelperDslObject helper = (HelperDslObject) helpers.getFirst();
@@ -87,14 +67,13 @@ class BankingHelpersDslTest {
 
     HelperInput payload =
         HelperInput.builder().params(Map.of("customerId", "C1", "error", "ERR")).build();
-    HelperContext<HelperInput> ctx = HelperContext.builder()
+    HelperContext ctx = HelperContext.builder()
         .params(Map.of("customerId", "C1", "error", "ERR"))
-        .payload(payload)
         .build();
 
-    HelperContext<HelperOutput> result = helper.executeBlock().apply(ctx);
-    assertEquals(true, result.payload().params().get("sent"));
-    assertEquals("EMAIL", result.payload().params().get("channel"));
+    HelperContext result = helper.executeBlock().apply(ctx);
+    assertEquals(true, result.params().get("sent"));
+    assertEquals("EMAIL", result.params().get("channel"));
   }
 
   @Test

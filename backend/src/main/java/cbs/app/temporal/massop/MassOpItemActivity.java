@@ -4,7 +4,7 @@ import cbs.nova.entity.MassOperationExecutionEntity;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 
-//TODO: remove
+// TODO: remove
 @Deprecated(forRemoval = true)
 @ActivityInterface
 public interface MassOpItemActivity {

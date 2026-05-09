@@ -4,7 +4,6 @@ import cbs.dsl.api.ContextTypes.ContextInput;
 import cbs.dsl.api.ContextTypes.ContextOutput;
 import cbs.dsl.api.ParameterDefinition;
 import cbs.dsl.api.StandardDslObject;
-import cbs.dsl.api.TransactionDefinition;
 import cbs.dsl.api.TransactionTypes.TransactionInput;
 import cbs.dsl.api.TransactionTypes.TransactionOutput;
 import lombok.Builder;
@@ -21,6 +20,4 @@ public record TransactionDslObject(
     Function<TransactionInput, TransactionOutput> previewBlock,
     Function<TransactionInput, TransactionOutput> executeBlock,
     Function<TransactionInput, TransactionOutput> rollbackBlock)
-    implements StandardDslObject {
-
-}
+    implements StandardDslObject {}

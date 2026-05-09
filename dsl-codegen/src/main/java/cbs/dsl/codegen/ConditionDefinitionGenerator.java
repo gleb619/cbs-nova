@@ -15,6 +15,7 @@ import java.util.function.Function;
 public class ConditionDefinitionGenerator implements DefinitionGenerator {
 
   private static final String CN_INPUT = "cbs.dsl.api.ConditionTypes.ConditionInput";
+  private static final String CN_OUTPUT = "cbs.dsl.api.ConditionTypes.ConditionOutput";
   private static final String GENERATED_PACKAGE = "cbs.dsl.codegen.generated";
   private static final String DEFINITIONS_PACKAGE = "cbs.dsl.codegen.generated.definitions";
 
@@ -31,7 +32,8 @@ public class ConditionDefinitionGenerator implements DefinitionGenerator {
     this(null, outputDir, dslBodyProvider);
   }
 
-  public ConditionDefinitionGenerator(Filer filer, Function<RegistrationModel, String> dslBodyProvider) {
+  public ConditionDefinitionGenerator(
+      Filer filer, Function<RegistrationModel, String> dslBodyProvider) {
     this(filer, null, dslBodyProvider);
   }
 
@@ -114,6 +116,7 @@ public class ConditionDefinitionGenerator implements DefinitionGenerator {
 
     String timestamp = CodeGenUtil.currentTimestamp();
     boolean inputIsRuntime = spec.inputType().equals(CN_INPUT);
+    boolean outputIsRuntime = spec.outputType().equals(CN_OUTPUT);
 
     String inputConversion = inputIsRuntime
         ? "input"
@@ -125,18 +128,19 @@ public class ConditionDefinitionGenerator implements DefinitionGenerator {
     String inputTypeImport = inputIsRuntime
         ? ""
         : Substitutor.format("import {{inputType}};\n", Map.of("inputType", spec.inputType()));
+    String outputTypeImport = outputIsRuntime
+        ? ""
+        : Substitutor.format("import {{outputType}};\n", Map.of("outputType", spec.outputType()));
     String parameterScannerImports = inputIsRuntime
         ? ""
         : "import cbs.dsl.api.ParameterScanner;\n        import cbs.dsl.api.ParameterScanner.ParameterScanResult;\n        ";
 
     String parametersField = inputIsRuntime
         ? ""
-        : "private static final ParameterScanResult PARAMETERS = ParameterScanner.scan(%s.class);\n\n".formatted(
-            CodeGenUtil.simpleName(spec.inputType()));
+        : "private static final ParameterScanResult PARAMETERS = ParameterScanner.scan(%s.class);\n\n"
+            .formatted(CodeGenUtil.simpleName(spec.inputType()));
 
-    String getParametersOverride = inputIsRuntime
-        ? ""
-        : """
+    String getParametersOverride = inputIsRuntime ? "" : """
           @Override
           public List<ParameterDefinition> getParameters() {
               return PARAMETERS.definitions();
@@ -156,15 +160,17 @@ public class ConditionDefinitionGenerator implements DefinitionGenerator {
         import cbs.dsl.api.ConditionDefinition;
         import cbs.dsl.api.DslObject;
         import cbs.dsl.api.ParameterDefinition;
-        {{parameterScannerImports}}import cbs.dsl.api.ConditionTypes.ConditionInput;
+        import cbs.dsl.api.ConditionTypes.ConditionInput;
         import cbs.dsl.api.ConditionTypes.ConditionOutput;
-        import cbs.dsl.api.DslComponentResolver;
+        import cbs.dsl.api.ContextTypes.ContextOutput;
+        {{parameterScannerImports}}import cbs.dsl.api.DslComponentResolver;
         import cbs.dsl.api.context.TransactionContext;
         import {{generatedPackage}}.{{activityInterfaceName}};
         {{jsonPayloadImport}}        import {{specPackage}}.{{specClass}};
-        {{inputTypeImport}}        import {{outputType}};
+        {{inputTypeImport}}        {{outputTypeImport}}
         {{dslImportsBlock}}        import java.util.Collections;
         import java.util.List;
+        import java.util.Map;
         import java.util.function.Predicate;
         import javax.annotation.processing.Generated;
 
@@ -190,13 +196,13 @@ public class ConditionDefinitionGenerator implements DefinitionGenerator {
             public String getCode() {
                 return "{{code}}";
             }
-            
+
             {{getParametersOverride}}
             @Override
             public ContextOutput prepare(Map<String, Object> params) {
                 return prepareContext(params);
             }
-            
+
             @Override
             public Predicate<TransactionContext> getPredicate() {
                 return ctx -> false;
@@ -228,6 +234,7 @@ public class ConditionDefinitionGenerator implements DefinitionGenerator {
             Map.entry("specPackage", spec.packageName()),
             Map.entry("specClass", spec.className()),
             Map.entry("inputTypeImport", inputTypeImport),
+            Map.entry("outputTypeImport", outputTypeImport),
             Map.entry("outputType", spec.outputType()),
             Map.entry("parameterScannerImports", parameterScannerImports),
             Map.entry("parametersField", parametersField),

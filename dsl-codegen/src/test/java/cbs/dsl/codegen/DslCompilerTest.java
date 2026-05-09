@@ -89,4 +89,61 @@ class DslCompilerTest {
     assertTrue(parsed.body().contains("EventDsl.event(\"TEST\").build();"));
     assertFalse(parsed.body().contains("// just a comment"));
   }
+
+  @Test
+  @DisplayName("Should ignore JEP 512 style void main method")
+  void shouldIgnoreJep512StyleVoidMainMethod() {
+    String dslWithJep512Main = """
+        import cbs.dsl.builder.EventDsl;
+
+        String fieldName = "testValue";
+
+        void main() {
+            Dsl.register("JEP512_HELPER");
+            System.out.println("This should be ignored");
+        }
+
+        EventDsl.event("JEP512_TEST").build();
+        """;
+
+    DslCompiler.ParsedDsl parsed = DslCompiler.parseImplicitClassWithJavaParser(dslWithJep512Main);
+
+    assertTrue(parsed.imports().contains("import cbs.dsl.builder.EventDsl;"));
+
+    String body = parsed.body();
+    assertTrue(body.contains("String fieldName = \"testValue\";"));
+    assertTrue(body.contains("EventDsl.event(\"JEP512_TEST\").build();"));
+    assertFalse(body.contains("Dsl.register"));
+    assertFalse(body.contains("System.out.println"));
+  }
+
+  @Test
+  @DisplayName("Should ignore standard public static void main method")
+  void shouldIgnoreStandardPublicStaticVoidMainMethod() {
+    String dslWithStandardMain = """
+        import cbs.dsl.builder.EventDsl;
+        import java.util.List;
+
+        int counter = 42;
+
+        public static void main(String[] args) {
+            Dsl.register("STANDARD_HELPER");
+            System.out.println("Standard main should be ignored");
+        }
+
+        EventDsl.event("STANDARD_MAIN_TEST").build();
+        """;
+
+    DslCompiler.ParsedDsl parsed =
+        DslCompiler.parseImplicitClassWithJavaParser(dslWithStandardMain);
+
+    assertTrue(parsed.imports().contains("import cbs.dsl.builder.EventDsl;"));
+    assertTrue(parsed.imports().contains("import java.util.List;"));
+
+    String body = parsed.body();
+    assertTrue(body.contains("int counter = 42;"));
+    assertTrue(body.contains("EventDsl.event(\"STANDARD_MAIN_TEST\").build();"));
+    assertFalse(body.contains("Dsl.register"));
+    assertFalse(body.contains("System.out.println"));
+  }
 }

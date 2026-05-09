@@ -1,10 +1,6 @@
 package cbs.dsl.builder;
 
-import cbs.dsl.api.ContextTypes.ContextInput;
-import cbs.dsl.api.ContextTypes.ContextOutput;
 import cbs.dsl.api.DslObject;
-import cbs.dsl.api.HelperTypes.HelperInput;
-import cbs.dsl.api.HelperTypes.HelperOutput;
 import cbs.dsl.api.ParameterDefinition;
 import cbs.dsl.api.context.Context;
 import cbs.dsl.api.context.HelperContext;
@@ -20,6 +16,4 @@ public record HelperDslObject(
     Function<Context, Context> contextBlock,
     Function<HelperContext, HelperContext> previewBlock,
     Function<HelperContext, HelperContext> executeBlock)
-    implements DslObject {
-
-}
+    implements DslObject {}

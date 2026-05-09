@@ -37,7 +37,7 @@ class ConditionDefinitionGeneratorTest {
         null);
 
     ConditionDefinitionGenerator gen =
-        new ConditionDefinitionGenerator(tempDir, s -> "return UndefinedDslObject.create();");
+        new ConditionDefinitionGenerator(tempDir, s -> "UndefinedDslObject.create()");
     List<FileWrite> files = gen.generate(List.of(spec));
     gen.write(files);
 
@@ -64,7 +64,7 @@ class ConditionDefinitionGeneratorTest {
         content.contains("implements ConditionDefinition, MyConditionConditionActivity"),
         "Should implement ConditionDefinition and ConditionActivity");
     assertTrue(
-        content.contains("return UndefinedDslObject.create();"),
+        content.contains("UndefinedDslObject.create()"),
         "Should contain UndefinedDslObject dsl body");
     assertTrue(
         content.contains("import cbs.dsl.builder.UndefinedDslObject;"),
@@ -82,7 +82,7 @@ class ConditionDefinitionGeneratorTest {
         CN_INPUT,
         CN_OUTPUT,
         DslComponentModel.SIMPLE,
-        "return CustomConditionDsl.condition(\"COND_1\").build();",
+        "CustomConditionDsl.condition(\"COND_1\").build()",
         "import com.example.CustomConditionDsl;");
 
     ConditionDefinitionGenerator gen = new ConditionDefinitionGenerator(tempDir, s -> s.dslBody());
@@ -96,7 +96,7 @@ class ConditionDefinitionGeneratorTest {
     assertNotNull(content);
 
     assertTrue(
-        content.contains("return CustomConditionDsl.condition(\"COND_1\").build();"),
+        content.contains("CustomConditionDsl.condition(\"COND_1\").build()"),
         "Should contain custom dsl body");
     assertTrue(
         content.contains("import com.example.CustomConditionDsl;"),
@@ -121,7 +121,7 @@ class ConditionDefinitionGeneratorTest {
         null);
 
     ConditionDefinitionGenerator gen =
-        new ConditionDefinitionGenerator(tempDir, s -> "return UndefinedDslObject.create();");
+        new ConditionDefinitionGenerator(tempDir, s -> "UndefinedDslObject.create()");
     List<FileWrite> files = gen.generate(List.of(spec));
     gen.write(files);
 
@@ -131,16 +131,15 @@ class ConditionDefinitionGeneratorTest {
     String content = Files.readString(definitionPath);
 
     assertTrue(
-        content.contains("import cbs.dsl.api.ParameterScanner;"),
-        "Should import ParameterScanner");
+        content.contains("import cbs.dsl.api.ParameterScanner;"), "Should import ParameterScanner");
     assertTrue(
         content.contains("import cbs.dsl.api.ParameterScanner.ParameterScanResult;"),
         "Should import ParameterScanResult");
     assertTrue(
-        content.contains("private static final ParameterScanResult PARAMETERS = ParameterScanner.scan(MyConditionInput.class);"),
+        content.contains(
+            "private static final ParameterScanResult PARAMETERS = ParameterScanner.scan(MyConditionInput.class);"),
         "Should contain ParameterScanner static field");
     assertTrue(
-        content.contains("return PARAMETERS.definitions();"),
-        "Should return scanned parameters");
+        content.contains("return PARAMETERS.definitions();"), "Should return scanned parameters");
   }
 }

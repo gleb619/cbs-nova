@@ -40,8 +40,8 @@ public class TemporalManagerAutoConfiguration {
    */
   @Bean(destroyMethod = "shutdown")
   @ConditionalOnMissingBean
-  public WorkflowServiceStubs workflowServiceStubs(@Value("${app.temporal.service-address:127.0.0.1:7233}")
-  String serviceAddress) {
+  public WorkflowServiceStubs workflowServiceStubs(
+      @Value("${app.temporal.service-address:127.0.0.1:7233}") String serviceAddress) {
     return WorkflowServiceStubs.newServiceStubs(
         WorkflowServiceStubsOptions.newBuilder().setTarget(serviceAddress).build());
   }

@@ -1,6 +1,5 @@
 package cbs.dsl.codegen;
 
-import cbs.dsl.api.DslCompilationUnit;
 import cbs.dsl.api.DslComponent;
 import cbs.dsl.api.DslObject;
 import cbs.dsl.builder.EventDslObject;
@@ -149,9 +148,8 @@ public class DslCompiler {
       ParsedDsl parsed = parseImplicitClassWithJavaParser(content);
       PARSED_DSL_MAP.put(className, parsed);
       String transformedBody = transformBodyForCollection(parsed.body());
-      String importsBlock = parsed.imports() != null && !parsed.imports().isEmpty()
-          ? parsed.imports() + "\n"
-          : "";
+      String importsBlock =
+          parsed.imports() != null && !parsed.imports().isEmpty() ? parsed.imports() + "\n" : "";
       String wrappedContent = Substitutor.format(
           WRAPPER_TEMPLATE,
           Map.of("className", className, "statements", transformedBody, "imports", importsBlock));
@@ -174,8 +172,9 @@ public class DslCompiler {
         """.formatted(body);
 
     CompilationUnit cu = StaticJavaParser.parse(tempWrapper);
-    MethodDeclaration method = cu.findFirst(MethodDeclaration.class,
-        m -> "__method".equals(m.getNameAsString())).orElseThrow();
+    MethodDeclaration method = cu.findFirst(
+            MethodDeclaration.class, m -> "__method".equals(m.getNameAsString()))
+        .orElseThrow();
 
     StringBuilder result = new StringBuilder();
     method.getBody().ifPresent(block -> {
@@ -216,7 +215,8 @@ public class DslCompiler {
       }
     }
 
-    // Step 2: wrap only the body in a temporary class and parse with JavaParser.
+    // Step 2: strip any user-defined main methods and wrap the rest in a synthetic main.
+    removeMainMethods(body.toString());
     String tempWrapper =
         """
         %sclass __Temp__ {
@@ -446,7 +446,7 @@ public class DslCompiler {
               : obj.getClass().getSimpleName());
       RegistrationModel spec = toRegistrationSpec(obj, className, parsed);
       Function<RegistrationModel, String> dslBodyProvider =
-          s -> parsed != null ? parsed.body() : "return UndefinedDslObject.create();";
+          s -> parsed != null ? parsed.body() : "UndefinedDslObject.create();";
       switch (spec.interfaceType()) {
         case EVENT -> {
           EventSpecificationGenerator wfGen = new EventSpecificationGenerator();
@@ -476,7 +476,8 @@ public class DslCompiler {
           generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
         }
         case MASS_OPERATION -> {
-          MassOperationDefinitionGenerator gen = new MassOperationDefinitionGenerator(dslBodyProvider);
+          MassOperationDefinitionGenerator gen =
+              new MassOperationDefinitionGenerator(dslBodyProvider);
           generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));
         }
         default ->
@@ -494,9 +495,8 @@ public class DslCompiler {
     String inputType = resolveInputType(interfaceType);
     String outputType = resolveOutputType(interfaceType);
     boolean isDsl = parsed != null;
-    String uniqueClassName = isDsl
-        ? className + "_" + CodeGenUtil.toClassName(obj.code())
-        : className;
+    String uniqueClassName =
+        isDsl ? className + "_" + CodeGenUtil.toClassName(obj.code()) : className;
     return new RegistrationModel(
         "",
         uniqueClassName,
@@ -581,6 +581,62 @@ public class DslCompiler {
     } catch (Exception e) {
       return source.matches("(?s).*\\b(class|interface|enum|record)\\s+\\w+.*");
     }
+  }
+
+  private static String removeMainMethods(String body) {
+    StringBuilder result = new StringBuilder();
+    String[] lines = body.split("\n", -1);
+    boolean inMainMethod = false;
+    boolean waitingForOpenBrace = false;
+    int braceDepth = 0;
+
+    for (String line : lines) {
+      if (!inMainMethod && !waitingForOpenBrace) {
+        if (isMainMethodDeclarationLine(line)) {
+          for (char c : line.toCharArray()) {
+            if (c == '{') braceDepth++;
+            if (c == '}') braceDepth--;
+          }
+          if (braceDepth > 0) {
+            inMainMethod = true;
+          } else if (line.contains("{")) {
+            braceDepth = 0;
+          } else {
+            waitingForOpenBrace = true;
+          }
+          continue;
+        }
+        result.append(line).append("\n");
+      } else if (waitingForOpenBrace) {
+        for (char c : line.toCharArray()) {
+          if (c == '{') braceDepth++;
+          if (c == '}') braceDepth--;
+        }
+        if (braceDepth > 0) {
+          inMainMethod = true;
+          waitingForOpenBrace = false;
+        } else if (line.contains("{")) {
+          waitingForOpenBrace = false;
+          braceDepth = 0;
+        }
+      } else {
+        for (char c : line.toCharArray()) {
+          if (c == '{') braceDepth++;
+          if (c == '}') braceDepth--;
+        }
+        if (braceDepth <= 0) {
+          inMainMethod = false;
+          braceDepth = 0;
+        }
+      }
+    }
+    return result.toString();
+  }
+
+  private static boolean isMainMethodDeclarationLine(String line) {
+    String trimmed = line.trim();
+    return trimmed.matches(
+        "(?s)(?:public\\s+|static\\s+|private\\s+|protected\\s+)*\\s*void\\s+main\\s*\\(.*");
   }
 
   private static void deleteRecursively(Path path) throws IOException {

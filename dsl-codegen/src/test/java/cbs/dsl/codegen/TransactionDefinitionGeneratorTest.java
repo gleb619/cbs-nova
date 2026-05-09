@@ -39,7 +39,7 @@ class TransactionDefinitionGeneratorTest {
         null);
 
     TransactionDefinitionGenerator gen =
-        new TransactionDefinitionGenerator(tempDir, s -> "return UndefinedDslObject.create();");
+        new TransactionDefinitionGenerator(tempDir, s -> "UndefinedDslObject.create()");
     List<FileWrite> files = gen.generate(List.of(spec));
     gen.write(files);
 
@@ -73,7 +73,7 @@ class TransactionDefinitionGeneratorTest {
         content.contains("implements TransactionDefinition, MyTxActivity"),
         "Should implement TransactionDefinition and MyTxActivity");
     assertTrue(
-        content.contains("return UndefinedDslObject.create();"),
+        content.contains("UndefinedDslObject.create()"),
         "Should contain UndefinedDslObject dsl body");
     assertTrue(
         content.contains("import cbs.dsl.builder.UndefinedDslObject;"),
@@ -91,10 +91,11 @@ class TransactionDefinitionGeneratorTest {
         TX_INPUT,
         TX_OUTPUT,
         DslComponentModel.SIMPLE,
-        "return CustomTxDsl.transaction(\"TX_1\").build();",
+        "CustomTxDsl.transaction(\"TX_1\").build()",
         "import com.example.CustomTxDsl;");
 
-    TransactionDefinitionGenerator gen = new TransactionDefinitionGenerator(tempDir, s -> s.dslBody());
+    TransactionDefinitionGenerator gen =
+        new TransactionDefinitionGenerator(tempDir, s -> s.dslBody());
     List<FileWrite> files = gen.generate(List.of(spec));
     gen.write(files);
 
@@ -105,7 +106,7 @@ class TransactionDefinitionGeneratorTest {
     assertNotNull(content);
 
     assertTrue(
-        content.contains("return CustomTxDsl.transaction(\"TX_1\").build();"),
+        content.contains("CustomTxDsl.transaction(\"TX_1\").build()"),
         "Should contain custom dsl body");
     assertTrue(
         content.contains("import com.example.CustomTxDsl;"), "Should contain custom dsl import");
@@ -129,7 +130,7 @@ class TransactionDefinitionGeneratorTest {
         null);
 
     TransactionDefinitionGenerator gen =
-        new TransactionDefinitionGenerator(tempDir, s -> "return UndefinedDslObject.create();");
+        new TransactionDefinitionGenerator(tempDir, s -> "UndefinedDslObject.create()");
     List<FileWrite> files = gen.generate(List.of(spec));
     gen.write(files);
 
@@ -139,16 +140,15 @@ class TransactionDefinitionGeneratorTest {
     String content = Files.readString(definitionPath);
 
     assertTrue(
-        content.contains("import cbs.dsl.api.ParameterScanner;"),
-        "Should import ParameterScanner");
+        content.contains("import cbs.dsl.api.ParameterScanner;"), "Should import ParameterScanner");
     assertTrue(
         content.contains("import cbs.dsl.api.ParameterScanner.ParameterScanResult;"),
         "Should import ParameterScanResult");
     assertTrue(
-        content.contains("private static final ParameterScanResult PARAMETERS = ParameterScanner.scan(MyTxInput.class);"),
+        content.contains(
+            "private static final ParameterScanResult PARAMETERS = ParameterScanner.scan(MyTxInput.class);"),
         "Should contain ParameterScanner static field");
     assertTrue(
-        content.contains("return PARAMETERS.definitions();"),
-        "Should return scanned parameters");
+        content.contains("return PARAMETERS.definitions();"), "Should return scanned parameters");
   }
 }

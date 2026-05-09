@@ -1,4 +1,3 @@
-import cbs.dsl.api.HelperTypes.HelperOutput;
 import cbs.dsl.api.context.HelperContext;
 import cbs.dsl.builder.Dsl;
 
@@ -25,15 +24,16 @@ Object obj = Dsl.helpers()
     /** Retrieves loan conditions for a given loan identifier. */
     .helper("LOAN_CONDITIONS_BY_ID", h -> h
         .parameters(reg -> reg.number("loanId"))
-        .execute(input -> HelperContext.builder()
-            .params(input.params())
-            .build()))
+        .execute(ctx -> ctx.put("aaa", "bbb"))
+    )
     /** Sends a fault notification to the customer via the configured channel. */
     .helper("SEND_FAULT_NOTIFICATION", h -> h
         .parameters(reg -> reg.string("customerId").string("error"))
-        .execute(input -> HelperContext.builder()
-            .params(input.params())
-            .build()))
+        .context(ctx -> ctx.remove("error"))
+        .execute(ctx -> HelperContext.builder()
+            .params(ctx.params())
+            .build())
+    )
     .build();
 
 void main() {

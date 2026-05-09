@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RequiredArgsConstructor
-//TODO: remove
+// TODO: remove
 @Deprecated(forRemoval = true)
 public class GenericEventWorkflowImpl implements EventWorkflow {
 

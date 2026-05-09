@@ -147,7 +147,8 @@ abstract class ShowcaseTestBase {
     for (String className : dslFiles) {
       Class<?> clazz = classLoader.loadClass(className);
       if (DslCompilationUnit.class.isAssignableFrom(clazz)) {
-        DslCompilationUnit unit = (DslCompilationUnit) clazz.getDeclaredConstructor().newInstance();
+        DslCompilationUnit unit =
+            (DslCompilationUnit) clazz.getDeclaredConstructor().newInstance();
         for (DslObject obj : unit.getDslObjects()) {
           dslRegistry.register(obj);
         }

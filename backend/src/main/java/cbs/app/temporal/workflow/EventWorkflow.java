@@ -6,7 +6,7 @@ import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
 
 @WorkflowInterface
-//TODO: remove
+// TODO: remove
 @Deprecated(forRemoval = true)
 public interface EventWorkflow {
 

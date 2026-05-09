@@ -2,7 +2,7 @@ package cbs.app.temporal.massop;
 
 import cbs.nova.entity.MassOperationStatus;
 
-//TODO: remove
+// TODO: remove
 @Deprecated(forRemoval = true)
 public record MassOpExecutionCreateInput(
     String massOpCode,

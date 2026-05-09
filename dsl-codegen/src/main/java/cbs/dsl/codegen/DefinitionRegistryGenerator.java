@@ -112,7 +112,7 @@ public class DefinitionRegistryGenerator {
             public void register(DefinitionRegistry registry, DslComponentResolver resolver) {
               {{registrations}}
             }
-            
+
         }
         """;
 

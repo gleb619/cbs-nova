@@ -134,7 +134,8 @@ public interface DefinitionRegistry {
    * @throws UnsupportedOperationException if this registry does not support resolution
    */
   default TransactionDefinition resolveTransaction(String code) {
-    throw new UnsupportedOperationException("Transaction resolution not supported by this registry");
+    throw new UnsupportedOperationException(
+        "Transaction resolution not supported by this registry");
   }
 
   /**
@@ -145,7 +146,8 @@ public interface DefinitionRegistry {
    * @throws UnsupportedOperationException if this registry does not support resolution
    */
   default MassOperationDefinition resolveMassOperation(String code) {
-    throw new UnsupportedOperationException("MassOperation resolution not supported by this registry");
+    throw new UnsupportedOperationException(
+        "MassOperation resolution not supported by this registry");
   }
 
   /**

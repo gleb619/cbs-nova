@@ -1,6 +1,6 @@
 package cbs.app.temporal.massop;
 
-//TODO: remove
+// TODO: remove
 @Deprecated(forRemoval = true)
 public record MassOpItemInput(
     String itemId,

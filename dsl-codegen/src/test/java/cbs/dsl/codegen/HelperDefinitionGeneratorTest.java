@@ -37,7 +37,7 @@ class HelperDefinitionGeneratorTest {
         null);
 
     HelperDefinitionGenerator gen =
-        new HelperDefinitionGenerator(tempDir, s -> "return UndefinedDslObject.create();");
+        new HelperDefinitionGenerator(tempDir, s -> "UndefinedDslObject.create()");
     List<FileWrite> files = gen.generate(List.of(spec));
     gen.write(files);
 
@@ -50,10 +50,9 @@ class HelperDefinitionGeneratorTest {
 
     assertTrue(content.contains("class MyHelperDefinition"), "Should contain class name");
     assertTrue(
-        content.contains("implements HelperDefinition"),
-        "Should implement HelperDefinition only");
+        content.contains("implements HelperDefinition"), "Should implement HelperDefinition only");
     assertTrue(
-        content.contains("return UndefinedDslObject.create();"),
+        content.contains("UndefinedDslObject.create()"),
         "Should contain UndefinedDslObject dsl body");
     assertTrue(
         content.contains("import cbs.dsl.builder.HelperDslObject;"),
@@ -77,7 +76,7 @@ class HelperDefinitionGeneratorTest {
         HL_INPUT,
         HL_OUTPUT,
         DslComponentModel.SIMPLE,
-        "return CustomHelperDsl.helper(\"HLP_1\").build();",
+        "CustomHelperDsl.helper(\"HLP_1\").build()",
         "import com.example.CustomHelperDsl;");
 
     HelperDefinitionGenerator gen = new HelperDefinitionGenerator(tempDir, s -> s.dslBody());
@@ -91,7 +90,7 @@ class HelperDefinitionGeneratorTest {
     assertNotNull(content);
 
     assertTrue(
-        content.contains("return CustomHelperDsl.helper(\"HLP_1\").build();"),
+        content.contains("CustomHelperDsl.helper(\"HLP_1\").build()"),
         "Should contain custom dsl body");
     assertTrue(
         content.contains("import com.example.CustomHelperDsl;"),
@@ -113,7 +112,7 @@ class HelperDefinitionGeneratorTest {
         null);
 
     HelperDefinitionGenerator gen =
-        new HelperDefinitionGenerator(tempDir, s -> "return UndefinedDslObject.create();");
+        new HelperDefinitionGenerator(tempDir, s -> "UndefinedDslObject.create()");
     List<FileWrite> files = gen.generate(List.of(spec));
     gen.write(files);
 
@@ -123,23 +122,23 @@ class HelperDefinitionGeneratorTest {
     String content = Files.readString(definitionPath);
 
     assertTrue(
-        content.contains("import cbs.dsl.api.ParameterScanner;"),
-        "Should import ParameterScanner");
+        content.contains("import cbs.dsl.api.ParameterScanner;"), "Should import ParameterScanner");
     assertTrue(
         content.contains("import cbs.dsl.api.ParameterScanner.ParameterScanResult;"),
         "Should import ParameterScanResult");
     assertTrue(
-        content.contains("private static final ParameterScanResult PARAMETERS = ParameterScanner.scan(MyHelperInput.class);"),
+        content.contains(
+            "private static final ParameterScanResult PARAMETERS = ParameterScanner.scan(MyHelperInput.class);"),
         "Should contain ParameterScanner static field");
     assertTrue(
-        content.contains("return PARAMETERS.definitions();"),
-        "Should return scanned parameters");
+        content.contains("return PARAMETERS.definitions();"), "Should return scanned parameters");
   }
 
   @Test
   @DisplayName("shouldGenerateSharedDslClassAndDefinitionForDslGeneratedSpec")
   void shouldGenerateSharedDslClassAndDefinitionForDslGeneratedSpec() throws Exception {
-    String dslBody = "Dsl.helpers().helper(\"FIND_CUSTOMER_CODE\", h -> h.execute(input -> new HelperOutput(Map.of(\"customerCode\", \"CUST-\" + input.params().get(\"id\"))))).build();";
+    String dslBody =
+        "Dsl.helpers().helper(\"FIND_CUSTOMER_CODE\", h -> h.execute(input -> new HelperOutput(Map.of(\"customerCode\", \"CUST-\" + input.params().get(\"id\"))))).build();";
 
     RegistrationModel spec = new RegistrationModel(
         "",
@@ -155,14 +154,13 @@ class HelperDefinitionGeneratorTest {
         true,
         "BankingHelpersDsl");
 
-    HelperDefinitionGenerator gen =
-        new HelperDefinitionGenerator(tempDir, s -> s.dslBody());
+    HelperDefinitionGenerator gen = new HelperDefinitionGenerator(tempDir, s -> s.dslBody());
     List<FileWrite> files = gen.generate(List.of(spec));
     gen.write(files);
 
     // Shared class should be generated
-    Path sharedPath = tempDir.resolve(
-        "cbs/dsl/codegen/generated/definitions/BankingHelpersDslGenerated.java");
+    Path sharedPath =
+        tempDir.resolve("cbs/dsl/codegen/generated/definitions/BankingHelpersDslGenerated.java");
     assertTrue(Files.exists(sharedPath), "Should generate shared DSL class");
     String sharedContent = Files.readString(sharedPath);
     assertTrue(
@@ -195,13 +193,12 @@ class HelperDefinitionGeneratorTest {
         content.contains("class BankingHelpersDsl_FindCustomerCodeDefinition"),
         "Should contain unique class name");
     assertTrue(
-        content.contains("implements HelperDefinition"),
-        "Should implement HelperDefinition");
+        content.contains("implements HelperDefinition"), "Should implement HelperDefinition");
     assertTrue(
-        content.contains("private final Evaluator evaluator;"),
-        "Should contain Evaluator field");
+        content.contains("private final Evaluator evaluator;"), "Should contain Evaluator field");
     assertTrue(
-        content.contains("public BankingHelpersDsl_FindCustomerCodeDefinition(DslComponentResolver resolver)"),
+        content.contains(
+            "public BankingHelpersDsl_FindCustomerCodeDefinition(DslComponentResolver resolver)"),
         "Should have constructor with DslComponentResolver");
     assertTrue(
         content.contains("BankingHelpersDslGenerated.get(\"FIND_CUSTOMER_CODE\")"),
@@ -256,14 +253,13 @@ class HelperDefinitionGeneratorTest {
         true,
         "BankingHelpersDsl");
 
-    HelperDefinitionGenerator gen =
-        new HelperDefinitionGenerator(tempDir, s -> s.dslBody());
+    HelperDefinitionGenerator gen = new HelperDefinitionGenerator(tempDir, s -> s.dslBody());
     List<FileWrite> files = gen.generate(List.of(specA, specB));
     gen.write(files);
 
     // Only ONE shared class
-    Path sharedPath = tempDir.resolve(
-        "cbs/dsl/codegen/generated/definitions/BankingHelpersDslGenerated.java");
+    Path sharedPath =
+        tempDir.resolve("cbs/dsl/codegen/generated/definitions/BankingHelpersDslGenerated.java");
     assertTrue(Files.exists(sharedPath), "Should generate exactly one shared DSL class");
 
     // Both definitions exist
@@ -303,7 +299,7 @@ class HelperDefinitionGeneratorTest {
         null);
 
     HelperDefinitionGenerator gen =
-        new HelperDefinitionGenerator(tempDir, s -> "return UndefinedDslObject.create();");
+        new HelperDefinitionGenerator(tempDir, s -> "UndefinedDslObject.create()");
     List<FileWrite> files = gen.generate(List.of(spec));
     gen.write(files);
 
@@ -315,16 +311,13 @@ class HelperDefinitionGeneratorTest {
     assertNotNull(content);
 
     assertTrue(
-        content.contains("private final MyHelper function;"),
-        "Should contain function field");
+        content.contains("private final MyHelper function;"), "Should contain function field");
     assertTrue(
         content.contains("resolver.resolve(MyHelper.class)"),
         "Should resolve function class from resolver");
     assertTrue(
         content.contains("evaluator.previewHelper(dsl, input)"),
         "Should contain evaluator fallback path");
-    assertTrue(
-        content.contains("function.preview(typed)"),
-        "Should contain direct function call");
+    assertTrue(content.contains("function.preview(typed)"), "Should contain direct function call");
   }
 }

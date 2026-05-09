@@ -1,6 +1,5 @@
 package cbs.dsl.builder;
 
-import cbs.dsl.api.ConditionDefinition;
 import cbs.dsl.api.ConditionTypes.ConditionInput;
 import cbs.dsl.api.ConditionTypes.ConditionOutput;
 import cbs.dsl.api.DslObject;
@@ -15,6 +14,4 @@ public record ConditionDslObject(
     String code,
     List<ParameterDefinition> parameters,
     Function<ConditionInput, ConditionOutput> evaluateBlock)
-    implements DslObject {
-
-}
+    implements DslObject {}

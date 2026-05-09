@@ -30,7 +30,7 @@ class MassOperationDefinitionGeneratorTest {
         null,
         null);
 
-    new MassOperationDefinitionGenerator(filer, s -> "return UndefinedDslObject.create();")
+    new MassOperationDefinitionGenerator(filer, s -> "UndefinedDslObject.create()")
         .generate(List.of(spec));
 
     String key = "cbs.dsl.codegen.generated.definitions.MyMassOpDefinition";
@@ -43,7 +43,7 @@ class MassOperationDefinitionGeneratorTest {
         content.contains("implements MassOperationDefinition"),
         "Should implement MassOperationDefinition");
     assertTrue(
-        content.contains("return UndefinedDslObject.create();"),
+        content.contains("UndefinedDslObject.create()"),
         "Should contain UndefinedDslObject dsl body");
     assertTrue(
         content.contains("import cbs.dsl.builder.UndefinedDslObject;"),
@@ -62,7 +62,7 @@ class MassOperationDefinitionGeneratorTest {
         MO_INPUT,
         MO_OUTPUT,
         DslComponentModel.SIMPLE,
-        "return CustomMassOpDsl.massOperation(\"MOP_1\").build();",
+        "CustomMassOpDsl.massOperation(\"MOP_1\").build()",
         "import com.example.CustomMassOpDsl;");
 
     new MassOperationDefinitionGenerator(filer, s -> s.dslBody()).generate(List.of(spec));
@@ -73,7 +73,7 @@ class MassOperationDefinitionGeneratorTest {
     assertNotNull(content);
 
     assertTrue(
-        content.contains("return CustomMassOpDsl.massOperation(\"MOP_1\").build();"),
+        content.contains("CustomMassOpDsl.massOperation(\"MOP_1\").build()"),
         "Should contain custom dsl body");
     assertTrue(
         content.contains("import com.example.CustomMassOpDsl;"),

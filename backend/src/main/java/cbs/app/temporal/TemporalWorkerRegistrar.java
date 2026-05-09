@@ -32,7 +32,7 @@ import tools.jackson.databind.ObjectMapper;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-//TODO: remove
+// TODO: remove
 @Deprecated(forRemoval = true)
 public class TemporalWorkerRegistrar implements ApplicationRunner {
 
@@ -53,7 +53,7 @@ public class TemporalWorkerRegistrar implements ApplicationRunner {
     Worker worker = workerFactory.newWorker(taskQueue);
 
     // 1. Register generated event workflows (Layer 3 codegen)
-    //GeneratedWorkflowRegistry.registerAll(worker);
+    // GeneratedWorkflowRegistry.registerAll(worker);
     log.info("Registered generated event workflows via GeneratedWorkflowRegistry");
 
     // 2. Register generic event workflow as fallback for non-generated events
@@ -67,7 +67,8 @@ public class TemporalWorkerRegistrar implements ApplicationRunner {
     log.info("Registered generic event workflow (fallback)");
 
     // 3. Register generated activities and mass-operation workflow
-    // GeneratedActivityRegistry.registerAll(worker); // removed — use SpecDefinitionRegistry via ActivityManager
+    // GeneratedActivityRegistry.registerAll(worker); // removed — use SpecDefinitionRegistry via
+    // ActivityManager
     worker.registerWorkflowImplementationFactory(
         MassOpWorkflow.class,
         () -> new MassOpWorkflowImpl(

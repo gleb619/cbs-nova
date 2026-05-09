@@ -30,7 +30,7 @@ class WorkflowDefinitionGeneratorTest {
         null,
         null);
 
-    new WorkflowDefinitionGenerator(filer, s -> "return UndefinedDslObject.create();")
+    new WorkflowDefinitionGenerator(filer, s -> "UndefinedDslObject.create()")
         .generate(List.of(spec));
 
     String definitionKey = "cbs.dsl.codegen.generated.definitions.MyWorkflowDefinition";
@@ -42,7 +42,7 @@ class WorkflowDefinitionGeneratorTest {
     assertTrue(
         content.contains("implements WorkflowDefinition"), "Should implement WorkflowDefinition");
     assertTrue(
-        content.contains("return UndefinedDslObject.create();"),
+        content.contains("UndefinedDslObject.create()"),
         "Should contain UndefinedDslObject dsl body");
     assertTrue(
         content.contains("import cbs.dsl.builder.UndefinedDslObject;"),
@@ -61,7 +61,7 @@ class WorkflowDefinitionGeneratorTest {
         WF_INPUT,
         WF_OUTPUT,
         DslComponentModel.SIMPLE,
-        "return CustomWorkflowDsl.workflow(\"WF_1\").build();",
+        "CustomWorkflowDsl.workflow(\"WF_1\").build()",
         "import com.example.CustomWorkflowDsl;");
 
     new WorkflowDefinitionGenerator(filer, s -> s.dslBody()).generate(List.of(spec));
@@ -72,7 +72,7 @@ class WorkflowDefinitionGeneratorTest {
     assertNotNull(content);
 
     assertTrue(
-        content.contains("return CustomWorkflowDsl.workflow(\"WF_1\").build();"),
+        content.contains("CustomWorkflowDsl.workflow(\"WF_1\").build()"),
         "Should contain custom dsl body");
     assertTrue(
         content.contains("import com.example.CustomWorkflowDsl;"),

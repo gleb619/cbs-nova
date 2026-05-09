@@ -32,7 +32,8 @@ public class TransactionDefinitionGenerator implements DefinitionGenerator {
     this(null, outputDir, dslBodyProvider);
   }
 
-  public TransactionDefinitionGenerator(Filer filer, Function<RegistrationModel, String> dslBodyProvider) {
+  public TransactionDefinitionGenerator(
+      Filer filer, Function<RegistrationModel, String> dslBodyProvider) {
     this(filer, null, dslBodyProvider);
   }
 
@@ -132,7 +133,7 @@ public class TransactionDefinitionGenerator implements DefinitionGenerator {
             Map.of("inputType", CodeGenUtil.simpleName(spec.inputType())));
 
     String outputConversion =
-        outputIsRuntime ? "out" : "new TransactionOutput(JsonPayload.params(out))";
+        outputIsRuntime ? "out" : "TransactionOutput.success(JsonPayload.toMap(out))";
 
     String jsonPayloadImport =
         (inputIsRuntime && outputIsRuntime) ? "" : "import cbs.dsl.api.JsonPayload;\n";
@@ -147,12 +148,10 @@ public class TransactionDefinitionGenerator implements DefinitionGenerator {
 
     String parametersField = inputIsRuntime
         ? ""
-        : "private static final ParameterScanResult PARAMETERS = ParameterScanner.scan(%s.class);\n\n".formatted(
-            CodeGenUtil.simpleName(spec.inputType()));
+        : "private static final ParameterScanResult PARAMETERS = ParameterScanner.scan(%s.class);\n\n"
+            .formatted(CodeGenUtil.simpleName(spec.inputType()));
 
-    String getParametersOverride = inputIsRuntime
-        ? ""
-        : """
+    String getParametersOverride = inputIsRuntime ? "" : """
           @Override
           public List<ParameterDefinition> getParameters() {
               return PARAMETERS.definitions();

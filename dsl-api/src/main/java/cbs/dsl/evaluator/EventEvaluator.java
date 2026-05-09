@@ -35,7 +35,7 @@ public class EventEvaluator {
    */
   public static EventOutput evaluate(EventDslObject dsl, EventInput input, EnrichmentContext ctx) {
     evaluateContext(dsl, ctx);
-    //return new EventOutput(ctx.enrichment());
+    // return new EventOutput(ctx.enrichment());
     return null;
   }
 }

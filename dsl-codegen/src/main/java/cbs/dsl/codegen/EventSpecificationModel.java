@@ -17,7 +17,8 @@ public record EventSpecificationModel(
     List<String> transactionCodes,
     String workflowImplClassName) {
 
-  public EventSpecificationModel(String eventCode, String eventClassName, List<String> transactionCodes) {
+  public EventSpecificationModel(
+      String eventCode, String eventClassName, List<String> transactionCodes) {
     this(eventCode, eventClassName, transactionCodes, null);
   }
 }

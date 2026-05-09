@@ -12,5 +12,4 @@ public interface HelperResolver extends BiFunction<String, Map<String, Object>, 
   default Object apply(String key, Map<String, Object> values) {
     return run(key, values);
   }
-
 }

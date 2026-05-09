@@ -68,8 +68,9 @@ public class DefaultSpecDefinitionRegistry implements SpecDefinitionRegistry {
           "Activity '%s' not found in SpecDefinitionRegistry".formatted(code));
     }
     if (!entry.interfaceClass().equals(activityInterface)) {
-      throw new IllegalArgumentException("Activity '%s' is registered with interface %s, requested %s".formatted(code,
-          entry.interfaceClass().getName(), activityInterface.getName()));
+      throw new IllegalArgumentException(
+          "Activity '%s' is registered with interface %s, requested %s"
+              .formatted(code, entry.interfaceClass().getName(), activityInterface.getName()));
     }
     return activityInterface.cast(entry.implementation());
   }
@@ -82,8 +83,9 @@ public class DefaultSpecDefinitionRegistry implements SpecDefinitionRegistry {
           "Workflow '%s' not found in SpecDefinitionRegistry".formatted(code));
     }
     if (!entry.interfaceClass().equals(workflowInterface)) {
-      throw new IllegalArgumentException("Workflow '%s' is registered with interface %s, requested %s".formatted(code,
-          entry.interfaceClass().getName(), workflowInterface.getName()));
+      throw new IllegalArgumentException(
+          "Workflow '%s' is registered with interface %s, requested %s"
+              .formatted(code, entry.interfaceClass().getName(), workflowInterface.getName()));
     }
     return workflowInterface.cast(entry.implementation());
   }

@@ -27,11 +27,13 @@ public class WorkflowDefinitionGenerator implements DefinitionGenerator {
     this(null, null, dslBodyProvider);
   }
 
-  public WorkflowDefinitionGenerator(Path outputDir, Function<RegistrationModel, String> dslBodyProvider) {
+  public WorkflowDefinitionGenerator(
+      Path outputDir, Function<RegistrationModel, String> dslBodyProvider) {
     this(null, outputDir, dslBodyProvider);
   }
 
-  public WorkflowDefinitionGenerator(Filer filer, Function<RegistrationModel, String> dslBodyProvider) {
+  public WorkflowDefinitionGenerator(
+      Filer filer, Function<RegistrationModel, String> dslBodyProvider) {
     this(filer, null, dslBodyProvider);
   }
 
@@ -81,7 +83,7 @@ public class WorkflowDefinitionGenerator implements DefinitionGenerator {
             Map.of("inputSimpleName", CodeGenUtil.simpleName(spec.inputType())));
 
     String outputConversion =
-        outputIsRuntime ? "out" : "new WorkflowOutput(JsonPayload.params(out))";
+        outputIsRuntime ? "out" : "new WorkflowOutput(JsonPayload.toMap(out))";
 
     String jsonPayloadImport =
         (inputIsRuntime && outputIsRuntime) ? "" : "import cbs.dsl.api.JsonPayload;\n";

@@ -1,7 +1,6 @@
 package cbs.dsl.builder;
 
 import cbs.dsl.api.DslObject;
-import cbs.dsl.api.EventDefinition;
 import cbs.dsl.api.ParameterDefinition;
 import cbs.dsl.api.context.DisplayScope;
 import cbs.dsl.api.context.EnrichmentContext;
@@ -22,6 +21,4 @@ public record EventDslObject(
     Consumer<TransactionsScope> transactionsBlock,
     List<String> transactionCodes,
     BiConsumer<FinishContext, Throwable> finishBlock)
-    implements DslObject {
-
-}
+    implements DslObject {}

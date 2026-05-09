@@ -3,18 +3,24 @@ package cbs.dsl.api.context;
 import lombok.Builder;
 
 import java.util.Map;
-import java.util.function.BiFunction;
 
 @Builder(toBuilder = true)
-public record TransactionContext<T>(
+public record TransactionContext(
     String eventNumber,
     String performedBy,
     Map<String, Object> params,
-    HelperResolver helperResolver,
-    T payload) {
+    HelperResolver helperResolver) {
 
-  @FunctionalInterface
-  public interface HelperResolver extends BiFunction<String, HelperContext<?>, HelperContext<?>> {}
+  public TransactionContext put(String key, Object value) {
+    params.put(key, value);
+    return this;
+  }
 
+  public Object get(String key) {
+    return params.get(key);
+  }
 
+  public TransactionContext copy() {
+    return toBuilder().build();
+  }
 }

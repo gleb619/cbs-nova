@@ -13,12 +13,15 @@ public class Evaluator {
 
   @NonNull
   public HelperOutput previewHelper(@NonNull HelperDslObject dsl, @NonNull HelperInput input) {
-    return helperEvaluator.evaluatePreview(dsl, input);
+    helperEvaluator.evaluatePreview(dsl, input);
+    // TODO: fix bug
+    return null;
   }
 
   @NonNull
   public HelperOutput executeHelper(@NonNull HelperDslObject dsl, @NonNull HelperInput input) {
-    return helperEvaluator.evaluateExecute(dsl, input);
+    helperEvaluator.evaluateExecute(dsl, input);
+    // TODO: fix bug
+    return null;
   }
-
 }

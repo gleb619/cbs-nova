@@ -38,7 +38,7 @@ public class DslComponentProcessor extends AbstractProcessor {
       MassOperationFunction.class.getName(), DslInterfaceType.MASS_OPERATION);
 
   private static final Function<RegistrationModel, String> UNDEFINED_DSL_BODY_PROVIDER =
-      _ -> "return UndefinedDslObject.create();";
+      _ -> "UndefinedDslObject.create();";
 
   private boolean processed = false;
 
@@ -107,7 +107,8 @@ public class DslComponentProcessor extends AbstractProcessor {
           for (RegistrationModel spec : helperSpecs) {
             generationFutures.add(CompletableFuture.runAsync(
                 () -> {
-                  HelperDefinitionGenerator gen = new HelperDefinitionGenerator(UNDEFINED_DSL_BODY_PROVIDER);
+                  HelperDefinitionGenerator gen =
+                      new HelperDefinitionGenerator(UNDEFINED_DSL_BODY_PROVIDER);
                   genericSources.put(spec, gen.generateDefinitionCode(spec));
                 },
                 virtualExecutor));
@@ -115,7 +116,8 @@ public class DslComponentProcessor extends AbstractProcessor {
           for (RegistrationModel spec : eventSpecs) {
             generationFutures.add(CompletableFuture.runAsync(
                 () -> {
-                  EventDefinitionGenerator gen = new EventDefinitionGenerator(UNDEFINED_DSL_BODY_PROVIDER);
+                  EventDefinitionGenerator gen =
+                      new EventDefinitionGenerator(UNDEFINED_DSL_BODY_PROVIDER);
                   activitySources.put(spec, gen.generateActivityInterfaceCode(spec));
                   definitionSources.put(spec, gen.generateDefinitionCode(spec));
                 },
@@ -164,7 +166,8 @@ public class DslComponentProcessor extends AbstractProcessor {
             new HelperDefinitionGenerator(filer, UNDEFINED_DSL_BODY_PROVIDER)
                 .writeDefinition(spec, genericSources.get(spec));
           }
-          EventDefinitionGenerator eventGen = new EventDefinitionGenerator(filer, UNDEFINED_DSL_BODY_PROVIDER);
+          EventDefinitionGenerator eventGen =
+              new EventDefinitionGenerator(filer, UNDEFINED_DSL_BODY_PROVIDER);
           for (RegistrationModel spec : eventSpecs) {
             // TODO: we need to use
             // `dsl-codegen/src/main/java/cbs/dsl/codegen/EventSpecificationGenerator.java` instead
@@ -189,15 +192,16 @@ public class DslComponentProcessor extends AbstractProcessor {
           new DefinitionRegistryGenerator(filer).generate(registrations);
 
           List<EventSpecificationModel> eventSpecificationModels = eventSpecs.stream()
-              .map(r ->
-                  new EventSpecificationModel(r.code(), r.packageName() + "." + r.className(), List.of()))
+              .map(r -> new EventSpecificationModel(
+                  r.code(), r.packageName() + "." + r.className(), List.of()))
               .toList();
           if (!eventSpecificationModels.isEmpty()) {
             new EventSpecificationGenerator(filer).generateAndWrite(eventSpecificationModels);
-            
           }
 
-          if (!txSpecs.isEmpty() || !conditionSpecs.isEmpty() || !eventSpecificationModels.isEmpty()) {
+          if (!txSpecs.isEmpty()
+              || !conditionSpecs.isEmpty()
+              || !eventSpecificationModels.isEmpty()) {
             new SpecificationRegistryGenerator(filer)
                 .generate(txSpecs, conditionSpecs, eventSpecificationModels);
           }

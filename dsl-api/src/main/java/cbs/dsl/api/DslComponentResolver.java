@@ -32,5 +32,4 @@ public interface DslComponentResolver {
   default Evaluator resolveEvaluator() {
     return resolve(Evaluator.class);
   }
-
 }

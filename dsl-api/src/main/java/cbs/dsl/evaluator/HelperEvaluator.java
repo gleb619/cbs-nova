@@ -38,14 +38,14 @@ public class HelperEvaluator {
    * @param input the helper input
    * @return the helper output
    */
-  public @NonNull HelperContext evaluatePreview(@NonNull HelperDslObject dsl, @NonNull HelperInput input) {
-    var ctx = HelperContext.builder()
-        .build();
+  public @NonNull HelperContext evaluatePreview(
+      @NonNull HelperDslObject dsl, @NonNull HelperInput input) {
+    var ctx = HelperContext.builder().build();
     var result = dsl.previewBlock().apply(ctx);
     if (result instanceof HelperContext hctx) {
       return hctx.copy();
     } else {
-      //TODO: how to handle custom response
+      // TODO: how to handle custom response
       return null;
     }
   }
@@ -57,14 +57,14 @@ public class HelperEvaluator {
    * @param input the helper input
    * @return the helper output
    */
-  public @NonNull HelperContext evaluateExecute(@NonNull HelperDslObject dsl, @NonNull HelperInput input) {
-    var ctx = HelperContext.builder()
-        .build();
+  public @NonNull HelperContext evaluateExecute(
+      @NonNull HelperDslObject dsl, @NonNull HelperInput input) {
+    var ctx = HelperContext.builder().build();
     var result = dsl.executeBlock().apply(ctx);
     if (result instanceof HelperContext hctx) {
       return hctx.copy();
     } else {
-      //TODO: how to handle custom response
+      // TODO: how to handle custom response
       return null;
     }
   }

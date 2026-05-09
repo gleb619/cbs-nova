@@ -25,11 +25,13 @@ public class HelperDefinitionGenerator implements DefinitionGenerator {
     this(null, null, dslBodyProvider);
   }
 
-  public HelperDefinitionGenerator(Filer filer, Function<RegistrationModel, String> dslBodyProvider) {
+  public HelperDefinitionGenerator(
+      Filer filer, Function<RegistrationModel, String> dslBodyProvider) {
     this(filer, null, dslBodyProvider);
   }
 
-  public HelperDefinitionGenerator(Path outputDir, Function<RegistrationModel, String> dslBodyProvider) {
+  public HelperDefinitionGenerator(
+      Path outputDir, Function<RegistrationModel, String> dslBodyProvider) {
     this(null, outputDir, dslBodyProvider);
   }
 
@@ -91,7 +93,8 @@ public class HelperDefinitionGenerator implements DefinitionGenerator {
     return generateDefinitionCode(spec, Map.of());
   }
 
-  public String generateDefinitionCode(RegistrationModel spec, Map<String, List<RegistrationModel>> dslGroups) {
+  public String generateDefinitionCode(
+      RegistrationModel spec, Map<String, List<RegistrationModel>> dslGroups) {
     boolean hasSharedClass = spec.dslGenerated()
         && spec.dslSourceClassName() != null
         && dslGroups.containsKey(spec.dslSourceClassName());
@@ -124,12 +127,10 @@ public class HelperDefinitionGenerator implements DefinitionGenerator {
 
     String parametersField = inputIsRuntime
         ? ""
-        : "private static final ParameterScanResult PARAMETERS = ParameterScanner.scan(%s.class);\n\n    ".formatted(
-            CodeGenUtil.simpleName(spec.inputType()));
+        : "private static final ParameterScanResult PARAMETERS = ParameterScanner.scan(%s.class);\n\n    "
+            .formatted(CodeGenUtil.simpleName(spec.inputType()));
 
-    String getParametersOverride = inputIsRuntime
-        ? ""
-        : """
+    String getParametersOverride = inputIsRuntime ? "" : """
           @Override
           public List<ParameterDefinition> getParameters() {
               if (dsl() instanceof HelperDslObject dsl) {
@@ -142,17 +143,20 @@ public class HelperDefinitionGenerator implements DefinitionGenerator {
     String dslBody = buildDslBody(spec, hasSharedClass);
 
     String dslImportsBlock = "";
-    if (!hasSharedClass && spec.dslGenerated() && spec.dslImports() != null && !spec.dslImports().isBlank()) {
+    if (!hasSharedClass
+        && spec.dslGenerated()
+        && spec.dslImports() != null
+        && !spec.dslImports().isBlank()) {
       dslImportsBlock = spec.dslImports().trim() + "\n";
     }
 
-    String specImport = (spec.packageName().isBlank() || spec.className().isBlank() || spec.dslGenerated())
-        ? ""
-        : "import " + spec.packageName() + "." + spec.className() + ";\n";
+    String specImport =
+        (spec.packageName().isBlank() || spec.className().isBlank() || spec.dslGenerated())
+            ? ""
+            : "import " + spec.packageName() + "." + spec.className() + ";\n";
 
-    String functionField = spec.dslGenerated()
-        ? ""
-        : "private final " + spec.className() + " function;\n    ";
+    String functionField =
+        spec.dslGenerated() ? "" : "private final " + spec.className() + " function;\n    ";
 
     String functionAssignment = spec.dslGenerated()
         ? ""
@@ -165,6 +169,14 @@ public class HelperDefinitionGenerator implements DefinitionGenerator {
     String executeFallback = spec.dslGenerated()
         ? "throw new IllegalStateException(\"DSL object not available for execute\");"
         : "{{inputTypeName}} typed = {{inputConversion}};\n        {{outputTypeName}} out = function.execute(typed);\n        return {{outputConversion}};";
+
+    Map<String, String> fallbackParams = Map.of(
+        "inputTypeName", CodeGenUtil.simpleName(spec.inputType()),
+        "inputConversion", inputConversion,
+        "outputTypeName", CodeGenUtil.simpleName(spec.outputType()),
+        "outputConversion", outputConversion);
+    previewFallback = Substitutor.format(previewFallback, fallbackParams);
+    executeFallback = Substitutor.format(executeFallback, fallbackParams);
 
     return Substitutor.format(
         // language=java
@@ -224,7 +236,7 @@ public class HelperDefinitionGenerator implements DefinitionGenerator {
 
             @Override
             public DslObject dsl() {
-                return {{dslBody}};
+                return {{dslBody}}
             }
         }
         """,
@@ -261,19 +273,20 @@ public class HelperDefinitionGenerator implements DefinitionGenerator {
           Map.of("sharedClassName", sharedClassName, "code", spec.code()));
     }
     String rawDslBody = dslBodyProvider.apply(spec);
-    return rawDslBody != null ? rawDslBody : "return UndefinedDslObject.create();";
+    return rawDslBody != null ? rawDslBody : "UndefinedDslObject.create();";
   }
 
-  private FileWrite generateSharedDslFile(String dslSourceClassName, RegistrationModel representative) {
+  private FileWrite generateSharedDslFile(
+      String dslSourceClassName, RegistrationModel representative) {
     String className = dslSourceClassName + "Generated";
     String source = generateSharedDslClass(dslSourceClassName, representative);
-    Path outputPath = outputDir
-        .resolve("cbs/dsl/codegen/generated/definitions")
-        .resolve(className + ".java");
+    Path outputPath =
+        outputDir.resolve("cbs/dsl/codegen/generated/definitions").resolve(className + ".java");
     return new FileWrite(outputPath, source);
   }
 
-  private void writeSharedDslToFiler(String dslSourceClassName, RegistrationModel representative) throws IOException {
+  private void writeSharedDslToFiler(String dslSourceClassName, RegistrationModel representative)
+      throws IOException {
     String className = dslSourceClassName + "Generated";
     String source = generateSharedDslClass(dslSourceClassName, representative);
     CodeGenUtil.writeToFiler(filer, DEFINITIONS_PACKAGE + "." + className, source);
@@ -289,9 +302,7 @@ public class HelperDefinitionGenerator implements DefinitionGenerator {
       trimmed = trimmed.substring(0, trimmed.length() - 1);
     }
 
-    String imports = dslImports != null && !dslImports.isBlank()
-        ? dslImports.trim() + "\n"
-        : "";
+    String imports = dslImports != null && !dslImports.isBlank() ? dslImports.trim() + "\n" : "";
 
     return Substitutor.format(
         // language=java
@@ -334,7 +345,8 @@ public class HelperDefinitionGenerator implements DefinitionGenerator {
     return generateFileSpecs(spec, outputDir, Map.of());
   }
 
-  public List<FileWrite> generateFileSpecs(RegistrationModel spec, Path outputDir, Map<String, List<RegistrationModel>> dslGroups) {
+  public List<FileWrite> generateFileSpecs(
+      RegistrationModel spec, Path outputDir, Map<String, List<RegistrationModel>> dslGroups) {
     List<FileWrite> files = new ArrayList<>();
     String definitionSource = generateDefinitionCode(spec, dslGroups);
     files.add(writeDefinitionToSpec(spec, definitionSource, outputDir));
