@@ -21,6 +21,11 @@ public class ParametersBuilder {
     return this;
   }
 
+  public ParametersBuilder longNumber(String name) {
+    this.parameters.add(ParameterDefinition.mandatory(name, ParameterType.LONG));
+    return this;
+  }
+
   public ParametersBuilder decimal(String name) {
     this.parameters.add(ParameterDefinition.mandatory(name, ParameterType.DECIMAL));
     return this;

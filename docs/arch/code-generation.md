@@ -201,7 +201,7 @@ The generated code for an Event produces **two classes**:
      * `transactionActivity.prepareContext(currentCtx)`
      * `transactionActivity.execute(preparedCtx)`
    * For each `when/then/otherwise` branch the workflow calls:
-     * `conditionActivity.evaluate(currentCtx)`
+     * `conditionActivity.check(currentCtx)`
 
 3. **Finish** — optional `finish {}` block is also pasted into the workflow.
 
@@ -260,7 +260,7 @@ public class LoanDisbursementEventWorkflow implements LoanDisbursementWorkflow {
         var credit = creditActivity.execute(creditActivity.prepareContext(ctx));
         Workflow.await(() -> kyc.isDone() && credit.isDone());
 
-        boolean ready = conditionActivity.evaluate(ctx);
+        boolean ready = conditionActivity.check(ctx);
         if (ready) {
             debitActivity.execute(debitActivity.prepareContext(ctx));
         }
@@ -399,7 +399,7 @@ Generated EventWorkflow
     │      2. Evaluates transactions block (pasted DSL code)
     │         ├─ For each transaction: TransactionActivity.prepareContext(ctx)
     │         │                              TransactionActivity.execute(ctx)
-    │         └─ For conditions: ConditionActivity.evaluate(ctx)
+    │         └─ For conditions: ConditionActivity.check(ctx)
     ▼
 TransactionActivity.execute(ctx)
     │      1. Calls Helper.prepareContext() / Helper.execute() synchronously (plain code)

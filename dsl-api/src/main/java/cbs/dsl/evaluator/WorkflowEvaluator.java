@@ -22,9 +22,9 @@ public class WorkflowEvaluator {
     if (dsl == null) {
       return new WorkflowOutput("DONE");
     }
-    String initial = dsl.getInitial();
+    String initial = dsl.initial();
     if (initial == null || initial.isEmpty()) {
-      initial = dsl.getStates().isEmpty() ? "DONE" : dsl.getStates().get(0);
+      initial = dsl.states().isEmpty() ? "DONE" : dsl.states().get(0);
     }
     return new WorkflowOutput(initial);
   }

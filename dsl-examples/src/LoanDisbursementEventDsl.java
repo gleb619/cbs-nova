@@ -1,4 +1,5 @@
 import cbs.dsl.builder.Dsl;
+
 import java.util.Map;
 
 Dsl.event("LOAN_DISBURSEMENT")
@@ -25,7 +26,7 @@ Dsl.event("LOAN_DISBURSEMENT")
             // Use both parameters (customerId) and enriched context values (customerCode)
             ctx.helperResolver().apply("SEND_FAULT_NOTIFICATION", Map.of(
                 "customerId", ctx.eventParameters().get("customerId"),
-                "customerCode", ctx.enrichment().getOrDefault("customerCode", "N/A"),
+                "customerCode", ctx.eventParameters().getOrDefault("customerCode", "N/A"),
                 "error", ex.getMessage()
             ));
         }

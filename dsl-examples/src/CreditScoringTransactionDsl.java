@@ -1,5 +1,6 @@
-import cbs.dsl.builder.Dsl;
 import cbs.dsl.api.TransactionTypes.TransactionOutput;
+import cbs.dsl.builder.Dsl;
+
 import java.util.Map;
 
 Dsl.transaction("CREDIT_SCORING")
@@ -9,15 +10,15 @@ Dsl.transaction("CREDIT_SCORING")
     .execute(ctx -> {
         int baseScore = 700;
         // creditHistory is populated in enrichment by the parent event's context block
-        String creditHistory = (String) ctx.enrichment().getOrDefault("creditHistory", "GOOD");
+        String creditHistory = (String) ctx.params().getOrDefault("creditHistory", "GOOD");
         int adjustment = "EXCELLENT".equals(creditHistory) ? 100 : "POOR".equals(creditHistory) ? -200 : 0;
         int score = baseScore + adjustment;
         boolean approved = score >= 650;
         return TransactionOutput.success(Map.of(
-            "customerId", ctx.eventParameters().get("customerId"),
+            "customerId", ctx.params().get("customerId"),
             "score", score,
             "approved", approved,
-            "amount", ctx.eventParameters().get("amount")
+            "amount", ctx.params().get("amount")
         ));
     })
     .build();

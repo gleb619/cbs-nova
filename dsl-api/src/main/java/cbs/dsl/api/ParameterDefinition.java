@@ -23,6 +23,7 @@ public class ParameterDefinition {
   public enum ParameterType {
     STRING,
     INTEGER,
+    LONG,
     DECIMAL,
     BOOLEAN
   }

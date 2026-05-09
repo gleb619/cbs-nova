@@ -25,8 +25,6 @@ import java.util.Map;
  * with the same code as an existing entry overwrites it (last-write-wins). This supports test
  * overrides of production beans.
  */
-//TODO: remove file
-@Deprecated(forRemoval = true)
 public class DslRegistry implements DefinitionRegistry {
 
   private final Map<String, WorkflowDefinition> workflows = new HashMap<>();
@@ -113,6 +111,7 @@ public class DslRegistry implements DefinitionRegistry {
    * @return the transaction definition
    * @throws IllegalArgumentException if not found
    */
+  @Override
   public TransactionDefinition resolveTransaction(String code) {
     TransactionDefinition t = transactions.get(code);
     if (t == null) {
@@ -128,6 +127,7 @@ public class DslRegistry implements DefinitionRegistry {
    * @return the helper definition
    * @throws IllegalArgumentException if not found
    */
+  @Override
   public HelperDefinition resolveHelper(String code) {
     HelperDefinition h = helpers.get(code);
     if (h == null) {
@@ -143,6 +143,7 @@ public class DslRegistry implements DefinitionRegistry {
    * @return the condition definition
    * @throws IllegalArgumentException if not found
    */
+  @Override
   public ConditionDefinition resolveCondition(String code) {
     ConditionDefinition c = conditions.get(code);
     if (c == null) {
@@ -158,6 +159,7 @@ public class DslRegistry implements DefinitionRegistry {
    * @return the workflow definition
    * @throws IllegalArgumentException if not found
    */
+  @Override
   public WorkflowDefinition resolveWorkflow(String code) {
     WorkflowDefinition w = workflows.get(code);
     if (w == null) {
@@ -173,6 +175,7 @@ public class DslRegistry implements DefinitionRegistry {
    * @return the event definition
    * @throws IllegalArgumentException if not found
    */
+  @Override
   public EventDefinition resolveEvent(String code) {
     EventDefinition e = events.get(code);
     if (e == null) {
@@ -188,6 +191,7 @@ public class DslRegistry implements DefinitionRegistry {
    * @return the mass operation definition
    * @throws IllegalArgumentException if not found
    */
+  @Override
   public MassOperationDefinition resolveMassOperation(String code) {
     MassOperationDefinition m = massOperations.get(code);
     if (m == null) {

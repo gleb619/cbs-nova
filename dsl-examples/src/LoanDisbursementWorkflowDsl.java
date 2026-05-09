@@ -1,5 +1,5 @@
-import cbs.dsl.builder.Dsl;
 import cbs.dsl.api.Action;
+import cbs.dsl.builder.Dsl;
 
 Dsl.workflow("LOAN_DISBURSEMENT_WF")
     .states("START", "REVIEW", "APPROVED", "REJECTED", "DONE")

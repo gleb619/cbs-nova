@@ -137,4 +137,5 @@ class DefinitionRegistryGeneratorTest {
         spiContent.contains("cbs.dsl.codegen.generated.GeneratedImplRegistrations"),
         "SPI file should contain GeneratedImplRegistrations class name: " + spiContent);
   }
+
 }

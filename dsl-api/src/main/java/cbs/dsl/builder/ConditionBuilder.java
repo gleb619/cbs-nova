@@ -30,7 +30,7 @@ public class ConditionBuilder {
     return this;
   }
 
-  public ConditionBuilder evaluate(Function<ConditionInput, ConditionOutput> block) {
+  public ConditionBuilder check(Function<ConditionInput, ConditionOutput> block) {
     this.evaluateBlock = block;
     return this;
   }
@@ -43,7 +43,7 @@ public class ConditionBuilder {
     return Collections.unmodifiableList(new ArrayList<>(parameters));
   }
 
-  public Function<ConditionInput, ConditionOutput> evaluate() {
+  public Function<ConditionInput, ConditionOutput> check() {
     return evaluateBlock;
   }
 

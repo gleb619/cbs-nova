@@ -1,5 +1,6 @@
-import cbs.dsl.builder.Dsl;
 import cbs.dsl.api.TransactionTypes.TransactionOutput;
+import cbs.dsl.builder.Dsl;
+
 import java.util.Map;
 
 Dsl.transaction("CREDIT_BORROWER_ACCOUNT")
@@ -8,18 +9,18 @@ Dsl.transaction("CREDIT_BORROWER_ACCOUNT")
     // Preview shows what will happen using both parameters and context enrichment
     .preview(ctx -> TransactionOutput.success(Map.of(
         "description",
-            "Will credit " + ctx.eventParameters().get("accountCode")
-                + " with " + ctx.eventParameters().get("amount")
-                + " " + ctx.eventParameters().get("currency"),
-        "customerCode", ctx.enrichment().getOrDefault("customerCode", "N/A")
+            "Will credit " + ctx.params().get("accountCode")
+                + " with " + ctx.params().get("amount")
+                + " " + ctx.params().get("currency"),
+        "customerCode", ctx.params().getOrDefault("customerCode", "N/A")
     )))
     // Execute the credit using both parameters and enriched context values
     .execute(ctx -> TransactionOutput.success(Map.of(
         "transactionId", "TX-" + System.currentTimeMillis(),
-        "accountCode", ctx.eventParameters().get("accountCode"),
-        "amount", ctx.eventParameters().get("amount"),
-        "currency", ctx.eventParameters().get("currency"),
-        "customerCode", ctx.enrichment().getOrDefault("customerCode", "N/A"),
+        "accountCode", ctx.params().get("accountCode"),
+        "amount", ctx.params().get("amount"),
+        "currency", ctx.params().get("currency"),
+        "customerCode", ctx.params().getOrDefault("customerCode", "N/A"),
         "status", "CREDITED"
     )))
     .build();

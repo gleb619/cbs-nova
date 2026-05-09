@@ -17,7 +17,7 @@ public interface StandardDslDefinition extends DslDefinition {
 
   default List<ParameterDefinition> getParameters() {
     if (dsl() instanceof TransactionDslObject dsl) {
-      return dsl.getParameters();
+      return dsl.parameters();
     }
     return Collections.emptyList();
   }

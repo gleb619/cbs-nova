@@ -19,8 +19,8 @@ public class MassOperationEvaluator {
    * @param ctx the mass operation context
    */
   public static void evaluateContext(MassOperationDslObject dsl, MassOperationContext ctx) {
-    if (dsl != null && dsl.getContextBlock() != null) {
-      dsl.getContextBlock().accept(ctx);
+    if (dsl != null && dsl.contextBlock() != null) {
+      dsl.contextBlock().accept(ctx);
     }
   }
 

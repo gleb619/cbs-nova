@@ -103,4 +103,70 @@ public interface DefinitionRegistry {
   default DslComponentResolver getComponentResolver() {
     return null;
   }
+
+  /**
+   * Resolves a workflow definition by code.
+   *
+   * @param code the workflow code
+   * @return the workflow definition
+   * @throws UnsupportedOperationException if this registry does not support resolution
+   */
+  default WorkflowDefinition resolveWorkflow(String code) {
+    throw new UnsupportedOperationException("Workflow resolution not supported by this registry");
+  }
+
+  /**
+   * Resolves an event definition by code.
+   *
+   * @param code the event code
+   * @return the event definition
+   * @throws UnsupportedOperationException if this registry does not support resolution
+   */
+  default EventDefinition resolveEvent(String code) {
+    throw new UnsupportedOperationException("Event resolution not supported by this registry");
+  }
+
+  /**
+   * Resolves a transaction definition by code.
+   *
+   * @param code the transaction code
+   * @return the transaction definition
+   * @throws UnsupportedOperationException if this registry does not support resolution
+   */
+  default TransactionDefinition resolveTransaction(String code) {
+    throw new UnsupportedOperationException("Transaction resolution not supported by this registry");
+  }
+
+  /**
+   * Resolves a mass operation definition by code.
+   *
+   * @param code the mass operation code
+   * @return the mass operation definition
+   * @throws UnsupportedOperationException if this registry does not support resolution
+   */
+  default MassOperationDefinition resolveMassOperation(String code) {
+    throw new UnsupportedOperationException("MassOperation resolution not supported by this registry");
+  }
+
+  /**
+   * Resolves a helper definition by code.
+   *
+   * @param code the helper code
+   * @return the helper definition
+   * @throws UnsupportedOperationException if this registry does not support resolution
+   */
+  default HelperDefinition resolveHelper(String code) {
+    throw new UnsupportedOperationException("Helper resolution not supported by this registry");
+  }
+
+  /**
+   * Resolves a condition definition by code.
+   *
+   * @param code the condition code
+   * @return the condition definition
+   * @throws UnsupportedOperationException if this registry does not support resolution
+   */
+  default ConditionDefinition resolveCondition(String code) {
+    throw new UnsupportedOperationException("Condition resolution not supported by this registry");
+  }
 }

@@ -1,5 +1,6 @@
-import cbs.dsl.builder.Dsl;
 import cbs.dsl.api.ConditionTypes.ConditionOutput;
+import cbs.dsl.builder.Dsl;
+
 import java.util.Map;
 
 Dsl.condition("BORROWER_ACCOUNT_READY")
@@ -7,8 +8,8 @@ Dsl.condition("BORROWER_ACCOUNT_READY")
     .parameters(reg -> reg.string("accountCode"))
     // Evaluate using both input parameters and enriched context values.
     // accountStatus is expected to be populated in enrichment by the parent event's context block.
-    .evaluate(ctx -> new ConditionOutput(
-        "ACTIVE".equals(ctx.enrichment().get("accountStatus"))
-            && ctx.eventParameters().get("accountCode") != null
+    .check(ctx -> new ConditionOutput(
+        "ACTIVE".equals(ctx.params().get("accountStatus"))
+            && ctx.params().get("accountCode") != null
     ))
     .build();

@@ -12,7 +12,35 @@ public record RegistrationModel(
     DslComponentModel componentModel,
     String dslBody,
     String dslImports,
-    String sourceCode) {
+    String sourceCode,
+    boolean dslGenerated,
+    String dslSourceClassName) {
+
+  public RegistrationModel(
+      String packageName,
+      String className,
+      String code,
+      DslInterfaceType interfaceType,
+      String inputType,
+      String outputType,
+      DslComponentModel componentModel,
+      String dslBody,
+      String dslImports,
+      String sourceCode) {
+    this(
+        packageName,
+        className,
+        code,
+        interfaceType,
+        inputType,
+        outputType,
+        componentModel,
+        dslBody,
+        dslImports,
+        sourceCode,
+        false,
+        null);
+  }
 
   public RegistrationModel(
       String packageName,
@@ -34,6 +62,8 @@ public record RegistrationModel(
         componentModel,
         dslBody,
         dslImports,
+        null,
+        false,
         null);
   }
 
@@ -55,6 +85,8 @@ public record RegistrationModel(
         componentModel,
         null,
         null,
+        null,
+        false,
         null);
   }
 }

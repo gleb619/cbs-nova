@@ -450,7 +450,7 @@ public class DslCompiler {
       switch (spec.interfaceType()) {
         case EVENT -> {
           EventSpecificationGenerator wfGen = new EventSpecificationGenerator();
-          List<String> txCodes = ((EventDslObject) obj).getTransactionCodes();
+          List<String> txCodes = ((EventDslObject) obj).transactionCodes();
           String wfImplClassName = "cbs.dsl.codegen.generated.%sEventWorkflowImpl"
               .formatted(CodeGenUtil.toClassName(obj.code()));
           EventSpecificationModel wfSpec =
@@ -493,16 +493,23 @@ public class DslCompiler {
     DslInterfaceType interfaceType = resolveInterfaceType(obj);
     String inputType = resolveInputType(interfaceType);
     String outputType = resolveOutputType(interfaceType);
+    boolean isDsl = parsed != null;
+    String uniqueClassName = isDsl
+        ? className + "_" + CodeGenUtil.toClassName(obj.code())
+        : className;
     return new RegistrationModel(
         "",
-        className,
+        uniqueClassName,
         obj.code(),
         interfaceType,
         inputType,
         outputType,
         DslComponent.DslComponentModel.SIMPLE,
         parsed != null ? parsed.body() : null,
-        parsed != null ? parsed.imports() : null);
+        parsed != null ? parsed.imports() : null,
+        null,
+        isDsl,
+        className);
   }
 
   private static DslInterfaceType resolveInterfaceType(DslObject obj) {

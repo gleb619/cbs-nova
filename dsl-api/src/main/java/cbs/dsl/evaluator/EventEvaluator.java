@@ -20,8 +20,8 @@ public class EventEvaluator {
    * @param ctx the enrichment context
    */
   public static void evaluateContext(EventDslObject dsl, EnrichmentContext ctx) {
-    if (dsl != null && dsl.getContextBlock() != null) {
-      dsl.getContextBlock().accept(ctx);
+    if (dsl != null && dsl.contextBlock() != null) {
+      dsl.contextBlock().accept(ctx);
     }
   }
 
@@ -35,6 +35,7 @@ public class EventEvaluator {
    */
   public static EventOutput evaluate(EventDslObject dsl, EventInput input, EnrichmentContext ctx) {
     evaluateContext(dsl, ctx);
-    return new EventOutput(ctx.enrichment());
+    //return new EventOutput(ctx.enrichment());
+    return null;
   }
 }

@@ -1,6 +1,6 @@
 package cbs.dsl.evaluator;
 
-import cbs.dsl.api.context.TransactionContext;
+import cbs.dsl.api.ConditionTypes.ConditionInput;
 import cbs.dsl.builder.ConditionDslObject;
 
 /**
@@ -17,9 +17,9 @@ public class ConditionEvaluator {
    * @param ctx the transaction context
    * @return the boolean result
    */
-  public static boolean evaluate(ConditionDslObject dsl, TransactionContext ctx) {
-    if (dsl != null && dsl.getEvaluateBlock() != null) {
-      return dsl.getEvaluateBlock().apply(ctx).result();
+  public static boolean evaluate(ConditionDslObject dsl, ConditionInput ctx) {
+    if (dsl != null && dsl.evaluateBlock() != null) {
+      return dsl.evaluateBlock().apply(ctx).result();
     }
     return false;
   }

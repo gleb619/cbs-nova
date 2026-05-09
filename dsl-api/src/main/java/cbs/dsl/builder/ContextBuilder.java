@@ -1,7 +1,7 @@
 package cbs.dsl.builder;
 
 import cbs.dsl.api.DslObject;
-import cbs.dsl.builder.ContextDslObject.Pair;
+import cbs.dsl.api.context.Pair;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,7 +20,7 @@ public class ContextBuilder {
   public DslObject build() {
     return ContextDslObject.builder()
         .parameters(params.entrySet().stream()
-            .map(entry -> Pair.of(entry.getKey(), entry.getValue()))
+            .map(entry -> new Pair<>(entry.getKey(), entry.getValue()))
             .collect(Collectors.toList()))
         .build();
   }

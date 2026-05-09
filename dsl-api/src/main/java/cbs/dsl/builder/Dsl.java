@@ -35,4 +35,8 @@ public final class Dsl {
   public static WorkflowBuilder workflow(String code) {
     return new WorkflowBuilder(code);
   }
+
+  public static void register(Object obj) {
+    //TODO: handle `List<DslObject> obj` here
+  }
 }

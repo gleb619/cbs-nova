@@ -5,17 +5,56 @@ plugins {
 apply(from: "${rootDir}/gradle/java.gradle")
 apply(from: "${rootDir}/gradle/code-style.gradle")
 
+sourceSets {
+  dsl {
+    java {
+      srcDirs = ['src']
+    }
+  }
+  test {
+    java {
+      srcDirs = ['test']
+    }
+  }
+}
+
+// DSL files are implicit-class JEP-512 sources and cannot be compiled by javac directly.
+tasks.named('compileDslJava') {
+  enabled = false
+}
+
 dependencies {
-  implementation project(':dsl-api')
-  implementation project(':dsl-codegen')
+  dslImplementation project(':dsl-api')
+  dslImplementation project(':dsl-codegen')
+  testImplementation project(':dsl-api')
+  testImplementation project(':dsl-codegen')
+  testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.0'
+}
+
+tasks.withType(Test).configureEach {
+  useJUnitPlatform()
 }
 
 tasks.register('compileDsl', JavaExec) {
-  dependsOn configurations.runtimeClasspath
-  classpath = sourceSets.main.runtimeClasspath + sourceSets.main.compileClasspath
+  group = 'build'
+  description = 'Compiles DSL implicit-class sources with DslCompiler'
+  dependsOn project(':dsl-api').tasks.jar
+  dependsOn project(':dsl-codegen').tasks.jar
+  classpath = sourceSets.dsl.runtimeClasspath + sourceSets.dsl.compileClasspath
   mainClass = 'cbs.dsl.codegen.DslCompiler'
-  args 'src/dsl', 'build/dsl-classes'
+  args 'src', 'build/dsl-classes'
   javaLauncher = javaToolchains.launcherFor {
     languageVersion = JavaLanguageVersion.of(25)
+  }
+}
+
+tasks.named('classes') {
+  dependsOn 'compileDsl'
+}
+
+spotless {
+  java {
+    targetExclude 'src/*.java'
   }
 }

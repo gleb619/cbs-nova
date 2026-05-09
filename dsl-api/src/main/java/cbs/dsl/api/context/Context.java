@@ -1,23 +1,21 @@
 package cbs.dsl.api.context;
 
+import java.util.Map;
 import lombok.Builder;
 
-import java.util.Map;
-
 @Builder(toBuilder = true)
-public record HelperContext(
+public record Context(
     String eventNumber,
     String performedBy,
     Map<String, Object> params,
     HelperResolver helperResolver
 ) {
 
-  public HelperContext put(String key, Object value) {
+  public Context put(String key, Object value) {
     params.put(key, value);
     return this;
   }
 
-  @SuppressWarnings("unchecked")
   public Object get(String key) {
     return params.get(key);
   }
@@ -26,7 +24,7 @@ public record HelperContext(
     return helperResolver.run(key, values);
   }
 
-  public HelperContext copy() {
+  public Context copy() {
     return toBuilder().build();
   }
 

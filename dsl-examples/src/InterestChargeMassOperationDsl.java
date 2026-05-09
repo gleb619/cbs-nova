@@ -1,4 +1,6 @@
+import cbs.dsl.api.MassOperationTypes.MassOperationInput;
 import cbs.dsl.builder.Dsl;
+
 import java.util.Map;
 
 Dsl.massOperation("INTEREST_CHARGE")
@@ -8,11 +10,12 @@ Dsl.massOperation("INTEREST_CHARGE")
     // Context enrichment: prepare batch-wide calculated values
     .context(ctx -> {
         ctx.enrichment().put("batchId", "BATCH-" + System.currentTimeMillis());
-        ctx.enrichment().put("processedAt", java.time.Instant.now().toString());
+        ctx.enrichment().put("processedAt", Instant.now().toString());
     })
     // Process each item using enriched context (parameters + calculated values)
     .item(ctx -> {
-        String productCode = (String) ctx.enrichment().get("productCode");
+//        var input = (MassOperationInput) ctx.payload();
+//        String productCode = (String) input.params().get("productCode");
         // Item processing logic uses both the input productCode and enriched batchId
     })
     .build();

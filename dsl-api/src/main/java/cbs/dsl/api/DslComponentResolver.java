@@ -1,5 +1,8 @@
 package cbs.dsl.api;
 
+import cbs.dsl.api.DslComponent.DslComponentModel;
+import cbs.dsl.evaluator.Evaluator;
+
 /**
  * Runtime resolver for DSL component instances.
  *
@@ -25,4 +28,9 @@ public interface DslComponentResolver {
    * @throws IllegalArgumentException if the instance cannot be resolved
    */
   <T> T resolve(Class<T> type);
+
+  default Evaluator resolveEvaluator() {
+    return resolve(Evaluator.class);
+  }
+
 }
