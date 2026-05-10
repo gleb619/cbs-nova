@@ -34,11 +34,11 @@ class KycCheckTransactionDslTest {
   @DisplayName("should generate valid transaction activity interface")
   void shouldGenerateValidTransactionActivityInterface() throws Exception {
     Path activity = OUTPUT.resolve(
-        "cbs/dsl/codegen/generated/KycCheckTransactionDsl_KycCheckActivity.java");
+        "cbs/dsl/codegen/generated/KycCheckTransactionDslActivity.java");
     assertTrue(Files.exists(activity), "Activity interface should exist");
     String content = Files.readString(activity);
     assertTrue(content.contains("@ActivityInterface"));
-    assertTrue(content.contains("interface KycCheckTransactionDsl_KycCheckActivity"));
+    assertTrue(content.contains("interface KycCheckTransactionDslActivity"));
     parseJava(activity);
   }
 
@@ -46,10 +46,10 @@ class KycCheckTransactionDslTest {
   @DisplayName("should generate valid transaction definition")
   void shouldGenerateValidTransactionDefinition() throws Exception {
     Path def = OUTPUT.resolve(
-        "cbs/dsl/codegen/generated/definitions/KycCheckTransactionDsl_KycCheckDefinition.java");
+        "cbs/dsl/codegen/generated/definitions/KycCheckTransactionDslDefinition.java");
     assertTrue(Files.exists(def), "Definition file should exist");
     String content = Files.readString(def);
-    assertTrue(content.contains("class KycCheckTransactionDsl_KycCheckDefinition"));
+    assertTrue(content.contains("class KycCheckTransactionDslDefinition"));
     assertTrue(content.contains("implements TransactionDefinition"));
     parseJava(def);
   }

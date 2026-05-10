@@ -23,8 +23,8 @@ class ConditionDefinitionGeneratorTest {
   Path tempDir;
 
   @Test
-  @DisplayName("shouldGenerateConditionActivityInterfaceAndDefinitionWithUndefinedDsl")
-  void shouldGenerateConditionActivityInterfaceAndDefinitionWithUndefinedDsl() throws Exception {
+  @DisplayName("shouldGenerateActivityInterfaceAndDefinitionWithUndefinedDsl")
+  void shouldGenerateActivityInterfaceAndDefinitionWithUndefinedDsl() throws Exception {
     RegistrationModel spec = new RegistrationModel(
         "com.example",
         "MyCondition",
@@ -42,11 +42,11 @@ class ConditionDefinitionGeneratorTest {
     gen.write(files);
 
     Path activityPath =
-        tempDir.resolve("cbs/dsl/codegen/generated/MyConditionConditionActivity.java");
+        tempDir.resolve("cbs/dsl/codegen/generated/MyConditionActivity.java");
     Path definitionPath =
         tempDir.resolve("cbs/dsl/codegen/generated/definitions/MyConditionDefinition.java");
 
-    assertTrue(Files.exists(activityPath), "Should generate MyConditionConditionActivity");
+    assertTrue(Files.exists(activityPath), "Should generate MyConditionActivity");
     assertTrue(Files.exists(definitionPath), "Should generate MyConditionDefinition");
 
     String activityContent = Files.readString(activityPath);
@@ -61,8 +61,8 @@ class ConditionDefinitionGeneratorTest {
 
     assertTrue(content.contains("class MyConditionDefinition"), "Should contain class name");
     assertTrue(
-        content.contains("implements ConditionDefinition, MyConditionConditionActivity"),
-        "Should implement ConditionDefinition and ConditionActivity");
+        content.contains("implements ConditionDefinition, MyConditionActivity"),
+        "Should implement ConditionDefinition and Activity");
     assertTrue(
         content.contains("UndefinedDslObject.create()"),
         "Should contain UndefinedDslObject dsl body");

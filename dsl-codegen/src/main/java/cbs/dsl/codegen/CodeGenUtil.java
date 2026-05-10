@@ -32,6 +32,40 @@ public final class CodeGenUtil {
     return sb.toString();
   }
 
+  public static String toCamelCase(String input) {
+    StringBuilder sb = new StringBuilder();
+    boolean upper = true;
+    for (char c : input.toCharArray()) {
+      if (c == '_' || c == '-' || c == '.') {
+        upper = true;
+      } else if (Character.isLetterOrDigit(c)) {
+        sb.append(upper ? Character.toUpperCase(c) : Character.toLowerCase(c));
+        upper = false;
+      }
+    }
+    return sb.toString();
+  }
+
+  public static String sanitizeDslFileName(String fileName) {
+    int dot = fileName.lastIndexOf('.');
+    String base = dot > 0 ? fileName.substring(0, dot) : fileName;
+    return toCamelCase(base);
+  }
+
+  public static String toCamelCasePreservingFirstUpper(String input) {
+    StringBuilder sb = new StringBuilder();
+    boolean upper = false;
+    for (char c : input.toCharArray()) {
+      if (c == '_' || c == '-' || c == '.') {
+        upper = true;
+      } else if (Character.isLetterOrDigit(c)) {
+        sb.append(upper ? Character.toUpperCase(c) : Character.toLowerCase(c));
+        upper = false;
+      }
+    }
+    return sb.toString();
+  }
+
   public static String toFieldName(String code) {
     String className = toClassName(code);
     return Character.toLowerCase(className.charAt(0)) + className.substring(1);

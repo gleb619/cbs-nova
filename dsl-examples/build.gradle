@@ -53,6 +53,10 @@ tasks.named('classes') {
   dependsOn 'compileDsl'
 }
 
+tasks.named('test') {
+  dependsOn 'compileDsl'
+}
+
 spotless {
   java {
     targetExclude 'src/*.java'

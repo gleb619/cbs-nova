@@ -30,10 +30,10 @@ class LoanDisbursementWorkflowDslTest {
 
   @Test @DisplayName("should generate valid workflow definition")
   void shouldGenerateValidWorkflowDefinition() throws Exception {
-    Path def = OUTPUT.resolve("cbs/dsl/codegen/generated/definitions/LoanDisbursementWorkflowDsl_LoanDisbursementWfDefinition.java");
+    Path def = OUTPUT.resolve("cbs/dsl/codegen/generated/definitions/LoanDisbursementWorkflowDslDefinition.java");
     assertTrue(Files.exists(def), "Definition file should exist");
     String content = Files.readString(def);
-    assertTrue(content.contains("class LoanDisbursementWorkflowDsl_LoanDisbursementWfDefinition"));
+    assertTrue(content.contains("class LoanDisbursementWorkflowDslDefinition"));
     parseJava(def);
   }
 

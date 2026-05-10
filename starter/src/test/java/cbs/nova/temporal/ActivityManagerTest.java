@@ -60,7 +60,8 @@ class ActivityManagerTest {
     SampleActivity expectedStub = mock(SampleActivity.class);
 
     try (MockedStatic<Workflow> workflow = Mockito.mockStatic(Workflow.class)) {
-      workflow.when(() -> Workflow.newActivityStub(SampleActivity.class, defaultOptions()))
+      workflow
+          .when(() -> Workflow.newActivityStub(SampleActivity.class, defaultOptions()))
           .thenReturn(expectedStub);
 
       SampleActivity result =

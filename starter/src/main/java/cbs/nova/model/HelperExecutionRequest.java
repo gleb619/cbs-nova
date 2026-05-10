@@ -2,9 +2,9 @@ package cbs.nova.model;
 
 import cbs.dsl.api.HelperTypes.HelperInput;
 import lombok.Builder;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Map;
-import org.jspecify.annotations.NonNull;
 
 @Builder(toBuilder = true)
 public record HelperExecutionRequest(

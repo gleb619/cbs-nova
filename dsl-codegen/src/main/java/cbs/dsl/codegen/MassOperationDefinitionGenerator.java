@@ -105,7 +105,7 @@ public class MassOperationDefinitionGenerator implements DefinitionGenerator {
     String sourceTemplate = // language=java
         """
         package {{package}};
-
+        
         import cbs.dsl.api.DslComponentResolver;
         import cbs.dsl.api.DslObject;
         import cbs.dsl.api.LockDefinition;
@@ -116,7 +116,9 @@ public class MassOperationDefinitionGenerator implements DefinitionGenerator {
         import cbs.dsl.api.SourceDefinition;
         import cbs.dsl.api.TriggerDefinition;
         import cbs.dsl.api.context.MassOperationContext;
-        {{jsonPayloadImport}}        {{specImport}}{{inputTypeImport}}{{outputTypeImport}}        {{dslImports}}        import java.util.Collections;
+        {{jsonPayloadImport}}{{specImport}}{{inputTypeImport}}{{outputTypeImport}}
+        {{dslImports}}
+        import java.util.Collections;
         import java.util.List;
         import java.util.function.Consumer;
         import javax.annotation.processing.Generated;
@@ -132,7 +134,6 @@ public class MassOperationDefinitionGenerator implements DefinitionGenerator {
         public class {{wrapperClassName}} implements MassOperationDefinition {
         
             private final {{className}} function;
-        
         
             public {{wrapperClassName}}(DslComponentResolver resolver) {
                 this.function = resolver.resolve({{className}}.class)

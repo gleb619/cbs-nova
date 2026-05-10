@@ -114,7 +114,8 @@ public class TemporalManagerAutoConfiguration {
    */
   @Bean
   public WorkflowManager workflowManager(
-      SpecDefinitionRegistry specDefinitionRegistry, WorkflowClient workflowClient,
+      SpecDefinitionRegistry specDefinitionRegistry,
+      WorkflowClient workflowClient,
       @Value("${app.temporal.task-queue:}") String taskQueue) {
     return new WorkflowManager(specDefinitionRegistry, workflowClient, taskQueue);
   }

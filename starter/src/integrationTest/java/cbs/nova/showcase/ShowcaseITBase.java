@@ -3,12 +3,16 @@ package cbs.nova.showcase;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.dsl.api.DslCompilationUnit;
+import cbs.dsl.api.DslComponentResolver;
 import cbs.dsl.api.DslObject;
 import cbs.dsl.api.HelperTypes.HelperInput;
 import cbs.nova.registry.DslRegistry;
 import cbs.nova.registry.SpiImplRegistryLoader;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mockito;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.testcontainers.containers.Container.ExecResult;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -36,15 +40,21 @@ abstract class ShowcaseITBase {
           DockerImageName.parse("gradle:jdk25"))
       .withCommand("tail", "-f", "/dev/null");
 
+  @Autowired
+  ApplicationContext applicationContext;
+
   @TempDir
   static Path sharedTempDir;
 
   protected DslRegistry dslRegistry;
+  protected DslComponentResolver resolver;
 
   @BeforeEach
   void setUpBase() throws Exception {
     dslRegistry = new DslRegistry();
-    SpiImplRegistryLoader.loadInto(dslRegistry);
+    // TODO: redo to spring with `applicationContext` usage
+    resolver = new TestDslComponentResolver();
+    SpiImplRegistryLoader.loadInto(dslRegistry, resolver);
     compileDslAndRegister();
   }
 
@@ -186,5 +196,13 @@ abstract class ShowcaseITBase {
 
   protected BiFunction<Map<String, Object>, Map<String, Object>, Boolean> helperAssertion() {
     return (expected, actual) -> expected.equals(actual);
+  }
+
+  public class TestDslComponentResolver implements DslComponentResolver {
+
+    @Override
+    public <T> T resolve(Class<T> type) {
+      return Mockito.mock(type);
+    }
   }
 }

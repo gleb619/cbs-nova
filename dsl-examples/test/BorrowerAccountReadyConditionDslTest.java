@@ -30,20 +30,20 @@ class BorrowerAccountReadyConditionDslTest {
 
   @Test @DisplayName("should generate valid condition activity interface")
   void shouldGenerateValidConditionActivityInterface() throws Exception {
-    Path activity = OUTPUT.resolve("cbs/dsl/codegen/generated/BorrowerAccountReadyConditionDsl_BorrowerAccountReadyConditionActivity.java");
+    Path activity = OUTPUT.resolve("cbs/dsl/codegen/generated/BorrowerAccountReadyConditionDslActivity.java");
     assertTrue(Files.exists(activity), "Activity interface should exist");
     String content = Files.readString(activity);
-    assertTrue(content.contains(" @ActivityInterface"));
-    assertTrue(content.contains("interface BorrowerAccountReadyConditionDsl_BorrowerAccountReadyConditionActivity"));
+    assertTrue(content.contains("@ActivityInterface"));
+    assertTrue(content.contains("interface BorrowerAccountReadyConditionDslActivity"));
     parseJava(activity);
   }
 
   @Test @DisplayName("should generate valid condition definition")
   void shouldGenerateValidConditionDefinition() throws Exception {
-    Path def = OUTPUT.resolve("cbs/dsl/codegen/generated/definitions/BorrowerAccountReadyConditionDsl_BorrowerAccountReadyDefinition.java");
+    Path def = OUTPUT.resolve("cbs/dsl/codegen/generated/definitions/BorrowerAccountReadyConditionDslDefinition.java");
     assertTrue(Files.exists(def), "Definition file should exist");
     String content = Files.readString(def);
-    assertTrue(content.contains("class BorrowerAccountReadyConditionDsl_BorrowerAccountReadyDefinition"));
+    assertTrue(content.contains("class BorrowerAccountReadyConditionDslDefinition"));
     parseJava(def);
   }
 

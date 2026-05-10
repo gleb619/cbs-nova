@@ -115,11 +115,10 @@ public class WorkflowManager {
    */
   public <T> T newWorkflowStub(Class<T> workflowInterface, String workflowId) {
     String queue = taskQueue.isBlank() ? "cbs-nova-task-queue" : taskQueue;
-    WorkflowOptions options =
-        WorkflowOptions.newBuilder()
-            .setWorkflowId(workflowId)
-            .setTaskQueue(queue)
-            .build();
+    WorkflowOptions options = WorkflowOptions.newBuilder()
+        .setWorkflowId(workflowId)
+        .setTaskQueue(queue)
+        .build();
     return workflowClient.newWorkflowStub(workflowInterface, options);
   }
 
@@ -141,5 +140,4 @@ public class WorkflowManager {
       worker.registerWorkflowImplementationTypes(workflowClasses.toArray(new Class<?>[0]));
     }
   }
-
 }

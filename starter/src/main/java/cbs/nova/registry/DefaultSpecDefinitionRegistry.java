@@ -69,6 +69,7 @@ public class DefaultSpecDefinitionRegistry implements SpecDefinitionRegistry {
   }
 
   @Override
+  // TODO: add `T extends TransactionOperation` like in `getWorkflow`
   public <T> T getActivity(String code, Class<T> activityInterface) {
     TemporalWorkflowOrActivity entry = activities.get(code);
     if (entry == null) {

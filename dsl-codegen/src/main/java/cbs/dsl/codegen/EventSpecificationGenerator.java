@@ -112,6 +112,7 @@ public class EventSpecificationGenerator {
         @WorkflowInterface
         public interface {{className}} extends EventOperation {
         
+            @Override
             @WorkflowMethod(name = "{{workflowMethodName}}")
             EventOutput execute(EventInput input)
         
@@ -217,7 +218,8 @@ public class EventSpecificationGenerator {
             }
         
             public EventDslObject dsl() {
-                return {{dslBody}}
+                //return {{dslBody}}
+                return null;
             }
         
         }

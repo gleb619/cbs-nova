@@ -56,9 +56,7 @@ class EventRunnerTest {
   @DisplayName("shouldFilterParamsAndStartWorkflow")
   void shouldFilterParamsAndStartWorkflow() {
     EventExecutionRequest request = new EventExecutionRequest(
-        "LOAN_DISBURSEMENT",
-        "admin1",
-        Map.of("amount", 1000, "unknownParam", "value"));
+        "LOAN_DISBURSEMENT", "admin1", Map.of("amount", 1000, "unknownParam", "value"));
 
     ParameterDefinition paramDef1 = mock(ParameterDefinition.class);
     when(paramDef1.getName()).thenReturn("amount");
@@ -71,14 +69,16 @@ class EventRunnerTest {
     doReturn(Object.class).when(specRegistry).getWorkflowInterface("LOAN_DISBURSEMENT");
 
     WorkflowStub mockWorkflowStub = mock(WorkflowStub.class);
-    when(workflowManager.newUntypedWorkflowStub(eq("LOAN_DISBURSEMENT"), any())).thenReturn(mockWorkflowStub);
+    when(workflowManager.newUntypedWorkflowStub(eq("LOAN_DISBURSEMENT"), any()))
+        .thenReturn(mockWorkflowStub);
 
     EventExecutionResponse response = eventRunner.perform(request);
 
     assertThat(response.status()).isEqualTo("STARTED");
     assertThat(response.executionId()).isNull();
 
-    ArgumentCaptor<EventExecutionRequest> requestCaptor = ArgumentCaptor.forClass(EventExecutionRequest.class);
+    ArgumentCaptor<EventExecutionRequest> requestCaptor =
+        ArgumentCaptor.forClass(EventExecutionRequest.class);
     verify(mockWorkflowStub).start(requestCaptor.capture());
 
     EventExecutionRequest capturedRequest = requestCaptor.getValue();
@@ -90,9 +90,7 @@ class EventRunnerTest {
   @DisplayName("shouldIncludeAllParamsWhenAllAreDefined")
   void shouldIncludeAllParamsWhenAllAreDefined() {
     EventExecutionRequest request = new EventExecutionRequest(
-        "PAYMENT",
-        "admin1",
-        Map.of("amount", 500, "accountId", "ACC123"));
+        "PAYMENT", "admin1", Map.of("amount", 500, "accountId", "ACC123"));
 
     ParameterDefinition paramDef1 = mock(ParameterDefinition.class);
     when(paramDef1.getName()).thenReturn("amount");
@@ -109,7 +107,8 @@ class EventRunnerTest {
 
     EventExecutionResponse response = eventRunner.perform(request);
 
-    ArgumentCaptor<EventExecutionRequest> requestCaptor = ArgumentCaptor.forClass(EventExecutionRequest.class);
+    ArgumentCaptor<EventExecutionRequest> requestCaptor =
+        ArgumentCaptor.forClass(EventExecutionRequest.class);
     verify(mockWorkflowStub).start(requestCaptor.capture());
 
     EventExecutionRequest capturedRequest = requestCaptor.getValue();
@@ -121,23 +120,22 @@ class EventRunnerTest {
   @Test
   @DisplayName("shouldHandleEmptyParams")
   void shouldHandleEmptyParams() {
-    EventExecutionRequest request = new EventExecutionRequest(
-        "SIMPLE_EVENT",
-        "admin1",
-        Map.of());
+    EventExecutionRequest request = new EventExecutionRequest("SIMPLE_EVENT", "admin1", Map.of());
 
     when(dslRegistry.resolveEvent("SIMPLE_EVENT")).thenReturn(mockEventDefinition);
     when(mockEventDefinition.getParameters()).thenReturn(List.of());
     doReturn(Object.class).when(specRegistry).getWorkflowInterface("SIMPLE_EVENT");
 
     WorkflowStub mockWorkflowStub = mock(WorkflowStub.class);
-    when(workflowManager.newUntypedWorkflowStub(eq("SIMPLE_EVENT"), any())).thenReturn(mockWorkflowStub);
+    when(workflowManager.newUntypedWorkflowStub(eq("SIMPLE_EVENT"), any()))
+        .thenReturn(mockWorkflowStub);
 
     EventExecutionResponse response = eventRunner.perform(request);
 
     assertThat(response.status()).isEqualTo("STARTED");
 
-    ArgumentCaptor<EventExecutionRequest> requestCaptor = ArgumentCaptor.forClass(EventExecutionRequest.class);
+    ArgumentCaptor<EventExecutionRequest> requestCaptor =
+        ArgumentCaptor.forClass(EventExecutionRequest.class);
     verify(mockWorkflowStub).start(requestCaptor.capture());
     assertThat(requestCaptor.getValue().params()).isEmpty();
   }
@@ -145,13 +143,12 @@ class EventRunnerTest {
   @Test
   @DisplayName("shouldThrowWhenWorkflowNotRegistered")
   void shouldThrowWhenWorkflowNotRegistered() {
-    EventExecutionRequest request = new EventExecutionRequest(
-        "UNKNOWN_EVENT",
-        "admin1",
-        Map.of("param", "value"));
+    EventExecutionRequest request =
+        new EventExecutionRequest("UNKNOWN_EVENT", "admin1", Map.of("param", "value"));
 
     doThrow(new IllegalArgumentException("Workflow 'UNKNOWN_EVENT' not found"))
-        .when(specRegistry).getWorkflowInterface("UNKNOWN_EVENT");
+        .when(specRegistry)
+        .getWorkflowInterface("UNKNOWN_EVENT");
 
     assertThatThrownBy(() -> eventRunner.perform(request))
         .isInstanceOf(IllegalArgumentException.class)
@@ -161,10 +158,7 @@ class EventRunnerTest {
   @Test
   @DisplayName("shouldThrowWhenEventNotInRegistry")
   void shouldThrowWhenEventNotInRegistry() {
-    EventExecutionRequest request = new EventExecutionRequest(
-        "MISSING_EVENT",
-        "admin1",
-        Map.of());
+    EventExecutionRequest request = new EventExecutionRequest("MISSING_EVENT", "admin1", Map.of());
 
     when(dslRegistry.resolveEvent("MISSING_EVENT"))
         .thenThrow(new IllegalArgumentException("Event 'MISSING_EVENT' not found"));
@@ -177,10 +171,8 @@ class EventRunnerTest {
   @Test
   @DisplayName("shouldPreservePerformedByInFilteredRequest")
   void shouldPreservePerformedByInFilteredRequest() {
-    EventExecutionRequest request = new EventExecutionRequest(
-        "TEST_EVENT",
-        "specific-performer",
-        Map.of("extra", "value"));
+    EventExecutionRequest request =
+        new EventExecutionRequest("TEST_EVENT", "specific-performer", Map.of("extra", "value"));
 
     ParameterDefinition paramDef = mock(ParameterDefinition.class);
     when(paramDef.getName()).thenReturn("required");
@@ -190,11 +182,13 @@ class EventRunnerTest {
     doReturn(Object.class).when(specRegistry).getWorkflowInterface("TEST_EVENT");
 
     WorkflowStub mockWorkflowStub = mock(WorkflowStub.class);
-    when(workflowManager.newUntypedWorkflowStub(eq("TEST_EVENT"), any())).thenReturn(mockWorkflowStub);
+    when(workflowManager.newUntypedWorkflowStub(eq("TEST_EVENT"), any()))
+        .thenReturn(mockWorkflowStub);
 
     eventRunner.perform(request);
 
-    ArgumentCaptor<EventExecutionRequest> requestCaptor = ArgumentCaptor.forClass(EventExecutionRequest.class);
+    ArgumentCaptor<EventExecutionRequest> requestCaptor =
+        ArgumentCaptor.forClass(EventExecutionRequest.class);
     verify(mockWorkflowStub).start(requestCaptor.capture());
 
     assertThat(requestCaptor.getValue().performedBy()).isEqualTo("specific-performer");
@@ -203,10 +197,8 @@ class EventRunnerTest {
   @Test
   @DisplayName("shouldPreserveEventCodeInFilteredRequest")
   void shouldPreserveEventCodeInFilteredRequest() {
-    EventExecutionRequest request = new EventExecutionRequest(
-        "MY_EVENT_CODE",
-        "admin",
-        Map.of("extra", "value"));
+    EventExecutionRequest request =
+        new EventExecutionRequest("MY_EVENT_CODE", "admin", Map.of("extra", "value"));
 
     ParameterDefinition paramDef = mock(ParameterDefinition.class);
     when(paramDef.getName()).thenReturn("required");
@@ -216,11 +208,13 @@ class EventRunnerTest {
     doReturn(Object.class).when(specRegistry).getWorkflowInterface("MY_EVENT_CODE");
 
     WorkflowStub mockWorkflowStub = mock(WorkflowStub.class);
-    when(workflowManager.newUntypedWorkflowStub(eq("MY_EVENT_CODE"), any())).thenReturn(mockWorkflowStub);
+    when(workflowManager.newUntypedWorkflowStub(eq("MY_EVENT_CODE"), any()))
+        .thenReturn(mockWorkflowStub);
 
     eventRunner.perform(request);
 
-    ArgumentCaptor<EventExecutionRequest> requestCaptor = ArgumentCaptor.forClass(EventExecutionRequest.class);
+    ArgumentCaptor<EventExecutionRequest> requestCaptor =
+        ArgumentCaptor.forClass(EventExecutionRequest.class);
     verify(mockWorkflowStub).start(requestCaptor.capture());
 
     assertThat(requestCaptor.getValue().eventCode()).isEqualTo("MY_EVENT_CODE");

@@ -8,11 +8,12 @@ import io.temporal.common.RetryOptions;
 import io.temporal.failure.ActivityFailure;
 import io.temporal.failure.ApplicationFailure;
 import io.temporal.workflow.Workflow;
+import lombok.extern.slf4j.Slf4j;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.Map;
-import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class GenericWorkflowImpl implements GenericWorkflow {
@@ -29,16 +30,12 @@ public class GenericWorkflowImpl implements GenericWorkflow {
       Class<?> iface = activityManager.getActivityInterface(request.activityCode());
 
       @SuppressWarnings("unchecked")
-      Object stub =
-          Workflow.newActivityStub(
-              iface,
-              ActivityOptions.newBuilder()
-                  .setStartToCloseTimeout(Duration.ofSeconds(30))
-                  .setRetryOptions(
-                      RetryOptions.newBuilder()
-                          .setMaximumAttempts(5)
-                          .build())
-                  .build());
+      Object stub = Workflow.newActivityStub(
+          iface,
+          ActivityOptions.newBuilder()
+              .setStartToCloseTimeout(Duration.ofSeconds(30))
+              .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(5).build())
+              .build());
 
       log.debug("Calling prepare on activity: {}", request.activityCode());
       Method prepare = iface.getMethod("prepare", Map.class);
@@ -55,12 +52,11 @@ public class GenericWorkflowImpl implements GenericWorkflow {
         try {
           Class<?> iface = activityManager.getActivityInterface(request.activityCode());
           @SuppressWarnings("unchecked")
-          Object stub =
-              Workflow.newActivityStub(
-                  iface,
-                  ActivityOptions.newBuilder()
-                      .setStartToCloseTimeout(Duration.ofSeconds(30))
-                      .build());
+          Object stub = Workflow.newActivityStub(
+              iface,
+              ActivityOptions.newBuilder()
+                  .setStartToCloseTimeout(Duration.ofSeconds(30))
+                  .build());
 
           Method rollback = iface.getMethod("rollback", TransactionInput.class);
           return (TransactionOutput) rollback.invoke(stub, request.input());
@@ -72,7 +68,8 @@ public class GenericWorkflowImpl implements GenericWorkflow {
       throw ApplicationFailure.newNonRetryableFailure(
           e.getMessage(), e.getClass().getName());
     } catch (Exception e) {
-      throw ApplicationFailure.newNonRetryableFailure(e.getMessage(), e.getClass().getName());
+      throw ApplicationFailure.newNonRetryableFailure(
+          e.getMessage(), e.getClass().getName());
     }
   }
 }

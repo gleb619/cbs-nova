@@ -2,9 +2,9 @@ package cbs.nova.model;
 
 import cbs.dsl.api.TransactionTypes.TransactionInput;
 import lombok.Builder;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Map;
-import org.jspecify.annotations.NonNull;
 
 @Builder(toBuilder = true)
 public record TransactionExecutionRequest(
@@ -13,9 +13,6 @@ public record TransactionExecutionRequest(
     @NonNull Map<String, Object> params) {
 
   public TransactionInput toTransactionInput(String eventNumber) {
-    return TransactionInput.builder()
-        .eventNumber(eventNumber)
-        .params(params())
-        .build();
+    return TransactionInput.builder().eventNumber(eventNumber).params(params()).build();
   }
 }

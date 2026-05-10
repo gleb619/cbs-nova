@@ -11,15 +11,16 @@ import cbs.nova.temporal.WorkflowManager;
 import cbs.nova.temporal.workflow.GenericTransactionRequest;
 import cbs.nova.temporal.workflow.GenericWorkflow;
 import io.temporal.client.WorkflowClient;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
@@ -47,9 +48,7 @@ public class TransactionRunner {
     List<ParameterDefinition> definedParams =
         dslRegistry.resolveTransaction(request.transactionCode()).getParameters();
     Set<String> definedParamNames =
-        definedParams.stream()
-            .map(ParameterDefinition::getName)
-            .collect(Collectors.toSet());
+        definedParams.stream().map(ParameterDefinition::getName).collect(Collectors.toSet());
 
     Map<String, Object> filteredParams = new HashMap<>();
     for (Map.Entry<String, Object> entry : request.params().entrySet()) {
@@ -61,14 +60,12 @@ public class TransactionRunner {
     TransactionExecutionRequest filteredRequest =
         request.toBuilder().params(filteredParams).build();
 
-    String workflowId =
-        "transaction-%s-%s".formatted(request.transactionCode(), UUID.randomUUID());
+    String workflowId = "transaction-%s-%s".formatted(request.transactionCode(), UUID.randomUUID());
 
     TransactionInput input =
         filteredRequest.toTransactionInput(UUID.randomUUID().toString());
 
-    GenericWorkflow stub =
-        workflowManager.newWorkflowStub(GenericWorkflow.class, workflowId);
+    GenericWorkflow stub = workflowManager.newWorkflowStub(GenericWorkflow.class, workflowId);
 
     GenericTransactionRequest genericRequest =
         new GenericTransactionRequest(request.transactionCode(), input);

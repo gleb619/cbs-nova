@@ -30,10 +30,10 @@ class InterestChargeMassOperationDslTest {
 
   @Test @DisplayName("should generate valid mass operation definition")
   void shouldGenerateValidMassOperationDefinition() throws Exception {
-    Path def = OUTPUT.resolve("cbs/dsl/codegen/generated/definitions/InterestChargeMassOperationDsl_InterestChargeDefinition.java");
+    Path def = OUTPUT.resolve("cbs/dsl/codegen/generated/definitions/InterestChargeMassOperationDslDefinition.java");
     assertTrue(Files.exists(def), "Definition file should exist");
     String content = Files.readString(def);
-    assertTrue(content.contains("class InterestChargeMassOperationDsl_InterestChargeDefinition"));
+    assertTrue(content.contains("class InterestChargeMassOperationDslDefinition"));
     parseJava(def);
   }
 

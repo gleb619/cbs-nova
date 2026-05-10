@@ -73,7 +73,7 @@ public class ConditionDefinitionGenerator implements DefinitionGenerator {
   }
 
   public String generateActivityInterfaceCode(RegistrationModel spec) {
-    String className = spec.className() + "ConditionActivity";
+    String className = spec.className() + "Activity";
     String timestamp = CodeGenUtil.currentTimestamp();
 
     return Substitutor.format(
@@ -105,14 +105,14 @@ public class ConditionDefinitionGenerator implements DefinitionGenerator {
   }
 
   public void writeActivityInterface(RegistrationModel spec, String source) throws IOException {
-    String className = spec.className() + "ConditionActivity";
+    String className = spec.className() + "Activity";
     String fqcn = GENERATED_PACKAGE + "." + className;
     CodeGenUtil.writeToFiler(filer, fqcn, source);
   }
 
   public String generateDefinitionCode(RegistrationModel spec) {
     String wrapperClassName = spec.className() + "Definition";
-    String activityInterfaceName = spec.className() + "ConditionActivity";
+    String activityInterfaceName = spec.className() + "Activity";
 
     String timestamp = CodeGenUtil.currentTimestamp();
     boolean inputIsRuntime = spec.inputType().equals(CN_INPUT);
@@ -134,6 +134,9 @@ public class ConditionDefinitionGenerator implements DefinitionGenerator {
     String parameterScannerImports = inputIsRuntime
         ? ""
         : "import cbs.dsl.api.ParameterScanner;\n        import cbs.dsl.api.ParameterScanner.ParameterScanResult;\n        ";
+    String specImport = spec.packageName().isBlank()
+        ? ""
+        : "import " + spec.packageName() + "." + spec.className() + ";\n";
 
     String parametersField = inputIsRuntime
         ? ""
@@ -166,9 +169,8 @@ public class ConditionDefinitionGenerator implements DefinitionGenerator {
         {{parameterScannerImports}}import cbs.dsl.api.DslComponentResolver;
         import cbs.dsl.api.context.TransactionContext;
         import {{generatedPackage}}.{{activityInterfaceName}};
-        {{jsonPayloadImport}}        import {{specPackage}}.{{specClass}};
-        {{inputTypeImport}}        {{outputTypeImport}}
-        {{dslImportsBlock}}        import java.util.Collections;
+        {{jsonPayloadImport}}{{specImport}}{{inputTypeImport}}{{outputTypeImport}}
+        {{dslImportsBlock}}import java.util.Collections;
         import java.util.List;
         import java.util.Map;
         import java.util.function.Predicate;
@@ -224,7 +226,7 @@ public class ConditionDefinitionGenerator implements DefinitionGenerator {
             Map.entry("generatedPackage", GENERATED_PACKAGE),
             Map.entry("activityInterfaceName", activityInterfaceName),
             Map.entry("jsonPayloadImport", jsonPayloadImport),
-            Map.entry("specPackage", spec.packageName()),
+            Map.entry("specImport", specImport),
             Map.entry("specClass", spec.className()),
             Map.entry("inputTypeImport", inputTypeImport),
             Map.entry("outputTypeImport", outputTypeImport),
@@ -253,7 +255,7 @@ public class ConditionDefinitionGenerator implements DefinitionGenerator {
 
   private FileWrite writeActivityInterfaceToSpec(
       RegistrationModel spec, String source, Path outputDir) {
-    String className = spec.className() + "ConditionActivity";
+    String className = spec.className() + "Activity";
     Path outputPath = outputDir.resolve("cbs/dsl/codegen/generated").resolve(className + ".java");
     return new FileWrite(outputPath, source);
   }

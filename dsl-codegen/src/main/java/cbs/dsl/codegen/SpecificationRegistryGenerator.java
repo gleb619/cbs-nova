@@ -156,7 +156,7 @@ public class SpecificationRegistryGenerator {
   }
 
   private static String toConditionActivityInterfaceImport(String className) {
-    return "import " + GENERATED_PACKAGE + "." + className + "ConditionActivity;";
+    return "import " + GENERATED_PACKAGE + "." + className + "Activity;";
   }
 
   private static String toEventActivityInterfaceImport(String eventCode) {
@@ -176,7 +176,7 @@ public class SpecificationRegistryGenerator {
 
   private static String toConditionRegistration(String code, String className) {
     return "        registry.registerActivity(\"" + code + "\", " + className
-        + "ConditionActivity.class, new " + className + "Definition(resolver));";
+        + "Activity.class, new " + className + "Definition(resolver));";
   }
 
   private static String toEventActivityRegistration(String eventCode) {

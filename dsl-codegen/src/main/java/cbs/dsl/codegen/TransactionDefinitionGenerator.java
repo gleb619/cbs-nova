@@ -184,7 +184,9 @@ public class TransactionDefinitionGenerator implements DefinitionGenerator {
         import cbs.dsl.api.ParametersTypes.ParametersInput;
         import cbs.dsl.api.ParametersTypes;
         import {{generatedPackage}}.{{activityInterfaceName}};
-        {{specImport}}{{inputTypeImport}}        {{outputTypeImport}}        {{dslImportsBlock}}        import java.util.ArrayList;
+        {{specImport}}{{inputTypeImport}}{{outputTypeImport}}
+        {{dslImportsBlock}}
+        import java.util.ArrayList;
         import java.util.Collections;
         import java.util.List;
         import java.util.Map;

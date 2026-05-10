@@ -3,12 +3,14 @@ package cbs.nova.showcase;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.dsl.api.DslCompilationUnit;
+import cbs.dsl.api.DslComponentResolver;
 import cbs.dsl.api.DslObject;
 import cbs.dsl.api.HelperTypes.HelperInput;
 import cbs.nova.registry.DslRegistry;
 import cbs.nova.registry.SpiImplRegistryLoader;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mockito;
 import org.testcontainers.containers.Container.ExecResult;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -40,11 +42,13 @@ abstract class ShowcaseTestBase {
   static Path sharedTempDir;
 
   protected DslRegistry dslRegistry;
+  protected DslComponentResolver resolver;
 
   @BeforeEach
   void setUpBase() throws Exception {
     dslRegistry = new DslRegistry();
-    SpiImplRegistryLoader.loadInto(dslRegistry, null);
+    resolver = new TestDslComponentResolver();
+    SpiImplRegistryLoader.loadInto(dslRegistry, resolver);
     compileDslAndRegister();
   }
 
@@ -186,5 +190,13 @@ abstract class ShowcaseTestBase {
 
   protected BiFunction<Map<String, Object>, Map<String, Object>, Boolean> helperAssertion() {
     return (expected, actual) -> expected.equals(actual);
+  }
+
+  public class TestDslComponentResolver implements DslComponentResolver {
+
+    @Override
+    public <T> T resolve(Class<T> type) {
+      return Mockito.mock(type);
+    }
   }
 }

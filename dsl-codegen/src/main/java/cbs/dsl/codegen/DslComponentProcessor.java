@@ -38,7 +38,7 @@ public class DslComponentProcessor extends AbstractProcessor {
       MassOperationFunction.class.getName(), DslInterfaceType.MASS_OPERATION);
 
   private static final Function<RegistrationModel, String> UNDEFINED_DSL_BODY_PROVIDER =
-      _ -> "UndefinedDslObject.create();";
+      _ -> "return UndefinedDslObject.create();";
 
   private boolean processed = false;
 

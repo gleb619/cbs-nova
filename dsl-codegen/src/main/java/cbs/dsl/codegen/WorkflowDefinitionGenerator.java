@@ -106,7 +106,7 @@ public class WorkflowDefinitionGenerator implements DefinitionGenerator {
     String sourceTemplate = // language=java
         """
         package {{definitionsPackage}};
-
+        
         import cbs.dsl.api.DslComponentResolver;
         import cbs.dsl.api.DslObject;
         import cbs.dsl.api.WorkflowDefinition;
@@ -114,7 +114,9 @@ public class WorkflowDefinitionGenerator implements DefinitionGenerator {
         import cbs.dsl.api.WorkflowTypes.WorkflowOutput;
         import cbs.dsl.api.TransitionRuleDefinition;
         import cbs.dsl.api.ParameterDefinition;
-        {{jsonPayloadImport}}        {{specImport}}{{inputTypeImport}}{{outputTypeImport}}        {{dslImportsBlock}}        import java.util.Collections;
+        {{jsonPayloadImport}}{{specImport}}{{inputTypeImport}}{{outputTypeImport}}
+        {{dslImportsBlock}}
+        import java.util.Collections;
         import java.util.List;
         import javax.annotation.processing.Generated;
         
@@ -129,7 +131,6 @@ public class WorkflowDefinitionGenerator implements DefinitionGenerator {
         public class {{wrapperClassName}} implements WorkflowDefinition {
         
             private final {{specClassName}} function;
-        
         
             public {{wrapperClassName}}(DslComponentResolver resolver) {
                 this.function = resolver.resolve({{specClassName}}.class)

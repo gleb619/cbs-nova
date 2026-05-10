@@ -8,8 +8,6 @@ import cbs.nova.model.EventExecutionResponse;
 import cbs.nova.registry.DefaultSpecDefinitionRegistry;
 import cbs.nova.registry.DslRegistry;
 import cbs.nova.temporal.WorkflowManager;
-import io.temporal.client.WorkflowStub;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -19,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -40,10 +39,10 @@ public class EventRunner {
 
     specRegistry.getWorkflowInterface(request.eventCode());
 
-    List<ParameterDefinition> definedParams = dslRegistry.resolveEvent(request.eventCode()).getParameters();
-    Set<String> definedParamNames = definedParams.stream()
-        .map(ParameterDefinition::getName)
-        .collect(Collectors.toSet());
+    List<ParameterDefinition> definedParams =
+        dslRegistry.resolveEvent(request.eventCode()).getParameters();
+    Set<String> definedParamNames =
+        definedParams.stream().map(ParameterDefinition::getName).collect(Collectors.toSet());
 
     Map<String, Object> filteredParams = new HashMap<>();
     for (Map.Entry<String, Object> entry : request.params().entrySet()) {
@@ -52,16 +51,15 @@ public class EventRunner {
       }
     }
 
-    EventExecutionRequest filteredRequest = request.toBuilder()
-        .params(filteredParams)
-        .build();
+    EventExecutionRequest filteredRequest =
+        request.toBuilder().params(filteredParams).build();
 
     String workflowId = generateWorkflowId(request);
 
     EventOperation workflowStub = workflowManager.newWorkflowStub(request.eventCode(), workflowId);
 
     log.debug("Starting Temporal workflow: code={}, id={}", request.eventCode(), workflowId);
-    //TODO: generate and add a event number here
+    // TODO: generate and add a event number here
     String eventNumber = "123abc";
     workflowManager.start(workflowStub, filteredRequest.toEventInput(eventNumber));
 

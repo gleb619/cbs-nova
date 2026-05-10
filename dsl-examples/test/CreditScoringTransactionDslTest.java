@@ -34,12 +34,11 @@ class CreditScoringTransactionDslTest {
   @DisplayName("should generate valid transaction activity interface")
   void shouldGenerateValidTransactionActivityInterface() throws Exception {
     Path activity = OUTPUT.resolve(
-        "cbs/dsl/codegen/generated/CreditScoringTransactionDsl_CreditScoringActivity.java");
+        "cbs/dsl/codegen/generated/CreditScoringTransactionDslActivity.java");
     assertTrue(Files.exists(activity), "Activity interface should exist");
     String content = Files.readString(activity);
     assertTrue(content.contains("@ActivityInterface"));
-    assertTrue(
-        content.contains("interface CreditScoringTransactionDsl_CreditScoringActivity"));
+    assertTrue(content.contains("interface CreditScoringTransactionDslActivity"));
     parseJava(activity);
   }
 
@@ -47,11 +46,10 @@ class CreditScoringTransactionDslTest {
   @DisplayName("should generate valid transaction definition")
   void shouldGenerateValidTransactionDefinition() throws Exception {
     Path def = OUTPUT.resolve(
-        "cbs/dsl/codegen/generated/definitions/CreditScoringTransactionDsl_CreditScoringDefinition.java");
+        "cbs/dsl/codegen/generated/definitions/CreditScoringTransactionDslDefinition.java");
     assertTrue(Files.exists(def), "Definition file should exist");
     String content = Files.readString(def);
-    assertTrue(
-        content.contains("class CreditScoringTransactionDsl_CreditScoringDefinition"));
+    assertTrue(content.contains("class CreditScoringTransactionDslDefinition"));
     assertTrue(content.contains("implements TransactionDefinition"));
     parseJava(def);
   }

@@ -30,10 +30,10 @@ class LoanDisbursementEventDslTest {
 
   @Test @DisplayName("should generate valid event activity interface")
   void shouldGenerateValidEventActivityInterface() throws Exception {
-    Path activity = OUTPUT.resolve("cbs/dsl/codegen/generated/LoanDisbursementEventDsl_LoanDisbursementEventActivity.java");
+    Path activity = OUTPUT.resolve("cbs/dsl/codegen/generated/LoanDisbursementEventDslEventActivity.java");
     assertTrue(Files.exists(activity), "Activity interface should exist");
     String content = Files.readString(activity);
-    assertTrue(content.contains(" @ActivityInterface"));
+    assertTrue(content.contains("@ActivityInterface"));
     parseJava(activity);
   }
 
@@ -42,7 +42,7 @@ class LoanDisbursementEventDslTest {
     Path spec = OUTPUT.resolve("cbs/dsl/codegen/generated/LoanDisbursementEventSpecification.java");
     assertTrue(Files.exists(spec), "Specification interface should exist");
     String content = Files.readString(spec);
-    assertTrue(content.contains(" @WorkflowInterface"));
+    assertTrue(content.contains("@WorkflowInterface"));
     assertTrue(content.contains("interface LoanDisbursementEventSpecification"));
     parseJava(spec);
   }
@@ -58,10 +58,10 @@ class LoanDisbursementEventDslTest {
 
   @Test @DisplayName("should generate valid event definition")
   void shouldGenerateValidEventDefinition() throws Exception {
-    Path def = OUTPUT.resolve("cbs/dsl/codegen/generated/definitions/LoanDisbursementEventDsl_LoanDisbursementDefinition.java");
+    Path def = OUTPUT.resolve("cbs/dsl/codegen/generated/definitions/LoanDisbursementEventDslDefinition.java");
     assertTrue(Files.exists(def), "Definition file should exist");
     String content = Files.readString(def);
-    assertTrue(content.contains("class LoanDisbursementEventDsl_LoanDisbursementDefinition"));
+    assertTrue(content.contains("class LoanDisbursementEventDslDefinition"));
     parseJava(def);
   }
 

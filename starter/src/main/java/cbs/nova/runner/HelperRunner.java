@@ -1,8 +1,8 @@
 package cbs.nova.runner;
 
-import cbs.dsl.api.ParameterDefinition;
 import cbs.dsl.api.HelperTypes.HelperInput;
 import cbs.dsl.api.HelperTypes.HelperOutput;
+import cbs.dsl.api.ParameterDefinition;
 import cbs.nova.model.HelperExecutionRequest;
 import cbs.nova.model.HelperExecutionResponse;
 import cbs.nova.registry.DslRegistry;
@@ -28,16 +28,12 @@ public class HelperRunner {
 
   public HelperExecutionResponse perform(HelperExecutionRequest request) {
     log.debug(
-        "Running helper: code={}, performedBy={}",
-        request.helperCode(),
-        request.performedBy());
+        "Running helper: code={}, performedBy={}", request.helperCode(), request.performedBy());
 
     List<ParameterDefinition> definedParams =
         dslRegistry.resolveHelper(request.helperCode()).getParameters();
     Set<String> definedParamNames =
-        definedParams.stream()
-            .map(ParameterDefinition::getName)
-            .collect(Collectors.toSet());
+        definedParams.stream().map(ParameterDefinition::getName).collect(Collectors.toSet());
 
     Map<String, Object> filteredParams = new HashMap<>();
     for (Map.Entry<String, Object> entry : request.params().entrySet()) {
@@ -49,16 +45,11 @@ public class HelperRunner {
     HelperExecutionRequest filteredRequest =
         request.toBuilder().params(filteredParams).build();
 
-    String executionId =
-        "helper-%s-%s".formatted(request.helperCode(), UUID.randomUUID());
+    String executionId = "helper-%s-%s".formatted(request.helperCode(), UUID.randomUUID());
 
-    HelperInput input =
-        filteredRequest.toHelperInput();
+    HelperInput input = filteredRequest.toHelperInput();
 
-    log.debug(
-        "Executing helper: code={}, id={}",
-        request.helperCode(),
-        executionId);
+    log.debug("Executing helper: code={}, id={}", request.helperCode(), executionId);
     log.debug("Calling prepare on helper: code={}", request.helperCode());
     genericActivity.prepare(request.helperCode(), input.params());
 

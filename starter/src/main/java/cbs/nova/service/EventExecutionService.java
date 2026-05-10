@@ -34,8 +34,7 @@ public class EventExecutionService {
   private final DslRegistry dslRegistry;
 
   public EventExecutionResponse execute(EventExecutionRequest request) {
-    log.debug(
-        "Executing event: workflow={}, event={}", null, request.eventCode());
+    log.debug("Executing event: workflow={}, event={}", null, request.eventCode());
 
     WorkflowDefinition workflowDefinition = workflowResolver.resolve(null);
     log.debug("Resolved workflow: {}", workflowDefinition.getCode());
@@ -84,6 +83,7 @@ public class EventExecutionService {
     workflowTransitionLogRepository.save(transitionLog);
 
     EventExecutionResponse runnerResponse = eventRunner.perform(request);
-    return new EventExecutionResponse(workflowExecution.getId().toString(), runnerResponse.status());
+    return new EventExecutionResponse(
+        workflowExecution.getId().toString(), runnerResponse.status());
   }
 }

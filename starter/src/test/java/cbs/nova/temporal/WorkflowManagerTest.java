@@ -1,11 +1,9 @@
 package cbs.nova.temporal;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -46,7 +44,6 @@ class WorkflowManagerTest {
   interface SampleWorkflow extends EventOperation {
 
     EventOutput execute(EventInput input);
-
   }
 
   @BeforeEach
@@ -59,7 +56,9 @@ class WorkflowManagerTest {
   void shouldCreateWorkflowStubWithCorrectOptions() {
     doReturn(SampleWorkflow.class).when(artifactRegistry).getWorkflowInterface("LOAN_123");
     SampleWorkflow expectedStub = mock(SampleWorkflow.class);
-    doReturn(expectedStub).when(workflowClient).newWorkflowStub(eq(SampleWorkflow.class), any(WorkflowOptions.class));
+    doReturn(expectedStub)
+        .when(workflowClient)
+        .newWorkflowStub(eq(SampleWorkflow.class), any(WorkflowOptions.class));
 
     SampleWorkflow result = workflowManager.newWorkflowStub("LOAN_123", "wf-1");
 
@@ -75,7 +74,9 @@ class WorkflowManagerTest {
   @DisplayName("shouldCreateUntypedWorkflowStubWithCorrectOptions")
   void shouldCreateUntypedWorkflowStubWithCorrectOptions() {
     WorkflowStub expectedStub = mock(WorkflowStub.class);
-    doReturn(expectedStub).when(workflowClient).newUntypedWorkflowStub(any(String.class), any(WorkflowOptions.class));
+    doReturn(expectedStub)
+        .when(workflowClient)
+        .newUntypedWorkflowStub(any(String.class), any(WorkflowOptions.class));
 
     WorkflowStub result = workflowManager.newUntypedWorkflowStub("LOAN_456", "wf-2");
 
@@ -95,7 +96,9 @@ class WorkflowManagerTest {
     ReflectionTestUtils.setField(workflowManager, "taskQueue", "");
 
     WorkflowStub expectedStub = mock(WorkflowStub.class);
-    doReturn(expectedStub).when(workflowClient).newUntypedWorkflowStub(any(String.class), any(WorkflowOptions.class));
+    doReturn(expectedStub)
+        .when(workflowClient)
+        .newUntypedWorkflowStub(any(String.class), any(WorkflowOptions.class));
 
     workflowManager.newUntypedWorkflowStub("EVENT_CODE", "wf-3");
 

@@ -36,17 +36,17 @@ class DefinitionRegistryGeneratorTest {
 
     assertTrue(
         filer.files.entrySet().stream()
-            .anyMatch(e -> e.getKey().contains("GeneratedImplRegistrations")),
-        "Should contain GeneratedImplRegistrations class");
+            .anyMatch(e -> e.getKey().contains("DefinitionRegistryProviderImpl")),
+        "Should contain DefinitionRegistryProviderImpl class");
 
     String generatedClassKey = filer.files.keySet().stream()
-        .filter(k -> k.contains("GeneratedImplRegistrations"))
+        .filter(k -> k.contains("DefinitionRegistryProviderImpl"))
         .findFirst()
-        .orElseThrow(() -> new AssertionError("No GeneratedImplRegistrations found"));
+        .orElseThrow(() -> new AssertionError("No DefinitionRegistryProviderImpl found"));
 
     String content = filer.files.get(generatedClassKey).getContent();
     assertTrue(
-        content.contains("class GeneratedImplRegistrations implements DefinitionRegistryProvider"),
+        content.contains("class DefinitionRegistryProviderImpl implements DefinitionRegistryProvider"),
         "Content should contain class declaration: " + content);
     assertTrue(
         content.contains("registry.register(new TxOneDefinition(resolver))"),
@@ -75,8 +75,8 @@ class DefinitionRegistryGeneratorTest {
 
     String spiContent = filer.files.get(spiKey).getContent();
     assertTrue(
-        spiContent.contains("cbs.dsl.codegen.generated.GeneratedImplRegistrations"),
-        "SPI file should contain GeneratedImplRegistrations class name: " + spiContent);
+        spiContent.contains("cbs.dsl.codegen.generated.DefinitionRegistryProviderImpl"),
+        "SPI file should contain DefinitionRegistryProviderImpl class name: " + spiContent);
   }
 
   @Test
@@ -97,13 +97,13 @@ class DefinitionRegistryGeneratorTest {
     new DefinitionRegistryGenerator(filer).generate(specs);
 
     String generatedClassKey = filer.files.keySet().stream()
-        .filter(k -> k.contains("GeneratedImplRegistrations"))
+        .filter(k -> k.contains("DefinitionRegistryProviderImpl"))
         .findFirst()
-        .orElseThrow(() -> new AssertionError("No GeneratedImplRegistrations found"));
+        .orElseThrow(() -> new AssertionError("No DefinitionRegistryProviderImpl found"));
 
     String content = filer.files.get(generatedClassKey).getContent();
     assertTrue(
-        content.contains("class GeneratedImplRegistrations implements DefinitionRegistryProvider"),
+        content.contains("class DefinitionRegistryProviderImpl implements DefinitionRegistryProvider"),
         "Content should contain class declaration: " + content);
     assertTrue(
         content.contains("registry.register(new TxWithBodyDefinition(resolver))"),
@@ -134,7 +134,7 @@ class DefinitionRegistryGeneratorTest {
 
     String spiContent = filer.files.get(spiKey).getContent();
     assertTrue(
-        spiContent.contains("cbs.dsl.codegen.generated.GeneratedImplRegistrations"),
-        "SPI file should contain GeneratedImplRegistrations class name: " + spiContent);
+        spiContent.contains("cbs.dsl.codegen.generated.DefinitionRegistryProviderImpl"),
+        "SPI file should contain DefinitionRegistryProviderImpl class name: " + spiContent);
   }
 }

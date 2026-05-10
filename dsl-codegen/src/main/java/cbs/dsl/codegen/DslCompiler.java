@@ -30,6 +30,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 /** Compiles JEP 512 implicit-class DSL files and collects their {@link DslObject} instances. */
+
+//TODO: replace javaparser with `https://github.com/INRIA/spoon` implementation("fr.inria.gforge.spoon:spoon-core:10.3.0")
 public class DslCompiler {
 
   private static final JavaCompiler COMPILER = ToolProvider.getSystemJavaCompiler();
@@ -453,8 +455,9 @@ public class DslCompiler {
     String inputType = resolveInputType(interfaceType);
     String outputType = resolveOutputType(interfaceType);
     boolean isDsl = parsed != null;
-    String uniqueClassName =
-        isDsl ? className + "_" + CodeGenUtil.toClassName(obj.code()) : className;
+    String uniqueClassName = (isDsl && interfaceType == DslInterfaceType.HELPER)
+        ? className + "_" + CodeGenUtil.toClassName(obj.code())
+        : className;
     return new RegistrationModel(
         "",
         uniqueClassName,

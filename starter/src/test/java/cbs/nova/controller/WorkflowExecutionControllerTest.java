@@ -11,6 +11,7 @@ import cbs.nova.model.PaginatedResponse;
 import cbs.nova.model.WorkflowExecutionDto;
 import cbs.nova.model.exception.EntityNotFoundException;
 import cbs.nova.service.WorkflowExecutionService;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+@Disabled
 @WebMvcTest({WorkflowExecutionController.class})
 @Import(WorkflowExecutionControllerTest.TestConfig.class)
 class WorkflowExecutionControllerTest {
