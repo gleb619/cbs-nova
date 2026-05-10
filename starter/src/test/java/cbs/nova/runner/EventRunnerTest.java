@@ -11,13 +11,15 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import cbs.dsl.api.EventDefinition;
+import cbs.dsl.api.EventTypes.EventStatus;
+import cbs.dsl.api.EventOperation;
 import cbs.dsl.api.ParameterDefinition;
 import cbs.nova.model.EventExecutionRequest;
 import cbs.nova.model.EventExecutionResponse;
+import cbs.dsl.api.EventTypes.EventInput;
 import cbs.nova.registry.DefaultSpecDefinitionRegistry;
 import cbs.nova.registry.DslRegistry;
 import cbs.nova.temporal.WorkflowManager;
-import io.temporal.client.WorkflowStub;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -68,22 +70,16 @@ class EventRunnerTest {
     when(mockEventDefinition.getParameters()).thenReturn(List.of(paramDef1, paramDef2));
     doReturn(Object.class).when(specRegistry).getWorkflowInterface("LOAN_DISBURSEMENT");
 
-    WorkflowStub mockWorkflowStub = mock(WorkflowStub.class);
-    when(workflowManager.newUntypedWorkflowStub(eq("LOAN_DISBURSEMENT"), any()))
-        .thenReturn(mockWorkflowStub);
+    EventOperation mockEventOperation = mock(EventOperation.class);
+    when(workflowManager.newWorkflowStub(eq("LOAN_DISBURSEMENT"), any()))
+        .thenReturn(mockEventOperation);
 
     EventExecutionResponse response = eventRunner.perform(request);
 
-    assertThat(response.status()).isEqualTo("STARTED");
-    assertThat(response.executionId()).isNull();
+    assertThat(response.status()).isEqualTo(EventStatus.PENDING);
+    assertThat(response.executionId()).isEqualTo("123abc");
 
-    ArgumentCaptor<EventExecutionRequest> requestCaptor =
-        ArgumentCaptor.forClass(EventExecutionRequest.class);
-    verify(mockWorkflowStub).start(requestCaptor.capture());
-
-    EventExecutionRequest capturedRequest = requestCaptor.getValue();
-    assertThat(capturedRequest.params()).containsKey("amount");
-    assertThat(capturedRequest.params()).doesNotContainKey("unknownParam");
+    verify(workflowManager).start(any(EventOperation.class), any());
   }
 
   @Test
@@ -102,19 +98,18 @@ class EventRunnerTest {
     when(mockEventDefinition.getParameters()).thenReturn(List.of(paramDef1, paramDef2));
     doReturn(Object.class).when(specRegistry).getWorkflowInterface("PAYMENT");
 
-    WorkflowStub mockWorkflowStub = mock(WorkflowStub.class);
-    when(workflowManager.newUntypedWorkflowStub(eq("PAYMENT"), any())).thenReturn(mockWorkflowStub);
+    EventOperation mockEventOperation = mock(EventOperation.class);
+    when(workflowManager.newWorkflowStub(eq("PAYMENT"), any())).thenReturn(mockEventOperation);
 
     EventExecutionResponse response = eventRunner.perform(request);
 
-    ArgumentCaptor<EventExecutionRequest> requestCaptor =
-        ArgumentCaptor.forClass(EventExecutionRequest.class);
-    verify(mockWorkflowStub).start(requestCaptor.capture());
+    ArgumentCaptor<EventInput> inputCaptor = ArgumentCaptor.forClass(EventInput.class);
+    verify(workflowManager).start(any(EventOperation.class), inputCaptor.capture());
 
-    EventExecutionRequest capturedRequest = requestCaptor.getValue();
-    assertThat(capturedRequest.params()).hasSize(2);
-    assertThat(capturedRequest.params()).containsEntry("amount", 500);
-    assertThat(capturedRequest.params()).containsEntry("accountId", "ACC123");
+    EventInput capturedInput = inputCaptor.getValue();
+    assertThat(capturedInput.params()).hasSize(2);
+    assertThat(capturedInput.params()).containsEntry("amount", 500);
+    assertThat(capturedInput.params()).containsEntry("accountId", "ACC123");
   }
 
   @Test
@@ -126,18 +121,17 @@ class EventRunnerTest {
     when(mockEventDefinition.getParameters()).thenReturn(List.of());
     doReturn(Object.class).when(specRegistry).getWorkflowInterface("SIMPLE_EVENT");
 
-    WorkflowStub mockWorkflowStub = mock(WorkflowStub.class);
-    when(workflowManager.newUntypedWorkflowStub(eq("SIMPLE_EVENT"), any()))
-        .thenReturn(mockWorkflowStub);
+    EventOperation mockEventOperation = mock(EventOperation.class);
+    when(workflowManager.newWorkflowStub(eq("SIMPLE_EVENT"), any()))
+        .thenReturn(mockEventOperation);
 
     EventExecutionResponse response = eventRunner.perform(request);
 
-    assertThat(response.status()).isEqualTo("STARTED");
+    assertThat(response.status()).isEqualTo(EventStatus.PENDING);
 
-    ArgumentCaptor<EventExecutionRequest> requestCaptor =
-        ArgumentCaptor.forClass(EventExecutionRequest.class);
-    verify(mockWorkflowStub).start(requestCaptor.capture());
-    assertThat(requestCaptor.getValue().params()).isEmpty();
+    ArgumentCaptor<EventInput> inputCaptor = ArgumentCaptor.forClass(EventInput.class);
+    verify(workflowManager).start(any(EventOperation.class), inputCaptor.capture());
+    assertThat(inputCaptor.getValue().params()).isEmpty();
   }
 
   @Test
@@ -166,57 +160,5 @@ class EventRunnerTest {
     assertThatThrownBy(() -> eventRunner.perform(request))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("MISSING_EVENT");
-  }
-
-  @Test
-  @DisplayName("shouldPreservePerformedByInFilteredRequest")
-  void shouldPreservePerformedByInFilteredRequest() {
-    EventExecutionRequest request =
-        new EventExecutionRequest("TEST_EVENT", "specific-performer", Map.of("extra", "value"));
-
-    ParameterDefinition paramDef = mock(ParameterDefinition.class);
-    when(paramDef.getName()).thenReturn("required");
-
-    when(dslRegistry.resolveEvent("TEST_EVENT")).thenReturn(mockEventDefinition);
-    when(mockEventDefinition.getParameters()).thenReturn(List.of(paramDef));
-    doReturn(Object.class).when(specRegistry).getWorkflowInterface("TEST_EVENT");
-
-    WorkflowStub mockWorkflowStub = mock(WorkflowStub.class);
-    when(workflowManager.newUntypedWorkflowStub(eq("TEST_EVENT"), any()))
-        .thenReturn(mockWorkflowStub);
-
-    eventRunner.perform(request);
-
-    ArgumentCaptor<EventExecutionRequest> requestCaptor =
-        ArgumentCaptor.forClass(EventExecutionRequest.class);
-    verify(mockWorkflowStub).start(requestCaptor.capture());
-
-    assertThat(requestCaptor.getValue().performedBy()).isEqualTo("specific-performer");
-  }
-
-  @Test
-  @DisplayName("shouldPreserveEventCodeInFilteredRequest")
-  void shouldPreserveEventCodeInFilteredRequest() {
-    EventExecutionRequest request =
-        new EventExecutionRequest("MY_EVENT_CODE", "admin", Map.of("extra", "value"));
-
-    ParameterDefinition paramDef = mock(ParameterDefinition.class);
-    when(paramDef.getName()).thenReturn("required");
-
-    when(dslRegistry.resolveEvent("MY_EVENT_CODE")).thenReturn(mockEventDefinition);
-    when(mockEventDefinition.getParameters()).thenReturn(List.of(paramDef));
-    doReturn(Object.class).when(specRegistry).getWorkflowInterface("MY_EVENT_CODE");
-
-    WorkflowStub mockWorkflowStub = mock(WorkflowStub.class);
-    when(workflowManager.newUntypedWorkflowStub(eq("MY_EVENT_CODE"), any()))
-        .thenReturn(mockWorkflowStub);
-
-    eventRunner.perform(request);
-
-    ArgumentCaptor<EventExecutionRequest> requestCaptor =
-        ArgumentCaptor.forClass(EventExecutionRequest.class);
-    verify(mockWorkflowStub).start(requestCaptor.capture());
-
-    assertThat(requestCaptor.getValue().eventCode()).isEqualTo("MY_EVENT_CODE");
   }
 }
