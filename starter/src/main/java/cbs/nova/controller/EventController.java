@@ -41,7 +41,7 @@ public class EventController {
       @Valid @RequestBody EventExecutionRequest request) {
     log.info(
         "Executing event: workflow={}, event={}, by={}",
-        request.workflowCode(),
+        null,
         request.eventCode(),
         request.performedBy());
     EventExecutionResponse response = eventExecutionService.execute(request);

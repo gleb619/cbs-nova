@@ -1,15 +1,22 @@
 package cbs.nova.model;
 
-import jakarta.validation.constraints.NotBlank;
+import cbs.dsl.api.EventTypes.EventInput;
 import lombok.Builder;
 
 import java.util.Map;
+import org.jspecify.annotations.NonNull;
 
-// TODO: remove file, instead use another api
-@Deprecated(forRemoval = true)
 @Builder(toBuilder = true)
 public record EventExecutionRequest(
-    @NotBlank String workflowCode,
-    @NotBlank String eventCode,
-    @NotBlank String performedBy,
-    Map<String, Object> parameters) {}
+    @NonNull String eventCode,
+    @NonNull String performedBy,
+    @NonNull Map<String, Object> params) {
+
+  public EventInput toEventInput(String eventNumber) {
+    return EventInput.builder()
+        .eventNumber(eventNumber)
+        .params(params())
+        .build();
+  }
+
+}

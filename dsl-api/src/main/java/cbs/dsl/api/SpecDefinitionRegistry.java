@@ -63,7 +63,7 @@ public interface SpecDefinitionRegistry {
    * @return the interface class
    * @throws IllegalArgumentException if no workflow is registered with the given code
    */
-  Class<?> getWorkflowInterface(String code);
+  <T extends EventOperation> Class<T> getWorkflowInterface(String code);
 
   /**
    * Looks up an activity implementation by code and casts it to the requested interface type.
@@ -85,5 +85,5 @@ public interface SpecDefinitionRegistry {
    * @return the implementation cast to the requested type
    * @throws IllegalArgumentException if the code is unknown or the cast fails
    */
-  <T> T getWorkflow(String code, Class<T> workflowInterface);
+  <T extends EventOperation> T getWorkflow(String code, Class<T> workflowInterface);
 }

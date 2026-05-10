@@ -16,15 +16,23 @@ public class EventTypes {
   @Json
   @Builder(toBuilder = true)
   public record EventInput(
-      Map<String, Object> params, String eventCode, Long eventNumber, String workflowExecutionId)
+      String eventNumber, Map<String, Object> params)
       implements EventArg {}
 
   @Json
   @Builder(toBuilder = true)
-  public record EventOutput(Map<String, Object> params, String status) implements EventResult {
+  public record EventOutput(Map<String, Object> params, EventStatus status) implements EventResult {
 
-    public EventOutput(Map<String, Object> result) {
-      this(result, "SUCCESS");
+    public static EventOutput success(Map<String, Object> result) {
+      return new EventOutput(result, EventStatus.SUCCESS);
     }
   }
+
+  public enum EventStatus {
+    UNDEFINED,
+    SUCCESS,
+    PENDING,
+    ERROR,
+  }
+
 }

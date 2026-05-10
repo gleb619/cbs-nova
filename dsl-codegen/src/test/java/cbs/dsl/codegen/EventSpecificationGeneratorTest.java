@@ -41,7 +41,7 @@ class EventSpecificationGeneratorTest {
         "Interface should have @WorkflowInterface");
     assertTrue(
         interfaceContent.contains(
-            "WorkflowExecutionResponse execute(EventSpecificationRequest input)"),
+            "EventOutput execute(EventInput input)"),
         "Interface should have execute method");
     assertTrue(
         interfaceContent.contains("@WorkflowMethod(name = \"LOAN_DISBURSEMENT\")"),

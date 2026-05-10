@@ -158,6 +158,10 @@ public class TransactionDefinitionGenerator implements DefinitionGenerator {
           }
           """;
 
+    String specImport = spec.packageName().isBlank()
+        ? ""
+        : "import " + spec.packageName() + "." + spec.className() + ";\n";
+
     String dslBody = dslBodyProvider.apply(spec);
     String dslImportsBlock = (spec.dslImports() != null && !spec.dslImports().isBlank())
         ? spec.dslImports().trim() + "\n"
@@ -180,8 +184,7 @@ public class TransactionDefinitionGenerator implements DefinitionGenerator {
         import cbs.dsl.api.ParametersTypes.ParametersInput;
         import cbs.dsl.api.ParametersTypes;
         import {{generatedPackage}}.{{activityInterfaceName}};
-        import {{specPackageName}}.{{specClassName}};
-        {{inputTypeImport}}        {{outputTypeImport}}        {{dslImportsBlock}}        import java.util.ArrayList;
+        {{specImport}}{{inputTypeImport}}        {{outputTypeImport}}        {{dslImportsBlock}}        import java.util.ArrayList;
         import java.util.Collections;
         import java.util.List;
         import java.util.Map;
@@ -232,7 +235,7 @@ public class TransactionDefinitionGenerator implements DefinitionGenerator {
 
             @Override
             public DslObject dsl() {
-                return {{dslBody}}
+                {{dslBody}}
             }
         }
         """,
@@ -240,7 +243,7 @@ public class TransactionDefinitionGenerator implements DefinitionGenerator {
             Map.entry("definitionsPackage", DEFINITIONS_PACKAGE),
             Map.entry("generatedPackage", GENERATED_PACKAGE),
             Map.entry("activityInterfaceName", activityInterfaceName),
-            Map.entry("specPackageName", spec.packageName()),
+            Map.entry("specImport", specImport),
             Map.entry("specClassName", spec.className()),
             Map.entry("inputTypeImport", inputTypeImport),
             Map.entry("outputTypeImport", outputTypeImport),

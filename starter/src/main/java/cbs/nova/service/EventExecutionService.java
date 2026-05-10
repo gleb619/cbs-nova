@@ -35,16 +35,16 @@ public class EventExecutionService {
 
   public EventExecutionResponse execute(EventExecutionRequest request) {
     log.debug(
-        "Executing event: workflow={}, event={}", request.workflowCode(), request.eventCode());
+        "Executing event: workflow={}, event={}", null, request.eventCode());
 
-    WorkflowDefinition workflowDefinition = workflowResolver.resolve(request.workflowCode());
+    WorkflowDefinition workflowDefinition = workflowResolver.resolve(null);
     log.debug("Resolved workflow: {}", workflowDefinition.getCode());
 
-    Map<String, Object> parameters = request.parameters() != null ? request.parameters() : Map.of();
+    Map<String, Object> parameters = request.params() != null ? request.params() : Map.of();
     String encryptedContext = contextEncryptionService.encrypt(parameters);
 
     WorkflowExecutionEntity workflowExecution = WorkflowExecutionEntity.builder()
-        .workflowCode(request.workflowCode())
+        .workflowCode(null)
         .dslVersion("dev")
         .currentState(workflowDefinition.getInitial())
         .status(WorkflowStatus.ACTIVE)
@@ -83,7 +83,7 @@ public class EventExecutionService {
         .build();
     workflowTransitionLogRepository.save(transitionLog);
 
-    EventExecutionResponse runnerResponse = eventRunner.run(request);
-    return new EventExecutionResponse(workflowExecution.getId(), runnerResponse.status());
+    EventExecutionResponse runnerResponse = eventRunner.perform(request);
+    return new EventExecutionResponse(workflowExecution.getId().toString(), runnerResponse.status());
   }
 }

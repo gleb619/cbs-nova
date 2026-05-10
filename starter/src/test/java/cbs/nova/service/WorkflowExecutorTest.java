@@ -50,7 +50,7 @@ class WorkflowExecutorTest {
   @DisplayName("shouldReturnWorkflowExecutionResultWhenTemporalSucceeds")
   void shouldReturnWorkflowExecutionResultWhenTemporalSucceeds() {
     EventExecutionRequest request =
-        new EventExecutionRequest("loan", "submit", "user1", Map.of("amount", 1000));
+        new EventExecutionRequest("submit", "user1", Map.of("amount", 1000));
     String contextJson = "{\"amount\":1000}";
     WorkflowStub workflowStub = mock(WorkflowStub.class);
     WorkflowExecutionResponse expectedResult = new WorkflowExecutionResponse(42L, "ACTIVE");
@@ -75,7 +75,7 @@ class WorkflowExecutorTest {
   @Test
   @DisplayName("shouldPropagateWorkflowExceptionWhenTemporalFails")
   void shouldPropagateWorkflowExceptionWhenTemporalFails() {
-    EventExecutionRequest request = new EventExecutionRequest("loan", "submit", "user1", Map.of());
+    EventExecutionRequest request = new EventExecutionRequest("submit", "user1", Map.of());
     WorkflowStub workflowStub = mock(WorkflowStub.class);
 
     when(workflowClient.newUntypedWorkflowStub(eq("GENERIC_EVENT"), any(WorkflowOptions.class)))

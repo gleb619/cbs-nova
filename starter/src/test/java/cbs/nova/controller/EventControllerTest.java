@@ -46,8 +46,8 @@ class EventControllerTest {
   void shouldReturn200WhenEventExecutesSuccessfully() throws Exception {
     // Arrange
     EventExecutionRequest request =
-        new EventExecutionRequest("loan-approval", "approve", "admin1", Map.of("amount", 1000));
-    EventExecutionResponse response = new EventExecutionResponse(1L, "ACTIVE");
+        new EventExecutionRequest("approve", "admin1", Map.of("amount", 1000));
+    EventExecutionResponse response = new EventExecutionResponse("1", "ACTIVE");
     when(eventExecutionService.execute(any(EventExecutionRequest.class))).thenReturn(response);
 
     // Act & Assert
@@ -65,7 +65,7 @@ class EventControllerTest {
   void shouldReturn404WhenDefinitionNotFound() throws Exception {
     // Arrange
     EventExecutionRequest request =
-        new EventExecutionRequest("unknown-workflow", "approve", "admin1", Map.of());
+        new EventExecutionRequest("approve", "admin1", Map.of());
     when(eventExecutionService.execute(any(EventExecutionRequest.class)))
         .thenThrow(new EntityNotFoundException("Workflow", "unknown-workflow"));
 
@@ -83,7 +83,7 @@ class EventControllerTest {
   void shouldReturn422WhenIllegalArgument() throws Exception {
     // Arrange
     EventExecutionRequest request =
-        new EventExecutionRequest("loan-approval", "approve", "admin1", Map.of());
+        new EventExecutionRequest("approve", "admin1", Map.of());
     when(eventExecutionService.execute(any(EventExecutionRequest.class)))
         .thenThrow(new IllegalArgumentException("Context evaluation failed"));
 
@@ -101,8 +101,8 @@ class EventControllerTest {
   void shouldReturn200WhenNoJwtBecauseSecurityIsMocked() throws Exception {
     // Arrange — security is mocked, so no auth check is performed
     EventExecutionRequest request =
-        new EventExecutionRequest("loan-approval", "approve", "admin1", Map.of());
-    EventExecutionResponse response = new EventExecutionResponse(1L, "ACTIVE");
+        new EventExecutionRequest("approve", "admin1", Map.of());
+    EventExecutionResponse response = new EventExecutionResponse("1", "ACTIVE");
     when(eventExecutionService.execute(any(EventExecutionRequest.class))).thenReturn(response);
 
     // Act & Assert — 200 because SecurityFilterChain is a mock (no auth enforcement)
@@ -117,7 +117,7 @@ class EventControllerTest {
   @DisplayName("Should return 422 when workflowCode is blank")
   void shouldReturn422WhenWorkflowCodeIsBlank() throws Exception {
     // Arrange
-    EventExecutionRequest request = new EventExecutionRequest("", "approve", "admin1", Map.of());
+    EventExecutionRequest request = new EventExecutionRequest("approve", "admin1", Map.of());
 
     // Act & Assert
     mockMvc

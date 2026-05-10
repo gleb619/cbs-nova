@@ -12,7 +12,7 @@ archunit = "1.4.1"
 temporal = "1.27.0"
 jgit = "7.2.0.202503040940-r"
 javapoet = "0.11.0"
-javaparser = "3.26.4"
+javaparser = "3.28.1"
 # Used in `gradle/checkstyle.gradle`
 checkstyle = "13.4.0"
 pmd = "6.55.0"

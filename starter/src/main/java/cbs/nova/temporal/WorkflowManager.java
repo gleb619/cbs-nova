@@ -1,11 +1,14 @@
 package cbs.nova.temporal;
 
+import cbs.dsl.api.EventOperation;
+import cbs.dsl.api.EventTypes.EventInput;
 import cbs.dsl.api.SpecDefinitionRegistry;
+import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
+import io.temporal.client.WorkflowStub;
 import io.temporal.worker.Worker;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,9 +29,7 @@ public class WorkflowManager {
 
   private final SpecDefinitionRegistry artifactRegistry;
   private final WorkflowClient workflowClient;
-
-  @Value("${app.temporal.task-queue:}")
-  private String taskQueue;
+  private final String taskQueue;
 
   /**
    * Creates a typed workflow stub for the given event code.
@@ -40,8 +41,8 @@ public class WorkflowManager {
    * @throws IllegalArgumentException if the code is not registered
    */
   @SuppressWarnings("unchecked")
-  public <T> T newWorkflowStub(String code, String workflowId) {
-    Class<T> workflowInterface = (Class<T>) artifactRegistry.getWorkflowInterface(code);
+  public <T extends EventOperation> T newWorkflowStub(String code, String workflowId) {
+    Class<T> workflowInterface = artifactRegistry.getWorkflowInterface(code);
 
     String queue = taskQueue.isBlank() ? "cbs-nova-task-queue" : taskQueue;
     WorkflowOptions options = WorkflowOptions.newBuilder()
@@ -53,12 +54,29 @@ public class WorkflowManager {
   }
 
   /**
+   * Creates an untyped workflow stub for the given event code.
+   *
+   * @param code the event code
+   * @param workflowId the unique workflow ID
+   * @return an untyped Temporal workflow stub
+   */
+  public WorkflowStub newUntypedWorkflowStub(String code, String workflowId) {
+    String queue = taskQueue.isBlank() ? "cbs-nova-task-queue" : taskQueue;
+    WorkflowOptions options = WorkflowOptions.newBuilder()
+        .setWorkflowId(workflowId)
+        .setTaskQueue(queue)
+        .build();
+
+    return workflowClient.newUntypedWorkflowStub(code, options);
+  }
+
+  /**
    * Returns the workflow interface class registered under the given code.
    *
    * @param code the workflow code
    * @return the interface class
    */
-  public Class<?> getWorkflowInterface(String code) {
+  public <T extends EventOperation> Class<T> getWorkflowInterface(String code) {
     return artifactRegistry.getWorkflowInterface(code);
   }
 
@@ -79,8 +97,30 @@ public class WorkflowManager {
    * @param <T> the workflow type
    * @return the implementation instance
    */
-  public <T> T getWorkflow(String code, Class<T> workflowInterface) {
+  public <T extends EventOperation> T getWorkflow(String code, Class<T> workflowInterface) {
     return artifactRegistry.getWorkflow(code, workflowInterface);
+  }
+
+  public WorkflowExecution start(EventOperation eventOperation, EventInput input) {
+    return WorkflowClient.start(eventOperation::execute, input);
+  }
+
+  /**
+   * Creates a typed workflow stub for the given workflow interface.
+   *
+   * @param workflowInterface the workflow interface class
+   * @param workflowId the unique workflow ID
+   * @param <T> the workflow interface type
+   * @return a typed Temporal workflow stub
+   */
+  public <T> T newWorkflowStub(Class<T> workflowInterface, String workflowId) {
+    String queue = taskQueue.isBlank() ? "cbs-nova-task-queue" : taskQueue;
+    WorkflowOptions options =
+        WorkflowOptions.newBuilder()
+            .setWorkflowId(workflowId)
+            .setTaskQueue(queue)
+            .build();
+    return workflowClient.newWorkflowStub(workflowInterface, options);
   }
 
   /**
@@ -93,12 +133,13 @@ public class WorkflowManager {
   public void registerWorkflows(Worker worker) {
     List<Class<?>> workflowClasses = new ArrayList<>();
     for (String code : artifactRegistry.getWorkflowCodes()) {
-      Class<?> workflowInterface = artifactRegistry.getWorkflowInterface(code);
-      Object impl = artifactRegistry.getWorkflow(code, (Class<Object>) workflowInterface);
+      Class<EventOperation> workflowInterface = artifactRegistry.getWorkflowInterface(code);
+      EventOperation impl = artifactRegistry.getWorkflow(code, workflowInterface);
       workflowClasses.add(impl.getClass());
     }
     if (!workflowClasses.isEmpty()) {
       worker.registerWorkflowImplementationTypes(workflowClasses.toArray(new Class<?>[0]));
     }
   }
+
 }

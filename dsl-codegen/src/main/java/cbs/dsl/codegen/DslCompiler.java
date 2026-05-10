@@ -9,7 +9,6 @@ import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.MethodDeclaration;
-import com.github.javaparser.ast.stmt.Statement;
 
 import javax.tools.*;
 
@@ -34,19 +33,16 @@ import java.util.function.Function;
 public class DslCompiler {
 
   private static final JavaCompiler COMPILER = ToolProvider.getSystemJavaCompiler();
-  private static final String WRAPPER_TEMPLATE = // language=java
+  static final String WRAPPER_TEMPLATE = // language=java
       """
-      import java.util.ArrayList;
       import java.util.List;
       import cbs.dsl.api.DslCompilationUnit;
       import cbs.dsl.api.DslObject;
 
       {{imports}}public class {{className}} implements DslCompilationUnit {
           @Override
-          public List<DslObject> getDslObjects() {
-              List<DslObject> __objects = new ArrayList<>();
-      {{statements}}
-              return __objects;
+          public List<DslObject> define() {
+      {{body}}
           }
       }
       """;
@@ -145,14 +141,13 @@ public class DslCompiler {
 
     if (!containsExplicitTypeDeclaration(content)) {
       Path wrappedPath = wrapDir.resolve(sourceFile.getName());
-      ParsedDsl parsed = parseImplicitClassWithJavaParser(content);
+      ParsedDsl parsed = parseCompactDsl(content);
       PARSED_DSL_MAP.put(className, parsed);
-      String transformedBody = transformBodyForCollection(parsed.body());
       String importsBlock =
           parsed.imports() != null && !parsed.imports().isEmpty() ? parsed.imports() + "\n" : "";
       String wrappedContent = Substitutor.format(
           WRAPPER_TEMPLATE,
-          Map.of("className", className, "statements", transformedBody, "imports", importsBlock));
+          Map.of("className", className, "body", parsed.body(), "imports", importsBlock));
       Files.writeString(wrappedPath, wrappedContent);
       return wrappedPath.toFile();
     } else {
@@ -160,43 +155,10 @@ public class DslCompiler {
     }
   }
 
-  record ParsedDsl(String imports, String body) {}
+  public record ParsedDsl(String imports, String body) {}
 
-  static String transformBodyForCollection(String body) {
-    String tempWrapper = """
-        class __TransformHelper {
-            void __method() {
-                %s
-            }
-        }
-        """.formatted(body);
 
-    CompilationUnit cu = StaticJavaParser.parse(tempWrapper);
-    MethodDeclaration method = cu.findFirst(
-            MethodDeclaration.class, m -> "__method".equals(m.getNameAsString()))
-        .orElseThrow();
-
-    StringBuilder result = new StringBuilder();
-    method.getBody().ifPresent(block -> {
-      for (Statement stmt : block.getStatements()) {
-        if (stmt.isExpressionStmt()) {
-          String expr = stmt.asExpressionStmt().getExpression().toString();
-          if (expr.contains(".build()")) {
-            boolean isAggregate = expr.contains("Dsl.helpers()");
-            String addMethod = isAggregate ? "__objects.addAll" : "__objects.add";
-            result.append(addMethod).append("(").append(expr).append(");\n");
-          } else {
-            result.append(expr).append(";\n");
-          }
-        } else {
-          result.append(stmt).append("\n");
-        }
-      }
-    });
-    return result.toString();
-  }
-
-  static ParsedDsl parseImplicitClassWithJavaParser(String content) {
+  public static ParsedDsl parseCompactDsl(String content) {
     // Step 1: split imports and body with a lightweight line scan so imports stay
     // at compilation-unit level when we wrap the body in a temporary class.
     StringBuilder imports = new StringBuilder();
@@ -215,14 +177,11 @@ public class DslCompiler {
       }
     }
 
-    // Step 2: strip any user-defined main methods and wrap the rest in a synthetic main.
-    removeMainMethods(body.toString());
+    // Step 2: wrap body in a temp class (body already contains the define() method).
     String tempWrapper =
         """
         %sclass __Temp__ {
-            public static void main(String[] args) throws Exception {
         %s
-            }
         }""".formatted(imports.isEmpty() ? "" : imports.toString().trim() + "\n\n", body);
 
     ParserConfiguration config = new ParserConfiguration();
@@ -234,20 +193,19 @@ public class DslCompiler {
     }
     CompilationUnit cu = result.getResult().orElseThrow();
 
-    // Step 3: extract clean imports and body from the AST (comments already stripped).
+    // Step 3: extract clean imports from the AST (comments already stripped).
     StringBuilder importBlock = new StringBuilder();
     cu.getImports().forEach(imp -> importBlock.append(imp.toString()).append("\n"));
 
-    MethodDeclaration mainMethod = cu.findFirst(
+    // Step 4: find the define() method (no parameters) and extract its body.
+    MethodDeclaration defineMethod = cu.findFirst(
             MethodDeclaration.class,
-            m -> "main".equals(m.getName().asString())
-                && m.getParameters().size() == 1
-                && m.getParameter(0).getType().asString().contains("String[]"))
+            m -> "define".equals(m.getName().asString()) && m.getParameters().isEmpty())
         .orElseThrow(() -> new IllegalStateException(
-            "Could not locate synthetic main method in temporary wrapper"));
+            "Could not locate define() method in compact DSL"));
 
     StringBuilder cleanBody = new StringBuilder();
-    mainMethod.getBody().ifPresent(blockStmt -> blockStmt
+    defineMethod.getBody().ifPresent(blockStmt -> blockStmt
         .getStatements()
         .forEach(stmt -> cleanBody.append(stmt.toString()).append("\n")));
 
@@ -570,73 +528,14 @@ public class DslCompiler {
       throws Exception {
     Class<?> clazz = classLoader.loadClass(className);
     Object instance = clazz.getDeclaredConstructor().newInstance();
-    Method getter = clazz.getMethod("getDslObjects");
+    Method getter = clazz.getMethod("define");
     return (List<DslObject>) getter.invoke(instance);
   }
 
-  static boolean containsExplicitTypeDeclaration(String source) {
-    try {
-      CompilationUnit cu = StaticJavaParser.parse(source);
-      return !cu.getTypes().isEmpty();
-    } catch (Exception e) {
-      return source.matches("(?s).*\\b(class|interface|enum|record)\\s+\\w+.*");
-    }
-  }
-
-  private static String removeMainMethods(String body) {
-    StringBuilder result = new StringBuilder();
-    String[] lines = body.split("\n", -1);
-    boolean inMainMethod = false;
-    boolean waitingForOpenBrace = false;
-    int braceDepth = 0;
-
-    for (String line : lines) {
-      if (!inMainMethod && !waitingForOpenBrace) {
-        if (isMainMethodDeclarationLine(line)) {
-          for (char c : line.toCharArray()) {
-            if (c == '{') braceDepth++;
-            if (c == '}') braceDepth--;
-          }
-          if (braceDepth > 0) {
-            inMainMethod = true;
-          } else if (line.contains("{")) {
-            braceDepth = 0;
-          } else {
-            waitingForOpenBrace = true;
-          }
-          continue;
-        }
-        result.append(line).append("\n");
-      } else if (waitingForOpenBrace) {
-        for (char c : line.toCharArray()) {
-          if (c == '{') braceDepth++;
-          if (c == '}') braceDepth--;
-        }
-        if (braceDepth > 0) {
-          inMainMethod = true;
-          waitingForOpenBrace = false;
-        } else if (line.contains("{")) {
-          waitingForOpenBrace = false;
-          braceDepth = 0;
-        }
-      } else {
-        for (char c : line.toCharArray()) {
-          if (c == '{') braceDepth++;
-          if (c == '}') braceDepth--;
-        }
-        if (braceDepth <= 0) {
-          inMainMethod = false;
-          braceDepth = 0;
-        }
-      }
-    }
-    return result.toString();
-  }
-
-  private static boolean isMainMethodDeclarationLine(String line) {
-    String trimmed = line.trim();
-    return trimmed.matches(
-        "(?s)(?:public\\s+|static\\s+|private\\s+|protected\\s+)*\\s*void\\s+main\\s*\\(.*");
+  public static boolean containsExplicitTypeDeclaration(String source) {
+    // Use regex directly — JavaParser 3.28+ parses JEP 512 implicit classes
+    // as valid compilation units with types, which breaks the old check.
+    return source.matches("(?s).*\\b(class|interface|enum|record)\\s+\\w+.*");
   }
 
   private static void deleteRecursively(Path path) throws IOException {

@@ -99,8 +99,8 @@ public class EventDefinitionGenerator implements DefinitionGenerator {
         """
         package {{package}};
 
-        import cbs.nova.model.EventWorkflowRequest;
-        import cbs.nova.model.WorkflowExecutionResponse;
+        import cbs.dsl.api.EventTypes.EventInput;
+        import cbs.dsl.api.EventTypes.EventOutput;
         import io.temporal.activity.ActivityInterface;
         import io.temporal.activity.ActivityMethod;
         import java.util.Map;
@@ -114,10 +114,11 @@ public class EventDefinitionGenerator implements DefinitionGenerator {
         public interface {{className}} {
 
             @ActivityMethod
-            Map<String, Object> prepareContext(EventWorkflowRequest input);
+            Map<String, Object> prepareContext(EventInput input);
 
             @ActivityMethod
-            WorkflowExecutionResponse execute(EventWorkflowRequest input);
+            EventOutput execute(EventInput input);
+        
         }
         """,
         Map.of(
@@ -151,6 +152,10 @@ public class EventDefinitionGenerator implements DefinitionGenerator {
         ? ""
         : Substitutor.format("import {{outputType}};\n", Map.of("outputType", spec.outputType()));
 
+    String specImport = spec.packageName().isBlank()
+        ? ""
+        : "import " + spec.packageName() + "." + spec.className() + ";\n";
+
     String dslBody = dslBodyProvider.apply(spec);
     String dslImportsBlock = (spec.dslImports() != null && !spec.dslImports().isBlank())
         ? spec.dslImports().trim() + "\n"
@@ -163,13 +168,12 @@ public class EventDefinitionGenerator implements DefinitionGenerator {
         import cbs.dsl.api.DslComponentResolver;
         import cbs.dsl.api.DslObject;
         import cbs.dsl.api.EventDefinition;
-        
+
         import cbs.dsl.api.EventTypes.EventInput;
         import cbs.dsl.api.EventTypes.EventOutput;
         import cbs.dsl.api.ContextTypes.ContextOutput;
         import cbs.dsl.api.context.EventContext;
-        {{jsonPayloadImport}}        import {{specPackageName}}.{{specClassName}};
-        {{inputTypeImport}}{{outputTypeImport}}
+        {{jsonPayloadImport}}        {{specImport}}{{inputTypeImport}}{{outputTypeImport}}
         {{dslImportsBlock}}        import java.util.function.Consumer;
         import java.util.function.Function;
         import javax.annotation.processing.Generated;
@@ -203,7 +207,7 @@ public class EventDefinitionGenerator implements DefinitionGenerator {
 
             @Override
             public DslObject dsl() {
-                return {{dslBody}}
+                {{dslBody}}
             }
         }
         """;
@@ -212,7 +216,7 @@ public class EventDefinitionGenerator implements DefinitionGenerator {
     params.put("definitionsPackage", DEFINITIONS_PACKAGE);
     params.put("activityInterfaceName", activityInterfaceName);
     params.put("jsonPayloadImport", jsonPayloadImport);
-    params.put("specPackageName", spec.packageName());
+    params.put("specImport", specImport);
     params.put("specClassName", spec.className());
     params.put("inputTypeImport", inputTypeImport);
     params.put("outputTypeImport", outputTypeImport);
@@ -226,16 +230,6 @@ public class EventDefinitionGenerator implements DefinitionGenerator {
     params.put("outputConversion", outputConversion);
     params.put("dslBody", dslBody);
     return Substitutor.format(sourceTemplate, params);
-  }
-
-  public void writeDefinitionToPath(RegistrationModel spec, String source, Path outputDir)
-      throws IOException {
-    String wrapperClassName = spec.className() + "Definition";
-    Path outputPath = outputDir
-        .resolve("cbs/dsl/codegen/generated/definitions")
-        .resolve(wrapperClassName + ".java");
-    Files.createDirectories(outputPath.getParent());
-    Files.writeString(outputPath, source);
   }
 
   public List<FileWrite> generateFileSpecs(RegistrationModel spec, Path outputDir) {

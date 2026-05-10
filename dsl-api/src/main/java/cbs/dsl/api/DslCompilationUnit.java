@@ -9,5 +9,5 @@ import java.util.List;
  */
 @FunctionalInterface
 public interface DslCompilationUnit {
-  List<DslObject> getDslObjects();
+  List<DslObject> define();
 }

@@ -1,5 +1,6 @@
 package cbs.nova.registry;
 
+import cbs.dsl.api.EventOperation;
 import cbs.dsl.api.SpecDefinitionRegistry;
 
 import java.util.Collections;
@@ -15,19 +16,24 @@ import java.util.Set;
  */
 public class DefaultSpecDefinitionRegistry implements SpecDefinitionRegistry {
 
-  private final Map<String, ArtifactEntry> activities = new HashMap<>();
-  private final Map<String, ArtifactEntry> workflows = new HashMap<>();
+  private final Map<String, TemporalWorkflowOrActivity> activities = new HashMap<>();
+  private final Map<String, TemporalWorkflowOrActivity> workflows = new HashMap<>();
 
-  private record ArtifactEntry(Class<?> interfaceClass, Object implementation) {}
+  private record TemporalWorkflowOrActivity(Class<?> interfaceClass, Object implementation) {
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public Class<EventOperation> asWorkflow() {
+      return (Class) interfaceClass();
+    }
+  }
 
   @Override
   public void registerActivity(String code, Class<?> activityInterface, Object implementation) {
-    activities.put(code, new ArtifactEntry(activityInterface, implementation));
+    activities.put(code, new TemporalWorkflowOrActivity(activityInterface, implementation));
   }
 
   @Override
   public void registerWorkflow(String code, Class<?> workflowInterface, Object implementation) {
-    workflows.put(code, new ArtifactEntry(workflowInterface, implementation));
+    workflows.put(code, new TemporalWorkflowOrActivity(workflowInterface, implementation));
   }
 
   @Override
@@ -42,7 +48,7 @@ public class DefaultSpecDefinitionRegistry implements SpecDefinitionRegistry {
 
   @Override
   public Class<?> getActivityInterface(String code) {
-    ArtifactEntry entry = activities.get(code);
+    TemporalWorkflowOrActivity entry = activities.get(code);
     if (entry == null) {
       throw new IllegalArgumentException(
           "Activity '%s' not found in SpecDefinitionRegistry".formatted(code));
@@ -51,18 +57,20 @@ public class DefaultSpecDefinitionRegistry implements SpecDefinitionRegistry {
   }
 
   @Override
-  public Class<?> getWorkflowInterface(String code) {
-    ArtifactEntry entry = workflows.get(code);
+  public <T extends EventOperation> Class<T> getWorkflowInterface(String code) {
+    TemporalWorkflowOrActivity entry = workflows.get(code);
     if (entry == null) {
       throw new IllegalArgumentException(
           "Workflow '%s' not found in SpecDefinitionRegistry".formatted(code));
     }
-    return entry.interfaceClass();
+    @SuppressWarnings("unchecked")
+    Class<T> result = (Class<T>) entry.interfaceClass();
+    return result;
   }
 
   @Override
   public <T> T getActivity(String code, Class<T> activityInterface) {
-    ArtifactEntry entry = activities.get(code);
+    TemporalWorkflowOrActivity entry = activities.get(code);
     if (entry == null) {
       throw new IllegalArgumentException(
           "Activity '%s' not found in SpecDefinitionRegistry".formatted(code));
@@ -76,8 +84,8 @@ public class DefaultSpecDefinitionRegistry implements SpecDefinitionRegistry {
   }
 
   @Override
-  public <T> T getWorkflow(String code, Class<T> workflowInterface) {
-    ArtifactEntry entry = workflows.get(code);
+  public <T extends EventOperation> T getWorkflow(String code, Class<T> workflowInterface) {
+    TemporalWorkflowOrActivity entry = workflows.get(code);
     if (entry == null) {
       throw new IllegalArgumentException(
           "Workflow '%s' not found in SpecDefinitionRegistry".formatted(code));

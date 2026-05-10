@@ -1,17 +1,23 @@
 package cbs.nova.runner;
 
-import cbs.dsl.api.EventDefinition;
+import cbs.dsl.api.EventOperation;
+import cbs.dsl.api.EventTypes.EventStatus;
+import cbs.dsl.api.ParameterDefinition;
 import cbs.nova.model.EventExecutionRequest;
 import cbs.nova.model.EventExecutionResponse;
+import cbs.nova.registry.DefaultSpecDefinitionRegistry;
 import cbs.nova.registry.DslRegistry;
-import io.temporal.client.WorkflowClient;
-import io.temporal.client.WorkflowOptions;
+import cbs.nova.temporal.WorkflowManager;
 import io.temporal.client.WorkflowStub;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -19,42 +25,50 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class EventRunner {
 
-  private final WorkflowClient workflowClient;
+  private final WorkflowManager workflowManager;
   private final DslRegistry dslRegistry;
-
-  @Value("${app.temporal.task-queue}")
-  private String taskQueue;
+  private final DefaultSpecDefinitionRegistry specRegistry;
 
   /**
    * Runs an event by starting its generated Temporal workflow.
    *
-   * @param request the execution request containing eventCode, parameters, performer
+   * @param request the execution request containing eventCode, params, performer
    * @return the execution response with executionId and status
    */
-  public EventExecutionResponse run(EventExecutionRequest request) {
+  public EventExecutionResponse perform(EventExecutionRequest request) {
     log.debug("Running event: code={}, performedBy={}", request.eventCode(), request.performedBy());
 
-    EventDefinition eventDef = dslRegistry.resolveEvent(request.eventCode());
+    specRegistry.getWorkflowInterface(request.eventCode());
 
-    String workflowId = generateWorkflowId(request);
-    String workflowType = request.eventCode();
+    List<ParameterDefinition> definedParams = dslRegistry.resolveEvent(request.eventCode()).getParameters();
+    Set<String> definedParamNames = definedParams.stream()
+        .map(ParameterDefinition::getName)
+        .collect(Collectors.toSet());
 
-    WorkflowOptions options = WorkflowOptions.newBuilder()
-        .setWorkflowId(workflowId)
-        .setTaskQueue(taskQueue)
+    Map<String, Object> filteredParams = new HashMap<>();
+    for (Map.Entry<String, Object> entry : request.params().entrySet()) {
+      if (definedParamNames.contains(entry.getKey())) {
+        filteredParams.put(entry.getKey(), entry.getValue());
+      }
+    }
+
+    EventExecutionRequest filteredRequest = request.toBuilder()
+        .params(filteredParams)
         .build();
 
-    // Use untyped stub so we don't need the workflow interface class at compile time
-    WorkflowStub workflowStub = workflowClient.newUntypedWorkflowStub(workflowType, options);
+    String workflowId = generateWorkflowId(request);
 
-    log.debug("Starting Temporal workflow: type={}, id={}", workflowType, workflowId);
-    workflowStub.start(request);
+    EventOperation workflowStub = workflowManager.newWorkflowStub(request.eventCode(), workflowId);
 
-    // For now return async; in future we may wait for result
-    return new EventExecutionResponse(null, "STARTED");
+    log.debug("Starting Temporal workflow: code={}, id={}", request.eventCode(), workflowId);
+    //TODO: generate and add a event number here
+    String eventNumber = "123abc";
+    workflowManager.start(workflowStub, filteredRequest.toEventInput(eventNumber));
+
+    return new EventExecutionResponse(eventNumber, EventStatus.PENDING);
   }
 
   private String generateWorkflowId(EventExecutionRequest request) {
-    return "event-" + request.workflowCode() + "-" + request.eventCode() + "-" + UUID.randomUUID();
+    return "event-%s-%s".formatted(request.eventCode(), UUID.randomUUID());
   }
 }

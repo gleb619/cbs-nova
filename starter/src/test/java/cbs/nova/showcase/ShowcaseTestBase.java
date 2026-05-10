@@ -44,7 +44,7 @@ abstract class ShowcaseTestBase {
   @BeforeEach
   void setUpBase() throws Exception {
     dslRegistry = new DslRegistry();
-    SpiImplRegistryLoader.loadInto(dslRegistry);
+    SpiImplRegistryLoader.loadInto(dslRegistry, null);
     compileDslAndRegister();
   }
 
@@ -149,7 +149,7 @@ abstract class ShowcaseTestBase {
       if (DslCompilationUnit.class.isAssignableFrom(clazz)) {
         DslCompilationUnit unit =
             (DslCompilationUnit) clazz.getDeclaredConstructor().newInstance();
-        for (DslObject obj : unit.getDslObjects()) {
+        for (DslObject obj : unit.define()) {
           dslRegistry.register(obj);
         }
       }

@@ -2,6 +2,7 @@ package cbs.dsl.codegen;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.DisplayName;
@@ -34,116 +35,82 @@ class DslCompilerTest {
   }
 
   @Test
-  @DisplayName("Should strip comments and extract DSL body")
-  void shouldStripCommentsAndExtractDslBody() {
-    String dslWithComments = """
-        import cbs.dsl.builder.EventDsl;
+  @DisplayName("Should parse compact DSL with define method")
+  void shouldParseCompactDslWithDefineMethod() {
+    String compactDsl = """
+        import cbs.dsl.builder.Dsl;
         import java.util.Map;
+
+        List<DslObject> define() {
+            return Dsl.helpers()
+                .helper("TEST", h -> h
+                    .parameters(reg -> reg.string("name"))
+                    .execute(ctx -> ctx))
+                .build();
+        }
+        """;
+
+    DslCompiler.ParsedDsl parsed = DslCompiler.parseCompactDsl(compactDsl);
+
+    assertTrue(parsed.imports().contains("import cbs.dsl.builder.Dsl;"));
+    assertTrue(parsed.imports().contains("import java.util.Map;"));
+    assertTrue(parsed.body().contains("return"));
+    assertTrue(parsed.body().contains(".build();"));
+    assertFalse(parsed.body().contains("define"));
+  }
+
+  @Test
+  @DisplayName("Should strip comments from compact DSL")
+  void shouldStripCommentsFromCompactDsl() {
+    String dslWithComments = """
+        import cbs.dsl.builder.Dsl;
 
         // line comment
         /* block comment */
-        /**
-         * long comment
-         */
-        EventDsl.event("SAMPLE_EVENT_DSL")
-            .requiredParam("name")
-            .context(ctx -> {
-              Object helperResult = ctx.helper("SAMPLE_HELPER", Map.of("someVal", ctx.get("name")));
-              ctx.put("enriched", helperResult);
-            })
-            .transaction("SAMPLE_TX")
-            .transaction("SAMPLE_TRANSACTION_DSL")
-            .finish((ctx, ex) -> {})
-            .build();
-        """;
-
-    DslCompiler.ParsedDsl parsed = DslCompiler.parseImplicitClassWithJavaParser(dslWithComments);
-
-    assertTrue(parsed.imports().contains("import cbs.dsl.builder.EventDsl;"));
-    assertTrue(parsed.imports().contains("import java.util.Map;"));
-
-    String body = parsed.body();
-    assertFalse(body.contains("// line comment"));
-    assertFalse(body.contains("/* block comment */"));
-    assertFalse(body.contains("/**"));
-    assertFalse(body.contains(" * long comment"));
-
-    assertTrue(body.contains("EventDsl.event(\"SAMPLE_EVENT_DSL\")"));
-    assertTrue(body.contains(".requiredParam(\"name\")"));
-    assertTrue(body.contains(".transaction(\"SAMPLE_TX\")"));
-    assertTrue(body.contains(".transaction(\"SAMPLE_TRANSACTION_DSL\")"));
-    assertTrue(body.contains(".build();"));
-  }
-
-  @Test
-  @DisplayName("Should handle implicit class file without imports")
-  void shouldHandleImplicitClassFileWithoutImports() {
-    String implicitClass = """
-        // just a comment
-        EventDsl.event("TEST").build();
-        """;
-
-    DslCompiler.ParsedDsl parsed = DslCompiler.parseImplicitClassWithJavaParser(implicitClass);
-
-    assertEquals("", parsed.imports());
-    assertTrue(parsed.body().contains("EventDsl.event(\"TEST\").build();"));
-    assertFalse(parsed.body().contains("// just a comment"));
-  }
-
-  @Test
-  @DisplayName("Should ignore JEP 512 style void main method")
-  void shouldIgnoreJep512StyleVoidMainMethod() {
-    String dslWithJep512Main = """
-        import cbs.dsl.builder.EventDsl;
-
-        String fieldName = "testValue";
-
-        void main() {
-            Dsl.register("JEP512_HELPER");
-            System.out.println("This should be ignored");
+        List<DslObject> define() {
+            return List.of(Dsl.event("TEST")
+                .build());
         }
-
-        EventDsl.event("JEP512_TEST").build();
         """;
 
-    DslCompiler.ParsedDsl parsed = DslCompiler.parseImplicitClassWithJavaParser(dslWithJep512Main);
+    DslCompiler.ParsedDsl parsed = DslCompiler.parseCompactDsl(dslWithComments);
 
-    assertTrue(parsed.imports().contains("import cbs.dsl.builder.EventDsl;"));
-
-    String body = parsed.body();
-    assertTrue(body.contains("String fieldName = \"testValue\";"));
-    assertTrue(body.contains("EventDsl.event(\"JEP512_TEST\").build();"));
-    assertFalse(body.contains("Dsl.register"));
-    assertFalse(body.contains("System.out.println"));
+    assertTrue(parsed.imports().contains("import cbs.dsl.builder.Dsl;"));
+    assertFalse(parsed.body().contains("// line comment"));
+    assertFalse(parsed.body().contains("/* block comment */"));
+    assertTrue(parsed.body().contains("return"));
   }
 
   @Test
-  @DisplayName("Should ignore standard public static void main method")
-  void shouldIgnoreStandardPublicStaticVoidMainMethod() {
-    String dslWithStandardMain = """
-        import cbs.dsl.builder.EventDsl;
+  @DisplayName("Should throw when no define method found")
+  void shouldThrowWhenNoDefineMethodFound() {
+    String noDefine = """
+        import cbs.dsl.builder.Dsl;
+
+        Dsl.event("TEST").build();
+        """;
+
+    assertThrows(IllegalStateException.class, () -> DslCompiler.parseCompactDsl(noDefine));
+  }
+
+  @Test
+  @DisplayName("Should parse compact DSL with List.of wrapper")
+  void shouldParseCompactDslWithListOfWrapper() {
+    String compactDsl = """
+        import cbs.dsl.api.DslObject;
+        import cbs.dsl.builder.Dsl;
         import java.util.List;
 
-        int counter = 42;
-
-        public static void main(String[] args) {
-            Dsl.register("STANDARD_HELPER");
-            System.out.println("Standard main should be ignored");
+        List<DslObject> define() {
+            return List.of(Dsl.event("MY_EVENT")
+                .parameters(reg -> reg.string("name"))
+                .build());
         }
-
-        EventDsl.event("STANDARD_MAIN_TEST").build();
         """;
 
-    DslCompiler.ParsedDsl parsed =
-        DslCompiler.parseImplicitClassWithJavaParser(dslWithStandardMain);
+    DslCompiler.ParsedDsl parsed = DslCompiler.parseCompactDsl(compactDsl);
 
-    assertTrue(parsed.imports().contains("import cbs.dsl.builder.EventDsl;"));
-    assertTrue(parsed.imports().contains("import java.util.List;"));
-
-    String body = parsed.body();
-    assertTrue(body.contains("int counter = 42;"));
-    assertTrue(body.contains("EventDsl.event(\"STANDARD_MAIN_TEST\").build();"));
-    assertFalse(body.contains("Dsl.register"));
-    assertFalse(body.contains("System.out.println"));
+    assertTrue(parsed.body().contains("List.of(Dsl.event(\"MY_EVENT\")"));
+    assertTrue(parsed.body().contains(".build());"));
   }
 }

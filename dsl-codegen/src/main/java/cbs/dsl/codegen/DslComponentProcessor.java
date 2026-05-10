@@ -321,7 +321,7 @@ public class DslComponentProcessor extends AbstractProcessor {
       String content = sourceFile.getCharContent(true).toString();
       sourceCode = content;
       if (!DslCompiler.containsExplicitTypeDeclaration(content)) {
-        DslCompiler.ParsedDsl parsed = DslCompiler.parseImplicitClassWithJavaParser(content);
+        DslCompiler.ParsedDsl parsed = DslCompiler.parseCompactDsl(content);
         dslBody = parsed.body();
         dslImports = parsed.imports();
       }

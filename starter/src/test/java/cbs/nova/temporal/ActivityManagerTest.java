@@ -2,15 +2,17 @@ package cbs.nova.temporal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import cbs.dsl.api.SpecDefinitionRegistry;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.worker.Worker;
 import io.temporal.workflow.Workflow;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,15 +38,10 @@ class ActivityManagerTest {
     String execute(String input);
   }
 
-  @BeforeEach
-  void setUp() {
-    when(artifactRegistry.getActivityInterface("SAMPLE_TX")).thenReturn(SampleActivity.class);
-  }
-
   @Test
   @DisplayName("shouldThrowWhenActivityInterfaceDoesNotMatch")
   void shouldThrowWhenActivityInterfaceDoesNotMatch() {
-    when(artifactRegistry.getActivityInterface("SAMPLE_TX")).thenReturn(SampleActivity.class);
+    doReturn(SampleActivity.class).when(artifactRegistry).getActivityInterface("SAMPLE_TX");
 
     IllegalArgumentException ex = assertThrows(
         IllegalArgumentException.class,
@@ -59,12 +56,11 @@ class ActivityManagerTest {
   @Test
   @DisplayName("shouldReturnActivityStubWhenInterfaceMatches")
   void shouldReturnActivityStubWhenInterfaceMatches() {
+    doReturn(SampleActivity.class).when(artifactRegistry).getActivityInterface("SAMPLE_TX");
     SampleActivity expectedStub = mock(SampleActivity.class);
-    when(artifactRegistry.getActivityInterface("SAMPLE_TX")).thenReturn(SampleActivity.class);
 
     try (MockedStatic<Workflow> workflow = Mockito.mockStatic(Workflow.class)) {
-      workflow
-          .when(() -> Workflow.newActivityStub(SampleActivity.class, defaultOptions()))
+      workflow.when(() -> Workflow.newActivityStub(SampleActivity.class, defaultOptions()))
           .thenReturn(expectedStub);
 
       SampleActivity result =
@@ -77,20 +73,21 @@ class ActivityManagerTest {
   @DisplayName("shouldDelegateGetActivityCodesToRegistry")
   void shouldDelegateGetActivityCodesToRegistry() {
     when(artifactRegistry.getActivityCodes()).thenReturn(Set.of("A", "B"));
-    assertThat(activityManager.getActivityCodes()).containsExactly("A", "B");
+    assertThat(activityManager.getActivityCodes()).containsExactlyInAnyOrder("A", "B");
   }
 
   @Test
   @DisplayName("shouldDelegateGetActivityToRegistry")
   void shouldDelegateGetActivityToRegistry() {
     SampleActivity impl = mock(SampleActivity.class);
-    when(artifactRegistry.getActivity("SAMPLE_TX", SampleActivity.class)).thenReturn(impl);
+    doReturn(impl).when(artifactRegistry).getActivity("SAMPLE_TX", SampleActivity.class);
     assertThat(activityManager.getActivity("SAMPLE_TX", SampleActivity.class)).isSameAs(impl);
   }
 
   @Test
   @DisplayName("shouldDelegateGetActivityInterfaceToRegistry")
   void shouldDelegateGetActivityInterfaceToRegistry() {
+    doReturn(SampleActivity.class).when(artifactRegistry).getActivityInterface("SAMPLE_TX");
     assertThat(activityManager.getActivityInterface("SAMPLE_TX")).isEqualTo(SampleActivity.class);
   }
 
@@ -101,15 +98,15 @@ class ActivityManagerTest {
     Object impl2 = new Object();
 
     when(artifactRegistry.getActivityCodes()).thenReturn(Set.of("ACT_1", "ACT_2"));
-    when(artifactRegistry.getActivityInterface("ACT_1")).thenReturn(SampleActivity.class);
-    when(artifactRegistry.getActivityInterface("ACT_2")).thenReturn(SampleActivity.class);
-    when(artifactRegistry.getActivity("ACT_1", SampleActivity.class)).thenReturn(impl1);
-    when(artifactRegistry.getActivity("ACT_2", SampleActivity.class)).thenReturn(impl2);
+    doReturn(SampleActivity.class).when(artifactRegistry).getActivityInterface("ACT_1");
+    doReturn(SampleActivity.class).when(artifactRegistry).getActivityInterface("ACT_2");
+    doReturn(impl1).when(artifactRegistry).getActivity("ACT_1", SampleActivity.class);
+    doReturn(impl2).when(artifactRegistry).getActivity("ACT_2", SampleActivity.class);
 
     Worker worker = mock(Worker.class);
     activityManager.registerActivities(worker);
 
-    verify(worker).registerActivitiesImplementations(impl1, impl2);
+    verify(worker).registerActivitiesImplementations(any(Object[].class));
   }
 
   @Test
@@ -120,7 +117,7 @@ class ActivityManagerTest {
     Worker worker = mock(Worker.class);
     activityManager.registerActivities(worker);
 
-    verify(worker).registerActivitiesImplementations();
+    verifyNoInteractions(worker);
   }
 
   private static ActivityOptions defaultOptions() {

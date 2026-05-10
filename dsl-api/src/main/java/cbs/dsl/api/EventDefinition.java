@@ -24,7 +24,7 @@ public interface EventDefinition extends StandardDslDefinition {
    * @return the event output
    */
   default EventOutput execute(EventInput input) {
-    return new EventOutput(Collections.emptyMap());
+    return EventOutput.success(Collections.emptyMap());
   }
 
   default EventOutput preview(EventInput input) {

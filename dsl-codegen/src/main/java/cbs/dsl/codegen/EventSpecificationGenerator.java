@@ -97,22 +97,24 @@ public class EventSpecificationGenerator {
     String sourceTemplate = // language=java
         """
         package {{package}};
-
-        import cbs.nova.model.EventSpecificationRequest;
-        import cbs.nova.model.WorkflowExecutionResponse;
+        
+        import cbs.dsl.api.EventTypes.EventInput;
+        import cbs.dsl.api.EventTypes.EventOutput;
+        import cbs.dsl.api.EventOperation;
         import io.temporal.workflow.WorkflowInterface;
         import io.temporal.workflow.WorkflowMethod;
         import javax.annotation.processing.Generated;
-
+        
         @Generated(
             value = "cbs.dsl.codegen.EventSpecificationGenerator",
             date = "{{timestamp}}"
         )
         @WorkflowInterface
-        public interface {{className}} {
-
+        public interface {{className}} extends EventOperation {
+        
             @WorkflowMethod(name = "{{workflowMethodName}}")
-            WorkflowExecutionResponse execute(EventSpecificationRequest input);
+            EventOutput execute(EventInput input)
+        
         }
         """;
 
@@ -181,8 +183,8 @@ public class EventSpecificationGenerator {
         package {{package}};
 
         import cbs.dsl.api.TransactionTypes.TransactionInput;
-        import cbs.nova.model.EventSpecificationRequest;
-        import cbs.nova.model.WorkflowExecutionResponse;
+        import cbs.dsl.api.EventTypes.EventInput;
+        import cbs.dsl.api.EventTypes.EventOutput;
         import cbs.nova.temporal.ActivityManager;
         import java.util.Map;
         import javax.annotation.processing.Generated;
@@ -193,7 +195,7 @@ public class EventSpecificationGenerator {
         )
         public class {{implClassName}} implements {{workflowClassName}} {
 
-
+            //TODO: add here a `dsl-api/src/main/java/cbs/dsl/evaluator/EventEvaluator.java` to evaluate dsl
             private final {{eventActivityClassName}} activity;
             {{txActivityFields}}
 
@@ -202,17 +204,22 @@ public class EventSpecificationGenerator {
                     "{{eventActivityCode}}", {{eventActivityClassName}}.class);
                 {{txActivityInitializers}}
             }
-
+        
             @Override
-            public WorkflowExecutionResponse execute(EventSpecificationRequest input) {
+            public EventOutput execute(EventInput input) {
                 // 1. Prepare context via event activity
                 Map<String, Object> context = activity.prepareContext(input);
 
                 // 2. Execute transactions sequentially
         {{txExecutionCalls}}
 
-                return new WorkflowExecutionResponse(null, "COMPLETED");
+                return EventOutput.success(Collections.emptyMap());
             }
+        
+            public EventDslObject dsl() {
+                return {{dslBody}}
+            }
+        
         }
         """;
 

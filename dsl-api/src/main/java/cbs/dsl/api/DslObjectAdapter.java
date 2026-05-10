@@ -70,7 +70,7 @@ public final class DslObjectAdapter {
         return Collections.emptyList();
       }
       if (returnType == EventOutput.class) {
-        return new EventOutput(Collections.emptyMap());
+        return EventOutput.success(Collections.emptyMap());
       }
       if (returnType == TransactionOutput.class) {
         return TransactionOutput.empty();

@@ -149,7 +149,7 @@ abstract class ShowcaseITBase {
       if (DslCompilationUnit.class.isAssignableFrom(clazz)) {
         DslCompilationUnit unit =
             (DslCompilationUnit) clazz.getDeclaredConstructor().newInstance();
-        for (DslObject obj : unit.getDslObjects()) {
+        for (DslObject obj : unit.define()) {
           dslRegistry.register(obj);
         }
       }

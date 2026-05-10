@@ -239,7 +239,7 @@ public class HelperDefinitionGenerator implements DefinitionGenerator {
 
             @Override
             public DslObject dsl() {
-                return {{dslBody}}
+                {{dslBody}}
             }
         }
         """,

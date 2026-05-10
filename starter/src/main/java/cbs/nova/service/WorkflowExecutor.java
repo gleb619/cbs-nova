@@ -45,7 +45,7 @@ public class WorkflowExecutor {
   public WorkflowExecutionResponse start(
       EventExecutionRequest request, String contextJson, List<String> transactionCodes) {
     EventWorkflowRequest input = new EventWorkflowRequest(
-        request.workflowCode(),
+        null,
         request.eventCode(),
         contextJson,
         request.performedBy(),
@@ -83,6 +83,6 @@ public class WorkflowExecutor {
   }
 
   private String generateWorkflowId(EventExecutionRequest request) {
-    return "event-" + request.workflowCode() + "-" + request.eventCode() + "-" + UUID.randomUUID();
+    return "event-" + request.eventCode() + "-" + UUID.randomUUID();
   }
 }

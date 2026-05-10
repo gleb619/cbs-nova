@@ -93,6 +93,10 @@ public class MassOperationDefinitionGenerator implements DefinitionGenerator {
         ? ""
         : Substitutor.format("import {{type}};\n", Map.of("type", spec.outputType()));
 
+    String specImport = spec.packageName().isBlank()
+        ? ""
+        : "import " + spec.packageName() + "." + spec.className() + ";\n";
+
     String dslBody = dslBodyProvider.apply(spec);
     String dslImportsBlock = (spec.dslImports() != null && !spec.dslImports().isBlank())
         ? spec.dslImports().trim() + "\n"
@@ -101,7 +105,7 @@ public class MassOperationDefinitionGenerator implements DefinitionGenerator {
     String sourceTemplate = // language=java
         """
         package {{package}};
-        
+
         import cbs.dsl.api.DslComponentResolver;
         import cbs.dsl.api.DslObject;
         import cbs.dsl.api.LockDefinition;
@@ -112,8 +116,7 @@ public class MassOperationDefinitionGenerator implements DefinitionGenerator {
         import cbs.dsl.api.SourceDefinition;
         import cbs.dsl.api.TriggerDefinition;
         import cbs.dsl.api.context.MassOperationContext;
-        {{jsonPayloadImport}}        import {{packageName}}.{{className}};
-        {{inputTypeImport}}{{outputTypeImport}}        {{dslImports}}        import java.util.Collections;
+        {{jsonPayloadImport}}        {{specImport}}{{inputTypeImport}}{{outputTypeImport}}        {{dslImports}}        import java.util.Collections;
         import java.util.List;
         import java.util.function.Consumer;
         import javax.annotation.processing.Generated;
@@ -169,7 +172,7 @@ public class MassOperationDefinitionGenerator implements DefinitionGenerator {
         
             @Override
             public DslObject dsl() {
-                return {{dslBody}}
+                {{dslBody}}
             }
         }
         """;
@@ -179,7 +182,7 @@ public class MassOperationDefinitionGenerator implements DefinitionGenerator {
         Map.ofEntries(
             Map.entry("package", DEFINITIONS_PACKAGE),
             Map.entry("jsonPayloadImport", jsonPayloadImport),
-            Map.entry("packageName", spec.packageName()),
+            Map.entry("specImport", specImport),
             Map.entry("className", spec.className()),
             Map.entry("inputTypeImport", inputTypeImport),
             Map.entry("outputTypeImport", outputTypeImport),

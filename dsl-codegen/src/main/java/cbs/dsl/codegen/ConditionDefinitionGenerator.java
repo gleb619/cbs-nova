@@ -215,7 +215,7 @@ public class ConditionDefinitionGenerator implements DefinitionGenerator {
 
             @Override
             public DslObject dsl() {
-                return {{dslBody}}
+                {{dslBody}}
             }
         }
         """,
@@ -270,13 +270,5 @@ public class ConditionDefinitionGenerator implements DefinitionGenerator {
     String wrapperClassName = spec.className() + "Definition";
     String qualifiedName = DEFINITIONS_PACKAGE + "." + wrapperClassName;
     CodeGenUtil.writeToFiler(filer, qualifiedName, source);
-  }
-
-  public void writeActivityInterfaceToPath(RegistrationModel spec, String source, Path outputDir)
-      throws IOException {
-    String className = spec.className() + "ConditionActivity";
-    Path outputPath = outputDir.resolve("cbs/dsl/codegen/generated").resolve(className + ".java");
-    Files.createDirectories(outputPath.getParent());
-    Files.writeString(outputPath, source);
   }
 }

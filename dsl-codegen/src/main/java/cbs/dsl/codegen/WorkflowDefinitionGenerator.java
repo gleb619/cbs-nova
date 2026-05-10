@@ -94,6 +94,10 @@ public class WorkflowDefinitionGenerator implements DefinitionGenerator {
         ? ""
         : Substitutor.format("import {{outputType}};\n", Map.of("outputType", spec.outputType()));
 
+    String specImport = spec.packageName().isBlank()
+        ? ""
+        : "import " + spec.packageName() + "." + spec.className() + ";\n";
+
     String dslBody = dslBodyProvider.apply(spec);
     String dslImportsBlock = (spec.dslImports() != null && !spec.dslImports().isBlank())
         ? spec.dslImports().trim() + "\n"
@@ -102,7 +106,7 @@ public class WorkflowDefinitionGenerator implements DefinitionGenerator {
     String sourceTemplate = // language=java
         """
         package {{definitionsPackage}};
-        
+
         import cbs.dsl.api.DslComponentResolver;
         import cbs.dsl.api.DslObject;
         import cbs.dsl.api.WorkflowDefinition;
@@ -110,8 +114,7 @@ public class WorkflowDefinitionGenerator implements DefinitionGenerator {
         import cbs.dsl.api.WorkflowTypes.WorkflowOutput;
         import cbs.dsl.api.TransitionRuleDefinition;
         import cbs.dsl.api.ParameterDefinition;
-        {{jsonPayloadImport}}        import {{specPackageName}}.{{specClassName}};
-        {{inputTypeImport}}{{outputTypeImport}}        {{dslImportsBlock}}        import java.util.Collections;
+        {{jsonPayloadImport}}        {{specImport}}{{inputTypeImport}}{{outputTypeImport}}        {{dslImportsBlock}}        import java.util.Collections;
         import java.util.List;
         import javax.annotation.processing.Generated;
         
@@ -166,7 +169,7 @@ public class WorkflowDefinitionGenerator implements DefinitionGenerator {
         
             @Override
             public DslObject dsl() {
-                return {{dslBody}}
+                {{dslBody}}
             }
         }
         """;
@@ -174,7 +177,7 @@ public class WorkflowDefinitionGenerator implements DefinitionGenerator {
     Map<String, String> params = new HashMap<>();
     params.put("definitionsPackage", DEFINITIONS_PACKAGE);
     params.put("jsonPayloadImport", jsonPayloadImport);
-    params.put("specPackageName", spec.packageName());
+    params.put("specImport", specImport);
     params.put("specClassName", spec.className());
     params.put("inputTypeImport", inputTypeImport);
     params.put("outputTypeImport", outputTypeImport);
