@@ -84,8 +84,11 @@ class EventSpecificationGeneratorTest {
   @DisplayName("shouldDelegateExecutionToEventActivityAndExposeDsl")
   void shouldDelegateExecutionToEventActivityAndExposeDsl() throws Exception {
     EventSpecificationModel spec = new EventSpecificationModel(
-        "PAYMENT", "com.example.Payment", List.of("DEBIT_ACCOUNT", "CREDIT_ACCOUNT"),
-        "return PaymentDsl.create();", null);
+        "PAYMENT",
+        "com.example.Payment",
+        List.of("DEBIT_ACCOUNT", "CREDIT_ACCOUNT"),
+        "return PaymentDsl.create();",
+        null);
 
     EventSpecificationGenerator gen = new EventSpecificationGenerator(tempDir);
     List<DslCompiler.FileWrite> files = gen.generate(List.of(spec));
@@ -97,9 +100,7 @@ class EventSpecificationGeneratorTest {
     assertTrue(
         implContent.contains("Evaluator.getInstance()"),
         "Should call Evaluator.getInstance() in execute()");
-    assertTrue(
-        implContent.contains("public EventDslObject dsl()"),
-        "Should declare dsl() method");
+    assertTrue(implContent.contains("public EventDslObject dsl()"), "Should declare dsl() method");
     assertTrue(
         implContent.contains("return PaymentDsl.create();"),
         "Should embed DSL body in dsl() method");

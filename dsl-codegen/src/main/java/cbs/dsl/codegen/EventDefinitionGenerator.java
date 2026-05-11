@@ -189,7 +189,7 @@ public class EventDefinitionGenerator implements DefinitionGenerator {
             public String getCode() {
                 return "{{specCode}}";
             }
-            
+
             //TODO: add method to filter input map from a `getParameters()`, like in `starter/src/main/java/cbs/nova/runner/EventRunner.java`
 
             @Override

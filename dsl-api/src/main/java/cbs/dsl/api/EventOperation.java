@@ -7,5 +7,4 @@ import cbs.dsl.api.EventTypes.EventOutput;
 public interface EventOperation {
 
   EventOutput execute(EventInput input);
-
 }

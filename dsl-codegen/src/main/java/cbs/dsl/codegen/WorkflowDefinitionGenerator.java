@@ -130,12 +130,6 @@ public class WorkflowDefinitionGenerator implements DefinitionGenerator {
         )
         public class {{wrapperClassName}} implements WorkflowDefinition {
 
-            private final {{specClassName}} function;
-
-            public {{wrapperClassName}}(DslComponentResolver resolver) {
-                this.function = resolver.resolve({{specClassName}}.class)
-          }
-
             @Override
             public String getCode() {
                 return "{{specCode}}";
@@ -179,7 +173,6 @@ public class WorkflowDefinitionGenerator implements DefinitionGenerator {
     params.put("definitionsPackage", DEFINITIONS_PACKAGE);
     params.put("jsonPayloadImport", jsonPayloadImport);
     params.put("specImport", specImport);
-    params.put("specClassName", spec.className());
     params.put("inputTypeImport", inputTypeImport);
     params.put("outputTypeImport", outputTypeImport);
     params.put("timestamp", timestamp);

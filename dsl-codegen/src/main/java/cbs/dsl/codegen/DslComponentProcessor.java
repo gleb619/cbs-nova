@@ -193,7 +193,11 @@ public class DslComponentProcessor extends AbstractProcessor {
 
           List<EventSpecificationModel> eventSpecificationModels = eventSpecs.stream()
               .map(r -> new EventSpecificationModel(
-                  r.code(), r.packageName() + "." + r.className(), List.of(), r.dslBody(), r.dslImports()))
+                  r.code(),
+                  r.packageName() + "." + r.className(),
+                  List.of(),
+                  r.dslBody(),
+                  r.dslImports()))
               .toList();
           if (!eventSpecificationModels.isEmpty()) {
             new EventSpecificationGenerator(filer).generateAndWrite(eventSpecificationModels);

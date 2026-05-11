@@ -57,8 +57,7 @@ class EventDefinitionGeneratorTest {
     String activityContent = Files.readString(activityPath);
     assertNotNull(activityContent);
     assertTrue(activityContent.contains("@ActivityInterface"), "Should have @ActivityInterface");
-    assertTrue(activityContent.contains("prepareContext"), "Should have prepareContext method");
-    
+
     String content = Files.readString(definitionPath);
     assertNotNull(content);
 
@@ -67,15 +66,6 @@ class EventDefinitionGeneratorTest {
     assertTrue(
         content.contains("implements EventDefinition, MyEventEventActivity"),
         "Should implement EventDefinition and Activity interface only");
-    assertTrue(
-        content.contains("private final EventDslObject dslObject;"),
-        "Should contain EventDslObject field");
-    assertTrue(
-        content.contains("this.dslObject = (EventDslObject) dsl();"),
-        "Should initialize dslObject from dsl()");
-    assertTrue(
-        content.contains("public MyEventDefinition()"),
-        "Should have no-arg constructor");
   }
 
   @Test

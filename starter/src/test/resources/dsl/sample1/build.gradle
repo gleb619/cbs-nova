@@ -20,6 +20,8 @@ dependencies {
   implementation files('libs/dsl-codegen.jar')
 }
 
+//TODO: fix problem with `java.lang.ClassNotFoundException: com.github.javaparser.ParserConfiguration`
+//resolve deps, create a shadow jar for `dsl-codegen`
 tasks.register('compileDsl', JavaExec) {
   dependsOn configurations.runtimeClasspath
   classpath = files('libs/dsl-api.jar', 'libs/dsl-codegen.jar') + configurations.runtimeClasspath

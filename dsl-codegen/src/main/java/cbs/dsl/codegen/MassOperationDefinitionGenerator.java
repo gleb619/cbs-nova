@@ -133,12 +133,6 @@ public class MassOperationDefinitionGenerator implements DefinitionGenerator {
         )
         public class {{wrapperClassName}} implements MassOperationDefinition {
 
-            private final {{className}} function;
-
-            public {{wrapperClassName}}(DslComponentResolver resolver) {
-                this.function = resolver.resolve({{className}}.class)
-          }
-
             @Override
             public String getCode() {
                 return "{{code}}";
@@ -184,7 +178,6 @@ public class MassOperationDefinitionGenerator implements DefinitionGenerator {
             Map.entry("package", DEFINITIONS_PACKAGE),
             Map.entry("jsonPayloadImport", jsonPayloadImport),
             Map.entry("specImport", specImport),
-            Map.entry("className", spec.className()),
             Map.entry("inputTypeImport", inputTypeImport),
             Map.entry("outputTypeImport", outputTypeImport),
             Map.entry("timestamp", timestamp),

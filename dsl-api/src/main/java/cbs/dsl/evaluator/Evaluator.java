@@ -1,8 +1,6 @@
 package cbs.dsl.evaluator;
 
-import cbs.dsl.api.EventTypes;
 import cbs.dsl.api.EventTypes.EventInput;
-import cbs.dsl.api.EventTypes.EventOutput;
 import cbs.dsl.api.HelperTypes.HelperInput;
 import cbs.dsl.api.HelperTypes.HelperOutput;
 import cbs.dsl.api.StandardDslObject;
@@ -13,8 +11,6 @@ import cbs.dsl.builder.HelperDslObject;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
-import java.util.Map;
-
 @RequiredArgsConstructor
 public class Evaluator {
 
@@ -22,7 +18,7 @@ public class Evaluator {
 
   private final RegistryEventEvaluator eventEvaluator;
   private final RegistryHelperEvaluator helperEvaluator;
-  //TODO: create a context Evaluator for `.context` block
+  // TODO: create a context Evaluator for `.context` block
 
   public static Evaluator getInstance() {
     if (instance == null) {
@@ -51,13 +47,12 @@ public class Evaluator {
   }
 
   public Context evaluateContext(@NonNull StandardDslObject dsl, @NonNull Object ctx) {
-    //TODO: add `.context` block evaluation here
-    //dsl.contextBlock().apply(ctx)
+    // TODO: add `.context` block evaluation here
+    // dsl.contextBlock().apply(ctx)
     return null;
   }
 
   public EventContext evaluateEvent(@NonNull EventDslObject dsl, @NonNull EventInput input) {
     return eventEvaluator.evaluateTransactions(dsl, input);
   }
-
 }

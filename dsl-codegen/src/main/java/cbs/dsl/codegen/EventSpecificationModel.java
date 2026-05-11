@@ -27,7 +27,11 @@ public record EventSpecificationModel(
   }
 
   public EventSpecificationModel(
-      String eventCode, String eventClassName, List<String> transactionCodes, String dslBody, String dslImports) {
+      String eventCode,
+      String eventClassName,
+      List<String> transactionCodes,
+      String dslBody,
+      String dslImports) {
     this(eventCode, eventClassName, transactionCodes, dslBody, dslImports, null);
   }
 }

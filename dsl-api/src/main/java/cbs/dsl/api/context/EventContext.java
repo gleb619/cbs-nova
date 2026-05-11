@@ -15,5 +15,4 @@ public record EventContext(
   public EventContext copy() {
     return toBuilder().build();
   }
-
 }

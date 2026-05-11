@@ -2,7 +2,6 @@ package cbs.dsl.codegen;
 
 import cbs.dsl.api.DslComponent;
 import cbs.dsl.api.DslObject;
-import cbs.dsl.builder.EventDslObject;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
 import com.github.javaparser.ParserConfiguration;
@@ -398,7 +397,7 @@ public class DslCompiler {
     ParsedDsl parsed = PARSED_DSL_MAP.get(className);
     for (DslObject obj : objects) {
       logInfo(
-          "Compiled and validated: %s (%s)",
+          "Compiled and validated: %s (%s)%n",
           obj.code(),
           obj.getClass().getEnclosingClass() != null
               ? obj.getClass().getEnclosingClass().getSimpleName()
@@ -410,11 +409,11 @@ public class DslCompiler {
         case EVENT -> {
           EventSpecificationGenerator wfGen = new EventSpecificationGenerator();
           List<String> txCodes = new ArrayList<>();
-          //List<String> txCodes = ((EventDslObject) obj).transactionCodes();
+          // List<String> txCodes = ((EventDslObject) obj).transactionCodes();
           String wfImplClassName = "cbs.dsl.codegen.generated.%sEventWorkflowImpl"
               .formatted(CodeGenUtil.toClassName(obj.code()));
-          EventSpecificationModel wfSpec =
-              new EventSpecificationModel(obj.code(), className, txCodes, spec.dslBody(), spec.dslImports(), wfImplClassName);
+          EventSpecificationModel wfSpec = new EventSpecificationModel(
+              obj.code(), className, txCodes, spec.dslBody(), spec.dslImports(), wfImplClassName);
           generatedFiles.addAll(wfGen.generateFileSpecs(List.of(wfSpec), outputDir));
           EventDefinitionGenerator gen = new EventDefinitionGenerator(dslBodyProvider);
           generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));

@@ -2,13 +2,13 @@ package cbs.dsl.codegen;
 
 import cbs.dsl.codegen.DslCompiler.FileWrite;
 
-import java.util.HashMap;
 import javax.annotation.processing.Filer;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -154,15 +154,13 @@ public class EventSpecificationGenerator {
         public class {{implClassName}} implements {{workflowClassName}} {
 
             private final {{eventActivityClassName}} activity;
-            private final EventDslObject dslObject;
             //TODO: evaluate dsl on compilation phase and add transaction activities here
 
             public {{implClassName}}() {
                 this.activity = ActivityManager.getInstance().newActivityStub(
                     "{{eventActivityCode}}", {{eventActivityClassName}}.class);
-                this.dslObject = (EventDslObject) dsl();
             }
-            
+
             public String getCode() {
                 return "{{eventCode}}";
             }
@@ -174,7 +172,7 @@ public class EventSpecificationGenerator {
                   .params(context.params())
                   .build();
                 EventContext eventContext = Evaluator.getInstance().evaluateEvent(dsl(), enrichedInput);
-                
+
                 return EventOutput.from(eventContext.params());
             }
 

@@ -65,7 +65,8 @@ public class DslRegistryConfiguration {
    * @return the evaluator
    */
   @Bean
-  public Evaluator evaluator(RegistryEventEvaluator eventEvaluator, RegistryHelperEvaluator helperEvaluator) {
+  public Evaluator evaluator(
+      RegistryEventEvaluator eventEvaluator, RegistryHelperEvaluator helperEvaluator) {
     return new Evaluator(eventEvaluator, helperEvaluator);
   }
 }

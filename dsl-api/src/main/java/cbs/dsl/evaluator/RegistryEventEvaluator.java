@@ -3,20 +3,19 @@ package cbs.dsl.evaluator;
 import cbs.dsl.api.DefinitionRegistry;
 import cbs.dsl.api.EventDefinition;
 import cbs.dsl.api.EventTypes.EventInput;
-import cbs.dsl.api.EventTypes.EventOutput;
 import cbs.dsl.api.context.Context;
 import cbs.dsl.api.context.EventContext;
 import cbs.dsl.api.context.EventEvaluator;
 import cbs.dsl.api.context.FinishContext;
 import cbs.dsl.api.context.TransactionsScope;
 import cbs.dsl.builder.EventDslObject;
-import java.util.function.Consumer;
-import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * Evaluates a {@link EventDslObject} DSL descriptor at runtime.
@@ -71,11 +70,11 @@ public class RegistryEventEvaluator implements EventEvaluator {
    */
   public EventContext evaluateTransactions(@NonNull EventDslObject dsl, @NonNull EventInput input) {
     if (dsl.transactionsBlock() != null) {
-//      SimpleTransactionsScope scope = new SimpleTransactionsScope(input);
-//      dsl.transactionsBlock().accept(scope);
-//      return scope.toContext();
+      //      SimpleTransactionsScope scope = new SimpleTransactionsScope(input);
+      //      dsl.transactionsBlock().accept(scope);
+      //      return scope.toContext();
     }
-//    return input.copy();
+    //    return input.copy();
 
     return null;
   }
@@ -85,7 +84,7 @@ public class RegistryEventEvaluator implements EventEvaluator {
    *
    * @param dsl the event DSL object
    * @param ctx the event context
-   * @param ex  the throwable, if any
+   * @param ex the throwable, if any
    */
   public void evaluateFinish(@NonNull EventDslObject dsl, @NonNull EventContext ctx, Throwable ex) {
     if (dsl.finishBlock() != null) {
@@ -105,9 +104,9 @@ public class RegistryEventEvaluator implements EventEvaluator {
     EventDslObject dsl = (EventDslObject) definition.dsl();
     EventContext ctx = EventContext.builder().params(params).build();
     EventContext resultCtx = evaluateContext(dsl, ctx);
-//    resultCtx = evaluateTransactions(dsl, resultCtx);
-//    evaluateFinish(dsl, resultCtx, null);
-//    return (U) EventOutput.success(resultCtx.params());
+    //    resultCtx = evaluateTransactions(dsl, resultCtx);
+    //    evaluateFinish(dsl, resultCtx, null);
+    //    return (U) EventOutput.success(resultCtx.params());
 
     return null;
   }
@@ -140,7 +139,8 @@ public class RegistryEventEvaluator implements EventEvaluator {
     @SuppressWarnings("unchecked")
     public CompletableFuture<TransactionsScope.StepHandle> step(String code) {
       if (baseContext.transactionEvaluator() != null) {
-        Map<String, Object> result = baseContext.transactionEvaluator().evaluate(code, currentContext.params());
+        Map<String, Object> result =
+            baseContext.transactionEvaluator().evaluate(code, currentContext.params());
         if (result != null) {
           currentContext.params().putAll(result);
         }
@@ -149,8 +149,7 @@ public class RegistryEventEvaluator implements EventEvaluator {
     }
 
     @Override
-    public CompletableFuture<TransactionsScope.StepHandle> when(
-        Consumer<ConditionalScope> block) {
+    public CompletableFuture<TransactionsScope.StepHandle> when(Consumer<ConditionalScope> block) {
       return CompletableFuture.completedFuture(new SimpleStepHandle());
     }
 
