@@ -6,7 +6,6 @@ import cbs.dsl.builder.EventDslObject;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
 import com.github.javaparser.ParserConfiguration;
-import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.MethodDeclaration;
 
@@ -31,7 +30,8 @@ import java.util.function.Function;
 
 /** Compiles JEP 512 implicit-class DSL files and collects their {@link DslObject} instances. */
 
-//TODO: replace javaparser with `https://github.com/INRIA/spoon` implementation("fr.inria.gforge.spoon:spoon-core:10.3.0")
+// TODO: replace javaparser with `https://github.com/INRIA/spoon`
+// implementation("fr.inria.gforge.spoon:spoon-core:10.3.0")
 public class DslCompiler {
 
   private static final JavaCompiler COMPILER = ToolProvider.getSystemJavaCompiler();
@@ -159,7 +159,6 @@ public class DslCompiler {
 
   public record ParsedDsl(String imports, String body) {}
 
-
   public static ParsedDsl parseCompactDsl(String content) {
     // Step 1: split imports and body with a lightweight line scan so imports stay
     // at compilation-unit level when we wrap the body in a temporary class.
@@ -203,8 +202,8 @@ public class DslCompiler {
     MethodDeclaration defineMethod = cu.findFirst(
             MethodDeclaration.class,
             m -> "define".equals(m.getName().asString()) && m.getParameters().isEmpty())
-        .orElseThrow(() -> new IllegalStateException(
-            "Could not locate define() method in compact DSL"));
+        .orElseThrow(
+            () -> new IllegalStateException("Could not locate define() method in compact DSL"));
 
     StringBuilder cleanBody = new StringBuilder();
     defineMethod.getBody().ifPresent(blockStmt -> blockStmt

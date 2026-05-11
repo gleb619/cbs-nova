@@ -143,9 +143,7 @@ public class HelperDefinitionGenerator implements DefinitionGenerator {
     String dslBody = buildDslBody(spec, hasSharedClass);
 
     String dslImportsBlock;
-    if (!hasSharedClass
-        && spec.dslImports() != null
-        && !spec.dslImports().isBlank()) {
+    if (!hasSharedClass && spec.dslImports() != null && !spec.dslImports().isBlank()) {
       dslImportsBlock = spec.dslImports().trim() + "\n";
     } else if (!hasSharedClass) {
       dslImportsBlock = "import cbs.dsl.builder.UndefinedDslObject;\n";
@@ -174,10 +172,14 @@ public class HelperDefinitionGenerator implements DefinitionGenerator {
         : "{{inputTypeName}} typed = {{inputConversion}};\n        {{outputTypeName}} out = function.execute(typed);\n        return {{outputConversion}};";
 
     Map<String, String> fallbackParams = Map.of(
-        "inputTypeName", CodeGenUtil.simpleName(spec.inputType()),
-        "inputConversion", inputConversion,
-        "outputTypeName", CodeGenUtil.simpleName(spec.outputType()),
-        "outputConversion", outputConversion);
+        "inputTypeName",
+        CodeGenUtil.simpleName(spec.inputType()),
+        "inputConversion",
+        inputConversion,
+        "outputTypeName",
+        CodeGenUtil.simpleName(spec.outputType()),
+        "outputConversion",
+        outputConversion);
     previewFallback = Substitutor.format(previewFallback, fallbackParams);
     executeFallback = Substitutor.format(executeFallback, fallbackParams);
 

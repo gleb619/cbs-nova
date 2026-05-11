@@ -3,10 +3,15 @@ package cbs.dsl.evaluator;
 import cbs.dsl.api.DefinitionRegistry;
 import cbs.dsl.api.HelperDefinition;
 import cbs.dsl.api.HelperTypes.HelperInput;
+import cbs.dsl.api.HelperTypes.HelperOutput;
 import cbs.dsl.api.context.HelperContext;
+import cbs.dsl.api.context.HelperEvaluator;
 import cbs.dsl.builder.HelperDslObject;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Evaluates a {@link HelperDslObject} DSL descriptor at runtime.
@@ -15,7 +20,7 @@ import org.jspecify.annotations.NonNull;
  * {@link DefinitionRegistry} so that nested helper resolution can be performed.
  */
 @RequiredArgsConstructor
-public class HelperEvaluator {
+public class RegistryHelperEvaluator implements HelperEvaluator {
 
   private final DefinitionRegistry registry;
 
@@ -45,8 +50,9 @@ public class HelperEvaluator {
     if (result instanceof HelperContext hctx) {
       return hctx.copy();
     } else {
-      // TODO: how to handle custom response
-      return null;
+      var values = new HashMap<>(ctx.params());
+      values.put(dsl.code(), values);
+      return ctx.toBuilder().params(values).build();
     }
   }
 
@@ -64,8 +70,23 @@ public class HelperEvaluator {
     if (result instanceof HelperContext hctx) {
       return hctx.copy();
     } else {
-      // TODO: how to handle custom response
-      return null;
+      var values = new HashMap<>(ctx.params());
+      values.put(dsl.code(), values);
+      return ctx.toBuilder().params(values).build();
     }
+  }
+
+  @Override
+  public <U> U evaluate(String code, Map<String, Object> params) {
+    // TODO: handle preview/execute call here
+    HelperOutput output = resolveHelper(code).execute(HelperInput.from(params));
+    // TODO: we need a unified result pojo here
+
+    if (output.params().size() == 1) {
+      return (U) output.params().entrySet().iterator().next().getValue();
+    }
+
+    // TODO: fix problem with types
+    return (U) output.params();
   }
 }

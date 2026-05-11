@@ -11,12 +11,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import cbs.dsl.api.EventDefinition;
-import cbs.dsl.api.EventTypes.EventStatus;
 import cbs.dsl.api.EventOperation;
+import cbs.dsl.api.EventTypes.EventInput;
+import cbs.dsl.api.EventTypes.EventStatus;
 import cbs.dsl.api.ParameterDefinition;
 import cbs.nova.model.EventExecutionRequest;
 import cbs.nova.model.EventExecutionResponse;
-import cbs.dsl.api.EventTypes.EventInput;
 import cbs.nova.registry.DefaultSpecDefinitionRegistry;
 import cbs.nova.registry.DslRegistry;
 import cbs.nova.temporal.WorkflowManager;
@@ -122,8 +122,7 @@ class EventRunnerTest {
     doReturn(Object.class).when(specRegistry).getWorkflowInterface("SIMPLE_EVENT");
 
     EventOperation mockEventOperation = mock(EventOperation.class);
-    when(workflowManager.newWorkflowStub(eq("SIMPLE_EVENT"), any()))
-        .thenReturn(mockEventOperation);
+    when(workflowManager.newWorkflowStub(eq("SIMPLE_EVENT"), any())).thenReturn(mockEventOperation);
 
     EventExecutionResponse response = eventRunner.perform(request);
 

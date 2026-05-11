@@ -13,7 +13,8 @@ class SimpleHelperDslTest {
 
   private static final Path OUTPUT = Path.of("build/dsl-classes");
 
-  @Test @DisplayName("should parse DSL source as valid implicit class")
+  @Test
+  @DisplayName("should parse DSL source as valid implicit class")
   void shouldParseDslSourceAsValidImplicitClass() throws Exception {
     Path source = Path.of("src/SimpleHelperDsl.java");
     String content = Files.readString(source);
@@ -23,14 +24,17 @@ class SimpleHelperDslTest {
     assertTrue(parsed.body().contains("SIMPLE_GREETING"));
   }
 
-  @Test @DisplayName("should generate compiled class file")
+  @Test
+  @DisplayName("should generate compiled class file")
   void shouldGenerateCompiledClassFile() {
     assertTrue(Files.exists(OUTPUT.resolve("SimpleHelperDsl.class")));
   }
 
-  @Test @DisplayName("should generate valid SimpleGreeting definition")
+  @Test
+  @DisplayName("should generate valid SimpleGreeting definition")
   void shouldGenerateValidSimpleGreetingDefinition() throws Exception {
-    Path def = OUTPUT.resolve("cbs/dsl/codegen/generated/definitions/SimpleHelperDsl_SimpleGreetingDefinition.java");
+    Path def = OUTPUT.resolve(
+        "cbs/dsl/codegen/generated/definitions/SimpleHelperDsl_SimpleGreetingDefinition.java");
     assertTrue(Files.exists(def), "Definition file should exist");
     String content = Files.readString(def);
     assertTrue(content.contains("class SimpleHelperDsl_SimpleGreetingDefinition"));

@@ -2,7 +2,7 @@ package cbs.nova.config;
 
 import cbs.dsl.api.DefinitionRegistry;
 import cbs.dsl.evaluator.Evaluator;
-import cbs.dsl.evaluator.HelperEvaluator;
+import cbs.dsl.evaluator.RegistryHelperEvaluator;
 import cbs.nova.registry.DslRegistry;
 import cbs.nova.registry.SpiImplRegistryLoader;
 import cbs.nova.registry.SpringDslComponentResolver;
@@ -17,7 +17,7 @@ import org.springframework.context.annotation.Bean;
  * application startup. When a {@link SpringDslComponentResolver} is available it is injected into
  * the registry so that {@code SPRING} model components are resolved from the Spring context.
  *
- * <p>Also creates the {@link HelperEvaluator} and {@link Evaluator} beans so that generated
+ * <p>Also creates the {@link RegistryHelperEvaluator} and {@link Evaluator} beans so that generated
  * wrappers can resolve them from the Spring context.
  */
 @AutoConfiguration
@@ -42,24 +42,24 @@ public class DslRegistryConfiguration {
   }
 
   /**
-   * Creates the {@link HelperEvaluator} bean backed by the {@link DefinitionRegistry}.
+   * Creates the {@link RegistryHelperEvaluator} bean backed by the {@link DefinitionRegistry}.
    *
    * @param registry the definition registry
    * @return the helper evaluator
    */
   @Bean
-  public HelperEvaluator helperEvaluator(DefinitionRegistry registry) {
-    return new HelperEvaluator(registry);
+  public RegistryHelperEvaluator helperEvaluator(DefinitionRegistry registry) {
+    return new RegistryHelperEvaluator(registry);
   }
 
   /**
-   * Creates the {@link Evaluator} bean that wraps the {@link HelperEvaluator}.
+   * Creates the {@link Evaluator} bean that wraps the {@link RegistryHelperEvaluator}.
    *
    * @param helperEvaluator the helper evaluator
    * @return the evaluator
    */
   @Bean
-  public Evaluator evaluator(HelperEvaluator helperEvaluator) {
+  public Evaluator evaluator(RegistryHelperEvaluator helperEvaluator) {
     return new Evaluator(helperEvaluator);
   }
 }

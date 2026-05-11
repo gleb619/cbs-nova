@@ -97,25 +97,25 @@ public class EventSpecificationGenerator {
     String sourceTemplate = // language=java
         """
         package {{package}};
-        
+
         import cbs.dsl.api.EventTypes.EventInput;
         import cbs.dsl.api.EventTypes.EventOutput;
         import cbs.dsl.api.EventOperation;
         import io.temporal.workflow.WorkflowInterface;
         import io.temporal.workflow.WorkflowMethod;
         import javax.annotation.processing.Generated;
-        
+
         @Generated(
             value = "cbs.dsl.codegen.EventSpecificationGenerator",
             date = "{{timestamp}}"
         )
         @WorkflowInterface
         public interface {{className}} extends EventOperation {
-        
+
             @Override
             @WorkflowMethod(name = "{{workflowMethodName}}")
             EventOutput execute(EventInput input)
-        
+
         }
         """;
 
@@ -205,7 +205,7 @@ public class EventSpecificationGenerator {
                     "{{eventActivityCode}}", {{eventActivityClassName}}.class);
                 {{txActivityInitializers}}
             }
-        
+
             @Override
             public EventOutput execute(EventInput input) {
                 // 1. Prepare context via event activity
@@ -216,12 +216,12 @@ public class EventSpecificationGenerator {
 
                 return EventOutput.success(Collections.emptyMap());
             }
-        
+
             public EventDslObject dsl() {
                 //return {{dslBody}}
                 return null;
             }
-        
+
         }
         """;
 

@@ -13,7 +13,8 @@ class BankingHelpersDslTest {
 
   private static final Path OUTPUT = Path.of("build/dsl-classes");
 
-  @Test @DisplayName("should parse DSL source as valid implicit class")
+  @Test
+  @DisplayName("should parse DSL source as valid implicit class")
   void shouldParseDslSourceAsValidImplicitClass() throws Exception {
     Path source = Path.of("src/BankingHelpersDsl.java");
     String content = Files.readString(source);
@@ -22,14 +23,17 @@ class BankingHelpersDslTest {
     assertFalse(parsed.body().isEmpty());
   }
 
-  @Test @DisplayName("should generate compiled class file")
+  @Test
+  @DisplayName("should generate compiled class file")
   void shouldGenerateCompiledClassFile() {
     assertTrue(Files.exists(OUTPUT.resolve("BankingHelpersDsl.class")));
   }
 
-  @Test @DisplayName("should generate valid FindCustomerCode definition")
+  @Test
+  @DisplayName("should generate valid FindCustomerCode definition")
   void shouldGenerateValidFindCustomerCodeDefinition() throws Exception {
-    Path def = OUTPUT.resolve("cbs/dsl/codegen/generated/definitions/BankingHelpersDsl_FindCustomerCodeDefinition.java");
+    Path def = OUTPUT.resolve(
+        "cbs/dsl/codegen/generated/definitions/BankingHelpersDsl_FindCustomerCodeDefinition.java");
     assertTrue(Files.exists(def), "Definition file should exist");
     String content = Files.readString(def);
     assertTrue(content.contains("class BankingHelpersDsl_FindCustomerCodeDefinition"));
@@ -37,18 +41,22 @@ class BankingHelpersDslTest {
     parseJava(def);
   }
 
-  @Test @DisplayName("should generate valid LoanConditionsById definition")
+  @Test
+  @DisplayName("should generate valid LoanConditionsById definition")
   void shouldGenerateValidLoanConditionsByIdDefinition() throws Exception {
-    Path def = OUTPUT.resolve("cbs/dsl/codegen/generated/definitions/BankingHelpersDsl_LoanConditionsByIdDefinition.java");
+    Path def = OUTPUT.resolve(
+        "cbs/dsl/codegen/generated/definitions/BankingHelpersDsl_LoanConditionsByIdDefinition.java");
     assertTrue(Files.exists(def), "Definition file should exist");
     String content = Files.readString(def);
     assertTrue(content.contains("class BankingHelpersDsl_LoanConditionsByIdDefinition"));
     parseJava(def);
   }
 
-  @Test @DisplayName("should generate valid SendFaultNotification definition")
+  @Test
+  @DisplayName("should generate valid SendFaultNotification definition")
   void shouldGenerateValidSendFaultNotificationDefinition() throws Exception {
-    Path def = OUTPUT.resolve("cbs/dsl/codegen/generated/definitions/BankingHelpersDsl_SendFaultNotificationDefinition.java");
+    Path def = OUTPUT.resolve(
+        "cbs/dsl/codegen/generated/definitions/BankingHelpersDsl_SendFaultNotificationDefinition.java");
     assertTrue(Files.exists(def), "Definition file should exist");
     String content = Files.readString(def);
     assertTrue(content.contains("class BankingHelpersDsl_SendFaultNotificationDefinition"));

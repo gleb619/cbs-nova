@@ -12,7 +12,7 @@ import java.time.Duration;
  * @param workflowInterface the workflow interface class
  * @param taskQueue the Temporal task queue this workflow listens on
  * @param workflowExecutionTimeout max execution time for the entire workflow
- * @param workflowRunTimeout max run time for a single workflow attempt
+ * @param workflowRunTimeout max evaluate time for a single workflow attempt
  * @param defaultWorkflowIdPrefix optional prefix for auto-generated workflow IDs
  */
 // TODO: remove file

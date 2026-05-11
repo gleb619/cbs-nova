@@ -1,5 +1,5 @@
 import cbs.dsl.api.DslObject;
-import cbs.dsl.api.TransactionTypes.TransactionOutput;
+import cbs.dsl.api.context.TransactionContext;
 import cbs.dsl.builder.Dsl;
 
 import java.util.List;
@@ -10,27 +10,27 @@ List<DslObject> define() {
         // Input parameters from the event - raw values provided by the caller
         .parameters(reg -> reg.string("accountCode").decimal("amount").string("currency"))
         // Preview uses both parameters and enriched context values from the parent event
-        .preview(ctx -> TransactionOutput.success(Map.of(
+        .preview(ctx -> TransactionContext.builder().params(Map.of(
             "description",
                 "Will debit " + ctx.params().get("accountCode")
                     + " for " + ctx.params().get("amount")
                     + " " + ctx.params().get("currency"),
             "customerCode", ctx.params().getOrDefault("customerCode", "N/A")
-        )))
+        )).build())
         // Execute the debit using both parameters and enriched context values
-        .execute(ctx -> TransactionOutput.success(Map.of(
+        .execute(ctx -> TransactionContext.builder().params(Map.of(
             "transactionId", "TX-" + System.currentTimeMillis(),
             "accountCode", ctx.params().get("accountCode"),
             "amount", ctx.params().get("amount"),
             "currency", ctx.params().get("currency"),
             "customerCode", ctx.params().getOrDefault("customerCode", "N/A"),
             "status", "DEBITED"
-        )))
+        )).build())
         // Rollback compensates using parameters to know what to reverse
-        .rollback(ctx -> TransactionOutput.success(Map.of(
+        .rollback(ctx -> TransactionContext.builder().params(Map.of(
             "compensated", true,
             "accountCode", ctx.params().get("accountCode"),
             "amount", ctx.params().get("amount")
-        )))
+        )).build())
         .build());
 }

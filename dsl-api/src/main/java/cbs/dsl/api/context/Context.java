@@ -9,7 +9,7 @@ public record Context(
     String eventNumber,
     String performedBy,
     Map<String, Object> params,
-    HelperResolver helperResolver) {
+    HelperEvaluator helperEvaluator) {
 
   public Context put(String key, Object value) {
     params.put(key, value);
@@ -26,7 +26,7 @@ public record Context(
   }
 
   public Object helper(String key, Map<String, Object> values) {
-    return helperResolver.run(key, values);
+    return helperEvaluator.evaluate(key, values);
   }
 
   public Context copy() {

@@ -6,8 +6,8 @@ import cbs.dsl.api.EventTypes.EventOutput;
 import java.util.Collections;
 
 /**
- * Defines an event — a triggered operation that orchestrates transactions and defines display,
- * context, and finish behaviour.
+ * Defines an event — a triggered operation that orchestrates transactions, context, and finish
+ * behaviour.
  *
  * <p>Implementations are typically created via the Kotlin DSL {@code event { }} block or annotated
  * with {@link DslComponent} for compile-time registration.

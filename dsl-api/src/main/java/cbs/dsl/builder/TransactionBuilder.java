@@ -1,10 +1,10 @@
 package cbs.dsl.builder;
 
-import cbs.dsl.api.ContextTypes.ContextInput;
 import cbs.dsl.api.DslObject;
 import cbs.dsl.api.ParameterDefinition;
-import cbs.dsl.api.TransactionTypes.TransactionInput;
-import cbs.dsl.api.TransactionTypes.TransactionOutput;
+import cbs.dsl.api.context.Context;
+import cbs.dsl.api.context.TransactionContext;
+import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,15 +13,16 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 /** Builder for creating transaction objects from DSL files. */
+@Getter
 public class TransactionBuilder {
 
   private final String code;
   private String name;
   private final List<ParameterDefinition> parameters = new ArrayList<>();
-  private final Consumer<ContextInput> contextBlock = _ -> {};
-  private Function<TransactionInput, TransactionOutput> previewBlock;
-  private Function<TransactionInput, TransactionOutput> executeBlock;
-  private Function<TransactionInput, TransactionOutput> rollbackBlock;
+  private Function<Context, Context> contextBlock = Context::copy;
+  private Function<TransactionContext, TransactionContext> previewBlock;
+  private Function<TransactionContext, TransactionContext> executeBlock;
+  private Function<TransactionContext, TransactionContext> rollbackBlock;
 
   TransactionBuilder(String code) {
     this.code = code;
@@ -39,51 +40,43 @@ public class TransactionBuilder {
     return this;
   }
 
-  public TransactionBuilder context(Consumer<TransactionInput> block) {
-    // this.contextBlock = block;
+  public TransactionBuilder context(Function<Context, Context> block) {
+    this.contextBlock = block;
     return this;
   }
 
-  public TransactionBuilder preview(Function<TransactionInput, TransactionOutput> block) {
+  public TransactionBuilder preview(Function<TransactionContext, TransactionContext> block) {
     this.previewBlock = block;
     return this;
   }
 
-  public TransactionBuilder execute(Function<TransactionInput, TransactionOutput> block) {
+  public TransactionBuilder execute(Function<TransactionContext, TransactionContext> block) {
     this.executeBlock = block;
     return this;
   }
 
-  public TransactionBuilder rollback(Function<TransactionInput, TransactionOutput> block) {
+  public TransactionBuilder rollback(Function<TransactionContext, TransactionContext> block) {
     this.rollbackBlock = block;
     return this;
-  }
-
-  public String getCode() {
-    return code;
-  }
-
-  public String getName() {
-    return name;
   }
 
   public List<ParameterDefinition> getParameters() {
     return Collections.unmodifiableList(new ArrayList<>(parameters));
   }
 
-  public Consumer<ContextInput> context() {
+  public Function<Context, Context> context() {
     return contextBlock;
   }
 
-  public Function<TransactionInput, TransactionOutput> preview() {
+  public Function<TransactionContext, TransactionContext> preview() {
     return previewBlock;
   }
 
-  public Function<TransactionInput, TransactionOutput> execute() {
+  public Function<TransactionContext, TransactionContext> execute() {
     return executeBlock;
   }
 
-  public Function<TransactionInput, TransactionOutput> rollback() {
+  public Function<TransactionContext, TransactionContext> rollback() {
     return rollbackBlock;
   }
 
@@ -92,7 +85,7 @@ public class TransactionBuilder {
         .code(code)
         .name(name)
         .parameters(Collections.unmodifiableList(new ArrayList<>(parameters)))
-        .contextBlock(ContextInput::asOutput)
+        .contextBlock(contextBlock)
         .previewBlock(previewBlock)
         .executeBlock(executeBlock)
         .rollbackBlock(rollbackBlock)

@@ -6,6 +6,7 @@ import cbs.dsl.api.context.DisplayScope;
 import cbs.dsl.api.context.EnrichmentContext;
 import cbs.dsl.api.context.FinishContext;
 import cbs.dsl.api.context.TransactionsScope;
+import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,15 +14,22 @@ import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
+@Getter
 public class EventBuilder {
 
   private final String code;
+
+  @Deprecated(forRemoval = true)
   private final List<String> transactionCodes = new ArrayList<>();
+
   private final List<ParameterDefinition> parameters = new ArrayList<>();
   private Consumer<EnrichmentContext> contextBlock = ctx -> {};
+
+  @Deprecated(forRemoval = true)
   private Consumer<DisplayScope> displayBlock = scope -> {};
+
   private Consumer<TransactionsScope> transactionsBlock;
-  private BiConsumer<FinishContext, Throwable> finishBlock = (ctx, ex) -> {};
+  private BiConsumer<FinishContext, Throwable> finishBlock = (_, _) -> {};
 
   EventBuilder(String code) {
     this.code = code;
@@ -34,6 +42,7 @@ public class EventBuilder {
     return this;
   }
 
+  @Deprecated(forRemoval = true)
   public EventBuilder transaction(String transactionCode) {
     this.transactionCodes.add(transactionCode);
     return this;
@@ -44,11 +53,13 @@ public class EventBuilder {
     return this;
   }
 
+  @Deprecated(forRemoval = true)
   public EventBuilder display(Consumer<DisplayScope> block) {
     this.displayBlock = block;
     return this;
   }
 
+  @Deprecated(forRemoval = true)
   public EventBuilder transactions(Consumer<TransactionsScope> block) {
     this.transactionsBlock = block;
     return this;
@@ -57,36 +68,6 @@ public class EventBuilder {
   public EventBuilder finish(BiConsumer<FinishContext, Throwable> block) {
     this.finishBlock = block;
     return this;
-  }
-
-  public String getCode() {
-    return code;
-  }
-
-  public Consumer<EnrichmentContext> context() {
-    return contextBlock;
-  }
-
-  public Consumer<DisplayScope> display() {
-    return displayBlock;
-  }
-
-  public Consumer<TransactionsScope> transactions() {
-    return transactionsBlock != null
-        ? transactionsBlock
-        : transactionCodes.isEmpty()
-            ? null
-            : scope -> {
-              for (String txCode : transactionCodes) {}
-            };
-  }
-
-  public List<String> transactionCodes() {
-    return Collections.unmodifiableList(new ArrayList<>(transactionCodes));
-  }
-
-  public BiConsumer<FinishContext, Throwable> finish() {
-    return finishBlock;
   }
 
   public DslObject build() {

@@ -13,7 +13,8 @@ class InterestChargeMassOperationDslTest {
 
   private static final Path OUTPUT = Path.of("build/dsl-classes");
 
-  @Test @DisplayName("should parse DSL source as valid implicit class")
+  @Test
+  @DisplayName("should parse DSL source as valid implicit class")
   void shouldParseDslSourceAsValidImplicitClass() throws Exception {
     Path source = Path.of("src/InterestChargeMassOperationDsl.java");
     String content = Files.readString(source);
@@ -23,14 +24,17 @@ class InterestChargeMassOperationDslTest {
     assertTrue(parsed.body().contains("INTEREST_CHARGE"));
   }
 
-  @Test @DisplayName("should generate compiled class file")
+  @Test
+  @DisplayName("should generate compiled class file")
   void shouldGenerateCompiledClassFile() {
     assertTrue(Files.exists(OUTPUT.resolve("InterestChargeMassOperationDsl.class")));
   }
 
-  @Test @DisplayName("should generate valid mass operation definition")
+  @Test
+  @DisplayName("should generate valid mass operation definition")
   void shouldGenerateValidMassOperationDefinition() throws Exception {
-    Path def = OUTPUT.resolve("cbs/dsl/codegen/generated/definitions/InterestChargeMassOperationDslDefinition.java");
+    Path def = OUTPUT.resolve(
+        "cbs/dsl/codegen/generated/definitions/InterestChargeMassOperationDslDefinition.java");
     assertTrue(Files.exists(def), "Definition file should exist");
     String content = Files.readString(def);
     assertTrue(content.contains("class InterestChargeMassOperationDslDefinition"));

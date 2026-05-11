@@ -17,7 +17,7 @@ public record EventDslObject(
     String code,
     List<ParameterDefinition> parameters,
     Consumer<EnrichmentContext> contextBlock,
-    Consumer<DisplayScope> displayBlock,
+    @Deprecated(forRemoval = true) Consumer<DisplayScope> displayBlock,
     Consumer<TransactionsScope> transactionsBlock,
     List<String> transactionCodes,
     BiConsumer<FinishContext, Throwable> finishBlock)

@@ -33,8 +33,7 @@ class KycCheckTransactionDslTest {
   @Test
   @DisplayName("should generate valid transaction activity interface")
   void shouldGenerateValidTransactionActivityInterface() throws Exception {
-    Path activity = OUTPUT.resolve(
-        "cbs/dsl/codegen/generated/KycCheckTransactionDslActivity.java");
+    Path activity = OUTPUT.resolve("cbs/dsl/codegen/generated/KycCheckTransactionDslActivity.java");
     assertTrue(Files.exists(activity), "Activity interface should exist");
     String content = Files.readString(activity);
     assertTrue(content.contains("@ActivityInterface"));

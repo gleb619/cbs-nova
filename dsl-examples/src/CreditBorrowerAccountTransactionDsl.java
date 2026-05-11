@@ -1,5 +1,5 @@
 import cbs.dsl.api.DslObject;
-import cbs.dsl.api.TransactionTypes.TransactionOutput;
+import cbs.dsl.api.context.TransactionContext;
 import cbs.dsl.builder.Dsl;
 
 import java.util.List;
@@ -10,21 +10,21 @@ List<DslObject> define() {
         // Input parameters from the event - raw values provided by the caller
         .parameters(reg -> reg.string("accountCode").decimal("amount").string("currency"))
         // Preview shows what will happen using both parameters and context enrichment
-        .preview(ctx -> TransactionOutput.success(Map.of(
+        .preview(ctx -> TransactionContext.builder().params(Map.of(
             "description",
                 "Will credit " + ctx.params().get("accountCode")
                     + " with " + ctx.params().get("amount")
                     + " " + ctx.params().get("currency"),
             "customerCode", ctx.params().getOrDefault("customerCode", "N/A")
-        )))
+        )).build())
         // Execute the credit using both parameters and enriched context values
-        .execute(ctx -> TransactionOutput.success(Map.of(
+        .execute(ctx -> TransactionContext.builder().params(Map.of(
             "transactionId", "TX-" + System.currentTimeMillis(),
             "accountCode", ctx.params().get("accountCode"),
             "amount", ctx.params().get("amount"),
             "currency", ctx.params().get("currency"),
             "customerCode", ctx.params().getOrDefault("customerCode", "N/A"),
             "status", "CREDITED"
-        )))
+        )).build())
         .build());
 }

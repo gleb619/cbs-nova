@@ -13,7 +13,7 @@ public record EnrichmentContext(
     String dslVersion,
     Map<String, Object> eventParameters,
     Map<String, Object> enrichment,
-    BiFunction<String, Map<String, Object>, Object> helperResolver) {
+    BiFunction<String, Map<String, Object>, Object> helperEvaluator) {
 
   public static Builder builder() {
     return new Builder();
@@ -36,8 +36,8 @@ public record EnrichmentContext(
   }
 
   public Object helper(String name, Map<String, Object> params) {
-    if (helperResolver != null) {
-      return helperResolver.apply(name, params);
+    if (helperEvaluator != null) {
+      return helperEvaluator.apply(name, params);
     }
     return null;
   }
@@ -49,7 +49,7 @@ public record EnrichmentContext(
     private String dslVersion;
     private Map<String, Object> eventParameters;
     private Map<String, Object> enrichment = new HashMap<>();
-    private BiFunction<String, Map<String, Object>, Object> helperResolver;
+    private BiFunction<String, Map<String, Object>, Object> helperEvaluator;
 
     public Builder eventCode(String eventCode) {
       this.eventCode = eventCode;
@@ -81,8 +81,9 @@ public record EnrichmentContext(
       return this;
     }
 
-    public Builder helperResolver(BiFunction<String, Map<String, Object>, Object> helperResolver) {
-      this.helperResolver = helperResolver;
+    public Builder helperEvaluator(
+        BiFunction<String, Map<String, Object>, Object> helperEvaluator) {
+      this.helperEvaluator = helperEvaluator;
       return this;
     }
 
@@ -94,7 +95,7 @@ public record EnrichmentContext(
           dslVersion,
           eventParameters,
           enrichment,
-          helperResolver);
+          helperEvaluator);
     }
   }
 }

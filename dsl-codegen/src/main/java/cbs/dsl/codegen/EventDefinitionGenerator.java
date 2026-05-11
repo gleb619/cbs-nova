@@ -118,7 +118,7 @@ public class EventDefinitionGenerator implements DefinitionGenerator {
 
             @ActivityMethod
             EventOutput execute(EventInput input);
-        
+
         }
         """,
         Map.of(

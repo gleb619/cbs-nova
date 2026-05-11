@@ -1,7 +1,6 @@
 package cbs.dsl.api;
 
-import cbs.dsl.api.ContextTypes.ContextInput;
-import cbs.dsl.api.ContextTypes.ContextOutput;
+import cbs.dsl.api.context.Context;
 
 import java.util.List;
 import java.util.function.Function;
@@ -14,5 +13,5 @@ public interface StandardDslObject extends DslObject {
 
   List<ParameterDefinition> parameters();
 
-  Function<ContextInput, ContextOutput> contextBlock();
+  Function<Context, Context> contextBlock();
 }

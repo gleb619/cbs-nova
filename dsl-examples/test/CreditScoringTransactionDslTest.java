@@ -33,8 +33,8 @@ class CreditScoringTransactionDslTest {
   @Test
   @DisplayName("should generate valid transaction activity interface")
   void shouldGenerateValidTransactionActivityInterface() throws Exception {
-    Path activity = OUTPUT.resolve(
-        "cbs/dsl/codegen/generated/CreditScoringTransactionDslActivity.java");
+    Path activity =
+        OUTPUT.resolve("cbs/dsl/codegen/generated/CreditScoringTransactionDslActivity.java");
     assertTrue(Files.exists(activity), "Activity interface should exist");
     String content = Files.readString(activity);
     assertTrue(content.contains("@ActivityInterface"));

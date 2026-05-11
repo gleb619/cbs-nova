@@ -15,9 +15,7 @@ public class EventTypes {
 
   @Json
   @Builder(toBuilder = true)
-  public record EventInput(
-      String eventNumber, Map<String, Object> params)
-      implements EventArg {}
+  public record EventInput(String eventNumber, Map<String, Object> params) implements EventArg {}
 
   @Json
   @Builder(toBuilder = true)
@@ -34,5 +32,4 @@ public class EventTypes {
     PENDING,
     ERROR,
   }
-
 }

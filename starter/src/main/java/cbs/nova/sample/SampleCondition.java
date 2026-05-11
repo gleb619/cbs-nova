@@ -15,7 +15,7 @@ public class SampleCondition implements ConditionFunction<ConditionInput, Condit
     //    return new ConditionContext<>(
     //        input.eventCode(), input.workflowExecutionId(), input.performedBy(),
     //        input.dslVersion(), input.eventParameters(), input.enrichment(),
-    //        input.helperResolver(), input.isResumed(),
+    //        input.helperEvaluator(), input.isResumed(),
     //        new ConditionOutput(true));
     return null;
   }

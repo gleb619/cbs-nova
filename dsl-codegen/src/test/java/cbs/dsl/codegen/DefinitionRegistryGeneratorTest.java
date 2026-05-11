@@ -46,7 +46,8 @@ class DefinitionRegistryGeneratorTest {
 
     String content = filer.files.get(generatedClassKey).getContent();
     assertTrue(
-        content.contains("class DefinitionRegistryProviderImpl implements DefinitionRegistryProvider"),
+        content.contains(
+            "class DefinitionRegistryProviderImpl implements DefinitionRegistryProvider"),
         "Content should contain class declaration: " + content);
     assertTrue(
         content.contains("registry.register(new TxOneDefinition(resolver))"),
@@ -103,7 +104,8 @@ class DefinitionRegistryGeneratorTest {
 
     String content = filer.files.get(generatedClassKey).getContent();
     assertTrue(
-        content.contains("class DefinitionRegistryProviderImpl implements DefinitionRegistryProvider"),
+        content.contains(
+            "class DefinitionRegistryProviderImpl implements DefinitionRegistryProvider"),
         "Content should contain class declaration: " + content);
     assertTrue(
         content.contains("registry.register(new TxWithBodyDefinition(resolver))"),

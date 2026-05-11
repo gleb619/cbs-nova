@@ -41,8 +41,7 @@ class ConditionDefinitionGeneratorTest {
     List<FileWrite> files = gen.generate(List.of(spec));
     gen.write(files);
 
-    Path activityPath =
-        tempDir.resolve("cbs/dsl/codegen/generated/MyConditionActivity.java");
+    Path activityPath = tempDir.resolve("cbs/dsl/codegen/generated/MyConditionActivity.java");
     Path definitionPath =
         tempDir.resolve("cbs/dsl/codegen/generated/definitions/MyConditionDefinition.java");
 

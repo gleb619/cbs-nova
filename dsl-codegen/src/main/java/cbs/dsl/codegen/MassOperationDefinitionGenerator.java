@@ -105,7 +105,7 @@ public class MassOperationDefinitionGenerator implements DefinitionGenerator {
     String sourceTemplate = // language=java
         """
         package {{package}};
-        
+
         import cbs.dsl.api.DslComponentResolver;
         import cbs.dsl.api.DslObject;
         import cbs.dsl.api.LockDefinition;
@@ -122,7 +122,7 @@ public class MassOperationDefinitionGenerator implements DefinitionGenerator {
         import java.util.List;
         import java.util.function.Consumer;
         import javax.annotation.processing.Generated;
-        
+
         /**
          * Generated MassOperationDefinition wrapper for {{className}}.
          * <strong>WARNING:</strong> Auto-generated — do not edit.
@@ -132,45 +132,45 @@ public class MassOperationDefinitionGenerator implements DefinitionGenerator {
             date = "{{timestamp}}"
         )
         public class {{wrapperClassName}} implements MassOperationDefinition {
-        
+
             private final {{className}} function;
-        
+
             public {{wrapperClassName}}(DslComponentResolver resolver) {
                 this.function = resolver.resolve({{className}}.class)
           }
-        
+
             @Override
             public String getCode() {
                 return "{{code}}";
             }
-        
+
             @Override
             public String getCategory() {
                 return "DEFAULT";
             }
-        
+
             @Override
             public List<TriggerDefinition> getTriggers() {
                 return Collections.emptyList();
             }
-        
+
             @Override
             public SourceDefinition getSource() {
                 return null;
             }
-        
+
             @Override
             public Consumer<MassOperationContext> getItemBlock() {
                 return ctx -> {};
             }
-        
+
             @Override
             public MassOperationOutput execute(MassOperationInput input) {
                 {{inputType}} typed = {{inputConversion}};
                 {{outputType}} out = function.execute(typed);
                 return {{outputConversion}};
             }
-        
+
             @Override
             public DslObject dsl() {
                 {{dslBody}}

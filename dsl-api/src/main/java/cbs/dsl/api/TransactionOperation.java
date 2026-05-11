@@ -7,5 +7,4 @@ import cbs.dsl.api.TransactionTypes.TransactionOutput;
 public interface TransactionOperation {
 
   TransactionOutput execute(TransactionInput input);
-
 }

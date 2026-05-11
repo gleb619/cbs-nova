@@ -6,15 +6,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 
 class CompactDslCompilationTest {
 
@@ -22,11 +23,7 @@ class CompactDslCompilationTest {
 
   static Stream<Path> dslFiles() throws IOException {
     try (Stream<Path> files = Files.list(DSL_EXAMPLES_DIR)) {
-      return files
-          .filter(p -> p.toString().endsWith(".java"))
-          .sorted()
-          .toList()
-          .stream();
+      return files.filter(p -> p.toString().endsWith(".java")).sorted().toList().stream();
     }
   }
 
@@ -41,7 +38,8 @@ class CompactDslCompilationTest {
 
     assertNotNull(parsed);
     assertFalse(parsed.body().isEmpty(), "Body should not be empty for " + dslFile);
-    assertTrue(parsed.body().contains("return"), "Body should contain return statement in " + dslFile);
+    assertTrue(
+        parsed.body().contains("return"), "Body should contain return statement in " + dslFile);
 
     // Generate wrapper class
     String className = dslFile.getFileName().toString().replace(".java", "");

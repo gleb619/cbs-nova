@@ -1,9 +1,9 @@
 package cbs.dsl.api;
 
-import cbs.dsl.api.ContextTypes.ContextInput;
 import cbs.dsl.api.ContextTypes.ContextOutput;
 import cbs.dsl.api.ParametersTypes.ParameterError;
 import cbs.dsl.api.ParametersTypes.ParametersInput;
+import cbs.dsl.api.context.Context;
 import cbs.dsl.builder.TransactionDslObject;
 import cbs.dsl.exception.ParametersValidationException;
 
@@ -47,16 +47,11 @@ public interface StandardDslDefinition extends DslDefinition {
           throw new ParametersValidationException(fieldErrors);
         }
       }
-      ContextOutput context;
-
-      ContextInput input = ContextInput.from(params);
+      Context context = Context.builder().params(params).build();
       if (Objects.nonNull(dsl.contextBlock())) {
-        context = dsl.contextBlock().apply(input);
-      } else {
-        context = input.asOutput();
+        context = dsl.contextBlock().apply(context);
       }
-
-      return context;
+      return ContextOutput.from(context.params());
     }
 
     return ContextOutput.from(params);

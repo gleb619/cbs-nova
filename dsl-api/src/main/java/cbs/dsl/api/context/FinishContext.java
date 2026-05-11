@@ -3,16 +3,28 @@ package cbs.dsl.api.context;
 import lombok.Builder;
 
 import java.util.Map;
-import java.util.function.BiFunction;
 
-// TODO: remove
-@Deprecated(forRemoval = true)
-@Builder
+@Builder(toBuilder = true)
 public record FinishContext(
-    String eventCode,
-    Long workflowExecutionId,
+    String eventNumber,
     String performedBy,
-    String dslVersion,
-    Map<String, Object> eventParameters,
-    Map<String, Object> enrichment,
-    BiFunction<String, Map<String, Object>, Object> helperResolver) {}
+    Map<String, Object> params,
+    HelperEvaluator helperEvaluator) {
+
+  public FinishContext put(String key, Object value) {
+    params.put(key, value);
+    return this;
+  }
+
+  public Object get(String key) {
+    return params.get(key);
+  }
+
+  public Object helper(String key, Map<String, Object> values) {
+    return helperEvaluator.evaluate(key, values);
+  }
+
+  public FinishContext copy() {
+    return toBuilder().build();
+  }
+}

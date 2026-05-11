@@ -9,7 +9,8 @@ public record TransactionContext(
     String eventNumber,
     String performedBy,
     Map<String, Object> params,
-    HelperResolver helperResolver) {
+    HelperEvaluator helperEvaluator,
+    TransactionEvaluator transactionEvaluator) {
 
   public TransactionContext put(String key, Object value) {
     params.put(key, value);
@@ -22,5 +23,9 @@ public record TransactionContext(
 
   public TransactionContext copy() {
     return toBuilder().build();
+  }
+
+  public Object transaction(String code, Map<String, Object> values) {
+    return transactionEvaluator.evaluate(code, values);
   }
 }

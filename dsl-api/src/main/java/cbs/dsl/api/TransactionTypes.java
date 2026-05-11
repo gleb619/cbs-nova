@@ -18,6 +18,13 @@ public class TransactionTypes {
   public record TransactionInput(Map<String, Object> params, String eventNumber)
       implements TransactionArg {
 
+    public static TransactionInput from(Map<String, Object> params) {
+      return TransactionInput.builder()
+          .params(params)
+          .eventNumber("Insert value in TransactionTypes#from")
+          .build();
+    }
+
     public TransactionOutput asOutput() {
       return TransactionOutput.success(params);
     }

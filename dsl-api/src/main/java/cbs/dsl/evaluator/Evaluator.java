@@ -9,7 +9,7 @@ import org.jspecify.annotations.NonNull;
 @RequiredArgsConstructor
 public class Evaluator {
 
-  private final HelperEvaluator helperEvaluator;
+  private final RegistryHelperEvaluator helperEvaluator;
 
   @NonNull
   public HelperOutput previewHelper(@NonNull HelperDslObject dsl, @NonNull HelperInput input) {

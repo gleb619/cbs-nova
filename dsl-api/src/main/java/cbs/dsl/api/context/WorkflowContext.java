@@ -16,5 +16,5 @@ public record WorkflowContext<T>(
     String dslVersion,
     Map<String, Object> eventParameters,
     Map<String, Object> enrichment,
-    BiFunction<String, Map<String, Object>, Object> helperResolver,
+    BiFunction<String, Map<String, Object>, Object> helperEvaluator,
     T payload) {}

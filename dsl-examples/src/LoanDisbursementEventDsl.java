@@ -28,8 +28,8 @@ List<DslObject> define() {
             if (ex != null) {
                 // Use both parameters (customerId) and enriched context values (customerCode)
                 ctx.helperResolver().apply("SEND_FAULT_NOTIFICATION", Map.of(
-                    "customerId", ctx.eventParameters().get("customerId"),
-                    "customerCode", ctx.eventParameters().getOrDefault("customerCode", "N/A"),
+                    "customerId", ctx.params().get("customerId"),
+                    "customerCode", ctx.params().getOrDefault("customerCode", "N/A"),
                     "error", ex.getMessage()
                 ));
             }

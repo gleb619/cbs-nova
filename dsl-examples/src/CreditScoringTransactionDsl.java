@@ -1,5 +1,5 @@
 import cbs.dsl.api.DslObject;
-import cbs.dsl.api.TransactionTypes.TransactionOutput;
+import cbs.dsl.api.context.TransactionContext;
 import cbs.dsl.builder.Dsl;
 
 import java.util.List;
@@ -17,12 +17,12 @@ List<DslObject> define() {
             int adjustment = "EXCELLENT".equals(creditHistory) ? 100 : "POOR".equals(creditHistory) ? -200 : 0;
             int score = baseScore + adjustment;
             boolean approved = score >= 650;
-            return TransactionOutput.success(Map.of(
+            return TransactionContext.builder().params(Map.of(
                 "customerId", ctx.params().get("customerId"),
                 "score", score,
                 "approved", approved,
                 "amount", ctx.params().get("amount")
-            ));
+            )).build();
         })
         .build());
 }

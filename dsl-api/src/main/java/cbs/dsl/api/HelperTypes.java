@@ -15,8 +15,15 @@ public class HelperTypes {
 
   @Json
   @Builder(toBuilder = true)
-  public record HelperInput(Map<String, Object> params, String eventCode, Long workflowExecutionId)
-      implements HelperArg {}
+  public record HelperInput(Map<String, Object> params, String eventNumber) implements HelperArg {
+
+    public static HelperInput from(Map<String, Object> params) {
+      return HelperInput.builder()
+          .params(params)
+          .eventNumber("Insert value in HelperTypes#from")
+          .build();
+    }
+  }
 
   @Json
   @Builder(toBuilder = true)

@@ -38,8 +38,7 @@ class CreditBorrowerAccountTransactionDslTest {
     assertTrue(Files.exists(activity), "Activity interface should exist");
     String content = Files.readString(activity);
     assertTrue(content.contains("@ActivityInterface"));
-    assertTrue(content.contains(
-        "interface CreditBorrowerAccountTransactionDslActivity"));
+    assertTrue(content.contains("interface CreditBorrowerAccountTransactionDslActivity"));
     parseJava(activity);
   }
 
@@ -50,8 +49,7 @@ class CreditBorrowerAccountTransactionDslTest {
         "cbs/dsl/codegen/generated/definitions/CreditBorrowerAccountTransactionDslDefinition.java");
     assertTrue(Files.exists(def), "Definition file should exist");
     String content = Files.readString(def);
-    assertTrue(content.contains(
-        "class CreditBorrowerAccountTransactionDslDefinition"));
+    assertTrue(content.contains("class CreditBorrowerAccountTransactionDslDefinition"));
     assertTrue(content.contains("implements TransactionDefinition"));
     parseJava(def);
   }

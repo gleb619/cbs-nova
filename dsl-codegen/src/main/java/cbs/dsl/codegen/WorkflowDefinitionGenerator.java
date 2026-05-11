@@ -106,7 +106,7 @@ public class WorkflowDefinitionGenerator implements DefinitionGenerator {
     String sourceTemplate = // language=java
         """
         package {{definitionsPackage}};
-        
+
         import cbs.dsl.api.DslComponentResolver;
         import cbs.dsl.api.DslObject;
         import cbs.dsl.api.WorkflowDefinition;
@@ -119,7 +119,7 @@ public class WorkflowDefinitionGenerator implements DefinitionGenerator {
         import java.util.Collections;
         import java.util.List;
         import javax.annotation.processing.Generated;
-        
+
         /**
          * Generated WorkflowDefinition wrapper for {{specClassName}}.
          * <strong>WARNING:</strong> Auto-generated — do not edit.
@@ -129,45 +129,45 @@ public class WorkflowDefinitionGenerator implements DefinitionGenerator {
             date = "{{timestamp}}"
         )
         public class {{wrapperClassName}} implements WorkflowDefinition {
-        
+
             private final {{specClassName}} function;
-        
+
             public {{wrapperClassName}}(DslComponentResolver resolver) {
                 this.function = resolver.resolve({{specClassName}}.class)
           }
-        
+
             @Override
             public String getCode() {
                 return "{{specCode}}";
             }
-        
+
             @Override
             public List<String> getStates() {
                 return Collections.emptyList();
             }
-        
+
             @Override
             public String getInitial() {
                 return "";
             }
-        
+
             @Override
             public List<String> getTerminalStates() {
                 return Collections.emptyList();
             }
-        
+
             @Override
             public List<TransitionRuleDefinition> getTransitions() {
                 return Collections.emptyList();
             }
-        
+
             @Override
             public WorkflowOutput execute(WorkflowInput input) {
                 {{inputSimpleName}} typed = {{inputConversion}};
                 {{outputSimpleName}} out = function.execute(typed);
                 return {{outputConversion}};
             }
-        
+
             @Override
             public DslObject dsl() {
                 {{dslBody}}

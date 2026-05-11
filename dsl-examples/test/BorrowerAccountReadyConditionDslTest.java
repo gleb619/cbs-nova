@@ -13,7 +13,8 @@ class BorrowerAccountReadyConditionDslTest {
 
   private static final Path OUTPUT = Path.of("build/dsl-classes");
 
-  @Test @DisplayName("should parse DSL source as valid implicit class")
+  @Test
+  @DisplayName("should parse DSL source as valid implicit class")
   void shouldParseDslSourceAsValidImplicitClass() throws Exception {
     Path source = Path.of("src/BorrowerAccountReadyConditionDsl.java");
     String content = Files.readString(source);
@@ -23,14 +24,17 @@ class BorrowerAccountReadyConditionDslTest {
     assertTrue(parsed.body().contains("BORROWER_ACCOUNT_READY"));
   }
 
-  @Test @DisplayName("should generate compiled class file")
+  @Test
+  @DisplayName("should generate compiled class file")
   void shouldGenerateCompiledClassFile() {
     assertTrue(Files.exists(OUTPUT.resolve("BorrowerAccountReadyConditionDsl.class")));
   }
 
-  @Test @DisplayName("should generate valid condition activity interface")
+  @Test
+  @DisplayName("should generate valid condition activity interface")
   void shouldGenerateValidConditionActivityInterface() throws Exception {
-    Path activity = OUTPUT.resolve("cbs/dsl/codegen/generated/BorrowerAccountReadyConditionDslActivity.java");
+    Path activity =
+        OUTPUT.resolve("cbs/dsl/codegen/generated/BorrowerAccountReadyConditionDslActivity.java");
     assertTrue(Files.exists(activity), "Activity interface should exist");
     String content = Files.readString(activity);
     assertTrue(content.contains("@ActivityInterface"));
@@ -38,9 +42,11 @@ class BorrowerAccountReadyConditionDslTest {
     parseJava(activity);
   }
 
-  @Test @DisplayName("should generate valid condition definition")
+  @Test
+  @DisplayName("should generate valid condition definition")
   void shouldGenerateValidConditionDefinition() throws Exception {
-    Path def = OUTPUT.resolve("cbs/dsl/codegen/generated/definitions/BorrowerAccountReadyConditionDslDefinition.java");
+    Path def = OUTPUT.resolve(
+        "cbs/dsl/codegen/generated/definitions/BorrowerAccountReadyConditionDslDefinition.java");
     assertTrue(Files.exists(def), "Definition file should exist");
     String content = Files.readString(def);
     assertTrue(content.contains("class BorrowerAccountReadyConditionDslDefinition"));

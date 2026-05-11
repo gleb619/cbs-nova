@@ -1,5 +1,5 @@
 import cbs.dsl.api.DslObject;
-import cbs.dsl.api.TransactionTypes.TransactionOutput;
+import cbs.dsl.api.context.TransactionContext;
 import cbs.dsl.builder.Dsl;
 
 import java.util.List;
@@ -15,11 +15,11 @@ List<DslObject> define() {
             // riskLevel is populated in enrichment by the parent event's context block
             String riskLevel = (String) ctx.params().getOrDefault("riskLevel", "MEDIUM");
             boolean verified = !"HIGH".equals(riskLevel);
-            return TransactionOutput.success(Map.of(
+            return TransactionContext.builder().params(Map.of(
                 "customerId", customerId,
                 "verified", verified,
                 "riskLevel", riskLevel
-            ));
+            )).build();
         })
         .build());
 }
