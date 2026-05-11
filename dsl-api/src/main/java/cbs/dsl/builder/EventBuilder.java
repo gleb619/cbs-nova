@@ -2,37 +2,38 @@ package cbs.dsl.builder;
 
 import cbs.dsl.api.DslObject;
 import cbs.dsl.api.ParameterDefinition;
-import cbs.dsl.api.context.DisplayScope;
-import cbs.dsl.api.context.EnrichmentContext;
+import cbs.dsl.api.context.Context;
+import cbs.dsl.api.context.EventContext;
 import cbs.dsl.api.context.FinishContext;
 import cbs.dsl.api.context.TransactionsScope;
+import java.util.function.BiConsumer;
 import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 @Getter
 public class EventBuilder {
 
   private final String code;
-
-  @Deprecated(forRemoval = true)
-  private final List<String> transactionCodes = new ArrayList<>();
-
+  private String name;
   private final List<ParameterDefinition> parameters = new ArrayList<>();
-  private Consumer<EnrichmentContext> contextBlock = ctx -> {};
-
-  @Deprecated(forRemoval = true)
-  private Consumer<DisplayScope> displayBlock = scope -> {};
-
+  private Function<Context, Context> contextBlock = Context::copy;
+  private Function<EventContext, EventContext> previewBlock;
+  private Function<EventContext, EventContext> executeBlock;
   private Consumer<TransactionsScope> transactionsBlock;
   private BiConsumer<FinishContext, Throwable> finishBlock = (_, _) -> {};
 
   EventBuilder(String code) {
     this.code = code;
+  }
+
+  public EventBuilder name(String name) {
+    this.name = name;
+    return this;
   }
 
   public EventBuilder parameters(Consumer<ParametersBuilder> block) {
@@ -42,27 +43,23 @@ public class EventBuilder {
     return this;
   }
 
-  @Deprecated(forRemoval = true)
-  public EventBuilder transaction(String transactionCode) {
-    this.transactionCodes.add(transactionCode);
-    return this;
-  }
-
-  public EventBuilder context(Consumer<EnrichmentContext> block) {
+  public EventBuilder context(Function<Context, Context> block) {
     this.contextBlock = block;
     return this;
   }
 
-  @Deprecated(forRemoval = true)
-  public EventBuilder display(Consumer<DisplayScope> block) {
-    this.displayBlock = block;
+  public EventBuilder preview(Function<EventContext, EventContext> block) {
+    this.previewBlock = block;
     return this;
   }
 
-  @Deprecated(forRemoval = true)
-  public EventBuilder transactions(Consumer<TransactionsScope> block) {
-    this.transactionsBlock = block;
+  public EventBuilder execute(Function<EventContext, EventContext> block) {
+    this.executeBlock = block;
     return this;
+  }
+
+  public List<ParameterDefinition> getParameters() {
+    return Collections.unmodifiableList(new ArrayList<>(parameters));
   }
 
   public EventBuilder finish(BiConsumer<FinishContext, Throwable> block) {
@@ -71,24 +68,13 @@ public class EventBuilder {
   }
 
   public DslObject build() {
-    List<String> txCodes = Collections.unmodifiableList(new ArrayList<>(transactionCodes));
-    List<ParameterDefinition> params = Collections.unmodifiableList(new ArrayList<>(parameters));
-    Consumer<TransactionsScope> txBlock = transactionsBlock != null
-        ? transactionsBlock
-        : txCodes.isEmpty()
-            ? null
-            : scope -> {
-              for (String txCode : txCodes) {}
-            };
-
     return EventDslObject.builder()
         .code(code)
-        .parameters(params)
+        .parameters(Collections.unmodifiableList(new ArrayList<>(parameters)))
         .contextBlock(contextBlock)
-        .displayBlock(displayBlock)
-        .transactionsBlock(txBlock)
-        .transactionCodes(txCodes)
-        .finishBlock(finishBlock)
+        .previewBlock(previewBlock)
+        .executeBlock(executeBlock)
         .build();
   }
+
 }

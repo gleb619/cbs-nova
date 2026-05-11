@@ -14,20 +14,18 @@ List<DslObject> define() {
         // Context enrichment: calculated values when parameters alone are not enough.
         // customerId is in parameters, but we need customerCode from a helper call.
         // loanId is in parameters, but we need loan conditions from a helper call.
-        .context(ctx -> {
-            ctx.set("customerCode", ctx.helper("FIND_CUSTOMER_CODE",
-                Map.of("id", ctx.get("customerId"))));
-            ctx.set("loanConditions", ctx.helper("LOAN_CONDITIONS_BY_ID",
-                Map.of("loanId", ctx.get("loanId"))));
-        })
-        .transaction("KYC_CHECK")
-        .transaction("CREDIT_SCORING")
-        .transaction("DEBIT_FUNDING_ACCOUNT")
-        .transaction("CREDIT_BORROWER_ACCOUNT")
+        .context(ctx ->
+            ctx.put("customerCode", ctx.helper("FIND_CUSTOMER_CODE", Map.of("id", ctx.get("customerId"))))
+               .put("loanConditions", ctx.helper("LOAN_CONDITIONS_BY_ID", Map.of("loanId", ctx.get("loanId"))))
+        )
+//        .transaction("KYC_CHECK")
+//        .transaction("CREDIT_SCORING")
+//        .transaction("DEBIT_FUNDING_ACCOUNT")
+//        .transaction("CREDIT_BORROWER_ACCOUNT")
         .finish((ctx, ex) -> {
             if (ex != null) {
                 // Use both parameters (customerId) and enriched context values (customerCode)
-                ctx.helperResolver().apply("SEND_FAULT_NOTIFICATION", Map.of(
+                ctx.helper("SEND_FAULT_NOTIFICATION", Map.of(
                     "customerId", ctx.params().get("customerId"),
                     "customerCode", ctx.params().getOrDefault("customerCode", "N/A"),
                     "error", ex.getMessage()

@@ -1,26 +1,34 @@
 package cbs.dsl.builder;
 
-import cbs.dsl.api.ConditionTypes.ConditionInput;
-import cbs.dsl.api.ConditionTypes.ConditionOutput;
 import cbs.dsl.api.DslObject;
 import cbs.dsl.api.ParameterDefinition;
+import cbs.dsl.api.context.ConditionContext;
+import cbs.dsl.api.context.Context;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
+import lombok.Getter;
 
 /** Builder for creating inline condition objects from DSL files. */
+@Getter
 public class ConditionBuilder {
 
   private final String code;
+  private String name;
   private final List<ParameterDefinition> parameters = new ArrayList<>();
-  private Function<ConditionInput, ConditionOutput> evaluateBlock;
+  private Function<Context, Context> contextBlock = Context::copy;
+  private Function<ConditionContext, ConditionContext> checkBlock;
 
   ConditionBuilder(String code) {
     this.code = code;
+  }
+
+  public ConditionBuilder name(String name) {
+    this.name = name;
+    return this;
   }
 
   public ConditionBuilder parameters(Consumer<ParametersBuilder> block) {
@@ -30,37 +38,35 @@ public class ConditionBuilder {
     return this;
   }
 
-  public ConditionBuilder check(Function<ConditionInput, ConditionOutput> block) {
-    this.evaluateBlock = block;
+  public ConditionBuilder context(Function<Context, Context> block) {
+    this.contextBlock = block;
     return this;
   }
 
-  public String getCode() {
-    return code;
+  public ConditionBuilder check(Function<ConditionContext, ConditionContext> block) {
+    this.checkBlock = block;
+    return this;
   }
 
   public List<ParameterDefinition> getParameters() {
     return Collections.unmodifiableList(new ArrayList<>(parameters));
   }
 
-  public Function<ConditionInput, ConditionOutput> check() {
-    return evaluateBlock;
+  public Function<Context, Context> context() {
+    return contextBlock;
   }
 
-  public Predicate<ConditionInput> getPredicate() {
-    return ctx -> {
-      if (evaluateBlock == null) {
-        return false;
-      }
-      return evaluateBlock.apply(ctx).result();
-    };
+  public Function<ConditionContext, ConditionContext> check() {
+    return checkBlock;
   }
 
   public DslObject build() {
     return ConditionDslObject.builder()
         .code(code)
+        .name(name)
         .parameters(Collections.unmodifiableList(new ArrayList<>(parameters)))
-        .evaluateBlock(evaluateBlock)
+        .contextBlock(contextBlock)
+        .checkBlock(checkBlock)
         .build();
   }
 }

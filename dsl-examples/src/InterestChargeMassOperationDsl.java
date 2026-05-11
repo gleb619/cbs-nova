@@ -13,8 +13,8 @@ List<DslObject> define() {
         .parameters(reg -> reg.string("productCode").decimal("rate"))
         // Context enrichment: prepare batch-wide calculated values
         .context(ctx -> {
-            ctx.enrichment().put("batchId", "BATCH-" + System.currentTimeMillis());
-            ctx.enrichment().put("processedAt", Instant.now().toString());
+//            ctx.put("batchId", "BATCH-" + System.currentTimeMillis());
+//            ctx.put("processedAt", Instant.now().toString());
         })
         // Process each item using enriched context (parameters + calculated values)
         .item(ctx -> {

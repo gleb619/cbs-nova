@@ -409,7 +409,8 @@ public class DslCompiler {
       switch (spec.interfaceType()) {
         case EVENT -> {
           EventSpecificationGenerator wfGen = new EventSpecificationGenerator();
-          List<String> txCodes = ((EventDslObject) obj).transactionCodes();
+          List<String> txCodes = new ArrayList<>();
+          //List<String> txCodes = ((EventDslObject) obj).transactionCodes();
           String wfImplClassName = "cbs.dsl.codegen.generated.%sEventWorkflowImpl"
               .formatted(CodeGenUtil.toClassName(obj.code()));
           EventSpecificationModel wfSpec =

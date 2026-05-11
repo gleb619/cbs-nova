@@ -1,4 +1,3 @@
-import cbs.dsl.api.ConditionTypes.ConditionOutput;
 import cbs.dsl.api.DslObject;
 import cbs.dsl.builder.Dsl;
 
@@ -11,9 +10,9 @@ List<DslObject> define() {
         .parameters(reg -> reg.string("accountCode"))
         // Evaluate using both input parameters and enriched context values.
         // accountStatus is expected to be populated in enrichment by the parent event's context block.
-        .check(ctx -> new ConditionOutput(
-            "ACTIVE".equals(ctx.params().get("accountStatus"))
-                && ctx.params().get("accountCode") != null
+        .check(ctx -> ctx.result(
+            "ACTIVE".equals(ctx.get("accountStatus"))
+                && ctx.get("accountCode") != null
         ))
         .build());
 }

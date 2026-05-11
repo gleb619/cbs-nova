@@ -12,18 +12,18 @@ List<DslObject> define() {
         // Preview shows what will happen using both parameters and context enrichment
         .preview(ctx -> TransactionContext.builder().params(Map.of(
             "description",
-                "Will credit " + ctx.params().get("accountCode")
-                    + " with " + ctx.params().get("amount")
-                    + " " + ctx.params().get("currency"),
-            "customerCode", ctx.params().getOrDefault("customerCode", "N/A")
+                "Will credit " + ctx.get("accountCode")
+                    + " with " + ctx.get("amount")
+                    + " " + ctx.get("currency"),
+            "customerCode", ctx.get("customerCode")
         )).build())
         // Execute the credit using both parameters and enriched context values
         .execute(ctx -> TransactionContext.builder().params(Map.of(
             "transactionId", "TX-" + System.currentTimeMillis(),
-            "accountCode", ctx.params().get("accountCode"),
-            "amount", ctx.params().get("amount"),
-            "currency", ctx.params().get("currency"),
-            "customerCode", ctx.params().getOrDefault("customerCode", "N/A"),
+            "accountCode", ctx.get("accountCode"),
+            "amount", ctx.get("amount"),
+            "currency", ctx.get("currency"),
+            "customerCode", ctx.get("customerCode"),
             "status", "CREDITED"
         )).build())
         .build());

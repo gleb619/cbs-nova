@@ -13,15 +13,15 @@ List<DslObject> define() {
         .execute(ctx -> {
             int baseScore = 700;
             // creditHistory is populated in enrichment by the parent event's context block
-            String creditHistory = (String) ctx.params().getOrDefault("creditHistory", "GOOD");
+            String creditHistory = (String) ctx.get("creditHistory");
             int adjustment = "EXCELLENT".equals(creditHistory) ? 100 : "POOR".equals(creditHistory) ? -200 : 0;
             int score = baseScore + adjustment;
             boolean approved = score >= 650;
             return TransactionContext.builder().params(Map.of(
-                "customerId", ctx.params().get("customerId"),
+                "customerId", ctx.get("customerId"),
                 "score", score,
                 "approved", approved,
-                "amount", ctx.params().get("amount")
+                "amount", ctx.get("amount")
             )).build();
         })
         .build());

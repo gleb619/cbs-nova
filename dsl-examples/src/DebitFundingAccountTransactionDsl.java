@@ -12,25 +12,25 @@ List<DslObject> define() {
         // Preview uses both parameters and enriched context values from the parent event
         .preview(ctx -> TransactionContext.builder().params(Map.of(
             "description",
-                "Will debit " + ctx.params().get("accountCode")
-                    + " for " + ctx.params().get("amount")
-                    + " " + ctx.params().get("currency"),
-            "customerCode", ctx.params().getOrDefault("customerCode", "N/A")
+                "Will debit " + ctx.get("accountCode")
+                    + " for " + ctx.get("amount")
+                    + " " + ctx.get("currency"),
+            "customerCode", ctx.get("customerCode")
         )).build())
         // Execute the debit using both parameters and enriched context values
         .execute(ctx -> TransactionContext.builder().params(Map.of(
             "transactionId", "TX-" + System.currentTimeMillis(),
-            "accountCode", ctx.params().get("accountCode"),
-            "amount", ctx.params().get("amount"),
-            "currency", ctx.params().get("currency"),
-            "customerCode", ctx.params().getOrDefault("customerCode", "N/A"),
+            "accountCode", ctx.get("accountCode"),
+            "amount", ctx.get("amount"),
+            "currency", ctx.get("currency"),
+            "customerCode", ctx.get("customerCode"),
             "status", "DEBITED"
         )).build())
         // Rollback compensates using parameters to know what to reverse
         .rollback(ctx -> TransactionContext.builder().params(Map.of(
             "compensated", true,
-            "accountCode", ctx.params().get("accountCode"),
-            "amount", ctx.params().get("amount")
+            "accountCode", ctx.get("accountCode"),
+            "amount", ctx.get("amount")
         )).build())
         .build());
 }

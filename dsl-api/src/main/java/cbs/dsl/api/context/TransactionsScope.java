@@ -1,25 +1,39 @@
 package cbs.dsl.api.context;
 
-import cbs.dsl.api.TransactionDefinition;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
-// TODO: remove
-@Deprecated(forRemoval = true)
 public interface TransactionsScope {
 
-  CompletableFuture<StepHandle> step(TransactionDefinition tx);
+  CompletableFuture<StepHandle> step(Function<EventContext, EventContext> fn);
 
-  CompletableFuture<StepHandle> step(Consumer<ConditionalStepBuilder> block);
+  CompletableFuture<StepHandle> when(Consumer<ConditionalScope> block);
 
-  void await(StepHandle... handles);
+  void await(CompletableFuture<StepHandle>... handles);
 
-  default void await(CompletableFuture<StepHandle>... handles) {
-    throw new IllegalStateException("Not implemented yet!");
+  interface StepHandle {
+
+    CompletableFuture<StepHandle> then(Function<EventContext, EventContext> fn);
+
+    void join();
+
   }
 
-  Object get(String key);
+  interface ConditionalScope {
 
-  void set(String key, Object value);
+    WhenClause is(Function<ConditionContext, ConditionContext> predicate);
+
+    WhenClause or(Function<ConditionContext, ConditionContext> predicate);
+
+    void otherwise(Function<ConditionContext, ConditionContext> predicate);
+
+  }
+
+  interface WhenClause {
+
+    ConditionalScope then(Consumer<ConditionalScope> block);
+
+  }
+
 }
