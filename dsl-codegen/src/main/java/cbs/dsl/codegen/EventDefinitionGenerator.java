@@ -114,7 +114,7 @@ public class EventDefinitionGenerator implements DefinitionGenerator {
         public interface {{className}} {
 
             @ActivityMethod
-            Map<String, Object> prepareContext(EventInput input);
+            ContextOutput prepare(EventInput input);
 
             @ActivityMethod
             EventOutput execute(EventInput input);
@@ -134,14 +134,6 @@ public class EventDefinitionGenerator implements DefinitionGenerator {
     String timestamp = CodeGenUtil.currentTimestamp();
     boolean inputIsRuntime = spec.inputType().equals(EV_INPUT);
     boolean outputIsRuntime = spec.outputType().equals(EV_OUTPUT);
-
-    String inputConversion = inputIsRuntime
-        ? "input"
-        : Substitutor.format(
-            "JsonPayload.fromMap(input.params(), {{inputSimpleName}}.class)",
-            Map.of("inputSimpleName", CodeGenUtil.simpleName(spec.inputType())));
-
-    String outputConversion = outputIsRuntime ? "out" : "new EventOutput(JsonPayload.toMap(out))";
 
     String jsonPayloadImport =
         (inputIsRuntime && outputIsRuntime) ? "" : "import cbs.dsl.api.JsonPayload;\n";
@@ -165,17 +157,16 @@ public class EventDefinitionGenerator implements DefinitionGenerator {
         """
         package {{definitionsPackage}};
 
-        import cbs.dsl.api.DslComponentResolver;
+        import java.util.HashMap;
         import cbs.dsl.api.DslObject;
         import cbs.dsl.api.EventDefinition;
-
         import cbs.dsl.api.EventTypes.EventInput;
         import cbs.dsl.api.EventTypes.EventOutput;
         import cbs.dsl.api.ContextTypes.ContextOutput;
-        import cbs.dsl.api.context.EventContext;
+        import cbs.dsl.api.context.Context;
+        import cbs.dsl.builder.EventDslObject;
         {{jsonPayloadImport}}        {{specImport}}{{inputTypeImport}}{{outputTypeImport}}
-        {{dslImportsBlock}}        import java.util.function.Consumer;
-        import java.util.function.Function;
+        {{dslImportsBlock}}        import java.util.Map;
         import javax.annotation.processing.Generated;
 
         /**
@@ -188,21 +179,23 @@ public class EventDefinitionGenerator implements DefinitionGenerator {
         )
         public class {{wrapperClassName}} implements EventDefinition, {{activityInterfaceName}} {
 
-            private final {{specClassName}} function;
-
+            private final Evaluator evaluator;
 
             public {{wrapperClassName}}(DslComponentResolver resolver) {
-                this.function = resolver.resolve({{specClassName}}.class);
+                this.evaluator = resolver.resolveEvaluator();
             }
 
             @Override
             public String getCode() {
                 return "{{specCode}}";
             }
+            
+            //TODO: add method to filter input map from a `getParameters()`, like in `starter/src/main/java/cbs/nova/runner/EventRunner.java`
 
             @Override
-            public ContextOutput prepare(Map<String, Object> params) {
-                return prepareContext(params);
+            public ContextOutput prepare(EventInput input) {
+                Context context = evaluator.evaluateContext(dsl(), input);
+                return ContextOutput.from(context.params());
             }
 
             @Override
@@ -225,9 +218,7 @@ public class EventDefinitionGenerator implements DefinitionGenerator {
     params.put("wrapperClassName", wrapperClassName);
     params.put("specCode", spec.code());
     params.put("inputSimpleName", CodeGenUtil.simpleName(spec.inputType()));
-    params.put("inputConversion", inputConversion);
     params.put("outputSimpleName", CodeGenUtil.simpleName(spec.outputType()));
-    params.put("outputConversion", outputConversion);
     params.put("dslBody", dslBody);
     return Substitutor.format(sourceTemplate, params);
   }

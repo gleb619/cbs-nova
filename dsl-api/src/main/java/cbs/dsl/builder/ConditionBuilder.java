@@ -4,13 +4,13 @@ import cbs.dsl.api.DslObject;
 import cbs.dsl.api.ParameterDefinition;
 import cbs.dsl.api.context.ConditionContext;
 import cbs.dsl.api.context.Context;
+import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import lombok.Getter;
 
 /** Builder for creating inline condition objects from DSL files. */
 @Getter

@@ -81,10 +81,11 @@ class EventSpecificationGeneratorTest {
   }
 
   @Test
-  @DisplayName("shouldWireTransactionActivitiesInConstructor")
-  void shouldWireTransactionActivitiesInConstructor() throws Exception {
+  @DisplayName("shouldDelegateExecutionToEventActivityAndExposeDsl")
+  void shouldDelegateExecutionToEventActivityAndExposeDsl() throws Exception {
     EventSpecificationModel spec = new EventSpecificationModel(
-        "PAYMENT", "com.example.Payment", List.of("DEBIT_ACCOUNT", "CREDIT_ACCOUNT"));
+        "PAYMENT", "com.example.Payment", List.of("DEBIT_ACCOUNT", "CREDIT_ACCOUNT"),
+        "return PaymentDsl.create();", null);
 
     EventSpecificationGenerator gen = new EventSpecificationGenerator(tempDir);
     List<DslCompiler.FileWrite> files = gen.generate(List.of(spec));
@@ -94,25 +95,22 @@ class EventSpecificationGeneratorTest {
     String implContent = Files.readString(implPath);
 
     assertTrue(
-        implContent.contains("private final DebitAccountTransactionActivity debitAccountActivity;"),
-        "Should declare debit account activity field");
+        implContent.contains("Evaluator.getInstance()"),
+        "Should call Evaluator.getInstance() in execute()");
     assertTrue(
-        implContent.contains(
-            "private final CreditAccountTransactionActivity creditAccountActivity;"),
-        "Should declare credit account activity field");
+        implContent.contains("public EventDslObject dsl()"),
+        "Should declare dsl() method");
     assertTrue(
-        implContent.contains(
-            "this.debitAccountActivity = ActivityManager.getInstance().newActivityStub("),
-        "Should initialize debit account activity stub");
-    assertTrue(
-        implContent.contains("\"DEBIT_ACCOUNT\", DebitAccountTransactionActivity.class"),
-        "Should reference DEBIT_ACCOUNT activity");
-    assertTrue(
-        implContent.contains(
-            "this.creditAccountActivity = ActivityManager.getInstance().newActivityStub("),
-        "Should initialize credit account activity stub");
-    assertTrue(
-        implContent.contains("\"CREDIT_ACCOUNT\", CreditAccountTransactionActivity.class"),
-        "Should reference CREDIT_ACCOUNT activity");
+        implContent.contains("return PaymentDsl.create();"),
+        "Should embed DSL body in dsl() method");
+    assertFalse(
+        implContent.contains("return null;"),
+        "dsl() should not return null when DSL body is provided");
+    assertFalse(
+        implContent.contains("TransactionInput"),
+        "Should not contain deprecated TransactionInput usage");
+    assertFalse(
+        implContent.contains("private final DebitAccountTransactionActivity"),
+        "Should not declare transaction activity fields");
   }
 }

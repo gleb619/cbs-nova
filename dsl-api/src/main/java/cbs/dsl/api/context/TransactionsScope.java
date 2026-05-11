@@ -8,6 +8,8 @@ public interface TransactionsScope {
 
   CompletableFuture<StepHandle> step(Function<EventContext, EventContext> fn);
 
+  CompletableFuture<StepHandle> step(String code);
+
   CompletableFuture<StepHandle> when(Consumer<ConditionalScope> block);
 
   void await(CompletableFuture<StepHandle>... handles);
@@ -17,7 +19,6 @@ public interface TransactionsScope {
     CompletableFuture<StepHandle> then(Function<EventContext, EventContext> fn);
 
     void join();
-
   }
 
   interface ConditionalScope {
@@ -27,13 +28,10 @@ public interface TransactionsScope {
     WhenClause or(Function<ConditionContext, ConditionContext> predicate);
 
     void otherwise(Function<ConditionContext, ConditionContext> predicate);
-
   }
 
   interface WhenClause {
 
     ConditionalScope then(Consumer<ConditionalScope> block);
-
   }
-
 }

@@ -18,10 +18,14 @@ List<DslObject> define() {
             ctx.put("customerCode", ctx.helper("FIND_CUSTOMER_CODE", Map.of("id", ctx.get("customerId"))))
                .put("loanConditions", ctx.helper("LOAN_CONDITIONS_BY_ID", Map.of("loanId", ctx.get("loanId"))))
         )
-//        .transaction("KYC_CHECK")
-//        .transaction("CREDIT_SCORING")
-//        .transaction("DEBIT_FUNDING_ACCOUNT")
-//        .transaction("CREDIT_BORROWER_ACCOUNT")
+        .transactions(ctx -> {
+            var kyc = ctx.step(ev -> ev);
+            var scoring = ctx.step(ev -> ev);
+            ctx.await(kyc, scoring);
+            var debit = ctx.step(ev -> ev);
+            var credit = ctx.step(ev -> ev);
+            ctx.await(debit, credit);
+        })
         .finish((ctx, ex) -> {
             if (ex != null) {
                 // Use both parameters (customerId) and enriched context values (customerCode)

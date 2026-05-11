@@ -23,8 +23,8 @@ class EventDefinitionGeneratorTest {
   Path tempDir;
 
   @Test
-  @DisplayName("shouldGenerateActivityInterfaceAndDefinitionWithUndefinedDsl")
-  void shouldGenerateActivityInterfaceAndDefinitionWithUndefinedDsl() throws Exception {
+  @DisplayName("shouldGenerateActivityInterfaceAndDefinitionWithDslObject")
+  void shouldGenerateActivityInterfaceAndDefinitionWithDslObject() throws Exception {
     RegistrationModel spec = new RegistrationModel(
         "com.example",
         "MyEvent",
@@ -58,7 +58,7 @@ class EventDefinitionGeneratorTest {
     assertNotNull(activityContent);
     assertTrue(activityContent.contains("@ActivityInterface"), "Should have @ActivityInterface");
     assertTrue(activityContent.contains("prepareContext"), "Should have prepareContext method");
-
+    
     String content = Files.readString(definitionPath);
     assertNotNull(content);
 
@@ -68,11 +68,14 @@ class EventDefinitionGeneratorTest {
         content.contains("implements EventDefinition, MyEventEventActivity"),
         "Should implement EventDefinition and Activity interface only");
     assertTrue(
-        content.contains("UndefinedDslObject.create()"),
-        "Should contain UndefinedDslObject dsl body");
+        content.contains("private final EventDslObject dslObject;"),
+        "Should contain EventDslObject field");
     assertTrue(
-        content.contains("import cbs.dsl.builder.UndefinedDslObject;"),
-        "Should contain UndefinedDslObject import");
+        content.contains("this.dslObject = (EventDslObject) dsl();"),
+        "Should initialize dslObject from dsl()");
+    assertTrue(
+        content.contains("public MyEventDefinition()"),
+        "Should have no-arg constructor");
   }
 
   @Test

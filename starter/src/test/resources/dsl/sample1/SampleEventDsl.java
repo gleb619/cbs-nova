@@ -9,8 +9,10 @@ List<DslObject> define() {
         Object helperResult = ctx.helper("SAMPLE_HELPER", Map.of("someVal", ctx.get("name")));
         ctx.put("enriched", helperResult);
       })
-      .transaction("SAMPLE_TX")
-      .transaction("SAMPLE_TRANSACTION_DSL")
+      .transactions(ctx -> {
+        ctx.step("SAMPLE_TX");
+        ctx.step("SAMPLE_TRANSACTION_DSL");
+      })
       .finish((ctx, ex) -> {
       })
       .build();

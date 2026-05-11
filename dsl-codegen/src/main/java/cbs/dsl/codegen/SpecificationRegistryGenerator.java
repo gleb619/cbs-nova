@@ -182,12 +182,12 @@ public class SpecificationRegistryGenerator {
   private static String toEventActivityRegistration(String eventCode) {
     String className = CodeGenUtil.toClassName(eventCode);
     return "        registry.registerActivity(\"" + eventCode + "\", " + className
-        + "EventActivity.class, new " + className + "Definition(resolver));";
+        + "EventActivity.class, new " + className + "Definition());";
   }
 
   private static String toWorkflowRegistration(String eventCode) {
     String className = CodeGenUtil.toClassName(eventCode);
     return "        registry.registerWorkflow(\"" + eventCode + "\", " + className
-        + "Workflow.class, new " + className + "Definition(resolver));";
+        + "EventSpecification.class, new " + className + "EventSpecificationImpl());";
   }
 }

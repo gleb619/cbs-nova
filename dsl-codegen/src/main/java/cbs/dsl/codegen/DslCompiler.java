@@ -414,7 +414,7 @@ public class DslCompiler {
           String wfImplClassName = "cbs.dsl.codegen.generated.%sEventWorkflowImpl"
               .formatted(CodeGenUtil.toClassName(obj.code()));
           EventSpecificationModel wfSpec =
-              new EventSpecificationModel(obj.code(), className, txCodes, wfImplClassName);
+              new EventSpecificationModel(obj.code(), className, txCodes, spec.dslBody(), spec.dslImports(), wfImplClassName);
           generatedFiles.addAll(wfGen.generateFileSpecs(List.of(wfSpec), outputDir));
           EventDefinitionGenerator gen = new EventDefinitionGenerator(dslBodyProvider);
           generatedFiles.addAll(gen.generateFileSpecs(spec, outputDir));

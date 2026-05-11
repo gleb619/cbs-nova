@@ -16,9 +16,7 @@ public class ConditionTypes {
       implements ConditionFunction.ConditionArg {
 
     public static ConditionInput from(Map<String, Object> params) {
-      return ConditionInput.builder()
-          .params(params)
-          .build();
+      return ConditionInput.builder().params(params).build();
     }
   }
 

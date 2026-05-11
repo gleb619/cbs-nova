@@ -2,6 +2,7 @@ package cbs.nova.config;
 
 import cbs.dsl.api.DefinitionRegistry;
 import cbs.dsl.evaluator.Evaluator;
+import cbs.dsl.evaluator.RegistryEventEvaluator;
 import cbs.dsl.evaluator.RegistryHelperEvaluator;
 import cbs.nova.registry.DslRegistry;
 import cbs.nova.registry.SpiImplRegistryLoader;
@@ -41,6 +42,11 @@ public class DslRegistryConfiguration {
     return registry;
   }
 
+  @Bean
+  public RegistryEventEvaluator eventEvaluator(DefinitionRegistry registry) {
+    return new RegistryEventEvaluator(registry);
+  }
+
   /**
    * Creates the {@link RegistryHelperEvaluator} bean backed by the {@link DefinitionRegistry}.
    *
@@ -59,7 +65,7 @@ public class DslRegistryConfiguration {
    * @return the evaluator
    */
   @Bean
-  public Evaluator evaluator(RegistryHelperEvaluator helperEvaluator) {
-    return new Evaluator(helperEvaluator);
+  public Evaluator evaluator(RegistryEventEvaluator eventEvaluator, RegistryHelperEvaluator helperEvaluator) {
+    return new Evaluator(eventEvaluator, helperEvaluator);
   }
 }

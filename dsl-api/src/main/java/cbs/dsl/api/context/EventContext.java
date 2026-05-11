@@ -10,4 +10,10 @@ public record EventContext(
     String performedBy,
     Map<String, Object> params,
     HelperEvaluator helperEvaluator,
-    TransactionEvaluator transactionEvaluator) {}
+    TransactionEvaluator transactionEvaluator) {
+
+  public EventContext copy() {
+    return toBuilder().build();
+  }
+
+}

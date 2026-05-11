@@ -2,6 +2,7 @@ package cbs.dsl.codegen;
 
 import cbs.dsl.codegen.DslCompiler.FileWrite;
 
+import java.util.HashMap;
 import javax.annotation.processing.Filer;
 
 import java.io.IOException;
@@ -10,7 +11,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class EventSpecificationGenerator {
 
@@ -97,25 +97,25 @@ public class EventSpecificationGenerator {
     String sourceTemplate = // language=java
         """
         package {{package}};
-
+        
         import cbs.dsl.api.EventTypes.EventInput;
         import cbs.dsl.api.EventTypes.EventOutput;
         import cbs.dsl.api.EventOperation;
         import io.temporal.workflow.WorkflowInterface;
         import io.temporal.workflow.WorkflowMethod;
         import javax.annotation.processing.Generated;
-
+        
         @Generated(
             value = "cbs.dsl.codegen.EventSpecificationGenerator",
             date = "{{timestamp}}"
         )
         @WorkflowInterface
         public interface {{className}} extends EventOperation {
-
+        
             @Override
             @WorkflowMethod(name = "{{workflowMethodName}}")
             EventOutput execute(EventInput input)
-
+        
         }
         """;
 
@@ -135,57 +135,14 @@ public class EventSpecificationGenerator {
     String implClassName = workflowClassName + "Impl";
     String timestamp = CodeGenUtil.currentTimestamp();
 
-    String txActivityFields = spec.transactionCodes().stream()
-        .map(tx -> {
-          String txActivityInterfaceName = CodeGenUtil.toClassName(tx) + "TransactionActivity";
-          return Substitutor.format(
-              """
-                    private final {{txActivityInterfaceName}} {{txActivityFieldName}};""",
-              Map.of(
-                  "txActivityInterfaceName",
-                  txActivityInterfaceName,
-                  "txActivityFieldName",
-                  CodeGenUtil.toFieldName(tx) + "Activity"));
-        })
-        .collect(Collectors.joining("\n"));
-
-    String txActivityInitializers = spec.transactionCodes().stream()
-        .map(tx -> {
-          String txActivityInterfaceName = CodeGenUtil.toClassName(tx) + "TransactionActivity";
-          String fieldName = CodeGenUtil.toFieldName(tx) + "Activity";
-          return Substitutor.format(
-              """
-                    this.{{fieldName}} = ActivityManager.getInstance().newActivityStub(
-                        "{{txCode}}", {{txActivityInterfaceName}}.class);""",
-              Map.of(
-                  "fieldName", fieldName,
-                  "txCode", tx,
-                  "txActivityInterfaceName", txActivityInterfaceName));
-        })
-        .collect(Collectors.joining("\n"));
-
-    String txExecutionCalls = spec.transactionCodes().stream()
-        .map(tx -> {
-          String fieldName = CodeGenUtil.toFieldName(tx) + "Activity";
-          return Substitutor.format(
-              """
-                    // Execute transaction {{txCode}}
-                    TransactionInput {{fieldName}}Input = new TransactionInput(
-                        context, input.eventCode());
-                    {{fieldName}}.execute({{fieldName}}Input);""",
-              Map.of(
-                  "fieldName", fieldName,
-                  "txCode", tx));
-        })
-        .collect(Collectors.joining("\n"));
-
     String sourceTemplate = // language=java
         """
         package {{package}};
 
-        import cbs.dsl.api.TransactionTypes.TransactionInput;
         import cbs.dsl.api.EventTypes.EventInput;
         import cbs.dsl.api.EventTypes.EventOutput;
+        import cbs.dsl.builder.EventDslObject;
+        import cbs.dsl.evaluator.Evaluator;
         import cbs.nova.temporal.ActivityManager;
         import java.util.Map;
         import javax.annotation.processing.Generated;
@@ -196,46 +153,47 @@ public class EventSpecificationGenerator {
         )
         public class {{implClassName}} implements {{workflowClassName}} {
 
-            //TODO: add here a `dsl-api/src/main/java/cbs/dsl/evaluator/EventEvaluator.java` to evaluate dsl
             private final {{eventActivityClassName}} activity;
-            {{txActivityFields}}
+            private final EventDslObject dslObject;
+            //TODO: evaluate dsl on compilation phase and add transaction activities here
 
             public {{implClassName}}() {
                 this.activity = ActivityManager.getInstance().newActivityStub(
                     "{{eventActivityCode}}", {{eventActivityClassName}}.class);
-                {{txActivityInitializers}}
+                this.dslObject = (EventDslObject) dsl();
+            }
+            
+            public String getCode() {
+                return "{{eventCode}}";
             }
 
             @Override
             public EventOutput execute(EventInput input) {
-                // 1. Prepare context via event activity
-                Map<String, Object> context = activity.prepareContext(input);
-
-                // 2. Execute transactions sequentially
-        {{txExecutionCalls}}
-
-                return EventOutput.success(Collections.emptyMap());
+                ContextOutput context = activity.prepare(input);
+                var enrichedInput = input.toBuilder()
+                  .params(context.params())
+                  .build();
+                EventContext eventContext = Evaluator.getInstance().evaluateEvent(dsl(), enrichedInput);
+                
+                return EventOutput.from(eventContext.params());
             }
 
             public EventDslObject dsl() {
-                //return {{dslBody}}
-                return null;
+                {{dslBody}}
             }
 
         }
         """;
 
-    return Substitutor.format(
-        sourceTemplate,
-        Map.of(
-            "package", DEFINITIONS_PACKAGE,
-            "timestamp", timestamp,
-            "implClassName", implClassName,
-            "workflowClassName", workflowClassName,
-            "eventActivityClassName", eventActivityClassName,
-            "eventActivityCode", eventActivityCode,
-            "txActivityFields", txActivityFields,
-            "txActivityInitializers", txActivityInitializers,
-            "txExecutionCalls", txExecutionCalls));
+    Map<String, String> params = new HashMap<>();
+    params.put("package", DEFINITIONS_PACKAGE);
+    params.put("timestamp", timestamp);
+    params.put("implClassName", implClassName);
+    params.put("workflowClassName", workflowClassName);
+    params.put("eventActivityClassName", eventActivityClassName);
+    params.put("eventActivityCode", eventActivityCode);
+    params.put("eventCode", spec.eventCode());
+    params.put("dslBody", spec.dslBody());
+    return Substitutor.format(sourceTemplate, params);
   }
 }

@@ -14,8 +14,9 @@ import java.util.Map;
 public class ParametersTypes {
 
   @Json
-  //TODO: Delegate paramer evaluation to `dsl-api/src/main/java/cbs/dsl/evaluator/RegistryParameterEvaluator.java`
-  // move logic from pojo to a specific Evaluator instead
+  // TODO: Delegate paramer evaluation to
+  // `dsl-api/src/main/java/cbs/dsl/evaluator/RegistryParameterEvaluator.java`
+  //  move logic from pojo to a specific Evaluator instead
   @Deprecated
   public record ParametersInput(Map<String, Object> params) implements ParametersArg {
 
