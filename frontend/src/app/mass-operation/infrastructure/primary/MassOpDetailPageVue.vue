@@ -1,96 +1,96 @@
 <template>
   <div class="mass-op-detail-page">
     <h1 class="page-title">Mass Operation Detail</h1>
-
-    <div v-if="loading" class="loading-indicator">
+    <div
+      v-if="loading"
+      class="loading-indicator"
+    >
       Loading...
     </div>
-
-    <div v-else-if="error" class="error-message">
+    <div
+      v-else-if="error"
+      class="error-message"
+    >
       {{ error }}
     </div>
-
-    <div v-else-if="execution" class="detail-content">
+    <div
+      v-else-if="massOperation"
+      class="detail-content"
+    >
       <div class="execution-header">
         <div class="field-group">
-          <label>ID</label>
-          <span>{{ execution.id }}</span>
+          <label>ID</label><span>{{ massOperation.id }}</span>
         </div>
         <div class="field-group">
-          <label>Code</label>
-          <span>{{ execution.code }}</span>
+          <label>Code</label><span>{{ massOperation.code }}</span>
         </div>
         <div class="field-group">
-          <label>Category</label>
-          <span>{{ execution.category }}</span>
+          <label>Category</label><span>{{ massOperation.category }}</span>
         </div>
         <div class="field-group">
-          <label>DSL Version</label>
-          <span>{{ execution.dslVersion }}</span>
+          <label>DSL Version</label><span>{{ massOperation.dslVersion }}</span>
         </div>
         <div class="field-group">
           <label>Status</label>
-          <span :class="['status-badge', `status-${execution.status.toLowerCase()}`]">
-            {{ execution.status }}
-          </span>
+          <span :class="['status-badge', `status-${massOperation.status.toLowerCase()}`]">{{ massOperation.status }}</span>
         </div>
         <div class="field-group">
-          <label>Total Items</label>
-          <span>{{ execution.totalItems }}</span>
+          <label>Total Items</label><span>{{ massOperation.totalItems }}</span>
         </div>
         <div class="field-group">
-          <label>Processed</label>
-          <span>{{ execution.processedCount }}</span>
+          <label>Processed</label><span>{{ massOperation.processedCount }}</span>
         </div>
         <div class="field-group">
-          <label>Failed</label>
-          <span>{{ execution.failedCount }}</span>
+          <label>Failed</label><span>{{ massOperation.failedCount }}</span>
         </div>
         <div class="field-group">
-          <label>Trigger Type</label>
-          <span>{{ execution.triggerType }}</span>
+          <label>Trigger Type</label><span>{{ massOperation.triggerType }}</span>
         </div>
         <div class="field-group">
-          <label>Trigger Source</label>
-          <span>{{ execution.triggerSource }}</span>
+          <label>Trigger Source</label><span>{{ massOperation.triggerSource }}</span>
         </div>
         <div class="field-group">
-          <label>Performed By</label>
-          <span>{{ execution.performedBy }}</span>
+          <label>Performed By</label><span>{{ massOperation.performedBy }}</span>
         </div>
         <div class="field-group">
-          <label>Started At</label>
-          <span>{{ formatDate(execution.startedAt) }}</span>
+          <label>Started At</label><span>{{ formatDate(massOperation.startedAt) }}</span>
         </div>
         <div class="field-group">
-          <label>Completed At</label>
-          <span>{{ execution.completedAt ? formatDate(execution.completedAt) : '—' }}</span>
+          <label>Completed At</label><span>{{ massOperation.completedAt ? formatDate(massOperation.completedAt) : '—' }}</span>
         </div>
         <div class="field-group">
-          <label>Temporal Workflow ID</label>
-          <span>{{ execution.temporalWorkflowId }}</span>
+          <label>Temporal Workflow ID</label><span>{{ massOperation.temporalWorkflowId }}</span>
         </div>
       </div>
-
-      <button class="retry-btn" @click="retryFailed">
+      <button
+        class="retry-btn"
+        @click="handleRetry"
+      >
         Retry Failed
       </button>
-
-      <div v-if="retryResult" class="success-message">
-        {{ retryResult }}
+      <div
+        v-if="retryMsg"
+        class="success-message"
+      >
+        {{ retryMsg }}
       </div>
-
       <h2 class="items-title">Items</h2>
-
-      <div v-if="itemsLoading" class="loading-indicator">
+      <div
+        v-if="itemsLoading"
+        class="loading-indicator"
+      >
         Loading items...
       </div>
-
-      <div v-else-if="itemsError" class="error-message">
+      <div
+        v-else-if="itemsError"
+        class="error-message"
+      >
         {{ itemsError }}
       </div>
-
-      <table v-else class="items-table">
+      <table
+        v-else
+        class="items-table"
+      >
         <thead>
           <tr>
             <th>ID</th>
@@ -109,9 +109,7 @@
             <td>{{ item.id }}</td>
             <td>{{ item.itemKey }}</td>
             <td>
-              <span :class="['status-badge', `status-${item.status.toLowerCase()}`]">
-                {{ item.status }}
-              </span>
+              <span :class="['status-badge', `status-${item.status.toLowerCase()}`]">{{ item.status }}</span>
             </td>
             <td>{{ item.errorMessage || '—' }}</td>
             <td>{{ formatDate(item.startedAt) }}</td>
@@ -119,8 +117,10 @@
           </tr>
         </tbody>
       </table>
-
-      <div v-if="!itemsLoading && !itemsError && items.length === 0" class="empty-state">
+      <div
+        v-if="!itemsLoading && !itemsError && items.length === 0"
+        class="empty-state"
+      >
         No items found for this mass operation.
       </div>
     </div>
@@ -128,61 +128,40 @@
 </template>
 
 <script lang="ts">
-import { MASS_OPERATION_REPOSITORY, inject } from '@cbs/admin-plugin/composables/mass-operation/MassOperationProvider';
-import { defineComponent } from 'vue';
+import { useMassOperation } from '@cbs/admin-plugin/composables/mass-operation/useMassOperation';
+import { defineComponent, ref } from 'vue';
 
 export default defineComponent({
   name: 'MassOpDetailPageVue',
-  data() {
+  setup() {
+    const { massOperation, items, loading, itemsLoading, error, itemsError, loadOne, loadItems, retryFailed } = useMassOperation();
+    const retryMsg = ref<string | null>(null);
     return {
-      execution: null as any,
-      items: [] as any[],
-      loading: false,
-      itemsLoading: false,
-      error: null as string | null,
-      itemsError: null as string | null,
-      retryResult: null as string | null,
+      massOperation,
+      items,
+      loading,
+      itemsLoading,
+      error,
+      itemsError,
+      loadOne,
+      loadItems,
+      retryFailed,
+      retryMsg,
     };
   },
   async mounted() {
-    await this.fetchExecution();
-    await this.loadItems();
+    const id = Number(this.$route.params.id);
+    await this.loadOne(id);
+    await this.loadItems(id);
   },
   methods: {
-    async fetchExecution() {
-      this.loading = true;
-      this.error = null;
+    async handleRetry() {
+      this.retryMsg = null;
       try {
         const id = Number(this.$route.params.id);
-        const repository = inject(MASS_OPERATION_REPOSITORY);
-        this.execution = await repository.findById(id);
-      } catch (err: any) {
-        this.error = err?.message || 'Failed to load mass operation';
-      } finally {
-        this.loading = false;
-      }
-    },
-    async loadItems() {
-      this.itemsLoading = true;
-      this.itemsError = null;
-      try {
-        const id = Number(this.$route.params.id);
-        const repository = inject(MASS_OPERATION_REPOSITORY);
-        this.items = await repository.findItems(id);
-      } catch (err: any) {
-        this.itemsError = err?.message || 'Failed to load items';
-      } finally {
-        this.itemsLoading = false;
-      }
-    },
-    async retryFailed() {
-      this.retryResult = null;
-      try {
-        const id = Number(this.$route.params.id);
-        const repository = inject(MASS_OPERATION_REPOSITORY);
-        const result = await repository.retryFailed(id);
-        this.retryResult = `Retried ${result.retriedCount} items`;
-        await this.loadItems();
+        const result = await this.retryFailed(id);
+        this.retryMsg = `Retried ${result.retriedCount} items`;
+        await this.loadItems(id);
       } catch {
         this.itemsError = 'Retry failed';
       }

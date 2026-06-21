@@ -1,21 +1,29 @@
 <template>
   <div class="mass-op-list-page">
     <h1 class="page-title">Mass Operations</h1>
-
-    <div v-if="loading" class="loading-indicator">
+    <div
+      v-if="loading"
+      class="loading-indicator"
+    >
       Loading...
     </div>
-
-    <div v-else-if="error" class="error-message">
+    <div
+      v-else-if="error"
+      class="error-message"
+    >
       {{ error }}
     </div>
-
     <div v-else>
-      <button class="trigger-btn" @click="showTriggerForm = !showTriggerForm">
+      <button
+        class="trigger-btn"
+        @click="showTriggerForm = !showTriggerForm"
+      >
         {{ showTriggerForm ? 'Cancel' : 'Trigger' }}
       </button>
-
-      <div v-if="showTriggerForm" class="trigger-form">
+      <div
+        v-if="showTriggerForm"
+        class="trigger-form"
+      >
         <div class="form-group">
           <label for="massOpCode">Mass Op Code</label>
           <input
@@ -43,16 +51,21 @@
             required
           >
         </div>
-        <button class="submit-btn" @click="submitTrigger">
+        <button
+          class="submit-btn"
+          @click="submitTrigger"
+        >
           Submit
         </button>
-        <div v-if="triggerError" class="error-message">
+        <div
+          v-if="triggerError"
+          class="error-message"
+        >
           {{ triggerError }}
         </div>
       </div>
-
       <MassOpListVue
-        :executions="executions"
+        :executions="massOperations"
         @select="navigateToDetail"
       />
     </div>
@@ -61,59 +74,44 @@
 
 <script lang="ts">
 import MassOpListVue from '@cbs/admin-plugin/composables/mass-operation/MassOpListVue.vue';
-import { MASS_OPERATION_REPOSITORY, inject } from '@cbs/admin-plugin/composables/mass-operation/MassOperationProvider';
-import { defineComponent } from 'vue';
+import { useMassOperation } from '@cbs/admin-plugin/composables/mass-operation/useMassOperation';
+import { defineComponent, ref } from 'vue';
 
 export default defineComponent({
   name: 'MassOpListPageVue',
-  components: {
-    MassOpListVue,
-  },
-  data() {
+  components: { MassOpListVue },
+  setup() {
+    const { massOperations, loading, error, loadAll, trigger } = useMassOperation();
+    const showTriggerForm = ref(false);
+    const triggerError = ref<string | null>(null);
+    const triggerForm = ref({ massOpCode: '', performedBy: '', dslVersion: '' });
+    loadAll();
     return {
-      executions: [] as any[],
-      loading: false,
-      error: null as string | null,
-      showTriggerForm: false,
-      triggerForm: {
-        massOpCode: '',
-        performedBy: '',
-        dslVersion: '',
-      },
-      triggerError: null as string | null,
+      massOperations,
+      loading,
+      error,
+      loadAll,
+      trigger,
+      showTriggerForm,
+      triggerError,
+      triggerForm,
     };
   },
-  async mounted() {
-    await this.loadExecutions();
-  },
   methods: {
-    async loadExecutions() {
-      this.loading = true;
-      this.error = null;
-      try {
-        const repository = inject(MASS_OPERATION_REPOSITORY);
-        this.executions = await repository.findAll();
-      } catch (err: any) {
-        this.error = err?.message || 'Failed to load mass operations';
-      } finally {
-        this.loading = false;
-      }
-    },
     navigateToDetail(id: number) {
       this.$router.push({ name: 'MassOpDetail', params: { id: String(id) } });
     },
     async submitTrigger() {
       this.triggerError = null;
       try {
-        const repository = inject(MASS_OPERATION_REPOSITORY);
-        await repository.trigger({
+        await this.trigger({
           massOpCode: this.triggerForm.massOpCode,
           performedBy: this.triggerForm.performedBy,
           dslVersion: this.triggerForm.dslVersion,
         });
         this.showTriggerForm = false;
         this.triggerForm = { massOpCode: '', performedBy: '', dslVersion: '' };
-        await this.loadExecutions();
+        await this.loadAll();
       } catch (err: any) {
         this.triggerError = err?.message || 'Failed to trigger mass operation';
       }
@@ -145,7 +143,6 @@ export default defineComponent({
   background-color: #fee2e2;
   color: #b91c1c;
   border-radius: 0.375rem;
-  margin-bottom: 1rem;
 }
 
 .trigger-btn {
