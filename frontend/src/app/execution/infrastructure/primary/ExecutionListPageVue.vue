@@ -6,7 +6,10 @@
       Loading...
     </div>
 
-    <div v-else-if="error" class="error-message">
+    <div
+      v-else-if="error"
+      class="error-message"
+    >
       {{ error }}
     </div>
 
@@ -16,7 +19,10 @@
       @select="navigateToDetail"
     />
 
-    <div v-if="!loading && !error && totalPages > 1" class="pagination">
+    <div
+      v-if="!loading && !error && totalPages > 1"
+      class="pagination"
+    >
       <button
         :disabled="currentPage === 0"
         @click="loadPage(currentPage - 1)"
@@ -36,45 +42,18 @@
 
 <script lang="ts">
 import ExecutionListVue from '@cbs/admin-plugin/composables/execution/ExecutionListVue.vue';
-import { EXECUTION_REPOSITORY, inject } from '@cbs/admin-plugin/composables/execution/WorkflowExecutionProvider';
+import { useExecution } from '@cbs/admin-plugin/composables/execution/useExecution';
 import { defineComponent } from 'vue';
 
 export default defineComponent({
   name: 'ExecutionListPageVue',
-  components: {
-    ExecutionListVue,
-  },
-  data() {
-    return {
-      executions: [] as any[],
-      loading: false,
-      error: null as string | null,
-      currentPage: 0,
-      totalPages: 1,
-      totalElements: 0,
-      pageSize: 20,
-    };
-  },
-  async mounted() {
-    await this.loadPage(0);
+  components: { ExecutionListVue },
+  setup() {
+    const { executions, loading, error, currentPage, totalPages, loadPage } = useExecution();
+    loadPage(0);
+    return { executions, loading, error, currentPage, totalPages, loadPage };
   },
   methods: {
-    async loadPage(page: number) {
-      this.loading = true;
-      this.error = null;
-      try {
-        const repository = inject(EXECUTION_REPOSITORY);
-        const result = await repository.findAll(page, this.pageSize);
-        this.executions = result.content;
-        this.currentPage = result.number;
-        this.totalPages = result.totalPages;
-        this.totalElements = result.totalElements;
-      } catch (err: any) {
-        this.error = err?.message || 'Failed to load workflow executions';
-      } finally {
-        this.loading = false;
-      }
-    },
     navigateToDetail(id: number) {
       this.$router.push({ name: 'ExecutionDetail', params: { id: String(id) } });
     },

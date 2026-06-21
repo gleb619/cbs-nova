@@ -1,68 +1,83 @@
 <template>
   <div class="execution-detail-page">
     <h1 class="page-title">Workflow Execution Detail</h1>
-
-    <div v-if="loading" class="loading-indicator">
+    <div
+      v-if="loading"
+      class="loading-indicator"
+    >
       Loading...
     </div>
-
-    <div v-else-if="error" class="error-message">
+    <div
+      v-else-if="error"
+      class="error-message"
+    >
       {{ error }}
     </div>
-
-    <div v-else-if="execution" class="detail-content">
+    <div
+      v-else-if="execution"
+      class="detail-content"
+    >
       <div class="field-group">
-        <label>ID</label>
-        <span>{{ execution.id }}</span>
+        <label>ID</label><span>{{ execution.id }}</span>
       </div>
       <div class="field-group">
-        <label>Workflow Code</label>
-        <span>{{ execution.workflowCode }}</span>
+        <label>Workflow Code</label><span>{{ execution.workflowCode }}</span>
       </div>
       <div class="field-group">
-        <label>DSL Version</label>
-        <span>{{ execution.dslVersion }}</span>
+        <label>DSL Version</label><span>{{ execution.dslVersion }}</span>
       </div>
       <div class="field-group">
-        <label>Current State</label>
-        <span>{{ execution.currentState }}</span>
+        <label>Current State</label><span>{{ execution.currentState }}</span>
       </div>
       <div class="field-group">
         <label>Status</label>
-        <span :class="['status-badge', `status-${execution.status.toLowerCase()}`]">
-          {{ execution.status }}
-        </span>
+        <span :class="['status-badge', `status-${execution.status.toLowerCase()}`]">{{ execution.status }}</span>
       </div>
       <div class="field-group">
-        <label>Performed By</label>
-        <span>{{ execution.performedBy }}</span>
+        <label>Performed By</label><span>{{ execution.performedBy }}</span>
       </div>
       <div class="field-group">
-        <label>Created At</label>
-        <span>{{ formatDate(execution.createdAt) }}</span>
+        <label>Created At</label><span>{{ formatDate(execution.createdAt) }}</span>
       </div>
       <div class="field-group">
-        <label>Updated At</label>
-        <span>{{ formatDate(execution.updatedAt) }}</span>
+        <label>Updated At</label><span>{{ formatDate(execution.updatedAt) }}</span>
       </div>
       <div class="field-group">
-        <label>Context</label>
-        <pre>{{ prettyJson(execution.context) }}</pre>
+        <label>Context</label><pre>{{ prettyJson(execution.context) }}</pre>
       </div>
       <div class="field-group">
-        <label>Display Data</label>
-        <pre>{{ prettyJson(execution.displayData) }}</pre>
+        <label>Display Data</label><pre>{{ prettyJson(execution.displayData) }}</pre>
       </div>
-
       <div class="field-group">
-        <button class="bpmn-toggle-btn" @click="toggleBpmn">
+        <button
+          class="bpmn-toggle-btn"
+          @click="toggleBpmn"
+        >
           {{ bpmnOpen ? 'Hide Diagram' : 'Show Diagram' }}
         </button>
         <div v-if="bpmnOpen">
-          <div v-if="bpmnLoading" class="loading-indicator">Loading diagram…</div>
-          <div v-else-if="bpmnNotFound" class="no-diagram-message">No diagram available</div>
-          <div v-else-if="bpmnError" class="error-message">{{ bpmnError }}</div>
-          <BpmnViewer v-else-if="bpmnXml" :xml="bpmnXml" />
+          <div
+            v-if="bpmnLoading"
+            class="loading-indicator"
+          >
+            Loading diagram…
+          </div>
+          <div
+            v-else-if="bpmnNotFound"
+            class="no-diagram-message"
+          >
+            No diagram available
+          </div>
+          <div
+            v-else-if="bpmnError"
+            class="error-message"
+          >
+            {{ bpmnError }}
+          </div>
+          <BpmnViewer
+            v-else-if="bpmnXml"
+            :xml="bpmnXml"
+          />
         </div>
       </div>
     </div>
@@ -70,55 +85,52 @@
 </template>
 
 <script lang="ts">
-import { BPMN_REPOSITORY, inject as injectBpmn } from '@cbs/admin-plugin/composables/bpmn/BpmnProvider';
 import BpmnViewer from '@cbs/admin-plugin/composables/bpmn/BpmnViewer.vue';
-import { EXECUTION_REPOSITORY, inject as injectExecution } from '@cbs/admin-plugin/composables/execution/WorkflowExecutionProvider';
-import { defineComponent } from 'vue';
+import { useBpmn } from '@cbs/admin-plugin/composables/bpmn/useBpmn';
+import { useExecution } from '@cbs/admin-plugin/composables/execution/useExecution';
+import { defineComponent, ref } from 'vue';
 
 export default defineComponent({
   name: 'ExecutionDetailPageVue',
   components: { BpmnViewer },
-  data() {
+  setup() {
+    const { execution, loading, error, loadOne } = useExecution();
+    const { fetchXml } = useBpmn();
+    const bpmnOpen = ref(false);
+    const bpmnXml = ref<string | null>(null);
+    const bpmnLoading = ref(false);
+    const bpmnError = ref<string | null>(null);
+    const bpmnNotFound = ref(false);
     return {
-      execution: null as any,
-      loading: false,
-      error: null as string | null,
-      bpmnOpen: false,
-      bpmnXml: null as string | null,
-      bpmnLoading: false,
-      bpmnError: null as string | null,
-      bpmnNotFound: false,
+      execution,
+      loading,
+      error,
+      loadOne,
+      fetchXml,
+      bpmnOpen,
+      bpmnXml,
+      bpmnLoading,
+      bpmnError,
+      bpmnNotFound,
     };
   },
   async mounted() {
-    await this.fetchExecution();
+    const id = Number(this.$route.params.id);
+    await this.loadOne(id);
   },
   methods: {
-    async fetchExecution() {
-      this.loading = true;
-      this.error = null;
-      try {
-        const id = Number(this.$route.params.id);
-        const repository = injectExecution(EXECUTION_REPOSITORY);
-        this.execution = await repository.findById(id);
-      } catch (err: any) {
-        this.error = err?.message || 'Failed to load workflow execution';
-      } finally {
-        this.loading = false;
-      }
-    },
     async toggleBpmn() {
       this.bpmnOpen = !this.bpmnOpen;
       if (this.bpmnOpen && this.bpmnXml === null && !this.bpmnNotFound) {
-        await this.fetchBpmn();
+        await this.loadBpmn();
       }
     },
-    async fetchBpmn() {
+    async loadBpmn() {
       this.bpmnLoading = true;
       this.bpmnError = null;
       try {
-        const repository = injectBpmn(BPMN_REPOSITORY);
-        this.bpmnXml = await repository.fetchXml(this.execution.workflowCode);
+        // biome-ignore lint/style/noNonNullAssertion: button only renders when execution is loaded
+        this.bpmnXml = await this.fetchXml(this.execution!.workflowCode);
       } catch (err: any) {
         if (err?.response?.status === 404) {
           this.bpmnNotFound = true;
@@ -236,7 +248,6 @@ pre {
   border: 1px solid #d1d5db;
   border-radius: 0.375rem;
   cursor: pointer;
-  transition: background-color 0.15s ease;
 }
 
 .bpmn-toggle-btn:hover {
