@@ -1,6 +1,6 @@
 import Keycloak from 'keycloak-js';
-import { defineNuxtPlugin } from 'nuxt/app';
-import { provideForAuth } from '../composables/auth/AuthProvider';
+import { defineNuxtPlugin, useRuntimeConfig } from 'nuxt/app';
+import { setAuth } from '../composables/auth/auth.store';
 import { KeycloakAuthRepository } from '../infrastructure/secondary/KeycloakAuthRepository';
 import { KeycloakHttp } from '../infrastructure/secondary/KeycloakHttp';
 
@@ -17,7 +17,7 @@ export default defineNuxtPlugin(async () => {
     setAuthConfig(true);
 
     const localAuthHttp = new LocalAuthHttp(axios.default.create({ baseURL: config.public.apiBase as string }));
-    provideForAuth(new LocalAuthRepository(localAuthHttp));
+    setAuth(new LocalAuthRepository(localAuthHttp));
   } else {
     const { setAuthConfig } = await import('@/auth/application/AuthConfig');
     setAuthConfig(false);
@@ -30,7 +30,7 @@ export default defineNuxtPlugin(async () => {
 
     try {
       const keycloakHttp = new KeycloakHttp(keycloak);
-      provideForAuth(new KeycloakAuthRepository(keycloakHttp));
+      setAuth(new KeycloakAuthRepository(keycloakHttp));
     } catch (error) {
       throw new Error(`Keycloak initialisation failed: ${error instanceof Error ? error.message : String(error)}`);
     }

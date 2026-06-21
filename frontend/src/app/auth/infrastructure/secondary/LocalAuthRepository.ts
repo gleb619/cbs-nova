@@ -1,9 +1,9 @@
 import type { LocalAuthHttp } from '@/auth/infrastructure/secondary/LocalAuthHttp';
-import type { AuthRepository, Credentials } from '@cbs/admin-plugin/composables/auth/AuthRepository';
 import type { AuthenticatedUser } from '@cbs/admin-plugin/composables/auth/AuthenticatedUser';
 import { TokenStorage } from '@cbs/admin-plugin/composables/auth/TokenStorage';
+import type { AuthLike, Credentials } from '@cbs/admin-plugin/composables/auth/auth.store';
 
-export class LocalAuthRepository implements AuthRepository {
+export class LocalAuthRepository implements AuthLike {
   constructor(private readonly localAuthHttp: LocalAuthHttp) {}
 
   async login(credentials?: Credentials): Promise<void> {

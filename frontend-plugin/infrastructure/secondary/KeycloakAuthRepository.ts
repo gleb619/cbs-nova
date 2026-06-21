@@ -1,8 +1,8 @@
-import type { AuthRepository, Credentials } from '../../composables/auth/AuthRepository';
 import type { AuthenticatedUser } from '../../composables/auth/AuthenticatedUser';
+import type { AuthLike, Credentials } from '../../composables/auth/auth.store';
 import type { KeycloakHttp } from './KeycloakHttp';
 
-export class KeycloakAuthRepository implements AuthRepository {
+export class KeycloakAuthRepository implements AuthLike {
   constructor(private readonly keycloakHttp: KeycloakHttp) {}
 
   currentUser(): Promise<AuthenticatedUser> {

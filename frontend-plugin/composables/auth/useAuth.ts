@@ -1,13 +1,12 @@
-import { AUTH_REPOSITORY, inject } from './AuthProvider';
-import type { Credentials } from './AuthRepository';
+import { getAuth } from './auth.store';
 
 export const useAuth = () => {
-  const repo = inject(AUTH_REPOSITORY);
+  const auth = getAuth();
   return {
-    currentUser: () => repo.currentUser(),
-    login: (credentials?: Credentials) => repo.login(credentials),
-    logout: () => repo.logout(),
-    authenticated: () => repo.authenticated(),
-    refreshToken: () => repo.refreshToken(),
+    currentUser: () => auth.currentUser(),
+    login: (credentials?: { username: string; password: string }) => auth.login(credentials),
+    logout: () => auth.logout(),
+    authenticated: () => auth.authenticated(),
+    refreshToken: () => auth.refreshToken(),
   };
 };
