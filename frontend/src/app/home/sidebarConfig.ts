@@ -1,8 +1,3 @@
-/**
- * Sidebar navigation configuration.
- * Defines the complete menu structure with ABAC role filters per TDD §12.1–§12.2.
- */
-
 import type { SidebarGroup } from './types';
 
 export const sidebarGroups: SidebarGroup[] = [
@@ -36,18 +31,8 @@ export const sidebarGroups: SidebarGroup[] = [
     items: [
       { key: 'executions', label: 'sidebar.executions', routeName: 'ExecutionList' },
       { key: 'event-log', label: 'sidebar.eventLog', routeName: 'EventLog' },
-      {
-        key: 'dsl-rules',
-        label: 'sidebar.dslRules',
-        externalUrl: 'https://gitea/cbs-rules',
-        roles: ['ROLE_DEVELOPER'],
-      },
-      {
-        key: 'temporal-ui',
-        label: 'sidebar.temporalUi',
-        externalUrl: 'http://localhost:8080',
-        roles: ['ROLE_OPS', 'ROLE_ADMIN'],
-      },
+      { key: 'dsl-rules', label: 'sidebar.dslRules', externalUrl: 'https://gitea/cbs-rules', roles: ['ROLE_DEVELOPER'] },
+      { key: 'temporal-ui', label: 'sidebar.temporalUi', externalUrl: 'http://localhost:8080', roles: ['ROLE_OPS', 'ROLE_ADMIN'] },
     ],
   },
   {

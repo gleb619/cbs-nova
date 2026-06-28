@@ -2,6 +2,8 @@
 import { ref } from 'vue';
 import { useRoute } from 'vue-router';
 
+defineOptions({ name: 'HomepageVue' });
+
 const route = useRoute();
 const sidebarCollapsed = ref(false);
 

@@ -9,9 +9,9 @@ export default defineNuxtPlugin(async () => {
   const localAuth = config.public.localAuth as boolean;
 
   if (localAuth) {
-    const { setAuthConfig } = await import('@/auth/application/AuthConfig');
-    const { LocalAuthRepository } = await import('@/auth/infrastructure/secondary/LocalAuthRepository');
-    const { LocalAuthHttp } = await import('@/auth/infrastructure/secondary/LocalAuthHttp');
+    const { setAuthConfig } = await import('@/auth/AuthConfig');
+    const { LocalAuthRepository } = await import('@/auth/LocalAuthRepository');
+    const { LocalAuthHttp } = await import('@/auth/LocalAuthHttp');
     const axios = await import('axios');
 
     setAuthConfig(true);
@@ -19,7 +19,7 @@ export default defineNuxtPlugin(async () => {
     const localAuthHttp = new LocalAuthHttp(axios.default.create({ baseURL: config.public.apiBase as string }));
     setAuth(new LocalAuthRepository(localAuthHttp));
   } else {
-    const { setAuthConfig } = await import('@/auth/application/AuthConfig');
+    const { setAuthConfig } = await import('@/auth/AuthConfig');
     setAuthConfig(false);
 
     const keycloak = new Keycloak({

@@ -25,7 +25,7 @@ public record TransactionContext(
     return toBuilder().build();
   }
 
-  public Object transaction(String code, Map<String, Object> values) {
+  public Object runTransaction(String code, Map<String, Object> values) {
     return transactionEvaluator.evaluate(code, values);
   }
 }

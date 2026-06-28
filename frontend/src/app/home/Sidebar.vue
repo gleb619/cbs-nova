@@ -40,7 +40,7 @@
       </router-link>
 
       <!-- Groups filtered by ABAC -->
-      <SidebarGroupVue
+      <SidebarGroup
         v-for="group in visibleGroups"
         :key="group.key"
         :group="group"
@@ -54,12 +54,12 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import SidebarGroupVue from './sidebar/SidebarGroupVue.vue';
-import { sidebarGroups } from './sidebar/sidebarConfig';
+import SidebarGroup from './SidebarGroup.vue';
+import { sidebarGroups } from './sidebarConfig';
 
 export default defineComponent({
   name: 'Sidebar',
-  components: { SidebarGroupVue },
+  components: { SidebarGroup },
   props: {
     collapsed: {
       type: Boolean,

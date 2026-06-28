@@ -1,0 +1,151 @@
+plugins {
+  id 'java-library'
+  id 'maven-publish'
+  alias(libs.plugins.spring.boot)
+  alias(libs.plugins.spring.dm)
+  alias(libs.plugins.openapi.generator)
+}
+
+apply(from: "${rootDir}/gradle/java.gradle")
+apply(from: "${rootDir}/gradle/code-style.gradle")
+
+bootJar {
+  enabled = false
+}
+
+jar {
+  enabled = true
+}
+
+//def libs = versionCatalogs.named('libs')
+
+// Feign runtime dependency
+dependencies {
+  api platform(libs.spring.cloud.dependencies)
+  api libs.spring.cloud.starter.openfeign
+//  api libs.findLibrary('spring-cloud-starter-openfeign').get()
+}
+
+// Import Spring Cloud BOM for version management
+//apply plugin: 'io.spring.dependency-management'
+//dependencyManagement {
+//  imports {
+//    mavenBom libs.spring.cloud.dependencies.get()
+//    //mavenBom 'org.springframework.cloud:spring-cloud-dependencies:2025.0.0'
+//  }
+//}
+
+// -----------------------------------------------------------------------------
+// OpenAPI Java Feign Client Generation
+// -----------------------------------------------------------------------------
+
+def openApiSpecFile = layout.buildDirectory.file('openapi.json').get().asFile
+def openApiOutputDir = file("$projectDir/generated")
+
+openApiGenerate {
+  generatorName = "java"
+  inputSpec = openApiSpecFile.absolutePath
+  outputDir = openApiOutputDir.absolutePath
+  ignoreFileOverride = file("$projectDir/.openapi-generator-ignore").absolutePath
+  library = "feign"
+  apiPackage = "cbs.nova.api.client"
+  modelPackage = "cbs.nova.api.client.model"
+  invokerPackage = "cbs.nova.api.client"
+  configOptions = [
+    asyncNative: "true",
+    generateBuilders: "true",
+    dateLibrary: "java8",
+    java8: "true",
+    sourceFolder: "main/java",
+    openApiNullable: "false",
+    documentationProvider: "none",
+    annotationLibrary: "none",
+    serializationLibrary: "jackson",
+    useJakartaEe: "true",
+    configHelp: "false",
+    interfaceOnly: "true",
+    skipFormModel: "true",
+  ]
+  globalProperties = [
+    generateSupportingFiles: "false",
+    generateModelTests: "false",
+    generateApiTests: "false",
+  ]
+  openapiGeneratorIgnoreList = [
+    "README.md",
+    "docs/**",
+    "pom.xml",
+    "build.gradle",
+    "git_push.sh",
+    ".openapi-generator/**",
+  ]
+}
+
+// -----------------------------------------------------------------------------
+// Tasks
+// -----------------------------------------------------------------------------
+
+tasks.register('generateFeignClient') {
+  group = 'codegen'
+  description = 'Generate Java Spring Feign client from OpenAPI spec. Fetches from running app if spec not found.'
+
+  doLast {
+    if (!openApiSpecFile.exists()) {
+      def serverUrl = "http://localhost:7070"
+      def docsUrl = "$serverUrl/v3/api-docs"
+      logger.warn("OpenAPI spec not found at ${openApiSpecFile}. Attempting to fetch from $docsUrl ...")
+
+      try {
+        def conn = new URL(docsUrl).openConnection()
+        conn.setRequestMethod("GET")
+        conn.setConnectTimeout(10000)
+        conn.setReadTimeout(30000)
+        def rc = conn.getResponseCode()
+        if (rc != 200) {
+          throw new GradleException("Failed to fetch OpenAPI spec: HTTP $rc. Is the app running on $serverUrl?")
+        }
+        def content = conn.inputStream.text
+        openApiSpecFile.parentFile.mkdirs()
+        openApiSpecFile.text = content
+        logger.lifecycle("OpenAPI spec fetched and saved to ${openApiSpecFile}")
+      } catch (Exception e) {
+        throw new GradleException("Could not fetch OpenAPI spec from $docsUrl. Start the app on port 7070 first, or run the integration test to export the spec. Cause: ${e.message}", e)
+      }
+    }
+
+    logger.lifecycle("Generating Java Feign client from ${openApiSpecFile} ...")
+    tasks.openApiGenerate.execute()
+    logger.lifecycle("Java Feign client generated to ${openApiOutputDir}")
+  }
+}
+
+tasks.register('cleanGeneratedFeign') {
+  group = 'codegen'
+  description = 'Clean generated Feign client files.'
+  doLast {
+    delete fileTree(openApiOutputDir)
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Publishing configuration
+// -----------------------------------------------------------------------------
+
+java {
+  withSourcesJar()
+  withJavadocJar()
+}
+
+publishing {
+  publications {
+    mavenJava(MavenPublication) {
+      from components.java
+      groupId = 'org.cbs'
+      artifactId = 'cbs-nova-client'
+      version = project.version
+    }
+  }
+  repositories {
+    mavenLocal()
+  }
+}

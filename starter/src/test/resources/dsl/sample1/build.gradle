@@ -15,16 +15,19 @@ repositories {
   mavenCentral()
 }
 
-dependencies {
-  implementation files('libs/dsl-api.jar')
-  implementation files('libs/dsl-codegen.jar')
+configurations {
+  dslRuntime
 }
 
-//TODO: fix problem with `java.lang.ClassNotFoundException: com.github.javaparser.ParserConfiguration`
-//resolve deps, create a shadow jar for `dsl-codegen`
+dependencies {
+  implementation files('libs/dsl-api.jar')
+  dslRuntime files('libs/dsl-api.jar', 'libs/dsl-codegen.jar')
+  // DslCompiler transitively requires javaparser-core at runtime.
+  dslRuntime 'com.github.javaparser:javaparser-core:3.28.1'
+}
+
 tasks.register('compileDsl', JavaExec) {
-  dependsOn configurations.runtimeClasspath
-  classpath = files('libs/dsl-api.jar', 'libs/dsl-codegen.jar') + configurations.runtimeClasspath
+  classpath = configurations.dslRuntime
   mainClass = 'cbs.dsl.codegen.DslCompiler'
   args '.', 'build/dsl-classes'
   javaLauncher = javaToolchains.launcherFor {

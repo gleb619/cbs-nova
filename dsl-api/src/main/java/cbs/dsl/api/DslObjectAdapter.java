@@ -46,19 +46,49 @@ public final class DslObjectAdapter {
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
       String name = method.getName();
 
-      // getCode() is the only method guaranteed on DslObject
+      // Canonical code/version are the only methods guaranteed on DslObject.
       if ("getCode".equals(name) && method.getParameterCount() == 0) {
         return object.code();
       }
+      if ("getVersion".equals(name) && method.getParameterCount() == 0) {
+        return object.version();
+      }
+      if ("dsl".equals(name) && method.getParameterCount() == 0) {
+        return object;
+      }
 
-      // Try to find the method on the DslObject's concrete class
+      // Try to find the method on the DslObject's concrete class.
       try {
         Method implMethod = object.getClass().getDeclaredMethod(name, method.getParameterTypes());
         return implMethod.invoke(object, args);
       } catch (NoSuchMethodException e) {
-        // Return defaults for common DslDefinition methods
+        // Map common JavaBean getters to record-style accessors used by builder DSL objects.
+        String mappedName = mapGetterName(name);
+        if (mappedName != null && method.getParameterCount() == 0) {
+          try {
+            Method accessor = object.getClass().getDeclaredMethod(mappedName);
+            return accessor.invoke(object);
+          } catch (NoSuchMethodException ignored) {
+            // Fall through to default value.
+          }
+        }
         return defaultValue(method);
       }
+    }
+
+    private static String mapGetterName(String methodName) {
+      return switch (methodName) {
+        case "getParameters" -> "parameters";
+        case "getName" -> "name";
+        case "getCode" -> "code";
+        case "getContextBlock" -> "contextBlock";
+        case "getPreviewBlock" -> "previewBlock";
+        case "getExecuteBlock" -> "executeBlock";
+        case "getRollbackBlock" -> "rollbackBlock";
+        case "getTransactionsBlock" -> "transactionsBlock";
+        case "getFinishBlock" -> "finishBlock";
+        default -> null;
+      };
     }
 
     private static Object defaultValue(Method method) {

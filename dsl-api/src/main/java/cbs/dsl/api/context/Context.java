@@ -25,7 +25,7 @@ public record Context(
     return this;
   }
 
-  public Object helper(String key, Map<String, Object> values) {
+  public Object runHelper(String key, Map<String, Object> values) {
     return helperEvaluator.evaluate(key, values);
   }
 

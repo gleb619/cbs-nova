@@ -1,7 +1,7 @@
-import { isLocalAuthMode } from '@/auth/application/AuthConfig';
-import { helpRoutes } from '@/help/application/HelpRouter';
-import { homeRoutes } from '@/home/application/HomeRouter';
-import { useAbac } from '@/home/infrastructure/primary/sidebar/useAbac';
+import { isLocalAuthMode } from '@/auth/AuthConfig';
+import { helpRoutes } from '@/help/router';
+import { homeRoutes } from '@/home/router';
+import { useAbac } from '@/home/useAbac';
 import IndexPageVue from '@cbs/admin-plugin/composables/auth/IndexPageVue.vue';
 import LoginPageVue from '@cbs/admin-plugin/composables/auth/LoginPageVue.vue';
 import { useAuth } from '@cbs/admin-plugin/composables/auth/useAuth';

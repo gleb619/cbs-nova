@@ -1,0 +1,22 @@
+# OpenAPI Generator Ignore File — Java Feign Client
+
+# Documentation
+README.md
+docs/**
+
+# Maven / Gradle
+pom.xml
+build.gradle
+build.sbt
+
+# Git / CI
+git_push.sh
+.github/**
+.gitignore
+.gitlab-ci.yml
+
+# Internal generator files
+.openapi-generator/**
+
+# Tests (disabled via globalProperties anyway)
+src/test/**

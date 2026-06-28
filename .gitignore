@@ -50,6 +50,8 @@ node_modules
 /.kimi/plans/*
 /plans/*
 .blackboxcli/
+/.codegraph/
+/.cursor/rules/codegraph.mdc
 
 /examples/cbs-rules/
 /docs/results/*
@@ -120,3 +122,9 @@ node_modules
 /dsl-examples/.project
 /dsl-examples/.settings/
 /dsl-examples/bin/
+/docs/superpowers/
+
+# temporary
+/frontend/src/e2e/
+/frontend/src/unit/
+

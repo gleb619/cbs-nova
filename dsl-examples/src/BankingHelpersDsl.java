@@ -17,8 +17,8 @@ List<DslObject> define() {
                 .longNumber("loanId"))
 
             .context(ctx ->
-                ctx.put("customerCode", ctx.helper("FIND_CUSTOMER_CODE_BY_ID", Map.of("id", ctx.get("customerId"))))
-                   .put("loanConditions", ctx.helper("LOAN_CONDITIONS_BY_ID", Map.of("loanId", ctx.get("loanId"))))
+                ctx.put("customerCode", ctx.runHelper("FIND_CUSTOMER_CODE_BY_ID", Map.of("id", ctx.get("customerId"))))
+                   .put("loanConditions", ctx.runHelper("LOAN_CONDITIONS_BY_ID", Map.of("loanId", ctx.get("loanId"))))
             )
 
             .execute(ctx -> ctx)

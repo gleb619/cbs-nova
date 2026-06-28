@@ -57,8 +57,9 @@ abstract class ShowcaseTestBase {
     try {
       prepareDslProject(tempDir);
       runGradleCompilation(tempDir);
-      loadAndRegisterDefinitions(
-          tempDir, new String[] {"SampleEventDsl", "SampleTransactionDsl", "SampleWorkflowDsl"});
+      loadAndRegisterDefinitions(tempDir, new String[] {
+        "SampleEventDsl", "SampleTransactionDsl", "SampleWorkflowDsl", "SampleHelperDsl"
+      });
     } finally {
       deleteRecursively(tempDir);
     }
@@ -73,6 +74,7 @@ abstract class ShowcaseTestBase {
     copyResource(
         "dsl/sample1/SampleTransactionDsl.java", tempDir.resolve("SampleTransactionDsl.java"));
     copyResource("dsl/sample1/SampleWorkflowDsl.java", tempDir.resolve("SampleWorkflowDsl.java"));
+    copyResource("dsl/sample1/SampleHelperDsl.java", tempDir.resolve("SampleHelperDsl.java"));
 
     String dslApiJar = findDslApiJar();
     String dslCodegenJar = findDslCodegenJar();

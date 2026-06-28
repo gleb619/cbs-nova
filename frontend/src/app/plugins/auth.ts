@@ -1,5 +1,5 @@
-import { defineNuxtPlugin } from 'nuxt/app';
-import { initializeAuthConfig } from '../auth/application/AuthConfig';
+import { initializeAuthConfig } from '@/auth/AuthConfig';
+import { defineNuxtPlugin, useRuntimeConfig } from 'nuxt/app';
 
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig();

@@ -154,11 +154,13 @@ public class EventSpecificationGenerator {
         public class {{implClassName}} implements {{workflowClassName}} {
 
             private final {{eventActivityClassName}} activity;
+            private final Evaluator evaluator;
             //TODO: evaluate dsl on compilation phase and add transaction activities here
 
             public {{implClassName}}() {
                 this.activity = ActivityManager.getInstance().newActivityStub(
                     "{{eventActivityCode}}", {{eventActivityClassName}}.class);
+                this.evaluator = Evaluator.getInstance();
             }
 
             public String getCode() {
@@ -171,7 +173,7 @@ public class EventSpecificationGenerator {
                 var enrichedInput = input.toBuilder()
                   .params(context.params())
                   .build();
-                EventContext eventContext = Evaluator.getInstance().evaluateEvent(dsl(), enrichedInput);
+                EventContext eventContext = evaluator.evaluateEvent(dsl(), enrichedInput);
 
                 return EventOutput.from(eventContext.params());
             }

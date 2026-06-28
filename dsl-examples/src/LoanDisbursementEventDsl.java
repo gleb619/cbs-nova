@@ -15,8 +15,8 @@ List<DslObject> define() {
         // customerId is in parameters, but we need customerCode from a helper call.
         // loanId is in parameters, but we need loan conditions from a helper call.
         .context(ctx ->
-            ctx.put("customerCode", ctx.helper("FIND_CUSTOMER_CODE", Map.of("id", ctx.get("customerId"))))
-               .put("loanConditions", ctx.helper("LOAN_CONDITIONS_BY_ID", Map.of("loanId", ctx.get("loanId"))))
+            ctx.put("customerCode", ctx.runHelper("FIND_CUSTOMER_CODE", Map.of("id", ctx.get("customerId"))))
+               .put("loanConditions", ctx.runHelper("LOAN_CONDITIONS_BY_ID", Map.of("loanId", ctx.get("loanId"))))
         )
         .transactions(ctx -> {
             var kyc = ctx.step(ev -> ev);
