@@ -4,6 +4,7 @@ import cbs.dsl.api.DefinitionRegistry;
 import cbs.dsl.evaluator.Evaluator;
 import cbs.dsl.evaluator.RegistryEventEvaluator;
 import cbs.dsl.evaluator.RegistryHelperEvaluator;
+import cbs.dsl.evaluator.RegistryTransactionEvaluator;
 import cbs.nova.registry.DslRegistry;
 import cbs.nova.registry.SpiImplRegistryLoader;
 import cbs.nova.registry.SpringDslComponentResolver;
@@ -54,6 +55,11 @@ public class DslRegistryConfiguration {
    * @return the helper evaluator
    */
   @Bean
+  public RegistryTransactionEvaluator transactionEvaluator(DefinitionRegistry registry) {
+    return new RegistryTransactionEvaluator(registry);
+  }
+
+  @Bean
   public RegistryHelperEvaluator helperEvaluator(DefinitionRegistry registry) {
     return new RegistryHelperEvaluator(registry);
   }
@@ -66,7 +72,9 @@ public class DslRegistryConfiguration {
    */
   @Bean
   public Evaluator evaluator(
-      RegistryEventEvaluator eventEvaluator, RegistryHelperEvaluator helperEvaluator) {
-    return new Evaluator(eventEvaluator, helperEvaluator);
+      RegistryEventEvaluator eventEvaluator,
+      RegistryHelperEvaluator helperEvaluator,
+      RegistryTransactionEvaluator transactionEvaluator) {
+    return new Evaluator(eventEvaluator, helperEvaluator, transactionEvaluator);
   }
 }

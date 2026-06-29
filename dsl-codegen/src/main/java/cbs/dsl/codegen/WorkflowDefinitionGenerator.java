@@ -112,6 +112,7 @@ public class WorkflowDefinitionGenerator implements DefinitionGenerator {
         import cbs.dsl.api.WorkflowDefinition;
         import cbs.dsl.api.WorkflowTypes.WorkflowInput;
         import cbs.dsl.api.WorkflowTypes.WorkflowOutput;
+        import cbs.dsl.evaluator.Evaluator;
         import cbs.dsl.api.TransitionRuleDefinition;
         import cbs.dsl.api.ParameterDefinition;
         {{jsonPayloadImport}}{{specImport}}{{inputTypeImport}}{{outputTypeImport}}
@@ -129,6 +130,13 @@ public class WorkflowDefinitionGenerator implements DefinitionGenerator {
             date = "{{timestamp}}"
         )
         public class {{wrapperClassName}} implements WorkflowDefinition {
+
+            {{functionField}}private final Evaluator evaluator;
+
+            public {{wrapperClassName}}(DslComponentResolver resolver) {
+                this.evaluator = resolver.resolveEvaluator();
+                {{functionAssignment}}
+            }
 
             @Override
             public String getCode() {
@@ -157,9 +165,7 @@ public class WorkflowDefinitionGenerator implements DefinitionGenerator {
 
             @Override
             public WorkflowOutput execute(WorkflowInput input) {
-                {{inputSimpleName}} typed = {{inputConversion}};
-                {{outputSimpleName}} out = function.execute(typed);
-                return {{outputConversion}};
+                {{executeBody}}
             }
 
             @Override
@@ -184,6 +190,12 @@ public class WorkflowDefinitionGenerator implements DefinitionGenerator {
     params.put("outputConversion", outputConversion);
     params.put("dslBody", dslBody);
     params.put("dslImportsBlock", dslImportsBlock);
+    params.put("functionField", spec.dslGenerated() ? "" : "private final " + spec.className() + " function;\n\n    ");
+    params.put("functionAssignment", spec.dslGenerated() ? "" : "this.function = resolver.resolve(" + spec.className() + ".class);\n");
+    String executeBody = spec.dslGenerated()
+        ? "throw new UnsupportedOperationException(\"Workflow execution is driven by its state machine\");"
+        : "{{inputSimpleName}} typed = {{inputConversion}};\n        {{outputSimpleName}} out = function.execute(typed);\n        return {{outputConversion}};";
+    params.put("executeBody", executeBody);
     return Substitutor.format(sourceTemplate, params);
   }
 

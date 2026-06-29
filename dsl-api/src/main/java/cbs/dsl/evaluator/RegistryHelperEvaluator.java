@@ -45,15 +45,20 @@ public class RegistryHelperEvaluator implements HelperEvaluator {
    */
   public @NonNull HelperContext evaluatePreview(
       @NonNull HelperDslObject dsl, @NonNull HelperInput input) {
-    var ctx = HelperContext.builder().build();
+    HelperContext ctx = HelperContext.builder()
+        .params(new HashMap<>(input.params()))
+        .helperEvaluator(this)
+        .build();
+    if (dsl.previewBlock() == null) {
+      return ctx.copy();
+    }
     var result = dsl.previewBlock().apply(ctx);
     if (result instanceof HelperContext hctx) {
       return hctx.copy();
-    } else {
-      var values = new HashMap<>(ctx.params());
-      values.put(dsl.code(), values);
-      return ctx.toBuilder().params(values).build();
     }
+    var values = new HashMap<>(ctx.params());
+    values.put(dsl.code(), values);
+    return ctx.toBuilder().params(values).build();
   }
 
   /**
@@ -65,15 +70,20 @@ public class RegistryHelperEvaluator implements HelperEvaluator {
    */
   public @NonNull HelperContext evaluateExecute(
       @NonNull HelperDslObject dsl, @NonNull HelperInput input) {
-    var ctx = HelperContext.builder().build();
+    HelperContext ctx = HelperContext.builder()
+        .params(new HashMap<>(input.params()))
+        .helperEvaluator(this)
+        .build();
+    if (dsl.executeBlock() == null) {
+      return ctx.copy();
+    }
     var result = dsl.executeBlock().apply(ctx);
     if (result instanceof HelperContext hctx) {
       return hctx.copy();
-    } else {
-      var values = new HashMap<>(ctx.params());
-      values.put(dsl.code(), values);
-      return ctx.toBuilder().params(values).build();
     }
+    var values = new HashMap<>(ctx.params());
+    values.put(dsl.code(), values);
+    return ctx.toBuilder().params(values).build();
   }
 
   @Override

@@ -1,7 +1,9 @@
 package cbs.dsl.api;
 
+import cbs.dsl.api.ContextTypes.ContextOutput;
 import cbs.dsl.api.HelperTypes.HelperInput;
 import cbs.dsl.api.HelperTypes.HelperOutput;
+import java.util.Map;
 
 /**
  * Defines a helper — a reusable computation that can be invoked from event context blocks or
@@ -12,6 +14,14 @@ import cbs.dsl.api.HelperTypes.HelperOutput;
  */
 public interface HelperDefinition extends StandardDslDefinition {
 
+  default ContextOutput prepare(Map<String, Object> params) {
+    return prepareContext(params);
+  }
+
+  default HelperOutput preview(HelperInput input) {
+    return execute(input);
+  }
+
   /**
    * Executes this helper with the given typed input.
    *
@@ -20,7 +30,4 @@ public interface HelperDefinition extends StandardDslDefinition {
    */
   HelperOutput execute(HelperInput input);
 
-  default HelperOutput preview(HelperInput input) {
-    return execute(input);
-  }
 }

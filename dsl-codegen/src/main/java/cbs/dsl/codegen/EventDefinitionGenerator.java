@@ -101,9 +101,9 @@ public class EventDefinitionGenerator implements DefinitionGenerator {
 
         import cbs.dsl.api.EventTypes.EventInput;
         import cbs.dsl.api.EventTypes.EventOutput;
+        import cbs.dsl.api.ContextTypes.ContextOutput;
         import io.temporal.activity.ActivityInterface;
         import io.temporal.activity.ActivityMethod;
-        import java.util.Map;
         import javax.annotation.processing.Generated;
 
         @Generated(
@@ -158,12 +158,14 @@ public class EventDefinitionGenerator implements DefinitionGenerator {
         package {{definitionsPackage}};
 
         import java.util.HashMap;
+        import cbs.dsl.api.DslComponentResolver;
         import cbs.dsl.api.DslObject;
         import cbs.dsl.api.EventDefinition;
         import cbs.dsl.api.EventTypes.EventInput;
         import cbs.dsl.api.EventTypes.EventOutput;
         import cbs.dsl.api.ContextTypes.ContextOutput;
         import cbs.dsl.api.context.Context;
+        import cbs.dsl.evaluator.Evaluator;
         import cbs.dsl.builder.EventDslObject;
         {{jsonPayloadImport}}        {{specImport}}{{inputTypeImport}}{{outputTypeImport}}
         {{dslImportsBlock}}        import java.util.Map;

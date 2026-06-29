@@ -2,12 +2,22 @@ package cbs.nova.showcase;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.dsl.api.DslCompilationUnit;
+import cbs.dsl.api.ConditionDefinition;
+import cbs.dsl.api.DslDefinition;
 import cbs.dsl.api.DslComponentResolver;
-import cbs.dsl.api.DslObject;
+import cbs.dsl.api.EventDefinition;
+import cbs.dsl.api.HelperDefinition;
 import cbs.dsl.api.HelperTypes.HelperInput;
+import cbs.dsl.api.MassOperationDefinition;
+import cbs.dsl.api.TransactionDefinition;
+import cbs.dsl.api.WorkflowDefinition;
+import cbs.dsl.evaluator.Evaluator;
+import cbs.dsl.evaluator.RegistryEventEvaluator;
+import cbs.dsl.evaluator.RegistryHelperEvaluator;
+import cbs.dsl.evaluator.RegistryTransactionEvaluator;
 import cbs.nova.registry.DslRegistry;
 import cbs.nova.registry.SpiImplRegistryLoader;
+import cbs.nova.sample.SampleHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
@@ -23,7 +33,16 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.io.File;
+import java.util.ArrayList;
+import javax.tools.JavaCompiler;
+import javax.tools.JavaFileObject;
+import javax.tools.StandardJavaFileManager;
+import javax.tools.StandardLocation;
+import javax.tools.ToolProvider;
 import java.util.function.BiFunction;
 
 /**
@@ -57,9 +76,7 @@ abstract class ShowcaseTestBase {
     try {
       prepareDslProject(tempDir);
       runGradleCompilation(tempDir);
-      loadAndRegisterDefinitions(tempDir, new String[] {
-        "SampleEventDsl", "SampleTransactionDsl", "SampleWorkflowDsl", "SampleHelperDsl"
-      });
+      loadAndRegisterGeneratedDefinitions(tempDir);
     } finally {
       deleteRecursively(tempDir);
     }
@@ -130,7 +147,7 @@ abstract class ShowcaseTestBase {
     Files.createDirectories(outputDir);
 
     ExecResult lsResult =
-        gradleContainer.execInContainer("find", "/project/build/dsl-classes", "-name", "*.class");
+        gradleContainer.execInContainer("find", "/project/build/dsl-classes", "-type", "f");
     String[] files = lsResult.getStdout().split("\n");
     for (String file : files) {
       if (file.trim().isEmpty()) {
@@ -141,23 +158,86 @@ abstract class ShowcaseTestBase {
       Files.createDirectories(dest.getParent());
       gradleContainer.copyFileFromContainer(file, dest.toString());
     }
+    compileGeneratedJavaSources(outputDir);
   }
 
-  protected void loadAndRegisterDefinitions(Path tempDir, String[] dslFiles) throws Exception {
+  protected void loadAndRegisterGeneratedDefinitions(Path tempDir) throws Exception {
     Path outputDir = tempDir.resolve("build-output");
     Path classDir = Files.exists(outputDir.resolve("main")) ? outputDir.resolve("main") : outputDir;
+    Path definitionsDir = classDir.resolve("cbs/dsl/codegen/generated/definitions");
+    if (!Files.exists(definitionsDir)) {
+      throw new IllegalStateException("Generated definitions not found in " + definitionsDir);
+    }
 
     URLClassLoader classLoader =
         new URLClassLoader(new URL[] {classDir.toUri().toURL()}, getClass().getClassLoader());
 
-    for (String className : dslFiles) {
-      Class<?> clazz = classLoader.loadClass(className);
-      if (DslCompilationUnit.class.isAssignableFrom(clazz)) {
-        DslCompilationUnit unit =
-            (DslCompilationUnit) clazz.getDeclaredConstructor().newInstance();
-        for (DslObject obj : unit.define()) {
-          dslRegistry.register(obj);
+    List<Class<?>> classes = new ArrayList<>();
+    try (var walk = Files.walk(definitionsDir)) {
+      walk
+          .filter(p -> p.toString().endsWith(".class"))
+          .map(p -> classDir.relativize(p).toString().replace('/', '.').replace("\\", ".").replaceAll("\\.class$", ""))
+          .map(p -> loadClass(classLoader, p))
+          .filter(c -> DslDefinition.class.isAssignableFrom(c))
+          .forEach(classes::add);
+
+      for (Class<?> clazz : classes) {
+        Object instance = clazz.getDeclaredConstructor(DslComponentResolver.class).newInstance(resolver);
+        switch (instance) {
+          case HelperDefinition h -> dslRegistry.register(h);
+          case EventDefinition e -> dslRegistry.register(e);
+          case TransactionDefinition t -> dslRegistry.register(t);
+          case WorkflowDefinition w -> dslRegistry.register(w);
+          case ConditionDefinition c -> dslRegistry.register(c);
+          case MassOperationDefinition m -> dslRegistry.register(m);
+          default -> throw new IllegalStateException("Unsupported definition: " + instance.getClass());
         }
+      }
+    }
+  }
+
+  private Class<?> loadClass(URLClassLoader classLoader, String name) {
+    try {
+      return Class.forName(name, false, classLoader);
+    } catch (ClassNotFoundException e) {
+      throw new IllegalStateException("Cannot load generated class: " + name, e);
+    }
+  }
+
+  protected void compileGeneratedJavaSources(Path outputDir) throws Exception {
+    JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+    if (compiler == null) {
+      throw new IllegalStateException("JDK compiler not available");
+    }
+
+    List<File> sourceFiles;
+    try (var walk = Files.walk(outputDir)) {
+      sourceFiles = walk
+          .filter(p -> p.toString().endsWith(".java"))
+          .map(Path::toFile)
+          .toList();
+    }
+    if (sourceFiles.isEmpty()) {
+      return;
+    }
+
+    try (StandardJavaFileManager fileManager = compiler.getStandardFileManager(null, null, null)) {
+      fileManager.setLocation(StandardLocation.CLASS_OUTPUT, List.of(outputDir.toFile()));
+      Iterable<? extends JavaFileObject> units = fileManager.getJavaFileObjectsFromFiles(sourceFiles);
+
+      List<String> options = new ArrayList<>();
+      options.add("-implicit:class");
+      String baseCp = System.getProperty("java.class.path");
+      String cp = baseCp == null || baseCp.isEmpty()
+          ? outputDir.toAbsolutePath().toString()
+          : outputDir.toAbsolutePath() + File.pathSeparator + baseCp;
+      options.add("-classpath");
+      options.add(cp);
+
+      List<String> diagnosticMessages = new ArrayList<>();
+      JavaCompiler.CompilationTask task = compiler.getTask(null, fileManager, d -> diagnosticMessages.add(d.toString()), options, null, units);
+      if (!task.call() || !diagnosticMessages.isEmpty()) {
+        throw new IllegalStateException("Generated DSL source compilation failed: " + String.join("\n", diagnosticMessages));
       }
     }
   }
@@ -198,6 +278,15 @@ abstract class ShowcaseTestBase {
 
     @Override
     public <T> T resolve(Class<T> type) {
+      if (type == Evaluator.class) {
+        return type.cast(new Evaluator(
+            new RegistryEventEvaluator(dslRegistry),
+            new RegistryHelperEvaluator(dslRegistry),
+            new RegistryTransactionEvaluator(dslRegistry)));
+      }
+      if (type == SampleHelper.class) {
+        return type.cast(new SampleHelper());
+      }
       return Mockito.mock(type);
     }
   }

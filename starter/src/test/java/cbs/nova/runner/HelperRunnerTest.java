@@ -52,7 +52,7 @@ class HelperRunnerTest {
   @DisplayName("shouldFilterParamsAndExecuteHelper")
   void shouldFilterParamsAndExecuteHelper() {
     HelperExecutionRequest request = new HelperExecutionRequest(
-        "HELPER_CODE", "admin1", Map.of("amount", 1000, "unknownParam", "value"));
+        "HELPER_CODE", "admin1", Map.of("amount", 1000, "unknownParam", "value"), "eventNumber");
 
     ParameterDefinition paramDef1 = mock(ParameterDefinition.class);
     when(paramDef1.getName()).thenReturn("amount");
@@ -90,7 +90,7 @@ class HelperRunnerTest {
   @DisplayName("shouldIncludeAllParamsWhenAllAreDefined")
   void shouldIncludeAllParamsWhenAllAreDefined() {
     HelperExecutionRequest request = new HelperExecutionRequest(
-        "HELPER_CODE", "admin1", Map.of("amount", 500, "accountId", "ACC123"));
+        "HELPER_CODE", "admin1", Map.of("amount", 500, "accountId", "ACC123"), "eventNumber");
 
     ParameterDefinition paramDef1 = mock(ParameterDefinition.class);
     when(paramDef1.getName()).thenReturn("amount");
@@ -121,7 +121,7 @@ class HelperRunnerTest {
   @Test
   @DisplayName("shouldHandleEmptyParams")
   void shouldHandleEmptyParams() {
-    HelperExecutionRequest request = new HelperExecutionRequest("HELPER_CODE", "admin1", Map.of());
+    HelperExecutionRequest request = new HelperExecutionRequest("HELPER_CODE", "admin1", Map.of(), "eventNumber");
 
     when(dslRegistry.resolveHelper("HELPER_CODE")).thenReturn(mockHelperDefinition);
     when(mockHelperDefinition.getParameters()).thenReturn(List.of());
@@ -147,7 +147,7 @@ class HelperRunnerTest {
   @DisplayName("shouldThrowWhenHelperNotInRegistry")
   void shouldThrowWhenHelperNotInRegistry() {
     HelperExecutionRequest request =
-        new HelperExecutionRequest("UNKNOWN_HELPER", "admin1", Map.of("param", "value"));
+        new HelperExecutionRequest("UNKNOWN_HELPER", "admin1", Map.of("param", "value"), "eventNumber");
 
     when(dslRegistry.resolveHelper("UNKNOWN_HELPER"))
         .thenThrow(new IllegalArgumentException("Helper 'UNKNOWN_HELPER' not found"));
@@ -161,7 +161,7 @@ class HelperRunnerTest {
   @DisplayName("shouldPreservePerformedByInFilteredRequest")
   void shouldPreservePerformedByInFilteredRequest() {
     HelperExecutionRequest request =
-        new HelperExecutionRequest("HELPER_CODE", "specific-performer", Map.of("extra", "value"));
+        new HelperExecutionRequest("HELPER_CODE", "specific-performer", Map.of("extra", "value"), "eventNumber");
 
     ParameterDefinition paramDef = mock(ParameterDefinition.class);
     when(paramDef.getName()).thenReturn("required");
@@ -188,7 +188,7 @@ class HelperRunnerTest {
   @DisplayName("shouldPreserveHelperCodeInFilteredRequest")
   void shouldPreserveHelperCodeInFilteredRequest() {
     HelperExecutionRequest request =
-        new HelperExecutionRequest("MY_HELPER_CODE", "admin", Map.of("extra", "value"));
+        new HelperExecutionRequest("MY_HELPER_CODE", "admin", Map.of("extra", "value"), "eventNumber");
 
     ParameterDefinition paramDef = mock(ParameterDefinition.class);
     when(paramDef.getName()).thenReturn("required");

@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -194,9 +195,12 @@ public class HelperDefinitionGenerator implements DefinitionGenerator {
         import cbs.dsl.api.ParameterDefinition;
         import cbs.dsl.api.HelperTypes.HelperInput;
         import cbs.dsl.api.HelperTypes.HelperOutput;
+        import cbs.dsl.api.ContextTypes.ContextOutput;
         import cbs.dsl.builder.HelperDslObject;
+        import cbs.dsl.api.context.Context;
         import cbs.dsl.evaluator.Evaluator;
         {{jsonPayloadImport}}{{parameterScannerImports}}{{specImport}}{{inputTypeImport}}{{outputTypeImport}}{{dslImportsBlock}}import java.util.List;
+import java.util.Map;
         import javax.annotation.processing.Generated;
 
         /**
@@ -220,6 +224,15 @@ public class HelperDefinitionGenerator implements DefinitionGenerator {
             @Override
             public String getCode() {
                 return "{{code}}";
+            }
+            
+            @Override
+            public ContextOutput prepare(Map<String, Object> params) {
+                if (dsl() instanceof HelperDslObject dsl) {
+                    Context enriched = evaluator.evaluateContext(dsl, params);
+                    return ContextOutput.from(enriched.params());
+                }
+                return prepareContext(params);
             }
 
             {{getParametersOverride}}
@@ -315,7 +328,9 @@ public class HelperDefinitionGenerator implements DefinitionGenerator {
         package {{package}};
 
         import cbs.dsl.builder.HelperDslObject;
+import cbs.dsl.api.context.Context;
         {{imports}}import java.util.List;
+import java.util.Map;
         import javax.annotation.processing.Generated;
 
         /**

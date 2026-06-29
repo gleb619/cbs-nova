@@ -51,47 +51,6 @@ public interface DefinitionRegistry {
    */
   void register(EventDefinition e);
 
-  /**
-   * Registers a runtime {@link DslObject} by adapting it to the appropriate {@link DslDefinition}
-   * type. Used only in REFLECTED dev mode.
-   *
-   * @param obj the DSL object to register
-   */
-  @Deprecated(forRemoval = true)
-  default void register(DslObject obj) {
-    Class<?> enclosing = obj.getClass().getEnclosingClass();
-    String typeName = enclosing != null ? enclosing.getSimpleName() : "";
-    String simpleName = obj.getClass().getSimpleName();
-    String resolvedType = typeName.isEmpty() ? simpleName : typeName;
-
-    switch (resolvedType) {
-      case "EventBuilder", "EventDslObject" -> {
-        if (obj instanceof EventDefinition def) register(def);
-        else register(DslObjectAdapter.adapt(obj, EventDefinition.class));
-      }
-      case "TransactionBuilder", "TransactionDslObject" -> {
-        if (obj instanceof TransactionDefinition def) register(def);
-        else register(DslObjectAdapter.adapt(obj, TransactionDefinition.class));
-      }
-      case "WorkflowBuilder", "WorkflowDslObject" -> {
-        if (obj instanceof WorkflowDefinition def) register(def);
-        else register(DslObjectAdapter.adapt(obj, WorkflowDefinition.class));
-      }
-      case "HelperBuilder", "HelperDslObject" -> {
-        if (obj instanceof HelperDefinition def) register(def);
-        else register(DslObjectAdapter.adapt(obj, HelperDefinition.class));
-      }
-      case "ConditionBuilder", "ConditionDslObject" -> {
-        if (obj instanceof ConditionDefinition def) register(def);
-        else register(DslObjectAdapter.adapt(obj, ConditionDefinition.class));
-      }
-      case "MassOperationBuilder", "MassOperationDslObject" -> {
-        if (obj instanceof MassOperationDefinition def) register(def);
-        else register(DslObjectAdapter.adapt(obj, MassOperationDefinition.class));
-      }
-      default -> throw new IllegalArgumentException("Unsupported builder type: " + resolvedType);
-    }
-  }
 
   /**
    * Returns the component resolver associated with this registry, or {@code null} if none.

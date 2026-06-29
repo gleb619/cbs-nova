@@ -82,6 +82,7 @@ public class TransactionDefinitionGenerator implements DefinitionGenerator {
         package {{package}};
 
         import cbs.dsl.api.ContextTypes.ContextOutput;
+        import cbs.dsl.evaluator.Evaluator;
         import cbs.dsl.api.TransactionTypes.TransactionInput;
         import cbs.dsl.api.TransactionTypes.TransactionOutput;
         import io.temporal.activity.ActivityInterface;
@@ -173,6 +174,7 @@ public class TransactionDefinitionGenerator implements DefinitionGenerator {
         package {{definitionsPackage}};
 
         import cbs.dsl.api.ContextTypes.ContextOutput;
+import cbs.dsl.evaluator.Evaluator;
         import cbs.dsl.api.DslComponentResolver;
         import cbs.dsl.api.DslObject;
         import cbs.dsl.api.JsonPayload;
@@ -202,12 +204,12 @@ public class TransactionDefinitionGenerator implements DefinitionGenerator {
         )
         public class {{wrapperClassName}} implements TransactionDefinition, {{activityInterfaceName}} {
 
-            private final {{specClassName}} function;
+            {{functionField}}private final Evaluator evaluator;
 
             {{parametersField}}
 
             public {{wrapperClassName}}(DslComponentResolver resolver) {
-                this.function = resolver.resolve({{specClassName}}.class);
+                {{functionAssignment}}this.evaluator = resolver.resolveEvaluator();
             }
 
             @Override
@@ -223,16 +225,12 @@ public class TransactionDefinitionGenerator implements DefinitionGenerator {
 
             @Override
             public TransactionOutput execute(TransactionInput input) {
-                {{inputSimpleName}} typed = {{inputConversion}};
-                {{outputSimpleName}} out = function.execute(typed);
-                return {{outputConversion}};
+                {{executeBody}}
             }
 
             @Override
             public TransactionOutput rollback(TransactionInput input) {
-                {{inputSimpleName}} typed = {{inputConversion}};
-                {{outputSimpleName}} out = function.rollback(typed);
-                return {{outputConversion}};
+                {{rollbackBody}}
             }
 
             @Override
@@ -242,6 +240,14 @@ public class TransactionDefinitionGenerator implements DefinitionGenerator {
         }
         """,
         Map.ofEntries(
+            Map.entry("functionField", spec.dslGenerated() ? "" : "private final " + spec.className() + " function;\n\n    "),
+            Map.entry("functionAssignment", spec.dslGenerated() ? "" : "this.function = resolver.resolve(" + spec.className() + ".class);\n        "),
+            Map.entry("executeBody", spec.dslGenerated()
+                ? "if (dsl() instanceof cbs.dsl.builder.TransactionDslObject dsl) { return evaluator.evaluateExecute(dsl, input); }\n        {{inputSimpleName}} typed = {{inputConversion}};\n        {{outputSimpleName}} out = function.execute(typed);\n        return {{outputConversion}};"
+                : "{{inputSimpleName}} typed = {{inputConversion}};\n        {{outputSimpleName}} out = function.execute(typed);\n        return {{outputConversion}};"),
+            Map.entry("rollbackBody", spec.dslGenerated()
+                ? "if (dsl() instanceof cbs.dsl.builder.TransactionDslObject dsl) { return evaluator.evaluateRollback(dsl, input); }\n        {{inputSimpleName}} typed = {{inputConversion}};\n        {{outputSimpleName}} out = function.rollback(typed);\n        return {{outputConversion}};"
+                : "{{inputSimpleName}} typed = {{inputConversion}};\n        {{outputSimpleName}} out = function.rollback(typed);\n        return {{outputConversion}};"),
             Map.entry("definitionsPackage", DEFINITIONS_PACKAGE),
             Map.entry("generatedPackage", GENERATED_PACKAGE),
             Map.entry("activityInterfaceName", activityInterfaceName),

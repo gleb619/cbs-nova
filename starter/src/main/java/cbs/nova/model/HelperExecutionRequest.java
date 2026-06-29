@@ -10,9 +10,11 @@ import java.util.Map;
 public record HelperExecutionRequest(
     @NonNull String helperCode,
     @NonNull String performedBy,
-    @NonNull Map<String, Object> params) {
+    @NonNull Map<String, Object> params,
+    @NonNull String eventNumber) {
 
   public HelperInput toHelperInput() {
     return HelperInput.builder().params(params()).build();
   }
+
 }
