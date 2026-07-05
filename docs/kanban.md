@@ -22,8 +22,8 @@ This file is a lightweight planner for tracking implementation tasks. It is inte
 | ID | Status | Title | Description | Priority | Owner | Blocks | Blocked By | Plan File |
 | :- | :----- | :---- | :---------- | :------: | :---- | :----- | :--------- | :-------- |
 | T20 | Done | DSL auto-configuration | Spring bean reads dsl.source-dir, calls DefinitionLoader.load() at startup so Preview/Explain work out-of-the-box | High | TBD | T21 | - | `./docs/plans/T20-dsl-autoconfig.md` |
-| T21 | In Progress | Temporal worker bootstrap | DslWorkerConfiguration creates Worker, registers generated ProcessDefinition/TransactionDefinition impls from classpath | High | TBD | - | T20 | `./docs/plans/T21-worker-bootstrap.md` |
-| T22 | In Progress | GitHub Actions CI pipeline | .github/workflows/ci.yml running ./gradlew :dsl-codegen:build :dsl:build :starter:build on push/PR | Medium | TBD | - | - | `./docs/plans/T22-ci-pipeline.md` |
-| T23 | Backlog | Starter integration test | @SpringBootTest covering full path: configure source-dir → load DSL → preview + explain via DslRuntimeResource | Medium | TBD | - | T20 | `./docs/plans/T23-starter-integration-test.md` |
+| T21 | Done | Temporal worker bootstrap | DslWorkerConfiguration creates Worker, registers generated ProcessDefinition/TransactionDefinition impls from classpath | High | TBD | - | T20 | `./docs/plans/T21-worker-bootstrap.md` |
+| T22 | Done | GitHub Actions CI pipeline | .github/workflows/ci.yml running ./gradlew :dsl-codegen:build :dsl:build :starter:build on push/PR | Medium | TBD | - | - | `./docs/plans/T22-ci-pipeline.md` |
+| T23 | In Progress | Starter integration test | @SpringBootTest covering full path: configure source-dir → load DSL → preview + explain via DslRuntimeResource | Medium | TBD | - | T20 | `./docs/plans/T23-starter-integration-test.md` |
 
 > **How to use:** Replace the example rows with real tasks. Create a matching plan file under `./docs/plans/<ID>-short-title.md` for each task that needs detailed instructions.
