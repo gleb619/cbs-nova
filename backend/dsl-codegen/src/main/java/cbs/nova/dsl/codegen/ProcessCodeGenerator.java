@@ -18,7 +18,7 @@ public final class ProcessCodeGenerator {
             new GeneratedSource(pkg, interfaceName, generateInterface(pkg, interfaceName)),
             new GeneratedSource(
                     pkg, implName, generateImpl(pkg, name, interfaceName, implName,
-                            descriptor.hasCompensation())));
+                            descriptor.version(), descriptor.hasCompensation())));
   }
 
   static String versionedPackage(String name, String version) {
@@ -31,19 +31,22 @@ public final class ProcessCodeGenerator {
     return "package "
             + pkg
             + ";\n\n"
+            + "import io.temporal.workflow.QueryMethod;\n"
             + "import io.temporal.workflow.WorkflowInterface;\n"
             + "import io.temporal.workflow.WorkflowMethod;\n\n"
             + "@WorkflowInterface\n"
             + "public interface "
             + interfaceName
             + " {\n"
+            + "  @QueryMethod\n"
+            + "  String getVersion();\n\n"
             + "  @WorkflowMethod\n"
             + "  Object run(Object input);\n"
             + "}\n";
   }
 
   private String generateImpl(
-          String pkg, String processName, String interfaceName, String implName,
+          String pkg, String processName, String interfaceName, String implName, String version,
           boolean hasCompensation) {
     if (hasCompensation) {
       return "package "
@@ -58,6 +61,13 @@ public final class ProcessCodeGenerator {
               + " implements "
               + interfaceName
               + " {\n"
+              + "  private static final String VERSION = \""
+              + version
+              + "\";\n\n"
+              + "  @Override\n"
+              + "  public String getVersion() {\n"
+              + "    return VERSION;\n"
+              + "  }\n\n"
               + "  @Override\n"
               + "  public Object run(Object input) {\n"
               + "    Saga saga = new Saga(new Saga.Options.Builder().build());\n"
@@ -95,6 +105,13 @@ public final class ProcessCodeGenerator {
             + " implements "
             + interfaceName
             + " {\n"
+            + "  private static final String VERSION = \""
+            + version
+            + "\";\n\n"
+            + "  @Override\n"
+            + "  public String getVersion() {\n"
+            + "    return VERSION;\n"
+            + "  }\n\n"
             + "  @Override\n"
             + "  public Object run(Object input) {\n"
             + "    var ctx = SimpleContext.of(input, ExecutionMode.RUN);\n"

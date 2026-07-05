@@ -100,4 +100,22 @@ class ProcessCodeGeneratorTest {
     var impl = generator.generate(descriptor).get(1);
     assertThat(impl.source()).doesNotContain("Saga");
   }
+
+  @Test
+  void interfaceHasGetVersion() {
+    var descriptor = DescriptorFactory.fromProcess(
+            Dsl.process("Foo").execute(ctx -> Result.success("x")).build());
+    var iface = generator.generate(descriptor).get(0);
+    assertThat(iface.source()).contains("@QueryMethod");
+    assertThat(iface.source()).contains("String getVersion()");
+  }
+
+  @Test
+  void implReturnsVersion() {
+    var descriptor = DescriptorFactory.fromProcess(
+            Dsl.process("Foo").version("v2").execute(ctx -> Result.success("x")).build());
+    var impl = generator.generate(descriptor).get(1);
+    assertThat(impl.source()).contains("\"v2\"");
+    assertThat(impl.source()).contains("getVersion()");
+  }
 }
