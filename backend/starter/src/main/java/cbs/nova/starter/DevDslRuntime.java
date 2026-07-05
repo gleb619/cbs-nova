@@ -5,6 +5,7 @@ import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.MermaidDiagramGenerator;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.SimpleContext;
 import org.jspecify.annotations.NonNull;
@@ -31,7 +32,11 @@ public class DevDslRuntime implements DslRuntime {
     String description = result.isSuccess()
             ? "Executed " + name + " successfully"
             : "Execution of " + name + " failed: " + result.cause().getMessage();
-    String mermaid = "graph TD\n  A[" + name + "] --> B[Done]";
+    GlobalManager gm2 = GlobalManager.getInstance();
+    String mermaid = gm2.findProcess(name)
+            .map(MermaidDiagramGenerator::forProcess)
+            .or(() -> gm2.findTransaction(name).map(MermaidDiagramGenerator::forTransaction))
+            .orElse(MermaidDiagramGenerator.forHelper(name));
     return new ExplainReport(name, description, mermaid, List.of());
   }
 
