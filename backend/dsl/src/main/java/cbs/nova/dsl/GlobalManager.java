@@ -2,6 +2,8 @@ package cbs.nova.dsl;
 
 import org.jspecify.annotations.NonNull;
 
+import java.util.Optional;
+
 public final class GlobalManager {
 
   private static volatile GlobalManager INSTANCE;
@@ -70,6 +72,14 @@ public final class GlobalManager {
 
   public boolean hasHelper(@NonNull String name) {
     return helperManager.contains(name);
+  }
+
+  public @NonNull Optional<ProcessDslObject> findProcess(@NonNull String name) {
+    return processManager.find(name);
+  }
+
+  public @NonNull Optional<TransactionDslObject> findTransaction(@NonNull String name) {
+    return transactionManager.find(name);
   }
 
   public static void resetForTests() {

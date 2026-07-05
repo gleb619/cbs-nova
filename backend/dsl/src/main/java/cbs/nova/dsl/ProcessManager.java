@@ -2,6 +2,8 @@ package cbs.nova.dsl;
 
 import org.jspecify.annotations.NonNull;
 
+import java.util.Optional;
+
 public final class ProcessManager {
   private final ProcessRegistry registry;
   private final ProcessRunner runner;
@@ -24,5 +26,9 @@ public final class ProcessManager {
 
   public boolean contains(@NonNull String name) {
     return registry.find(name).isPresent();
+  }
+
+  public @NonNull Optional<ProcessDslObject> find(@NonNull String name) {
+    return registry.find(name);
   }
 }
