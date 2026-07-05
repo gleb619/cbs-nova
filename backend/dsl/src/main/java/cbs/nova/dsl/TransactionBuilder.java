@@ -70,9 +70,6 @@ public final class TransactionBuilder {
   public @NonNull TransactionDslObject build() {
     if (executeLogic == null)
       throw new IllegalStateException("execute() is required for transaction: " + name);
-    if (parameters == null && (inputType == null || outputType == null))
-      throw new IllegalStateException(
-              "transaction '" + name + "' requires either .input()/.output() or .parameters()");
     if (parameters != null && (inputType != null || outputType != null))
       throw new IllegalStateException(
               "transaction '" + name + "' cannot have both .parameters() and .input()/.output()");

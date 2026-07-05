@@ -57,9 +57,6 @@ public final class ProcessBuilder {
   public @NonNull ProcessDslObject build() {
     if (executeLogic == null)
       throw new IllegalStateException("execute() is required for process: " + name);
-    if (parameters == null && (inputType == null || outputType == null))
-      throw new IllegalStateException(
-              "process '" + name + "' requires either .input()/.output() or .parameters()");
     if (parameters != null && (inputType != null || outputType != null))
       throw new IllegalStateException(
               "process '" + name + "' cannot have both .parameters() and .input()/.output()");
