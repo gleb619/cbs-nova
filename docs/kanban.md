@@ -21,8 +21,8 @@ This file is a lightweight planner for tracking implementation tasks. It is inte
 
 | ID | Status | Title | Description | Priority | Owner | Blocks | Blocked By | Plan File |
 | :- | :----- | :---- | :---------- | :------: | :---- | :----- | :--------- | :-------- |
-| T14 | Backlog | DslRuntime contract | ExplainReport record + DslRuntime interface in dsl-api; GlobalManager lookup extensions in dsl | High | TBD | T15,T16 | - | `./docs/plans/T14-dsl-runtime-contract.md` |
-| T15 | Backlog | DevDslRuntime service | Spring @Service implementing DslRuntime via GlobalManager for preview/explain/run modes | High | TBD | T16 | T14 | `./docs/plans/T15-dev-dsl-runtime.md` |
-| T16 | Backlog | REST runtime surface | DslRuntimeResource @RestController with /api/dsl/preview, /run, /explain endpoints | High | TBD | - | T15 | `./docs/plans/T16-rest-runtime.md` |
+| T17 | Backlog | DslCompiler entry point | Main class orchestrating load→descriptor→validate→generate→write pipeline | High | TBD | T18 | - | `./docs/plans/T17-dsl-compiler.md` |
+| T18 | Backlog | dsl-module Gradle subproject | Sample DSL module with compileDsl task invoking DslCompiler | High | TBD | - | T17 | `./docs/plans/T18-dsl-module.md` |
+| T19 | Backlog | Generator upgrade — typed output | Add getVersion() + dsl() accessor to generated workflow/activity classes | Medium | TBD | - | T17 | `./docs/plans/T19-generator-upgrade.md` |
 
 > **How to use:** Replace the example rows with real tasks. Create a matching plan file under `./docs/plans/<ID>-short-title.md` for each task that needs detailed instructions.
