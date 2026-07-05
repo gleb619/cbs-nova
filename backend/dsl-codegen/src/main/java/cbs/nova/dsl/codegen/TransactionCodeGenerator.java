@@ -6,19 +6,16 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 
 public final class TransactionCodeGenerator {
-  private static final String BASE_PACKAGE = "cbs.nova.dsl.generated";
 
   public @NonNull List<GeneratedSource> generate(@NonNull TransactionDescriptor descriptor) {
     String name = descriptor.name();
+    String pkg = ProcessCodeGenerator.versionedPackage(descriptor.name(), descriptor.version());
     String interfaceName = name + "TransactionActivity";
     String implName = name + "TransactionDefinition";
 
-    String interfaceSource = generateInterface(BASE_PACKAGE, interfaceName);
-    String implSource = generateImpl(BASE_PACKAGE, name, interfaceName, implName);
-
     return List.of(
-            new GeneratedSource(BASE_PACKAGE, interfaceName, interfaceSource),
-            new GeneratedSource(BASE_PACKAGE, implName, implSource));
+            new GeneratedSource(pkg, interfaceName, generateInterface(pkg, interfaceName)),
+            new GeneratedSource(pkg, implName, generateImpl(pkg, name, interfaceName, implName)));
   }
 
   private String generateInterface(String pkg, String interfaceName) {

@@ -10,15 +10,19 @@ public final class ProcessCodeGenerator {
 
   public @NonNull List<GeneratedSource> generate(@NonNull ProcessDescriptor descriptor) {
     String name = descriptor.name();
+    String pkg = versionedPackage(descriptor.name(), descriptor.version());
     String interfaceName = name + "ProcessWorkflow";
     String implName = name + "ProcessDefinition";
 
-    String interfaceSource = generateInterface(BASE_PACKAGE, interfaceName);
-    String implSource = generateImpl(BASE_PACKAGE, name, interfaceName, implName);
-
     return List.of(
-            new GeneratedSource(BASE_PACKAGE, interfaceName, interfaceSource),
-            new GeneratedSource(BASE_PACKAGE, implName, implSource));
+            new GeneratedSource(pkg, interfaceName, generateInterface(pkg, interfaceName)),
+            new GeneratedSource(pkg, implName, generateImpl(pkg, name, interfaceName, implName)));
+  }
+
+  static String versionedPackage(String name, String version) {
+    String nameSegment = name.toLowerCase().replaceAll("[^a-z0-9]", "");
+    String versionSegment = version.replaceAll("[^a-z0-9]", "");
+    return BASE_PACKAGE + "." + nameSegment + "." + versionSegment;
   }
 
   private String generateInterface(String pkg, String interfaceName) {

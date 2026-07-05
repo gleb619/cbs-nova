@@ -41,6 +41,20 @@ class TransactionCodeGeneratorTest {
   }
 
   @Test
+  void packageIsVersioned() {
+    var descriptor = DescriptorFactory.fromTransaction(
+            Dsl.transaction("LoanDisbursement")
+                    .input(String.class)
+                    .output(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+
+    var sources = generator.generate(descriptor);
+    assertThat(sources.get(0).packageName())
+            .isEqualTo("cbs.nova.dsl.generated.loandisbursement.v1");
+  }
+
+  @Test
   void implementationDelegatesViaGlobalManager() {
     var descriptor = DescriptorFactory.fromTransaction(
             Dsl.transaction("LoanDisbursement")
