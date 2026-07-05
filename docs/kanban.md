@@ -32,5 +32,6 @@ This file is a lightweight planner for tracking implementation tasks. It is inte
 | T41 | Done | RichContext impl + runner wiring | ProcessRichContext/TransactionRichContext impls + builder update + runner wiring | High | loop | - | T40 | `./docs/plans/T41-rich-context-impl.md` |
 | T42 | Done | FunctionContext interface + FunctionRichContext | FunctionContext<T> in dsl-api + FunctionRichContext<T> in dsl + wire FunctionBuilder/FunctionDslObject/DefaultHelperRunner | Medium | loop | - | - | `./docs/plans/T42-function-context.md` |
 | T43 | Done | ProcessContext.complete() + CompensationContext.log() fluent | Add complete(Object) to ProcessContext + make CompensationContext.log() return CompensationContext<T> | Low | loop | - | - | `./docs/plans/T43-process-complete-compensation-log.md` |
+| T44 | Done | Parameter-based DSL support | ParameterRegistry/ParameterDescriptor/ParameterType in dsl-api + DefaultParameterRegistry + .parameters() in all 3 builders + update DslObject records | Medium | loop | - | - | `./docs/plans/T44-parameter-registry.md` |
 
 > **How to use:** Replace the example rows with real tasks. Create a matching plan file under `./docs/plans/<ID>-short-title.md` for each task that needs detailed instructions.
