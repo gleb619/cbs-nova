@@ -21,5 +21,9 @@ This file is a lightweight planner for tracking implementation tasks. It is inte
 
 | ID | Status | Title | Description | Priority | Owner | Blocks | Blocked By | Plan File |
 | :- | :----- | :---- | :---------- | :------: | :---- | :----- | :--------- | :-------- |
+| T6 | Backlog | DefinitionLoader | Scan JEP-512 compact source files, invoke define(), collect List<DslObject> into registries | High | TBD | T7 | - | `./docs/plans/T6-definition-loader.md` |
+| T7 | Backlog | DSL descriptors | ProcessDescriptor, TransactionDescriptor, FunctionDescriptor — AST value objects extracted from DslObjects | High | TBD | T8 | T6 | `./docs/plans/T7-dsl-descriptors.md` |
+| T8 | Backlog | Semantic validator | Validate parameter presence, helper ref resolution, cycle detection across descriptors | High | TBD | T9 | T7 | `./docs/plans/T8-semantic-validator.md` |
+| T9 | Backlog | Property placeholder support | ${key} resolution in string fields of descriptors via configurable PropertyResolver | Medium | TBD | - | T8 | `./docs/plans/T9-property-placeholder.md` |
 
 > **How to use:** Replace the example rows with real tasks. Create a matching plan file under `./docs/plans/<ID>-short-title.md` for each task that needs detailed instructions.
