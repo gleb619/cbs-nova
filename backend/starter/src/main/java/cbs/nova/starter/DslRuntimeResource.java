@@ -63,7 +63,4 @@ public class DslRuntimeResource {
 
   public record DslRequest(Object body, Map<String, Object> metadata) {
   }
-
-  public record ErrorResponse(String code, String message, String entityName) {
-  }
 }
