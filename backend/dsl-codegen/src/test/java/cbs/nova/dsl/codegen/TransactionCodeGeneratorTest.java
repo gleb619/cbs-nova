@@ -88,4 +88,13 @@ class TransactionCodeGeneratorTest {
     assertThat(impl.source()).contains("\"v3\"");
     assertThat(impl.source()).contains("getVersion()");
   }
+
+  @Test
+  void implContainsTaskQueueConstant() {
+    var descriptor = DescriptorFactory.fromTransaction(
+            Dsl.transaction("FooTx").execute(ctx -> Result.success("x")).build());
+    var impl = generator.generate(descriptor).get(1);
+    assertThat(impl.source()).contains("TASK_QUEUE");
+    assertThat(impl.source()).contains("FooTx-queue");
+  }
 }
