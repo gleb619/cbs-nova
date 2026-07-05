@@ -11,8 +11,10 @@ public record ProcessDslObject(
         @NonNull String version,
         @NonNull Class<?> inputType,
         @NonNull Class<?> outputType,
-        @NonNull Function<Context<?>, Result<?>> executeLogic,
-        @Nullable Function<Context<?>, Result<?>> compensationLogic) implements DslObject {
+        @NonNull Function<ProcessContext<?>, Result<?>> executeLogic,
+        @Nullable Function<CompensationContext<?>, Result<?>> compensationLogic)
+        implements
+          DslObject {
   @Override
   public @NonNull DslType type() {
     return DslType.PROCESS;

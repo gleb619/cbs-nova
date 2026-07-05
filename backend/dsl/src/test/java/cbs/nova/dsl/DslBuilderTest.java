@@ -2,6 +2,7 @@ package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.*;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 class DslBuilderTest {
@@ -56,5 +57,27 @@ class DslBuilderTest {
             .execute(ctx -> Result.success("ok"))
             .build();
     assertThat(obj.retryPolicy()).isNull();
+  }
+
+  @Test
+  void processInvokesRegisteredHelperViaRichContext() {
+    GlobalManager.resetForTests();
+    var gm = GlobalManager.getInstance();
+    gm.registerHelper("greeter", ctx -> Result.success("hello"));
+
+    var proc = Dsl.process("GreetProc")
+            .input(String.class).output(String.class)
+            .execute(ctx -> ctx.runHelper("greeter"))
+            .build();
+    gm.registerProcess(proc);
+
+    var result = gm.runProcess("GreetProc", SimpleContext.of("in", ExecutionMode.PREVIEW));
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value()).isEqualTo("hello");
+  }
+
+  @AfterEach
+  void cleanup() {
+    GlobalManager.resetForTests();
   }
 }
