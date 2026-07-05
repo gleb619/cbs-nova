@@ -27,4 +27,10 @@ public class TemporalConfiguration {
   WorkflowClient workflowClient(WorkflowServiceStubs workflowServiceStubs) {
     return WorkflowClient.newInstance(workflowServiceStubs);
   }
+
+  @Bean
+  @ConditionalOnMissingBean
+  DevDslRuntime devDslRuntime() {
+    return new DevDslRuntime();
+  }
 }

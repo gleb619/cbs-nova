@@ -1,0 +1,53 @@
+package cbs.nova.starter;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.ExecutionMode;
+import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.Result;
+import cbs.nova.dsl.SimpleContext;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+class DevDslRuntimeTest {
+  private final DevDslRuntime runtime = new DevDslRuntime();
+
+  @BeforeEach
+  void reset() {
+    GlobalManager.resetForTests();
+    GlobalManager.getInstance()
+            .registerProcess(Dsl.process("Ping").execute(ctx -> Result.success("pong")).build());
+  }
+
+  @Test
+  void previewDispatchesToProcess() {
+    var ctx = SimpleContext.of("input", ExecutionMode.PREVIEW);
+    var result = runtime.preview("Ping", ctx);
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value()).isEqualTo("pong");
+  }
+
+  @Test
+  void runDispatchesToProcess() {
+    var ctx = SimpleContext.of("input", ExecutionMode.RUN);
+    var result = runtime.run("Ping", ctx);
+    assertThat(result.isSuccess()).isTrue();
+  }
+
+  @Test
+  void explainReturnsReport() {
+    var ctx = SimpleContext.of("input", ExecutionMode.EXPLAIN);
+    var report = runtime.explain("Ping", ctx);
+    assertThat(report.name()).isEqualTo("Ping");
+    assertThat(report.description()).contains("Ping");
+    assertThat(report.mermaidDiagram()).isNotBlank();
+  }
+
+  @Test
+  void unknownEntityReturnsFailure() {
+    var ctx = SimpleContext.of("x", ExecutionMode.PREVIEW);
+    var result = runtime.preview("Unknown", ctx);
+    assertThat(result.isSuccess()).isFalse();
+  }
+}

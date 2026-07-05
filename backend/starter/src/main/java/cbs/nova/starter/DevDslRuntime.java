@@ -1,0 +1,49 @@
+package cbs.nova.starter;
+
+import cbs.nova.dsl.Context;
+import cbs.nova.dsl.DslRuntime;
+import cbs.nova.dsl.ExecutionMode;
+import cbs.nova.dsl.ExplainReport;
+import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.Result;
+import cbs.nova.dsl.SimpleContext;
+import org.jspecify.annotations.NonNull;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class DevDslRuntime implements DslRuntime {
+
+  @Override
+  public @NonNull Result<?> preview(@NonNull String name, @NonNull Context<?> ctx) {
+    return dispatch(name, ctx, ExecutionMode.PREVIEW);
+  }
+
+  @Override
+  public @NonNull Result<?> run(@NonNull String name, @NonNull Context<?> ctx) {
+    return dispatch(name, ctx, ExecutionMode.RUN);
+  }
+
+  @Override
+  public @NonNull ExplainReport explain(@NonNull String name, @NonNull Context<?> ctx) {
+    Result<?> result = dispatch(name, ctx, ExecutionMode.EXPLAIN);
+    String description = result.isSuccess()
+            ? "Executed " + name + " successfully"
+            : "Execution of " + name + " failed: " + result.cause().getMessage();
+    String mermaid = "graph TD\n  A[" + name + "] --> B[Done]";
+    return new ExplainReport(name, description, mermaid, List.of());
+  }
+
+  private Result<?> dispatch(String name, Context<?> ctx, ExecutionMode mode) {
+    var modeCtx = new SimpleContext<>(ctx.body(), ctx.metadata(), mode);
+    GlobalManager gm = GlobalManager.getInstance();
+    if (gm.hasProcess(name))
+      return gm.runProcess(name, modeCtx);
+    if (gm.hasTransaction(name))
+      return gm.runTransaction(name, modeCtx);
+    if (gm.hasHelper(name))
+      return gm.runHelper(name, modeCtx);
+    return Result.failure(new IllegalArgumentException("No DSL entity registered: " + name));
+  }
+}
