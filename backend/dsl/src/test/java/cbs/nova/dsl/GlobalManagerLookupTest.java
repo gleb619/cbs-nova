@@ -14,7 +14,11 @@ class GlobalManagerLookupTest {
   @Test
   void hasProcessReturnsTrueWhenRegistered() {
     GlobalManager.getInstance()
-            .registerProcess(Dsl.process("Foo").execute(ctx -> Result.success("ok")).build());
+            .registerProcess(Dsl.process("Foo")
+                    .input(String.class)
+                    .output(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
     assertThat(GlobalManager.getInstance().hasProcess("Foo")).isTrue();
     assertThat(GlobalManager.getInstance().hasProcess("Bar")).isFalse();
   }
@@ -23,7 +27,11 @@ class GlobalManagerLookupTest {
   void hasTransactionReturnsTrueWhenRegistered() {
     GlobalManager.getInstance()
             .registerTransaction(
-                    Dsl.transaction("FooTx").execute(ctx -> Result.success("ok")).build());
+                    Dsl.transaction("FooTx")
+                            .input(String.class)
+                            .output(String.class)
+                            .execute(ctx -> Result.success("ok"))
+                            .build());
     assertThat(GlobalManager.getInstance().hasTransaction("FooTx")).isTrue();
     assertThat(GlobalManager.getInstance().hasTransaction("BarTx")).isFalse();
   }
