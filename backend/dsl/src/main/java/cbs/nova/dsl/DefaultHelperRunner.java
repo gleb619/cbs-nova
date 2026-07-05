@@ -27,7 +27,8 @@ public final class DefaultHelperRunner implements HelperRunner {
       return Result.failure(new IllegalArgumentException("Function not found: " + name));
     }
     try {
-      return fn.get().executeLogic().apply(ctx);
+      var richCtx = new FunctionRichContext<>(ctx);
+      return fn.get().executeLogic().apply(richCtx);
     } catch (Exception ex) {
       return Result.failure(ex);
     }

@@ -7,13 +7,13 @@ import java.util.function.Function;
 
 public final class FunctionBuilder {
   private final String name;
-  private Function<Context<?>, Result<?>> executeLogic;
+  private Function<FunctionContext<?>, Result<?>> executeLogic;
 
   FunctionBuilder(@NonNull String name) {
     this.name = name;
   }
 
-  public FunctionBuilder execute(@NonNull Function<Context<?>, Result<?>> logic) {
+  public FunctionBuilder execute(@NonNull Function<FunctionContext<?>, Result<?>> logic) {
     this.executeLogic = logic;
     return this;
   }
