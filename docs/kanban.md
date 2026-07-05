@@ -21,5 +21,9 @@ This file is a lightweight planner for tracking implementation tasks. It is inte
 
 | ID | Status | Title | Description | Priority | Owner | Blocks | Blocked By | Plan File |
 | :- | :----- | :---- | :---------- | :------: | :---- | :----- | :--------- | :-------- |
+| T28 | Backlog | Execution trace in ExplainReport | Populate executionTrace list with step entries during explain dispatch | Medium | TBD | - | - | `./docs/plans/T28-execution-trace.md` |
+| T29 | Backlog | TASK_QUEUE constant in generated classes | Emit private static final TASK_QUEUE from descriptor.taskQueue() in ProcessDefinition and TransactionDefinition | Medium | TBD | - | - | `./docs/plans/T29-taskqueue-constant.md` |
+| T30 | Backlog | DSL HealthIndicator | Spring Boot HealthIndicator reporting count of loaded processes/transactions/helpers | Low | TBD | - | - | `./docs/plans/T30-health-indicator.md` |
+| T31 | Backlog | Entity detail endpoints | GET /api/dsl/processes/{name} and /transactions/{name} returning version/taskQueue/types/hasCompensation | Medium | TBD | - | - | `./docs/plans/T31-entity-detail.md` |
 
 > **How to use:** Replace the example rows with real tasks. Create a matching plan file under `./docs/plans/<ID>-short-title.md` for each task that needs detailed instructions.
