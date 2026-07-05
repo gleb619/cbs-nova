@@ -15,5 +15,6 @@ public interface CompensationContext<T> extends Context<T> {
   @NonNull
   Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input);
 
-  void log(@NonNull String message);
+  @NonNull
+  CompensationContext<T> log(@NonNull String message);
 }
