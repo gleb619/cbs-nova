@@ -8,7 +8,11 @@ class MermaidDiagramGeneratorTest {
 
   @Test
   void processWithoutCompensationHasFailEdge() {
-    var process = Dsl.process("LoanDisbursement").execute(ctx -> Result.success("ok")).build();
+    var process = Dsl.process("LoanDisbursement")
+            .input(String.class)
+            .output(String.class)
+            .execute(ctx -> Result.success("ok"))
+            .build();
     String diagram = MermaidDiagramGenerator.forProcess(process);
     assertThat(diagram).contains("Execute[LoanDisbursement]");
     assertThat(diagram).contains("|failure| Fail");
@@ -18,6 +22,8 @@ class MermaidDiagramGeneratorTest {
   @Test
   void processWithCompensationHasCompensateEdge() {
     var process = Dsl.process("LoanDisbursement")
+            .input(String.class)
+            .output(String.class)
             .execute(ctx -> Result.success("ok"))
             .compensation(ctx -> Result.success("rolled back"))
             .build();
@@ -28,7 +34,11 @@ class MermaidDiagramGeneratorTest {
 
   @Test
   void transactionGeneratesDiagram() {
-    var tx = Dsl.transaction("KycCheck").execute(ctx -> Result.success("ok")).build();
+    var tx = Dsl.transaction("KycCheck")
+            .input(String.class)
+            .output(String.class)
+            .execute(ctx -> Result.success("ok"))
+            .build();
     String diagram = MermaidDiagramGenerator.forTransaction(tx);
     assertThat(diagram).contains("Activity[KycCheck]");
   }

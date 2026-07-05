@@ -5,6 +5,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public final class TransactionBuilder {
@@ -13,6 +14,7 @@ public final class TransactionBuilder {
   private String version = "v1";
   private Class<?> inputType;
   private Class<?> outputType;
+  private List<ParameterDescriptor> parameters;
   private Function<TransactionContext<?>, Result<?>> executeLogic;
   @Nullable
   private Function<CompensationContext<?>, Result<?>> compensationLogic;
@@ -31,6 +33,12 @@ public final class TransactionBuilder {
   }
   public TransactionBuilder output(@NonNull Class<?> type) {
     this.outputType = type;
+    return this;
+  }
+  public TransactionBuilder parameters(@NonNull Consumer<ParameterRegistry> registrar) {
+    var registry = new DefaultParameterRegistry();
+    registrar.accept(registry);
+    this.parameters = registry.descriptors();
     return this;
   }
   public TransactionBuilder taskQueue(@NonNull String queue) {
@@ -62,8 +70,14 @@ public final class TransactionBuilder {
   public @NonNull TransactionDslObject build() {
     if (executeLogic == null)
       throw new IllegalStateException("execute() is required for transaction: " + name);
-    return new TransactionDslObject(name, taskQueue, version, inputType, outputType, executeLogic,
-            compensationLogic, startToCloseTimeout, retryPolicy);
+    if (parameters == null && (inputType == null || outputType == null))
+      throw new IllegalStateException(
+              "transaction '" + name + "' requires either .input()/.output() or .parameters()");
+    if (parameters != null && (inputType != null || outputType != null))
+      throw new IllegalStateException(
+              "transaction '" + name + "' cannot have both .parameters() and .input()/.output()");
+    return new TransactionDslObject(name, taskQueue, version, inputType, outputType, parameters,
+            executeLogic, compensationLogic, startToCloseTimeout, retryPolicy);
   }
 
   public @NonNull List<DslObject> buildList() {

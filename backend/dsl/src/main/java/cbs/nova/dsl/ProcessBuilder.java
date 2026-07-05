@@ -4,6 +4,7 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public final class ProcessBuilder {
@@ -12,6 +13,7 @@ public final class ProcessBuilder {
   private String version = "v1";
   private Class<?> inputType;
   private Class<?> outputType;
+  private List<ParameterDescriptor> parameters;
   private Function<ProcessContext<?>, Result<?>> executeLogic;
   @Nullable
   private Function<CompensationContext<?>, Result<?>> compensationLogic;
@@ -27,6 +29,12 @@ public final class ProcessBuilder {
   }
   public ProcessBuilder output(@NonNull Class<?> type) {
     this.outputType = type;
+    return this;
+  }
+  public ProcessBuilder parameters(@NonNull Consumer<ParameterRegistry> registrar) {
+    var registry = new DefaultParameterRegistry();
+    registrar.accept(registry);
+    this.parameters = registry.descriptors();
     return this;
   }
   public ProcessBuilder taskQueue(@NonNull String queue) {
@@ -49,8 +57,14 @@ public final class ProcessBuilder {
   public @NonNull ProcessDslObject build() {
     if (executeLogic == null)
       throw new IllegalStateException("execute() is required for process: " + name);
-    return new ProcessDslObject(name, taskQueue, version, inputType, outputType, executeLogic,
-            compensationLogic);
+    if (parameters == null && (inputType == null || outputType == null))
+      throw new IllegalStateException(
+              "process '" + name + "' requires either .input()/.output() or .parameters()");
+    if (parameters != null && (inputType != null || outputType != null))
+      throw new IllegalStateException(
+              "process '" + name + "' cannot have both .parameters() and .input()/.output()");
+    return new ProcessDslObject(name, taskQueue, version, inputType, outputType, parameters,
+            executeLogic, compensationLogic);
   }
 
   public @NonNull List<DslObject> buildList() {
