@@ -26,5 +26,7 @@ This file is a lightweight planner for tracking implementation tasks. It is inte
 | T34 | Done | RetryPolicy builder flow tests | Tests verifying retryPolicy chains through TransactionBuilder → DslObject → TransactionDescriptor | Low | loop | - | - | `./docs/plans/T34-retry-policy-tests.md` |
 | T35 | Done | OpenAPI integration | springdoc-openapi-starter-webmvc-ui + @Operation annotations + /swagger-ui active | Low | loop | - | - | `./docs/plans/T35-openapi.md` |
 | T36 | Done | Fix DslReloadResource | Remove Spring bean injection of GlobalManager, add reset before load, add try/catch for 500 | High | loop | - | - | `./docs/plans/T36-fix-reload-resource.md` |
+| T38 | Done | MapInput utility | MapInput.of(key, value, ...) ordered Map factory for parameter-based DSL calls | Medium | loop | - | - | `./docs/plans/T38-map-input.md` |
+| T39 | Done | @Helper classpath scanner | DslAutoConfiguration scans dsl.helper-scan-packages for @Helper Executable classes | Medium | loop | - | - | `./docs/plans/T39-helper-scanner.md` |
 
 > **How to use:** Replace the example rows with real tasks. Create a matching plan file under `./docs/plans/<ID>-short-title.md` for each task that needs detailed instructions.
