@@ -21,8 +21,8 @@ This file is a lightweight planner for tracking implementation tasks. It is inte
 
 | ID | Status | Title | Description | Priority | Owner | Blocks | Blocked By | Plan File |
 | :- | :----- | :---- | :---------- | :------: | :---- | :----- | :--------- | :-------- |
-| T17 | Backlog | DslCompiler entry point | Main class orchestrating load→descriptor→validate→generate→write pipeline | High | TBD | T18 | - | `./docs/plans/T17-dsl-compiler.md` |
-| T18 | Backlog | dsl-module Gradle subproject | Sample DSL module with compileDsl task invoking DslCompiler | High | TBD | - | T17 | `./docs/plans/T18-dsl-module.md` |
-| T19 | Backlog | Generator upgrade — typed output | Add getVersion() + dsl() accessor to generated workflow/activity classes | Medium | TBD | - | T17 | `./docs/plans/T19-generator-upgrade.md` |
+| T17 | Done | DslCompiler entry point | Main class orchestrating load→descriptor→validate→generate→write pipeline | High | TBD | T18 | - | `./docs/plans/T17-dsl-compiler.md` |
+| T18 | Done | dsl-module Gradle subproject | Sample DSL module with compileDsl task invoking DslCompiler | High | TBD | - | T17 | `./docs/plans/T18-dsl-module.md` |
+| T19 | Done | Generator upgrade — typed output | Add getVersion() + dsl() accessor to generated workflow/activity classes | Medium | TBD | - | T17 | `./docs/plans/T19-generator-upgrade.md` |
 
 > **How to use:** Replace the example rows with real tasks. Create a matching plan file under `./docs/plans/<ID>-short-title.md` for each task that needs detailed instructions.
