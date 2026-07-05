@@ -7,22 +7,27 @@ public final class DefaultProcessRunner implements ProcessRunner {
   @Override
   public @NonNull Result<?> run(@NonNull ProcessDslObject process, @NonNull Context<?> ctx) {
     Result<?> result;
+    Throwable failure = null;
     try {
+      var richCtx = new ProcessRichContext<>(ctx);
       if (ctx.mode() == ExecutionMode.EXPLAIN) {
-        result = process.executeLogic().apply(ctx);
+        result = process.executeLogic().apply(richCtx);
         if (result.isSuccess()) {
           ctx = ctx.withMetadata("explain.description", "Process: " + process.name());
         }
       } else {
         // TODO: wire to Temporal in RUN mode
-        result = process.executeLogic().apply(ctx);
+        result = process.executeLogic().apply(richCtx);
       }
     } catch (Exception ex) {
       result = Result.failure(ex);
+      failure = ex;
     }
     if (!result.isSuccess() && process.compensationLogic() != null) {
       try {
-        process.compensationLogic().apply(ctx);
+        var compensationCtx = new CompensationRichContext<>(ctx,
+                failure != null ? failure : result.cause());
+        process.compensationLogic().apply(compensationCtx);
       } catch (Exception ignored) {
       }
     }

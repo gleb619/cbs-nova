@@ -12,9 +12,9 @@ public final class ProcessBuilder {
   private String version = "v1";
   private Class<?> inputType;
   private Class<?> outputType;
-  private Function<Context<?>, Result<?>> executeLogic;
+  private Function<ProcessContext<?>, Result<?>> executeLogic;
   @Nullable
-  private Function<Context<?>, Result<?>> compensationLogic;
+  private Function<CompensationContext<?>, Result<?>> compensationLogic;
 
   ProcessBuilder(@NonNull String name) {
     this.name = name;
@@ -37,11 +37,11 @@ public final class ProcessBuilder {
     this.version = version;
     return this;
   }
-  public ProcessBuilder execute(@NonNull Function<Context<?>, Result<?>> logic) {
+  public ProcessBuilder execute(@NonNull Function<ProcessContext<?>, Result<?>> logic) {
     this.executeLogic = logic;
     return this;
   }
-  public ProcessBuilder compensation(@NonNull Function<Context<?>, Result<?>> logic) {
+  public ProcessBuilder compensation(@NonNull Function<CompensationContext<?>, Result<?>> logic) {
     this.compensationLogic = logic;
     return this;
   }

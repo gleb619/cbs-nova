@@ -12,8 +12,8 @@ public record TransactionDslObject(
         @NonNull String version,
         @NonNull Class<?> inputType,
         @NonNull Class<?> outputType,
-        @NonNull Function<Context<?>, Result<?>> executeLogic,
-        @Nullable Function<Context<?>, Result<?>> compensationLogic,
+        @NonNull Function<TransactionContext<?>, Result<?>> executeLogic,
+        @Nullable Function<CompensationContext<?>, Result<?>> compensationLogic,
         @NonNull Duration startToCloseTimeout,
         @Nullable RetryPolicy retryPolicy) implements DslObject {
   @Override

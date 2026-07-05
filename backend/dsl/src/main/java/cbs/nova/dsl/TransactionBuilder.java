@@ -13,9 +13,9 @@ public final class TransactionBuilder {
   private String version = "v1";
   private Class<?> inputType;
   private Class<?> outputType;
-  private Function<Context<?>, Result<?>> executeLogic;
+  private Function<TransactionContext<?>, Result<?>> executeLogic;
   @Nullable
-  private Function<Context<?>, Result<?>> compensationLogic;
+  private Function<CompensationContext<?>, Result<?>> compensationLogic;
   private Duration startToCloseTimeout = Duration.ofSeconds(30);
   @Nullable
   private RetryPolicy retryPolicy;
@@ -41,11 +41,12 @@ public final class TransactionBuilder {
     this.version = version;
     return this;
   }
-  public TransactionBuilder execute(@NonNull Function<Context<?>, Result<?>> logic) {
+  public TransactionBuilder execute(@NonNull Function<TransactionContext<?>, Result<?>> logic) {
     this.executeLogic = logic;
     return this;
   }
-  public TransactionBuilder compensation(@NonNull Function<Context<?>, Result<?>> logic) {
+  public TransactionBuilder compensation(
+          @NonNull Function<CompensationContext<?>, Result<?>> logic) {
     this.compensationLogic = logic;
     return this;
   }
