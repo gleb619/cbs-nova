@@ -2,6 +2,8 @@ package cbs.nova.starter;
 
 import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +16,7 @@ import java.nio.file.Path;
 
 @RestController
 @RequestMapping("/api/dsl")
+@Tag(name = "DSL Admin", description = "Administrative operations for DSL runtime")
 public class DslReloadResource {
 
   @Value("${dsl.source-dir:}")
@@ -26,6 +29,7 @@ public class DslReloadResource {
   }
 
   @PostMapping("/reload")
+  @Operation(summary = "Reload DSL definitions from configured source directory")
   public ResponseEntity<?> reload() {
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
       return ResponseEntity.status(409)
