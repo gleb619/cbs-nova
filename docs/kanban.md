@@ -22,8 +22,8 @@ This file is a lightweight planner for tracking implementation tasks. It is inte
 | ID | Status | Title | Description | Priority | Owner | Blocks | Blocked By | Plan File |
 | :- | :----- | :---- | :---------- | :------: | :---- | :----- | :--------- | :-------- |
 | T24 | In Progress | MermaidDiagramGenerator | Real Mermaid flowchart from descriptor in Explain mode replacing placeholder | Medium | TBD | - | - | `./docs/plans/T24-mermaid-generator.md` |
-| T25 | Backlog | DSL introspection endpoints | GET /api/dsl/processes, /transactions, /helpers listing registered entity names | Medium | TBD | - | - | `./docs/plans/T25-introspection-endpoints.md` |
-| T26 | Backlog | Spring PropertyResolver wiring | Auto-configure PropertyResolver bean from Spring Environment in starter | Low | TBD | - | - | `./docs/plans/T26-property-resolver.md` |
+| T25 | In Progress | DSL introspection endpoints | GET /api/dsl/processes, /transactions, /helpers listing registered entity names | Medium | TBD | - | - | `./docs/plans/T25-introspection-endpoints.md` |
+| T26 | In Progress | Spring PropertyResolver wiring | Auto-configure PropertyResolver bean from Spring Environment in starter | Low | TBD | - | - | `./docs/plans/T26-property-resolver.md` |
 | T27 | In Progress | REST error response standardization | Structured ErrorResponse JSON record on preview/run failure instead of bare string | Low | TBD | - | - | `./docs/plans/T27-error-response.md` |
 
 > **How to use:** Replace the example rows with real tasks. Create a matching plan file under `./docs/plans/<ID>-short-title.md` for each task that needs detailed instructions.
