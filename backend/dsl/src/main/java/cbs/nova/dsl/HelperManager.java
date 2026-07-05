@@ -1,0 +1,29 @@
+package cbs.nova.dsl;
+
+import org.jspecify.annotations.NonNull;
+
+public final class HelperManager {
+  private final HelperRegistry registry;
+  private final HelperRunner runner;
+
+  public HelperManager(@NonNull HelperRegistry registry, @NonNull HelperRunner runner) {
+    this.registry = registry;
+    this.runner = runner;
+  }
+
+  public void registerHelper(@NonNull String name, @NonNull Executable<?, ?> helper) {
+    registry.registerHelper(name, helper);
+  }
+
+  public void registerFunction(@NonNull FunctionDslObject fn) {
+    registry.registerFunction(fn);
+  }
+
+  public @NonNull Result<?> executeHelper(@NonNull String name, @NonNull Context<?> ctx) {
+    return runner.runHelper(name, ctx, registry);
+  }
+
+  public @NonNull Result<?> executeFunction(@NonNull String name, @NonNull Context<?> ctx) {
+    return runner.runFunction(name, ctx, registry);
+  }
+}

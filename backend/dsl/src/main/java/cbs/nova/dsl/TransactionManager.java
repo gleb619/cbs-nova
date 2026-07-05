@@ -1,0 +1,25 @@
+package cbs.nova.dsl;
+
+import org.jspecify.annotations.NonNull;
+
+public final class TransactionManager {
+  private final TransactionRegistry registry;
+  private final TransactionRunner runner;
+
+  public TransactionManager(
+          @NonNull TransactionRegistry registry, @NonNull TransactionRunner runner) {
+    this.registry = registry;
+    this.runner = runner;
+  }
+
+  public void register(@NonNull TransactionDslObject tx) {
+    registry.register(tx);
+  }
+
+  public @NonNull Result<?> execute(@NonNull String name, @NonNull Context<?> ctx) {
+    return registry
+            .find(name)
+            .map(t -> runner.run(t, ctx))
+            .orElse(Result.failure(new IllegalArgumentException("Transaction not found: " + name)));
+  }
+}
