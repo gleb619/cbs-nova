@@ -30,5 +30,7 @@ This file is a lightweight planner for tracking implementation tasks. It is inte
 | T39 | Done | @Helper classpath scanner | DslAutoConfiguration scans dsl.helper-scan-packages for @Helper Executable classes | Medium | loop | - | - | `./docs/plans/T39-helper-scanner.md` |
 | T40 | Done | Context sub-interfaces | ProcessContext, TransactionContext, CompensationContext interfaces in dsl-api | High | loop | T41 | - | `./docs/plans/T40-context-interfaces.md` |
 | T41 | Done | RichContext impl + runner wiring | ProcessRichContext/TransactionRichContext impls + builder update + runner wiring | High | loop | - | T40 | `./docs/plans/T41-rich-context-impl.md` |
+| T42 | Done | FunctionContext interface + FunctionRichContext | FunctionContext<T> in dsl-api + FunctionRichContext<T> in dsl + wire FunctionBuilder/FunctionDslObject/DefaultHelperRunner | Medium | loop | - | - | `./docs/plans/T42-function-context.md` |
+| T43 | Done | ProcessContext.complete() + CompensationContext.log() fluent | Add complete(Object) to ProcessContext + make CompensationContext.log() return CompensationContext<T> | Low | loop | - | - | `./docs/plans/T43-process-complete-compensation-log.md` |
 
 > **How to use:** Replace the example rows with real tasks. Create a matching plan file under `./docs/plans/<ID>-short-title.md` for each task that needs detailed instructions.
