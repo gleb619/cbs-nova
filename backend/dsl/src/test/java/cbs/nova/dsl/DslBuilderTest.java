@@ -2,6 +2,7 @@ package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.*;
 
+import cbs.nova.dsl.ParameterType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -74,6 +75,63 @@ class DslBuilderTest {
     var result = gm.runProcess("GreetProc", SimpleContext.of("in", ExecutionMode.PREVIEW));
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("hello");
+  }
+
+  @Test
+  void processWithParametersBuildsSuccessfully() {
+    var obj = Dsl.process("ParamProcess")
+            .parameters(reg -> reg.string("name").number("amount"))
+            .execute(ctx -> Result.success("done"))
+            .build();
+    assertThat(obj.parameters()).hasSize(2);
+    assertThat(obj.parameters().get(0).name()).isEqualTo("name");
+    assertThat(obj.parameters().get(0).type()).isEqualTo(ParameterType.STRING);
+    assertThat(obj.parameters().get(1).name()).isEqualTo("amount");
+    assertThat(obj.parameters().get(1).type()).isEqualTo(ParameterType.NUMBER);
+    assertThat(obj.inputType()).isNull();
+    assertThat(obj.outputType()).isNull();
+  }
+
+  @Test
+  void transactionWithParametersBuildsSuccessfully() {
+    var obj = Dsl.transaction("ParamTx")
+            .parameters(reg -> reg.string("customerId").bool("verified"))
+            .execute(ctx -> Result.success("ok"))
+            .build();
+    assertThat(obj.parameters()).hasSize(2);
+    assertThat(obj.parameters().get(1).type()).isEqualTo(ParameterType.BOOLEAN);
+    assertThat(obj.inputType()).isNull();
+  }
+
+  @Test
+  void functionWithParametersBuildsSuccessfully() {
+    var obj = Dsl.function("ParamFn")
+            .parameters(reg -> reg.object("data", String.class))
+            .execute(ctx -> Result.success("fn-ok"))
+            .build();
+    assertThat(obj.parameters()).hasSize(1);
+    assertThat(obj.parameters().get(0).type()).isEqualTo(ParameterType.OBJECT);
+    assertThat(obj.parameters().get(0).objectType()).isEqualTo(String.class);
+  }
+
+  @Test
+  void processMixingParametersAndInputThrows() {
+    assertThatThrownBy(() -> Dsl.process("Bad")
+            .input(String.class)
+            .parameters(reg -> reg.string("name"))
+            .execute(ctx -> Result.success("ok"))
+            .build())
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("cannot have both");
+  }
+
+  @Test
+  void typedProcessHasNullParameters() {
+    var obj = Dsl.process("TypedProc")
+            .input(String.class).output(String.class)
+            .execute(ctx -> Result.success("ok"))
+            .build();
+    assertThat(obj.parameters()).isNull();
   }
 
   @AfterEach
