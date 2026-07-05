@@ -1,0 +1,17 @@
+rootProject.name = 'cbs-nova-backend'
+
+include 'dsl-api'
+include 'dsl'
+include 'dsl-codegen'
+include 'starter'
+include 'temporal-example'
+
+dependencyResolutionManagement {
+  repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+  repositories {
+    mavenLocal()
+    mavenCentral()
+  }
+}
+
+enableFeaturePreview('TYPESAFE_PROJECT_ACCESSORS')

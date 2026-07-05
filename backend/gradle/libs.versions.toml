@@ -1,0 +1,48 @@
+[versions]
+java = "25"
+jspecify = "1.0.0"
+junit = "5.12.2"
+assertj = "3.27.3"
+temporal = "1.27.0"
+javaparser = "3.28.1"
+wiremock = "3.9.1"
+
+# plugins
+spring-boot = "4.0.4"
+spring-dm = "1.1.7"
+spotless = "7.0.2"
+test-logger = "4.0.0"
+
+[libraries]
+# -- Nullability --
+jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
+
+# -- JUnit (BOM keeps platform and jupiter aligned) --
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+
+# -- Temporal --
+temporal-sdk = { module = "io.temporal:temporal-sdk", version.ref = "temporal" }
+temporal-testing = { module = "io.temporal:temporal-testing", version.ref = "temporal" }
+
+# -- JavaParser (used by dsl-codegen) --
+javaparser = { module = "com.github.javaparser:javaparser-core", version.ref = "javaparser" }
+wiremock = { module = "org.wiremock:wiremock", version.ref = "wiremock" }
+
+# -- Spring Boot (versions managed by the Spring Boot BOM) --
+spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
+spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
+spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
+spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+
+[bundles]
+spring-web = ["spring-boot-starter-web", "spring-boot-starter-validation", "spring-boot-starter-actuator"]
+spring-test = ["spring-boot-starter-test", "assertj"]
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+spring-dm = { id = "io.spring.dependency-management", version.ref = "spring-dm" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+test-logger = { id = "com.adarshr.test-logger", version.ref = "test-logger" }

@@ -1,0 +1,16 @@
+apply plugin: 'com.diffplug.spotless'
+
+spotless {
+  java {
+    eclipse().configFile("${rootDir}/gradle/eclipse-formatter.xml")
+    importOrder('', 'javax', 'java')
+    trimTrailingWhitespace()
+    endWithNewline()
+    leadingTabsToSpaces(2)
+  }
+  format('misc') {
+    target('*.md', '.gitignore', '*.properties')
+    trimTrailingWhitespace()
+    endWithNewline()
+  }
+}

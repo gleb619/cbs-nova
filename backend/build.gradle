@@ -1,0 +1,27 @@
+plugins {
+  id 'idea'
+  alias(libs.plugins.spotless) apply false
+  alias(libs.plugins.test.logger) apply false
+}
+
+allprojects {
+  group = 'cbs.nova'
+  version = '0.0.1-SNAPSHOT'
+
+  repositories {
+    mavenLocal()
+    mavenCentral()
+  }
+}
+
+subprojects {
+  apply from: "${rootDir}/gradle/java.gradle"
+  apply from: "${rootDir}/gradle/test.gradle"
+  apply from: "${rootDir}/gradle/code-style.gradle"
+}
+
+idea {
+  module {
+    name = 'cbs-nova-backend'
+  }
+}

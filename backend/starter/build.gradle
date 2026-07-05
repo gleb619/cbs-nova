@@ -1,0 +1,27 @@
+plugins {
+  id 'java-library'
+  id 'maven-publish'
+  alias(libs.plugins.spring.boot)
+  alias(libs.plugins.spring.dm)
+}
+
+bootJar {
+  enabled = false
+}
+
+jar {
+  enabled = true
+}
+
+dependencies {
+  api project(":dsl-api")
+  api project(':dsl')
+
+  api libs.bundles.spring.web
+  api libs.temporal.sdk
+
+  annotationProcessor project(':dsl-codegen')
+
+  testImplementation libs.bundles.spring.test
+  testImplementation libs.temporal.testing
+}
