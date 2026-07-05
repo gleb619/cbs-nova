@@ -53,7 +53,10 @@ class DslRuntimeResourceTest {
                     post("/api/dsl/preview/Fail")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"body\": \"x\"}"))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.code").value("EXECUTION_FAILED"))
+            .andExpect(jsonPath("$.message").value("boom"))
+            .andExpect(jsonPath("$.entityName").value("Fail"));
   }
 
   @Test

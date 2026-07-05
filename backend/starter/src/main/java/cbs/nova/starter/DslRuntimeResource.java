@@ -33,7 +33,8 @@ public class DslRuntimeResource {
     Result<?> result = dslRuntime.preview(name, ctx);
     return result.isSuccess()
             ? ResponseEntity.ok(result.value())
-            : ResponseEntity.unprocessableEntity().body(result.cause().getMessage());
+            : ResponseEntity.unprocessableEntity()
+                    .body(new ErrorResponse("EXECUTION_FAILED", result.cause().getMessage(), name));
   }
 
   @PostMapping("/run/{name}")
@@ -43,7 +44,8 @@ public class DslRuntimeResource {
     Result<?> result = dslRuntime.run(name, ctx);
     return result.isSuccess()
             ? ResponseEntity.ok(result.value())
-            : ResponseEntity.unprocessableEntity().body(result.cause().getMessage());
+            : ResponseEntity.unprocessableEntity()
+                    .body(new ErrorResponse("EXECUTION_FAILED", result.cause().getMessage(), name));
   }
 
   @PostMapping("/explain/{name}")
@@ -60,5 +62,8 @@ public class DslRuntimeResource {
   }
 
   public record DslRequest(Object body, Map<String, Object> metadata) {
+  }
+
+  public record ErrorResponse(String code, String message, String entityName) {
   }
 }
