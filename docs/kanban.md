@@ -21,5 +21,9 @@ This file is a lightweight planner for tracking implementation tasks. It is inte
 
 | ID | Status | Title | Description | Priority | Owner | Blocks | Blocked By | Plan File |
 | :- | :----- | :---- | :---------- | :------: | :---- | :----- | :--------- | :-------- |
+| T32 | Done | DSL reload endpoint | POST /api/dsl/reload resets GlobalManager and re-loads DSL from dsl.source-dir | Medium | loop | - | - | `./docs/plans/T32-reload-endpoint.md` |
+| T33 | Done | Global exception handler | @RestControllerAdvice catching unhandled exceptions, returns ErrorResponse with 500 | Medium | loop | - | - | `./docs/plans/T33-exception-handler.md` |
+| T34 | Done | RetryPolicy builder flow tests | Tests verifying retryPolicy chains through TransactionBuilder → DslObject → TransactionDescriptor | Low | loop | - | - | `./docs/plans/T34-retry-policy-tests.md` |
+| T35 | Done | OpenAPI integration | springdoc-openapi-starter-webmvc-ui + @Operation annotations + /swagger-ui active | Low | loop | - | - | `./docs/plans/T35-openapi.md` |
 
 > **How to use:** Replace the example rows with real tasks. Create a matching plan file under `./docs/plans/<ID>-short-title.md` for each task that needs detailed instructions.
