@@ -37,4 +37,24 @@ class DslBuilderTest {
     assertThatThrownBy(() -> Dsl.process("Bad").build())
             .isInstanceOf(IllegalStateException.class);
   }
+
+  @Test
+  void transactionRetryPolicyFlowsThroughBuilder() {
+    var policy = RetryPolicy.defaults();
+    var obj = Dsl.transaction("MyTx")
+            .input(String.class).output(String.class)
+            .execute(ctx -> Result.success("ok"))
+            .retryPolicy(policy)
+            .build();
+    assertThat(obj.retryPolicy()).isEqualTo(policy);
+  }
+
+  @Test
+  void transactionDefaultRetryPolicyIsNull() {
+    var obj = Dsl.transaction("MyTx")
+            .input(String.class).output(String.class)
+            .execute(ctx -> Result.success("ok"))
+            .build();
+    assertThat(obj.retryPolicy()).isNull();
+  }
 }
