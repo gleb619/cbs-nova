@@ -21,9 +21,8 @@ This file is a lightweight planner for tracking implementation tasks. It is inte
 
 | ID | Status | Title | Description | Priority | Owner | Blocks | Blocked By | Plan File |
 | :- | :----- | :---- | :---------- | :------: | :---- | :----- | :--------- | :-------- |
-| T10 | Backlog | Process codegen | Generate ProcessWorkflow interface + ProcessDefinition implementation from ProcessDescriptor | High | TBD | T12 | - | `./docs/plans/T10-process-codegen.md` |
-| T11 | Backlog | Transaction codegen | Generate TransactionActivity interface + TransactionDefinition implementation from TransactionDescriptor | High | TBD | T12 | - | `./docs/plans/T11-transaction-codegen.md` |
-| T12 | Backlog | Versioned package naming | Generated classes in cbs.nova.dsl.generated.<name>.<version> package pattern | High | TBD | T13 | T10,T11 | `./docs/plans/T12-versioned-packages.md` |
-| T13 | Backlog | Saga compensation wiring | Inject compensation logic into ProcessDefinition via Temporal Saga API | Medium | TBD | - | T12 | `./docs/plans/T13-saga-compensation.md` |
+| T14 | Backlog | DslRuntime contract | ExplainReport record + DslRuntime interface in dsl-api; GlobalManager lookup extensions in dsl | High | TBD | T15,T16 | - | `./docs/plans/T14-dsl-runtime-contract.md` |
+| T15 | Backlog | DevDslRuntime service | Spring @Service implementing DslRuntime via GlobalManager for preview/explain/run modes | High | TBD | T16 | T14 | `./docs/plans/T15-dev-dsl-runtime.md` |
+| T16 | Backlog | REST runtime surface | DslRuntimeResource @RestController with /api/dsl/preview, /run, /explain endpoints | High | TBD | - | T15 | `./docs/plans/T16-rest-runtime.md` |
 
 > **How to use:** Replace the example rows with real tasks. Create a matching plan file under `./docs/plans/<ID>-short-title.md` for each task that needs detailed instructions.
