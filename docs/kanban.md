@@ -21,10 +21,5 @@ This file is a lightweight planner for tracking implementation tasks. It is inte
 
 | ID | Status | Title | Description | Priority | Owner | Blocks | Blocked By | Plan File |
 | :- | :----- | :---- | :---------- | :------: | :---- | :----- | :--------- | :-------- |
-| T1 | Ready | dsl-api core contracts | DslObject, Executable<IN,OUT>, Context<T>, Result<T>, @Helper annotation, ExecutionMode enum in package cbs.nova.dsl | High | TBD | T2 | - | `./docs/plans/T1-dsl-api-contracts.md` |
-| T2 | Backlog | DSL builder API | Dsl static facade + ProcessBuilder, TransactionBuilder, FunctionBuilder with fluent API in cbs.nova.dsl | High | TBD | T3 | T1 | `./docs/plans/T2-dsl-builder-api.md` |
-| T3 | Backlog | Registry layer | ProcessRegistry, TransactionRegistry, HelperRegistry — store DslObject definitions by name | High | TBD | T4 | T2 | `./docs/plans/T3-registry-layer.md` |
-| T4 | Backlog | Runner layer | ProcessRunner, TransactionRunner, HelperRunner — execute DslObject against typed Context | High | TBD | T5 | T3 | `./docs/plans/T4-runner-layer.md` |
-| T5 | Backlog | Manager layer & GlobalManager | ProcessManager, TransactionManager, HelperManager + GlobalManager singleton facade | High | TBD | - | T4 | `./docs/plans/T5-manager-layer.md` |
 
 > **How to use:** Replace the example rows with real tasks. Create a matching plan file under `./docs/plans/<ID>-short-title.md` for each task that needs detailed instructions.
