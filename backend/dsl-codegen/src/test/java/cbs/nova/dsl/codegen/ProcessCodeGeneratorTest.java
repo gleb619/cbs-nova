@@ -118,4 +118,13 @@ class ProcessCodeGeneratorTest {
     assertThat(impl.source()).contains("\"v2\"");
     assertThat(impl.source()).contains("getVersion()");
   }
+
+  @Test
+  void implContainsTaskQueueConstant() {
+    var descriptor = DescriptorFactory.fromProcess(
+            Dsl.process("Foo").execute(ctx -> Result.success("x")).build());
+    var impl = generator.generate(descriptor).get(1);
+    assertThat(impl.source()).contains("TASK_QUEUE");
+    assertThat(impl.source()).contains("Foo-queue"); // default from ProcessBuilder: name + "-queue"
+  }
 }

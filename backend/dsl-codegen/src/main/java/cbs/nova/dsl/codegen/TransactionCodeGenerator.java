@@ -17,7 +17,7 @@ public final class TransactionCodeGenerator {
             new GeneratedSource(pkg, interfaceName, generateInterface(pkg, interfaceName)),
             new GeneratedSource(
                     pkg, implName, generateImpl(pkg, name, interfaceName, implName,
-                            descriptor.version())));
+                            descriptor.version(), descriptor.taskQueue())));
   }
 
   private String generateInterface(String pkg, String interfaceName) {
@@ -38,7 +38,7 @@ public final class TransactionCodeGenerator {
   }
 
   private String generateImpl(String pkg, String transactionName, String interfaceName,
-          String implName, String version) {
+          String implName, String version, String taskQueue) {
     return "package "
             + pkg
             + ";\n\n"
@@ -52,6 +52,9 @@ public final class TransactionCodeGenerator {
             + " {\n"
             + "  private static final String VERSION = \""
             + version
+            + "\";\n\n"
+            + "  private static final String TASK_QUEUE = \""
+            + taskQueue
             + "\";\n\n"
             + "  @Override\n"
             + "  public String getVersion() {\n"

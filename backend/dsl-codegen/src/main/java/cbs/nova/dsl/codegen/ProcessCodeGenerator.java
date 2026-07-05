@@ -18,7 +18,8 @@ public final class ProcessCodeGenerator {
             new GeneratedSource(pkg, interfaceName, generateInterface(pkg, interfaceName)),
             new GeneratedSource(
                     pkg, implName, generateImpl(pkg, name, interfaceName, implName,
-                            descriptor.version(), descriptor.hasCompensation())));
+                            descriptor.version(), descriptor.taskQueue(),
+                            descriptor.hasCompensation())));
   }
 
   static String versionedPackage(String name, String version) {
@@ -47,7 +48,7 @@ public final class ProcessCodeGenerator {
 
   private String generateImpl(
           String pkg, String processName, String interfaceName, String implName, String version,
-          boolean hasCompensation) {
+          String taskQueue, boolean hasCompensation) {
     if (hasCompensation) {
       return "package "
               + pkg
@@ -63,6 +64,9 @@ public final class ProcessCodeGenerator {
               + " {\n"
               + "  private static final String VERSION = \""
               + version
+              + "\";\n\n"
+              + "  private static final String TASK_QUEUE = \""
+              + taskQueue
               + "\";\n\n"
               + "  @Override\n"
               + "  public String getVersion() {\n"
@@ -107,6 +111,9 @@ public final class ProcessCodeGenerator {
             + " {\n"
             + "  private static final String VERSION = \""
             + version
+            + "\";\n\n"
+            + "  private static final String TASK_QUEUE = \""
+            + taskQueue
             + "\";\n\n"
             + "  @Override\n"
             + "  public String getVersion() {\n"
