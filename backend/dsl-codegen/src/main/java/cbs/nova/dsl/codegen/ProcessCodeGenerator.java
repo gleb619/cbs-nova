@@ -16,7 +16,9 @@ public final class ProcessCodeGenerator {
 
     return List.of(
             new GeneratedSource(pkg, interfaceName, generateInterface(pkg, interfaceName)),
-            new GeneratedSource(pkg, implName, generateImpl(pkg, name, interfaceName, implName)));
+            new GeneratedSource(
+                    pkg, implName, generateImpl(pkg, name, interfaceName, implName,
+                            descriptor.hasCompensation())));
   }
 
   static String versionedPackage(String name, String version) {
@@ -40,8 +42,48 @@ public final class ProcessCodeGenerator {
             + "}\n";
   }
 
-  private String generateImpl(String pkg, String processName, String interfaceName,
-          String implName) {
+  private String generateImpl(
+          String pkg, String processName, String interfaceName, String implName,
+          boolean hasCompensation) {
+    if (hasCompensation) {
+      return "package "
+              + pkg
+              + ";\n\n"
+              + "import cbs.nova.dsl.ExecutionMode;\n"
+              + "import cbs.nova.dsl.GlobalManager;\n"
+              + "import cbs.nova.dsl.SimpleContext;\n"
+              + "import io.temporal.workflow.Saga;\n\n"
+              + "public class "
+              + implName
+              + " implements "
+              + interfaceName
+              + " {\n"
+              + "  @Override\n"
+              + "  public Object run(Object input) {\n"
+              + "    Saga saga = new Saga(new Saga.Options.Builder().build());\n"
+              + "    var ctx = SimpleContext.of(input, ExecutionMode.RUN);\n"
+              + "    var compensationCtx = SimpleContext.of(input, ExecutionMode.RUN);\n"
+              + "    saga.addCompensation(\n"
+              + "        () ->\n"
+              + "            GlobalManager.getInstance().runProcess(\""
+              + processName
+              + "-compensation\", compensationCtx));\n"
+              + "    try {\n"
+              + "      var result = GlobalManager.getInstance().runProcess(\""
+              + processName
+              + "\", ctx);\n"
+              + "      if (!result.isSuccess()) {\n"
+              + "        saga.compensate();\n"
+              + "        throw new RuntimeException(\"Process failed\", result.cause());\n"
+              + "      }\n"
+              + "      return result.value();\n"
+              + "    } catch (Exception e) {\n"
+              + "      saga.compensate();\n"
+              + "      throw e;\n"
+              + "    }\n"
+              + "  }\n"
+              + "}\n";
+    }
     return "package "
             + pkg
             + ";\n\n"

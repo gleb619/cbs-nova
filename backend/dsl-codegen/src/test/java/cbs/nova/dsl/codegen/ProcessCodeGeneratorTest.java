@@ -70,4 +70,34 @@ class ProcessCodeGeneratorTest {
             .contains("GlobalManager.getInstance().runProcess(\"LoanDisbursement\"");
     assertThat(impl.source()).contains("ExecutionMode.RUN");
   }
+
+  @Test
+  void withCompensationEmitsSagaCode() {
+    var descriptor = DescriptorFactory.fromProcess(
+            Dsl.process("LoanDisbursement")
+                    .input(String.class)
+                    .output(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .compensation(ctx -> Result.success(null))
+                    .build());
+
+    var impl = generator.generate(descriptor).get(1);
+    assertThat(impl.source()).contains("Saga");
+    assertThat(impl.source()).contains("saga.addCompensation");
+    assertThat(impl.source()).contains("saga.compensate()");
+    assertThat(impl.source()).contains("LoanDisbursement-compensation");
+  }
+
+  @Test
+  void withoutCompensationNoSagaCode() {
+    var descriptor = DescriptorFactory.fromProcess(
+            Dsl.process("LoanDisbursement")
+                    .input(String.class)
+                    .output(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+
+    var impl = generator.generate(descriptor).get(1);
+    assertThat(impl.source()).doesNotContain("Saga");
+  }
 }
