@@ -5,6 +5,7 @@ include 'dsl'
 include 'dsl-codegen'
 include 'starter'
 include 'temporal-example'
+include 'dsl-module'
 
 dependencyResolutionManagement {
   repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)

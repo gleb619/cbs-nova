@@ -1,0 +1,53 @@
+plugins {
+  id 'java'
+}
+
+dependencies {
+  implementation project(':dsl-api')
+  implementation project(':dsl')
+  implementation libs.temporal.sdk
+}
+
+def generatedDir = layout.buildDirectory.dir('generated').get().asFile
+
+sourceSets {
+  main {
+    java {
+      srcDirs = [generatedDir]
+    }
+  }
+}
+
+configurations {
+  dslCompiler
+}
+
+dependencies {
+  dslCompiler project(':dsl-codegen')
+  dslCompiler project(':dsl')
+  dslCompiler project(':dsl-api')
+}
+
+tasks.register('compileDsl', JavaExec) {
+  group = 'build'
+  description = 'Compiles DSL compact source files with DslCompiler'
+  classpath = configurations.dslCompiler
+  mainClass = 'cbs.nova.dsl.codegen.DslCompiler'
+  args 'src', generatedDir.absolutePath
+  javaLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(25)
+  }
+  doFirst {
+    generatedDir.mkdirs()
+  }
+}
+
+tasks.named('compileJava') {
+  dependsOn 'compileDsl'
+}
+
+spotless {
+  java {
+    targetExclude 'build/generated/**/*.java'
+  }
+}
