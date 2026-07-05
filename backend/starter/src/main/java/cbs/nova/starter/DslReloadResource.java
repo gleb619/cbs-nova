@@ -4,7 +4,6 @@ import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,10 +21,7 @@ public class DslReloadResource {
   @Value("${dsl.source-dir:}")
   private String sourceDirProperty;
 
-  private final GlobalManager globalManager;
-
-  public DslReloadResource(@NonNull GlobalManager globalManager) {
-    this.globalManager = globalManager;
+  public DslReloadResource() {
   }
 
   @PostMapping("/reload")
@@ -41,7 +37,13 @@ public class DslReloadResource {
               .body(new ErrorResponse("NOT_FOUND", "Source directory does not exist: " + dir,
                       null));
     }
-    DefinitionLoader.load(dir, globalManager);
+    GlobalManager.resetForTests();
+    try {
+      DefinitionLoader.load(dir, GlobalManager.getInstance());
+    } catch (Exception e) {
+      return ResponseEntity.status(500)
+              .body(new ErrorResponse("RELOAD_FAILED", e.getMessage(), null));
+    }
     return ResponseEntity.noContent().build();
   }
 }
