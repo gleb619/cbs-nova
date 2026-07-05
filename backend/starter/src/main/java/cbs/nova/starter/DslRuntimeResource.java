@@ -6,6 +6,8 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExplainReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.SimpleContext;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.jspecify.annotations.NonNull;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,6 +20,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/dsl")
+@Tag(name = "DSL Runtime", description = "Execute DSL processes and transactions")
 public class DslRuntimeResource {
 
   private final DslRuntime dslRuntime;
@@ -27,6 +30,7 @@ public class DslRuntimeResource {
   }
 
   @PostMapping("/preview/{name}")
+  @Operation(summary = "Preview a DSL process without side effects")
   public ResponseEntity<?> preview(
           @PathVariable String name, @RequestBody DslRequest request) {
     var ctx = toContext(request, ExecutionMode.PREVIEW);
@@ -38,6 +42,7 @@ public class DslRuntimeResource {
   }
 
   @PostMapping("/run/{name}")
+  @Operation(summary = "Execute a DSL process with full side effects")
   public ResponseEntity<?> run(
           @PathVariable String name, @RequestBody DslRequest request) {
     var ctx = toContext(request, ExecutionMode.RUN);
@@ -49,6 +54,7 @@ public class DslRuntimeResource {
   }
 
   @PostMapping("/explain/{name}")
+  @Operation(summary = "Return a static analysis report of a DSL process")
   public ResponseEntity<ExplainReport> explain(
           @PathVariable String name, @RequestBody DslRequest request) {
     var ctx = toContext(request, ExecutionMode.EXPLAIN);

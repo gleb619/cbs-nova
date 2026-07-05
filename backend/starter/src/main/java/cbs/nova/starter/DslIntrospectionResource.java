@@ -1,6 +1,8 @@
 package cbs.nova.starter;
 
 import cbs.nova.dsl.GlobalManager;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -11,14 +13,17 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/dsl")
+@Tag(name = "DSL Introspection", description = "Inspect registered DSL entities")
 public class DslIntrospectionResource {
 
   @GetMapping("/processes")
+  @Operation(summary = "List all registered DSL process names")
   public ResponseEntity<NamesResponse> processes() {
     return ResponseEntity.ok(new NamesResponse(GlobalManager.getInstance().processNames()));
   }
 
   @GetMapping("/processes/{name}")
+  @Operation(summary = "Get metadata of a single DSL process")
   public ResponseEntity<?> processDetail(@PathVariable String name) {
     return GlobalManager.getInstance()
             .findProcess(name)
@@ -35,11 +40,13 @@ public class DslIntrospectionResource {
   }
 
   @GetMapping("/transactions")
+  @Operation(summary = "List all registered DSL transaction names")
   public ResponseEntity<NamesResponse> transactions() {
     return ResponseEntity.ok(new NamesResponse(GlobalManager.getInstance().transactionNames()));
   }
 
   @GetMapping("/transactions/{name}")
+  @Operation(summary = "Get metadata of a single DSL transaction")
   public ResponseEntity<?> transactionDetail(@PathVariable String name) {
     return GlobalManager.getInstance()
             .findTransaction(name)
@@ -57,6 +64,7 @@ public class DslIntrospectionResource {
   }
 
   @GetMapping("/helpers")
+  @Operation(summary = "List all registered DSL helper names")
   public ResponseEntity<NamesResponse> helpers() {
     return ResponseEntity.ok(new NamesResponse(GlobalManager.getInstance().helperNames()));
   }
