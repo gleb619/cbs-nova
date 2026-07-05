@@ -1,0 +1,59 @@
+package cbs.nova.dsl.codegen;
+
+import static org.assertj.core.api.Assertions.*;
+
+import cbs.nova.dsl.DescriptorFactory;
+import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.Result;
+import org.junit.jupiter.api.Test;
+
+class ProcessCodeGeneratorTest {
+  private final ProcessCodeGenerator generator = new ProcessCodeGenerator();
+
+  @Test
+  void generatesTwoSources() {
+    var descriptor = DescriptorFactory.fromProcess(
+            Dsl.process("LoanDisbursement")
+                    .input(String.class)
+                    .output(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+
+    var sources = generator.generate(descriptor);
+    assertThat(sources).hasSize(2);
+  }
+
+  @Test
+  void interfaceHasCorrectNameAndAnnotations() {
+    var descriptor = DescriptorFactory.fromProcess(
+            Dsl.process("LoanDisbursement")
+                    .input(String.class)
+                    .output(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+
+    var iface = generator.generate(descriptor).get(0);
+    assertThat(iface.className()).isEqualTo("LoanDisbursementProcessWorkflow");
+    assertThat(iface.source()).contains("@WorkflowInterface");
+    assertThat(iface.source()).contains("@WorkflowMethod");
+    assertThat(iface.source()).contains("interface LoanDisbursementProcessWorkflow");
+    assertThat(iface.source()).contains("Object run(Object input)");
+  }
+
+  @Test
+  void implementationDelegatesViaGlobalManager() {
+    var descriptor = DescriptorFactory.fromProcess(
+            Dsl.process("LoanDisbursement")
+                    .input(String.class)
+                    .output(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+
+    var impl = generator.generate(descriptor).get(1);
+    assertThat(impl.className()).isEqualTo("LoanDisbursementProcessDefinition");
+    assertThat(impl.source()).contains("implements LoanDisbursementProcessWorkflow");
+    assertThat(impl.source())
+            .contains("GlobalManager.getInstance().runProcess(\"LoanDisbursement\"");
+    assertThat(impl.source()).contains("ExecutionMode.RUN");
+  }
+}
