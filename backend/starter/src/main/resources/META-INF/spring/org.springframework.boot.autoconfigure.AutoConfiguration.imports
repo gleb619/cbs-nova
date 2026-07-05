@@ -1,2 +1,3 @@
 cbs.nova.starter.TemporalConfiguration
 cbs.nova.starter.DslAutoConfiguration
+cbs.nova.starter.DslWorkerConfiguration
