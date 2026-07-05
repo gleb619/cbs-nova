@@ -1,5 +1,6 @@
 package cbs.nova.starter;
 
+import cbs.nova.dsl.DslRuntime;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -32,5 +33,11 @@ public class TemporalConfiguration {
   @ConditionalOnMissingBean
   DevDslRuntime devDslRuntime() {
     return new DevDslRuntime();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  DslRuntimeResource dslRuntimeResource(DslRuntime dslRuntime) {
+    return new DslRuntimeResource(dslRuntime);
   }
 }
