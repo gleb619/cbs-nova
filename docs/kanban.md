@@ -28,5 +28,7 @@ This file is a lightweight planner for tracking implementation tasks. It is inte
 | T36 | Done | Fix DslReloadResource | Remove Spring bean injection of GlobalManager, add reset before load, add try/catch for 500 | High | loop | - | - | `./docs/plans/T36-fix-reload-resource.md` |
 | T38 | Done | MapInput utility | MapInput.of(key, value, ...) ordered Map factory for parameter-based DSL calls | Medium | loop | - | - | `./docs/plans/T38-map-input.md` |
 | T39 | Done | @Helper classpath scanner | DslAutoConfiguration scans dsl.helper-scan-packages for @Helper Executable classes | Medium | loop | - | - | `./docs/plans/T39-helper-scanner.md` |
+| T40 | Done | Context sub-interfaces | ProcessContext, TransactionContext, CompensationContext interfaces in dsl-api | High | loop | T41 | - | `./docs/plans/T40-context-interfaces.md` |
+| T41 | Done | RichContext impl + runner wiring | ProcessRichContext/TransactionRichContext impls + builder update + runner wiring | High | loop | - | T40 | `./docs/plans/T41-rich-context-impl.md` |
 
 > **How to use:** Replace the example rows with real tasks. Create a matching plan file under `./docs/plans/<ID>-short-title.md` for each task that needs detailed instructions.
