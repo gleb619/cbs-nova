@@ -33,5 +33,7 @@ This file is a lightweight planner for tracking implementation tasks. It is inte
 | T42 | Done | FunctionContext interface + FunctionRichContext | FunctionContext<T> in dsl-api + FunctionRichContext<T> in dsl + wire FunctionBuilder/FunctionDslObject/DefaultHelperRunner | Medium | loop | - | - | `./docs/plans/T42-function-context.md` |
 | T43 | Done | ProcessContext.complete() + CompensationContext.log() fluent | Add complete(Object) to ProcessContext + make CompensationContext.log() return CompensationContext<T> | Low | loop | - | - | `./docs/plans/T43-process-complete-compensation-log.md` |
 | T44 | Done | Parameter-based DSL support | ParameterRegistry/ParameterDescriptor/ParameterType in dsl-api + DefaultParameterRegistry + .parameters() in all 3 builders + update DslObject records | Medium | loop | - | - | `./docs/plans/T44-parameter-registry.md` |
+| T45 | Done | Result.as() + Result.asMap() convenience methods | Add default as(Class<U>) and asMap() methods to Result<T> sealed interface | Low | loop | - | - | - |
+| T46 | Done | Parameter DSL tests | DslBuilderTest cases for .parameters() on process/transaction/function + ResultTest cases for as/asMap | Low | loop | - | T45 | - |
 
 > **How to use:** Replace the example rows with real tasks. Create a matching plan file under `./docs/plans/<ID>-short-title.md` for each task that needs detailed instructions.
