@@ -37,7 +37,16 @@ public class DevDslRuntime implements DslRuntime {
             .map(MermaidDiagramGenerator::forProcess)
             .or(() -> gm2.findTransaction(name).map(MermaidDiagramGenerator::forTransaction))
             .orElse(MermaidDiagramGenerator.forHelper(name));
-    return new ExplainReport(name, description, mermaid, List.of());
+    var trace = new java.util.ArrayList<String>();
+    trace.add("started: " + name);
+    trace.add("mode: EXPLAIN");
+    if (result.isSuccess()) {
+      Object val = result.value();
+      trace.add("result: " + (val != null ? val.toString() : "null"));
+    } else {
+      trace.add("result: failure: " + result.cause().getMessage());
+    }
+    return new ExplainReport(name, description, mermaid, java.util.List.copyOf(trace));
   }
 
   private Result<?> dispatch(String name, Context<?> ctx, ExecutionMode mode) {

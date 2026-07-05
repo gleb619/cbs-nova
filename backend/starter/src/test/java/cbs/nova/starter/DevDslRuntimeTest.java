@@ -42,6 +42,18 @@ class DevDslRuntimeTest {
     assertThat(report.name()).isEqualTo("Ping");
     assertThat(report.description()).contains("Ping");
     assertThat(report.mermaidDiagram()).isNotBlank();
+    assertThat(report.executionTrace()).isNotEmpty();
+    assertThat(report.executionTrace()).contains("started: Ping");
+  }
+
+  @Test
+  void explainTraceContainsSteps() {
+    var ctx = SimpleContext.of("input", ExecutionMode.EXPLAIN);
+    var report = runtime.explain("Ping", ctx);
+    assertThat(report.executionTrace()).containsExactly(
+            "started: Ping",
+            "mode: EXPLAIN",
+            "result: pong");
   }
 
   @Test
