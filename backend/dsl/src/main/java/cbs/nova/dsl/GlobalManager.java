@@ -2,6 +2,7 @@ package cbs.nova.dsl;
 
 import org.jspecify.annotations.NonNull;
 
+import java.util.List;
 import java.util.Optional;
 
 public final class GlobalManager {
@@ -80,6 +81,18 @@ public final class GlobalManager {
 
   public @NonNull Optional<TransactionDslObject> findTransaction(@NonNull String name) {
     return transactionManager.find(name);
+  }
+
+  public @NonNull List<String> processNames() {
+    return processManager.names();
+  }
+
+  public @NonNull List<String> transactionNames() {
+    return transactionManager.names();
+  }
+
+  public @NonNull List<String> helperNames() {
+    return helperManager.names();
   }
 
   public static void resetForTests() {

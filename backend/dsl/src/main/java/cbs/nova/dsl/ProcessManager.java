@@ -2,6 +2,7 @@ package cbs.nova.dsl;
 
 import org.jspecify.annotations.NonNull;
 
+import java.util.List;
 import java.util.Optional;
 
 public final class ProcessManager {
@@ -30,5 +31,9 @@ public final class ProcessManager {
 
   public @NonNull Optional<ProcessDslObject> find(@NonNull String name) {
     return registry.find(name);
+  }
+
+  public @NonNull List<String> names() {
+    return registry.all().stream().map(ProcessDslObject::name).sorted().toList();
   }
 }
