@@ -26,4 +26,8 @@ public final class HelperManager {
   public @NonNull Result<?> executeFunction(@NonNull String name, @NonNull Context<?> ctx) {
     return runner.runFunction(name, ctx, registry);
   }
+
+  public boolean contains(@NonNull String name) {
+    return registry.containsName(name);
+  }
 }

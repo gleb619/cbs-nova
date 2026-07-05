@@ -60,7 +60,19 @@ public final class GlobalManager {
     return helperManager.executeFunction(name, ctx);
   }
 
-  static void resetForTests() {
+  public boolean hasProcess(@NonNull String name) {
+    return processManager.contains(name);
+  }
+
+  public boolean hasTransaction(@NonNull String name) {
+    return transactionManager.contains(name);
+  }
+
+  public boolean hasHelper(@NonNull String name) {
+    return helperManager.contains(name);
+  }
+
+  public static void resetForTests() {
     INSTANCE = null;
   }
 }

@@ -21,4 +21,8 @@ public final class ProcessManager {
             .map(p -> runner.run(p, ctx))
             .orElse(Result.failure(new IllegalArgumentException("Process not found: " + name)));
   }
+
+  public boolean contains(@NonNull String name) {
+    return registry.find(name).isPresent();
+  }
 }

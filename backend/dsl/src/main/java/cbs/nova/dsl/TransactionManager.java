@@ -22,4 +22,8 @@ public final class TransactionManager {
             .map(t -> runner.run(t, ctx))
             .orElse(Result.failure(new IllegalArgumentException("Transaction not found: " + name)));
   }
+
+  public boolean contains(@NonNull String name) {
+    return registry.find(name).isPresent();
+  }
 }
