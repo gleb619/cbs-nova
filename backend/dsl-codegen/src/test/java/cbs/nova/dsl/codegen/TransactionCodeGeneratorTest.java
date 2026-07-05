@@ -70,4 +70,22 @@ class TransactionCodeGeneratorTest {
             .contains("GlobalManager.getInstance().runTransaction(\"LoanDisbursement\"");
     assertThat(impl.source()).contains("ExecutionMode.RUN");
   }
+
+  @Test
+  void interfaceHasGetVersion() {
+    var descriptor = DescriptorFactory.fromTransaction(
+            Dsl.transaction("FooTx").execute(ctx -> Result.success("x")).build());
+    var iface = generator.generate(descriptor).get(0);
+    assertThat(iface.source()).contains("@ActivityMethod");
+    assertThat(iface.source()).contains("String getVersion()");
+  }
+
+  @Test
+  void implReturnsVersion() {
+    var descriptor = DescriptorFactory.fromTransaction(
+            Dsl.transaction("FooTx").version("v3").execute(ctx -> Result.success("x")).build());
+    var impl = generator.generate(descriptor).get(1);
+    assertThat(impl.source()).contains("\"v3\"");
+    assertThat(impl.source()).contains("getVersion()");
+  }
 }
