@@ -57,4 +57,28 @@ class DslIntrospectionResourceTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.names").isArray());
   }
+
+  @Test
+  void processDetailEndpointReturnsDetails() throws Exception {
+    mockMvc
+            .perform(get("/api/dsl/processes/LoanDisbursement"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("LoanDisbursement"))
+            .andExpect(jsonPath("$.version").value("v1"))
+            .andExpect(jsonPath("$.hasCompensation").value(false));
+  }
+
+  @Test
+  void processDetailEndpointReturns404ForUnknown() throws Exception {
+    mockMvc
+            .perform(get("/api/dsl/processes/Unknown"))
+            .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void transactionDetailEndpointReturns404ForUnknown() throws Exception {
+    mockMvc
+            .perform(get("/api/dsl/transactions/Unknown"))
+            .andExpect(status().isNotFound());
+  }
 }
