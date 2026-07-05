@@ -11,6 +11,7 @@ import java.io.File;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 public final class DefinitionLoader {
@@ -19,11 +20,18 @@ public final class DefinitionLoader {
   }
 
   public static void load(@NonNull Path sourceDir, @NonNull GlobalManager gm) {
+    var objects = loadObjects(sourceDir);
+    for (var obj : objects) {
+      register(obj, gm);
+    }
+  }
+
+  public static @NonNull List<DslObject> loadObjects(@NonNull Path sourceDir) {
     var compiler = ToolProvider.getSystemJavaCompiler();
     if (compiler == null) {
       throw new IllegalStateException("No system Java compiler available (JDK required)");
     }
-
+    var result = new ArrayList<DslObject>();
     try {
       var outputDir = Files.createTempDirectory("dsl-compiled-");
       try (StandardJavaFileManager fm = compiler.getStandardFileManager(null, null, null)) {
@@ -31,37 +39,31 @@ public final class DefinitionLoader {
                 .filter(p -> p.toString().endsWith(".java"))
                 .map(Path::toFile)
                 .toList();
-
         if (javaFiles.isEmpty())
-          return;
-
+          return result;
         var classpath = System.getProperty("java.class.path");
         var options = List.of("-classpath", classpath, "-d", outputDir.toString());
-
         for (var file : javaFiles) {
           var diagnostics = new DiagnosticCollector<JavaFileObject>();
           var singleUnit = fm.getJavaFileObjectsFromFiles(List.of(file));
           var task = compiler.getTask(null, fm, diagnostics, options, null, singleUnit);
           boolean ok = task.call();
           if (!ok) {
-            diagnostics
-                    .getDiagnostics()
-                    .forEach(
-                            d -> System.err.println(
-                                    "[DefinitionLoader] " + file.getName() + ": "
-                                            + d.getMessage(null)));
+            diagnostics.getDiagnostics().forEach(d -> System.err
+                    .println("[DefinitionLoader] " + file.getName() + ": " + d.getMessage(null)));
             continue;
           }
-          loadAndRegister(file, outputDir, gm);
+          result.addAll(loadFromFile(file, outputDir));
         }
       }
     } catch (Exception e) {
-      throw new RuntimeException("DefinitionLoader failed", e);
+      throw new RuntimeException("DefinitionLoader.loadObjects failed", e);
     }
+    return result;
   }
 
   @SuppressWarnings("unchecked")
-  private static void loadAndRegister(File source, Path outputDir, GlobalManager gm) {
+  private static List<DslObject> loadFromFile(File source, Path outputDir) {
     String className = source.getName().replace(".java", "");
     try (var loader = new URLClassLoader(
             new java.net.URL[]{outputDir.toUri().toURL()},
@@ -72,12 +74,10 @@ public final class DefinitionLoader {
       Object instance = ctor.newInstance();
       var define = cls.getDeclaredMethod("define");
       define.setAccessible(true);
-      var objects = (List<DslObject>) define.invoke(instance);
-      for (var obj : objects) {
-        register(obj, gm);
-      }
+      return (List<DslObject>) define.invoke(instance);
     } catch (Exception e) {
       System.err.println("[DefinitionLoader] Failed to load " + className + ": " + e.getMessage());
+      return List.of();
     }
   }
 
