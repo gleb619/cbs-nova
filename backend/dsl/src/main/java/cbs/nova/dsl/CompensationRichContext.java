@@ -56,7 +56,8 @@ public final class CompensationRichContext<T> implements CompensationContext<T> 
   }
 
   @Override
-  public void log(@NonNull String message) {
+  public @NonNull CompensationContext<T> log(@NonNull String message) {
     System.out.println("[DSL:" + delegate.mode() + "] [compensation] " + message);
+    return this;
   }
 }

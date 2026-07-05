@@ -61,6 +61,11 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   }
 
   @Override
+  public @NonNull Result<?> complete(@NonNull Object result) {
+    return Result.success(result);
+  }
+
+  @Override
   public void fail(@NonNull String reason) {
     throw new RuntimeException(reason);
   }
