@@ -22,7 +22,7 @@ class DslReloadResourceTest {
   @BeforeEach
   void setUp() throws Exception {
     GlobalManager.resetForTests();
-    resource = new DslReloadResource(GlobalManager.getInstance());
+    resource = new DslReloadResource();
     mockMvc = MockMvcBuilders.standaloneSetup(resource)
             .setMessageConverters(new JacksonJsonHttpMessageConverter())
             .build();
