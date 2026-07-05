@@ -43,6 +43,20 @@ class DescriptorFactoryTest {
   }
 
   @Test
+  void transactionDescriptorHasRetryPolicy() {
+    var policy = RetryPolicy.defaults();
+    var obj = Dsl.transaction("T1")
+            .input(String.class)
+            .output(String.class)
+            .execute(ctx -> Result.success("ok"))
+            .retryPolicy(policy)
+            .build();
+    var desc = DescriptorFactory.fromTransaction(obj);
+    assertThat(desc.name()).isEqualTo("T1");
+    assertThat(desc.retryPolicy()).isEqualTo(policy);
+  }
+
+  @Test
   void functionDescriptorHasName() {
     var obj = Dsl.function("Fn1")
             .execute(ctx -> Result.success("x"))
