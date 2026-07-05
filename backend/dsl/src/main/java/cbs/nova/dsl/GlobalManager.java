@@ -2,6 +2,8 @@ package cbs.nova.dsl;
 
 import org.jspecify.annotations.NonNull;
 
+import java.util.List;
+
 public final class GlobalManager {
 
   private static volatile GlobalManager INSTANCE;
@@ -70,6 +72,18 @@ public final class GlobalManager {
 
   public boolean hasHelper(@NonNull String name) {
     return helperManager.contains(name);
+  }
+
+  public @NonNull List<String> processNames() {
+    return processManager.names();
+  }
+
+  public @NonNull List<String> transactionNames() {
+    return transactionManager.names();
+  }
+
+  public @NonNull List<String> helperNames() {
+    return helperManager.names();
   }
 
   public static void resetForTests() {

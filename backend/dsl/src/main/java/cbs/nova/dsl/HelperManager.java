@@ -2,6 +2,8 @@ package cbs.nova.dsl;
 
 import org.jspecify.annotations.NonNull;
 
+import java.util.List;
+
 public final class HelperManager {
   private final HelperRegistry registry;
   private final HelperRunner runner;
@@ -29,5 +31,9 @@ public final class HelperManager {
 
   public boolean contains(@NonNull String name) {
     return registry.containsName(name);
+  }
+
+  public @NonNull List<String> names() {
+    return registry.allNames().stream().sorted().toList();
   }
 }

@@ -40,4 +40,10 @@ public class TemporalConfiguration {
   DslRuntimeResource dslRuntimeResource(DslRuntime dslRuntime) {
     return new DslRuntimeResource(dslRuntime);
   }
+
+  @Bean
+  @ConditionalOnMissingBean
+  DslIntrospectionResource dslIntrospectionResource() {
+    return new DslIntrospectionResource();
+  }
 }

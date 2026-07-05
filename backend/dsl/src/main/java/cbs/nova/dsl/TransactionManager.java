@@ -2,6 +2,8 @@ package cbs.nova.dsl;
 
 import org.jspecify.annotations.NonNull;
 
+import java.util.List;
+
 public final class TransactionManager {
   private final TransactionRegistry registry;
   private final TransactionRunner runner;
@@ -25,5 +27,9 @@ public final class TransactionManager {
 
   public boolean contains(@NonNull String name) {
     return registry.find(name).isPresent();
+  }
+
+  public @NonNull List<String> names() {
+    return registry.all().stream().map(TransactionDslObject::name).sorted().toList();
   }
 }
