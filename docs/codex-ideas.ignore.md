@@ -178,3 +178,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T100 | Process runner EXPLAIN metadata tests | test | Rejected | already queued as T75; do not duplicate |
 | T100 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
 | T100 | BFF proxy error passthrough tests | test | Rejected | T67 must land first; keep deferring |
+| T101 | CompensationRichContext unit tests | test | Chosen | T68 backlog exists with detailed plan; codegraph-confirmed no direct tests; critical for saga/rollback DSL examples; low risk |
+| T101 | DefaultProcessRunner compensation tests | test | Rejected | T68 already covers runner compensation aspect; do not duplicate |
+| T101 | ProcessBuilder validation tests | test | Rejected | broader; better after compensation context locked |
+| T101 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
+| T101 | BFF proxy error passthrough tests | test | Rejected | T67 must land first; keep deferring |
