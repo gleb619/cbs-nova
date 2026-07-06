@@ -46,4 +46,5 @@ This file is a lightweight planner for tracking implementation tasks. It is inte
 | T71 | Backlog | DSL reload resource error-path tests | Add MockMvc tests for `DslReloadResource.reload()` covering `NOT_CONFIGURED` and `NOT_FOUND` error branches. | High | loop | - | - | `./docs/plans/T71-reload-resource-error-path-tests.md` |
 | T72 | Backlog | Transaction registry and manager tests | Add unit tests for `DefaultTransactionRegistry` and `TransactionManager` covering store/find/duplicate semantics and execution dispatch. | High | loop | - | - | `./docs/plans/T72-transaction-registry-tests.md` |
 
+| T73 | Backlog | DSL input JSON Schema generation | Generate JSON Schema (Draft 2020-12) from a DSL definition's `ParameterDescriptor`/`MapInput` input shape and expose it via the introspection REST endpoint so the Runner UI (T58) can render a typed, auto-generated input form instead of guessing the shape. | High | loop | - | - | `./docs/plans/T73-dsl-input-json-schema.md` |
 > **How to use:** Replace the example rows with real tasks. Create a matching plan file under `./docs/plans/<ID>-short-title.md` for each task that needs detailed instructions.
