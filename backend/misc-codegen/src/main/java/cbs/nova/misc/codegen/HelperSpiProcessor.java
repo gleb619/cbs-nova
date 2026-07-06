@@ -94,19 +94,19 @@ public class HelperSpiProcessor extends AbstractProcessor {
                   "    registrar.register(\"{0}\", new {1}());\n", entry.name(), simpleName));
         }
         var template = """
-                package {0};
+                package %s;
 
                 import cbs.nova.dsl.Executable;
                 import cbs.nova.dsl.HelperRegistrar;
                 import cbs.nova.dsl.HelperResolver;
-                {1}
-                public final class {2} implements HelperResolver {{
+                %s
+                public final class %s implements HelperResolver {
                   @Override
-                  public void registerHelpers(HelperRegistrar registrar) {{
-                {3}  }}
-                }}
+                  public void registerHelpers(HelperRegistrar registrar) {
+                %s  }
+                }
                 """;
-        writer.print(MessageFormat.format(template, RESOLVER_PACKAGE, imports, RESOLVER_CLASS,
+        writer.print(String.format(template, RESOLVER_PACKAGE, imports, RESOLVER_CLASS,
                 registrations));
       }
     } catch (IOException e) {
@@ -121,7 +121,7 @@ public class HelperSpiProcessor extends AbstractProcessor {
               StandardLocation.CLASS_OUTPUT, "",
               "META-INF/services/cbs.nova.dsl.HelperResolver");
       try (var writer = new PrintWriter(resource.openWriter())) {
-        writer.print(MessageFormat.format("{0}\n", RESOLVER_FQN));
+        writer.print(String.format("%s%n", RESOLVER_FQN));
       }
     } catch (IOException e) {
       processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
