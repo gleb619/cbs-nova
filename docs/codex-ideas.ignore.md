@@ -168,3 +168,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T98 | ProcessBuilder validation tests | test | Rejected | broader; can follow after dashboard |
 | T98 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
 | T98 | BFF proxy error passthrough tests | test | Rejected | T67 must land first; keep deferring |
+| T99 | DefaultProcessRegistry unit tests | test | Chosen | codegraph-confirmed no direct tests for DefaultProcessRegistry; low risk, locks process registry semantics used by ProcessManager |
+| T99 | Transaction registry and manager tests | test | Rejected | already queued as T72; do not duplicate |
+| T99 | Process manager and runner tests | test | Rejected | already queued as T75; do not duplicate |
+| T99 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
+| T99 | BFF proxy error passthrough tests | test | Rejected | T67 must land first; keep deferring |
