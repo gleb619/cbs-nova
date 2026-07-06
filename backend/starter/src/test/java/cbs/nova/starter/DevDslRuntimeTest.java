@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.SimpleContext;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,7 +26,14 @@ class DevDslRuntimeTest {
     var ctx = SimpleContext.of("input", ExecutionMode.PREVIEW);
     var result = runtime.preview("Ping", ctx);
     assertThat(result.isSuccess()).isTrue();
-    assertThat(result.value()).isEqualTo("pong");
+    PreviewReport report = result.value();
+    assertThat(report.name()).isEqualTo("Ping");
+    assertThat(report.mode()).isEqualTo(ExecutionMode.PREVIEW);
+    assertThat(report.success()).isTrue();
+    assertThat(report.output()).isEqualTo("pong");
+    assertThat(report.executionTrace()).isNotEmpty();
+    assertThat(report.executionTrace()).contains("started: Ping", "mode: PREVIEW",
+            "completed successfully");
   }
 
   @Test
@@ -61,6 +69,7 @@ class DevDslRuntimeTest {
     var ctx = SimpleContext.of("x", ExecutionMode.PREVIEW);
     var result = runtime.preview("Unknown", ctx);
     assertThat(result.isSuccess()).isFalse();
+    assertThat(result.value()).isNull();
   }
 
   @Test

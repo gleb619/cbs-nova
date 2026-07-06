@@ -44,12 +44,16 @@ public final class FunctionRichContext<T> implements FunctionContext<T> {
 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name) {
-    return GlobalManager.getInstance().runHelper(name, delegate);
+    Result<?> result = GlobalManager.getInstance().runHelper(name, delegate);
+    ExecutionTraceCollector.add("called helper: " + name);
+    return result;
   }
 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input) {
-    return GlobalManager.getInstance().runHelper(name,
+    Result<?> result = GlobalManager.getInstance().runHelper(name,
             SimpleContext.of(input, delegate.mode(), delegate.runId()));
+    ExecutionTraceCollector.add("called helper: " + name);
+    return result;
   }
 }

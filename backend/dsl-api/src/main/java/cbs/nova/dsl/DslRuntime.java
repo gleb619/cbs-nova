@@ -4,7 +4,7 @@ import org.jspecify.annotations.NonNull;
 
 public interface DslRuntime {
   @NonNull
-  Result<?> preview(@NonNull String name, @NonNull Context<?> ctx);
+  Result<PreviewReport> preview(@NonNull String name, @NonNull Context<?> ctx);
 
   @NonNull
   Result<?> run(@NonNull String name, @NonNull Context<?> ctx);
