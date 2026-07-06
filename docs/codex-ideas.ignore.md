@@ -118,3 +118,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T87 | InputForm schema-driven tests | test | Rejected | T67 must land first; keep deferring |
 | T87 | BFF proxy error passthrough tests | test | Rejected | T67 must land first; keep deferring |
 | T87 | DevDslRuntime explain failure path | test | Rejected | larger integration test; better after diagram tests locked |
+| T88 | DslAutoConfiguration ExternalCallListener registration tests | test | Chosen | codegraph-confirmed listener registration path untested; low risk, locks Spring Boot observer wiring |
+| T88 | HelperSpiProcessor error-path tests | test | Rejected | abstract/default-package warnings are edge cases; smaller value |
+| T88 | ExecutableDescriptor defaults test | test | Rejected | defaults are trivial; lower value than runtime wiring |
+| T88 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
+| T88 | Dashboard overview page | ui | Rejected | already queued as T70; do not duplicate |
