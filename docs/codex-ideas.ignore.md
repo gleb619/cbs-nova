@@ -123,3 +123,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T88 | ExecutableDescriptor defaults test | test | Rejected | defaults are trivial; lower value than runtime wiring |
 | T88 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
 | T88 | Dashboard overview page | ui | Rejected | already queued as T70; do not duplicate |
+| T89 | RetryPolicy and ParameterRegistry unit tests | test | Chosen | codegraph-confirmed no tests for RetryPolicy/DefaultParameterRegistry; low risk, locks DSL builder primitives |
+| T89 | ProcessDslObject/TransactionDslObject record tests | test | Rejected | record accessors are implicitly covered by builder/runtime tests |
+| T89 | DslObject type enum tests | test | Rejected | trivial enum coverage; lower value |
+| T89 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
+| T89 | Dashboard overview page | ui | Rejected | already queued as T70; do not duplicate |
