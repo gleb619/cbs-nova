@@ -21,6 +21,8 @@ public final class TransactionBuilder {
   private Duration startToCloseTimeout = Duration.ofSeconds(30);
   @Nullable
   private RetryPolicy retryPolicy;
+  @Nullable
+  private Duration heartbeatTimeout;
 
   TransactionBuilder(@NonNull String name) {
     this.name = name;
@@ -66,6 +68,10 @@ public final class TransactionBuilder {
     this.retryPolicy = policy;
     return this;
   }
+  public TransactionBuilder heartbeatTimeout(@NonNull Duration duration) {
+    this.heartbeatTimeout = duration;
+    return this;
+  }
 
   public @NonNull TransactionDslObject build() {
     if (executeLogic == null)
@@ -74,7 +80,7 @@ public final class TransactionBuilder {
       throw new IllegalStateException(
               "transaction '" + name + "' cannot have both .parameters() and .input()/.output()");
     return new TransactionDslObject(name, taskQueue, version, inputType, outputType, parameters,
-            executeLogic, compensationLogic, startToCloseTimeout, retryPolicy);
+            executeLogic, compensationLogic, startToCloseTimeout, retryPolicy, heartbeatTimeout);
   }
 
   public @NonNull List<DslObject> buildList() {

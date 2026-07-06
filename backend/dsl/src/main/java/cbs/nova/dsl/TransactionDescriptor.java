@@ -15,5 +15,6 @@ public record TransactionDescriptor(
         boolean hasCompensation,
         @NonNull List<String> helperRefs,
         @NonNull Duration startToCloseTimeout,
-        @Nullable RetryPolicy retryPolicy) {
+        @Nullable RetryPolicy retryPolicy,
+        @Nullable Duration heartbeatTimeout) {
 }
