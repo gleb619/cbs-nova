@@ -43,3 +43,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T72 | BFF DSL save/publish endpoints | backend | Rejected | needs backend DSL admin resource first; too broad for this cycle |
 | T72 | Dashboard stats backend endpoint | backend | Rejected | can be client-side computed; backend endpoint adds infra |
 | T72 | PlantUml diagram generator tests | test | Rejected | similar to T69 but smaller surface; defer until T69 done |
+| T73 | DSL input JSON Schema generation | backend | Chosen | kanban row exists but stub plan file missing; completes T73 so it is actionable |
+| T73 | Semantic validator tests | test | Rejected | good value but T73 is already queued and more user-facing |
+| T73 | Frontend useApiError composable | dx | Rejected | still deferred until T67 frontend test scaffold lands |
+| T73 | BFF error-status passthrough tests | test | Rejected | proxyToBackend has no tests yet, but needs test scaffold first |
+| T73 | PlantUml diagram generator tests | test | Rejected | similar to T69; defer until T69 done |
