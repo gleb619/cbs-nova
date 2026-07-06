@@ -1,5 +1,12 @@
 plugins {
   id 'java'
+  alias(libs.plugins.spring.dm)
+}
+
+dependencyManagement {
+  imports {
+    mavenBom "org.springframework.boot:spring-boot-dependencies:${libs.versions.spring.boot.get()}"
+  }
 }
 
 dependencies {
@@ -28,6 +35,7 @@ dependencies {
   dslCompiler project(':dsl')
   dslCompiler project(':dsl-api')
   dslCompiler project(':dsl-model')
+  dslCompiler project(':starter')
 }
 
 tasks.register('compileDsl', JavaExec) {
@@ -39,6 +47,7 @@ tasks.register('compileDsl', JavaExec) {
   javaLauncher = javaToolchains.launcherFor {
     languageVersion = JavaLanguageVersion.of(25)
   }
+  dependsOn ':starter:classes'
   doFirst {
     generatedDir.mkdirs()
   }

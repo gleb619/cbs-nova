@@ -58,6 +58,19 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   }
 
   @Override
+  public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Object input) {
+    if (input instanceof Map<?, ?> map) {
+      @SuppressWarnings("unchecked")
+      Map<String, Object> typed = (Map<String, Object>) map;
+      return runHelper(name, typed);
+    }
+    Result<?> result = GlobalManager.getInstance().runHelper(name,
+            SimpleContext.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
+    ExecutionTraceCollector.add("called helper: " + name);
+    return result;
+  }
+
+  @Override
   public @NonNull Result<?> runTransaction(@NonNull String name) {
     Result<?> result = GlobalManager.getInstance().runTransaction(name, delegate);
     ExecutionTraceCollector.add("executed transaction: " + name);
@@ -67,6 +80,19 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   @Override
   public @NonNull Result<?> runTransaction(@NonNull String name,
           @NonNull Map<String, Object> input) {
+    Result<?> result = GlobalManager.getInstance().runTransaction(name,
+            SimpleContext.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
+    ExecutionTraceCollector.add("executed transaction: " + name);
+    return result;
+  }
+
+  @Override
+  public @NonNull Result<?> runTransaction(@NonNull String name, @NonNull Object input) {
+    if (input instanceof Map<?, ?> map) {
+      @SuppressWarnings("unchecked")
+      Map<String, Object> typed = (Map<String, Object>) map;
+      return runTransaction(name, typed);
+    }
     Result<?> result = GlobalManager.getInstance().runTransaction(name,
             SimpleContext.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
     ExecutionTraceCollector.add("executed transaction: " + name);
