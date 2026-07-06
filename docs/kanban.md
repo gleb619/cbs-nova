@@ -75,6 +75,8 @@ This file is a lightweight planner for tracking implementation tasks. It is inte
 | T102 | Backlog | CI backend test-completeness | Extend `.github/workflows/ci.yml` to run the full backend test matrix: add `:dsl-api:test` and `:misc-codegen:build`/`:misc-codegen:test` (currently `misc-codegen` and `:dsl-api:test` are never exercised in CI, so `HelperSpiProcessorTest`, `DslExceptionTest`, `MapInputTest`, `ResultTest` run only locally), and fix the deprecated `cache: gradle` to `gradle: true`. | High | loop | - | - | `./docs/plans/T102-ci-backend-test-completeness.md` |
 | T103 | Backlog | Temporal service in docker-compose | Add `temporal` (auto-setup image) and `temporal-ui` services to the root `docker-compose.yml` and a shared network so `docker compose up` yields a full local runtime (Temporal is the workflow engine every worker/example/DSL run depends on, yet it is currently absent from the compose stack). | High | loop | - | - | `./docs/plans/T103-temporal-docker-compose.md` |
 
+| T104 | Backlog     | BFF DSL reload proxy                                       | frontend — Add Nitro BFF route `POST /api/v1/dsl/reload` that proxies to Spring Boot `POST /api/dsl/reload`, wire `useDslApi.reload()` and a Refresh action in `useDslWorkbench`, and add a Refresh button to the DSL Workbench toolbar. |   High   | loop  | -                       | -             | `./docs/plans/T104-bff-dsl-reload-proxy.md`                     |
+
 ---
 
 > **How to use:** Replace the example rows with real tasks. Create a matching plan file under `./docs/plans/<ID>-short-title.md` for each task that needs detailed instructions.
