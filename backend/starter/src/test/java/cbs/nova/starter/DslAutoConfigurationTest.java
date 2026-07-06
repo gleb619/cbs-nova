@@ -12,7 +12,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.lang.reflect.Field;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 class DslAutoConfigurationTest {
 
@@ -22,6 +25,7 @@ class DslAutoConfigurationTest {
   @AfterEach
   void resetGlobalManager() {
     GlobalManager.resetForTests();
+    ExternalCallTracker.instance = null;
   }
 
   @Test
@@ -73,9 +77,50 @@ class DslAutoConfigurationTest {
     }
   }
 
+  @Test
+  void listenersRegisteredWithTrackerWhenInstanceExists() throws Exception {
+    var tracker = new ExternalCallTracker();
+    var callCount = new AtomicInteger(0);
+    ExternalCallListener listener = (type, target, op, payload) -> callCount.incrementAndGet();
+
+    var config = new DslAutoConfiguration();
+    setListeners(config, List.of(listener));
+    config.loadDslDefinitions();
+
+    tracker.recordCall("http", "svc", "GET", null);
+    assertThat(callCount.get()).isEqualTo(1);
+  }
+
+  @Test
+  void noErrorWhenNoListenerBeansPresent() {
+    ExternalCallTracker.instance = null;
+    var config = new DslAutoConfiguration();
+    config.loadDslDefinitions();
+  }
+
+  @Test
+  void listenersSkippedWhenTrackerInstanceNull() throws Exception {
+    ExternalCallTracker.instance = null;
+    var callCount = new AtomicInteger(0);
+    ExternalCallListener listener = (type, target, op, payload) -> callCount.incrementAndGet();
+
+    var config = new DslAutoConfiguration();
+    setListeners(config, List.of(listener));
+    config.loadDslDefinitions();
+
+    assertThat(callCount.get()).isEqualTo(0);
+  }
+
   private void setField(Object target, String fieldName, String value) throws Exception {
     var field = target.getClass().getDeclaredField(fieldName);
     field.setAccessible(true);
     field.set(target, value);
+  }
+
+  private void setListeners(DslAutoConfiguration config, List<ExternalCallListener> listeners)
+          throws Exception {
+    Field field = DslAutoConfiguration.class.getDeclaredField("externalCallListeners");
+    field.setAccessible(true);
+    field.set(config, listeners);
   }
 }
