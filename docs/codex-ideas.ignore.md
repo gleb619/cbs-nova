@@ -108,3 +108,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T85 | Compensation context unit tests | test | Rejected | already queued as T68; do not duplicate |
 | T85 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
 | T85 | Dashboard overview page | ui | Rejected | already queued as T70; do not duplicate |
+| T86 | BPMN diagram generator tests | test | Chosen | codegraph-confirmed BpmnDiagramGenerator has no tests; complements T69 Mermaid coverage; low risk |
+| T86 | PlantUml diagram generator tests | test | Rejected | similar to BPMN tests; defer until T86/T69 done |
+| T86 | DevDslRuntime explain report integration test | test | Rejected | larger than one fire; needs diagram contracts locked first |
+| T86 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
+| T86 | Dashboard overview page | ui | Rejected | already queued as T70; do not duplicate |
