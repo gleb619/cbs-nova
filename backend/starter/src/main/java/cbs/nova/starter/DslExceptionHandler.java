@@ -1,5 +1,6 @@
 package cbs.nova.starter;
 
+import io.sentry.Sentry;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -15,6 +16,7 @@ public class DslExceptionHandler {
 
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ErrorResponse> handleGeneral(Exception ex) {
+    Sentry.captureException(ex);
     return ResponseEntity.internalServerError()
             .body(new ErrorResponse("INTERNAL_ERROR", ex.getMessage(), null));
   }

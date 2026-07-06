@@ -21,6 +21,7 @@ dependencies {
   api libs.temporal.sdk
 
   api 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9'
+  api libs.sentry.spring.boot.jakarta
 
   annotationProcessor project(':dsl-codegen')
 

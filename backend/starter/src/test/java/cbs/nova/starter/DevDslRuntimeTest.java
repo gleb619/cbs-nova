@@ -62,4 +62,39 @@ class DevDslRuntimeTest {
     var result = runtime.preview("Unknown", ctx);
     assertThat(result.isSuccess()).isFalse();
   }
+
+  @Test
+  void explainTracksExternalCallsAndDiagrams() {
+    GlobalManager.getInstance()
+            .registerProcess(Dsl.process("TrackedProcess")
+                    .execute(ctx -> {
+                      ExternalCallTracker.record("db", "user-db", "SELECT * FROM users", null);
+                      ExternalCallTracker.record("http", "payment-api", "POST /pay", "{\"amount\": 100}");
+                      return Result.success("ok");
+                    }).build());
+
+    var ctx = SimpleContext.of("input", ExecutionMode.EXPLAIN);
+    var report = runtime.explain("TrackedProcess", ctx);
+
+    assertThat(report.name()).isEqualTo("TrackedProcess");
+    assertThat(report.plantUmlDiagram()).contains("TrackedProcess");
+    assertThat(report.bpmnXml()).contains("bpmn:process");
+    assertThat(report.callCounts()).containsEntry("db", 1);
+    assertThat(report.callCounts()).containsEntry("http", 1);
+    assertThat(report.externalCalls()).hasSize(2);
+    assertThat(report.externalCalls().get(0)).containsEntry("type", "db");
+    assertThat(report.externalCalls().get(0)).containsEntry("target", "user-db");
+    assertThat(report.externalCalls().get(0)).containsEntry("operation", "SELECT * FROM users");
+  }
+
+  @Test
+  void trackerTriggersListeners() {
+    var tracker = new ExternalCallTracker();
+    var calls = new java.util.ArrayList<String>();
+    tracker.registerListener((type, target, op, payload) -> calls.add(type + ":" + target));
+
+    tracker.recordCall("mq", "queue-1", "send", "msg");
+    assertThat(calls).containsExactly("mq:queue-1");
+  }
 }
+

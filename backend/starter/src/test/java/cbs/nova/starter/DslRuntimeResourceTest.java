@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
+import java.util.Map;
 
 class DslRuntimeResourceTest {
 
@@ -62,7 +63,7 @@ class DslRuntimeResourceTest {
   @Test
   void explainReturnsReport() throws Exception {
     var report = new ExplainReport(
-            "Ping", "Executed Ping successfully", "graph TD\n  A --> B", List.of());
+            "Ping", "Executed Ping successfully", "graph TD\n  A --> B", "@startuml\nstart\n:Ping;\nstop\n@endum", "", List.of(), List.of(), Map.of());
     doReturn(report).when(dslRuntime).explain(eq("Ping"), any());
 
     mockMvc
