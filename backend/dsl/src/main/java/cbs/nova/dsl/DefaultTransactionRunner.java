@@ -19,7 +19,8 @@ public final class DefaultTransactionRunner implements TransactionRunner {
       // TODO: wire to Temporal in RUN mode
       return transaction.executeLogic().apply(richCtx);
     } catch (Exception ex) {
-      return Result.failure(ex);
+      String message = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
+      return Result.failure(new DslExecutionException(ctx.runId(), message, ex));
     }
   }
 }

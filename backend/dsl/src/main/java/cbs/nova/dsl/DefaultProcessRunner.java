@@ -20,7 +20,8 @@ public final class DefaultProcessRunner implements ProcessRunner {
         result = process.executeLogic().apply(richCtx);
       }
     } catch (Exception ex) {
-      result = Result.failure(ex);
+      String message = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
+      result = Result.failure(new DslExecutionException(ctx.runId(), message, ex));
       failure = ex;
     }
     if (!result.isSuccess() && process.compensationLogic() != null) {
@@ -28,7 +29,11 @@ public final class DefaultProcessRunner implements ProcessRunner {
         var compensationCtx = new CompensationRichContext<>(ctx,
                 failure != null ? failure : result.cause());
         process.compensationLogic().apply(compensationCtx);
-      } catch (Exception ignored) {
+      } catch (Exception compEx) {
+        String message = compEx.getMessage() != null
+                ? compEx.getMessage()
+                : compEx.getClass().getSimpleName();
+        return Result.failure(new DslCompensationException(ctx.runId(), message, compEx));
       }
     }
     return result;

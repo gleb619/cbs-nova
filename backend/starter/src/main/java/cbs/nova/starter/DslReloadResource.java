@@ -29,20 +29,29 @@ public class DslReloadResource {
   public ResponseEntity<?> reload() {
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
       return ResponseEntity.status(409)
-              .body(new ErrorResponse("NOT_CONFIGURED", "dsl.source-dir is not configured", null));
+              .body(
+                      new ErrorResponse(
+                              "NOT_CONFIGURED", "dsl.source-dir is not configured", null, null,
+                              null));
     }
     var dir = Path.of(sourceDirProperty);
     if (!Files.isDirectory(dir)) {
       return ResponseEntity.status(409)
-              .body(new ErrorResponse("NOT_FOUND", "Source directory does not exist: " + dir,
-                      null));
+              .body(
+                      new ErrorResponse(
+                              "NOT_FOUND",
+                              "Source directory does not exist: " + dir,
+                              null,
+                              null,
+                              null));
     }
     GlobalManager.resetForTests();
     try {
       DefinitionLoader.load(dir, GlobalManager.getInstance());
     } catch (Exception e) {
       return ResponseEntity.status(500)
-              .body(new ErrorResponse("RELOAD_FAILED", e.getMessage(), null));
+              .body(
+                      new ErrorResponse("RELOAD_FAILED", e.getMessage(), null, null, null));
     }
     return ResponseEntity.noContent().build();
   }

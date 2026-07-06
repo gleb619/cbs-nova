@@ -68,8 +68,9 @@ class DevDslRuntimeTest {
     GlobalManager.getInstance()
             .registerProcess(Dsl.process("TrackedProcess")
                     .execute(ctx -> {
-                      ExternalCallTracker.record("db", "user-db", "SELECT * FROM users", null);
-                      ExternalCallTracker.record("http", "payment-api", "POST /pay", "{\"amount\": 100}");
+                      ExternalCallTracker.record("jdbc", "user-db", "SELECT * FROM users", null);
+                      ExternalCallTracker.record("http", "payment-api", "POST /pay",
+                              "{\"amount\": 100}");
                       return Result.success("ok");
                     }).build());
 
@@ -79,10 +80,10 @@ class DevDslRuntimeTest {
     assertThat(report.name()).isEqualTo("TrackedProcess");
     assertThat(report.plantUmlDiagram()).contains("TrackedProcess");
     assertThat(report.bpmnXml()).contains("bpmn:process");
-    assertThat(report.callCounts()).containsEntry("db", 1);
+    assertThat(report.callCounts()).containsEntry("database", 1);
     assertThat(report.callCounts()).containsEntry("http", 1);
     assertThat(report.externalCalls()).hasSize(2);
-    assertThat(report.externalCalls().get(0)).containsEntry("type", "db");
+    assertThat(report.externalCalls().get(0)).containsEntry("type", "database");
     assertThat(report.externalCalls().get(0)).containsEntry("target", "user-db");
     assertThat(report.externalCalls().get(0)).containsEntry("operation", "SELECT * FROM users");
   }
@@ -97,4 +98,3 @@ class DevDslRuntimeTest {
     assertThat(calls).containsExactly("mq:queue-1");
   }
 }
-

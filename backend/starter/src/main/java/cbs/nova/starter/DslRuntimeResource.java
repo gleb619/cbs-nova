@@ -1,6 +1,7 @@
 package cbs.nova.starter;
 
 import cbs.nova.dsl.Context;
+import cbs.nova.dsl.DslException;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExplainReport;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/dsl")
@@ -38,7 +40,7 @@ public class DslRuntimeResource {
     return result.isSuccess()
             ? ResponseEntity.ok(result.value())
             : ResponseEntity.unprocessableEntity()
-                    .body(new ErrorResponse("EXECUTION_FAILED", result.cause().getMessage(), name));
+                    .body(toErrorResponse(name, ctx, result.cause()));
   }
 
   @PostMapping("/run/{name}")
@@ -50,7 +52,7 @@ public class DslRuntimeResource {
     return result.isSuccess()
             ? ResponseEntity.ok(result.value())
             : ResponseEntity.unprocessableEntity()
-                    .body(new ErrorResponse("EXECUTION_FAILED", result.cause().getMessage(), name));
+                    .body(toErrorResponse(name, ctx, result.cause()));
   }
 
   @PostMapping("/explain/{name}")
@@ -64,7 +66,20 @@ public class DslRuntimeResource {
 
   private Context<?> toContext(DslRequest request, ExecutionMode mode) {
     Map<String, Object> metadata = request.metadata() != null ? request.metadata() : Map.of();
-    return new SimpleContext<>(request.body(), metadata, mode);
+    return SimpleContext.of(request.body(), metadata, mode, SimpleContext.generateRunId());
+  }
+
+  private ErrorResponse toErrorResponse(String entityName, Context<?> ctx, Throwable cause) {
+    if (cause instanceof DslException d) {
+      return new ErrorResponse(d.code().name(), d.getMessage(), entityName, d.runId(),
+              d.exceptionId());
+    }
+    String runId = ctx.runId();
+    String exceptionId = runId + ":ex:" + UUID.randomUUID();
+    String message = cause.getMessage() != null
+            ? cause.getMessage()
+            : cause.getClass().getSimpleName();
+    return new ErrorResponse("EXECUTION_FAILED", message, entityName, runId, exceptionId);
   }
 
   public record DslRequest(Object body, Map<String, Object> metadata) {

@@ -28,6 +28,11 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   }
 
   @Override
+  public @NonNull String runId() {
+    return delegate.runId();
+  }
+
+  @Override
   public @NonNull <U> Context<U> withBody(@NonNull U body) {
     return delegate.withBody(body);
   }
@@ -45,7 +50,7 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input) {
     return GlobalManager.getInstance().runHelper(name,
-            SimpleContext.of(input, delegate.mode()));
+            SimpleContext.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
   }
 
   @Override
@@ -57,7 +62,7 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   public @NonNull Result<?> runTransaction(@NonNull String name,
           @NonNull Map<String, Object> input) {
     return GlobalManager.getInstance().runTransaction(name,
-            SimpleContext.of(input, delegate.mode()));
+            SimpleContext.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
   }
 
   @Override
@@ -72,6 +77,6 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
 
   @Override
   public void log(@NonNull String message) {
-    System.out.println("[DSL:" + delegate.mode() + "] " + message);
+    System.out.println("[DSL:" + delegate.mode() + "][runId:" + delegate.runId() + "] " + message);
   }
 }

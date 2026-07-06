@@ -10,12 +10,14 @@ public final class DefaultHelperRunner implements HelperRunner {
           @NonNull String name, @NonNull Context<?> ctx, @NonNull HelperRegistry registry) {
     var helper = registry.findHelper(name);
     if (helper.isEmpty()) {
-      return Result.failure(new IllegalArgumentException("Helper not found: " + name));
+      return Result
+              .failure(new DslEntityNotFoundException(ctx.runId(), "Helper not found: " + name));
     }
     try {
       return ((Executable<Object, Object>) helper.get()).execute((Context<Object>) ctx);
     } catch (Exception ex) {
-      return Result.failure(ex);
+      String message = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
+      return Result.failure(new DslExecutionException(ctx.runId(), message, ex));
     }
   }
 
@@ -24,13 +26,15 @@ public final class DefaultHelperRunner implements HelperRunner {
           @NonNull String name, @NonNull Context<?> ctx, @NonNull HelperRegistry registry) {
     var fn = registry.findFunction(name);
     if (fn.isEmpty()) {
-      return Result.failure(new IllegalArgumentException("Function not found: " + name));
+      return Result
+              .failure(new DslEntityNotFoundException(ctx.runId(), "Function not found: " + name));
     }
     try {
       var richCtx = new FunctionRichContext<>(ctx);
       return fn.get().executeLogic().apply(richCtx);
     } catch (Exception ex) {
-      return Result.failure(ex);
+      String message = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
+      return Result.failure(new DslExecutionException(ctx.runId(), message, ex));
     }
   }
 }

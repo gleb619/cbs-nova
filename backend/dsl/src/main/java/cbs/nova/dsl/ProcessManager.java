@@ -22,7 +22,8 @@ public final class ProcessManager {
     return registry
             .find(name)
             .map(p -> runner.run(p, ctx))
-            .orElse(Result.failure(new IllegalArgumentException("Process not found: " + name)));
+            .orElse(Result.failure(
+                    new DslEntityNotFoundException(ctx.runId(), "Process not found: " + name)));
   }
 
   public boolean contains(@NonNull String name) {

@@ -23,7 +23,8 @@ public final class TransactionManager {
     return registry
             .find(name)
             .map(t -> runner.run(t, ctx))
-            .orElse(Result.failure(new IllegalArgumentException("Transaction not found: " + name)));
+            .orElse(Result.failure(
+                    new DslEntityNotFoundException(ctx.runId(), "Transaction not found: " + name)));
   }
 
   public boolean contains(@NonNull String name) {

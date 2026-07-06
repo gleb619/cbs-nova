@@ -105,15 +105,17 @@ public class DevDslRuntime implements DslRuntime {
               bpmn,
               List.copyOf(trace),
               List.copyOf(callsJson),
-              Map.copyOf(counts)
-      );
+              Map.copyOf(counts));
     } finally {
       ExternalCallTracker.stopTracking();
     }
   }
 
   private Result<?> dispatch(String name, Context<?> ctx, ExecutionMode mode) {
-    var modeCtx = new SimpleContext<>(ctx.body(), ctx.metadata(), mode);
+    String runId = (ctx.runId() == null || ctx.runId().isBlank())
+            ? SimpleContext.generateRunId()
+            : ctx.runId();
+    var modeCtx = SimpleContext.of(ctx.body(), ctx.metadata(), mode, runId);
     GlobalManager gm = GlobalManager.getInstance();
     if (gm.hasProcess(name))
       return gm.runProcess(name, modeCtx);
