@@ -15,7 +15,7 @@ Invoke before any work:
 
 | File                   | Purpose                                             |
 |------------------------|-----------------------------------------------------|
-| `docs/architecture.md` | System overview and implementation roadmap          |
+| `docs/architecture-backend.md` | System overview and implementation roadmap          |
 | `docs/dsl/*.md`        | DSL constructs, authoring rules, codegen, runtime   |
 | `backend/AGENTS.md`    | Coding conventions, module map, build commands      |
 | `docs/kanban.md`       | Task board — source of truth for current loop state |
@@ -42,7 +42,7 @@ Run once per new batch before PLAN:
 
 1. `codegraph_status` — confirm index is healthy.
 2. `codegraph_context` — survey current codebase state.
-3. Read `docs/architecture.md` roadmap section — identify which phases are complete.
+3. Read `docs/architecture-backend.md` roadmap section — identify which phases are complete.
 4. Transition to PLAN.
 
 ---
@@ -115,7 +115,7 @@ Triggered when all tasks in the current batch are `Done` or `Blocked`:
 
 ## State: NEXT_BATCH
 
-1. Read `docs/architecture.md` roadmap. Use `codegraph_context` to confirm what is implemented vs. pending.
+1. Read `docs/architecture-backend.md` roadmap. Use `codegraph_context` to confirm what is implemented vs. pending.
 2. Identify the next logical implementation phase from the roadmap.
 3. Decompose into 3–5 concrete, independently executable tasks. For each task:
    - Add a row to kanban with status `Backlog`

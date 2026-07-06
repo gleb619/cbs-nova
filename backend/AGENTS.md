@@ -1,7 +1,7 @@
 # Agent Guide: cbs-nova Backend
 
 This document guides coding agents on the Java backend for the Temporal DSL Orchestration Engine. Keep it updated.
-Primary architecture docs: `docs/architecture.md` and `docs/dsl/`.
+Primary architecture docs: `docs/architecture-backend.md` and `docs/dsl/`.
 
 ---
 
@@ -83,7 +83,7 @@ backend/
 ---
 
 ## 6. Onboarding Reading List
-1. `docs/architecture.md` (overview)
+1. `docs/architecture-backend.md` (overview)
 2. `docs/dsl/constructs.md` (execution contracts)
 3. `docs/dsl/authoring.md` (writing DSL flows)
 4. `docs/dsl/codegen.md` (generated code conventions)
