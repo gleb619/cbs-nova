@@ -1,6 +1,6 @@
 export function useExecutionsApi() {
-  async function list() {
-    return $fetch('/api/v1/executions')
+  async function list(filters?: Record<string, unknown>) {
+    return $fetch('/api/v1/executions', { query: filters })
   }
 
   async function get(id: string) {
