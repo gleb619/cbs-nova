@@ -88,3 +88,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T81 | ProcessRichContext delegation tests | test | Rejected | smaller surface; T68 and registry tests higher value |
 | T81 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
 | T81 | Dashboard overview page | ui | Rejected | already queued as T70; do not duplicate |
+| T82 | GlobalManager runtime gap tests | test | Chosen | codegraph-confirmed GlobalManagerTest lacks transaction/function round-trips and name sorting; low risk, locks facade contract |
+| T82 | DefinitionLoader empty-directory path test | test | Rejected | empty dir returns empty list; smaller value than facade runtime contract |
+| T82 | DevDslRuntime explain-mode report test | test | Rejected | explain report tests are broader; better grouped with T69 diagram tests |
+| T82 | Frontend shared useApiError composable | dx | Rejected | still deferred until T67 frontend test scaffold lands |
+| T82 | BFF proxy error passthrough tests | test | Rejected | needs Nitro/Vitest scaffold; defer until T67 |
