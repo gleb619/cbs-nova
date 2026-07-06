@@ -24,6 +24,7 @@ dependencies {
   api libs.sentry.spring.boot.jakarta
 
   annotationProcessor project(':dsl-codegen')
+  annotationProcessor project(':misc-codegen')
 
   testImplementation libs.bundles.spring.test
   testImplementation libs.temporal.testing
