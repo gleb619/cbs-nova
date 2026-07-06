@@ -63,37 +63,37 @@ public final class ProcessCodeGenerator {
                     import cbs.nova.dsl.SimpleContext;
                     import io.temporal.workflow.Saga;
 
-                    public class {3} implements {2} \u007B
+                    public class {3} implements {2} '{'
                       private static final String VERSION = "{5}";
 
                       private static final String TASK_QUEUE = "{6}";
 
                       @Override
-                      public String getVersion() \u007B
+                      public String getVersion() '{'
                         return VERSION;
-                      \u007D
+                      '}'
 
                       @Override
-                      public Object run(Object input) \u007B
+                      public Object run(Object input) '{'
                         Saga saga = new Saga(new Saga.Options.Builder().build());
                         var ctx = SimpleContext.of(input, ExecutionMode.RUN);
                         var compensationCtx = SimpleContext.of(input, ExecutionMode.RUN);
                         saga.addCompensation(
                             () ->
                                 GlobalManager.getInstance().runProcess("{1}-compensation", compensationCtx));
-                        try \u007B
+                        try '{'
                           var result = GlobalManager.getInstance().runProcess("{1}", ctx);
-                          if (!result.isSuccess()) \u007B
+                          if (!result.isSuccess()) '{'
                             saga.compensate();
                             throw new RuntimeException("Process failed", result.cause());
-                          \u007D
+                          '}'
                           return result.value();
-                        \u007D catch (Exception e) \u007B
+                        '}' catch (Exception e) '{'
                           saga.compensate();
                           throw e;
-                        \u007D
-                      \u007D
-                    \u007D
+                        '}'
+                      '}'
+                    '}'
                     """
                     : """
                     package {0};
@@ -102,24 +102,24 @@ public final class ProcessCodeGenerator {
                     import cbs.nova.dsl.GlobalManager;
                     import cbs.nova.dsl.SimpleContext;
 
-                    public class {3} implements {2} \u007B
+                    public class {3} implements {2} '{'
                       private static final String VERSION = "{5}";
 
                       private static final String TASK_QUEUE = "{6}";
 
                       @Override
-                      public String getVersion() \u007B
+                      public String getVersion() '{'
                         return VERSION;
-                      \u007D
+                      '}'
 
                       @Override
-                      public Object run(Object input) \u007B
+                      public Object run(Object input) '{'
                         var ctx = SimpleContext.of(input, ExecutionMode.RUN);
                         var result = GlobalManager.getInstance().runProcess("{1}", ctx);
                         if (!result.isSuccess()) throw new RuntimeException("Process failed", result.cause());
                         return result.value();
-                      \u007D
-                    \u007D
+                      '}'
+                    '}'
                     """,
             pkg, processName, interfaceName, implName, version, version, taskQueue);
   }
