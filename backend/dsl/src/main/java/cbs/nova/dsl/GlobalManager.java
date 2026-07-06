@@ -99,6 +99,12 @@ public final class GlobalManager {
     return helperManager.names();
   }
 
+  @SuppressWarnings("unchecked")
+  public @NonNull Optional<ExecutableDescriptor> describeHelper(@NonNull String name) {
+    return helperManager.findHelper(name)
+            .map(h -> ((Executable<Object, Object>) h).describe());
+  }
+
   public static void resetForTests() {
     INSTANCE = null;
   }
