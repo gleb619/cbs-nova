@@ -148,3 +148,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T94 | TransactionRunner RUN-mode wiring spike | test | Rejected | DefaultTransactionRunner TODO exists but RUN mode is Temporal integration; larger and riskier than actuator |
 | T94 | Frontend page head titles | ui | Rejected | T67 must land first; keep deferring |
 | T94 | BFF proxy error passthrough tests | test | Rejected | T67 must land first; keep deferring |
+| T95 | DefaultParameterRegistry unit tests | test | Chosen | codegraph-confirmed no direct tests for DefaultParameterRegistry; low risk, locks builder primitive used by ProcessBuilder/TransactionBuilder |
+| T95 | RetryPolicy unit tests | test | Rejected | bundled with DefaultParameterRegistry tests as T89; avoid duplicate kanban row |
+| T95 | ProcessBuilder validation tests | test | Rejected | valuable but broader; DefaultParameterRegistry is the smaller missing brick |
+| T95 | Frontend nav item composable | ui | Rejected | T67 must land first; keep deferring |
+| T95 | BFF proxy timeout config tests | test | Rejected | T67 must land first; keep deferring |
