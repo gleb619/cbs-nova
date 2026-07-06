@@ -4,6 +4,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cbs.nova.dsl.DslErrorCode;
+import cbs.nova.dsl.DslException;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
@@ -49,6 +51,23 @@ class DslExceptionHandlerTest {
             .andExpect(jsonPath("$.exceptionId").doesNotExist());
   }
 
+  @Test
+  void dslExceptionMapsTo422WithStructuredFields() throws Exception {
+    MockMvc mvc = MockMvcBuilders
+            .standaloneSetup(new ThrowingController())
+            .setControllerAdvice(new DslExceptionHandler())
+            .setMessageConverters(new JacksonJsonHttpMessageConverter())
+            .build();
+
+    mvc
+            .perform(get("/throw/dsl"))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.code").value("EXECUTION_FAILED"))
+            .andExpect(jsonPath("$.message").value("dsl failed"))
+            .andExpect(jsonPath("$.runId").value("run-abc"))
+            .andExpect(jsonPath("$.exceptionId").isString());
+  }
+
   @RestController
   static class ThrowingController {
 
@@ -60,6 +79,11 @@ class DslExceptionHandlerTest {
     @GetMapping("/throw/bad")
     String throwBad() {
       throw new IllegalArgumentException("bad arg");
+    }
+
+    @GetMapping("/throw/dsl")
+    String throwDsl() {
+      throw new DslException("run-abc", DslErrorCode.EXECUTION_FAILED, "dsl failed");
     }
   }
 }
