@@ -21,7 +21,7 @@ public class DslWorkerConfiguration {
     Worker worker = factory.newWorker(taskQueue);
     // Generated workflow and activity classes are registered here when available.
     // Classpath scanning for cbs.nova.dsl.generated.* impls can be wired in when
-    // dsl-module generates and exposes those classes on the runtime classpath.
+    // dsl-examples generates and exposes those classes on the runtime classpath.
     factory.start();
     return worker;
   }

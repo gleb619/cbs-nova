@@ -11,9 +11,9 @@ It introduces four constructs that all share the same execution contract:
 
 | Construct       | Temporal mapping       | Where it lives                            | Purpose                                                               |
 |-----------------|------------------------|-------------------------------------------|-----------------------------------------------------------------------|
-| **Process**     | Temporal Workflow      | DSL module (`dsl-module/src/*.java`)      | Orchestrates a sequence of steps; defines the business flow           |
-| **Transaction** | Temporal Activity      | DSL module (`dsl-module/src/*.java`)      | Executes a single, idempotent, retryable action                       |
-| **Function**    | None (local helper)    | DSL module (`dsl-module/src/*.java`)      | Lightweight reusable logic; no Temporal code is generated             |
+| **Process**     | Temporal Workflow      | DSL module (`dsl-examples/src/*.java`)      | Orchestrates a sequence of steps; defines the business flow           |
+| **Transaction** | Temporal Activity      | DSL module (`dsl-examples/src/*.java`)      | Executes a single, idempotent, retryable action                       |
+| **Function**    | None (local helper)    | DSL module (`dsl-examples/src/*.java`)      | Lightweight reusable logic; no Temporal code is generated             |
 | **Helper**      | Plain Java class/logic | Normal Java modules (`src/main/java/...`) | Reusable business logic invoked from Processes/Transactions/Functions |
 
 DSL sources are **JEP-512 compact source files**: no `class` declaration, no `public` modifier, and no package
@@ -31,7 +31,7 @@ Three modes let the same definition behave differently depending on environment 
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────────┐
-│                    DSL Module Source Files (`dsl-module/src/`)              │
+│                    DSL Module Source Files (`dsl-examples/src/`)              │
 │                                                                               │
 │  ┌───────────────────────────────────┐   ┌──────────────────────────────────┐ │
 │  │ LoanDisbursementProcessDsl.java   │   │ KycCheckTransactionDsl.java      │ │

@@ -5,7 +5,7 @@ include 'dsl'
 include 'dsl-codegen'
 include 'starter'
 include 'temporal-example'
-include 'dsl-module'
+include 'dsl-examples'
 
 dependencyResolutionManagement {
   repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
@@ -16,3 +16,5 @@ dependencyResolutionManagement {
 }
 
 enableFeaturePreview('TYPESAFE_PROJECT_ACCESSORS')
+
+include 'misc-codegen'

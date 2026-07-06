@@ -5,7 +5,7 @@ parameter-based definitions, helper/transaction/function calls, compensation, an
 
 ## DSL source files
 
-Definitions live in a dedicated Gradle module, typically `dsl-module/src/`. They are authored as **JEP-512 compact
+Definitions live in a dedicated Gradle module, typically `dsl-examples/src/`. They are authored as **JEP-512 compact
 source files**:
 
 - no `class` declaration,

@@ -46,7 +46,7 @@ is used in Preview, Explain, and production Run modes.
 The DSL lives in a dedicated Gradle module. The Java plugin is applied so that normal test classes can be compiled, but
 the compact DSL source files are compiled by the custom DSL compiler rather than `javac`.
 
-### `dsl-module/build.gradle`
+### `dsl-examples/build.gradle`
 
 ```gradle
 plugins {
