@@ -28,3 +28,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T69 | Map helper for DSL data manipulation | helper | Rejected | useful helper but lower priority than locking diagram contract |
 | T69 | Shared useApiError composable | dx | Rejected | good DX; defer until frontend test scaffold (T67) in place |
 | T69 | Transaction retry-policy validation tests | test | Rejected | small incremental value, already covered indirectly by builder/runtime tests |
+| T70 | Dashboard overview page | ui | Chosen | T59 now Done; index.vue is still placeholder; fills last major nav gap, low risk |
+| T70 | FunctionBuilder unit tests | test | Rejected | useful but smaller blast radius; DslBuilderTest already covers function basics |
+| T70 | Shared useApiError composable | dx | Rejected | good DX; defer until frontend test scaffold (T67) in place |
+| T70 | Map helper for DSL data manipulation | helper | Rejected | lower priority than finishing core admin pages |
+| T70 | PropertyResolver edge-case tests | test | Rejected | PropertyResolver already has dedicated test class |
