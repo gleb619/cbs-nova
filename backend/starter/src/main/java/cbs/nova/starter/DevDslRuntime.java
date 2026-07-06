@@ -116,7 +116,8 @@ public class DevDslRuntime implements DslRuntime {
               bpmn,
               List.copyOf(trace),
               toCallJson(calls),
-              toCallCounts(calls));
+              toCallCounts(calls),
+              gm2.describeHelper(name).orElse(null));
     } finally {
       ExecutionTraceCollector.stop();
       ExternalCallTracker.stopTracking();

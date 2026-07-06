@@ -14,7 +14,11 @@ public final class DefaultHelperRunner implements HelperRunner {
               .failure(new DslEntityNotFoundException(ctx.runId(), "Helper not found: " + name));
     }
     try {
-      return ((Executable<Object, Object>) helper.get()).execute((Context<Object>) ctx);
+      var cast = (Executable<Object, Object>) helper.get();
+      var result = ctx.mode() == ExecutionMode.PREVIEW
+              ? cast.preview((Context<Object>) ctx)
+              : cast.execute((Context<Object>) ctx);
+      return result;
     } catch (Exception ex) {
       String message = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
       return Result.failure(new DslExecutionException(ctx.runId(), message, ex));

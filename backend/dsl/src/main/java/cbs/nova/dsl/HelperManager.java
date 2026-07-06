@@ -3,6 +3,7 @@ package cbs.nova.dsl;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
+import java.util.Optional;
 
 public final class HelperManager {
   private final HelperRegistry registry;
@@ -31,6 +32,10 @@ public final class HelperManager {
 
   public boolean contains(@NonNull String name) {
     return registry.containsName(name);
+  }
+
+  public @NonNull Optional<Executable<?, ?>> findHelper(@NonNull String name) {
+    return registry.findHelper(name);
   }
 
   public @NonNull List<String> names() {
