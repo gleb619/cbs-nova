@@ -58,3 +58,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T75 | Shared useApiError composable | dx | Rejected | still deferred until T67 frontend test scaffold lands |
 | T75 | PlantUml diagram generator tests | test | Rejected | similar to T69; defer until T69 done |
 | T75 | DSL advanced examples completion | example | Rejected | T64 already in progress; do not duplicate |
+| T76 | Fix mobile drawer DSL Workbench nav link | ui | Chosen | codegraph-confirmed mismatch: mobile drawer /workbench vs sidebar /dsl-workbench; real 404 bug, low risk |
+| T76 | HelperManager unit tests | test | Rejected | good coverage gap but frontend bug is user-facing and immediate |
+| T76 | Shared useApiError composable | dx | Rejected | still deferred until T67 frontend test scaffold lands |
+| T76 | BFF proxy error passthrough tests | test | Rejected | needs Nitro/Vitest scaffold; defer until T67 |
+| T76 | PlantUml diagram generator tests | test | Rejected | similar to T69; defer until T69 done |
