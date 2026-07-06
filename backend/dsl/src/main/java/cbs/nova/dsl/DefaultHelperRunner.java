@@ -2,6 +2,8 @@ package cbs.nova.dsl;
 
 import org.jspecify.annotations.NonNull;
 
+import java.util.function.Function;
+
 public final class DefaultHelperRunner implements HelperRunner {
 
   @Override
@@ -35,7 +37,10 @@ public final class DefaultHelperRunner implements HelperRunner {
     }
     try {
       var richCtx = new FunctionRichContext<>(ctx);
-      return fn.get().executeLogic().apply(richCtx);
+      Function<FunctionContext<?>, Result<?>> logic = ctx.mode() == ExecutionMode.PREVIEW
+              ? fn.get().effectivePreview()
+              : fn.get().executeLogic();
+      return logic.apply(richCtx);
     } catch (Exception ex) {
       String message = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
       return Result.failure(new DslExecutionException(ctx.runId(), message, ex));

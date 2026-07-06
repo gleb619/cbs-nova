@@ -15,5 +15,6 @@ public record ExplainReport(
         @NonNull List<String> executionTrace,
         @NonNull List<Map<String, Object>> externalCalls,
         @NonNull Map<String, Integer> callCounts,
-        @Nullable ExecutableDescriptor executableDescriptor) {
+        @Nullable ExecutableDescriptor executableDescriptor,
+        @Nullable DslDescriptor dslDescriptor) {
 }

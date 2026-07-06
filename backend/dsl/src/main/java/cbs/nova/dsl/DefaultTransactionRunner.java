@@ -16,7 +16,10 @@ public final class DefaultTransactionRunner implements TransactionRunner {
         }
         return result;
       }
-      // TODO: wire to Temporal in RUN mode
+      if (ctx.mode() == ExecutionMode.PREVIEW) {
+        return transaction.effectivePreview().apply(richCtx);
+      }
+      // RUN: TODO wire to Temporal
       return transaction.executeLogic().apply(richCtx);
     } catch (Exception ex) {
       String message = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();

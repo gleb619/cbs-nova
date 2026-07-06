@@ -15,8 +15,10 @@ public final class DefaultProcessRunner implements ProcessRunner {
         if (result.isSuccess()) {
           ctx = ctx.withMetadata("explain.description", "Process: " + process.name());
         }
+      } else if (ctx.mode() == ExecutionMode.PREVIEW) {
+        result = process.effectivePreview().apply(richCtx);
       } else {
-        // TODO: wire to Temporal in RUN mode
+        // RUN: TODO wire to Temporal
         result = process.executeLogic().apply(richCtx);
       }
     } catch (Exception ex) {
