@@ -33,6 +33,47 @@ services:
     volumes:
       - keycloak-data:/opt/keycloak/data
 
+  bugsink-db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bugsinkuser
+      POSTGRES_PASSWORD: change_me_secure_password
+      POSTGRES_DB: bugsink
+    volumes:
+      - postgres-bugsink-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bugsinkuser"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  bugsink:
+    image: bugsink/bugsink:latest
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    depends_on:
+      bugsink-db:
+        condition: service_healthy
+    environment:
+      SECRET_KEY: your_super_secret_key_at_least_50_chars_long
+      CREATE_SUPERUSER: admin:admin
+      DATABASE_URL: postgresql://bugsinkuser:change_me_secure_password@bugsink-db:5432/bugsink
+      BEHIND_HTTPS_PROXY: "false"
+      PORT: 8000
+
+  spring-app:
+    image: cbs-nova:latest
+    ports:
+      - "8090:8090"
+    environment:
+      SENTRY_DSN: "${SENTRY_DSN:-}"
+      SPRING_PROFILES_ACTIVE: prod
+    depends_on:
+      - bugsink
+
 volumes:
   postgres-keycloak-data:
   keycloak-data:
+  postgres-bugsink-data:
