@@ -13,10 +13,16 @@ public interface ProcessContext<T> extends Context<T> {
   Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input);
 
   @NonNull
+  Result<?> runHelper(@NonNull String name, @NonNull Object input);
+
+  @NonNull
   Result<?> runTransaction(@NonNull String name);
 
   @NonNull
   Result<?> runTransaction(@NonNull String name, @NonNull Map<String, Object> input);
+
+  @NonNull
+  Result<?> runTransaction(@NonNull String name, @NonNull Object input);
 
   @NonNull
   Result<?> complete(@NonNull Object result);
