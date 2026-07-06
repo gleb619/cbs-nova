@@ -3,6 +3,7 @@ package cbs.nova.dsl.codegen;
 import cbs.nova.dsl.ProcessDescriptor;
 import org.jspecify.annotations.NonNull;
 
+import java.text.MessageFormat;
 import java.util.List;
 
 public final class ProcessCodeGenerator {
@@ -29,105 +30,97 @@ public final class ProcessCodeGenerator {
   }
 
   private String generateInterface(String pkg, String interfaceName) {
-    return "package "
-            + pkg
-            + ";\n\n"
-            + "import io.temporal.workflow.QueryMethod;\n"
-            + "import io.temporal.workflow.WorkflowInterface;\n"
-            + "import io.temporal.workflow.WorkflowMethod;\n\n"
-            + "@WorkflowInterface\n"
-            + "public interface "
-            + interfaceName
-            + " {\n"
-            + "  @QueryMethod\n"
-            + "  String getVersion();\n\n"
-            + "  @WorkflowMethod\n"
-            + "  Object run(Object input);\n"
-            + "}\n";
+    return MessageFormat.format(
+            """
+            package {0};
+
+            import io.temporal.workflow.QueryMethod;
+            import io.temporal.workflow.WorkflowInterface;
+            import io.temporal.workflow.WorkflowMethod;
+
+            @WorkflowInterface
+            public interface {1} '{'
+              @QueryMethod
+              String getVersion();
+
+              @WorkflowMethod
+              Object run(Object input);
+            '}'
+            """.replace("'", ""),
+            pkg, interfaceName);
   }
 
   private String generateImpl(
           String pkg, String processName, String interfaceName, String implName, String version,
           String taskQueue, boolean hasCompensation) {
-    if (hasCompensation) {
-      return "package "
-              + pkg
-              + ";\n\n"
-              + "import cbs.nova.dsl.ExecutionMode;\n"
-              + "import cbs.nova.dsl.GlobalManager;\n"
-              + "import cbs.nova.dsl.SimpleContext;\n"
-              + "import io.temporal.workflow.Saga;\n\n"
-              + "public class "
-              + implName
-              + " implements "
-              + interfaceName
-              + " {\n"
-              + "  private static final String VERSION = \""
-              + version
-              + "\";\n\n"
-              + "  private static final String TASK_QUEUE = \""
-              + taskQueue
-              + "\";\n\n"
-              + "  @Override\n"
-              + "  public String getVersion() {\n"
-              + "    return VERSION;\n"
-              + "  }\n\n"
-              + "  @Override\n"
-              + "  public Object run(Object input) {\n"
-              + "    Saga saga = new Saga(new Saga.Options.Builder().build());\n"
-              + "    var ctx = SimpleContext.of(input, ExecutionMode.RUN);\n"
-              + "    var compensationCtx = SimpleContext.of(input, ExecutionMode.RUN);\n"
-              + "    saga.addCompensation(\n"
-              + "        () ->\n"
-              + "            GlobalManager.getInstance().runProcess(\""
-              + processName
-              + "-compensation\", compensationCtx));\n"
-              + "    try {\n"
-              + "      var result = GlobalManager.getInstance().runProcess(\""
-              + processName
-              + "\", ctx);\n"
-              + "      if (!result.isSuccess()) {\n"
-              + "        saga.compensate();\n"
-              + "        throw new RuntimeException(\"Process failed\", result.cause());\n"
-              + "      }\n"
-              + "      return result.value();\n"
-              + "    } catch (Exception e) {\n"
-              + "      saga.compensate();\n"
-              + "      throw e;\n"
-              + "    }\n"
-              + "  }\n"
-              + "}\n";
-    }
-    return "package "
-            + pkg
-            + ";\n\n"
-            + "import cbs.nova.dsl.ExecutionMode;\n"
-            + "import cbs.nova.dsl.GlobalManager;\n"
-            + "import cbs.nova.dsl.SimpleContext;\n\n"
-            + "public class "
-            + implName
-            + " implements "
-            + interfaceName
-            + " {\n"
-            + "  private static final String VERSION = \""
-            + version
-            + "\";\n\n"
-            + "  private static final String TASK_QUEUE = \""
-            + taskQueue
-            + "\";\n\n"
-            + "  @Override\n"
-            + "  public String getVersion() {\n"
-            + "    return VERSION;\n"
-            + "  }\n\n"
-            + "  @Override\n"
-            + "  public Object run(Object input) {\n"
-            + "    var ctx = SimpleContext.of(input, ExecutionMode.RUN);\n"
-            + "    var result = GlobalManager.getInstance().runProcess(\""
-            + processName
-            + "\", ctx);\n"
-            + "    if (!result.isSuccess()) throw new RuntimeException(\"Process failed\", result.cause());\n"
-            + "    return result.value();\n"
-            + "  }\n"
-            + "}\n";
+    return MessageFormat.format(
+            hasCompensation
+                    ? """
+                    package {0};
+
+                    import cbs.nova.dsl.ExecutionMode;
+                    import cbs.nova.dsl.GlobalManager;
+                    import cbs.nova.dsl.SimpleContext;
+                    import io.temporal.workflow.Saga;
+
+                    public class {3} implements {2} {{
+                      private static final String VERSION = "{5}";
+
+                      private static final String TASK_QUEUE = "{6}";
+
+                      @Override
+                      public String getVersion() {{
+                        return VERSION;
+                      }}
+
+                      @Override
+                      public Object run(Object input) {{
+                        Saga saga = new Saga(new Saga.Options.Builder().build());
+                        var ctx = SimpleContext.of(input, ExecutionMode.RUN);
+                        var compensationCtx = SimpleContext.of(input, ExecutionMode.RUN);
+                        saga.addCompensation(
+                            () ->
+                                GlobalManager.getInstance().runProcess("{1}-compensation", compensationCtx));
+                        try {{
+                          var result = GlobalManager.getInstance().runProcess("{1}", ctx);
+                          if (!result.isSuccess()) {{
+                            saga.compensate();
+                            throw new RuntimeException("Process failed", result.cause());
+                          }}
+                          return result.value();
+                        }} catch (Exception e) {{
+                          saga.compensate();
+                          throw e;
+                        }}
+                      }}
+                    }}
+                    """
+                    : """
+                    package {0};
+
+                    import cbs.nova.dsl.ExecutionMode;
+                    import cbs.nova.dsl.GlobalManager;
+                    import cbs.nova.dsl.SimpleContext;
+
+                    public class {3} implements {2} {{
+                      private static final String VERSION = "{5}";
+
+                      private static final String TASK_QUEUE = "{6}";
+
+                      @Override
+                      public String getVersion() {{
+                        return VERSION;
+                      }}
+
+                      @Override
+                      public Object run(Object input) {{
+                        var ctx = SimpleContext.of(input, ExecutionMode.RUN);
+                        var result = GlobalManager.getInstance().runProcess("{1}", ctx);
+                        if (!result.isSuccess()) throw new RuntimeException("Process failed", result.cause());
+                        return result.value();
+                      }}
+                    }}
+                    """,
+            pkg, processName, interfaceName, implName, version, version, taskQueue);
   }
 }

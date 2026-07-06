@@ -1,9 +1,9 @@
 package cbs.nova.dsl.codegen;
 
 import cbs.nova.dsl.TransactionDescriptor;
-import org.jspecify.annotations.NonNull;
-
+import java.text.MessageFormat;
 import java.util.List;
+import org.jspecify.annotations.NonNull;
 
 public final class TransactionCodeGenerator {
 
@@ -21,54 +21,54 @@ public final class TransactionCodeGenerator {
   }
 
   private String generateInterface(String pkg, String interfaceName) {
-    return "package "
-            + pkg
-            + ";\n\n"
-            + "import io.temporal.activity.ActivityInterface;\n"
-            + "import io.temporal.activity.ActivityMethod;\n\n"
-            + "@ActivityInterface\n"
-            + "public interface "
-            + interfaceName
-            + " {\n"
-            + "  @ActivityMethod\n"
-            + "  String getVersion();\n\n"
-            + "  @ActivityMethod\n"
-            + "  Object execute(Object input);\n"
-            + "}\n";
+    return MessageFormat.format(
+            """
+            package {0};
+
+            import io.temporal.activity.ActivityInterface;
+            import io.temporal.activity.ActivityMethod;
+
+            @ActivityInterface
+            public interface {1} {{
+              @ActivityMethod
+              String getVersion();
+
+              @ActivityMethod
+              Object execute(Object input);
+            }}
+            """,
+            pkg, interfaceName);
   }
 
   private String generateImpl(String pkg, String transactionName, String interfaceName,
           String implName, String version, String taskQueue) {
-    return "package "
-            + pkg
-            + ";\n\n"
-            + "import cbs.nova.dsl.ExecutionMode;\n"
-            + "import cbs.nova.dsl.GlobalManager;\n"
-            + "import cbs.nova.dsl.SimpleContext;\n\n"
-            + "public class "
-            + implName
-            + " implements "
-            + interfaceName
-            + " {\n"
-            + "  private static final String VERSION = \""
-            + version
-            + "\";\n\n"
-            + "  private static final String TASK_QUEUE = \""
-            + taskQueue
-            + "\";\n\n"
-            + "  @Override\n"
-            + "  public String getVersion() {\n"
-            + "    return VERSION;\n"
-            + "  }\n\n"
-            + "  @Override\n"
-            + "  public Object execute(Object input) {\n"
-            + "    var ctx = SimpleContext.of(input, ExecutionMode.RUN);\n"
-            + "    var result = GlobalManager.getInstance().runTransaction(\""
-            + transactionName
-            + "\", ctx);\n"
-            + "    if (!result.isSuccess()) throw new RuntimeException(\"Transaction failed\", result.cause());\n"
-            + "    return result.value();\n"
-            + "  }\n"
-            + "}\n";
+    return MessageFormat.format(
+            """
+            package {0};
+
+            import cbs.nova.dsl.ExecutionMode;
+            import cbs.nova.dsl.GlobalManager;
+            import cbs.nova.dsl.SimpleContext;
+
+            public class {3} implements {2} {{
+              private static final String VERSION = "{5}";
+
+              private static final String TASK_QUEUE = "{6}";
+
+              @Override
+              public String getVersion() {{
+                return VERSION;
+              }}
+
+              @Override
+              public Object execute(Object input) {{
+                var ctx = SimpleContext.of(input, ExecutionMode.RUN);
+                var result = GlobalManager.getInstance().runTransaction("{1}", ctx);
+                if (!result.isSuccess()) throw new RuntimeException("Transaction failed", result.cause());
+                return result.value();
+              }}
+            }}
+            """,
+            pkg, transactionName, interfaceName, implName, version, version, taskQueue);
   }
 }
