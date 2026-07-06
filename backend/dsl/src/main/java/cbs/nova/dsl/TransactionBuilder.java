@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public final class TransactionBuilder {
   private final String name;
@@ -23,6 +24,10 @@ public final class TransactionBuilder {
   private RetryPolicy retryPolicy;
   @Nullable
   private Duration heartbeatTimeout;
+  @Nullable
+  private Function<TransactionContext<?>, Result<?>> previewLogic;
+  @Nullable
+  private Supplier<DslDescriptor> descriptor;
 
   TransactionBuilder(@NonNull String name) {
     this.name = name;
@@ -72,6 +77,14 @@ public final class TransactionBuilder {
     this.heartbeatTimeout = duration;
     return this;
   }
+  public TransactionBuilder preview(@NonNull Function<TransactionContext<?>, Result<?>> logic) {
+    this.previewLogic = logic;
+    return this;
+  }
+  public TransactionBuilder describe(@NonNull Supplier<DslDescriptor> desc) {
+    this.descriptor = desc;
+    return this;
+  }
 
   public @NonNull TransactionDslObject build() {
     if (executeLogic == null)
@@ -80,7 +93,8 @@ public final class TransactionBuilder {
       throw new IllegalStateException(
               "transaction '" + name + "' cannot have both .parameters() and .input()/.output()");
     return new TransactionDslObject(name, taskQueue, version, inputType, outputType, parameters,
-            executeLogic, compensationLogic, startToCloseTimeout, retryPolicy, heartbeatTimeout);
+            executeLogic, compensationLogic, startToCloseTimeout, retryPolicy, heartbeatTimeout,
+            previewLogic, descriptor);
   }
 
   public @NonNull List<DslObject> buildList() {

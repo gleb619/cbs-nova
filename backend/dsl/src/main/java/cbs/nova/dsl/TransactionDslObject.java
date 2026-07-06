@@ -6,6 +6,7 @@ import org.jspecify.annotations.Nullable;
 import java.time.Duration;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public record TransactionDslObject(
         @NonNull String name,
@@ -18,9 +19,34 @@ public record TransactionDslObject(
         @Nullable Function<CompensationContext<?>, Result<?>> compensationLogic,
         @NonNull Duration startToCloseTimeout,
         @Nullable RetryPolicy retryPolicy,
-        @Nullable Duration heartbeatTimeout) implements DslObject {
+        @Nullable Duration heartbeatTimeout,
+        @Nullable Function<TransactionContext<?>, Result<?>> previewLogic,
+        @Nullable Supplier<DslDescriptor> descriptor) implements DslObject {
   @Override
   public @NonNull DslType type() {
     return DslType.TRANSACTION;
+  }
+
+  public @NonNull Function<TransactionContext<?>, Result<?>> effectivePreview() {
+    return previewLogic != null ? previewLogic : executeLogic;
+  }
+
+  public @NonNull DslDescriptor describe() {
+    if (descriptor != null)
+      return descriptor.get();
+    return new DslDescriptor(
+            name,
+            DslType.TRANSACTION,
+            null,
+            inputType,
+            outputType,
+            compensationLogic != null,
+            true,
+            "delegates to execute",
+            parameters != null ? parameters : List.of(),
+            taskQueue,
+            version,
+            startToCloseTimeout,
+            heartbeatTimeout);
   }
 }

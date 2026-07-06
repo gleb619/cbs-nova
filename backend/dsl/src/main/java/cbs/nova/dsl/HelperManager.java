@@ -38,6 +38,10 @@ public final class HelperManager {
     return registry.findHelper(name);
   }
 
+  public @NonNull Optional<FunctionDslObject> findFunction(@NonNull String name) {
+    return registry.findFunction(name);
+  }
+
   public @NonNull List<String> names() {
     return registry.allNames().stream().sorted().toList();
   }

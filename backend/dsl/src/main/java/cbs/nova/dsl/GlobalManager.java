@@ -105,6 +105,18 @@ public final class GlobalManager {
             .map(h -> ((Executable<Object, Object>) h).describe());
   }
 
+  public @NonNull Optional<DslDescriptor> describeProcess(@NonNull String name) {
+    return findProcess(name).map(ProcessDslObject::describe);
+  }
+
+  public @NonNull Optional<DslDescriptor> describeTransaction(@NonNull String name) {
+    return findTransaction(name).map(TransactionDslObject::describe);
+  }
+
+  public @NonNull Optional<DslDescriptor> describeFunction(@NonNull String name) {
+    return helperManager.findFunction(name).map(FunctionDslObject::describe);
+  }
+
   public static void resetForTests() {
     INSTANCE = null;
   }

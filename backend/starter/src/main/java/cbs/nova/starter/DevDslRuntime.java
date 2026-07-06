@@ -2,6 +2,7 @@ package cbs.nova.starter;
 
 import cbs.nova.dsl.BpmnDiagramGenerator;
 import cbs.nova.dsl.Context;
+import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExecutionTraceCollector;
@@ -108,6 +109,11 @@ public class DevDslRuntime implements DslRuntime {
         trace.add("result: failure: " + result.cause().getMessage());
       }
 
+      DslDescriptor dslDesc = gm2.describeProcess(name)
+              .or(() -> gm2.describeTransaction(name))
+              .or(() -> gm2.describeFunction(name))
+              .orElse(null);
+
       return new ExplainReport(
               name,
               description,
@@ -117,7 +123,8 @@ public class DevDslRuntime implements DslRuntime {
               List.copyOf(trace),
               toCallJson(calls),
               toCallCounts(calls),
-              gm2.describeHelper(name).orElse(null));
+              gm2.describeHelper(name).orElse(null),
+              dslDesc);
     } finally {
       ExecutionTraceCollector.stop();
       ExternalCallTracker.stopTracking();

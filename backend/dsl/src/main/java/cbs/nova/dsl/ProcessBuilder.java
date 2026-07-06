@@ -6,6 +6,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public final class ProcessBuilder {
   private final String name;
@@ -17,6 +18,10 @@ public final class ProcessBuilder {
   private Function<ProcessContext<?>, Result<?>> executeLogic;
   @Nullable
   private Function<CompensationContext<?>, Result<?>> compensationLogic;
+  @Nullable
+  private Function<ProcessContext<?>, Result<?>> previewLogic;
+  @Nullable
+  private Supplier<DslDescriptor> descriptor;
 
   ProcessBuilder(@NonNull String name) {
     this.name = name;
@@ -53,6 +58,14 @@ public final class ProcessBuilder {
     this.compensationLogic = logic;
     return this;
   }
+  public ProcessBuilder preview(@NonNull Function<ProcessContext<?>, Result<?>> logic) {
+    this.previewLogic = logic;
+    return this;
+  }
+  public ProcessBuilder describe(@NonNull Supplier<DslDescriptor> desc) {
+    this.descriptor = desc;
+    return this;
+  }
 
   public @NonNull ProcessDslObject build() {
     if (executeLogic == null)
@@ -61,7 +74,7 @@ public final class ProcessBuilder {
       throw new IllegalStateException(
               "process '" + name + "' cannot have both .parameters() and .input()/.output()");
     return new ProcessDslObject(name, taskQueue, version, inputType, outputType, parameters,
-            executeLogic, compensationLogic);
+            executeLogic, compensationLogic, previewLogic, descriptor);
   }
 
   public @NonNull List<DslObject> buildList() {
