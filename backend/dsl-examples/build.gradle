@@ -5,6 +5,7 @@ plugins {
 dependencies {
   implementation project(':dsl-api')
   implementation project(':dsl')
+  implementation project(':dsl-model')
   implementation libs.temporal.sdk
 }
 
@@ -26,6 +27,7 @@ dependencies {
   dslCompiler project(':dsl-codegen')
   dslCompiler project(':dsl')
   dslCompiler project(':dsl-api')
+  dslCompiler project(':dsl-model')
 }
 
 tasks.register('compileDsl', JavaExec) {
