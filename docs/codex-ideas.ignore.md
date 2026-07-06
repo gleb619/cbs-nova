@@ -133,3 +133,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T90 | Frontend ESLint + Prettier setup | dx | Rejected | good DX but may overlap with T67 test scaffold setup; defer |
 | T90 | dsl-model JSON serialization round-trip tests | test | Rejected | simple records; lower value than CI coverage |
 | T90 | Dashboard overview page | ui | Rejected | already queued as T70; do not duplicate |
+| T92 | SimpleContext unit tests | test | Chosen | codegraph-confirmed no direct tests for SimpleContext; low risk, locks base context/runId/immutability contract |
+| T92 | ProcessRichContext delegation tests | test | Rejected | useful but needs GlobalManager wiring; higher risk than pure SimpleContext tests |
+| T92 | FunctionRichContext delegation tests | test | Rejected | smaller surface; ProcessRichContext pattern covers similar ground |
+| T92 | GeneratedSource builder tests | test | Rejected | codegen utility exercised indirectly; smaller impact than runtime primitives |
+| T92 | PlantUmlDiagramGenerator tests | test | Rejected | T69/T86 diagram tests still in Backlog; defer until those land |
