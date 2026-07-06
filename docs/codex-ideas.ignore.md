@@ -98,3 +98,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T83 | BFF proxy error passthrough tests | test | Rejected | T67 must land first; keep deferring |
 | T83 | StatusIndicator unit test | test | Rejected | T67 must land first; keep deferring |
 | T83 | ModeSwitcher unit test | test | Rejected | T67 must land first; keep deferring |
+| T84 | DSL input JSON Schema generation | backend | Chosen | T73 existed as Backlog with missing stub plan; codegraph-confirmed ParameterDescriptor/MapInput ready; high user impact for Runner UI input forms |
+| T84 | PropertyResolver failOnMissing edge cases | test | Rejected | PropertyResolverTest already exists; smaller value |
+| T84 | DescriptorFactory helperRefs propagation | test | Rejected | helperRefs list is empty by design today; low value |
+| T84 | ExecutionTraceCollector thread isolation | test | Rejected | already covered by existing test |
+| T84 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
