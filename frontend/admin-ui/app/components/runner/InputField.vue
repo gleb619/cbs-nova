@@ -1,0 +1,100 @@
+<script setup lang="ts">
+const props = defineProps<{
+  name: string
+  type: string
+  required?: boolean
+  modelValue: unknown
+}>()
+
+const emit = defineEmits<{
+  'update:modelValue': [val: unknown]
+}>()
+
+const touched = ref(false)
+
+const normalizedType = computed(() => (props.type || 'string').toLowerCase())
+
+const isEmpty = computed(() => {
+  const v = props.modelValue
+  if (v === null || v === undefined) return true
+  if (typeof v === 'string') return v.length === 0
+  return false
+})
+
+const showError = computed(() => Boolean(props.required) && touched.value && isEmpty.value)
+
+function emitValue(value: unknown) {
+  emit('update:modelValue', value)
+}
+
+function onTextInput(event: Event) {
+  emitValue((event.target as HTMLInputElement).value)
+}
+
+function onCheckboxInput(event: Event) {
+  emitValue((event.target as HTMLInputElement).checked)
+}
+
+function onJsonInput(event: Event) {
+  const raw = (event.target as HTMLTextAreaElement).value
+  emitValue(raw)
+}
+
+function onBlur() {
+  touched.value = true
+}
+</script>
+
+<template>
+  <div class="flex flex-col gap-1">
+    <label class="text-sm font-medium text-gray-700">
+      {{ props.name }}<span v-if="props.required" class="text-red-500 ml-0.5">*</span>
+    </label>
+
+    <input
+      v-if="normalizedType === 'string'"
+      type="text"
+      :value="(props.modelValue as string | undefined) ?? ''"
+      class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      :class="showError ? 'border-red-400' : 'border-gray-300'"
+      :aria-invalid="showError"
+      @input="onTextInput"
+      @blur="onBlur"
+    >
+
+    <input
+      v-else-if="normalizedType === 'number'"
+      type="number"
+      :value="(props.modelValue as number | undefined) ?? ''"
+      class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      :class="showError ? 'border-red-400' : 'border-gray-300'"
+      :aria-invalid="showError"
+      @input="onTextInput"
+      @blur="onBlur"
+    >
+
+    <label v-else-if="normalizedType === 'boolean'" class="inline-flex items-center gap-2 text-sm text-gray-700">
+      <input
+        type="checkbox"
+        :checked="Boolean(props.modelValue)"
+        class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        @change="onCheckboxInput"
+      >
+      <span>{{ Boolean(props.modelValue) ? 'true' : 'false' }}</span>
+    </label>
+
+    <textarea
+      v-else
+      :value="typeof props.modelValue === 'string' ? props.modelValue : JSON.stringify(props.modelValue ?? '', null, 2)"
+      rows="4"
+      :placeholder="normalizedType === 'array' ? 'JSON array' : 'JSON object'"
+      class="px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+      :class="showError ? 'border-red-400' : 'border-gray-300'"
+      :aria-invalid="showError"
+      @input="onJsonInput"
+      @blur="onBlur"
+    />
+
+    <span v-if="showError" class="text-xs text-red-600">{{ props.name }} is required</span>
+  </div>
+</template>
