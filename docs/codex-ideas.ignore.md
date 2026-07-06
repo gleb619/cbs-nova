@@ -128,3 +128,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T89 | DslObject type enum tests | test | Rejected | trivial enum coverage; lower value |
 | T89 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
 | T89 | Dashboard overview page | ui | Rejected | already queued as T70; do not duplicate |
+| T90 | CI frontend build | dx | Chosen | current CI only builds/tests backend; adding frontend build catches Nuxt breakage; low risk, no new dependencies |
+| T90 | Expand root README with build/dev instructions | docs | Rejected | valuable but CI frontend build has higher immediate correctness impact |
+| T90 | Frontend ESLint + Prettier setup | dx | Rejected | good DX but may overlap with T67 test scaffold setup; defer |
+| T90 | dsl-model JSON serialization round-trip tests | test | Rejected | simple records; lower value than CI coverage |
+| T90 | Dashboard overview page | ui | Rejected | already queued as T70; do not duplicate |
