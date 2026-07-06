@@ -44,4 +44,5 @@ This file is a lightweight planner for tracking implementation tasks. It is inte
 ## Note
 
 | T106 | Backlog | Starter Dockerfile | Add a multi-stage Dockerfile that builds `backend/starter` and packages it as the `cbs-nova:latest` image the compose `spring-app` service already references (currently nonexistent), so `docker compose up` + the `make dev` orchestration (T105) yield a fully running local stack including the Spring Boot app. | High | loop | - | T103, T105 | `./docs/plans/T106-starter-dockerfile.md` |
+| T107 | Backlog | Root README quickstart | Expand the current 2-line `README.md` stub into a real project front door: what cbs-nova is, prerequisites (Java 25, pnpm, Docker), one-command local stack (`make dev` once T105 lands / `docker compose up`), key ports, architecture-doc pointers (`docs/architecture-*.md`), where DSL examples live, and how to run backend/frontend tests. | High | loop | - | T105, T106 | `./docs/plans/T107-root-readme-quickstart.md` |
 > **How to use:** Replace the example rows with real tasks. Create a matching plan file under `./docs/plans/<ID>-short-title.md` for each task that needs detailed instructions.
