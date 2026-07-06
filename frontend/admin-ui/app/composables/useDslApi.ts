@@ -1,0 +1,28 @@
+export function useDslApi() {
+  async function getDefinitions() {
+    return $fetch('/api/v1/dsl/definitions')
+  }
+
+  async function preview(name: string, body: unknown, metadata?: Record<string, unknown>) {
+    return $fetch(`/api/v1/dsl/preview/${name}`, {
+      method: 'POST',
+      body: { body, metadata },
+    })
+  }
+
+  async function run(name: string, body: unknown, metadata?: Record<string, unknown>) {
+    return $fetch(`/api/v1/dsl/run/${name}`, {
+      method: 'POST',
+      body: { body, metadata },
+    })
+  }
+
+  async function explain(name: string, body: unknown, metadata?: Record<string, unknown>) {
+    return $fetch(`/api/v1/dsl/explain/${name}`, {
+      method: 'POST',
+      body: { body, metadata },
+    })
+  }
+
+  return { getDefinitions, preview, run, explain }
+}
