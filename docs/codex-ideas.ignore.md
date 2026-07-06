@@ -83,3 +83,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T80 | DslWorkerConfiguration task queue wiring test | test | Rejected | existing test covers basic wiring; not a gap |
 | T80 | Intermediate DSL examples explain-mode test | test | Rejected | large test already exists; adding explain assertions is bigger than one fire |
 | T80 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
+| T81 | DefaultHelperRegistry unit tests | test | Chosen | codegraph-confirmed RegistryTest only touches DefaultHelperRegistry indirectly; low risk, completes registry coverage |
+| T81 | CompensationRichContext tests | test | Rejected | already queued as T68; do not duplicate |
+| T81 | ProcessRichContext delegation tests | test | Rejected | smaller surface; T68 and registry tests higher value |
+| T81 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
+| T81 | Dashboard overview page | ui | Rejected | already queued as T70; do not duplicate |
