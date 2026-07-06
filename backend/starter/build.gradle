@@ -23,6 +23,7 @@ dependencies {
   api 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9'
 
   annotationProcessor project(':dsl-codegen')
+  annotationProcessor project(':misc-codegen')
 
   testImplementation libs.bundles.spring.test
   testImplementation libs.temporal.testing

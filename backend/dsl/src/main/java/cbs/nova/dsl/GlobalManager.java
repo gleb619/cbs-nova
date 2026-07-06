@@ -43,6 +43,10 @@ public final class GlobalManager {
     helperManager.registerHelper(name, helper);
   }
 
+  public void registerHelpers(@NonNull HelperResolver resolver) {
+    resolver.registerHelpers(helperManager::registerHelper);
+  }
+
   public void registerFunction(@NonNull FunctionDslObject fn) {
     helperManager.registerFunction(fn);
   }
