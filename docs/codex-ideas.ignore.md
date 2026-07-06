@@ -23,3 +23,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T68 | Map helper for DSL data manipulation | helper | Rejected | useful but lower novelty than compensation tests |
 | T68 | Shared useApiError composable | dx | Rejected | good DX improvement; defer until frontend test scaffold (T67) is in place |
 | T68 | Transaction retry-policy validation tests | test | Rejected | small incremental value, already covered indirectly by builder/runtime tests |
+| T69 | BPMN/Mermaid diagram generator tests | test | Chosen | codegraph-confirmed no tests for BpmnDiagramGenerator, thin Mermaid coverage; low risk, locks explain/runner UI contract |
+| T69 | Dashboard overview stats page | ui | Rejected | medium value; defer until execution details UI (T59) lands |
+| T69 | Map helper for DSL data manipulation | helper | Rejected | useful helper but lower priority than locking diagram contract |
+| T69 | Shared useApiError composable | dx | Rejected | good DX; defer until frontend test scaffold (T67) in place |
+| T69 | Transaction retry-policy validation tests | test | Rejected | small incremental value, already covered indirectly by builder/runtime tests |
