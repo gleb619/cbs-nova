@@ -3,7 +3,7 @@ const { collapsed } = useSidebar()
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: '🏠' },
-  { to: '/workbench', label: 'DSL Workbench', icon: '⚙️' },
+  { to: '/dsl-workbench', label: 'DSL Workbench', icon: '⚙️' },
   { to: '/runner', label: 'Runner', icon: '▶️' },
   { to: '/executions', label: 'Executions', icon: '📋' },
 ]

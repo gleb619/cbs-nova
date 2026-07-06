@@ -24,5 +24,15 @@ export function useDslApi() {
     })
   }
 
-  return { getDefinitions, preview, run, explain }
+  async function saveDraft(name: string, payload: unknown) {
+    // stub — endpoint TBD
+    return Promise.resolve({ success: true, name, payload })
+  }
+
+  async function validateConstruct(name: string) {
+    // stub — calls preview to validate
+    return preview(name, {})
+  }
+
+  return { getDefinitions, preview, run, explain, saveDraft, validateConstruct }
 }
