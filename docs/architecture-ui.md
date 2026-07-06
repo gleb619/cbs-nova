@@ -89,6 +89,16 @@ All UI styling is based on the brandbook in `docs/colors.md`.
 - Build the admin UI: `pnpm --filter admin-ui build`
 - Build the component library: `pnpm --filter components build`
 
+## Frontend design details
+
+Detailed UI design documentation lives in `docs/frontend/`:
+
+- [`frontend/index.md`](./frontend/index.md) — overview and entry point for the admin UI design docs.
+- [`frontend/layout.md`](./frontend/layout.md) — overall page layout, navigation, and responsive shell.
+- [`frontend/dsl-workbench.md`](./frontend/dsl-workbench.md) — DSL editing experience: editor, validation, and flow structure.
+- [`frontend/runner.md`](./frontend/runner.md) — run/preview controls, input forms, and mode selection.
+- [`frontend/execution-details.md`](./frontend/execution-details.md) — execution view, event history, status, and diagnostics.
+
 ## Relationship to other docs
 
 - `architecture-backend.md` — describes the Java / Temporal orchestration backend the admin UI consumes.

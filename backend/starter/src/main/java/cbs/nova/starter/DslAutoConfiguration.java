@@ -2,16 +2,18 @@ package cbs.nova.starter;
 
 import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.Executable;
+import cbs.nova.dsl.ExternalCallListener;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Helper;
 import jakarta.annotation.PostConstruct;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 @AutoConfiguration
 public class DslAutoConfiguration {
@@ -21,6 +23,9 @@ public class DslAutoConfiguration {
 
   @Value("${dsl.helper-scan-packages:}")
   private String helperScanPackages;
+
+  @Autowired(required = false)
+  private List<ExternalCallListener> externalCallListeners;
 
   @PostConstruct
   void loadDslDefinitions() {
@@ -33,6 +38,7 @@ public class DslAutoConfiguration {
       DefinitionLoader.load(dir, GlobalManager.getInstance());
     }
     scanHelpers();
+    registerExternalCallListeners();
   }
 
   private void scanHelpers() {
@@ -68,6 +74,26 @@ public class DslAutoConfiguration {
                           + e.getMessage());
         }
       }
+    }
+  }
+
+  /**
+   * Automatically registers all ExternalCallListener beans with the ExternalCallTracker
+   * to enable automatic tracking of external calls during DSL execution.
+   */
+  private void registerExternalCallListeners() {
+    if (externalCallListeners == null || externalCallListeners.isEmpty()) {
+      return;
+    }
+    
+    ExternalCallTracker tracker = ExternalCallTracker.instance;
+    if (tracker == null) {
+      // Tracker not initialized yet, listeners will be registered when it is
+      return;
+    }
+    
+    for (ExternalCallListener listener : externalCallListeners) {
+      tracker.registerListener(listener);
     }
   }
 }
