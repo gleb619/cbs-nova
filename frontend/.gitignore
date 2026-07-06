@@ -1,0 +1,19 @@
+# Dependencies
+node_modules
+
+# Build outputs
+admin-ui/.nuxt
+admin-ui/.output
+admin-ui/.data
+components/dist
+
+# Environment files
+.env
+.env.*.local
+
+# Logs
+*.log
+
+# IDE
+.vscode/settings.json
+.idea/

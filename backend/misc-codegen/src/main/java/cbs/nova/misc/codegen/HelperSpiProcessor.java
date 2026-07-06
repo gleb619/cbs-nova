@@ -15,6 +15,7 @@ import javax.tools.StandardLocation;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -78,27 +79,32 @@ public class HelperSpiProcessor extends AbstractProcessor {
     try {
       var sourceFile = processingEnv.getFiler().createSourceFile(RESOLVER_FQN);
       try (var writer = new PrintWriter(sourceFile.openWriter())) {
-        writer.println("package " + RESOLVER_PACKAGE + ";");
-        writer.println();
-        writer.println("import cbs.nova.dsl.Executable;");
-        writer.println("import cbs.nova.dsl.HelperRegistrar;");
-        writer.println("import cbs.nova.dsl.HelperResolver;");
+        var imports = new StringBuilder();
         for (var entry : entries) {
-          writer.println("import " + entry.fqn() + ";");
+          imports.append("import ").append(entry.fqn()).append(";\n");
         }
-        writer.println();
-        writer.println("public final class " + RESOLVER_CLASS + " implements HelperResolver {");
-        writer.println("  @Override");
-        writer.println("  public void registerHelpers(HelperRegistrar registrar) {");
+        var registrations = new StringBuilder();
         for (var entry : entries) {
           var simpleName = entry.fqn().contains(".")
                   ? entry.fqn().substring(entry.fqn().lastIndexOf('.') + 1)
                   : entry.fqn();
-          writer.println(
-                  "    registrar.register(\"" + entry.name() + "\", new " + simpleName + "());");
+          registrations.append(MessageFormat.format(
+                  "    registrar.register(\"{0}\", new {1}());\n", entry.name(), simpleName));
         }
-        writer.println("  }");
-        writer.println("}");
+        var template = """
+                package {0};
+
+                import cbs.nova.dsl.Executable;
+                import cbs.nova.dsl.HelperRegistrar;
+                import cbs.nova.dsl.HelperResolver;
+                {1}
+                public final class {2} implements HelperResolver {{
+                  @Override
+                  public void registerHelpers(HelperRegistrar registrar) {{
+                {3}  }}
+                }}
+                """;
+        writer.print(MessageFormat.format(template, RESOLVER_PACKAGE, imports, RESOLVER_CLASS, registrations));
       }
     } catch (IOException e) {
       processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
@@ -112,7 +118,7 @@ public class HelperSpiProcessor extends AbstractProcessor {
               StandardLocation.CLASS_OUTPUT, "",
               "META-INF/services/cbs.nova.dsl.HelperResolver");
       try (var writer = new PrintWriter(resource.openWriter())) {
-        writer.println(RESOLVER_FQN);
+        writer.print(MessageFormat.format("{0}\n", RESOLVER_FQN));
       }
     } catch (IOException e) {
       processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
