@@ -78,3 +78,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T79 | DslReloadResource success-path test | test | Rejected | error paths already queued as T71; success path needs real DSL sources on disk, infra risk |
 | T79 | Runner page query sync tests | ui | Rejected | needs Vitest scaffold (T67) first; defer |
 | T79 | Admin UI page head titles | ui | Rejected | nice polish; defer until core tests are in place |
+| T80 | DslExceptionHandler DslException branch test | test | Chosen | handler DslException branch explicitly untested; low risk MockMvc, locks structured error contract |
+| T80 | TemporalConfiguration bean wiring test | test | Rejected | already has a smoke test; smaller incremental value |
+| T80 | DslWorkerConfiguration task queue wiring test | test | Rejected | existing test covers basic wiring; not a gap |
+| T80 | Intermediate DSL examples explain-mode test | test | Rejected | large test already exists; adding explain assertions is bigger than one fire |
+| T80 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
