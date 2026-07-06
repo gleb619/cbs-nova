@@ -163,3 +163,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T97 | ProcessBuilder validation tests | test | Rejected | broader than T97; better after registry primitives are locked |
 | T97 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
 | T97 | BFF proxy error passthrough tests | test | Rejected | T67 must land first; keep deferring |
+| T98 | Dashboard overview page | ui | Chosen | T70 backlog exists with detailed plan; codegraph confirms index.vue is still placeholder; closes last major nav gap, no test dependency needed |
+| T98 | DefaultProcessRegistry unit tests | test | Rejected | useful but dashboard is user-facing and unblocks T70 queue |
+| T98 | ProcessBuilder validation tests | test | Rejected | broader; can follow after dashboard |
+| T98 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
+| T98 | BFF proxy error passthrough tests | test | Rejected | T67 must land first; keep deferring |
