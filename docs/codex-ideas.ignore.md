@@ -138,3 +138,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T92 | FunctionRichContext delegation tests | test | Rejected | smaller surface; ProcessRichContext pattern covers similar ground |
 | T92 | GeneratedSource builder tests | test | Rejected | codegen utility exercised indirectly; smaller impact than runtime primitives |
 | T92 | PlantUmlDiagramGenerator tests | test | Rejected | T69/T86 diagram tests still in Backlog; defer until those land |
+| T93 | DSL definition details input schema wiring | backend | Chosen | T73/T84 backlog exists with broad schema plan; codegraph shows detail endpoints already serve ProcessDetail/TransactionDetail; narrow task is wiring inputSchema field end-to-end with focused test, low risk |
+| T93 | DefaultParameterRegistry unit tests | test | Rejected | already queued as T89; do not duplicate |
+| T93 | PlantUmlDiagramGenerator tests | test | Rejected | T69/T86 diagram tests still in Backlog; defer |
+| T93 | Frontend useApiError composable | dx | Rejected | T67 must land first; keep deferring |
+| T93 | BFF health endpoint passthrough tests | test | Rejected | T67 must land first; defer until Vitest scaffold |
