@@ -30,7 +30,8 @@ public final class DescriptorFactory {
             obj.compensationLogic() != null,
             List.of(),
             obj.startToCloseTimeout(),
-            obj.retryPolicy());
+            obj.retryPolicy(),
+            obj.heartbeatTimeout());
   }
 
   public static @NonNull FunctionDescriptor fromFunction(@NonNull FunctionDslObject obj) {

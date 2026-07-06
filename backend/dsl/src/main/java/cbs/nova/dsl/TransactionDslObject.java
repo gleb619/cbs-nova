@@ -17,7 +17,8 @@ public record TransactionDslObject(
         @NonNull Function<TransactionContext<?>, Result<?>> executeLogic,
         @Nullable Function<CompensationContext<?>, Result<?>> compensationLogic,
         @NonNull Duration startToCloseTimeout,
-        @Nullable RetryPolicy retryPolicy) implements DslObject {
+        @Nullable RetryPolicy retryPolicy,
+        @Nullable Duration heartbeatTimeout) implements DslObject {
   @Override
   public @NonNull DslType type() {
     return DslType.TRANSACTION;
