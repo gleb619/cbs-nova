@@ -1,10 +1,10 @@
+<script setup lang="ts">
+definePageMeta({ layout: 'default' })
+</script>
+
 <template>
-  <div class="p-6 lg:p-8">
-    <h1 class="text-2xl font-semibold text-neutral-900">
-      cbs-nova admin UI
-    </h1>
-    <p class="mt-2 text-neutral-600">
-      Temporal DSL orchestration console.
-    </p>
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900 mb-4">Dashboard</h1>
+    <p class="text-gray-600">Welcome to CBS Nova Admin.</p>
   </div>
 </template>
