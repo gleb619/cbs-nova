@@ -158,3 +158,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T96 | FunctionDslObject record tests | test | Rejected | record accessors implicitly covered by builder/runtime tests |
 | T96 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
 | T96 | BFF health endpoint passthrough tests | test | Rejected | T67 must land first; keep deferring |
+| T97 | DefaultHelperRegistry unit tests | test | Chosen | T81 backlog exists with detailed plan; codegraph shows RegistryTest only covers cross-type duplicate; low risk, completes registry coverage |
+| T97 | DefaultProcessRegistry unit tests | test | Rejected | useful but DefaultHelperRegistry is the larger gap; can follow T97 |
+| T97 | ProcessBuilder validation tests | test | Rejected | broader than T97; better after registry primitives are locked |
+| T97 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
+| T97 | BFF proxy error passthrough tests | test | Rejected | T67 must land first; keep deferring |
