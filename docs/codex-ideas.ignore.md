@@ -53,3 +53,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T74 | Shared useApiError composable | dx | Rejected | still deferred until T67 frontend test scaffold lands |
 | T74 | Semantic validator tests | test | Rejected | valuable but DslException handler is more directly user-facing |
 | T74 | PlantUml diagram generator tests | test | Rejected | similar to T69; defer until T69 done |
+| T75 | Process manager and runner tests | test | Chosen | codegraph-confirmed no direct ProcessManager tests; low risk, locks core runtime dispatch |
+| T75 | BFF proxy unit tests | test | Rejected | needs Vitest/Nitro test scaffold first; defer until T67 |
+| T75 | Shared useApiError composable | dx | Rejected | still deferred until T67 frontend test scaffold lands |
+| T75 | PlantUml diagram generator tests | test | Rejected | similar to T69; defer until T69 done |
+| T75 | DSL advanced examples completion | example | Rejected | T64 already in progress; do not duplicate |
