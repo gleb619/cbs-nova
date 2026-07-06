@@ -1,35 +1,27 @@
 # T70 — Dashboard overview page
 
-**Tier:** frontend
-**Status:** Backlog
-**Owner:** loop
-
 ## Goal
+Replace the placeholder `frontend/admin-ui/app/pages/index.vue` with a real dashboard landing page: summary cards for registered processes/transactions/helpers and a recent executions table. Uses existing BFF endpoints so no backend work is required.
 
-Turn the placeholder `pages/index.vue` dashboard into a minimal admin overview that surfaces key system state. Currently the dashboard is a blank welcome page; this page is the default landing route after login and should give users a useful at-a-glance summary.
+## Tier
+frontend
 
-## Acceptance Criteria
+## Files to create / modify
+- Modify: `frontend/admin-ui/app/pages/index.vue`
+- Create: `frontend/admin-ui/app/components/dashboard/StatCard.vue`
+- Create: `frontend/admin-ui/app/components/dashboard/RecentExecutions.vue`
+- Read only: `frontend/admin-ui/app/composables/useDslApi.ts`, `frontend/admin-ui/app/composables/useExecutions.ts`
 
-- [ ] Replace `frontend/admin-ui/app/pages/index.vue` with a `Dashboard` page that uses the default layout.
-- [ ] Page loads counts/totals from existing BFF routes via `useDslApi()` and `useExecutionsApi()` (or new `/api/v1/executions/stats` if backend lacks aggregation).
-- [ ] Display summary cards for: total DSL definitions, recent executions (last 24h), failed executions, currently running executions.
-- [ ] Display a compact recent-executions table (latest 5) with entity, mode, status, and started-at columns, linking to `/executions/[id]`.
-- [ ] Handle loading and error states per existing patterns.
-- [ ] No new backend work required if aggregation is missing; fall back to fetching lists and computing client-side.
-- [ ] `pnpm install && pnpm --filter admin-ui lint` passes.
+## Acceptance criteria
+- Dashboard fetches process/transaction/helper counts via `/api/v1/dsl/definitions` and recent executions via `/api/v1/executions`.
+- Summary cards display counts with labels and link to the relevant pages.
+- Recent executions table lists the last N executions with status, name, and timestamp; clicking a row navigates to `/executions/[id]`.
+- Page uses Tailwind and the shared color system; no hard-coded colors.
+- Existing `pnpm dev`/`pnpm build` still pass.
 
-## Files to Create / Modify
-
-- `frontend/admin-ui/app/pages/index.vue` — rewrite.
-- `frontend/admin-ui/app/components/dashboard/StatCard.vue` — new small presentational component.
-- `frontend/admin-ui/app/components/dashboard/RecentExecutions.vue` — new component for the recent table.
-- `frontend/admin-ui/app/types/dashboard.ts` — optional type file for stat shapes.
-
-## Build / Test Commands
-
+## Build / test commands
 ```bash
 cd frontend
 pnpm install
-pnpm --filter admin-ui lint
 pnpm --filter admin-ui build
 ```

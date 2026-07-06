@@ -113,3 +113,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T86 | DevDslRuntime explain report integration test | test | Rejected | larger than one fire; needs diagram contracts locked first |
 | T86 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
 | T86 | Dashboard overview page | ui | Rejected | already queued as T70; do not duplicate |
+| T87 | Dashboard overview page revival | ui | Chosen | T70 exists but stub plan was thin; reviving with concrete components and data sources to close last major nav gap |
+| T87 | useDslApi unit tests | test | Rejected | T67 must land first; keep deferring |
+| T87 | InputForm schema-driven tests | test | Rejected | T67 must land first; keep deferring |
+| T87 | BFF proxy error passthrough tests | test | Rejected | T67 must land first; keep deferring |
+| T87 | DevDslRuntime explain failure path | test | Rejected | larger integration test; better after diagram tests locked |
