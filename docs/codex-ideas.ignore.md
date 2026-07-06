@@ -33,3 +33,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T70 | Shared useApiError composable | dx | Rejected | good DX; defer until frontend test scaffold (T67) in place |
 | T70 | Map helper for DSL data manipulation | helper | Rejected | lower priority than finishing core admin pages |
 | T70 | PropertyResolver edge-case tests | test | Rejected | PropertyResolver already has dedicated test class |
+| T71 | DSL reload resource error-path tests | test | Chosen | codegraph-confirmed reload() method has no tests; low risk, completes admin reload endpoint contract |
+| T71 | Frontend Vitest test scaffold | test | Rejected | already exists as T67 in Backlog; do not duplicate |
+| T71 | Shared useApiError composable | dx | Rejected | good DX; defer until frontend test scaffold (T67) in place |
+| T71 | Map helper for DSL data manipulation | helper | Rejected | lower priority than locking admin endpoint behavior |
+| T71 | PropertyResolver edge-case tests | test | Rejected | PropertyResolver already has dedicated test class |

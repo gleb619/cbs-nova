@@ -43,5 +43,6 @@ This file is a lightweight planner for tracking implementation tasks. It is inte
 | T68 | Backlog | Compensation context unit tests | Add tests for `CompensationContext`/`CompensationRichContext` delegation, helper calls, log tracing, and compensation error propagation. | High | loop | - | - | `./docs/plans/T68-compensation-context-tests.md` |
 | T69 | Backlog | BPMN/Mermaid diagram generator tests | Add tests for `BpmnDiagramGenerator` and `MermaidDiagramGenerator` covering compensation, external calls, and call counts consumed by explain/runner. | High | loop | - | - | `./docs/plans/T69-bpmn-diagram-tests.md` |
 | T70 | Backlog | Dashboard overview page | Replace placeholder dashboard with summary cards and recent executions table landing page. | High | loop | - | - | `./docs/plans/T70-dashboard-overview-page.md` |
+| T71 | Backlog | DSL reload resource error-path tests | Add MockMvc tests for `DslReloadResource.reload()` covering `NOT_CONFIGURED` and `NOT_FOUND` error branches. | High | loop | - | - | `./docs/plans/T71-reload-resource-error-path-tests.md` |
 
 > **How to use:** Replace the example rows with real tasks. Create a matching plan file under `./docs/plans/<ID>-short-title.md` for each task that needs detailed instructions.
