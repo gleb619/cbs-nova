@@ -15,6 +15,10 @@ public class ExternalCallTracker {
   private static final ThreadLocal<List<CallDetail>> THREAD_LOCAL_CALLS = new ThreadLocal<>();
   static volatile ExternalCallTracker instance;
 
+  public static @Nullable ExternalCallTracker getInstance() {
+    return instance;
+  }
+
   private final List<ExternalCallListener> listeners = new CopyOnWriteArrayList<>();
   private final Map<String, Integer> globalCounts = new ConcurrentHashMap<>();
 

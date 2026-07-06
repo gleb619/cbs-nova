@@ -86,7 +86,7 @@ public class DslAutoConfiguration {
       return;
     }
 
-    ExternalCallTracker tracker = ExternalCallTracker.instance;
+    ExternalCallTracker tracker = ExternalCallTracker.getInstance();
     if (tracker == null) {
       // Tracker not initialized yet, listeners will be registered when it is
       return;

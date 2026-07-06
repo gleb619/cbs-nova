@@ -39,13 +39,13 @@ public final class ProcessCodeGenerator {
             import io.temporal.workflow.WorkflowMethod;
 
             @WorkflowInterface
-            public interface {1} \u007B
+            public interface {1} '{'
               @QueryMethod
               String getVersion();
 
               @WorkflowMethod
               Object run(Object input);
-            \u007D
+            '}'
             """,
             pkg, interfaceName);
   }
