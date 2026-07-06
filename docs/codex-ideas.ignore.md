@@ -63,3 +63,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T76 | Shared useApiError composable | dx | Rejected | still deferred until T67 frontend test scaffold lands |
 | T76 | BFF proxy error passthrough tests | test | Rejected | needs Nitro/Vitest scaffold; defer until T67 |
 | T76 | PlantUml diagram generator tests | test | Rejected | similar to T69; defer until T69 done |
+| T77 | HelperManager unit tests | test | Rejected | good coverage gap, but DslRuntimeResource endpoints are more user-facing and lower risk |
+| T77 | ExternalCallTracker unit tests | test | Rejected | valuable for explain/runner reports, but runtime REST contract has higher user impact |
+| T77 | DefaultHelperRunner run/error-path tests | test | Rejected | preview path already covered; smaller incremental value than run/explain REST coverage |
+| T77 | DslRuntimeResource run/explain MockMvc tests | test | Chosen | codegraph-confirmed run/explain endpoints untested; locks user-facing REST contract; low risk MockMvc |
+| T77 | Admin UI page head titles | ui | Rejected | nice polish but lower correctness value than backend runtime tests |
