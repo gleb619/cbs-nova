@@ -173,3 +173,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T99 | Process manager and runner tests | test | Rejected | already queued as T75; do not duplicate |
 | T99 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
 | T99 | BFF proxy error passthrough tests | test | Rejected | T67 must land first; keep deferring |
+| T100 | DefaultTransactionRegistry unit tests | test | Chosen | codegraph-confirmed no direct tests for DefaultTransactionRegistry; pairs with T99 process registry; low risk, locks transaction registry semantics |
+| T100 | Transaction manager tests | test | Rejected | already queued as T72; do not duplicate |
+| T100 | Process runner EXPLAIN metadata tests | test | Rejected | already queued as T75; do not duplicate |
+| T100 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
+| T100 | BFF proxy error passthrough tests | test | Rejected | T67 must land first; keep deferring |
