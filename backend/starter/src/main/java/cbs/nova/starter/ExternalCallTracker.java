@@ -13,7 +13,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class ExternalCallTracker {
 
   private static final ThreadLocal<List<CallDetail>> THREAD_LOCAL_CALLS = new ThreadLocal<>();
-  private static volatile ExternalCallTracker instance;
+  static volatile ExternalCallTracker instance;
 
   private final List<ExternalCallListener> listeners = new CopyOnWriteArrayList<>();
   private final Map<String, Integer> globalCounts = new ConcurrentHashMap<>();
@@ -43,7 +43,8 @@ public class ExternalCallTracker {
     return THREAD_LOCAL_CALLS.get();
   }
 
-  public static void record(@NonNull String type, @NonNull String target, @NonNull String operation, @Nullable Object payload) {
+  public static void record(@NonNull String type, @NonNull String target, @NonNull String operation,
+          @Nullable Object payload) {
     if (instance != null) {
       instance.recordCall(type, target, operation, payload);
     } else {
@@ -59,7 +60,8 @@ public class ExternalCallTracker {
     this.listeners.add(listener);
   }
 
-  public void recordCall(@NonNull String type, @NonNull String target, @NonNull String operation, @Nullable Object payload) {
+  public void recordCall(@NonNull String type, @NonNull String target, @NonNull String operation,
+          @Nullable Object payload) {
     String normType = normalizeType(type);
     globalCounts.merge(normType, 1, Integer::sum);
 
@@ -80,45 +82,52 @@ public class ExternalCallTracker {
   /**
    * Normalizes external call types to standard categories for better tracking and visualization
    */
-  private String normalizeType(String type) {
+  private static String normalizeType(String type) {
     String lowerType = type.toLowerCase().trim();
-    
+
     // Database-related calls
-    if (lowerType.contains("jdbc") || lowerType.contains("db") || lowerType.contains("sql") || 
-        lowerType.contains("hibernate") || lowerType.contains("jpa") || lowerType.contains("datasource")) {
+    if (lowerType.contains("jdbc") || lowerType.contains("db") || lowerType.contains("sql") ||
+            lowerType.contains("hibernate") || lowerType.contains("jpa")
+            || lowerType.contains("datasource")) {
       return TYPE_DATABASE;
     }
-    
+
     // HTTP-related calls
-    if (lowerType.contains("http") || lowerType.contains("rest") || lowerType.contains("webclient") || 
-        lowerType.contains("resttemplate") || lowerType.contains("feign") || lowerType.contains("url")) {
+    if (lowerType.contains("http") || lowerType.contains("rest") || lowerType.contains("webclient")
+            ||
+            lowerType.contains("resttemplate") || lowerType.contains("feign")
+            || lowerType.contains("url")) {
       return TYPE_HTTP;
     }
-    
+
     // Message Queue-related calls
-    if (lowerType.contains("mq") || lowerType.contains("jms") || lowerType.contains("kafka") || 
-        lowerType.contains("amqp") || lowerType.contains("rabbit") || lowerType.contains("activemq")) {
+    if (lowerType.contains("mq") || lowerType.contains("jms") || lowerType.contains("kafka") ||
+            lowerType.contains("amqp") || lowerType.contains("rabbit")
+            || lowerType.contains("activemq")) {
       return TYPE_MQ;
     }
-    
+
     // File system calls
-    if (lowerType.contains("file") || lowerType.contains("filesystem") || lowerType.contains("nio") || 
-        lowerType.contains("fileinput") || lowerType.contains("fileoutput")) {
+    if (lowerType.contains("file") || lowerType.contains("filesystem") || lowerType.contains("nio")
+            ||
+            lowerType.contains("fileinput") || lowerType.contains("fileoutput")) {
       return TYPE_FILE_SYSTEM;
     }
-    
+
     // Microservice calls
-    if (lowerType.contains("microservice") || lowerType.contains("grpc") || lowerType.contains("thrift") || 
-        lowerType.contains("soap") || lowerType.contains("rpc")) {
+    if (lowerType.contains("microservice") || lowerType.contains("grpc")
+            || lowerType.contains("thrift") ||
+            lowerType.contains("soap") || lowerType.contains("rpc")) {
       return TYPE_MICROSERVICE;
     }
-    
+
     // External API calls
-    if (lowerType.contains("api") || lowerType.contains("external") || lowerType.contains("thirdparty") || 
-        lowerType.contains("service")) {
+    if (lowerType.contains("api") || lowerType.contains("external")
+            || lowerType.contains("thirdparty") ||
+            lowerType.contains("service")) {
       return TYPE_EXTERNAL_API;
     }
-    
+
     // Default to other
     return TYPE_OTHER;
   }
@@ -136,6 +145,6 @@ public class ExternalCallTracker {
           @NonNull String target,
           @NonNull String operation,
           long timestamp,
-          @NonNull Map<String, Object> metadata
-  ) {}
+          @NonNull Map<String, Object> metadata) {
+  }
 }

@@ -26,7 +26,9 @@ class DslExceptionHandlerTest {
             .andExpect(status().isInternalServerError())
             .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"))
             .andExpect(jsonPath("$.message").value("boom"))
-            .andExpect(jsonPath("$.entityName").doesNotExist());
+            .andExpect(jsonPath("$.entityName").doesNotExist())
+            .andExpect(jsonPath("$.runId").doesNotExist())
+            .andExpect(jsonPath("$.exceptionId").doesNotExist());
   }
 
   @Test
@@ -42,7 +44,9 @@ class DslExceptionHandlerTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
             .andExpect(jsonPath("$.message").value("bad arg"))
-            .andExpect(jsonPath("$.entityName").doesNotExist());
+            .andExpect(jsonPath("$.entityName").doesNotExist())
+            .andExpect(jsonPath("$.runId").doesNotExist())
+            .andExpect(jsonPath("$.exceptionId").doesNotExist());
   }
 
   @RestController

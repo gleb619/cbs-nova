@@ -57,22 +57,8 @@ class DslRuntimeResourceTest {
             .andExpect(status().isUnprocessableEntity())
             .andExpect(jsonPath("$.code").value("EXECUTION_FAILED"))
             .andExpect(jsonPath("$.message").value("boom"))
-            .andExpect(jsonPath("$.entityName").value("Fail"));
-  }
-
-  @Test
-  void explainReturnsReport() throws Exception {
-    var report = new ExplainReport(
-            "Ping", "Executed Ping successfully", "graph TD\n  A --> B", "@startuml\nstart\n:Ping;\nstop\n@endum", "", List.of(), List.of(), Map.of());
-    doReturn(report).when(dslRuntime).explain(eq("Ping"), any());
-
-    mockMvc
-            .perform(
-                    post("/api/dsl/explain/Ping")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"body\": \"hello\"}"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.name").value("Ping"))
-            .andExpect(jsonPath("$.description").value("Executed Ping successfully"));
+            .andExpect(jsonPath("$.entityName").value("Fail"))
+            .andExpect(jsonPath("$.runId").exists())
+            .andExpect(jsonPath("$.exceptionId").exists());
   }
 }

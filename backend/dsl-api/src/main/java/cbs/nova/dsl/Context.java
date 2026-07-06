@@ -14,6 +14,9 @@ public interface Context<T> {
   ExecutionMode mode();
 
   @NonNull
+  String runId();
+
+  @NonNull
   <U> Context<U> withBody(@NonNull U body);
   @NonNull
   Context<T> withMetadata(@NonNull String key, @Nullable Object value);

@@ -28,6 +28,11 @@ public final class TransactionRichContext<T> implements TransactionContext<T> {
   }
 
   @Override
+  public @NonNull String runId() {
+    return delegate.runId();
+  }
+
+  @Override
   public @NonNull <U> Context<U> withBody(@NonNull U body) {
     return delegate.withBody(body);
   }
@@ -45,6 +50,6 @@ public final class TransactionRichContext<T> implements TransactionContext<T> {
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input) {
     return GlobalManager.getInstance().runHelper(name,
-            SimpleContext.of(input, delegate.mode()));
+            SimpleContext.of(input, delegate.mode(), delegate.runId()));
   }
 }
