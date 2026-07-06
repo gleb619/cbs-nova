@@ -38,3 +38,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T71 | Shared useApiError composable | dx | Rejected | good DX; defer until frontend test scaffold (T67) in place |
 | T71 | Map helper for DSL data manipulation | helper | Rejected | lower priority than locking admin endpoint behavior |
 | T71 | PropertyResolver edge-case tests | test | Rejected | PropertyResolver already has dedicated test class |
+| T72 | Transaction registry and manager tests | test | Chosen | codegraph-confirmed no tests for DefaultTransactionRegistry/TransactionManager; low risk, completes runtime coverage |
+| T72 | Frontend useApiError composable | dx | Rejected | useful DX; still deferred until frontend test scaffold (T67) lands |
+| T72 | BFF DSL save/publish endpoints | backend | Rejected | needs backend DSL admin resource first; too broad for this cycle |
+| T72 | Dashboard stats backend endpoint | backend | Rejected | can be client-side computed; backend endpoint adds infra |
+| T72 | PlantUml diagram generator tests | test | Rejected | similar to T69 but smaller surface; defer until T69 done |
