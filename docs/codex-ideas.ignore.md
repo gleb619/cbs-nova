@@ -93,3 +93,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T82 | DevDslRuntime explain-mode report test | test | Rejected | explain report tests are broader; better grouped with T69 diagram tests |
 | T82 | Frontend shared useApiError composable | dx | Rejected | still deferred until T67 frontend test scaffold lands |
 | T82 | BFF proxy error passthrough tests | test | Rejected | needs Nitro/Vitest scaffold; defer until T67 |
+| T83 | Frontend Vitest test scaffold revival | test | Chosen | T67 exists but stub plan was thin; reviving with concrete file list and commands to unblock all deferred frontend test tasks |
+| T83 | Shared useApiError composable | dx | Rejected | T67 must land first; keep deferring |
+| T83 | BFF proxy error passthrough tests | test | Rejected | T67 must land first; keep deferring |
+| T83 | StatusIndicator unit test | test | Rejected | T67 must land first; keep deferring |
+| T83 | ModeSwitcher unit test | test | Rejected | T67 must land first; keep deferring |
