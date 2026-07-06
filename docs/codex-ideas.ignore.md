@@ -68,3 +68,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T77 | DefaultHelperRunner run/error-path tests | test | Rejected | preview path already covered; smaller incremental value than run/explain REST coverage |
 | T77 | DslRuntimeResource run/explain MockMvc tests | test | Chosen | codegraph-confirmed run/explain endpoints untested; locks user-facing REST contract; low risk MockMvc |
 | T77 | Admin UI page head titles | ui | Rejected | nice polish but lower correctness value than backend runtime tests |
+| T78 | HelperManager unit tests | test | Chosen | codegraph-confirmed HelperManager/DefaultHelperRunner lack direct tests; low risk, locks helper runtime contract |
+| T78 | ExternalCallTracker unit tests | test | Rejected | useful for explain/runner reports, but helper runtime is more directly invoked by every DSL execution |
+| T78 | Dashboard overview page | ui | Rejected | T70 already in backlog; do not duplicate |
+| T78 | Shared nav items composable | ui | Rejected | nav duplication already queued as T76; do not duplicate |
+| T78 | DefaultTransactionRegistry duplicate semantics | test | Rejected | already queued as T72; do not duplicate |
