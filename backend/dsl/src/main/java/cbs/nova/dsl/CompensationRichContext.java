@@ -51,17 +51,22 @@ public final class CompensationRichContext<T> implements CompensationContext<T> 
 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name) {
-    return GlobalManager.getInstance().runHelper(name, delegate);
+    Result<?> result = GlobalManager.getInstance().runHelper(name, delegate);
+    ExecutionTraceCollector.add("called helper: " + name);
+    return result;
   }
 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input) {
-    return GlobalManager.getInstance().runHelper(name,
+    Result<?> result = GlobalManager.getInstance().runHelper(name,
             SimpleContext.of(input, delegate.mode(), delegate.runId()));
+    ExecutionTraceCollector.add("called helper: " + name);
+    return result;
   }
 
   @Override
   public @NonNull CompensationContext<T> log(@NonNull String message) {
+    ExecutionTraceCollector.add("compensation log: " + message);
     System.out.println(
             "[DSL:" + delegate.mode() + "][runId:" + delegate.runId() + "] [compensation] "
                     + message);

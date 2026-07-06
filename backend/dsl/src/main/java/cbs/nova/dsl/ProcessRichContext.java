@@ -44,25 +44,33 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name) {
-    return GlobalManager.getInstance().runHelper(name, delegate);
+    Result<?> result = GlobalManager.getInstance().runHelper(name, delegate);
+    ExecutionTraceCollector.add("called helper: " + name);
+    return result;
   }
 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input) {
-    return GlobalManager.getInstance().runHelper(name,
+    Result<?> result = GlobalManager.getInstance().runHelper(name,
             SimpleContext.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
+    ExecutionTraceCollector.add("called helper: " + name);
+    return result;
   }
 
   @Override
   public @NonNull Result<?> runTransaction(@NonNull String name) {
-    return GlobalManager.getInstance().runTransaction(name, delegate);
+    Result<?> result = GlobalManager.getInstance().runTransaction(name, delegate);
+    ExecutionTraceCollector.add("executed transaction: " + name);
+    return result;
   }
 
   @Override
   public @NonNull Result<?> runTransaction(@NonNull String name,
           @NonNull Map<String, Object> input) {
-    return GlobalManager.getInstance().runTransaction(name,
+    Result<?> result = GlobalManager.getInstance().runTransaction(name,
             SimpleContext.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
+    ExecutionTraceCollector.add("executed transaction: " + name);
+    return result;
   }
 
   @Override

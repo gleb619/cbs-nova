@@ -5,6 +5,7 @@ import cbs.nova.dsl.DslException;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExplainReport;
+import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.SimpleContext;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,7 +37,7 @@ public class DslRuntimeResource {
   public ResponseEntity<?> preview(
           @PathVariable String name, @RequestBody DslRequest request) {
     var ctx = toContext(request, ExecutionMode.PREVIEW);
-    Result<?> result = dslRuntime.preview(name, ctx);
+    Result<PreviewReport> result = dslRuntime.preview(name, ctx);
     return result.isSuccess()
             ? ResponseEntity.ok(result.value())
             : ResponseEntity.unprocessableEntity()

@@ -8,8 +8,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * Listener for tracking message queue-related external calls.
- * Logs MQ operations and can be extended to capture detailed metrics.
+ * Listener for tracking message queue-related external calls. Logs MQ operations and can be
+ * extended to capture detailed metrics.
  */
 @Component
 public class MqCallListener implements ExternalCallListener {
@@ -17,7 +17,8 @@ public class MqCallListener implements ExternalCallListener {
   private static final Logger LOGGER = LoggerFactory.getLogger(MqCallListener.class);
 
   @Override
-  public void onCall(@NonNull String type, @NonNull String target, @NonNull String operation, @Nullable Object payload) {
+  public void onCall(@NonNull String type, @NonNull String target, @NonNull String operation,
+          @Nullable Object payload) {
     if (!type.equals("mq")) {
       return; // Only handle MQ calls
     }

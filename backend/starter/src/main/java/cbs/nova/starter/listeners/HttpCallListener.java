@@ -10,8 +10,8 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 
 /**
- * Listener for tracking HTTP-related external calls.
- * Logs HTTP operations and can be extended to capture detailed metrics.
+ * Listener for tracking HTTP-related external calls. Logs HTTP operations and can be extended to
+ * capture detailed metrics.
  */
 @Component
 public class HttpCallListener implements ExternalCallListener {
@@ -19,7 +19,8 @@ public class HttpCallListener implements ExternalCallListener {
   private static final Logger LOGGER = LoggerFactory.getLogger(HttpCallListener.class);
 
   @Override
-  public void onCall(@NonNull String type, @NonNull String target, @NonNull String operation, @Nullable Object payload) {
+  public void onCall(@NonNull String type, @NonNull String target, @NonNull String operation,
+          @Nullable Object payload) {
     if (!type.equals("http")) {
       return; // Only handle HTTP calls
     }

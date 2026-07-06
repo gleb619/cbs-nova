@@ -6,7 +6,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import cbs.nova.dsl.DslRuntime;
+import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExplainReport;
+import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,7 +34,15 @@ class DslRuntimeResourceTest {
 
   @Test
   void previewReturns200OnSuccess() throws Exception {
-    doReturn(Result.success("pong")).when(dslRuntime).preview(eq("Ping"), any());
+    PreviewReport report = new PreviewReport(
+            "Ping",
+            ExecutionMode.PREVIEW,
+            true,
+            "pong",
+            List.of("started: Ping", "mode: PREVIEW", "completed successfully"),
+            List.of(),
+            Map.of());
+    doReturn(Result.success(report)).when(dslRuntime).preview(eq("Ping"), any());
 
     mockMvc
             .perform(
@@ -40,7 +50,12 @@ class DslRuntimeResourceTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"body\": \"hello\"}"))
             .andExpect(status().isOk())
-            .andExpect(content().string("\"pong\""));
+            .andExpect(jsonPath("$.name").value("Ping"))
+            .andExpect(jsonPath("$.mode").value("PREVIEW"))
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.output").value("pong"))
+            .andExpect(jsonPath("$.executionTrace[0]").value("started: Ping"))
+            .andExpect(jsonPath("$.callCounts").isMap());
   }
 
   @Test

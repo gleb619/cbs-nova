@@ -66,7 +66,9 @@ public class HelperSpiProcessor extends AbstractProcessor {
         var fqn = typeElement.getQualifiedName().toString();
         if (!fqn.contains(".")) {
           processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,
-                  "@Helper on default-package class ignored (cannot reference from generated SPI): " + fqn, element);
+                  "@Helper on default-package class ignored (cannot reference from generated SPI): "
+                          + fqn,
+                  element);
           continue;
         }
         entries.add(new HelperEntry(fqn, helper.name()));
@@ -104,7 +106,8 @@ public class HelperSpiProcessor extends AbstractProcessor {
                 {3}  }}
                 }}
                 """;
-        writer.print(MessageFormat.format(template, RESOLVER_PACKAGE, imports, RESOLVER_CLASS, registrations));
+        writer.print(MessageFormat.format(template, RESOLVER_PACKAGE, imports, RESOLVER_CLASS,
+                registrations));
       }
     } catch (IOException e) {
       processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
