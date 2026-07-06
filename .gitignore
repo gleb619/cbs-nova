@@ -128,3 +128,4 @@ node_modules
 /frontend/src/e2e/
 /frontend/src/unit/
 /build.gradle
+/docs/superpowers2/
