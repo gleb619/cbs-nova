@@ -103,3 +103,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T84 | DescriptorFactory helperRefs propagation | test | Rejected | helperRefs list is empty by design today; low value |
 | T84 | ExecutionTraceCollector thread isolation | test | Rejected | already covered by existing test |
 | T84 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
+| T85 | Transaction runner explain-mode tests | test | Chosen | codegraph-confirmed DefaultTransactionRunner lacks direct tests; low risk, locks transaction execution contract |
+| T85 | Process runner EXPLAIN metadata tests | test | Rejected | already queued as part of T75; do not duplicate |
+| T85 | Compensation context unit tests | test | Rejected | already queued as T68; do not duplicate |
+| T85 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
+| T85 | Dashboard overview page | ui | Rejected | already queued as T70; do not duplicate |
