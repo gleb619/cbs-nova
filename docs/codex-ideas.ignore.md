@@ -143,3 +143,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T93 | PlantUmlDiagramGenerator tests | test | Rejected | T69/T86 diagram tests still in Backlog; defer |
 | T93 | Frontend useApiError composable | dx | Rejected | T67 must land first; keep deferring |
 | T93 | BFF health endpoint passthrough tests | test | Rejected | T67 must land first; defer until Vitest scaffold |
+| T94 | Actuator runtime enablement | dx | Chosen | T91 backlog exists with full plan; codegraph confirms actuator is compileOnly and DslHealthIndicator exists; low-risk, high ops value, completes half-wired surface |
+| T94 | DefaultProcessRegistry unit tests | test | Rejected | useful but smaller than T91 ops impact; can follow actuator work |
+| T94 | TransactionRunner RUN-mode wiring spike | test | Rejected | DefaultTransactionRunner TODO exists but RUN mode is Temporal integration; larger and riskier than actuator |
+| T94 | Frontend page head titles | ui | Rejected | T67 must land first; keep deferring |
+| T94 | BFF proxy error passthrough tests | test | Rejected | T67 must land first; keep deferring |
