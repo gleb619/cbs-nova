@@ -79,4 +79,5 @@ This file is a lightweight planner for tracking implementation tasks. It is inte
 
 ---
 
+| T105 | Backlog | Dev orchestration (make dev) | Add a Makefile/Taskfile + `scripts/dev.sh` that brings up the full local dev stack in order — `docker compose up` (Keycloak/Bugsink/Temporal once T103 lands), backend `./gradlew :starter:bootRun`, frontend `pnpm dev` — with healthcheck waits so new contributors get a one-command `make dev` instead of juggling three terminals. No production code touched. | High | loop | - | T103 | `./docs/plans/T105-dev-orchestration.md` |
 > **How to use:** Replace the example rows with real tasks. Create a matching plan file under `./docs/plans/<ID>-short-title.md` for each task that needs detailed instructions.
