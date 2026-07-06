@@ -153,3 +153,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T95 | ProcessBuilder validation tests | test | Rejected | valuable but broader; DefaultParameterRegistry is the smaller missing brick |
 | T95 | Frontend nav item composable | ui | Rejected | T67 must land first; keep deferring |
 | T95 | BFF proxy timeout config tests | test | Rejected | T67 must land first; keep deferring |
+| T96 | DslExceptionHandler DslException branch test | test | Chosen | T74/T80 backlog exists but no implementation; codegraph shows handler branch explicitly untested; low risk MockMvc, locks structured error REST contract |
+| T96 | DefaultProcessRegistry unit tests | test | Rejected | useful registry brick; defer until more handler/REST contracts locked |
+| T96 | FunctionDslObject record tests | test | Rejected | record accessors implicitly covered by builder/runtime tests |
+| T96 | Frontend Vitest test scaffold | test | Rejected | already queued as T67; do not duplicate |
+| T96 | BFF health endpoint passthrough tests | test | Rejected | T67 must land first; keep deferring |
