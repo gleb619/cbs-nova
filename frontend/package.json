@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "pnpm --filter admin-ui dev",
     "build": "pnpm --filter admin-ui build",
-    "build:components": "pnpm --filter components build"
+    "build:components": "pnpm --filter components build",
+    "test": "pnpm --filter admin-ui test"
   },
   "devDependencies": {
     "typescript": "^5.4.0"
