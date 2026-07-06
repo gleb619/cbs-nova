@@ -73,3 +73,8 @@ Re-pick rule: a `Rejected` row is eligible for revival only if its `Reason` was 
 | T78 | Dashboard overview page | ui | Rejected | T70 already in backlog; do not duplicate |
 | T78 | Shared nav items composable | ui | Rejected | nav duplication already queued as T76; do not duplicate |
 | T78 | DefaultTransactionRegistry duplicate semantics | test | Rejected | already queued as T72; do not duplicate |
+| T79 | ExternalCallTracker unit tests | test | Chosen | codegraph-confirmed no tests for ExternalCallTracker/Listener; locks observability contract for explain/runner; low risk |
+| T79 | DslIntrospectionResource detail endpoint tests | test | Rejected | processes/tx detail paths partially covered; smaller incremental value |
+| T79 | DslReloadResource success-path test | test | Rejected | error paths already queued as T71; success path needs real DSL sources on disk, infra risk |
+| T79 | Runner page query sync tests | ui | Rejected | needs Vitest scaffold (T67) first; defer |
+| T79 | Admin UI page head titles | ui | Rejected | nice polish; defer until core tests are in place |
