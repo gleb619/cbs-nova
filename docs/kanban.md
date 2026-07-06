@@ -37,7 +37,7 @@ This file is a lightweight planner for tracking implementation tasks. It is inte
 | T46 | Done | Parameter DSL tests | DslBuilderTest cases for .parameters() on process/transaction/function + ResultTest cases for as/asMap | Low | loop | - | T45 | - |
 | T47 | Done | ResultTest as/asMap coverage | Add ResultTest cases for Result.as() and Result.asMap() default methods | Low | loop | - | - | - |
 | T48 | Done | heartbeatTimeout on TransactionBuilder | Add heartbeatTimeout(Duration) to TransactionBuilder + TransactionDslObject record + TransactionDescriptor | Low | loop | - | - | - |
-| T49 | In Progress | misc-codegen @Helper SPI generator | Build annotation processor in `misc-codegen` that scans classes annotated with `@Helper` and generates SPI registration code so a `HelperResolver`/`HelperRegistry` can discover and register helpers at runtime. | High | loop | - | - | `./docs/plans/T49-misc-codegen-helper-spi.md` |
+| T49 | Done | misc-codegen @Helper SPI generator | Build annotation processor in `misc-codegen` that scans classes annotated with `@Helper` and generates SPI registration code so a `HelperResolver`/`HelperRegistry` can discover and register helpers at runtime. | High | loop | - | - | `./docs/plans/T49-misc-codegen-helper-spi.md` |
 | T50 | Done | Bugsink integration | Create docker-compose.yml at root and integrate Sentry/Bugsink SDK in starter module | Medium | loop | - | - | `./docs/plans/T50-bugsink-integration.md` |
 | T51 | Done | Keycloak integration | Add docker-compose.yml at root for Keycloak and integrate Spring Boot starter module with Keycloak (plan only, no implementation) | Medium | loop | - | - | `./docs/plans/T51-keycloak-integration.md` |
 
