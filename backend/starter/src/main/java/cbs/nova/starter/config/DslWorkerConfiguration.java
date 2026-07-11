@@ -3,10 +3,15 @@ package cbs.nova.starter.config;
 import io.temporal.client.WorkflowClient;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
+import io.temporal.workflow.Workflow;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
+import org.springframework.core.type.classreading.MetadataReader;
+import org.springframework.util.ClassUtils;
 
 @AutoConfiguration
 @ConditionalOnProperty(name = "dsl.worker.enabled", havingValue = "true")
@@ -19,10 +24,34 @@ public class DslWorkerConfiguration {
   Worker dslWorker(WorkflowClient workflowClient) {
     WorkerFactory factory = WorkerFactory.newInstance(workflowClient);
     Worker worker = factory.newWorker(taskQueue);
-    // Generated workflow and activity classes are registered here when available.
-    // Classpath scanning for cbs.nova.dsl.generated.* impls can be wired in when
-    // dsl-examples generates and exposes those classes on the runtime classpath.
+    registerGeneratedImplementations(worker);
     factory.start();
     return worker;
+  }
+
+  private void registerGeneratedImplementations(Worker worker) {
+    var resolver = new PathMatchingResourcePatternResolver();
+    var readerFactory = new CachingMetadataReaderFactory();
+    String packageSearchPath = "classpath*:cbs/nova/dsl/generated/**/*.class";
+    try {
+      var resources = resolver.getResources(packageSearchPath);
+      for (var resource : resources) {
+        if (!resource.isReadable()) {
+          continue;
+        }
+        MetadataReader reader = readerFactory.getMetadataReader(resource);
+        String className = reader.getClassMetadata().getClassName();
+        Class<?> cls = ClassUtils.forName(className, Thread.currentThread().getContextClassLoader());
+        String simpleName = cls.getSimpleName();
+        if (simpleName.endsWith("ProcessDefinition") && Workflow.class.isAssignableFrom(cls)) {
+          worker.registerWorkflowImplementationTypes(cls);
+        } else if (simpleName.endsWith("TransactionDefinition")) {
+          Object instance = cls.getDeclaredConstructor().newInstance();
+          worker.registerActivitiesImplementations(instance);
+        }
+      }
+    } catch (Exception e) {
+      throw new IllegalStateException("Failed to scan generated DSL implementations", e);
+    }
   }
 }
