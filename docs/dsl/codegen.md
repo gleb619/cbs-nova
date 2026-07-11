@@ -121,14 +121,18 @@ configured `fallbackVersion`, depending on `strictVersioning`.
 1. **Scanning**: The DSL compiler scans the DSL module's `/src` folder and collects every compact source file that
    declares a `List<DslObject> define()` method.
 
-2. **Parsing**: For each DSL file, the `define()` method is analyzed to extract builder calls. This yields an
+2. **Static validation & preprocessing**: Each file is checked for the compact-source rules (no package, no top-level
+   type, one `define()` method). It is then wrapped in a class that implements `cbs.nova.dsl.DslCompactSource` and
+   compiled with the standard Java compiler.
+
+3. **Parsing**: For each DSL file, the `define()` method is analyzed to extract builder calls. This yields an
    intermediate model:
     - `ProcessDescriptor`: name, task queue, input/output types, compensation block, execution logic.
     - `TransactionDescriptor`: name, task queue, retry policy, input/output types, compensation block, execution logic.
     - `FunctionDescriptor`: name, input/output types or parameter schema, execution logic. No Temporal mapping is
       produced.
 
-3. **Validation**:
+4. **Validation**:
     - No duplicate process/transaction/function names.
     - For parameter-based definitions, parameters referenced in `execute` must be registered in `.parameters()`.
     - For typed definitions, `.input(...)`/`.output(...)` types must exist and be valid records annotated with `@Json`.
@@ -141,7 +145,7 @@ configured `fallbackVersion`, depending on `strictVersioning`.
       Transactions.
     - Compensation blocks may only call Helpers and Functions, not Transactions or Processes.
 
-4. **Code Generation**:
+5. **Code Generation**:
     - For each **Process**, generate:
         - A versioned package (`{basePackage}.v{commit}`) for all classes produced from this DSL module.
         - A `@WorkflowInterface` with a `@WorkflowMethod` named `execute` accepting `Context<IN>` and returning

@@ -5,14 +5,16 @@ parameter-based definitions, helper/transaction/function calls, compensation, an
 
 ## DSL source files
 
-Definitions live in a dedicated Gradle module, typically `dsl-examples/src/`. They are authored as **JEP-512 compact
+Definitions live in a dedicated Gradle module, typically `dsl-examples/src/`. They are authored as **compact
 source files**:
 
 - no `class` declaration,
 - no `public` modifier,
 - no package statement.
 
-Each file exposes one `List<DslObject> define()` method:
+Each file exposes one `List<DslObject> define()` method. At build time (and at runtime when a source directory is
+configured), the compiler preprocesses the file into a normal Java class that implements
+`cbs.nova.dsl.DslCompactSource`, makes `define()` public, and then compiles it normally:
 
 ```java
 import com.example.dsl.Dsl;

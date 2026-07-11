@@ -1,3 +1,5 @@
+import java.time.Duration;
+import java.util.List;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.Result;

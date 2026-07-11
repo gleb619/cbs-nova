@@ -20,11 +20,6 @@ import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.TimeUnit;
 
-/**
- * Chaos tests for the booking activities using a local WireMock server. The external reservation
- * services are stubbed to fail intermittently so that we can verify Temporal's retry behaviour and
- * the saga compensation path.
- */
 @Timeout(value = 10, unit = TimeUnit.SECONDS)
 class BookingActivitiesChaosTest {
 

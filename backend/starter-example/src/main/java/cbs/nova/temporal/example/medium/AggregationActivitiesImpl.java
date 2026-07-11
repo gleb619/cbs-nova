@@ -1,8 +1,5 @@
 package cbs.nova.temporal.example.medium;
 
-/**
- * Plain implementation of the aggregation activities.
- */
 public class AggregationActivitiesImpl implements AggregationActivities {
 
   @Override

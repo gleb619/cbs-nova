@@ -1,5 +1,12 @@
 plugins {
   id 'java-library'
+  alias(libs.plugins.spring.dm)
+}
+
+dependencyManagement {
+  imports {
+    mavenBom "org.springframework.boot:spring-boot-dependencies:${libs.versions.spring.boot.get()}"
+  }
 }
 
 dependencies {
@@ -19,6 +26,7 @@ dependencies {
   testImplementation project(':dsl-api')
   testImplementation project(':dsl')
   testImplementation project(':dsl-model')
+  testImplementation project(':starter')
   testImplementation project(':dsl-examples')
 
   testRuntimeOnly libs.junit.platform.launcher

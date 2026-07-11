@@ -127,6 +127,6 @@ class ProcessCodeGeneratorTest {
             Dsl.process("Foo").execute(ctx -> Result.success("x")).build());
     var impl = generator.generate(descriptor).get(1);
     assertThat(impl.source()).contains("TASK_QUEUE");
-    assertThat(impl.source()).contains("Foo-queue"); // default from ProcessBuilder: name + "-queue"
+    assertThat(impl.source()).contains("Foo-queue");
   }
 }

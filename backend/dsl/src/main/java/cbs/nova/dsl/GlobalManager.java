@@ -14,6 +14,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.ServiceLoader;
 
 @RequiredArgsConstructor
 public final class GlobalManager {
@@ -58,6 +59,10 @@ public final class GlobalManager {
 
   public void registerHelpers(@NonNull HelperResolver resolver) {
     resolver.registerHelpers(helperManager::registerHelper);
+  }
+
+  public void registerHelperResolvers() {
+    ServiceLoader.load(HelperResolver.class).forEach(this::registerHelpers);
   }
 
   public void registerFunction(@NonNull FunctionDslObject fn) {

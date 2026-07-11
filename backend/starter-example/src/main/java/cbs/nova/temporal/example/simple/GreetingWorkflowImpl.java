@@ -6,9 +6,6 @@ import io.temporal.workflow.Workflow;
 
 import java.time.Duration;
 
-/**
- * Simple workflow implementation that delegates to a single activity.
- */
 public class GreetingWorkflowImpl implements GreetingWorkflow {
 
   private final GreetingActivities activities = Workflow.newActivityStub(

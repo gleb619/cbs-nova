@@ -34,9 +34,16 @@ backend/
 
 ## 2. Core Rules & Constraints
 
-### DSL Authoring (JEP-512 Compact Sources in `dsl-examples`)
+### DSL Authoring (Compact Sources in `dsl-examples`)
 
-- Define exactly one `List<DslObject> define()` method. No `class`, `package`, or `public` modifiers.
+- Source files are authored without a `class`, `package`, or `public` modifier and declare exactly one
+  `List<DslObject> define()` method.
+- `SourceCompiler` preprocesses each compact source into a normal Java class that implements
+  `cbs.nova.dsl.DslCompactSource`, validates it, and then compiles it through the standard Java compiler.
+- The generated `GeneratedDslDefinitionProvider` (default package) aggregates all `define()` results via
+  `java.util.ServiceLoader` so the runtime can load them.
+- `DefinitionLoader` uses the same preprocessor when a configured source directory contains `.java` files; otherwise it
+  loads definitions from the classpath via `ServiceLoader`.
 - **Call Hierarchy constraints**:
     - **Process** can call: Transactions, Helpers, Functions (never Processes).
     - **Transaction / Function / Helper / Compensation** can call: Helpers, Functions (never Processes/Transactions).
@@ -90,8 +97,10 @@ The frontend index (`frontend/.codegraph/`) is a separate database and must not 
 - **Result Casts**: Use `Result.as(Class)` and `Result.asMap()` on `Result`.
 - **Parameter DSL**: Support untyped parameters via `.parameters(...)`, `ParameterRegistry`, and `MapInput.of(k, v)`.
 - **Heartbeat**: Configured via `TransactionBuilder.heartbeatTimeout(Duration)`.
-- **SPI Discovery**: `misc-codegen` generates SPI metadata for `@Helper` classes. `starter` scans
-  `dsl.helper-scan-packages` at runtime.
+- **SPI Discovery**: `misc-codegen` generates a `HelperResolver` implementation and a
+  `META-INF/services/cbs.nova.dsl.HelperResolver` descriptor for each `@Helper` class. On startup
+  `DslAutoConfiguration` loads these resolvers via `ServiceLoader` and registers helpers through
+  `GlobalManager`. Runtime reflection scanning of `dsl.helper-scan-packages` is removed.
 - **CodeGraph**: Prioritize `codegraph_*` tools for fast structural/symbol exploration over slow grep.
 
 ---

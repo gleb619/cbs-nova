@@ -37,7 +37,6 @@ class AdvancedDslExamplesTest {
 
     var config = new DslAutoConfiguration();
     setField(config, "sourceDirProperty", dslSourceDir.toString());
-    setField(config, "helperScanPackages", "cbs.nova.starter.helpers");
     config.loadDslDefinitions();
   }
 

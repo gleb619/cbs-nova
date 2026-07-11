@@ -49,11 +49,11 @@ public class DslReloadResource {
     GlobalManager.getInstance().resetForTests();
     try {
       new DefinitionLoader().load(dir, GlobalManager.getInstance());
+      return ResponseEntity.noContent().build();
     } catch (Exception e) {
       return ResponseEntity.status(500)
               .body(
                       new ErrorResponse("RELOAD_FAILED", e.getMessage(), null, null, null));
     }
-    return ResponseEntity.noContent().build();
   }
 }

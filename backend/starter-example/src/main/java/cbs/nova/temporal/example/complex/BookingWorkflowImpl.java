@@ -10,15 +10,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * Complex workflow implementation that:
- *
- * <ul>
- * <li>books a flight, hotel and car sequentially;
- * <li>compensates already booked items when a later step fails or a cancel signal arrives;
- * <li>exposes status via a query method and accepts cancellation via a signal.
- * </ul>
- */
 public class BookingWorkflowImpl implements BookingWorkflow {
 
   private final BookingActivities activities = Workflow.newActivityStub(

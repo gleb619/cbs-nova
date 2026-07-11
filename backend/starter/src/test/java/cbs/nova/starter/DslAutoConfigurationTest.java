@@ -3,11 +3,7 @@ package cbs.nova.starter;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import cbs.nova.dsl.Context;
-import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.Helper;
-import cbs.nova.dsl.Result;
 import cbs.nova.starter.config.DslAutoConfiguration;
 import cbs.nova.starter.listeners.ExternalCallListener;
 import org.junit.jupiter.api.AfterEach;
@@ -52,22 +48,13 @@ class DslAutoConfigurationTest {
   }
 
   @Test
-  void registersHelperAnnotatedClassesFromScanPackages() throws Exception {
+  void registersHelpersFromGeneratedResolver() {
     GlobalManager.getInstance().resetForTests();
     var config = new DslAutoConfiguration();
-    setField(config, "helperScanPackages", "cbs.nova.starter");
 
     config.loadDslDefinitions();
 
-    assertThat(GlobalManager.getInstance().hasHelper("test-helper-fixture")).isTrue();
-  }
-
-  @Test
-  void doesNothingWhenHelperScanPackagesBlank() {
-    var config = new DslAutoConfiguration();
-    config.loadDslDefinitions();
-
-    assertThat(GlobalManager.getInstance().hasHelper("test-helper-fixture")).isFalse();
+    assertThat(GlobalManager.getInstance().hasHelper("currentTimestamp")).isTrue();
   }
 
   @Test
@@ -122,14 +109,5 @@ class DslAutoConfigurationTest {
     Field field = DslAutoConfiguration.class.getDeclaredField("externalCallTracker");
     field.setAccessible(true);
     field.set(config, tracker);
-  }
-
-  @Helper(name = "test-helper-fixture")
-  static final class FixtureHelper implements Executable<String, String> {
-
-    @Override
-    public Result<String> execute(Context<String> ctx) {
-      return Result.success(ctx.body());
-    }
   }
 }
