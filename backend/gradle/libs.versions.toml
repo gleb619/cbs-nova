@@ -10,6 +10,8 @@ testcontainers = "1.21.3"
 slf4j = "2.0.16"
 sentry = "7.0.0"
 lombok = "1.18.38"
+keycloak-admin-client = "22.0.0"
+rest-assured = "5.5.0"
 
 # plugins
 spring-boot = "4.0.4"
@@ -37,8 +39,11 @@ wiremock = { module = "org.wiremock:wiremock", version.ref = "wiremock" }
 
 # -- Testcontainers --
 testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
+testcontainers-core = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
 testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
 testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
+keycloak-admin-client = { module = "org.keycloak:keycloak-admin-client", version.ref = "keycloak-admin-client" }
+rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "rest-assured" }
 
 # -- SLF4J --
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
