@@ -109,4 +109,75 @@ class BpmnDiagramGeneratorTest {
     assertThat(xml).contains("a-very-long-targe...");
     assertThat(xml).doesNotContain("a-very-long-target-name-that-exceeds-twenty");
   }
+
+  @Test
+  void transactionWithCompensationRendersCompensateBranch() {
+    var tx = Dsl.transaction("KycCheck")
+            .input(String.class)
+            .output(String.class)
+            .execute(ctx -> Result.success("ok"))
+            .compensation(ctx -> Result.success("rolled back"))
+            .build();
+    String xml = generator.forTransaction(tx);
+    assertThat(xml).contains("<bpmn:serviceTask id=\"Activity_1\" name=\"KycCheck\"");
+    assertThat(xml).contains("<bpmn:exclusiveGateway id=\"Gateway_1\" name=\"Success?\"");
+    assertThat(xml).contains("<bpmn:serviceTask id=\"Activity_Compensate\" name=\"Compensate\"");
+    assertThat(xml).contains("<bpmn:sequenceFlow id=\"Flow_Success\" name=\"Yes\"");
+    assertThat(xml).doesNotContain("name=\"Fail\"");
+  }
+
+  @Test
+  void transactionWithExternalCallsRendersCallNodesAndMainActivity() {
+    var tx = Dsl.transaction("TrackedTx")
+            .input(String.class)
+            .output(String.class)
+            .execute(ctx -> Result.success("ok"))
+            .build();
+    List<Map<String, Object>> calls = List.of(
+            Map.of("type", "http", "target", "payment-api", "operation", "POST /pay"),
+            Map.of("type", "database", "target", "user-db", "operation", "SELECT"));
+    String xml = generator.forTransaction(tx, calls, null);
+    assertThat(xml)
+            .contains("<bpmn:serviceTask id=\"Activity_1\" name=\"HTTP POST /pay (payment-api)\"");
+    assertThat(xml)
+            .contains("<bpmn:serviceTask id=\"Activity_2\" name=\"DATABASE SELECT (user-db)\"");
+    assertThat(xml).contains("<bpmn:serviceTask id=\"Activity_3\" name=\"TrackedTx\"");
+    assertThat(xml).contains("sourceRef=\"StartEvent_1\" targetRef=\"Activity_1\"");
+    assertThat(xml).contains("sourceRef=\"Activity_2\" targetRef=\"Activity_3\"");
+  }
+
+  @Test
+  void helperWithExternalCallsRendersCallNodesAndMainActivity() {
+    String xml = generator.forHelper("TrackedHelper", List.of(
+            Map.of("type", "http", "target", "payment-api", "operation", "POST /pay"),
+            Map.of("type", "database", "target", "user-db", "operation", "SELECT")), null);
+    assertThat(xml)
+            .contains("<bpmn:serviceTask id=\"Activity_1\" name=\"HTTP POST /pay (payment-api)\"");
+    assertThat(xml)
+            .contains("<bpmn:serviceTask id=\"Activity_2\" name=\"DATABASE SELECT (user-db)\"");
+    assertThat(xml).contains("<bpmn:serviceTask id=\"Activity_3\" name=\"TrackedHelper\"");
+    assertThat(xml).contains("sourceRef=\"StartEvent_1\" targetRef=\"Activity_1\"");
+    assertThat(xml).contains("sourceRef=\"Activity_2\" targetRef=\"Activity_3\"");
+  }
+
+  @Test
+  void helperWithExternalCallsAndCallCountsRendersComment() {
+    String xml = generator.forHelper("TrackedHelper", List.of(
+            Map.of("type", "http", "target", "payment-api", "operation", "POST /pay")),
+            Map.of("http", 3, "database", 1));
+    assertThat(xml)
+            .contains("<bpmn:serviceTask id=\"Activity_1\" name=\"HTTP POST /pay (payment-api)\"");
+    assertThat(xml).contains("<!-- Call Counts: database: 1, http: 3 -->");
+  }
+
+  @Test
+  void emptyCallListAndEmptyCallCountsProduceNoCallCountComment() {
+    var process = Dsl.process("P")
+            .input(String.class)
+            .output(String.class)
+            .execute(ctx -> Result.success("ok"))
+            .build();
+    String xml = generator.forProcess(process, List.of(), Map.of());
+    assertThat(xml).doesNotContain("Call Counts:");
+  }
 }
