@@ -1,9 +1,9 @@
 package cbs.nova.dsl;
 
-import org.jspecify.annotations.NonNull;
-
+import cbs.nova.dsl.function.FunctionDslObject;
 import java.util.Collection;
 import java.util.Optional;
+import org.jspecify.annotations.NonNull;
 
 public interface HelperRegistry {
   void registerHelper(@NonNull String name, @NonNull Executable<?, ?> helper);

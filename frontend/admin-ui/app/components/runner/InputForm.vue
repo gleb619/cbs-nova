@@ -22,9 +22,11 @@ watch(freeform, (next) => {
   try {
     const parsed = next.trim() ? JSON.parse(next) : {}
     freeformError.value = null
-    emit('update:modelValue', parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {})
-  }
-  catch (err) {
+    emit(
+      'update:modelValue',
+      parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {},
+    )
+  } catch (err) {
     freeformError.value = (err as Error).message
   }
 })
@@ -36,9 +38,15 @@ const isSchemaEmpty = computed(() => {
 })
 
 const fields = computed<FieldSpec[]>(() => {
-  const props_ = (props.schema as { properties?: Record<string, Record<string, unknown>>, required?: string[] } | undefined)?.properties
+  const props_ = (
+    props.schema as
+      | { properties?: Record<string, Record<string, unknown>>; required?: string[] }
+      | undefined
+  )?.properties
   if (!props_) return []
-  const required = new Set(props.schema && (props.schema as { required?: string[] }).required || [])
+  const required = new Set(
+    (props.schema && (props.schema as { required?: string[] }).required) || [],
+  )
   return Object.entries(props_).map(([name, spec]) => ({
     name,
     type: typeof spec.type === 'string' ? spec.type : 'string',
@@ -46,12 +54,12 @@ const fields = computed<FieldSpec[]>(() => {
   }))
 })
 
-function getFieldType(name: string): string {
-  return fields.value.find(f => f.name === name)?.type ?? 'string'
+function _getFieldType(name: string): string {
+  return fields.value.find((f) => f.name === name)?.type ?? 'string'
 }
 
-function isRequired(name: string): boolean {
-  return fields.value.find(f => f.name === name)?.required ?? false
+function _isRequired(name: string): boolean {
+  return fields.value.find((f) => f.name === name)?.required ?? false
 }
 
 function updateField(name: string, value: unknown) {
@@ -71,7 +79,9 @@ function updateField(name: string, value: unknown) {
           class="px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
           :class="freeformError ? 'border-red-400' : 'border-gray-300'"
         />
-        <span v-if="freeformError" class="text-xs text-red-600">Invalid JSON: {{ freeformError }}</span>
+        <span v-if="freeformError" class="text-xs text-red-600"
+          >Invalid JSON: {{ freeformError }}</span
+        >
       </label>
     </template>
 

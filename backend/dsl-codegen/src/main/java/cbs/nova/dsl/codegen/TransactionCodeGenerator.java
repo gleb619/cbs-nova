@@ -1,10 +1,9 @@
 package cbs.nova.dsl.codegen;
 
-import cbs.nova.dsl.TransactionDescriptor;
-import org.jspecify.annotations.NonNull;
-
+import cbs.nova.dsl.transaction.TransactionDescriptor;
 import java.text.MessageFormat;
 import java.util.List;
+import org.jspecify.annotations.NonNull;
 
 public final class TransactionCodeGenerator {
 

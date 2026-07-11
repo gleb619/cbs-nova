@@ -1,9 +1,9 @@
 package cbs.nova.dsl;
 
-import org.jspecify.annotations.NonNull;
-
+import cbs.nova.dsl.function.FunctionDslObject;
 import java.util.List;
 import java.util.Optional;
+import org.jspecify.annotations.NonNull;
 
 public final class HelperManager {
   private final HelperRegistry registry;

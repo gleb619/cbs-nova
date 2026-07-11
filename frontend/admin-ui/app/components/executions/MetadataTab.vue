@@ -6,7 +6,10 @@ const props = defineProps<{
   execution: Execution
 }>()
 
-interface Row { key: string; value: string }
+interface Row {
+  key: string
+  value: string
+}
 
 const rows = computed<Row[]>(() => {
   const out: Row[] = [

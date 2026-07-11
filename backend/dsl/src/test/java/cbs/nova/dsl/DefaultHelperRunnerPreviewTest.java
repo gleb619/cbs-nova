@@ -2,6 +2,9 @@ package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.registry.DefaultHelperRegistry;
+import cbs.nova.dsl.runner.DefaultHelperRunner;
+import java.util.List;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
@@ -27,7 +30,7 @@ class DefaultHelperRunnerPreviewTest {
               String.class,
               false,
               "preview returns PREVIEW_MOCK",
-              java.util.List.of(ParameterDescriptor.ofString("in")));
+              List.of(ParameterDescriptor.ofString("in")));
     }
   }
 

@@ -1,23 +1,25 @@
 package cbs.nova.dsl;
 
-import org.jspecify.annotations.NonNull;
-
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaFileObject;
-import javax.tools.StandardJavaFileManager;
-import javax.tools.ToolProvider;
-
+import cbs.nova.dsl.function.FunctionDslObject;
+import cbs.nova.dsl.process.ProcessDslObject;
+import cbs.nova.dsl.transaction.TransactionDslObject;
 import java.io.File;
+import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import javax.tools.DiagnosticCollector;
+import javax.tools.JavaFileObject;
+import javax.tools.StandardJavaFileManager;
+import javax.tools.ToolProvider;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+import org.jspecify.annotations.NonNull;
 
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DefinitionLoader {
-
-  private DefinitionLoader() {
-  }
 
   public static void load(@NonNull Path sourceDir, @NonNull GlobalManager gm) {
     var objects = loadObjects(sourceDir);
@@ -66,7 +68,7 @@ public final class DefinitionLoader {
   private static List<DslObject> loadFromFile(File source, Path outputDir) {
     String className = source.getName().replace(".java", "");
     try (var loader = new URLClassLoader(
-            new java.net.URL[]{outputDir.toUri().toURL()},
+            new URL[]{outputDir.toUri().toURL()},
             Thread.currentThread().getContextClassLoader())) {
       Class<?> cls = loader.loadClass(className);
       var ctor = cls.getDeclaredConstructor();

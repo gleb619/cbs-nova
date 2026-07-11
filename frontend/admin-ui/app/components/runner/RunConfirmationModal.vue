@@ -12,19 +12,21 @@ const emit = defineEmits<{
 const acknowledged = ref(false)
 const skipPreference = ref(false)
 
-watch(() => props.show, (open) => {
-  if (open) {
-    acknowledged.value = false
-    skipPreference.value = readSkipPreference()
-  }
-})
+watch(
+  () => props.show,
+  (open) => {
+    if (open) {
+      acknowledged.value = false
+      skipPreference.value = readSkipPreference()
+    }
+  },
+)
 
 function readSkipPreference(): boolean {
   if (!import.meta.client) return false
   try {
     return window.sessionStorage.getItem('skip-run-confirm') === '1'
-  }
-  catch {
+  } catch {
     return false
   }
 }
@@ -34,19 +36,18 @@ function writeSkipPreference(value: boolean) {
   try {
     if (value) window.sessionStorage.setItem('skip-run-confirm', '1')
     else window.sessionStorage.removeItem('skip-run-confirm')
-  }
-  catch {
+  } catch {
     // ignore storage failures
   }
 }
 
 watch(skipPreference, (value) => writeSkipPreference(value))
 
+// biome-ignore lint/correctness/noUnusedVariables: used in the modal template
 const payloadText = computed(() => {
   try {
     return JSON.stringify(props.payload, null, 2)
-  }
-  catch {
+  } catch {
     return String(props.payload)
   }
 })
@@ -63,6 +64,7 @@ function onCancel() {
 
 <template>
   <Teleport to="body">
+    <!-- biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click dismisses modal -->
     <div
       v-if="props.show"
       class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
@@ -79,7 +81,9 @@ function onCancel() {
 
         <div class="px-6 py-4 overflow-y-auto flex-1">
           <h3 class="text-sm font-semibold text-gray-700 mb-2">Payload</h3>
-          <pre class="bg-gray-900 text-gray-100 text-xs rounded-lg p-3 overflow-auto max-h-64 whitespace-pre-wrap break-words">{{ payloadText }}</pre>
+          <pre
+            class="bg-gray-900 text-gray-100 text-xs rounded-lg p-3 overflow-auto max-h-64 whitespace-pre-wrap break-words"
+          >{{ payloadText }}</pre>
 
           <label class="mt-4 inline-flex items-center gap-2 text-sm text-gray-700">
             <input

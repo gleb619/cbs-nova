@@ -1,17 +1,16 @@
 package cbs.nova.dsl.codegen;
 
-import cbs.nova.dsl.DefaultHelperRegistry;
 import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.DescriptorFactory;
 import cbs.nova.dsl.DslObject;
-import cbs.nova.dsl.FunctionDescriptor;
-import cbs.nova.dsl.FunctionDslObject;
-import cbs.nova.dsl.ProcessDescriptor;
-import cbs.nova.dsl.ProcessDslObject;
 import cbs.nova.dsl.SemanticValidator;
-import cbs.nova.dsl.TransactionDescriptor;
-import cbs.nova.dsl.TransactionDslObject;
-
+import cbs.nova.dsl.function.FunctionDescriptor;
+import cbs.nova.dsl.function.FunctionDslObject;
+import cbs.nova.dsl.process.ProcessDescriptor;
+import cbs.nova.dsl.process.ProcessDslObject;
+import cbs.nova.dsl.registry.DefaultHelperRegistry;
+import cbs.nova.dsl.transaction.TransactionDescriptor;
+import cbs.nova.dsl.transaction.TransactionDslObject;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;

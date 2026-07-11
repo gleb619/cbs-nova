@@ -3,7 +3,7 @@ import type { RunnerStatus } from '~/types/runner'
 
 const props = defineProps<{ status: RunnerStatus }>()
 
-const styleMap: Record<RunnerStatus, { label: string, classes: string, animate: boolean }> = {
+const styleMap: Record<RunnerStatus, { label: string; classes: string; animate: boolean }> = {
   idle: { label: 'Idle', classes: 'bg-gray-200 text-gray-700', animate: false },
   loading: { label: 'Loading', classes: 'bg-yellow-100 text-yellow-800', animate: true },
   running: { label: 'Running', classes: 'bg-blue-100 text-blue-800', animate: true },

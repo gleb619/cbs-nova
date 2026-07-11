@@ -1,15 +1,14 @@
 package cbs.nova.dsl;
 
-import org.jspecify.annotations.NonNull;
-
 import java.util.Map;
+import org.jspecify.annotations.NonNull;
 
 public final class CompensationRichContext<T> implements CompensationContext<T> {
 
   private final Context<T> delegate;
   private final Throwable error;
 
-  CompensationRichContext(@NonNull Context<T> delegate, @NonNull Throwable error) {
+  public CompensationRichContext(@NonNull Context<T> delegate, @NonNull Throwable error) {
     this.delegate = delegate;
     this.error = error;
   }

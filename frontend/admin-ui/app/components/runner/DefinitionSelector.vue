@@ -25,12 +25,9 @@ function onChange(event: Event) {
       @change="onChange"
     >
       <option value="" disabled>Select a definition…</option>
-      <option
-        v-for="def in props.definitions"
-        :key="def.name"
-        :value="def.name"
-      >
-        {{ def.name }} ({{ def.type }})
+      <option v-for="def in props.definitions" :key="def.name" :value="def.name">
+        {{ def.name }}
+        ({{ def.type }})
       </option>
     </select>
   </label>

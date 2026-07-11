@@ -2,9 +2,9 @@ package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.jupiter.api.Test;
-
+import cbs.nova.dsl.runner.DefaultProcessRunner;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.junit.jupiter.api.Test;
 
 class DefaultProcessRunnerCompensationTest {
 

@@ -46,9 +46,7 @@ const isEmpty = computed(() => !props.output)
       </button>
     </div>
 
-    <div v-if="isEmpty" class="text-sm text-gray-500">
-      Output will appear here after running.
-    </div>
+    <div v-if="isEmpty" class="text-sm text-gray-500">Output will appear here after running.</div>
 
     <div v-else>
       <ResultTab v-if="activeTab === 'result'" :result="props.output?.result" />

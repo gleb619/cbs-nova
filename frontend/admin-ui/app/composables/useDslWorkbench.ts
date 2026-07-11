@@ -30,7 +30,9 @@ export function useDslWorkbench() {
     state.value.isLoading = true
     try {
       const result = await api.getDefinitions()
-      const list = Array.isArray(result) ? result : (result as { constructs?: DslConstruct[] }).constructs ?? []
+      const list = Array.isArray(result)
+        ? result
+        : ((result as { constructs?: DslConstruct[] }).constructs ?? [])
       state.value.constructs = list
       if (list.length && !state.value.selectedName) {
         state.value.selectedName = list[0].name

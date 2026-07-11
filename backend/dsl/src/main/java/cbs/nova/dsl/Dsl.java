@@ -1,15 +1,21 @@
 package cbs.nova.dsl;
 
-public final class Dsl {
-  private Dsl() {
-  }
+import cbs.nova.dsl.function.FunctionBuilder;
+import cbs.nova.dsl.process.ProcessBuilder;
+import cbs.nova.dsl.transaction.TransactionBuilder;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+public final class Dsl {
   public static ProcessBuilder process(String name) {
     return new ProcessBuilder(name);
   }
+
   public static TransactionBuilder transaction(String name) {
     return new TransactionBuilder(name);
   }
+
   public static FunctionBuilder function(String name) {
     return new FunctionBuilder(name);
   }

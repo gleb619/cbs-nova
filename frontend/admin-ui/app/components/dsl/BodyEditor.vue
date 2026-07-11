@@ -9,10 +9,14 @@ const tab = ref<'structure' | 'code'>('structure')
 const steps = ref<StepDef[]>([])
 const code = ref('')
 
-watch(() => props.construct?.name, () => {
-  steps.value = []
-  code.value = ''
-}, { immediate: true })
+watch(
+  () => props.construct?.name,
+  () => {
+    steps.value = []
+    code.value = ''
+  },
+  { immediate: true },
+)
 </script>
 
 <template>

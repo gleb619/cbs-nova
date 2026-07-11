@@ -30,6 +30,7 @@ const navItems = [
         <div class="flex items-center justify-between h-16 border-b border-gray-700 px-4">
           <span class="text-white font-bold text-lg">CBS Nova</span>
           <button
+            type="button"
             class="text-gray-300 hover:text-white p-1 rounded"
             aria-label="Close navigation menu"
             @click="closeMobile"
@@ -53,8 +54,20 @@ const navItems = [
 </template>
 
 <style scoped>
-.fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
-.slide-enter-active, .slide-leave-active { transition: transform 0.2s; }
-.slide-enter-from, .slide-leave-to { transform: translateX(-100%); }
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+.slide-enter-active,
+.slide-leave-active {
+  transition: transform 0.2s;
+}
+.slide-enter-from,
+.slide-leave-to {
+  transform: translateX(-100%);
+}
 </style>

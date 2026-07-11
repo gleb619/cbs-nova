@@ -6,7 +6,10 @@ assertj = "3.27.3"
 temporal = "1.27.0"
 javaparser = "3.28.1"
 wiremock = "3.9.1"
+testcontainers = "1.21.3"
+slf4j = "2.0.16"
 sentry = "7.0.0"
+lombok = "1.18.38"
 
 # plugins
 spring-boot = "4.0.4"
@@ -32,12 +35,23 @@ temporal-testing = { module = "io.temporal:temporal-testing", version.ref = "tem
 javaparser = { module = "com.github.javaparser:javaparser-core", version.ref = "javaparser" }
 wiremock = { module = "org.wiremock:wiremock", version.ref = "wiremock" }
 
+# -- Testcontainers --
+testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
+testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
+testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
+
+# -- SLF4J --
+slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
+
 # -- Spring Boot (versions managed by the Spring Boot BOM) --
 spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
 spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
 spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
 sentry-spring-boot-jakarta = { module = "io.sentry:sentry-spring-boot-starter-jakarta", version.ref = "sentry" }
+
+# -- Misc --
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 
 [bundles]
 spring-web = ["spring-boot-starter-web", "spring-boot-starter-validation", "spring-boot-starter-actuator"]

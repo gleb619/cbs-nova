@@ -16,7 +16,9 @@ const props = defineProps<{
 
     <section v-if="props.mermaidDiagram">
       <h3 class="text-sm font-semibold text-gray-700 mb-2">Mermaid Diagram</h3>
-      <pre class="bg-gray-900 text-gray-100 text-xs rounded-lg p-4 overflow-auto max-h-[60vh] whitespace-pre-wrap break-words">{{ props.mermaidDiagram }}</pre>
+      <pre
+        class="bg-gray-900 text-gray-100 text-xs rounded-lg p-4 overflow-auto max-h-[60vh] whitespace-pre-wrap break-words"
+      >{{ props.mermaidDiagram }}</pre>
     </section>
 
     <div v-if="!props.description && !props.mermaidDiagram" class="text-sm text-gray-500">

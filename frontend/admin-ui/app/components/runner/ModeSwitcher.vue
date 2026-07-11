@@ -4,7 +4,7 @@ import type { RunnerMode } from '~/types/runner'
 const props = defineProps<{ modelValue: RunnerMode }>()
 const emit = defineEmits<{ 'update:modelValue': [mode: RunnerMode] }>()
 
-const modes: { value: RunnerMode, label: string }[] = [
+const modes: { value: RunnerMode; label: string }[] = [
   { value: 'preview', label: 'Preview' },
   { value: 'run', label: 'Run' },
   { value: 'explain', label: 'Explain' },
@@ -16,7 +16,12 @@ function pick(value: RunnerMode) {
 </script>
 
 <template>
-  <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden" role="radiogroup" aria-label="Runner mode">
+  <div
+    class="inline-flex rounded-lg border border-gray-300 overflow-hidden"
+    role="radiogroup"
+    aria-label="Runner mode"
+  >
+    <!-- biome-ignore lint/a11y/useSemanticElements: styled segmented toggle buttons -->
     <button
       v-for="m in modes"
       :key="m.value"

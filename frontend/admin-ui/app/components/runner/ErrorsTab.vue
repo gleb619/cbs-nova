@@ -19,7 +19,11 @@ const list = computed(() => props.errors ?? [])
         class="border border-red-200 bg-red-50 rounded-lg p-3"
       >
         <div class="flex items-center gap-2 mb-1">
-          <span v-if="err.code" class="text-xs font-mono px-2 py-0.5 rounded bg-red-200 text-red-800">{{ err.code }}</span>
+          <span
+            v-if="err.code"
+            class="text-xs font-mono px-2 py-0.5 rounded bg-red-200 text-red-800"
+            >{{ err.code }}</span
+          >
         </div>
         <p class="text-sm text-red-900 whitespace-pre-wrap break-words">{{ err.message }}</p>
       </li>

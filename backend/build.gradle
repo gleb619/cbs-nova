@@ -20,6 +20,18 @@ subprojects {
   apply from: "${rootDir}/gradle/code-style.gradle"
 }
 
+subprojects {
+  plugins.withType(JavaPlugin).configureEach {
+    dependencies {
+      compileOnly libs.lombok
+      annotationProcessor libs.lombok
+
+      testCompileOnly libs.lombok
+      testAnnotationProcessor libs.lombok
+    }
+  }
+}
+
 idea {
   module {
     name = 'cbs-nova-backend'

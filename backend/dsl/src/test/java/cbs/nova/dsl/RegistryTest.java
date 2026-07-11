@@ -1,7 +1,10 @@
 package cbs.nova.dsl;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import cbs.nova.dsl.registry.DefaultHelperRegistry;
+import cbs.nova.dsl.registry.DefaultProcessRegistry;
 import org.junit.jupiter.api.Test;
 
 class RegistryTest {

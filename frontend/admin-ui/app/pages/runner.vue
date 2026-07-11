@@ -29,15 +29,13 @@ async function loadDefinitions() {
   loadError.value = null
   try {
     const api = useDslApi()
-    const response = await api.getDefinitions() as unknown
+    const response = (await api.getDefinitions()) as unknown
     const list = extractDefinitions(response)
     definitions.value = list
     syncFromQuery()
-  }
-  catch (err) {
+  } catch (err) {
     loadError.value = (err as Error).message ?? 'Failed to load definitions'
-  }
-  finally {
+  } finally {
     loadingDefinitions.value = false
   }
 }
@@ -45,7 +43,7 @@ async function loadDefinitions() {
 function extractDefinitions(response: unknown): DefinitionMeta[] {
   if (!response) return []
   if (Array.isArray(response)) return response as DefinitionMeta[]
-  const obj = response as { definitions?: DefinitionMeta[], items?: DefinitionMeta[] }
+  const obj = response as { definitions?: DefinitionMeta[]; items?: DefinitionMeta[] }
   return obj.definitions ?? obj.items ?? []
 }
 
@@ -53,8 +51,7 @@ function syncFromQuery() {
   const nameParam = route.query.name
   if (typeof nameParam === 'string' && nameParam) {
     if (selectedDefinition.value !== nameParam) selectDefinition(nameParam)
-  }
-  else if (selectedDefinition.value === null && definitions.value.length > 0) {
+  } else if (selectedDefinition.value === null && definitions.value.length > 0) {
     selectDefinition(definitions.value[0].name)
   }
 
@@ -64,7 +61,10 @@ function syncFromQuery() {
   }
 }
 
-watch(() => route.query, () => syncFromQuery())
+watch(
+  () => route.query,
+  () => syncFromQuery(),
+)
 
 function pushQuery(name: string | null, nextMode: RunnerMode) {
   const query: Record<string, string> = {}
@@ -97,7 +97,7 @@ function onCancelRun() {
 }
 
 const selectedSchema = computed<Record<string, unknown> | undefined>(() => {
-  const def = definitions.value.find(d => d.name === selectedDefinition.value)
+  const def = definitions.value.find((d) => d.name === selectedDefinition.value)
   return def?.inputSchema
 })
 

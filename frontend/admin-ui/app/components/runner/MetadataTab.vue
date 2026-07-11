@@ -11,8 +11,7 @@ function format(value: unknown): string {
   if (typeof value === 'string') return value
   try {
     return JSON.stringify(value, null, 2)
-  }
-  catch {
+  } catch {
     return String(value)
   }
 }
@@ -29,9 +28,11 @@ function format(value: unknown): string {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="[key, value] in entries" :key="key" class="border-b border-gray-100">
+        <tr v-for="[ key, value ] in entries" :key="key" class="border-b border-gray-100">
           <td class="py-2 pr-4 font-mono text-gray-700 align-top">{{ key }}</td>
-          <td class="py-2 font-mono text-gray-900 break-words whitespace-pre-wrap">{{ format(value) }}</td>
+          <td class="py-2 font-mono text-gray-900 break-words whitespace-pre-wrap">
+            {{ format(value) }}
+          </td>
         </tr>
       </tbody>
     </table>

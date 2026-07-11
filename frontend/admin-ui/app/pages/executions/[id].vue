@@ -12,8 +12,8 @@ if (selectedExecution.value?.status === 'Running') {
 }
 
 const traceSteps = computed(() => selectedExecution.value?.trace ?? [])
-const compensationSteps = computed(() => traceSteps.value.filter(s => s.isCompensation))
-const regularSteps = computed(() => traceSteps.value.filter(s => !s.isCompensation))
+const compensationSteps = computed(() => traceSteps.value.filter((s) => s.isCompensation))
+const regularSteps = computed(() => traceSteps.value.filter((s) => !s.isCompensation))
 
 onUnmounted(() => {
   stopPolling()
@@ -31,22 +31,37 @@ onUnmounted(() => {
 
       <div class="bg-white border border-gray-200 rounded-lg">
         <div class="border-b border-gray-200 flex overflow-x-auto">
-          <button v-for="tab in (['diagram','payload','metadata','logs','errors'] as const)" :key="tab"
-                  type="button"
-                  :class="['px-4 py-2 text-sm font-medium border-b-2',
+          <button
+            v-for="tab in (['diagram','payload','metadata','logs','errors'] as const)"
+            :key="tab"
+            type="button"
+            :class="['px-4 py-2 text-sm font-medium border-b-2',
                            activeTab === tab ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-600 hover:text-gray-900']"
-                  @click="activeTab = tab">
+            @click="activeTab = tab"
+          >
             {{ tab === 'diagram' ? 'Diagram' : tab === 'payload' ? 'I/O Payload' : tab[0].toUpperCase() + tab.slice(1) }}
           </button>
         </div>
         <div class="p-4">
-          <ExecutionsDiagramTab v-if="activeTab === 'diagram'" :diagram="selectedExecution.mermaidDiagram" />
-          <ExecutionsPayloadTab v-else-if="activeTab === 'payload'"
-                                :input="selectedExecution.input" :output="selectedExecution.output" />
-          <ExecutionsMetadataTab v-else-if="activeTab === 'metadata'"
-                                  :metadata="selectedExecution.metadata" :execution="selectedExecution" />
+          <ExecutionsDiagramTab
+            v-if="activeTab === 'diagram'"
+            :diagram="selectedExecution.mermaidDiagram"
+          />
+          <ExecutionsPayloadTab
+            v-else-if="activeTab === 'payload'"
+            :input="selectedExecution.input"
+            :output="selectedExecution.output"
+          />
+          <ExecutionsMetadataTab
+            v-else-if="activeTab === 'metadata'"
+            :metadata="selectedExecution.metadata"
+            :execution="selectedExecution"
+          />
           <ExecutionsLogsTab v-else-if="activeTab === 'logs'" :logs="selectedExecution.logs" />
-          <ExecutionsErrorsTab v-else-if="activeTab === 'errors'" :errors="selectedExecution.errors" />
+          <ExecutionsErrorsTab
+            v-else-if="activeTab === 'errors'"
+            :errors="selectedExecution.errors"
+          />
         </div>
       </div>
     </template>

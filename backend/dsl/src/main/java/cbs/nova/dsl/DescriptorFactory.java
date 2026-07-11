@@ -1,8 +1,13 @@
 package cbs.nova.dsl;
 
-import org.jspecify.annotations.NonNull;
-
+import cbs.nova.dsl.function.FunctionDescriptor;
+import cbs.nova.dsl.function.FunctionDslObject;
+import cbs.nova.dsl.process.ProcessDescriptor;
+import cbs.nova.dsl.process.ProcessDslObject;
+import cbs.nova.dsl.transaction.TransactionDescriptor;
+import cbs.nova.dsl.transaction.TransactionDslObject;
 import java.util.List;
+import org.jspecify.annotations.NonNull;
 
 public final class DescriptorFactory {
 

@@ -40,18 +40,15 @@ export function useRunner() {
       let response: unknown
       if (mode.value === 'preview') {
         response = await api.preview(name, payload)
-      }
-      else if (mode.value === 'run') {
+      } else if (mode.value === 'run') {
         response = await api.run(name, payload)
-      }
-      else {
+      } else {
         response = await api.explain(name, payload)
       }
 
       output.value = normalizeResponse(response)
       status.value = 'success'
-    }
-    catch (err: unknown) {
+    } catch (err: unknown) {
       output.value = errorToOutput(err)
       status.value = 'failed'
     }
@@ -82,11 +79,13 @@ export function useRunner() {
   }
 
   function errorToOutput(err: unknown): RunnerOutput {
-    const fetchErr = err as { data?: { message?: string; errors?: RunnerOutput['errors'] }, message?: string, statusMessage?: string }
-    const message = fetchErr?.data?.message
-      ?? fetchErr?.statusMessage
-      ?? fetchErr?.message
-      ?? 'Request failed'
+    const fetchErr = err as {
+      data?: { message?: string; errors?: RunnerOutput['errors'] }
+      message?: string
+      statusMessage?: string
+    }
+    const message =
+      fetchErr?.data?.message ?? fetchErr?.statusMessage ?? fetchErr?.message ?? 'Request failed'
     return {
       errors: fetchErr?.data?.errors ?? [{ message, code: 'REQUEST_FAILED' }],
     }
@@ -100,9 +99,9 @@ export function useRunner() {
   function asErrors(v: unknown): RunnerOutput['errors'] {
     if (!Array.isArray(v)) return undefined
     return v
-      .filter(e => e && typeof e === 'object')
-      .map(e => {
-        const err = e as { message?: string, code?: string }
+      .filter((e) => e && typeof e === 'object')
+      .map((e) => {
+        const err = e as { message?: string; code?: string }
         return {
           message: typeof err.message === 'string' ? err.message : 'Unknown error',
           code: typeof err.code === 'string' ? err.code : undefined,
@@ -112,7 +111,7 @@ export function useRunner() {
 
   function asStringArray(v: unknown): string[] | undefined {
     if (!Array.isArray(v)) return undefined
-    return v.filter(x => typeof x === 'string') as string[]
+    return v.filter((x) => typeof x === 'string') as string[]
   }
 
   return {

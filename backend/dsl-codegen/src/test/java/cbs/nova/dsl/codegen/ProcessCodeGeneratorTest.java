@@ -1,6 +1,6 @@
 package cbs.nova.dsl.codegen;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.DescriptorFactory;
 import cbs.nova.dsl.Dsl;
@@ -37,7 +37,7 @@ class ProcessCodeGeneratorTest {
     assertThat(iface.source()).contains("@WorkflowInterface");
     assertThat(iface.source()).contains("@WorkflowMethod");
     assertThat(iface.source()).contains("interface LoanDisbursementProcessWorkflow");
-    assertThat(iface.source()).contains("Object run(Object input)");
+    assertThat(iface.source()).contains("String run(String input)");
   }
 
   @Test

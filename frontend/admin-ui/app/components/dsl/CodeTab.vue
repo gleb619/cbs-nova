@@ -5,7 +5,12 @@ const props = defineProps<{
 }>()
 
 const localCode = ref(props.code)
-watch(() => props.code, (v) => { localCode.value = v })
+watch(
+  () => props.code,
+  (v) => {
+    localCode.value = v
+  },
+)
 </script>
 
 <template>

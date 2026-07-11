@@ -50,11 +50,16 @@ function formatDuration(ms?: number) {
           </tr>
         </template>
         <template v-else>
-          <tr v-for="exec in executions" :key="exec.id"
-              class="border-t border-gray-100 hover:bg-gray-50 cursor-pointer"
-              @click="$emit('select', exec.id)">
+          <tr
+            v-for="exec in executions"
+            :key="exec.id"
+            class="border-t border-gray-100 hover:bg-gray-50 cursor-pointer"
+            @click="$emit('select', exec.id)"
+          >
             <td class="px-3 py-2 font-mono text-xs">{{ truncate(exec.id) }}</td>
-            <td class="px-3 py-2">{{ exec.entity }} <span class="text-gray-400 text-xs">({{ exec.entityType }})</span></td>
+            <td class="px-3 py-2">
+              {{ exec.entity }} <span class="text-gray-400 text-xs">({{ exec.entityType }})</span>
+            </td>
             <td class="px-3 py-2 font-mono text-xs">{{ exec.mode }}</td>
             <td class="px-3 py-2"><ExecutionsStatusBadge :status="exec.status" /></td>
             <td class="px-3 py-2 text-xs">{{ formatDate(exec.startedAt) }}</td>

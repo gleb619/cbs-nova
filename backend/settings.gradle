@@ -4,7 +4,7 @@ include 'dsl-api'
 include 'dsl'
 include 'dsl-codegen'
 include 'starter'
-include 'temporal-example'
+include 'starter-example'
 include 'dsl-examples'
 include 'dsl-model'
 

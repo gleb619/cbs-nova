@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import type { ExecutionStatus } from '~/types/execution'
 
-defineProps<{ executions: { id: string; entity: string; status: ExecutionStatus; startedAt: string }[]; loading?: boolean }>()
+defineProps<{
+  executions: { id: string; entity: string; status: ExecutionStatus; startedAt: string }[]
+  loading?: boolean
+}>()
 
 const router = useRouter()
 
@@ -45,11 +48,15 @@ function statusClass(status: ExecutionStatus) {
         >
           <td class="px-4 py-2 text-sm text-gray-700">{{ exec.entity }}</td>
           <td class="px-4 py-2">
-            <span :class="['px-2 inline-flex text-xs leading-5 font-semibold rounded-full', statusClass(exec.status)]">
+            <span
+              :class="['px-2 inline-flex text-xs leading-5 font-semibold rounded-full', statusClass(exec.status)]"
+            >
               {{ exec.status }}
             </span>
           </td>
-          <td class="px-4 py-2 text-sm text-gray-500">{{ new Date(exec.startedAt).toLocaleString() }}</td>
+          <td class="px-4 py-2 text-sm text-gray-500">
+            {{ new Date(exec.startedAt).toLocaleString() }}
+          </td>
         </tr>
       </tbody>
     </table>

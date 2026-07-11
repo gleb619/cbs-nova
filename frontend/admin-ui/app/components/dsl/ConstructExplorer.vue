@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DslConstruct, ConstructType } from '~/types/dsl'
+import type { ConstructType, DslConstruct } from '~/types/dsl'
 
 const props = defineProps<{
   constructs: DslConstruct[]
@@ -18,9 +18,7 @@ const grouped = computed(() => {
   const q = search.value.trim().toLowerCase()
   return types.map((t) => ({
     type: t,
-    items: props.constructs.filter(
-      (c) => c.type === t && (!q || c.name.toLowerCase().includes(q)),
-    ),
+    items: props.constructs.filter((c) => c.type === t && (!q || c.name.toLowerCase().includes(q))),
   }))
 })
 
@@ -40,7 +38,7 @@ const statusClass: Record<string, string> = {
         type="text"
         placeholder="Search constructs..."
         class="w-full px-2 py-1.5 text-sm rounded bg-gray-800 text-gray-100 placeholder-gray-500 border border-gray-700 focus:outline-none focus:border-gray-500"
-      />
+      >
     </div>
 
     <div v-if="loading" class="p-3 space-y-2">
@@ -50,16 +48,14 @@ const statusClass: Record<string, string> = {
     <div v-else class="flex-1 overflow-y-auto p-2 space-y-3">
       <div v-for="group in grouped" :key="group.type">
         <div class="px-2 py-1 text-xs font-semibold uppercase text-gray-400 tracking-wide">
-          {{ group.type }} ({{ group.items.length }})
+          {{ group.type }}
+          ({{ group.items.length }})
         </div>
         <ul class="space-y-0.5">
           <li v-if="group.items.length === 0" class="px-2 py-1 text-xs text-gray-500 italic">
             none
           </li>
-          <li
-            v-for="item in group.items"
-            :key="item.name"
-          >
+          <li v-for="item in group.items" :key="item.name">
             <button
               type="button"
               class="w-full text-left px-2 py-1.5 rounded text-sm flex items-center justify-between gap-2 hover:bg-gray-800 transition-colors"

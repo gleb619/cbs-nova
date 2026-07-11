@@ -2,6 +2,7 @@ package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.generator.MermaidDiagramGenerator;
 import org.junit.jupiter.api.Test;
 
 class MermaidDiagramGeneratorTest {

@@ -15,13 +15,13 @@ export function useExecutions() {
   async function loadExecutions() {
     loading.value = true
     try {
-      const result: any = await api.list({ ...filters.value, page: page.value })
+      const result = await api.list({ ...filters.value, page: page.value })
       if (Array.isArray(result)) {
         executions.value = result
         total.value = result.length
       } else {
-        executions.value = result?.items ?? result?.data ?? []
-        total.value = result?.total ?? executions.value.length
+        executions.value = result.items ?? []
+        total.value = result.total ?? executions.value.length
       }
     } catch (err) {
       console.error('[useExecutions] loadExecutions failed', err)
@@ -35,8 +35,7 @@ export function useExecutions() {
   async function loadDetail(id: string) {
     loading.value = true
     try {
-      const result: any = await api.get(id)
-      selectedExecution.value = result as ExecutionDetail
+      selectedExecution.value = await api.get(id)
     } catch (err) {
       console.error('[useExecutions] loadDetail failed', err)
       selectedExecution.value = null

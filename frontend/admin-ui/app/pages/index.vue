@@ -23,14 +23,18 @@ const executionsError = ref<string | null>(null)
 function extractDefinitions(response: unknown): DefinitionMeta[] {
   if (!response) return []
   if (Array.isArray(response)) return response as DefinitionMeta[]
-  const obj = response as { definitions?: DefinitionMeta[], items?: DefinitionMeta[], constructs?: DefinitionMeta[] }
+  const obj = response as {
+    definitions?: DefinitionMeta[]
+    items?: DefinitionMeta[]
+    constructs?: DefinitionMeta[]
+  }
   return obj.definitions ?? obj.items ?? obj.constructs ?? []
 }
 
 function countByType(definitions: DefinitionMeta[]) {
-  processCount.value = definitions.filter(d => d.type === 'Process').length
-  transactionCount.value = definitions.filter(d => d.type === 'Transaction').length
-  helperCount.value = definitions.filter(d => d.type === 'Helper').length
+  processCount.value = definitions.filter((d) => d.type === 'Process').length
+  transactionCount.value = definitions.filter((d) => d.type === 'Transaction').length
+  helperCount.value = definitions.filter((d) => d.type === 'Helper').length
 }
 
 async function loadDefinitions() {
@@ -40,14 +44,12 @@ async function loadDefinitions() {
     const api = useDslApi()
     const response = await api.getDefinitions()
     countByType(extractDefinitions(response))
-  }
-  catch (err) {
+  } catch (err) {
     definitionsError.value = (err as Error).message ?? 'Failed to load definitions'
     processCount.value = 0
     transactionCount.value = 0
     helperCount.value = 0
-  }
-  finally {
+  } finally {
     loadingDefinitions.value = false
   }
 }
@@ -60,21 +62,19 @@ async function loadRecentExecutions() {
     const result = await api.list()
     const items = Array.isArray(result)
       ? result
-      : (result as { items?: RecentExecution[], data?: RecentExecution[] })?.items
-        ?? (result as { items?: RecentExecution[], data?: RecentExecution[] })?.data
-        ?? []
-    recentExecutions.value = items.slice(0, 5).map(item => ({
+      : ((result as { items?: RecentExecution[]; data?: RecentExecution[] })?.items ??
+        (result as { items?: RecentExecution[]; data?: RecentExecution[] })?.data ??
+        [])
+    recentExecutions.value = items.slice(0, 5).map((item) => ({
       id: item.id,
       entity: item.entity,
       status: item.status,
       startedAt: item.startedAt,
     }))
-  }
-  catch (err) {
+  } catch (err) {
     executionsError.value = (err as Error).message ?? 'Failed to load executions'
     recentExecutions.value = []
-  }
-  finally {
+  } finally {
     loadingExecutions.value = false
   }
 }
@@ -94,7 +94,11 @@ onMounted(() => {
 
     <section>
       <div v-if="loadingDefinitions" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div v-for="i in 3" :key="i" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div
+          v-for="i in 3"
+          :key="i"
+          class="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
+        >
           <div class="flex items-center gap-4">
             <div class="w-10 h-10 bg-gray-200 rounded animate-pulse" />
             <div class="flex-1 space-y-2">
@@ -106,7 +110,12 @@ onMounted(() => {
       </div>
       <div v-else class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <DashboardStatCard label="Processes" :count="processCount" icon="🔷" to="/dsl-workbench" />
-        <DashboardStatCard label="Transactions" :count="transactionCount" icon="🔶" to="/dsl-workbench" />
+        <DashboardStatCard
+          label="Transactions"
+          :count="transactionCount"
+          icon="🔶"
+          to="/dsl-workbench"
+        />
         <DashboardStatCard label="Helpers" :count="helperCount" icon="🛠" to="/dsl-workbench" />
       </div>
       <p v-if="definitionsError" class="text-xs text-red-600 mt-2">{{ definitionsError }}</p>

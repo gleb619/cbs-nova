@@ -3,20 +3,26 @@ import type { TraceStep } from '~/types/execution'
 
 const props = defineProps<{ steps: TraceStep[] }>()
 
-interface TreeNode { step: TraceStep; children: TreeNode[] }
+interface TreeNode {
+  step: TraceStep
+  children: TreeNode[]
+}
 
 const tree = computed<TreeNode[]>(() => {
   const byId = new Map<string, TreeNode>()
-  props.steps.forEach(s => byId.set(s.id, { step: s, children: [] }))
+  for (const s of props.steps) {
+    byId.set(s.id, { step: s, children: [] })
+  }
   const roots: TreeNode[] = []
-  props.steps.forEach(s => {
-    const node = byId.get(s.id)!
+  for (const s of props.steps) {
+    const node = byId.get(s.id)
+    if (!node) continue
     if (s.parentId && byId.has(s.parentId)) {
-      byId.get(s.parentId)!.children.push(node)
+      byId.get(s.parentId)?.children.push(node)
     } else {
       roots.push(node)
     }
-  })
+  }
   return roots
 })
 </script>
@@ -30,14 +36,24 @@ const tree = computed<TreeNode[]>(() => {
     <template v-else>
       <template v-for="node in tree" :key="node.step.id">
         <ExecutionsTraceNode :step="node.step" :depth="0" />
-        <ExecutionsTraceNode v-for="child in flatten(node)" :key="child.step.id" :step="child.step" :depth="child.depth" />
+        <ExecutionsTraceNode
+          v-for="child in flatten(node)"
+          :key="child.step.id"
+          :step="child.step"
+          :depth="child.depth"
+        />
       </template>
     </template>
   </div>
 </template>
 
 <script lang="ts">
-function flatten(node: { step: any; children: any[] }, depth = 0, out: { step: any; depth: number }[] = []): { step: any; depth: number }[] {
+interface FlatNode {
+  step: TraceStep
+  depth: number
+}
+
+function flatten(node: TreeNode, depth = 0, out: FlatNode[] = []): FlatNode[] {
   for (const child of node.children) {
     out.push({ step: child.step, depth: depth + 1 })
     flatten(child, depth + 1, out)

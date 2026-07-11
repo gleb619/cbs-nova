@@ -1,6 +1,5 @@
 package cbs.nova.starter;
 
-import cbs.nova.dsl.BpmnDiagramGenerator;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslRuntime;
@@ -8,19 +7,19 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.MermaidDiagramGenerator;
-import cbs.nova.dsl.PlantUmlDiagramGenerator;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.SimpleContext;
-import org.jspecify.annotations.NonNull;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
+import cbs.nova.dsl.generator.BpmnDiagramGenerator;
+import cbs.nova.dsl.generator.MermaidDiagramGenerator;
+import cbs.nova.dsl.generator.PlantUmlDiagramGenerator;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.jspecify.annotations.NonNull;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 @Service
 public class DevDslRuntime implements DslRuntime {
@@ -83,22 +82,26 @@ public class DevDslRuntime implements DslRuntime {
               : "Execution of " + name + " failed: " + result.cause().getMessage();
 
       GlobalManager gm2 = GlobalManager.getInstance();
+      var mermaidGen = new MermaidDiagramGenerator();
+      var plantGen = new PlantUmlDiagramGenerator();
+      var bpmnGen = new BpmnDiagramGenerator();
+
       String mermaid = gm2.findProcess(name)
-              .map(MermaidDiagramGenerator::forProcess)
-              .or(() -> gm2.findTransaction(name).map(MermaidDiagramGenerator::forTransaction))
-              .orElse(MermaidDiagramGenerator.forHelper(name));
+              .map(mermaidGen::forProcess)
+              .or(() -> gm2.findTransaction(name).map(mermaidGen::forTransaction))
+              .orElseGet(() -> mermaidGen.forHelper(name));
 
       String plantUml = gm2.findProcess(name)
-              .map(PlantUmlDiagramGenerator::forProcess)
-              .or(() -> gm2.findTransaction(name).map(PlantUmlDiagramGenerator::forTransaction))
-              .orElse(PlantUmlDiagramGenerator.forHelper(name));
+              .map(plantGen::forProcess)
+              .or(() -> gm2.findTransaction(name).map(plantGen::forTransaction))
+              .orElseGet(() -> plantGen.forHelper(name));
 
       String bpmn = gm2.findProcess(name)
-              .map(BpmnDiagramGenerator::forProcess)
-              .or(() -> gm2.findTransaction(name).map(BpmnDiagramGenerator::forTransaction))
-              .orElse(BpmnDiagramGenerator.forHelper(name));
+              .map(bpmnGen::forProcess)
+              .or(() -> gm2.findTransaction(name).map(bpmnGen::forTransaction))
+              .orElseGet(() -> bpmnGen.forHelper(name));
 
-      var trace = new java.util.ArrayList<String>();
+      var trace = new ArrayList<String>();
       trace.add("started: " + name);
       trace.add("mode: EXPLAIN");
       trace.addAll(ExecutionTraceCollector.snapshot());

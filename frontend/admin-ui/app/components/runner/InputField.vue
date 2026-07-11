@@ -14,6 +14,8 @@ const touched = ref(false)
 
 const normalizedType = computed(() => (props.type || 'string').toLowerCase())
 
+const inputId = computed(() => `input-${props.name}`)
+
 const isEmpty = computed(() => {
   const v = props.modelValue
   if (v === null || v === undefined) return true
@@ -47,12 +49,17 @@ function onBlur() {
 
 <template>
   <div class="flex flex-col gap-1">
-    <label class="text-sm font-medium text-gray-700">
+    <label
+      v-if="normalizedType !== 'boolean'"
+      :for="inputId"
+      class="text-sm font-medium text-gray-700"
+    >
       {{ props.name }}<span v-if="props.required" class="text-red-500 ml-0.5">*</span>
     </label>
 
     <input
       v-if="normalizedType === 'string'"
+      :id="inputId"
       type="text"
       :value="(props.modelValue as string | undefined) ?? ''"
       class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -64,6 +71,7 @@ function onBlur() {
 
     <input
       v-else-if="normalizedType === 'number'"
+      :id="inputId"
       type="number"
       :value="(props.modelValue as number | undefined) ?? ''"
       class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -73,18 +81,25 @@ function onBlur() {
       @blur="onBlur"
     >
 
-    <label v-else-if="normalizedType === 'boolean'" class="inline-flex items-center gap-2 text-sm text-gray-700">
+    <!-- biome-ignore lint/a11y/noLabelWithoutControl: boolean label wraps its checkbox and text -->
+    <label
+      v-else-if="normalizedType === 'boolean'"
+      :for="inputId"
+      class="inline-flex items-center gap-2 text-sm text-gray-700"
+    >
       <input
+        :id="inputId"
         type="checkbox"
         :checked="Boolean(props.modelValue)"
         class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
         @change="onCheckboxInput"
       >
-      <span>{{ Boolean(props.modelValue) ? 'true' : 'false' }}</span>
+      <span>{{ props.modelValue ? 'true' : 'false' }}</span>
     </label>
 
     <textarea
       v-else
+      :id="inputId"
       :value="typeof props.modelValue === 'string' ? props.modelValue : JSON.stringify(props.modelValue ?? '', null, 2)"
       rows="4"
       :placeholder="normalizedType === 'array' ? 'JSON array' : 'JSON object'"

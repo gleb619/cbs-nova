@@ -2,7 +2,15 @@
 definePageMeta({ layout: 'default' })
 
 const workbench = useDslWorkbench()
-const { state, selectedConstruct, loadConstructs, selectConstruct, saveConstruct, validateConstruct, publishConstruct } = workbench
+const {
+  state,
+  selectedConstruct,
+  loadConstructs,
+  selectConstruct,
+  saveConstruct,
+  validateConstruct,
+  publishConstruct,
+} = workbench
 
 const explorerOpen = ref(true)
 
@@ -57,10 +65,7 @@ onMounted(() => {
     </header>
 
     <div class="flex flex-1 overflow-hidden">
-      <aside
-        v-show="explorerOpen"
-        class="w-64 shrink-0 border-r border-gray-800"
-      >
+      <aside v-show="explorerOpen" class="w-64 shrink-0 border-r border-gray-800">
         <ConstructExplorer
           :constructs="state.constructs"
           :selected-name="state.selectedName"

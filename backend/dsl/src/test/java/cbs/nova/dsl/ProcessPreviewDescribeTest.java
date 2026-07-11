@@ -2,9 +2,10 @@ package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.jupiter.api.Test;
-
+import cbs.nova.dsl.runner.DefaultProcessRunner;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.junit.jupiter.api.Test;
 
 class ProcessPreviewDescribeTest {
 
@@ -92,7 +93,7 @@ class ProcessPreviewDescribeTest {
             false,
             false,
             "custom preview",
-            java.util.List.of(),
+            List.of(),
             "P-queue",
             "v1",
             null,

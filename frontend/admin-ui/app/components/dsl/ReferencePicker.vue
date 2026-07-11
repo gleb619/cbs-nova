@@ -29,7 +29,7 @@ const compatible = computed(() => {
         type="text"
         :placeholder="`Search ${type}...`"
         class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-      />
+      >
     </div>
     <ul class="flex-1 overflow-y-auto p-1">
       <li v-if="compatible.length === 0" class="px-2 py-2 text-sm text-gray-500 italic">

@@ -1,9 +1,10 @@
 package cbs.nova.dsl.codegen;
 
-import cbs.nova.dsl.ProcessDescriptor;
+import cbs.nova.dsl.process.ProcessDescriptor;
 import org.jspecify.annotations.NonNull;
 
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.List;
 
 public final class ProcessCodeGenerator {
@@ -16,10 +17,11 @@ public final class ProcessCodeGenerator {
     String implName = name + "ProcessDefinition";
 
     return List.of(
-            new GeneratedSource(pkg, interfaceName, generateInterface(pkg, interfaceName)),
+            new GeneratedSource(pkg, interfaceName, generateInterface(pkg, interfaceName, descriptor)),
             new GeneratedSource(
                     pkg, implName, generateImpl(pkg, name, interfaceName, implName,
                             descriptor.version(), descriptor.taskQueue(),
+                            descriptor.inputType(), descriptor.outputType(),
                             descriptor.hasCompensation())));
   }
 
@@ -29,98 +31,133 @@ public final class ProcessCodeGenerator {
     return BASE_PACKAGE + "." + nameSegment + "." + versionSegment;
   }
 
-  private String generateInterface(String pkg, String interfaceName) {
+  private String generateInterface(String pkg, String interfaceName, ProcessDescriptor descriptor) {
+    String inputType = typeName(descriptor.inputType());
+    String outputType = typeName(descriptor.outputType());
+    List<String> imports = new ArrayList<>();
+    addImport(imports, descriptor.inputType());
+    addImport(imports, descriptor.outputType());
+
+    String importBlock = imports.isEmpty() ? "" : "\n" + String.join("\n", imports) + "\n";
+
     return MessageFormat.format(
             """
-                    package {0};
-
+                    package {0};{1}
                     import io.temporal.workflow.QueryMethod;
                     import io.temporal.workflow.WorkflowInterface;
                     import io.temporal.workflow.WorkflowMethod;
 
                     @WorkflowInterface
-                    public interface {1} '{'
+                    public interface {2} '{'
                       @QueryMethod
                       String getVersion();
 
                       @WorkflowMethod
-                      Object run(Object input);
+                      {3} run({4} input);
                     '}'
                     """,
-            pkg, interfaceName);
+            pkg, importBlock, interfaceName, outputType, inputType);
   }
 
   private String generateImpl(
           String pkg, String processName, String interfaceName, String implName, String version,
-          String taskQueue, boolean hasCompensation) {
+          String taskQueue, Class<?> inputType, Class<?> outputType, boolean hasCompensation) {
+    String inputTypeName = typeName(inputType);
+    String outputTypeName = typeName(outputType);
+    List<String> imports = new ArrayList<>();
+    addImport(imports, inputType);
+    addImport(imports, outputType);
+
+    String importBlock = imports.isEmpty() ? "" : "\n" + String.join("\n", imports) + "\n";
+
+    String compensationTemplate = """
+            package {0};{1}
+            import cbs.nova.dsl.ExecutionMode;
+            import cbs.nova.dsl.GlobalManager;
+            import cbs.nova.dsl.SimpleContext;
+            import io.temporal.workflow.Saga;
+            import io.temporal.workflow.Workflow;
+
+            public class {4} implements {3} '{'
+              private static final String VERSION = "{5}";
+
+              private static final String TASK_QUEUE = "{6}";
+
+              @Override
+              public String getVersion() '{'
+                return VERSION;
+              '}'
+
+              @Override
+              public {7} run({8} input) '{'
+                Saga saga = new Saga(new Saga.Options.Builder().build());
+                String runId = Workflow.getInfo().getRunId();
+                var ctx = SimpleContext.of(input, ExecutionMode.RUN, runId);
+                var compensationCtx = SimpleContext.of(input, ExecutionMode.RUN, runId);
+                saga.addCompensation(
+                    () ->
+                        GlobalManager.getInstance().runProcess("{2}-compensation", compensationCtx));
+                try '{'
+                  var result = GlobalManager.getInstance().runProcess("{2}", ctx);
+                  if (!result.isSuccess()) '{'
+                    saga.compensate();
+                    throw new RuntimeException("Process failed", result.cause());
+                  '}'
+                  return {9}result.value();
+                '}' catch (Exception e) '{'
+                  saga.compensate();
+                  throw e;
+                '}'
+              '}'
+            '}'
+            """;
+
+    String plainTemplate = """
+            package {0};{1}
+            import cbs.nova.dsl.ExecutionMode;
+            import cbs.nova.dsl.GlobalManager;
+            import cbs.nova.dsl.SimpleContext;
+            import io.temporal.workflow.Workflow;
+
+            public class {4} implements {3} '{'
+              private static final String VERSION = "{5}";
+
+              private static final String TASK_QUEUE = "{6}";
+
+              @Override
+              public String getVersion() '{'
+                return VERSION;
+              '}'
+
+              @Override
+              public {7} run({8} input) '{'
+                String runId = Workflow.getInfo().getRunId();
+                var ctx = SimpleContext.of(input, ExecutionMode.RUN, runId);
+                var result = GlobalManager.getInstance().runProcess("{2}", ctx);
+                if (!result.isSuccess()) throw new RuntimeException("Process failed", result.cause());
+                return {9}result.value();
+              '}'
+            '}'
+            """;
+
     return MessageFormat.format(
-            hasCompensation
-                    ? """
-                            package {0};
+            hasCompensation ? compensationTemplate : plainTemplate,
+            pkg, importBlock, processName, interfaceName, implName, version, taskQueue,
+            outputTypeName, inputTypeName, castIfNeeded(outputType));
+  }
 
-                            import cbs.nova.dsl.ExecutionMode;
-                            import cbs.nova.dsl.GlobalManager;
-                            import cbs.nova.dsl.SimpleContext;
-                            import io.temporal.workflow.Saga;
+  private String typeName(Class<?> type) {
+    return type == null ? "Object" : type.getSimpleName();
+  }
 
-                            public class {3} implements {2} '{'
-                              private static final String VERSION = "{5}";
+  private String castIfNeeded(Class<?> type) {
+    return type == null ? "" : "(" + type.getSimpleName() + ") ";
+  }
 
-                              private static final String TASK_QUEUE = "{6}";
-
-                              @Override
-                              public String getVersion() '{'
-                                return VERSION;
-                              '}'
-
-                              @Override
-                              public Object run(Object input) '{'
-                                Saga saga = new Saga(new Saga.Options.Builder().build());
-                                var ctx = SimpleContext.of(input, ExecutionMode.RUN);
-                                var compensationCtx = SimpleContext.of(input, ExecutionMode.RUN);
-                                saga.addCompensation(
-                                    () ->
-                                        GlobalManager.getInstance().runProcess("{1}-compensation", compensationCtx));
-                                try '{'
-                                  var result = GlobalManager.getInstance().runProcess("{1}", ctx);
-                                  if (!result.isSuccess()) '{'
-                                    saga.compensate();
-                                    throw new RuntimeException("Process failed", result.cause());
-                                  '}'
-                                  return result.value();
-                                '}' catch (Exception e) '{'
-                                  saga.compensate();
-                                  throw e;
-                                '}'
-                              '}'
-                            '}'
-                            """
-                    : """
-                            package {0};
-
-                            import cbs.nova.dsl.ExecutionMode;
-                            import cbs.nova.dsl.GlobalManager;
-                            import cbs.nova.dsl.SimpleContext;
-
-                            public class {3} implements {2} '{'
-                              private static final String VERSION = "{5}";
-
-                              private static final String TASK_QUEUE = "{6}";
-
-                              @Override
-                              public String getVersion() '{'
-                                return VERSION;
-                              '}'
-
-                              @Override
-                              public Object run(Object input) '{'
-                                var ctx = SimpleContext.of(input, ExecutionMode.RUN);
-                                var result = GlobalManager.getInstance().runProcess("{1}", ctx);
-                                if (!result.isSuccess()) throw new RuntimeException("Process failed", result.cause());
-                                return result.value();
-                              '}'
-                            '}'
-                            """,
-            pkg, processName, interfaceName, implName, version, version, taskQueue);
+  private void addImport(List<String> imports, Class<?> type) {
+    if (type == null || type.getPackageName().startsWith("java.lang")) {
+      return;
+    }
+    imports.add("import " + type.getName() + ";");
   }
 }

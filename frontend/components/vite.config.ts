@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
 import { resolve } from 'node:path'
+import vue from '@vitejs/plugin-vue'
+import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [vue()],
@@ -8,11 +8,11 @@ export default defineConfig({
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'CbsComponents',
-      fileName: 'index'
+      fileName: 'index',
     },
     rollupOptions: {
       external: ['vue'],
-      output: { globals: { vue: 'Vue' } }
-    }
-  }
+      output: { globals: { vue: 'Vue' } },
+    },
+  },
 })

@@ -1,0 +1,31 @@
+plugins {
+  id 'java-library'
+}
+
+dependencies {
+  api libs.jspecify
+  api libs.temporal.sdk
+
+  testImplementation platform(libs.junit.bom)
+  testImplementation libs.junit.jupiter
+  testImplementation libs.assertj
+  testImplementation libs.temporal.testing
+  testImplementation libs.wiremock
+
+  testImplementation libs.testcontainers
+  testImplementation libs.testcontainers.junit.jupiter
+  testImplementation libs.testcontainers.postgresql
+
+  testImplementation project(':dsl-api')
+  testImplementation project(':dsl')
+  testImplementation project(':dsl-model')
+  testImplementation project(':dsl-examples')
+
+  testRuntimeOnly libs.junit.platform.launcher
+
+  testRuntimeOnly libs.slf4j.simple
+}
+
+test {
+  systemProperty 'dsl.examples.src.dir', project(':dsl-examples').file('src').absolutePath
+}
