@@ -3,8 +3,8 @@ import java.util.List;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.Result;
-import cbs.nova.dslmodel.InvoiceIn;
-import cbs.nova.dslmodel.InvoiceOut;
+import cbs.nova.dslexamples.InvoiceModels.InvoiceIn;
+import cbs.nova.dslexamples.InvoiceModels.InvoiceOut;
 
 void main() {
 }

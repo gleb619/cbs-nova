@@ -1,5 +1,5 @@
 import cbs.nova.dsl.*;
-import cbs.nova.dslmodel.*;
+import cbs.nova.dslexamples.InvoiceModels.*;
 import java.util.List;
 
 void main() {

@@ -27,8 +27,9 @@ dependencies {
   annotationProcessor project(':misc-codegen')
 
   testImplementation libs.bundles.spring.test
+
+  testImplementation project(':dsl-examples')
   testImplementation libs.temporal.testing
-  testImplementation project(':dsl-model')
 
   compileOnly 'org.springframework.boot:spring-boot-starter-actuator'
   testImplementation 'org.springframework.boot:spring-boot-starter-actuator'

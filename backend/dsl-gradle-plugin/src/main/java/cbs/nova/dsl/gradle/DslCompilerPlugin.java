@@ -23,7 +23,7 @@ public class DslCompilerPlugin implements Plugin<Project> {
       dependencies.add(project.getDependencies().create("cbs.nova:dsl-codegen:" + version));
       dependencies.add(project.getDependencies().create("cbs.nova:dsl:" + version));
       dependencies.add(project.getDependencies().create("cbs.nova:dsl-api:" + version));
-      dependencies.add(project.getDependencies().create("cbs.nova:dsl-model:" + version));
+      // dsl-model removed - dsl-examples provides its own POJOs
       dependencies.add(project.getDependencies().create("cbs.nova:starter:" + version));
     });
 

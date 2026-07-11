@@ -1,5 +1,5 @@
 import cbs.nova.dsl.*;
-import cbs.nova.dslmodel.*;
+import cbs.nova.dslexamples.LongWorkModels.*;
 import java.time.Duration;
 import java.util.List;
 

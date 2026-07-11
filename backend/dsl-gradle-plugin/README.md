@@ -25,7 +25,7 @@ dslCompile {
 ```
 
 The `dslVersion` is used to resolve the compiler runtime dependencies
-(`dsl-codegen`, `dsl`, `dsl-api`, `dsl-model`, `starter`) from Maven Local or
+(`dsl-codegen`, `dsl`, `dsl-api`, `starter`) from Maven Local or
 any configured repository.
 
 ## Tasks
@@ -44,7 +44,7 @@ first be published to Maven Local:
 
 ```bash
 ./gradlew :dsl-api:publishToMavenLocal :dsl:publishToMavenLocal \
-  :dsl-codegen:publishToMavenLocal :dsl-model:publishToMavenLocal \
+  :dsl-codegen:publishToMavenLocal \
   :starter:publishToMavenLocal :dsl-gradle-plugin:publishToMavenLocal
 ```
 

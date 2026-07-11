@@ -3,8 +3,8 @@ import java.util.List;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.Result;
-import cbs.nova.dslmodel.LongWorkIn;
-import cbs.nova.dslmodel.LongWorkOut;
+import cbs.nova.dslexamples.LongWorkModels.LongWorkIn;
+import cbs.nova.dslexamples.LongWorkModels.LongWorkOut;
 
 void main() {
 }

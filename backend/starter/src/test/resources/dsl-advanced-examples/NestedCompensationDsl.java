@@ -3,8 +3,8 @@ import java.util.List;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.Result;
-import cbs.nova.dslmodel.NestedCompensationIn;
-import cbs.nova.dslmodel.NestedCompensationOut;
+import cbs.nova.dslexamples.NestedCompensationModels.NestedCompensationIn;
+import cbs.nova.dslexamples.NestedCompensationModels.NestedCompensationOut;
 
 void main() {
 }

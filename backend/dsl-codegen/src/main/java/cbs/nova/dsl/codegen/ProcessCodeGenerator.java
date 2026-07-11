@@ -178,6 +178,6 @@ public final class ProcessCodeGenerator {
     if (type == null || type.getPackageName().startsWith("java.lang")) {
       return;
     }
-    imports.add("import " + type.getName() + ";");
+    imports.add("import " + type.getCanonicalName() + ";");
   }
 }

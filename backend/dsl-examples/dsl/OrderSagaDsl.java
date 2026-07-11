@@ -1,5 +1,5 @@
 import cbs.nova.dsl.*;
-import cbs.nova.dslmodel.*;
+import cbs.nova.dslexamples.OrderSagaModels.*;
 import java.util.List;
 import java.time.Duration;
 

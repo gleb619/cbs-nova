@@ -19,7 +19,6 @@ allprojects {
         substitute(module('cbs.nova:dsl-codegen')).using(project(':dsl-codegen'))
         substitute(module('cbs.nova:dsl')).using(project(':dsl'))
         substitute(module('cbs.nova:dsl-api')).using(project(':dsl-api'))
-        substitute(module('cbs.nova:dsl-model')).using(project(':dsl-model'))
         substitute(module('cbs.nova:starter')).using(project(':starter'))
         substitute(module('cbs.nova:dsl-gradle-plugin')).using(project(':dsl-gradle-plugin'))
       }

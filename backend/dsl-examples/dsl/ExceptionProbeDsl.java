@@ -1,5 +1,5 @@
 import cbs.nova.dsl.*;
-import cbs.nova.dslmodel.*;
+import cbs.nova.dslexamples.ExceptionProbeModels.*;
 import cbs.nova.starter.helpers.model.*;
 import java.util.List;
 

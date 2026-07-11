@@ -21,7 +21,6 @@ include 'dsl-codegen'
 include 'starter'
 include 'starter-example'
 include 'dsl-examples'
-include 'dsl-model'
 include 'dsl-gradle-plugin'
 include 'misc-codegen'
 

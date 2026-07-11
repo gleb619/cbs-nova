@@ -25,7 +25,6 @@ dependencies {
 
   testImplementation project(':dsl-api')
   testImplementation project(':dsl')
-  testImplementation project(':dsl-model')
   testImplementation project(':starter')
   testImplementation project(':dsl-examples')
 
@@ -35,5 +34,5 @@ dependencies {
 }
 
 test {
-  systemProperty 'dsl.examples.src.dir', project(':dsl-examples').file('src').absolutePath
+  systemProperty 'dsl.examples.src.dir', project(':dsl-examples').file('dsl').absolutePath
 }

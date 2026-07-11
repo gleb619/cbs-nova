@@ -10,16 +10,50 @@ dependencyManagement {
   }
 }
 
+sourceSets {
+  dslModels {
+    java {
+      srcDirs = ['src/main/java']
+    }
+  }
+}
+
 dependencies {
   implementation project(':dsl-api')
   implementation project(':dsl')
-  implementation project(':dsl-model')
   compileOnly project(':starter')
   implementation libs.temporal.sdk
+
+  dslCompiler project(':dsl-api')
+  dslCompiler project(':dsl')
+  dslCompiler project(':dsl-codegen')
+  dslCompiler project(':starter')
+}
+
+tasks.register('compileDslModels', JavaCompile) {
+  source = sourceSets.dslModels.java
+  classpath = sourceSets.main.compileClasspath
+  destinationDirectory = layout.buildDirectory.dir('classes/dsl-models')
+}
+
+tasks.named('compileDsl', JavaExec) {
+  dependsOn 'compileDslModels'
+  classpath.from(tasks.compileDslModels.outputs.files)
+  getOutputDir().set(layout.buildDirectory.dir('generated-dsl'))
+}
+
+dslCompile {
+  sourceDir = layout.projectDirectory.dir('dsl')
+}
+
+tasks.named('compileJava', JavaCompile) {
+  dependsOn 'compileDsl'
+  source += fileTree(layout.buildDirectory.dir('generated-dsl')) { include '**/*.java' }
 }
 
 spotless {
   java {
-    targetExclude 'build/generated/**/*.java'
+    targetExclude 'dsl/**/*.java'
+    targetExclude layout.buildDirectory.dir('generated-dsl').get().asFile
   }
 }

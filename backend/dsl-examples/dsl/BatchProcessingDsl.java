@@ -1,5 +1,5 @@
 import cbs.nova.dsl.*;
-import cbs.nova.dslmodel.*;
+import cbs.nova.dslexamples.BatchModels.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
