@@ -14,9 +14,9 @@ public class TemporalTestConfiguration {
   @Primary
   WorkflowServiceStubs workflowServiceStubs(@Value("${temporal.target}") String target) {
     return WorkflowServiceStubs.newInstance(
-        WorkflowServiceStubsOptions.newBuilder()
-            .setTarget(target)
-            .setEnableKeepAlive(true)
-            .build());
+            WorkflowServiceStubsOptions.newBuilder()
+                    .setTarget(target)
+                    .setEnableKeepAlive(true)
+                    .build());
   }
 }

@@ -1,4 +1,4 @@
-cbs.nova.starter.TemporalConfiguration
-cbs.nova.starter.DslAutoConfiguration
-cbs.nova.starter.DslWorkerConfiguration
-cbs.nova.starter.PropertyResolverConfiguration
+cbs.nova.starter.config.TemporalConfiguration
+cbs.nova.starter.config.DslAutoConfiguration
+cbs.nova.starter.config.DslWorkerConfiguration
+cbs.nova.starter.config.PropertyResolverConfiguration

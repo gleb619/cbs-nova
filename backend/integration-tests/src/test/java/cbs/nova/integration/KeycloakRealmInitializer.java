@@ -1,12 +1,13 @@
 package cbs.nova.integration;
 
-import java.util.List;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.idm.ClientRepresentation;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.RealmRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.testcontainers.containers.GenericContainer;
+
+import java.util.List;
 
 public class KeycloakRealmInitializer {
 
@@ -17,13 +18,12 @@ public class KeycloakRealmInitializer {
   private final String password = "test-pass";
 
   public KeycloakRealmInitializer(GenericContainer<?> keycloak) {
-    this.authServerUrl =
-        "http://" + keycloak.getHost() + ":" + keycloak.getMappedPort(8080);
+    this.authServerUrl = "http://" + keycloak.getHost() + ":" + keycloak.getMappedPort(8080);
   }
 
   public void initialize() {
-    try (Keycloak keycloak =
-        Keycloak.getInstance(authServerUrl, "master", "admin", "admin", "admin-cli")) {
+    try (Keycloak keycloak = Keycloak.getInstance(authServerUrl, "master", "admin", "admin",
+            "admin-cli")) {
       RealmRepresentation realmRep = new RealmRepresentation();
       realmRep.setRealm(realm);
       realmRep.setEnabled(true);
