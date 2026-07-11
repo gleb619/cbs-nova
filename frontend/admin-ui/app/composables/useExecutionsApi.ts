@@ -1,4 +1,4 @@
-import type { Execution, ExecutionDetail } from '~/types/execution'
+import type { Execution, ExecutionDetail } from '~/types'
 
 export function useExecutionsApi() {
   async function list(

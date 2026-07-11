@@ -66,7 +66,7 @@ onMounted(() => {
 
     <div class="flex flex-1 overflow-hidden">
       <aside v-show="explorerOpen" class="w-64 shrink-0 border-r border-gray-800">
-        <ConstructExplorer
+        <DslConstructExplorer
           :constructs="state.constructs"
           :selected-name="state.selectedName"
           :loading="state.isLoading"
@@ -75,11 +75,11 @@ onMounted(() => {
       </aside>
 
       <main class="flex-1 flex flex-col overflow-hidden">
-        <MetadataPanel :construct="selectedConstruct" />
+        <DslMetadataPanel :construct="selectedConstruct" />
         <div class="flex-1 overflow-hidden">
-          <BodyEditor :construct="selectedConstruct" />
+          <DslBodyEditor :construct="selectedConstruct" />
         </div>
-        <ProblemsPanel :errors="state.validationErrors" />
+        <DslProblemsPanel :errors="state.validationErrors" />
       </main>
     </div>
   </div>

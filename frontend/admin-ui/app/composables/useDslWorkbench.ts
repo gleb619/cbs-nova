@@ -1,4 +1,4 @@
-import type { DslConstruct, ValidationError } from '~/types/dsl'
+import type { DslConstruct, ValidationError } from '~/types'
 
 interface WorkbenchState {
   constructs: DslConstruct[]

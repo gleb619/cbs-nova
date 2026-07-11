@@ -1,4 +1,4 @@
-import type { RunnerMode, RunnerOutput, RunnerStatus } from '../types/runner'
+import type { RunnerMode, RunnerOutput, RunnerStatus } from '~/types'
 import { useDslApi } from './useDslApi'
 
 const selectedDefinition = ref<string | null>(null)

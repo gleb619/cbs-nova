@@ -112,6 +112,7 @@ See [Runtime details](dsl/runtime.md) for the full contract, operational modes, 
   Transaction, Function, and Helper.
 - **[Authoring DSL flows](dsl/authoring.md)** — source files, builder API, `Result` type, helper/transaction calls,
   compensation, and the full loan-disbursement example.
+- **[Working with DSL examples](dsl/how-to-work-with-dsl-in-examples.md)** — source layout, building examples, the Testcontainers integration test, and tips for adding new flows.
 - **[Compile-time code generation](dsl/codegen.md)** — generated class naming/versioning, the Gradle module, the
   generation pipeline, and generated code samples.
 

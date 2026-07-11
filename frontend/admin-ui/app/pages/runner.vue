@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DefinitionMeta, RunnerMode } from '../types/runner'
+import type { DefinitionMeta, RunnerMode } from '~/types'
 
 definePageMeta({ layout: 'default' })
 
@@ -119,13 +119,13 @@ onMounted(() => {
         <p class="text-sm text-gray-600">Preview, run, or explain DSL definitions.</p>
       </div>
       <div class="flex items-center gap-3">
-        <StatusIndicator :status="status" />
+        <RunnerStatusIndicator :status="status" />
       </div>
     </header>
 
     <div class="flex flex-wrap items-end gap-4 bg-white border border-gray-200 rounded-xl p-4">
       <div class="min-w-[16rem] flex-1">
-        <DefinitionSelector
+        <RunnerDefinitionSelector
           :definitions="definitions"
           :model-value="selectedDefinition"
           @update:model-value="onSelectDefinition"
@@ -134,7 +134,7 @@ onMounted(() => {
         <p v-else-if="loadError" class="text-xs text-red-600 mt-1">{{ loadError }}</p>
       </div>
 
-      <ModeSwitcher :model-value="mode" @update:model-value="onSetMode" />
+      <RunnerModeSwitcher :model-value="mode" @update:model-value="onSetMode" />
 
       <div class="ml-auto flex gap-2">
         <button
@@ -159,7 +159,7 @@ onMounted(() => {
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <section class="bg-white border border-gray-200 rounded-xl p-5">
         <h2 class="text-sm font-semibold text-gray-700 mb-4">Input</h2>
-        <InputForm
+        <RunnerInputForm
           :schema="selectedSchema"
           :model-value="formData"
           @update:model-value="(val) => (formData = val)"
@@ -168,11 +168,11 @@ onMounted(() => {
 
       <section class="bg-white border border-gray-200 rounded-xl p-5">
         <h2 class="text-sm font-semibold text-gray-700 mb-4">Output</h2>
-        <OutputPanel :output="output" :mode="mode" :status="status" />
+        <RunnerOutputPanel :output="output" :mode="mode" :status="status" />
       </section>
     </div>
 
-    <RunConfirmationModal
+    <RunnerRunConfirmationModal
       :show="showConfirmModal"
       :payload="formData"
       @confirm="onConfirmRun"

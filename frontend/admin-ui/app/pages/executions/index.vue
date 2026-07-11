@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ExecutionFilters } from '~/types/execution'
+import type { ExecutionFilters } from '~/types'
 
 const { executions, loading, loadExecutions, applyFilters } = useExecutions()
 

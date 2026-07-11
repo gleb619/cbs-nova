@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { ExecutionStatus } from '~/types/execution'
-import type { DefinitionMeta } from '~/types/runner'
+import { NuxtLink } from '#components'
+import type { DefinitionMeta, ExecutionStatus } from '~/types'
 
 interface RecentExecution {
   id: string
@@ -79,6 +79,10 @@ async function loadRecentExecutions() {
   }
 }
 
+function onSelectExecution(id: string) {
+  navigateTo(`/executions/${id}`)
+}
+
 onMounted(() => {
   loadDefinitions()
   loadRecentExecutions()
@@ -109,20 +113,37 @@ onMounted(() => {
         </div>
       </div>
       <div v-else class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <DashboardStatCard label="Processes" :count="processCount" icon="🔷" to="/dsl-workbench" />
         <DashboardStatCard
+          :link-component="NuxtLink"
+          label="Processes"
+          :count="processCount"
+          icon="🔷"
+          to="/dsl-workbench"
+        />
+        <DashboardStatCard
+          :link-component="NuxtLink"
           label="Transactions"
           :count="transactionCount"
           icon="🔶"
           to="/dsl-workbench"
         />
-        <DashboardStatCard label="Helpers" :count="helperCount" icon="🛠" to="/dsl-workbench" />
+        <DashboardStatCard
+          :link-component="NuxtLink"
+          label="Helpers"
+          :count="helperCount"
+          icon="🛠"
+          to="/dsl-workbench"
+        />
       </div>
       <p v-if="definitionsError" class="text-xs text-red-600 mt-2">{{ definitionsError }}</p>
     </section>
 
     <section>
-      <DashboardRecentExecutions :executions="recentExecutions" :loading="loadingExecutions" />
+      <DashboardRecentExecutions
+        :executions="recentExecutions"
+        :loading="loadingExecutions"
+        @select="onSelectExecution"
+      />
       <p v-if="executionsError" class="text-xs text-red-600 mt-2">{{ executionsError }}</p>
     </section>
   </div>

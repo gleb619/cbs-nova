@@ -3,6 +3,10 @@ export default defineNuxtConfig({
   modules: ['@pinia/nuxt'],
   css: ['~/assets/css/main.css'],
   compatibilityDate: '2024-04-03',
+  components: [
+    { path: '~/components', pathPrefix: true },
+    { path: '../components/src/components', pathPrefix: true },
+  ],
   runtimeConfig: {
     backendBaseUrl: process.env.BACKEND_BASE_URL ?? 'http://localhost:8090',
     backendApiKey: process.env.BACKEND_API_KEY ?? '',

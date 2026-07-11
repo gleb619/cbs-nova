@@ -1,4 +1,4 @@
-import type { Execution, ExecutionDetail, ExecutionFilters } from '~/types/execution'
+import type { Execution, ExecutionDetail, ExecutionFilters } from '~/types'
 
 export function useExecutions() {
   const executions = ref<Execution[]>([])
