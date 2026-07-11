@@ -11,10 +11,7 @@ import org.jspecify.annotations.NonNull;
 
 public final class DescriptorFactory {
 
-  private DescriptorFactory() {
-  }
-
-  public static @NonNull ProcessDescriptor fromProcess(@NonNull ProcessDslObject obj) {
+  public ProcessDescriptor fromProcess(@NonNull ProcessDslObject obj) {
     return new ProcessDescriptor(
             obj.name(),
             obj.version(),
@@ -25,7 +22,7 @@ public final class DescriptorFactory {
             List.of());
   }
 
-  public static @NonNull TransactionDescriptor fromTransaction(@NonNull TransactionDslObject obj) {
+  public TransactionDescriptor fromTransaction(@NonNull TransactionDslObject obj) {
     return new TransactionDescriptor(
             obj.name(),
             obj.version(),
@@ -39,7 +36,7 @@ public final class DescriptorFactory {
             obj.heartbeatTimeout());
   }
 
-  public static @NonNull FunctionDescriptor fromFunction(@NonNull FunctionDslObject obj) {
+  public FunctionDescriptor fromFunction(@NonNull FunctionDslObject obj) {
     return new FunctionDescriptor(obj.name(), null, null);
   }
 }

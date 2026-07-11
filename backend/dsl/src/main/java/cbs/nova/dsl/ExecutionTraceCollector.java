@@ -1,30 +1,35 @@
 package cbs.nova.dsl;
 
-import org.jspecify.annotations.NonNull;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.jspecify.annotations.NonNull;
 
 public final class ExecutionTraceCollector {
-  private static final ThreadLocal<List<String>> TRACE = new ThreadLocal<>();
+  private final ThreadLocal<List<String>> trace = new ThreadLocal<>();
 
-  public static void start() {
-    TRACE.set(new ArrayList<>());
+  private static final ExecutionTraceCollector INSTANCE = new ExecutionTraceCollector();
+
+  public static ExecutionTraceCollector getInstance() {
+    return INSTANCE;
   }
 
-  public static void stop() {
-    TRACE.remove();
+  public void start() {
+    trace.set(new ArrayList<>());
   }
 
-  public static @NonNull List<String> snapshot() {
-    List<String> trace = TRACE.get();
-    return trace != null ? List.copyOf(trace) : List.of();
+  public void stop() {
+    trace.remove();
   }
 
-  public static void add(@NonNull String entry) {
-    List<String> trace = TRACE.get();
-    if (trace != null) {
-      trace.add(entry);
+  public @NonNull List<String> snapshot() {
+    List<String> current = trace.get();
+    return current != null ? List.copyOf(current) : List.of();
+  }
+
+  public void add(@NonNull String entry) {
+    List<String> current = trace.get();
+    if (current != null) {
+      current.add(entry);
     }
   }
 }

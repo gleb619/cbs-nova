@@ -3,6 +3,7 @@ package cbs.nova.dsl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
+import cbs.nova.dsl.transaction.TransactionDslObject;
 import org.junit.jupiter.api.Test;
 
 class DefaultTransactionRunnerTest {
@@ -15,7 +16,7 @@ class DefaultTransactionRunnerTest {
 
   @Test
   void runModeExecutesLogicAndReturnsSuccess() {
-    var ctx = SimpleContext.of("in", ExecutionMode.RUN, "r1");
+    var ctx = SimpleContext.getInstance().of("in", ExecutionMode.RUN, "r1");
     var result = runner.run(tx("T"), ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("ok-T");
@@ -23,14 +24,14 @@ class DefaultTransactionRunnerTest {
 
   @Test
   void explainModeExecutesLogicAndReturnsSuccess() {
-    var ctx = SimpleContext.of("in", ExecutionMode.EXPLAIN, "r2");
+    var ctx = SimpleContext.getInstance().of("in", ExecutionMode.EXPLAIN, "r2");
     var result = runner.run(tx("T"), ctx);
     assertThat(result.isSuccess()).isTrue();
   }
 
   @Test
   void previewModeExecutesLogic() {
-    var ctx = SimpleContext.of("in", ExecutionMode.PREVIEW, "r3");
+    var ctx = SimpleContext.getInstance().of("in", ExecutionMode.PREVIEW, "r3");
     var result = runner.run(tx("T"), ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("ok-T");
@@ -43,7 +44,7 @@ class DefaultTransactionRunnerTest {
               throw new RuntimeException("burst");
             })
             .build();
-    var ctx = SimpleContext.of("in", ExecutionMode.RUN, "r4");
+    var ctx = SimpleContext.getInstance().of("in", ExecutionMode.RUN, "r4");
     var result = runner.run(tx, ctx);
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause()).isInstanceOf(DslExecutionException.class);
@@ -57,7 +58,7 @@ class DefaultTransactionRunnerTest {
               throw new RuntimeException("err");
             })
             .build();
-    var ctx = SimpleContext.of("in", ExecutionMode.RUN, "my-run");
+    var ctx = SimpleContext.getInstance().of("in", ExecutionMode.RUN, "my-run");
     var result = runner.run(tx, ctx);
     assertThat(result.cause()).isInstanceOf(DslExecutionException.class);
     assertThat(((DslException) result.cause()).runId()).isEqualTo("my-run");
@@ -69,7 +70,7 @@ class DefaultTransactionRunnerTest {
             .execute(ctx -> Result.success("execute-result"))
             .preview(ctx -> Result.success("preview-result"))
             .build();
-    var ctx = SimpleContext.of("in", ExecutionMode.EXPLAIN, "r5");
+    var ctx = SimpleContext.getInstance().of("in", ExecutionMode.EXPLAIN, "r5");
     var result = runner.run(tx, ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("execute-result");
@@ -81,7 +82,7 @@ class DefaultTransactionRunnerTest {
             .execute(ctx -> Result.success("execute-result"))
             .preview(ctx -> Result.success("preview-result"))
             .build();
-    var ctx = SimpleContext.of("in", ExecutionMode.PREVIEW, "r6");
+    var ctx = SimpleContext.getInstance().of("in", ExecutionMode.PREVIEW, "r6");
     var result = runner.run(tx, ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("preview-result");

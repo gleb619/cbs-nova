@@ -4,14 +4,13 @@ import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 @RestController
 @RequestMapping("/api/dsl")
@@ -45,9 +44,9 @@ public class DslReloadResource {
                               null,
                               null));
     }
-    GlobalManager.resetForTests();
+    GlobalManager.getInstance().resetForTests();
     try {
-      DefinitionLoader.load(dir, GlobalManager.getInstance());
+      new DefinitionLoader().load(dir, GlobalManager.getInstance());
     } catch (Exception e) {
       return ResponseEntity.status(500)
               .body(

@@ -16,15 +16,14 @@ import cbs.nova.dslmodel.InvoiceLine;
 import cbs.nova.dslmodel.InvoiceOut;
 import cbs.nova.dslmodel.LongWorkIn;
 import cbs.nova.dslmodel.LongWorkOut;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class IntermediateDslExamplesTest {
 
@@ -35,7 +34,7 @@ class IntermediateDslExamplesTest {
 
   @BeforeEach
   void loadCompactDsls() throws Exception {
-    GlobalManager.resetForTests();
+    GlobalManager.getInstance().resetForTests();
     copyCompactDsl("BatchProcessingDsl.java");
     copyCompactDsl("InvoiceGenerationDsl.java");
     copyCompactDsl("LongWorkSimulationDsl.java");
@@ -47,7 +46,7 @@ class IntermediateDslExamplesTest {
 
   @AfterEach
   void cleanup() {
-    GlobalManager.resetForTests();
+    GlobalManager.getInstance().resetForTests();
   }
 
   @Test
@@ -56,7 +55,7 @@ class IntermediateDslExamplesTest {
             new BatchItem("a", 10),
             new BatchItem("b", 20),
             new BatchItem("c", 12)));
-    Context<BatchIn> ctx = SimpleContext.of(input, ExecutionMode.PREVIEW);
+    Context<BatchIn> ctx = SimpleContext.getInstance().of(input, ExecutionMode.PREVIEW);
 
     Result<?> result = GlobalManager.getInstance().runProcess("BatchProcessing", ctx);
 
@@ -71,7 +70,7 @@ class IntermediateDslExamplesTest {
     var input = new InvoiceIn(List.of(
             new InvoiceLine("widget", 2.50, 4),
             new InvoiceLine("gadget", 10.00, 2)));
-    Context<InvoiceIn> ctx = SimpleContext.of(input, ExecutionMode.PREVIEW);
+    Context<InvoiceIn> ctx = SimpleContext.getInstance().of(input, ExecutionMode.PREVIEW);
 
     Result<?> result = GlobalManager.getInstance().runProcess("InvoiceGeneration", ctx);
 
@@ -87,7 +86,7 @@ class IntermediateDslExamplesTest {
   @Test
   void longWorkSimulationPreviewCompletesAllSteps() {
     var input = new LongWorkIn("task-42", 5);
-    Context<LongWorkIn> ctx = SimpleContext.of(input, ExecutionMode.PREVIEW);
+    Context<LongWorkIn> ctx = SimpleContext.getInstance().of(input, ExecutionMode.PREVIEW);
 
     Result<?> result = GlobalManager.getInstance().runTransaction("LongWorkSimulation", ctx);
 
@@ -101,7 +100,7 @@ class IntermediateDslExamplesTest {
   @Test
   void devDslRuntimePreviewReturnsSuccessReport() {
     var input = new BatchIn(List.of(new BatchItem("only", 7)));
-    Context<BatchIn> ctx = SimpleContext.of(input, ExecutionMode.PREVIEW);
+    Context<BatchIn> ctx = SimpleContext.getInstance().of(input, ExecutionMode.PREVIEW);
 
     Result<PreviewReport> reportResult = runtime.preview("BatchProcessing", ctx);
 

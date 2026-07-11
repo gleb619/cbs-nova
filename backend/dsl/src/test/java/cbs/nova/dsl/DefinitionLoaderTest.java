@@ -3,12 +3,11 @@ package cbs.nova.dsl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 class DefinitionLoaderTest {
   @TempDir
@@ -16,7 +15,7 @@ class DefinitionLoaderTest {
 
   @BeforeEach
   void reset() {
-    GlobalManager.resetForTests();
+    GlobalManager.getInstance().resetForTests();
   }
 
   @Test
@@ -40,9 +39,9 @@ class DefinitionLoaderTest {
                     """);
 
     var gm = GlobalManager.getInstance();
-    DefinitionLoader.load(tempDir, gm);
+    new DefinitionLoader().load(tempDir, gm);
 
-    var ctx = SimpleContext.of("test", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.getInstance().of("test", ExecutionMode.PREVIEW);
     var result = gm.runProcess("LoadedProcess", ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("loaded");
@@ -54,6 +53,6 @@ class DefinitionLoaderTest {
     Files.writeString(bad, "this is not valid java !!!;");
 
     var gm = GlobalManager.getInstance();
-    assertThatCode(() -> DefinitionLoader.load(tempDir, gm)).doesNotThrowAnyException();
+    assertThatCode(() -> new DefinitionLoader().load(tempDir, gm)).doesNotThrowAnyException();
   }
 }

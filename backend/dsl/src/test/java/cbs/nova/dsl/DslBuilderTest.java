@@ -1,8 +1,8 @@
 package cbs.nova.dsl;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import cbs.nova.dsl.ParameterType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -42,7 +42,7 @@ class DslBuilderTest {
 
   @Test
   void transactionRetryPolicyFlowsThroughBuilder() {
-    var policy = RetryPolicy.defaults();
+    var policy = RetryPolicy.getInstance().defaults();
     var obj = Dsl.transaction("MyTx")
             .input(String.class).output(String.class)
             .execute(ctx -> Result.success("ok"))
@@ -62,7 +62,7 @@ class DslBuilderTest {
 
   @Test
   void processInvokesRegisteredHelperViaRichContext() {
-    GlobalManager.resetForTests();
+    GlobalManager.getInstance().resetForTests();
     var gm = GlobalManager.getInstance();
     gm.registerHelper("greeter", ctx -> Result.success("hello"));
 
@@ -72,7 +72,8 @@ class DslBuilderTest {
             .build();
     gm.registerProcess(proc);
 
-    var result = gm.runProcess("GreetProc", SimpleContext.of("in", ExecutionMode.PREVIEW));
+    var result = gm.runProcess("GreetProc",
+            SimpleContext.getInstance().of("in", ExecutionMode.PREVIEW));
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("hello");
   }
@@ -136,6 +137,6 @@ class DslBuilderTest {
 
   @AfterEach
   void cleanup() {
-    GlobalManager.resetForTests();
+    GlobalManager.getInstance().resetForTests();
   }
 }

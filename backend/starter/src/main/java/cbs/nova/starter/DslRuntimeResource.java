@@ -10,6 +10,8 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.SimpleContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.Map;
+import java.util.UUID;
 import org.jspecify.annotations.NonNull;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,9 +19,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/dsl")
@@ -67,7 +66,8 @@ public class DslRuntimeResource {
 
   private Context<?> toContext(DslRequest request, ExecutionMode mode) {
     Map<String, Object> metadata = request.metadata() != null ? request.metadata() : Map.of();
-    return SimpleContext.of(request.body(), metadata, mode, SimpleContext.generateRunId());
+    return SimpleContext.getInstance().of(request.body(), metadata, mode,
+            SimpleContext.getInstance().generateRunId());
   }
 
   private ErrorResponse toErrorResponse(String entityName, Context<?> ctx, Throwable cause) {

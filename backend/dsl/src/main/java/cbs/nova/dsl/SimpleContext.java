@@ -1,11 +1,10 @@
 package cbs.nova.dsl;
 
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 public record SimpleContext<T>(
         @NonNull T body,
@@ -14,6 +13,12 @@ public record SimpleContext<T>(
         @NonNull String runId)
         implements
           Context<T> {
+
+  private static final SimpleContext<?> INSTANCE = new SimpleContext<>(null, Map.of(), null, null);
+
+  public static SimpleContext<?> getInstance() {
+    return INSTANCE;
+  }
 
   public <U> Context<U> withBody(@NonNull U newBody) {
     return new SimpleContext<>(newBody, metadata, mode, runId);
@@ -25,24 +30,24 @@ public record SimpleContext<T>(
     return new SimpleContext<>(body, Map.copyOf(updated), mode, runId);
   }
 
-  public static <T> SimpleContext<T> of(@NonNull T body, @NonNull ExecutionMode mode) {
+  public <U> SimpleContext<U> of(@NonNull U body, @NonNull ExecutionMode mode) {
     return new SimpleContext<>(body, Map.of(), mode, generateRunId());
   }
 
-  public static <T> SimpleContext<T> of(
-          @NonNull T body, @NonNull ExecutionMode mode, @NonNull String runId) {
+  public <U> SimpleContext<U> of(
+          @NonNull U body, @NonNull ExecutionMode mode, @NonNull String runId) {
     return new SimpleContext<>(body, Map.of(), mode, runId);
   }
 
-  public static <T> SimpleContext<T> of(
-          @NonNull T body,
+  public <U> SimpleContext<U> of(
+          @NonNull U body,
           @NonNull Map<String, Object> metadata,
           @NonNull ExecutionMode mode,
           @NonNull String runId) {
     return new SimpleContext<>(body, metadata, mode, runId);
   }
 
-  public static String generateRunId() {
+  public String generateRunId() {
     return "run-" + UUID.randomUUID();
   }
 }

@@ -8,14 +8,13 @@ import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Helper;
 import cbs.nova.dsl.Result;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class DslAutoConfigurationTest {
 
@@ -24,7 +23,7 @@ class DslAutoConfigurationTest {
 
   @AfterEach
   void resetGlobalManager() {
-    GlobalManager.resetForTests();
+    GlobalManager.getInstance().resetForTests();
     ExternalCallTracker.instance = null;
   }
 
@@ -52,7 +51,7 @@ class DslAutoConfigurationTest {
 
   @Test
   void registersHelperAnnotatedClassesFromScanPackages() throws Exception {
-    GlobalManager.resetForTests();
+    GlobalManager.getInstance().resetForTests();
     var config = new DslAutoConfiguration();
     setField(config, "helperScanPackages", "cbs.nova.starter");
 

@@ -1,11 +1,10 @@
 package cbs.nova.dsl.codegen;
 
 import cbs.nova.dsl.process.ProcessDescriptor;
-import org.jspecify.annotations.NonNull;
-
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
+import org.jspecify.annotations.NonNull;
 
 public final class ProcessCodeGenerator {
   private static final String BASE_PACKAGE = "cbs.nova.dsl.generated";
@@ -17,7 +16,8 @@ public final class ProcessCodeGenerator {
     String implName = name + "ProcessDefinition";
 
     return List.of(
-            new GeneratedSource(pkg, interfaceName, generateInterface(pkg, interfaceName, descriptor)),
+            new GeneratedSource(pkg, interfaceName,
+                    generateInterface(pkg, interfaceName, descriptor)),
             new GeneratedSource(
                     pkg, implName, generateImpl(pkg, name, interfaceName, implName,
                             descriptor.version(), descriptor.taskQueue(),
@@ -92,8 +92,8 @@ public final class ProcessCodeGenerator {
               public {7} run({8} input) '{'
                 Saga saga = new Saga(new Saga.Options.Builder().build());
                 String runId = Workflow.getInfo().getRunId();
-                var ctx = SimpleContext.of(input, ExecutionMode.RUN, runId);
-                var compensationCtx = SimpleContext.of(input, ExecutionMode.RUN, runId);
+                var ctx = SimpleContext.getInstance().of(input, ExecutionMode.RUN, runId);
+                var compensationCtx = SimpleContext.getInstance().of(input, ExecutionMode.RUN, runId);
                 saga.addCompensation(
                     () ->
                         GlobalManager.getInstance().runProcess("{2}-compensation", compensationCtx));
@@ -132,7 +132,7 @@ public final class ProcessCodeGenerator {
               @Override
               public {7} run({8} input) '{'
                 String runId = Workflow.getInfo().getRunId();
-                var ctx = SimpleContext.of(input, ExecutionMode.RUN, runId);
+                var ctx = SimpleContext.getInstance().of(input, ExecutionMode.RUN, runId);
                 var result = GlobalManager.getInstance().runProcess("{2}", ctx);
                 if (!result.isSuccess()) throw new RuntimeException("Process failed", result.cause());
                 return {9}result.value();

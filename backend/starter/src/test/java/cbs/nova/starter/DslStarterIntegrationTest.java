@@ -21,7 +21,7 @@ class DslStarterIntegrationTest {
 
   @BeforeEach
   void setUp() {
-    GlobalManager.resetForTests();
+    GlobalManager.getInstance().resetForTests();
     GlobalManager.getInstance()
             .registerProcess(
                     Dsl.process("LoanDisbursement")
@@ -39,7 +39,7 @@ class DslStarterIntegrationTest {
 
   @AfterEach
   void tearDown() {
-    GlobalManager.resetForTests();
+    GlobalManager.getInstance().resetForTests();
   }
 
   @Test

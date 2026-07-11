@@ -27,11 +27,10 @@ public final class GlobalManager {
 
   private static GlobalManager create() {
     return new GlobalManager(new ProcessManager(new DefaultProcessRegistry(),
-        new DefaultProcessRunner()),
-        new TransactionManager(new DefaultTransactionRegistry(),
-            new DefaultTransactionRunner()),
-        new HelperManager(new DefaultHelperRegistry(), new DefaultHelperRunner())
-    );
+            new DefaultProcessRunner()),
+            new TransactionManager(new DefaultTransactionRegistry(),
+                    new DefaultTransactionRunner()),
+            new HelperManager(new DefaultHelperRegistry(), new DefaultHelperRunner()));
   }
 
   public static @NonNull GlobalManager getInstance() {
@@ -130,7 +129,7 @@ public final class GlobalManager {
     return helperManager.findFunction(name).map(FunctionDslObject::describe);
   }
 
-  public static void resetForTests() {
+  public void resetForTests() {
     INSTANCE = null;
   }
 }

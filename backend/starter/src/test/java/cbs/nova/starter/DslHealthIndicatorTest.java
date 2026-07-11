@@ -14,12 +14,12 @@ class DslHealthIndicatorTest {
 
   @BeforeEach
   void setUp() {
-    GlobalManager.resetForTests();
+    GlobalManager.getInstance().resetForTests();
   }
 
   @AfterEach
   void tearDown() {
-    GlobalManager.resetForTests();
+    GlobalManager.getInstance().resetForTests();
   }
 
   @Test
@@ -31,7 +31,8 @@ class DslHealthIndicatorTest {
   @Test
   void healthDetailsReportCounts() {
     GlobalManager.getInstance()
-            .registerProcess(Dsl.process("Loan").execute(ctx -> Result.success("ok")).build());
+            .registerProcess(
+                    Dsl.process("Loan").execute(ctx -> Result.success("ok")).build());
     var indicator = new DslHealthIndicator();
     var details = indicator.health().getDetails();
     assertThat(details.get("processes")).isEqualTo(1);

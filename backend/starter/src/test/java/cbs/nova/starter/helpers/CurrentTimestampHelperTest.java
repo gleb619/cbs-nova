@@ -1,6 +1,6 @@
 package cbs.nova.starter.helpers;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
@@ -14,7 +14,7 @@ class CurrentTimestampHelperTest {
 
   @Test
   void returnsIsoTimestamp() {
-    var ctx = SimpleContext.of(new CurrentTimestampIn(null), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.getInstance().of(new CurrentTimestampIn(null), ExecutionMode.PREVIEW);
     Result<CurrentTimestampOut> result = helper.execute(ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().timestamp()).isNotBlank();
@@ -23,13 +23,15 @@ class CurrentTimestampHelperTest {
 
   @Test
   void acceptsValidZone() {
-    var ctx = SimpleContext.of(new CurrentTimestampIn("Europe/London"), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.getInstance().of(new CurrentTimestampIn("Europe/London"),
+            ExecutionMode.PREVIEW);
     assertThat(helper.execute(ctx).isSuccess()).isTrue();
   }
 
   @Test
   void fallsBackToUtcForInvalidZone() {
-    var ctx = SimpleContext.of(new CurrentTimestampIn("Not/AZone"), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.getInstance().of(new CurrentTimestampIn("Not/AZone"),
+            ExecutionMode.PREVIEW);
     assertThat(helper.execute(ctx).isSuccess()).isTrue();
   }
 }

@@ -20,10 +20,11 @@ class DslIntrospectionResourceTest {
 
   @BeforeEach
   void setUp() {
-    GlobalManager.resetForTests();
+    GlobalManager.getInstance().resetForTests();
     GlobalManager.getInstance()
             .registerProcess(
-                    Dsl.process("LoanDisbursement").execute(ctx -> Result.success("ok")).build());
+                    Dsl.process("LoanDisbursement")
+                            .execute(ctx -> Result.success("ok")).build());
     mockMvc = MockMvcBuilders.standaloneSetup(new DslIntrospectionResource())
             .setMessageConverters(new JacksonJsonHttpMessageConverter())
             .build();
@@ -31,7 +32,7 @@ class DslIntrospectionResourceTest {
 
   @AfterEach
   void tearDown() {
-    GlobalManager.resetForTests();
+    GlobalManager.getInstance().resetForTests();
   }
 
   @Test

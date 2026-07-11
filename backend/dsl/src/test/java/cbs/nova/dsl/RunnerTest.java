@@ -2,10 +2,12 @@ package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.process.ProcessRunner;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
 import cbs.nova.dsl.runner.DefaultHelperRunner;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
+import cbs.nova.dsl.transaction.TransactionRunner;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 
@@ -21,7 +23,7 @@ class RunnerTest {
             .output(String.class)
             .execute(ctx -> Result.success("done"))
             .build();
-    var ctx = SimpleContext.of("input", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.PREVIEW);
     var result = processRunner.run(process, ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("done");
@@ -40,7 +42,7 @@ class RunnerTest {
                       return Result.success(null);
                     })
             .build();
-    var ctx = SimpleContext.of("input", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.PREVIEW);
     processRunner.run(process, ctx);
     assertThat(compensated.get()).isTrue();
   }
@@ -48,7 +50,7 @@ class RunnerTest {
   @Test
   void helperRunnerUnknownNameReturnsFailure() {
     var registry = new DefaultHelperRegistry();
-    var ctx = SimpleContext.of("x", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.getInstance().of("x", ExecutionMode.PREVIEW);
     var result = helperRunner.runHelper("unknown", ctx, registry);
     assertThat(result.isSuccess()).isFalse();
   }

@@ -14,21 +14,20 @@ import javax.tools.DiagnosticCollector;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@Slf4j
 public final class DefinitionLoader {
 
-  public static void load(@NonNull Path sourceDir, @NonNull GlobalManager gm) {
+  public void load(@NonNull Path sourceDir, @NonNull GlobalManager gm) {
     var objects = loadObjects(sourceDir);
     for (var obj : objects) {
       register(obj, gm);
     }
   }
 
-  public static @NonNull List<DslObject> loadObjects(@NonNull Path sourceDir) {
+  public @NonNull List<DslObject> loadObjects(@NonNull Path sourceDir) {
     var compiler = ToolProvider.getSystemJavaCompiler();
     if (compiler == null) {
       throw new IllegalStateException("No system Java compiler available (JDK required)");
@@ -51,8 +50,8 @@ public final class DefinitionLoader {
           var task = compiler.getTask(null, fm, diagnostics, options, null, singleUnit);
           boolean ok = task.call();
           if (!ok) {
-            diagnostics.getDiagnostics().forEach(d -> System.err
-                    .println("[DefinitionLoader] " + file.getName() + ": " + d.getMessage(null)));
+            diagnostics.getDiagnostics().forEach(d -> log.error("[DefinitionLoader] {}: {}",
+                    file.getName(), d.getMessage(null)));
             continue;
           }
           result.addAll(loadFromFile(file, outputDir));
@@ -65,7 +64,7 @@ public final class DefinitionLoader {
   }
 
   @SuppressWarnings("unchecked")
-  private static List<DslObject> loadFromFile(File source, Path outputDir) {
+  private List<DslObject> loadFromFile(File source, Path outputDir) {
     String className = source.getName().replace(".java", "");
     try (var loader = new URLClassLoader(
             new URL[]{outputDir.toUri().toURL()},
@@ -78,12 +77,12 @@ public final class DefinitionLoader {
       define.setAccessible(true);
       return (List<DslObject>) define.invoke(instance);
     } catch (Exception e) {
-      System.err.println("[DefinitionLoader] Failed to load " + className + ": " + e.getMessage());
+      log.error("[DefinitionLoader] Failed to load {}: {}", className, e.getMessage(), e);
       return List.of();
     }
   }
 
-  private static void register(DslObject obj, GlobalManager gm) {
+  private void register(DslObject obj, GlobalManager gm) {
     switch (obj.type()) {
       case PROCESS -> gm.registerProcess((ProcessDslObject) obj);
       case TRANSACTION -> gm.registerTransaction((TransactionDslObject) obj);

@@ -15,6 +15,9 @@ import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.util.List;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -26,63 +29,56 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
-import java.nio.file.Path;
-import java.time.Duration;
-import java.util.List;
-
 @Testcontainers
 class BatchProcessingDslIntegrationTest {
 
   private static final String TASK_QUEUE = "BatchProcessing-queue";
-  private static final DockerImageName TEMPORAL_IMAGE =
-          DockerImageName.parse("temporalio/auto-setup:1.25.2");
+  private static final DockerImageName TEMPORAL_IMAGE = DockerImageName
+          .parse("temporalio/auto-setup:1.25.2");
   private static final DockerImageName POSTGRES_IMAGE = DockerImageName.parse("postgres:15");
 
   private static final Network NETWORK = Network.newNetwork();
 
   @Container
-  private static final PostgreSQLContainer<?> POSTGRES =
-          new PostgreSQLContainer<>(POSTGRES_IMAGE)
-                  .withNetwork(NETWORK)
-                  .withNetworkAliases("postgres")
-                  .withDatabaseName("temporal")
-                  .withUsername("temporal")
-                  .withPassword("temporal");
+  private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(POSTGRES_IMAGE)
+          .withNetwork(NETWORK)
+          .withNetworkAliases("postgres")
+          .withDatabaseName("temporal")
+          .withUsername("temporal")
+          .withPassword("temporal");
 
   @Container
-  private static final GenericContainer<?> TEMPORAL =
-          new GenericContainer<>(TEMPORAL_IMAGE)
-                  .withNetwork(NETWORK)
-                  .withExposedPorts(7233)
-                  .withEnv("DB", "postgres12")
-                  .withEnv("DB_PORT", "5432")
-                  .withEnv("POSTGRES_USER", "temporal")
-                  .withEnv("POSTGRES_PWD", "temporal")
-                  .withEnv("POSTGRES_SEEDS", "postgres")
-                  .dependsOn(POSTGRES)
-                  .waitingFor(
-                          Wait.forLogMessage(".*Started Worker.*", 1)
-                                  .withStartupTimeout(Duration.ofMinutes(5)));
+  private static final GenericContainer<?> TEMPORAL = new GenericContainer<>(TEMPORAL_IMAGE)
+          .withNetwork(NETWORK)
+          .withExposedPorts(7233)
+          .withEnv("DB", "postgres12")
+          .withEnv("DB_PORT", "5432")
+          .withEnv("POSTGRES_USER", "temporal")
+          .withEnv("POSTGRES_PWD", "temporal")
+          .withEnv("POSTGRES_SEEDS", "postgres")
+          .dependsOn(POSTGRES)
+          .waitingFor(
+                  Wait.forLogMessage(".*Started Worker.*", 1)
+                          .withStartupTimeout(Duration.ofMinutes(5)));
 
   private static WorkerFactory workerFactory;
   private static WorkflowClient workflowClient;
 
   @BeforeAll
   static void setUp() {
-    GlobalManager.resetForTests();
+    GlobalManager.getInstance().resetForTests();
     var globalManager = GlobalManager.getInstance();
     var dslSourceDir = Path.of(System.getProperty("dsl.examples.src.dir"));
-    DefinitionLoader.load(dslSourceDir, globalManager);
+    new DefinitionLoader().load(dslSourceDir, globalManager);
     assertThat(globalManager.hasProcess("BatchProcessing"))
             .as("DSL source for BatchProcessing should be loaded")
             .isTrue();
 
-    var serviceStubs =
-            WorkflowServiceStubs.newServiceStubs(
-                    WorkflowServiceStubsOptions.newBuilder()
-                            .setTarget(
-                                    TEMPORAL.getHost() + ":" + TEMPORAL.getMappedPort(7233))
-                            .build());
+    var serviceStubs = WorkflowServiceStubs.newServiceStubs(
+            WorkflowServiceStubsOptions.newBuilder()
+                    .setTarget(
+                            TEMPORAL.getHost() + ":" + TEMPORAL.getMappedPort(7233))
+                    .build());
     workflowClient = WorkflowClient.newInstance(serviceStubs);
 
     workerFactory = WorkerFactory.newInstance(workflowClient);
@@ -100,22 +96,20 @@ class BatchProcessingDslIntegrationTest {
 
   @Test
   void runsBatchProcessingDslEndToEnd() {
-    var workflow =
-            workflowClient.newWorkflowStub(
-                    BatchProcessingProcessWorkflow.class,
-                    WorkflowOptions.newBuilder()
-                            .setTaskQueue(TASK_QUEUE)
-                            .setWorkflowId("batch-processing-test-1")
-                            .setWorkflowExecutionTimeout(Duration.ofSeconds(30))
-                            .setWorkflowTaskTimeout(Duration.ofSeconds(5))
-                            .build());
+    var workflow = workflowClient.newWorkflowStub(
+            BatchProcessingProcessWorkflow.class,
+            WorkflowOptions.newBuilder()
+                    .setTaskQueue(TASK_QUEUE)
+                    .setWorkflowId("batch-processing-test-1")
+                    .setWorkflowExecutionTimeout(Duration.ofSeconds(30))
+                    .setWorkflowTaskTimeout(Duration.ofSeconds(5))
+                    .build());
 
-    var input =
-            new BatchIn(
-                    List.of(
-                            new BatchItem("a", 1),
-                            new BatchItem("b", 2),
-                            new BatchItem("c", 3)));
+    var input = new BatchIn(
+            List.of(
+                    new BatchItem("a", 1),
+                    new BatchItem("b", 2),
+                    new BatchItem("c", 3)));
 
     BatchOut result = workflow.run(input);
 

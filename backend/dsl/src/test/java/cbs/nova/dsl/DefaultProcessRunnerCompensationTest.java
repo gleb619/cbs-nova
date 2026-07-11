@@ -2,6 +2,7 @@ package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.process.ProcessRunner;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,7 @@ class DefaultProcessRunnerCompensationTest {
               return Result.success("compensated");
             })
             .build();
-    var ctx = SimpleContext.of("input", ExecutionMode.RUN, "run-1");
+    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.RUN, "run-1");
     var result = runner.run(process, ctx);
     assertThat(compensated.get()).isTrue();
     assertThat(result.isSuccess()).isFalse();
@@ -39,7 +40,7 @@ class DefaultProcessRunnerCompensationTest {
               throw new RuntimeException("compensation also failed");
             })
             .build();
-    var ctx = SimpleContext.of("input", ExecutionMode.RUN, "run-2");
+    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.RUN, "run-2");
     var result = runner.run(process, ctx);
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause()).isInstanceOf(DslCompensationException.class);
@@ -58,7 +59,7 @@ class DefaultProcessRunnerCompensationTest {
               return Result.success("should not run");
             })
             .build();
-    var ctx = SimpleContext.of("input", ExecutionMode.RUN, "run-3");
+    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.RUN, "run-3");
     var result = runner.run(process, ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(compensated.get()).isFalse();

@@ -8,6 +8,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.SimpleContext;
+import java.util.ArrayList;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -16,14 +17,15 @@ class DevDslRuntimeTest {
 
   @BeforeEach
   void reset() {
-    GlobalManager.resetForTests();
+    GlobalManager.getInstance().resetForTests();
     GlobalManager.getInstance()
-            .registerProcess(Dsl.process("Ping").execute(ctx -> Result.success("pong")).build());
+            .registerProcess(Dsl.process("Ping")
+                    .execute(ctx -> Result.success("pong")).build());
   }
 
   @Test
   void previewDispatchesToProcess() {
-    var ctx = SimpleContext.of("input", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.PREVIEW);
     var result = runtime.preview("Ping", ctx);
     assertThat(result.isSuccess()).isTrue();
     PreviewReport report = result.value();
@@ -38,14 +40,14 @@ class DevDslRuntimeTest {
 
   @Test
   void runDispatchesToProcess() {
-    var ctx = SimpleContext.of("input", ExecutionMode.RUN);
+    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.RUN);
     var result = runtime.run("Ping", ctx);
     assertThat(result.isSuccess()).isTrue();
   }
 
   @Test
   void explainReturnsReport() {
-    var ctx = SimpleContext.of("input", ExecutionMode.EXPLAIN);
+    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.EXPLAIN);
     var report = runtime.explain("Ping", ctx);
     assertThat(report.name()).isEqualTo("Ping");
     assertThat(report.description()).contains("Ping");
@@ -56,7 +58,7 @@ class DevDslRuntimeTest {
 
   @Test
   void explainTraceContainsSteps() {
-    var ctx = SimpleContext.of("input", ExecutionMode.EXPLAIN);
+    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.EXPLAIN);
     var report = runtime.explain("Ping", ctx);
     assertThat(report.executionTrace()).containsExactly(
             "started: Ping",
@@ -66,7 +68,7 @@ class DevDslRuntimeTest {
 
   @Test
   void unknownEntityReturnsFailure() {
-    var ctx = SimpleContext.of("x", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.getInstance().of("x", ExecutionMode.PREVIEW);
     var result = runtime.preview("Unknown", ctx);
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.value()).isNull();
@@ -83,7 +85,7 @@ class DevDslRuntimeTest {
                       return Result.success("ok");
                     }).build());
 
-    var ctx = SimpleContext.of("input", ExecutionMode.EXPLAIN);
+    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.EXPLAIN);
     var report = runtime.explain("TrackedProcess", ctx);
 
     assertThat(report.name()).isEqualTo("TrackedProcess");
@@ -100,7 +102,7 @@ class DevDslRuntimeTest {
   @Test
   void trackerTriggersListeners() {
     var tracker = new ExternalCallTracker();
-    var calls = new java.util.ArrayList<String>();
+    var calls = new ArrayList<String>();
     tracker.registerListener((type, target, op, payload) -> calls.add(type + ":" + target));
 
     tracker.recordCall("mq", "queue-1", "send", "msg");

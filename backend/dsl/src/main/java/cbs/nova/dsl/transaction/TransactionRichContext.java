@@ -51,15 +51,15 @@ public final class TransactionRichContext<T> implements TransactionContext<T> {
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name) {
     Result<?> result = GlobalManager.getInstance().runHelper(name, delegate);
-    ExecutionTraceCollector.add("called helper: " + name);
+    ExecutionTraceCollector.getInstance().add("called helper: " + name);
     return result;
   }
 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input) {
     Result<?> result = GlobalManager.getInstance().runHelper(name,
-            SimpleContext.of(input, delegate.mode(), delegate.runId()));
-    ExecutionTraceCollector.add("called helper: " + name);
+            SimpleContext.getInstance().of(input, delegate.mode(), delegate.runId()));
+    ExecutionTraceCollector.getInstance().add("called helper: " + name);
     return result;
   }
 }

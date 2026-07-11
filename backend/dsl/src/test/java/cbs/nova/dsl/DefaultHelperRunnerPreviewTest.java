@@ -39,7 +39,7 @@ class DefaultHelperRunnerPreviewTest {
     var registry = new DefaultHelperRegistry();
     registry.registerHelper("mock", new MockHelper());
     var runner = new DefaultHelperRunner();
-    var ctx = SimpleContext.of("input", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.PREVIEW);
     var result = runner.runHelper("mock", ctx, registry);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("PREVIEW_MOCK");
@@ -50,7 +50,7 @@ class DefaultHelperRunnerPreviewTest {
     var registry = new DefaultHelperRegistry();
     registry.registerHelper("mock", new MockHelper());
     var runner = new DefaultHelperRunner();
-    var ctx = SimpleContext.of("input", ExecutionMode.RUN);
+    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.RUN);
     var result = runner.runHelper("mock", ctx, registry);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("REAL");
@@ -77,7 +77,7 @@ class DefaultHelperRunnerPreviewTest {
         return Result.success("ONLY_EXEC");
       }
     };
-    var ctx = SimpleContext.of("x", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.getInstance().of("x", ExecutionMode.PREVIEW);
     assertThat(plain.preview(ctx).value()).isEqualTo("ONLY_EXEC");
   }
 }

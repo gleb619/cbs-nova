@@ -1,8 +1,10 @@
 package cbs.nova.dsl;
 
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 
+@Slf4j
 public final class CompensationRichContext<T> implements CompensationContext<T> {
 
   private final Context<T> delegate;
@@ -51,24 +53,22 @@ public final class CompensationRichContext<T> implements CompensationContext<T> 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name) {
     Result<?> result = GlobalManager.getInstance().runHelper(name, delegate);
-    ExecutionTraceCollector.add("called helper: " + name);
+    ExecutionTraceCollector.getInstance().add("called helper: " + name);
     return result;
   }
 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input) {
     Result<?> result = GlobalManager.getInstance().runHelper(name,
-            SimpleContext.of(input, delegate.mode(), delegate.runId()));
-    ExecutionTraceCollector.add("called helper: " + name);
+            SimpleContext.getInstance().of(input, delegate.mode(), delegate.runId()));
+    ExecutionTraceCollector.getInstance().add("called helper: " + name);
     return result;
   }
 
   @Override
   public @NonNull CompensationContext<T> log(@NonNull String message) {
-    ExecutionTraceCollector.add("compensation log: " + message);
-    System.out.println(
-            "[DSL:" + delegate.mode() + "][runId:" + delegate.runId() + "] [compensation] "
-                    + message);
+    ExecutionTraceCollector.getInstance().add("compensation log: " + message);
+    log.info("[DSL:{}][runId:{}] [compensation] {}", delegate.mode(), delegate.runId(), message);
     return this;
   }
 }

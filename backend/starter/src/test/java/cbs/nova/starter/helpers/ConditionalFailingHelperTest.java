@@ -1,6 +1,6 @@
 package cbs.nova.starter.helpers;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
@@ -14,7 +14,8 @@ class ConditionalFailingHelperTest {
 
   @Test
   void returnsSuccessWhenNotFailing() {
-    var ctx = SimpleContext.of(new ConditionalFailIn(false, null), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.getInstance().of(new ConditionalFailIn(false, null),
+            ExecutionMode.PREVIEW);
     Result<ConditionalFailOut> result = helper.execute(ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().status()).isEqualTo("ok");
@@ -22,7 +23,8 @@ class ConditionalFailingHelperTest {
 
   @Test
   void returnsFailureWhenShouldFail() {
-    var ctx = SimpleContext.of(new ConditionalFailIn(true, "test failure"), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.getInstance().of(new ConditionalFailIn(true, "test failure"),
+            ExecutionMode.PREVIEW);
     Result<ConditionalFailOut> result = helper.execute(ctx);
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause().getMessage()).isEqualTo("test failure");
@@ -30,7 +32,8 @@ class ConditionalFailingHelperTest {
 
   @Test
   void usesDefaultReasonWhenNullReason() {
-    var ctx = SimpleContext.of(new ConditionalFailIn(true, null), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.getInstance().of(new ConditionalFailIn(true, null),
+            ExecutionMode.PREVIEW);
     Result<ConditionalFailOut> result = helper.execute(ctx);
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause().getMessage()).isNotBlank();

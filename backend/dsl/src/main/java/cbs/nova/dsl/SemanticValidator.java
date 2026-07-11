@@ -15,10 +15,7 @@ import org.jspecify.annotations.NonNull;
 
 public final class SemanticValidator {
 
-  private SemanticValidator() {
-  }
-
-  public static void validate(
+  public void validate(
           @NonNull Collection<ProcessDescriptor> processes,
           @NonNull Collection<TransactionDescriptor> transactions,
           @NonNull Collection<FunctionDescriptor> functions,
@@ -26,7 +23,6 @@ public final class SemanticValidator {
 
     var errors = new ArrayList<String>();
 
-    // 1. Non-empty names
     processes.stream()
             .filter(p -> p.name().isBlank())
             .forEach(p -> errors.add("Process has blank name"));
@@ -37,7 +33,6 @@ public final class SemanticValidator {
             .filter(f -> f.name().isBlank())
             .forEach(f -> errors.add("Function has blank name"));
 
-    // 2. No duplicate names across all three kinds
     var allNames = new ArrayList<String>();
     processes.forEach(p -> allNames.add(p.name()));
     transactions.forEach(t -> allNames.add(t.name()));
@@ -47,13 +42,11 @@ public final class SemanticValidator {
             .filter(n -> !seen.add(n))
             .forEach(n -> errors.add("Duplicate name: " + n));
 
-    // Known helper/function names for ref validation
     var functionNames = functions.stream().map(FunctionDescriptor::name)
             .collect(Collectors.toSet());
     var allKnownHelperNames = new HashSet<>(functionNames);
     helperRegistry.allNames().forEach(allKnownHelperNames::add);
 
-    // 3. Unknown helper refs in processes and transactions
     processes.forEach(
             p -> p.helperRefs().stream()
                     .filter(ref -> !allKnownHelperNames.contains(ref))
@@ -71,7 +64,6 @@ public final class SemanticValidator {
                                             + "' references unknown helper: "
                                             + ref)));
 
-    // 4. Cycle detection in function dependency graph (via helperRefs that are function names)
     detectCycles(functions, functionNames, errors);
 
     if (!errors.isEmpty()) {
@@ -79,19 +71,15 @@ public final class SemanticValidator {
     }
   }
 
-  private static void detectCycles(
+  private void detectCycles(
           @NonNull Collection<FunctionDescriptor> functions,
           @NonNull Set<String> functionNames,
           @NonNull List<String> errors) {
-    // Build adjacency: fn name -> fn-name refs (only refs to other functions form edges).
-    // Note: FunctionDescriptor has no helperRefs() field at this stage, so the graph
-    // has no edges. This structure is correct for when helperRefs gets populated later.
     Map<String, List<String>> graph = new HashMap<>();
     for (var fn : functions) {
       graph.put(fn.name(), List.of());
     }
 
-    // WHITE=unvisited, GRAY=in-stack, BLACK=done
     Map<String, String> color = new HashMap<>();
     functionNames.forEach(n -> color.put(n, "WHITE"));
 
@@ -105,7 +93,7 @@ public final class SemanticValidator {
     }
   }
 
-  private static boolean dfs(
+  private boolean dfs(
           String node,
           Map<String, List<String>> graph,
           Map<String, String> color,

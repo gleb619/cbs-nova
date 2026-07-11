@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 
 class MermaidDiagramGeneratorTest {
 
+  private final MermaidDiagramGenerator generator = new MermaidDiagramGenerator();
+
   @Test
   void processWithoutCompensationHasFailEdge() {
     var process = Dsl.process("LoanDisbursement")
@@ -14,7 +16,7 @@ class MermaidDiagramGeneratorTest {
             .output(String.class)
             .execute(ctx -> Result.success("ok"))
             .build();
-    String diagram = MermaidDiagramGenerator.forProcess(process);
+    String diagram = generator.forProcess(process);
     assertThat(diagram).contains("Execute[LoanDisbursement]");
     assertThat(diagram).contains("|failure| Fail");
     assertThat(diagram).doesNotContain("Compensate");
@@ -28,7 +30,7 @@ class MermaidDiagramGeneratorTest {
             .execute(ctx -> Result.success("ok"))
             .compensation(ctx -> Result.success("rolled back"))
             .build();
-    String diagram = MermaidDiagramGenerator.forProcess(process);
+    String diagram = generator.forProcess(process);
     assertThat(diagram).contains("Compensate[Compensate]");
     assertThat(diagram).doesNotContain("Fail");
   }
@@ -40,7 +42,7 @@ class MermaidDiagramGeneratorTest {
             .output(String.class)
             .execute(ctx -> Result.success("ok"))
             .build();
-    String diagram = MermaidDiagramGenerator.forTransaction(tx);
+    String diagram = generator.forTransaction(tx);
     assertThat(diagram).contains("Activity[KycCheck]");
   }
 }

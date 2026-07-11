@@ -1,6 +1,6 @@
 package cbs.nova.dsl.codegen;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.DescriptorFactory;
 import cbs.nova.dsl.Dsl;
@@ -12,7 +12,7 @@ class TransactionCodeGeneratorTest {
 
   @Test
   void generatesTwoSources() {
-    var descriptor = DescriptorFactory.fromTransaction(
+    var descriptor = new DescriptorFactory().fromTransaction(
             Dsl.transaction("LoanDisbursement")
                     .input(String.class)
                     .output(String.class)
@@ -25,7 +25,7 @@ class TransactionCodeGeneratorTest {
 
   @Test
   void interfaceHasCorrectNameAndAnnotations() {
-    var descriptor = DescriptorFactory.fromTransaction(
+    var descriptor = new DescriptorFactory().fromTransaction(
             Dsl.transaction("LoanDisbursement")
                     .input(String.class)
                     .output(String.class)
@@ -42,7 +42,7 @@ class TransactionCodeGeneratorTest {
 
   @Test
   void packageIsVersioned() {
-    var descriptor = DescriptorFactory.fromTransaction(
+    var descriptor = new DescriptorFactory().fromTransaction(
             Dsl.transaction("LoanDisbursement")
                     .input(String.class)
                     .output(String.class)
@@ -56,7 +56,7 @@ class TransactionCodeGeneratorTest {
 
   @Test
   void implementationDelegatesViaGlobalManager() {
-    var descriptor = DescriptorFactory.fromTransaction(
+    var descriptor = new DescriptorFactory().fromTransaction(
             Dsl.transaction("LoanDisbursement")
                     .input(String.class)
                     .output(String.class)
@@ -73,7 +73,7 @@ class TransactionCodeGeneratorTest {
 
   @Test
   void interfaceHasGetVersion() {
-    var descriptor = DescriptorFactory.fromTransaction(
+    var descriptor = new DescriptorFactory().fromTransaction(
             Dsl.transaction("FooTx").execute(ctx -> Result.success("x")).build());
     var iface = generator.generate(descriptor).get(0);
     assertThat(iface.source()).contains("@ActivityMethod");
@@ -82,8 +82,9 @@ class TransactionCodeGeneratorTest {
 
   @Test
   void implReturnsVersion() {
-    var descriptor = DescriptorFactory.fromTransaction(
-            Dsl.transaction("FooTx").version("v3").execute(ctx -> Result.success("x")).build());
+    var descriptor = new DescriptorFactory().fromTransaction(
+            Dsl.transaction("FooTx").version("v3").execute(ctx -> Result.success("x"))
+                    .build());
     var impl = generator.generate(descriptor).get(1);
     assertThat(impl.source()).contains("\"v3\"");
     assertThat(impl.source()).contains("getVersion()");
@@ -91,7 +92,7 @@ class TransactionCodeGeneratorTest {
 
   @Test
   void implContainsTaskQueueConstant() {
-    var descriptor = DescriptorFactory.fromTransaction(
+    var descriptor = new DescriptorFactory().fromTransaction(
             Dsl.transaction("FooTx").execute(ctx -> Result.success("x")).build());
     var impl = generator.generate(descriptor).get(1);
     assertThat(impl.source()).contains("TASK_QUEUE");

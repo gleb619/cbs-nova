@@ -1,10 +1,9 @@
 package cbs.nova.dsl;
 
-import static org.assertj.core.api.Assertions.*;
-
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
+import org.junit.jupiter.api.Test;
 
 class DescriptorFactoryTest {
 
@@ -18,7 +17,7 @@ class DescriptorFactoryTest {
             .execute(ctx -> Result.success(1))
             .compensation(ctx -> Result.success(null))
             .build();
-    var desc = DescriptorFactory.fromProcess(obj);
+    var desc = new DescriptorFactory().fromProcess(obj);
     assertThat(desc.name()).isEqualTo("P1");
     assertThat(desc.version()).isEqualTo("v2");
     assertThat(desc.taskQueue()).isEqualTo("my-queue");
@@ -36,7 +35,7 @@ class DescriptorFactoryTest {
             .execute(ctx -> Result.success("ok"))
             .startToCloseTimeout(Duration.ofMinutes(5))
             .build();
-    var desc = DescriptorFactory.fromTransaction(obj);
+    var desc = new DescriptorFactory().fromTransaction(obj);
     assertThat(desc.name()).isEqualTo("T1");
     assertThat(desc.startToCloseTimeout()).isEqualTo(Duration.ofMinutes(5));
     assertThat(desc.hasCompensation()).isFalse();
@@ -44,14 +43,14 @@ class DescriptorFactoryTest {
 
   @Test
   void transactionDescriptorHasRetryPolicy() {
-    var policy = RetryPolicy.defaults();
+    var policy = RetryPolicy.getInstance().defaults();
     var obj = Dsl.transaction("T1")
             .input(String.class)
             .output(String.class)
             .execute(ctx -> Result.success("ok"))
             .retryPolicy(policy)
             .build();
-    var desc = DescriptorFactory.fromTransaction(obj);
+    var desc = new DescriptorFactory().fromTransaction(obj);
     assertThat(desc.name()).isEqualTo("T1");
     assertThat(desc.retryPolicy()).isEqualTo(policy);
   }
@@ -61,7 +60,7 @@ class DescriptorFactoryTest {
     var obj = Dsl.function("Fn1")
             .execute(ctx -> Result.success("x"))
             .build();
-    var desc = DescriptorFactory.fromFunction(obj);
+    var desc = new DescriptorFactory().fromFunction(obj);
     assertThat(desc.name()).isEqualTo("Fn1");
     assertThat(desc.inputType()).isNull();
     assertThat(desc.outputType()).isNull();

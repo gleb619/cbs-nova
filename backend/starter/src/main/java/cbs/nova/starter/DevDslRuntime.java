@@ -31,13 +31,13 @@ public class DevDslRuntime implements DslRuntime {
   public @NonNull Result<PreviewReport> preview(@NonNull String name, @NonNull Context<?> ctx) {
     List<ExternalCallTracker.CallDetail> calls = new ArrayList<>();
     ExternalCallTracker.startTracking(calls);
-    ExecutionTraceCollector.start();
+    ExecutionTraceCollector.getInstance().start();
     try {
       Result<?> result = dispatch(name, ctx, ExecutionMode.PREVIEW);
       List<String> trace = new ArrayList<>();
       trace.add("started: " + name);
       trace.add("mode: PREVIEW");
-      trace.addAll(ExecutionTraceCollector.snapshot());
+      trace.addAll(ExecutionTraceCollector.getInstance().snapshot());
       if (result.isSuccess()) {
         trace.add("completed successfully");
         PreviewReport report = new PreviewReport(
@@ -54,7 +54,7 @@ public class DevDslRuntime implements DslRuntime {
         return Result.failure(result.cause());
       }
     } finally {
-      ExecutionTraceCollector.stop();
+      ExecutionTraceCollector.getInstance().stop();
       ExternalCallTracker.stopTracking();
     }
   }
@@ -74,7 +74,7 @@ public class DevDslRuntime implements DslRuntime {
   public @NonNull ExplainReport explain(@NonNull String name, @NonNull Context<?> ctx) {
     List<ExternalCallTracker.CallDetail> calls = new ArrayList<>();
     ExternalCallTracker.startTracking(calls);
-    ExecutionTraceCollector.start();
+    ExecutionTraceCollector.getInstance().start();
     try {
       Result<?> result = dispatch(name, ctx, ExecutionMode.EXPLAIN);
       String description = result.isSuccess()
@@ -104,7 +104,7 @@ public class DevDslRuntime implements DslRuntime {
       var trace = new ArrayList<String>();
       trace.add("started: " + name);
       trace.add("mode: EXPLAIN");
-      trace.addAll(ExecutionTraceCollector.snapshot());
+      trace.addAll(ExecutionTraceCollector.getInstance().snapshot());
       if (result.isSuccess()) {
         Object val = result.value();
         trace.add("result: " + (val != null ? val.toString() : "null"));
@@ -129,7 +129,7 @@ public class DevDslRuntime implements DslRuntime {
               gm2.describeHelper(name).orElse(null),
               dslDesc);
     } finally {
-      ExecutionTraceCollector.stop();
+      ExecutionTraceCollector.getInstance().stop();
       ExternalCallTracker.stopTracking();
     }
   }
@@ -158,9 +158,9 @@ public class DevDslRuntime implements DslRuntime {
 
   private Result<?> dispatch(String name, Context<?> ctx, ExecutionMode mode) {
     String runId = (ctx.runId() == null || ctx.runId().isBlank())
-            ? SimpleContext.generateRunId()
+            ? SimpleContext.getInstance().generateRunId()
             : ctx.runId();
-    var modeCtx = SimpleContext.of(ctx.body(), ctx.metadata(), mode, runId);
+    var modeCtx = SimpleContext.getInstance().of(ctx.body(), ctx.metadata(), mode, runId);
     GlobalManager gm = GlobalManager.getInstance();
     if (gm.hasProcess(name))
       return gm.runProcess(name, modeCtx);

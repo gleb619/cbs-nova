@@ -62,7 +62,7 @@ public final class TransactionCodeGenerator {
 
                       @Override
                       public Object execute(Object input) '{'
-                        var ctx = SimpleContext.of(input, ExecutionMode.RUN);
+                        var ctx = SimpleContext.getInstance().of(input, ExecutionMode.RUN);
                         var result = GlobalManager.getInstance().runTransaction("{1}", ctx);
                         if (!result.isSuccess()) throw new RuntimeException("Transaction failed", result.cause());
                         return result.value();

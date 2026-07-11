@@ -20,13 +20,14 @@ class TransactionManagerTest {
   }
 
   private TransactionDslObject tx(String name) {
-    return Dsl.transaction(name).execute(ctx -> Result.success("result-" + name)).build();
+    return Dsl.transaction(name).execute(ctx -> Result.success("result-" + name))
+            .build();
   }
 
   @Test
   void executeRunsRegisteredTransaction() {
     manager.register(tx("PayTx"));
-    var ctx = SimpleContext.of("input", ExecutionMode.RUN, "run-1");
+    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.RUN, "run-1");
     var result = manager.execute("PayTx", ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("result-PayTx");
@@ -34,7 +35,7 @@ class TransactionManagerTest {
 
   @Test
   void executeReturnsFailureForUnknownName() {
-    var ctx = SimpleContext.of("input", ExecutionMode.RUN, "run-2");
+    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.RUN, "run-2");
     var result = manager.execute("NoSuch", ctx);
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause()).isInstanceOf(DslEntityNotFoundException.class);

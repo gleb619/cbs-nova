@@ -1,6 +1,6 @@
 package cbs.nova.dsl;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 class GlobalManagerTest {
   @BeforeEach
   void reset() {
-    GlobalManager.resetForTests();
+    GlobalManager.getInstance().resetForTests();
   }
 
   @Test
@@ -20,7 +20,7 @@ class GlobalManagerTest {
                     .output(String.class)
                     .execute(ctx -> Result.success("Hello, " + ctx.body()))
                     .build());
-    var ctx = SimpleContext.of("World", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.getInstance().of("World", ExecutionMode.PREVIEW);
     var result = gm.runProcess("Greet", ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("Hello, World");
@@ -29,7 +29,7 @@ class GlobalManagerTest {
   @Test
   void unknownProcessReturnsFailure() {
     var result = GlobalManager.getInstance()
-            .runProcess("Ghost", SimpleContext.of("x", ExecutionMode.PREVIEW));
+            .runProcess("Ghost", SimpleContext.getInstance().of("x", ExecutionMode.PREVIEW));
     assertThat(result.isSuccess()).isFalse();
   }
 
@@ -37,7 +37,8 @@ class GlobalManagerTest {
   void helperRoundTrip() {
     var gm = GlobalManager.getInstance();
     gm.registerHelper("upper", ctx -> Result.success(ctx.body().toString().toUpperCase()));
-    var result = gm.runHelper("upper", SimpleContext.of("hello", ExecutionMode.PREVIEW));
+    var result = gm.runHelper("upper",
+            SimpleContext.getInstance().of("hello", ExecutionMode.PREVIEW));
     assertThat(result.value()).isEqualTo("HELLO");
   }
 
@@ -48,7 +49,7 @@ class GlobalManagerTest {
             .execute(ctx -> Result.success("ok"))
             .build();
     gm.registerTransaction(tx);
-    var ctx = SimpleContext.of("body", ExecutionMode.RUN, "run-1");
+    var ctx = SimpleContext.getInstance().of("body", ExecutionMode.RUN, "run-1");
     var result = gm.runTransaction("TestTx", ctx);
     assertThat(result.isSuccess()).isTrue();
   }
@@ -56,7 +57,7 @@ class GlobalManagerTest {
   @Test
   void unknownTransactionReturnsFailure() {
     var result = GlobalManager.getInstance().runTransaction("Ghost",
-            SimpleContext.of("x", ExecutionMode.PREVIEW));
+            SimpleContext.getInstance().of("x", ExecutionMode.PREVIEW));
     assertThat(result.isSuccess()).isFalse();
   }
 
@@ -67,7 +68,7 @@ class GlobalManagerTest {
             .execute(ctx -> Result.success("fn-ok"))
             .build();
     gm.registerFunction(fn);
-    var ctx = SimpleContext.of("body", ExecutionMode.RUN, "run-1");
+    var ctx = SimpleContext.getInstance().of("body", ExecutionMode.RUN, "run-1");
     var result = gm.runFunction("TestFn", ctx);
     assertThat(result.value()).isEqualTo("fn-ok");
   }
@@ -75,7 +76,7 @@ class GlobalManagerTest {
   @Test
   void unknownFunctionReturnsFailure() {
     var result = GlobalManager.getInstance().runFunction("Ghost",
-            SimpleContext.of("x", ExecutionMode.PREVIEW));
+            SimpleContext.getInstance().of("x", ExecutionMode.PREVIEW));
     assertThat(result.isSuccess()).isFalse();
   }
 
@@ -91,8 +92,10 @@ class GlobalManagerTest {
   @Test
   void transactionNamesSorted() {
     var gm = GlobalManager.getInstance();
-    gm.registerTransaction(Dsl.transaction("Ztx").execute(ctx -> Result.success("z")).build());
-    gm.registerTransaction(Dsl.transaction("Atx").execute(ctx -> Result.success("a")).build());
+    gm.registerTransaction(
+            Dsl.transaction("Ztx").execute(ctx -> Result.success("z")).build());
+    gm.registerTransaction(
+            Dsl.transaction("Atx").execute(ctx -> Result.success("a")).build());
     var names = gm.transactionNames();
     assertThat(names).containsExactlyInAnyOrder("Atx", "Ztx");
   }

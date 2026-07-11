@@ -12,7 +12,7 @@ class ProcessCodeGeneratorTest {
 
   @Test
   void generatesTwoSources() {
-    var descriptor = DescriptorFactory.fromProcess(
+    var descriptor = new DescriptorFactory().fromProcess(
             Dsl.process("LoanDisbursement")
                     .input(String.class)
                     .output(String.class)
@@ -25,7 +25,7 @@ class ProcessCodeGeneratorTest {
 
   @Test
   void interfaceHasCorrectNameAndAnnotations() {
-    var descriptor = DescriptorFactory.fromProcess(
+    var descriptor = new DescriptorFactory().fromProcess(
             Dsl.process("LoanDisbursement")
                     .input(String.class)
                     .output(String.class)
@@ -42,7 +42,7 @@ class ProcessCodeGeneratorTest {
 
   @Test
   void packageIsVersioned() {
-    var descriptor = DescriptorFactory.fromProcess(
+    var descriptor = new DescriptorFactory().fromProcess(
             Dsl.process("LoanDisbursement")
                     .input(String.class)
                     .output(String.class)
@@ -56,7 +56,7 @@ class ProcessCodeGeneratorTest {
 
   @Test
   void implementationDelegatesViaGlobalManager() {
-    var descriptor = DescriptorFactory.fromProcess(
+    var descriptor = new DescriptorFactory().fromProcess(
             Dsl.process("LoanDisbursement")
                     .input(String.class)
                     .output(String.class)
@@ -73,7 +73,7 @@ class ProcessCodeGeneratorTest {
 
   @Test
   void withCompensationEmitsSagaCode() {
-    var descriptor = DescriptorFactory.fromProcess(
+    var descriptor = new DescriptorFactory().fromProcess(
             Dsl.process("LoanDisbursement")
                     .input(String.class)
                     .output(String.class)
@@ -90,7 +90,7 @@ class ProcessCodeGeneratorTest {
 
   @Test
   void withoutCompensationNoSagaCode() {
-    var descriptor = DescriptorFactory.fromProcess(
+    var descriptor = new DescriptorFactory().fromProcess(
             Dsl.process("LoanDisbursement")
                     .input(String.class)
                     .output(String.class)
@@ -103,7 +103,7 @@ class ProcessCodeGeneratorTest {
 
   @Test
   void interfaceHasGetVersion() {
-    var descriptor = DescriptorFactory.fromProcess(
+    var descriptor = new DescriptorFactory().fromProcess(
             Dsl.process("Foo").execute(ctx -> Result.success("x")).build());
     var iface = generator.generate(descriptor).get(0);
     assertThat(iface.source()).contains("@QueryMethod");
@@ -112,8 +112,9 @@ class ProcessCodeGeneratorTest {
 
   @Test
   void implReturnsVersion() {
-    var descriptor = DescriptorFactory.fromProcess(
-            Dsl.process("Foo").version("v2").execute(ctx -> Result.success("x")).build());
+    var descriptor = new DescriptorFactory().fromProcess(
+            Dsl.process("Foo").version("v2").execute(ctx -> Result.success("x"))
+                    .build());
     var impl = generator.generate(descriptor).get(1);
     assertThat(impl.source()).contains("\"v2\"");
     assertThat(impl.source()).contains("getVersion()");
@@ -121,7 +122,7 @@ class ProcessCodeGeneratorTest {
 
   @Test
   void implContainsTaskQueueConstant() {
-    var descriptor = DescriptorFactory.fromProcess(
+    var descriptor = new DescriptorFactory().fromProcess(
             Dsl.process("Foo").execute(ctx -> Result.success("x")).build());
     var impl = generator.generate(descriptor).get(1);
     assertThat(impl.source()).contains("TASK_QUEUE");

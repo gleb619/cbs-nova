@@ -2,7 +2,6 @@ package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,14 +14,14 @@ class CompensationRichContextTest {
 
   @BeforeEach
   void setUp() {
-    delegate = SimpleContext.of("payload", ExecutionMode.RUN, RUN_ID);
+    delegate = SimpleContext.getInstance().of("payload", ExecutionMode.RUN, RUN_ID);
     failure = new RuntimeException("execute failed");
-    ExecutionTraceCollector.start();
+    ExecutionTraceCollector.getInstance().start();
   }
 
   @AfterEach
   void tearDown() {
-    ExecutionTraceCollector.stop();
+    ExecutionTraceCollector.getInstance().stop();
   }
 
   @Test
@@ -73,6 +72,7 @@ class CompensationRichContextTest {
   void logAddsToTrace() {
     var ctx = new CompensationRichContext<>(delegate, failure);
     ctx.log("rollback done");
-    assertThat(ExecutionTraceCollector.snapshot()).anyMatch(e -> e.contains("rollback done"));
+    assertThat(ExecutionTraceCollector.getInstance().snapshot())
+            .anyMatch(e -> e.contains("rollback done"));
   }
 }

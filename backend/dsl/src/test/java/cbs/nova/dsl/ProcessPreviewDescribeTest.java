@@ -23,7 +23,7 @@ class ProcessPreviewDescribeTest {
             .build();
 
     var runner = new DefaultProcessRunner();
-    var ctx = SimpleContext.of("input", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.PREVIEW);
     var result = runner.run(process, ctx);
 
     assertThat(result.isSuccess()).isTrue();
@@ -40,7 +40,7 @@ class ProcessPreviewDescribeTest {
             .build();
 
     var runner = new DefaultProcessRunner();
-    var ctx = SimpleContext.of("input", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.PREVIEW);
     var result = runner.run(process, ctx);
 
     assertThat(result.isSuccess()).isTrue();

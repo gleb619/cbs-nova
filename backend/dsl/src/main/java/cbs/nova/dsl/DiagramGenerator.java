@@ -8,8 +8,8 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Common contract for diagram generators that can produce visual representations
- * of processes, transactions, and helper activities.
+ * Common contract for diagram generators that can produce visual representations of processes,
+ * transactions, and helper activities.
  */
 public interface DiagramGenerator {
 

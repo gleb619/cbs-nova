@@ -5,6 +5,7 @@ plugins {
 dependencies {
   implementation project(":dsl-api")
   implementation project(':dsl')
+  implementation libs.slf4j.api
   implementation libs.javaparser
 
   testImplementation platform(libs.junit.bom)

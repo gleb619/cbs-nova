@@ -15,19 +15,21 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public final class DslCompiler {
 
   public static void main(String[] args) throws IOException {
     if (args.length < 2) {
-      System.err.println("Usage: DslCompiler <srcDir> <outputDir>");
+      log.error("Usage: DslCompiler <srcDir> <outputDir>");
       System.exit(1);
     }
     compile(Path.of(args[0]), Path.of(args[1]));
   }
 
   public static void compile(Path srcDir, Path outputDir) throws IOException {
-    List<DslObject> objects = DefinitionLoader.loadObjects(srcDir);
+    List<DslObject> objects = new DefinitionLoader().loadObjects(srcDir);
 
     var processes = new ArrayList<ProcessDescriptor>();
     var transactions = new ArrayList<TransactionDescriptor>();
@@ -35,14 +37,16 @@ public final class DslCompiler {
 
     for (DslObject obj : objects) {
       switch (obj.type()) {
-        case PROCESS -> processes.add(DescriptorFactory.fromProcess((ProcessDslObject) obj));
+        case PROCESS -> processes.add(new DescriptorFactory().fromProcess((ProcessDslObject) obj));
         case TRANSACTION ->
-          transactions.add(DescriptorFactory.fromTransaction((TransactionDslObject) obj));
-        case FUNCTION -> functions.add(DescriptorFactory.fromFunction((FunctionDslObject) obj));
+          transactions.add(new DescriptorFactory().fromTransaction((TransactionDslObject) obj));
+        case FUNCTION ->
+          functions.add(new DescriptorFactory().fromFunction((FunctionDslObject) obj));
       }
     }
 
-    SemanticValidator.validate(processes, transactions, functions, new DefaultHelperRegistry());
+    new SemanticValidator().validate(processes, transactions, functions,
+            new DefaultHelperRegistry());
 
     var processGen = new ProcessCodeGenerator();
     var txGen = new TransactionCodeGenerator();
@@ -53,6 +57,6 @@ public final class DslCompiler {
       sources.addAll(txGen.generate(t));
 
     CodeWriter.write(sources, outputDir);
-    System.out.println("[DslCompiler] Generated " + sources.size() + " source(s) to " + outputDir);
+    log.info("[DslCompiler] Generated {} source(s) to {}", sources.size(), outputDir);
   }
 }
