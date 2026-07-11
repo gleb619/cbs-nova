@@ -3,7 +3,8 @@ import cbs.nova.dslmodel.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
-void main() {}
+void main() {
+}
 
 List<DslObject> define() {
   return Dsl.process("BatchProcessing")

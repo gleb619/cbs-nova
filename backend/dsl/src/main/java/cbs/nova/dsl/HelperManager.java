@@ -9,6 +9,7 @@ import java.util.Optional;
 
 @RequiredArgsConstructor
 public final class HelperManager {
+
   private final HelperRegistry registry;
   private final HelperRunner runner;
 

@@ -70,14 +70,6 @@ class DslAutoConfigurationTest {
     assertThat(GlobalManager.getInstance().hasHelper("test-helper-fixture")).isFalse();
   }
 
-  @Helper(name = "test-helper-fixture")
-  static final class FixtureHelper implements Executable<String, String> {
-    @Override
-    public Result<String> execute(Context<String> ctx) {
-      return Result.success(ctx.body());
-    }
-  }
-
   @Test
   void listenersRegisteredWithTracker() throws Exception {
     var tracker = new ExternalCallTracker();
@@ -130,5 +122,14 @@ class DslAutoConfigurationTest {
     Field field = DslAutoConfiguration.class.getDeclaredField("externalCallTracker");
     field.setAccessible(true);
     field.set(config, tracker);
+  }
+
+  @Helper(name = "test-helper-fixture")
+  static final class FixtureHelper implements Executable<String, String> {
+
+    @Override
+    public Result<String> execute(Context<String> ctx) {
+      return Result.success(ctx.body());
+    }
   }
 }

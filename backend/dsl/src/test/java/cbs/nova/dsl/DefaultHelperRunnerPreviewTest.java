@@ -15,30 +15,6 @@ class DefaultHelperRunnerPreviewTest {
   private final ContextFactory contextFactory = new ContextFactory();
   private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
 
-  static final class MockHelper implements Executable<String, String> {
-    @Override
-    public @NonNull Result<String> preview(@NonNull Context<String> ctx) {
-      return Result.success("PREVIEW_MOCK");
-    }
-
-    @Override
-    public @NonNull Result<String> execute(@NonNull Context<String> ctx) {
-      return Result.success("REAL");
-    }
-
-    @Override
-    public @NonNull ExecutableDescriptor describe() {
-      return new ExecutableDescriptor(
-              "mock",
-              "mock helper",
-              String.class,
-              String.class,
-              false,
-              "preview returns PREVIEW_MOCK",
-              List.of(ParameterDescriptor.ofString("in")));
-    }
-  }
-
   @Test
   void previewModeInvokesPreviewHook() {
     var registry = new DefaultHelperRegistry();
@@ -84,5 +60,30 @@ class DefaultHelperRunnerPreviewTest {
     };
     var ctx = contextFactory.of("x", ExecutionMode.PREVIEW);
     assertThat(plain.preview(ctx).value()).isEqualTo("ONLY_EXEC");
+  }
+
+  static final class MockHelper implements Executable<String, String> {
+
+    @Override
+    public @NonNull Result<String> preview(@NonNull Context<String> ctx) {
+      return Result.success("PREVIEW_MOCK");
+    }
+
+    @Override
+    public @NonNull Result<String> execute(@NonNull Context<String> ctx) {
+      return Result.success("REAL");
+    }
+
+    @Override
+    public @NonNull ExecutableDescriptor describe() {
+      return new ExecutableDescriptor(
+              "mock",
+              "mock helper",
+              String.class,
+              String.class,
+              false,
+              "preview returns PREVIEW_MOCK",
+              List.of(ParameterDescriptor.ofString("in")));
+    }
   }
 }

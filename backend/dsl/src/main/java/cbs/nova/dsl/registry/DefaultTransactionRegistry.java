@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class DefaultTransactionRegistry implements TransactionRegistry {
+
   private final ConcurrentHashMap<String, TransactionDslObject> store = new ConcurrentHashMap<>();
 
   @Override

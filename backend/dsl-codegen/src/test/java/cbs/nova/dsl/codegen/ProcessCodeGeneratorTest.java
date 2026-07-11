@@ -8,6 +8,7 @@ import cbs.nova.dsl.Result;
 import org.junit.jupiter.api.Test;
 
 class ProcessCodeGeneratorTest {
+
   private final ProcessCodeGenerator generator = new ProcessCodeGenerator();
 
   @Test

@@ -1,9 +1,12 @@
-import cbs.nova.dsl.*;
-import cbs.nova.dslmodel.*;
-import cbs.nova.starter.helpers.model.*;
-import java.util.List;
+import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.DslObject;
+import cbs.nova.dsl.Result;
+import cbs.nova.dslmodel.ExceptionProbeIn;
+import cbs.nova.dslmodel.ExceptionProbeOut;
+import cbs.nova.starter.helpers.model.ConditionalFailIn;
 
-void main() {}
+void main() {
+}
 
 List<DslObject> define() {
   return Dsl.process("ExceptionProbe")
@@ -13,7 +16,9 @@ List<DslObject> define() {
         ExceptionProbeIn in = (ExceptionProbeIn) ctx.body();
         Result<?> r = ctx.runHelper("conditionalFailing",
             new ConditionalFailIn(in.shouldFail(), in.reason()));
-        if (!r.isSuccess()) return Result.failure(r.cause());
+        if (!r.isSuccess()) {
+          return Result.failure(r.cause());
+        }
         return Result.success(new ExceptionProbeOut("SUCCESS"));
       })
       .compensation(ctx -> {

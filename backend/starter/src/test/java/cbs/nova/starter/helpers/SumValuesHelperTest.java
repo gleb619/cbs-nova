@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 class SumValuesHelperTest {
+
   private final ContextFactory contextFactory = new ContextFactory();
   private final SumValuesHelper helper = new SumValuesHelper();
 

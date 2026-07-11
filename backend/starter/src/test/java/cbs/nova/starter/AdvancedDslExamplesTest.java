@@ -24,10 +24,9 @@ import java.nio.file.Path;
 
 class AdvancedDslExamplesTest {
 
+  private final ContextFactory contextFactory = new ContextFactory();
   @TempDir
   Path dslSourceDir;
-
-  private final ContextFactory contextFactory = new ContextFactory();
 
   @BeforeEach
   void loadCompactDsls() throws Exception {

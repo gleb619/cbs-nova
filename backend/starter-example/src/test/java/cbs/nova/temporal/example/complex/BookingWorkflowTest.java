@@ -18,10 +18,26 @@ import java.util.function.Supplier;
 
 @Timeout(value = 5, unit = TimeUnit.SECONDS)
 class BookingWorkflowTest {
+
   private static final String TASK_QUEUE = "booking-task-queue";
 
   private TestWorkflowEnvironment testEnv;
   private TestBookingActivities activities;
+
+  private static void await(Supplier<Boolean> condition) {
+    for (int i = 0; i < 100; i++) {
+      if (condition.get()) {
+        return;
+      }
+      try {
+        Thread.sleep(Duration.ofMillis(20).toMillis());
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new AssertionError("Interrupted while waiting for condition");
+      }
+    }
+    throw new AssertionError("Condition was not met in time");
+  }
 
   @BeforeEach
   void setUp() {
@@ -82,20 +98,5 @@ class BookingWorkflowTest {
                             .setTaskQueue(TASK_QUEUE)
                             .setWorkflowId(workflowId)
                             .build());
-  }
-
-  private static void await(Supplier<Boolean> condition) {
-    for (int i = 0; i < 100; i++) {
-      if (condition.get()) {
-        return;
-      }
-      try {
-        Thread.sleep(Duration.ofMillis(20).toMillis());
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new AssertionError("Interrupted while waiting for condition");
-      }
-    }
-    throw new AssertionError("Condition was not met in time");
   }
 }

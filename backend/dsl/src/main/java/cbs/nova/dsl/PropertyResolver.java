@@ -6,6 +6,7 @@ import org.jspecify.annotations.NonNull;
 import java.util.Map;
 
 public final class PropertyResolver {
+
   private final Map<String, String> properties;
   private final boolean failOnMissing;
 

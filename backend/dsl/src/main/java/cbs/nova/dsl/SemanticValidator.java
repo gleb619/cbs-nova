@@ -102,10 +102,12 @@ public final class SemanticValidator {
     color.put(node, "GRAY");
     stack.add(node);
     for (String neighbor : graph.getOrDefault(node, List.of())) {
-      if ("GRAY".equals(color.get(neighbor)))
+      if ("GRAY".equals(color.get(neighbor))) {
         return true;
-      if ("WHITE".equals(color.get(neighbor)) && dfs(neighbor, graph, color, stack))
+      }
+      if ("WHITE".equals(color.get(neighbor)) && dfs(neighbor, graph, color, stack)) {
         return true;
+      }
     }
     stack.remove(node);
     color.put(node, "BLACK");

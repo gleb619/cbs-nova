@@ -6,6 +6,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.UUID;
 
 public class DslException extends RuntimeException {
+
   private final String runId;
   private final String exceptionId;
   private final DslErrorCode code;

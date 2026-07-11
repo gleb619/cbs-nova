@@ -11,6 +11,7 @@ import java.util.Optional;
 
 @RequiredArgsConstructor
 public final class ProcessManager {
+
   private final ProcessRegistry registry;
   private final ProcessRunner runner;
 

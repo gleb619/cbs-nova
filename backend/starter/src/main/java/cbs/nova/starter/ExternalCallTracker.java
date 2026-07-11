@@ -15,10 +15,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @RequiredArgsConstructor
 public class ExternalCallTracker {
 
-  private final ThreadLocal<List<CallDetail>> threadLocalCalls = new ThreadLocal<>();
-  private final List<ExternalCallListener> listeners = new CopyOnWriteArrayList<>();
-  private final Map<String, Integer> globalCounts = new ConcurrentHashMap<>();
-
   public static final String TYPE_DATABASE = "database";
   public static final String TYPE_HTTP = "http";
   public static final String TYPE_MQ = "mq";
@@ -26,6 +22,9 @@ public class ExternalCallTracker {
   public static final String TYPE_EXTERNAL_API = "external_api";
   public static final String TYPE_MICROSERVICE = "microservice";
   public static final String TYPE_OTHER = "other";
+  private final ThreadLocal<List<CallDetail>> threadLocalCalls = new ThreadLocal<>();
+  private final List<ExternalCallListener> listeners = new CopyOnWriteArrayList<>();
+  private final Map<String, Integer> globalCounts = new ConcurrentHashMap<>();
 
   public void startTracking(@NonNull List<CallDetail> container) {
     threadLocalCalls.set(container);
@@ -119,5 +118,6 @@ public class ExternalCallTracker {
           @NonNull String operation,
           long timestamp,
           @NonNull Map<String, Object> metadata) {
+
   }
 }

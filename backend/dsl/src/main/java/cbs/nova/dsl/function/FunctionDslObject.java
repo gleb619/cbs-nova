@@ -18,6 +18,7 @@ public record FunctionDslObject(
         @NonNull Function<FunctionContext<?>, Result<?>> executeLogic,
         @Nullable Function<FunctionContext<?>, Result<?>> previewLogic,
         @Nullable Supplier<DslDescriptor> descriptor) implements DslObject {
+
   @Override
   public @NonNull DslType type() {
     return DslType.FUNCTION;
@@ -28,8 +29,9 @@ public record FunctionDslObject(
   }
 
   public @NonNull DslDescriptor describe() {
-    if (descriptor != null)
+    if (descriptor != null) {
       return descriptor.get();
+    }
     return new DslDescriptor(
             name,
             DslType.FUNCTION,

@@ -7,29 +7,21 @@ import java.util.Map;
 
 public sealed interface Result<T> permits Result.Success, Result.Failure {
 
+  static <T> Result<T> success(@NonNull T value) {
+    return new Success<>(value);
+  }
+
+  static <T> Result<T> failure(@NonNull Throwable cause) {
+    return new Failure<>(cause);
+  }
+
   boolean isSuccess();
+
   @Nullable
   T value();
+
   @Nullable
   Throwable cause();
-
-  record Success<T>(@NonNull T value) implements Result<T> {
-    public boolean isSuccess() {
-      return true;
-    }
-    public Throwable cause() {
-      return null;
-    }
-  }
-
-  record Failure<T>(@NonNull Throwable cause) implements Result<T> {
-    public boolean isSuccess() {
-      return false;
-    }
-    public T value() {
-      return null;
-    }
-  }
 
   @SuppressWarnings("unchecked")
   @Nullable
@@ -40,15 +32,31 @@ public sealed interface Result<T> permits Result.Success, Result.Failure {
   @SuppressWarnings("unchecked")
   default @NonNull Map<String, Object> asMap() {
     Object v = value();
-    if (v instanceof Map<?, ?> m)
+    if (v instanceof Map<?, ?> m) {
       return (Map<String, Object>) m;
+    }
     return v != null ? Map.of("value", v) : Map.of();
   }
 
-  static <T> Result<T> success(@NonNull T value) {
-    return new Success<>(value);
+  record Success<T>(@NonNull T value) implements Result<T> {
+
+    public boolean isSuccess() {
+      return true;
+    }
+
+    public Throwable cause() {
+      return null;
+    }
   }
-  static <T> Result<T> failure(@NonNull Throwable cause) {
-    return new Failure<>(cause);
+
+  record Failure<T>(@NonNull Throwable cause) implements Result<T> {
+
+    public boolean isSuccess() {
+      return false;
+    }
+
+    public T value() {
+      return null;
+    }
   }
 }

@@ -26,6 +26,7 @@ public record ProcessDslObject(
         @Nullable Supplier<DslDescriptor> descriptor)
         implements
           DslObject {
+
   @Override
   public @NonNull DslType type() {
     return DslType.PROCESS;
@@ -36,8 +37,9 @@ public record ProcessDslObject(
   }
 
   public @NonNull DslDescriptor describe() {
-    if (descriptor != null)
+    if (descriptor != null) {
       return descriptor.get();
+    }
     return new DslDescriptor(
             name,
             DslType.PROCESS,

@@ -12,6 +12,7 @@ import java.time.Duration;
  * Medium-complexity workflow that invokes three activities in parallel and joins the results.
  */
 public class ParallelAggregationWorkflowImpl implements ParallelAggregationWorkflow {
+
   private final AggregationActivities activities = Workflow.newActivityStub(
           AggregationActivities.class,
           ActivityOptions.newBuilder()

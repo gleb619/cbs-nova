@@ -30,13 +30,12 @@ import java.util.List;
 
 class IntermediateDslExamplesTest {
 
-  @TempDir
-  Path dslSourceDir;
-
   private final ContextFactory contextFactory = new ContextFactory();
   private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
   private final ExternalCallTracker tracker = new ExternalCallTracker();
   private final DevDslRuntime runtime = new DevDslRuntime(tracker, traceCollector, contextFactory);
+  @TempDir
+  Path dslSourceDir;
 
   @BeforeEach
   void loadCompactDsls() throws Exception {

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 class FormatMessageHelperTest {
+
   private final ContextFactory contextFactory = new ContextFactory();
   private final FormatMessageHelper helper = new FormatMessageHelper();
 

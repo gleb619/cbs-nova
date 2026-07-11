@@ -5,6 +5,7 @@ import io.temporal.activity.ActivityMethod;
 
 @ActivityInterface
 public interface BookingActivities {
+
   @ActivityMethod
   void bookFlight(String userId);
 

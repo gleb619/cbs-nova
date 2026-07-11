@@ -5,6 +5,7 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 
 public final class ValidationException extends RuntimeException {
+
   private final List<String> errors;
 
   public ValidationException(@NonNull List<String> errors) {

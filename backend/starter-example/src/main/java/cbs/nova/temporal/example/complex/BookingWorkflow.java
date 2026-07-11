@@ -7,6 +7,7 @@ import io.temporal.workflow.WorkflowMethod;
 
 @WorkflowInterface
 public interface BookingWorkflow {
+
   @WorkflowMethod
   String book(String userId);
 

@@ -3,7 +3,6 @@ package cbs.nova.misc.codegen;
 import cbs.nova.dsl.Helper;
 import cbs.nova.dsl.utils.Substitutor;
 
-import java.util.Map;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
@@ -20,6 +19,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -31,6 +31,31 @@ public class HelperSpiProcessor extends AbstractProcessor {
 
   private final List<HelperEntry> entries = new ArrayList<>();
   private boolean wrote = false;
+
+  private static String packageOf(String fqn) {
+    var idx = fqn.lastIndexOf('.');
+    return idx < 0 ? "" : fqn.substring(0, idx);
+  }
+
+  private static String commonPackage(List<HelperEntry> entries) {
+    if (entries.isEmpty()) {
+      return "";
+    }
+    var first = packageOf(entries.get(0).fqn()).split("\\.");
+    var common = first.length;
+    for (var i = 1; i < entries.size(); i++) {
+      var segs = packageOf(entries.get(i).fqn()).split("\\.");
+      var matched = 0;
+      while (matched < common && matched < segs.length && segs[matched].equals(first[matched])) {
+        matched++;
+      }
+      common = matched;
+      if (common == 0) {
+        return "";
+      }
+    }
+    return String.join(".", Arrays.copyOf(first, common));
+  }
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -57,8 +82,9 @@ public class HelperSpiProcessor extends AbstractProcessor {
           continue;
         }
         var helper = typeElement.getAnnotation(Helper.class);
-        if (helper == null)
+        if (helper == null) {
           continue;
+        }
         var fqn = typeElement.getQualifiedName().toString();
         if (!fqn.contains(".")) {
           processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,
@@ -137,31 +163,7 @@ public class HelperSpiProcessor extends AbstractProcessor {
     }
   }
 
-  private static String packageOf(String fqn) {
-    var idx = fqn.lastIndexOf('.');
-    return idx < 0 ? "" : fqn.substring(0, idx);
-  }
-
-  private static String commonPackage(List<HelperEntry> entries) {
-    if (entries.isEmpty()) {
-      return "";
-    }
-    var first = packageOf(entries.get(0).fqn()).split("\\.");
-    var common = first.length;
-    for (var i = 1; i < entries.size(); i++) {
-      var segs = packageOf(entries.get(i).fqn()).split("\\.");
-      var matched = 0;
-      while (matched < common && matched < segs.length && segs[matched].equals(first[matched])) {
-        matched++;
-      }
-      common = matched;
-      if (common == 0) {
-        return "";
-      }
-    }
-    return String.join(".", Arrays.copyOf(first, common));
-  }
-
   private record HelperEntry(String fqn, String name) {
+
   }
 }

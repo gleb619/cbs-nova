@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class DefaultProcessRegistry implements ProcessRegistry {
+
   private final ConcurrentHashMap<String, ProcessDslObject> store = new ConcurrentHashMap<>();
 
   @Override

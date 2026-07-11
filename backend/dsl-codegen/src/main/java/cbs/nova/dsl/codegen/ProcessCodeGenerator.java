@@ -9,7 +9,14 @@ import java.util.List;
 import java.util.Map;
 
 public final class ProcessCodeGenerator {
+
   private static final String BASE_PACKAGE = "cbs.nova.dsl.generated";
+
+  static String versionedPackage(String name, String version) {
+    String nameSegment = name.toLowerCase().replaceAll("[^a-z0-9]", "");
+    String versionSegment = version.replaceAll("[^a-z0-9]", "");
+    return BASE_PACKAGE + "." + nameSegment + "." + versionSegment;
+  }
 
   public @NonNull List<GeneratedSource> generate(@NonNull ProcessDescriptor descriptor) {
     String name = descriptor.name();
@@ -25,12 +32,6 @@ public final class ProcessCodeGenerator {
                             descriptor.version(), descriptor.taskQueue(),
                             descriptor.inputType(), descriptor.outputType(),
                             descriptor.hasCompensation())));
-  }
-
-  static String versionedPackage(String name, String version) {
-    String nameSegment = name.toLowerCase().replaceAll("[^a-z0-9]", "");
-    String versionSegment = version.replaceAll("[^a-z0-9]", "");
-    return BASE_PACKAGE + "." + nameSegment + "." + versionSegment;
   }
 
   private String generateInterface(String pkg, String interfaceName, ProcessDescriptor descriptor) {

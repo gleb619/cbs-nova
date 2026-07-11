@@ -12,6 +12,7 @@ import java.util.Optional;
 
 @RequiredArgsConstructor
 public final class TransactionManager {
+
   private final TransactionRegistry registry;
   private final TransactionRunner runner;
 

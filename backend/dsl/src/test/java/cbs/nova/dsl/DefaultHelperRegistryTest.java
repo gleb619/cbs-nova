@@ -9,8 +9,8 @@ import org.junit.jupiter.api.Test;
 
 class DefaultHelperRegistryTest {
 
-  private DefaultHelperRegistry registry;
   private final Executable<String, String> helper = ctx -> Result.success("ok");
+  private DefaultHelperRegistry registry;
 
   @BeforeEach
   void setUp() {

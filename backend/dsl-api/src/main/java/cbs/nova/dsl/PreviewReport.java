@@ -14,4 +14,5 @@ public record PreviewReport(
         @NonNull List<String> executionTrace,
         @NonNull List<Map<String, Object>> externalCalls,
         @NonNull Map<String, Integer> callCounts) {
+
 }

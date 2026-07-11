@@ -8,6 +8,7 @@ import cbs.nova.dsl.registry.DefaultProcessRegistry;
 import org.junit.jupiter.api.Test;
 
 class RegistryTest {
+
   @Test
   void processRegistryStoresAndFinds() {
     var reg = new DefaultProcessRegistry();

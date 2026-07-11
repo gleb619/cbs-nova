@@ -18,4 +18,5 @@ public record TransactionDescriptor(
         @NonNull Duration startToCloseTimeout,
         @Nullable RetryPolicy retryPolicy,
         @Nullable Duration heartbeatTimeout) {
+
 }

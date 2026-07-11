@@ -1,6 +1,6 @@
 package cbs.nova.dsl;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 class PropertyResolverTest {
+
   @Test
   void basicSubstitution() {
     var r = new PropertyResolver(Map.of("env", "prod"), false);

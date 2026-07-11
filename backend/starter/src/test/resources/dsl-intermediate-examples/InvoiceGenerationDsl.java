@@ -1,8 +1,11 @@
-import cbs.nova.dsl.*;
-import cbs.nova.dslmodel.*;
-import java.util.List;
+import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.DslObject;
+import cbs.nova.dsl.Result;
+import cbs.nova.dslmodel.InvoiceIn;
+import cbs.nova.dslmodel.InvoiceOut;
 
-void main() {}
+void main() {
+}
 
 List<DslObject> define() {
   return Dsl.process("InvoiceGeneration")

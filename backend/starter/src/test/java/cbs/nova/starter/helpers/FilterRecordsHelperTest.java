@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 class FilterRecordsHelperTest {
+
   private final ContextFactory contextFactory = new ContextFactory();
   private final FilterRecordsHelper helper = new FilterRecordsHelper();
 

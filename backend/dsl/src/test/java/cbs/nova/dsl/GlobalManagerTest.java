@@ -1,4 +1,5 @@
 package cbs.nova.dsl;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.ContextFactory;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Test;
 class GlobalManagerTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
+
   @BeforeEach
   void reset() {
     GlobalManager.getInstance().resetForTests();

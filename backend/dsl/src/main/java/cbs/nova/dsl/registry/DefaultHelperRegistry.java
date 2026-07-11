@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class DefaultHelperRegistry implements HelperRegistry {
+
   private final ConcurrentHashMap<String, Executable<?, ?>> helpers = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, FunctionDslObject> functions = new ConcurrentHashMap<>();
 

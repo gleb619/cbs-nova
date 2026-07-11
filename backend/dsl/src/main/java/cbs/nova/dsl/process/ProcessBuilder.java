@@ -17,6 +17,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public final class ProcessBuilder {
+
   private final String name;
   private String taskQueue;
   private String version = "v1";
@@ -40,47 +41,57 @@ public final class ProcessBuilder {
     this.inputType = type;
     return this;
   }
+
   public ProcessBuilder output(@NonNull Class<?> type) {
     this.outputType = type;
     return this;
   }
+
   public ProcessBuilder parameters(@NonNull Consumer<ParameterRegistry> registrar) {
     var registry = new DefaultParameterRegistry();
     registrar.accept(registry);
     this.parameters = registry.descriptors();
     return this;
   }
+
   public ProcessBuilder taskQueue(@NonNull String queue) {
     this.taskQueue = queue;
     return this;
   }
+
   public ProcessBuilder version(@NonNull String version) {
     this.version = version;
     return this;
   }
+
   public ProcessBuilder execute(@NonNull Function<ProcessContext<?>, Result<?>> logic) {
     this.executeLogic = logic;
     return this;
   }
+
   public ProcessBuilder compensation(@NonNull Function<CompensationContext<?>, Result<?>> logic) {
     this.compensationLogic = logic;
     return this;
   }
+
   public ProcessBuilder preview(@NonNull Function<ProcessContext<?>, Result<?>> logic) {
     this.previewLogic = logic;
     return this;
   }
+
   public ProcessBuilder describe(@NonNull Supplier<DslDescriptor> desc) {
     this.descriptor = desc;
     return this;
   }
 
   public @NonNull ProcessDslObject build() {
-    if (executeLogic == null)
+    if (executeLogic == null) {
       throw new IllegalStateException("execute() is required for process: " + name);
-    if (parameters != null && (inputType != null || outputType != null))
+    }
+    if (parameters != null && (inputType != null || outputType != null)) {
       throw new IllegalStateException(
               "process '" + name + "' cannot have both .parameters() and .input()/.output()");
+    }
     return new ProcessDslObject(name, taskQueue, version, inputType, outputType, parameters,
             executeLogic, compensationLogic, previewLogic, descriptor);
   }

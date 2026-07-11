@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Timeout(value = 10, unit = TimeUnit.SECONDS)
 class BookingActivitiesChaosTest {
+
   private static final String TASK_QUEUE = "booking-chaos-task-queue";
 
   private TestWorkflowEnvironment testEnv;

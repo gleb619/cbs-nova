@@ -17,4 +17,5 @@ public record ExplainReport(
         @NonNull Map<String, Integer> callCounts,
         @Nullable ExecutableDescriptor executableDescriptor,
         @Nullable DslDescriptor dslDescriptor) {
+
 }

@@ -83,5 +83,6 @@ public class DslRuntimeResource {
   }
 
   public record DslRequest(Object body, Map<String, Object> metadata) {
+
   }
 }

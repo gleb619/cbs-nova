@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 public class BookingActivitiesImpl implements BookingActivities {
+
   private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
           .connectTimeout(Duration.ofSeconds(2)).build();
 
@@ -23,6 +24,10 @@ public class BookingActivitiesImpl implements BookingActivities {
 
   public BookingActivitiesImpl(String baseUrl) {
     this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+  }
+
+  private static String encode(String value) {
+    return URLEncoder.encode(value, StandardCharsets.UTF_8);
   }
 
   @Override
@@ -75,9 +80,5 @@ public class BookingActivitiesImpl implements BookingActivities {
       Thread.currentThread().interrupt();
       throw new RuntimeException("Service " + path + " call was interrupted", e);
     }
-  }
-
-  private static String encode(String value) {
-    return URLEncoder.encode(value, StandardCharsets.UTF_8);
   }
 }

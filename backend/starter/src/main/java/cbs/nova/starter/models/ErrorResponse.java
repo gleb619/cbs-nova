@@ -6,4 +6,5 @@ public record ErrorResponse(
         String entityName,
         String runId,
         String exceptionId) {
+
 }

@@ -8,6 +8,7 @@ import cbs.nova.dsl.Result;
 import org.junit.jupiter.api.Test;
 
 class TransactionCodeGeneratorTest {
+
   private final TransactionCodeGenerator generator = new TransactionCodeGenerator();
 
   @Test

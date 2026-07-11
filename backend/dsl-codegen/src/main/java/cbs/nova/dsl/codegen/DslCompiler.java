@@ -51,10 +51,12 @@ public final class DslCompiler {
     var processGen = new ProcessCodeGenerator();
     var txGen = new TransactionCodeGenerator();
     var sources = new ArrayList<GeneratedSource>();
-    for (var p : processes)
+    for (var p : processes) {
       sources.addAll(processGen.generate(p));
-    for (var t : transactions)
+    }
+    for (var t : transactions) {
       sources.addAll(txGen.generate(t));
+    }
 
     CodeWriter.write(sources, outputDir);
     log.info("[DslCompiler] Generated {} source(s) to {}", sources.size(), outputDir);

@@ -1,7 +1,10 @@
 package cbs.nova.temporal.example.medium;
 
-/** Plain implementation of the aggregation activities. */
+/**
+ * Plain implementation of the aggregation activities.
+ */
 public class AggregationActivitiesImpl implements AggregationActivities {
+
   @Override
   public String fetchPartA(String input) {
     return "A-" + input;

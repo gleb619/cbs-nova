@@ -13,4 +13,5 @@ public record ExecutableDescriptor(
         boolean hasSideEffects,
         @Nullable String previewBehavior,
         @NonNull List<ParameterDescriptor> parameters) {
+
 }

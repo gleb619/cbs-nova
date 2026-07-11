@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.Optional;
 
 public interface TransactionRegistry {
+
   void register(@NonNull TransactionDslObject transaction);
 
   @NonNull

@@ -13,68 +13,6 @@ import java.util.stream.Collectors;
 
 public final class BpmnDiagramGenerator implements DiagramGenerator {
 
-  public @NonNull String forProcess(@NonNull ProcessDslObject process) {
-    return generateXml(process.name(), process.compensationLogic() != null);
-  }
-
-  public @NonNull String forProcess(@NonNull ProcessDslObject process,
-          @Nullable List<Map<String, Object>> externalCalls,
-          @Nullable Map<String, Integer> callCounts) {
-    return generateXml(process.name(), process.compensationLogic() != null, externalCalls,
-            callCounts);
-  }
-
-  public @NonNull String forTransaction(@NonNull TransactionDslObject tx) {
-    return generateXml(tx.name(), tx.compensationLogic() != null);
-  }
-
-  public @NonNull String forTransaction(@NonNull TransactionDslObject tx,
-          @Nullable List<Map<String, Object>> externalCalls,
-          @Nullable Map<String, Integer> callCounts) {
-    return generateXml(tx.name(), tx.compensationLogic() != null, externalCalls, callCounts);
-  }
-
-  public @NonNull String forHelper(@NonNull String name) {
-    return generateXml(name, false);
-  }
-
-  public @NonNull String forHelper(@NonNull String name,
-          @Nullable List<Map<String, Object>> externalCalls,
-          @Nullable Map<String, Integer> callCounts) {
-    return generateXml(name, false, externalCalls, callCounts);
-  }
-
-  private String generateXml(String name, boolean hasCompensation) {
-    var template = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
-                              xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
-                              xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
-                              xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
-                              id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
-              <bpmn:process id="Process_1" isExecutable="true">
-                <bpmn:startEvent id="StartEvent_1" name="Start">
-                  <bpmn:outgoing>Flow_1</bpmn:outgoing>
-                </bpmn:startEvent>
-                <bpmn:serviceTask id="Activity_1" name="${name}">
-                  <bpmn:incoming>Flow_1</bpmn:incoming>
-                  <bpmn:outgoing>Flow_2</bpmn:outgoing>
-                </bpmn:serviceTask>
-                <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Activity_1" />
-            ${compensation}  </bpmn:process>
-              <bpmndi:BPMNDiagram id="BPMNDiagram_1">
-                <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
-                  <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
-                    <dc:Bounds x="173" y="102" width="36" height="36" />
-                  </bpmndi:BPMNShape>
-                </bpmndi:BPMNPlane>
-              </bpmndi:BPMNDiagram>
-            </bpmn:definitions>""";
-    return Substitutor.format(template, Map.of(
-            "name", name,
-            "compensation", buildSimpleCompensation(hasCompensation)));
-  }
-
   private static String buildSimpleCompensation(boolean hasCompensation) {
     if (hasCompensation) {
       return """
@@ -103,34 +41,6 @@ public final class BpmnDiagramGenerator implements DiagramGenerator {
             </bpmn:endEvent>
             <bpmn:sequenceFlow id="Flow_2" sourceRef="Activity_1" targetRef="EndEvent_1" />
             """.indent(4);
-  }
-
-  private String generateXml(String name, boolean hasCompensation,
-          @Nullable List<Map<String, Object>> externalCalls,
-          @Nullable Map<String, Integer> callCounts) {
-    var template = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
-                              xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
-                              xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
-                              xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
-                              id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
-              <bpmn:process id="Process_1" isExecutable="true">
-                <bpmn:startEvent id="StartEvent_1" name="Start">
-                  <bpmn:outgoing>Flow_1</bpmn:outgoing>
-                </bpmn:startEvent>
-            ${body}  </bpmn:process>
-              <bpmndi:BPMNDiagram id="BPMNDiagram_1">
-                <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
-                  <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
-                    <dc:Bounds x="173" y="102" width="36" height="36" />
-                  </bpmndi:BPMNShape>
-                </bpmndi:BPMNPlane>
-              </bpmndi:BPMNDiagram>
-            ${callCounts}</bpmn:definitions>""";
-    return Substitutor.format(template, Map.of(
-            "body", buildBody(name, hasCompensation, externalCalls),
-            "callCounts", buildCallCounts(callCounts)));
   }
 
   private static String buildBody(String name, boolean hasCompensation,
@@ -254,7 +164,98 @@ public final class BpmnDiagramGenerator implements DiagramGenerator {
             .collect(Collectors.joining(", ")) + " -->";
   }
 
+  public @NonNull String forProcess(@NonNull ProcessDslObject process) {
+    return generateXml(process.name(), process.compensationLogic() != null);
+  }
+
+  public @NonNull String forProcess(@NonNull ProcessDslObject process,
+          @Nullable List<Map<String, Object>> externalCalls,
+          @Nullable Map<String, Integer> callCounts) {
+    return generateXml(process.name(), process.compensationLogic() != null, externalCalls,
+            callCounts);
+  }
+
+  public @NonNull String forTransaction(@NonNull TransactionDslObject tx) {
+    return generateXml(tx.name(), tx.compensationLogic() != null);
+  }
+
+  public @NonNull String forTransaction(@NonNull TransactionDslObject tx,
+          @Nullable List<Map<String, Object>> externalCalls,
+          @Nullable Map<String, Integer> callCounts) {
+    return generateXml(tx.name(), tx.compensationLogic() != null, externalCalls, callCounts);
+  }
+
+  public @NonNull String forHelper(@NonNull String name) {
+    return generateXml(name, false);
+  }
+
+  public @NonNull String forHelper(@NonNull String name,
+          @Nullable List<Map<String, Object>> externalCalls,
+          @Nullable Map<String, Integer> callCounts) {
+    return generateXml(name, false, externalCalls, callCounts);
+  }
+
+  private String generateXml(String name, boolean hasCompensation) {
+    var template = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                              xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                              xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                              xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                              id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+              <bpmn:process id="Process_1" isExecutable="true">
+                <bpmn:startEvent id="StartEvent_1" name="Start">
+                  <bpmn:outgoing>Flow_1</bpmn:outgoing>
+                </bpmn:startEvent>
+                <bpmn:serviceTask id="Activity_1" name="${name}">
+                  <bpmn:incoming>Flow_1</bpmn:incoming>
+                  <bpmn:outgoing>Flow_2</bpmn:outgoing>
+                </bpmn:serviceTask>
+                <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Activity_1" />
+            ${compensation}  </bpmn:process>
+              <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+                <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+                  <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+                    <dc:Bounds x="173" y="102" width="36" height="36" />
+                  </bpmndi:BPMNShape>
+                </bpmndi:BPMNPlane>
+              </bpmndi:BPMNDiagram>
+            </bpmn:definitions>""";
+    return Substitutor.format(template, Map.of(
+            "name", name,
+            "compensation", buildSimpleCompensation(hasCompensation)));
+  }
+
+  private String generateXml(String name, boolean hasCompensation,
+          @Nullable List<Map<String, Object>> externalCalls,
+          @Nullable Map<String, Integer> callCounts) {
+    var template = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                              xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                              xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                              xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                              id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+              <bpmn:process id="Process_1" isExecutable="true">
+                <bpmn:startEvent id="StartEvent_1" name="Start">
+                  <bpmn:outgoing>Flow_1</bpmn:outgoing>
+                </bpmn:startEvent>
+            ${body}  </bpmn:process>
+              <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+                <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+                  <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+                    <dc:Bounds x="173" y="102" width="36" height="36" />
+                  </bpmndi:BPMNShape>
+                </bpmndi:BPMNPlane>
+              </bpmndi:BPMNDiagram>
+            ${callCounts}</bpmn:definitions>""";
+    return Substitutor.format(template, Map.of(
+            "body", buildBody(name, hasCompensation, externalCalls),
+            "callCounts", buildCallCounts(callCounts)));
+  }
+
   private static final class Ids {
+
     private int activityId = 1;
     private int flowId = 1;
     private int gatewayId = 1;

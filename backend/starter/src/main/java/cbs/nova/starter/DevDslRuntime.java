@@ -165,12 +165,15 @@ public class DevDslRuntime implements DslRuntime {
             : ctx.runId();
     var modeCtx = contextFactory.of(ctx.body(), ctx.metadata(), mode, runId);
     GlobalManager gm = GlobalManager.getInstance();
-    if (gm.hasProcess(name))
+    if (gm.hasProcess(name)) {
       return gm.runProcess(name, modeCtx);
-    if (gm.hasTransaction(name))
+    }
+    if (gm.hasTransaction(name)) {
       return gm.runTransaction(name, modeCtx);
-    if (gm.hasHelper(name))
+    }
+    if (gm.hasHelper(name)) {
       return gm.runHelper(name, modeCtx);
+    }
     return Result.failure(new IllegalArgumentException("No DSL entity registered: " + name));
   }
 }

@@ -29,6 +29,7 @@ public record TransactionDslObject(
         @Nullable Duration heartbeatTimeout,
         @Nullable Function<TransactionContext<?>, Result<?>> previewLogic,
         @Nullable Supplier<DslDescriptor> descriptor) implements DslObject {
+
   @Override
   public @NonNull DslType type() {
     return DslType.TRANSACTION;
@@ -39,8 +40,9 @@ public record TransactionDslObject(
   }
 
   public @NonNull DslDescriptor describe() {
-    if (descriptor != null)
+    if (descriptor != null) {
       return descriptor.get();
+    }
     return new DslDescriptor(
             name,
             DslType.TRANSACTION,

@@ -1,4 +1,5 @@
 package cbs.nova.dsl;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -11,6 +12,7 @@ class DslBuilderTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
   private final RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory();
+
   @Test
   void processBuildsSuccessfully() {
     var obj = Dsl.process("MyProcess")

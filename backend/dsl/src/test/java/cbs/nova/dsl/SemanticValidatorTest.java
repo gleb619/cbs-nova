@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 class SemanticValidatorTest {
+
   private final HelperRegistry emptyRegistry = new DefaultHelperRegistry();
 
   @Test

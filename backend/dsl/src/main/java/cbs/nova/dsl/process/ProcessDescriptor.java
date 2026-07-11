@@ -13,4 +13,5 @@ public record ProcessDescriptor(
         @Nullable Class<?> outputType,
         boolean hasCompensation,
         @NonNull List<String> helperRefs) {
+
 }

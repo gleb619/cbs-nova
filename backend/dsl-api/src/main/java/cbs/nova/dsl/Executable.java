@@ -5,6 +5,7 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 
 public interface Executable<IN, OUT> {
+
   @NonNull
   default Result<OUT> preview(@NonNull Context<IN> ctx) {
     return execute(ctx);

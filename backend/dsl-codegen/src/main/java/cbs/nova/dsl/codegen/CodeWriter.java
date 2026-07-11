@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 public final class CodeWriter {
+
   public static void write(@NonNull List<GeneratedSource> sources, @NonNull Path outputDir)
           throws IOException {
     for (var source : sources) {

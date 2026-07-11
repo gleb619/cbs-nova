@@ -3,8 +3,11 @@ package cbs.nova.temporal.example.complex;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Test double that records calls and can simulate booking failures. */
+/**
+ * Test double that records calls and can simulate booking failures.
+ */
 public class TestBookingActivities implements BookingActivities {
+
   final List<String> actions = new ArrayList<>();
 
   boolean failFlight = false;

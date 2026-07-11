@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class ParallelAggregationWorkflowTest {
+
   private static final String TASK_QUEUE = "aggregation-task-queue";
 
   private TestWorkflowEnvironment testEnv;

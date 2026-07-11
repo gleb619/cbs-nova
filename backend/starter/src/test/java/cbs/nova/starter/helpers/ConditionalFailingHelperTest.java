@@ -10,6 +10,7 @@ import cbs.nova.starter.helpers.model.ConditionalFailOut;
 import org.junit.jupiter.api.Test;
 
 class ConditionalFailingHelperTest {
+
   private final ContextFactory contextFactory = new ContextFactory();
   private final ConditionalFailingHelper helper = new ConditionalFailingHelper();
 

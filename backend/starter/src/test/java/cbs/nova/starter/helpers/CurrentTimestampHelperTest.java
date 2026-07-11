@@ -10,6 +10,7 @@ import cbs.nova.starter.helpers.model.CurrentTimestampOut;
 import org.junit.jupiter.api.Test;
 
 class CurrentTimestampHelperTest {
+
   private final ContextFactory contextFactory = new ContextFactory();
   private final CurrentTimestampHelper helper = new CurrentTimestampHelper();
 

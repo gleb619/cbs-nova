@@ -1,9 +1,11 @@
-import cbs.nova.dsl.*;
-import cbs.nova.dslmodel.*;
-import java.time.Duration;
-import java.util.List;
+import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.DslObject;
+import cbs.nova.dsl.Result;
+import cbs.nova.dslmodel.LongWorkIn;
+import cbs.nova.dslmodel.LongWorkOut;
 
-void main() {}
+void main() {
+}
 
 List<DslObject> define() {
   return Dsl.transaction("LongWorkSimulation")

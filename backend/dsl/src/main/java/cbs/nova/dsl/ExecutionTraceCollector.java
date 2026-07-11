@@ -8,6 +8,7 @@ import java.util.List;
 
 @RequiredArgsConstructor
 public final class ExecutionTraceCollector {
+
   private final ThreadLocal<List<String>> trace = new ThreadLocal<>();
 
   public void start() {

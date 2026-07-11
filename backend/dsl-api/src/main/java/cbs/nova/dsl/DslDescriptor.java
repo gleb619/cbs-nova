@@ -21,4 +21,5 @@ public record DslDescriptor(
         @Nullable String version,
         @Nullable Duration startToCloseTimeout,
         @Nullable Duration heartbeatTimeout) {
+
 }

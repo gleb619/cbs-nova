@@ -9,10 +9,9 @@ import org.junit.jupiter.api.Test;
 
 class CompensationRichContextTest {
 
+  private static final String RUN_ID = "test-run-id";
   private final ContextFactory contextFactory = new ContextFactory();
   private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
-
-  private static final String RUN_ID = "test-run-id";
   private Context<String> delegate;
   private Throwable failure;
 

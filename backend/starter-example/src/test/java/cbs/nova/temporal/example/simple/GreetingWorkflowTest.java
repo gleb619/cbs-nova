@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class GreetingWorkflowTest {
+
   private static final String TASK_QUEUE = "greeting-task-queue";
 
   private TestWorkflowEnvironment testEnv;

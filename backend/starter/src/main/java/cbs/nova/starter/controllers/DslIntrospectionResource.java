@@ -16,6 +16,10 @@ import java.util.List;
 @Tag(name = "DSL Introspection", description = "Inspect registered DSL entities")
 public class DslIntrospectionResource {
 
+  private static String typeName(Class<?> type) {
+    return type == null ? null : type.getSimpleName();
+  }
+
   @GetMapping("/processes")
   @Operation(summary = "List all registered DSL process names")
   public ResponseEntity<NamesResponse> processes() {
@@ -69,11 +73,8 @@ public class DslIntrospectionResource {
     return ResponseEntity.ok(new NamesResponse(GlobalManager.getInstance().helperNames()));
   }
 
-  private static String typeName(Class<?> type) {
-    return type == null ? null : type.getSimpleName();
-  }
-
   public record NamesResponse(List<String> names) {
+
   }
 
   public record ProcessDetail(
@@ -83,6 +84,7 @@ public class DslIntrospectionResource {
           String inputType,
           String outputType,
           boolean hasCompensation) {
+
   }
 
   public record TransactionDetail(
@@ -93,5 +95,6 @@ public class DslIntrospectionResource {
           String outputType,
           boolean hasCompensation,
           long startToCloseTimeoutMs) {
+
   }
 }

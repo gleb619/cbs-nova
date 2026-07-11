@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.Optional;
 
 public interface HelperRegistry {
+
   void registerHelper(@NonNull String name, @NonNull Executable<?, ?> helper);
 
   void registerFunction(@NonNull FunctionDslObject function);

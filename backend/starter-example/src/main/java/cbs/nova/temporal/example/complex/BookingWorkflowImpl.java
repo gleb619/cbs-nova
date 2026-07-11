@@ -20,6 +20,7 @@ import java.util.List;
  * </ul>
  */
 public class BookingWorkflowImpl implements BookingWorkflow {
+
   private final BookingActivities activities = Workflow.newActivityStub(
           BookingActivities.class,
           ActivityOptions.newBuilder()
