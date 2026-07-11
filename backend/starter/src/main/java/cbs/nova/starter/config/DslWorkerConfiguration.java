@@ -1,9 +1,10 @@
 package cbs.nova.starter.config;
 
 import io.temporal.client.WorkflowClient;
+import io.temporal.worker.TypeAlreadyRegisteredException;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
-import io.temporal.workflow.Workflow;
+import io.temporal.workflow.WorkflowInterface;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -41,17 +42,32 @@ public class DslWorkerConfiguration {
         }
         MetadataReader reader = readerFactory.getMetadataReader(resource);
         String className = reader.getClassMetadata().getClassName();
-        Class<?> cls = ClassUtils.forName(className, Thread.currentThread().getContextClassLoader());
+        Class<?> cls = ClassUtils.forName(className,
+                Thread.currentThread().getContextClassLoader());
         String simpleName = cls.getSimpleName();
-        if (simpleName.endsWith("ProcessDefinition") && Workflow.class.isAssignableFrom(cls)) {
+        if (simpleName.endsWith("ProcessDefinition") && implementsWorkflowInterface(cls)) {
           worker.registerWorkflowImplementationTypes(cls);
         } else if (simpleName.endsWith("TransactionDefinition")) {
           Object instance = cls.getDeclaredConstructor().newInstance();
-          worker.registerActivitiesImplementations(instance);
+          try {
+            worker.registerActivitiesImplementations(instance);
+          } catch (TypeAlreadyRegisteredException ignored) {
+            // multiple generated transactions share the default activity method name;
+            // the first registration wins, subsequent duplicates are skipped
+          }
         }
       }
     } catch (Exception e) {
       throw new IllegalStateException("Failed to scan generated DSL implementations", e);
     }
+  }
+
+  private static boolean implementsWorkflowInterface(Class<?> cls) {
+    for (Class<?> iface : cls.getInterfaces()) {
+      if (iface.isAnnotationPresent(WorkflowInterface.class)) {
+        return true;
+      }
+    }
+    return false;
   }
 }

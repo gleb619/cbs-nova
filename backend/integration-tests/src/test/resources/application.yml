@@ -2,3 +2,4 @@ dsl:
   worker:
     enabled: true
   task-queue: SampleProcess-queue
+  source-dir: src/test/resources
