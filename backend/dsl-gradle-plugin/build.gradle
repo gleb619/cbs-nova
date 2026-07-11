@@ -1,0 +1,23 @@
+plugins {
+  id 'java-gradle-plugin'
+  id 'maven-publish'
+}
+
+dependencies {
+  implementation "cbs.nova:dsl-codegen:${project.version}"
+
+  testImplementation gradleTestKit()
+  testImplementation platform(libs.junit.bom)
+  testImplementation libs.junit.jupiter
+  testImplementation libs.assertj
+  testRuntimeOnly libs.junit.platform.launcher
+}
+
+gradlePlugin {
+  plugins {
+    dslCompiler {
+      id = 'cbs.nova.dsl'
+      implementationClass = 'cbs.nova.dsl.gradle.DslCompilerPlugin'
+    }
+  }
+}

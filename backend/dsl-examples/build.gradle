@@ -1,6 +1,7 @@
 plugins {
   id 'java'
   alias(libs.plugins.spring.dm)
+  id 'cbs.nova.dsl' version '0.0.1-SNAPSHOT'
 }
 
 dependencyManagement {
@@ -15,64 +16,6 @@ dependencies {
   implementation project(':dsl-model')
   compileOnly project(':starter')
   implementation libs.temporal.sdk
-}
-
-def generatedDir = layout.buildDirectory.dir('generated').get().asFile
-
-sourceSets {
-  main {
-    java {
-      srcDirs = [generatedDir]
-      exclude '**/*.class'
-    }
-    compileClasspath += files(generatedDir)
-    resources {
-      srcDirs += [generatedDir]
-      includes += ['META-INF/**']
-    }
-  }
-}
-
-tasks.register('copyGeneratedClasses', Copy) {
-  from generatedDir
-  include '**/*.class'
-  into layout.buildDirectory.dir('classes/java/main')
-  mustRunAfter 'compileJava'
-}
-
-tasks.named('jar') {
-  dependsOn 'copyGeneratedClasses'
-}
-
-configurations {
-  dslCompiler
-}
-
-dependencies {
-  dslCompiler project(':dsl-codegen')
-  dslCompiler project(':dsl')
-  dslCompiler project(':dsl-api')
-  dslCompiler project(':dsl-model')
-  dslCompiler project(':starter')
-}
-
-tasks.register('compileDsl', JavaExec) {
-  group = 'build'
-  description = 'Compiles DSL compact source files with DslCompiler'
-  classpath = configurations.dslCompiler
-  mainClass = 'cbs.nova.dsl.codegen.DslCompiler'
-  args 'src', generatedDir.absolutePath
-  javaLauncher = javaToolchains.launcherFor {
-    languageVersion = JavaLanguageVersion.of(25)
-  }
-  dependsOn ':starter:classes'
-  doFirst {
-    generatedDir.mkdirs()
-  }
-}
-
-tasks.named('compileJava') {
-  dependsOn 'compileDsl'
 }
 
 spotless {

@@ -23,11 +23,12 @@ backend/
 ├── dsl-codegen/      # Annotation processor generating Temporal workflows/activities
 ├── misc-codegen/     # SPI generator for `@Helper` classes
 ├── dsl-examples/     # JEP-512 compact DSL source files (no class/package/public)
+├── dsl-gradle-plugin/# Standalone Gradle plugin that compiles DSL sources
 ├── starter/          # Spring Boot starter & REST surface (e.g. POST /api/dsl/reload)
 └── temporal-example/ # Sample Temporal workflows and testing
 ```
 
-**Dependency flow**: `dsl-api` (none) <- `dsl` <- `dsl-codegen` / `starter` / `dsl-examples`.
+**Dependency flow**: `dsl-api` (none) <- `dsl` <- `dsl-codegen` / `starter` / `dsl-examples` / `dsl-gradle-plugin`.
 **Execution Layers**: Generated code -> Facade (`GlobalManager.getInstance()`) -> Managers -> Runners -> Registries.
 
 ---
@@ -44,6 +45,8 @@ backend/
   `java.util.ServiceLoader` so the runtime can load them.
 - `DefinitionLoader` uses the same preprocessor when a configured source directory contains `.java` files; otherwise it
   loads definitions from the classpath via `ServiceLoader`.
+- `dsl-gradle-plugin` provides a standalone Gradle plugin (`cbs.nova.dsl`) that compacts DSL sources. It resolves the
+  compiler runtime from Maven Local using configurable `dslVersion`. See `backend/dsl-gradle-plugin/README.md`.
 - **Call Hierarchy constraints**:
     - **Process** can call: Transactions, Helpers, Functions (never Processes).
     - **Transaction / Function / Helper / Compensation** can call: Helpers, Functions (never Processes/Transactions).
@@ -68,6 +71,7 @@ backend/
 ./gradlew build                 # Build project and run code generation
 ./gradlew test                  # Run all tests
 ./gradlew :dsl:test             # Run specific module tests (e.g. :dsl-codegen, :starter)
+./gradlew :dsl-gradle-plugin:build   # Build and validate the DSL compiler plugin
 ./gradlew spotlessCheck         # Check Spotless formatting rules
 ./gradlew spotlessApply         # Format code automatically using Spotless
 ```

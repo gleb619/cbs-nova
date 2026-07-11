@@ -1,3 +1,18 @@
+pluginManagement {
+  repositories {
+    mavenLocal()
+    mavenCentral()
+    gradlePluginPortal()
+  }
+  resolutionStrategy {
+    eachPlugin {
+      if (requested.id.id == 'cbs.nova.dsl') {
+        useModule("cbs.nova:dsl-gradle-plugin:${requested.version ?: version}")
+      }
+    }
+  }
+}
+
 rootProject.name = 'cbs-nova-backend'
 
 include 'dsl-api'
@@ -7,6 +22,8 @@ include 'starter'
 include 'starter-example'
 include 'dsl-examples'
 include 'dsl-model'
+include 'dsl-gradle-plugin'
+include 'misc-codegen'
 
 dependencyResolutionManagement {
   repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
@@ -17,5 +34,3 @@ dependencyResolutionManagement {
 }
 
 enableFeaturePreview('TYPESAFE_PROJECT_ACCESSORS')
-
-include 'misc-codegen'
