@@ -4,18 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.generated.batchprocessing.v1.BatchProcessingProcessDefinition;
-import cbs.nova.dsl.generated.batchprocessing.v1.BatchProcessingProcessWorkflow;
-import cbs.nova.dslmodel.BatchIn;
-import cbs.nova.dslmodel.BatchItem;
 import cbs.nova.dslmodel.BatchOut;
+import cbs.nova.starter.services.TemporalDslService;
 import io.temporal.client.WorkflowClient;
-import io.temporal.client.WorkflowOptions;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
-import io.temporal.worker.Worker;
-import io.temporal.worker.WorkerFactory;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.GenericContainer;
@@ -29,11 +22,11 @@ import org.testcontainers.utility.DockerImageName;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 
 @Testcontainers
 class BatchProcessingDslIntegrationTest {
 
-  private static final String TASK_QUEUE = "BatchProcessing-queue";
   private static final DockerImageName TEMPORAL_IMAGE = DockerImageName
           .parse("temporalio/auto-setup:1.25.2");
   private static final DockerImageName POSTGRES_IMAGE = DockerImageName.parse("postgres:15");
@@ -62,8 +55,7 @@ class BatchProcessingDslIntegrationTest {
                   Wait.forLogMessage(".*Started Worker.*", 1)
                           .withStartupTimeout(Duration.ofMinutes(5)));
 
-  private static WorkerFactory workerFactory;
-  private static WorkflowClient workflowClient;
+  private static TemporalDslService dslService;
 
   @BeforeAll
   static void setUp() {
@@ -71,8 +63,12 @@ class BatchProcessingDslIntegrationTest {
     var globalManager = GlobalManager.getInstance();
     var dslSourceDir = Path.of(System.getProperty("dsl.examples.src.dir"));
     new DefinitionLoader().load(dslSourceDir, globalManager);
+
     assertThat(globalManager.hasProcess("BatchProcessing"))
             .as("DSL source for BatchProcessing should be loaded")
+            .isTrue();
+    assertThat(globalManager.hasGeneratedProcess("BatchProcessing"))
+            .as("Generated Temporal classes for BatchProcessing should be available")
             .isTrue();
 
     var serviceStubs = WorkflowServiceStubs.newServiceStubs(
@@ -80,39 +76,18 @@ class BatchProcessingDslIntegrationTest {
                     .setTarget(
                             TEMPORAL.getHost() + ":" + TEMPORAL.getMappedPort(7233))
                     .build());
-    workflowClient = WorkflowClient.newInstance(serviceStubs);
-
-    workerFactory = WorkerFactory.newInstance(workflowClient);
-    Worker worker = workerFactory.newWorker(TASK_QUEUE);
-    worker.registerWorkflowImplementationTypes(BatchProcessingProcessDefinition.class);
-    workerFactory.start();
-  }
-
-  @AfterAll
-  static void tearDown() {
-    if (workerFactory != null) {
-      workerFactory.shutdown();
-    }
+    dslService = new TemporalDslService(WorkflowClient.newInstance(serviceStubs));
   }
 
   @Test
   void runsBatchProcessingDslEndToEnd() {
-    var workflow = workflowClient.newWorkflowStub(
-            BatchProcessingProcessWorkflow.class,
-            WorkflowOptions.newBuilder()
-                    .setTaskQueue(TASK_QUEUE)
-                    .setWorkflowId("batch-processing-test-1")
-                    .setWorkflowExecutionTimeout(Duration.ofSeconds(30))
-                    .setWorkflowTaskTimeout(Duration.ofSeconds(5))
-                    .build());
-
-    var input = new BatchIn(
-            List.of(
-                    new BatchItem("a", 1),
-                    new BatchItem("b", 2),
-                    new BatchItem("c", 3)));
-
-    BatchOut result = workflow.run(input);
+    BatchOut result = dslService.execute(
+            "BatchProcessing",
+            Map.of("items", List.of(
+                    Map.of("id", "a", "value", 1),
+                    Map.of("id", "b", "value", 2),
+                    Map.of("id", "c", "value", 3))),
+            BatchOut.class);
 
     assertThat(result.total()).isEqualTo(6);
     assertThat(result.summary()).isEqualTo("Processed: a=1, b=2, c=3");

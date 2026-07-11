@@ -7,6 +7,7 @@ import cbs.nova.dsl.process.ProcessManager;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
 import cbs.nova.dsl.registry.DefaultProcessRegistry;
 import cbs.nova.dsl.registry.DefaultTransactionRegistry;
+import cbs.nova.dsl.registry.GeneratedClassRegistry;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.dsl.transaction.TransactionManager;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public final class GlobalManager {
   private final ProcessManager processManager;
   private final TransactionManager transactionManager;
   private final HelperManager helperManager;
+  private final GeneratedClassRegistry generatedClassRegistry;
 
   public static @NonNull GlobalManager getInstance() {
     if (INSTANCE == null) {
@@ -38,7 +40,8 @@ public final class GlobalManager {
                   new TransactionManager(new DefaultTransactionRegistry(),
                           config.transactionRunner(traceCollector, contextFactory)),
                   new HelperManager(new DefaultHelperRegistry(),
-                          config.helperRunner(traceCollector, contextFactory)));
+                          config.helperRunner(traceCollector, contextFactory)),
+                  new GeneratedClassRegistry());
         }
       }
     }
@@ -62,7 +65,8 @@ public final class GlobalManager {
   }
 
   public void registerHelperResolvers() {
-    ServiceLoader.load(HelperResolver.class).forEach(this::registerHelpers);
+    var classLoader = Thread.currentThread().getContextClassLoader();
+    ServiceLoader.load(HelperResolver.class, classLoader).forEach(this::registerHelpers);
   }
 
   public void registerFunction(@NonNull FunctionDslObject fn) {
@@ -133,6 +137,35 @@ public final class GlobalManager {
 
   public @NonNull Optional<DslDescriptor> describeFunction(@NonNull String name) {
     return helperManager.findFunction(name).map(FunctionDslObject::describe);
+  }
+
+  public @NonNull Optional<GeneratedClassDescriptor> findGeneratedProcess(@NonNull String name) {
+    return generatedClassRegistry.findProcess(name);
+  }
+
+  public @NonNull Optional<GeneratedClassDescriptor> findGeneratedTransaction(
+          @NonNull String name) {
+    return generatedClassRegistry.findTransaction(name);
+  }
+
+  public boolean hasGeneratedProcess(@NonNull String name) {
+    return generatedClassRegistry.findProcess(name).isPresent();
+  }
+
+  public boolean hasGeneratedTransaction(@NonNull String name) {
+    return generatedClassRegistry.findTransaction(name).isPresent();
+  }
+
+  public @NonNull List<GeneratedClassDescriptor> generatedProcesses() {
+    return generatedClassRegistry.processes();
+  }
+
+  public @NonNull List<GeneratedClassDescriptor> generatedTransactions() {
+    return generatedClassRegistry.transactions();
+  }
+
+  public void registerGeneratedClass(@NonNull GeneratedClassDescriptor descriptor) {
+    generatedClassRegistry.register(descriptor);
   }
 
   public void resetForTests() {
