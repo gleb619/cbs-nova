@@ -4,16 +4,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.ExecutionMode;
+import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.SimpleContext;
-import java.util.ArrayList;
+import cbs.nova.dsl.config.ContextFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+
 class DevDslRuntimeTest {
-  private final DevDslRuntime runtime = new DevDslRuntime();
+  private final ExternalCallTracker tracker = new ExternalCallTracker();
+  private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
+  private final ContextFactory contextFactory = new ContextFactory();
+  private final DevDslRuntime runtime = new DevDslRuntime(tracker, traceCollector, contextFactory);
 
   @BeforeEach
   void reset() {
@@ -25,7 +30,7 @@ class DevDslRuntimeTest {
 
   @Test
   void previewDispatchesToProcess() {
-    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.PREVIEW);
+    var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
     var result = runtime.preview("Ping", ctx);
     assertThat(result.isSuccess()).isTrue();
     PreviewReport report = result.value();
@@ -40,14 +45,14 @@ class DevDslRuntimeTest {
 
   @Test
   void runDispatchesToProcess() {
-    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.RUN);
+    var ctx = contextFactory.of("input", ExecutionMode.RUN);
     var result = runtime.run("Ping", ctx);
     assertThat(result.isSuccess()).isTrue();
   }
 
   @Test
   void explainReturnsReport() {
-    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.EXPLAIN);
+    var ctx = contextFactory.of("input", ExecutionMode.EXPLAIN);
     var report = runtime.explain("Ping", ctx);
     assertThat(report.name()).isEqualTo("Ping");
     assertThat(report.description()).contains("Ping");
@@ -58,7 +63,7 @@ class DevDslRuntimeTest {
 
   @Test
   void explainTraceContainsSteps() {
-    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.EXPLAIN);
+    var ctx = contextFactory.of("input", ExecutionMode.EXPLAIN);
     var report = runtime.explain("Ping", ctx);
     assertThat(report.executionTrace()).containsExactly(
             "started: Ping",
@@ -68,7 +73,7 @@ class DevDslRuntimeTest {
 
   @Test
   void unknownEntityReturnsFailure() {
-    var ctx = SimpleContext.getInstance().of("x", ExecutionMode.PREVIEW);
+    var ctx = contextFactory.of("x", ExecutionMode.PREVIEW);
     var result = runtime.preview("Unknown", ctx);
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.value()).isNull();
@@ -79,13 +84,13 @@ class DevDslRuntimeTest {
     GlobalManager.getInstance()
             .registerProcess(Dsl.process("TrackedProcess")
                     .execute(ctx -> {
-                      ExternalCallTracker.record("jdbc", "user-db", "SELECT * FROM users", null);
-                      ExternalCallTracker.record("http", "payment-api", "POST /pay",
+                      tracker.record("jdbc", "user-db", "SELECT * FROM users", null);
+                      tracker.record("http", "payment-api", "POST /pay",
                               "{\"amount\": 100}");
                       return Result.success("ok");
                     }).build());
 
-    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.EXPLAIN);
+    var ctx = contextFactory.of("input", ExecutionMode.EXPLAIN);
     var report = runtime.explain("TrackedProcess", ctx);
 
     assertThat(report.name()).isEqualTo("TrackedProcess");
@@ -101,11 +106,10 @@ class DevDslRuntimeTest {
 
   @Test
   void trackerTriggersListeners() {
-    var tracker = new ExternalCallTracker();
     var calls = new ArrayList<String>();
     tracker.registerListener((type, target, op, payload) -> calls.add(type + ":" + target));
 
-    tracker.recordCall("mq", "queue-1", "send", "msg");
+    tracker.record("mq", "queue-1", "send", "msg");
     assertThat(calls).containsExactly("mq:queue-1");
   }
 }

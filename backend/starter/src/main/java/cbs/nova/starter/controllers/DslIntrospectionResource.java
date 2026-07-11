@@ -1,4 +1,4 @@
-package cbs.nova.starter;
+package cbs.nova.starter.controllers;
 
 import cbs.nova.dsl.GlobalManager;
 import io.swagger.v3.oas.annotations.Operation;

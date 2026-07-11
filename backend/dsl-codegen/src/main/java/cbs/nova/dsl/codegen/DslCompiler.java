@@ -1,6 +1,5 @@
 package cbs.nova.dsl.codegen;
 
-import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.DescriptorFactory;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.SemanticValidator;
@@ -11,11 +10,12 @@ import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.transaction.TransactionDslObject;
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public final class DslCompiler {
@@ -29,7 +29,7 @@ public final class DslCompiler {
   }
 
   public static void compile(Path srcDir, Path outputDir) throws IOException {
-    List<DslObject> objects = new DefinitionLoader().loadObjects(srcDir);
+    List<DslObject> objects = new DslSourceCompiler().compileAndLoad(srcDir);
 
     var processes = new ArrayList<ProcessDescriptor>();
     var transactions = new ArrayList<TransactionDescriptor>();

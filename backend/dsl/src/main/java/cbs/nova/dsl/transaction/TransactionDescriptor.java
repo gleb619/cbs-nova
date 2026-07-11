@@ -1,10 +1,11 @@
 package cbs.nova.dsl.transaction;
 
 import cbs.nova.dsl.RetryPolicy;
-import java.time.Duration;
-import java.util.List;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+
+import java.time.Duration;
+import java.util.List;
 
 public record TransactionDescriptor(
         @NonNull String name,

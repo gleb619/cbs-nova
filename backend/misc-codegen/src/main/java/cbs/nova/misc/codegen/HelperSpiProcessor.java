@@ -1,7 +1,9 @@
 package cbs.nova.misc.codegen;
 
 import cbs.nova.dsl.Helper;
+import cbs.nova.dsl.utils.Substitutor;
 
+import java.util.Map;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
@@ -16,21 +18,16 @@ import javax.tools.StandardLocation;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-/**
- * Annotation processor that discovers {@link Helper}-annotated classes and emits a
- * {@link cbs.nova.dsl.HelperResolver} SPI registration plus a {@code META-INF/services} descriptor
- * so the hosting runtime can load them via {@link java.util.ServiceLoader}.
- */
 @SupportedAnnotationTypes("cbs.nova.dsl.Helper")
 @SupportedSourceVersion(SourceVersion.RELEASE_25)
 public class HelperSpiProcessor extends AbstractProcessor {
 
-  private static final String RESOLVER_PACKAGE = "cbs.nova.misc.codegen.spi";
   private static final String RESOLVER_CLASS = "GeneratedHelperResolver";
-  private static final String RESOLVER_FQN = RESOLVER_PACKAGE + "." + RESOLVER_CLASS;
 
   private final List<HelperEntry> entries = new ArrayList<>();
   private boolean wrote = false;
@@ -77,36 +74,44 @@ public class HelperSpiProcessor extends AbstractProcessor {
   }
 
   private void writeSimpleResolver() {
+    var resolverPackage = commonPackage(entries);
+    var resolverFqn = resolverPackage.isEmpty()
+            ? RESOLVER_CLASS
+            : resolverPackage + "." + RESOLVER_CLASS;
     try {
-      var sourceFile = processingEnv.getFiler().createSourceFile(RESOLVER_FQN);
+      var sourceFile = processingEnv.getFiler().createSourceFile(resolverFqn);
       try (var writer = new PrintWriter(sourceFile.openWriter())) {
-        var imports = new StringBuilder();
-        for (var entry : entries) {
-          imports.append("import ").append(entry.fqn()).append(";\n");
-        }
-        var registrations = new StringBuilder();
-        for (var entry : entries) {
-          var simpleName = entry.fqn().contains(".")
-                  ? entry.fqn().substring(entry.fqn().lastIndexOf('.') + 1)
-                  : entry.fqn();
-          registrations.append(String.format(
-                  "    registrar.register(\"%s\", new %s());%n", entry.name(), simpleName));
-        }
+        var imports = entries.stream()
+                .filter(entry -> !packageOf(entry.fqn()).equals(resolverPackage))
+                .map(entry -> "import " + entry.fqn() + ";\n")
+                .collect(Collectors.joining());
+        var registrations = entries.stream()
+                .map(entry -> {
+                  var simpleName = entry.fqn().substring(entry.fqn().lastIndexOf('.') + 1);
+                  return "    registrar.register(\"" + entry.name() + "\", new " + simpleName
+                          + "());\n";
+                })
+                .collect(Collectors.joining());
+        var packageLine = resolverPackage.isEmpty()
+                ? ""
+                : "package " + resolverPackage + ";\n\n";
         var template = """
-                package %s;
-
-                import cbs.nova.dsl.Executable;
+                ${packageLine}import cbs.nova.dsl.Executable;
                 import cbs.nova.dsl.HelperRegistrar;
                 import cbs.nova.dsl.HelperResolver;
-                %s
-                public final class %s implements HelperResolver {
+                ${imports}
+
+                public final class ${resolverClass} implements HelperResolver {
                   @Override
                   public void registerHelpers(HelperRegistrar registrar) {
-                %s  }
+                ${registrations}  }
                 }
                 """;
-        writer.print(String.format(template, RESOLVER_PACKAGE, imports, RESOLVER_CLASS,
-                registrations));
+        writer.print(Substitutor.format(template, Map.of(
+                "packageLine", packageLine,
+                "imports", imports,
+                "resolverClass", RESOLVER_CLASS,
+                "registrations", registrations)));
       }
     } catch (IOException e) {
       processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
@@ -115,17 +120,46 @@ public class HelperSpiProcessor extends AbstractProcessor {
   }
 
   private void writeServiceFile() {
+    var resolverPackage = commonPackage(entries);
+    var resolverFqn = resolverPackage.isEmpty()
+            ? RESOLVER_CLASS
+            : resolverPackage + "." + RESOLVER_CLASS;
     try {
       var resource = processingEnv.getFiler().createResource(
               StandardLocation.CLASS_OUTPUT, "",
               "META-INF/services/cbs.nova.dsl.HelperResolver");
       try (var writer = new PrintWriter(resource.openWriter())) {
-        writer.print(String.format("%s%n", RESOLVER_FQN));
+        writer.print(String.format("%s%n", resolverFqn));
       }
     } catch (IOException e) {
       processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
               "Failed to write HelperResolver service file: " + e.getMessage());
     }
+  }
+
+  private static String packageOf(String fqn) {
+    var idx = fqn.lastIndexOf('.');
+    return idx < 0 ? "" : fqn.substring(0, idx);
+  }
+
+  private static String commonPackage(List<HelperEntry> entries) {
+    if (entries.isEmpty()) {
+      return "";
+    }
+    var first = packageOf(entries.get(0).fqn()).split("\\.");
+    var common = first.length;
+    for (var i = 1; i < entries.size(); i++) {
+      var segs = packageOf(entries.get(i).fqn()).split("\\.");
+      var matched = 0;
+      while (matched < common && matched < segs.length && segs[matched].equals(first[matched])) {
+        matched++;
+      }
+      common = matched;
+      if (common == 0) {
+        return "";
+      }
+    }
+    return String.join(".", Arrays.copyOf(first, common));
   }
 
   private record HelperEntry(String fqn, String name) {

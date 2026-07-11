@@ -3,7 +3,6 @@ package cbs.nova.temporal.example.complex;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 
-/** Activities used by the booking saga: book and compensate each reservation. */
 @ActivityInterface
 public interface BookingActivities {
   @ActivityMethod

@@ -18,61 +18,49 @@ class ExternalCallTrackerTest {
   void setUp() {
     tracker = new ExternalCallTracker();
     tracker.resetGlobalCounts();
-    ExternalCallTracker.stopTracking();
+    tracker.stopTracking();
   }
 
   @AfterEach
   void tearDown() {
-    ExternalCallTracker.stopTracking();
+    tracker.stopTracking();
     tracker.resetGlobalCounts();
-    ExternalCallTracker.instance = null;
   }
 
   @Test
   void startTrackingIsolatesCallsPerThread() {
     var calls = new ArrayList<ExternalCallTracker.CallDetail>();
-    ExternalCallTracker.startTracking(calls);
-    tracker.recordCall("http", "svc", "GET", null);
-    ExternalCallTracker.stopTracking();
+    tracker.startTracking(calls);
+    tracker.record("http", "svc", "GET", null);
+    tracker.stopTracking();
     assertThat(calls).hasSize(1);
     assertThat(calls.get(0).type()).isEqualTo(ExternalCallTracker.TYPE_HTTP);
   }
 
   @Test
   void stopTrackingClearsThreadLocal() {
-    ExternalCallTracker.startTracking(new ArrayList<>());
-    ExternalCallTracker.stopTracking();
-    assertThat(ExternalCallTracker.getActiveTracking()).isNull();
+    tracker.startTracking(new ArrayList<>());
+    tracker.stopTracking();
+    assertThat(tracker.getActiveTracking()).isNull();
   }
 
   @Test
-  void recordCallIncrementsGlobalCount() {
-    tracker.recordCall("jdbc", "db", "SELECT", null);
+  void recordIncrementsGlobalCount() {
+    tracker.record("jdbc", "db", "SELECT", null);
     assertThat(tracker.getGlobalCounts().get(ExternalCallTracker.TYPE_DATABASE)).isEqualTo(1);
   }
 
   @Test
-  void recordCallNotifiesListeners() {
+  void recordNotifiesListeners() {
     var count = new AtomicInteger(0);
     tracker.registerListener((type, target, op, payload) -> count.incrementAndGet());
-    tracker.recordCall("kafka", "topic", "send", null);
+    tracker.record("kafka", "topic", "send", null);
     assertThat(count.get()).isEqualTo(1);
   }
 
   @Test
-  void staticRecordWritesToThreadLocalWhenNoInstance() {
-    ExternalCallTracker.instance = null;
-    var calls = new ArrayList<ExternalCallTracker.CallDetail>();
-    ExternalCallTracker.startTracking(calls);
-    ExternalCallTracker.record("file", "path", "read", null);
-    ExternalCallTracker.stopTracking();
-    assertThat(calls).hasSize(1);
-    assertThat(calls.get(0).type()).isEqualTo(ExternalCallTracker.TYPE_FILE_SYSTEM);
-  }
-
-  @Test
   void resetGlobalCountsClearsAggregation() {
-    tracker.recordCall("rest", "api", "POST", null);
+    tracker.record("rest", "api", "POST", null);
     tracker.resetGlobalCounts();
     assertThat(tracker.getGlobalCounts()).isEmpty();
   }
@@ -81,7 +69,7 @@ class ExternalCallTrackerTest {
   void normalizeTypeMapsDatabaseAliases() {
     List<String> aliases = List.of("jdbc", "db", "sql", "hibernate", "jpa", "datasource");
     for (String alias : aliases) {
-      tracker.recordCall(alias, "t", "op", null);
+      tracker.record(alias, "t", "op", null);
     }
     assertThat(tracker.getGlobalCounts().get(ExternalCallTracker.TYPE_DATABASE))
             .isEqualTo(aliases.size());
@@ -89,34 +77,34 @@ class ExternalCallTrackerTest {
 
   @Test
   void normalizeTypeMapsHttpAliases() {
-    tracker.recordCall("rest", "t", "op", null);
-    tracker.recordCall("http", "t", "op", null);
-    tracker.recordCall("resttemplate", "t", "op", null);
+    tracker.record("rest", "t", "op", null);
+    tracker.record("http", "t", "op", null);
+    tracker.record("resttemplate", "t", "op", null);
     assertThat(tracker.getGlobalCounts().get(ExternalCallTracker.TYPE_HTTP)).isEqualTo(3);
   }
 
   @Test
   void normalizeTypeMapsMqAliases() {
-    tracker.recordCall("kafka", "t", "op", null);
-    tracker.recordCall("jms", "t", "op", null);
+    tracker.record("kafka", "t", "op", null);
+    tracker.record("jms", "t", "op", null);
     assertThat(tracker.getGlobalCounts().get(ExternalCallTracker.TYPE_MQ)).isEqualTo(2);
   }
 
   @Test
   void normalizeTypeMapsGrpcToMicroservice() {
-    tracker.recordCall("grpc", "t", "op", null);
+    tracker.record("grpc", "t", "op", null);
     assertThat(tracker.getGlobalCounts().get(ExternalCallTracker.TYPE_MICROSERVICE)).isEqualTo(1);
   }
 
   @Test
   void normalizeTypeMapsApiToExternalApi() {
-    tracker.recordCall("api", "t", "op", null);
+    tracker.record("api", "t", "op", null);
     assertThat(tracker.getGlobalCounts().get(ExternalCallTracker.TYPE_EXTERNAL_API)).isEqualTo(1);
   }
 
   @Test
   void normalizeTypeDefaultsToOther() {
-    tracker.recordCall("unknown_xyz", "t", "op", null);
+    tracker.record("unknown_xyz", "t", "op", null);
     assertThat(tracker.getGlobalCounts().get(ExternalCallTracker.TYPE_OTHER)).isEqualTo(1);
   }
 }

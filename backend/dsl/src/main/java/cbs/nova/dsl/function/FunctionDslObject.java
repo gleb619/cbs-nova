@@ -5,11 +5,12 @@ import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.FunctionContext;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
 
 public record FunctionDslObject(
         @NonNull String name,

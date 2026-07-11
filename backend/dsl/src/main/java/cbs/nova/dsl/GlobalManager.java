@@ -1,20 +1,19 @@
 package cbs.nova.dsl;
 
+import cbs.nova.dsl.config.DslRuntimeConfig;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.process.ProcessManager;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
 import cbs.nova.dsl.registry.DefaultProcessRegistry;
 import cbs.nova.dsl.registry.DefaultTransactionRegistry;
-import cbs.nova.dsl.runner.DefaultHelperRunner;
-import cbs.nova.dsl.runner.DefaultProcessRunner;
-import cbs.nova.dsl.runner.DefaultTransactionRunner;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.dsl.transaction.TransactionManager;
-import java.util.List;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
+
+import java.util.List;
+import java.util.Optional;
 
 @RequiredArgsConstructor
 public final class GlobalManager {
@@ -25,19 +24,21 @@ public final class GlobalManager {
   private final TransactionManager transactionManager;
   private final HelperManager helperManager;
 
-  private static GlobalManager create() {
-    return new GlobalManager(new ProcessManager(new DefaultProcessRegistry(),
-            new DefaultProcessRunner()),
-            new TransactionManager(new DefaultTransactionRegistry(),
-                    new DefaultTransactionRunner()),
-            new HelperManager(new DefaultHelperRegistry(), new DefaultHelperRunner()));
-  }
-
   public static @NonNull GlobalManager getInstance() {
     if (INSTANCE == null) {
       synchronized (GlobalManager.class) {
-        if (INSTANCE == null)
-          INSTANCE = GlobalManager.create();
+        if (INSTANCE == null) {
+          var config = new DslRuntimeConfig();
+          var traceCollector = config.executionTraceCollector();
+          var contextFactory = config.contextFactory();
+          INSTANCE = new GlobalManager(
+                  new ProcessManager(new DefaultProcessRegistry(),
+                          config.processRunner(traceCollector, contextFactory)),
+                  new TransactionManager(new DefaultTransactionRegistry(),
+                          config.transactionRunner(traceCollector, contextFactory)),
+                  new HelperManager(new DefaultHelperRegistry(),
+                          config.helperRunner(traceCollector, contextFactory)));
+        }
       }
     }
     return INSTANCE;

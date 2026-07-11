@@ -1,4 +1,4 @@
-package cbs.nova.starter;
+package cbs.nova.starter.controllers;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslException;
@@ -7,12 +7,11 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExplainReport;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.SimpleContext;
+import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.starter.models.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.util.Map;
-import java.util.UUID;
-import org.jspecify.annotations.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,16 +19,17 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/dsl")
 @Tag(name = "DSL Runtime", description = "Execute DSL processes and transactions")
+@RequiredArgsConstructor
 public class DslRuntimeResource {
 
   private final DslRuntime dslRuntime;
-
-  public DslRuntimeResource(@NonNull DslRuntime dslRuntime) {
-    this.dslRuntime = dslRuntime;
-  }
+  private final ContextFactory contextFactory;
 
   @PostMapping("/preview/{name}")
   @Operation(summary = "Preview a DSL process without side effects")
@@ -66,8 +66,7 @@ public class DslRuntimeResource {
 
   private Context<?> toContext(DslRequest request, ExecutionMode mode) {
     Map<String, Object> metadata = request.metadata() != null ? request.metadata() : Map.of();
-    return SimpleContext.getInstance().of(request.body(), metadata, mode,
-            SimpleContext.getInstance().generateRunId());
+    return contextFactory.of(request.body(), metadata, mode, contextFactory.generateRunId());
   }
 
   private ErrorResponse toErrorResponse(String entityName, Context<?> ctx, Throwable cause) {

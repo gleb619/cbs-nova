@@ -1,11 +1,14 @@
 package cbs.nova.dsl;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.Duration;
+import cbs.nova.dsl.config.RetryPolicyFactory;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+
 class DescriptorFactoryTest {
+
+  private final RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory();
 
   @Test
   void processDescriptorHasCorrectFields() {
@@ -43,7 +46,7 @@ class DescriptorFactoryTest {
 
   @Test
   void transactionDescriptorHasRetryPolicy() {
-    var policy = RetryPolicy.getInstance().defaults();
+    var policy = retryPolicyFactory.defaults();
     var obj = Dsl.transaction("T1")
             .input(String.class)
             .output(String.class)

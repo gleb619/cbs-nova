@@ -1,15 +1,18 @@
 package cbs.nova.dsl;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.Duration;
+import cbs.nova.dsl.config.RetryPolicyFactory;
 import org.junit.jupiter.api.Test;
+
+import java.time.Duration;
 
 class RetryPolicyTest {
 
+  private final RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory();
+
   @Test
   void defaultsHaveCorrectValues() {
-    var policy = RetryPolicy.getInstance().defaults();
+    var policy = retryPolicyFactory.defaults();
     assertThat(policy.maxAttempts()).isEqualTo(3);
     assertThat(policy.initialInterval()).isEqualTo(Duration.ofSeconds(1));
     assertThat(policy.backoffCoefficient()).isEqualTo(2.0);
@@ -25,7 +28,7 @@ class RetryPolicyTest {
 
   @Test
   void twoDefaultsAreEqual() {
-    assertThat(RetryPolicy.getInstance().defaults())
-            .isEqualTo(RetryPolicy.getInstance().defaults());
+    assertThat(retryPolicyFactory.defaults())
+            .isEqualTo(retryPolicyFactory.defaults());
   }
 }

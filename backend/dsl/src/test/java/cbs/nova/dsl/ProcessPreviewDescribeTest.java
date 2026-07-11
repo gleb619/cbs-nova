@@ -2,12 +2,17 @@ package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 class ProcessPreviewDescribeTest {
+
+  private final ContextFactory contextFactory = new ContextFactory();
+  private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
 
   @Test
   void processWithPreviewReturnsMockInPreviewMode() {
@@ -22,8 +27,8 @@ class ProcessPreviewDescribeTest {
             .preview(ctx -> Result.success("PREVIEW_MOCK"))
             .build();
 
-    var runner = new DefaultProcessRunner();
-    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.PREVIEW);
+    var runner = new DefaultProcessRunner(traceCollector, contextFactory);
+    var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
     var result = runner.run(process, ctx);
 
     assertThat(result.isSuccess()).isTrue();
@@ -39,8 +44,8 @@ class ProcessPreviewDescribeTest {
             .execute(ctx -> Result.success("EXEC"))
             .build();
 
-    var runner = new DefaultProcessRunner();
-    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.PREVIEW);
+    var runner = new DefaultProcessRunner(traceCollector, contextFactory);
+    var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
     var result = runner.run(process, ctx);
 
     assertThat(result.isSuccess()).isTrue();

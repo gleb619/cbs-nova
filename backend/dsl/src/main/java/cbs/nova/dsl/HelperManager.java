@@ -1,18 +1,16 @@
 package cbs.nova.dsl;
 
 import cbs.nova.dsl.function.FunctionDslObject;
-import java.util.List;
-import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
+import java.util.List;
+import java.util.Optional;
+
+@RequiredArgsConstructor
 public final class HelperManager {
   private final HelperRegistry registry;
   private final HelperRunner runner;
-
-  public HelperManager(@NonNull HelperRegistry registry, @NonNull HelperRunner runner) {
-    this.registry = registry;
-    this.runner = runner;
-  }
 
   public void registerHelper(@NonNull String name, @NonNull Executable<?, ?> helper) {
     registry.registerHelper(name, helper);

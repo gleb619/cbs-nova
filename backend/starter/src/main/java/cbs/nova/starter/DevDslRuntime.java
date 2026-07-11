@@ -9,35 +9,38 @@ import cbs.nova.dsl.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.SimpleContext;
+import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.generator.BpmnDiagramGenerator;
 import cbs.nova.dsl.generator.MermaidDiagramGenerator;
 import cbs.nova.dsl.generator.PlantUmlDiagramGenerator;
+import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
+import org.springframework.stereotype.Service;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.jspecify.annotations.NonNull;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class DevDslRuntime implements DslRuntime {
 
-  @Autowired(required = false)
-  private ExternalCallTracker externalCallTracker;
+  private final ExternalCallTracker externalCallTracker;
+  private final ExecutionTraceCollector traceCollector;
+  private final ContextFactory contextFactory;
 
   @Override
   public @NonNull Result<PreviewReport> preview(@NonNull String name, @NonNull Context<?> ctx) {
     List<ExternalCallTracker.CallDetail> calls = new ArrayList<>();
-    ExternalCallTracker.startTracking(calls);
-    ExecutionTraceCollector.getInstance().start();
+    externalCallTracker.startTracking(calls);
+    traceCollector.start();
     try {
       Result<?> result = dispatch(name, ctx, ExecutionMode.PREVIEW);
       List<String> trace = new ArrayList<>();
       trace.add("started: " + name);
       trace.add("mode: PREVIEW");
-      trace.addAll(ExecutionTraceCollector.getInstance().snapshot());
+      trace.addAll(traceCollector.snapshot());
       if (result.isSuccess()) {
         trace.add("completed successfully");
         PreviewReport report = new PreviewReport(
@@ -54,27 +57,27 @@ public class DevDslRuntime implements DslRuntime {
         return Result.failure(result.cause());
       }
     } finally {
-      ExecutionTraceCollector.getInstance().stop();
-      ExternalCallTracker.stopTracking();
+      traceCollector.stop();
+      externalCallTracker.stopTracking();
     }
   }
 
   @Override
   public @NonNull Result<?> run(@NonNull String name, @NonNull Context<?> ctx) {
     List<ExternalCallTracker.CallDetail> calls = new ArrayList<>();
-    ExternalCallTracker.startTracking(calls);
+    externalCallTracker.startTracking(calls);
     try {
       return dispatch(name, ctx, ExecutionMode.RUN);
     } finally {
-      ExternalCallTracker.stopTracking();
+      externalCallTracker.stopTracking();
     }
   }
 
   @Override
   public @NonNull ExplainReport explain(@NonNull String name, @NonNull Context<?> ctx) {
     List<ExternalCallTracker.CallDetail> calls = new ArrayList<>();
-    ExternalCallTracker.startTracking(calls);
-    ExecutionTraceCollector.getInstance().start();
+    externalCallTracker.startTracking(calls);
+    traceCollector.start();
     try {
       Result<?> result = dispatch(name, ctx, ExecutionMode.EXPLAIN);
       String description = result.isSuccess()
@@ -104,7 +107,7 @@ public class DevDslRuntime implements DslRuntime {
       var trace = new ArrayList<String>();
       trace.add("started: " + name);
       trace.add("mode: EXPLAIN");
-      trace.addAll(ExecutionTraceCollector.getInstance().snapshot());
+      trace.addAll(traceCollector.snapshot());
       if (result.isSuccess()) {
         Object val = result.value();
         trace.add("result: " + (val != null ? val.toString() : "null"));
@@ -129,8 +132,8 @@ public class DevDslRuntime implements DslRuntime {
               gm2.describeHelper(name).orElse(null),
               dslDesc);
     } finally {
-      ExecutionTraceCollector.getInstance().stop();
-      ExternalCallTracker.stopTracking();
+      traceCollector.stop();
+      externalCallTracker.stopTracking();
     }
   }
 
@@ -158,9 +161,9 @@ public class DevDslRuntime implements DslRuntime {
 
   private Result<?> dispatch(String name, Context<?> ctx, ExecutionMode mode) {
     String runId = (ctx.runId() == null || ctx.runId().isBlank())
-            ? SimpleContext.getInstance().generateRunId()
+            ? contextFactory.generateRunId()
             : ctx.runId();
-    var modeCtx = SimpleContext.getInstance().of(ctx.body(), ctx.metadata(), mode, runId);
+    var modeCtx = contextFactory.of(ctx.body(), ctx.metadata(), mode, runId);
     GlobalManager gm = GlobalManager.getInstance();
     if (gm.hasProcess(name))
       return gm.runProcess(name, modeCtx);

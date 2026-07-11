@@ -2,6 +2,7 @@ package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.registry.DefaultTransactionRegistry;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
 import cbs.nova.dsl.transaction.TransactionDslObject;
@@ -11,12 +12,15 @@ import org.junit.jupiter.api.Test;
 
 class TransactionManagerTest {
 
+  private final ContextFactory contextFactory = new ContextFactory();
+  private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
+
   private TransactionManager manager;
 
   @BeforeEach
   void setUp() {
     manager = new TransactionManager(new DefaultTransactionRegistry(),
-            new DefaultTransactionRunner());
+            new DefaultTransactionRunner(traceCollector, contextFactory));
   }
 
   private TransactionDslObject tx(String name) {
@@ -27,7 +31,7 @@ class TransactionManagerTest {
   @Test
   void executeRunsRegisteredTransaction() {
     manager.register(tx("PayTx"));
-    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.RUN, "run-1");
+    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-1");
     var result = manager.execute("PayTx", ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("result-PayTx");
@@ -35,7 +39,7 @@ class TransactionManagerTest {
 
   @Test
   void executeReturnsFailureForUnknownName() {
-    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.RUN, "run-2");
+    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-2");
     var result = manager.execute("NoSuch", ctx);
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause()).isInstanceOf(DslEntityNotFoundException.class);

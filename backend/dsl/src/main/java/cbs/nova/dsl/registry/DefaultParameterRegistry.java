@@ -2,10 +2,11 @@ package cbs.nova.dsl.registry;
 
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.ParameterRegistry;
+import org.jspecify.annotations.NonNull;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.jspecify.annotations.NonNull;
 
 public final class DefaultParameterRegistry implements ParameterRegistry {
 

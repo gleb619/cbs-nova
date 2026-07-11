@@ -6,24 +6,28 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.SimpleContext;
+import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dslmodel.ExceptionProbeIn;
 import cbs.nova.dslmodel.ExceptionProbeOut;
 import cbs.nova.dslmodel.NestedCompensationIn;
 import cbs.nova.dslmodel.OrderSagaIn;
 import cbs.nova.dslmodel.OrderSagaOut;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import cbs.nova.starter.config.DslAutoConfiguration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 class AdvancedDslExamplesTest {
 
   @TempDir
   Path dslSourceDir;
+
+  private final ContextFactory contextFactory = new ContextFactory();
 
   @BeforeEach
   void loadCompactDsls() throws Exception {
@@ -46,7 +50,7 @@ class AdvancedDslExamplesTest {
   @Test
   void orderSagaPreviewCompletesSuccessfully() {
     var input = new OrderSagaIn("order1", 2);
-    Context<OrderSagaIn> ctx = SimpleContext.getInstance().of(input, ExecutionMode.PREVIEW);
+    Context<OrderSagaIn> ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
 
     Result<?> result = GlobalManager.getInstance().runProcess("OrderSaga", ctx);
 
@@ -57,7 +61,7 @@ class AdvancedDslExamplesTest {
   @Test
   void exceptionProbePreviewSucceedsWhenHelperSucceeds() {
     var input = new ExceptionProbeIn(false, null);
-    Context<ExceptionProbeIn> ctx = SimpleContext.getInstance().of(input, ExecutionMode.PREVIEW);
+    Context<ExceptionProbeIn> ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
 
     Result<?> result = GlobalManager.getInstance().runProcess("ExceptionProbe", ctx);
 
@@ -69,7 +73,7 @@ class AdvancedDslExamplesTest {
   @Test
   void exceptionProbePreviewFailsWhenHelperFails() {
     var input = new ExceptionProbeIn(true, "test fail");
-    Context<ExceptionProbeIn> ctx = SimpleContext.getInstance().of(input, ExecutionMode.PREVIEW);
+    Context<ExceptionProbeIn> ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
 
     Result<?> result = GlobalManager.getInstance().runProcess("ExceptionProbe", ctx);
 
@@ -79,7 +83,7 @@ class AdvancedDslExamplesTest {
   @Test
   void nestedCompensationPreviewFailsAtStep3() {
     var input = new NestedCompensationIn("job1");
-    Context<NestedCompensationIn> ctx = SimpleContext.getInstance().of(input,
+    Context<NestedCompensationIn> ctx = contextFactory.of(input,
             ExecutionMode.PREVIEW);
 
     Result<?> result = GlobalManager.getInstance().runProcess("NestedCompensation", ctx);

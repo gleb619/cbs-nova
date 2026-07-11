@@ -6,30 +6,32 @@ import org.junit.jupiter.api.Test;
 
 class ExecutionTraceCollectorTest {
 
+  private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
+
   @Test
   void collectsEntriesWhileStarted() {
-    ExecutionTraceCollector.getInstance().start();
+    traceCollector.start();
     try {
-      ExecutionTraceCollector.getInstance().add("step-1");
-      ExecutionTraceCollector.getInstance().add("step-2");
-      assertThat(ExecutionTraceCollector.getInstance().snapshot()).containsExactly("step-1",
+      traceCollector.add("step-1");
+      traceCollector.add("step-2");
+      assertThat(traceCollector.snapshot()).containsExactly("step-1",
               "step-2");
     } finally {
-      ExecutionTraceCollector.getInstance().stop();
+      traceCollector.stop();
     }
   }
 
   @Test
   void returnsEmptyAfterStop() {
-    ExecutionTraceCollector.getInstance().start();
-    ExecutionTraceCollector.getInstance().add("x");
-    ExecutionTraceCollector.getInstance().stop();
-    assertThat(ExecutionTraceCollector.getInstance().snapshot()).isEmpty();
+    traceCollector.start();
+    traceCollector.add("x");
+    traceCollector.stop();
+    assertThat(traceCollector.snapshot()).isEmpty();
   }
 
   @Test
   void addsAreNoopWhenNotStarted() {
-    ExecutionTraceCollector.getInstance().add("ignored");
-    assertThat(ExecutionTraceCollector.getInstance().snapshot()).isEmpty();
+    traceCollector.add("ignored");
+    assertThat(traceCollector.snapshot()).isEmpty();
   }
 }

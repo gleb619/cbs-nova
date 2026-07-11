@@ -1,17 +1,14 @@
 package cbs.nova.dsl;
 
-import java.util.ArrayList;
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
+import java.util.ArrayList;
+import java.util.List;
+
+@RequiredArgsConstructor
 public final class ExecutionTraceCollector {
   private final ThreadLocal<List<String>> trace = new ThreadLocal<>();
-
-  private static final ExecutionTraceCollector INSTANCE = new ExecutionTraceCollector();
-
-  public static ExecutionTraceCollector getInstance() {
-    return INSTANCE;
-  }
 
   public void start() {
     trace.set(new ArrayList<>());

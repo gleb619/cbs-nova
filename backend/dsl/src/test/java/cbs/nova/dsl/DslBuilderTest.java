@@ -1,12 +1,16 @@
 package cbs.nova.dsl;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.config.RetryPolicyFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 class DslBuilderTest {
+
+  private final ContextFactory contextFactory = new ContextFactory();
+  private final RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory();
   @Test
   void processBuildsSuccessfully() {
     var obj = Dsl.process("MyProcess")
@@ -42,7 +46,7 @@ class DslBuilderTest {
 
   @Test
   void transactionRetryPolicyFlowsThroughBuilder() {
-    var policy = RetryPolicy.getInstance().defaults();
+    var policy = retryPolicyFactory.defaults();
     var obj = Dsl.transaction("MyTx")
             .input(String.class).output(String.class)
             .execute(ctx -> Result.success("ok"))
@@ -73,7 +77,7 @@ class DslBuilderTest {
     gm.registerProcess(proc);
 
     var result = gm.runProcess("GreetProc",
-            SimpleContext.getInstance().of("in", ExecutionMode.PREVIEW));
+            contextFactory.of("in", ExecutionMode.PREVIEW));
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("hello");
   }

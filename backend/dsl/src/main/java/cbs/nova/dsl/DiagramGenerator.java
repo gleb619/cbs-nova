@@ -2,15 +2,12 @@ package cbs.nova.dsl;
 
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
-import java.util.List;
-import java.util.Map;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-/**
- * Common contract for diagram generators that can produce visual representations of processes,
- * transactions, and helper activities.
- */
+import java.util.List;
+import java.util.Map;
+
 public interface DiagramGenerator {
 
   @NonNull

@@ -8,13 +8,16 @@ import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Helper;
 import cbs.nova.dsl.Result;
+import cbs.nova.starter.config.DslAutoConfiguration;
+import cbs.nova.starter.listeners.ExternalCallListener;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
 import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 class DslAutoConfigurationTest {
 
@@ -24,7 +27,6 @@ class DslAutoConfigurationTest {
   @AfterEach
   void resetGlobalManager() {
     GlobalManager.getInstance().resetForTests();
-    ExternalCallTracker.instance = null;
   }
 
   @Test
@@ -77,29 +79,29 @@ class DslAutoConfigurationTest {
   }
 
   @Test
-  void listenersRegisteredWithTrackerWhenInstanceExists() throws Exception {
+  void listenersRegisteredWithTracker() throws Exception {
     var tracker = new ExternalCallTracker();
     var callCount = new AtomicInteger(0);
     ExternalCallListener listener = (type, target, op, payload) -> callCount.incrementAndGet();
 
     var config = new DslAutoConfiguration();
     setListeners(config, List.of(listener));
+    setTracker(config, tracker);
     config.loadDslDefinitions();
 
-    tracker.recordCall("http", "svc", "GET", null);
+    tracker.record("http", "svc", "GET", null);
     assertThat(callCount.get()).isEqualTo(1);
   }
 
   @Test
-  void noErrorWhenNoListenerBeansPresent() {
-    ExternalCallTracker.instance = null;
+  void noErrorWhenNoListenerBeansPresent() throws Exception {
     var config = new DslAutoConfiguration();
+    setTracker(config, new ExternalCallTracker());
     config.loadDslDefinitions();
   }
 
   @Test
-  void listenersSkippedWhenTrackerInstanceNull() throws Exception {
-    ExternalCallTracker.instance = null;
+  void listenersSkippedWhenTrackerNull() throws Exception {
     var callCount = new AtomicInteger(0);
     ExternalCallListener listener = (type, target, op, payload) -> callCount.incrementAndGet();
 
@@ -121,5 +123,12 @@ class DslAutoConfigurationTest {
     Field field = DslAutoConfiguration.class.getDeclaredField("externalCallListeners");
     field.setAccessible(true);
     field.set(config, listeners);
+  }
+
+  private void setTracker(DslAutoConfiguration config, ExternalCallTracker tracker)
+          throws Exception {
+    Field field = DslAutoConfiguration.class.getDeclaredField("externalCallTracker");
+    field.setAccessible(true);
+    field.set(config, tracker);
   }
 }

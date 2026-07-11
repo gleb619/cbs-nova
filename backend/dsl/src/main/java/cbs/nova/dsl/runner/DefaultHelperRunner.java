@@ -5,15 +5,27 @@ import cbs.nova.dsl.DslEntityNotFoundException;
 import cbs.nova.dsl.DslExecutionException;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutionMode;
+import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.FunctionContext;
 import cbs.nova.dsl.HelperRegistry;
 import cbs.nova.dsl.HelperRunner;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.function.FunctionRichContext;
-import java.util.function.Function;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
+import java.util.function.Function;
+
+@RequiredArgsConstructor
 public final class DefaultHelperRunner implements HelperRunner {
+
+  private final ExecutionTraceCollector traceCollector;
+  private final ContextFactory contextFactory;
+
+  public DefaultHelperRunner() {
+    this(new ExecutionTraceCollector(), new ContextFactory());
+  }
 
   @Override
   @SuppressWarnings("unchecked")
@@ -45,7 +57,7 @@ public final class DefaultHelperRunner implements HelperRunner {
               .failure(new DslEntityNotFoundException(ctx.runId(), "Function not found: " + name));
     }
     try {
-      var richCtx = new FunctionRichContext<>(ctx);
+      var richCtx = new FunctionRichContext<>(ctx, traceCollector, contextFactory);
       Function<FunctionContext<?>, Result<?>> logic = ctx.mode() == ExecutionMode.PREVIEW
               ? fn.get().effectivePreview()
               : fn.get().executeLogic();

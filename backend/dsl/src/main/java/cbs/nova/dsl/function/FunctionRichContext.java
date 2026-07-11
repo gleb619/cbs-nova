@@ -6,17 +6,18 @@ import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.FunctionContext;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.SimpleContext;
-import java.util.Map;
+import cbs.nova.dsl.config.ContextFactory;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
+import java.util.Map;
+
+@RequiredArgsConstructor
 public final class FunctionRichContext<T> implements FunctionContext<T> {
 
   private final Context<T> delegate;
-
-  public FunctionRichContext(@NonNull Context<T> delegate) {
-    this.delegate = delegate;
-  }
+  private final ExecutionTraceCollector traceCollector;
+  private final ContextFactory contextFactory;
 
   @Override
   public @NonNull T body() {
@@ -51,15 +52,15 @@ public final class FunctionRichContext<T> implements FunctionContext<T> {
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name) {
     Result<?> result = GlobalManager.getInstance().runHelper(name, delegate);
-    ExecutionTraceCollector.getInstance().add("called helper: " + name);
+    traceCollector.add("called helper: " + name);
     return result;
   }
 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input) {
     Result<?> result = GlobalManager.getInstance().runHelper(name,
-            SimpleContext.getInstance().of(input, delegate.mode(), delegate.runId()));
-    ExecutionTraceCollector.getInstance().add("called helper: " + name);
+            contextFactory.of(input, delegate.mode(), delegate.runId()));
+    traceCollector.add("called helper: " + name);
     return result;
   }
 }

@@ -3,15 +3,14 @@ package cbs.nova.dsl.generator;
 import cbs.nova.dsl.DiagramGenerator;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
-import java.util.List;
-import java.util.Map;
+import cbs.nova.dsl.utils.Substitutor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-/**
- * Enhanced Mermaid diagram generator that includes more detailed information and can visualize
- * external calls when provided.
- */
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 public final class MermaidDiagramGenerator implements DiagramGenerator {
 
   public @NonNull String forProcess(@NonNull ProcessDslObject process) {
@@ -21,53 +20,15 @@ public final class MermaidDiagramGenerator implements DiagramGenerator {
   public @NonNull String forProcess(@NonNull ProcessDslObject process,
           @Nullable List<Map<String, Object>> externalCalls,
           @Nullable Map<String, Integer> callCounts) {
-    var sb = new StringBuilder("graph TD\n");
-    sb.append("  Start([Start]) --> Execute[").append(process.name()).append("]\n");
-
-    // Add external calls as sub-processes if provided
-    if (externalCalls != null && !externalCalls.isEmpty()) {
-      int callIndex = 0;
-      for (Map<String, Object> call : externalCalls) {
-        String callType = (String) call.getOrDefault("type", "external");
-        String callTarget = (String) call.getOrDefault("target", "unknown");
-        String callOperation = (String) call.getOrDefault("operation", "call");
-
-        // Truncate long targets for readability
-        String displayTarget = callTarget.length() > 20
-                ? callTarget.substring(0, 17) + "..."
-                : callTarget;
-
-        sb.append("  Execute --> |").append(callOperation).append("| ").append(callType)
-                .append(callIndex).append("[")
-                .append(callType.toUpperCase()).append(": ").append(displayTarget)
-                .append("]\n");
-        callIndex++;
-      }
-    }
-
-    if (process.compensationLogic() != null) {
-      sb.append("  Execute --> |success| End([End])\n");
-      sb.append("  Execute --> |failure| Compensate[Compensate]\n");
-      sb.append("  Compensate --> End");
-    } else {
-      sb.append("  Execute --> |success| End([End])\n");
-      sb.append("  Execute --> |failure| Fail([Fail])");
-    }
-
-    // Add call counts as a note if provided
-    if (callCounts != null && !callCounts.isEmpty()) {
-      sb.append("\n  %% Call Counts: ");
-      boolean first = true;
-      for (Map.Entry<String, Integer> entry : callCounts.entrySet()) {
-        if (!first) {
-          sb.append(", ");
-        }
-        sb.append(entry.getKey()).append(": ").append(entry.getValue());
-        first = false;
-      }
-    }
-
-    return sb.toString();
+    var template = """
+            graph TD
+              Start([Start]) --> Execute[${process}]
+            ${externalCalls}${branches}${callCounts}""";
+    return Substitutor.format(template, Map.of(
+            "process", process.name(),
+            "externalCalls", buildCallLines(externalCalls, "Execute"),
+            "branches", processBranches(process.compensationLogic() != null),
+            "callCounts", buildCallCounts(callCounts)));
   }
 
   public @NonNull String forTransaction(@NonNull TransactionDslObject tx) {
@@ -77,53 +38,15 @@ public final class MermaidDiagramGenerator implements DiagramGenerator {
   public @NonNull String forTransaction(@NonNull TransactionDslObject tx,
           @Nullable List<Map<String, Object>> externalCalls,
           @Nullable Map<String, Integer> callCounts) {
-    var sb = new StringBuilder("graph TD\n");
-    sb.append("  Start([Start]) --> Activity[").append(tx.name()).append("]\n");
-
-    // Add external calls as sub-processes if provided
-    if (externalCalls != null && !externalCalls.isEmpty()) {
-      int callIndex = 0;
-      for (Map<String, Object> call : externalCalls) {
-        String callType = (String) call.getOrDefault("type", "external");
-        String callTarget = (String) call.getOrDefault("target", "unknown");
-        String callOperation = (String) call.getOrDefault("operation", "call");
-
-        // Truncate long targets for readability
-        String displayTarget = callTarget.length() > 20
-                ? callTarget.substring(0, 17) + "..."
-                : callTarget;
-
-        sb.append("  Activity --> |").append(callOperation).append("| ").append(callType)
-                .append(callIndex).append("[")
-                .append(callType.toUpperCase()).append(": ").append(displayTarget)
-                .append("]\n");
-        callIndex++;
-      }
-    }
-
-    if (tx.compensationLogic() != null) {
-      sb.append("  Activity --> |success| End([End])\n");
-      sb.append("  Activity --> |failure| Compensate[Compensate]\n");
-      sb.append("  Compensate --> End");
-    } else {
-      sb.append("  Activity --> |success| End([End])\n");
-      sb.append("  Activity --> |failure| Fail([Fail])");
-    }
-
-    // Add call counts as a note if provided
-    if (callCounts != null && !callCounts.isEmpty()) {
-      sb.append("\n  %% Call Counts: ");
-      boolean first = true;
-      for (Map.Entry<String, Integer> entry : callCounts.entrySet()) {
-        if (!first) {
-          sb.append(", ");
-        }
-        sb.append(entry.getKey()).append(": ").append(entry.getValue());
-        first = false;
-      }
-    }
-
-    return sb.toString();
+    var template = """
+            graph TD
+              Start([Start]) --> Activity[${tx}]
+            ${externalCalls}${branches}${callCounts}""";
+    return Substitutor.format(template, Map.of(
+            "tx", tx.name(),
+            "externalCalls", buildCallLines(externalCalls, "Activity"),
+            "branches", activityBranches(tx.compensationLogic() != null),
+            "callCounts", buildCallCounts(callCounts)));
   }
 
   public @NonNull String forHelper(@NonNull String name) {
@@ -133,45 +56,78 @@ public final class MermaidDiagramGenerator implements DiagramGenerator {
   public @NonNull String forHelper(@NonNull String name,
           @Nullable List<Map<String, Object>> externalCalls,
           @Nullable Map<String, Integer> callCounts) {
-    var sb = new StringBuilder("graph TD\n");
-    sb.append("  Start([Start]) --> Helper[").append(name).append("]\n");
+    var template = """
+            graph TD
+              Start([Start]) --> Helper[${name}]
+            ${externalCalls}  Helper --> End([End])${callCounts}""";
+    return Substitutor.format(template, Map.of(
+            "name", name,
+            "externalCalls", buildCallLines(externalCalls, "Helper"),
+            "callCounts", buildCallCounts(callCounts)));
+  }
 
-    // Add external calls as sub-processes if provided
-    if (externalCalls != null && !externalCalls.isEmpty()) {
-      int callIndex = 0;
-      for (Map<String, Object> call : externalCalls) {
-        String callType = (String) call.getOrDefault("type", "external");
-        String callTarget = (String) call.getOrDefault("target", "unknown");
-        String callOperation = (String) call.getOrDefault("operation", "call");
-
-        // Truncate long targets for readability
-        String displayTarget = callTarget.length() > 20
-                ? callTarget.substring(0, 17) + "..."
-                : callTarget;
-
-        sb.append("  Helper --> |").append(callOperation).append("| ").append(callType)
-                .append(callIndex).append("[")
-                .append(callType.toUpperCase()).append(": ").append(displayTarget)
-                .append("]\n");
-        callIndex++;
-      }
+  private static String buildCallLines(@Nullable List<Map<String, Object>> calls, String fromNode) {
+    if (calls == null || calls.isEmpty()) {
+      return "";
     }
+    var lineTemplate = """
+            ${from} --> |${operation}| ${type}${index}[${typeUpper}: ${displayTarget}]
+            """.indent(2);
+    int[] index = {0};
+    return calls.stream()
+            .map(call -> {
+              String callType = (String) call.getOrDefault("type", "external");
+              String callTarget = (String) call.getOrDefault("target", "unknown");
+              String callOperation = (String) call.getOrDefault("operation", "call");
+              String displayTarget = callTarget.length() > 20
+                      ? callTarget.substring(0, 17) + "..."
+                      : callTarget;
+              return Substitutor.format(lineTemplate, Map.of(
+                      "from", fromNode,
+                      "operation", callOperation,
+                      "type", callType,
+                      "index", String.valueOf(index[0]++),
+                      "typeUpper", callType.toUpperCase(),
+                      "displayTarget", displayTarget));
+            })
+            .collect(Collectors.joining());
+  }
 
-    sb.append("  Helper --> End([End])");
-
-    // Add call counts as a note if provided
-    if (callCounts != null && !callCounts.isEmpty()) {
-      sb.append("\n  %% Call Counts: ");
-      boolean first = true;
-      for (Map.Entry<String, Integer> entry : callCounts.entrySet()) {
-        if (!first) {
-          sb.append(", ");
-        }
-        sb.append(entry.getKey()).append(": ").append(entry.getValue());
-        first = false;
-      }
+  private static String processBranches(boolean hasCompensation) {
+    if (hasCompensation) {
+      return """
+              Execute --> |success| End([End])
+              Execute --> |failure| Compensate[Compensate]
+              Compensate --> End
+              """.indent(2).stripTrailing();
     }
+    return """
+            Execute --> |success| End([End])
+            Execute --> |failure| Fail([Fail])
+            """.indent(2).stripTrailing();
+  }
 
-    return sb.toString();
+  private static String activityBranches(boolean hasCompensation) {
+    if (hasCompensation) {
+      return """
+              Activity --> |success| End([End])
+              Activity --> |failure| Compensate[Compensate]
+              Compensate --> End
+              """.indent(2).stripTrailing();
+    }
+    return """
+            Activity --> |success| End([End])
+            Activity --> |failure| Fail([Fail])
+            """.indent(2).stripTrailing();
+  }
+
+  private static String buildCallCounts(@Nullable Map<String, Integer> callCounts) {
+    if (callCounts == null || callCounts.isEmpty()) {
+      return "";
+    }
+    return "\n  %% Call Counts: " + callCounts.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .map(entry -> entry.getKey() + ": " + entry.getValue())
+            .collect(Collectors.joining(", "));
   }
 }

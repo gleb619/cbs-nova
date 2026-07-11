@@ -5,8 +5,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.starter.controllers.DslRuntimeResource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,8 +33,9 @@ class DslStarterIntegrationTest {
                             .execute(ctx -> Result.success("disbursed"))
                             .build());
 
-    var runtime = new DevDslRuntime();
-    var resource = new DslRuntimeResource(runtime);
+    var runtime = new DevDslRuntime(new ExternalCallTracker(), new ExecutionTraceCollector(),
+            new ContextFactory());
+    var resource = new DslRuntimeResource(runtime, new ContextFactory());
     mockMvc = MockMvcBuilders.standaloneSetup(resource)
             .setMessageConverters(new JacksonJsonHttpMessageConverter())
             .build();

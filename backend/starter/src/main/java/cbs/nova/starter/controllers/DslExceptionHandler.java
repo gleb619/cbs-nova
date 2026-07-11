@@ -1,6 +1,7 @@
-package cbs.nova.starter;
+package cbs.nova.starter.controllers;
 
 import cbs.nova.dsl.DslException;
+import cbs.nova.starter.models.ErrorResponse;
 import io.sentry.Sentry;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;

@@ -1,4 +1,4 @@
-package cbs.nova.starter;
+package cbs.nova.starter.config;
 
 import io.temporal.client.WorkflowClient;
 import io.temporal.worker.Worker;

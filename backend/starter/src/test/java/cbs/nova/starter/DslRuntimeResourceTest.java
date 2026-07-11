@@ -12,6 +12,8 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExplainReport;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.starter.controllers.DslRuntimeResource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -29,7 +31,8 @@ class DslRuntimeResourceTest {
 
   @BeforeEach
   void setUp() {
-    mockMvc = MockMvcBuilders.standaloneSetup(new DslRuntimeResource(dslRuntime))
+    mockMvc = MockMvcBuilders
+            .standaloneSetup(new DslRuntimeResource(dslRuntime, new ContextFactory()))
             .setMessageConverters(new JacksonJsonHttpMessageConverter())
             .build();
   }

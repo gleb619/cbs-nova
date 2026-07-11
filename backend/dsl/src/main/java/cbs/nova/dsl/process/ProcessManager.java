@@ -3,18 +3,16 @@ package cbs.nova.dsl.process;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslEntityNotFoundException;
 import cbs.nova.dsl.Result;
-import java.util.List;
-import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
+import java.util.List;
+import java.util.Optional;
+
+@RequiredArgsConstructor
 public final class ProcessManager {
   private final ProcessRegistry registry;
   private final ProcessRunner runner;
-
-  public ProcessManager(@NonNull ProcessRegistry registry, @NonNull ProcessRunner runner) {
-    this.registry = registry;
-    this.runner = runner;
-  }
 
   public void register(@NonNull ProcessDslObject process) {
     registry.register(process);

@@ -2,10 +2,11 @@ package cbs.nova.dsl.registry;
 
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.process.ProcessRegistry;
+import org.jspecify.annotations.NonNull;
+
 import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import org.jspecify.annotations.NonNull;
 
 public final class DefaultProcessRegistry implements ProcessRegistry {
   private final ConcurrentHashMap<String, ProcessDslObject> store = new ConcurrentHashMap<>();

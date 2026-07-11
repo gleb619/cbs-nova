@@ -1,19 +1,20 @@
 package cbs.nova.dsl;
 
-import java.util.Map;
+import cbs.nova.dsl.config.ContextFactory;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 
+import java.util.Map;
+
 @Slf4j
+@RequiredArgsConstructor
 public final class CompensationRichContext<T> implements CompensationContext<T> {
 
   private final Context<T> delegate;
   private final Throwable error;
-
-  public CompensationRichContext(@NonNull Context<T> delegate, @NonNull Throwable error) {
-    this.delegate = delegate;
-    this.error = error;
-  }
+  private final ExecutionTraceCollector traceCollector;
+  private final ContextFactory contextFactory;
 
   @Override
   public @NonNull Throwable error() {
@@ -53,21 +54,21 @@ public final class CompensationRichContext<T> implements CompensationContext<T> 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name) {
     Result<?> result = GlobalManager.getInstance().runHelper(name, delegate);
-    ExecutionTraceCollector.getInstance().add("called helper: " + name);
+    traceCollector.add("called helper: " + name);
     return result;
   }
 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input) {
     Result<?> result = GlobalManager.getInstance().runHelper(name,
-            SimpleContext.getInstance().of(input, delegate.mode(), delegate.runId()));
-    ExecutionTraceCollector.getInstance().add("called helper: " + name);
+            contextFactory.of(input, delegate.mode(), delegate.runId()));
+    traceCollector.add("called helper: " + name);
     return result;
   }
 
   @Override
   public @NonNull CompensationContext<T> log(@NonNull String message) {
-    ExecutionTraceCollector.getInstance().add("compensation log: " + message);
+    traceCollector.add("compensation log: " + message);
     log.info("[DSL:{}][runId:{}] [compensation] {}", delegate.mode(), delegate.runId(), message);
     return this;
   }

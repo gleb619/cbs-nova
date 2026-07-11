@@ -4,10 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
+import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.SimpleContext;
+import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dslmodel.BatchIn;
 import cbs.nova.dslmodel.BatchItem;
 import cbs.nova.dslmodel.BatchOut;
@@ -16,21 +17,26 @@ import cbs.nova.dslmodel.InvoiceLine;
 import cbs.nova.dslmodel.InvoiceOut;
 import cbs.nova.dslmodel.LongWorkIn;
 import cbs.nova.dslmodel.LongWorkOut;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
+import cbs.nova.starter.config.DslAutoConfiguration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
 
 class IntermediateDslExamplesTest {
 
   @TempDir
   Path dslSourceDir;
 
-  private final DevDslRuntime runtime = new DevDslRuntime();
+  private final ContextFactory contextFactory = new ContextFactory();
+  private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
+  private final ExternalCallTracker tracker = new ExternalCallTracker();
+  private final DevDslRuntime runtime = new DevDslRuntime(tracker, traceCollector, contextFactory);
 
   @BeforeEach
   void loadCompactDsls() throws Exception {
@@ -55,7 +61,7 @@ class IntermediateDslExamplesTest {
             new BatchItem("a", 10),
             new BatchItem("b", 20),
             new BatchItem("c", 12)));
-    Context<BatchIn> ctx = SimpleContext.getInstance().of(input, ExecutionMode.PREVIEW);
+    Context<BatchIn> ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
 
     Result<?> result = GlobalManager.getInstance().runProcess("BatchProcessing", ctx);
 
@@ -70,7 +76,7 @@ class IntermediateDslExamplesTest {
     var input = new InvoiceIn(List.of(
             new InvoiceLine("widget", 2.50, 4),
             new InvoiceLine("gadget", 10.00, 2)));
-    Context<InvoiceIn> ctx = SimpleContext.getInstance().of(input, ExecutionMode.PREVIEW);
+    Context<InvoiceIn> ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
 
     Result<?> result = GlobalManager.getInstance().runProcess("InvoiceGeneration", ctx);
 
@@ -86,7 +92,7 @@ class IntermediateDslExamplesTest {
   @Test
   void longWorkSimulationPreviewCompletesAllSteps() {
     var input = new LongWorkIn("task-42", 5);
-    Context<LongWorkIn> ctx = SimpleContext.getInstance().of(input, ExecutionMode.PREVIEW);
+    Context<LongWorkIn> ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
 
     Result<?> result = GlobalManager.getInstance().runTransaction("LongWorkSimulation", ctx);
 
@@ -100,7 +106,7 @@ class IntermediateDslExamplesTest {
   @Test
   void devDslRuntimePreviewReturnsSuccessReport() {
     var input = new BatchIn(List.of(new BatchItem("only", 7)));
-    Context<BatchIn> ctx = SimpleContext.getInstance().of(input, ExecutionMode.PREVIEW);
+    Context<BatchIn> ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
 
     Result<PreviewReport> reportResult = runtime.preview("BatchProcessing", ctx);
 

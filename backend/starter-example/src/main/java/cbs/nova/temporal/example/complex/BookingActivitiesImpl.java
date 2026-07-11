@@ -9,11 +9,6 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
-/**
- * Production-style implementation that makes real outbound HTTP calls to the flight, hotel and car
- * reservation services. A shared {@link HttpClient} is used for all services and the target base
- * URL can be configured, which makes the implementation testable with a local WireMock server.
- */
 public class BookingActivitiesImpl implements BookingActivities {
   private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
           .connectTimeout(Duration.ofSeconds(2)).build();

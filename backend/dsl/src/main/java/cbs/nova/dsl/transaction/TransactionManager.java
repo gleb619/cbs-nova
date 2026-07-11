@@ -4,19 +4,16 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslEntityNotFoundException;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.TransactionRegistry;
-import java.util.List;
-import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
+import java.util.List;
+import java.util.Optional;
+
+@RequiredArgsConstructor
 public final class TransactionManager {
   private final TransactionRegistry registry;
   private final TransactionRunner runner;
-
-  public TransactionManager(
-          @NonNull TransactionRegistry registry, @NonNull TransactionRunner runner) {
-    this.registry = registry;
-    this.runner = runner;
-  }
 
   public void register(@NonNull TransactionDslObject tx) {
     registry.register(tx);

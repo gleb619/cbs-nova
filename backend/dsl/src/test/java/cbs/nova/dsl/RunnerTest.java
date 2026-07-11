@@ -2,19 +2,26 @@ package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.process.ProcessRunner;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
 import cbs.nova.dsl.runner.DefaultHelperRunner;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
 import cbs.nova.dsl.transaction.TransactionRunner;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 class RunnerTest {
-  private final ProcessRunner processRunner = new DefaultProcessRunner();
-  private final TransactionRunner txRunner = new DefaultTransactionRunner();
-  private final HelperRunner helperRunner = new DefaultHelperRunner();
+
+  private final ContextFactory contextFactory = new ContextFactory();
+  private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
+  private final ProcessRunner processRunner = new DefaultProcessRunner(traceCollector,
+          contextFactory);
+  private final TransactionRunner txRunner = new DefaultTransactionRunner(traceCollector,
+          contextFactory);
+  private final HelperRunner helperRunner = new DefaultHelperRunner(traceCollector, contextFactory);
 
   @Test
   void processRunnerPreviewSuccess() {
@@ -23,7 +30,7 @@ class RunnerTest {
             .output(String.class)
             .execute(ctx -> Result.success("done"))
             .build();
-    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.PREVIEW);
+    var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
     var result = processRunner.run(process, ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("done");
@@ -42,7 +49,7 @@ class RunnerTest {
                       return Result.success(null);
                     })
             .build();
-    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.PREVIEW);
+    var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
     processRunner.run(process, ctx);
     assertThat(compensated.get()).isTrue();
   }
@@ -50,7 +57,7 @@ class RunnerTest {
   @Test
   void helperRunnerUnknownNameReturnsFailure() {
     var registry = new DefaultHelperRegistry();
-    var ctx = SimpleContext.getInstance().of("x", ExecutionMode.PREVIEW);
+    var ctx = contextFactory.of("x", ExecutionMode.PREVIEW);
     var result = helperRunner.runHelper("unknown", ctx, registry);
     assertThat(result.isSuccess()).isFalse();
   }

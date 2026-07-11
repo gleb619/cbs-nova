@@ -62,6 +62,20 @@ backend/
 
 ---
 
+## CodeGraph
+
+The backend has its own isolated CodeGraph index under `backend/.codegraph/`.
+Run all CodeGraph commands from `backend/` so only Java/Kotlin sources are indexed:
+
+```bash
+cd backend
+codegraph status
+codegraph query <SymbolName> --kind class --limit 5 --json
+codegraph index --force   # after mass refactors
+```
+
+The frontend index (`frontend/.codegraph/`) is a separate database and must not be mixed with this one.
+
 ## 4. Key Context & Recent Changes
 
 - **Rich Contexts**: Use sub-interfaces under `dsl-api` (`ProcessContext`, `TransactionContext`, `CompensationContext`, `FunctionContext<T>`).

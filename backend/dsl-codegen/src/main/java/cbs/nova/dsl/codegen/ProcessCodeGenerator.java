@@ -1,10 +1,12 @@
 package cbs.nova.dsl.codegen;
 
 import cbs.nova.dsl.process.ProcessDescriptor;
-import java.text.MessageFormat;
+import cbs.nova.dsl.utils.Substitutor;
+import org.jspecify.annotations.NonNull;
+
 import java.util.ArrayList;
 import java.util.List;
-import org.jspecify.annotations.NonNull;
+import java.util.Map;
 
 public final class ProcessCodeGenerator {
   private static final String BASE_PACKAGE = "cbs.nova.dsl.generated";
@@ -40,23 +42,28 @@ public final class ProcessCodeGenerator {
 
     String importBlock = imports.isEmpty() ? "" : "\n" + String.join("\n", imports) + "\n";
 
-    return MessageFormat.format(
+    return Substitutor.format(
             """
-                    package {0};{1}
+                    package ${pkg};${importBlock}
                     import io.temporal.workflow.QueryMethod;
                     import io.temporal.workflow.WorkflowInterface;
                     import io.temporal.workflow.WorkflowMethod;
 
                     @WorkflowInterface
-                    public interface {2} '{'
+                    public interface ${interfaceName} {
                       @QueryMethod
                       String getVersion();
 
                       @WorkflowMethod
-                      {3} run({4} input);
-                    '}'
+                      ${outputType} run(${inputType} input);
+                    }
                     """,
-            pkg, importBlock, interfaceName, outputType, inputType);
+            Map.of(
+                    "pkg", pkg,
+                    "importBlock", importBlock,
+                    "interfaceName", interfaceName,
+                    "outputType", outputType,
+                    "inputType", inputType));
   }
 
   private String generateImpl(
@@ -71,79 +78,91 @@ public final class ProcessCodeGenerator {
     String importBlock = imports.isEmpty() ? "" : "\n" + String.join("\n", imports) + "\n";
 
     String compensationTemplate = """
-            package {0};{1}
+            package ${pkg};${importBlock}
             import cbs.nova.dsl.ExecutionMode;
             import cbs.nova.dsl.GlobalManager;
             import cbs.nova.dsl.SimpleContext;
             import io.temporal.workflow.Saga;
             import io.temporal.workflow.Workflow;
+            import java.util.Map;
+            import java.util.UUID;
 
-            public class {4} implements {3} '{'
-              private static final String VERSION = "{5}";
+            public class ${implName} implements ${interfaceName} {
+              private static final String VERSION = "${version}";
 
-              private static final String TASK_QUEUE = "{6}";
+              private static final String TASK_QUEUE = "${taskQueue}";
 
               @Override
-              public String getVersion() '{'
+              public String getVersion() {
                 return VERSION;
-              '}'
+              }
 
               @Override
-              public {7} run({8} input) '{'
+              public ${outputTypeName} run(${inputTypeName} input) {
                 Saga saga = new Saga(new Saga.Options.Builder().build());
                 String runId = Workflow.getInfo().getRunId();
-                var ctx = SimpleContext.getInstance().of(input, ExecutionMode.RUN, runId);
-                var compensationCtx = SimpleContext.getInstance().of(input, ExecutionMode.RUN, runId);
+                var ctx = new SimpleContext<>(input, Map.of(), ExecutionMode.RUN, runId);
+                var compensationCtx = new SimpleContext<>(input, Map.of(), ExecutionMode.RUN, runId);
                 saga.addCompensation(
                     () ->
-                        GlobalManager.getInstance().runProcess("{2}-compensation", compensationCtx));
-                try '{'
-                  var result = GlobalManager.getInstance().runProcess("{2}", ctx);
-                  if (!result.isSuccess()) '{'
+                        GlobalManager.getInstance().runProcess("${processName}-compensation", compensationCtx));
+                try {
+                  var result = GlobalManager.getInstance().runProcess("${processName}", ctx);
+                  if (!result.isSuccess()) {
                     saga.compensate();
                     throw new RuntimeException("Process failed", result.cause());
-                  '}'
-                  return {9}result.value();
-                '}' catch (Exception e) '{'
+                  }
+                  return ${castIfNeeded}result.value();
+                } catch (Exception e) {
                   saga.compensate();
                   throw e;
-                '}'
-              '}'
-            '}'
+                }
+              }
+            }
             """;
 
     String plainTemplate = """
-            package {0};{1}
+            package ${pkg};${importBlock}
             import cbs.nova.dsl.ExecutionMode;
             import cbs.nova.dsl.GlobalManager;
             import cbs.nova.dsl.SimpleContext;
             import io.temporal.workflow.Workflow;
+            import java.util.Map;
 
-            public class {4} implements {3} '{'
-              private static final String VERSION = "{5}";
+            public class ${implName} implements ${interfaceName} {
+              private static final String VERSION = "${version}";
 
-              private static final String TASK_QUEUE = "{6}";
+              private static final String TASK_QUEUE = "${taskQueue}";
 
               @Override
-              public String getVersion() '{'
+              public String getVersion() {
                 return VERSION;
-              '}'
+              }
 
               @Override
-              public {7} run({8} input) '{'
+              public ${outputTypeName} run(${inputTypeName} input) {
                 String runId = Workflow.getInfo().getRunId();
-                var ctx = SimpleContext.getInstance().of(input, ExecutionMode.RUN, runId);
-                var result = GlobalManager.getInstance().runProcess("{2}", ctx);
+                var ctx = new SimpleContext<>(input, Map.of(), ExecutionMode.RUN, runId);
+                var result = GlobalManager.getInstance().runProcess("${processName}", ctx);
                 if (!result.isSuccess()) throw new RuntimeException("Process failed", result.cause());
-                return {9}result.value();
-              '}'
-            '}'
+                return ${castIfNeeded}result.value();
+              }
+            }
             """;
 
-    return MessageFormat.format(
+    return Substitutor.format(
             hasCompensation ? compensationTemplate : plainTemplate,
-            pkg, importBlock, processName, interfaceName, implName, version, taskQueue,
-            outputTypeName, inputTypeName, castIfNeeded(outputType));
+            Map.of(
+                    "pkg", pkg,
+                    "importBlock", importBlock,
+                    "processName", processName,
+                    "interfaceName", interfaceName,
+                    "implName", implName,
+                    "version", version,
+                    "taskQueue", taskQueue,
+                    "outputTypeName", outputTypeName,
+                    "inputTypeName", inputTypeName,
+                    "castIfNeeded", castIfNeeded(outputType)));
   }
 
   private String typeName(Class<?> type) {

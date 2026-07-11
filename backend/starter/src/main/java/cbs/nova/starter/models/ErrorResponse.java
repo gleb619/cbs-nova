@@ -1,4 +1,4 @@
-package cbs.nova.starter;
+package cbs.nova.starter.models;
 
 public record ErrorResponse(
         String code,

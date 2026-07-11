@@ -2,13 +2,18 @@ package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
 import cbs.nova.dsl.runner.DefaultHelperRunner;
-import java.util.List;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 class DefaultHelperRunnerPreviewTest {
+
+  private final ContextFactory contextFactory = new ContextFactory();
+  private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
 
   static final class MockHelper implements Executable<String, String> {
     @Override
@@ -38,8 +43,8 @@ class DefaultHelperRunnerPreviewTest {
   void previewModeInvokesPreviewHook() {
     var registry = new DefaultHelperRegistry();
     registry.registerHelper("mock", new MockHelper());
-    var runner = new DefaultHelperRunner();
-    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.PREVIEW);
+    var runner = new DefaultHelperRunner(traceCollector, contextFactory);
+    var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
     var result = runner.runHelper("mock", ctx, registry);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("PREVIEW_MOCK");
@@ -49,8 +54,8 @@ class DefaultHelperRunnerPreviewTest {
   void runModeInvokesExecuteHook() {
     var registry = new DefaultHelperRegistry();
     registry.registerHelper("mock", new MockHelper());
-    var runner = new DefaultHelperRunner();
-    var ctx = SimpleContext.getInstance().of("input", ExecutionMode.RUN);
+    var runner = new DefaultHelperRunner(traceCollector, contextFactory);
+    var ctx = contextFactory.of("input", ExecutionMode.RUN);
     var result = runner.runHelper("mock", ctx, registry);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("REAL");
@@ -77,7 +82,7 @@ class DefaultHelperRunnerPreviewTest {
         return Result.success("ONLY_EXEC");
       }
     };
-    var ctx = SimpleContext.getInstance().of("x", ExecutionMode.PREVIEW);
+    var ctx = contextFactory.of("x", ExecutionMode.PREVIEW);
     assertThat(plain.preview(ctx).value()).isEqualTo("ONLY_EXEC");
   }
 }

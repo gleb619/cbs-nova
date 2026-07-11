@@ -1,11 +1,13 @@
 package cbs.nova.dsl;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.config.ContextFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class GlobalManagerTest {
+
+  private final ContextFactory contextFactory = new ContextFactory();
   @BeforeEach
   void reset() {
     GlobalManager.getInstance().resetForTests();
@@ -20,7 +22,7 @@ class GlobalManagerTest {
                     .output(String.class)
                     .execute(ctx -> Result.success("Hello, " + ctx.body()))
                     .build());
-    var ctx = SimpleContext.getInstance().of("World", ExecutionMode.PREVIEW);
+    var ctx = contextFactory.of("World", ExecutionMode.PREVIEW);
     var result = gm.runProcess("Greet", ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("Hello, World");
@@ -29,7 +31,7 @@ class GlobalManagerTest {
   @Test
   void unknownProcessReturnsFailure() {
     var result = GlobalManager.getInstance()
-            .runProcess("Ghost", SimpleContext.getInstance().of("x", ExecutionMode.PREVIEW));
+            .runProcess("Ghost", contextFactory.of("x", ExecutionMode.PREVIEW));
     assertThat(result.isSuccess()).isFalse();
   }
 
@@ -38,7 +40,7 @@ class GlobalManagerTest {
     var gm = GlobalManager.getInstance();
     gm.registerHelper("upper", ctx -> Result.success(ctx.body().toString().toUpperCase()));
     var result = gm.runHelper("upper",
-            SimpleContext.getInstance().of("hello", ExecutionMode.PREVIEW));
+            contextFactory.of("hello", ExecutionMode.PREVIEW));
     assertThat(result.value()).isEqualTo("HELLO");
   }
 
@@ -49,7 +51,7 @@ class GlobalManagerTest {
             .execute(ctx -> Result.success("ok"))
             .build();
     gm.registerTransaction(tx);
-    var ctx = SimpleContext.getInstance().of("body", ExecutionMode.RUN, "run-1");
+    var ctx = contextFactory.of("body", ExecutionMode.RUN, "run-1");
     var result = gm.runTransaction("TestTx", ctx);
     assertThat(result.isSuccess()).isTrue();
   }
@@ -57,7 +59,7 @@ class GlobalManagerTest {
   @Test
   void unknownTransactionReturnsFailure() {
     var result = GlobalManager.getInstance().runTransaction("Ghost",
-            SimpleContext.getInstance().of("x", ExecutionMode.PREVIEW));
+            contextFactory.of("x", ExecutionMode.PREVIEW));
     assertThat(result.isSuccess()).isFalse();
   }
 
@@ -68,7 +70,7 @@ class GlobalManagerTest {
             .execute(ctx -> Result.success("fn-ok"))
             .build();
     gm.registerFunction(fn);
-    var ctx = SimpleContext.getInstance().of("body", ExecutionMode.RUN, "run-1");
+    var ctx = contextFactory.of("body", ExecutionMode.RUN, "run-1");
     var result = gm.runFunction("TestFn", ctx);
     assertThat(result.value()).isEqualTo("fn-ok");
   }
@@ -76,7 +78,7 @@ class GlobalManagerTest {
   @Test
   void unknownFunctionReturnsFailure() {
     var result = GlobalManager.getInstance().runFunction("Ghost",
-            SimpleContext.getInstance().of("x", ExecutionMode.PREVIEW));
+            contextFactory.of("x", ExecutionMode.PREVIEW));
     assertThat(result.isSuccess()).isFalse();
   }
 

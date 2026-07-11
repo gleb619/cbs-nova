@@ -50,7 +50,10 @@ node_modules
 /.kimi/plans/*
 /plans/*
 .blackboxcli/
-/.codegraph/
+# /backend/.codegraph/ and /frontend/.codegraph/ are ignored below
+/backend/.codegraph/
+/frontend/.codegraph/
+# (legacy root index removed)
 /.cursor/rules/codegraph.mdc
 
 /examples/cbs-rules/
@@ -129,3 +132,4 @@ node_modules
 /frontend/src/unit/
 /build.gradle
 /docs/superpowers2/
+.codegraph

@@ -1,4 +1,4 @@
-package cbs.nova.starter;
+package cbs.nova.starter.listeners;
 
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;

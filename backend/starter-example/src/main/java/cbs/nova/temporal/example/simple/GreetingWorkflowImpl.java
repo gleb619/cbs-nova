@@ -3,6 +3,7 @@ package cbs.nova.temporal.example.simple;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
 import io.temporal.workflow.Workflow;
+
 import java.time.Duration;
 
 /** Simple workflow implementation that delegates to a single activity. */

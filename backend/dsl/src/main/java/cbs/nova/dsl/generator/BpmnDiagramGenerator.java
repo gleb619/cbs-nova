@@ -3,43 +3,35 @@ package cbs.nova.dsl.generator;
 import cbs.nova.dsl.DiagramGenerator;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
-import java.util.List;
-import java.util.Map;
+import cbs.nova.dsl.utils.Substitutor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-/**
- * Enhanced BPMN diagram generator that includes more detailed information and can visualize
- * external calls when provided.
- */
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 public final class BpmnDiagramGenerator implements DiagramGenerator {
 
   public @NonNull String forProcess(@NonNull ProcessDslObject process) {
-    String name = process.name();
-    boolean hasComp = process.compensationLogic() != null;
-    return generateXml(name, hasComp);
+    return generateXml(process.name(), process.compensationLogic() != null);
   }
 
   public @NonNull String forProcess(@NonNull ProcessDslObject process,
           @Nullable List<Map<String, Object>> externalCalls,
           @Nullable Map<String, Integer> callCounts) {
-    String name = process.name();
-    boolean hasComp = process.compensationLogic() != null;
-    return generateXml(name, hasComp, externalCalls, callCounts);
+    return generateXml(process.name(), process.compensationLogic() != null, externalCalls,
+            callCounts);
   }
 
   public @NonNull String forTransaction(@NonNull TransactionDslObject tx) {
-    String name = tx.name();
-    boolean hasComp = tx.compensationLogic() != null;
-    return generateXml(name, hasComp);
+    return generateXml(tx.name(), tx.compensationLogic() != null);
   }
 
   public @NonNull String forTransaction(@NonNull TransactionDslObject tx,
           @Nullable List<Map<String, Object>> externalCalls,
           @Nullable Map<String, Integer> callCounts) {
-    String name = tx.name();
-    boolean hasComp = tx.compensationLogic() != null;
-    return generateXml(name, hasComp, externalCalls, callCounts);
+    return generateXml(tx.name(), tx.compensationLogic() != null, externalCalls, callCounts);
   }
 
   public @NonNull String forHelper(@NonNull String name) {
@@ -53,185 +45,230 @@ public final class BpmnDiagramGenerator implements DiagramGenerator {
   }
 
   private String generateXml(String name, boolean hasCompensation) {
-    String xml = "<?xml version=\\\"1.0\\\" encoding=\\\"UTF-8\\\"?>\\n" +
-            "<bpmn:definitions xmlns:bpmn=\\\"http://www.omg.org/spec/BPMN/20100524/MODEL\\\" \\n" +
-            "                  xmlns:bpmndi=\\\"http://www.omg.org/spec/BPMN/20100524/DI\\\" \\n" +
-            "                  xmlns:dc=\\\"http://www.omg.org/spec/DD/20100524/DC\\\" \\n" +
-            "                  xmlns:di=\\\"http://www.omg.org/spec/DD/20100524/DI\\\" \\n" +
-            "                  id=\\\"Definitions_1\\\" targetNamespace=\\\"http://bpmn.io/schema/bpmn\\\">\\n"
-            +
-            "  <bpmn:process id=\\\"Process_1\\\" isExecutable=\\\"true\\\">\\n" +
-            "    <bpmn:startEvent id=\\\"StartEvent_1\\\" name=\\\"Start\\\">\\n" +
-            "      <bpmn:outgoing>Flow_1</bpmn:outgoing>\\n" +
-            "    </bpmn:startEvent>\\n" +
-            "    <bpmn:serviceTask id=\\\"Activity_1\\\" name=\\\"\" + name + \"\\\">\\n" +
-            "      <bpmn:incoming>Flow_1</bpmn:incoming>\\n" +
-            "      <bpmn:outgoing>Flow_2</bpmn:outgoing>\\n" +
-            "    </bpmn:serviceTask>\\n" +
-            "    <bpmn:sequenceFlow id=\\\"Flow_1\\\" sourceRef=\\\"StartEvent_1\\\" targetRef=\\\"Activity_1\\\" />\\n";
-
-    if (hasCompensation) {
-      xml += "    <bpmn:exclusiveGateway id=\\\"Gateway_1\\\" name=\\\"Success?\\\">\\n" +
-              "      <bpmn:incoming>Flow_2</bpmn:incoming>\\n" +
-              "      <bpmn:outgoing>Flow_Success</bpmn:outgoing>\\n" +
-              "      <bpmn:outgoing>Flow_Fail</bpmn:outgoing>\\n" +
-              "    </bpmn:exclusiveGateway>\\n" +
-              "    <bpmn:sequenceFlow id=\\\"Flow_2\\\" sourceRef=\\\"Activity_1\\\" targetRef=\\\"Gateway_1\\\" />\\n"
-              +
-              "    <bpmn:serviceTask id=\\\"Activity_Compensate\\\" name=\\\"Compensate\\\">\\n" +
-              "      <bpmn:incoming>Flow_Fail</bpmn:incoming>\\n" +
-              "      <bpmn:outgoing>Flow_Comp_End</bpmn:outgoing>\\n" +
-              "    </bpmn:serviceTask>\\n" +
-              "    <bpmn:endEvent id=\\\"EndEvent_1\\\" name=\\\"End\\\">\\n" +
-              "      <bpmn:incoming>Flow_Success</bpmn:incoming>\\n" +
-              "      <bpmn:incoming>Flow_Comp_End</bpmn:incoming>\\n" +
-              "    </bpmn:endEvent>\\n" +
-              "    <bpmn:sequenceFlow id=\\\"Flow_Success\\\" name=\\\"Yes\\\" sourceRef=\\\"Gateway_1\\\" targetRef=\\\"EndEvent_1\\\" />\\n"
-              +
-              "    <bpmn:sequenceFlow id=\\\"Flow_Comp_End\\\" sourceRef=\\\"Activity_Compensate\\\" targetRef=\\\"EndEvent_1\\\" />\\n";
-    } else {
-      xml += "    <bpmn:endEvent id=\\\"EndEvent_1\\\" name=\\\"End\\\">\\n" +
-              "      <bpmn:incoming>Flow_2</bpmn:incoming>\\n" +
-              "      <bpmn:endEvent>\\n" +
-              "      <bpmn:sequenceFlow id=\\\"Flow_2\\\" sourceRef=\\\"Activity_1\\\" targetRef=\\\"EndEvent_1\\\" />\\n";
-    }
-
-    xml += "  </bpmn:process>\\n" +
-            "  <bpmndi:BPMNDiagram id=\\\"BPMNDiagram_1\\\">\\n" +
-            "    <bpmndi:BPMNPlane id=\\\"BPMNPlane_1\\\" bpmnElement=\\\"Process_1\\\">\\n" +
-            "      <bpmndi:BPMNShape id=\\\"_BPMNShape_StartEvent_2\\\" bpmnElement=\\\"StartEvent_1\\\">\\n"
-            +
-            "        <dc:Bounds x=\\\"173\\\" y=\\\"102\\\" width=\\\"36\\\" height=\\\"36\\\" />\\n"
-            +
-            "      </bpmndi:BPMNShape>\\n" +
-            "    </bpmndi:BPMNPlane>\\n" +
-            "  </bpmndi:BPMNDiagram>\\n" +
-            "</bpmn:definitions>";
-    return xml;
+    var template = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                              xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                              xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                              xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                              id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+              <bpmn:process id="Process_1" isExecutable="true">
+                <bpmn:startEvent id="StartEvent_1" name="Start">
+                  <bpmn:outgoing>Flow_1</bpmn:outgoing>
+                </bpmn:startEvent>
+                <bpmn:serviceTask id="Activity_1" name="${name}">
+                  <bpmn:incoming>Flow_1</bpmn:incoming>
+                  <bpmn:outgoing>Flow_2</bpmn:outgoing>
+                </bpmn:serviceTask>
+                <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Activity_1" />
+            ${compensation}  </bpmn:process>
+              <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+                <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+                  <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+                    <dc:Bounds x="173" y="102" width="36" height="36" />
+                  </bpmndi:BPMNShape>
+                </bpmndi:BPMNPlane>
+              </bpmndi:BPMNDiagram>
+            </bpmn:definitions>""";
+    return Substitutor.format(template, Map.of(
+            "name", name,
+            "compensation", buildSimpleCompensation(hasCompensation)));
   }
 
-  // Enhanced overloads for external call visualization
+  private static String buildSimpleCompensation(boolean hasCompensation) {
+    if (hasCompensation) {
+      return """
+              <bpmn:exclusiveGateway id="Gateway_1" name="Success?">
+                <bpmn:incoming>Flow_2</bpmn:incoming>
+                <bpmn:outgoing>Flow_Success</bpmn:outgoing>
+                <bpmn:outgoing>Flow_Fail</bpmn:outgoing>
+              </bpmn:exclusiveGateway>
+              <bpmn:sequenceFlow id="Flow_2" sourceRef="Activity_1" targetRef="Gateway_1" />
+              <bpmn:serviceTask id="Activity_Compensate" name="Compensate">
+                <bpmn:incoming>Flow_Fail</bpmn:incoming>
+                <bpmn:outgoing>Flow_Comp_End</bpmn:outgoing>
+              </bpmn:serviceTask>
+              <bpmn:endEvent id="EndEvent_1" name="End">
+                <bpmn:incoming>Flow_Success</bpmn:incoming>
+                <bpmn:incoming>Flow_Comp_End</bpmn:incoming>
+              </bpmn:endEvent>
+              <bpmn:sequenceFlow id="Flow_Success" name="Yes" sourceRef="Gateway_1" targetRef="EndEvent_1" />
+              <bpmn:sequenceFlow id="Flow_Comp_End" sourceRef="Activity_Compensate" targetRef="EndEvent_1" />
+              """
+              .indent(4);
+    }
+    return """
+            <bpmn:endEvent id="EndEvent_1" name="End">
+              <bpmn:incoming>Flow_2</bpmn:incoming>
+            </bpmn:endEvent>
+            <bpmn:sequenceFlow id="Flow_2" sourceRef="Activity_1" targetRef="EndEvent_1" />
+            """.indent(4);
+  }
+
   private String generateXml(String name, boolean hasCompensation,
           @Nullable List<Map<String, Object>> externalCalls,
           @Nullable Map<String, Integer> callCounts) {
-    String xml = "<?xml version=\\\"1.0\\\" encoding=\\\"UTF-8\\\"?>\\n" +
-            "<bpmn:definitions xmlns:bpmn=\\\"http://www.omg.org/spec/BPMN/20100524/MODEL\\\" \\n" +
-            "                  xmlns:bpmndi=\\\"http://www.omg.org/spec/BPMN/20100524/DI\\\" \\n" +
-            "                  xmlns:dc=\\\"http://www.omg.org/spec/DD/20100524/DC\\\" \\n" +
-            "                  xmlns:di=\\\"http://www.omg.org/spec/DD/20100524/DI\\\" \\n" +
-            "                  id=\\\"Definitions_1\\\" targetNamespace=\\\"http://bpmn.io/schema/bpmn\\\">\\n"
-            +
-            "  <bpmn:process id=\\\"Process_1\\\" isExecutable=\\\"true\\\">\\n" +
-            "    <bpmn:startEvent id=\\\"StartEvent_1\\\" name=\\\"Start\\\">\\n" +
-            "      <bpmn:outgoing>Flow_1</bpmn:outgoing>\\n" +
-            "    </bpmn:startEvent>\\n";
+    var template = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                              xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                              xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                              xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                              id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+              <bpmn:process id="Process_1" isExecutable="true">
+                <bpmn:startEvent id="StartEvent_1" name="Start">
+                  <bpmn:outgoing>Flow_1</bpmn:outgoing>
+                </bpmn:startEvent>
+            ${body}  </bpmn:process>
+              <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+                <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+                  <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+                    <dc:Bounds x="173" y="102" width="36" height="36" />
+                  </bpmndi:BPMNShape>
+                </bpmndi:BPMNPlane>
+              </bpmndi:BPMNDiagram>
+            ${callCounts}</bpmn:definitions>""";
+    return Substitutor.format(template, Map.of(
+            "body", buildBody(name, hasCompensation, externalCalls),
+            "callCounts", buildCallCounts(callCounts)));
+  }
 
-    int activityId = 1;
-    int gatewayId = 1;
-    int sequenceFlowId = 1;
+  private static String buildBody(String name, boolean hasCompensation,
+          @Nullable List<Map<String, Object>> externalCalls) {
+    var ids = new Ids();
+    var sb = new StringBuilder();
 
-    // Add external calls as service tasks if provided
+    String mainSourceRef = "StartEvent_1";
+
     if (externalCalls != null && !externalCalls.isEmpty()) {
-      for (int i = 0; i < externalCalls.size(); i++) {
-        Map<String, Object> call = externalCalls.get(i);
-        String callType = (String) call.getOrDefault("type", "external");
-        String callTarget = (String) call.getOrDefault("target", "unknown");
-        String callOperation = (String) call.getOrDefault("operation", "call");
-
-        // Truncate long targets for readability
-        String displayTarget = callTarget.length() > 20
-                ? callTarget.substring(0, 17) + "..."
-                : callTarget;
-
-        xml += "    <bpmn:serviceTask id=\\\"Activity_" + activityId
-                + "\\\" name=\\\"\" + callType.toUpperCase() + \" " + callOperation
-                + " (\" + displayTarget + \")\\\">\\n" +
-                "      <bpmn:incoming>Flow_" + sequenceFlowId + "</bpmn:incoming>\\n" +
-                "      <bpmn:outgoing>Flow_" + (sequenceFlowId + 1) + "</bpmn:outgoing>\\n" +
-                "    </bpmn:serviceTask>\\n" +
-                "    <bpmn:sequenceFlow id=\\\"Flow_" + sequenceFlowId
-                + "\\\" sourceRef=\\\"Activity_" + (activityId - 1) + "\\\" targetRef=\\\"Activity_"
-                + activityId + "\\\" />\\n";
-
-        activityId++;
-        sequenceFlowId += 2;
+      for (Map<String, Object> call : externalCalls) {
+        int activityId = ids.nextActivity();
+        int incomingFlow = ids.nextFlow();
+        int outgoingFlow = ids.nextFlow();
+        sb.append(buildActivityNode(activityId,
+                buildCallName(call), incomingFlow, outgoingFlow));
+        sb.append(buildSequenceFlow(incomingFlow, mainSourceRef, "Activity_" + activityId));
+        mainSourceRef = "Activity_" + activityId;
       }
     }
 
-    // Add the main activity
-    xml += "    <bpmn:serviceTask id=\\\"Activity_" + activityId
-            + "\\\" name=\\\"\" + name + \"\\\">\\n" +
-            "      <bpmn:incoming>Flow_" + sequenceFlowId + "</bpmn:incoming>\\n" +
-            "      <bpmn:outgoing>Flow_" + (sequenceFlowId + 1) + "</bpmn:outgoing>\\n" +
-            "    </bpmn:serviceTask>\\n" +
-            "    <bpmn:sequenceFlow id=\\\"Flow_" + sequenceFlowId + "\\\" sourceRef=\\\"Activity_"
-            + (activityId - 1) + "\\\" targetRef=\\\"Activity_" + activityId + "\\\" />\\n";
-
-    activityId++;
-    sequenceFlowId += 2;
+    int mainActivityId = ids.nextActivity();
+    int mainIncomingFlow = ids.nextFlow();
+    int mainOutgoingFlow = ids.nextFlow();
+    sb.append(buildActivityNode(mainActivityId, name, mainIncomingFlow, mainOutgoingFlow));
+    sb.append(buildSequenceFlow(mainIncomingFlow, mainSourceRef, "Activity_" + mainActivityId));
 
     if (hasCompensation) {
-      xml += "    <bpmn:exclusiveGateway id=\\\"Gateway_" + gatewayId
-              + "\\\" name=\\\"Success?\\\">\\n" +
-              "      <bpmn:incoming>Flow_" + sequenceFlowId + "</bpmn:incoming>\\n" +
-              "      <bpmn:outgoing>Flow_Success</bpmn:outgoing>\\n" +
-              "      <bpmn:outgoing>Flow_Fail</bpmn:outgoing>\\n" +
-              "    </bpmn:exclusiveGateway>\\n" +
-              "    <bpmn:serviceTask id=\\\"Activity_Compensate\\\" name=\\\"Compensate\\\">\\n" +
-              "      <bpmn:incoming>Flow_Fail</bpmn:incoming>\\n" +
-              "      <bpmn:outgoing>Flow_Comp_End</bpmn:outgoing>\\n" +
-              "    </bpmn:serviceTask>\\n" +
-              "    <bpmn:endEvent id=\\\"EndEvent_1\\\" name=\\\"End\\\">\\n" +
-              "      <bpmn:incoming>Flow_Success</bpmn:incoming>\\n" +
-              "      <bpmn:incoming>Flow_Comp_End</bpmn:incoming>\\n" +
-              "    </bpmn:endEvent>\\n" +
-              "    <bpmn:sequenceFlow id=\\\"Flow_Success\\\" name=\\\"Yes\\\" sourceRef=\\\"Gateway_"
-              + gatewayId + "\\\" targetRef=\\\"EndEvent_1\\\" />\\n" +
-              "    <bpmn:sequenceFlow id=\\\"Flow_Comp_End\\\" sourceRef=\\\"Activity_Compensate\\\" targetRef=\\\"EndEvent_1\\\" />\\n";
-
-      gatewayId++;
-      sequenceFlowId += 4;
+      int gatewayId = ids.nextGateway();
+      sb.append(buildCompensationGateway(gatewayId, mainOutgoingFlow, mainActivityId));
     } else {
-      xml += "    <bpmn:endEvent id=\\\"EndEvent_1\\\" name=\\\"End\\\">\\n" +
-              "      <bpmn:incoming>Flow_" + sequenceFlowId + "</bpmn:incoming>\\n" +
-              "      <bpmn:endEvent>\\n" +
-              "      <bpmn:sequenceFlow id=\\\"Flow_" + sequenceFlowId
-              + "\\\" sourceRef=\\\"Activity_" + (activityId - 1)
-              + "\\\" targetRef=\\\"EndEvent_1\\\" />\\n";
-
-      sequenceFlowId += 2;
+      sb.append(buildSimpleEnd(mainOutgoingFlow, "Activity_" + mainActivityId));
     }
 
-    xml += "  </bpmn:process>\\n" +
-            "  <bpmndi:BPMNDiagram id=\\\"BPMNDiagram_1\\\">\\n" +
-            "    <bpmndi:BPMNPlane id=\\\"BPMNPlane_1\\\" bpmnElement=\\\"Process_1\\\">\\n" +
-            "      <bpmndi:BPMNShape id=\\\"_BPMNShape_StartEvent_2\\\" bpmnElement=\\\"StartEvent_1\\\">\\n"
-            +
-            "        <dc:Bounds x=\\\"173\\\" y=\\\"102\\\" width=\\\"36\\\" height=\\\"36\\\" />\\n"
-            +
-            "      </bpmndi:BPMNShape>\\n" +
-            "    </bpmndi:BPMNPlane>\\n" +
-            "  </bpmndi:BPMNDiagram>\\n" +
-            "</bpmn:definitions>";
+    return sb.toString();
+  }
 
-    // Add call counts as documentation if provided
-    if (callCounts != null && !callCounts.isEmpty()) {
-      String callCountsComment = "\n  <!-- Call Counts: ";
-      boolean first = true;
-      for (Map.Entry<String, Integer> entry : callCounts.entrySet()) {
-        if (!first) {
-          callCountsComment += ", ";
-        }
-        callCountsComment += entry.getKey() + ": " + entry.getValue();
-        first = false;
-      }
-      callCountsComment += " -->";
+  private static String buildCallName(Map<String, Object> call) {
+    String callType = (String) call.getOrDefault("type", "external");
+    String callTarget = (String) call.getOrDefault("target", "unknown");
+    String callOperation = (String) call.getOrDefault("operation", "call");
+    String displayTarget = callTarget.length() > 20
+            ? callTarget.substring(0, 17) + "..."
+            : callTarget;
+    return callType.toUpperCase() + " " + callOperation + " (" + displayTarget + ")";
+  }
 
-      // Insert the comment before the closing definitions tag
-      int insertPos = xml.lastIndexOf("</bpmn:definitions>");
-      xml = xml.substring(0, insertPos) + callCountsComment + xml.substring(insertPos);
+  private static String buildActivityNode(int activityId, String name, int incomingFlow,
+          int outgoingFlow) {
+    var template = """
+            <bpmn:serviceTask id="Activity_${activityId}" name="${name}">
+              <bpmn:incoming>Flow_${incoming}</bpmn:incoming>
+              <bpmn:outgoing>Flow_${outgoing}</bpmn:outgoing>
+            </bpmn:serviceTask>
+            """.indent(4);
+    return Substitutor.format(template, Map.of(
+            "activityId", activityId,
+            "name", name,
+            "incoming", incomingFlow,
+            "outgoing", outgoingFlow));
+  }
+
+  private static String buildSequenceFlow(int flowId, String sourceRef, String targetRef) {
+    var template = """
+            <bpmn:sequenceFlow id="Flow_${flowId}" sourceRef="${sourceRef}" targetRef="${targetRef}" />
+            """
+            .indent(4);
+    return Substitutor.format(template, Map.of(
+            "flowId", flowId,
+            "sourceRef", sourceRef,
+            "targetRef", targetRef));
+  }
+
+  private static String buildCompensationGateway(int gatewayId, int incomingFlow,
+          int sourceActivityId) {
+    var template = """
+            <bpmn:exclusiveGateway id="Gateway_${gatewayId}" name="Success?">
+              <bpmn:incoming>Flow_${incoming}</bpmn:incoming>
+              <bpmn:outgoing>Flow_Success</bpmn:outgoing>
+              <bpmn:outgoing>Flow_Fail</bpmn:outgoing>
+            </bpmn:exclusiveGateway>
+            <bpmn:sequenceFlow id="Flow_${incoming}" sourceRef="Activity_${sourceActivityId}" targetRef="Gateway_${gatewayId}" />
+            <bpmn:serviceTask id="Activity_Compensate" name="Compensate">
+              <bpmn:incoming>Flow_Fail</bpmn:incoming>
+              <bpmn:outgoing>Flow_Comp_End</bpmn:outgoing>
+            </bpmn:serviceTask>
+            <bpmn:endEvent id="EndEvent_1" name="End">
+              <bpmn:incoming>Flow_Success</bpmn:incoming>
+              <bpmn:incoming>Flow_Comp_End</bpmn:incoming>
+            </bpmn:endEvent>
+            <bpmn:sequenceFlow id="Flow_Success" name="Yes" sourceRef="Gateway_${gatewayId}" targetRef="EndEvent_1" />
+            <bpmn:sequenceFlow id="Flow_Comp_End" sourceRef="Activity_Compensate" targetRef="EndEvent_1" />
+            """
+            .indent(4);
+    return Substitutor.format(template, Map.of(
+            "gatewayId", gatewayId,
+            "incoming", incomingFlow,
+            "sourceActivityId", sourceActivityId));
+  }
+
+  private static String buildSimpleEnd(int incomingFlow, String sourceRef) {
+    var template = """
+            <bpmn:endEvent id="EndEvent_1" name="End">
+              <bpmn:incoming>Flow_${incoming}</bpmn:incoming>
+            </bpmn:endEvent>
+            <bpmn:sequenceFlow id="Flow_${incoming}" sourceRef="${sourceRef}" targetRef="EndEvent_1" />
+            """
+            .indent(4);
+    return Substitutor.format(template, Map.of(
+            "incoming", incomingFlow,
+            "sourceRef", sourceRef));
+  }
+
+  private static String buildCallCounts(@Nullable Map<String, Integer> callCounts) {
+    if (callCounts == null || callCounts.isEmpty()) {
+      return "";
+    }
+    return "\n  <!-- Call Counts: " + callCounts.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .map(entry -> entry.getKey() + ": " + entry.getValue())
+            .collect(Collectors.joining(", ")) + " -->";
+  }
+
+  private static final class Ids {
+    private int activityId = 1;
+    private int flowId = 1;
+    private int gatewayId = 1;
+
+    int nextActivity() {
+      return activityId++;
     }
 
-    return xml;
+    int nextFlow() {
+      return flowId++;
+    }
+
+    int nextGateway() {
+      return gatewayId++;
+    }
   }
 }

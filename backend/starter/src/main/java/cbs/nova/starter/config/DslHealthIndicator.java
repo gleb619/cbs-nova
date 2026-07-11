@@ -1,4 +1,4 @@
-package cbs.nova.starter;
+package cbs.nova.starter.config;
 
 import cbs.nova.dsl.GlobalManager;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;

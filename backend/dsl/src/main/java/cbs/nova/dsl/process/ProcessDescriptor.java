@@ -1,8 +1,9 @@
 package cbs.nova.dsl.process;
 
-import java.util.List;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+
+import java.util.List;
 
 public record ProcessDescriptor(
         @NonNull String name,

@@ -3,15 +3,14 @@ package cbs.nova.dsl.generator;
 import cbs.nova.dsl.DiagramGenerator;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
-import java.util.List;
-import java.util.Map;
+import cbs.nova.dsl.utils.Substitutor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-/**
- * Enhanced PlantUML diagram generator that includes more detailed information and can visualize
- * external calls when provided.
- */
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 public final class PlantUmlDiagramGenerator implements DiagramGenerator {
 
   public @NonNull String forProcess(@NonNull ProcessDslObject process) {
@@ -21,50 +20,17 @@ public final class PlantUmlDiagramGenerator implements DiagramGenerator {
   public @NonNull String forProcess(@NonNull ProcessDslObject process,
           @Nullable List<Map<String, Object>> externalCalls,
           @Nullable Map<String, Integer> callCounts) {
-    var sb = new StringBuilder("@startuml\n");
-    sb.append("start\n");
-    sb.append(":").append(process.name()).append(";\n");
-
-    // Add external calls as steps if provided
-    if (externalCalls != null && !externalCalls.isEmpty()) {
-      for (Map<String, Object> call : externalCalls) {
-        String callType = (String) call.getOrDefault("type", "external");
-        String callTarget = (String) call.getOrDefault("target", "unknown");
-        String callOperation = (String) call.getOrDefault("operation", "call");
-
-        // Truncate long targets for readability
-        String displayTarget = callTarget.length() > 30
-                ? callTarget.substring(0, 27) + "..."
-                : callTarget;
-
-        sb.append(":").append(callType.toUpperCase()).append(" ").append(callOperation)
-                .append(" (").append(displayTarget).append(");\n");
-      }
-    }
-
-    if (process.compensationLogic() != null) {
-      sb.append("if (success?) then (yes)\n");
-      sb.append("else (no)\n");
-      sb.append("  :Compensate;\n");
-      sb.append("endif\n");
-    }
-    sb.append("stop\n");
-    sb.append("@endum");
-
-    // Add call counts as a comment if provided
-    if (callCounts != null && !callCounts.isEmpty()) {
-      sb.insert(sb.lastIndexOf("@endum"), "\n' Call Counts: ");
-      boolean first = true;
-      for (Map.Entry<String, Integer> entry : callCounts.entrySet()) {
-        if (!first) {
-          sb.insert(sb.lastIndexOf("@endum"), ", ");
-        }
-        sb.insert(sb.lastIndexOf("@endum"), entry.getKey() + ": " + entry.getValue());
-        first = false;
-      }
-    }
-
-    return sb.toString();
+    var template = """
+            @startuml
+            start
+            :${name};
+            ${externalCalls}${compensation}stop
+            ${callCounts}@enduml""";
+    return Substitutor.format(template, Map.of(
+            "name", process.name(),
+            "externalCalls", buildExternalCallLines(externalCalls),
+            "compensation", buildCompensation(process.compensationLogic() != null),
+            "callCounts", buildCallCounts(callCounts)));
   }
 
   public @NonNull String forTransaction(@NonNull TransactionDslObject tx) {
@@ -74,50 +40,17 @@ public final class PlantUmlDiagramGenerator implements DiagramGenerator {
   public @NonNull String forTransaction(@NonNull TransactionDslObject tx,
           @Nullable List<Map<String, Object>> externalCalls,
           @Nullable Map<String, Integer> callCounts) {
-    var sb = new StringBuilder("@startuml\n");
-    sb.append("start\n");
-    sb.append(":").append(tx.name()).append(";\n");
-
-    // Add external calls as steps if provided
-    if (externalCalls != null && !externalCalls.isEmpty()) {
-      for (Map<String, Object> call : externalCalls) {
-        String callType = (String) call.getOrDefault("type", "external");
-        String callTarget = (String) call.getOrDefault("target", "unknown");
-        String callOperation = (String) call.getOrDefault("operation", "call");
-
-        // Truncate long targets for readability
-        String displayTarget = callTarget.length() > 30
-                ? callTarget.substring(0, 27) + "..."
-                : callTarget;
-
-        sb.append(":").append(callType.toUpperCase()).append(" ").append(callOperation)
-                .append(" (").append(displayTarget).append(");\n");
-      }
-    }
-
-    if (tx.compensationLogic() != null) {
-      sb.append("if (success?) then (yes)\n");
-      sb.append("else (no)\n");
-      sb.append("  :Compensate;\n");
-      sb.append("endif\n");
-    }
-    sb.append("stop\n");
-    sb.append("@endum");
-
-    // Add call counts as a comment if provided
-    if (callCounts != null && !callCounts.isEmpty()) {
-      sb.insert(sb.lastIndexOf("@endum"), "\n' Call Counts: ");
-      boolean first = true;
-      for (Map.Entry<String, Integer> entry : callCounts.entrySet()) {
-        if (!first) {
-          sb.insert(sb.lastIndexOf("@endum"), ", ");
-        }
-        sb.insert(sb.lastIndexOf("@endum"), entry.getKey() + ": " + entry.getValue());
-        first = false;
-      }
-    }
-
-    return sb.toString();
+    var template = """
+            @startuml
+            start
+            :${name};
+            ${externalCalls}${compensation}stop
+            ${callCounts}@enduml""";
+    return Substitutor.format(template, Map.of(
+            "name", tx.name(),
+            "externalCalls", buildExternalCallLines(externalCalls),
+            "compensation", buildCompensation(tx.compensationLogic() != null),
+            "callCounts", buildCallCounts(callCounts)));
   }
 
   public @NonNull String forHelper(@NonNull String name) {
@@ -127,43 +60,67 @@ public final class PlantUmlDiagramGenerator implements DiagramGenerator {
   public @NonNull String forHelper(@NonNull String name,
           @Nullable List<Map<String, Object>> externalCalls,
           @Nullable Map<String, Integer> callCounts) {
-    var sb = new StringBuilder("@startuml\n");
-    sb.append("start\n");
-    sb.append(":").append(name).append(";\n");
+    var template = """
+            @startuml
+            start
+            :${name};
+            ${externalCalls}stop
+            ${callCounts}@enduml""";
+    return Substitutor.format(template, Map.of(
+            "name", name,
+            "externalCalls", buildExternalCallLines(externalCalls),
+            "callCounts", buildCallCounts(callCounts)));
+  }
 
-    // Add external calls as steps if provided
-    if (externalCalls != null && !externalCalls.isEmpty()) {
-      for (Map<String, Object> call : externalCalls) {
-        String callType = (String) call.getOrDefault("type", "external");
-        String callTarget = (String) call.getOrDefault("target", "unknown");
-        String callOperation = (String) call.getOrDefault("operation", "call");
-
-        // Truncate long targets for readability
-        String displayTarget = callTarget.length() > 30
-                ? callTarget.substring(0, 27) + "..."
-                : callTarget;
-
-        sb.append(":").append(callType.toUpperCase()).append(" ").append(callOperation)
-                .append(" (").append(displayTarget).append(");\n");
-      }
+  private static String buildExternalCallLines(@Nullable List<Map<String, Object>> externalCalls) {
+    if (externalCalls == null || externalCalls.isEmpty()) {
+      return "";
     }
+    var template = """
+            :${type} ${operation} (${target});
+            """;
+    return externalCalls.stream()
+            .map(call -> Substitutor.format(template, Map.of(
+                    "type", callType(call),
+                    "operation", callOperation(call),
+                    "target", displayTarget(call))))
+            .collect(Collectors.joining());
+  }
 
-    sb.append("stop\n");
-    sb.append("@endum");
+  private static String callType(Map<String, Object> call) {
+    return ((String) call.getOrDefault("type", "external")).toUpperCase();
+  }
 
-    // Add call counts as a comment if provided
-    if (callCounts != null && !callCounts.isEmpty()) {
-      sb.insert(sb.lastIndexOf("@endum"), "\n' Call Counts: ");
-      boolean first = true;
-      for (Map.Entry<String, Integer> entry : callCounts.entrySet()) {
-        if (!first) {
-          sb.insert(sb.lastIndexOf("@endum"), ", ");
-        }
-        sb.insert(sb.lastIndexOf("@endum"), entry.getKey() + ": " + entry.getValue());
-        first = false;
-      }
+  private static String callOperation(Map<String, Object> call) {
+    return (String) call.getOrDefault("operation", "call");
+  }
+
+  private static String displayTarget(Map<String, Object> call) {
+    String target = (String) call.getOrDefault("target", "unknown");
+    return target.length() > 30
+            ? target.substring(0, 27) + "..."
+            : target;
+  }
+
+  private static String buildCompensation(boolean hasCompensation) {
+    if (!hasCompensation) {
+      return "";
     }
+    return """
+            if (success?) then (yes)
+            else (no)
+              :Compensate;
+            endif
+            """;
+  }
 
-    return sb.toString();
+  private static String buildCallCounts(@Nullable Map<String, Integer> callCounts) {
+    if (callCounts == null || callCounts.isEmpty()) {
+      return "";
+    }
+    return "\n' Call Counts: " + callCounts.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .map(entry -> entry.getKey() + ": " + entry.getValue())
+            .collect(Collectors.joining(", "));
   }
 }

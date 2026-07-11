@@ -6,19 +6,20 @@ import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.ProcessContext;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.SimpleContext;
-import java.util.Map;
+import cbs.nova.dsl.config.ContextFactory;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 
+import java.util.Map;
+
 @Slf4j
+@RequiredArgsConstructor
 public final class ProcessRichContext<T> implements ProcessContext<T> {
 
   private final Context<T> delegate;
-
-  public ProcessRichContext(@NonNull Context<T> delegate) {
-    this.delegate = delegate;
-  }
+  private final ExecutionTraceCollector traceCollector;
+  private final ContextFactory contextFactory;
 
   @Override
   public @NonNull T body() {
@@ -53,16 +54,15 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name) {
     Result<?> result = GlobalManager.getInstance().runHelper(name, delegate);
-    ExecutionTraceCollector.getInstance().add("called helper: " + name);
+    traceCollector.add("called helper: " + name);
     return result;
   }
 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input) {
     Result<?> result = GlobalManager.getInstance().runHelper(name,
-            SimpleContext.getInstance().of(input, delegate.metadata(), delegate.mode(),
-                    delegate.runId()));
-    ExecutionTraceCollector.getInstance().add("called helper: " + name);
+            contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
+    traceCollector.add("called helper: " + name);
     return result;
   }
 
@@ -74,16 +74,15 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
       return runHelper(name, typed);
     }
     Result<?> result = GlobalManager.getInstance().runHelper(name,
-            SimpleContext.getInstance().of(input, delegate.metadata(), delegate.mode(),
-                    delegate.runId()));
-    ExecutionTraceCollector.getInstance().add("called helper: " + name);
+            contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
+    traceCollector.add("called helper: " + name);
     return result;
   }
 
   @Override
   public @NonNull Result<?> runTransaction(@NonNull String name) {
     Result<?> result = GlobalManager.getInstance().runTransaction(name, delegate);
-    ExecutionTraceCollector.getInstance().add("executed transaction: " + name);
+    traceCollector.add("executed transaction: " + name);
     return result;
   }
 
@@ -91,9 +90,8 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   public @NonNull Result<?> runTransaction(@NonNull String name,
           @NonNull Map<String, Object> input) {
     Result<?> result = GlobalManager.getInstance().runTransaction(name,
-            SimpleContext.getInstance().of(input, delegate.metadata(), delegate.mode(),
-                    delegate.runId()));
-    ExecutionTraceCollector.getInstance().add("executed transaction: " + name);
+            contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
+    traceCollector.add("executed transaction: " + name);
     return result;
   }
 
@@ -105,9 +103,8 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
       return runTransaction(name, typed);
     }
     Result<?> result = GlobalManager.getInstance().runTransaction(name,
-            SimpleContext.getInstance().of(input, delegate.metadata(), delegate.mode(),
-                    delegate.runId()));
-    ExecutionTraceCollector.getInstance().add("executed transaction: " + name);
+            contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
+    traceCollector.add("executed transaction: " + name);
     return result;
   }
 
