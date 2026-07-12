@@ -92,7 +92,7 @@
   },
   "overrides": [
     {
-      "includes": ["admin-ui/app/pages/**/*.vue"],
+      "includes": ["admin-ui-plugin/app/pages/**/*.vue"],
       "linter": {
         "rules": {
           "style": {
@@ -102,7 +102,7 @@
       }
     },
     {
-      "includes": ["admin-ui/app/layouts/**/*.vue"],
+      "includes": ["admin-ui-plugin/app/layouts/**/*.vue"],
       "linter": {
         "rules": {
           "style": {

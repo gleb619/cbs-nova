@@ -133,3 +133,4 @@ node_modules
 /build.gradle
 /docs/superpowers2/
 .codegraph
+/.kiro/

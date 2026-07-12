@@ -7,25 +7,19 @@ import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.FunctionContext;
-import cbs.nova.dsl.HelperRegistry;
-import cbs.nova.dsl.HelperRunner;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.function.FunctionRichContext;
+import cbs.nova.dsl.registry.HelperRegistry;
+import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
-
-import java.util.function.Function;
 
 @RequiredArgsConstructor
 public final class DefaultHelperRunner implements HelperRunner {
 
   private final ExecutionTraceCollector traceCollector;
   private final ContextFactory contextFactory;
-
-  public DefaultHelperRunner() {
-    this(new ExecutionTraceCollector(), new ContextFactory());
-  }
 
   @Override
   @SuppressWarnings("unchecked")

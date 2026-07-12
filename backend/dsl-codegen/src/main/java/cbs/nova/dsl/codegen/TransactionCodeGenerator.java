@@ -2,16 +2,22 @@ package cbs.nova.dsl.codegen;
 
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.utils.Substitutor;
-import org.jspecify.annotations.NonNull;
-
 import java.util.List;
 import java.util.Map;
+import org.jspecify.annotations.NonNull;
 
 public final class TransactionCodeGenerator {
 
   public @NonNull List<GeneratedSource> generate(@NonNull TransactionDescriptor descriptor) {
+    return generate(descriptor, null);
+  }
+
+  public @NonNull List<GeneratedSource> generate(
+          @NonNull TransactionDescriptor descriptor,
+          String buildVersion) {
     String name = descriptor.name();
     String pkg = ProcessCodeGenerator.versionedPackage(descriptor.name(), descriptor.version());
+    String versionConstant = resolveVersion(descriptor.version(), buildVersion);
     String interfaceName = name + "TransactionActivity";
     String implName = name + "TransactionDefinition";
 
@@ -19,7 +25,13 @@ public final class TransactionCodeGenerator {
             new GeneratedSource(pkg, interfaceName, generateInterface(pkg, interfaceName)),
             new GeneratedSource(
                     pkg, implName, generateImpl(pkg, name, interfaceName, implName,
-                            descriptor.version(), descriptor.taskQueue())));
+                            versionConstant, descriptor.taskQueue())));
+  }
+
+  private static @NonNull String resolveVersion(
+          @NonNull String descriptorVersion,
+          String buildVersion) {
+    return (buildVersion != null && !buildVersion.isBlank()) ? buildVersion : descriptorVersion;
   }
 
   private String generateInterface(String pkg, String interfaceName) {
@@ -45,7 +57,7 @@ public final class TransactionCodeGenerator {
   }
 
   private String generateImpl(String pkg, String transactionName, String interfaceName,
-          String implName, String version, String taskQueue) {
+          String implName, String versionConstant, String taskQueue) {
     return Substitutor.format(
             """
                     package ${pkg};
@@ -81,7 +93,7 @@ public final class TransactionCodeGenerator {
                     "transactionName", transactionName,
                     "interfaceName", interfaceName,
                     "implName", implName,
-                    "version", version,
+                    "version", versionConstant,
                     "taskQueue", taskQueue));
   }
 }

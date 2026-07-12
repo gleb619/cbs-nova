@@ -2,9 +2,9 @@ package cbs.nova.dsl.codegen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.DescriptorFactory;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.DescriptorFactory;
 import org.junit.jupiter.api.Test;
 
 class TransactionCodeGeneratorTest {

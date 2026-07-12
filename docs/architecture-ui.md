@@ -15,79 +15,115 @@ The frontend lives in `./frontend` and is managed as a pnpm workspace.
 
 ```
 frontend/
-├── package.json              # workspace root scripts and shared devDependencies
-├── pnpm-workspace.yaml       # members: [admin-ui, components]
-├── admin-ui/                 # Nuxt 3 application
+├── package.json                  # workspace root scripts and shared devDependencies
+├── pnpm-workspace.yaml           # members: [admin-ui-plugin, components]
+├── admin-ui-plugin/              # Nuxt module — the full admin UI as an installable plugin
+│   ├── module.ts                 # Nuxt module entrypoint (defineNuxtModule)
+│   ├── nuxt.config.dev.ts        # Standalone dev config — loads module.ts for local development
 │   ├── app/
-│   │   ├── components/       # admin-ui-specific Vue components
-│   │   ├── composables/      # shared Vue composables
-│   │   ├── layouts/
-│   │   ├── pages/
-│   │   └── stores/           # Pinia stores
-│   ├── server/               # Nitro TypeScript backend (BFF)
-│   │   ├── api/v1/           # proxy routes to Spring Boot
-│   │   └── utils/            # JWT helpers, HTTP client, config
-│   ├── nuxt.config.ts
-│   ├── tailwind.config.ts
+│   │   ├── components/           # plugin-specific Vue components
+│   │   ├── composables/          # shared Vue composables (auto-imported by the module)
+│   │   ├── layouts/              # Nuxt layouts registered by the module
+│   │   ├── pages/                # pages registered by the module via extendPages
+│   │   └── stores/               # Pinia stores
+│   ├── server/                   # Nitro TypeScript backend (BFF)
+│   │   ├── api/v1/               # proxy routes to Spring Boot
+│   │   └── utils/                # JWT helpers, HTTP client, config
+│   ├── assets/css/main.css       # global Tailwind stylesheet injected by the module
+│   ├── tailwind.config.ts        # local Tailwind config (extends @cbs/components preset)
 │   ├── package.json
 │   └── .env.example
-└── components/               # reusable Vue component library
+└── components/                   # reusable Vue component library
     ├── src/
-    │   ├── components/       # exported SFCs
+    │   ├── components/           # exported SFCs
     │   ├── composables/
-    │   ├── tailwind.config.ts # canonical color theme
-    │   └── index.ts          # public exports
+    │   ├── tailwind.config.ts    # canonical color theme
+    │   └── index.ts              # public exports
     ├── package.json
     └── vite.config.ts
 ```
 
 ## Packages
 
-### `admin-ui`
+### `@cbs/admin-ui-plugin`
 
-A Nuxt 3 application that serves:
+A **Nuxt module** that installs the full CBS Nova admin UI into any host Nuxt application.
 
-- the admin web interface (pages, layouts, components),
-- shared client-side state via Pinia,
-- server-side proxy routes that talk to the Spring Boot API.
+The module is the primary entry point (`module.ts`). When activated it:
 
-The Nuxt `server/` directory is the TypeScript backend of the admin UI. It is responsible for authentication tokens,
-request forwarding, response shaping, and error translation.
+- registers pages (Dashboard, Runner, DSL Workbench, Executions) via `extendPages`,
+- registers the default shell layout (sidebar + top bar) via `addLayout`,
+- adds `@pinia/nuxt` if not already present,
+- injects the global Tailwind stylesheet,
+- exposes composables to the host app via auto-import dirs,
+- merges the Nitro `server/` directory into the host so BFF routes are available at `/api/v1/**`,
+- merges `backendBaseUrl`, `backendApiKey`, and `appName` into the host runtime config.
 
-### `components`
+Usage in a host `nuxt.config.ts`:
 
-A standalone Vue 3 + Vite library package. It exposes reusable components, composables, and the Tailwind color theme
-so that other projects can embed them without depending on the full `admin-ui` application.
+```ts
+export default defineNuxtConfig({
+  modules: ['@cbs/admin-ui-plugin'],
+  adminUiPlugin: {
+    routePrefix: '/admin',      // optional — defaults to '/'
+    appName: 'My CBS Admin',    // optional
+  },
+})
+```
+
+For **standalone local development** the package ships `nuxt.config.dev.ts`, which loads the module
+directly so the plugin can be developed and tested without a separate host app:
+
+```bash
+pnpm --filter @cbs/admin-ui-plugin dev
+```
+
+The Nuxt `server/` directory is the TypeScript backend of the admin UI. It is responsible for request
+forwarding, response shaping, and error translation.
+
+### `components` (`@cbs/components`)
+
+A standalone Vue 3 + Vite library package. It exposes reusable components, composables, and the Tailwind
+color theme so that other projects can embed them without depending on the full `admin-ui-plugin`.
 
 ## Communication with the backend
 
 ```
-┌──────────────┐          ┌──────────────────────────┐          ┌──────────────┐
-│   Browser    │  HTTP    │   admin-ui (Nuxt)        │  HTTP +  │  Spring Boot │
-│  (Vue pages) │ ───────▶ │  ┌─────────────────────┐ │  JWT     │   API        │
-│              │          │  │  Nitro server/      │ │────────▶│              │
-└──────────────┘          │  │  BFF routes         │ │          └──────────────┘
-                          │  └─────────────────────┘ │
-                          └──────────────────────────┘
+┌──────────────┐          ┌──────────────────────────────────┐          ┌──────────────┐
+│   Browser    │  HTTP    │   Host Nuxt app                  │  HTTP +  │  Spring Boot │
+│  (Vue pages) │ ───────▶ │  ┌──────────────────────────┐   │  JWT     │   API        │
+│              │          │  │  @cbs/admin-ui-plugin     │   │────────▶│              │
+└──────────────┘          │  │  Nitro server/ (BFF)      │   │          └──────────────┘
+                          │  └──────────────────────────┘   │
+                          └──────────────────────────────────┘
 ```
 
 - The browser never talks directly to the Spring Boot API.
 - Nuxt server routes request or refresh a JWT and forward authenticated calls to Spring Boot.
-- The JWT is kept on the server side; the browser only holds its own session cookie with `admin-ui`.
+- The JWT is kept on the server side; the browser only holds its own session cookie.
 
 ## Styling
 
 All UI styling is based on the brandbook in `docs/colors.md`.
 
 - `components/src/tailwind.config.ts` is the canonical implementation of the palette.
-- `admin-ui` imports the Tailwind preset from `@cbs/components` so the theme stays single-sourced.
+- `admin-ui-plugin` imports the Tailwind preset from `@cbs/components` so the theme stays single-sourced.
+- The module injects `assets/css/main.css` (Tailwind base + body tokens) into the host app automatically.
 
 ## Build and run
 
 - Install dependencies: `pnpm install`
-- Develop the admin UI: `pnpm --filter admin-ui dev`
-- Build the admin UI: `pnpm --filter admin-ui build`
+- Develop the admin UI (standalone): `pnpm --filter @cbs/admin-ui-plugin dev`
+- Build the admin UI (standalone): `pnpm --filter @cbs/admin-ui-plugin build`
 - Build the component library: `pnpm --filter components build`
+
+Workspace shortcuts from `frontend/`:
+
+```bash
+pnpm dev                # start admin-ui-plugin standalone dev server
+pnpm build              # build admin-ui-plugin standalone
+pnpm build:components   # build component library
+```
 
 ## Frontend design details
 
@@ -102,7 +138,7 @@ Detailed UI design documentation lives in `docs/frontend/`:
 ## Relationship to other docs
 
 - `architecture-backend.md` — describes the Java / Temporal orchestration backend the admin UI consumes.
-- `colors.md` — defines the Tailwind color palette used by both `admin-ui` and `components`.
+- `colors.md` — defines the Tailwind color palette used by both `admin-ui-plugin` and `components`.
 
 ## See also
 

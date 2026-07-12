@@ -64,7 +64,7 @@ Run once per new batch before PLAN:
    - Files to create or modify (with full paths)
    - Build and test commands to verify success:
      - Backend: `./gradlew spotlessApply && ./gradlew build test` from `backend/`
-     - Frontend: `pnpm install && pnpm --filter admin-ui lint && pnpm --filter admin-ui test` from `frontend/`
+     - Frontend: `pnpm install && pnpm --filter @cbs/admin-ui-plugin lint && pnpm --filter @cbs/admin-ui-plugin test` from `frontend/`
    - Relevant constraints from `backend/AGENTS.md` (backend) or `architecture-ui.md` / component library rules (frontend)
 5. Update kanban: set task status to `In Progress`.
 6. Transition to DELEGATE.
@@ -83,7 +83,7 @@ Run once per new batch before PLAN:
    - Constraint: work entirely inside the worktree
    - Constraint: run tier-specific verification before committing:
      - Backend: `./gradlew spotlessApply && ./gradlew build test` in `backend/`
-     - Frontend: `pnpm install && pnpm --filter admin-ui lint && pnpm --filter admin-ui test` in `frontend/`
+     - Frontend: `pnpm install && pnpm --filter @cbs/admin-ui-plugin lint && pnpm --filter @cbs/admin-ui-plugin test` in `frontend/`
    - Constraint: commit with message `feat(<task-id>): <short description>` — no `Co-Authored-By` line
 3. Track attempt count (starts at 1).
 4. Transition to VERIFY.
@@ -95,7 +95,7 @@ Run once per new batch before PLAN:
 1. Read `at` agent result and any output.
 2. Run tier-specific verification in the worktree:
    - Backend: `./gradlew build test` in `backend/`
-   - Frontend: `pnpm --filter admin-ui lint && pnpm --filter admin-ui test` in `frontend/`
+   - Frontend: `pnpm --filter @cbs/admin-ui-plugin lint && pnpm --filter @cbs/admin-ui-plugin test` in `frontend/`
 3. **Pass** — merge worktree branch, remove worktree, update kanban:
    ```bash
    git merge feat/<task-id>
@@ -155,9 +155,9 @@ Triggered when all tasks in the current batch are `Done` or `Blocked`:
 - **Commit pattern** — `feat(<task-id>): short description` exactly. Example: `feat(T4): add ProcessRegistry`.
 - **Style gate**
   - Backend: always run `./gradlew spotlessApply` before committing; `spotlessCheck` must pass.
-  - Frontend: `pnpm --filter admin-ui lint` must pass before committing.
+  - Frontend: `pnpm --filter @cbs/admin-ui-plugin lint` must pass before committing.
 - **One worktree per task** — clean up on Done or Blocked. Never leave stale worktrees.
 - **Retry cap** — 2 attempts per task. On second failure, mark `Blocked` and continue.
 - **Preserve layer contract (backend)** — Registry → Runner → Manager → GlobalManager facade. Generated code only calls `GlobalManager`.
-- **Browser never calls Spring Boot directly (frontend)** — all backend traffic goes through the Nuxt BFF in `admin-ui/server/`.
-- **Single-source theme (frontend)** — color changes belong in `frontend/components`; `admin-ui` consumes the preset from `@cbs/components`.
+- **Browser never calls Spring Boot directly (frontend)** — all backend traffic goes through the Nuxt BFF in `admin-ui-plugin/server/`.
+- **Single-source theme (frontend)** — color changes belong in `frontend/components`; `admin-ui-plugin` consumes the preset from `@cbs/components`.

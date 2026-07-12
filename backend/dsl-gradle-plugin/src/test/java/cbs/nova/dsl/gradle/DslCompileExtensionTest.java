@@ -2,10 +2,9 @@ package cbs.nova.dsl.gradle;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.File;
 import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.Test;
-
-import java.io.File;
 
 class DslCompileExtensionTest {
 
@@ -19,7 +18,10 @@ class DslCompileExtensionTest {
     assertThat(extension.getSourceDir().get().getAsFile())
             .isEqualTo(new File(project.getProjectDir(), "src"));
     assertThat(extension.getOutputDir().get().getAsFile())
-            .isEqualTo(new File(project.getBuildDir(), "generated"));
+            .isEqualTo(project.getLayout().getBuildDirectory().dir("generated").get().getAsFile());
     assertThat(extension.getDslVersion().get()).isEqualTo("1.2.3");
+    assertThat(extension.getDslPackage().get()).isEmpty();
+    assertThat(extension.getBuildVersion().get()).isEmpty();
+    assertThat(extension.getLogLevel().get()).isEqualTo("TRACE");
   }
 }

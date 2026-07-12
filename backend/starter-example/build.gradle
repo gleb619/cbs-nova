@@ -34,5 +34,5 @@ dependencies {
 }
 
 test {
-  systemProperty 'dsl.examples.src.dir', project(':dsl-examples').file('dsl').absolutePath
+  systemProperty 'dsl.examples.src.dir', project(':dsl-examples').file('src/dsl').absolutePath
 }

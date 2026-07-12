@@ -1,11 +1,11 @@
 package cbs.nova.dsl.codegen;
 
-import cbs.nova.dsl.DescriptorFactory;
-import cbs.nova.dsl.DslCompactSource;
 import cbs.nova.dsl.DslDefinitionProvider;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.SemanticValidator;
 import cbs.nova.dsl.compact.CompactSourcePreprocessor;
+import cbs.nova.dsl.compact.ModelSourcePreprocessor;
+import cbs.nova.dsl.config.DescriptorFactory;
 import cbs.nova.dsl.function.FunctionDescriptor;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.process.ProcessDescriptor;
@@ -13,14 +13,6 @@ import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.transaction.TransactionDslObject;
-import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
-
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaCompiler;
-import javax.tools.JavaFileObject;
-import javax.tools.StandardJavaFileManager;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -29,11 +21,25 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.ServiceLoader;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.stream.Stream;
+import javax.tools.DiagnosticCollector;
+import javax.tools.JavaCompiler;
+import javax.tools.JavaFileObject;
+import javax.tools.StandardJavaFileManager;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 
 @Slf4j
 public final class SourceCompiler {
+
+  public record CompileOptions(
+          String buildVersion,
+          String targetPackage) {
+  }
 
   public record Descriptors(
           @NonNull List<ProcessDescriptor> processes,
@@ -44,10 +50,22 @@ public final class SourceCompiler {
   private record PreprocessedSource(@NonNull String className, @NonNull Path sourceFile) {
   }
 
+  private record PreprocessResult(@NonNull String className, @NonNull String fileName,
+          @NonNull String source) {
+  }
+
   public @NonNull Descriptors compileAndDescribe(
           @NonNull Path srcDir, @NonNull Path outputDir, @NonNull JavaCompiler compiler)
           throws IOException {
-    var objects = compileAndLoad(srcDir, outputDir, compiler);
+    return compileAndDescribe(srcDir, outputDir, compiler, new CompileOptions(null, null));
+  }
+
+  public @NonNull Descriptors compileAndDescribe(
+          @NonNull Path srcDir,
+          @NonNull Path outputDir,
+          @NonNull JavaCompiler compiler,
+          CompileOptions options) throws IOException {
+    var objects = compileAndLoad(srcDir, outputDir, compiler, options);
     var processes = new ArrayList<ProcessDescriptor>();
     var transactions = new ArrayList<TransactionDescriptor>();
     var functions = new ArrayList<FunctionDescriptor>();
@@ -68,85 +86,193 @@ public final class SourceCompiler {
   public @NonNull List<DslObject> compileAndLoad(
           @NonNull Path srcDir, @NonNull Path outputDir, @NonNull JavaCompiler compiler)
           throws IOException {
+    return compileAndLoad(srcDir, outputDir, compiler, new CompileOptions(null, null));
+  }
+
+  public @NonNull List<DslObject> compileAndLoad(
+          @NonNull Path srcDir,
+          @NonNull Path outputDir,
+          @NonNull JavaCompiler compiler,
+          CompileOptions options) throws IOException {
     Files.createDirectories(outputDir);
+
+    var dslDir = srcDir.resolve("dsl");
+    var modelsDir = srcDir.resolve("models");
     var classpath = System.getProperty("java.class.path");
 
-    List<Path> sourceFiles;
-    try (Stream<Path> stream = Files.walk(srcDir)) {
-      sourceFiles = stream
-              .filter(p -> p.toString().endsWith(".java"))
-              .toList();
+    var dslSources = collectJavaSources(dslDir);
+    var modelSources = collectJavaSources(modelsDir);
+
+    if (dslSources.isEmpty() && modelSources.isEmpty()) {
+      log.warn("[SourceCompiler] No .java sources found under {} (expected dsl/ and models/)",
+              srcDir);
+      return List.of();
     }
-    if (sourceFiles.isEmpty()) {
-      log.warn("[SourceCompiler] No .java sources found under {}", srcDir);
+    if (dslSources.isEmpty()) {
+      log.warn("[SourceCompiler] No DSL sources found under {}", dslDir);
       return List.of();
     }
 
-    var preprocessed = new ArrayList<PreprocessedSource>();
-    for (var file : sourceFiles) {
-      var preprocessedSource = preprocess(file, outputDir);
-      if (preprocessedSource != null) {
-        preprocessed.add(preprocessedSource);
-      }
-    }
-    if (preprocessed.isEmpty()) {
-      log.warn("[SourceCompiler] No valid compact DSL sources found under {}", srcDir);
+    var targetPackage = (options != null) ? options.targetPackage() : null;
+
+    var dslResults = preprocessInVirtualThreads(dslSources, targetPackage, true);
+    if (dslResults.isEmpty()) {
+      log.warn("[SourceCompiler] No valid compact DSL sources found under {}", dslDir);
       return List.of();
+    }
+
+    var modelResults = preprocessInVirtualThreads(modelSources, targetPackage, false);
+
+    var preprocessedModels = writePreprocessedSources(modelResults, outputDir);
+    var preprocessedDsl = writePreprocessedSources(dslResults, outputDir);
+
+    var allSources = new ArrayList<Path>();
+    for (var s : preprocessedModels) {
+      allSources.add(s.sourceFile());
+    }
+    for (var s : preprocessedDsl) {
+      allSources.add(s.sourceFile());
+    }
+
+    if (!compileSources(compiler, classpath, allSources, outputDir)) {
+      throw new IllegalStateException("[SourceCompiler] Failed to compile DSL/model sources");
     }
 
     var compiledClassNames = new ArrayList<String>();
-    for (var source : preprocessed) {
-      if (compileSingleSource(compiler, classpath, source.sourceFile(), outputDir)) {
-        compiledClassNames.add(source.className());
-      }
-    }
-    if (compiledClassNames.isEmpty()) {
-      log.error("[SourceCompiler] No DSL sources compiled successfully");
-      return List.of();
+    for (var source : preprocessedDsl) {
+      compiledClassNames.add(qualifiedClassName(source.className(), targetPackage));
     }
 
-    new DefinitionProviderGenerator().generate(outputDir, compiledClassNames);
-    var providerSource = outputDir.resolve(DefinitionProviderGenerator.PROVIDER_CLASS + ".java");
+    var providerFqcn = new DefinitionProviderGenerator().generate(
+            outputDir, compiledClassNames, targetPackage);
+    var providerSource = outputDir.resolve(
+            (targetPackage != null && !targetPackage.isBlank())
+                    ? targetPackage.replace('.', '/') + "/"
+                            + DefinitionProviderGenerator.PROVIDER_CLASS + ".java"
+                    : DefinitionProviderGenerator.PROVIDER_CLASS + ".java");
     compileProvider(compiler, classpath, providerSource, outputDir);
 
-    return loadDefinitions(outputDir);
+    return loadDefinitions(outputDir, providerFqcn);
   }
 
-  private PreprocessedSource preprocess(@NonNull Path sourceFile, @NonNull Path outputDir)
-          throws IOException {
+  private List<Path> collectJavaSources(@NonNull Path dir) throws IOException {
+    if (!Files.exists(dir)) {
+      return List.of();
+    }
+    try (Stream<Path> stream = Files.walk(dir)) {
+      return stream
+              .filter(p -> p.toString().endsWith(".java"))
+              .toList();
+    }
+  }
+
+  private @NonNull List<PreprocessResult> preprocessInVirtualThreads(
+          @NonNull List<Path> sources,
+          String targetPackage,
+          boolean dsl) throws IOException {
+    if (sources.isEmpty()) {
+      return List.of();
+    }
+    try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+      var futures = new ArrayList<Future<PreprocessResult>>();
+      for (var file : sources) {
+        Callable<PreprocessResult> task = dsl
+                ? () -> preprocessDsl(file, targetPackage)
+                : () -> preprocessModel(file, targetPackage);
+        futures.add(executor.submit(task));
+      }
+      var results = new ArrayList<PreprocessResult>();
+      for (var future : futures) {
+        try {
+          var result = future.get();
+          if (result != null) {
+            results.add(result);
+          }
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new IllegalStateException("[SourceCompiler] Preprocessing interrupted", e);
+        } catch (ExecutionException e) {
+          var cause = e.getCause();
+          if (cause instanceof IOException io) {
+            throw io;
+          }
+          if (cause instanceof RuntimeException re) {
+            throw re;
+          }
+          throw new IllegalStateException("[SourceCompiler] Preprocessing failed", cause);
+        }
+      }
+      return results;
+    }
+  }
+
+  private @NonNull List<PreprocessedSource> writePreprocessedSources(
+          @NonNull List<PreprocessResult> results,
+          @NonNull Path outputDir) throws IOException {
+    var written = new ArrayList<PreprocessedSource>();
+    for (var result : results) {
+      var outputFile = outputDir.resolve(result.fileName());
+      Files.writeString(outputFile, result.source());
+      log.info("[SourceCompiler] Preprocessed {} -> {}", result.fileName(), outputFile);
+      written.add(new PreprocessedSource(result.className(), outputFile));
+    }
+    return written;
+  }
+
+  private PreprocessResult preprocessDsl(
+          @NonNull Path sourceFile,
+          String targetPackage) throws IOException {
     var fileName = sourceFile.getFileName().toString();
     var rawSource = Files.readString(sourceFile);
     try {
-      var result = CompactSourcePreprocessor.preprocess(fileName, rawSource);
-      var outputFile = outputDir.resolve(fileName);
-      Files.writeString(outputFile, result.preprocessedSource());
-      log.info("[SourceCompiler] Preprocessed {} -> {}", sourceFile, outputFile);
-      return new PreprocessedSource(result.className(), outputFile);
+      var result = CompactSourcePreprocessor.preprocess(fileName, rawSource, targetPackage);
+      log.info("[SourceCompiler] Preprocessed DSL {}", sourceFile);
+      return new PreprocessResult(result.className(), fileName, result.preprocessedSource());
     } catch (IllegalArgumentException e) {
       log.error("[SourceCompiler] {}", e.getMessage());
       return null;
     }
   }
 
-  private boolean compileSingleSource(
+  private PreprocessResult preprocessModel(
+          @NonNull Path sourceFile,
+          String targetPackage) throws IOException {
+    var fileName = sourceFile.getFileName().toString();
+    var rawSource = Files.readString(sourceFile);
+    try {
+      if (targetPackage == null || targetPackage.isBlank()) {
+        throw new IllegalArgumentException(
+                "targetPackage is required to preprocess model " + fileName);
+      }
+      var result = ModelSourcePreprocessor.preprocess(fileName, rawSource, targetPackage);
+      log.info("[SourceCompiler] Preprocessed model {}", sourceFile);
+      return new PreprocessResult(result.className(), fileName, result.preprocessedSource());
+    } catch (IllegalArgumentException e) {
+      log.error("[SourceCompiler] {}", e.getMessage());
+      return null;
+    }
+  }
+
+  private boolean compileSources(
           @NonNull JavaCompiler compiler,
           @NonNull String classpath,
-          @NonNull Path sourceFile,
+          @NonNull List<Path> sourceFiles,
           @NonNull Path outputDir) {
     var diagnostics = new DiagnosticCollector<JavaFileObject>();
     try (StandardJavaFileManager fm = compiler.getStandardFileManager(null, null, null)) {
       var options = List.of("-classpath", classpath, "-d", outputDir.toString());
-      var unit = fm.getJavaFileObjectsFromFiles(List.of(sourceFile.toFile()));
-      var task = compiler.getTask(null, fm, diagnostics, options, null, unit);
+      var units = fm.getJavaFileObjectsFromFiles(sourceFiles.stream()
+              .map(Path::toFile)
+              .toList());
+      var task = compiler.getTask(null, fm, diagnostics, options, null, units);
       if (!task.call()) {
         diagnostics.getDiagnostics().forEach(d -> log.error(
-                "[SourceCompiler] {}: {}", sourceFile.getFileName(), d.getMessage(null)));
+                "[SourceCompiler] compilation: {}", d.getMessage(null)));
         return false;
       }
       return true;
     } catch (IOException e) {
-      log.error("[SourceCompiler] Compilation of {} failed: {}",
-              sourceFile.getFileName(), e.getMessage(), e);
+      log.error("[SourceCompiler] Compilation failed: {}", e.getMessage(), e);
       return false;
     }
   }
@@ -172,7 +298,17 @@ public final class SourceCompiler {
     }
   }
 
-  private @NonNull List<DslObject> loadDefinitions(@NonNull Path outputDir) {
+  private @NonNull String qualifiedClassName(
+          @NonNull String className,
+          String targetPackage) {
+    return (targetPackage != null && !targetPackage.isBlank())
+            ? targetPackage + "." + className
+            : className;
+  }
+
+  private @NonNull List<DslObject> loadDefinitions(
+          @NonNull Path outputDir,
+          @NonNull String providerFqcn) {
     URL url;
     try {
       url = outputDir.toUri().toURL();
@@ -180,13 +316,12 @@ public final class SourceCompiler {
       log.error("[SourceCompiler] Failed to build output URL: {}", e.getMessage(), e);
       return List.of();
     }
-    try (var loader = new URLClassLoader(new URL[]{url},
-            Thread.currentThread().getContextClassLoader())) {
-      var providers = ServiceLoader.load(DslDefinitionProvider.class, loader);
-      for (var provider : providers) {
-        return provider.definitions();
-      }
-      log.error("[SourceCompiler] No DslDefinitionProvider found in {}", outputDir);
+    var loader = new URLClassLoader(new URL[]{url},
+            Thread.currentThread().getContextClassLoader());
+    try {
+      var clazz = loader.loadClass(providerFqcn);
+      var provider = (DslDefinitionProvider) clazz.getDeclaredConstructor().newInstance();
+      return provider.definitions();
     } catch (Exception e) {
       log.error("[SourceCompiler] Failed to load DSL definitions: {}", e.getMessage(), e);
     }

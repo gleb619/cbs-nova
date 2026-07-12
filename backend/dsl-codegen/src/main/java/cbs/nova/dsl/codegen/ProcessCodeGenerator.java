@@ -2,11 +2,10 @@ package cbs.nova.dsl.codegen;
 
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.utils.Substitutor;
-import org.jspecify.annotations.NonNull;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.jspecify.annotations.NonNull;
 
 public final class ProcessCodeGenerator {
 
@@ -15,12 +14,22 @@ public final class ProcessCodeGenerator {
   static String versionedPackage(String name, String version) {
     String nameSegment = name.toLowerCase().replaceAll("[^a-z0-9]", "");
     String versionSegment = version.replaceAll("[^a-z0-9]", "");
+    if (!versionSegment.isEmpty() && Character.isDigit(versionSegment.charAt(0))) {
+      versionSegment = "v" + versionSegment;
+    }
     return BASE_PACKAGE + "." + nameSegment + "." + versionSegment;
   }
 
   public @NonNull List<GeneratedSource> generate(@NonNull ProcessDescriptor descriptor) {
+    return generate(descriptor, null);
+  }
+
+  public @NonNull List<GeneratedSource> generate(
+          @NonNull ProcessDescriptor descriptor,
+          String buildVersion) {
     String name = descriptor.name();
     String pkg = versionedPackage(descriptor.name(), descriptor.version());
+    String versionConstant = resolveVersion(descriptor.version(), buildVersion);
     String interfaceName = name + "ProcessWorkflow";
     String implName = name + "ProcessDefinition";
 
@@ -29,9 +38,15 @@ public final class ProcessCodeGenerator {
                     generateInterface(pkg, interfaceName, descriptor)),
             new GeneratedSource(
                     pkg, implName, generateImpl(pkg, name, interfaceName, implName,
-                            descriptor.version(), descriptor.taskQueue(),
+                            versionConstant, descriptor.taskQueue(),
                             descriptor.inputType(), descriptor.outputType(),
                             descriptor.hasCompensation())));
+  }
+
+  private static @NonNull String resolveVersion(
+          @NonNull String descriptorVersion,
+          String buildVersion) {
+    return (buildVersion != null && !buildVersion.isBlank()) ? buildVersion : descriptorVersion;
   }
 
   private String generateInterface(String pkg, String interfaceName, ProcessDescriptor descriptor) {
@@ -68,8 +83,9 @@ public final class ProcessCodeGenerator {
   }
 
   private String generateImpl(
-          String pkg, String processName, String interfaceName, String implName, String version,
-          String taskQueue, Class<?> inputType, Class<?> outputType, boolean hasCompensation) {
+          String pkg, String processName, String interfaceName, String implName,
+          String versionConstant, String taskQueue, Class<?> inputType,
+          Class<?> outputType, boolean hasCompensation) {
     String inputTypeName = typeName(inputType);
     String outputTypeName = typeName(outputType);
     List<String> imports = new ArrayList<>();
@@ -78,7 +94,12 @@ public final class ProcessCodeGenerator {
 
     String importBlock = imports.isEmpty() ? "" : "\n" + String.join("\n", imports) + "\n";
 
-    String compensationTemplate = """
+    String compensationBody = hasCompensation
+            ? "() ->\n            GlobalManager.getInstance().runProcess(\"" + processName
+                    + "-compensation\", compensationCtx)"
+            : "() -> { /* default no-op compensation */ }";
+
+    String template = """
             package ${pkg};${importBlock}
             import cbs.nova.dsl.ExecutionMode;
             import cbs.nova.dsl.GlobalManager;
@@ -86,7 +107,6 @@ public final class ProcessCodeGenerator {
             import io.temporal.workflow.Saga;
             import io.temporal.workflow.Workflow;
             import java.util.Map;
-            import java.util.UUID;
 
             public class ${implName} implements ${interfaceName} {
               private static final String VERSION = "${version}";
@@ -104,9 +124,7 @@ public final class ProcessCodeGenerator {
                 String runId = Workflow.getInfo().getRunId();
                 var ctx = new SimpleContext<>(input, Map.of(), ExecutionMode.RUN, runId);
                 var compensationCtx = new SimpleContext<>(input, Map.of(), ExecutionMode.RUN, runId);
-                saga.addCompensation(
-                    () ->
-                        GlobalManager.getInstance().runProcess("${processName}-compensation", compensationCtx));
+                saga.addCompensation(${compensationBody});
                 try {
                   var result = GlobalManager.getInstance().runProcess("${processName}", ctx);
                   if (!result.isSuccess()) {
@@ -122,48 +140,20 @@ public final class ProcessCodeGenerator {
             }
             """;
 
-    String plainTemplate = """
-            package ${pkg};${importBlock}
-            import cbs.nova.dsl.ExecutionMode;
-            import cbs.nova.dsl.GlobalManager;
-            import cbs.nova.dsl.SimpleContext;
-            import io.temporal.workflow.Workflow;
-            import java.util.Map;
-
-            public class ${implName} implements ${interfaceName} {
-              private static final String VERSION = "${version}";
-
-              private static final String TASK_QUEUE = "${taskQueue}";
-
-              @Override
-              public String getVersion() {
-                return VERSION;
-              }
-
-              @Override
-              public ${outputTypeName} run(${inputTypeName} input) {
-                String runId = Workflow.getInfo().getRunId();
-                var ctx = new SimpleContext<>(input, Map.of(), ExecutionMode.RUN, runId);
-                var result = GlobalManager.getInstance().runProcess("${processName}", ctx);
-                if (!result.isSuccess()) throw new RuntimeException("Process failed", result.cause());
-                return ${castIfNeeded}result.value();
-              }
-            }
-            """;
-
     return Substitutor.format(
-            hasCompensation ? compensationTemplate : plainTemplate,
-            Map.of(
-                    "pkg", pkg,
-                    "importBlock", importBlock,
-                    "processName", processName,
-                    "interfaceName", interfaceName,
-                    "implName", implName,
-                    "version", version,
-                    "taskQueue", taskQueue,
-                    "outputTypeName", outputTypeName,
-                    "inputTypeName", inputTypeName,
-                    "castIfNeeded", castIfNeeded(outputType)));
+            template,
+            Map.ofEntries(
+                    Map.entry("pkg", pkg),
+                    Map.entry("importBlock", importBlock),
+                    Map.entry("processName", processName),
+                    Map.entry("interfaceName", interfaceName),
+                    Map.entry("implName", implName),
+                    Map.entry("version", versionConstant),
+                    Map.entry("taskQueue", taskQueue),
+                    Map.entry("outputTypeName", outputTypeName),
+                    Map.entry("inputTypeName", inputTypeName),
+                    Map.entry("castIfNeeded", castIfNeeded(outputType)),
+                    Map.entry("compensationBody", compensationBody)));
   }
 
   private String typeName(Class<?> type) {

@@ -12,9 +12,18 @@ public abstract class DslCompileExtension {
 
   public abstract Property<String> getDslVersion();
 
+  public abstract Property<String> getDslPackage();
+
+  public abstract Property<String> getBuildVersion();
+
+  public abstract Property<String> getLogLevel();
+
   public DslCompileExtension(Project project) {
     getSourceDir().convention(project.getLayout().getProjectDirectory().dir("src"));
     getOutputDir().convention(project.getLayout().getBuildDirectory().dir("generated"));
     getDslVersion().convention(project.getVersion().toString());
+    getDslPackage().convention("");
+    getBuildVersion().convention("");
+    getLogLevel().convention("TRACE");
   }
 }

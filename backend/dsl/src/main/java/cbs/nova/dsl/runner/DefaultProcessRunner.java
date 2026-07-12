@@ -20,10 +20,6 @@ public final class DefaultProcessRunner implements ProcessRunner {
   private final ExecutionTraceCollector traceCollector;
   private final ContextFactory contextFactory;
 
-  public DefaultProcessRunner() {
-    this(new ExecutionTraceCollector(), new ContextFactory());
-  }
-
   @Override
   public @NonNull Result<?> run(@NonNull ProcessDslObject process, @NonNull Context<?> ctx) {
     Result<?> result;

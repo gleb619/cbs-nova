@@ -3,7 +3,7 @@
 cbs-nova is a Temporal DSL Orchestration Engine with a Java backend and a Vue/Nuxt admin frontend.
 
 - Backend: declarative Java DSL that compiles to Temporal workflows/activities. Lives in `backend/`.
-- Frontend: Nuxt 3 admin UI with a Nitro BFF that proxies to Spring Boot. Lives in `frontend/`.
+- Frontend: `admin-ui-plugin` — a Nuxt module that mounts the full admin UI into any host Nuxt app. Includes a Nitro BFF that proxies to Spring Boot. Lives in `frontend/`.
 
 ## Task routing
 

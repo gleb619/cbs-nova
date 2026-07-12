@@ -5,13 +5,14 @@ junit = "5.12.2"
 assertj = "3.27.3"
 temporal = "1.27.0"
 javaparser = "3.28.1"
-wiremock = "3.9.1"
+wiremock = "3.13.2"
 testcontainers = "1.21.3"
 slf4j = "2.0.16"
 sentry = "7.0.0"
 lombok = "1.18.38"
 keycloak-admin-client = "22.0.0"
 rest-assured = "5.5.0"
+springdoc-openapi = "2.8.9"
 
 # plugins
 spring-boot = "4.0.4"
@@ -23,27 +24,26 @@ test-logger = "4.0.0"
 # -- Nullability --
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 
-# -- JUnit (BOM keeps platform and jupiter aligned) --
-junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
-junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
-junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
-assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
-
 # -- Temporal --
 temporal-sdk = { module = "io.temporal:temporal-sdk", version.ref = "temporal" }
 temporal-testing = { module = "io.temporal:temporal-testing", version.ref = "temporal" }
 
 # -- JavaParser (used by dsl-codegen) --
 javaparser = { module = "com.github.javaparser:javaparser-core", version.ref = "javaparser" }
-wiremock = { module = "org.wiremock:wiremock", version.ref = "wiremock" }
 
 # -- Testcontainers --
 testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
 testcontainers-core = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
 testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
 testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
-keycloak-admin-client = { module = "org.keycloak:keycloak-admin-client", version.ref = "keycloak-admin-client" }
+
+# -- JUnit (BOM keeps platform and jupiter aligned) --
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "rest-assured" }
+wiremock = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
 
 # -- SLF4J --
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
@@ -56,8 +56,11 @@ spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
 sentry-spring-boot-jakarta = { module = "io.sentry:sentry-spring-boot-starter-jakarta", version.ref = "sentry" }
 
+springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc-openapi" }
+
 # -- Misc --
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+keycloak-admin-client = { module = "org.keycloak:keycloak-admin-client", version.ref = "keycloak-admin-client" }
 
 [bundles]
 spring-web = ["spring-boot-starter-web", "spring-boot-starter-validation", "spring-boot-starter-actuator"]

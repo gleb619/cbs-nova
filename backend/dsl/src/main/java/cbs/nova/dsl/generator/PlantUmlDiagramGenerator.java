@@ -1,15 +1,13 @@
 package cbs.nova.dsl.generator;
 
-import cbs.nova.dsl.DiagramGenerator;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.dsl.utils.Substitutor;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
-
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 public final class PlantUmlDiagramGenerator implements DiagramGenerator {
 

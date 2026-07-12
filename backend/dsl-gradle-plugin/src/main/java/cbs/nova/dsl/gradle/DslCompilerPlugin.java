@@ -1,5 +1,6 @@
 package cbs.nova.dsl.gradle;
 
+import java.util.Map;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.plugins.JavaPlugin;
@@ -18,12 +19,16 @@ public class DslCompilerPlugin implements Plugin<Project> {
 
     var dslCompiler = project.getConfigurations().create("dslCompiler");
 
+    dslCompiler.exclude(Map.of("group", "ch.qos.logback"));
+    dslCompiler.exclude(Map.of(
+            "group", "org.springframework.boot",
+            "module", "spring-boot-starter-logging"));
+
     dslCompiler.defaultDependencies(dependencies -> {
       var version = extension.getDslVersion().get();
       dependencies.add(project.getDependencies().create("cbs.nova:dsl-codegen:" + version));
       dependencies.add(project.getDependencies().create("cbs.nova:dsl:" + version));
       dependencies.add(project.getDependencies().create("cbs.nova:dsl-api:" + version));
-      // dsl-model removed - dsl-examples provides its own POJOs
       dependencies.add(project.getDependencies().create("cbs.nova:starter:" + version));
     });
 
@@ -32,6 +37,9 @@ public class DslCompilerPlugin implements Plugin<Project> {
       task.setDescription("Compiles DSL compact source files with DslCompiler");
       task.getSourceDir().set(extension.getSourceDir());
       task.getOutputDir().set(extension.getOutputDir());
+      task.getDslPackage().set(extension.getDslPackage());
+      task.getBuildVersion().set(extension.getBuildVersion());
+      task.getLogLevel().set(extension.getLogLevel());
       task.setClasspath(dslCompiler);
     });
 

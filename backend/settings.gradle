@@ -23,7 +23,6 @@ include 'starter-example'
 include 'dsl-examples'
 include 'dsl-gradle-plugin'
 include 'misc-codegen'
-include 'integration-tests'
 
 dependencyResolutionManagement {
   repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)

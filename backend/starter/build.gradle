@@ -16,21 +16,27 @@ jar {
 dependencies {
   api project(":dsl-api")
   api project(':dsl')
+  api project(':misc-codegen')
 
-  api libs.bundles.spring.web
+  compileOnly libs.bundles.spring.web
+  compileOnly libs.spring.boot.starter.actuator
+  compileOnly libs.springdoc.openapi.starter.webmvc.ui
+
   api libs.temporal.sdk
-
-  api 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9'
   api libs.sentry.spring.boot.jakarta
 
-  annotationProcessor project(':dsl-codegen')
   annotationProcessor project(':misc-codegen')
 
-  testImplementation libs.bundles.spring.test
-
+  testAnnotationProcessor project(':dsl-codegen')
   testImplementation project(':dsl-examples')
-  testImplementation libs.temporal.testing
 
-  compileOnly 'org.springframework.boot:spring-boot-starter-actuator'
-  testImplementation 'org.springframework.boot:spring-boot-starter-actuator'
+  testImplementation libs.springdoc.openapi.starter.webmvc.ui
+  testImplementation libs.spring.boot.starter.actuator
+  testImplementation libs.bundles.spring.web
+  testImplementation libs.bundles.spring.test
+  testImplementation libs.temporal.testing
+  testImplementation libs.testcontainers.core
+  testImplementation libs.testcontainers.junit.jupiter
+  testImplementation libs.keycloak.admin.client
+  testImplementation libs.rest.assured
 }

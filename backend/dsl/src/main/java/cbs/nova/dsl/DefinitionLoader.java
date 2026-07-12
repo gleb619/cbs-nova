@@ -4,15 +4,6 @@ import cbs.nova.dsl.compact.CompactSourcePreprocessor;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
-import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
-
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaCompiler;
-import javax.tools.JavaFileObject;
-import javax.tools.StandardJavaFileManager;
-import javax.tools.ToolProvider;
-
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -23,6 +14,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ServiceLoader;
 import java.util.stream.Stream;
+import javax.tools.DiagnosticCollector;
+import javax.tools.JavaFileObject;
+import javax.tools.StandardJavaFileManager;
+import javax.tools.ToolProvider;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 
 @Slf4j
 public final class DefinitionLoader {
@@ -65,6 +62,7 @@ public final class DefinitionLoader {
     });
   }
 
+  // TODO: experimental
   public @NonNull List<DslObject> loadObjects(@NonNull Path sourceDir) {
     var compiler = ToolProvider.getSystemJavaCompiler();
     if (compiler == null) {

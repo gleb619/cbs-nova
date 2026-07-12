@@ -2,9 +2,8 @@ package cbs.nova.dsl;
 
 import cbs.nova.dsl.function.FunctionDescriptor;
 import cbs.nova.dsl.process.ProcessDescriptor;
+import cbs.nova.dsl.registry.HelperRegistry;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
-import org.jspecify.annotations.NonNull;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -13,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.jspecify.annotations.NonNull;
 
 public final class SemanticValidator {
 

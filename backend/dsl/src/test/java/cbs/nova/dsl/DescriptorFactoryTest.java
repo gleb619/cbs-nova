@@ -2,10 +2,10 @@ package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.config.DescriptorFactory;
 import cbs.nova.dsl.config.RetryPolicyFactory;
-import org.junit.jupiter.api.Test;
-
 import java.time.Duration;
+import org.junit.jupiter.api.Test;
 
 class DescriptorFactoryTest {
 

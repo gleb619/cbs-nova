@@ -6,13 +6,17 @@ Coding agent reference for Vue/Nuxt frontend. Architecture docs: `docs/architect
 
 ```
 frontend/
-├── admin-ui/                 # Nuxt 3 app (pages, BFF, auth)
+├── admin-ui-plugin/          # Nuxt module — mounts the full admin UI into any host Nuxt app
+│   ├── module.ts             # Nuxt module entrypoint (defineNuxtModule)
+│   ├── nuxt.config.dev.ts    # Standalone dev config — loads module.ts for local development
 │   ├── app/
-│   │   ├── components/       # ONLY app-specific shell/auth wrappers
-│   │   ├── pages/            # file-based routes
-│   │   ├── stores/           # Pinia stores
-│   │   └── layouts/          # Nuxt layouts
+│   │   ├── components/       # ONLY plugin-specific shell/auth wrappers
+│   │   ├── pages/            # file-based routes registered by the module
+│   │   ├── stores/           # Pinia stores (auto-imported by the module)
+│   │   └── layouts/          # Nuxt layouts registered by the module
 │   └── server/               # Nitro BFF: JWT, proxy to Spring Boot
+│       ├── api/v1/           # proxy routes merged into the host Nitro server
+│       └── utils/            # config helpers, HTTP client
 └── components/               # reusable Vue 3 + Vite library
     └── src/
         ├── components/       # exported SFCs
@@ -21,20 +25,33 @@ frontend/
         └── tailwind.config.ts # canonical theme
 ```
 
-**Rule:** Most code lives in `components/`. `admin-ui` is thin—imports bulk of UI from `@cbs/components`.
+**Rule:** Most code lives in `components/`. `admin-ui-plugin` is thin — imports bulk of UI from `@cbs/components`.
 
 ## Core Rules
 
+### Plugin architecture
+- `admin-ui-plugin` is a **Nuxt module** (`module.ts`). A host Nuxt app activates it via:
+  ```ts
+  // host nuxt.config.ts
+  export default defineNuxtConfig({
+    modules: ['@cbs/admin-ui-plugin'],
+  })
+  ```
+- `nuxt.config.dev.ts` is only used for standalone local development (`pnpm dev`).
+- The module registers pages, layouts, composables, Nitro server routes, and runtime config into the host app automatically.
+- `routePrefix` option controls where admin routes are mounted (default: `/`).
+
 ### Components-first
 - **Reusable components/composables/types go in `components/src/` first**
-- `admin-ui` imports via `@cbs/components` or `@cbs/components/types`
-- No duplication between `components/` and `admin-ui/app/`
+- `admin-ui-plugin` imports via `@cbs/components` or `@cbs/components/types`
+- No duplication between `components/` and `admin-ui-plugin/app/`
 
-### What stays in `admin-ui`
+### What stays in `admin-ui-plugin`
 - Pages, layouts, Pinia stores
 - BFF routes (`server/api/v1/`) and JWT helpers (`server/utils/`)
 - BFF-coupled composables (e.g., `useDslApi`)
-- App-specific Nuxt wrappers
+- Plugin-specific Nuxt wrappers
+- `module.ts` — the Nuxt module definition
 
 ### What moves to `components`
 - All reusable SFCs
@@ -44,7 +61,7 @@ frontend/
 
 ### Communication
 - **Browser never calls Spring Boot directly**
-- All API traffic through `admin-ui/server/api/v1/*` Nitro routes
+- All API traffic through `admin-ui-plugin/server/api/v1/*` Nitro routes (merged into host)
 - BFF manages JWT, forwards calls, translates errors
 - Browser holds only session cookie; tokens server-side
 
@@ -53,7 +70,7 @@ frontend/
 - Import shared theme via `@cbs/components/tailwind.config`
 - Source of truth: `components/src/tailwind.config.ts`
 - Prefer semantic tokens: `bg-background`, `text-neutral-800`, `bg-primary-500`
-- No hard-coded colors in `admin-ui`
+- No hard-coded colors in `admin-ui-plugin`
 
 ### Vue/Nuxt/TS
 - Use `<script setup lang="ts">` for all SFCs
@@ -72,28 +89,30 @@ frontend/
 
 ```bash
 pnpm install                 # install workspace dependencies
-pnpm dev                     # start admin-ui dev server
-pnpm build                   # build admin-ui
+pnpm dev                     # start admin-ui-plugin dev server (standalone)
+pnpm build                   # build admin-ui-plugin standalone
 pnpm build:components        # build component library
-pnpm test                    # run admin-ui tests
+pnpm test                    # run admin-ui-plugin tests
 pnpm check                   # biome lint + format check
 pnpm check:fix               # biome fix
 ```
 
 Package-specific:
 ```bash
-pnpm --filter admin-ui dev
+pnpm --filter @cbs/admin-ui-plugin dev
 pnpm --filter components build
 ```
 
 ## Agent Workflows
 
-- **Add page**: Create Vue file in `admin-ui/app/pages/`, wire navigation in sidebar. Import from `@cbs/components`.
-- **Add shared component**: Build in `components/src/components/`, export from `components/src/index.ts`, import via `@cbs/components` in `admin-ui`.
-- **Add API consumer**: Add Nitro route under `admin-ui/server/api/v1/`, reuse `server/utils/` helpers.
+- **Add page**: Create Vue file in `admin-ui-plugin/app/pages/`, register the route in `module.ts` via `extendPages`. Import from `@cbs/components`.
+- **Add shared component**: Build in `components/src/components/`, export from `components/src/index.ts`, import via `@cbs/components` in `admin-ui-plugin`.
+- **Add API consumer**: Add Nitro route under `admin-ui-plugin/server/api/v1/`, reuse `server/utils/` helpers.
 - **Change colors**: Edit `components/src/tailwind.config.ts` and `docs/colors.md`.
-- **Add client state**: Add Pinia store in `admin-ui/app/stores/`.
-- **Move code to components**: Update internal imports to relative paths, update `components/src/index.ts` exports, adjust `admin-ui` imports.
+- **Add client state**: Add Pinia store in `admin-ui-plugin/app/stores/`.
+- **Move code to components**: Update internal imports to relative paths, update `components/src/index.ts` exports, adjust `admin-ui-plugin` imports.
+- **Add module option**: Extend `ModuleOptions` in `module.ts` and wire it in the `setup()` function.
+- **Change route prefix**: Set `routePrefix` in the host app's `adminUiPlugin` config key.
 
 ## Key Docs
 

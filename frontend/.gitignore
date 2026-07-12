@@ -2,9 +2,9 @@
 node_modules
 
 # Build outputs
-admin-ui/.nuxt
-admin-ui/.output
-admin-ui/.data
+admin-ui-plugin/.nuxt
+admin-ui-plugin/.output
+admin-ui-plugin/.data
 components/dist
 
 # Environment files

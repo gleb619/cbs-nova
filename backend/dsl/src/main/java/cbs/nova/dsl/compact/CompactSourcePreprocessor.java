@@ -1,10 +1,9 @@
 package cbs.nova.dsl.compact;
 
 import cbs.nova.dsl.DslCompactSource;
-import org.jspecify.annotations.NonNull;
-
 import java.util.ArrayList;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Turns a compact DSL source file (no package/class declaration, one {@code define()} method) into
@@ -25,17 +24,23 @@ public final class CompactSourcePreprocessor {
   }
 
   /**
-   * Validates and preprocesses the given compact source.
-   *
-   * @param fileName
-   *          the original file name, used to derive the class name
-   * @param rawSource
-   *          the raw compact source text
-   * @return the derived class name and the wrapped source
-   * @throws IllegalArgumentException
-   *           if the source fails static validation
+   * Validates and preprocesses the given compact source without a target package.
    */
   public static @NonNull Result preprocess(@NonNull String fileName, @NonNull String rawSource) {
+    return preprocess(fileName, rawSource, null);
+  }
+
+  /**
+   * Validates and preprocesses the given compact source, optionally injecting a target package.
+   *
+   * @param targetPackage
+   *          optional package to inject; if null/blank the compiled class stays in the default
+   *          package
+   */
+  public static @NonNull Result preprocess(
+          @NonNull String fileName,
+          @NonNull String rawSource,
+          String targetPackage) {
     if (!isValidCompactSource(rawSource)) {
       throw new IllegalArgumentException(
               fileName + " is not a valid compact DSL source: " + validationErrors(rawSource));
@@ -43,14 +48,7 @@ public final class CompactSourcePreprocessor {
     var className = className(fileName);
     var split = splitImports(rawSource);
     var body = ensurePublicDefine(split.body());
-    return new Result(className, wrapInClass(className, split.imports(), body));
-  }
-
-  private static @NonNull String className(@NonNull String fileName) {
-    if (!fileName.endsWith(".java")) {
-      throw new IllegalArgumentException("DSL source file must end with .java: " + fileName);
-    }
-    return fileName.substring(0, fileName.length() - ".java".length());
+    return new Result(className, wrapInClass(className, split.imports(), body, targetPackage));
   }
 
   public static boolean isValidCompactSource(@NonNull String source) {
@@ -85,8 +83,12 @@ public final class CompactSourcePreprocessor {
   private static @NonNull String wrapInClass(
           @NonNull String className,
           @NonNull String imports,
-          @NonNull String body) {
+          @NonNull String body,
+          String targetPackage) {
     var sb = new StringBuilder();
+    if (targetPackage != null && !targetPackage.isBlank()) {
+      sb.append("package ").append(targetPackage).append(";\n\n");
+    }
     if (!imports.isEmpty()) {
       sb.append(imports).append("\n");
     }
@@ -111,6 +113,13 @@ public final class CompactSourcePreprocessor {
     }
     body.append(source.substring(lastEnd));
     return new SourceSplit(imports.toString().stripTrailing(), body.toString());
+  }
+
+  private static @NonNull String className(@NonNull String fileName) {
+    if (!fileName.endsWith(".java")) {
+      throw new IllegalArgumentException("DSL source file must end with .java: " + fileName);
+    }
+    return fileName.substring(0, fileName.length() - ".java".length());
   }
 
   private record SourceSplit(@NonNull String imports, @NonNull String body) {

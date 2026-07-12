@@ -10,14 +10,6 @@ dependencyManagement {
   }
 }
 
-sourceSets {
-  dslModels {
-    java {
-      srcDirs = ['src/main/java']
-    }
-  }
-}
-
 dependencies {
   implementation project(':dsl-api')
   implementation project(':dsl')
@@ -30,30 +22,18 @@ dependencies {
   dslCompiler project(':starter')
 }
 
-tasks.register('compileDslModels', JavaCompile) {
-  source = sourceSets.dslModels.java
-  classpath = sourceSets.main.compileClasspath
-  destinationDirectory = layout.buildDirectory.dir('classes/dsl-models')
-}
-
-tasks.named('compileDsl', JavaExec) {
-  dependsOn 'compileDslModels'
-  classpath.from(tasks.compileDslModels.outputs.files)
-  getOutputDir().set(layout.buildDirectory.dir('generated-dsl'))
-}
-
 dslCompile {
-  sourceDir = layout.projectDirectory.dir('dsl')
-}
-
-tasks.named('compileJava', JavaCompile) {
-  dependsOn 'compileDsl'
-  source += fileTree(layout.buildDirectory.dir('generated-dsl')) { include '**/*.java' }
+  dslPackage = 'cbs.nova.dslexamples'
 }
 
 spotless {
   java {
-    targetExclude 'dsl/**/*.java'
-    targetExclude layout.buildDirectory.dir('generated-dsl').get().asFile
+    targetExclude 'src/dsl/**/*.java'
+    targetExclude 'src/models/**/*.java'
+    targetExclude 'build/generated/**/*.java'
   }
+}
+
+tasks.named('spotlessJava') {
+  dependsOn 'compileDsl'
 }

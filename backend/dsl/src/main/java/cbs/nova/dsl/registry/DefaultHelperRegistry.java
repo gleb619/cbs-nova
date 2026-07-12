@@ -1,15 +1,13 @@
 package cbs.nova.dsl.registry;
 
 import cbs.nova.dsl.Executable;
-import cbs.nova.dsl.HelperRegistry;
 import cbs.nova.dsl.function.FunctionDslObject;
-import org.jspecify.annotations.NonNull;
-
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import org.jspecify.annotations.NonNull;
 
 public final class DefaultHelperRegistry implements HelperRegistry {
 

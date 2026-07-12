@@ -1,6 +1,6 @@
 package cbs.nova.dsl;
 
-import cbs.nova.dsl.config.DslRuntimeConfig;
+import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.process.ProcessManager;
@@ -9,12 +9,11 @@ import cbs.nova.dsl.registry.DefaultProcessRegistry;
 import cbs.nova.dsl.registry.DefaultTransactionRegistry;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.dsl.transaction.TransactionManager;
-import lombok.RequiredArgsConstructor;
-import org.jspecify.annotations.NonNull;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.ServiceLoader;
+import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 
 @RequiredArgsConstructor
 public final class GlobalManager {
@@ -29,7 +28,7 @@ public final class GlobalManager {
     if (INSTANCE == null) {
       synchronized (GlobalManager.class) {
         if (INSTANCE == null) {
-          var config = new DslRuntimeConfig();
+          var config = DslConfig.dslConfig();
           var traceCollector = config.executionTraceCollector();
           var contextFactory = config.contextFactory();
           INSTANCE = new GlobalManager(

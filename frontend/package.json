@@ -5,10 +5,10 @@
   "type": "module",
   "packageManager": "pnpm@9.0.0",
   "scripts": {
-    "dev": "pnpm --filter admin-ui dev",
-    "build": "pnpm --filter admin-ui build",
+    "dev": "pnpm --filter @cbs/admin-ui-plugin dev",
+    "build": "pnpm --filter @cbs/admin-ui-plugin build",
     "build:components": "pnpm --filter components build",
-    "test": "pnpm --filter admin-ui test",
+    "test": "pnpm --filter @cbs/admin-ui-plugin test",
     "check": "biome check .",
     "check:fix": "biome check --write .",
     "lint": "biome lint .",

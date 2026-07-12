@@ -4,11 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 
+import cbs.nova.dsl.config.DescriptorFactory;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
-import org.junit.jupiter.api.Test;
-
+import cbs.nova.dsl.registry.HelperRegistry;
 import java.util.List;
+import org.junit.jupiter.api.Test;
 
 class SemanticValidatorTest {
 

@@ -18,10 +18,6 @@ public final class DefaultTransactionRunner implements TransactionRunner {
   private final ExecutionTraceCollector traceCollector;
   private final ContextFactory contextFactory;
 
-  public DefaultTransactionRunner() {
-    this(new ExecutionTraceCollector(), new ContextFactory());
-  }
-
   @Override
   public @NonNull Result<?> run(
           @NonNull TransactionDslObject transaction, @NonNull Context<?> ctx) {

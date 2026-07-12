@@ -8,10 +8,10 @@ import cbs.nova.dsl.registry.DefaultHelperRegistry;
 import cbs.nova.dsl.runner.DefaultHelperRunner;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
+import cbs.nova.dsl.runner.HelperRunner;
 import cbs.nova.dsl.transaction.TransactionRunner;
-import org.junit.jupiter.api.Test;
-
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.junit.jupiter.api.Test;
 
 class RunnerTest {
 

@@ -3,12 +3,10 @@ package cbs.nova.dsl.transaction;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslEntityNotFoundException;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.TransactionRegistry;
-import lombok.RequiredArgsConstructor;
-import org.jspecify.annotations.NonNull;
-
 import java.util.List;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 
 @RequiredArgsConstructor
 public final class TransactionManager {

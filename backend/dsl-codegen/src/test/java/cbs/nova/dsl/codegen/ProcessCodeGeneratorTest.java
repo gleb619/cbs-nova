@@ -2,9 +2,9 @@ package cbs.nova.dsl.codegen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.DescriptorFactory;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.DescriptorFactory;
 import org.junit.jupiter.api.Test;
 
 class ProcessCodeGeneratorTest {
@@ -90,7 +90,7 @@ class ProcessCodeGeneratorTest {
   }
 
   @Test
-  void withoutCompensationNoSagaCode() {
+  void withoutCompensationUsesDefaultNoOpCompensation() {
     var descriptor = new DescriptorFactory().fromProcess(
             Dsl.process("LoanDisbursement")
                     .input(String.class)
@@ -99,7 +99,11 @@ class ProcessCodeGeneratorTest {
                     .build());
 
     var impl = generator.generate(descriptor).get(1);
-    assertThat(impl.source()).doesNotContain("Saga");
+    assertThat(impl.source()).contains("Saga");
+    assertThat(impl.source()).contains("saga.addCompensation");
+    assertThat(impl.source()).contains("saga.compensate()");
+    assertThat(impl.source()).contains("default no-op compensation");
+    assertThat(impl.source()).doesNotContain("LoanDisbursement-compensation");
   }
 
   @Test

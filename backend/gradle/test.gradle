@@ -1,5 +1,19 @@
 apply plugin: 'com.adarshr.test-logger'
 
+sourceSets {
+  integrationTest {
+    java.srcDirs = ['src/integrationTest/java']
+    resources.srcDirs = ['src/integrationTest/resources', 'src/test/resources']
+    compileClasspath += sourceSets.main.output
+    runtimeClasspath += sourceSets.main.output
+  }
+}
+
+configurations {
+  integrationTestImplementation.extendsFrom testImplementation
+  integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
 tasks.withType(Test).configureEach {
   useJUnitPlatform()
 
@@ -9,6 +23,13 @@ tasks.withType(Test).configureEach {
     showStandardStreams = false
     showExceptions = true
   }
+}
+
+tasks.register('integrationTest', Test) {
+  useJUnitPlatform()
+  group = 'verification'
+  testClassesDirs = sourceSets.integrationTest.output.classesDirs
+  classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
 testlogger {

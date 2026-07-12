@@ -1,0 +1,36 @@
+{
+  "name": "@cbs/admin-ui-plugin",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./module.ts",
+  "exports": {
+    ".": "./module.ts"
+  },
+  "scripts": {
+    "dev": "nuxt dev --config nuxt.config.dev.ts",
+    "build": "nuxt build --config nuxt.config.dev.ts",
+    "generate": "nuxt generate --config nuxt.config.dev.ts",
+    "preview": "nuxt preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@cbs/components": "workspace:*",
+    "@nuxt/kit": "^3.11.0",
+    "@pinia/nuxt": "^0.5.0",
+    "nuxt": "^3.11.0",
+    "vue": "^3.4.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.0",
+    "@vitest/ui": "^2.1.0",
+    "@vue/test-utils": "^2.4.0",
+    "autoprefixer": "^10.4.0",
+    "happy-dom": "^17.0.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.4.0",
+    "vitest": "^2.1.0"
+  }
+}

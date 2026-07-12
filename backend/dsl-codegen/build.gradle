@@ -6,6 +6,7 @@ dependencies {
   implementation project(":dsl-api")
   implementation project(':dsl')
   implementation libs.slf4j.api
+  runtimeOnly libs.slf4j.simple
   implementation libs.javaparser
 
   testImplementation platform(libs.junit.bom)
