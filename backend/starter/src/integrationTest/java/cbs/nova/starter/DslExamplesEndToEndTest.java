@@ -4,11 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.DslTemporalProcessRequest;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dslexamples.sampleprocess.v1.SampleProcessProcessWorkflow;
+import cbs.nova.dslexamples.BatchModels.BatchIn;
+import cbs.nova.dslexamples.BatchModels.BatchItem;
+import cbs.nova.dslexamples.BatchModels.BatchOut;
+import cbs.nova.dslexamples.batchprocessing.v1.BatchProcessingProcessWorkflow;
 import io.restassured.RestAssured;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.client.WorkflowStub;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.AfterEach;
@@ -21,7 +25,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = IntegrationTestApplication.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = IntegrationTestApplication.class, properties = {"dsl.task-queue=BatchProcessing-queue"})
 @Import(TemporalTestConfiguration.class)
 class DslExamplesEndToEndTest extends BaseContainers {
 
@@ -53,21 +57,23 @@ class DslExamplesEndToEndTest extends BaseContainers {
 
   @Test
   void generatedDslWorkflowExecutesThroughTemporal() throws TimeoutException {
-    String workflowId = "sample-process-test-" + System.currentTimeMillis();
-    String runId = workflowId;
-    var request = new DslTemporalProcessRequest(runId, "integration-test");
+    String workflowId = "batch-processing-test-" + System.currentTimeMillis();
+    var input = new BatchIn(List.of(new BatchItem("a", 1), new BatchItem("b", 2)));
+    var request = new DslTemporalProcessRequest(workflowId, input);
 
     var stub = workflowClient.newWorkflowStub(
-            SampleProcessProcessWorkflow.class,
+            BatchProcessingProcessWorkflow.class,
             WorkflowOptions.newBuilder()
-                    .setTaskQueue("SampleProcess-queue")
+                    .setTaskQueue("BatchProcessing-queue")
                     .setWorkflowId(workflowId)
                     .build());
 
     WorkflowStub.fromTyped(stub).start(request);
     Object result = WorkflowStub.fromTyped(stub).getResult(30, TimeUnit.SECONDS, Object.class);
 
-    assertThat(result).isEqualTo("Hello from DSL: integration-test");
+    BatchOut out = (BatchOut) result;
+    assertThat(out.total()).isEqualTo(3);
+    assertThat(out.summary()).isEqualTo("Processed: a=1, b=2");
   }
 
   @Test

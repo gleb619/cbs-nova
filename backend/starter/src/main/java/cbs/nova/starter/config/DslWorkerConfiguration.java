@@ -33,7 +33,9 @@ public class DslWorkerConfiguration {
   private void registerGeneratedImplementations(Worker worker) {
     var resolver = new PathMatchingResourcePatternResolver();
     var readerFactory = new CachingMetadataReaderFactory();
-    String packageSearchPath = "classpath*:cbs/nova/dsl/generated/**/*.class";
+    // Generated implementations may live under the default cbs.nova.dsl.generated tree or under a
+    // project-specific package such as cbs.nova.dslexamples. The dsl* wildcard covers both.
+    String packageSearchPath = "classpath*:cbs/nova/dsl*/**/*.class";
     try {
       var resources = resolver.getResources(packageSearchPath);
       for (var resource : resources) {
