@@ -2,22 +2,24 @@ package cbs.nova.dsl.codegen;
 
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.utils.Substitutor;
-import org.jspecify.annotations.NonNull;
-
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
+@RequiredArgsConstructor
 public final class TransactionCodeGenerator {
 
-  public @NonNull List<GeneratedSource> generate(@NonNull TransactionDescriptor descriptor) {
-    return generate(descriptor, null);
-  }
+  private final CodegenNaming codegenNaming;
 
   public @NonNull List<GeneratedSource> generate(
           @NonNull TransactionDescriptor descriptor,
-          String buildVersion) {
+          @Nullable String buildVersion,
+          @Nullable String targetPackage) {
     String name = descriptor.name();
-    String pkg = ProcessCodeGenerator.versionedPackage(descriptor.name(), descriptor.version());
+    String pkg = codegenNaming.versionedPackage(descriptor.name(), descriptor.version(),
+            targetPackage);
     String versionConstant = resolveVersion(descriptor.version(), buildVersion);
     String interfaceName = name + "TransactionActivity";
     String implName = name + "TransactionDefinition";

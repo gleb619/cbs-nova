@@ -2,11 +2,10 @@ package cbs.nova.dsl.codegen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class DslCompilerTest {
 
@@ -105,7 +104,7 @@ class DslCompilerTest {
     assertThat(outDir.resolve("cbs/nova/dsl/codegen/test/GeneratedDslDefinitionProvider.class"))
             .exists();
 
-    var dir = outDir.resolve("cbs/nova/dsl/generated/versionedprocess/v1");
+    var dir = outDir.resolve("cbs/nova/dsl/codegen/test/versionedprocess/v1");
     assertThat(dir.resolve("VersionedProcessProcessWorkflow.java")).exists();
     assertThat(dir.resolve("VersionedProcessProcessDefinition.java")).exists();
     assertThat(Files.readString(dir.resolve("VersionedProcessProcessDefinition.java")))

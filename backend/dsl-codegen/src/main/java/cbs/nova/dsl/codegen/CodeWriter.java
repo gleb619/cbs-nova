@@ -1,15 +1,14 @@
 package cbs.nova.dsl.codegen;
 
-import org.jspecify.annotations.NonNull;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import org.jspecify.annotations.NonNull;
 
 public final class CodeWriter {
 
-  public static void write(@NonNull List<GeneratedSource> sources, @NonNull Path outputDir)
+  public void write(@NonNull List<GeneratedSource> sources, @NonNull Path outputDir)
           throws IOException {
     for (var source : sources) {
       var packagePath = source.packageName().replace('.', '/');
@@ -19,7 +18,7 @@ public final class CodeWriter {
     }
   }
 
-  public static void writeServiceFile(
+  public void writeServiceFile(
           @NonNull String serviceInterface,
           @NonNull List<String> providerFqns,
           @NonNull Path outputDir) throws IOException {

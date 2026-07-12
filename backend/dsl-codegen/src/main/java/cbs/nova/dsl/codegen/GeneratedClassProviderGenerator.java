@@ -4,17 +4,23 @@ import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.utils.Substitutor;
-import org.jspecify.annotations.NonNull;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
+@RequiredArgsConstructor
 public final class GeneratedClassProviderGenerator {
 
-  public @NonNull GeneratedSource forProcess(@NonNull ProcessDescriptor descriptor) {
+  private final CodegenNaming codegenNaming;
+
+  public @NonNull GeneratedSource forProcess(
+          @NonNull ProcessDescriptor descriptor,
+          @Nullable String targetPackage) {
     String name = descriptor.name();
-    String pkg = ProcessCodeGenerator.versionedPackage(name, descriptor.version());
+    String pkg = codegenNaming.versionedPackage(name, descriptor.version(), targetPackage);
     String interfaceName = name + "ProcessWorkflow";
     String implName = name + "ProcessDefinition";
     String providerClass = name + "GeneratedClassProvider";
@@ -24,9 +30,11 @@ public final class GeneratedClassProviderGenerator {
             descriptor.inputType(), descriptor.outputType());
   }
 
-  public @NonNull GeneratedSource forTransaction(@NonNull TransactionDescriptor descriptor) {
+  public @NonNull GeneratedSource forTransaction(
+          @NonNull TransactionDescriptor descriptor,
+          @Nullable String targetPackage) {
     String name = descriptor.name();
-    String pkg = ProcessCodeGenerator.versionedPackage(name, descriptor.version());
+    String pkg = codegenNaming.versionedPackage(name, descriptor.version(), targetPackage);
     String interfaceName = name + "TransactionActivity";
     String implName = name + "TransactionDefinition";
     String providerClass = name + "GeneratedClassProvider";

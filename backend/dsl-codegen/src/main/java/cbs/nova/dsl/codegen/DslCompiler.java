@@ -8,39 +8,74 @@ import cbs.nova.dsl.function.FunctionDescriptor;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.process.ProcessDslObject;
-import cbs.nova.dsl.registry.DefaultHelperRegistry;
+import cbs.nova.dsl.registry.HelperRegistry;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.transaction.TransactionDslObject;
-import lombok.extern.slf4j.Slf4j;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
+import org.slf4j.event.Level;
 
 @Slf4j
+@RequiredArgsConstructor
 public final class DslCompiler {
+
+  private final DslSourceCompiler dslSourceCompiler;
+  private final ProcessCodeGenerator processCodeGenerator;
+  private final TransactionCodeGenerator transactionCodeGenerator;
+  private final GeneratedClassProviderGenerator generatedClassProviderGenerator;
+  private final CodeWriter codeWriter;
+  private final DescriptorFactory descriptorFactory;
+  private final SemanticValidator semanticValidator;
+  private final HelperRegistry helperRegistry;
+  private final Level logLevel;
 
   public static void main(String[] args) throws IOException {
     if (args.length < 2) {
-      log.error("Usage: DslCompiler <srcDir> <outputDir> [version] [targetPackage] [logLevel]");
+      log.atLevel(Level.ERROR).log(
+              () -> "Usage: DslCompiler <srcDir> <outputDir> [version] [targetPackage] [logLevel]");
       System.exit(1);
     }
     var srcDir = Path.of(args[0]);
     var outputDir = Path.of(args[1]);
     var version = args.length > 2 ? nullIfBlank(args[2]) : null;
     var targetPackage = args.length > 3 ? nullIfBlank(args[3]) : null;
-    compile(srcDir, outputDir, version, targetPackage);
+    var logLevelArg = args.length > 4 ? nullIfBlank(args[4]) : null;
+    var logLevel = logLevelArg != null ? Level.valueOf(logLevelArg.toUpperCase()) : Level.INFO;
+    compile(srcDir, outputDir, version, targetPackage, logLevel);
   }
 
   public static void compile(Path srcDir, Path outputDir) throws IOException {
-    compile(srcDir, outputDir, null, null);
+    compile(srcDir, outputDir, null, null, Level.INFO);
   }
 
   public static void compile(
           Path srcDir, Path outputDir, String version, String targetPackage) throws IOException {
-    var options = new SourceCompiler.CompileOptions(version, targetPackage);
-    List<DslObject> objects = new DslSourceCompiler().compileAndLoad(srcDir, outputDir, options);
+    compile(srcDir, outputDir, version, targetPackage, Level.INFO);
+  }
+
+  public static void compile(
+          Path srcDir,
+          Path outputDir,
+          String version,
+          String targetPackage,
+          Level logLevel) throws IOException {
+    CompileConfig.compileConfig(logLevel)
+            .dslCompiler()
+            .compileInternal(srcDir, outputDir, version, targetPackage);
+  }
+
+  private void compileInternal(
+          @NonNull Path srcDir,
+          @NonNull Path outputDir,
+          String version,
+          String targetPackage) throws IOException {
+    var options = new SourceCompiler.CompileOptions(version, targetPackage, logLevel);
+    List<DslObject> objects = dslSourceCompiler.compileAndLoad(srcDir, outputDir, options);
 
     var processes = new ArrayList<ProcessDescriptor>();
     var transactions = new ArrayList<TransactionDescriptor>();
@@ -48,39 +83,37 @@ public final class DslCompiler {
 
     for (DslObject obj : objects) {
       switch (obj.type()) {
-        case PROCESS -> processes.add(new DescriptorFactory().fromProcess((ProcessDslObject) obj));
+        case PROCESS -> processes.add(descriptorFactory.fromProcess((ProcessDslObject) obj));
         case TRANSACTION ->
-          transactions.add(new DescriptorFactory().fromTransaction((TransactionDslObject) obj));
+          transactions.add(descriptorFactory.fromTransaction((TransactionDslObject) obj));
         case FUNCTION ->
-          functions.add(new DescriptorFactory().fromFunction((FunctionDslObject) obj));
+          functions.add(descriptorFactory.fromFunction((FunctionDslObject) obj));
       }
     }
 
-    new SemanticValidator().validate(processes, transactions, functions,
-            new DefaultHelperRegistry());
+    semanticValidator.validate(processes, transactions, functions,
+            helperRegistry);
 
-    var processGen = new ProcessCodeGenerator();
-    var txGen = new TransactionCodeGenerator();
-    var providerGen = new GeneratedClassProviderGenerator();
     var sources = new ArrayList<GeneratedSource>();
     var providerFqns = new ArrayList<String>();
 
     for (var p : processes) {
-      sources.addAll(processGen.generate(p, version));
-      var provider = providerGen.forProcess(p);
+      sources.addAll(processCodeGenerator.generate(p, version, targetPackage));
+      var provider = generatedClassProviderGenerator.forProcess(p, targetPackage);
       sources.add(provider);
       providerFqns.add(provider.fullyQualifiedName());
     }
     for (var t : transactions) {
-      sources.addAll(txGen.generate(t, version));
-      var provider = providerGen.forTransaction(t);
+      sources.addAll(transactionCodeGenerator.generate(t, version, targetPackage));
+      var provider = generatedClassProviderGenerator.forTransaction(t, targetPackage);
       sources.add(provider);
       providerFqns.add(provider.fullyQualifiedName());
     }
 
-    CodeWriter.write(sources, outputDir);
-    CodeWriter.writeServiceFile(GeneratedClassProvider.class.getName(), providerFqns, outputDir);
-    log.info("[DslCompiler] Generated {} source(s) to {}", sources.size(), outputDir);
+    codeWriter.write(sources, outputDir);
+    codeWriter.writeServiceFile(GeneratedClassProvider.class.getName(), providerFqns, outputDir);
+    log.atLevel(logLevel).log(() -> "[DslCompiler] Generated %s source(s) to %s"
+            .formatted(sources.size(), outputDir));
   }
 
   private static String nullIfBlank(String value) {

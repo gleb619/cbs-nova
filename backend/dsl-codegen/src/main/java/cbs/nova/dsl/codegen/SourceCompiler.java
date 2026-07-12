@@ -2,25 +2,8 @@ package cbs.nova.dsl.codegen;
 
 import cbs.nova.dsl.DslDefinitionProvider;
 import cbs.nova.dsl.DslObject;
-import cbs.nova.dsl.SemanticValidator;
 import cbs.nova.dsl.compact.CompactSourcePreprocessor;
 import cbs.nova.dsl.compact.ModelSourcePreprocessor;
-import cbs.nova.dsl.config.DescriptorFactory;
-import cbs.nova.dsl.function.FunctionDescriptor;
-import cbs.nova.dsl.function.FunctionDslObject;
-import cbs.nova.dsl.process.ProcessDescriptor;
-import cbs.nova.dsl.process.ProcessDslObject;
-import cbs.nova.dsl.registry.DefaultHelperRegistry;
-import cbs.nova.dsl.transaction.TransactionDescriptor;
-import cbs.nova.dsl.transaction.TransactionDslObject;
-import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
-
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaCompiler;
-import javax.tools.JavaFileObject;
-import javax.tools.StandardJavaFileManager;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -34,62 +17,21 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Stream;
+import javax.tools.DiagnosticCollector;
+import javax.tools.JavaCompiler;
+import javax.tools.JavaFileObject;
+import javax.tools.StandardJavaFileManager;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
+import org.slf4j.event.Level;
 
 @Slf4j
+@RequiredArgsConstructor
 public final class SourceCompiler {
 
-  public record CompileOptions(
-          String buildVersion,
-          String targetPackage) {
-  }
-
-  public record Descriptors(
-          @NonNull List<ProcessDescriptor> processes,
-          @NonNull List<TransactionDescriptor> transactions,
-          @NonNull List<FunctionDescriptor> functions) {
-  }
-
-  private record PreprocessedSource(@NonNull String className, @NonNull Path sourceFile) {
-  }
-
-  private record PreprocessResult(@NonNull String className, @NonNull String fileName,
-          @NonNull String source) {
-  }
-
-  public @NonNull Descriptors compileAndDescribe(
-          @NonNull Path srcDir, @NonNull Path outputDir, @NonNull JavaCompiler compiler)
-          throws IOException {
-    return compileAndDescribe(srcDir, outputDir, compiler, new CompileOptions(null, null));
-  }
-
-  public @NonNull Descriptors compileAndDescribe(
-          @NonNull Path srcDir,
-          @NonNull Path outputDir,
-          @NonNull JavaCompiler compiler,
-          CompileOptions options) throws IOException {
-    var objects = compileAndLoad(srcDir, outputDir, compiler, options);
-    var processes = new ArrayList<ProcessDescriptor>();
-    var transactions = new ArrayList<TransactionDescriptor>();
-    var functions = new ArrayList<FunctionDescriptor>();
-    for (var obj : objects) {
-      switch (obj.type()) {
-        case PROCESS -> processes.add(new DescriptorFactory().fromProcess((ProcessDslObject) obj));
-        case TRANSACTION ->
-          transactions.add(new DescriptorFactory().fromTransaction((TransactionDslObject) obj));
-        case FUNCTION ->
-          functions.add(new DescriptorFactory().fromFunction((FunctionDslObject) obj));
-      }
-    }
-    new SemanticValidator().validate(processes, transactions, functions,
-            new DefaultHelperRegistry());
-    return new Descriptors(processes, transactions, functions);
-  }
-
-  public @NonNull List<DslObject> compileAndLoad(
-          @NonNull Path srcDir, @NonNull Path outputDir, @NonNull JavaCompiler compiler)
-          throws IOException {
-    return compileAndLoad(srcDir, outputDir, compiler, new CompileOptions(null, null));
-  }
+  private final Level logLevel;
+  private final DefinitionProviderGenerator definitionProviderGenerator;
 
   public @NonNull List<DslObject> compileAndLoad(
           @NonNull Path srcDir,
@@ -106,12 +48,14 @@ public final class SourceCompiler {
     var modelSources = collectJavaSources(modelsDir);
 
     if (dslSources.isEmpty() && modelSources.isEmpty()) {
-      log.warn("[SourceCompiler] No .java sources found under {} (expected dsl/ and models/)",
-              srcDir);
+      log.atLevel(logLevel).log(
+              () -> "[SourceCompiler] No .java sources found under %s (expected dsl/ and models/)"
+                      .formatted(srcDir));
       return List.of();
     }
     if (dslSources.isEmpty()) {
-      log.warn("[SourceCompiler] No DSL sources found under {}", dslDir);
+      log.atLevel(logLevel)
+              .log(() -> "[SourceCompiler] No DSL sources found under %s".formatted(dslDir));
       return List.of();
     }
 
@@ -119,7 +63,9 @@ public final class SourceCompiler {
 
     var dslResults = preprocessInVirtualThreads(dslSources, targetPackage, true);
     if (dslResults.isEmpty()) {
-      log.warn("[SourceCompiler] No valid compact DSL sources found under {}", dslDir);
+      log.atLevel(logLevel)
+              .log(() -> "[SourceCompiler] No valid compact DSL sources found under %s"
+                      .formatted(dslDir));
       return List.of();
     }
 
@@ -145,7 +91,7 @@ public final class SourceCompiler {
       compiledClassNames.add(qualifiedClassName(source.className(), targetPackage));
     }
 
-    var providerFqcn = new DefinitionProviderGenerator().generate(
+    var providerFqcn = definitionProviderGenerator.generate(
             outputDir, compiledClassNames, targetPackage);
     var providerSource = outputDir.resolve(
             (targetPackage != null && !targetPackage.isBlank())
@@ -215,7 +161,8 @@ public final class SourceCompiler {
     for (var result : results) {
       var outputFile = outputDir.resolve(result.fileName());
       Files.writeString(outputFile, result.source());
-      log.info("[SourceCompiler] Preprocessed {} -> {}", result.fileName(), outputFile);
+      log.atLevel(logLevel).log(() -> "[SourceCompiler] Preprocessed %s -> %s"
+              .formatted(result.fileName(), outputFile));
       written.add(new PreprocessedSource(result.className(), outputFile));
     }
     return written;
@@ -228,10 +175,11 @@ public final class SourceCompiler {
     var rawSource = Files.readString(sourceFile);
     try {
       var result = CompactSourcePreprocessor.preprocess(fileName, rawSource, targetPackage);
-      log.info("[SourceCompiler] Preprocessed DSL {}", sourceFile);
+      log.atLevel(logLevel)
+              .log(() -> "[SourceCompiler] Preprocessed DSL %s".formatted(sourceFile));
       return new PreprocessResult(result.className(), fileName, result.preprocessedSource());
     } catch (IllegalArgumentException e) {
-      log.error("[SourceCompiler] {}", e.getMessage());
+      log.atLevel(logLevel).log(() -> "[SourceCompiler] %s".formatted(e.getMessage()));
       return null;
     }
   }
@@ -247,10 +195,11 @@ public final class SourceCompiler {
                 "targetPackage is required to preprocess model " + fileName);
       }
       var result = ModelSourcePreprocessor.preprocess(fileName, rawSource, targetPackage);
-      log.info("[SourceCompiler] Preprocessed model {}", sourceFile);
+      log.atLevel(logLevel)
+              .log(() -> "[SourceCompiler] Preprocessed model %s".formatted(sourceFile));
       return new PreprocessResult(result.className(), fileName, result.preprocessedSource());
     } catch (IllegalArgumentException e) {
-      log.error("[SourceCompiler] {}", e.getMessage());
+      log.atLevel(logLevel).log(() -> "[SourceCompiler] %s".formatted(e.getMessage()));
       return null;
     }
   }
@@ -268,13 +217,14 @@ public final class SourceCompiler {
               .toList());
       var task = compiler.getTask(null, fm, diagnostics, options, null, units);
       if (!task.call()) {
-        diagnostics.getDiagnostics().forEach(d -> log.error(
-                "[SourceCompiler] compilation: {}", d.getMessage(null)));
+        diagnostics.getDiagnostics().forEach(d -> log.atLevel(logLevel)
+                .log(() -> "[SourceCompiler] compilation: %s".formatted(d.getMessage(null))));
         return false;
       }
       return true;
     } catch (IOException e) {
-      log.error("[SourceCompiler] Compilation failed: {}", e.getMessage(), e);
+      log.atLevel(logLevel).setCause(e)
+              .log(() -> "[SourceCompiler] Compilation failed: %s".formatted(e.getMessage()));
       return false;
     }
   }
@@ -292,7 +242,8 @@ public final class SourceCompiler {
       var task = compiler.getTask(null, fm, diagnostics, options, null, unit);
       if (!task.call()) {
         diagnostics.getDiagnostics().forEach(
-                d -> log.error("[SourceCompiler] provider: {}", d.getMessage(null)));
+                d -> log.atLevel(logLevel)
+                        .log(() -> "[SourceCompiler] provider: %s".formatted(d.getMessage(null))));
         throw new IllegalStateException("Failed to compile generated DSL definition provider");
       }
     } catch (IOException e) {
@@ -315,7 +266,8 @@ public final class SourceCompiler {
     try {
       url = outputDir.toUri().toURL();
     } catch (IOException e) {
-      log.error("[SourceCompiler] Failed to build output URL: {}", e.getMessage(), e);
+      log.atLevel(logLevel).setCause(e).log(
+              () -> "[SourceCompiler] Failed to build output URL: %s".formatted(e.getMessage()));
       return List.of();
     }
     var loader = new URLClassLoader(new URL[]{url},
@@ -325,8 +277,26 @@ public final class SourceCompiler {
       var provider = (DslDefinitionProvider) clazz.getDeclaredConstructor().newInstance();
       return provider.definitions();
     } catch (Exception e) {
-      log.error("[SourceCompiler] Failed to load DSL definitions: {}", e.getMessage(), e);
+      log.atLevel(logLevel).setCause(e)
+              .log(() -> "[SourceCompiler] Failed to load DSL definitions: %s"
+                      .formatted(e.getMessage()));
     }
     return List.of();
   }
+
+  /* ============= */
+
+  public record CompileOptions(
+          String buildVersion,
+          String targetPackage,
+          Level logLevel) {
+  }
+
+  private record PreprocessedSource(@NonNull String className, @NonNull Path sourceFile) {
+  }
+
+  private record PreprocessResult(@NonNull String className, @NonNull String fileName,
+          @NonNull String source) {
+  }
+
 }

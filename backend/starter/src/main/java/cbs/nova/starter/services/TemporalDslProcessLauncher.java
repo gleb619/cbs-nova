@@ -9,13 +9,13 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.TemporalProcessLauncher;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
-import lombok.RequiredArgsConstructor;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
-
+import io.temporal.workflow.Workflow;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.time.Duration;
+import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Temporal implementation of {@link TemporalProcessLauncher}. It resolves the generated workflow
@@ -41,7 +41,7 @@ public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
     try {
       // If Workflow.getInfo() succeeds we are already inside a workflow thread;
       // let the in-workflow runner execute the DSL logic directly.
-      io.temporal.workflow.Workflow.getInfo();
+      Workflow.getInfo();
       return false;
     } catch (Throwable t) {
       return true;

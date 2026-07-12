@@ -2,18 +2,22 @@ package cbs.nova.dsl.codegen;
 
 import cbs.nova.dsl.DslDefinitionProvider;
 import cbs.nova.dsl.utils.Substitutor;
-import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
+import org.slf4j.event.Level;
 
 @Slf4j
+@RequiredArgsConstructor
 public final class DefinitionProviderGenerator {
+
+  private final Level logLevel;
 
   static final String PROVIDER_CLASS = "GeneratedDslDefinitionProvider";
   static final String SERVICE_PATH = "META-INF/services/" + DslDefinitionProvider.class.getName();
@@ -62,12 +66,14 @@ public final class DefinitionProviderGenerator {
             "className", PROVIDER_CLASS,
             "registrations", registrations));
     Files.writeString(sourceFile, source);
-    log.info("[DefinitionProviderGenerator] Wrote provider source to {}", sourceFile);
+    log.atLevel(logLevel).log(() -> "[DefinitionProviderGenerator] Wrote provider source to %s"
+            .formatted(sourceFile));
 
     var serviceFile = outputDir.resolve(SERVICE_PATH);
     Files.createDirectories(serviceFile.getParent());
     Files.writeString(serviceFile, providerFqcn + System.lineSeparator());
-    log.info("[DefinitionProviderGenerator] Wrote SPI descriptor to {}", serviceFile);
+    log.atLevel(logLevel).log(() -> "[DefinitionProviderGenerator] Wrote SPI descriptor to %s"
+            .formatted(serviceFile));
 
     return providerFqcn;
   }

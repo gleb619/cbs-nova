@@ -9,7 +9,8 @@ import org.junit.jupiter.api.Test;
 
 class TransactionCodeGeneratorTest {
 
-  private final TransactionCodeGenerator generator = new TransactionCodeGenerator();
+  private final TransactionCodeGenerator generator = new TransactionCodeGenerator(
+          new CodegenNaming());
 
   @Test
   void generatesTwoSources() {
@@ -20,7 +21,7 @@ class TransactionCodeGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var sources = generator.generate(descriptor);
+    var sources = generator.generate(descriptor, null, null);
     assertThat(sources).hasSize(2);
   }
 
@@ -33,7 +34,7 @@ class TransactionCodeGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var iface = generator.generate(descriptor).get(0);
+    var iface = generator.generate(descriptor, null, null).get(0);
     assertThat(iface.className()).isEqualTo("LoanDisbursementTransactionActivity");
     assertThat(iface.source()).contains("@ActivityInterface");
     assertThat(iface.source()).contains("@ActivityMethod");
@@ -50,7 +51,7 @@ class TransactionCodeGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var sources = generator.generate(descriptor);
+    var sources = generator.generate(descriptor, null, null);
     assertThat(sources.get(0).packageName())
             .isEqualTo("cbs.nova.dsl.generated.loandisbursement.v1");
   }
@@ -64,7 +65,7 @@ class TransactionCodeGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var impl = generator.generate(descriptor).get(1);
+    var impl = generator.generate(descriptor, null, null).get(1);
     assertThat(impl.className()).isEqualTo("LoanDisbursementTransactionDefinition");
     assertThat(impl.source()).contains("implements LoanDisbursementTransactionActivity");
     assertThat(impl.source())
@@ -76,7 +77,7 @@ class TransactionCodeGeneratorTest {
   void interfaceHasGetVersion() {
     var descriptor = new DescriptorFactory().fromTransaction(
             Dsl.transaction("FooTx").execute(ctx -> Result.success("x")).build());
-    var iface = generator.generate(descriptor).get(0);
+    var iface = generator.generate(descriptor, null, null).get(0);
     assertThat(iface.source()).contains("@ActivityMethod");
     assertThat(iface.source()).contains("String getVersion()");
   }
@@ -86,7 +87,7 @@ class TransactionCodeGeneratorTest {
     var descriptor = new DescriptorFactory().fromTransaction(
             Dsl.transaction("FooTx").version("v3").execute(ctx -> Result.success("x"))
                     .build());
-    var impl = generator.generate(descriptor).get(1);
+    var impl = generator.generate(descriptor, null, null).get(1);
     assertThat(impl.source()).contains("\"v3\"");
     assertThat(impl.source()).contains("getVersion()");
   }
@@ -95,7 +96,7 @@ class TransactionCodeGeneratorTest {
   void implContainsTaskQueueConstant() {
     var descriptor = new DescriptorFactory().fromTransaction(
             Dsl.transaction("FooTx").execute(ctx -> Result.success("x")).build());
-    var impl = generator.generate(descriptor).get(1);
+    var impl = generator.generate(descriptor, null, null).get(1);
     assertThat(impl.source()).contains("TASK_QUEUE");
     assertThat(impl.source()).contains("FooTx-queue");
   }

@@ -2,18 +2,18 @@ package cbs.nova.dsl.codegen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.event.Level;
 
 class DefinitionProviderGeneratorTest {
 
   @Test
   void writesProviderSourceAndSpiFile(@TempDir Path outDir) throws Exception {
-    var generator = new DefinitionProviderGenerator();
+    var generator = new DefinitionProviderGenerator(Level.INFO);
     var fqcn = generator.generate(outDir, List.of("FooDsl", "BarDsl"));
 
     var source = outDir.resolve("GeneratedDslDefinitionProvider.java");
@@ -33,7 +33,7 @@ class DefinitionProviderGeneratorTest {
 
   @Test
   void emptyClassListProducesEmptyRegistrations(@TempDir Path outDir) throws Exception {
-    var generator = new DefinitionProviderGenerator();
+    var generator = new DefinitionProviderGenerator(Level.INFO);
     var fqcn = generator.generate(outDir, List.of());
 
     var source = outDir.resolve("GeneratedDslDefinitionProvider.java");

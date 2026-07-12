@@ -21,6 +21,10 @@ public interface SingletonSupport {
     return singleton(() -> Replaceable.of(factory));
   }
 
+  default <T> Replaceable<T> replaceable() {
+    return replaceable(() -> null);
+  }
+
   @FunctionalInterface
   interface Factory<T> extends Supplier<T> {
 
@@ -43,10 +47,6 @@ public interface SingletonSupport {
 
     static <U> Replaceable<U> of(Factory<U> factory) {
       return new ReplaceableImpl<>(factory);
-    }
-
-    static <U> Replaceable<U> empty() {
-      return of(() -> null);
     }
   }
 

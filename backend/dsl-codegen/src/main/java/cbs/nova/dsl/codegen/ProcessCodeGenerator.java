@@ -2,34 +2,25 @@ package cbs.nova.dsl.codegen;
 
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.utils.Substitutor;
-import org.jspecify.annotations.NonNull;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
+@RequiredArgsConstructor
 public final class ProcessCodeGenerator {
 
-  private static final String BASE_PACKAGE = "cbs.nova.dsl.generated";
-
-  static String versionedPackage(String name, String version) {
-    String nameSegment = name.toLowerCase().replaceAll("[^a-z0-9]", "");
-    String versionSegment = version.replaceAll("[^a-z0-9]", "");
-    if (!versionSegment.isEmpty() && Character.isDigit(versionSegment.charAt(0))) {
-      versionSegment = "v" + versionSegment;
-    }
-    return BASE_PACKAGE + "." + nameSegment + "." + versionSegment;
-  }
-
-  public @NonNull List<GeneratedSource> generate(@NonNull ProcessDescriptor descriptor) {
-    return generate(descriptor, null);
-  }
+  private final CodegenNaming codegenNaming;
 
   public @NonNull List<GeneratedSource> generate(
           @NonNull ProcessDescriptor descriptor,
-          String buildVersion) {
+          @Nullable String buildVersion,
+          @Nullable String targetPackage) {
     String name = descriptor.name();
-    String pkg = versionedPackage(descriptor.name(), descriptor.version());
+    String pkg = codegenNaming.versionedPackage(descriptor.name(), descriptor.version(),
+            targetPackage);
     String versionConstant = resolveVersion(descriptor.version(), buildVersion);
     String interfaceName = name + "ProcessWorkflow";
     String implName = name + "ProcessDefinition";

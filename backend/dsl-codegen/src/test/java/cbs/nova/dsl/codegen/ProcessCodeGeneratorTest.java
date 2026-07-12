@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 
 class ProcessCodeGeneratorTest {
 
-  private final ProcessCodeGenerator generator = new ProcessCodeGenerator();
+  private final ProcessCodeGenerator generator = new ProcessCodeGenerator(new CodegenNaming());
 
   @Test
   void generatesTwoSources() {
@@ -20,7 +20,7 @@ class ProcessCodeGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var sources = generator.generate(descriptor);
+    var sources = generator.generate(descriptor, null, null);
     assertThat(sources).hasSize(2);
   }
 
@@ -33,7 +33,7 @@ class ProcessCodeGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var iface = generator.generate(descriptor).get(0);
+    var iface = generator.generate(descriptor, null, null).get(0);
     assertThat(iface.className()).isEqualTo("LoanDisbursementProcessWorkflow");
     assertThat(iface.source()).contains("@WorkflowInterface");
     assertThat(iface.source()).contains("@WorkflowMethod");
@@ -50,7 +50,7 @@ class ProcessCodeGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var sources = generator.generate(descriptor);
+    var sources = generator.generate(descriptor, null, null);
     assertThat(sources.get(0).packageName())
             .isEqualTo("cbs.nova.dsl.generated.loandisbursement.v1");
   }
@@ -64,7 +64,7 @@ class ProcessCodeGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var impl = generator.generate(descriptor).get(1);
+    var impl = generator.generate(descriptor, null, null).get(1);
     assertThat(impl.className()).isEqualTo("LoanDisbursementProcessDefinition");
     assertThat(impl.source()).contains("implements LoanDisbursementProcessWorkflow");
     assertThat(impl.source())
@@ -82,7 +82,7 @@ class ProcessCodeGeneratorTest {
                     .compensation(ctx -> Result.success(null))
                     .build());
 
-    var impl = generator.generate(descriptor).get(1);
+    var impl = generator.generate(descriptor, null, null).get(1);
     assertThat(impl.source()).contains("Saga");
     assertThat(impl.source()).contains("saga.addCompensation");
     assertThat(impl.source()).contains("saga.compensate()");
@@ -98,7 +98,7 @@ class ProcessCodeGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var impl = generator.generate(descriptor).get(1);
+    var impl = generator.generate(descriptor, null, null).get(1);
     assertThat(impl.source()).contains("Saga");
     assertThat(impl.source()).contains("saga.addCompensation");
     assertThat(impl.source()).contains("saga.compensate()");
@@ -110,7 +110,7 @@ class ProcessCodeGeneratorTest {
   void interfaceHasGetVersion() {
     var descriptor = new DescriptorFactory().fromProcess(
             Dsl.process("Foo").execute(ctx -> Result.success("x")).build());
-    var iface = generator.generate(descriptor).get(0);
+    var iface = generator.generate(descriptor, null, null).get(0);
     assertThat(iface.source()).contains("@QueryMethod");
     assertThat(iface.source()).contains("String getVersion()");
   }
@@ -120,7 +120,7 @@ class ProcessCodeGeneratorTest {
     var descriptor = new DescriptorFactory().fromProcess(
             Dsl.process("Foo").version("v2").execute(ctx -> Result.success("x"))
                     .build());
-    var impl = generator.generate(descriptor).get(1);
+    var impl = generator.generate(descriptor, null, null).get(1);
     assertThat(impl.source()).contains("\"v2\"");
     assertThat(impl.source()).contains("getVersion()");
   }
@@ -129,7 +129,7 @@ class ProcessCodeGeneratorTest {
   void implContainsTaskQueueConstant() {
     var descriptor = new DescriptorFactory().fromProcess(
             Dsl.process("Foo").execute(ctx -> Result.success("x")).build());
-    var impl = generator.generate(descriptor).get(1);
+    var impl = generator.generate(descriptor, null, null).get(1);
     assertThat(impl.source()).contains("TASK_QUEUE");
     assertThat(impl.source()).contains("Foo-queue");
   }
