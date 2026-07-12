@@ -15,11 +15,14 @@ importers:
         specifier: ^5.4.0
         version: 5.9.3
 
-  admin-ui:
+  admin-ui-plugin:
     dependencies:
       '@cbs/components':
         specifier: workspace:*
         version: link:../components
+      '@nuxt/kit':
+        specifier: ^3.11.0
+        version: 3.21.8(magicast@0.5.3)
       '@pinia/nuxt':
         specifier: ^0.5.0
         version: 0.5.5(magicast@0.5.3)(typescript@5.9.3)(vue@3.5.39(typescript@5.9.3))
