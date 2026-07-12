@@ -33,14 +33,17 @@ public class DevDslRuntime implements DslRuntime {
   @Override
   public @NonNull Result<PreviewReport> preview(@NonNull String name, @NonNull Context<?> ctx) {
     List<ExternalCallTracker.CallDetail> calls = new ArrayList<>();
+    String runId = runIdFor(ctx);
     externalCallTracker.startTracking(calls);
-    traceCollector.start();
+    traceCollector.start(runId);
     try {
-      Result<?> result = dispatch(name, ctx, ExecutionMode.PREVIEW);
+      Result<?> result = dispatch(name,
+              contextFactory.of(ctx.body(), ctx.metadata(), ExecutionMode.PREVIEW, runId),
+              ExecutionMode.PREVIEW);
       List<String> trace = new ArrayList<>();
       trace.add("started: " + name);
       trace.add("mode: PREVIEW");
-      trace.addAll(traceCollector.snapshot());
+      trace.addAll(traceCollector.snapshot(runId));
       if (result.isSuccess()) {
         trace.add("completed successfully");
         PreviewReport report = new PreviewReport(
@@ -57,7 +60,7 @@ public class DevDslRuntime implements DslRuntime {
         return Result.failure(result.cause());
       }
     } finally {
-      traceCollector.stop();
+      traceCollector.stop(runId);
       externalCallTracker.stopTracking();
     }
   }
@@ -76,10 +79,13 @@ public class DevDslRuntime implements DslRuntime {
   @Override
   public @NonNull ExplainReport explain(@NonNull String name, @NonNull Context<?> ctx) {
     List<ExternalCallTracker.CallDetail> calls = new ArrayList<>();
+    String runId = runIdFor(ctx);
     externalCallTracker.startTracking(calls);
-    traceCollector.start();
+    traceCollector.start(runId);
     try {
-      Result<?> result = dispatch(name, ctx, ExecutionMode.EXPLAIN);
+      Result<?> result = dispatch(name,
+              contextFactory.of(ctx.body(), ctx.metadata(), ExecutionMode.EXPLAIN, runId),
+              ExecutionMode.EXPLAIN);
       String description = result.isSuccess()
               ? "Executed " + name + " successfully"
               : "Execution of " + name + " failed: " + result.cause().getMessage();
@@ -107,7 +113,7 @@ public class DevDslRuntime implements DslRuntime {
       var trace = new ArrayList<String>();
       trace.add("started: " + name);
       trace.add("mode: EXPLAIN");
-      trace.addAll(traceCollector.snapshot());
+      trace.addAll(traceCollector.snapshot(runId));
       if (result.isSuccess()) {
         Object val = result.value();
         trace.add("result: " + (val != null ? val.toString() : "null"));
@@ -132,7 +138,7 @@ public class DevDslRuntime implements DslRuntime {
               gm2.describeHelper(name).orElse(null),
               dslDesc);
     } finally {
-      traceCollector.stop();
+      traceCollector.stop(runId);
       externalCallTracker.stopTracking();
     }
   }
@@ -160,9 +166,7 @@ public class DevDslRuntime implements DslRuntime {
   }
 
   private Result<?> dispatch(String name, Context<?> ctx, ExecutionMode mode) {
-    String runId = (ctx.runId() == null || ctx.runId().isBlank())
-            ? contextFactory.generateRunId()
-            : ctx.runId();
+    String runId = runIdFor(ctx);
     var modeCtx = contextFactory.of(ctx.body(), ctx.metadata(), mode, runId);
     GlobalManager gm = GlobalManager.getInstance();
     if (gm.hasProcess(name)) {
@@ -175,5 +179,10 @@ public class DevDslRuntime implements DslRuntime {
       return gm.runHelper(name, modeCtx);
     }
     return Result.failure(new IllegalArgumentException("No DSL entity registered: " + name));
+  }
+
+  private @NonNull String runIdFor(@NonNull Context<?> ctx) {
+    String runId = ctx.runId();
+    return (runId == null || runId.isBlank()) ? contextFactory.generateRunId() : runId;
   }
 }

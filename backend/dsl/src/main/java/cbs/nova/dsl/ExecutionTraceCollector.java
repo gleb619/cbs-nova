@@ -1,31 +1,39 @@
 package cbs.nova.dsl;
 
-import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
-@RequiredArgsConstructor
 public final class ExecutionTraceCollector {
 
-  private final ThreadLocal<List<String>> trace = new ThreadLocal<>();
+  private final ConcurrentHashMap<String, List<String>> traces = new ConcurrentHashMap<>();
 
-  public void start() {
-    trace.set(new ArrayList<>());
+  public ExecutionTraceCollector() {
   }
 
-  public void stop() {
-    trace.remove();
+  public void start(@NonNull String runId) {
+    traces.put(runId, Collections.synchronizedList(new ArrayList<>()));
   }
 
-  public @NonNull List<String> snapshot() {
-    List<String> current = trace.get();
-    return current != null ? List.copyOf(current) : List.of();
+  public void stop(@NonNull String runId) {
+    traces.remove(runId);
   }
 
-  public void add(@NonNull String entry) {
-    List<String> current = trace.get();
+  public @NonNull List<String> snapshot(@NonNull String runId) {
+    List<String> current = traces.get(runId);
+    if (current == null) {
+      return List.of();
+    }
+    synchronized (current) {
+      return List.copyOf(current);
+    }
+  }
+
+  public void add(@NonNull String runId, @NonNull String entry) {
+    List<String> current = traces.get(runId);
     if (current != null) {
       current.add(entry);
     }

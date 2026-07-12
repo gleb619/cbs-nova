@@ -55,7 +55,7 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name) {
     Result<?> result = GlobalManager.getInstance().runHelper(name, delegate);
-    traceCollector.add("called helper: " + name);
+    traceCollector.add(delegate.runId(), "called helper: " + name);
     return result;
   }
 
@@ -63,7 +63,7 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input) {
     Result<?> result = GlobalManager.getInstance().runHelper(name,
             contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
-    traceCollector.add("called helper: " + name);
+    traceCollector.add(delegate.runId(), "called helper: " + name);
     return result;
   }
 
@@ -76,14 +76,14 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
     }
     Result<?> result = GlobalManager.getInstance().runHelper(name,
             contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
-    traceCollector.add("called helper: " + name);
+    traceCollector.add(delegate.runId(), "called helper: " + name);
     return result;
   }
 
   @Override
   public @NonNull Result<?> runTransaction(@NonNull String name) {
     Result<?> result = invokeTransaction(name, delegate.body());
-    traceCollector.add("executed transaction: " + name);
+    traceCollector.add(delegate.runId(), "executed transaction: " + name);
     return result;
   }
 
@@ -91,7 +91,7 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   public @NonNull Result<?> runTransaction(@NonNull String name,
           @NonNull Map<String, Object> input) {
     Result<?> result = invokeTransaction(name, (Object) input);
-    traceCollector.add("executed transaction: " + name);
+    traceCollector.add(delegate.runId(), "executed transaction: " + name);
     return result;
   }
 
@@ -103,7 +103,7 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
       return runTransaction(name, typed);
     }
     Result<?> result = invokeTransaction(name, input);
-    traceCollector.add("executed transaction: " + name);
+    traceCollector.add(delegate.runId(), "executed transaction: " + name);
     return result;
   }
 

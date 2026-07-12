@@ -19,12 +19,12 @@ class CompensationRichContextTest {
   void setUp() {
     delegate = contextFactory.of("payload", ExecutionMode.RUN, RUN_ID);
     failure = new RuntimeException("execute failed");
-    traceCollector.start();
+    traceCollector.start(RUN_ID);
   }
 
   @AfterEach
   void tearDown() {
-    traceCollector.stop();
+    traceCollector.stop(RUN_ID);
   }
 
   private CompensationRichContext<String> newContext() {
@@ -79,7 +79,7 @@ class CompensationRichContextTest {
   void logAddsToTrace() {
     var ctx = newContext();
     ctx.log("rollback done");
-    assertThat(traceCollector.snapshot())
+    assertThat(traceCollector.snapshot(RUN_ID))
             .anyMatch(e -> e.contains("rollback done"));
   }
 }
