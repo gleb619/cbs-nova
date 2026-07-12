@@ -67,7 +67,23 @@ class DslIntrospectionResourceTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("LoanDisbursement"))
             .andExpect(jsonPath("$.version").value("v1"))
-            .andExpect(jsonPath("$.hasCompensation").value(false));
+            .andExpect(jsonPath("$.hasCompensation").value(false))
+            .andExpect(jsonPath("$.inputSchema").exists());
+  }
+
+  @Test
+  void processDetailEndpointReturnsInputSchemaForParameterBasedProcess() throws Exception {
+    GlobalManager.getInstance()
+            .registerProcess(
+                    Dsl.process("ParamBasedProcess")
+                            .parameters(p -> p.number("amount"))
+                            .execute(ctx -> Result.success("ok")).build());
+
+    mockMvc
+            .perform(get("/api/dsl/processes/ParamBasedProcess"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.inputSchema.type").value("object"))
+            .andExpect(jsonPath("$.inputSchema.properties.amount").exists());
   }
 
   @Test
