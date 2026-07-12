@@ -43,12 +43,12 @@ class ProcessCodeGeneratorTest {
     assertThat(iface.className()).isEqualTo("LoanDisbursementProcessWorkflow");
     assertThat(iface.source()).contains("@WorkflowInterface");
     assertThat(iface.source()).contains("@WorkflowMethod");
-    assertThat(iface.source()).contains(
-            "interface LoanDisbursementProcessWorkflow extends "
-                    + DslTemporalProcess.class.getSimpleName());
+    assertThat(iface.source())
+            .contains("interface LoanDisbursementProcessWorkflow extends "
+                    + DslTemporalProcess.class.getSimpleName() + "<String>");
     assertThat(iface.source())
             .contains("Object execute(" + DslTemporalProcessRequest.class.getSimpleName()
-                    + " request)");
+                    + "<String> request)");
   }
 
   @Test
@@ -81,9 +81,9 @@ class ProcessCodeGeneratorTest {
             .contains("GlobalManager.getInstance().runProcess(\"LoanDisbursement\"");
     assertThat(impl.source()).contains("ExecutionMode.RUN");
     assertThat(impl.source())
-            .contains(DslTemporalProcessRequest.class.getSimpleName() + " request");
+            .contains(DslTemporalProcessRequest.class.getSimpleName() + "<String> request");
     assertThat(impl.source()).contains("request.runId()");
-    assertThat(impl.source()).contains("request.payload()");
+    assertThat(impl.source()).contains("String input = request.payload()");
   }
 
   @Test

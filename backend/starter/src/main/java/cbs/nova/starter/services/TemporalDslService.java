@@ -61,7 +61,7 @@ public class TemporalDslService {
       String runId = effectiveOptions.getWorkflowId();
       var stub = workflowClient.newWorkflowStub(descriptor.temporalInterface(), effectiveOptions);
       DslTemporalProcess process = (DslTemporalProcess) stub;
-      Object result = process.execute(new DslTemporalProcessRequest(runId, preparedInput));
+      Object result = process.execute(new DslTemporalProcessRequest<>(runId, preparedInput));
       return outputType.cast(result);
     } catch (RuntimeException e) {
       Throwable cause = e.getCause() != null ? e.getCause() : e;

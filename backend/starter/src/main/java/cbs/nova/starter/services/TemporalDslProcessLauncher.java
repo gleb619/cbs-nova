@@ -75,7 +75,7 @@ public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
     var stub = workflowClient.newWorkflowStub(descriptor.temporalInterface(), options);
     try {
       DslTemporalProcess process = (DslTemporalProcess) stub;
-      Object result = process.execute(new DslTemporalProcessRequest(ctx.runId(), ctx.body()));
+      Object result = process.execute(new DslTemporalProcessRequest<>(ctx.runId(), ctx.body()));
       return Result.success(result);
     } catch (Exception e) {
       Throwable cause = e.getCause() != null ? e.getCause() : e;

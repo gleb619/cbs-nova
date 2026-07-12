@@ -12,9 +12,6 @@ import io.restassured.RestAssured;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.client.WorkflowStub;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,7 +22,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = IntegrationTestApplication.class, properties = {"dsl.task-queue=BatchProcessing-queue"})
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = IntegrationTestApplication.class, properties = {
+    "dsl.task-queue=BatchProcessing-queue"})
 @Import(TemporalTestConfiguration.class)
 class DslExamplesEndToEndTest extends BaseContainers {
 
@@ -69,11 +71,10 @@ class DslExamplesEndToEndTest extends BaseContainers {
                     .build());
 
     WorkflowStub.fromTyped(stub).start(request);
-    Object result = WorkflowStub.fromTyped(stub).getResult(30, TimeUnit.SECONDS, Object.class);
+    BatchOut result = WorkflowStub.fromTyped(stub).getResult(30, TimeUnit.SECONDS, BatchOut.class);
 
-    BatchOut out = (BatchOut) result;
-    assertThat(out.total()).isEqualTo(3);
-    assertThat(out.summary()).isEqualTo("Processed: a=1, b=2");
+    assertThat(result.total()).isEqualTo(3);
+    assertThat(result.summary()).isEqualTo("Processed: a=1, b=2");
   }
 
   @Test
