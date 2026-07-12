@@ -3,14 +3,17 @@ package cbs.nova.starter.services;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslExecutionException;
 import cbs.nova.dsl.DslTemporalProcess;
+import cbs.nova.dsl.DslTemporalProcessFailure;
 import cbs.nova.dsl.DslTemporalProcessRequest;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.TemporalProcessLauncher;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
+import io.temporal.common.RetryOptions;
 import io.temporal.workflow.Workflow;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
@@ -70,12 +73,21 @@ public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
             .setWorkflowId(ctx.runId())
             .setWorkflowExecutionTimeout(EXECUTION_TIMEOUT)
             .setWorkflowTaskTimeout(TASK_TIMEOUT)
+            .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(1).build())
             .build();
 
     var stub = workflowClient.newWorkflowStub(descriptor.temporalInterface(), options);
     try {
       DslTemporalProcess process = (DslTemporalProcess) stub;
       Object result = process.execute(new DslTemporalProcessRequest<>(ctx.runId(), ctx.body()));
+      if (result instanceof DslTemporalProcessFailure failure) {
+        return Result.failure(new DslExecutionException(ctx.runId(),
+                failure.message() + ": " + failure.detail(),
+                new RuntimeException(failure.message())));
+      }
+      if (outputType != null && result != null && !outputType.isInstance(result)) {
+        result = new ObjectMapper().convertValue(result, outputType);
+      }
       return Result.success(result);
     } catch (Exception e) {
       Throwable cause = e.getCause() != null ? e.getCause() : e;

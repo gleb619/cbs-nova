@@ -39,7 +39,9 @@ class TransactionCodeGeneratorTest {
     assertThat(iface.source()).contains("@ActivityInterface");
     assertThat(iface.source()).contains("@ActivityMethod");
     assertThat(iface.source()).contains("interface LoanDisbursementTransactionActivity");
-    assertThat(iface.source()).contains("Object execute(Object input)");
+    assertThat(iface.source()).contains("Object execute(String input)");
+    assertThat(iface.source()).contains("namePrefix");
+    assertThat(iface.source()).contains("LoanDisbursement_");
   }
 
   @Test

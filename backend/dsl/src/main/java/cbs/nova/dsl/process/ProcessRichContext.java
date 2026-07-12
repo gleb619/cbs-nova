@@ -6,6 +6,7 @@ import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.ProcessContext;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.TransactionInvoker;
 import cbs.nova.dsl.config.ContextFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -81,7 +82,7 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
 
   @Override
   public @NonNull Result<?> runTransaction(@NonNull String name) {
-    Result<?> result = GlobalManager.getInstance().runTransaction(name, delegate);
+    Result<?> result = invokeTransaction(name, delegate.body());
     traceCollector.add("executed transaction: " + name);
     return result;
   }
@@ -89,8 +90,7 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   @Override
   public @NonNull Result<?> runTransaction(@NonNull String name,
           @NonNull Map<String, Object> input) {
-    Result<?> result = GlobalManager.getInstance().runTransaction(name,
-            contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
+    Result<?> result = invokeTransaction(name, (Object) input);
     traceCollector.add("executed transaction: " + name);
     return result;
   }
@@ -102,10 +102,19 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
       Map<String, Object> typed = (Map<String, Object>) map;
       return runTransaction(name, typed);
     }
-    Result<?> result = GlobalManager.getInstance().runTransaction(name,
-            contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
+    Result<?> result = invokeTransaction(name, input);
     traceCollector.add("executed transaction: " + name);
     return result;
+  }
+
+  private @NonNull Result<?> invokeTransaction(@NonNull String name, @NonNull Object input) {
+    Object raw = delegate.metadata().get("dsl.transaction.invoker");
+    if (raw instanceof TransactionInvoker invoker) {
+      var ctx = contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId());
+      return invoker.invoke(name, input, ctx);
+    }
+    return GlobalManager.getInstance().runTransaction(name,
+            contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
   }
 
   @Override

@@ -127,6 +127,10 @@ public final class GlobalManager {
             .map(Executable::describe);
   }
 
+  public @NonNull Optional<Executable<?, ?>> findHelper(@NonNull String name) {
+    return helperManager.findHelper(name);
+  }
+
   public @NonNull Optional<DslDescriptor> describeProcess(@NonNull String name) {
     return findProcess(name).map(ProcessDslObject::describe);
   }
@@ -170,5 +174,6 @@ public final class GlobalManager {
 
   public void resetForTests() {
     INSTANCE = null;
+    DslConfig.dslConfig().temporalProcessLauncher().replace(null);
   }
 }

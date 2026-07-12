@@ -100,7 +100,7 @@ class ProcessCodeGeneratorTest {
     assertThat(impl.source()).contains("Saga");
     assertThat(impl.source()).contains("saga.addCompensation");
     assertThat(impl.source()).contains("saga.compensate()");
-    assertThat(impl.source()).contains("LoanDisbursement-compensation");
+    assertThat(impl.source()).contains("process.compensationLogic()");
   }
 
   @Test

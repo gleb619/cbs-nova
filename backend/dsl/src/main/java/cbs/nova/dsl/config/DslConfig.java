@@ -79,7 +79,7 @@ public class DslConfig implements SingletonSupport {
     private final SingletonScope scope = SingletonScope.of();
 
     public DslConfig dslConfig() {
-      return dslConfig(SingletonScope.of());
+      return dslConfig(scope);
     }
 
     public DslConfig dslConfig(Scope scope) {
