@@ -1,9 +1,9 @@
 package cbs.nova.dsl.codegen;
 
-import cbs.nova.dsl.DescriptorFactory;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.GeneratedClassProvider;
 import cbs.nova.dsl.SemanticValidator;
+import cbs.nova.dsl.config.DescriptorFactory;
 import cbs.nova.dsl.function.FunctionDescriptor;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.process.ProcessDescriptor;
@@ -23,14 +23,24 @@ public final class DslCompiler {
 
   public static void main(String[] args) throws IOException {
     if (args.length < 2) {
-      log.error("Usage: DslCompiler <srcDir> <outputDir>");
+      log.error("Usage: DslCompiler <srcDir> <outputDir> [version] [targetPackage] [logLevel]");
       System.exit(1);
     }
-    compile(Path.of(args[0]), Path.of(args[1]));
+    var srcDir = Path.of(args[0]);
+    var outputDir = Path.of(args[1]);
+    var version = args.length > 2 ? nullIfBlank(args[2]) : null;
+    var targetPackage = args.length > 3 ? nullIfBlank(args[3]) : null;
+    compile(srcDir, outputDir, version, targetPackage);
   }
 
   public static void compile(Path srcDir, Path outputDir) throws IOException {
-    List<DslObject> objects = new DslSourceCompiler().compileAndLoad(srcDir);
+    compile(srcDir, outputDir, null, null);
+  }
+
+  public static void compile(
+          Path srcDir, Path outputDir, String version, String targetPackage) throws IOException {
+    var options = new SourceCompiler.CompileOptions(version, targetPackage);
+    List<DslObject> objects = new DslSourceCompiler().compileAndLoad(srcDir, outputDir, options);
 
     var processes = new ArrayList<ProcessDescriptor>();
     var transactions = new ArrayList<TransactionDescriptor>();
@@ -56,13 +66,13 @@ public final class DslCompiler {
     var providerFqns = new ArrayList<String>();
 
     for (var p : processes) {
-      sources.addAll(processGen.generate(p));
+      sources.addAll(processGen.generate(p, version));
       var provider = providerGen.forProcess(p);
       sources.add(provider);
       providerFqns.add(provider.fullyQualifiedName());
     }
     for (var t : transactions) {
-      sources.addAll(txGen.generate(t));
+      sources.addAll(txGen.generate(t, version));
       var provider = providerGen.forTransaction(t);
       sources.add(provider);
       providerFqns.add(provider.fullyQualifiedName());
@@ -71,5 +81,9 @@ public final class DslCompiler {
     CodeWriter.write(sources, outputDir);
     CodeWriter.writeServiceFile(GeneratedClassProvider.class.getName(), providerFqns, outputDir);
     log.info("[DslCompiler] Generated {} source(s) to {}", sources.size(), outputDir);
+  }
+
+  private static String nullIfBlank(String value) {
+    return value != null && !value.isBlank() ? value : null;
   }
 }

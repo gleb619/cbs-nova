@@ -24,6 +24,7 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.containers.wait.strategy.WaitAllStrategy;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -32,11 +33,11 @@ import java.time.Duration;
 import java.util.List;
 
 /**
- * End-to-end test that exercises the public service API rather than a generated workflow
- * interface. The flow is:
+ * End-to-end test that exercises the public service API rather than a generated workflow interface.
+ * The flow is:
  *
- *   TemporalDslProcessService -> GlobalManager -> ProcessManager -> DefaultProcessRunner ->
- *   TemporalProcessLauncher -> Temporal cluster -> generated BatchProcessingProcessDefinition.
+ * TemporalDslProcessService -> GlobalManager -> ProcessManager -> DefaultProcessRunner ->
+ * TemporalProcessLauncher -> Temporal cluster -> generated BatchProcessingProcessDefinition.
  *
  * This keeps the test decoupled from the exact generated workflow interface name.
  */
@@ -69,7 +70,10 @@ class BatchProcessingDslIntegrationTest {
           .withEnv("POSTGRES_SEEDS", "postgres")
           .dependsOn(POSTGRES)
           .waitingFor(
-                  Wait.forListeningPort()
+                  new WaitAllStrategy()
+                          .withStrategy(Wait.forListeningPort())
+                          .withStrategy(
+                                  Wait.forLogMessage(".*Namespace cache refreshed.*", 1))
                           .withStartupTimeout(Duration.ofMinutes(5)));
 
   private static WorkerFactory workerFactory;

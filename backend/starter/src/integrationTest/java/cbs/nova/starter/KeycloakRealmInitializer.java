@@ -1,12 +1,13 @@
 package cbs.nova.starter;
 
-import java.util.List;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.idm.ClientRepresentation;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.RealmRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.testcontainers.containers.GenericContainer;
+
+import java.util.List;
 
 public class KeycloakRealmInitializer {
 

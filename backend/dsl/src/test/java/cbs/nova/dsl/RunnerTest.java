@@ -10,8 +10,9 @@ import cbs.nova.dsl.runner.DefaultProcessRunner;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
 import cbs.nova.dsl.runner.HelperRunner;
 import cbs.nova.dsl.transaction.TransactionRunner;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 class RunnerTest {
 

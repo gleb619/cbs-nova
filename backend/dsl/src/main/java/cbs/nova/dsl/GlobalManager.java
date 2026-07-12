@@ -10,11 +10,12 @@ import cbs.nova.dsl.registry.DefaultTransactionRegistry;
 import cbs.nova.dsl.registry.GeneratedClassRegistry;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.dsl.transaction.TransactionManager;
+import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.ServiceLoader;
-import lombok.RequiredArgsConstructor;
-import org.jspecify.annotations.NonNull;
 
 @RequiredArgsConstructor
 public final class GlobalManager {

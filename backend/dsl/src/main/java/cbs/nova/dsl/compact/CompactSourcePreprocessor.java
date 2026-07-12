@@ -1,9 +1,10 @@
 package cbs.nova.dsl.compact;
 
 import cbs.nova.dsl.DslCompactSource;
+import org.jspecify.annotations.NonNull;
+
 import java.util.ArrayList;
 import java.util.regex.Pattern;
-import org.jspecify.annotations.NonNull;
 
 /**
  * Turns a compact DSL source file (no package/class declaration, one {@code define()} method) into

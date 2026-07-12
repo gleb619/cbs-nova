@@ -2,10 +2,11 @@ package cbs.nova.dsl.codegen;
 
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.utils.Substitutor;
+import org.jspecify.annotations.NonNull;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import org.jspecify.annotations.NonNull;
 
 public final class ProcessCodeGenerator {
 

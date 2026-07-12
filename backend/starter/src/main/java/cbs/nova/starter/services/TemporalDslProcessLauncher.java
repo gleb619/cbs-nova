@@ -18,12 +18,12 @@ import java.lang.reflect.Method;
 import java.time.Duration;
 
 /**
- * Temporal implementation of {@link TemporalProcessLauncher}. It resolves the generated
- * workflow interface/implementation for a DSL process through
- * {@link GlobalManager#findGeneratedProcess(String)} and starts it on the process task queue.
- * When the caller is already inside a Temporal workflow thread, {@link #canRun(Context)}
- * returns false so the DSL runner falls back to executing the process logic directly and
- * avoids recursive workflow spawning.
+ * Temporal implementation of {@link TemporalProcessLauncher}. It resolves the generated workflow
+ * interface/implementation for a DSL process through
+ * {@link GlobalManager#findGeneratedProcess(String)} and starts it on the process task queue. When
+ * the caller is already inside a Temporal workflow thread, {@link #canRun(Context)} returns false
+ * so the DSL runner falls back to executing the process logic directly and avoids recursive
+ * workflow spawning.
  */
 @RequiredArgsConstructor
 public class TemporalDslProcessLauncher implements TemporalProcessLauncher {

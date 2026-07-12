@@ -1,8 +1,9 @@
 package cbs.nova.dsl.transaction;
 
+import org.jspecify.annotations.NonNull;
+
 import java.util.Collection;
 import java.util.Optional;
-import org.jspecify.annotations.NonNull;
 
 public interface TransactionRegistry {
 

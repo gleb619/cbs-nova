@@ -1,7 +1,8 @@
 package cbs.nova.dsl.compact;
 
-import java.util.regex.Pattern;
 import org.jspecify.annotations.NonNull;
+
+import java.util.regex.Pattern;
 
 /**
  * Preprocesses model/POJO source files authored without a package declaration so that they can be

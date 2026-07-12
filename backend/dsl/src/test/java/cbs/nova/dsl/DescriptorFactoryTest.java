@@ -4,8 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.DescriptorFactory;
 import cbs.nova.dsl.config.RetryPolicyFactory;
-import java.time.Duration;
 import org.junit.jupiter.api.Test;
+
+import java.time.Duration;
 
 class DescriptorFactoryTest {
 

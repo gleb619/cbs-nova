@@ -8,8 +8,9 @@ import cbs.nova.dsl.config.DescriptorFactory;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
 import cbs.nova.dsl.registry.HelperRegistry;
-import java.util.List;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 class SemanticValidatorTest {
 

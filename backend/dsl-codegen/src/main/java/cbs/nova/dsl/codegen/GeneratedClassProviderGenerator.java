@@ -95,6 +95,6 @@ public final class GeneratedClassProviderGenerator {
     if (type == null || type.getPackageName().startsWith("java.lang")) {
       return;
     }
-    imports.add("import " + type.getName() + ";");
+    imports.add("import " + type.getCanonicalName() + ";");
   }
 }

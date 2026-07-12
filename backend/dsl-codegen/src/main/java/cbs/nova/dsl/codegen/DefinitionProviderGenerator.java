@@ -2,14 +2,15 @@ package cbs.nova.dsl.codegen;
 
 import cbs.nova.dsl.DslDefinitionProvider;
 import cbs.nova.dsl.utils.Substitutor;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
 
 @Slf4j
 public final class DefinitionProviderGenerator {

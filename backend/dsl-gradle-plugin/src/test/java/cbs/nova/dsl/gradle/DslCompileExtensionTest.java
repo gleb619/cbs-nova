@@ -2,9 +2,10 @@ package cbs.nova.dsl.gradle;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.File;
 import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.Test;
+
+import java.io.File;
 
 class DslCompileExtensionTest {
 

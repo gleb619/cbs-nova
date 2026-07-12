@@ -1,6 +1,5 @@
 package cbs.nova.dsl.gradle;
 
-import java.util.Map;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.plugins.JavaPlugin;
@@ -9,6 +8,8 @@ import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.language.jvm.tasks.ProcessResources;
+
+import java.util.Map;
 
 public class DslCompilerPlugin implements Plugin<Project> {
 

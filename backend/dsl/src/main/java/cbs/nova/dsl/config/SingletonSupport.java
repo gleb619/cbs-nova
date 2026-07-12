@@ -17,6 +17,8 @@ public interface SingletonSupport {
     return getScope().get(hash, factory);
   }
 
+  // TODO: add here some new methods to use `Replaceable` type
+
   @FunctionalInterface
   interface Factory<T> extends Supplier<T> {
 
@@ -29,6 +31,12 @@ public interface SingletonSupport {
       var kind = new Kind("%s@%s".formatted(name, hash));
       return new HashFactory<>(factory, kind);
     }
+  }
+
+  interface Replaceable {
+
+    // TODO: add here some methods
+
   }
 
   record HashFactory<U>(Supplier<U> factory, Kind kind) implements Factory<U> {

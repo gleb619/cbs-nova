@@ -37,6 +37,7 @@ dependencies {
   testImplementation libs.temporal.testing
   testImplementation libs.testcontainers.core
   testImplementation libs.testcontainers.junit.jupiter
+  testImplementation libs.testcontainers.postgresql
   testImplementation libs.keycloak.admin.client
   testImplementation libs.rest.assured
 }

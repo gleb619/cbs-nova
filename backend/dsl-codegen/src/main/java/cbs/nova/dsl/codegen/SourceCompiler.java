@@ -13,6 +13,14 @@ import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.transaction.TransactionDslObject;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
+
+import javax.tools.DiagnosticCollector;
+import javax.tools.JavaCompiler;
+import javax.tools.JavaFileObject;
+import javax.tools.StandardJavaFileManager;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -26,12 +34,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Stream;
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaCompiler;
-import javax.tools.JavaFileObject;
-import javax.tools.StandardJavaFileManager;
-import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
 
 @Slf4j
 public final class SourceCompiler {
