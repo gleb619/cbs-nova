@@ -1,0 +1,255 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { proxyToBackend } from '../httpClient'
+
+// httpClient calls h3's getHeader as a bare global (Nitro auto-imports it at
+// runtime). The vitest setup stubs it as a no-op; here we install a per-suite
+// implementation that reads from a mutable headerMap so each test can
+// configure what the BFF sees on the incoming request.
+type HeaderMap = Record<string, string | undefined>
+let headerMap: HeaderMap = {}
+
+const g = globalThis as Record<string, unknown>
+const installedGetHeader = (_event: unknown, name: string) => headerMap[name.toLowerCase()]
+g.getHeader = installedGetHeader
+
+const makeEvent = (headers: HeaderMap = {}) => {
+  headerMap = Object.fromEntries(
+    Object.entries(headers).map(([k, v]) => [k.toLowerCase(), v]),
+  )
+  return {} as Parameters<typeof proxyToBackend>[0]
+}
+
+const setRuntimeConfig = (overrides: Record<string, unknown> = {}) => {
+  const merged = {
+    backendBaseUrl: 'http://localhost:8090',
+    backendApiKey: '',
+    backendTimeoutMs: 10000,
+    public: { appName: 'CBS Nova Admin' },
+    ...overrides,
+  }
+  vi.mocked(useRuntimeConfig as never).mockReturnValue(merged as ReturnType<typeof useRuntimeConfig>)
+  vi.mocked(useBackendConfig as never).mockReturnValue({
+    baseUrl: merged.backendBaseUrl as string,
+    apiKey: merged.backendApiKey as string,
+    timeoutMs: merged.backendTimeoutMs as number,
+  })
+}
+
+describe('proxyToBackend', () => {
+  beforeEach(() => {
+    setRuntimeConfig()
+  })
+
+  it('returns body and sets Content-Type on success', async () => {
+    const event = makeEvent()
+    vi.mocked($fetch as never).mockResolvedValueOnce({ ok: true, n: 1 })
+
+    const result = await proxyToBackend<{ ok: boolean; n: number }>(event, '/api/foo')
+
+    expect(result).toEqual({ ok: true, n: 1 })
+    expect($fetch).toHaveBeenCalledTimes(1)
+    const [url, opts] = vi.mocked($fetch as never).mock.calls[0] as [
+      string,
+      { method: string; headers: Record<string, string>; timeout: number },
+    ]
+    expect(url).toBe('http://localhost:8090/api/foo')
+    expect(opts.method).toBe('GET')
+    expect(opts.headers['Content-Type']).toBe('application/json')
+    expect(opts.timeout).toBe(10000)
+    // request id is always generated when no inbound x-request-id
+    expect(opts.headers['X-Request-Id']).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    )
+  })
+
+  it('forwards X-Api-Key when apiKey is configured', async () => {
+    setRuntimeConfig({ backendApiKey: 'secret-key' })
+    const event = makeEvent()
+    vi.mocked($fetch as never).mockResolvedValueOnce({})
+
+    await proxyToBackend(event, '/api/foo')
+
+    const [, opts] = vi.mocked($fetch as never).mock.calls[0] as [
+      string,
+      { headers: Record<string, string> },
+    ]
+    expect(opts.headers['X-Api-Key']).toBe('secret-key')
+  })
+
+  it('omits X-Api-Key when apiKey is empty', async () => {
+    const event = makeEvent()
+    vi.mocked($fetch as never).mockResolvedValueOnce({})
+
+    await proxyToBackend(event, '/api/foo')
+
+    const [, opts] = vi.mocked($fetch as never).mock.calls[0] as [
+      string,
+      { headers: Record<string, string> },
+    ]
+    expect(opts.headers['X-Api-Key']).toBeUndefined()
+  })
+
+  it('maps 4xx backend errors to createError with correct statusCode + data.code', async () => {
+    const event = makeEvent()
+    const err = Object.assign(new Error('bad request'), {
+      name: 'FetchError',
+      response: { status: 400 },
+      data: { message: 'Invalid input', code: 'VALIDATION', details: { field: 'x' } },
+    })
+    vi.mocked($fetch as never).mockRejectedValueOnce(err)
+
+    await expect(proxyToBackend(event, '/api/foo')).rejects.toMatchObject({
+      statusCode: 400,
+      statusMessage: 'Invalid input',
+      data: { message: 'Invalid input', code: 'VALIDATION', details: { field: 'x' } },
+    })
+  })
+
+  it('maps 5xx backend errors to createError with default code when absent', async () => {
+    const event = makeEvent()
+    const err = Object.assign(new Error('boom'), {
+      name: 'FetchError',
+      response: { status: 503 },
+    })
+    vi.mocked($fetch as never).mockRejectedValueOnce(err)
+
+    await expect(proxyToBackend(event, '/api/foo')).rejects.toMatchObject({
+      statusCode: 503,
+      data: { code: 'BACKEND_ERROR' },
+    })
+  })
+
+  it('falls back to status 500 when backend error has no response', async () => {
+    const event = makeEvent()
+    vi.mocked($fetch as never).mockRejectedValueOnce(new Error('network gone'))
+
+    await expect(proxyToBackend(event, '/api/foo')).rejects.toMatchObject({
+      statusCode: 500,
+      data: { code: 'BACKEND_ERROR' },
+    })
+  })
+
+  it('maps ofetch TimeoutError (cause) to 504 BACKEND_TIMEOUT', async () => {
+    const event = makeEvent()
+    const cause = Object.assign(new Error('[TimeoutError]: The operation was aborted due to timeout'), {
+      name: 'TimeoutError',
+    })
+    const err = Object.assign(new Error('timeout wrapper'), {
+      name: 'FetchError',
+      cause,
+    })
+    vi.mocked($fetch as never).mockRejectedValueOnce(err)
+
+    await expect(proxyToBackend(event, '/api/foo')).rejects.toMatchObject({
+      statusCode: 504,
+      statusMessage: 'Backend request timed out',
+      data: { code: 'BACKEND_TIMEOUT', message: 'Backend request timed out' },
+    })
+  })
+
+  it('maps a top-level TimeoutError to 504 BACKEND_TIMEOUT', async () => {
+    const event = makeEvent()
+    const err = Object.assign(new Error('[TimeoutError]'), { name: 'TimeoutError' })
+    vi.mocked($fetch as never).mockRejectedValueOnce(err)
+
+    await expect(proxyToBackend(event, '/api/foo')).rejects.toMatchObject({
+      statusCode: 504,
+      data: { code: 'BACKEND_TIMEOUT' },
+    })
+  })
+
+  it('passes configured timeoutMs through to $fetch', async () => {
+    setRuntimeConfig({ backendTimeoutMs: 2500 })
+    const event = makeEvent()
+    vi.mocked($fetch as never).mockResolvedValueOnce({})
+
+    await proxyToBackend(event, '/api/foo')
+
+    const [, opts] = vi.mocked($fetch as never).mock.calls[0] as [
+      string,
+      { timeout: number },
+    ]
+    expect(opts.timeout).toBe(2500)
+  })
+
+  it('generates and forwards x-request-id when inbound is absent', async () => {
+    const event = makeEvent({})
+    vi.mocked($fetch as never).mockResolvedValueOnce({})
+
+    await proxyToBackend(event, '/api/foo')
+
+    const [, opts] = vi.mocked($fetch as never).mock.calls[0] as [
+      string,
+      { headers: Record<string, string> },
+    ]
+    expect(opts.headers['X-Request-Id']).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    )
+  })
+
+  it('forwards inbound x-request-id verbatim', async () => {
+    const event = makeEvent({ 'x-request-id': 'rid-abc-123' })
+    vi.mocked($fetch as never).mockResolvedValueOnce({})
+
+    await proxyToBackend(event, '/api/foo')
+
+    const [, opts] = vi.mocked($fetch as never).mock.calls[0] as [
+      string,
+      { headers: Record<string, string> },
+    ]
+    expect(opts.headers['X-Request-Id']).toBe('rid-abc-123')
+  })
+
+  it('forwards inbound traceparent header', async () => {
+    const event = makeEvent({ traceparent: '00-aaa-bbb-01' })
+    vi.mocked($fetch as never).mockResolvedValueOnce({})
+
+    await proxyToBackend(event, '/api/foo')
+
+    const [, opts] = vi.mocked($fetch as never).mock.calls[0] as [
+      string,
+      { headers: Record<string, string> },
+    ]
+    expect(opts.headers.traceparent).toBe('00-aaa-bbb-01')
+  })
+
+  it('omits traceparent header when inbound is absent', async () => {
+    const event = makeEvent()
+    vi.mocked($fetch as never).mockResolvedValueOnce({})
+
+    await proxyToBackend(event, '/api/foo')
+
+    const [, opts] = vi.mocked($fetch as never).mock.calls[0] as [
+      string,
+      { headers: Record<string, string> },
+    ]
+    expect(opts.headers.traceparent).toBeUndefined()
+  })
+
+  it('forwards POST method and body', async () => {
+    const event = makeEvent()
+    vi.mocked($fetch as never).mockResolvedValueOnce({})
+
+    await proxyToBackend(event, '/api/foo', { method: 'POST', body: { x: 1 } })
+
+    const [url, opts] = vi.mocked($fetch as never).mock.calls[0] as [
+      string,
+      { method: string; body: unknown },
+    ]
+    expect(url).toBe('http://localhost:8090/api/foo')
+    expect(opts.method).toBe('POST')
+    expect(opts.body).toEqual({ x: 1 })
+  })
+
+  it('strips trailing slash from baseUrl', async () => {
+    setRuntimeConfig({ backendBaseUrl: 'http://localhost:8090/' })
+    const event = makeEvent()
+    vi.mocked($fetch as never).mockResolvedValueOnce({})
+
+    await proxyToBackend(event, '/api/foo')
+
+    const [url] = vi.mocked($fetch as never).mock.calls[0] as [string]
+    expect(url).toBe('http://localhost:8090/api/foo')
+  })
+
+})

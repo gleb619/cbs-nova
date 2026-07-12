@@ -20,7 +20,7 @@ import { defineNuxtModule, createResolver, addLayout, extendPages } from '@nuxt/
 //   - All admin pages under the configured `routePrefix` (default: '/')
 //   - Nitro server routes under /api/v1/** that proxy to the Spring Boot backend
 //   - The global Tailwind CSS stylesheet
-//   - Runtime config keys: backendBaseUrl, backendApiKey, public.appName
+//   - Runtime config keys: backendBaseUrl, backendApiKey, backendTimeoutMs, public.appName
 // ---------------------------------------------------------------------------
 
 export interface ModuleOptions {
@@ -44,6 +44,12 @@ export interface ModuleOptions {
   backendApiKey?: string
 
   /**
+   * Outbound request timeout (ms) for BFF -> backend calls.
+   * Surfaced as a 504 BACKEND_TIMEOUT when exceeded. Defaults to 10000.
+   */
+  backendTimeoutMs?: number
+
+  /**
    * Display name shown in the admin UI title bar.
    * Defaults to 'CBS Nova Admin'.
    */
@@ -61,6 +67,7 @@ export default defineNuxtModule<ModuleOptions>({
     routePrefix: '/',
     backendBaseUrl: process.env.BACKEND_BASE_URL ?? 'http://localhost:8090',
     backendApiKey: process.env.BACKEND_API_KEY ?? '',
+    backendTimeoutMs: Number(process.env.BACKEND_TIMEOUT_MS ?? 10000),
     appName: 'CBS Nova Admin',
   },
 
@@ -76,6 +83,8 @@ export default defineNuxtModule<ModuleOptions>({
       nuxt.options.runtimeConfig.backendBaseUrl || options.backendBaseUrl!
     nuxt.options.runtimeConfig.backendApiKey =
       nuxt.options.runtimeConfig.backendApiKey || options.backendApiKey!
+    nuxt.options.runtimeConfig.backendTimeoutMs =
+      nuxt.options.runtimeConfig.backendTimeoutMs || options.backendTimeoutMs || 10000
     nuxt.options.runtimeConfig.public.appName =
       nuxt.options.runtimeConfig.public.appName || options.appName!
 

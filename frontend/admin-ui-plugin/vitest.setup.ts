@@ -12,6 +12,46 @@ g.useState = (_key: string, init: () => unknown) => ref(init())
 
 g.$fetch = vi.fn()
 
+// Stub of h3's getHeader. The real one reads from the H3Event's internal
+// node req, but for unit tests we don't need that — the test that needs
+// header propagation overrides globalThis.getHeader directly.
+g.getHeader = (_event: unknown, _name: string) => undefined
+
+// Stub of Nuxt's useRuntimeConfig. Tests that need to assert specific values
+// can override these by re-assigning globalThis.useRuntimeConfig before
+// calling the SUT.
+const defaultRuntimeConfig = {
+  backendBaseUrl: 'http://localhost:8090',
+  backendApiKey: '',
+  backendTimeoutMs: 10000,
+  public: { appName: 'CBS Nova Admin' },
+}
+g.useRuntimeConfig = vi.fn(() => defaultRuntimeConfig)
+
+// Stub of the plugin's own useBackendConfig. The real one is exported from
+// server/utils/config.ts and auto-imported by Nitro; in unit tests we expose
+// the same shape as a bare global so httpClient.ts can call it.
+g.useBackendConfig = vi.fn(() => ({
+  baseUrl: defaultRuntimeConfig.backendBaseUrl,
+  apiKey: defaultRuntimeConfig.backendApiKey,
+  timeoutMs: defaultRuntimeConfig.backendTimeoutMs,
+}))
+
+// Stub of h3's createError used by proxyToBackend's catch block. Return a
+// plain Error so assertions can match on .statusCode and .data.
+type CreateErrorOptions = {
+  statusCode?: number
+  statusMessage?: string
+  data?: unknown
+}
+g.createError = (opts: CreateErrorOptions = {}) => {
+  const e = new Error(opts.statusMessage ?? 'Error') as Error & CreateErrorOptions
+  e.statusCode = opts.statusCode
+  e.statusMessage = opts.statusMessage
+  e.data = opts.data
+  return e
+}
+
 let cachedExecutionsApi: { list: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> } | null =
   null
 const defaultExecutionsApi = () => {
