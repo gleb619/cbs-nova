@@ -1,6 +1,7 @@
 package cbs.nova.starter.controllers;
 
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.JsonSchemaGenerator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/dsl")
@@ -18,6 +20,20 @@ public class DslIntrospectionResource {
 
   private static String typeName(Class<?> type) {
     return type == null ? null : type.getSimpleName();
+  }
+
+  private static Map<String, Object> inputSchema(cbs.nova.dsl.DslObject entity) {
+    if (entity instanceof cbs.nova.dsl.process.ProcessDslObject p) {
+      return p.inputType() != null
+              ? JsonSchemaGenerator.generateSchema(p.inputType())
+              : JsonSchemaGenerator.generateSchema(p.parameters());
+    }
+    if (entity instanceof cbs.nova.dsl.transaction.TransactionDslObject t) {
+      return t.inputType() != null
+              ? JsonSchemaGenerator.generateSchema(t.inputType())
+              : JsonSchemaGenerator.generateSchema(t.parameters());
+    }
+    return JsonSchemaGenerator.generateSchema((Class<?>) null);
   }
 
   @GetMapping("/processes")
@@ -39,7 +55,8 @@ public class DslIntrospectionResource {
                                     p.taskQueue(),
                                     typeName(p.inputType()),
                                     typeName(p.outputType()),
-                                    p.compensationLogic() != null)))
+                                    p.compensationLogic() != null,
+                                    inputSchema(p))))
             .orElse(ResponseEntity.notFound().build());
   }
 
@@ -63,7 +80,8 @@ public class DslIntrospectionResource {
                                     typeName(t.inputType()),
                                     typeName(t.outputType()),
                                     t.compensationLogic() != null,
-                                    t.startToCloseTimeout().toMillis())))
+                                    t.startToCloseTimeout().toMillis(),
+                                    inputSchema(t))))
             .orElse(ResponseEntity.notFound().build());
   }
 
@@ -83,7 +101,8 @@ public class DslIntrospectionResource {
           String taskQueue,
           String inputType,
           String outputType,
-          boolean hasCompensation) {
+          boolean hasCompensation,
+          Map<String, Object> inputSchema) {
 
   }
 
@@ -94,7 +113,8 @@ public class DslIntrospectionResource {
           String inputType,
           String outputType,
           boolean hasCompensation,
-          long startToCloseTimeoutMs) {
+          long startToCloseTimeoutMs,
+          Map<String, Object> inputSchema) {
 
   }
 }
