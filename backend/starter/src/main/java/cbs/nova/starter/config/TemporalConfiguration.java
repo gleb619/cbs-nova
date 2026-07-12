@@ -11,6 +11,8 @@ import cbs.nova.starter.controllers.DslRuntimeResource;
 import cbs.nova.starter.services.TemporalDslProcessLauncher;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
+import io.temporal.serviceclient.WorkflowServiceStubsOptions;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -20,8 +22,10 @@ public class TemporalConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
-  WorkflowServiceStubs workflowServiceStubs() {
-    return WorkflowServiceStubs.newLocalServiceStubs();
+  WorkflowServiceStubs workflowServiceStubs(
+          @Value("${temporal.connection-target:127.0.0.1:7233}") String connectionTarget) {
+    return WorkflowServiceStubs.newServiceStubs(
+            WorkflowServiceStubsOptions.newBuilder().setTarget(connectionTarget).build());
   }
 
   @Bean

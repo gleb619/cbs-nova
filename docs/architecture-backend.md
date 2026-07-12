@@ -93,6 +93,18 @@ Three modes let the same definition behave differently depending on environment 
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
+## Local Temporal runtime (docker-compose)
+
+The root `docker-compose.yml` provides a self-contained Temporal stack for local development:
+
+- `temporal` — the Temporal server (auto-setup image) on the compose network, gRPC port `7233`.
+- `temporal-ui` — the Temporal Web UI at **http://localhost:8233**.
+- `spring-app` — configured with `TEMPORAL_ADDRESS=temporal:7233`, mapped through
+  `temporal.connection-target=${TEMPORAL_ADDRESS:127.0.0.1:7233}` in `application.yml`.
+
+Workers and the `WorkflowClient` connect to `temporal:7233` inside the compose network, while
+local runs without compose fall back to the default `127.0.0.1:7233`.
+
 ## Runtime layers
 
 The runtime is deliberately layered so generated code has a single entry point:

@@ -1,3 +1,6 @@
+temporal:
+  connection-target: ${TEMPORAL_ADDRESS:127.0.0.1:7233}
+
 management:
   endpoints:
     web:
