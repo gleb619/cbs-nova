@@ -7,6 +7,8 @@ import cbs.nova.dsl.DslExecutionException;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.TemporalProcessLauncher;
+import cbs.nova.dsl.TemporalProcessLauncherHolder;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.process.ProcessRichContext;
@@ -24,25 +26,36 @@ public final class DefaultProcessRunner implements ProcessRunner {
   public @NonNull Result<?> run(@NonNull ProcessDslObject process, @NonNull Context<?> ctx) {
     Result<?> result;
     Throwable failure = null;
+    boolean launchedByTemporal = false;
     try {
-      var richCtx = new ProcessRichContext<>(ctx, traceCollector, contextFactory);
-      if (ctx.mode() == ExecutionMode.EXPLAIN) {
-        result = process.executeLogic().apply(richCtx);
-        if (result.isSuccess()) {
-          ctx = ctx.withMetadata("explain.description", "Process: " + process.name());
-        }
-      } else if (ctx.mode() == ExecutionMode.PREVIEW) {
-        result = process.effectivePreview().apply(richCtx);
+      TemporalProcessLauncher launcher = TemporalProcessLauncherHolder.get();
+      if (launcher != null && launcher.canRun(ctx)) {
+        launchedByTemporal = true;
+        result = launcher.launch(
+                process.name(),
+                process.taskQueue(),
+                process.inputType(),
+                process.outputType(),
+                ctx);
       } else {
-        // RUN: TODO wire to Temporal
-        result = process.executeLogic().apply(richCtx);
+        var richCtx = new ProcessRichContext<>(ctx, traceCollector, contextFactory);
+        if (ctx.mode() == ExecutionMode.EXPLAIN) {
+          result = process.executeLogic().apply(richCtx);
+          if (result.isSuccess()) {
+            ctx = ctx.withMetadata("explain.description", "Process: " + process.name());
+          }
+        } else if (ctx.mode() == ExecutionMode.PREVIEW) {
+          result = process.effectivePreview().apply(richCtx);
+        } else {
+          result = process.executeLogic().apply(richCtx);
+        }
       }
     } catch (Exception ex) {
       String message = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
       result = Result.failure(new DslExecutionException(ctx.runId(), message, ex));
       failure = ex;
     }
-    if (!result.isSuccess() && process.compensationLogic() != null) {
+    if (!launchedByTemporal && !result.isSuccess() && process.compensationLogic() != null) {
       try {
         var compensationCtx = new CompensationRichContext<>(ctx,
                 failure != null ? failure : result.cause(), traceCollector, contextFactory);

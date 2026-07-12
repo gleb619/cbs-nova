@@ -4,13 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.generated.batchprocessing.v1.BatchProcessingProcessDefinition;
-import cbs.nova.dsl.generated.batchprocessing.v1.BatchProcessingProcessWorkflow;
+import cbs.nova.dsl.Result;
+import cbs.nova.dsl.TemporalProcessLauncherHolder;
+import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dslexamples.BatchModels.BatchIn;
 import cbs.nova.dslexamples.BatchModels.BatchItem;
 import cbs.nova.dslexamples.BatchModels.BatchOut;
+import cbs.nova.starter.services.TemporalDslProcessLauncher;
+import cbs.nova.starter.services.TemporalDslProcessService;
 import io.temporal.client.WorkflowClient;
-import io.temporal.client.WorkflowOptions;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import io.temporal.worker.Worker;
@@ -26,10 +28,18 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 
+/**
+ * End-to-end test that exercises the public service API rather than a generated workflow
+ * interface. The flow is:
+ *
+ *   TemporalDslProcessService -> GlobalManager -> ProcessManager -> DefaultProcessRunner ->
+ *   TemporalProcessLauncher -> Temporal cluster -> generated BatchProcessingProcessDefinition.
+ *
+ * This keeps the test decoupled from the exact generated workflow interface name.
+ */
 @Testcontainers
 class BatchProcessingDslIntegrationTest {
 
@@ -59,7 +69,7 @@ class BatchProcessingDslIntegrationTest {
           .withEnv("POSTGRES_SEEDS", "postgres")
           .dependsOn(POSTGRES)
           .waitingFor(
-                  Wait.forLogMessage(".*Started Worker.*", 1)
+                  Wait.forListeningPort()
                           .withStartupTimeout(Duration.ofMinutes(5)));
 
   private static WorkerFactory workerFactory;
@@ -68,11 +78,15 @@ class BatchProcessingDslIntegrationTest {
   @BeforeAll
   static void setUp() {
     GlobalManager.getInstance().resetForTests();
+    TemporalProcessLauncherHolder.reset();
+
     var globalManager = GlobalManager.getInstance();
-    var dslSourceDir = Path.of(System.getProperty("dsl.examples.src.dir"));
-    new DefinitionLoader().load(dslSourceDir, globalManager);
+    new DefinitionLoader().load(globalManager);
     assertThat(globalManager.hasProcess("BatchProcessing"))
-            .as("DSL source for BatchProcessing should be loaded")
+            .as("DSL process BatchProcessing should be loaded")
+            .isTrue();
+    assertThat(globalManager.hasGeneratedProcess("BatchProcessing"))
+            .as("Generated Temporal classes for BatchProcessing should be available")
             .isTrue();
 
     var serviceStubs = WorkflowServiceStubs.newServiceStubs(
@@ -82,9 +96,13 @@ class BatchProcessingDslIntegrationTest {
                     .build());
     workflowClient = WorkflowClient.newInstance(serviceStubs);
 
+    var launcher = new TemporalDslProcessLauncher(workflowClient);
+    TemporalProcessLauncherHolder.set(launcher);
+
+    var descriptor = globalManager.findGeneratedProcess("BatchProcessing").orElseThrow();
     workerFactory = WorkerFactory.newInstance(workflowClient);
     Worker worker = workerFactory.newWorker(TASK_QUEUE);
-    worker.registerWorkflowImplementationTypes(BatchProcessingProcessDefinition.class);
+    worker.registerWorkflowImplementationTypes(descriptor.temporalImplementation());
     workerFactory.start();
   }
 
@@ -93,18 +111,12 @@ class BatchProcessingDslIntegrationTest {
     if (workerFactory != null) {
       workerFactory.shutdown();
     }
+    TemporalProcessLauncherHolder.reset();
   }
 
   @Test
-  void runsBatchProcessingDslEndToEnd() {
-    var workflow = workflowClient.newWorkflowStub(
-            BatchProcessingProcessWorkflow.class,
-            WorkflowOptions.newBuilder()
-                    .setTaskQueue(TASK_QUEUE)
-                    .setWorkflowId("batch-processing-test-1")
-                    .setWorkflowExecutionTimeout(Duration.ofSeconds(30))
-                    .setWorkflowTaskTimeout(Duration.ofSeconds(5))
-                    .build());
+  void runsBatchProcessingDslThroughServiceApi() {
+    var service = new TemporalDslProcessService(new ContextFactory());
 
     var input = new BatchIn(
             List.of(
@@ -112,9 +124,12 @@ class BatchProcessingDslIntegrationTest {
                     new BatchItem("b", 2),
                     new BatchItem("c", 3)));
 
-    BatchOut result = workflow.run(input);
+    Result<?> result = service.runProcess("BatchProcessing", input);
 
-    assertThat(result.total()).isEqualTo(6);
-    assertThat(result.summary()).isEqualTo("Processed: a=1, b=2, c=3");
+    assertThat(result.isSuccess()).isTrue();
+    BatchOut out = result.as(BatchOut.class);
+    assertThat(out).isNotNull();
+    assertThat(out.total()).isEqualTo(6);
+    assertThat(out.summary()).isEqualTo("Processed: a=1, b=2, c=3");
   }
 }

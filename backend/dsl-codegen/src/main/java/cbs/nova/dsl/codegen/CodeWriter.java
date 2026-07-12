@@ -18,4 +18,17 @@ public final class CodeWriter {
       Files.writeString(dir.resolve(source.className() + ".java"), source.source());
     }
   }
+
+  public static void writeServiceFile(
+          @NonNull String serviceInterface,
+          @NonNull List<String> providerFqns,
+          @NonNull Path outputDir) throws IOException {
+    if (providerFqns.isEmpty()) {
+      return;
+    }
+    var serviceFile = outputDir.resolve("META-INF/services/" + serviceInterface);
+    Files.createDirectories(serviceFile.getParent());
+    Files.writeString(serviceFile, String.join(System.lineSeparator(), providerFqns)
+            + System.lineSeparator());
+  }
 }
