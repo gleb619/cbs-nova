@@ -2,6 +2,7 @@ package cbs.nova.dsl.config;
 
 import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.RetryPolicy;
+import cbs.nova.dsl.TemporalProcessLauncher;
 import cbs.nova.dsl.process.ProcessRunner;
 import cbs.nova.dsl.runner.DefaultHelperRunner;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
@@ -44,6 +45,10 @@ public class DslConfig implements SingletonSupport {
 
   public @NonNull RetryPolicyFactory retryPolicyFactory() {
     return singleton(RetryPolicyFactory::new);
+  }
+
+  public @NonNull Replaceable<TemporalProcessLauncher> temporalProcessLauncher() {
+    return replaceable(() -> null);
   }
 
   public @NonNull ProcessRunner processRunner(

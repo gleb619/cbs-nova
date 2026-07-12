@@ -3,7 +3,6 @@ package cbs.nova.starter.config;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.TemporalProcessLauncher;
-import cbs.nova.dsl.TemporalProcessLauncherHolder;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.DevDslRuntime;
 import cbs.nova.starter.ExternalCallTracker;
@@ -34,9 +33,7 @@ public class TemporalConfiguration {
   @Bean
   @ConditionalOnMissingBean
   TemporalProcessLauncher temporalProcessLauncher(WorkflowClient workflowClient) {
-    var launcher = new TemporalDslProcessLauncher(workflowClient);
-    TemporalProcessLauncherHolder.set(launcher);
-    return launcher;
+    return new TemporalDslProcessLauncher(workflowClient);
   }
 
   @Bean

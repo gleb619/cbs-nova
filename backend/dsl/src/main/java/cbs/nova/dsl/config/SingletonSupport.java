@@ -17,7 +17,9 @@ public interface SingletonSupport {
     return getScope().get(hash, factory);
   }
 
-  // TODO: add here some new methods to use `Replaceable` type
+  default <T> Replaceable<T> replaceable(Factory<T> factory) {
+    return singleton(() -> Replaceable.of(factory));
+  }
 
   @FunctionalInterface
   interface Factory<T> extends Supplier<T> {
@@ -33,10 +35,39 @@ public interface SingletonSupport {
     }
   }
 
-  interface Replaceable {
+  interface Replaceable<T> {
 
-    // TODO: add here some methods
+    T get();
 
+    void replace(T value);
+
+    static <U> Replaceable<U> of(Factory<U> factory) {
+      return new ReplaceableImpl<>(factory);
+    }
+
+    static <U> Replaceable<U> empty() {
+      return of(() -> null);
+    }
+  }
+
+  class ReplaceableImpl<T> implements Replaceable<T> {
+
+    private final Factory<T> factory;
+    private volatile T override;
+
+    ReplaceableImpl(Factory<T> factory) {
+      this.factory = factory;
+    }
+
+    @Override
+    public T get() {
+      return override != null ? override : factory.get();
+    }
+
+    @Override
+    public void replace(T value) {
+      this.override = value;
+    }
   }
 
   record HashFactory<U>(Supplier<U> factory, Kind kind) implements Factory<U> {
@@ -107,5 +138,4 @@ public interface SingletonSupport {
       }
     }
   }
-
 }

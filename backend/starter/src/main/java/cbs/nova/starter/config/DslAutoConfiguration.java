@@ -2,6 +2,8 @@ package cbs.nova.starter.config;
 
 import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.TemporalProcessLauncher;
+import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.starter.ExternalCallTracker;
 import cbs.nova.starter.listeners.ExternalCallListener;
 import jakarta.annotation.PostConstruct;
@@ -27,6 +29,9 @@ public class DslAutoConfiguration {
   @Autowired(required = false)
   private ExternalCallTracker externalCallTracker;
 
+  @Autowired(required = false)
+  private TemporalProcessLauncher temporalProcessLauncher;
+
   @PostConstruct
   public void loadDslDefinitions() {
     if (sourceDirProperty != null && !sourceDirProperty.isBlank()) {
@@ -40,6 +45,7 @@ public class DslAutoConfiguration {
     }
     registerHelperResolvers();
     registerExternalCallListeners();
+    registerTemporalProcessLauncher();
   }
 
   private void registerHelperResolvers() {
@@ -54,6 +60,12 @@ public class DslAutoConfiguration {
 
     for (ExternalCallListener listener : externalCallListeners) {
       externalCallTracker.registerListener(listener);
+    }
+  }
+
+  private void registerTemporalProcessLauncher() {
+    if (temporalProcessLauncher != null) {
+      DslConfig.dslConfig().temporalProcessLauncher().replace(temporalProcessLauncher);
     }
   }
 }

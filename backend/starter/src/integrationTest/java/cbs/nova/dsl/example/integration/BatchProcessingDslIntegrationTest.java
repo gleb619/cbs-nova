@@ -5,8 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.TemporalProcessLauncherHolder;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dslexamples.BatchModels.BatchIn;
 import cbs.nova.dslexamples.BatchModels.BatchItem;
 import cbs.nova.dslexamples.BatchModels.BatchOut;
@@ -82,7 +82,7 @@ class BatchProcessingDslIntegrationTest {
   @BeforeAll
   static void setUp() {
     GlobalManager.getInstance().resetForTests();
-    TemporalProcessLauncherHolder.reset();
+    DslConfig.dslConfig().temporalProcessLauncher().replace(null);
 
     var globalManager = GlobalManager.getInstance();
     new DefinitionLoader().load(globalManager);
@@ -101,7 +101,7 @@ class BatchProcessingDslIntegrationTest {
     workflowClient = WorkflowClient.newInstance(serviceStubs);
 
     var launcher = new TemporalDslProcessLauncher(workflowClient);
-    TemporalProcessLauncherHolder.set(launcher);
+    DslConfig.dslConfig().temporalProcessLauncher().replace(launcher);
 
     var descriptor = globalManager.findGeneratedProcess("BatchProcessing").orElseThrow();
     workerFactory = WorkerFactory.newInstance(workflowClient);
@@ -115,7 +115,7 @@ class BatchProcessingDslIntegrationTest {
     if (workerFactory != null) {
       workerFactory.shutdown();
     }
-    TemporalProcessLauncherHolder.reset();
+    DslConfig.dslConfig().temporalProcessLauncher().replace(null);
   }
 
   @Test

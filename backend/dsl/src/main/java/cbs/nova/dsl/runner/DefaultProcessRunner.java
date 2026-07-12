@@ -8,8 +8,8 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.TemporalProcessLauncher;
-import cbs.nova.dsl.TemporalProcessLauncherHolder;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.process.ProcessRichContext;
 import cbs.nova.dsl.process.ProcessRunner;
@@ -28,7 +28,7 @@ public final class DefaultProcessRunner implements ProcessRunner {
     Throwable failure = null;
     boolean launchedByTemporal = false;
     try {
-      TemporalProcessLauncher launcher = TemporalProcessLauncherHolder.get();
+      TemporalProcessLauncher launcher = DslConfig.dslConfig().temporalProcessLauncher().get();
       if (launcher != null && launcher.canRun(ctx)) {
         launchedByTemporal = true;
         result = launcher.launch(
