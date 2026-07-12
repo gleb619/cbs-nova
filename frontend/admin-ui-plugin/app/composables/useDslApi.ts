@@ -34,5 +34,9 @@ export function useDslApi() {
     return preview(name, {})
   }
 
-  return { getDefinitions, preview, run, explain, saveDraft, validateConstruct }
+  async function reload() {
+    return $fetch('/api/v1/dsl/reload', { method: 'POST' })
+  }
+
+  return { getDefinitions, preview, run, explain, saveDraft, validateConstruct, reload }
 }

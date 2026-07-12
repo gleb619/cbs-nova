@@ -10,6 +10,7 @@ const {
   saveConstruct,
   validateConstruct,
   publishConstruct,
+  reloadDefinitions,
 } = workbench
 
 const explorerOpen = ref(true)
@@ -37,6 +38,14 @@ onMounted(() => {
         </span>
       </div>
       <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="px-3 py-1.5 text-sm rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50"
+          :disabled="state.isLoading"
+          @click="reloadDefinitions"
+        >
+          Refresh
+        </button>
         <button
           type="button"
           class="px-3 py-1.5 text-sm rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50"

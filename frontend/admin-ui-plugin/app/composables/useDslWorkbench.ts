@@ -85,6 +85,11 @@ export function useDslWorkbench() {
     state.value.isDirty = true
   }
 
+  async function reloadDefinitions() {
+    await api.reload()
+    await loadConstructs()
+  }
+
   return {
     state: readonly(state),
     selectedConstruct,
@@ -94,5 +99,6 @@ export function useDslWorkbench() {
     validateConstruct,
     publishConstruct,
     markDirty,
+    reloadDefinitions,
   }
 }
