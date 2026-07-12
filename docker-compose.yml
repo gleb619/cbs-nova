@@ -65,14 +65,19 @@ services:
 
   spring-app:
     image: cbs-nova:latest
+    build:
+      context: .
+      dockerfile: backend/starter/Dockerfile
     ports:
       - "8090:8090"
     environment:
-      SENTRY_DSN: "${SENTRY_DSN:-}"
       SPRING_PROFILES_ACTIVE: prod
       TEMPORAL_ADDRESS: temporal:7233
+      SENTRY_DSN: "${BUGSINK_DSN:-}"
+      KEYCLOAK_URL: "${KEYCLOAK_URL:-}"
     depends_on:
       - bugsink
+      - keycloak
       - temporal
 
   temporal:

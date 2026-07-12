@@ -1,0 +1,8 @@
+**/build/
+**/node_modules/
+**/.git/
+**/.idea/
+*.iml
+frontend/**/.nuxt/
+frontend/**/.output/
+frontend/**/dist/

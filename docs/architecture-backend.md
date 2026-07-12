@@ -135,7 +135,30 @@ small set of operational endpoints over HTTP. They are configured in
 > the servlet context can read health, info, and metrics. Gating (e.g. a `permitAll`/`authenticated` split
 > once security is introduced) is deferred until a security filter chain exists in this repo.
 
-## DSL authoring, constructs, and generated code
+## Building the app image
+
+The `spring-app` image is built from the root of the repository using a
+multi-stage Dockerfile located at `backend/starter/Dockerfile`.
+
+Build the image manually and tag it as `cbs-nova:latest`:
+
+```bash
+docker build -t cbs-nova:latest -f backend/starter/Dockerfile .
+```
+
+`docker compose build` will produce the same tag because the `spring-app`
+service keeps `image: cbs-nova:latest` and adds a `build` block that points at
+the same Dockerfile:
+
+```bash
+docker compose build spring-app
+```
+
+When `docker compose up` is run, compose will use the locally available
+`cbs-nova:latest` image if it exists, or build it first from the declared
+`build` context. The Dockerfile compiles the full backend in a JDK image and
+then copies only the `:starter` fat jar into a smaller JRE runtime image.
+
 
 - **[DSL constructs & execution contract](dsl/constructs.md)** — `Executable`, `Context`, and the semantics of Process,
   Transaction, Function, and Helper.
