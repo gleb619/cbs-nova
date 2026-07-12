@@ -106,6 +106,23 @@ The runtime is deliberately layered so generated code has a single entry point:
 
 See [Runtime details](dsl/runtime.md) for the full contract, operational modes, and REST endpoints.
 
+## Actuator endpoints
+
+The `cbs-nova-starter` module ships Spring Boot Actuator on the runtime classpath and exposes a
+small set of operational endpoints over HTTP. They are configured in
+`backend/starter/src/main/resources/application.yml`:
+
+| Endpoint                | Purpose                                                            |
+|-------------------------|-------------------------------------------------------------------|
+| `GET /actuator/health`  | Aggregated health. Includes a `dsl` component (from `DslHealthIndicator`) reporting `processes`/`transactions`/`helpers` counts out of `GlobalManager`. `show-details: always` so individual components are visible. |
+| `GET /actuator/info`    | Build metadata (group, artifact, version, build time) via the Gradle `springBoot { buildInfo() }` block, plus `env`/`java` info contributors. |
+| `GET /actuator/metrics` | Micrometer metrics list (e.g. `jvm.memory.used`); individual metrics are readable at `/actuator/metrics/{name}`. |
+
+> **Auth status:** these endpoints are **unauthenticated** today. There is no Spring Security / Keycloak filter
+> chain anywhere in `backend/starter` yet, so nothing gates access to `/actuator/*`. Any host that can reach
+> the servlet context can read health, info, and metrics. Gating (e.g. a `permitAll`/`authenticated` split
+> once security is introduced) is deferred until a security filter chain exists in this repo.
+
 ## DSL authoring, constructs, and generated code
 
 - **[DSL constructs & execution contract](dsl/constructs.md)** — `Executable`, `Context`, and the semantics of Process,

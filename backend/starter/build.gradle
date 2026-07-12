@@ -13,13 +13,17 @@ jar {
   enabled = true
 }
 
+springBoot {
+  buildInfo()
+}
+
 dependencies {
   api project(":dsl-api")
   api project(':dsl')
   api project(':misc-codegen')
 
   compileOnly libs.bundles.spring.web
-  compileOnly libs.spring.boot.starter.actuator
+  implementation libs.spring.boot.starter.actuator
   compileOnly libs.springdoc.openapi.starter.webmvc.ui
 
   api libs.temporal.sdk
