@@ -14,15 +14,15 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
-          cache: gradle
+          gradle: true
 
       - name: Build
         working-directory: backend
-        run: ./gradlew :dsl-api:build :dsl:build :dsl-codegen:build :starter:build --no-daemon
+        run: ./gradlew :dsl-api:build :dsl:build :dsl-codegen:build :misc-codegen:build :starter:build --no-daemon
 
       - name: Test
         working-directory: backend
-        run: ./gradlew :dsl-codegen:test :dsl:test :starter:test --no-daemon
+        run: ./gradlew test --no-daemon
 
       - name: Upload test results
         if: failure()
