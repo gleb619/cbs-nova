@@ -2,12 +2,15 @@ package cbs.nova.starter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.DslTemporalProcessRequest;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.generated.sampleprocess.v1.SampleProcessProcessWorkflow;
+import cbs.nova.dslexamples.sampleprocess.v1.SampleProcessProcessWorkflow;
 import io.restassured.RestAssured;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.client.WorkflowStub;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,9 +20,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
-
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = IntegrationTestApplication.class)
 @Import(TemporalTestConfiguration.class)
@@ -35,6 +35,7 @@ class DslExamplesEndToEndTest extends BaseContainers {
 
   @BeforeAll
   static void initKeycloak() {
+    GlobalManager.getInstance().resetForTests();
     keycloakRealm = new KeycloakRealmInitializer(KEYCLOAK);
     keycloakRealm.initialize();
   }
@@ -52,14 +53,18 @@ class DslExamplesEndToEndTest extends BaseContainers {
 
   @Test
   void generatedDslWorkflowExecutesThroughTemporal() throws TimeoutException {
+    String workflowId = "sample-process-test-" + System.currentTimeMillis();
+    String runId = workflowId;
+    var request = new DslTemporalProcessRequest(runId, "integration-test");
+
     var stub = workflowClient.newWorkflowStub(
             SampleProcessProcessWorkflow.class,
             WorkflowOptions.newBuilder()
                     .setTaskQueue("SampleProcess-queue")
-                    .setWorkflowId("sample-process-test-" + System.currentTimeMillis())
+                    .setWorkflowId(workflowId)
                     .build());
 
-    WorkflowStub.fromTyped(stub).start("integration-test");
+    WorkflowStub.fromTyped(stub).start(request);
     Object result = WorkflowStub.fromTyped(stub).getResult(30, TimeUnit.SECONDS, Object.class);
 
     assertThat(result).isEqualTo("Hello from DSL: integration-test");

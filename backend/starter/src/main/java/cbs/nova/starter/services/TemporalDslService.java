@@ -1,5 +1,7 @@
 package cbs.nova.starter.services;
 
+import cbs.nova.dsl.DslTemporalProcess;
+import cbs.nova.dsl.DslTemporalProcessRequest;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.converter.MapInputConverter;
@@ -11,14 +13,16 @@ import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 
 /**
  * Executes generated DSL workflows by their string code, hiding Temporal worker and stub wiring.
+ *
+ * <p>
+ * This service uses the {@link DslTemporalProcess} contract to start workflows, so no reflection is
+ * required to locate the workflow method.
  */
 @Service
 @RequiredArgsConstructor
@@ -54,17 +58,15 @@ public class TemporalDslService {
       workerFactory.start();
 
       Object preparedInput = prepareInput(input, descriptor.inputType());
-      Object stub = workflowClient.newWorkflowStub(descriptor.temporalInterface(),
-              effectiveOptions);
-      Method runMethod = findRunMethod(descriptor.temporalInterface());
-      Object result = runMethod.invoke(stub, preparedInput);
+      String runId = effectiveOptions.getWorkflowId();
+      var stub = workflowClient.newWorkflowStub(descriptor.temporalInterface(), effectiveOptions);
+      DslTemporalProcess process = (DslTemporalProcess) stub;
+      Object result = process.execute(new DslTemporalProcessRequest(runId, preparedInput));
       return outputType.cast(result);
-    } catch (InvocationTargetException e) {
-      Throwable cause = e.getCause();
+    } catch (RuntimeException e) {
+      Throwable cause = e.getCause() != null ? e.getCause() : e;
       throw new RuntimeException(
               "DSL workflow " + code + " failed: " + cause.getMessage(), cause);
-    } catch (ReflectiveOperationException e) {
-      throw new RuntimeException("Failed to execute DSL workflow " + code, e);
     } finally {
       workerFactory.shutdown();
     }
@@ -92,16 +94,6 @@ public class TemporalDslService {
       return MapInputConverter.convert(parameters, inputType);
     }
     return input;
-  }
-
-  private Method findRunMethod(Class<?> workflowInterface) {
-    for (Method method : workflowInterface.getMethods()) {
-      if ("run".equals(method.getName()) && method.getParameterCount() == 1) {
-        return method;
-      }
-    }
-    throw new IllegalArgumentException(
-            "No single-arg run method on " + workflowInterface.getName());
   }
 
   private WorkflowOptions defaultOptions(GeneratedClassDescriptor descriptor) {

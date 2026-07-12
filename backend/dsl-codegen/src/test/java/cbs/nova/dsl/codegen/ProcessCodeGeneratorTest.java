@@ -3,6 +3,8 @@ package cbs.nova.dsl.codegen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.DslTemporalProcess;
+import cbs.nova.dsl.DslTemporalProcessRequest;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.DescriptorFactory;
 import org.junit.jupiter.api.Test;
@@ -11,9 +13,13 @@ class ProcessCodeGeneratorTest {
 
   private final ProcessCodeGenerator generator = new ProcessCodeGenerator(new CodegenNaming());
 
+  private static DescriptorFactory descriptor() {
+    return new DescriptorFactory();
+  }
+
   @Test
   void generatesTwoSources() {
-    var descriptor = new DescriptorFactory().fromProcess(
+    var descriptor = descriptor().fromProcess(
             Dsl.process("LoanDisbursement")
                     .input(String.class)
                     .output(String.class)
@@ -26,7 +32,7 @@ class ProcessCodeGeneratorTest {
 
   @Test
   void interfaceHasCorrectNameAndAnnotations() {
-    var descriptor = new DescriptorFactory().fromProcess(
+    var descriptor = descriptor().fromProcess(
             Dsl.process("LoanDisbursement")
                     .input(String.class)
                     .output(String.class)
@@ -37,13 +43,17 @@ class ProcessCodeGeneratorTest {
     assertThat(iface.className()).isEqualTo("LoanDisbursementProcessWorkflow");
     assertThat(iface.source()).contains("@WorkflowInterface");
     assertThat(iface.source()).contains("@WorkflowMethod");
-    assertThat(iface.source()).contains("interface LoanDisbursementProcessWorkflow");
-    assertThat(iface.source()).contains("String run(String input)");
+    assertThat(iface.source()).contains(
+            "interface LoanDisbursementProcessWorkflow extends "
+                    + DslTemporalProcess.class.getSimpleName());
+    assertThat(iface.source())
+            .contains("Object execute(" + DslTemporalProcessRequest.class.getSimpleName()
+                    + " request)");
   }
 
   @Test
   void packageIsVersioned() {
-    var descriptor = new DescriptorFactory().fromProcess(
+    var descriptor = descriptor().fromProcess(
             Dsl.process("LoanDisbursement")
                     .input(String.class)
                     .output(String.class)
@@ -57,7 +67,7 @@ class ProcessCodeGeneratorTest {
 
   @Test
   void implementationDelegatesViaGlobalManager() {
-    var descriptor = new DescriptorFactory().fromProcess(
+    var descriptor = descriptor().fromProcess(
             Dsl.process("LoanDisbursement")
                     .input(String.class)
                     .output(String.class)
@@ -70,11 +80,15 @@ class ProcessCodeGeneratorTest {
     assertThat(impl.source())
             .contains("GlobalManager.getInstance().runProcess(\"LoanDisbursement\"");
     assertThat(impl.source()).contains("ExecutionMode.RUN");
+    assertThat(impl.source())
+            .contains(DslTemporalProcessRequest.class.getSimpleName() + " request");
+    assertThat(impl.source()).contains("request.runId()");
+    assertThat(impl.source()).contains("request.payload()");
   }
 
   @Test
   void withCompensationEmitsSagaCode() {
-    var descriptor = new DescriptorFactory().fromProcess(
+    var descriptor = descriptor().fromProcess(
             Dsl.process("LoanDisbursement")
                     .input(String.class)
                     .output(String.class)
@@ -91,7 +105,7 @@ class ProcessCodeGeneratorTest {
 
   @Test
   void withoutCompensationUsesDefaultNoOpCompensation() {
-    var descriptor = new DescriptorFactory().fromProcess(
+    var descriptor = descriptor().fromProcess(
             Dsl.process("LoanDisbursement")
                     .input(String.class)
                     .output(String.class)
@@ -108,7 +122,7 @@ class ProcessCodeGeneratorTest {
 
   @Test
   void interfaceHasGetVersion() {
-    var descriptor = new DescriptorFactory().fromProcess(
+    var descriptor = descriptor().fromProcess(
             Dsl.process("Foo").execute(ctx -> Result.success("x")).build());
     var iface = generator.generate(descriptor, null, null).get(0);
     assertThat(iface.source()).contains("@QueryMethod");
@@ -117,7 +131,7 @@ class ProcessCodeGeneratorTest {
 
   @Test
   void implReturnsVersion() {
-    var descriptor = new DescriptorFactory().fromProcess(
+    var descriptor = descriptor().fromProcess(
             Dsl.process("Foo").version("v2").execute(ctx -> Result.success("x"))
                     .build());
     var impl = generator.generate(descriptor, null, null).get(1);
@@ -127,7 +141,7 @@ class ProcessCodeGeneratorTest {
 
   @Test
   void implContainsTaskQueueConstant() {
-    var descriptor = new DescriptorFactory().fromProcess(
+    var descriptor = descriptor().fromProcess(
             Dsl.process("Foo").execute(ctx -> Result.success("x")).build());
     var impl = generator.generate(descriptor, null, null).get(1);
     assertThat(impl.source()).contains("TASK_QUEUE");

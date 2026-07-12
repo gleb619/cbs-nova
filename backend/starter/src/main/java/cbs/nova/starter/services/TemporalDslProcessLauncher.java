@@ -2,6 +2,8 @@ package cbs.nova.starter.services;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslExecutionException;
+import cbs.nova.dsl.DslTemporalProcess;
+import cbs.nova.dsl.DslTemporalProcessRequest;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
@@ -10,12 +12,11 @@ import cbs.nova.dsl.TemporalProcessLauncher;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.workflow.Workflow;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+
+import java.time.Duration;
 
 /**
  * Temporal implementation of {@link TemporalProcessLauncher}. It resolves the generated workflow
@@ -24,6 +25,10 @@ import org.jspecify.annotations.Nullable;
  * the caller is already inside a Temporal workflow thread, {@link #canRun(Context)} returns false
  * so the DSL runner falls back to executing the process logic directly and avoids recursive
  * workflow spawning.
+ *
+ * <p>
+ * The launcher communicates with generated workflows through the {@link DslTemporalProcess}
+ * contract instead of reflection.
  */
 @RequiredArgsConstructor
 public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
@@ -69,27 +74,13 @@ public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
 
     var stub = workflowClient.newWorkflowStub(descriptor.temporalInterface(), options);
     try {
-      Method runMethod = findRunMethod(descriptor.temporalInterface(), descriptor.inputType());
-      Object result = runMethod.invoke(stub, ctx.body());
+      DslTemporalProcess process = (DslTemporalProcess) stub;
+      Object result = process.execute(new DslTemporalProcessRequest(ctx.runId(), ctx.body()));
       return Result.success(result);
-    } catch (InvocationTargetException e) {
-      Throwable cause = e.getCause();
+    } catch (Exception e) {
+      Throwable cause = e.getCause() != null ? e.getCause() : e;
       return Result.failure(new DslExecutionException(ctx.runId(),
               "Process " + processName + " failed: " + cause.getMessage(), cause));
-    } catch (ReflectiveOperationException e) {
-      return Result.failure(new DslExecutionException(ctx.runId(),
-              "Failed to execute process " + processName, e));
     }
-  }
-
-  private Method findRunMethod(Class<?> workflowInterface, Class<?> inputType) {
-    for (Method method : workflowInterface.getMethods()) {
-      if ("run".equals(method.getName()) && method.getParameterCount() == 1) {
-        if (inputType == null || method.getParameterTypes()[0].isAssignableFrom(inputType)) {
-          return method;
-        }
-      }
-    }
-    throw new IllegalArgumentException("No suitable run method on " + workflowInterface.getName());
   }
 }
