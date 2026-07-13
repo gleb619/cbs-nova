@@ -120,4 +120,48 @@ class GlobalManagerTest {
     var descriptor = gm.describeHelper("HelperA");
     assertThat(descriptor).isNotEmpty();
   }
+
+  @Test
+  void transactionCompensationRoundTrip() {
+    var gm = GlobalManager.getInstance();
+    var order = new java.util.ArrayList<String>();
+    var tx = Dsl.transaction("CompTx")
+            .input(String.class)
+            .execute(ctx -> Result.success("ok"))
+            .compensation(ctx -> {
+              order.add("compensated:" + ctx.body());
+              return Result.success(null);
+            })
+            .build();
+    gm.registerTransaction(tx);
+    var baseCtx = contextFactory.of("payload", ExecutionMode.RUN, "run-comp");
+    assertThat(gm.registerTransactionCompensation("CompTx", "run-comp", baseCtx)).isTrue();
+    gm.compensateTransaction("CompTx", "run-comp", new RuntimeException("boom"));
+    assertThat(order).containsExactly("compensated:payload");
+  }
+
+  @Test
+  void directTransactionCompensationFindsRegisteredTransaction() {
+    var gm = GlobalManager.getInstance();
+    var order = new java.util.ArrayList<String>();
+    var tx = Dsl.transaction("DirectCompTx")
+            .input(String.class)
+            .execute(ctx -> Result.success("ok"))
+            .compensation(ctx -> {
+              order.add("direct:" + ctx.body());
+              return Result.success(null);
+            })
+            .build();
+    gm.registerTransaction(tx);
+    var ctx = contextFactory.of("direct-payload", ExecutionMode.COMPENSATION, "run-direct");
+    gm.compensateTransaction("DirectCompTx", ctx, new RuntimeException("boom"));
+    assertThat(order).containsExactly("direct:direct-payload");
+  }
+
+  @Test
+  void missingTransactionCompensationIsNoOp() {
+    var gm = GlobalManager.getInstance();
+    gm.compensateTransaction("MissingTx", "run-1", new RuntimeException("boom"));
+    // no exception expected
+  }
 }

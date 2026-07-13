@@ -1,5 +1,6 @@
 package cbs.nova.dsl.codegen;
 
+import cbs.nova.dsl.DslTemporalTransactionRequest;
 import cbs.nova.dsl.GeneratedTransactionActivity;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.utils.Substitutor;
@@ -47,10 +48,12 @@ public final class TransactionCodeGenerator {
 
   private String generateInterface(String pkg, String transactionName, String interfaceName,
           String inputTypeName, String inputImport, boolean hasCompensation) {
-    String importBlock = inputImport.isEmpty() ? "" : "\n" + inputImport + "\n";
+    String importBlock = buildImportBlock(inputImport,
+            "import " + DslTemporalTransactionRequest.class.getCanonicalName() + ";");
     String compensationMethod = hasCompensation
-            ? "\n  @ActivityMethod\n  void compensate(" + inputTypeName
-                    + " input, Throwable error);\n"
+            ? "\n  @ActivityMethod\n  void compensate(DslTemporalTransactionRequest<"
+                    + inputTypeName
+                    + "> request, Throwable error);\n"
             : "";
     return Substitutor.format(
             """
@@ -66,7 +69,7 @@ public final class TransactionCodeGenerator {
                       String getVersion();
 
                       @ActivityMethod
-                      Object execute(${inputTypeName} input);${compensationMethod}
+                      Object execute(DslTemporalTransactionRequest<${inputTypeName}> request);${compensationMethod}
                     }
                     """,
             Map.of(
@@ -81,20 +84,18 @@ public final class TransactionCodeGenerator {
   private String generateImpl(String pkg, String transactionName, String interfaceName,
           String implName, String versionConstant, String taskQueue, String inputTypeName,
           String inputImport, boolean hasCompensation) {
-    String importBlock = inputImport.isEmpty() ? "" : "\n" + inputImport + "\n";
+    String importBlock = buildImportBlock(inputImport,
+            "import " + DslTemporalTransactionRequest.class.getCanonicalName() + ";");
     String compensationMethod = hasCompensation
             ? Substitutor.format(
                     """
 
-                            public void compensate(${inputTypeName} input, Throwable error) {
-                              String runId = "run-" + UUID.randomUUID();
-                              var ctx = new SimpleContext<>(input, Map.of(), ExecutionMode.COMPENSATION, runId);
-                              var compCtx = new CompensationRichContext<>(ctx, error, new ExecutionTraceCollector(), new ContextFactory());
-                              GlobalManager.getInstance().findTransaction("${transactionName}").ifPresent(tx -> {
-                                if (tx.compensationLogic() != null) {
-                                  tx.compensationLogic().apply(compCtx);
-                                }
-                              });
+                            public void compensate(DslTemporalTransactionRequest<${inputTypeName}> request, Throwable error) {
+                              String runId = request.runId();
+                              ${inputTypeName} input = request.payload();
+                              var ctx = GlobalManager.getInstance()
+                                      .createContext(input, Map.of(), ExecutionMode.COMPENSATION, runId);
+                              GlobalManager.getInstance().compensateTransaction("${transactionName}", ctx, error);
                             }
                             """,
                     Map.of("inputTypeName", inputTypeName, "transactionName", transactionName))
@@ -102,14 +103,12 @@ public final class TransactionCodeGenerator {
     return Substitutor.format(
             """
                     package ${pkg};${importBlock}
-                    import cbs.nova.dsl.CompensationRichContext;
+                    import cbs.nova.dsl.DslTemporalTransactionRequest;
                     import cbs.nova.dsl.ExecutionMode;
-                    import cbs.nova.dsl.ExecutionTraceCollector;
                     import cbs.nova.dsl.GlobalManager;
-                    import cbs.nova.dsl.SimpleContext;
-                    import cbs.nova.dsl.config.ContextFactory;
+                    import cbs.nova.dsl.Result;
+                    import cbs.nova.dsl.TransactionRouting;
                     import java.util.Map;
-                    import java.util.UUID;
 
                     public class ${implName} implements ${interfaceName} {
                       private static final String VERSION = "${version}";
@@ -122,9 +121,12 @@ public final class TransactionCodeGenerator {
                       }
 
                       @Override
-                      public Object execute(${inputTypeName} input) {
-                        String runId = "run-" + UUID.randomUUID();
-                        var ctx = new SimpleContext<>(input, Map.of(), ExecutionMode.RUN, runId);
+                      public Object execute(DslTemporalTransactionRequest<${inputTypeName}> request) {
+                        String runId = request.runId();
+                        ${inputTypeName} input = request.payload();
+                        var ctx = GlobalManager.getInstance()
+                                .createContext(input, Map.of(), ExecutionMode.RUN, runId)
+                                .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);
                         var result = GlobalManager.getInstance().runTransaction("${transactionName}", ctx);
                         if (!result.isSuccess()) throw new RuntimeException("Transaction failed", result.cause());
                         return result.value();
@@ -141,6 +143,15 @@ public final class TransactionCodeGenerator {
                     "taskQueue", taskQueue,
                     "inputTypeName", inputTypeName,
                     "compensationMethod", compensationMethod));
+  }
+
+  private String buildImportBlock(String inputImport, String requestImport) {
+    List<String> imports = new ArrayList<>();
+    if (!inputImport.isEmpty()) {
+      imports.add(inputImport);
+    }
+    imports.add(requestImport);
+    return imports.isEmpty() ? "" : "\n" + String.join("\n", imports) + "\n";
   }
 
   private String typeName(Class<?> type) {

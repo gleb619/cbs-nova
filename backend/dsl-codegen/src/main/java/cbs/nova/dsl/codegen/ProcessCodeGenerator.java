@@ -34,9 +34,8 @@ public final class ProcessCodeGenerator {
                     generateInterface(pkg, interfaceName, descriptor)),
             new GeneratedSource(
                     pkg, implName, generateImpl(pkg, name, interfaceName, implName,
-                            versionConstant, descriptor.taskQueue(),
-                            descriptor.inputType(), descriptor.hasCompensation(),
-                            descriptor.transactionRefs())));
+                            versionConstant, descriptor.taskQueue(), descriptor.inputType(),
+                            descriptor.hasCompensation(), descriptor.transactionRefs())));
   }
 
   private static @NonNull String resolveVersion(
@@ -89,22 +88,18 @@ public final class ProcessCodeGenerator {
     addImport(imports, inputType);
 
     String importBlock = imports.isEmpty() ? "" : "\n" + String.join("\n", imports) + "\n";
-    String compensationRegistrations = generateCompensationRegistrations(transactionRefs);
-    String compensationMethods = generateCompensationMethods(processName, hasCompensation,
-            transactionRefs);
+    String compensationRegistrations = generateCompensationRegistrations(
+            processName, hasCompensation, transactionRefs);
+    String compensationMethods = generateCompensationMethods(processName, hasCompensation);
 
     String template = """
             package ${pkg};${importBlock}
-            import cbs.nova.dsl.CompensationRichContext;
             import cbs.nova.dsl.Context;
-            import cbs.nova.dsl.DslEntityNotFoundException;
             import cbs.nova.dsl.DslTemporalProcessFailure;
             import cbs.nova.dsl.ExecutionMode;
-            import cbs.nova.dsl.ExecutionTraceCollector;
             import cbs.nova.dsl.GlobalManager;
             import cbs.nova.dsl.Result;
             import cbs.nova.dsl.TransactionRouting;
-            import cbs.nova.dsl.config.ContextFactory;
             import io.temporal.workflow.Saga;
             import java.util.Map;
             import java.util.concurrent.atomic.AtomicReference;
@@ -127,7 +122,7 @@ public final class ProcessCodeGenerator {
                         .createContext(input, Map.of(), ExecutionMode.RUN, runId)
                         .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);
                 var compensationCtx = GlobalManager.getInstance()
-                        .createContext(input, Map.of(), ExecutionMode.RUN, runId);
+                        .createContext(input, Map.of(), ExecutionMode.COMPENSATION, runId);
                 AtomicReference<Throwable> failureRef = new AtomicReference<>();
                 ${compensationRegistrations}
                 try {
@@ -165,62 +160,36 @@ public final class ProcessCodeGenerator {
                     Map.entry("compensationMethods", compensationMethods)));
   }
 
-  private String generateCompensationRegistrations(List<String> transactionRefs) {
-    StringBuilder sb = new StringBuilder();
-    sb.append(
-            "    saga.addCompensation(() -> compensateProcess(runId, compensationCtx, failureRef));\n");
-    for (String tx : transactionRefs) {
-      sb.append("    saga.addCompensation(() -> compensate")
-              .append(tx)
-              .append("(runId, compensationCtx, failureRef));\n");
-    }
-    return sb.toString();
-  }
-
-  private String generateCompensationMethods(
+  private String generateCompensationRegistrations(
           String processName, boolean hasCompensation, List<String> transactionRefs) {
     StringBuilder sb = new StringBuilder();
-    sb.append(generateProcessCompensationMethod(processName, hasCompensation));
+    if (hasCompensation) {
+      sb.append(
+              "    saga.addCompensation(() -> compensateProcess(runId, compensationCtx, failureRef));\n");
+    }
     for (String tx : transactionRefs) {
-      sb.append(generateTransactionCompensationMethod(tx));
+      sb.append("    if (GlobalManager.getInstance().registerTransactionCompensation(\""
+              + tx + "\", runId, compensationCtx)) {\n")
+              .append("      saga.addCompensation(() -> GlobalManager.getInstance().compensateTransaction(\""
+                      + tx + "\", runId, failureRef.get()));\n")
+              .append("    }\n");
     }
     return sb.toString();
   }
 
-  private String generateProcessCompensationMethod(String processName, boolean hasCompensation) {
-    String body = hasCompensation
-            ? Substitutor.format(
-                    "    var process = GlobalManager.getInstance().findProcess(\"${processName}\").orElseThrow(() -> new DslEntityNotFoundException(runId, \"Process not found: ${processName}\"));\n"
-                            + "    if (process.compensationLogic() == null) {\n"
-                            + "      return;\n"
-                            + "    }\n"
-                            + "    var compCtx = new CompensationRichContext<>(compensationCtx,\n"
-                            + "            failureRef.get() != null ? failureRef.get() : new RuntimeException(\"compensation triggered\"),\n"
-                            + "            new ExecutionTraceCollector(), new ContextFactory());\n"
-                            + "    process.compensationLogic().apply(compCtx);\n",
-                    Map.of("processName", processName))
-            : "    /* default no-op compensation */\n";
-    return "private void compensateProcess(String runId, Context<?> compensationCtx, AtomicReference<Throwable> failureRef) {\n"
-            + body
-            + "  }\n";
-  }
-
-  private String generateTransactionCompensationMethod(String txName) {
+  private String generateCompensationMethods(String processName, boolean hasCompensation) {
+    if (!hasCompensation) {
+      return "";
+    }
     return Substitutor.format(
             """
-                    private void compensate${txName}(String runId, Context<?> compensationCtx, AtomicReference<Throwable> failureRef) {
-                      GlobalManager.getInstance().findTransaction("${txName}").ifPresent(tx -> {
-                        if (tx.compensationLogic() == null) {
-                          return;
-                        }
-                        var compCtx = new CompensationRichContext<>(compensationCtx,
-                                failureRef.get() != null ? failureRef.get() : new RuntimeException("compensation triggered"),
-                                new ExecutionTraceCollector(), new ContextFactory());
-                        tx.compensationLogic().apply(compCtx);
-                      });
+                    private void compensateProcess(String runId, Context<?> compensationCtx, AtomicReference<Throwable> failureRef) {
+                      GlobalManager.getInstance().compensateProcess("${processName}", compensationCtx,
+                              failureRef.get() != null ? failureRef.get()
+                                      : new RuntimeException("compensation triggered"));
                     }
                     """,
-            Map.of("txName", txName));
+            Map.of("processName", processName));
   }
 
   private String typeName(Class<?> type) {

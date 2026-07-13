@@ -29,6 +29,7 @@ public final class GlobalManager {
   private final HelperManager helperManager;
   private final GeneratedClassRegistry generatedClassRegistry;
   private final ProcessContextFactory processContextFactory;
+  private final CompensationRegistry compensationRegistry;
 
   public static @NonNull GlobalManager getInstance() {
     if (INSTANCE == null) {
@@ -45,7 +46,8 @@ public final class GlobalManager {
                   new HelperManager(new DefaultHelperRegistry(),
                           config.helperRunner(traceCollector, contextFactory)),
                   new GeneratedClassRegistry(),
-                  new DefaultProcessContextFactory());
+                  new DefaultProcessContextFactory(),
+                  new CompensationRegistry());
         }
       }
     }
@@ -92,6 +94,14 @@ public final class GlobalManager {
           @NonNull String runId,
           @NonNull TransactionRouting transactionRouting) {
     return processContextFactory.create(body, metadata, mode, runId, transactionRouting);
+  }
+
+  public @NonNull CompensationRichContext<?> createCompensationContext(
+          @NonNull Context<?> ctx,
+          @NonNull Throwable error) {
+    var config = DslConfig.dslConfig();
+    return new CompensationRichContext<>(ctx, error, config.executionTraceCollector(),
+            config.contextFactory());
   }
 
   public @NonNull Result<?> runProcess(@NonNull String name, @NonNull Context<?> ctx) {
@@ -203,6 +213,53 @@ public final class GlobalManager {
 
   public @NonNull Optional<TransactionInvoker> transactionInvoker() {
     return Optional.ofNullable(DslConfig.dslConfig().transactionInvoker().get());
+  }
+
+  /**
+   * Registers a compensation for the given transaction and run id. Returns {@code true} when the
+   * transaction exists and has a compensation block.
+   */
+  public boolean registerTransactionCompensation(
+          @NonNull String name,
+          @NonNull String runId,
+          @NonNull Context<?> baseCtx) {
+    return transactionManager.find(name)
+            .map(tx -> compensationRegistry.register(name, runId, baseCtx, tx))
+            .orElse(false);
+  }
+
+  /** Invokes a previously registered transaction compensation, if any. */
+  public void compensateTransaction(@NonNull String name, @NonNull String runId,
+          @NonNull Throwable error) {
+    var config = DslConfig.dslConfig();
+    compensationRegistry.compensate(name, runId, error, config.executionTraceCollector(),
+            config.contextFactory());
+  }
+
+  /** Compensates a transaction directly, handling the find/if-null boilerplate internally. */
+  public void compensateTransaction(
+          @NonNull String name,
+          @NonNull Context<?> ctx,
+          @NonNull Throwable error) {
+    transactionManager.find(name).ifPresent(tx -> {
+      if (tx.compensationLogic() == null) {
+        return;
+      }
+      tx.compensationLogic().apply(createCompensationContext(ctx, error));
+    });
+  }
+
+  /** Compensates a process directly, handling the find/if-null boilerplate internally. */
+  public void compensateProcess(
+          @NonNull String name,
+          @NonNull Context<?> ctx,
+          @NonNull Throwable error) {
+    findProcess(name).ifPresent(p -> {
+      if (p.compensationLogic() == null) {
+        return;
+      }
+      p.compensationLogic().apply(createCompensationContext(ctx, error));
+    });
   }
 
   public void resetForTests() {

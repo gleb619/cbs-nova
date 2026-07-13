@@ -1,6 +1,7 @@
 package cbs.nova.starter.services;
 
 import cbs.nova.dsl.Context;
+import cbs.nova.dsl.DslTemporalTransactionRequest;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
@@ -26,7 +27,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>
  * Instead of using {@link java.lang.reflect.Method} inside generated workflow code, this bean
  * resolves a {@link java.lang.invoke.MethodHandle} for the typed {@code execute} method of the
- * generated activity interface and invokes it on the Temporal stub.
+ * generated activity interface and invokes it on the Temporal stub. Inputs are wrapped into a
+ * {@link DslTemporalTransactionRequest} at the last moment so the activity API carries both the
+ * payload and the DSL run id, matching the process workflow API.
  * </p>
  */
 public final class TemporalTransactionInvoker implements TransactionInvoker {
@@ -50,7 +53,8 @@ public final class TemporalTransactionInvoker implements TransactionInvoker {
     Caller caller = callers.computeIfAbsent(name, n -> buildCaller(descriptor, tx));
     Object stub = Workflow.newActivityStub(caller.iface, caller.options);
     try {
-      Object value = caller.execute.invoke(stub, input);
+      var request = new DslTemporalTransactionRequest<>(ctx.runId(), input);
+      Object value = caller.execute.invoke(stub, request);
       return Result.success(value);
     } catch (Throwable t) {
       Throwable cause = t.getCause() != null ? t.getCause() : t;
@@ -60,11 +64,11 @@ public final class TemporalTransactionInvoker implements TransactionInvoker {
 
   private Caller buildCaller(GeneratedClassDescriptor descriptor, TransactionDslObject tx) {
     Class<?> iface = descriptor.temporalInterface();
-    Class<?> inputType = descriptor.inputType() != null ? descriptor.inputType() : Object.class;
     MethodHandle handle;
     try {
       handle = MethodHandles.publicLookup()
-              .findVirtual(iface, "execute", MethodType.methodType(Object.class, inputType));
+              .findVirtual(iface, "execute",
+                      MethodType.methodType(Object.class, DslTemporalTransactionRequest.class));
     } catch (NoSuchMethodException | IllegalAccessException e) {
       throw new IllegalStateException(
               "Generated transaction activity " + descriptor.name() + " has no execute method", e);

@@ -110,7 +110,7 @@ class ProcessCodeGeneratorTest {
     assertThat(impl.source()).contains("Saga");
     assertThat(impl.source()).contains("saga.addCompensation");
     assertThat(impl.source()).contains("saga.compensate()");
-    assertThat(impl.source()).contains("process.compensationLogic()");
+    assertThat(impl.source()).contains("GlobalManager.getInstance().compensateProcess");
   }
 
   @Test
@@ -124,9 +124,9 @@ class ProcessCodeGeneratorTest {
 
     var impl = generator.generate(descriptor, null, null).get(1);
     assertThat(impl.source()).contains("Saga");
-    assertThat(impl.source()).contains("saga.addCompensation");
+    assertThat(impl.source()).doesNotContain("saga.addCompensation");
     assertThat(impl.source()).contains("saga.compensate()");
-    assertThat(impl.source()).contains("default no-op compensation");
+    assertThat(impl.source()).doesNotContain("compensateProcess");
     assertThat(impl.source()).doesNotContain("LoanDisbursement-compensation");
   }
 
@@ -198,7 +198,7 @@ class ProcessCodeGeneratorTest {
   }
 
   @Test
-  void withTransactionsEmitsPerTransactionCompensationMethods() {
+  void withTransactionsRegistersCompensationsThroughGlobalManager() {
     var descriptor = descriptor().fromProcess(
             Dsl.process("LoanDisbursement")
                     .input(String.class)
@@ -208,9 +208,11 @@ class ProcessCodeGeneratorTest {
                     .build());
 
     var impl = generator.generate(descriptor, null, null).get(1);
-    assertThat(impl.source()).contains("compensateReserveInventory");
-    assertThat(impl.source()).contains("compensateChargePayment");
-    assertThat(impl.source()).contains("saga.addCompensation(() -> compensateReserveInventory");
-    assertThat(impl.source()).contains("saga.addCompensation(() -> compensateChargePayment");
+    assertThat(impl.source()).contains("registerTransactionCompensation(\"ReserveInventory\"");
+    assertThat(impl.source()).contains("registerTransactionCompensation(\"ChargePayment\"");
+    assertThat(impl.source()).contains("compensateTransaction(\"ReserveInventory\"");
+    assertThat(impl.source()).contains("compensateTransaction(\"ChargePayment\"");
+    assertThat(impl.source()).doesNotContain("private void compensateReserveInventory");
+    assertThat(impl.source()).doesNotContain("private void compensateChargePayment");
   }
 }

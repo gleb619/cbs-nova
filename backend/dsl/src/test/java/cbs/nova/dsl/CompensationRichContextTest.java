@@ -82,4 +82,14 @@ class CompensationRichContextTest {
     assertThat(traceCollector.snapshot(RUN_ID))
             .anyMatch(e -> e.contains("rollback done"));
   }
+
+  @Test
+  void createdThroughGlobalManagerFactory() {
+    GlobalManager.getInstance().resetForTests();
+    var ctx = GlobalManager.getInstance()
+            .createCompensationContext(delegate, failure);
+    assertThat(ctx.body()).isEqualTo("payload");
+    assertThat(ctx.error()).isSameAs(failure);
+    assertThat(ctx.runId()).isEqualTo(RUN_ID);
+  }
 }

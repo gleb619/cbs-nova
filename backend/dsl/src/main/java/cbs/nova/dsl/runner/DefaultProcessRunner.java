@@ -1,6 +1,5 @@
 package cbs.nova.dsl.runner;
 
-import cbs.nova.dsl.CompensationRichContext;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslCompensationException;
 import cbs.nova.dsl.DslExecutionException;
@@ -74,34 +73,27 @@ public final class DefaultProcessRunner implements ProcessRunner {
       try {
         var reverseHistory = listener.historyInReverse();
         for (TransactionExecution exec : reverseHistory) {
-          GlobalManager.getInstance()
-                  .findTransaction(exec.transactionName())
-                  .ifPresent(tx -> {
-                    if (tx.compensationLogic() == null) {
-                      return;
-                    }
-                    var txCtx = contextFactory.of(
-                            exec.input() != null ? exec.input() : Map.of(),
-                            ExecutionMode.COMPENSATION,
-                            exec.runId());
-                    var compCtx = new CompensationRichContext<>(txCtx, compensationError,
-                            traceCollector, contextFactory);
-                    tx.compensationLogic().apply(compCtx);
-                  });
+          var txCtx = contextFactory.of(
+                  exec.input() != null ? exec.input() : Map.of(),
+                  ExecutionMode.COMPENSATION,
+                  exec.runId());
+          GlobalManager.getInstance().compensateTransaction(exec.transactionName(), txCtx,
+                  compensationError);
         }
         if (process.compensationLogic() != null) {
           var processCompCtxBase = contextFactory.of(
                   ctx.body(), ExecutionMode.COMPENSATION, ctx.runId());
-          var processCompCtx = new CompensationRichContext<>(processCompCtxBase, compensationError,
-                  traceCollector, contextFactory);
-          process.compensationLogic().apply(processCompCtx);
+          process.compensationLogic().apply(
+                  GlobalManager.getInstance().createCompensationContext(processCompCtxBase,
+                          compensationError));
         }
         if (process.userCompensationHandler() != null) {
           var userCompCtxBase = contextFactory.of(
                   ctx.body(), ExecutionMode.COMPENSATION, ctx.runId());
-          var userCompCtx = new CompensationRichContext<>(userCompCtxBase, compensationError,
-                  traceCollector, contextFactory);
-          process.userCompensationHandler().accept(userCompCtx, reverseHistory);
+          process.userCompensationHandler().accept(
+                  GlobalManager.getInstance().createCompensationContext(userCompCtxBase,
+                          compensationError),
+                  reverseHistory);
         }
       } catch (Exception compEx) {
         String message = compEx.getMessage() != null
