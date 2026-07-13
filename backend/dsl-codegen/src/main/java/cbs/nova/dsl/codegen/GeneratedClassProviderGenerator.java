@@ -1,6 +1,8 @@
 package cbs.nova.dsl.codegen;
 
 import cbs.nova.dsl.DslObject;
+import cbs.nova.dsl.DslObject.DslType;
+import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.utils.Substitutor;
@@ -27,16 +29,26 @@ public final class GeneratedClassProviderGenerator {
           @NonNull ProcessDescriptor descriptor,
           @Nullable String buildVersion,
           @Nullable String targetPackage) {
+    return forProcess(descriptor, List.of(), buildVersion, targetPackage);
+  }
+
+  public @NonNull GeneratedSource forProcess(
+          @NonNull ProcessDescriptor descriptor,
+          @NonNull List<String> preprocessedSources,
+          @Nullable String buildVersion,
+          @Nullable String targetPackage) {
     String name = descriptor.name();
     String version = resolveVersion(descriptor.version(), buildVersion);
     String pkg = codegenNaming.versionedPackage(name, version, targetPackage);
     String interfaceName = name + "ProcessWorkflow";
     String implName = name + "ProcessDefinition";
     String providerClass = name + "GeneratedClassProvider";
+    String executeJson = ExecuteAstJsonExtractor.extract(
+            preprocessedSources, name, DslType.PROCESS);
 
     return buildSource(pkg, providerClass, DslObject.DslType.PROCESS, descriptor.name(),
             version, descriptor.taskQueue(), interfaceName, implName,
-            descriptor.inputType(), descriptor.outputType());
+            descriptor.inputType(), descriptor.outputType(), executeJson);
   }
 
   public @NonNull GeneratedSource forTransaction(
@@ -49,16 +61,26 @@ public final class GeneratedClassProviderGenerator {
           @NonNull TransactionDescriptor descriptor,
           @Nullable String buildVersion,
           @Nullable String targetPackage) {
+    return forTransaction(descriptor, List.of(), buildVersion, targetPackage);
+  }
+
+  public @NonNull GeneratedSource forTransaction(
+          @NonNull TransactionDescriptor descriptor,
+          @NonNull List<String> preprocessedSources,
+          @Nullable String buildVersion,
+          @Nullable String targetPackage) {
     String name = descriptor.name();
     String version = resolveVersion(descriptor.version(), buildVersion);
     String pkg = codegenNaming.versionedPackage(name, version, targetPackage);
     String interfaceName = name + "TransactionActivity";
     String implName = name + "TransactionDefinition";
     String providerClass = name + "GeneratedClassProvider";
+    String executeJson = ExecuteAstJsonExtractor.extract(
+            preprocessedSources, name, DslType.TRANSACTION);
 
     return buildSource(pkg, providerClass, DslObject.DslType.TRANSACTION, descriptor.name(),
             version, descriptor.taskQueue(), interfaceName, implName,
-            descriptor.inputType(), descriptor.outputType());
+            descriptor.inputType(), descriptor.outputType(), executeJson);
   }
 
   private static @NonNull String resolveVersion(
@@ -70,9 +92,10 @@ public final class GeneratedClassProviderGenerator {
   private GeneratedSource buildSource(
           String pkg, String providerClass, DslObject.DslType type, String name,
           String version, String taskQueue, String interfaceName, String implName,
-          Class<?> inputType, Class<?> outputType) {
+          Class<?> inputType, Class<?> outputType, String executeJson) {
     String inputLiteral = typeLiteral(inputType);
     String outputLiteral = typeLiteral(outputType);
+    String executeJsonLiteral = escapeJavaString(executeJson);
 
     List<String> imports = new ArrayList<>();
     addImport(imports, inputType);
@@ -98,8 +121,15 @@ public final class GeneratedClassProviderGenerator {
                                 ${interfaceName}.class,
                                 ${implName}.class,
                                 ${inputLiteral},
-                                ${outputLiteral});
+                                ${outputLiteral},
+                                "${executeJsonLiteral}");
                       }
+
+                      @Override
+                      public String executeJson() {
+                        return descriptor().executeJson();
+                      }
+
                     }
                     """,
             Map.ofEntries(
@@ -113,9 +143,34 @@ public final class GeneratedClassProviderGenerator {
                     Map.entry("interfaceName", interfaceName),
                     Map.entry("implName", implName),
                     Map.entry("inputLiteral", inputLiteral),
-                    Map.entry("outputLiteral", outputLiteral)));
+                    Map.entry("outputLiteral", outputLiteral),
+                    Map.entry("executeJsonLiteral", executeJsonLiteral)));
 
     return new GeneratedSource(pkg, providerClass, source);
+  }
+
+  private static @NonNull String escapeJavaString(@NonNull String value) {
+    var sb = new StringBuilder(value.length() + 2);
+    for (int i = 0; i < value.length(); i++) {
+      char c = value.charAt(i);
+      switch (c) {
+        case '"' -> sb.append("\\\"");
+        case '\\' -> sb.append("\\\\");
+        case '\b' -> sb.append("\\b");
+        case '\f' -> sb.append("\\f");
+        case '\n' -> sb.append("\\n");
+        case '\r' -> sb.append("\\r");
+        case '\t' -> sb.append("\\t");
+        default -> {
+          if (c < 0x20) {
+            sb.append(String.format("\\u%04x", (int) c));
+          } else {
+            sb.append(c);
+          }
+        }
+      }
+    }
+    return sb.toString();
   }
 
   private String typeLiteral(Class<?> type) {

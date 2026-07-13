@@ -152,9 +152,11 @@ configured `fallbackVersion`, depending on `strictVersioning`.
           `Context<OUT>`, plus a `@QueryMethod String getVersion()`.
         - An implementation named `*ProcessDefinition` that exposes the source `DslObject` through `dsl()` and delegates
           execution to `GlobalManager.runProcessDsl(dsl(), ctx)`.
-        - Saga wiring: if the Process or any referenced Transaction defines compensation, the generated workflow catches
-          failures, invokes completed transaction compensations in reverse order, and finally invokes the process-level
-          compensation block through `GlobalManager.compensateProcess(dsl(), ctx, failure)`.
+        - Saga orchestration: the generated `*ProcessDefinition` delegates to
+          `GlobalManager.runProcessWithCompensation(runId, input, main, compensation, transactionRefs)`. It supplies a
+          `ProcessMain` lambda that calls `GlobalManager.runProcess(name, ctx)` and a `ProcessCompensation` lambda that
+          calls `GlobalManager.compensateProcess(name, ctx, failure)`. `GlobalManager` records transaction compensations
+          and runs them in reverse order (LIFO) when the main logic fails.
     - For each **Transaction**, generate:
         - An `@ActivityInterface` with an `@ActivityMethod` named `execute` accepting `Context<IN>` and returning
           `Context<OUT>`, plus an `@ActivityMethod String getVersion()`.

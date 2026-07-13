@@ -3,6 +3,7 @@ package cbs.nova.dsl.codegen;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.GeneratedClassProvider;
 import cbs.nova.dsl.SemanticValidator;
+import cbs.nova.dsl.compact.CompactSourcePreprocessor;
 import cbs.nova.dsl.config.DescriptorFactory;
 import cbs.nova.dsl.function.FunctionDescriptor;
 import cbs.nova.dsl.function.FunctionDslObject;
@@ -17,6 +18,7 @@ import org.jspecify.annotations.NonNull;
 import org.slf4j.event.Level;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -77,6 +79,7 @@ public final class DslCompiler {
           String targetPackage) throws IOException {
     var options = new SourceCompiler.CompileOptions(version, targetPackage, logLevel);
     List<DslObject> objects = dslSourceCompiler.compileAndLoad(srcDir, outputDir, options);
+    List<String> preprocessedSources = preprocessedDslSources(srcDir, targetPackage);
 
     var processes = new ArrayList<ProcessDescriptor>();
     var transactions = new ArrayList<TransactionDescriptor>();
@@ -100,13 +103,15 @@ public final class DslCompiler {
 
     for (var p : processes) {
       sources.addAll(processCodeGenerator.generate(p, version, targetPackage));
-      var provider = generatedClassProviderGenerator.forProcess(p, version, targetPackage);
+      var provider = generatedClassProviderGenerator.forProcess(
+              p, preprocessedSources, version, targetPackage);
       sources.add(provider);
       providerFqns.add(provider.fullyQualifiedName());
     }
     for (var t : transactions) {
       sources.addAll(transactionCodeGenerator.generate(t, version, targetPackage));
-      var provider = generatedClassProviderGenerator.forTransaction(t, version, targetPackage);
+      var provider = generatedClassProviderGenerator.forTransaction(
+              t, preprocessedSources, version, targetPackage);
       sources.add(provider);
       providerFqns.add(provider.fullyQualifiedName());
     }
@@ -115,6 +120,34 @@ public final class DslCompiler {
     codeWriter.writeServiceFile(GeneratedClassProvider.class.getName(), providerFqns, outputDir);
     log.atLevel(logLevel).log(() -> "[DslCompiler] Generated %s source(s) to %s"
             .formatted(sources.size(), outputDir));
+  }
+
+  private static @NonNull List<String> preprocessedDslSources(
+          @NonNull Path srcDir,
+          String targetPackage) throws IOException {
+    var dslDir = srcDir.resolve("dsl");
+    if (!Files.isDirectory(dslDir)) {
+      return List.of();
+    }
+    var result = new ArrayList<String>();
+    try (var stream = Files.walk(dslDir)) {
+      for (Path file : stream.toList()) {
+        if (!file.toString().endsWith(".java")) {
+          continue;
+        }
+        try {
+          var fileName = file.getFileName().toString();
+          var rawSource = Files.readString(file);
+          var preprocess = CompactSourcePreprocessor.preprocess(fileName, rawSource, targetPackage);
+          result.add(preprocess.preprocessedSource());
+        } catch (IllegalArgumentException e) {
+          log.atLevel(Level.WARN).log(
+                  () -> "[DslCompiler] Skipping invalid DSL source %s: %s".formatted(file,
+                          e.getMessage()));
+        }
+      }
+    }
+    return result;
   }
 
   private static String nullIfBlank(String value) {

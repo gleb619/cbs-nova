@@ -2,6 +2,9 @@ package cbs.nova.dsl.codegen;
 
 import cbs.nova.dsl.DslTemporalProcess;
 import cbs.nova.dsl.DslTemporalProcessRequest;
+import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.ProcessCompensation;
+import cbs.nova.dsl.ProcessMain;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.utils.Substitutor;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +14,6 @@ import org.jspecify.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 
 @RequiredArgsConstructor
 public final class ProcessCodeGenerator {
@@ -34,8 +36,8 @@ public final class ProcessCodeGenerator {
                     generateInterface(pkg, interfaceName, descriptor)),
             new GeneratedSource(
                     pkg, implName, generateImpl(pkg, name, interfaceName, implName,
-                            versionConstant, descriptor.taskQueue(), descriptor.inputType(),
-                            descriptor.hasCompensation(), descriptor.transactionRefs())));
+                            versionConstant, descriptor.inputType(),
+                            descriptor.transactionRefs())));
   }
 
   private static @NonNull String resolveVersion(
@@ -80,30 +82,21 @@ public final class ProcessCodeGenerator {
 
   private String generateImpl(
           String pkg, String processName, String interfaceName, String implName,
-          String versionConstant, String taskQueue, Class<?> inputType, boolean hasCompensation,
-          List<String> transactionRefs) {
+          String versionConstant, Class<?> inputType, List<String> transactionRefs) {
     String inputTypeName = typeName(inputType);
     List<String> imports = new ArrayList<>();
     addImport(imports, DslTemporalProcessRequest.class);
     addImport(imports, inputType);
+    addImport(imports, GlobalManager.class);
+    addImport(imports, ProcessMain.class);
+    addImport(imports, ProcessCompensation.class);
+    imports.add("import java.util.List;");
 
     String importBlock = imports.isEmpty() ? "" : "\n" + String.join("\n", imports) + "\n";
-    String compensationRegistrations = generateCompensationRegistrations(
-            processName, hasCompensation, transactionRefs);
-    String compensationMethods = generateCompensationMethods(processName, hasCompensation);
+    String transactionList = generateTransactionList(transactionRefs);
 
     String template = """
             package ${pkg};${importBlock}
-            import cbs.nova.dsl.Context;
-            import cbs.nova.dsl.DslTemporalProcessFailure;
-            import cbs.nova.dsl.ExecutionMode;
-            import cbs.nova.dsl.GlobalManager;
-            import cbs.nova.dsl.Result;
-            import cbs.nova.dsl.TransactionRouting;
-            import io.temporal.workflow.Saga;
-            import java.util.Map;
-            import java.util.concurrent.atomic.AtomicReference;
-
             public class ${implName} implements ${interfaceName} {
 
               private static final String VERSION = "${version}";
@@ -115,34 +108,15 @@ public final class ProcessCodeGenerator {
 
               @Override
               public Object execute(DslTemporalProcessRequest<${inputTypeName}> request) {
-                Saga saga = new Saga(new Saga.Options.Builder().build());
-                String runId = request.runId();
                 ${inputTypeName} input = request.payload();
-                var ctx = GlobalManager.getInstance()
-                        .createContext(input, Map.of(), ExecutionMode.RUN, runId)
-                        .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);
-                var compensationCtx = GlobalManager.getInstance()
-                        .createContext(input, Map.of(), ExecutionMode.COMPENSATION, runId);
-                AtomicReference<Throwable> failureRef = new AtomicReference<>();
-                ${compensationRegistrations}
-                try {
-                  var result = GlobalManager.getInstance().runProcess("${processName}", ctx);
-                  if (!result.isSuccess()) {
-                    failureRef.set(result.cause());
-                    saga.compensate();
-                    return new DslTemporalProcessFailure("Process failed",
-                            result.cause() != null ? result.cause().getMessage() : "unknown");
-                  }
-                  return result.value();
-                } catch (Exception e) {
-                  failureRef.set(e);
-                  saga.compensate();
-                  return new DslTemporalProcessFailure(e.getMessage(),
-                          e.getClass().getName());
-                }
+                return GlobalManager.getInstance().runProcessWithCompensation(
+                        request.runId(),
+                        input,
+                        ctx -> GlobalManager.getInstance().runProcess("${processName}", ctx),
+                        (compCtx, error) -> GlobalManager.getInstance()
+                                .compensateProcess("${processName}", compCtx, error),
+                        ${transactionList});
               }
-
-              ${compensationMethods}
             }
             """;
 
@@ -156,40 +130,22 @@ public final class ProcessCodeGenerator {
                     Map.entry("implName", implName),
                     Map.entry("version", versionConstant),
                     Map.entry("inputTypeName", inputTypeName),
-                    Map.entry("compensationRegistrations", compensationRegistrations),
-                    Map.entry("compensationMethods", compensationMethods)));
+                    Map.entry("transactionList", transactionList)));
   }
 
-  private String generateCompensationRegistrations(
-          String processName, boolean hasCompensation, List<String> transactionRefs) {
-    StringBuilder sb = new StringBuilder();
-    if (hasCompensation) {
-      sb.append(
-              "    saga.addCompensation(() -> compensateProcess(runId, compensationCtx, failureRef));\n");
+  private String generateTransactionList(List<String> transactionRefs) {
+    if (transactionRefs.isEmpty()) {
+      return "List.of()";
     }
-    for (String tx : transactionRefs) {
-      sb.append("    if (GlobalManager.getInstance().registerTransactionCompensation(\""
-              + tx + "\", runId, compensationCtx)) {\n")
-              .append("      saga.addCompensation(() -> GlobalManager.getInstance().compensateTransaction(\""
-                      + tx + "\", runId, failureRef.get()));\n")
-              .append("    }\n");
+    StringBuilder sb = new StringBuilder("List.of(");
+    for (int i = 0; i < transactionRefs.size(); i++) {
+      if (i > 0) {
+        sb.append(", ");
+      }
+      sb.append('"').append(transactionRefs.get(i)).append('"');
     }
+    sb.append(')');
     return sb.toString();
-  }
-
-  private String generateCompensationMethods(String processName, boolean hasCompensation) {
-    if (!hasCompensation) {
-      return "";
-    }
-    return Substitutor.format(
-            """
-                    private void compensateProcess(String runId, Context<?> compensationCtx, AtomicReference<Throwable> failureRef) {
-                      GlobalManager.getInstance().compensateProcess("${processName}", compensationCtx,
-                              failureRef.get() != null ? failureRef.get()
-                                      : new RuntimeException("compensation triggered"));
-                    }
-                    """,
-            Map.of("processName", processName));
   }
 
   private String typeName(Class<?> type) {

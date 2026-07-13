@@ -10,4 +10,11 @@ public interface GeneratedClassProvider {
 
   @NonNull
   GeneratedClassDescriptor descriptor();
+
+  /**
+   * Returns the JSON serialized AST of the original DSL {@code .execute(...)} body.
+   */
+  default @NonNull String executeJson() {
+    return descriptor().executeJson();
+  }
 }

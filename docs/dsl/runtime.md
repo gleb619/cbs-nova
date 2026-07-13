@@ -72,8 +72,9 @@ This structure keeps generated `*Definition` classes free of direct registry/run
   production, transaction execution delegates to real Temporal activity stubs while helper/function calls remain local.
 - Full Temporal guarantees (durability, retries, versioning) apply.
 - **Compensation:** if a Process or any of its compensatable Transactions declares a `.compensation(...)` block, the
-  generated workflow implements a Saga: completed transaction compensations run in reverse order, followed by the
-  process-level compensation block. Compensation activity failures follow the parent transaction's retry policy.
+  generated workflow delegates to `GlobalManager.runProcessWithCompensation(...)`, which records transaction compensations
+  and runs them in reverse order, followed by the process-level compensation block. Compensation activity failures
+  follow the parent transaction's retry policy.
 
 ### Preview mode (dry-run)
 

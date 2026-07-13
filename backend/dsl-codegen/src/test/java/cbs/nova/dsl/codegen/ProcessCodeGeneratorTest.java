@@ -6,8 +6,9 @@ import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslTemporalProcess;
 import cbs.nova.dsl.DslTemporalProcessRequest;
 import cbs.nova.dsl.MapInput;
+import cbs.nova.dsl.ProcessCompensation;
+import cbs.nova.dsl.ProcessMain;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.TransactionRouting;
 import cbs.nova.dsl.config.DescriptorFactory;
 import org.junit.jupiter.api.Test;
 
@@ -82,10 +83,11 @@ class ProcessCodeGeneratorTest {
     assertThat(impl.className()).isEqualTo("LoanDisbursementProcessDefinition");
     assertThat(impl.source()).contains("implements LoanDisbursementProcessWorkflow");
     assertThat(impl.source())
-            .contains("GlobalManager.getInstance().runProcess(\"LoanDisbursement\"");
-    assertThat(impl.source()).contains("ExecutionMode.RUN");
+            .contains("GlobalManager.getInstance().runProcessWithCompensation(");
+    assertThat(impl.source()).contains(ProcessMain.class.getSimpleName());
+    assertThat(impl.source()).contains(ProcessCompensation.class.getSimpleName());
     assertThat(impl.source())
-            .contains("TransactionRouting.TEMPORAL_ACTIVITY");
+            .contains("GlobalManager.getInstance().runProcess(\"LoanDisbursement\"");
     assertThat(impl.source()).doesNotContain("java.lang.reflect.Method");
     assertThat(impl.source()).doesNotContain("class TemporalTransactionInvoker");
     assertThat(impl.source()).doesNotContain("dsl.transaction.invoker");
@@ -94,10 +96,13 @@ class ProcessCodeGeneratorTest {
             .contains(DslTemporalProcessRequest.class.getSimpleName() + "<String> request");
     assertThat(impl.source()).contains("request.runId()");
     assertThat(impl.source()).contains("String input = request.payload()");
+    assertThat(impl.source()).doesNotContain("ExecutionMode");
+    assertThat(impl.source()).doesNotContain("TransactionRouting");
+    assertThat(impl.source()).doesNotContain("Saga");
   }
 
   @Test
-  void withCompensationEmitsSagaCode() {
+  void withCompensationEmitsFunctionalCompensation() {
     var descriptor = descriptor().fromProcess(
             Dsl.process("LoanDisbursement")
                     .input(String.class)
@@ -107,14 +112,16 @@ class ProcessCodeGeneratorTest {
                     .build());
 
     var impl = generator.generate(descriptor, null, null).get(1);
-    assertThat(impl.source()).contains("Saga");
-    assertThat(impl.source()).contains("saga.addCompensation");
-    assertThat(impl.source()).contains("saga.compensate()");
-    assertThat(impl.source()).contains("GlobalManager.getInstance().compensateProcess");
+    assertThat(impl.source()).contains("runProcessWithCompensation");
+    assertThat(impl.source()).contains(ProcessCompensation.class.getSimpleName());
+    assertThat(impl.source()).contains("compensateProcess");
+    assertThat(impl.source()).doesNotContain("Saga");
+    assertThat(impl.source()).doesNotContain("saga.addCompensation");
+    assertThat(impl.source()).doesNotContain("saga.compensate()");
   }
 
   @Test
-  void withoutCompensationUsesDefaultNoOpCompensation() {
+  void withoutCompensationStillUsesCompensateProcessLambda() {
     var descriptor = descriptor().fromProcess(
             Dsl.process("LoanDisbursement")
                     .input(String.class)
@@ -123,11 +130,12 @@ class ProcessCodeGeneratorTest {
                     .build());
 
     var impl = generator.generate(descriptor, null, null).get(1);
-    assertThat(impl.source()).contains("Saga");
+    assertThat(impl.source()).contains("runProcessWithCompensation");
+    assertThat(impl.source()).contains(ProcessCompensation.class.getSimpleName());
+    assertThat(impl.source()).contains("compensateProcess");
+    assertThat(impl.source()).doesNotContain("Saga");
     assertThat(impl.source()).doesNotContain("saga.addCompensation");
-    assertThat(impl.source()).contains("saga.compensate()");
-    assertThat(impl.source()).doesNotContain("compensateProcess");
-    assertThat(impl.source()).doesNotContain("LoanDisbursement-compensation");
+    assertThat(impl.source()).doesNotContain("saga.compensate()");
   }
 
   @Test
@@ -174,11 +182,11 @@ class ProcessCodeGeneratorTest {
     assertThat(iface.source()).contains("DslTemporalProcessRequest<MapInput> request");
     assertThat(impl.source()).contains("import " + MapInput.class.getCanonicalName() + ";");
     assertThat(impl.source()).contains("MapInput input = request.payload()");
-    assertThat(impl.source())
-            .contains("GlobalManager.getInstance()")
-            .contains(".createContext(input, Map.of(), ExecutionMode.RUN, runId)");
-    assertThat(impl.source())
-            .contains(".withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY)");
+    assertThat(impl.source()).contains("runProcessWithCompensation");
+    assertThat(impl.source()).contains("List.of()");
+    assertThat(impl.source()).doesNotContain("ExecutionMode");
+    assertThat(impl.source()).doesNotContain("TransactionRouting");
+    assertThat(impl.source()).doesNotContain("Saga");
   }
 
   @Test
@@ -198,7 +206,7 @@ class ProcessCodeGeneratorTest {
   }
 
   @Test
-  void withTransactionsRegistersCompensationsThroughGlobalManager() {
+  void withTransactionsPassesTransactionRefsAsList() {
     var descriptor = descriptor().fromProcess(
             Dsl.process("LoanDisbursement")
                     .input(String.class)
@@ -208,11 +216,12 @@ class ProcessCodeGeneratorTest {
                     .build());
 
     var impl = generator.generate(descriptor, null, null).get(1);
-    assertThat(impl.source()).contains("registerTransactionCompensation(\"ReserveInventory\"");
-    assertThat(impl.source()).contains("registerTransactionCompensation(\"ChargePayment\"");
-    assertThat(impl.source()).contains("compensateTransaction(\"ReserveInventory\"");
-    assertThat(impl.source()).contains("compensateTransaction(\"ChargePayment\"");
+    assertThat(impl.source()).contains("runProcessWithCompensation");
+    assertThat(impl.source()).contains("List.of(\"ReserveInventory\", \"ChargePayment\")");
+    assertThat(impl.source()).doesNotContain("registerTransactionCompensation");
+    assertThat(impl.source()).doesNotContain("compensateTransaction");
     assertThat(impl.source()).doesNotContain("private void compensateReserveInventory");
     assertThat(impl.source()).doesNotContain("private void compensateChargePayment");
+    assertThat(impl.source()).doesNotContain("Saga");
   }
 }

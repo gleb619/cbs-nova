@@ -15,5 +15,6 @@ public record GeneratedClassDescriptor(
         @NonNull Class<?> temporalInterface,
         @NonNull Class<?> temporalImplementation,
         @Nullable Class<?> inputType,
-        @Nullable Class<?> outputType) {
+        @Nullable Class<?> outputType,
+        @NonNull String executeJson) {
 }

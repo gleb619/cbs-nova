@@ -4,8 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.compact.CompactSourcePreprocessor;
 import cbs.nova.dsl.config.DescriptorFactory;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 class GeneratedClassProviderGeneratorTest {
 
@@ -41,5 +44,36 @@ class GeneratedClassProviderGeneratorTest {
     assertThat(source.packageName())
             .isEqualTo("cbs.nova.dsl.generated.reserveinventory.v1");
     assertThat(source.source()).contains("\"v1\"");
+  }
+
+  @Test
+  void processProviderEmbedsExecuteAstJson() {
+    var descriptor = descriptorFactory.fromProcess(
+            Dsl.process("LoanDisbursement")
+                    .input(String.class)
+                    .output(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+    var rawSource = """
+            import cbs.nova.dsl.*;
+            import java.util.List;
+
+            void main() {}
+
+            List<DslObject> define() {
+              return Dsl.process("LoanDisbursement")
+                  .input(String.class)
+                  .output(String.class)
+                  .execute(ctx -> Result.success("ok"))
+                  .buildList();
+            }
+            """;
+    var preprocessed = CompactSourcePreprocessor.preprocess("LoanDsl.java", rawSource, null);
+
+    var source = generator.forProcess(descriptor, List.of(preprocessed.preprocessedSource()), null,
+            null);
+
+    assertThat(source.source()).contains("executeJson()");
+    assertThat(source.source()).contains("LambdaExpr");
   }
 }

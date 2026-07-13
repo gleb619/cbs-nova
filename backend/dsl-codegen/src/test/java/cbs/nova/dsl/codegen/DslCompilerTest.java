@@ -40,6 +40,10 @@ class DslCompilerTest {
     var dir = outDir.resolve("cbs/nova/dsl/generated/loandisbursement/v1");
     assertThat(dir.resolve("LoanDisbursementProcessWorkflow.java")).exists();
     assertThat(dir.resolve("LoanDisbursementProcessDefinition.java")).exists();
+    assertThat(dir.resolve("LoanDisbursementGeneratedClassProvider.java")).exists();
+    assertThat(Files.readString(dir.resolve("LoanDisbursementGeneratedClassProvider.java")))
+            .contains("executeJson()")
+            .contains("LambdaExpr");
   }
 
   @Test
@@ -67,6 +71,10 @@ class DslCompilerTest {
     var dir = outDir.resolve("cbs/nova/dsl/generated/kyccheck/v1");
     assertThat(dir.resolve("KycCheckTransactionActivity.java")).exists();
     assertThat(dir.resolve("KycCheckTransactionDefinition.java")).exists();
+    assertThat(dir.resolve("KycCheckGeneratedClassProvider.java")).exists();
+    assertThat(Files.readString(dir.resolve("KycCheckGeneratedClassProvider.java")))
+            .contains("executeJson()")
+            .contains("LambdaExpr");
   }
 
   @Test

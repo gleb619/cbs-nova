@@ -217,7 +217,7 @@ class TemporalDslProcessLauncherTest {
     GlobalManager.getInstance().registerGeneratedClass(
             new GeneratedClassDescriptor(
                     name, DslType.PROCESS, "1.0", "tq",
-                    LauncherTestProcess.class, LauncherTestProcessImpl.class, null, null));
+                    LauncherTestProcess.class, LauncherTestProcessImpl.class, null, null, "{}"));
   }
 
   private static String unique(String prefix) {

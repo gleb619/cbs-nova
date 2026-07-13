@@ -46,7 +46,7 @@ class TemporalDslServiceTest {
     GlobalManager.getInstance().registerGeneratedClass(
             new GeneratedClassDescriptor(
                     name, DslType.PROCESS, "1.0", "tq",
-                    TestProcess.class, TestProcessImpl.class, null, String.class));
+                    TestProcess.class, TestProcessImpl.class, null, String.class, "{}"));
 
     TestProcessImpl impl = new TestProcessImpl();
     impl.handler = req -> "ok:" + req.runId() + ":" + req.payload();
@@ -89,7 +89,7 @@ class TemporalDslServiceTest {
     GlobalManager.getInstance().registerGeneratedClass(
             new GeneratedClassDescriptor(
                     name, DslType.PROCESS, "1.0", "tq",
-                    TestProcess.class, TestProcessImpl.class, null, String.class));
+                    TestProcess.class, TestProcessImpl.class, null, String.class, "{}"));
 
     IllegalStateException inner = new IllegalStateException("inner-detail");
     TestProcessImpl impl = new TestProcessImpl();
@@ -122,7 +122,7 @@ class TemporalDslServiceTest {
     GlobalManager.getInstance().registerGeneratedClass(
             new GeneratedClassDescriptor(
                     name, DslType.PROCESS, "1.0", "tq",
-                    TestProcess.class, TestProcessImpl.class, null, String.class));
+                    TestProcess.class, TestProcessImpl.class, null, String.class, "{}"));
 
     TestProcessImpl impl = new TestProcessImpl();
     impl.handler = req -> {

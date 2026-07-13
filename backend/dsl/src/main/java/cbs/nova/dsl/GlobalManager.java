@@ -14,10 +14,12 @@ import cbs.nova.dsl.transaction.TransactionManager;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.ServiceLoader;
+import java.util.concurrent.atomic.AtomicReference;
 
 @RequiredArgsConstructor
 public final class GlobalManager {
@@ -262,9 +264,80 @@ public final class GlobalManager {
     });
   }
 
+  /**
+   * Executes the main process logic under a compensation saga. When the main logic returns a
+   * failure or throws, the registered compensations are run in reverse order and a
+   * {@link DslTemporalProcessFailure} is returned.
+   *
+   * <p>
+   * This method is intended to be called from generated Temporal process workflows so that the saga
+   * orchestration lives in the runtime rather than in generated code.
+   */
+  public @NonNull Object runProcessWithCompensation(
+          @NonNull String runId,
+          @NonNull Object input,
+          @NonNull ProcessMain main,
+          @NonNull ProcessCompensation compensation,
+          @NonNull List<String> transactionRefs) {
+    var saga = new CompensationSaga();
+    var ctx = createContext(input, Map.of(), ExecutionMode.RUN, runId)
+            .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);
+    var compCtx = createContext(input, Map.of(), ExecutionMode.COMPENSATION, runId);
+    var failureRef = new AtomicReference<Throwable>();
+
+    saga.addCompensation(() -> compensation.accept(compCtx,
+            failureRef.get() != null
+                    ? failureRef.get()
+                    : new RuntimeException("compensation triggered")));
+
+    for (String tx : transactionRefs) {
+      if (registerTransactionCompensation(tx, runId, ctx)) {
+        saga.addCompensation(() -> compensateTransaction(tx, runId,
+                failureRef.get() != null
+                        ? failureRef.get()
+                        : new RuntimeException("compensation triggered")));
+      }
+    }
+
+    try {
+      var result = main.apply(ctx);
+      if (!result.isSuccess()) {
+        failureRef.set(result.cause());
+        saga.compensate();
+        return new DslTemporalProcessFailure("Process failed",
+                result.cause() != null ? result.cause().getMessage() : "unknown");
+      }
+      return result.value();
+    } catch (Exception e) {
+      failureRef.set(e);
+      saga.compensate();
+      return new DslTemporalProcessFailure(e.getMessage(), e.getClass().getName());
+    }
+  }
+
   public void resetForTests() {
     INSTANCE = null;
     DslConfig.dslConfig().temporalProcessLauncher().replace(null);
     DslConfig.dslConfig().transactionInvoker().replace(null);
+  }
+
+  /**
+   * Lightweight LIFO compensation runner that mirrors a Temporal {@code Saga} without requiring a
+   * workflow thread. Compensations are recorded in registration order and executed in reverse order
+   * when {@link #compensate()} is invoked.
+   */
+  private static final class CompensationSaga {
+
+    private final List<Runnable> compensations = new ArrayList<>();
+
+    void addCompensation(@NonNull Runnable compensation) {
+      compensations.add(compensation);
+    }
+
+    void compensate() {
+      for (int i = compensations.size() - 1; i >= 0; i--) {
+        compensations.get(i).run();
+      }
+    }
   }
 }
