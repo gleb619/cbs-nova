@@ -4,6 +4,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.MapInput;
 import cbs.nova.dsl.ProcessContext;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.TransactionInvoker;
@@ -68,11 +69,19 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   }
 
   @Override
+  public @NonNull Result<?> runHelper(@NonNull String name, @NonNull MapInput input) {
+    return runHelper(name, input.values());
+  }
+
+  @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Object input) {
     if (input instanceof Map<?, ?> map) {
       @SuppressWarnings("unchecked")
       Map<String, Object> typed = (Map<String, Object>) map;
       return runHelper(name, typed);
+    }
+    if (input instanceof MapInput mapInput) {
+      return runHelper(name, mapInput.values());
     }
     Result<?> result = GlobalManager.getInstance().runHelper(name,
             contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
@@ -96,11 +105,19 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   }
 
   @Override
+  public @NonNull Result<?> runTransaction(@NonNull String name, @NonNull MapInput input) {
+    return runTransaction(name, input.values());
+  }
+
+  @Override
   public @NonNull Result<?> runTransaction(@NonNull String name, @NonNull Object input) {
     if (input instanceof Map<?, ?> map) {
       @SuppressWarnings("unchecked")
       Map<String, Object> typed = (Map<String, Object>) map;
       return runTransaction(name, typed);
+    }
+    if (input instanceof MapInput mapInput) {
+      return runTransaction(name, mapInput.values());
     }
     Result<?> result = invokeTransaction(name, input);
     traceCollector.add(delegate.runId(), "executed transaction: " + name);

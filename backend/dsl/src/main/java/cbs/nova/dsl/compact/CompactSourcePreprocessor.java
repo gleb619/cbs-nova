@@ -91,7 +91,7 @@ public final class CompactSourcePreprocessor {
       sb.append("package ").append(targetPackage).append(";\n\n");
     }
     if (!imports.isEmpty()) {
-      sb.append(imports).append("\n");
+      sb.append(imports).append("\n\n");
     }
     sb.append("public class ").append(className)
             .append(" implements ").append(COMPACT_SOURCE_INTERFACE).append(" {\n")

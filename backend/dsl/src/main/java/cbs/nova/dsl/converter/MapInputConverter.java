@@ -1,5 +1,6 @@
 package cbs.nova.dsl.converter;
 
+import cbs.nova.dsl.MapInput;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -27,6 +28,10 @@ public final class MapInputConverter {
       return null;
     }
 
+    if (targetType instanceof Class<?> targetClass && targetClass == MapInput.class) {
+      return toMapInput(value);
+    }
+
     if (targetType instanceof Class<?> targetClass) {
       return convertToClass(value, targetClass);
     }
@@ -35,6 +40,18 @@ public final class MapInputConverter {
       return convertToParameterized(value, parameterized);
     }
 
+    return value;
+  }
+
+  private static Object toMapInput(Object value) {
+    if (value instanceof MapInput mapInput) {
+      return mapInput;
+    }
+    if (value instanceof Map<?, ?> map) {
+      @SuppressWarnings("unchecked")
+      Map<String, Object> typed = (Map<String, Object>) map;
+      return MapInput.fromMap(typed);
+    }
     return value;
   }
 

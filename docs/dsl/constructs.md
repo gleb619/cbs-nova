@@ -141,12 +141,14 @@ public class RiskHelper implements Executable<RiskIn, RiskOut> {
 
 ## JSON binding with Avaje Jsonb
 
-All DSL input/output records (for Processes, Transactions, and Functions), helper parameter records, and Temporal
-payload classes should be annotated with `@Json` so that Avaje Jsonb can generate reflection-free serializers at compile
+All DSL model records (for Processes, Transactions, and Functions), helper parameter records, and Temporal
+payload classes are annotated with `@Json` so that Avaje Jsonb can generate reflection-free serializers at compile
 time.
 
 Avaje Jsonb is a fast, reflection-free JSON binder that uses Java Annotation Processing (APT). It is GraalVM
 native-image ready and supports rich types such as collections, `Optional`, streams, and `java.time` classes.
+
+The `ModelSourcePreprocessor` automatically injects `@Json` (and the required `io.avaje.jsonb.Json` import) into DSL model files when the annotation is missing.
 
 ### Gradle dependency
 

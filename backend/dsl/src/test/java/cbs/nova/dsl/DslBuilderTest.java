@@ -8,6 +8,8 @@ import cbs.nova.dsl.config.RetryPolicyFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
+
 class DslBuilderTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
@@ -139,6 +141,49 @@ class DslBuilderTest {
             .execute(ctx -> Result.success("ok"))
             .build();
     assertThat(obj.parameters()).isNull();
+  }
+
+  @Test
+  void parameterBasedProcessReceivesMapBodyFromMapInput() {
+    GlobalManager.getInstance().resetForTests();
+    var gm = GlobalManager.getInstance();
+
+    var proc = Dsl.process("ParamProcess")
+            .parameters(reg -> reg.string("name"))
+            .execute(ctx -> {
+              @SuppressWarnings("unchecked")
+              Map<String, Object> body = (Map<String, Object>) ctx.body();
+              return Result.success("hello " + body.get("name"));
+            })
+            .build();
+    gm.registerProcess(proc);
+
+    var result = gm.runProcess("ParamProcess",
+            contextFactory.of(MapInput.of("name", "world"), ExecutionMode.PREVIEW));
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value()).isEqualTo("hello world");
+  }
+
+  @Test
+  void parameterBasedProcessRunHelperWithMapInput() {
+    GlobalManager.getInstance().resetForTests();
+    var gm = GlobalManager.getInstance();
+    gm.registerHelper("echo", ctx -> Result.success(ctx.body()));
+
+    var proc = Dsl.process("ParamProcess")
+            .parameters(reg -> reg.string("name"))
+            .execute(ctx -> ctx.runHelper("echo", MapInput.of("name", "test")))
+            .build();
+    gm.registerProcess(proc);
+
+    var result = gm.runProcess("ParamProcess",
+            contextFactory.of(MapInput.of("name", "ignored"), ExecutionMode.PREVIEW));
+
+    assertThat(result.isSuccess()).isTrue();
+    @SuppressWarnings("unchecked")
+    Map<String, Object> value = (Map<String, Object>) result.value();
+    assertThat(value).containsEntry("name", "test");
   }
 
   @AfterEach

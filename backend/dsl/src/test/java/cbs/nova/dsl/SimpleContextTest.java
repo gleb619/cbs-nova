@@ -73,4 +73,29 @@ class SimpleContextTest {
     assertThat(id1).isNotEqualTo(id2);
     assertThat(id1).startsWith("run-");
   }
+
+  @Test
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  void bodyUnwrapsMapInputIntoMutableMapCopy() {
+    var input = MapInput.of("a", 1, "b", 2);
+    Context rawCtx = contextFactory.of(input, ExecutionMode.RUN, "r1");
+
+    Map<String, Object> body = (Map<String, Object>) rawCtx.body();
+
+    assertThat(body).containsEntry("a", 1).containsEntry("b", 2);
+    body.put("c", 3);
+    assertThat(input.values()).doesNotContainKey("c");
+  }
+
+  @Test
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  void bodyUnwrapsMapInputEachCall() {
+    var input = MapInput.of("a", 1);
+    Context rawCtx = contextFactory.of(input, ExecutionMode.RUN, "r1");
+
+    Map<String, Object> first = (Map<String, Object>) rawCtx.body();
+    Map<String, Object> second = (Map<String, Object>) rawCtx.body();
+
+    assertThat(first).isNotSameAs(second);
+  }
 }

@@ -1,17 +1,29 @@
 package cbs.nova.dsl.compact;
 
+import com.github.javaparser.JavaParser;
+import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.NodeList;
+import com.github.javaparser.ast.PackageDeclaration;
+import com.github.javaparser.ast.body.BodyDeclaration;
+import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.body.EnumDeclaration;
+import com.github.javaparser.ast.body.TypeDeclaration;
+import com.github.javaparser.ast.expr.Name;
+import com.github.javaparser.printer.lexicalpreservation.LexicalPreservingPrinter;
 import org.jspecify.annotations.NonNull;
 
-import java.util.regex.Pattern;
-
 /**
- * Preprocesses model/POJO source files authored without a package declaration so that they can be
- * compiled into a shared target package alongside DSL sources.
+ * Preprocesses model/POJO source files so that they can be compiled into a shared target package
+ * alongside DSL sources. If a source already declares a package, that package is preserved; only
+ * package-free sources get the configured target package injected. Any class or record that is not
+ * already annotated with {@code @Json} gets the Avaje Jsonb annotation added, plus the import if
+ * needed.
  */
 public final class ModelSourcePreprocessor {
 
-  private static final Pattern PACKAGE_PATTERN = Pattern.compile("(?m)^\\s*package\\s+[^;]+;\\s*$");
-  private static final Pattern IMPORT_PATTERN = Pattern.compile("(?m)^\\s*import\\s+.*;\\s*$");
+  private static final String JSON_IMPORT = "io.avaje.jsonb.Json";
+  private static final String JSON_ANNOTATION_SIMPLE = "Json";
+  private static final String JSON_ANNOTATION_QUALIFIED = "io.avaje.jsonb.Json";
 
   public record Result(@NonNull String className, @NonNull String preprocessedSource) {
   }
@@ -23,19 +35,60 @@ public final class ModelSourcePreprocessor {
     if (targetPackage.isBlank()) {
       throw new IllegalArgumentException("targetPackage is required for model preprocessing");
     }
-    if (PACKAGE_PATTERN.matcher(rawSource).find()) {
-      throw new IllegalArgumentException(
-              fileName + " must not declare a package; package is injected by the compiler");
+    var parser = new JavaParser();
+    var cu = parser.parse(rawSource).getResult()
+            .orElseThrow(() -> new IllegalArgumentException(
+                    fileName + " is not valid Java source"));
+    LexicalPreservingPrinter.setup(cu);
+
+    if (cu.getPackageDeclaration().isEmpty()) {
+      cu.setPackageDeclaration(new PackageDeclaration(new Name(targetPackage)));
     }
-    var className = className(fileName);
-    var split = splitImports(rawSource);
-    var sb = new StringBuilder();
-    sb.append("package ").append(targetPackage).append(";\n\n");
-    if (!split.imports().isEmpty()) {
-      sb.append(split.imports()).append("\n");
+
+    boolean hasJsonAnnotation = addMissingJsonAnnotations(cu);
+    if (hasJsonAnnotation && cu.getImports().stream().noneMatch(
+            i -> i.getNameAsString().equals(JSON_IMPORT))) {
+      cu.addImport(JSON_IMPORT);
     }
-    sb.append(split.body().strip()).append("\n");
-    return new Result(className, sb.toString());
+
+    var output = LexicalPreservingPrinter.print(cu);
+    return new Result(className(fileName), output);
+  }
+
+  private static boolean addMissingJsonAnnotations(CompilationUnit cu) {
+    boolean modified = false;
+    for (var type : cu.getTypes()) {
+      modified |= annotateType(type);
+    }
+    return modified;
+  }
+
+  private static boolean annotateType(TypeDeclaration<?> type) {
+    boolean modified = false;
+    if (shouldAnnotate(type) && !hasJsonAnnotation(type)) {
+      type.addAnnotation(JSON_ANNOTATION_SIMPLE);
+      modified = true;
+    }
+    for (var member : type.getMembers()) {
+      if (member instanceof TypeDeclaration<?> nested) {
+        modified |= annotateType(nested);
+      }
+    }
+    return modified;
+  }
+
+  private static boolean shouldAnnotate(TypeDeclaration<?> type) {
+    if (type instanceof ClassOrInterfaceDeclaration ci && ci.isInterface()) {
+      return false;
+    }
+    return !(type instanceof EnumDeclaration);
+  }
+
+  private static boolean hasJsonAnnotation(TypeDeclaration<?> type) {
+    return type.getAnnotations().stream().anyMatch(a -> {
+      var name = a.getNameAsString();
+      return name.equals(JSON_ANNOTATION_SIMPLE) || name.equals(JSON_ANNOTATION_QUALIFIED);
+    });
   }
 
   private static @NonNull String className(@NonNull String fileName) {
@@ -43,24 +96,5 @@ public final class ModelSourcePreprocessor {
       throw new IllegalArgumentException("Model source file must end with .java: " + fileName);
     }
     return fileName.substring(0, fileName.length() - ".java".length());
-  }
-
-  private static SourceSplit splitImports(@NonNull String source) {
-    var imports = new StringBuilder();
-    var body = new StringBuilder();
-    var matcher = IMPORT_PATTERN.matcher(source);
-    var lastEnd = 0;
-    while (matcher.find()) {
-      imports.append(matcher.group().strip()).append("\n");
-      if (matcher.start() > lastEnd) {
-        body.append(source, lastEnd, matcher.start());
-      }
-      lastEnd = matcher.end();
-    }
-    body.append(source.substring(lastEnd));
-    return new SourceSplit(imports.toString().stripTrailing(), body.toString());
-  }
-
-  private record SourceSplit(@NonNull String imports, @NonNull String body) {
   }
 }

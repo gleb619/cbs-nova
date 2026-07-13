@@ -9,6 +9,9 @@ dependencies {
   runtimeOnly libs.slf4j.simple
   implementation libs.javaparser
 
+  annotationProcessor libs.avaje.jsonb.generator
+  runtimeOnly libs.avaje.jsonb.generator
+
   testImplementation platform(libs.junit.bom)
   testImplementation libs.junit.jupiter
   testImplementation libs.assertj

@@ -4,6 +4,8 @@ plugins {
 
 dependencies {
   api libs.jspecify
+  api libs.avaje.jsonb
+  annotationProcessor libs.avaje.jsonb.generator
 
   testImplementation platform(libs.junit.bom)
   testImplementation libs.junit.jupiter

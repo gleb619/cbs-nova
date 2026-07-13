@@ -5,30 +5,33 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
+
 class MapInputTest {
 
   @Test
   void emptyReturnsEmptyMap() {
-    assertThat(MapInput.of()).isEmpty();
+    var input = MapInput.of();
+    assertThat(input.values()).isEmpty();
   }
 
   @Test
   void singlePairReturnsMap() {
-    var map = MapInput.of("key", "value");
-    assertThat(map).hasSize(1).containsEntry("key", "value");
+    var input = MapInput.of("key", "value");
+    assertThat(input.values()).hasSize(1).containsEntry("key", "value");
   }
 
   @Test
   void multiplePairsPreservesInsertionOrder() {
-    var map = MapInput.of("a", 1, "b", 2, "c", 3);
-    assertThat(map.keySet()).containsExactly("a", "b", "c");
-    assertThat(map.values()).containsExactly(1, 2, 3);
+    var input = MapInput.of("a", 1, "b", 2, "c", 3);
+    assertThat(input.values().keySet()).containsExactly("a", "b", "c");
+    assertThat(input.values().values()).containsExactly(1, 2, 3);
   }
 
   @Test
   void nullValueAllowed() {
-    var map = MapInput.of("key", null);
-    assertThat(map).containsEntry("key", null);
+    var input = MapInput.of("key", null);
+    assertThat(input.values()).containsEntry("key", null);
   }
 
   @Test
@@ -46,9 +49,27 @@ class MapInputTest {
   }
 
   @Test
-  void returnedMapIsUnmodifiable() {
-    var map = MapInput.of("k", "v");
-    assertThatThrownBy(() -> map.put("x", "y"))
+  void returnedValuesMapIsUnmodifiable() {
+    var input = MapInput.of("k", "v");
+    assertThatThrownBy(() -> input.values().put("x", "y"))
             .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  void fromMapCopiesValues() {
+    var source = new java.util.LinkedHashMap<String, Object>();
+    source.put("a", 1);
+    var input = MapInput.fromMap(source);
+    source.put("b", 2);
+    assertThat(input.values()).containsOnlyKeys("a");
+  }
+
+  @Test
+  void asMapReturnsMutableCopy() {
+    var input = MapInput.of("k", "v");
+    var copy = input.asMap();
+    assertThat(copy).containsEntry("k", "v");
+    copy.put("x", "y");
+    assertThat(input.values()).doesNotContainKey("x");
   }
 }

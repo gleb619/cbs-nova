@@ -3,6 +3,7 @@ package cbs.nova.dsl.codegen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.MapInput;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.DescriptorFactory;
 import org.junit.jupiter.api.Test;
@@ -73,33 +74,25 @@ class TransactionCodeGeneratorTest {
     assertThat(impl.source())
             .contains("GlobalManager.getInstance().runTransaction(\"LoanDisbursement\"");
     assertThat(impl.source()).contains("ExecutionMode.RUN");
+    assertThat(impl.source()).contains("String input");
+    assertThat(impl.source()).contains("SimpleContext");
   }
 
   @Test
-  void interfaceHasGetVersion() {
+  void parameterBasedTransactionUsesMapInput() {
     var descriptor = new DescriptorFactory().fromTransaction(
-            Dsl.transaction("FooTx").execute(ctx -> Result.success("x")).build());
-    var iface = generator.generate(descriptor, null, null).get(0);
-    assertThat(iface.source()).contains("@ActivityMethod");
-    assertThat(iface.source()).contains("String getVersion()");
-  }
-
-  @Test
-  void implReturnsVersion() {
-    var descriptor = new DescriptorFactory().fromTransaction(
-            Dsl.transaction("FooTx").version("v3").execute(ctx -> Result.success("x"))
+            Dsl.transaction("ParamTx")
+                    .parameters(reg -> reg.string("customerId").bool("verified"))
+                    .execute(ctx -> Result.success(MapInput.fromMap(java.util.Map.of())))
                     .build());
-    var impl = generator.generate(descriptor, null, null).get(1);
-    assertThat(impl.source()).contains("\"v3\"");
-    assertThat(impl.source()).contains("getVersion()");
-  }
 
-  @Test
-  void implContainsTaskQueueConstant() {
-    var descriptor = new DescriptorFactory().fromTransaction(
-            Dsl.transaction("FooTx").execute(ctx -> Result.success("x")).build());
-    var impl = generator.generate(descriptor, null, null).get(1);
-    assertThat(impl.source()).contains("TASK_QUEUE");
-    assertThat(impl.source()).contains("FooTx-queue");
+    var sources = generator.generate(descriptor, null, null);
+    var iface = sources.get(0);
+    var impl = sources.get(1);
+
+    assertThat(iface.source()).contains("Object execute(MapInput input)");
+    assertThat(impl.source()).contains("import " + MapInput.class.getCanonicalName() + ";");
+    assertThat(impl.source()).contains("MapInput input");
+    assertThat(impl.source()).contains("new SimpleContext<>(input, Map.of(), ExecutionMode.RUN, runId)");
   }
 }

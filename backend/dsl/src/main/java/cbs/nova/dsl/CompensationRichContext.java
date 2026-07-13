@@ -67,6 +67,11 @@ public final class CompensationRichContext<T> implements CompensationContext<T> 
   }
 
   @Override
+  public @NonNull Result<?> runHelper(@NonNull String name, @NonNull MapInput input) {
+    return runHelper(name, input.values());
+  }
+
+  @Override
   public @NonNull CompensationContext<T> log(@NonNull String message) {
     traceCollector.add(delegate.runId(), "compensation log: " + message);
     log.info("[DSL:{}][runId:{}] [compensation] {}", delegate.mode(), delegate.runId(), message);

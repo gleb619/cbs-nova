@@ -22,6 +22,9 @@ dependencies {
   api project(':dsl')
   api project(':misc-codegen')
 
+  api libs.avaje.jsonb
+  annotationProcessor libs.avaje.jsonb.generator
+
   compileOnly libs.bundles.spring.web
   implementation libs.spring.boot.starter.actuator
   compileOnly libs.springdoc.openapi.starter.webmvc.ui

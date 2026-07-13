@@ -13,6 +13,8 @@ lombok = "1.18.38"
 keycloak-admin-client = "22.0.0"
 rest-assured = "5.5.0"
 springdoc-openapi = "2.8.9"
+avaje-jsonb = "3.4"
+avaje-jsonb-generator = "3.4"
 
 # plugins
 spring-boot = "4.0.4"
@@ -28,7 +30,11 @@ jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 temporal-sdk = { module = "io.temporal:temporal-sdk", version.ref = "temporal" }
 temporal-testing = { module = "io.temporal:temporal-testing", version.ref = "temporal" }
 
-# -- JavaParser (used by dsl-codegen) --
+# -- Avaje Jsonb --
+avaje-jsonb = { module = "io.avaje:avaje-jsonb", version.ref = "avaje-jsonb" }
+avaje-jsonb-generator = { module = "io.avaje:avaje-jsonb-generator", version.ref = "avaje-jsonb-generator" }
+
+# -- JavaParser (used by dsl-codegen and dsl preprocessing) --
 javaparser = { module = "com.github.javaparser:javaparser-core", version.ref = "javaparser" }
 
 # -- Testcontainers --

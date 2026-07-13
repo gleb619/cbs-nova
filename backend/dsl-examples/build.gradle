@@ -15,11 +15,14 @@ dependencies {
   implementation project(':dsl')
   compileOnly project(':starter')
   implementation libs.temporal.sdk
+  implementation libs.avaje.jsonb
+  annotationProcessor libs.avaje.jsonb.generator
 
   dslCompiler project(':dsl-api')
   dslCompiler project(':dsl')
   dslCompiler project(':dsl-codegen')
   dslCompiler project(':starter')
+  dslCompiler libs.avaje.jsonb.generator
 }
 
 dslCompile {

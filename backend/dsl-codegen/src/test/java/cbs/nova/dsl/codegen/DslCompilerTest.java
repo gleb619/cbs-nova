@@ -111,4 +111,34 @@ class DslCompilerTest {
     assertThat(Files.readString(dir.resolve("VersionedProcessProcessDefinition.java")))
             .contains("VERSION = \"abc1234\"");
   }
+
+  @Test
+  void compilesParameterBasedProcessWithMapInput() throws Exception {
+    var dslDir = Files.createDirectories(srcDir.resolve("dsl"));
+    Files.writeString(
+            dslDir.resolve("ParamProcess.java"),
+            """
+                    import cbs.nova.dsl.*;
+                    import java.util.List;
+                    import java.util.Map;
+
+                    void main() {}
+
+                    List<DslObject> define() {
+                      return Dsl.process("ParamProcess")
+                          .parameters(reg -> reg.string("name"))
+                          .execute(ctx -> {
+                            Map<String, Object> body = (Map<String, Object>) ctx.body();
+                            return Result.success("hello " + body.get("name"));
+                          })
+                          .buildList();
+                    }
+                    """);
+
+    DslCompiler.compile(srcDir, outDir);
+
+    var dir = outDir.resolve("cbs/nova/dsl/generated/paramprocess/v1");
+    assertThat(dir.resolve("ParamProcessProcessWorkflow.java")).exists();
+    assertThat(dir.resolve("ParamProcessProcessDefinition.java")).exists();
+  }
 }

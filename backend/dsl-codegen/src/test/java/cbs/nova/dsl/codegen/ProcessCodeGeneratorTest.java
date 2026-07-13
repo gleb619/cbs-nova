@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslTemporalProcess;
 import cbs.nova.dsl.DslTemporalProcessRequest;
+import cbs.nova.dsl.MapInput;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.DescriptorFactory;
 import org.junit.jupiter.api.Test;
@@ -146,5 +147,24 @@ class ProcessCodeGeneratorTest {
     var impl = generator.generate(descriptor, null, null).get(1);
     assertThat(impl.source()).contains("TASK_QUEUE");
     assertThat(impl.source()).contains("Foo-queue");
+  }
+
+  @Test
+  void parameterBasedProcessUsesMapInput() {
+    var descriptor = descriptor().fromProcess(
+            Dsl.process("ParamProcess")
+                    .parameters(reg -> reg.string("customerId").number("amount"))
+                    .execute(ctx -> Result.success(MapInput.fromMap(java.util.Map.of())))
+                    .build());
+
+    var sources = generator.generate(descriptor, null, null);
+    var iface = sources.get(0);
+    var impl = sources.get(1);
+
+    assertThat(iface.source()).contains("extends DslTemporalProcess<MapInput>");
+    assertThat(iface.source()).contains("DslTemporalProcessRequest<MapInput> request");
+    assertThat(impl.source()).contains("import " + MapInput.class.getCanonicalName() + ";");
+    assertThat(impl.source()).contains("MapInput input = request.payload()");
+    assertThat(impl.source()).contains("new SimpleContext<>(input, Map.of(), ExecutionMode.RUN, runId)");
   }
 }

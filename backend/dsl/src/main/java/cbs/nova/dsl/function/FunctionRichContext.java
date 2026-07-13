@@ -5,6 +5,7 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.FunctionContext;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.MapInput;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import lombok.RequiredArgsConstructor;
@@ -62,5 +63,10 @@ public final class FunctionRichContext<T> implements FunctionContext<T> {
             contextFactory.of(input, delegate.mode(), delegate.runId()));
     traceCollector.add(delegate.runId(), "called helper: " + name);
     return result;
+  }
+
+  @Override
+  public @NonNull Result<?> runHelper(@NonNull String name, @NonNull MapInput input) {
+    return runHelper(name, input.values());
   }
 }
