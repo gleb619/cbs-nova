@@ -23,9 +23,9 @@ public final class ProcessCodeGenerator {
           @Nullable String buildVersion,
           @Nullable String targetPackage) {
     String name = descriptor.name();
-    String pkg = codegenNaming.versionedPackage(descriptor.name(), descriptor.version(),
-            targetPackage);
     String versionConstant = resolveVersion(descriptor.version(), buildVersion);
+    String pkg = codegenNaming.versionedPackage(descriptor.name(), versionConstant,
+            targetPackage);
     String interfaceName = name + "ProcessWorkflow";
     String implName = name + "ProcessDefinition";
 

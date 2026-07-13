@@ -105,11 +105,13 @@ class DslCompilerTest {
     assertThat(outDir.resolve("cbs/nova/dsl/codegen/test/GeneratedDslDefinitionProvider.class"))
             .exists();
 
-    var dir = outDir.resolve("cbs/nova/dsl/codegen/test/versionedprocess/v1");
+    var dir = outDir.resolve("cbs/nova/dsl/codegen/test/versionedprocess/abc1234");
     assertThat(dir.resolve("VersionedProcessProcessWorkflow.java")).exists();
     assertThat(dir.resolve("VersionedProcessProcessDefinition.java")).exists();
     assertThat(Files.readString(dir.resolve("VersionedProcessProcessDefinition.java")))
             .contains("VERSION = \"abc1234\"");
+    assertThat(Files.readString(dir.resolve("VersionedProcessGeneratedClassProvider.java")))
+            .contains("\"abc1234\"");
   }
 
   @Test

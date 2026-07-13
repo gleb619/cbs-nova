@@ -182,6 +182,22 @@ class ProcessCodeGeneratorTest {
   }
 
   @Test
+  void buildVersionOverridesPackageAndVersionConstant() {
+    var descriptor = descriptor().fromProcess(
+            Dsl.process("LoanDisbursement")
+                    .input(String.class)
+                    .output(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+
+    var sources = generator.generate(descriptor, "9c74a34", null);
+    assertThat(sources.get(0).packageName())
+            .isEqualTo("cbs.nova.dsl.generated.loandisbursement.v9c74a34");
+    assertThat(sources.get(1).source())
+            .contains("VERSION = \"9c74a34\"");
+  }
+
+  @Test
   void withTransactionsEmitsPerTransactionCompensationMethods() {
     var descriptor = descriptor().fromProcess(
             Dsl.process("LoanDisbursement")

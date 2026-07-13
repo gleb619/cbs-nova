@@ -20,29 +20,51 @@ public final class GeneratedClassProviderGenerator {
   public @NonNull GeneratedSource forProcess(
           @NonNull ProcessDescriptor descriptor,
           @Nullable String targetPackage) {
+    return forProcess(descriptor, null, targetPackage);
+  }
+
+  public @NonNull GeneratedSource forProcess(
+          @NonNull ProcessDescriptor descriptor,
+          @Nullable String buildVersion,
+          @Nullable String targetPackage) {
     String name = descriptor.name();
-    String pkg = codegenNaming.versionedPackage(name, descriptor.version(), targetPackage);
+    String version = resolveVersion(descriptor.version(), buildVersion);
+    String pkg = codegenNaming.versionedPackage(name, version, targetPackage);
     String interfaceName = name + "ProcessWorkflow";
     String implName = name + "ProcessDefinition";
     String providerClass = name + "GeneratedClassProvider";
 
     return buildSource(pkg, providerClass, DslObject.DslType.PROCESS, descriptor.name(),
-            descriptor.version(), descriptor.taskQueue(), interfaceName, implName,
+            version, descriptor.taskQueue(), interfaceName, implName,
             descriptor.inputType(), descriptor.outputType());
   }
 
   public @NonNull GeneratedSource forTransaction(
           @NonNull TransactionDescriptor descriptor,
           @Nullable String targetPackage) {
+    return forTransaction(descriptor, null, targetPackage);
+  }
+
+  public @NonNull GeneratedSource forTransaction(
+          @NonNull TransactionDescriptor descriptor,
+          @Nullable String buildVersion,
+          @Nullable String targetPackage) {
     String name = descriptor.name();
-    String pkg = codegenNaming.versionedPackage(name, descriptor.version(), targetPackage);
+    String version = resolveVersion(descriptor.version(), buildVersion);
+    String pkg = codegenNaming.versionedPackage(name, version, targetPackage);
     String interfaceName = name + "TransactionActivity";
     String implName = name + "TransactionDefinition";
     String providerClass = name + "GeneratedClassProvider";
 
     return buildSource(pkg, providerClass, DslObject.DslType.TRANSACTION, descriptor.name(),
-            descriptor.version(), descriptor.taskQueue(), interfaceName, implName,
+            version, descriptor.taskQueue(), interfaceName, implName,
             descriptor.inputType(), descriptor.outputType());
+  }
+
+  private static @NonNull String resolveVersion(
+          @NonNull String descriptorVersion,
+          String buildVersion) {
+    return (buildVersion != null && !buildVersion.isBlank()) ? buildVersion : descriptorVersion;
   }
 
   private GeneratedSource buildSource(

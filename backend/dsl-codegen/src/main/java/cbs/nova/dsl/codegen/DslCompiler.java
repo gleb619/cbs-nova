@@ -100,13 +100,13 @@ public final class DslCompiler {
 
     for (var p : processes) {
       sources.addAll(processCodeGenerator.generate(p, version, targetPackage));
-      var provider = generatedClassProviderGenerator.forProcess(p, targetPackage);
+      var provider = generatedClassProviderGenerator.forProcess(p, version, targetPackage);
       sources.add(provider);
       providerFqns.add(provider.fullyQualifiedName());
     }
     for (var t : transactions) {
       sources.addAll(transactionCodeGenerator.generate(t, version, targetPackage));
-      var provider = generatedClassProviderGenerator.forTransaction(t, targetPackage);
+      var provider = generatedClassProviderGenerator.forTransaction(t, version, targetPackage);
       sources.add(provider);
       providerFqns.add(provider.fullyQualifiedName());
     }
