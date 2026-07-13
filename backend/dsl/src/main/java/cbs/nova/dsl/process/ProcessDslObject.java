@@ -6,10 +6,12 @@ import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.ProcessContext;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.TransactionExecution;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -23,7 +25,9 @@ public record ProcessDslObject(
         @NonNull Function<ProcessContext<?>, Result<?>> executeLogic,
         @Nullable Function<CompensationContext<?>, Result<?>> compensationLogic,
         @Nullable Function<ProcessContext<?>, Result<?>> previewLogic,
-        @Nullable Supplier<DslDescriptor> descriptor)
+        @Nullable Supplier<DslDescriptor> descriptor,
+        @Nullable BiConsumer<CompensationContext<?>, List<TransactionExecution>> userCompensationHandler,
+        @Nullable List<String> transactionRefs)
         implements
           DslObject {
 

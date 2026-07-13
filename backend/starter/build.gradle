@@ -27,6 +27,10 @@ dependencies {
 
   compileOnly libs.bundles.spring.web
   implementation libs.spring.boot.starter.actuator
+  implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
+  implementation 'org.flywaydb:flyway-core'
+  implementation 'com.fasterxml.jackson.core:jackson-databind'
+  runtimeOnly 'org.postgresql:postgresql'
   compileOnly libs.springdoc.openapi.starter.webmvc.ui
 
   api libs.temporal.sdk
@@ -46,5 +50,10 @@ dependencies {
   testImplementation libs.testcontainers.junit.jupiter
   testImplementation libs.testcontainers.postgresql
   testImplementation libs.keycloak.admin.client
+  testImplementation 'com.h2database:h2'
   testImplementation libs.rest.assured
+}
+
+processIntegrationTestResources {
+  duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }

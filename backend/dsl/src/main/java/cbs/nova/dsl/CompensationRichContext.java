@@ -1,9 +1,11 @@
 package cbs.nova.dsl;
 
+import cbs.nova.dsl.ExecutionListener;
 import cbs.nova.dsl.config.ContextFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
 
@@ -42,6 +44,11 @@ public final class CompensationRichContext<T> implements CompensationContext<T> 
   }
 
   @Override
+  public @NonNull TransactionRouting transactionRouting() {
+    return delegate.transactionRouting();
+  }
+
+  @Override
   public @NonNull <U> Context<U> withBody(@NonNull U body) {
     return delegate.withBody(body);
   }
@@ -49,6 +56,12 @@ public final class CompensationRichContext<T> implements CompensationContext<T> 
   @Override
   public @NonNull Context<T> withMetadata(@NonNull String key, Object value) {
     return delegate.withMetadata(key, value);
+  }
+
+  @Override
+  public @NonNull Context<T> withTransactionRouting(@NonNull TransactionRouting routing) {
+    return new CompensationRichContext<>(delegate.withTransactionRouting(routing), error,
+            traceCollector, contextFactory);
   }
 
   @Override
@@ -76,5 +89,16 @@ public final class CompensationRichContext<T> implements CompensationContext<T> 
     traceCollector.add(delegate.runId(), "compensation log: " + message);
     log.info("[DSL:{}][runId:{}] [compensation] {}", delegate.mode(), delegate.runId(), message);
     return this;
+  }
+
+  @Override
+  public @Nullable ExecutionListener executionListener() {
+    return delegate.executionListener();
+  }
+
+  @Override
+  public @NonNull Context<T> withExecutionListener(@NonNull ExecutionListener listener) {
+    return new CompensationRichContext<>(delegate.withExecutionListener(listener), error,
+            traceCollector, contextFactory);
   }
 }

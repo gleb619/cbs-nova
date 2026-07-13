@@ -98,4 +98,34 @@ class SimpleContextTest {
 
     assertThat(first).isNotSameAs(second);
   }
+
+  @Test
+  void defaultTransactionRoutingIsLocal() {
+    var ctx = contextFactory.of("body", ExecutionMode.RUN, "r1");
+    assertThat(ctx.transactionRouting()).isEqualTo(TransactionRouting.LOCAL);
+  }
+
+  @Test
+  void withTransactionRoutingReturnsNewContextWithRouting() {
+    var ctx = contextFactory.of("body", ExecutionMode.RUN, "r1");
+    var updated = ctx.withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);
+    assertThat(updated.transactionRouting()).isEqualTo(TransactionRouting.TEMPORAL_ACTIVITY);
+    assertThat(ctx.transactionRouting()).isEqualTo(TransactionRouting.LOCAL);
+  }
+
+  @Test
+  void withBodyPreservesTransactionRouting() {
+    var ctx = contextFactory.of("body", ExecutionMode.RUN, "r1")
+            .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);
+    var updated = ctx.withBody("replaced");
+    assertThat(updated.transactionRouting()).isEqualTo(TransactionRouting.TEMPORAL_ACTIVITY);
+  }
+
+  @Test
+  void withMetadataPreservesTransactionRouting() {
+    var ctx = contextFactory.of("body", ExecutionMode.RUN, "r1")
+            .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);
+    var updated = ctx.withMetadata("x", 1);
+    assertThat(updated.transactionRouting()).isEqualTo(TransactionRouting.TEMPORAL_ACTIVITY);
+  }
 }

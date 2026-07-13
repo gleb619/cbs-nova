@@ -1,6 +1,7 @@
 package cbs.nova.dsl;
 
 import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.dsl.context.DefaultProcessContextFactory;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.process.ProcessManager;
@@ -14,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.ServiceLoader;
 
@@ -26,6 +28,7 @@ public final class GlobalManager {
   private final TransactionManager transactionManager;
   private final HelperManager helperManager;
   private final GeneratedClassRegistry generatedClassRegistry;
+  private final ProcessContextFactory processContextFactory;
 
   public static @NonNull GlobalManager getInstance() {
     if (INSTANCE == null) {
@@ -41,7 +44,8 @@ public final class GlobalManager {
                           config.transactionRunner(traceCollector, contextFactory)),
                   new HelperManager(new DefaultHelperRegistry(),
                           config.helperRunner(traceCollector, contextFactory)),
-                  new GeneratedClassRegistry());
+                  new GeneratedClassRegistry(),
+                  new DefaultProcessContextFactory());
         }
       }
     }
@@ -73,8 +77,33 @@ public final class GlobalManager {
     helperManager.registerFunction(fn);
   }
 
+  public @NonNull Context<?> createContext(
+          @NonNull Object body,
+          @NonNull Map<String, Object> metadata,
+          @NonNull ExecutionMode mode,
+          @NonNull String runId) {
+    return processContextFactory.create(body, metadata, mode, runId);
+  }
+
+  public @NonNull Context<?> createContext(
+          @NonNull Object body,
+          @NonNull Map<String, Object> metadata,
+          @NonNull ExecutionMode mode,
+          @NonNull String runId,
+          @NonNull TransactionRouting transactionRouting) {
+    return processContextFactory.create(body, metadata, mode, runId, transactionRouting);
+  }
+
   public @NonNull Result<?> runProcess(@NonNull String name, @NonNull Context<?> ctx) {
     return processManager.execute(name, ctx);
+  }
+
+  public @NonNull Result<?> runTransaction(
+          @NonNull String name, @NonNull Object input, @NonNull Context<?> parentCtx) {
+    Context<Object> ctx = DslConfig.dslConfig().contextFactory()
+            .of(input, parentCtx.metadata(), parentCtx.mode(), parentCtx.runId(),
+                    parentCtx.transactionRouting(), parentCtx.executionListener());
+    return transactionManager.execute(name, ctx);
   }
 
   public @NonNull Result<?> runTransaction(@NonNull String name, @NonNull Context<?> ctx) {
@@ -172,8 +201,13 @@ public final class GlobalManager {
     generatedClassRegistry.register(descriptor);
   }
 
+  public @NonNull Optional<TransactionInvoker> transactionInvoker() {
+    return Optional.ofNullable(DslConfig.dslConfig().transactionInvoker().get());
+  }
+
   public void resetForTests() {
     INSTANCE = null;
     DslConfig.dslConfig().temporalProcessLauncher().replace(null);
+    DslConfig.dslConfig().transactionInvoker().replace(null);
   }
 }

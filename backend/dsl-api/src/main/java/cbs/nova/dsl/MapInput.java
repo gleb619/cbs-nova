@@ -7,9 +7,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Immutable wrapper for a parameter map. Used as the typed input/output for parameter-based
- * DSL processes, transactions, and functions, and as a convenient factory for map literals
- * in DSL authoring.
+ * Immutable wrapper for a parameter map. Used as the typed input/output for parameter-based DSL
+ * processes, transactions, and functions, and as a convenient factory for map literals in DSL
+ * authoring.
  */
 @Json
 public record MapInput(Map<String, Object> values) {

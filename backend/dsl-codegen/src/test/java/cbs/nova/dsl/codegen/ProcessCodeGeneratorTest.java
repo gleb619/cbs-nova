@@ -7,8 +7,11 @@ import cbs.nova.dsl.DslTemporalProcess;
 import cbs.nova.dsl.DslTemporalProcessRequest;
 import cbs.nova.dsl.MapInput;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.TransactionRouting;
 import cbs.nova.dsl.config.DescriptorFactory;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 class ProcessCodeGeneratorTest {
 
@@ -82,6 +85,12 @@ class ProcessCodeGeneratorTest {
             .contains("GlobalManager.getInstance().runProcess(\"LoanDisbursement\"");
     assertThat(impl.source()).contains("ExecutionMode.RUN");
     assertThat(impl.source())
+            .contains("TransactionRouting.TEMPORAL_ACTIVITY");
+    assertThat(impl.source()).doesNotContain("java.lang.reflect.Method");
+    assertThat(impl.source()).doesNotContain("class TemporalTransactionInvoker");
+    assertThat(impl.source()).doesNotContain("dsl.transaction.invoker");
+    assertThat(impl.source()).doesNotContain("GlobalManager.getInstance().transactionInvoker()");
+    assertThat(impl.source())
             .contains(DslTemporalProcessRequest.class.getSimpleName() + "<String> request");
     assertThat(impl.source()).contains("request.runId()");
     assertThat(impl.source()).contains("String input = request.payload()");
@@ -141,12 +150,12 @@ class ProcessCodeGeneratorTest {
   }
 
   @Test
-  void implContainsTaskQueueConstant() {
+  void implDoesNotContainLegacyTaskQueueConstant() {
     var descriptor = descriptor().fromProcess(
             Dsl.process("Foo").execute(ctx -> Result.success("x")).build());
     var impl = generator.generate(descriptor, null, null).get(1);
-    assertThat(impl.source()).contains("TASK_QUEUE");
-    assertThat(impl.source()).contains("Foo-queue");
+    assertThat(impl.source()).doesNotContain("TASK_QUEUE");
+    assertThat(impl.source()).doesNotContain("Foo-queue");
   }
 
   @Test
@@ -165,6 +174,27 @@ class ProcessCodeGeneratorTest {
     assertThat(iface.source()).contains("DslTemporalProcessRequest<MapInput> request");
     assertThat(impl.source()).contains("import " + MapInput.class.getCanonicalName() + ";");
     assertThat(impl.source()).contains("MapInput input = request.payload()");
-    assertThat(impl.source()).contains("new SimpleContext<>(input, Map.of(), ExecutionMode.RUN, runId)");
+    assertThat(impl.source())
+            .contains("GlobalManager.getInstance()")
+            .contains(".createContext(input, Map.of(), ExecutionMode.RUN, runId)");
+    assertThat(impl.source())
+            .contains(".withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY)");
+  }
+
+  @Test
+  void withTransactionsEmitsPerTransactionCompensationMethods() {
+    var descriptor = descriptor().fromProcess(
+            Dsl.process("LoanDisbursement")
+                    .input(String.class)
+                    .output(String.class)
+                    .transactions(List.of("ReserveInventory", "ChargePayment"))
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+
+    var impl = generator.generate(descriptor, null, null).get(1);
+    assertThat(impl.source()).contains("compensateReserveInventory");
+    assertThat(impl.source()).contains("compensateChargePayment");
+    assertThat(impl.source()).contains("saga.addCompensation(() -> compensateReserveInventory");
+    assertThat(impl.source()).contains("saga.addCompensation(() -> compensateChargePayment");
   }
 }

@@ -3,12 +3,14 @@ package cbs.nova.starter.config;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.TemporalProcessLauncher;
+import cbs.nova.dsl.TransactionInvoker;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.DevDslRuntime;
 import cbs.nova.starter.ExternalCallTracker;
 import cbs.nova.starter.controllers.DslIntrospectionResource;
 import cbs.nova.starter.controllers.DslRuntimeResource;
 import cbs.nova.starter.services.TemporalDslProcessLauncher;
+import cbs.nova.starter.services.TemporalTransactionInvoker;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
@@ -38,6 +40,12 @@ public class TemporalConfiguration {
   @ConditionalOnMissingBean
   TemporalProcessLauncher temporalProcessLauncher(WorkflowClient workflowClient) {
     return new TemporalDslProcessLauncher(workflowClient);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  TransactionInvoker transactionInvoker() {
+    return new TemporalTransactionInvoker();
   }
 
   @Bean

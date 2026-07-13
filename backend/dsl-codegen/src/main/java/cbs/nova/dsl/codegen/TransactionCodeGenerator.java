@@ -1,5 +1,6 @@
 package cbs.nova.dsl.codegen;
 
+import cbs.nova.dsl.GeneratedTransactionActivity;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.utils.Substitutor;
 import lombok.RequiredArgsConstructor;
@@ -26,15 +27,16 @@ public final class TransactionCodeGenerator {
     String interfaceName = name + "TransactionActivity";
     String implName = name + "TransactionDefinition";
     String inputTypeName = typeName(descriptor.inputType());
+    boolean hasCompensation = descriptor.hasCompensation();
 
     return List.of(
             new GeneratedSource(pkg, interfaceName,
                     generateInterface(pkg, name, interfaceName, inputTypeName,
-                            importLine(descriptor.inputType()))),
+                            importLine(descriptor.inputType()), hasCompensation)),
             new GeneratedSource(
                     pkg, implName, generateImpl(pkg, name, interfaceName, implName,
                             versionConstant, descriptor.taskQueue(), inputTypeName,
-                            importLine(descriptor.inputType()))));
+                            importLine(descriptor.inputType()), hasCompensation)));
   }
 
   private static @NonNull String resolveVersion(
@@ -44,22 +46,27 @@ public final class TransactionCodeGenerator {
   }
 
   private String generateInterface(String pkg, String transactionName, String interfaceName,
-          String inputTypeName, String inputImport) {
+          String inputTypeName, String inputImport, boolean hasCompensation) {
     String importBlock = inputImport.isEmpty() ? "" : "\n" + inputImport + "\n";
+    String compensationMethod = hasCompensation
+            ? "\n  @ActivityMethod\n  void compensate(" + inputTypeName
+                    + " input, Throwable error);\n"
+            : "";
     return Substitutor.format(
             """
                     package ${pkg};${importBlock}
+                    import cbs.nova.dsl.GeneratedTransactionActivity;
                     import io.temporal.activity.ActivityInterface;
                     import io.temporal.activity.ActivityMethod;
 
                     @ActivityInterface(namePrefix = "${transactionName}_")
-                    public interface ${interfaceName} {
+                    public interface ${interfaceName} extends GeneratedTransactionActivity {
 
                       @ActivityMethod
                       String getVersion();
 
                       @ActivityMethod
-                      Object execute(${inputTypeName} input);
+                      Object execute(${inputTypeName} input);${compensationMethod}
                     }
                     """,
             Map.of(
@@ -67,19 +74,40 @@ public final class TransactionCodeGenerator {
                     "importBlock", importBlock,
                     "interfaceName", interfaceName,
                     "transactionName", transactionName,
-                    "inputTypeName", inputTypeName));
+                    "inputTypeName", inputTypeName,
+                    "compensationMethod", compensationMethod));
   }
 
   private String generateImpl(String pkg, String transactionName, String interfaceName,
           String implName, String versionConstant, String taskQueue, String inputTypeName,
-          String inputImport) {
+          String inputImport, boolean hasCompensation) {
     String importBlock = inputImport.isEmpty() ? "" : "\n" + inputImport + "\n";
+    String compensationMethod = hasCompensation
+            ? Substitutor.format(
+                    """
+
+                            public void compensate(${inputTypeName} input, Throwable error) {
+                              String runId = "run-" + UUID.randomUUID();
+                              var ctx = new SimpleContext<>(input, Map.of(), ExecutionMode.COMPENSATION, runId);
+                              var compCtx = new CompensationRichContext<>(ctx, error, new ExecutionTraceCollector(), new ContextFactory());
+                              GlobalManager.getInstance().findTransaction("${transactionName}").ifPresent(tx -> {
+                                if (tx.compensationLogic() != null) {
+                                  tx.compensationLogic().apply(compCtx);
+                                }
+                              });
+                            }
+                            """,
+                    Map.of("inputTypeName", inputTypeName, "transactionName", transactionName))
+            : "";
     return Substitutor.format(
             """
                     package ${pkg};${importBlock}
+                    import cbs.nova.dsl.CompensationRichContext;
                     import cbs.nova.dsl.ExecutionMode;
+                    import cbs.nova.dsl.ExecutionTraceCollector;
                     import cbs.nova.dsl.GlobalManager;
                     import cbs.nova.dsl.SimpleContext;
+                    import cbs.nova.dsl.config.ContextFactory;
                     import java.util.Map;
                     import java.util.UUID;
 
@@ -100,7 +128,7 @@ public final class TransactionCodeGenerator {
                         var result = GlobalManager.getInstance().runTransaction("${transactionName}", ctx);
                         if (!result.isSuccess()) throw new RuntimeException("Transaction failed", result.cause());
                         return result.value();
-                      }
+                      }${compensationMethod}
                     }
                     """,
             Map.of(
@@ -111,7 +139,8 @@ public final class TransactionCodeGenerator {
                     "implName", implName,
                     "version", versionConstant,
                     "taskQueue", taskQueue,
-                    "inputTypeName", inputTypeName));
+                    "inputTypeName", inputTypeName,
+                    "compensationMethod", compensationMethod));
   }
 
   private String typeName(Class<?> type) {

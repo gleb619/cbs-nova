@@ -3,6 +3,7 @@ package cbs.nova.dsl.codegen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.GeneratedTransactionActivity;
 import cbs.nova.dsl.MapInput;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.DescriptorFactory;
@@ -40,6 +41,8 @@ class TransactionCodeGeneratorTest {
     assertThat(iface.source()).contains("@ActivityInterface");
     assertThat(iface.source()).contains("@ActivityMethod");
     assertThat(iface.source()).contains("interface LoanDisbursementTransactionActivity");
+    assertThat(iface.source())
+            .contains("extends " + GeneratedTransactionActivity.class.getSimpleName());
     assertThat(iface.source()).contains("Object execute(String input)");
     assertThat(iface.source()).contains("namePrefix");
     assertThat(iface.source()).contains("LoanDisbursement_");
@@ -91,8 +94,11 @@ class TransactionCodeGeneratorTest {
     var impl = sources.get(1);
 
     assertThat(iface.source()).contains("Object execute(MapInput input)");
+    assertThat(iface.source())
+            .contains("extends " + GeneratedTransactionActivity.class.getSimpleName());
     assertThat(impl.source()).contains("import " + MapInput.class.getCanonicalName() + ";");
     assertThat(impl.source()).contains("MapInput input");
-    assertThat(impl.source()).contains("new SimpleContext<>(input, Map.of(), ExecutionMode.RUN, runId)");
+    assertThat(impl.source())
+            .contains("new SimpleContext<>(input, Map.of(), ExecutionMode.RUN, runId)");
   }
 }

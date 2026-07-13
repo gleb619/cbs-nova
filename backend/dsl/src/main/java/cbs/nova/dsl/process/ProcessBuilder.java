@@ -7,11 +7,13 @@ import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.ParameterRegistry;
 import cbs.nova.dsl.ProcessContext;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.TransactionExecution;
 import cbs.nova.dsl.registry.DefaultParameterRegistry;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -29,6 +31,9 @@ public final class ProcessBuilder {
   private Function<CompensationContext<?>, Result<?>> compensationLogic;
   @Nullable
   private Function<ProcessContext<?>, Result<?>> previewLogic;
+  @Nullable
+  private BiConsumer<CompensationContext<?>, List<TransactionExecution>> userCompensationHandler;
+  private List<String> transactionRefs = List.of();
   @Nullable
   private Supplier<DslDescriptor> descriptor;
 
@@ -74,6 +79,17 @@ public final class ProcessBuilder {
     return this;
   }
 
+  public ProcessBuilder compensation(
+          @NonNull BiConsumer<CompensationContext<?>, List<TransactionExecution>> handler) {
+    this.userCompensationHandler = handler;
+    return this;
+  }
+
+  public ProcessBuilder transactions(@NonNull List<String> refs) {
+    this.transactionRefs = refs;
+    return this;
+  }
+
   public ProcessBuilder preview(@NonNull Function<ProcessContext<?>, Result<?>> logic) {
     this.previewLogic = logic;
     return this;
@@ -93,7 +109,8 @@ public final class ProcessBuilder {
               "process '" + name + "' cannot have both .parameters() and .input()/.output()");
     }
     return new ProcessDslObject(name, taskQueue, version, inputType, outputType, parameters,
-            executeLogic, compensationLogic, previewLogic, descriptor);
+            executeLogic, compensationLogic, previewLogic, descriptor, userCompensationHandler,
+            transactionRefs);
   }
 
   public @NonNull List<DslObject> buildList() {

@@ -3,6 +3,7 @@ package cbs.nova.dsl.config;
 import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.RetryPolicy;
 import cbs.nova.dsl.TemporalProcessLauncher;
+import cbs.nova.dsl.TransactionInvoker;
 import cbs.nova.dsl.process.ProcessRunner;
 import cbs.nova.dsl.runner.DefaultHelperRunner;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
@@ -45,6 +46,10 @@ public class DslConfig implements SingletonSupport {
 
   public @NonNull RetryPolicyFactory retryPolicyFactory() {
     return singleton(RetryPolicyFactory::new);
+  }
+
+  public @NonNull Replaceable<TransactionInvoker> transactionInvoker() {
+    return singleton("transactionInvoker", () -> Replaceable.of(() -> null));
   }
 
   public @NonNull Replaceable<TemporalProcessLauncher> temporalProcessLauncher() {

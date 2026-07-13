@@ -65,7 +65,8 @@ class SemanticValidatorTest {
   @Test
   void unknownHelperRefThrows() {
     var p = new ProcessDescriptor(
-            "P", "v1", "P-queue", String.class, String.class, false, List.of("unknownHelper"));
+            "P", "v1", "P-queue", String.class, String.class, false, List.of("unknownHelper"),
+            List.of());
 
     var ex = catchThrowableOfType(
             ValidationException.class,
@@ -81,7 +82,8 @@ class SemanticValidatorTest {
     registry.registerHelper("myHelper", ctx -> Result.success("x"));
 
     var p = new ProcessDescriptor(
-            "P", "v1", "P-queue", String.class, String.class, false, List.of("myHelper"));
+            "P", "v1", "P-queue", String.class, String.class, false, List.of("myHelper"),
+            List.of());
 
     assertThatCode(
             () -> new SemanticValidator().validate(List.of(p), List.of(), List.of(), registry))

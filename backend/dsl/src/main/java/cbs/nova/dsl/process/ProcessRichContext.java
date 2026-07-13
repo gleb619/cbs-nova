@@ -1,6 +1,7 @@
 package cbs.nova.dsl.process;
 
 import cbs.nova.dsl.Context;
+import cbs.nova.dsl.ExecutionListener;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
@@ -8,10 +9,12 @@ import cbs.nova.dsl.MapInput;
 import cbs.nova.dsl.ProcessContext;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.TransactionInvoker;
+import cbs.nova.dsl.TransactionRouting;
 import cbs.nova.dsl.config.ContextFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
 
@@ -44,6 +47,11 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   }
 
   @Override
+  public @NonNull TransactionRouting transactionRouting() {
+    return delegate.transactionRouting();
+  }
+
+  @Override
   public @NonNull <U> Context<U> withBody(@NonNull U body) {
     return delegate.withBody(body);
   }
@@ -51,6 +59,12 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   @Override
   public @NonNull Context<T> withMetadata(@NonNull String key, Object value) {
     return delegate.withMetadata(key, value);
+  }
+
+  @Override
+  public @NonNull Context<T> withTransactionRouting(@NonNull TransactionRouting routing) {
+    return new ProcessRichContext<>(delegate.withTransactionRouting(routing), traceCollector,
+            contextFactory);
   }
 
   @Override
@@ -125,13 +139,15 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   }
 
   private @NonNull Result<?> invokeTransaction(@NonNull String name, @NonNull Object input) {
-    Object raw = delegate.metadata().get("dsl.transaction.invoker");
-    if (raw instanceof TransactionInvoker invoker) {
-      var ctx = contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId());
-      return invoker.invoke(name, input, ctx);
+    Context<Object> ctx = contextFactory.of(input, delegate.metadata(), delegate.mode(),
+            delegate.runId(), delegate.transactionRouting(), delegate.executionListener());
+    if (delegate.transactionRouting() == TransactionRouting.TEMPORAL_ACTIVITY) {
+      var invoker = GlobalManager.getInstance().transactionInvoker().orElse(null);
+      if (invoker != null) {
+        return invoker.invoke(name, input, ctx);
+      }
     }
-    return GlobalManager.getInstance().runTransaction(name,
-            contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
+    return GlobalManager.getInstance().runTransaction(name, ctx);
   }
 
   @Override
@@ -147,5 +163,16 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   @Override
   public void log(@NonNull String message) {
     log.info("[DSL:{}][runId:{}] {}", delegate.mode(), delegate.runId(), message);
+  }
+
+  @Override
+  public @Nullable ExecutionListener executionListener() {
+    return delegate.executionListener();
+  }
+
+  @Override
+  public @NonNull Context<T> withExecutionListener(@NonNull ExecutionListener listener) {
+    return new ProcessRichContext<>(delegate.withExecutionListener(listener), traceCollector,
+            contextFactory);
   }
 }

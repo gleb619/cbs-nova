@@ -12,6 +12,7 @@ public record ProcessDescriptor(
         @Nullable Class<?> inputType,
         @Nullable Class<?> outputType,
         boolean hasCompensation,
-        @NonNull List<String> helperRefs) {
+        @NonNull List<String> helperRefs,
+        @NonNull List<String> transactionRefs) {
 
 }

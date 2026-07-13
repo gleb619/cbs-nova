@@ -1,4 +1,3 @@
-
 package cbs.nova.dsl.codegen;
 
 import cbs.nova.dsl.DslTemporalProcess;
@@ -36,7 +35,8 @@ public final class ProcessCodeGenerator {
             new GeneratedSource(
                     pkg, implName, generateImpl(pkg, name, interfaceName, implName,
                             versionConstant, descriptor.taskQueue(),
-                            descriptor.inputType(), descriptor.hasCompensation())));
+                            descriptor.inputType(), descriptor.hasCompensation(),
+                            descriptor.transactionRefs())));
   }
 
   private static @NonNull String resolveVersion(
@@ -81,135 +81,75 @@ public final class ProcessCodeGenerator {
 
   private String generateImpl(
           String pkg, String processName, String interfaceName, String implName,
-          String versionConstant, String taskQueue, Class<?> inputType, boolean hasCompensation) {
+          String versionConstant, String taskQueue, Class<?> inputType, boolean hasCompensation,
+          List<String> transactionRefs) {
     String inputTypeName = typeName(inputType);
     List<String> imports = new ArrayList<>();
     addImport(imports, DslTemporalProcessRequest.class);
     addImport(imports, inputType);
 
     String importBlock = imports.isEmpty() ? "" : "\n" + String.join("\n", imports) + "\n";
-
-    String compensationLambda = hasCompensation
-            ? generateCompensationLambda(processName)
-            : "() -> { /* default no-op compensation */ }";
+    String compensationRegistrations = generateCompensationRegistrations(transactionRefs);
+    String compensationMethods = generateCompensationMethods(processName, hasCompensation,
+            transactionRefs);
 
     String template = """
-                        package ${pkg};${importBlock}
-                        import cbs.nova.dsl.CompensationRichContext;
-                        import cbs.nova.dsl.Context;
-                        import cbs.nova.dsl.DslEntityNotFoundException;
+            package ${pkg};${importBlock}
+            import cbs.nova.dsl.CompensationRichContext;
+            import cbs.nova.dsl.Context;
+            import cbs.nova.dsl.DslEntityNotFoundException;
             import cbs.nova.dsl.DslTemporalProcessFailure;
-                        import cbs.nova.dsl.ExecutionMode;
-                        import cbs.nova.dsl.ExecutionTraceCollector;
-                        import cbs.nova.dsl.GlobalManager;
-                        import cbs.nova.dsl.Result;
-                        import cbs.nova.dsl.RetryPolicy;
-                        import cbs.nova.dsl.SimpleContext;
-                        import cbs.nova.dsl.TransactionInvoker;
-                        import cbs.nova.dsl.config.ContextFactory;
-                        import cbs.nova.dsl.config.DslConfig;
-                        import cbs.nova.dsl.transaction.TransactionDslObject;
-                        import io.temporal.activity.ActivityOptions;
-                        import io.temporal.common.RetryOptions;
-                        import io.temporal.workflow.Saga;
-                        import io.temporal.workflow.Workflow;
-                        import java.lang.reflect.Method;
-            import java.time.Duration;
-                        import java.util.HashMap;
-                        import java.util.Map;
-                        import java.util.concurrent.atomic.AtomicReference;
+            import cbs.nova.dsl.ExecutionMode;
+            import cbs.nova.dsl.ExecutionTraceCollector;
+            import cbs.nova.dsl.GlobalManager;
+            import cbs.nova.dsl.Result;
+            import cbs.nova.dsl.TransactionRouting;
+            import cbs.nova.dsl.config.ContextFactory;
+            import io.temporal.workflow.Saga;
+            import java.util.Map;
+            import java.util.concurrent.atomic.AtomicReference;
 
-                        public class ${implName} implements ${interfaceName} {
-                          private static final String VERSION = "${version}";
+            public class ${implName} implements ${interfaceName} {
 
-                          private static final String TASK_QUEUE = "${taskQueue}";
+              private static final String VERSION = "${version}";
 
-                          @Override
-                          public String getVersion() {
-                            return VERSION;
-                          }
+              @Override
+              public String getVersion() {
+                return VERSION;
+              }
 
-                          @Override
-                          public Object execute(DslTemporalProcessRequest<${inputTypeName}> request) {
-                            Saga saga = new Saga(new Saga.Options.Builder().build());
-                            String runId = request.runId();
-                            ${inputTypeName} input = request.payload();
-                            var metadata = new HashMap<String, Object>();
-                            metadata.put("dsl.transaction.invoker", new TemporalTransactionInvoker(runId));
-                            var ctx = new SimpleContext<>(input, metadata, ExecutionMode.RUN, runId);
-                            var compensationCtx = new SimpleContext<>(input, Map.of(), ExecutionMode.RUN, runId);
-                            AtomicReference<Throwable> failureRef = new AtomicReference<>();
-                            saga.addCompensation(${compensationLambda});
-                            try {
-                              var result = GlobalManager.getInstance().runProcess("${processName}", ctx);
-                              if (!result.isSuccess()) {
-                                failureRef.set(result.cause());
-                                saga.compensate();
-                                return new DslTemporalProcessFailure("Process failed",
-                                        result.cause() != null ? result.cause().getMessage() : "unknown");
-                              }
-                              return result.value();
-                            } catch (Exception e) {
-                              failureRef.set(e);
-                              saga.compensate();
-                              return new DslTemporalProcessFailure(e.getMessage(),
-                                      e.getClass().getName());
-                            }
-                          }
+              @Override
+              public Object execute(DslTemporalProcessRequest<${inputTypeName}> request) {
+                Saga saga = new Saga(new Saga.Options.Builder().build());
+                String runId = request.runId();
+                ${inputTypeName} input = request.payload();
+                var ctx = GlobalManager.getInstance()
+                        .createContext(input, Map.of(), ExecutionMode.RUN, runId)
+                        .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);
+                var compensationCtx = GlobalManager.getInstance()
+                        .createContext(input, Map.of(), ExecutionMode.RUN, runId);
+                AtomicReference<Throwable> failureRef = new AtomicReference<>();
+                ${compensationRegistrations}
+                try {
+                  var result = GlobalManager.getInstance().runProcess("${processName}", ctx);
+                  if (!result.isSuccess()) {
+                    failureRef.set(result.cause());
+                    saga.compensate();
+                    return new DslTemporalProcessFailure("Process failed",
+                            result.cause() != null ? result.cause().getMessage() : "unknown");
+                  }
+                  return result.value();
+                } catch (Exception e) {
+                  failureRef.set(e);
+                  saga.compensate();
+                  return new DslTemporalProcessFailure(e.getMessage(),
+                          e.getClass().getName());
+                }
+              }
 
-
-                          private static class TemporalTransactionInvoker implements TransactionInvoker {
-                            private final String runId;
-
-                            TemporalTransactionInvoker(String runId) {
-                              this.runId = runId;
-                            }
-
-                            @Override
-                            public Result<?> invoke(String name, Object input, Context<?> ctx) {
-                              var txOpt = GlobalManager.getInstance().findTransaction(name);
-                              var generatedOpt = GlobalManager.getInstance().findGeneratedTransaction(name);
-                              if (txOpt.isEmpty() || generatedOpt.isEmpty()) {
-                                return GlobalManager.getInstance().runTransaction(name, ctx);
-                              }
-                              TransactionDslObject tx = txOpt.get();
-                              RetryPolicy policy = tx.retryPolicy();
-                              if (policy == null) {
-                                policy = DslConfig.dslConfig().defaultRetryPolicy();
-                              }
-                              RetryOptions retryOptions = RetryOptions.newBuilder()
-                                      .setMaximumAttempts(policy.maxAttempts())
-                                      .setInitialInterval(policy.initialInterval())
-                                      .setBackoffCoefficient(policy.backoffCoefficient())
-                                      .build();
-                              ActivityOptions options = ActivityOptions.newBuilder()
-                                      .setStartToCloseTimeout(tx.startToCloseTimeout())
-                                      .setRetryOptions(retryOptions)
-                                      .setTaskQueue(tx.taskQueue())
-                                      .build();
-                              Class<?> iface = generatedOpt.get().temporalInterface();
-                              Method executeMethod = null;
-                              for (Method m : iface.getMethods()) {
-                                if ("execute".equals(m.getName())) {
-                                  executeMethod = m;
-                                  break;
-                                }
-                              }
-                              if (executeMethod == null) {
-                                return GlobalManager.getInstance().runTransaction(name, ctx);
-                              }
-                              Object stub = Workflow.newActivityStub(iface, options);
-                              try {
-                                Object value = executeMethod.invoke(stub, input);
-                                return Result.success(value);
-                              } catch (Exception e) {
-                                Throwable cause = e.getCause() != null ? e.getCause() : e;
-                                return Result.failure(cause);
-                              }
-                            }
-                          }
-                        }
-                        """;
+              ${compensationMethods}
+            }
+            """;
 
     return Substitutor.format(
             template,
@@ -220,25 +160,67 @@ public final class ProcessCodeGenerator {
                     Map.entry("interfaceName", interfaceName),
                     Map.entry("implName", implName),
                     Map.entry("version", versionConstant),
-                    Map.entry("taskQueue", taskQueue),
                     Map.entry("inputTypeName", inputTypeName),
-                    Map.entry("compensationLambda", compensationLambda)));
+                    Map.entry("compensationRegistrations", compensationRegistrations),
+                    Map.entry("compensationMethods", compensationMethods)));
   }
 
-  private String generateCompensationLambda(String processName) {
-    return "() -> {\n" +
-            "      var process = GlobalManager.getInstance().findProcess(\"" + processName
-            + "\").orElseThrow(() -> new DslEntityNotFoundException(runId, \"Process not found: "
-            + processName + "\"));\n" +
-            "      if (process.compensationLogic() == null) {\n" +
-            "        return;\n" +
-            "      }\n" +
-            "      var compCtx = new CompensationRichContext<>(compensationCtx,\n" +
-            "              failureRef.get() != null ? failureRef.get() : new RuntimeException(\"compensation triggered\"),\n"
-            +
-            "              new ExecutionTraceCollector(), new ContextFactory());\n" +
-            "      process.compensationLogic().apply(compCtx);\n" +
-            "    }";
+  private String generateCompensationRegistrations(List<String> transactionRefs) {
+    StringBuilder sb = new StringBuilder();
+    sb.append(
+            "    saga.addCompensation(() -> compensateProcess(runId, compensationCtx, failureRef));\n");
+    for (String tx : transactionRefs) {
+      sb.append("    saga.addCompensation(() -> compensate")
+              .append(tx)
+              .append("(runId, compensationCtx, failureRef));\n");
+    }
+    return sb.toString();
+  }
+
+  private String generateCompensationMethods(
+          String processName, boolean hasCompensation, List<String> transactionRefs) {
+    StringBuilder sb = new StringBuilder();
+    sb.append(generateProcessCompensationMethod(processName, hasCompensation));
+    for (String tx : transactionRefs) {
+      sb.append(generateTransactionCompensationMethod(tx));
+    }
+    return sb.toString();
+  }
+
+  private String generateProcessCompensationMethod(String processName, boolean hasCompensation) {
+    String body = hasCompensation
+            ? Substitutor.format(
+                    "    var process = GlobalManager.getInstance().findProcess(\"${processName}\").orElseThrow(() -> new DslEntityNotFoundException(runId, \"Process not found: ${processName}\"));\n"
+                            + "    if (process.compensationLogic() == null) {\n"
+                            + "      return;\n"
+                            + "    }\n"
+                            + "    var compCtx = new CompensationRichContext<>(compensationCtx,\n"
+                            + "            failureRef.get() != null ? failureRef.get() : new RuntimeException(\"compensation triggered\"),\n"
+                            + "            new ExecutionTraceCollector(), new ContextFactory());\n"
+                            + "    process.compensationLogic().apply(compCtx);\n",
+                    Map.of("processName", processName))
+            : "    /* default no-op compensation */\n";
+    return "private void compensateProcess(String runId, Context<?> compensationCtx, AtomicReference<Throwable> failureRef) {\n"
+            + body
+            + "  }\n";
+  }
+
+  private String generateTransactionCompensationMethod(String txName) {
+    return Substitutor.format(
+            """
+                    private void compensate${txName}(String runId, Context<?> compensationCtx, AtomicReference<Throwable> failureRef) {
+                      GlobalManager.getInstance().findTransaction("${txName}").ifPresent(tx -> {
+                        if (tx.compensationLogic() == null) {
+                          return;
+                        }
+                        var compCtx = new CompensationRichContext<>(compensationCtx,
+                                failureRef.get() != null ? failureRef.get() : new RuntimeException("compensation triggered"),
+                                new ExecutionTraceCollector(), new ContextFactory());
+                        tx.compensationLogic().apply(compCtx);
+                      });
+                    }
+                    """,
+            Map.of("txName", txName));
   }
 
   private String typeName(Class<?> type) {

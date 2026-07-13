@@ -16,16 +16,39 @@ public final class SimpleContext<T> implements Context<T> {
   private final Map<String, Object> metadata;
   private final ExecutionMode mode;
   private final String runId;
+  private final TransactionRouting transactionRouting;
+  private final ExecutionListener executionListener;
 
   public SimpleContext(
           @NonNull Object body,
           @NonNull Map<String, Object> metadata,
           @NonNull ExecutionMode mode,
           @NonNull String runId) {
+    this(body, metadata, mode, runId, TransactionRouting.LOCAL, null);
+  }
+
+  public SimpleContext(
+          @NonNull Object body,
+          @NonNull Map<String, Object> metadata,
+          @NonNull ExecutionMode mode,
+          @NonNull String runId,
+          @NonNull TransactionRouting transactionRouting) {
+    this(body, metadata, mode, runId, transactionRouting, null);
+  }
+
+  public SimpleContext(
+          @NonNull Object body,
+          @NonNull Map<String, Object> metadata,
+          @NonNull ExecutionMode mode,
+          @NonNull String runId,
+          @NonNull TransactionRouting transactionRouting,
+          @Nullable ExecutionListener executionListener) {
     this.body = body;
     this.metadata = metadata;
     this.mode = mode;
     this.runId = runId;
+    this.transactionRouting = transactionRouting;
+    this.executionListener = executionListener;
   }
 
   @Override
@@ -53,14 +76,36 @@ public final class SimpleContext<T> implements Context<T> {
   }
 
   @Override
+  public @NonNull TransactionRouting transactionRouting() {
+    return transactionRouting;
+  }
+
+  @Override
+  public @Nullable ExecutionListener executionListener() {
+    return executionListener;
+  }
+
+  @Override
   public <U> @NonNull Context<U> withBody(@NonNull U newBody) {
-    return new SimpleContext<>(newBody, metadata, mode, runId);
+    return new SimpleContext<>(newBody, metadata, mode, runId, transactionRouting,
+            executionListener);
   }
 
   @Override
   public @NonNull Context<T> withMetadata(@NonNull String key, @Nullable Object value) {
     var updated = new LinkedHashMap<>(metadata);
     updated.put(key, value);
-    return new SimpleContext<>(body, Map.copyOf(updated), mode, runId);
+    return new SimpleContext<>(body, Map.copyOf(updated), mode, runId, transactionRouting,
+            executionListener);
+  }
+
+  @Override
+  public @NonNull Context<T> withTransactionRouting(@NonNull TransactionRouting routing) {
+    return new SimpleContext<>(body, metadata, mode, runId, routing, executionListener);
+  }
+
+  @Override
+  public @NonNull Context<T> withExecutionListener(@NonNull ExecutionListener listener) {
+    return new SimpleContext<>(body, metadata, mode, runId, transactionRouting, listener);
   }
 }

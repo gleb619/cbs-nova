@@ -2,6 +2,7 @@ package cbs.nova.starter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.DslTemporalProcessRequest;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dslexamples.BatchModels.BatchIn;
@@ -22,11 +23,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = IntegrationTestApplication.class, properties = {
+    "dsl.worker.enabled=true",
     "dsl.task-queue=BatchProcessing-queue"})
 @Import(TemporalTestConfiguration.class)
 class DslExamplesEndToEndTest extends BaseContainers {
@@ -42,6 +45,8 @@ class DslExamplesEndToEndTest extends BaseContainers {
   @BeforeAll
   static void initKeycloak() {
     GlobalManager.getInstance().resetForTests();
+    new DefinitionLoader().load(Path.of("src/test/resources/dsl-intermediate-examples"),
+            GlobalManager.getInstance());
     keycloakRealm = new KeycloakRealmInitializer(KEYCLOAK);
     keycloakRealm.initialize();
   }
@@ -55,6 +60,8 @@ class DslExamplesEndToEndTest extends BaseContainers {
   @AfterEach
   void tearDown() {
     GlobalManager.getInstance().resetForTests();
+    new DefinitionLoader().load(Path.of("src/test/resources/dsl-intermediate-examples"),
+            GlobalManager.getInstance());
   }
 
   @Test

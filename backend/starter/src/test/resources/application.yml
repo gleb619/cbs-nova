@@ -1,6 +1,17 @@
 temporal:
   connection-target: ${TEMPORAL_ADDRESS:127.0.0.1:7233}
 
+dsl:
+  worker:
+    enabled: false
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+  flyway:
+    enabled: false
+
 management:
   endpoints:
     web:

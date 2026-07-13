@@ -13,6 +13,7 @@ import cbs.nova.starter.helpers.CompensationTrackerHelper;
 import cbs.nova.starter.helpers.model.UnreliableApiIn;
 import cbs.nova.starter.services.TemporalDslProcessLauncher;
 import cbs.nova.starter.services.TemporalDslProcessService;
+import cbs.nova.starter.services.TemporalTransactionInvoker;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
@@ -99,6 +100,7 @@ class UnreliableApiDslIntegrationTest {
 
     var launcher = new TemporalDslProcessLauncher(workflowClient);
     DslConfig.dslConfig().temporalProcessLauncher().replace(launcher);
+    DslConfig.dslConfig().transactionInvoker().replace(new TemporalTransactionInvoker());
 
     workerFactory = WorkerFactory.newInstance(workflowClient);
     Worker worker = workerFactory.newWorker(TASK_QUEUE);
@@ -132,6 +134,7 @@ class UnreliableApiDslIntegrationTest {
       workerFactory.shutdown();
     }
     DslConfig.dslConfig().temporalProcessLauncher().replace(null);
+    DslConfig.dslConfig().transactionInvoker().replace(null);
   }
 
   @Test

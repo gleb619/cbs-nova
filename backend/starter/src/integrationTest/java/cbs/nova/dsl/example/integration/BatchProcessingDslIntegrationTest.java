@@ -12,6 +12,7 @@ import cbs.nova.dslexamples.BatchModels.BatchItem;
 import cbs.nova.dslexamples.BatchModels.BatchOut;
 import cbs.nova.starter.services.TemporalDslProcessLauncher;
 import cbs.nova.starter.services.TemporalDslProcessService;
+import cbs.nova.starter.services.TemporalTransactionInvoker;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
@@ -102,6 +103,7 @@ class BatchProcessingDslIntegrationTest {
 
     var launcher = new TemporalDslProcessLauncher(workflowClient);
     DslConfig.dslConfig().temporalProcessLauncher().replace(launcher);
+    DslConfig.dslConfig().transactionInvoker().replace(new TemporalTransactionInvoker());
 
     var descriptor = globalManager.findGeneratedProcess("BatchProcessing").orElseThrow();
     workerFactory = WorkerFactory.newInstance(workflowClient);
@@ -116,6 +118,7 @@ class BatchProcessingDslIntegrationTest {
       workerFactory.shutdown();
     }
     DslConfig.dslConfig().temporalProcessLauncher().replace(null);
+    DslConfig.dslConfig().transactionInvoker().replace(null);
   }
 
   @Test

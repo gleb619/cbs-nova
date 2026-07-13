@@ -6,8 +6,10 @@ import cbs.nova.dsl.DslCompensationException;
 import cbs.nova.dsl.DslExecutionException;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExecutionTraceCollector;
+import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.TemporalProcessLauncher;
+import cbs.nova.dsl.TransactionExecution;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.process.ProcessDslObject;
@@ -15,6 +17,8 @@ import cbs.nova.dsl.process.ProcessRichContext;
 import cbs.nova.dsl.process.ProcessRunner;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
+
+import java.util.Map;
 
 @RequiredArgsConstructor
 public final class DefaultProcessRunner implements ProcessRunner {
@@ -27,24 +31,27 @@ public final class DefaultProcessRunner implements ProcessRunner {
     Result<?> result;
     Throwable failure = null;
     boolean launchedByTemporal = false;
+    DefaultExecutionListener listener = new DefaultExecutionListener();
+    Context<?> listeningCtx = ctx.withExecutionListener(listener);
     try {
       TemporalProcessLauncher launcher = DslConfig.dslConfig().temporalProcessLauncher().get();
-      if (launcher != null && launcher.canRun(ctx)) {
+      if (launcher != null && launcher.canRun(listeningCtx)) {
         launchedByTemporal = true;
         result = launcher.launch(
                 process.name(),
                 process.taskQueue(),
                 process.inputType(),
                 process.outputType(),
-                ctx);
+                listeningCtx);
       } else {
-        var richCtx = new ProcessRichContext<>(ctx, traceCollector, contextFactory);
-        if (ctx.mode() == ExecutionMode.EXPLAIN) {
+        var richCtx = new ProcessRichContext<>(listeningCtx, traceCollector, contextFactory);
+        if (listeningCtx.mode() == ExecutionMode.EXPLAIN) {
           result = process.executeLogic().apply(richCtx);
           if (result.isSuccess()) {
-            ctx = ctx.withMetadata("explain.description", "Process: " + process.name());
+            listeningCtx = listeningCtx.withMetadata("explain.description",
+                    "Process: " + process.name());
           }
-        } else if (ctx.mode() == ExecutionMode.PREVIEW) {
+        } else if (listeningCtx.mode() == ExecutionMode.PREVIEW) {
           result = process.effectivePreview().apply(richCtx);
         } else {
           result = process.executeLogic().apply(richCtx);
@@ -55,11 +62,47 @@ public final class DefaultProcessRunner implements ProcessRunner {
       result = Result.failure(new DslExecutionException(ctx.runId(), message, ex));
       failure = ex;
     }
-    if (!launchedByTemporal && !result.isSuccess() && process.compensationLogic() != null) {
+
+    if (!launchedByTemporal && !result.isSuccess() && (process.compensationLogic() != null
+            || process.userCompensationHandler() != null
+            || !listener.historyInReverse().isEmpty())) {
+      Throwable compensationError = failure != null
+              ? failure
+              : (result.cause() != null
+                      ? result.cause()
+                      : new RuntimeException("compensation triggered"));
       try {
-        var compensationCtx = new CompensationRichContext<>(ctx,
-                failure != null ? failure : result.cause(), traceCollector, contextFactory);
-        process.compensationLogic().apply(compensationCtx);
+        var reverseHistory = listener.historyInReverse();
+        for (TransactionExecution exec : reverseHistory) {
+          GlobalManager.getInstance()
+                  .findTransaction(exec.transactionName())
+                  .ifPresent(tx -> {
+                    if (tx.compensationLogic() == null) {
+                      return;
+                    }
+                    var txCtx = contextFactory.of(
+                            exec.input() != null ? exec.input() : Map.of(),
+                            ExecutionMode.COMPENSATION,
+                            exec.runId());
+                    var compCtx = new CompensationRichContext<>(txCtx, compensationError,
+                            traceCollector, contextFactory);
+                    tx.compensationLogic().apply(compCtx);
+                  });
+        }
+        if (process.compensationLogic() != null) {
+          var processCompCtxBase = contextFactory.of(
+                  ctx.body(), ExecutionMode.COMPENSATION, ctx.runId());
+          var processCompCtx = new CompensationRichContext<>(processCompCtxBase, compensationError,
+                  traceCollector, contextFactory);
+          process.compensationLogic().apply(processCompCtx);
+        }
+        if (process.userCompensationHandler() != null) {
+          var userCompCtxBase = contextFactory.of(
+                  ctx.body(), ExecutionMode.COMPENSATION, ctx.runId());
+          var userCompCtx = new CompensationRichContext<>(userCompCtxBase, compensationError,
+                  traceCollector, contextFactory);
+          process.userCompensationHandler().accept(userCompCtx, reverseHistory);
+        }
       } catch (Exception compEx) {
         String message = compEx.getMessage() != null
                 ? compEx.getMessage()
