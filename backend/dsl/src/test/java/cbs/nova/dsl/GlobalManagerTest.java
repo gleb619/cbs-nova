@@ -191,17 +191,18 @@ class GlobalManagerTest {
     var gm = GlobalManager.globalManager();
     var order = new ArrayList<String>();
 
-    Object result = gm.runProcessWithCompensation(
+    assertThatThrownBy(() -> gm.runProcessWithCompensation(
             "run-1",
             "body",
             ctx -> {
               order.add("main");
               return Result.failure(new RuntimeException("boom"));
             },
-            (compCtx, error) -> order.add("compensate:" + error.getMessage()));
+            (compCtx, error) -> order.add("compensate:" + error.getMessage())))
+            .isInstanceOf(DslExecutionException.class)
+            .hasMessageContaining("Process failed")
+            .hasMessageContaining("boom");
 
-    assertThat(result).isInstanceOf(DslTemporalProcessFailure.class);
-    assertThat(((DslTemporalProcessFailure) result).message()).isEqualTo("Process failed");
     assertThat(order).containsExactly("main", "compensate:boom");
   }
 
@@ -210,18 +211,17 @@ class GlobalManagerTest {
     var gm = GlobalManager.globalManager();
     var order = new ArrayList<String>();
 
-    Object result = gm.runProcessWithCompensation(
+    assertThatThrownBy(() -> gm.runProcessWithCompensation(
             "run-1",
             "body",
             ctx -> {
               order.add("main");
               throw new IllegalStateException("bang");
             },
-            (compCtx, error) -> order.add("compensate:" + error.getClass().getSimpleName()));
+            (compCtx, error) -> order.add("compensate:" + error.getClass().getSimpleName())))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("bang");
 
-    assertThat(result).isInstanceOf(DslTemporalProcessFailure.class);
-    assertThat(((DslTemporalProcessFailure) result).detail())
-            .isEqualTo(IllegalStateException.class.getName());
     assertThat(order).containsExactly("main", "compensate:IllegalStateException");
   }
 
@@ -246,7 +246,7 @@ class GlobalManagerTest {
             })
             .build());
 
-    Object result = gm.runProcessWithCompensation(
+    assertThatThrownBy(() -> gm.runProcessWithCompensation(
             "run-1",
             "body",
             ctx -> {
@@ -255,9 +255,10 @@ class GlobalManagerTest {
               return Result.failure(new RuntimeException("boom"));
             },
             (compCtx, error) -> {
-              /* process compensation is a no-op in this test */ });
+              /* process compensation is a no-op in this test */ }))
+            .isInstanceOf(DslExecutionException.class)
+            .hasMessageContaining("boom");
 
-    assertThat(result).isInstanceOf(DslTemporalProcessFailure.class);
     assertThat(order).containsExactly("TxB", "TxA");
   }
   @Test
@@ -332,13 +333,14 @@ class GlobalManagerTest {
             })
             .build());
 
-    Object result = gm.runProcessWithCompensation(
+    assertThatThrownBy(() -> gm.runProcessWithCompensation(
             "run-1",
             "body",
             ctx -> gm.runProcess("DoubleCheck", ctx),
-            (compCtx, error) -> gm.compensateProcess("DoubleCheck", compCtx, error));
+            (compCtx, error) -> gm.compensateProcess("DoubleCheck", compCtx, error)))
+            .isInstanceOf(DslExecutionException.class)
+            .hasMessageContaining("boom");
 
-    assertThat(result).isInstanceOf(DslTemporalProcessFailure.class);
     assertThat(order).containsExactly("process-comp");
   }
 }

@@ -125,7 +125,7 @@ class UnreliableApiDslIntegrationTest {
     var descriptor = GlobalManager.globalManager().findGeneratedTransaction(name).orElseThrow();
     Object instance;
     try {
-      //TODO: remove reflection, use typed info instead
+      // TODO: remove reflection, use typed info instead
       instance = descriptor.temporalImplementation().getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       throw new RuntimeException("Failed to instantiate activity " + name, e);
@@ -203,7 +203,7 @@ class UnreliableApiDslIntegrationTest {
   private static HelperInstanceResolver reflectiveHelperResolver() {
     return helperClass -> {
       try {
-        //TODO: remove reflection, use typed info instead
+        // TODO: remove reflection, use typed info instead
         return (Executable<?, ?>) helperClass.getDeclaredConstructor().newInstance();
       } catch (ReflectiveOperationException e) {
         throw new IllegalStateException("Cannot instantiate helper " + helperClass, e);

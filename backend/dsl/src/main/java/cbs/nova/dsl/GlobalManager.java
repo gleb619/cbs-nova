@@ -303,14 +303,15 @@ public final class GlobalManager {
       if (!result.isSuccess()) {
         failureRef.set(result.cause());
         saga.compensate();
-        return new DslTemporalProcessFailure("Process failed",
-                result.cause() != null ? result.cause().getMessage() : "unknown");
+        String detail = result.cause() != null ? result.cause().getMessage() : "unknown";
+        throw new DslExecutionException(ctx.runId(), "Process failed: " + detail,
+                result.cause() != null ? result.cause() : new RuntimeException("unknown"));
       }
       return result.value();
     } catch (Exception e) {
       failureRef.set(e);
       saga.compensate();
-      return new DslTemporalProcessFailure(e.getMessage(), e.getClass().getName());
+      throw e;
     }
   }
 

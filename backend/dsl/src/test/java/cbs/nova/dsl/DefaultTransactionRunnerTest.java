@@ -5,8 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
 import cbs.nova.dsl.transaction.TransactionDslObject;
-import java.util.ArrayList;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
 
 class DefaultTransactionRunnerTest {
 

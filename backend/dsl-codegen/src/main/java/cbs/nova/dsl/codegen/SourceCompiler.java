@@ -279,7 +279,7 @@ public final class SourceCompiler {
             Thread.currentThread().getContextClassLoader());
     try {
       var clazz = loader.loadClass(providerFqcn);
-      //TODO: remove reflection, use typed info
+      // TODO: remove reflection, use typed info
       var provider = (DslDefinitionProvider) clazz.getDeclaredConstructor().newInstance();
       return provider.definitions();
     } catch (Exception e) {

@@ -68,7 +68,7 @@ public class DslWorkerConfiguration {
                 Thread.currentThread().getContextClassLoader());
         String simpleName = cls.getSimpleName();
 
-        //TODO: remove reflection, use typed info instead
+        // TODO: remove reflection, use typed info instead
         if (simpleName.endsWith("ProcessDefinition") && implementsWorkflowInterface(cls)) {
           worker.registerWorkflowImplementationTypes(cls);
         } else if (simpleName.endsWith("TransactionDefinition")) {

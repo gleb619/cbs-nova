@@ -132,7 +132,7 @@ class IntermediateDslExamplesTest {
   private static HelperInstanceResolver reflectiveHelperResolver() {
     return helperClass -> {
       try {
-        //TODO: remove reflection, use typed info instead
+        // TODO: remove reflection, use typed info instead
         return (Executable<?, ?>) helperClass.getDeclaredConstructor().newInstance();
       } catch (ReflectiveOperationException e) {
         throw new IllegalStateException("Cannot instantiate helper " + helperClass, e);

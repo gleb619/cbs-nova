@@ -20,8 +20,8 @@ public interface DslSaga {
   void addCompensation(@NonNull Runnable compensation);
 
   /**
-   * Executes registered compensations. By default they run sequentially in reverse order.
-   * Once invoked the compensation list is cleared.
+   * Executes registered compensations. By default they run sequentially in reverse order. Once
+   * invoked the compensation list is cleared.
    */
   void compensate();
 
