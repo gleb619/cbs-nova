@@ -12,6 +12,12 @@ g.useState = (_key: string, init: () => unknown) => ref(init())
 
 g.$fetch = vi.fn()
 
+// Stub of h3's defineEventHandler. The real one returns an EventHandler
+// wrapper object; for unit tests we treat it as identity so route files
+// (`export default defineEventHandler(handler)`) expose the inner handler
+// directly and tests can invoke it as a plain function.
+g.defineEventHandler = <T>(handler: T) => handler
+
 // Stub of h3's getHeader. The real one reads from the H3Event's internal
 // node req, but for unit tests we don't need that — the test that needs
 // header propagation overrides globalThis.getHeader directly.
