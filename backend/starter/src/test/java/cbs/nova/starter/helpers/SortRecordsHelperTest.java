@@ -1,0 +1,111 @@
+package cbs.nova.starter.helpers;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import cbs.nova.dsl.ExecutionMode;
+import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.starter.helpers.model.SortRecordsIn;
+import cbs.nova.starter.helpers.model.SortRecordsOut;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+
+class SortRecordsHelperTest {
+
+  private final ContextFactory contextFactory = new ContextFactory();
+  private final SortRecordsHelper helper = new SortRecordsHelper();
+
+  @Test
+  void sortsNumericFieldAscending() {
+    var records = List.of(
+            Map.<String, Object>of("a", 2),
+            Map.<String, Object>of("a", 1),
+            Map.<String, Object>of("a", 3));
+    var ctx = contextFactory.of(new SortRecordsIn(records, "a", true),
+            ExecutionMode.PREVIEW);
+    Result<SortRecordsOut> result = helper.execute(ctx);
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().records())
+            .map(r -> r.get("a"))
+            .containsExactly(1, 2, 3);
+  }
+
+  @Test
+  void sortsNumericFieldDescending() {
+    var records = List.of(
+            Map.<String, Object>of("a", 2),
+            Map.<String, Object>of("a", 1),
+            Map.<String, Object>of("a", 3));
+    var ctx = contextFactory.of(new SortRecordsIn(records, "a", false),
+            ExecutionMode.PREVIEW);
+    Result<SortRecordsOut> result = helper.execute(ctx);
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().records())
+            .map(r -> r.get("a"))
+            .containsExactly(3, 2, 1);
+  }
+
+  @Test
+  void sortsStringFieldLexicographically() {
+    var records = List.of(
+            Map.<String, Object>of("name", "charlie"),
+            Map.<String, Object>of("name", "alice"),
+            Map.<String, Object>of("name", "bob"));
+    var ctx = contextFactory.of(new SortRecordsIn(records, "name"),
+            ExecutionMode.PREVIEW);
+    Result<SortRecordsOut> result = helper.execute(ctx);
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().records())
+            .map(r -> r.get("name"))
+            .containsExactly("alice", "bob", "charlie");
+  }
+
+  @Test
+  void returnsEmptyForNullRecords() {
+    var ctx = contextFactory.of(new SortRecordsIn(null, "a", true),
+            ExecutionMode.PREVIEW);
+    assertThat(helper.execute(ctx).value().records()).isEmpty();
+  }
+
+  @Test
+  void returnsEmptyForEmptyRecords() {
+    var ctx = contextFactory.of(new SortRecordsIn(List.of(), "a", true),
+            ExecutionMode.PREVIEW);
+    assertThat(helper.execute(ctx).value().records()).isEmpty();
+  }
+
+  @Test
+  void sortsWithNullValuesPlacedLast() {
+    Map<String, Object> one = new java.util.HashMap<>();
+    one.put("a", 3);
+    Map<String, Object> two = new java.util.HashMap<>();
+    two.put("a", null);
+    Map<String, Object> three = new java.util.HashMap<>();
+    three.put("a", 1);
+    var records = List.<Map<String, Object>>of(one, two, three);
+    var ctx = contextFactory.of(new SortRecordsIn(records, "a", true),
+            ExecutionMode.PREVIEW);
+    Result<SortRecordsOut> result = helper.execute(ctx);
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().records())
+            .map(r -> r.get("a"))
+            .containsExactly(1, 3, null);
+  }
+
+  @Test
+  void sortsMixedTypesByStringCoercion() {
+    var records = List.<Map<String, Object>>of(
+            Map.of("a", 100),
+            Map.of("a", "20"),
+            Map.of("a", 3));
+    var ctx = contextFactory.of(new SortRecordsIn(records, "a", true),
+            ExecutionMode.PREVIEW);
+    Result<SortRecordsOut> result = helper.execute(ctx);
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().records())
+            .map(r -> String.valueOf(r.get("a")))
+            .containsExactly("100", "20", "3");
+  }
+}
