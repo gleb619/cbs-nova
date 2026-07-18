@@ -1,19 +1,26 @@
 package cbs.nova.dsl.example.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.DslTemporalProcessRequest;
+import cbs.nova.dsl.Executable;
+import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.HelperInstanceResolver;
+import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dslexamples.VersionProbeModels.VersionProbeIn;
 import cbs.nova.dslexamples.VersionProbeModels.VersionProbeOut;
 import cbs.nova.dslexamples.versionprobe.v1.VersionProbeProcessWorkflow;
 import cbs.nova.starter.services.TemporalDslProcessLauncher;
+import cbs.nova.starter.services.TemporalDslProcessService;
 import cbs.nova.starter.services.TemporalTransactionInvoker;
 import io.temporal.client.WorkflowClient;
-import io.temporal.client.WorkflowOptions;
-import io.temporal.client.WorkflowStub;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import io.temporal.worker.Worker;
@@ -29,6 +36,7 @@ import org.testcontainers.containers.wait.strategy.WaitAllStrategy;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -38,8 +46,9 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Verifies that a running workflow keeps using the DSL version it started with after a newer DSL
- * version is loaded. A file-based latch helper keeps the first execution open while the registry is
- * updated; after the latch file is released the workflow still finishes with the v1 logic.
+ * version is loaded, while a workflow started after the reload uses the new version. A file-based
+ * latch helper keeps the first execution open while the registry is updated; after the latch file
+ * is released the workflow still finishes with the v1 logic.
  */
 @Testcontainers
 class DslVersioningIntegrationTest {
@@ -89,6 +98,7 @@ class DslVersioningIntegrationTest {
 
     var globalManager = GlobalManager.globalManager();
     new DefinitionLoader().load(globalManager);
+    DslConfig.dslConfig().helperInstanceResolver().replace(reflectiveHelperResolver());
     globalManager.registerHelperResolvers();
 
     assertThat(globalManager.hasProcess("VersionProbe"))
@@ -107,7 +117,7 @@ class DslVersioningIntegrationTest {
                     .build());
     workflowClient = WorkflowClient.newInstance(serviceStubs);
 
-    var launcher = new TemporalDslProcessLauncher(workflowClient);
+    var launcher = new TemporalDslProcessLauncher(workflowClient, new ObjectMapper());
     DslConfig.dslConfig().temporalProcessLauncher().replace(launcher);
     DslConfig.dslConfig().transactionInvoker().replace(new TemporalTransactionInvoker());
 
@@ -125,6 +135,7 @@ class DslVersioningIntegrationTest {
     }
     DslConfig.dslConfig().temporalProcessLauncher().replace(null);
     DslConfig.dslConfig().transactionInvoker().replace(null);
+    DslConfig.dslConfig().helperInstanceResolver().replace(null);
     cleanLatchDir();
   }
 
@@ -145,19 +156,15 @@ class DslVersioningIntegrationTest {
 
   @Test
   void inFlightWorkflowKeepsUsingOriginalDslVersionAfterReload() throws Exception {
-    String firstRunId = "versioning-first-" + System.currentTimeMillis();
-    var firstStub = workflowClient.newWorkflowStub(
-            VersionProbeProcessWorkflow.class,
-            WorkflowOptions.newBuilder()
-                    .setTaskQueue(TASK_QUEUE)
-                    .setWorkflowId(firstRunId)
-                    .build());
+    var service = new TemporalDslProcessService(
+            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper());
 
-    var firstRequest = new DslTemporalProcessRequest<>(firstRunId, new VersionProbeIn("first"));
-    WorkflowStub.fromTyped(firstStub).start(firstRequest);
+    var firstRun = service.startProcess("VersionProbe", new VersionProbeIn("first"));
 
-    Path lock = LATCH_DIR.resolve("lock-" + firstRunId);
-    waitForFile(lock);
+    Path lock = LATCH_DIR.resolve("lock-" + firstRun.runId());
+    await().atMost(Duration.ofSeconds(10))
+            .pollInterval(Duration.ofMillis(50))
+            .until(() -> Files.exists(lock));
 
     Path v2Dir = Path.of("src/integrationTest/resources/dsl-versioning-v2");
     new DefinitionLoader().load(v2Dir, GlobalManager.globalManager());
@@ -166,23 +173,74 @@ class DslVersioningIntegrationTest {
             .as("latest registered DSL version should be v2 after reload")
             .isEqualTo("v2");
 
-    Path release = LATCH_DIR.resolve("release-" + firstRunId);
+    Path release = LATCH_DIR.resolve("release-" + firstRun.runId());
     Files.writeString(release, "go");
 
-    VersionProbeOut firstOut = WorkflowStub.fromTyped(firstStub)
-            .getResult(30, TimeUnit.SECONDS, VersionProbeOut.class);
+    Result<?> firstResult = firstRun.result().get(30, TimeUnit.SECONDS);
+    assertThat(firstResult.isSuccess()).as("result cause: %s", firstResult.cause()).isTrue();
+    VersionProbeOut firstOut = firstResult.as(VersionProbeOut.class);
 
     assertThat(firstOut).isNotNull();
     assertThat(firstOut.result()).isEqualTo("v1:first");
+
+    // First workflow finished with v1. Switch the worker to the v2 implementation and start a
+    // second workflow; it must use the freshly loaded v2 DSL and produce a different result.
+    workerFactory.shutdown();
+    workerFactory = WorkerFactory.newInstance(workflowClient);
+    Worker worker = workerFactory.newWorker(TASK_QUEUE);
+    worker.registerWorkflowImplementationTypes(VersionProbeV2ProcessDefinition.class);
+    workerFactory.start();
+
+    GlobalManager.globalManager().registerGeneratedClass(
+            new GeneratedClassDescriptor(
+                    "VersionProbe",
+                    DslObject.DslType.PROCESS,
+                    "v2",
+                    TASK_QUEUE,
+                    VersionProbeProcessWorkflow.class,
+                    VersionProbeV2ProcessDefinition.class,
+                    VersionProbeIn.class,
+                    VersionProbeOut.class,
+                    "{}"));
+
+    var secondRun = service.startProcess("VersionProbe", new VersionProbeIn("second"));
+    Result<?> secondResult = secondRun.result().get(30, TimeUnit.SECONDS);
+    assertThat(secondResult.isSuccess()).as("result cause: %s", secondResult.cause()).isTrue();
+    VersionProbeOut secondOut = secondResult.as(VersionProbeOut.class);
+
+    assertThat(secondOut).isNotNull();
+    assertThat(secondOut.result()).isEqualTo("v2:second");
+    assertThat(secondOut.result())
+            .as("second workflow should use the reloaded DSL version")
+            .isNotEqualTo(firstOut.result());
   }
 
-  private static void waitForFile(Path path) throws InterruptedException {
-    long deadline = System.currentTimeMillis() + 10_000;
-    while (!Files.exists(path)) {
-      if (System.currentTimeMillis() > deadline) {
-        throw new IllegalStateException("Timed out waiting for latch file " + path);
-      }
-      Thread.sleep(50);
+  public static final class VersionProbeV2ProcessDefinition implements VersionProbeProcessWorkflow {
+
+    @Override
+    public String getVersion() {
+      return "v2";
     }
+
+    @Override
+    public Object execute(DslTemporalProcessRequest<VersionProbeIn> request) {
+      return GlobalManager.globalManager().runProcessWithCompensation(
+              request.runId(),
+              request.payload(),
+              ctx -> GlobalManager.globalManager().runProcess("VersionProbe", "v2", ctx),
+              (compCtx, error) -> GlobalManager.globalManager()
+                      .compensateProcess("VersionProbe", compCtx, error));
+    }
+  }
+
+  private static HelperInstanceResolver reflectiveHelperResolver() {
+    return helperClass -> {
+      try {
+        //TODO: remove reflection, use typed info instead
+        return (Executable<?, ?>) helperClass.getDeclaredConstructor().newInstance();
+      } catch (ReflectiveOperationException e) {
+        throw new IllegalStateException("Cannot instantiate helper " + helperClass, e);
+      }
+    };
   }
 }

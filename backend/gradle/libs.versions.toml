@@ -10,6 +10,7 @@ wiremock = "3.13.2"
 testcontainers = "1.21.3"
 slf4j = "2.0.16"
 mockito = "5.23.0"
+awaitility = "4.3.0"
 sentry = "7.0.0"
 lombok = "1.18.38"
 keycloak-admin-client = "22.0.0"
@@ -52,6 +53,7 @@ rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "rest-as
 wiremock = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
 mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
 mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
+awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
 
 # -- SLF4J --
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }

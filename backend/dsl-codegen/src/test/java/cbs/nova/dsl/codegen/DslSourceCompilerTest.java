@@ -66,4 +66,51 @@ class DslSourceCompilerTest {
             new SourceCompiler.CompileOptions("demo", null, Level.INFO));
     assertThat(objects).isEmpty();
   }
+
+  @Test
+  void writesPreprocessedSourcesUnderPackageTreeWhenTargetPackageSet(@TempDir Path srcDir)
+          throws Exception {
+    var dslDir = Files.createDirectories(srcDir.resolve(CompilerConstants.DSL_FOLDER));
+    Files.writeString(
+            dslDir.resolve("GoodProcess.java"),
+            """
+                    import cbs.nova.dsl.*;
+                    import java.util.List;
+
+                    void main() {}
+
+                    List<DslObject> define() {
+                      return Dsl.process("GoodProcess")
+                          .input(String.class)
+                          .output(String.class)
+                          .execute(ctx -> Result.success("ok"))
+                          .buildList();
+                    }
+                    """);
+
+    var modelsDir = Files.createDirectories(srcDir.resolve(CompilerConstants.MODELS_FOLDER));
+    Files.writeString(
+            modelsDir.resolve("GoodModel.java"),
+            """
+                    public class GoodModel {
+                      private String value;
+                      public String getValue() { return value; }
+                      public void setValue(String value) { this.value = value; }
+                    }
+                    """);
+
+    var outDir = Files.createTempDirectory("dsl-codegen-test-");
+    var objects = compiler().compileAndLoad(srcDir, outDir,
+            new SourceCompiler.CompileOptions("demo", "cbs.nova.dsl.generated", Level.INFO));
+
+    assertThat(objects).hasSize(1);
+
+    var expectedDsl = outDir.resolve("cbs/nova/dsl/generated/GoodProcess.java");
+    var expectedModel = outDir.resolve("cbs/nova/dsl/generated/GoodModel.java");
+    assertThat(expectedDsl).exists();
+    assertThat(expectedModel).exists();
+    assertThat(Files.readString(expectedDsl)).contains("package cbs.nova.dsl.generated;");
+    assertThat(Files.readString(expectedModel)).contains("package cbs.nova.dsl.generated;");
+  }
+
 }

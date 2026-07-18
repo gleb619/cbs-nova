@@ -49,6 +49,7 @@ public class DslWorkerConfiguration {
     return new WorkerFactoryLifecycle(dslWorkerFactory);
   }
 
+  @Deprecated(forRemoval = true)
   private void registerGeneratedImplementations(Worker worker) {
     var resolver = new PathMatchingResourcePatternResolver();
     var readerFactory = new CachingMetadataReaderFactory();
@@ -66,6 +67,8 @@ public class DslWorkerConfiguration {
         Class<?> cls = ClassUtils.forName(className,
                 Thread.currentThread().getContextClassLoader());
         String simpleName = cls.getSimpleName();
+
+        //TODO: remove reflection, use typed info instead
         if (simpleName.endsWith("ProcessDefinition") && implementsWorkflowInterface(cls)) {
           worker.registerWorkflowImplementationTypes(cls);
         } else if (simpleName.endsWith("TransactionDefinition")) {

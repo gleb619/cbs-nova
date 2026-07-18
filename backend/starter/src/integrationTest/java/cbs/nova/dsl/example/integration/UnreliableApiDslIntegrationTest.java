@@ -3,7 +3,9 @@ package cbs.nova.dsl.example.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.HelperInstanceResolver;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
@@ -31,9 +33,9 @@ import org.testcontainers.containers.wait.strategy.WaitAllStrategy;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * End-to-end test for Temporal retry, backoff, and compensation behavior using an unreliable helper
@@ -84,6 +86,7 @@ class UnreliableApiDslIntegrationTest {
 
     var globalManager = GlobalManager.globalManager();
     new DefinitionLoader().load(globalManager);
+    DslConfig.dslConfig().helperInstanceResolver().replace(reflectiveHelperResolver());
     globalManager.registerHelperResolvers();
 
     assertThat(globalManager.hasProcess("UnreliableApiSuccess")).isTrue();
@@ -99,7 +102,7 @@ class UnreliableApiDslIntegrationTest {
                     .build());
     workflowClient = WorkflowClient.newInstance(serviceStubs);
 
-    var launcher = new TemporalDslProcessLauncher(workflowClient);
+    var launcher = new TemporalDslProcessLauncher(workflowClient, new ObjectMapper());
     DslConfig.dslConfig().temporalProcessLauncher().replace(launcher);
     DslConfig.dslConfig().transactionInvoker().replace(new TemporalTransactionInvoker());
 
@@ -122,6 +125,7 @@ class UnreliableApiDslIntegrationTest {
     var descriptor = GlobalManager.globalManager().findGeneratedTransaction(name).orElseThrow();
     Object instance;
     try {
+      //TODO: remove reflection, use typed info instead
       instance = descriptor.temporalImplementation().getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       throw new RuntimeException("Failed to instantiate activity " + name, e);
@@ -136,6 +140,7 @@ class UnreliableApiDslIntegrationTest {
     }
     DslConfig.dslConfig().temporalProcessLauncher().replace(null);
     DslConfig.dslConfig().transactionInvoker().replace(null);
+    DslConfig.dslConfig().helperInstanceResolver().replace(null);
   }
 
   @Test
@@ -193,5 +198,16 @@ class UnreliableApiDslIntegrationTest {
             .map(CompensationTrackerHelper.class::cast)
             .orElseThrow(
                     () -> new IllegalStateException("compensationTracker helper not registered"));
+  }
+
+  private static HelperInstanceResolver reflectiveHelperResolver() {
+    return helperClass -> {
+      try {
+        //TODO: remove reflection, use typed info instead
+        return (Executable<?, ?>) helperClass.getDeclaredConstructor().newInstance();
+      } catch (ReflectiveOperationException e) {
+        throw new IllegalStateException("Cannot instantiate helper " + helperClass, e);
+      }
+    };
   }
 }

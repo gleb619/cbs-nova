@@ -52,6 +52,7 @@ dependencies {
   testImplementation libs.keycloak.admin.client
   testImplementation 'com.h2database:h2'
   testImplementation libs.rest.assured
+  testImplementation libs.awaitility
 }
 
 processIntegrationTestResources {

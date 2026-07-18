@@ -3,30 +3,27 @@ package cbs.nova.starter;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.DefinitionLoader;
-import cbs.nova.dsl.DslTemporalProcessRequest;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dslexamples.BatchModels.BatchIn;
 import cbs.nova.dslexamples.BatchModels.BatchItem;
 import cbs.nova.dslexamples.BatchModels.BatchOut;
-import cbs.nova.dslexamples.batchprocessing.v1.BatchProcessingProcessWorkflow;
+import cbs.nova.starter.services.TemporalDslProcessService;
 import io.restassured.RestAssured;
-import io.temporal.client.WorkflowClient;
-import io.temporal.client.WorkflowOptions;
-import io.temporal.client.WorkflowStub;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
+import tools.jackson.databind.ObjectMapper;
 
 import java.nio.file.Path;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = IntegrationTestApplication.class, properties = {
     "dsl.worker.enabled=true",
@@ -36,9 +33,6 @@ class DslExamplesEndToEndTest extends BaseContainers {
 
   @LocalServerPort
   private int port;
-
-  @Autowired
-  private WorkflowClient workflowClient;
 
   private static KeycloakRealmInitializer keycloakRealm;
 
@@ -65,23 +59,18 @@ class DslExamplesEndToEndTest extends BaseContainers {
   }
 
   @Test
-  void generatedDslWorkflowExecutesThroughTemporal() throws TimeoutException {
-    String workflowId = "batch-processing-test-" + System.currentTimeMillis();
+  void generatedDslWorkflowExecutesThroughTemporal() {
     var input = new BatchIn(List.of(new BatchItem("a", 1), new BatchItem("b", 2)));
-    var request = new DslTemporalProcessRequest(workflowId, input);
 
-    var stub = workflowClient.newWorkflowStub(
-            BatchProcessingProcessWorkflow.class,
-            WorkflowOptions.newBuilder()
-                    .setTaskQueue("BatchProcessing-queue")
-                    .setWorkflowId(workflowId)
-                    .build());
+    var service = new TemporalDslProcessService(
+            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper());
+    Result<?> result = service.runProcess("BatchProcessing", input);
 
-    WorkflowStub.fromTyped(stub).start(request);
-    BatchOut result = WorkflowStub.fromTyped(stub).getResult(30, TimeUnit.SECONDS, BatchOut.class);
+    assertThat(result.isSuccess()).as("result cause: %s", result.cause()).isTrue();
+    BatchOut out = result.as(BatchOut.class);
 
-    assertThat(result.total()).isEqualTo(3);
-    assertThat(result.summary()).isEqualTo("Processed: a=1, b=2");
+    assertThat(out.total()).isEqualTo(3);
+    assertThat(out.summary()).isEqualTo("Processed: a=1, b=2");
   }
 
   @Test

@@ -85,8 +85,9 @@ public class TemporalConfiguration {
   @Bean
   TemporalDslProcessService temporalDslProcessService(ContextFactory contextFactory,
           DslRunRepository runRepository,
-      JsonMapper jsonMapper) {
-    return new TemporalDslProcessService(contextFactory, runRepository, JsonMapper.builder().build());
+          JsonMapper jsonMapper) {
+    return new TemporalDslProcessService(contextFactory, runRepository,
+            JsonMapper.builder().build());
   }
 
 }

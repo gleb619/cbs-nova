@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 
@@ -25,10 +26,11 @@ import java.nio.file.Path;
 public class DslAutoConfiguration {
 
   @Bean
+  @ConditionalOnProperty(name = "dsl.source-dir")
   public ApplicationRunner dslApplicationRunner(HelperInstanceResolver helperInstanceResolver,
-      TransactionInvoker transactionInvoker,
-      TemporalProcessLauncher temporalProcessLauncher,
-      @Value("${dsl.source-dir}") String sourceDirProperty) {
+          TransactionInvoker transactionInvoker,
+          TemporalProcessLauncher temporalProcessLauncher,
+          @Value("${dsl.source-dir}") String sourceDirProperty) {
     return _ -> {
       var dir = acquireSourceDir(sourceDirProperty);
       new DefinitionLoader().load(dir, GlobalManager.globalManager());
@@ -55,7 +57,7 @@ public class DslAutoConfiguration {
 
   private void registerHelperInstanceResolver(HelperInstanceResolver helperInstanceResolver) {
     DslConfig.dslConfig().helperInstanceResolver()
-        .replace(helperInstanceResolver);
+            .replace(helperInstanceResolver);
   }
 
   private void registerHelperResolvers() {
@@ -64,24 +66,24 @@ public class DslAutoConfiguration {
 
   private void registerTemporalProcessLauncher(TemporalProcessLauncher temporalProcessLauncher) {
     DslConfig.dslConfig().temporalProcessLauncher()
-        .replace(temporalProcessLauncher);
+            .replace(temporalProcessLauncher);
   }
 
   private void registerTransactionInvoker(TransactionInvoker transactionInvoker) {
     DslConfig.dslConfig().transactionInvoker()
-        .replace(transactionInvoker);
+            .replace(transactionInvoker);
   }
 
   private Path acquireSourceDir(String sourceDirProperty) {
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
       throw new NullPointerException(
-          "dsl.source-dir can't be empty");
+              "dsl.source-dir can't be empty");
     }
 
     var dir = Path.of(sourceDirProperty);
     if (!Files.isDirectory(dir)) {
       throw new IllegalStateException(
-          "dsl.source-dir does not exist or is not a directory: " + dir);
+              "dsl.source-dir does not exist or is not a directory: " + dir);
     }
 
     return dir;

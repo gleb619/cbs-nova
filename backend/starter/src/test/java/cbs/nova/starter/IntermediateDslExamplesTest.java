@@ -3,12 +3,16 @@ package cbs.nova.starter;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Context;
+import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.HelperInstanceResolver;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dslexamples.BatchModels.BatchIn;
 import cbs.nova.dslexamples.BatchModels.BatchItem;
 import cbs.nova.dslexamples.BatchModels.BatchOut;
@@ -17,7 +21,6 @@ import cbs.nova.dslexamples.InvoiceModels.InvoiceLine;
 import cbs.nova.dslexamples.InvoiceModels.InvoiceOut;
 import cbs.nova.dslexamples.LongWorkModels.LongWorkIn;
 import cbs.nova.dslexamples.LongWorkModels.LongWorkOut;
-import cbs.nova.starter.config.DslAutoConfiguration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,12 +43,13 @@ class IntermediateDslExamplesTest {
   @BeforeEach
   void loadCompactDsls() throws Exception {
     GlobalManager.globalManager().resetForTests();
+    DslConfig.dslConfig().helperInstanceResolver().replace(reflectiveHelperResolver());
     copyCompactDsl("BatchProcessingDsl.java");
     copyCompactDsl("InvoiceGenerationDsl.java");
     copyCompactDsl("LongWorkSimulationDsl.java");
 
-    var config = new DslAutoConfiguration();
-    setField(config, "sourceDirProperty", dslSourceDir.toString());
+    new DefinitionLoader().load(dslSourceDir, GlobalManager.globalManager());
+    GlobalManager.globalManager().registerHelperResolvers();
   }
 
   @AfterEach
@@ -125,9 +129,14 @@ class IntermediateDslExamplesTest {
     }
   }
 
-  private void setField(Object target, String fieldName, String value) throws Exception {
-    var field = target.getClass().getDeclaredField(fieldName);
-    field.setAccessible(true);
-    field.set(target, value);
+  private static HelperInstanceResolver reflectiveHelperResolver() {
+    return helperClass -> {
+      try {
+        //TODO: remove reflection, use typed info instead
+        return (Executable<?, ?>) helperClass.getDeclaredConstructor().newInstance();
+      } catch (ReflectiveOperationException e) {
+        throw new IllegalStateException("Cannot instantiate helper " + helperClass, e);
+      }
+    };
   }
 }

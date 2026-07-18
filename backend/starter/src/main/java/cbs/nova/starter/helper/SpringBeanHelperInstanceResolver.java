@@ -25,6 +25,7 @@ public final class SpringBeanHelperInstanceResolver implements HelperInstanceRes
   @Deprecated(forRemoval = true)
   private static @NonNull Executable<?, ?> newInstance(@NonNull Class<?> helperClass) {
     try {
+      //TODO: remove reflection, use typed info instead
       return (Executable<?, ?>) helperClass.getDeclaredConstructor().newInstance();
     } catch (NoSuchMethodException e) {
       throw new IllegalStateException(

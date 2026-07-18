@@ -85,6 +85,7 @@ class HelperSpiProcessorTest {
     try (var loader = new URLClassLoader(
             new URL[]{outputDir.toUri().toURL()}, getClass().getClassLoader())) {
       Class<?> resolverCls = loader.loadClass("fixture.GeneratedHelperResolver");
+      //TODO: remove reflection, use typed info instead
       HelperResolver resolver = (HelperResolver) resolverCls.getDeclaredConstructor().newInstance();
       List<String> registered = new ArrayList<>();
       resolver.registerHelpers((name, _) -> registered.add(name), clazz -> null);

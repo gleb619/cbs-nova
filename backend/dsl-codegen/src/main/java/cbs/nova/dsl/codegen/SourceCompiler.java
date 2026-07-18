@@ -75,8 +75,8 @@ public final class SourceCompiler {
 
     var modelResults = preprocessInVirtualThreads(modelSources, targetPackage, false);
 
-    var preprocessedModels = writePreprocessedSources(modelResults, outputDir);
-    var preprocessedDsl = writePreprocessedSources(dslResults, outputDir);
+    var preprocessedModels = writePreprocessedSources(modelResults, outputDir, targetPackage);
+    var preprocessedDsl = writePreprocessedSources(dslResults, outputDir, targetPackage);
 
     var allSources = new ArrayList<Path>();
     for (var s : preprocessedModels) {
@@ -157,10 +157,13 @@ public final class SourceCompiler {
 
   private @NonNull List<PreprocessedSource> writePreprocessedSources(
           @NonNull List<PreprocessResult> results,
-          @NonNull Path outputDir) throws IOException {
+          @NonNull Path outputDir,
+          String targetPackage) throws IOException {
     var written = new ArrayList<PreprocessedSource>();
     for (var result : results) {
-      var outputFile = outputDir.resolve(result.fileName());
+      var outputFile = (targetPackage != null && !targetPackage.isBlank())
+              ? outputDir.resolve(targetPackage.replace('.', '/')).resolve(result.fileName())
+              : outputDir.resolve(result.fileName());
       codeWriter.write(outputFile, result.source());
       log.atLevel(logLevel).log(() -> "[SourceCompiler] Preprocessed %s -> %s"
               .formatted(result.fileName(), outputFile));
@@ -260,6 +263,7 @@ public final class SourceCompiler {
             : className;
   }
 
+  @Deprecated(forRemoval = true)
   private @NonNull List<DslObject> loadDefinitions(
           @NonNull Path outputDir,
           @NonNull String providerFqcn) {
@@ -275,6 +279,7 @@ public final class SourceCompiler {
             Thread.currentThread().getContextClassLoader());
     try {
       var clazz = loader.loadClass(providerFqcn);
+      //TODO: remove reflection, use typed info
       var provider = (DslDefinitionProvider) clazz.getDeclaredConstructor().newInstance();
       return provider.definitions();
     } catch (Exception e) {

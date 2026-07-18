@@ -17,14 +17,14 @@ import io.temporal.workflow.Workflow;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
-import tools.jackson.databind.ObjectMapper;
 
 @RequiredArgsConstructor
 public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
 
-  //TODO: use app.yml instead
+  // TODO: use app.yml instead
   @Deprecated(forRemoval = true)
   private static final Duration EXECUTION_TIMEOUT = Duration.ofSeconds(30);
   @Deprecated(forRemoval = true)
@@ -84,7 +84,7 @@ public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
     } catch (Exception e) {
       Throwable cause = e.getCause() != null ? e.getCause() : e;
       return Result.failure(new DslExecutionException(ctx.runId(),
-          "Process %s failed: %s".formatted(processName, cause.getMessage()), cause));
+              "Process %s failed: %s".formatted(processName, cause.getMessage()), cause));
     }
   }
 }

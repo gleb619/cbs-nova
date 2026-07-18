@@ -11,10 +11,12 @@ import cbs.nova.dsl.config.ContextFactory;
 import lombok.AllArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.util.Map;
-import tools.jackson.databind.ObjectMapper;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ForkJoinPool;
 
 @AllArgsConstructor
 public class TemporalDslProcessService {
@@ -28,6 +30,29 @@ public class TemporalDslProcessService {
   }
 
   public @NonNull Result<?> runProcess(
+          @NonNull String processName,
+          @Nullable Object input,
+          @NonNull Map<String, Object> metadata) {
+    return startProcess(processName, input, metadata).result().join();
+  }
+
+  /**
+   * Starts a process asynchronously, returning as soon as the {@link DslRun} is recorded as
+   * {@code RUNNING} and the workflow has been launched. The returned handle exposes the generated
+   * {@code runId} (useful for correlating side effects such as latch files) and a future that
+   * completes with the {@link Result} once the workflow finishes and the run is recorded as
+   * {@code COMPLETED} or {@code FAILED}.
+   *
+   * <p>
+   * This is the non-blocking counterpart of {@link #runProcess(String, Object)} and is required for
+   * scenarios that need to mutate global state (e.g. reload DSL definitions) while a workflow is
+   * still in flight.
+   */
+  public @NonNull ProcessRun startProcess(@NonNull String processName, @Nullable Object input) {
+    return startProcess(processName, input, Map.of());
+  }
+
+  public @NonNull ProcessRun startProcess(
           @NonNull String processName,
           @Nullable Object input,
           @NonNull Map<String, Object> metadata) {
@@ -49,6 +74,18 @@ public class TemporalDslProcessService {
             .build();
     runRepository.save(running);
 
+    CompletableFuture<Result<?>> result = CompletableFuture.supplyAsync(
+            () -> executeAndRecord(processName, body, metadata, runId, startedAt),
+            ForkJoinPool.commonPool());
+    return new ProcessRun(runId, result);
+  }
+
+  private @NonNull Result<?> executeAndRecord(
+          @NonNull String processName,
+          @NonNull Object body,
+          @NonNull Map<String, Object> metadata,
+          @NonNull String runId,
+          @NonNull Instant startedAt) {
     Context<?> ctx = contextFactory.of(body, metadata, ExecutionMode.RUN, runId);
     Result<?> result;
     try {
@@ -62,7 +99,7 @@ public class TemporalDslProcessService {
             .runId(runId)
             .processName(processName)
             .status(result.isSuccess() ? DslRunStatus.COMPLETED.name() : DslRunStatus.FAILED.name())
-            .input(inputJson)
+            .input(serialize(body))
             .output(result.isSuccess() ? serialize(result.value()) : null)
             .error(result.isSuccess() ? null : messageOf(result.cause()))
             .startedAt(startedAt)
@@ -86,5 +123,13 @@ public class TemporalDslProcessService {
     return cause != null
             ? (cause.getMessage() != null ? cause.getMessage() : cause.getClass().getName())
             : "unknown";
+  }
+
+  /**
+   * Handle for an asynchronously started process. {@link #runId()} is the generated identifier used
+   * for both the persisted {@link DslRun} and the Temporal workflow id; {@link #result()} completes
+   * with the outcome once the run is finalized.
+   */
+  public record ProcessRun(@NonNull String runId, @NonNull CompletableFuture<Result<?>> result) {
   }
 }
