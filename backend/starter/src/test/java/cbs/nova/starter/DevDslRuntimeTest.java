@@ -56,10 +56,24 @@ class DevDslRuntimeTest {
     var ctx = contextFactory.of("input", ExecutionMode.EXPLAIN);
     var report = runtime.explain("Ping", ctx);
     assertThat(report.name()).isEqualTo("Ping");
-    assertThat(report.description()).contains("Ping");
+    assertThat(report.description()).isEqualTo("Process: Ping");
     assertThat(report.mermaidDiagram()).isNotBlank();
     assertThat(report.executionTrace()).isNotEmpty();
     assertThat(report.executionTrace()).contains("started: Ping");
+  }
+
+  @Test
+  void explainDescriptionReflectsEntityKind() {
+    GlobalManager.globalManager()
+            .registerTransaction(Dsl.transaction("EchoTx")
+                    .execute(ctx -> Result.success("echo")).build());
+
+    var ctx = contextFactory.of("input", ExecutionMode.EXPLAIN);
+    var processReport = runtime.explain("Ping", ctx);
+    var transactionReport = runtime.explain("EchoTx", ctx);
+
+    assertThat(processReport.description()).isEqualTo("Process: Ping");
+    assertThat(transactionReport.description()).isEqualTo("Transaction: EchoTx");
   }
 
   @Test

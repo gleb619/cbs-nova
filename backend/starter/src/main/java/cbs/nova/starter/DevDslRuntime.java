@@ -86,11 +86,15 @@ public class DevDslRuntime implements DslRuntime {
       Result<?> result = dispatch(name,
               contextFactory.of(ctx.body(), ctx.metadata(), ExecutionMode.EXPLAIN, runId),
               ExecutionMode.EXPLAIN);
-      String description = result.isSuccess()
-              ? "Executed " + name + " successfully"
-              : "Execution of " + name + " failed: " + result.cause().getMessage();
 
       GlobalManager gm2 = GlobalManager.globalManager();
+      String entityKind = gm2.hasProcess(name)
+              ? "Process"
+              : gm2.hasTransaction(name)
+                      ? "Transaction"
+                      : gm2.hasHelper(name) ? "Helper" : "Entity";
+      String description = entityKind + ": " + name;
+
       var mermaidGen = new MermaidDiagramGenerator();
       var plantGen = new PlantUmlDiagramGenerator();
       var bpmnGen = new BpmnDiagramGenerator();

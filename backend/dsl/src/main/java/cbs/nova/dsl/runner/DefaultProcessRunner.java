@@ -85,10 +85,6 @@ public final class DefaultProcessRunner implements ProcessRunner {
     Result<?> result;
     if (listeningCtx.mode() == ExecutionMode.EXPLAIN) {
       result = process.executeLogic().apply(richCtx);
-      if (result.isSuccess()) {
-        // TODO: return result with outcome
-        listeningCtx.withMetadata("explain.description", "Process: " + process.name());
-      }
     } else if (listeningCtx.mode() == ExecutionMode.PREVIEW) {
       result = process.effectivePreview().apply(richCtx);
     } else {
