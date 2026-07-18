@@ -15,7 +15,7 @@ sentry = "7.0.0"
 lombok = "1.18.38"
 keycloak-admin-client = "22.0.0"
 rest-assured = "5.5.0"
-springdoc-openapi = "2.8.9"
+springdoc-openapi = "3.0.2"
 avaje-jsonb = "3.4"
 avaje-jsonb-generator = "3.4"
 
