@@ -2,21 +2,15 @@ package cbs.nova.starter.helper;
 
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.HelperInstanceResolver;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
 
-/**
- * {@link HelperInstanceResolver} that returns Spring beans when available and falls back to a
- * no-arg constructor for helpers that are not declared as beans.
- */
+@RequiredArgsConstructor
 public final class SpringBeanHelperInstanceResolver implements HelperInstanceResolver {
 
   private final ApplicationContext applicationContext;
-
-  public SpringBeanHelperInstanceResolver(@NonNull ApplicationContext applicationContext) {
-    this.applicationContext = applicationContext;
-  }
 
   @Override
   public @NonNull Executable<?, ?> resolve(@NonNull Class<?> helperClass) {
@@ -28,6 +22,7 @@ public final class SpringBeanHelperInstanceResolver implements HelperInstanceRes
   }
 
   @SuppressWarnings("unchecked")
+  @Deprecated(forRemoval = true)
   private static @NonNull Executable<?, ?> newInstance(@NonNull Class<?> helperClass) {
     try {
       return (Executable<?, ?>) helperClass.getDeclaredConstructor().newInstance();

@@ -4,8 +4,6 @@ import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GeneratedClassProvider;
 import org.jspecify.annotations.NonNull;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -53,13 +51,5 @@ public final class GeneratedClassRegistry {
 
   public @NonNull List<GeneratedClassDescriptor> transactions() {
     return List.copyOf(transactions.values());
-  }
-
-  public @NonNull List<String> processNames() {
-    return List.copyOf(processes.keySet());
-  }
-
-  public @NonNull List<String> transactionNames() {
-    return List.copyOf(transactions.keySet());
   }
 }

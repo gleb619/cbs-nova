@@ -3,6 +3,7 @@ package cbs.nova.dsl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.process.ProcessRunner;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
 import org.junit.jupiter.api.Test;
@@ -14,7 +15,8 @@ class DefaultProcessRunnerExplainTest {
   private final ContextFactory contextFactory = new ContextFactory();
   private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
 
-  private final ProcessRunner runner = new DefaultProcessRunner(traceCollector, contextFactory);
+  private final ProcessRunner runner = new DefaultProcessRunner(traceCollector, contextFactory,
+          new CompensationRegistry());
 
   @Test
   void explainModeExecutesProcessLogicAndReturnsItsResult() {
@@ -40,5 +42,39 @@ class DefaultProcessRunnerExplainTest {
     assertThat(result).isSameAs(expected);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("ok");
+  }
+
+  @Test
+  void previewModeBypassesTemporalLauncher() {
+    DslConfig.dslConfig().temporalProcessLauncher().replace(new TemporalProcessLauncher() {
+      @Override
+      public Result<?> launch(
+              String processName,
+              String taskQueue,
+              Class<?> inputType,
+              Class<?> outputType,
+              Context<?> ctx) {
+        throw new AssertionError("Temporal launcher should not be used in PREVIEW mode");
+      }
+
+      @Override
+      public boolean canRun(Context<?> ctx) {
+        return true;
+      }
+    });
+
+    var process = Dsl.process("P")
+            .input(String.class)
+            .output(String.class)
+            .execute(ctx -> Result.success("preview-direct"))
+            .build();
+    var ctx = contextFactory.of("input", ExecutionMode.PREVIEW, "run-preview-direct");
+
+    var result = runner.run(process, ctx);
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value()).isEqualTo("preview-direct");
+
+    GlobalManager.globalManager().resetForTests();
   }
 }

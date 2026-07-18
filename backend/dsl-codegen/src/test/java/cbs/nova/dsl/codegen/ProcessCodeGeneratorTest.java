@@ -13,10 +13,12 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.codegen.generator.ProcessCodeGenerator;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.config.DescriptorFactory;
+import org.junit.jupiter.api.Test;
+
+import javax.annotation.processing.Generated;
+
 import java.util.List;
 import java.util.Map;
-import javax.annotation.processing.Generated;
-import org.junit.jupiter.api.Test;
 
 class ProcessCodeGeneratorTest {
 

@@ -18,10 +18,12 @@ class RunnerTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
   private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
+  private final CompensationRegistry compensationRegistry = new CompensationRegistry();
   private final ProcessRunner processRunner = new DefaultProcessRunner(traceCollector,
-          contextFactory);
+          contextFactory,
+          compensationRegistry);
   private final TransactionRunner txRunner = new DefaultTransactionRunner(traceCollector,
-          contextFactory);
+          contextFactory, compensationRegistry);
   private final HelperRunner helperRunner = new DefaultHelperRunner(traceCollector, contextFactory);
 
   @Test

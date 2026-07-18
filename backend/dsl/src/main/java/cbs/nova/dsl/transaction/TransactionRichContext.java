@@ -1,6 +1,7 @@
 package cbs.nova.dsl.transaction;
 
 import cbs.nova.dsl.Context;
+import cbs.nova.dsl.DslSaga;
 import cbs.nova.dsl.ExecutionListener;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExecutionTraceCollector;
@@ -10,10 +11,11 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.TransactionContext;
 import cbs.nova.dsl.TransactionRouting;
 import cbs.nova.dsl.config.ContextFactory;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+
+import java.util.Map;
 
 @RequiredArgsConstructor
 public final class TransactionRichContext<T> implements TransactionContext<T> {
@@ -48,6 +50,16 @@ public final class TransactionRichContext<T> implements TransactionContext<T> {
   }
 
   @Override
+  public @Nullable ExecutionListener executionListener() {
+    return delegate.executionListener();
+  }
+
+  @Override
+  public @Nullable DslSaga saga() {
+    return delegate.saga();
+  }
+
+  @Override
   public @NonNull <U> Context<U> withBody(@NonNull U body) {
     return delegate.withBody(body);
   }
@@ -61,6 +73,17 @@ public final class TransactionRichContext<T> implements TransactionContext<T> {
   public @NonNull Context<T> withTransactionRouting(@NonNull TransactionRouting routing) {
     return new TransactionRichContext<>(delegate.withTransactionRouting(routing), traceCollector,
             contextFactory);
+  }
+
+  @Override
+  public @NonNull Context<T> withExecutionListener(@NonNull ExecutionListener listener) {
+    return new TransactionRichContext<>(delegate.withExecutionListener(listener), traceCollector,
+            contextFactory);
+  }
+
+  @Override
+  public @NonNull Context<T> withSaga(@Nullable DslSaga saga) {
+    return new TransactionRichContext<>(delegate.withSaga(saga), traceCollector, contextFactory);
   }
 
   @Override
@@ -81,16 +104,5 @@ public final class TransactionRichContext<T> implements TransactionContext<T> {
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull MapInput input) {
     return runHelper(name, input.values());
-  }
-
-  @Override
-  public @Nullable ExecutionListener executionListener() {
-    return delegate.executionListener();
-  }
-
-  @Override
-  public @NonNull Context<T> withExecutionListener(@NonNull ExecutionListener listener) {
-    return new TransactionRichContext<>(delegate.withExecutionListener(listener), traceCollector,
-            contextFactory);
   }
 }

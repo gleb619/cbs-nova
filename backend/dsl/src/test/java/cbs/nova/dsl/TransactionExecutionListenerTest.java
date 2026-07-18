@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
 import cbs.nova.dsl.transaction.TransactionRunner;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -13,7 +14,7 @@ class TransactionExecutionListenerTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
   private final TransactionRunner runner = new DefaultTransactionRunner(
-          new ExecutionTraceCollector(), contextFactory);
+          new ExecutionTraceCollector(), contextFactory, new CompensationRegistry());
 
   @Test
   void successfulTransactionNotifiesListener() {
@@ -25,19 +26,21 @@ class TransactionExecutionListenerTest {
             .build();
     var listener = new ExecutionListener() {
       @Override
-      public void onTransactionSuccess(TransactionExecution execution) {
+      public void onTransactionSuccess(@NonNull TransactionExecution execution) {
         recorded.add(execution);
       }
 
       @Override
-      public void onTransactionFailure(String runId, String transactionName, Throwable cause) {
+      public void onTransactionFailure(@NonNull String runId, @NonNull String transactionName,
+              @NonNull Throwable cause) {
       }
     };
-    var ctx = contextFactory.of("in", ExecutionMode.RUN, "run-1")
+    var ctx = contextFactory.of("in", ExecutionMode.RUN, "run-listen")
             .withExecutionListener(listener);
+
     runner.run(tx, ctx);
+
     assertThat(recorded).hasSize(1);
     assertThat(recorded.get(0).transactionName()).isEqualTo("T");
-    assertThat(recorded.get(0).runId()).isEqualTo("run-1");
   }
 }

@@ -21,10 +21,11 @@ import cbs.nova.dsl.runner.DefaultTransactionRunner;
 import cbs.nova.dsl.runner.HelperRunner;
 import cbs.nova.dsl.transaction.TransactionManager;
 import cbs.nova.dsl.transaction.TransactionRunner;
-import java.time.Duration;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
+
+import java.time.Duration;
 
 @Getter
 @RequiredArgsConstructor
@@ -59,23 +60,27 @@ public class DslConfig implements SingletonSupport {
   }
 
   public @NonNull Replaceable<TransactionInvoker> transactionInvoker() {
-    return replaceable();
+    return replaceable("transactionInvoker");
   }
 
   public @NonNull Replaceable<TemporalProcessLauncher> temporalProcessLauncher() {
-    return replaceable();
+    return replaceable("temporalProcessLauncher");
   }
 
   public @NonNull ProcessRunner processRunner(
           @NonNull ExecutionTraceCollector executionTraceCollector,
-          @NonNull ContextFactory contextFactory) {
-    return singleton(() -> new DefaultProcessRunner(executionTraceCollector, contextFactory));
+          @NonNull ContextFactory contextFactory,
+          @NonNull CompensationRegistry compensationRegistry) {
+    return singleton(() -> new DefaultProcessRunner(executionTraceCollector, contextFactory,
+            compensationRegistry));
   }
 
   public @NonNull TransactionRunner transactionRunner(
           @NonNull ExecutionTraceCollector executionTraceCollector,
-          @NonNull ContextFactory contextFactory) {
-    return singleton(() -> new DefaultTransactionRunner(executionTraceCollector, contextFactory));
+          @NonNull ContextFactory contextFactory,
+          @NonNull CompensationRegistry compensationRegistry) {
+    return singleton(() -> new DefaultTransactionRunner(executionTraceCollector, contextFactory,
+            compensationRegistry));
   }
 
   public @NonNull HelperRunner helperRunner(
@@ -85,23 +90,27 @@ public class DslConfig implements SingletonSupport {
   }
 
   public @NonNull Replaceable<HelperInstanceResolver> helperInstanceResolver() {
-    return replaceable();
+    return replaceable("helperInstanceResolver");
   }
 
   public @NonNull GlobalManager globalManager() {
     var traceCollector = executionTraceCollector();
     var contextFactory = contextFactory();
+    var compensationRegistry = compensationRegistry();
     return new GlobalManager(
             new ProcessManager(new DefaultProcessRegistry(),
-                    processRunner(traceCollector, contextFactory)),
+                    processRunner(traceCollector, contextFactory, compensationRegistry)),
             new TransactionManager(new DefaultTransactionRegistry(),
-                    transactionRunner(traceCollector, contextFactory)),
+                    transactionRunner(traceCollector, contextFactory, compensationRegistry)),
             new HelperManager(new DefaultHelperRegistry(),
                     helperRunner(traceCollector, contextFactory)),
             new GeneratedClassRegistry(),
             new DefaultProcessContextFactory(),
-            new CompensationRegistry(),
-            helperInstanceResolver().get());
+            compensationRegistry);
+  }
+
+  public @NonNull CompensationRegistry compensationRegistry() {
+    return singleton(CompensationRegistry::new);
   }
 
   /* ============= */
@@ -121,5 +130,4 @@ public class DslConfig implements SingletonSupport {
       return singleton(scope.id(), () -> new DslConfig(scope));
     }
   }
-
 }

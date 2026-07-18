@@ -9,10 +9,6 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.Map;
 
-/**
- * Default implementation of {@link ProcessContextFactory} that builds {@link SimpleContext}
- * instances.
- */
 public final class DefaultProcessContextFactory implements ProcessContextFactory {
 
   @Override

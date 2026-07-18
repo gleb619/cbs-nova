@@ -2,10 +2,11 @@ package cbs.nova.dsl.codegen.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.Test;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.Test;
 
 class JsonTest {
 

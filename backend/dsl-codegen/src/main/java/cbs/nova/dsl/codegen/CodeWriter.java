@@ -1,11 +1,12 @@
 package cbs.nova.dsl.codegen;
 
 import cbs.nova.dsl.codegen.model.GeneratedSource;
+import org.jspecify.annotations.NonNull;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import org.jspecify.annotations.NonNull;
 
 public final class CodeWriter {
 

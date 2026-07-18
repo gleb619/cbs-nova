@@ -42,16 +42,17 @@ class DslRunRepositoryIntegrationTest {
   @Test
   void savesRunAndFindsItByRunId() {
     String runId = "run-" + UUID.randomUUID();
-    DslRun run = new DslRun(
-            runId,
-            "SampleProcess",
-            DslRunStatus.RUNNING.name(),
-            "{\"foo\":\"bar\"}",
-            null,
-            null,
-            Instant.now(),
-            null,
-            ExecutionMode.RUN.name());
+    DslRun run = DslRun.builder()
+            .runId(runId)
+            .processName("SampleProcess")
+            .status(DslRunStatus.RUNNING.name())
+            .input("{\"foo\":\"bar\"}")
+            .output(null)
+            .error(null)
+            .startedAt(Instant.now())
+            .finishedAt(null)
+            .executionMode(ExecutionMode.RUN.name())
+            .build();
 
     repository.save(run);
 
@@ -64,28 +65,30 @@ class DslRunRepositoryIntegrationTest {
   @Test
   void updatesExistingRunOnSave() {
     String runId = "run-" + UUID.randomUUID();
-    DslRun started = new DslRun(
-            runId,
-            "BatchProcessing",
-            DslRunStatus.RUNNING.name(),
-            "{\"items\":[]}",
-            null,
-            null,
-            Instant.now(),
-            null,
-            ExecutionMode.RUN.name());
+    DslRun started = DslRun.builder()
+            .runId(runId)
+            .processName("BatchProcessing")
+            .status(DslRunStatus.RUNNING.name())
+            .input("{\"items\":[]}")
+            .output(null)
+            .error(null)
+            .startedAt(Instant.now())
+            .finishedAt(null)
+            .executionMode(ExecutionMode.RUN.name())
+            .build();
     repository.save(started);
 
-    DslRun finished = new DslRun(
-            runId,
-            "BatchProcessing",
-            DslRunStatus.COMPLETED.name(),
-            started.input(),
-            "{\"total\":6}",
-            null,
-            started.startedAt(),
-            Instant.now(),
-            ExecutionMode.RUN.name());
+    DslRun finished = DslRun.builder()
+            .runId(runId)
+            .processName("BatchProcessing")
+            .status(DslRunStatus.COMPLETED.name())
+            .input(started.input())
+            .output("{\"total\":6}")
+            .error(null)
+            .startedAt(started.startedAt())
+            .finishedAt(Instant.now())
+            .executionMode(ExecutionMode.RUN.name())
+            .build();
     repository.save(finished);
 
     Optional<DslRun> found = repository.findByRunId(runId);

@@ -1,13 +1,12 @@
 package cbs.nova.dsl;
 
+import lombok.Builder;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 
-/**
- * Record of a single DSL process run.
- */
+@Builder
 public record DslRun(
         @NonNull String runId,
         @NonNull String processName,

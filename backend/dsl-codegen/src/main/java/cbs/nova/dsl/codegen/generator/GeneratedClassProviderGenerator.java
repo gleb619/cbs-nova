@@ -10,12 +10,13 @@ import cbs.nova.dsl.codegen.util.AstExtractor;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.utils.Substitutor;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 @RequiredArgsConstructor
 public final class GeneratedClassProviderGenerator {

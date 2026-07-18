@@ -3,6 +3,7 @@ package cbs.nova.starter.services;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslTemporalTransactionRequest;
 import cbs.nova.dsl.GeneratedClassDescriptor;
+import cbs.nova.dsl.GeneratedTransactionActivity;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.RetryPolicy;
@@ -12,29 +13,20 @@ import cbs.nova.dsl.transaction.TransactionDslObject;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
 import io.temporal.workflow.Workflow;
+import org.jspecify.annotations.NonNull;
+
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import org.jspecify.annotations.NonNull;
 
-/**
- * TransactionInvoker implementation that routes DSL transactions to generated Temporal activity
- * stubs.
- *
- * <p>
- * Instead of using {@link java.lang.reflect.Method} inside generated workflow code, this bean
- * resolves a {@link MethodHandle} for the typed {@code execute} method of the
- * generated activity interface and invokes it on the Temporal stub. Inputs are wrapped into a
- * {@link DslTemporalTransactionRequest} at the last moment so the activity API carries both the
- * payload and the DSL run id, matching the process workflow API.
- * </p>
- */
 public final class TemporalTransactionInvoker implements TransactionInvoker {
 
+  @Deprecated(forRemoval = true)
   private final Map<String, Caller> callers = new ConcurrentHashMap<>();
 
+  @Deprecated(forRemoval = true)
   private record Caller(Class<?> iface, MethodHandle execute, ActivityOptions options) {
   }
 
@@ -49,18 +41,23 @@ public final class TemporalTransactionInvoker implements TransactionInvoker {
 
     GeneratedClassDescriptor descriptor = generatedOpt.get();
     TransactionDslObject tx = txOpt.get();
-    Caller caller = callers.computeIfAbsent(name, n -> buildCaller(descriptor, tx));
+    Caller caller = callers.computeIfAbsent(name, _ -> buildCaller(descriptor, tx));
     Object stub = Workflow.newActivityStub(caller.iface, caller.options);
     try {
       var request = new DslTemporalTransactionRequest<>(ctx.runId(), input);
-      Object value = caller.execute.invoke(stub, request);
-      return Result.success(value);
+      if (stub instanceof GeneratedTransactionActivity activity) {
+        Object value = activity.execute(request);
+        return Result.success(value);
+      }
+
+      return Result.failure(new IllegalArgumentException("Can't execute activity code"));
     } catch (Throwable t) {
       Throwable cause = t.getCause() != null ? t.getCause() : t;
       return Result.failure(cause);
     }
   }
 
+  @Deprecated(forRemoval = true)
   private Caller buildCaller(GeneratedClassDescriptor descriptor, TransactionDslObject tx) {
     Class<?> iface = descriptor.temporalInterface();
     MethodHandle handle;

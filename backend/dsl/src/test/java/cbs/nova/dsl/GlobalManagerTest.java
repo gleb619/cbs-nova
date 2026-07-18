@@ -4,9 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.config.ContextFactory;
-import java.util.ArrayList;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
 
 class GlobalManagerTest {
 
@@ -248,7 +249,11 @@ class GlobalManagerTest {
     Object result = gm.runProcessWithCompensation(
             "run-1",
             "body",
-            ctx -> Result.failure(new RuntimeException("boom")),
+            ctx -> {
+              gm.runTransaction("TxA", ctx);
+              gm.runTransaction("TxB", ctx);
+              return Result.failure(new RuntimeException("boom"));
+            },
             (compCtx, error) -> {
               /* process compensation is a no-op in this test */ });
 
@@ -312,4 +317,28 @@ class GlobalManagerTest {
     // no exception expected
   }
 
+  @Test
+  void runProcessWithCompensationDoesNotDoubleRunProcessCompensation() {
+    var gm = GlobalManager.globalManager();
+    var order = new ArrayList<String>();
+
+    gm.registerProcess(Dsl.process("DoubleCheck")
+            .input(String.class)
+            .output(String.class)
+            .execute(ctx -> Result.failure(new RuntimeException("boom")))
+            .compensation(ctx -> {
+              order.add("process-comp");
+              return Result.success(null);
+            })
+            .build());
+
+    Object result = gm.runProcessWithCompensation(
+            "run-1",
+            "body",
+            ctx -> gm.runProcess("DoubleCheck", ctx),
+            (compCtx, error) -> gm.compensateProcess("DoubleCheck", compCtx, error));
+
+    assertThat(result).isInstanceOf(DslTemporalProcessFailure.class);
+    assertThat(order).containsExactly("process-comp");
+  }
 }

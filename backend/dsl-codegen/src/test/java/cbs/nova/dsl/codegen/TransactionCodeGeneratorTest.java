@@ -10,9 +10,11 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.codegen.generator.TransactionCodeGenerator;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.config.DescriptorFactory;
-import java.util.Map;
-import javax.annotation.processing.Generated;
 import org.junit.jupiter.api.Test;
+
+import javax.annotation.processing.Generated;
+
+import java.util.Map;
 
 class TransactionCodeGeneratorTest {
 

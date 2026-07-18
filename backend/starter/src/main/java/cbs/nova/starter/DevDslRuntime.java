@@ -13,13 +13,14 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.generator.BpmnDiagramGenerator;
 import cbs.nova.dsl.generator.MermaidDiagramGenerator;
 import cbs.nova.dsl.generator.PlantUmlDiagramGenerator;
+import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
+import org.springframework.stereotype.Service;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
-import org.jspecify.annotations.NonNull;
-import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor

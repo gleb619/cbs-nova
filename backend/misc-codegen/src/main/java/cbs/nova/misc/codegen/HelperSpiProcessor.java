@@ -2,14 +2,7 @@ package cbs.nova.misc.codegen;
 
 import cbs.nova.dsl.Helper;
 import cbs.nova.dsl.utils.Substitutor;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
@@ -20,6 +13,15 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic;
 import javax.tools.StandardLocation;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @SupportedAnnotationTypes("cbs.nova.dsl.Helper")
 @SupportedSourceVersion(SourceVersion.RELEASE_25)
@@ -116,8 +118,9 @@ public class HelperSpiProcessor extends AbstractProcessor {
         var registrations = entries.stream()
                 .map(entry -> {
                   var simpleName = simpleNameOf(entry.fqn());
-                  return "    registrar.register(\"%s\", instanceResolver.resolve(%s.class));\n".formatted(entry.name(),
-                      simpleName);
+                  return "    registrar.register(\"%s\", instanceResolver.resolve(%s.class));\n"
+                          .formatted(entry.name(),
+                                  simpleName);
                 })
                 .collect(Collectors.joining());
         var packageLine = resolverPackage.isEmpty()

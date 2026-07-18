@@ -1,10 +1,11 @@
 package cbs.nova.dsl.codegen.util;
 
-import java.util.List;
-import java.util.Map;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jspecify.annotations.NonNull;
+
+import java.util.List;
+import java.util.Map;
 
 public final class Json {
 

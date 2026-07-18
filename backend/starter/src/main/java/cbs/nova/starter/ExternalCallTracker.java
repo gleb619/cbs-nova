@@ -13,6 +13,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 @Component
 @RequiredArgsConstructor
+@Deprecated(forRemoval = true)
 public class ExternalCallTracker {
 
   public static final String TYPE_DATABASE = "database";

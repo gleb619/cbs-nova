@@ -5,16 +5,18 @@ import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.process.ProcessManager;
 import cbs.nova.dsl.registry.GeneratedClassRegistry;
+import cbs.nova.dsl.runner.DefaultExecutionListener;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.dsl.transaction.TransactionManager;
+import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.concurrent.atomic.AtomicReference;
-import lombok.RequiredArgsConstructor;
-import org.jspecify.annotations.NonNull;
 
 @RequiredArgsConstructor
 public final class GlobalManager {
@@ -27,7 +29,6 @@ public final class GlobalManager {
   private final GeneratedClassRegistry generatedClassRegistry;
   private final ProcessContextFactory processContextFactory;
   private final CompensationRegistry compensationRegistry;
-  private final HelperInstanceResolver helperInstanceResolver;
 
   public static @NonNull GlobalManager globalManager() {
     if (INSTANCE == null) {
@@ -53,7 +54,7 @@ public final class GlobalManager {
   }
 
   public void registerHelpers(@NonNull HelperResolver resolver) {
-    resolver.registerHelpers(helperManager, helperInstanceResolver);
+    resolver.registerHelpers(helperManager, DslConfig.dslConfig().helperInstanceResolver().get());
   }
 
   public void registerHelperResolvers() {
@@ -95,11 +96,19 @@ public final class GlobalManager {
     return processManager.execute(name, ctx);
   }
 
+  public @NonNull Result<?> runProcess(
+          @NonNull String name,
+          @NonNull String version,
+          @NonNull Context<?> ctx) {
+    return processManager.execute(name, version, ctx);
+  }
+
   public @NonNull Result<?> runTransaction(
           @NonNull String name, @NonNull Object input, @NonNull Context<?> parentCtx) {
     Context<Object> ctx = DslConfig.dslConfig().contextFactory()
             .of(input, parentCtx.metadata(), parentCtx.mode(), parentCtx.runId(),
-                    parentCtx.transactionRouting(), parentCtx.executionListener());
+                    parentCtx.transactionRouting(), parentCtx.executionListener(),
+                    parentCtx.saga());
     return transactionManager.execute(name, ctx);
   }
 
@@ -111,10 +120,13 @@ public final class GlobalManager {
           @NonNull String name,
           @NonNull String runId,
           @NonNull Object input) {
+    var saga = DslSaga.create();
     var ctx = createContext(input, Map.of(), ExecutionMode.RUN, runId)
-            .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);
+            .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY)
+            .withSaga(saga);
     var result = runTransaction(name, ctx);
     if (!result.isSuccess()) {
+      saga.compensate();
       throw new RuntimeException("Transaction failed", result.cause());
     }
     return result.value();
@@ -272,9 +284,12 @@ public final class GlobalManager {
           @NonNull Object input,
           @NonNull ProcessMain main,
           @NonNull ProcessCompensation compensation) {
-    var saga = new CompensationSaga();
+    var saga = DslSaga.create();
+    var listener = new DefaultExecutionListener();
     var ctx = createContext(input, Map.of(), ExecutionMode.RUN, runId)
-            .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);
+            .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY)
+            .withExecutionListener(listener)
+            .withSaga(saga);
     var compCtx = createContext(input, Map.of(), ExecutionMode.COMPENSATION, runId);
     var failureRef = new AtomicReference<Throwable>();
 
@@ -282,16 +297,6 @@ public final class GlobalManager {
             failureRef.get() != null
                     ? failureRef.get()
                     : new RuntimeException("compensation triggered")));
-
-    // TODO: refactor
-    for (String tx : List.<String>of()) {
-      if (registerTransactionCompensation(tx, runId, ctx)) {
-        saga.addCompensation(() -> compensateTransaction(tx, runId,
-                failureRef.get() != null
-                        ? failureRef.get()
-                        : new RuntimeException("compensation triggered")));
-      }
-    }
 
     try {
       var result = main.apply(ctx);
@@ -313,20 +318,5 @@ public final class GlobalManager {
     INSTANCE = null;
     DslConfig.dslConfig().temporalProcessLauncher().replace(null);
     DslConfig.dslConfig().transactionInvoker().replace(null);
-  }
-
-  private static final class CompensationSaga {
-
-    private final List<Runnable> compensations = new ArrayList<>();
-
-    void addCompensation(@NonNull Runnable compensation) {
-      compensations.add(compensation);
-    }
-
-    void compensate() {
-      for (int i = compensations.size() - 1; i >= 0; i--) {
-        compensations.get(i).run();
-      }
-    }
   }
 }

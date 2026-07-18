@@ -1,10 +1,13 @@
 package cbs.nova.dsl.runner;
 
+import cbs.nova.dsl.CompensationRegistry;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslExecutionException;
+import cbs.nova.dsl.DslSaga;
 import cbs.nova.dsl.ExecutionListener;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExecutionTraceCollector;
+import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.TransactionExecution;
 import cbs.nova.dsl.config.ContextFactory;
@@ -15,12 +18,14 @@ import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
 import java.time.Instant;
+import java.util.Map;
 
 @RequiredArgsConstructor
 public final class DefaultTransactionRunner implements TransactionRunner {
 
   private final ExecutionTraceCollector traceCollector;
   private final ContextFactory contextFactory;
+  private final CompensationRegistry compensationRegistry;
 
   @Override
   public @NonNull Result<?> run(
@@ -39,6 +44,9 @@ public final class DefaultTransactionRunner implements TransactionRunner {
         result = transaction.executeLogic().apply(richCtx);
       }
       notifyListener(ctx, transaction, result);
+      if (result.isSuccess()) {
+        registerCompensation(transaction, ctx);
+      }
       return result;
     } catch (Exception ex) {
       String message = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
@@ -46,6 +54,27 @@ public final class DefaultTransactionRunner implements TransactionRunner {
       notifyFailure(ctx, transaction, ex);
       return failure;
     }
+  }
+
+  private void registerCompensation(
+          @NonNull TransactionDslObject transaction, @NonNull Context<?> ctx) {
+    if (transaction.compensationLogic() == null) {
+      return;
+    }
+    DslSaga saga = ctx.saga();
+    if (saga != null) {
+      saga.addCompensation(() -> {
+        Object compensationBody = ctx.body();
+        var compCtxBase = contextFactory.of(compensationBody, Map.of(),
+                ExecutionMode.COMPENSATION, ctx.runId(), ctx.transactionRouting(),
+                ctx.executionListener(), ctx.saga());
+        var compCtx = GlobalManager.globalManager().createCompensationContext(compCtxBase,
+                new RuntimeException("compensation triggered"));
+        transaction.compensationLogic().apply(compCtx);
+      });
+      return;
+    }
+    compensationRegistry.register(transaction.name(), ctx.runId(), ctx, transaction);
   }
 
   private void notifyListener(

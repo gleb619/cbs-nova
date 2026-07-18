@@ -3,15 +3,16 @@ package cbs.nova.dsl.codegen.generator;
 import cbs.nova.dsl.DslDefinitionProvider;
 import cbs.nova.dsl.codegen.CodeWriter;
 import cbs.nova.dsl.utils.Substitutor;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
+import org.slf4j.event.Level;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
-import org.slf4j.event.Level;
 
 @Slf4j
 @RequiredArgsConstructor

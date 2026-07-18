@@ -27,6 +27,19 @@ public final class ProcessManager {
                     new DslEntityNotFoundException(ctx.runId(), "Process not found: " + name)));
   }
 
+  public @NonNull Result<?> execute(
+          @NonNull String name,
+          @NonNull String version,
+          @NonNull Context<?> ctx) {
+    return registry
+            .find(name, version)
+            .map(p -> runner.run(p, ctx))
+            .orElse(Result.failure(
+                    new DslEntityNotFoundException(
+                            ctx.runId(),
+                            "Process not found: " + name + " version " + version)));
+  }
+
   public boolean contains(@NonNull String name) {
     return registry.find(name).isPresent();
   }

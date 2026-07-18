@@ -13,13 +13,14 @@ import cbs.nova.dslexamples.NestedCompensationModels.NestedCompensationIn;
 import cbs.nova.dslexamples.OrderSagaModels.OrderSagaIn;
 import cbs.nova.dslexamples.OrderSagaModels.OrderSagaOut;
 import cbs.nova.starter.config.DslAutoConfiguration;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 class AdvancedDslExamplesTest {
 
@@ -36,7 +37,6 @@ class AdvancedDslExamplesTest {
 
     var config = new DslAutoConfiguration();
     setField(config, "sourceDirProperty", dslSourceDir.toString());
-    config.loadDslDefinitions();
   }
 
   @AfterEach

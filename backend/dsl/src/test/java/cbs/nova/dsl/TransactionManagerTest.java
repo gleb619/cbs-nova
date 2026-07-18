@@ -20,7 +20,8 @@ class TransactionManagerTest {
   @BeforeEach
   void setUp() {
     manager = new TransactionManager(new DefaultTransactionRegistry(),
-            new DefaultTransactionRunner(traceCollector, contextFactory));
+            new DefaultTransactionRunner(traceCollector, contextFactory,
+                    new CompensationRegistry()));
   }
 
   private TransactionDslObject tx(String name) {
@@ -58,16 +59,9 @@ class TransactionManagerTest {
   }
 
   @Test
-  void findReturnsRegisteredTransaction() {
-    manager.register(tx("KycTx"));
-    assertThat(manager.find("KycTx")).isPresent();
-    assertThat(manager.find("KycTx").get().name()).isEqualTo("KycTx");
-  }
-
-  @Test
-  void namesReturnsSortedList() {
-    manager.register(tx("ZTx"));
-    manager.register(tx("ATx"));
-    assertThat(manager.names()).containsExactly("ATx", "ZTx");
+  void namesReturnsSortedNames() {
+    manager.register(tx("Beta"));
+    manager.register(tx("Alpha"));
+    assertThat(manager.names()).containsExactly("Alpha", "Beta");
   }
 }

@@ -18,14 +18,15 @@ import cbs.nova.dslexamples.InvoiceModels.InvoiceOut;
 import cbs.nova.dslexamples.LongWorkModels.LongWorkIn;
 import cbs.nova.dslexamples.LongWorkModels.LongWorkOut;
 import cbs.nova.starter.config.DslAutoConfiguration;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
 
 class IntermediateDslExamplesTest {
 
@@ -45,7 +46,6 @@ class IntermediateDslExamplesTest {
 
     var config = new DslAutoConfiguration();
     setField(config, "sourceDirProperty", dslSourceDir.toString());
-    config.loadDslDefinitions();
   }
 
   @AfterEach

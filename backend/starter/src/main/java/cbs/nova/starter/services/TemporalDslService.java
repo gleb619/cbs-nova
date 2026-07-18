@@ -9,12 +9,13 @@ import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
-import java.time.Duration;
-import java.util.Map;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
+
+import java.time.Duration;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Executes generated DSL workflows by their string code, hiding Temporal worker and stub wiring.

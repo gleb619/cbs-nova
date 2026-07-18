@@ -1,5 +1,8 @@
 package cbs.nova.dsl.config;
 
+import lombok.RequiredArgsConstructor;
+
+import java.lang.StackWalker;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,7 +25,18 @@ public interface SingletonSupport {
   }
 
   default <T> Replaceable<T> replaceable() {
-    return replaceable(() -> null);
+    return replaceable(callerKey());
+  }
+
+  default <T> Replaceable<T> replaceable(String key) {
+    return singleton(Factory.from(key, () -> Replaceable.of(() -> null)));
+  }
+
+  private static String callerKey() {
+    return StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
+            .walk(frames -> frames.skip(2).findFirst()
+                    .map(f -> f.getDeclaringClass().getName() + "#" + f.getMethodName())
+                    .orElseGet(() -> UUID.randomUUID().toString()));
   }
 
   @FunctionalInterface
@@ -50,14 +64,11 @@ public interface SingletonSupport {
     }
   }
 
+  @RequiredArgsConstructor
   class ReplaceableImpl<T> implements Replaceable<T> {
 
     private final Factory<T> factory;
     private volatile T override;
-
-    ReplaceableImpl(Factory<T> factory) {
-      this.factory = factory;
-    }
 
     @Override
     public T get() {

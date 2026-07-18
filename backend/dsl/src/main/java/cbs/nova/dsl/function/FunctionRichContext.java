@@ -10,10 +10,11 @@ import cbs.nova.dsl.MapInput;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.TransactionRouting;
 import cbs.nova.dsl.config.ContextFactory;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+
+import java.util.Map;
 
 @RequiredArgsConstructor
 public final class FunctionRichContext<T> implements FunctionContext<T> {

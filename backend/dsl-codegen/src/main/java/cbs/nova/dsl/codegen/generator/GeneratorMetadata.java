@@ -1,10 +1,11 @@
 package cbs.nova.dsl.codegen.generator;
 
 import cbs.nova.dsl.codegen.util.EscapeUtil;
-import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.NonNull;
+
+import java.time.Instant;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class GeneratorMetadata {

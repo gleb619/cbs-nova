@@ -3,11 +3,12 @@ package cbs.nova.dsl.codegen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.codegen.model.GeneratedSource;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 class CodeWriterTest {
 

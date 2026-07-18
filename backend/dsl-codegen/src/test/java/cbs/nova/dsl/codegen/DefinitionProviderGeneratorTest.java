@@ -3,13 +3,15 @@ package cbs.nova.dsl.codegen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.codegen.generator.DefinitionProviderGenerator;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
-import javax.annotation.processing.Generated;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.event.Level;
+
+import javax.annotation.processing.Generated;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
 
 class DefinitionProviderGeneratorTest {
 

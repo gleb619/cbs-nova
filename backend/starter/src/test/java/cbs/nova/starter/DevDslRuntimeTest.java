@@ -9,9 +9,10 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
-import java.util.ArrayList;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
 
 class DevDslRuntimeTest {
 

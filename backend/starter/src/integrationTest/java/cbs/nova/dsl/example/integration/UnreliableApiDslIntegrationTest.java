@@ -7,6 +7,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dslexamples.UnreliableApiModels.UnreliableProcessIn;
 import cbs.nova.dslexamples.UnreliableApiModels.UnreliableProcessOut;
 import cbs.nova.starter.helpers.CompensationTrackerHelper;
@@ -19,7 +20,6 @@ import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
-import java.time.Duration;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -31,6 +31,9 @@ import org.testcontainers.containers.wait.strategy.WaitAllStrategy;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
+
+import java.time.Duration;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * End-to-end test for Temporal retry, backoff, and compensation behavior using an unreliable helper
@@ -137,7 +140,8 @@ class UnreliableApiDslIntegrationTest {
 
   @Test
   void resilientTransactionSucceedsAfterTemporalRetries() {
-    var service = new TemporalDslProcessService(new ContextFactory());
+    var service = new TemporalDslProcessService(
+            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper());
     String runId = "unreliable-success-" + System.currentTimeMillis();
     var apiCall = new UnreliableApiIn(runId, 3, false, null);
     var input = new UnreliableProcessIn("success", apiCall);
@@ -160,7 +164,8 @@ class UnreliableApiDslIntegrationTest {
     var input = new UnreliableProcessIn("compensated", apiCall);
     String markerId = "UnreliableApiCompensated-" + input.scenario();
 
-    Result<?> result = new TemporalDslProcessService(new ContextFactory())
+    Result<?> result = new TemporalDslProcessService(
+            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper())
             .runProcess("UnreliableApiCompensated", input);
 
     assertThat(result.isSuccess()).isFalse();
@@ -175,7 +180,8 @@ class UnreliableApiDslIntegrationTest {
     var apiCall = new UnreliableApiIn(runId, 5, false, null);
     var input = new UnreliableProcessIn("uncaught", apiCall);
 
-    Result<?> result = new TemporalDslProcessService(new ContextFactory())
+    Result<?> result = new TemporalDslProcessService(
+            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper())
             .runProcess("UnreliableApiUncaught", input);
 
     assertThat(result.isSuccess()).isFalse();

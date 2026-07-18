@@ -11,9 +11,10 @@ import cbs.nova.dsl.TransactionInvoker;
 import cbs.nova.dsl.TransactionRouting;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
-import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 class ProcessRichContextTest {
 
@@ -47,10 +48,10 @@ class ProcessRichContextTest {
 
     AtomicReference<String> invoked = new AtomicReference<>();
     DslConfig.dslConfig().transactionInvoker().replace(
-        (name, input, ctx) -> {
-          invoked.set(name);
-          return Result.success("invoked:" + name);
-        });
+            (name, input, ctx) -> {
+              invoked.set(name);
+              return Result.success("invoked:" + name);
+            });
 
     var ctx = contextFactory.of("body", ExecutionMode.RUN, "r1")
             .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);

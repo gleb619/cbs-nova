@@ -13,5 +13,10 @@ public interface ProcessRegistry {
   Optional<ProcessDslObject> find(@NonNull String name);
 
   @NonNull
+  default Optional<ProcessDslObject> find(@NonNull String name, @NonNull String version) {
+    return find(name);
+  }
+
+  @NonNull
   Collection<ProcessDslObject> all();
 }

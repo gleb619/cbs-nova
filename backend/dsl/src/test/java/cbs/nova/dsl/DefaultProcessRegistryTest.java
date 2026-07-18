@@ -25,6 +25,15 @@ class DefaultProcessRegistryTest {
             .build();
   }
 
+  private ProcessDslObject process(String name, String version) {
+    return Dsl.process(name)
+            .version(version)
+            .input(String.class)
+            .output(String.class)
+            .execute(ctx -> Result.success(version))
+            .build();
+  }
+
   @Test
   void storesAndFindsProcess() {
     registry.register(process("OrderProcess"));
@@ -54,7 +63,8 @@ class DefaultProcessRegistryTest {
     registry.register(process("Dup"));
     assertThatThrownBy(() -> registry.register(process("Dup")))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("Dup");
+            .hasMessageContaining("Dup")
+            .hasMessageContaining("v1");
   }
 
   @Test
@@ -62,5 +72,24 @@ class DefaultProcessRegistryTest {
     registry.register(process("ProcA"));
     registry.register(process("ProcB"));
     assertThat(registry.find("ProcA").get().name()).isEqualTo("ProcA");
+  }
+
+  @Test
+  void allowsDifferentVersionsForSameName() {
+    registry.register(process("Versioned", "v1"));
+    registry.register(process("Versioned", "v2"));
+    assertThat(registry.all()).hasSize(2);
+    assertThat(registry.find("Versioned", "v1").get().version()).isEqualTo("v1");
+    assertThat(registry.find("Versioned", "v2").get().version()).isEqualTo("v2");
+    assertThat(registry.find("Versioned").get().version()).isEqualTo("v2");
+  }
+
+  @Test
+  void rejectsDuplicateVersionForSameName() {
+    registry.register(process("DupVersion", "v1"));
+    assertThatThrownBy(() -> registry.register(process("DupVersion", "v1")))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("DupVersion")
+            .hasMessageContaining("v1");
   }
 }

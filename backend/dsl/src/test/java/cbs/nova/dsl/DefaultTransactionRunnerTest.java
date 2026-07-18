@@ -5,15 +5,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
 import cbs.nova.dsl.transaction.TransactionDslObject;
+import java.util.ArrayList;
 import org.junit.jupiter.api.Test;
 
 class DefaultTransactionRunnerTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
   private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
+  private final CompensationRegistry compensationRegistry = new CompensationRegistry();
 
   private final DefaultTransactionRunner runner = new DefaultTransactionRunner(traceCollector,
-          contextFactory);
+          contextFactory, compensationRegistry);
 
   private TransactionDslObject tx(String name) {
     return Dsl.transaction(name).execute(ctx -> Result.success("ok-" + name)).build();
@@ -91,5 +93,63 @@ class DefaultTransactionRunnerTest {
     var result = runner.run(tx, ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("preview-result");
+  }
+
+  @Test
+  void registersCompensationInRegistryOnSuccess() {
+    var order = new ArrayList<String>();
+    var tx = Dsl.transaction("RegTx")
+            .input(String.class)
+            .execute(ctx -> Result.success("ok"))
+            .compensation(ctx -> {
+              order.add("compensated:" + ctx.body());
+              return Result.success(null);
+            })
+            .build();
+    var ctx = contextFactory.of("in", ExecutionMode.RUN, "r-reg");
+
+    var result = runner.run(tx, ctx);
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(compensationRegistry.hasCompensation("r-reg")).isTrue();
+    compensationRegistry.compensateAll("r-reg", new RuntimeException("boom"), traceCollector,
+            contextFactory);
+    assertThat(order).containsExactly("compensated:in");
+  }
+
+  @Test
+  void registersCompensationInSagaOnSuccess() {
+    var order = new ArrayList<String>();
+    var tx = Dsl.transaction("SagaTx")
+            .input(String.class)
+            .execute(ctx -> Result.success("ok"))
+            .compensation(ctx -> {
+              order.add("compensated:" + ctx.body());
+              return Result.success(null);
+            })
+            .build();
+    var saga = DslSaga.create();
+    var ctx = contextFactory.of("in", ExecutionMode.RUN, "r-saga").withSaga(saga);
+
+    var result = runner.run(tx, ctx);
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(saga.hasCompensations()).isTrue();
+    saga.compensate();
+    assertThat(order).containsExactly("compensated:in");
+  }
+
+  @Test
+  void skipsCompensationRegistrationWhenCompensationMissing() {
+    var tx = Dsl.transaction("NoCompTx")
+            .input(String.class)
+            .execute(ctx -> Result.success("ok"))
+            .build();
+    var ctx = contextFactory.of("in", ExecutionMode.RUN, "r-no-comp");
+
+    var result = runner.run(tx, ctx);
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(compensationRegistry.hasCompensation("r-no-comp")).isFalse();
   }
 }

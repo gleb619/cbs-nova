@@ -13,7 +13,7 @@ class CompensationExecutionModeTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
   private final ProcessRunner runner = new DefaultProcessRunner(
-          new ExecutionTraceCollector(), contextFactory);
+          new ExecutionTraceCollector(), contextFactory, new CompensationRegistry());
 
   @Test
   void compensationBlockSeesCompensationMode() {

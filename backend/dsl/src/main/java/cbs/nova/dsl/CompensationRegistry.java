@@ -5,18 +5,16 @@ import cbs.nova.dsl.transaction.TransactionDslObject;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Run-scoped registry of transaction compensations. A compensation is registered before a
- * transaction runs (keyed by transaction name and run id) and can be invoked later without the
- * caller repeating the {@code find/if-null} boilerplate.
- */
 @RequiredArgsConstructor
 public final class CompensationRegistry {
 
-  private final Map<String, CompensationEntry> entries = new ConcurrentHashMap<>();
+  private final Map<String, List<CompensationEntry>> entries = new ConcurrentHashMap<>();
 
   public boolean register(
           @NonNull String transactionName,
@@ -26,7 +24,8 @@ public final class CompensationRegistry {
     if (transaction.compensationLogic() == null) {
       return false;
     }
-    entries.put(key(transactionName, runId), new CompensationEntry(transaction, baseCtx));
+    entries.computeIfAbsent(key(runId), k -> Collections.synchronizedList(new ArrayList<>()))
+            .add(new CompensationEntry(transactionName, transaction, baseCtx));
     return true;
   }
 
@@ -36,27 +35,63 @@ public final class CompensationRegistry {
           @NonNull Throwable error,
           @NonNull ExecutionTraceCollector traceCollector,
           @NonNull ContextFactory contextFactory) {
-    var entry = entries.remove(key(transactionName, runId));
-    if (entry == null) {
+    var list = entries.get(key(runId));
+    if (list == null) {
       return;
     }
-    var compCtx = new CompensationRichContext<>(entry.baseCtx(), error, traceCollector,
-            contextFactory);
-    entry.transaction().compensationLogic().apply(compCtx);
+    synchronized (list) {
+      for (int i = list.size() - 1; i >= 0; i--) {
+        var entry = list.get(i);
+        if (entry.transactionName().equals(transactionName)) {
+          list.remove(i);
+          entry.run(error, traceCollector, contextFactory);
+          return;
+        }
+      }
+    }
   }
 
-  public boolean hasCompensation(@NonNull String transactionName, @NonNull String runId) {
-    return entries.containsKey(key(transactionName, runId));
+  public void compensateAll(
+          @NonNull String runId,
+          @NonNull Throwable error,
+          @NonNull ExecutionTraceCollector traceCollector,
+          @NonNull ContextFactory contextFactory) {
+    var list = entries.remove(key(runId));
+    if (list == null) {
+      return;
+    }
+    synchronized (list) {
+      for (int i = list.size() - 1; i >= 0; i--) {
+        list.get(i).run(error, traceCollector, contextFactory);
+      }
+    }
+  }
+
+  public boolean hasCompensation(@NonNull String runId) {
+    var list = entries.get(key(runId));
+    return list != null && !list.isEmpty();
   }
 
   public void clear() {
     entries.clear();
   }
 
-  private static String key(String transactionName, String runId) {
-    return transactionName + "#" + runId;
+  private static String key(String runId) {
+    return runId;
   }
 
-  private record CompensationEntry(TransactionDslObject transaction, Context<?> baseCtx) {
+  private record CompensationEntry(
+          String transactionName,
+          TransactionDslObject transaction,
+          Context<?> baseCtx) {
+
+    void run(
+            Throwable error,
+            ExecutionTraceCollector traceCollector,
+            ContextFactory contextFactory) {
+      var compCtx = new CompensationRichContext<>(baseCtx, error, traceCollector,
+              contextFactory);
+      transaction.compensationLogic().apply(compCtx);
+    }
   }
 }

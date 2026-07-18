@@ -10,13 +10,16 @@ import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.model.GeneratedSource;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.utils.Substitutor;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import javax.annotation.processing.Generated;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+
+import javax.annotation.processing.Generated;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 @RequiredArgsConstructor
 public final class ProcessCodeGenerator {
@@ -39,7 +42,8 @@ public final class ProcessCodeGenerator {
                     generateInterface(pkg, interfaceName, descriptor)),
             new GeneratedSource(
                     pkg, implName, generateImpl(pkg, name, interfaceName, implName,
-                            versionConstant, descriptor.inputType())));
+                            versionConstant, descriptor.inputType(),
+                            descriptor.transactionRefs())));
   }
 
   private static @NonNull String resolveVersion(
@@ -89,7 +93,7 @@ public final class ProcessCodeGenerator {
 
   private String generateImpl(
           String pkg, String processName, String interfaceName, String implName,
-          String versionConstant, Class<?> inputType) {
+          String versionConstant, Class<?> inputType, List<String> transactionRefs) {
     String inputTypeName = typeName(inputType);
     List<String> imports = new ArrayList<>();
     addImport(imports, DslTemporalProcessRequest.class);
@@ -110,6 +114,7 @@ public final class ProcessCodeGenerator {
             public class ${implName} implements ${interfaceName} {
 
               private static final String VERSION = "${version}";
+              private static final List<String> TRANSACTION_REFS = ${transactionRefs};
 
               @Override
               public String getVersion() {
@@ -122,13 +127,14 @@ public final class ProcessCodeGenerator {
                 return GlobalManager.globalManager().runProcessWithCompensation(
                         request.runId(),
                         input,
-                        ctx -> GlobalManager.globalManager().runProcess("${processName}", ctx),
+                        ctx -> GlobalManager.globalManager().runProcess("${processName}", VERSION, ctx),
                         (compCtx, error) -> GlobalManager.globalManager()
                                 .compensateProcess("${processName}", compCtx, error));
               }
             }
             """;
 
+    String transactionRefsValue = transactionRefsLiteral(transactionRefs);
     return Substitutor.format(
             template,
             Map.ofEntries(
@@ -139,7 +145,18 @@ public final class ProcessCodeGenerator {
                     Map.entry("interfaceName", interfaceName),
                     Map.entry("implName", implName),
                     Map.entry("version", versionConstant),
-                    Map.entry("inputTypeName", inputTypeName)));
+                    Map.entry("inputTypeName", inputTypeName),
+                    Map.entry("transactionRefs", transactionRefsValue)));
+  }
+
+  private String transactionRefsLiteral(List<String> refs) {
+    if (refs.isEmpty()) {
+      return "List.of()";
+    }
+    return "List.of(" + refs.stream()
+            .map(s -> String.format("\"%s\"", s))
+            .collect(Collectors.joining(", "))
+            + ")";
   }
 
   private String typeName(Class<?> type) {

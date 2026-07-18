@@ -1,5 +1,6 @@
 package cbs.nova.dsl.config;
 
+import cbs.nova.dsl.DslSaga;
 import cbs.nova.dsl.ExecutionListener;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.SimpleContext;
@@ -51,6 +52,19 @@ public final class ContextFactory {
           @NonNull String runId,
           @NonNull TransactionRouting transactionRouting,
           @Nullable ExecutionListener executionListener) {
-    return new SimpleContext<>(body, metadata, mode, runId, transactionRouting, executionListener);
+    return new SimpleContext<>(body, metadata, mode, runId, transactionRouting,
+            executionListener);
+  }
+
+  public <U> @NonNull SimpleContext<U> of(
+          @NonNull U body,
+          @NonNull Map<String, Object> metadata,
+          @NonNull ExecutionMode mode,
+          @NonNull String runId,
+          @NonNull TransactionRouting transactionRouting,
+          @Nullable ExecutionListener executionListener,
+          @Nullable DslSaga saga) {
+    return new SimpleContext<>(body, metadata, mode, runId, transactionRouting,
+            executionListener, saga);
   }
 }

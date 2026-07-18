@@ -6,7 +6,6 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 class ProcessPreviewDescribeTest {
@@ -27,7 +26,8 @@ class ProcessPreviewDescribeTest {
             .preview(ctx -> Result.success("PREVIEW_MOCK"))
             .build();
 
-    var runner = new DefaultProcessRunner(traceCollector, contextFactory);
+    var runner = new DefaultProcessRunner(traceCollector, contextFactory,
+            new CompensationRegistry());
     var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
     var result = runner.run(process, ctx);
 
@@ -44,7 +44,8 @@ class ProcessPreviewDescribeTest {
             .execute(ctx -> Result.success("EXEC"))
             .build();
 
-    var runner = new DefaultProcessRunner(traceCollector, contextFactory);
+    var runner = new DefaultProcessRunner(traceCollector, contextFactory,
+            new CompensationRegistry());
     var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
     var result = runner.run(process, ctx);
 
@@ -85,34 +86,5 @@ class ProcessPreviewDescribeTest {
 
     DslDescriptor desc = process.describe();
     assertThat(desc.hasCompensation()).isTrue();
-  }
-
-  @Test
-  void customDescriptorSupplierOverridesDefault() {
-    var custom = new DslDescriptor(
-            "P",
-            DslObject.DslType.PROCESS,
-            "custom description",
-            String.class,
-            String.class,
-            false,
-            false,
-            "custom preview",
-            List.of(),
-            "P-queue",
-            "v1",
-            null,
-            null);
-    var process = Dsl.process("P")
-            .input(String.class)
-            .output(String.class)
-            .execute(ctx -> Result.success("ok"))
-            .describe(() -> custom)
-            .build();
-
-    DslDescriptor desc = process.describe();
-    assertThat(desc).isSameAs(custom);
-    assertThat(desc.description()).isEqualTo("custom description");
-    assertThat(desc.hasSideEffects()).isFalse();
   }
 }

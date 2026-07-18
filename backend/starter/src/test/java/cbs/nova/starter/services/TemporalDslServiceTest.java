@@ -18,11 +18,12 @@ import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
-import java.util.UUID;
-import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+
+import java.util.UUID;
+import java.util.function.Function;
 
 class TemporalDslServiceTest {
 

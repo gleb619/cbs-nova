@@ -8,46 +8,20 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
-import cbs.nova.dsl.repository.InMemoryDslRunRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.time.Instant;
-import java.util.Map;
+import lombok.AllArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
-/**
- * Service-layer API for running DSL processes backed by Temporal. It keeps callers decoupled from
- * generated workflow class names: callers provide the logical DSL process name and the service
- * delegates to {@link GlobalManager}, which routes to the runner and, when a
- * {@link cbs.nova.dsl.TemporalProcessLauncher} is registered, launches a Temporal workflow under
- * the hood.
- *
- * <p>
- * Every run is recorded through {@link DslRunRepository} so executions can be audited later.
- */
-@Service
+import java.time.Instant;
+import java.util.Map;
+import tools.jackson.databind.ObjectMapper;
+
+@AllArgsConstructor
 public class TemporalDslProcessService {
 
   private final ContextFactory contextFactory;
   private final DslRunRepository runRepository;
   private final ObjectMapper objectMapper;
-
-  public TemporalDslProcessService(@NonNull ContextFactory contextFactory) {
-    this(contextFactory, new InMemoryDslRunRepository(), new ObjectMapper());
-  }
-
-  @Autowired
-  public TemporalDslProcessService(
-          @NonNull ContextFactory contextFactory,
-          @NonNull DslRunRepository runRepository,
-          @NonNull ObjectMapper objectMapper) {
-    this.contextFactory = contextFactory;
-    this.runRepository = runRepository;
-    this.objectMapper = objectMapper;
-  }
 
   public @NonNull Result<?> runProcess(@NonNull String processName, @Nullable Object input) {
     return runProcess(processName, input, Map.of());
@@ -62,16 +36,17 @@ public class TemporalDslProcessService {
     String inputJson = serialize(body);
     Instant startedAt = Instant.now();
 
-    DslRun running = new DslRun(
-            runId,
-            processName,
-            DslRunStatus.RUNNING.name(),
-            inputJson,
-            null,
-            null,
-            startedAt,
-            null,
-            ExecutionMode.RUN.name());
+    DslRun running = DslRun.builder()
+            .runId(runId)
+            .processName(processName)
+            .status(DslRunStatus.RUNNING.name())
+            .input(inputJson)
+            .output(null)
+            .error(null)
+            .startedAt(startedAt)
+            .finishedAt(null)
+            .executionMode(ExecutionMode.RUN.name())
+            .build();
     runRepository.save(running);
 
     Context<?> ctx = contextFactory.of(body, metadata, ExecutionMode.RUN, runId);
@@ -83,16 +58,17 @@ public class TemporalDslProcessService {
     }
 
     Instant finishedAt = Instant.now();
-    DslRun finished = new DslRun(
-            runId,
-            processName,
-            result.isSuccess() ? DslRunStatus.COMPLETED.name() : DslRunStatus.FAILED.name(),
-            inputJson,
-            result.isSuccess() ? serialize(result.value()) : null,
-            result.isSuccess() ? null : messageOf(result.cause()),
-            startedAt,
-            finishedAt,
-            ExecutionMode.RUN.name());
+    DslRun finished = DslRun.builder()
+            .runId(runId)
+            .processName(processName)
+            .status(result.isSuccess() ? DslRunStatus.COMPLETED.name() : DslRunStatus.FAILED.name())
+            .input(inputJson)
+            .output(result.isSuccess() ? serialize(result.value()) : null)
+            .error(result.isSuccess() ? null : messageOf(result.cause()))
+            .startedAt(startedAt)
+            .finishedAt(finishedAt)
+            .executionMode(ExecutionMode.RUN.name())
+            .build();
     runRepository.save(finished);
 
     return result;
@@ -102,11 +78,8 @@ public class TemporalDslProcessService {
     if (value == null) {
       return "null";
     }
-    try {
-      return objectMapper.writeValueAsString(value);
-    } catch (JsonProcessingException e) {
-      throw new RuntimeException("Failed to serialize run payload", e);
-    }
+
+    return objectMapper.writeValueAsString(value);
   }
 
   private @Nullable String messageOf(@Nullable Throwable cause) {

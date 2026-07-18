@@ -10,35 +10,28 @@ import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.TemporalProcessLauncher;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.common.RetryOptions;
 import io.temporal.workflow.Workflow;
-import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-/**
- * Temporal implementation of {@link TemporalProcessLauncher}. It resolves the generated workflow
- * interface/implementation for a DSL process through
- * {@link GlobalManager#findGeneratedProcess(String)} and starts it on the process task queue. When
- * the caller is already inside a Temporal workflow thread, {@link #canRun(Context)} returns false
- * so the DSL runner falls back to executing the process logic directly and avoids recursive
- * workflow spawning.
- *
- * <p>
- * The launcher communicates with generated workflows through the {@link DslTemporalProcess}
- * contract instead of reflection.
- */
+import java.time.Duration;
+import tools.jackson.databind.ObjectMapper;
+
 @RequiredArgsConstructor
 public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
 
+  //TODO: use app.yml instead
+  @Deprecated(forRemoval = true)
   private static final Duration EXECUTION_TIMEOUT = Duration.ofSeconds(30);
+  @Deprecated(forRemoval = true)
   private static final Duration TASK_TIMEOUT = Duration.ofSeconds(5);
 
   private final WorkflowClient workflowClient;
+  private final ObjectMapper objectMapper;
 
   @Override
   public boolean canRun(@NonNull Context<?> ctx) {
@@ -77,21 +70,21 @@ public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
 
     var stub = workflowClient.newWorkflowStub(descriptor.temporalInterface(), options);
     try {
-      DslTemporalProcess process = (DslTemporalProcess) stub;
+      var process = (DslTemporalProcess) stub;
       Object result = process.execute(new DslTemporalProcessRequest<>(ctx.runId(), ctx.body()));
       if (result instanceof DslTemporalProcessFailure(String message, String detail)) {
         return Result.failure(new DslExecutionException(ctx.runId(),
-            message + ": " + detail,
+                message + ": " + detail,
                 new RuntimeException(message)));
       }
       if (outputType != null && result != null && !outputType.isInstance(result)) {
-        result = new ObjectMapper().convertValue(result, outputType);
+        result = objectMapper.convertValue(result, outputType);
       }
       return Result.success(result);
     } catch (Exception e) {
       Throwable cause = e.getCause() != null ? e.getCause() : e;
       return Result.failure(new DslExecutionException(ctx.runId(),
-              "Process " + processName + " failed: " + cause.getMessage(), cause));
+          "Process %s failed: %s".formatted(processName, cause.getMessage()), cause));
     }
   }
 }

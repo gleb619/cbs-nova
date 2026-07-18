@@ -7,12 +7,14 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.SimpleContext;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.util.Map;
 import java.util.UUID;
+import tools.jackson.databind.ObjectMapper;
 
 class TemporalDslProcessServiceTest {
 
@@ -25,7 +27,8 @@ class TemporalDslProcessServiceTest {
     Mockito.doReturn(stubCtx).when(contextFactory).of(
             Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
 
-    TemporalDslProcessService service = new TemporalDslProcessService(contextFactory);
+    TemporalDslProcessService service = new TemporalDslProcessService(
+            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper());
     service.runProcess(unique(), "payload");
 
     Mockito.verify(contextFactory).of(
@@ -44,7 +47,8 @@ class TemporalDslProcessServiceTest {
     Mockito.doReturn(stubCtx).when(contextFactory).of(
             Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
 
-    TemporalDslProcessService service = new TemporalDslProcessService(contextFactory);
+    TemporalDslProcessService service = new TemporalDslProcessService(
+            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper());
     service.runProcess(unique(), null, Map.of("k", "v"));
 
     ArgumentCaptor<Object> bodyCaptor = ArgumentCaptor.forClass(Object.class);
@@ -65,7 +69,8 @@ class TemporalDslProcessServiceTest {
     Mockito.doReturn(stubCtx).when(contextFactory).of(
             Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
 
-    TemporalDslProcessService service = new TemporalDslProcessService(contextFactory);
+    TemporalDslProcessService service = new TemporalDslProcessService(
+            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper());
     service.runProcess(unique(), "payload", Map.of());
 
     Mockito.verify(contextFactory).generateRunId();
@@ -80,7 +85,8 @@ class TemporalDslProcessServiceTest {
   void runProcessReachesGlobalManagerWithCorrectProcessName() {
     ContextFactory contextFactory = new ContextFactory();
     String missing = "missing-" + UUID.randomUUID();
-    TemporalDslProcessService service = new TemporalDslProcessService(contextFactory);
+    TemporalDslProcessService service = new TemporalDslProcessService(
+            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper());
 
     Result<?> result = service.runProcess(missing, Map.of("k", "v"), Map.of("meta", "data"));
 
@@ -99,7 +105,8 @@ class TemporalDslProcessServiceTest {
     Mockito.doReturn(stubCtx).when(contextFactory).of(
             Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
 
-    TemporalDslProcessService service = new TemporalDslProcessService(contextFactory);
+    TemporalDslProcessService service = new TemporalDslProcessService(
+            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper());
     service.runProcess(unique(), input, Map.of("meta", "data"));
 
     Mockito.verify(contextFactory).of(

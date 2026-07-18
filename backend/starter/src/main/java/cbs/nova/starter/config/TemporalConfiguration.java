@@ -1,15 +1,15 @@
 package cbs.nova.starter.config;
 
-import cbs.nova.dsl.DslRuntime;
+import cbs.nova.dsl.DslRunRepository;
 import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.TemporalProcessLauncher;
 import cbs.nova.dsl.TransactionInvoker;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.starter.DevDslRuntime;
 import cbs.nova.starter.ExternalCallTracker;
-import cbs.nova.starter.controllers.DslIntrospectionResource;
-import cbs.nova.starter.controllers.DslRuntimeResource;
 import cbs.nova.starter.services.TemporalDslProcessLauncher;
+import cbs.nova.starter.services.TemporalDslProcessService;
 import cbs.nova.starter.services.TemporalTransactionInvoker;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
+import tools.jackson.databind.json.JsonMapper;
 
 @AutoConfiguration
 public class TemporalConfiguration {
@@ -39,7 +40,7 @@ public class TemporalConfiguration {
   @Bean
   @ConditionalOnMissingBean
   TemporalProcessLauncher temporalProcessLauncher(WorkflowClient workflowClient) {
-    return new TemporalDslProcessLauncher(workflowClient);
+    return new TemporalDslProcessLauncher(workflowClient, JsonMapper.builder().build());
   }
 
   @Bean
@@ -68,6 +69,12 @@ public class TemporalConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
+  DslRunRepository dslRunRepository() {
+    return new InMemoryDslRunRepository();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
   DevDslRuntime devDslRuntime(
           ExternalCallTracker externalCallTracker,
           ExecutionTraceCollector executionTraceCollector,
@@ -76,14 +83,10 @@ public class TemporalConfiguration {
   }
 
   @Bean
-  @ConditionalOnMissingBean
-  DslRuntimeResource dslRuntimeResource(DslRuntime dslRuntime, ContextFactory contextFactory) {
-    return new DslRuntimeResource(dslRuntime, contextFactory);
+  TemporalDslProcessService temporalDslProcessService(ContextFactory contextFactory,
+          DslRunRepository runRepository,
+      JsonMapper jsonMapper) {
+    return new TemporalDslProcessService(contextFactory, runRepository, JsonMapper.builder().build());
   }
 
-  @Bean
-  @ConditionalOnMissingBean
-  DslIntrospectionResource dslIntrospectionResource() {
-    return new DslIntrospectionResource();
-  }
 }

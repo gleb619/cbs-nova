@@ -124,6 +124,7 @@ public final class DefinitionLoader {
     return Collections.unmodifiableList(result);
   }
 
+  @Deprecated(forRemoval = true)
   private @NonNull List<DslObject> loadViaReflection(@NonNull Path outputDir,
           @NonNull List<String> classNames) {
     var parent = Thread.currentThread().getContextClassLoader();

@@ -2,6 +2,7 @@ package cbs.nova.starter.repository;
 
 import cbs.nova.dsl.DslRun;
 import cbs.nova.dsl.DslRunRepository;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Repository;
@@ -13,19 +14,12 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-/**
- * JDBC-backed {@link DslRunRepository} implementation powered by Spring Data JDBC.
- */
-
-@ConditionalOnBean(DataSource.class)
 @Repository
+@RequiredArgsConstructor
+@ConditionalOnBean(DataSource.class)
 public class JdbcDslRunRepository implements DslRunRepository {
 
   private final DslRunJdbcRepository delegate;
-
-  public JdbcDslRunRepository(@NonNull DslRunJdbcRepository delegate) {
-    this.delegate = delegate;
-  }
 
   @Override
   public @NonNull DslRun save(@NonNull DslRun run) {
@@ -62,15 +56,16 @@ public class JdbcDslRunRepository implements DslRunRepository {
   }
 
   private DslRun toDomain(DslRunEntity entity) {
-    return new DslRun(
-            entity.getRunId(),
-            entity.getProcessName(),
-            entity.getStatus(),
-            entity.getInputJson(),
-            entity.getOutputJson(),
-            entity.getErrorMessage(),
-            entity.getStartedAt(),
-            entity.getFinishedAt(),
-            entity.getExecutionMode());
+    return DslRun.builder()
+            .runId(entity.getRunId())
+            .processName(entity.getProcessName())
+            .status(entity.getStatus())
+            .input(entity.getInputJson())
+            .output(entity.getOutputJson())
+            .error(entity.getErrorMessage())
+            .startedAt(entity.getStartedAt())
+            .finishedAt(entity.getFinishedAt())
+            .executionMode(entity.getExecutionMode())
+            .build();
   }
 }

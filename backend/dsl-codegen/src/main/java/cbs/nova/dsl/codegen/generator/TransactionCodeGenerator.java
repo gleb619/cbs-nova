@@ -6,13 +6,15 @@ import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.model.GeneratedSource;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.utils.Substitutor;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import javax.annotation.processing.Generated;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+
+import javax.annotation.processing.Generated;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 @RequiredArgsConstructor
 public final class TransactionCodeGenerator {
@@ -63,11 +65,12 @@ public final class TransactionCodeGenerator {
 
                     ${annotation}
                     @ActivityInterface(namePrefix = "${transactionName}_")
-                    public interface ${interfaceName} extends GeneratedTransactionActivity {
+                    public interface ${interfaceName} extends GeneratedTransactionActivity<${inputTypeName}> {
 
                       @ActivityMethod
                       String getVersion();
 
+                      @Override
                       @ActivityMethod
                       Object execute(DslTemporalTransactionRequest<${inputTypeName}> request);
 

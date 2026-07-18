@@ -10,9 +10,11 @@ import cbs.nova.dsl.codegen.util.AstExtractor;
 import cbs.nova.dsl.codegen.util.Json;
 import cbs.nova.dsl.compact.CompactSourcePreprocessor;
 import cbs.nova.dsl.config.DescriptorFactory;
-import java.util.List;
-import javax.annotation.processing.Generated;
 import org.junit.jupiter.api.Test;
+
+import javax.annotation.processing.Generated;
+
+import java.util.List;
 
 class GeneratedClassProviderGeneratorTest {
 

@@ -42,6 +42,15 @@ public interface Context<T> {
   }
 
   /**
+   * Returns the optional Saga helper attached to this context. When present, successful
+   * transactions automatically register their compensation action with this saga.
+   */
+  @Nullable
+  default DslSaga saga() {
+    return null;
+  }
+
+  /**
    * Returns a context with the given transaction routing hint.
    */
   @NonNull
@@ -54,6 +63,14 @@ public interface Context<T> {
    */
   @NonNull
   default Context<T> withExecutionListener(@NonNull ExecutionListener listener) {
+    return this;
+  }
+
+  /**
+   * Returns a context with the given saga helper. Passing {@code null} clears any existing saga.
+   */
+  @NonNull
+  default Context<T> withSaga(@Nullable DslSaga saga) {
     return this;
   }
 }
