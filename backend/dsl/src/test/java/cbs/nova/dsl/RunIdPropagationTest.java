@@ -12,15 +12,15 @@ class RunIdPropagationTest {
 
   @BeforeEach
   void reset() {
-    GlobalManager.getInstance().resetForTests();
+    GlobalManager.globalManager().resetForTests();
   }
 
   @Test
   void processReceivesProvidedRunId() {
-    GlobalManager.getInstance().registerProcess(
+    GlobalManager.globalManager().registerProcess(
             Dsl.process("Trace").execute(ctx -> Result.success(ctx.runId())).build());
     var ctx = contextFactory.of("in", ExecutionMode.PREVIEW, "run-xyz");
-    var result = GlobalManager.getInstance().runProcess("Trace", ctx);
+    var result = GlobalManager.globalManager().runProcess("Trace", ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("run-xyz");
   }

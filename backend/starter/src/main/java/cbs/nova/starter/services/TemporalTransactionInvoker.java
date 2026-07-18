@@ -12,13 +12,12 @@ import cbs.nova.dsl.transaction.TransactionDslObject;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
 import io.temporal.workflow.Workflow;
-import org.jspecify.annotations.NonNull;
-
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.jspecify.annotations.NonNull;
 
 /**
  * TransactionInvoker implementation that routes DSL transactions to generated Temporal activity
@@ -26,7 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>
  * Instead of using {@link java.lang.reflect.Method} inside generated workflow code, this bean
- * resolves a {@link java.lang.invoke.MethodHandle} for the typed {@code execute} method of the
+ * resolves a {@link MethodHandle} for the typed {@code execute} method of the
  * generated activity interface and invokes it on the Temporal stub. Inputs are wrapped into a
  * {@link DslTemporalTransactionRequest} at the last moment so the activity API carries both the
  * payload and the DSL run id, matching the process workflow API.
@@ -42,10 +41,10 @@ public final class TemporalTransactionInvoker implements TransactionInvoker {
   @Override
   public @NonNull Result<?> invoke(@NonNull String name, @NonNull Object input,
           @NonNull Context<?> ctx) {
-    var txOpt = GlobalManager.getInstance().findTransaction(name);
-    var generatedOpt = GlobalManager.getInstance().findGeneratedTransaction(name);
+    var txOpt = GlobalManager.globalManager().findTransaction(name);
+    var generatedOpt = GlobalManager.globalManager().findGeneratedTransaction(name);
     if (txOpt.isEmpty() || generatedOpt.isEmpty()) {
-      return GlobalManager.getInstance().runTransaction(name, ctx);
+      return GlobalManager.globalManager().runTransaction(name, ctx);
     }
 
     GeneratedClassDescriptor descriptor = generatedOpt.get();

@@ -4,11 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 import cbs.nova.dsl.config.ContextFactory;
+import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-
-import java.nio.file.Path;
 
 class DefinitionLoaderTest {
 
@@ -18,12 +17,12 @@ class DefinitionLoaderTest {
 
   @BeforeEach
   void reset() {
-    GlobalManager.getInstance().resetForTests();
+    GlobalManager.globalManager().resetForTests();
   }
 
   @Test
   void loadsProcessFromSpiProvider() {
-    var gm = GlobalManager.getInstance();
+    var gm = GlobalManager.globalManager();
     new DefinitionLoader().load(tempDir, gm);
 
     var ctx = contextFactory.of("test", ExecutionMode.PREVIEW);
@@ -34,7 +33,7 @@ class DefinitionLoaderTest {
 
   @Test
   void loadIgnoresSourceDirectoryArgument() {
-    var gm = GlobalManager.getInstance();
+    var gm = GlobalManager.globalManager();
     assertThatCode(() -> new DefinitionLoader().load(tempDir, gm)).doesNotThrowAnyException();
     assertThat(gm.hasProcess("SpiLoadedProcess")).isTrue();
   }

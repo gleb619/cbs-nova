@@ -1,4 +1,4 @@
-package cbs.nova.dsl.codegen;
+package cbs.nova.dsl.codegen.model;
 
 import org.jspecify.annotations.NonNull;
 

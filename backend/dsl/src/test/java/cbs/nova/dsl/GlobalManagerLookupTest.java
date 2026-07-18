@@ -9,38 +9,38 @@ class GlobalManagerLookupTest {
 
   @BeforeEach
   void reset() {
-    GlobalManager.getInstance().resetForTests();
+    GlobalManager.globalManager().resetForTests();
   }
 
   @Test
   void hasProcessReturnsTrueWhenRegistered() {
-    GlobalManager.getInstance()
+    GlobalManager.globalManager()
             .registerProcess(Dsl.process("Foo")
                     .input(String.class)
                     .output(String.class)
                     .execute(ctx -> Result.success("ok"))
                     .build());
-    assertThat(GlobalManager.getInstance().hasProcess("Foo")).isTrue();
-    assertThat(GlobalManager.getInstance().hasProcess("Bar")).isFalse();
+    assertThat(GlobalManager.globalManager().hasProcess("Foo")).isTrue();
+    assertThat(GlobalManager.globalManager().hasProcess("Bar")).isFalse();
   }
 
   @Test
   void hasTransactionReturnsTrueWhenRegistered() {
-    GlobalManager.getInstance()
+    GlobalManager.globalManager()
             .registerTransaction(
                     Dsl.transaction("FooTx")
                             .input(String.class)
                             .output(String.class)
                             .execute(ctx -> Result.success("ok"))
                             .build());
-    assertThat(GlobalManager.getInstance().hasTransaction("FooTx")).isTrue();
-    assertThat(GlobalManager.getInstance().hasTransaction("BarTx")).isFalse();
+    assertThat(GlobalManager.globalManager().hasTransaction("FooTx")).isTrue();
+    assertThat(GlobalManager.globalManager().hasTransaction("BarTx")).isFalse();
   }
 
   @Test
   void hasHelperReturnsTrueWhenRegistered() {
-    GlobalManager.getInstance().registerHelper("myHelper", ctx -> Result.success("done"));
-    assertThat(GlobalManager.getInstance().hasHelper("myHelper")).isTrue();
-    assertThat(GlobalManager.getInstance().hasHelper("other")).isFalse();
+    GlobalManager.globalManager().registerHelper("myHelper", ctx -> Result.success("done"));
+    assertThat(GlobalManager.globalManager().hasHelper("myHelper")).isTrue();
+    assertThat(GlobalManager.globalManager().hasHelper("other")).isFalse();
   }
 }

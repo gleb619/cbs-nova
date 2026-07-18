@@ -3,16 +3,20 @@ package cbs.nova.dsl.codegen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.DslGenerated;
 import cbs.nova.dsl.DslTemporalProcess;
 import cbs.nova.dsl.DslTemporalProcessRequest;
 import cbs.nova.dsl.MapInput;
 import cbs.nova.dsl.ProcessCompensation;
 import cbs.nova.dsl.ProcessMain;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.codegen.generator.ProcessCodeGenerator;
+import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.config.DescriptorFactory;
-import org.junit.jupiter.api.Test;
-
 import java.util.List;
+import java.util.Map;
+import javax.annotation.processing.Generated;
+import org.junit.jupiter.api.Test;
 
 class ProcessCodeGeneratorTest {
 
@@ -54,6 +58,10 @@ class ProcessCodeGeneratorTest {
     assertThat(iface.source())
             .contains("Object execute(" + DslTemporalProcessRequest.class.getSimpleName()
                     + "<String> request)");
+    assertThat(iface.source()).contains("@" + DslGenerated.class.getSimpleName());
+    assertThat(iface.source()).contains("@" + Generated.class.getSimpleName());
+    assertThat(iface.source())
+            .contains("generator = \"" + ProcessCodeGenerator.class.getName() + "\"");
   }
 
   @Test
@@ -83,15 +91,15 @@ class ProcessCodeGeneratorTest {
     assertThat(impl.className()).isEqualTo("LoanDisbursementProcessDefinition");
     assertThat(impl.source()).contains("implements LoanDisbursementProcessWorkflow");
     assertThat(impl.source())
-            .contains("GlobalManager.getInstance().runProcessWithCompensation(");
+            .contains("GlobalManager.globalManager().runProcessWithCompensation(");
     assertThat(impl.source()).contains(ProcessMain.class.getSimpleName());
     assertThat(impl.source()).contains(ProcessCompensation.class.getSimpleName());
     assertThat(impl.source())
-            .contains("GlobalManager.getInstance().runProcess(\"LoanDisbursement\"");
+            .contains("GlobalManager.globalManager().runProcess(\"LoanDisbursement\"");
     assertThat(impl.source()).doesNotContain("java.lang.reflect.Method");
     assertThat(impl.source()).doesNotContain("class TemporalTransactionInvoker");
     assertThat(impl.source()).doesNotContain("dsl.transaction.invoker");
-    assertThat(impl.source()).doesNotContain("GlobalManager.getInstance().transactionInvoker()");
+    assertThat(impl.source()).doesNotContain("GlobalManager.globalManager().transactionInvoker()");
     assertThat(impl.source())
             .contains(DslTemporalProcessRequest.class.getSimpleName() + "<String> request");
     assertThat(impl.source()).contains("request.runId()");
@@ -99,6 +107,10 @@ class ProcessCodeGeneratorTest {
     assertThat(impl.source()).doesNotContain("ExecutionMode");
     assertThat(impl.source()).doesNotContain("TransactionRouting");
     assertThat(impl.source()).doesNotContain("Saga");
+    assertThat(impl.source()).contains("@" + DslGenerated.class.getSimpleName());
+    assertThat(impl.source()).contains("@" + Generated.class.getSimpleName());
+    assertThat(impl.source())
+            .contains("generator = \"" + ProcessCodeGenerator.class.getName() + "\"");
   }
 
   @Test
@@ -171,7 +183,7 @@ class ProcessCodeGeneratorTest {
     var descriptor = descriptor().fromProcess(
             Dsl.process("ParamProcess")
                     .parameters(reg -> reg.string("customerId").number("amount"))
-                    .execute(ctx -> Result.success(MapInput.fromMap(java.util.Map.of())))
+                    .execute(ctx -> Result.success(MapInput.fromMap(Map.of())))
                     .build());
 
     var sources = generator.generate(descriptor, null, null);
@@ -187,6 +199,8 @@ class ProcessCodeGeneratorTest {
     assertThat(impl.source()).doesNotContain("ExecutionMode");
     assertThat(impl.source()).doesNotContain("TransactionRouting");
     assertThat(impl.source()).doesNotContain("Saga");
+    assertThat(impl.source()).contains("@" + DslGenerated.class.getSimpleName());
+    assertThat(impl.source()).contains("@" + Generated.class.getSimpleName());
   }
 
   @Test

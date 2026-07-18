@@ -12,7 +12,7 @@ public class DslHealthIndicator implements HealthIndicator {
 
   @Override
   public Health health() {
-    GlobalManager gm = GlobalManager.getInstance();
+    GlobalManager gm = GlobalManager.globalManager();
     return Health.up()
             .withDetail("processes", gm.processNames().size())
             .withDetail("transactions", gm.transactionNames().size())

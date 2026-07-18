@@ -2,19 +2,20 @@ package cbs.nova.dsl.codegen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import org.slf4j.event.Level;
-
+import cbs.nova.dsl.codegen.generator.DefinitionProviderGenerator;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import javax.annotation.processing.Generated;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.event.Level;
 
 class DefinitionProviderGeneratorTest {
 
   @Test
   void writesProviderSourceAndSpiFile(@TempDir Path outDir) throws Exception {
-    var generator = new DefinitionProviderGenerator(Level.INFO);
+    var generator = new DefinitionProviderGenerator(Level.INFO, new CodeWriter());
     var fqcn = generator.generate(outDir, List.of("FooDsl", "BarDsl"));
 
     var source = outDir.resolve("GeneratedDslDefinitionProvider.java");
@@ -23,6 +24,7 @@ class DefinitionProviderGeneratorTest {
     assertThat(text).contains("implements DslDefinitionProvider");
     assertThat(text).contains("new FooDsl().define()");
     assertThat(text).contains("new BarDsl().define()");
+    assertThat(text).contains("@" + Generated.class.getSimpleName());
 
     var spi = outDir.resolve("META-INF/services/cbs.nova.dsl.DslDefinitionProvider");
     assertThat(spi).exists();
@@ -34,7 +36,7 @@ class DefinitionProviderGeneratorTest {
 
   @Test
   void emptyClassListProducesEmptyRegistrations(@TempDir Path outDir) throws Exception {
-    var generator = new DefinitionProviderGenerator(Level.INFO);
+    var generator = new DefinitionProviderGenerator(Level.INFO, new CodeWriter());
     var fqcn = generator.generate(outDir, List.of());
 
     var source = outDir.resolve("GeneratedDslDefinitionProvider.java");

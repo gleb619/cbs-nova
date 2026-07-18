@@ -18,12 +18,11 @@ import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
+import java.util.UUID;
+import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
-
-import java.util.UUID;
-import java.util.function.Function;
 
 class TemporalDslServiceTest {
 
@@ -43,7 +42,7 @@ class TemporalDslServiceTest {
   @Test
   void executeReturnsTypedResultFromWorkflowStub() {
     String name = unique("svc-success");
-    GlobalManager.getInstance().registerGeneratedClass(
+    GlobalManager.globalManager().registerGeneratedClass(
             new GeneratedClassDescriptor(
                     name, DslType.PROCESS, "1.0", "tq",
                     TestProcess.class, TestProcessImpl.class, null, String.class, "{}"));
@@ -86,7 +85,7 @@ class TemporalDslServiceTest {
   @Test
   void executeUnwrapsCauseFromRuntimeExceptionAndRethrowsWithCode() {
     String name = unique("svc-cause");
-    GlobalManager.getInstance().registerGeneratedClass(
+    GlobalManager.globalManager().registerGeneratedClass(
             new GeneratedClassDescriptor(
                     name, DslType.PROCESS, "1.0", "tq",
                     TestProcess.class, TestProcessImpl.class, null, String.class, "{}"));
@@ -119,7 +118,7 @@ class TemporalDslServiceTest {
   @Test
   void executePropagatesOriginalExceptionWhenNoCauseIsPresent() {
     String name = unique("svc-no-cause");
-    GlobalManager.getInstance().registerGeneratedClass(
+    GlobalManager.globalManager().registerGeneratedClass(
             new GeneratedClassDescriptor(
                     name, DslType.PROCESS, "1.0", "tq",
                     TestProcess.class, TestProcessImpl.class, null, String.class, "{}"));

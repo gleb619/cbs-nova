@@ -1,4 +1,4 @@
-package cbs.nova.dsl.codegen;
+package cbs.nova.dsl.codegen.model;
 
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -7,11 +7,11 @@ public final class CodegenNaming {
 
   private static final String BASE_PACKAGE = "cbs.nova.dsl.generated";
 
-  String versionedPackage(@NonNull String name, @NonNull String version) {
+  public String versionedPackage(@NonNull String name, @NonNull String version) {
     return versionedPackage(name, version, null);
   }
 
-  String versionedPackage(
+  public String versionedPackage(
           @NonNull String name,
           @NonNull String version,
           @Nullable String targetPackage) {

@@ -6,14 +6,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.starter.controllers.DslReloadResource;
+import java.lang.reflect.Field;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
-import java.lang.reflect.Field;
 
 class DslReloadResourceTest {
 
@@ -22,7 +21,7 @@ class DslReloadResourceTest {
 
   @BeforeEach
   void setUp() throws Exception {
-    GlobalManager.getInstance().resetForTests();
+    GlobalManager.globalManager().resetForTests();
     resource = new DslReloadResource();
     mockMvc = MockMvcBuilders.standaloneSetup(resource)
             .setMessageConverters(new JacksonJsonHttpMessageConverter())
@@ -31,7 +30,7 @@ class DslReloadResourceTest {
 
   @AfterEach
   void tearDown() {
-    GlobalManager.getInstance().resetForTests();
+    GlobalManager.globalManager().resetForTests();
   }
 
   private void setSourceDir(String value) throws Exception {

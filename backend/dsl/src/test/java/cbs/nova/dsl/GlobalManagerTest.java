@@ -1,13 +1,12 @@
 package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.config.ContextFactory;
+import java.util.ArrayList;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
-import java.util.List;
 
 class GlobalManagerTest {
 
@@ -15,12 +14,12 @@ class GlobalManagerTest {
 
   @BeforeEach
   void reset() {
-    GlobalManager.getInstance().resetForTests();
+    GlobalManager.globalManager().resetForTests();
   }
 
   @Test
   void endToEndProcessPreview() {
-    var gm = GlobalManager.getInstance();
+    var gm = GlobalManager.globalManager();
     gm.registerProcess(
             Dsl.process("Greet")
                     .input(String.class)
@@ -35,14 +34,14 @@ class GlobalManagerTest {
 
   @Test
   void unknownProcessReturnsFailure() {
-    var result = GlobalManager.getInstance()
+    var result = GlobalManager.globalManager()
             .runProcess("Ghost", contextFactory.of("x", ExecutionMode.PREVIEW));
     assertThat(result.isSuccess()).isFalse();
   }
 
   @Test
   void helperRoundTrip() {
-    var gm = GlobalManager.getInstance();
+    var gm = GlobalManager.globalManager();
     gm.registerHelper("upper", ctx -> Result.success(ctx.body().toString().toUpperCase()));
     var result = gm.runHelper("upper",
             contextFactory.of("hello", ExecutionMode.PREVIEW));
@@ -51,7 +50,7 @@ class GlobalManagerTest {
 
   @Test
   void transactionRoundTrip() {
-    var gm = GlobalManager.getInstance();
+    var gm = GlobalManager.globalManager();
     var tx = Dsl.transaction("TestTx")
             .execute(ctx -> Result.success("ok"))
             .build();
@@ -63,14 +62,14 @@ class GlobalManagerTest {
 
   @Test
   void unknownTransactionReturnsFailure() {
-    var result = GlobalManager.getInstance().runTransaction("Ghost",
+    var result = GlobalManager.globalManager().runTransaction("Ghost",
             contextFactory.of("x", ExecutionMode.PREVIEW));
     assertThat(result.isSuccess()).isFalse();
   }
 
   @Test
   void functionRoundTrip() {
-    var gm = GlobalManager.getInstance();
+    var gm = GlobalManager.globalManager();
     var fn = Dsl.function("TestFn")
             .execute(ctx -> Result.success("fn-ok"))
             .build();
@@ -82,14 +81,14 @@ class GlobalManagerTest {
 
   @Test
   void unknownFunctionReturnsFailure() {
-    var result = GlobalManager.getInstance().runFunction("Ghost",
+    var result = GlobalManager.globalManager().runFunction("Ghost",
             contextFactory.of("x", ExecutionMode.PREVIEW));
     assertThat(result.isSuccess()).isFalse();
   }
 
   @Test
   void processNamesSorted() {
-    var gm = GlobalManager.getInstance();
+    var gm = GlobalManager.globalManager();
     gm.registerProcess(Dsl.process("Z").execute(ctx -> Result.success("z")).build());
     gm.registerProcess(Dsl.process("A").execute(ctx -> Result.success("a")).build());
     var names = gm.processNames();
@@ -98,7 +97,7 @@ class GlobalManagerTest {
 
   @Test
   void transactionNamesSorted() {
-    var gm = GlobalManager.getInstance();
+    var gm = GlobalManager.globalManager();
     gm.registerTransaction(
             Dsl.transaction("Ztx").execute(ctx -> Result.success("z")).build());
     gm.registerTransaction(
@@ -109,7 +108,7 @@ class GlobalManagerTest {
 
   @Test
   void helperNamesSorted() {
-    var gm = GlobalManager.getInstance();
+    var gm = GlobalManager.globalManager();
     gm.registerHelper("Ahelper", ctx -> Result.success("A"));
     gm.registerHelper("Bhelper", ctx -> Result.success("B"));
     var names = gm.helperNames();
@@ -118,7 +117,7 @@ class GlobalManagerTest {
 
   @Test
   void describeHelperReturnsDescriptorForRegistered() {
-    var gm = GlobalManager.getInstance();
+    var gm = GlobalManager.globalManager();
     gm.registerHelper("HelperA", ctx -> Result.success("A"));
     var descriptor = gm.describeHelper("HelperA");
     assertThat(descriptor).isNotEmpty();
@@ -126,8 +125,8 @@ class GlobalManagerTest {
 
   @Test
   void transactionCompensationRoundTrip() {
-    var gm = GlobalManager.getInstance();
-    var order = new java.util.ArrayList<String>();
+    var gm = GlobalManager.globalManager();
+    var order = new ArrayList<String>();
     var tx = Dsl.transaction("CompTx")
             .input(String.class)
             .execute(ctx -> Result.success("ok"))
@@ -145,8 +144,8 @@ class GlobalManagerTest {
 
   @Test
   void directTransactionCompensationFindsRegisteredTransaction() {
-    var gm = GlobalManager.getInstance();
-    var order = new java.util.ArrayList<String>();
+    var gm = GlobalManager.globalManager();
+    var order = new ArrayList<String>();
     var tx = Dsl.transaction("DirectCompTx")
             .input(String.class)
             .execute(ctx -> Result.success("ok"))
@@ -163,14 +162,14 @@ class GlobalManagerTest {
 
   @Test
   void missingTransactionCompensationIsNoOp() {
-    var gm = GlobalManager.getInstance();
+    var gm = GlobalManager.globalManager();
     gm.compensateTransaction("MissingTx", "run-1", new RuntimeException("boom"));
     // no exception expected
   }
 
   @Test
   void runProcessWithCompensationReturnsSuccessValue() {
-    var gm = GlobalManager.getInstance();
+    var gm = GlobalManager.globalManager();
     var order = new ArrayList<String>();
 
     Object result = gm.runProcessWithCompensation(
@@ -180,8 +179,7 @@ class GlobalManagerTest {
               order.add("main");
               return Result.success("ok");
             },
-            (compCtx, error) -> order.add("compensate"),
-            List.of());
+            (compCtx, error) -> order.add("compensate"));
 
     assertThat(result).isEqualTo("ok");
     assertThat(order).containsExactly("main");
@@ -189,7 +187,7 @@ class GlobalManagerTest {
 
   @Test
   void runProcessWithCompensationInvokesCompensationOnFailure() {
-    var gm = GlobalManager.getInstance();
+    var gm = GlobalManager.globalManager();
     var order = new ArrayList<String>();
 
     Object result = gm.runProcessWithCompensation(
@@ -199,8 +197,7 @@ class GlobalManagerTest {
               order.add("main");
               return Result.failure(new RuntimeException("boom"));
             },
-            (compCtx, error) -> order.add("compensate:" + error.getMessage()),
-            List.of());
+            (compCtx, error) -> order.add("compensate:" + error.getMessage()));
 
     assertThat(result).isInstanceOf(DslTemporalProcessFailure.class);
     assertThat(((DslTemporalProcessFailure) result).message()).isEqualTo("Process failed");
@@ -209,7 +206,7 @@ class GlobalManagerTest {
 
   @Test
   void runProcessWithCompensationInvokesCompensationOnException() {
-    var gm = GlobalManager.getInstance();
+    var gm = GlobalManager.globalManager();
     var order = new ArrayList<String>();
 
     Object result = gm.runProcessWithCompensation(
@@ -219,8 +216,7 @@ class GlobalManagerTest {
               order.add("main");
               throw new IllegalStateException("bang");
             },
-            (compCtx, error) -> order.add("compensate:" + error.getClass().getSimpleName()),
-            List.of());
+            (compCtx, error) -> order.add("compensate:" + error.getClass().getSimpleName()));
 
     assertThat(result).isInstanceOf(DslTemporalProcessFailure.class);
     assertThat(((DslTemporalProcessFailure) result).detail())
@@ -230,7 +226,7 @@ class GlobalManagerTest {
 
   @Test
   void runProcessWithCompensationCompensatesTransactionsInReverseOrder() {
-    var gm = GlobalManager.getInstance();
+    var gm = GlobalManager.globalManager();
     var order = new ArrayList<String>();
 
     gm.registerTransaction(Dsl.transaction("TxA")
@@ -254,10 +250,66 @@ class GlobalManagerTest {
             "body",
             ctx -> Result.failure(new RuntimeException("boom")),
             (compCtx, error) -> {
-              /* process compensation is a no-op in this test */ },
-            List.of("TxA", "TxB"));
+              /* process compensation is a no-op in this test */ });
 
     assertThat(result).isInstanceOf(DslTemporalProcessFailure.class);
     assertThat(order).containsExactly("TxB", "TxA");
   }
+  @Test
+  void runTransactionWithCompensationReturnsSuccessValue() {
+    var gm = GlobalManager.globalManager();
+    gm.registerTransaction(Dsl.transaction("SugarTx")
+            .input(String.class)
+            .execute(ctx -> Result.success("tx-" + ctx.body()))
+            .build());
+
+    Object result = gm.runTransactionWithCompensation("SugarTx", "run-1", "payload");
+
+    assertThat(result).isEqualTo("tx-payload");
+  }
+
+  @Test
+  void runTransactionWithCompensationThrowsOnFailure() {
+    var gm = GlobalManager.globalManager();
+    gm.registerTransaction(Dsl.transaction("FailingSugarTx")
+            .execute(ctx -> Result.failure(new RuntimeException("boom")))
+            .build());
+
+    assertThatThrownBy(() -> gm.runTransactionWithCompensation("FailingSugarTx", "run-1", "x"))
+            .isInstanceOf(RuntimeException.class)
+            .hasMessage("Transaction failed")
+            .cause()
+            .hasMessage("boom");
+  }
+
+  @Test
+  void compensateTransactionWithInputRunsCompensationLogic() {
+    var gm = GlobalManager.globalManager();
+    var order = new ArrayList<String>();
+    gm.registerTransaction(Dsl.transaction("CompSugarTx")
+            .input(String.class)
+            .execute(ctx -> Result.success("ok"))
+            .compensation(ctx -> {
+              order.add("comp:" + ctx.body());
+              return Result.success(null);
+            })
+            .build());
+
+    gm.compensateTransaction("CompSugarTx", "run-1", "input", new RuntimeException("boom"));
+
+    assertThat(order).containsExactly("comp:input");
+  }
+
+  @Test
+  void compensateTransactionWithInputIsNoOpWhenCompensationMissing() {
+    var gm = GlobalManager.globalManager();
+    gm.registerTransaction(Dsl.transaction("NoCompSugarTx")
+            .input(String.class)
+            .execute(ctx -> Result.success("ok"))
+            .build());
+
+    gm.compensateTransaction("NoCompSugarTx", "run-1", "input", new RuntimeException("boom"));
+    // no exception expected
+  }
+
 }

@@ -2,27 +2,30 @@ package cbs.nova.misc.codegen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.HelperInstanceResolver;
 import cbs.nova.dsl.HelperResolver;
-import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaFileObject;
-import javax.tools.ToolProvider;
-
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import javax.tools.DiagnosticCollector;
+import javax.tools.JavaFileObject;
+import javax.tools.ToolProvider;
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mock;
 
 @Slf4j
 class HelperSpiProcessorTest {
 
   @TempDir
   Path tempDir;
+
+  @Mock
+  HelperInstanceResolver helperInstanceResolver;
 
   @Test
   void processorGeneratesResolverForValidHelper() throws Exception {
@@ -86,7 +89,7 @@ class HelperSpiProcessorTest {
       Class<?> resolverCls = loader.loadClass("fixture.GeneratedHelperResolver");
       HelperResolver resolver = (HelperResolver) resolverCls.getDeclaredConstructor().newInstance();
       List<String> registered = new ArrayList<>();
-      resolver.registerHelpers((name, helper) -> registered.add(name));
+      resolver.registerHelpers((name, _) -> registered.add(name), helperInstanceResolver);
       assertThat(registered).containsExactly("greetHelper");
     }
   }

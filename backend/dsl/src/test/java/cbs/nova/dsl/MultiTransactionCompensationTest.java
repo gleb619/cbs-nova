@@ -5,9 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.process.ProcessRunner;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
+import org.junit.jupiter.api.Test;
 
 class MultiTransactionCompensationTest {
 
@@ -36,8 +35,8 @@ class MultiTransactionCompensationTest {
               return Result.success(null);
             })
             .build();
-    GlobalManager.getInstance().registerTransaction(t1);
-    GlobalManager.getInstance().registerTransaction(t2);
+    GlobalManager.globalManager().registerTransaction(t1);
+    GlobalManager.globalManager().registerTransaction(t2);
 
     var process = Dsl.process("P")
             .input(String.class)
@@ -53,6 +52,6 @@ class MultiTransactionCompensationTest {
     runner.run(process, ctx);
 
     assertThat(order).containsExactly("T2-compensated", "T1-compensated");
-    GlobalManager.getInstance().resetForTests();
+    GlobalManager.globalManager().resetForTests();
   }
 }

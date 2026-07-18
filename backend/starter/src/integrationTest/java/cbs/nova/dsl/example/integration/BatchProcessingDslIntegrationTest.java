@@ -18,6 +18,8 @@ import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
+import java.time.Duration;
+import java.util.List;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -29,9 +31,6 @@ import org.testcontainers.containers.wait.strategy.WaitAllStrategy;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
-
-import java.time.Duration;
-import java.util.List;
 
 /**
  * End-to-end test that exercises the public service API rather than a generated workflow interface.
@@ -82,10 +81,10 @@ class BatchProcessingDslIntegrationTest {
 
   @BeforeAll
   static void setUp() {
-    GlobalManager.getInstance().resetForTests();
+    GlobalManager.globalManager().resetForTests();
     DslConfig.dslConfig().temporalProcessLauncher().replace(null);
 
-    var globalManager = GlobalManager.getInstance();
+    var globalManager = GlobalManager.globalManager();
     new DefinitionLoader().load(globalManager);
     assertThat(globalManager.hasProcess("BatchProcessing"))
             .as("DSL process BatchProcessing should be loaded")

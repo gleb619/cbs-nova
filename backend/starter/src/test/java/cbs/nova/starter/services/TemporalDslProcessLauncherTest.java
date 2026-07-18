@@ -20,13 +20,12 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.SimpleContext;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
-import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-
 import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 class TemporalDslProcessLauncherTest {
 
@@ -214,7 +213,7 @@ class TemporalDslProcessLauncherTest {
   }
 
   private static void registerDescriptor(String name) {
-    GlobalManager.getInstance().registerGeneratedClass(
+    GlobalManager.globalManager().registerGeneratedClass(
             new GeneratedClassDescriptor(
                     name, DslType.PROCESS, "1.0", "tq",
                     LauncherTestProcess.class, LauncherTestProcessImpl.class, null, null, "{}"));

@@ -6,14 +6,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.starter.config.DslAutoConfiguration;
 import cbs.nova.starter.listeners.ExternalCallListener;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class DslAutoConfigurationTest {
 
@@ -22,7 +21,7 @@ class DslAutoConfigurationTest {
 
   @AfterEach
   void resetGlobalManager() {
-    GlobalManager.getInstance().resetForTests();
+    GlobalManager.globalManager().resetForTests();
   }
 
   @Test
@@ -49,12 +48,12 @@ class DslAutoConfigurationTest {
 
   @Test
   void registersHelpersFromGeneratedResolver() {
-    GlobalManager.getInstance().resetForTests();
+    GlobalManager.globalManager().resetForTests();
     var config = new DslAutoConfiguration();
 
     config.loadDslDefinitions();
 
-    assertThat(GlobalManager.getInstance().hasHelper("currentTimestamp")).isTrue();
+    assertThat(GlobalManager.globalManager().hasHelper("currentTimestamp")).isTrue();
   }
 
   @Test

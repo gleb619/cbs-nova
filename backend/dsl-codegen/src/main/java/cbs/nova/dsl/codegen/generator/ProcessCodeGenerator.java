@@ -1,19 +1,22 @@
-package cbs.nova.dsl.codegen;
+package cbs.nova.dsl.codegen.generator;
 
+import cbs.nova.dsl.DslGenerated;
 import cbs.nova.dsl.DslTemporalProcess;
 import cbs.nova.dsl.DslTemporalProcessRequest;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.ProcessCompensation;
 import cbs.nova.dsl.ProcessMain;
+import cbs.nova.dsl.codegen.model.CodegenNaming;
+import cbs.nova.dsl.codegen.model.GeneratedSource;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.utils.Substitutor;
-import lombok.RequiredArgsConstructor;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
+import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 @RequiredArgsConstructor
 public final class ProcessCodeGenerator {
@@ -36,8 +39,7 @@ public final class ProcessCodeGenerator {
                     generateInterface(pkg, interfaceName, descriptor)),
             new GeneratedSource(
                     pkg, implName, generateImpl(pkg, name, interfaceName, implName,
-                            versionConstant, descriptor.inputType(),
-                            descriptor.transactionRefs())));
+                            versionConstant, descriptor.inputType())));
   }
 
   private static @NonNull String resolveVersion(
@@ -52,8 +54,11 @@ public final class ProcessCodeGenerator {
     addImport(imports, DslTemporalProcess.class);
     addImport(imports, DslTemporalProcessRequest.class);
     addImport(imports, descriptor.inputType());
+    addImport(imports, DslGenerated.class);
+    addImport(imports, Generated.class);
 
     String importBlock = imports.isEmpty() ? "" : "\n" + String.join("\n", imports) + "\n";
+    String annotation = GeneratorMetadata.annotation(ProcessCodeGenerator.class);
 
     return Substitutor.format(
             """
@@ -62,6 +67,7 @@ public final class ProcessCodeGenerator {
                     import io.temporal.workflow.WorkflowInterface;
                     import io.temporal.workflow.WorkflowMethod;
 
+                    ${annotation}
                     @WorkflowInterface
                     public interface ${interfaceName} extends DslTemporalProcess<${inputType}> {
 
@@ -76,13 +82,14 @@ public final class ProcessCodeGenerator {
             Map.of(
                     "pkg", pkg,
                     "importBlock", importBlock,
+                    "annotation", annotation,
                     "interfaceName", interfaceName,
                     "inputType", inputType));
   }
 
   private String generateImpl(
           String pkg, String processName, String interfaceName, String implName,
-          String versionConstant, Class<?> inputType, List<String> transactionRefs) {
+          String versionConstant, Class<?> inputType) {
     String inputTypeName = typeName(inputType);
     List<String> imports = new ArrayList<>();
     addImport(imports, DslTemporalProcessRequest.class);
@@ -90,13 +97,16 @@ public final class ProcessCodeGenerator {
     addImport(imports, GlobalManager.class);
     addImport(imports, ProcessMain.class);
     addImport(imports, ProcessCompensation.class);
+    addImport(imports, DslGenerated.class);
+    addImport(imports, Generated.class);
     imports.add("import java.util.List;");
 
-    String importBlock = imports.isEmpty() ? "" : "\n" + String.join("\n", imports) + "\n";
-    String transactionList = generateTransactionList(transactionRefs);
+    String importBlock = "\n" + String.join("\n", imports) + "\n";
+    String annotation = GeneratorMetadata.annotation(ProcessCodeGenerator.class);
 
     String template = """
             package ${pkg};${importBlock}
+            ${annotation}
             public class ${implName} implements ${interfaceName} {
 
               private static final String VERSION = "${version}";
@@ -109,13 +119,12 @@ public final class ProcessCodeGenerator {
               @Override
               public Object execute(DslTemporalProcessRequest<${inputTypeName}> request) {
                 ${inputTypeName} input = request.payload();
-                return GlobalManager.getInstance().runProcessWithCompensation(
+                return GlobalManager.globalManager().runProcessWithCompensation(
                         request.runId(),
                         input,
-                        ctx -> GlobalManager.getInstance().runProcess("${processName}", ctx),
-                        (compCtx, error) -> GlobalManager.getInstance()
-                                .compensateProcess("${processName}", compCtx, error),
-                        ${transactionList});
+                        ctx -> GlobalManager.globalManager().runProcess("${processName}", ctx),
+                        (compCtx, error) -> GlobalManager.globalManager()
+                                .compensateProcess("${processName}", compCtx, error));
               }
             }
             """;
@@ -125,27 +134,12 @@ public final class ProcessCodeGenerator {
             Map.ofEntries(
                     Map.entry("pkg", pkg),
                     Map.entry("importBlock", importBlock),
+                    Map.entry("annotation", annotation),
                     Map.entry("processName", processName),
                     Map.entry("interfaceName", interfaceName),
                     Map.entry("implName", implName),
                     Map.entry("version", versionConstant),
-                    Map.entry("inputTypeName", inputTypeName),
-                    Map.entry("transactionList", transactionList)));
-  }
-
-  private String generateTransactionList(List<String> transactionRefs) {
-    if (transactionRefs.isEmpty()) {
-      return "List.of()";
-    }
-    StringBuilder sb = new StringBuilder("List.of(");
-    for (int i = 0; i < transactionRefs.size(); i++) {
-      if (i > 0) {
-        sb.append(", ");
-      }
-      sb.append('"').append(transactionRefs.get(i)).append('"');
-    }
-    sb.append(')');
-    return sb.toString();
+                    Map.entry("inputTypeName", inputTypeName)));
   }
 
   private String typeName(Class<?> type) {

@@ -13,14 +13,13 @@ import cbs.nova.dslexamples.NestedCompensationModels.NestedCompensationIn;
 import cbs.nova.dslexamples.OrderSagaModels.OrderSagaIn;
 import cbs.nova.dslexamples.OrderSagaModels.OrderSagaOut;
 import cbs.nova.starter.config.DslAutoConfiguration;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 class AdvancedDslExamplesTest {
 
@@ -30,7 +29,7 @@ class AdvancedDslExamplesTest {
 
   @BeforeEach
   void loadCompactDsls() throws Exception {
-    GlobalManager.getInstance().resetForTests();
+    GlobalManager.globalManager().resetForTests();
     copyCompactDsl("OrderSagaDsl.java");
     copyCompactDsl("ExceptionProbeDsl.java");
     copyCompactDsl("NestedCompensationDsl.java");
@@ -42,7 +41,7 @@ class AdvancedDslExamplesTest {
 
   @AfterEach
   void cleanup() {
-    GlobalManager.getInstance().resetForTests();
+    GlobalManager.globalManager().resetForTests();
   }
 
   @Test
@@ -50,7 +49,7 @@ class AdvancedDslExamplesTest {
     var input = new OrderSagaIn("order1", 2);
     Context<OrderSagaIn> ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
 
-    Result<?> result = GlobalManager.getInstance().runProcess("OrderSaga", ctx);
+    Result<?> result = GlobalManager.globalManager().runProcess("OrderSaga", ctx);
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isInstanceOf(OrderSagaOut.class);
@@ -61,7 +60,7 @@ class AdvancedDslExamplesTest {
     var input = new ExceptionProbeIn(false, null);
     Context<ExceptionProbeIn> ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
 
-    Result<?> result = GlobalManager.getInstance().runProcess("ExceptionProbe", ctx);
+    Result<?> result = GlobalManager.globalManager().runProcess("ExceptionProbe", ctx);
 
     assertThat(result.isSuccess()).isTrue();
     ExceptionProbeOut out = (ExceptionProbeOut) result.value();
@@ -73,7 +72,7 @@ class AdvancedDslExamplesTest {
     var input = new ExceptionProbeIn(true, "test fail");
     Context<ExceptionProbeIn> ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
 
-    Result<?> result = GlobalManager.getInstance().runProcess("ExceptionProbe", ctx);
+    Result<?> result = GlobalManager.globalManager().runProcess("ExceptionProbe", ctx);
 
     assertThat(result.isSuccess()).isFalse();
   }
@@ -84,7 +83,7 @@ class AdvancedDslExamplesTest {
     Context<NestedCompensationIn> ctx = contextFactory.of(input,
             ExecutionMode.PREVIEW);
 
-    Result<?> result = GlobalManager.getInstance().runProcess("NestedCompensation", ctx);
+    Result<?> result = GlobalManager.globalManager().runProcess("NestedCompensation", ctx);
 
     assertThat(result.isSuccess()).isFalse();
   }

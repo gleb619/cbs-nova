@@ -5,10 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.RetryPolicyFactory;
+import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.Map;
 
 class DslBuilderTest {
 
@@ -70,8 +69,8 @@ class DslBuilderTest {
 
   @Test
   void processInvokesRegisteredHelperViaRichContext() {
-    GlobalManager.getInstance().resetForTests();
-    var gm = GlobalManager.getInstance();
+    GlobalManager.globalManager().resetForTests();
+    var gm = GlobalManager.globalManager();
     gm.registerHelper("greeter", ctx -> Result.success("hello"));
 
     var proc = Dsl.process("GreetProc")
@@ -145,8 +144,8 @@ class DslBuilderTest {
 
   @Test
   void parameterBasedProcessReceivesMapBodyFromMapInput() {
-    GlobalManager.getInstance().resetForTests();
-    var gm = GlobalManager.getInstance();
+    GlobalManager.globalManager().resetForTests();
+    var gm = GlobalManager.globalManager();
 
     var proc = Dsl.process("ParamProcess")
             .parameters(reg -> reg.string("name"))
@@ -167,8 +166,8 @@ class DslBuilderTest {
 
   @Test
   void parameterBasedProcessRunHelperWithMapInput() {
-    GlobalManager.getInstance().resetForTests();
-    var gm = GlobalManager.getInstance();
+    GlobalManager.globalManager().resetForTests();
+    var gm = GlobalManager.globalManager();
     gm.registerHelper("echo", ctx -> Result.success(ctx.body()));
 
     var proc = Dsl.process("ParamProcess")
@@ -188,6 +187,6 @@ class DslBuilderTest {
 
   @AfterEach
   void cleanup() {
-    GlobalManager.getInstance().resetForTests();
+    GlobalManager.globalManager().resetForTests();
   }
 }

@@ -8,15 +8,13 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.MapInput;
 import cbs.nova.dsl.ProcessContext;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.TransactionInvoker;
 import cbs.nova.dsl.TransactionRouting;
 import cbs.nova.dsl.config.ContextFactory;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
-
-import java.util.Map;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -69,14 +67,14 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name) {
-    Result<?> result = GlobalManager.getInstance().runHelper(name, delegate);
+    Result<?> result = GlobalManager.globalManager().runHelper(name, delegate);
     traceCollector.add(delegate.runId(), "called helper: " + name);
     return result;
   }
 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input) {
-    Result<?> result = GlobalManager.getInstance().runHelper(name,
+    Result<?> result = GlobalManager.globalManager().runHelper(name,
             contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
     traceCollector.add(delegate.runId(), "called helper: " + name);
     return result;
@@ -94,10 +92,10 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
       Map<String, Object> typed = (Map<String, Object>) map;
       return runHelper(name, typed);
     }
-    if (input instanceof MapInput mapInput) {
-      return runHelper(name, mapInput.values());
+    if (input instanceof MapInput(Map<String, Object> values)) {
+      return runHelper(name, values);
     }
-    Result<?> result = GlobalManager.getInstance().runHelper(name,
+    Result<?> result = GlobalManager.globalManager().runHelper(name,
             contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
     traceCollector.add(delegate.runId(), "called helper: " + name);
     return result;
@@ -113,7 +111,7 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   @Override
   public @NonNull Result<?> runTransaction(@NonNull String name,
           @NonNull Map<String, Object> input) {
-    Result<?> result = invokeTransaction(name, (Object) input);
+    Result<?> result = invokeTransaction(name, input);
     traceCollector.add(delegate.runId(), "executed transaction: " + name);
     return result;
   }
@@ -130,8 +128,8 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
       Map<String, Object> typed = (Map<String, Object>) map;
       return runTransaction(name, typed);
     }
-    if (input instanceof MapInput mapInput) {
-      return runTransaction(name, mapInput.values());
+    if (input instanceof MapInput(Map<String, Object> values)) {
+      return runTransaction(name, values);
     }
     Result<?> result = invokeTransaction(name, input);
     traceCollector.add(delegate.runId(), "executed transaction: " + name);
@@ -142,12 +140,12 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
     Context<Object> ctx = contextFactory.of(input, delegate.metadata(), delegate.mode(),
             delegate.runId(), delegate.transactionRouting(), delegate.executionListener());
     if (delegate.transactionRouting() == TransactionRouting.TEMPORAL_ACTIVITY) {
-      var invoker = GlobalManager.getInstance().transactionInvoker().orElse(null);
+      var invoker = GlobalManager.globalManager().transactionInvoker().orElse(null);
       if (invoker != null) {
         return invoker.invoke(name, input, ctx);
       }
     }
-    return GlobalManager.getInstance().runTransaction(name, ctx);
+    return GlobalManager.globalManager().runTransaction(name, ctx);
   }
 
   @Override

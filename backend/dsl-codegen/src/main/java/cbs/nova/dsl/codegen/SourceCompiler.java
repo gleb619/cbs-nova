@@ -2,18 +2,9 @@ package cbs.nova.dsl.codegen;
 
 import cbs.nova.dsl.DslDefinitionProvider;
 import cbs.nova.dsl.DslObject;
+import cbs.nova.dsl.codegen.generator.DefinitionProviderGenerator;
 import cbs.nova.dsl.compact.CompactSourcePreprocessor;
 import cbs.nova.dsl.compact.ModelSourcePreprocessor;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
-import org.slf4j.event.Level;
-
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaCompiler;
-import javax.tools.JavaFileObject;
-import javax.tools.StandardJavaFileManager;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -27,6 +18,14 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Stream;
+import javax.tools.DiagnosticCollector;
+import javax.tools.JavaCompiler;
+import javax.tools.JavaFileObject;
+import javax.tools.StandardJavaFileManager;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
+import org.slf4j.event.Level;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -34,16 +33,17 @@ public final class SourceCompiler {
 
   private final Level logLevel;
   private final DefinitionProviderGenerator definitionProviderGenerator;
+  private final CodeWriter codeWriter;
 
   public @NonNull List<DslObject> compileAndLoad(
           @NonNull Path srcDir,
           @NonNull Path outputDir,
           @NonNull JavaCompiler compiler,
           CompileOptions options) throws IOException {
-    Files.createDirectories(outputDir);
+    codeWriter.createDirectories(outputDir);
 
-    var dslDir = srcDir.resolve("dsl");
-    var modelsDir = srcDir.resolve("models");
+    var dslDir = srcDir.resolve(CompilerConstants.DSL_FOLDER);
+    var modelsDir = srcDir.resolve(CompilerConstants.MODELS_FOLDER);
     var classpath = System.getProperty("java.class.path");
 
     var dslSources = collectJavaSources(dslDir);
@@ -96,10 +96,7 @@ public final class SourceCompiler {
     var providerFqcn = definitionProviderGenerator.generate(
             outputDir, compiledClassNames, targetPackage);
     var providerSource = outputDir.resolve(
-            (targetPackage != null && !targetPackage.isBlank())
-                    ? targetPackage.replace('.', '/') + "/"
-                            + DefinitionProviderGenerator.PROVIDER_CLASS + ".java"
-                    : DefinitionProviderGenerator.PROVIDER_CLASS + ".java");
+            parsePackage(targetPackage));
     compileProvider(compiler, classpath, providerSource, outputDir);
 
     return loadDefinitions(outputDir, providerFqcn);
@@ -162,7 +159,7 @@ public final class SourceCompiler {
     var written = new ArrayList<PreprocessedSource>();
     for (var result : results) {
       var outputFile = outputDir.resolve(result.fileName());
-      Files.writeString(outputFile, result.source());
+      codeWriter.write(outputFile, result.source());
       log.atLevel(logLevel).log(() -> "[SourceCompiler] Preprocessed %s -> %s"
               .formatted(result.fileName(), outputFile));
       written.add(new PreprocessedSource(result.className(), outputFile));
@@ -284,6 +281,15 @@ public final class SourceCompiler {
                       .formatted(e.getMessage()));
     }
     return List.of();
+  }
+
+  private String parsePackage(String targetPackage) {
+    if (targetPackage != null && !targetPackage.isBlank()) {
+      String packagePath = targetPackage.replace('.', '/');
+      return "%s/%s.java".formatted(packagePath, DefinitionProviderGenerator.PROVIDER_CLASS);
+    }
+
+    return DefinitionProviderGenerator.PROVIDER_CLASS + ".java";
   }
 
   /* ============= */

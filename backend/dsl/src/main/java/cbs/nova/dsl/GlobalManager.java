@@ -1,25 +1,20 @@
 package cbs.nova.dsl;
 
 import cbs.nova.dsl.config.DslConfig;
-import cbs.nova.dsl.context.DefaultProcessContextFactory;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.process.ProcessManager;
-import cbs.nova.dsl.registry.DefaultHelperRegistry;
-import cbs.nova.dsl.registry.DefaultProcessRegistry;
-import cbs.nova.dsl.registry.DefaultTransactionRegistry;
 import cbs.nova.dsl.registry.GeneratedClassRegistry;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.dsl.transaction.TransactionManager;
-import lombok.RequiredArgsConstructor;
-import org.jspecify.annotations.NonNull;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.concurrent.atomic.AtomicReference;
+import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 
 @RequiredArgsConstructor
 public final class GlobalManager {
@@ -32,24 +27,13 @@ public final class GlobalManager {
   private final GeneratedClassRegistry generatedClassRegistry;
   private final ProcessContextFactory processContextFactory;
   private final CompensationRegistry compensationRegistry;
+  private final HelperInstanceResolver helperInstanceResolver;
 
-  public static @NonNull GlobalManager getInstance() {
+  public static @NonNull GlobalManager globalManager() {
     if (INSTANCE == null) {
       synchronized (GlobalManager.class) {
         if (INSTANCE == null) {
-          var config = DslConfig.dslConfig();
-          var traceCollector = config.executionTraceCollector();
-          var contextFactory = config.contextFactory();
-          INSTANCE = new GlobalManager(
-                  new ProcessManager(new DefaultProcessRegistry(),
-                          config.processRunner(traceCollector, contextFactory)),
-                  new TransactionManager(new DefaultTransactionRegistry(),
-                          config.transactionRunner(traceCollector, contextFactory)),
-                  new HelperManager(new DefaultHelperRegistry(),
-                          config.helperRunner(traceCollector, contextFactory)),
-                  new GeneratedClassRegistry(),
-                  new DefaultProcessContextFactory(),
-                  new CompensationRegistry());
+          INSTANCE = DslConfig.dslConfig().globalManager();
         }
       }
     }
@@ -69,7 +53,7 @@ public final class GlobalManager {
   }
 
   public void registerHelpers(@NonNull HelperResolver resolver) {
-    resolver.registerHelpers(helperManager::registerHelper);
+    resolver.registerHelpers(helperManager, helperInstanceResolver);
   }
 
   public void registerHelperResolvers() {
@@ -89,6 +73,7 @@ public final class GlobalManager {
     return processContextFactory.create(body, metadata, mode, runId);
   }
 
+  @Deprecated(forRemoval = true)
   public @NonNull Context<?> createContext(
           @NonNull Object body,
           @NonNull Map<String, Object> metadata,
@@ -120,6 +105,19 @@ public final class GlobalManager {
 
   public @NonNull Result<?> runTransaction(@NonNull String name, @NonNull Context<?> ctx) {
     return transactionManager.execute(name, ctx);
+  }
+
+  public @NonNull Object runTransactionWithCompensation(
+          @NonNull String name,
+          @NonNull String runId,
+          @NonNull Object input) {
+    var ctx = createContext(input, Map.of(), ExecutionMode.RUN, runId)
+            .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);
+    var result = runTransaction(name, ctx);
+    if (!result.isSuccess()) {
+      throw new RuntimeException("Transaction failed", result.cause());
+    }
+    return result.value();
   }
 
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Context<?> ctx) {
@@ -197,14 +195,17 @@ public final class GlobalManager {
     return generatedClassRegistry.findProcess(name).isPresent();
   }
 
+  @Deprecated(forRemoval = true)
   public boolean hasGeneratedTransaction(@NonNull String name) {
     return generatedClassRegistry.findTransaction(name).isPresent();
   }
 
+  @Deprecated(forRemoval = true)
   public @NonNull List<GeneratedClassDescriptor> generatedProcesses() {
     return generatedClassRegistry.processes();
   }
 
+  @Deprecated(forRemoval = true)
   public @NonNull List<GeneratedClassDescriptor> generatedTransactions() {
     return generatedClassRegistry.transactions();
   }
@@ -217,10 +218,6 @@ public final class GlobalManager {
     return Optional.ofNullable(DslConfig.dslConfig().transactionInvoker().get());
   }
 
-  /**
-   * Registers a compensation for the given transaction and run id. Returns {@code true} when the
-   * transaction exists and has a compensation block.
-   */
   public boolean registerTransactionCompensation(
           @NonNull String name,
           @NonNull String runId,
@@ -230,7 +227,6 @@ public final class GlobalManager {
             .orElse(false);
   }
 
-  /** Invokes a previously registered transaction compensation, if any. */
   public void compensateTransaction(@NonNull String name, @NonNull String runId,
           @NonNull Throwable error) {
     var config = DslConfig.dslConfig();
@@ -238,7 +234,6 @@ public final class GlobalManager {
             config.contextFactory());
   }
 
-  /** Compensates a transaction directly, handling the find/if-null boilerplate internally. */
   public void compensateTransaction(
           @NonNull String name,
           @NonNull Context<?> ctx,
@@ -251,7 +246,15 @@ public final class GlobalManager {
     });
   }
 
-  /** Compensates a process directly, handling the find/if-null boilerplate internally. */
+  public void compensateTransaction(
+          @NonNull String name,
+          @NonNull String runId,
+          @NonNull Object input,
+          @NonNull Throwable error) {
+    var ctx = createContext(input, Map.of(), ExecutionMode.COMPENSATION, runId);
+    compensateTransaction(name, ctx, error);
+  }
+
   public void compensateProcess(
           @NonNull String name,
           @NonNull Context<?> ctx,
@@ -264,21 +267,11 @@ public final class GlobalManager {
     });
   }
 
-  /**
-   * Executes the main process logic under a compensation saga. When the main logic returns a
-   * failure or throws, the registered compensations are run in reverse order and a
-   * {@link DslTemporalProcessFailure} is returned.
-   *
-   * <p>
-   * This method is intended to be called from generated Temporal process workflows so that the saga
-   * orchestration lives in the runtime rather than in generated code.
-   */
   public @NonNull Object runProcessWithCompensation(
           @NonNull String runId,
           @NonNull Object input,
           @NonNull ProcessMain main,
-          @NonNull ProcessCompensation compensation,
-          @NonNull List<String> transactionRefs) {
+          @NonNull ProcessCompensation compensation) {
     var saga = new CompensationSaga();
     var ctx = createContext(input, Map.of(), ExecutionMode.RUN, runId)
             .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);
@@ -290,7 +283,8 @@ public final class GlobalManager {
                     ? failureRef.get()
                     : new RuntimeException("compensation triggered")));
 
-    for (String tx : transactionRefs) {
+    // TODO: refactor
+    for (String tx : List.<String>of()) {
       if (registerTransactionCompensation(tx, runId, ctx)) {
         saga.addCompensation(() -> compensateTransaction(tx, runId,
                 failureRef.get() != null
@@ -321,11 +315,6 @@ public final class GlobalManager {
     DslConfig.dslConfig().transactionInvoker().replace(null);
   }
 
-  /**
-   * Lightweight LIFO compensation runner that mirrors a Temporal {@code Saga} without requiring a
-   * workflow thread. Compensations are recorded in registration order and executed in reverse order
-   * when {@link #compensate()} is invoked.
-   */
   private static final class CompensationSaga {
 
     private final List<Runnable> compensations = new ArrayList<>();

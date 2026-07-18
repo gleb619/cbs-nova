@@ -1,29 +1,27 @@
-package cbs.nova.dsl.codegen;
+package cbs.nova.dsl.codegen.generator;
+
+import static cbs.nova.dsl.codegen.util.EscapeUtil.escapeJavaString;
 
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.DslObject.DslType;
-import cbs.nova.dsl.GeneratedClassDescriptor;
+import cbs.nova.dsl.codegen.model.CodegenNaming;
+import cbs.nova.dsl.codegen.model.GeneratedSource;
+import cbs.nova.dsl.codegen.util.AstExtractor;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.utils.Substitutor;
-import lombok.RequiredArgsConstructor;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 @RequiredArgsConstructor
 public final class GeneratedClassProviderGenerator {
 
   private final CodegenNaming codegenNaming;
-
-  public @NonNull GeneratedSource forProcess(
-          @NonNull ProcessDescriptor descriptor,
-          @Nullable String targetPackage) {
-    return forProcess(descriptor, null, targetPackage);
-  }
+  private final AstExtractor executeAstJsonExtractor;
 
   public @NonNull GeneratedSource forProcess(
           @NonNull ProcessDescriptor descriptor,
@@ -43,18 +41,12 @@ public final class GeneratedClassProviderGenerator {
     String interfaceName = name + "ProcessWorkflow";
     String implName = name + "ProcessDefinition";
     String providerClass = name + "GeneratedClassProvider";
-    String executeJson = ExecuteAstJsonExtractor.extract(
+    String executeJson = executeAstJsonExtractor.extract(
             preprocessedSources, name, DslType.PROCESS);
 
     return buildSource(pkg, providerClass, DslObject.DslType.PROCESS, descriptor.name(),
             version, descriptor.taskQueue(), interfaceName, implName,
             descriptor.inputType(), descriptor.outputType(), executeJson);
-  }
-
-  public @NonNull GeneratedSource forTransaction(
-          @NonNull TransactionDescriptor descriptor,
-          @Nullable String targetPackage) {
-    return forTransaction(descriptor, null, targetPackage);
   }
 
   public @NonNull GeneratedSource forTransaction(
@@ -75,7 +67,7 @@ public final class GeneratedClassProviderGenerator {
     String interfaceName = name + "TransactionActivity";
     String implName = name + "TransactionDefinition";
     String providerClass = name + "GeneratedClassProvider";
-    String executeJson = ExecuteAstJsonExtractor.extract(
+    String executeJson = executeAstJsonExtractor.extract(
             preprocessedSources, name, DslType.TRANSACTION);
 
     return buildSource(pkg, providerClass, DslObject.DslType.TRANSACTION, descriptor.name(),
@@ -102,15 +94,22 @@ public final class GeneratedClassProviderGenerator {
     addImport(imports, outputType);
 
     String importBlock = imports.isEmpty() ? "" : "\n" + String.join("\n", imports) + "\n";
+    String annotation = GeneratorMetadata.annotation(GeneratedClassProviderGenerator.class);
 
     String source = Substitutor.format(
             """
                     package ${pkg};${importBlock}
+                    import cbs.nova.dsl.DslGenerated;
                     import cbs.nova.dsl.DslObject;
                     import cbs.nova.dsl.GeneratedClassDescriptor;
                     import cbs.nova.dsl.GeneratedClassProvider;
+                    import javax.annotation.processing.Generated;
 
+                    ${annotation}
                     public final class ${providerClass} implements GeneratedClassProvider {
+
+                      private static final String JSON_SPEC = "${executeJsonLiteral}";
+
                       @Override
                       public GeneratedClassDescriptor descriptor() {
                         return new GeneratedClassDescriptor(
@@ -122,7 +121,8 @@ public final class GeneratedClassProviderGenerator {
                                 ${implName}.class,
                                 ${inputLiteral},
                                 ${outputLiteral},
-                                "${executeJsonLiteral}");
+                                JSON_SPEC
+                                );
                       }
 
                       @Override
@@ -135,6 +135,7 @@ public final class GeneratedClassProviderGenerator {
             Map.ofEntries(
                     Map.entry("pkg", pkg),
                     Map.entry("importBlock", importBlock),
+                    Map.entry("annotation", annotation),
                     Map.entry("providerClass", providerClass),
                     Map.entry("type", type.name()),
                     Map.entry("name", name),
@@ -149,30 +150,6 @@ public final class GeneratedClassProviderGenerator {
     return new GeneratedSource(pkg, providerClass, source);
   }
 
-  private static @NonNull String escapeJavaString(@NonNull String value) {
-    var sb = new StringBuilder(value.length() + 2);
-    for (int i = 0; i < value.length(); i++) {
-      char c = value.charAt(i);
-      switch (c) {
-        case '"' -> sb.append("\\\"");
-        case '\\' -> sb.append("\\\\");
-        case '\b' -> sb.append("\\b");
-        case '\f' -> sb.append("\\f");
-        case '\n' -> sb.append("\\n");
-        case '\r' -> sb.append("\\r");
-        case '\t' -> sb.append("\\t");
-        default -> {
-          if (c < 0x20) {
-            sb.append(String.format("\\u%04x", (int) c));
-          } else {
-            sb.append(c);
-          }
-        }
-      }
-    }
-    return sb.toString();
-  }
-
   private String typeLiteral(Class<?> type) {
     return type == null ? "null" : type.getSimpleName() + ".class";
   }
@@ -181,6 +158,6 @@ public final class GeneratedClassProviderGenerator {
     if (type == null || type.getPackageName().startsWith("java.lang")) {
       return;
     }
-    imports.add("import " + type.getCanonicalName() + ";");
+    imports.add("import %s;".formatted(type.getCanonicalName()));
   }
 }

@@ -15,12 +15,12 @@ class DslHealthIndicatorTest {
 
   @BeforeEach
   void setUp() {
-    GlobalManager.getInstance().resetForTests();
+    GlobalManager.globalManager().resetForTests();
   }
 
   @AfterEach
   void tearDown() {
-    GlobalManager.getInstance().resetForTests();
+    GlobalManager.globalManager().resetForTests();
   }
 
   @Test
@@ -31,7 +31,7 @@ class DslHealthIndicatorTest {
 
   @Test
   void healthDetailsReportCounts() {
-    GlobalManager.getInstance()
+    GlobalManager.globalManager()
             .registerProcess(
                     Dsl.process("Loan").execute(ctx -> Result.success("ok")).build());
     var indicator = new DslHealthIndicator();

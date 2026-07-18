@@ -2,11 +2,10 @@ package cbs.nova.dsl.codegen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class DslCompilerTest {
 
@@ -17,7 +16,7 @@ class DslCompilerTest {
 
   @Test
   void compilesProcessDslAndWritesFiles() throws Exception {
-    var dslDir = Files.createDirectories(srcDir.resolve("dsl"));
+    var dslDir = Files.createDirectories(srcDir.resolve(CompilerConstants.DSL_FOLDER));
     Files.writeString(
             dslDir.resolve("TestProcess.java"),
             """
@@ -48,7 +47,7 @@ class DslCompilerTest {
 
   @Test
   void compilesTransactionDslAndWritesFiles() throws Exception {
-    var dslDir = Files.createDirectories(srcDir.resolve("dsl"));
+    var dslDir = Files.createDirectories(srcDir.resolve(CompilerConstants.DSL_FOLDER));
     Files.writeString(
             dslDir.resolve("TestTx.java"),
             """
@@ -79,8 +78,8 @@ class DslCompilerTest {
 
   @Test
   void usesBuildVersionAndTargetPackage() throws Exception {
-    var dslDir = Files.createDirectories(srcDir.resolve("dsl"));
-    var modelsDir = Files.createDirectories(srcDir.resolve("models"));
+    var dslDir = Files.createDirectories(srcDir.resolve(CompilerConstants.DSL_FOLDER));
+    var modelsDir = Files.createDirectories(srcDir.resolve(CompilerConstants.MODELS_FOLDER));
     Files.writeString(
             modelsDir.resolve("TestModels.java"),
             """
@@ -124,7 +123,7 @@ class DslCompilerTest {
 
   @Test
   void compilesParameterBasedProcessWithMapInput() throws Exception {
-    var dslDir = Files.createDirectories(srcDir.resolve("dsl"));
+    var dslDir = Files.createDirectories(srcDir.resolve(CompilerConstants.DSL_FOLDER));
     Files.writeString(
             dslDir.resolve("ParamProcess.java"),
             """

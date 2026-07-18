@@ -2,7 +2,6 @@ package cbs.nova.dsl.process;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExecutionTraceCollector;
@@ -12,10 +11,9 @@ import cbs.nova.dsl.TransactionInvoker;
 import cbs.nova.dsl.TransactionRouting;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.concurrent.atomic.AtomicReference;
 
 class ProcessRichContextTest {
 
@@ -24,12 +22,12 @@ class ProcessRichContextTest {
 
   @BeforeEach
   void reset() {
-    GlobalManager.getInstance().resetForTests();
+    GlobalManager.globalManager().resetForTests();
   }
 
   @Test
   void localRoutingRunsTransactionDirectly() {
-    var gm = GlobalManager.getInstance();
+    var gm = GlobalManager.globalManager();
     gm.registerTransaction(
             Dsl.transaction("TestTx").execute(ctx -> Result.success("local")).build());
 
@@ -43,16 +41,16 @@ class ProcessRichContextTest {
 
   @Test
   void temporalRoutingDelegatesToRegisteredInvoker() {
-    var gm = GlobalManager.getInstance();
+    var gm = GlobalManager.globalManager();
     gm.registerTransaction(
             Dsl.transaction("TestTx").execute(ctx -> Result.success("local")).build());
 
     AtomicReference<String> invoked = new AtomicReference<>();
     DslConfig.dslConfig().transactionInvoker().replace(
-            (TransactionInvoker) (name, input, ctx) -> {
-              invoked.set(name);
-              return Result.success("invoked:" + name);
-            });
+        (name, input, ctx) -> {
+          invoked.set(name);
+          return Result.success("invoked:" + name);
+        });
 
     var ctx = contextFactory.of("body", ExecutionMode.RUN, "r1")
             .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);
@@ -66,7 +64,7 @@ class ProcessRichContextTest {
 
   @Test
   void temporalRoutingFallsBackToLocalRunnerWhenNoInvokerRegistered() {
-    var gm = GlobalManager.getInstance();
+    var gm = GlobalManager.globalManager();
     gm.registerTransaction(
             Dsl.transaction("TestTx").execute(ctx -> Result.success("fallback")).build());
 

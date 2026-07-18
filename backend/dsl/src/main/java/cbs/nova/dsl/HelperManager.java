@@ -3,20 +3,24 @@ package cbs.nova.dsl;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.registry.HelperRegistry;
 import cbs.nova.dsl.runner.HelperRunner;
+import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
-import java.util.List;
-import java.util.Optional;
-
 @RequiredArgsConstructor
-public final class HelperManager {
+public final class HelperManager implements HelperRegistrar {
 
   private final HelperRegistry registry;
   private final HelperRunner runner;
 
   public void registerHelper(@NonNull String name, @NonNull Executable<?, ?> helper) {
     registry.registerHelper(name, helper);
+  }
+
+  @Override
+  public void register(@NonNull String name, @NonNull Executable<?, ?> helper) {
+    registerHelper(name, helper);
   }
 
   public void registerFunction(@NonNull FunctionDslObject fn) {

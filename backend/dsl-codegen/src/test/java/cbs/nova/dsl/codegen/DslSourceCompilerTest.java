@@ -3,12 +3,11 @@ package cbs.nova.dsl.codegen;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.event.Level;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 class DslSourceCompilerTest {
 
@@ -18,7 +17,7 @@ class DslSourceCompilerTest {
 
   @Test
   void compilesAndLoadsValidProcess(@TempDir Path srcDir) throws Exception {
-    var dslDir = Files.createDirectories(srcDir.resolve("dsl"));
+    var dslDir = Files.createDirectories(srcDir.resolve(CompilerConstants.DSL_FOLDER));
     Files.writeString(
             dslDir.resolve("GoodProcess.java"),
             """
@@ -47,7 +46,7 @@ class DslSourceCompilerTest {
   @Test
   void ignoresFilesThatFailToCompile(@TempDir Path srcDir) {
     try {
-      var dslDir = Files.createDirectories(srcDir.resolve("dsl"));
+      var dslDir = Files.createDirectories(srcDir.resolve(CompilerConstants.DSL_FOLDER));
       Files.writeString(dslDir.resolve("BadFile.java"), "this is not valid java !!!;");
     } catch (Exception e) {
       throw new RuntimeException(e);

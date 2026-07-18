@@ -27,7 +27,7 @@ dependencies {
 
 dslCompile {
   dslPackage = 'cbs.nova.dslexamples'
-  buildVersion = 'v1'
+  buildVersion = 'v1' // v1 added only for convenience
 }
 
 spotless {

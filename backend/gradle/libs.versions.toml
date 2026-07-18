@@ -1,6 +1,7 @@
 [versions]
 java = "25"
 jspecify = "1.0.0"
+orgjson = "20240303"
 junit = "5.12.2"
 assertj = "3.27.3"
 temporal = "1.27.0"
@@ -8,6 +9,7 @@ javaparser = "3.28.1"
 wiremock = "3.13.2"
 testcontainers = "1.21.3"
 slf4j = "2.0.16"
+mockito = "5.23.0"
 sentry = "7.0.0"
 lombok = "1.18.38"
 keycloak-admin-client = "22.0.0"
@@ -23,16 +25,14 @@ spotless = "7.0.2"
 test-logger = "4.0.0"
 
 [libraries]
-# -- Nullability --
-jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
-
 # -- Temporal --
 temporal-sdk = { module = "io.temporal:temporal-sdk", version.ref = "temporal" }
 temporal-testing = { module = "io.temporal:temporal-testing", version.ref = "temporal" }
 
-# -- Avaje Jsonb --
+# -- Json --
 avaje-jsonb = { module = "io.avaje:avaje-jsonb", version.ref = "avaje-jsonb" }
 avaje-jsonb-generator = { module = "io.avaje:avaje-jsonb-generator", version.ref = "avaje-jsonb-generator" }
+orgjson = { module = "org.json:json", version.ref = "orgjson" }
 
 # -- JavaParser (used by dsl-codegen and dsl preprocessing) --
 javaparser = { module = "com.github.javaparser:javaparser-core", version.ref = "javaparser" }
@@ -43,19 +43,21 @@ testcontainers-core = { module = "org.testcontainers:testcontainers", version.re
 testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
 testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
 
-# -- JUnit (BOM keeps platform and jupiter aligned) --
+# -- JUnit --
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "rest-assured" }
 wiremock = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
 
 # -- SLF4J --
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
 
-# -- Spring Boot (versions managed by the Spring Boot BOM) --
+# -- Spring Boot --
 spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
 spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
 spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
@@ -65,6 +67,7 @@ sentry-spring-boot-jakarta = { module = "io.sentry:sentry-spring-boot-starter-ja
 springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc-openapi" }
 
 # -- Misc --
+jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 keycloak-admin-client = { module = "org.keycloak:keycloak-admin-client", version.ref = "keycloak-admin-client" }
 

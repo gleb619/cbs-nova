@@ -2,12 +2,12 @@ package cbs.nova.dsl.codegen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
+import cbs.nova.dsl.codegen.model.GeneratedSource;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class CodeWriterTest {
 
@@ -38,5 +38,24 @@ class CodeWriterTest {
     var dir = tempDir.resolve("cbs/nova/dsl/generated/loan/v1");
     assertThat(dir.resolve("LoanProcessWorkflow.java")).exists();
     assertThat(dir.resolve("LoanProcessDefinition.java")).exists();
+  }
+
+  @Test
+  void writesRawFileAndCreatesParentDirectories() throws Exception {
+    var writer = new CodeWriter();
+    var file = tempDir.resolve("a/b/c/Test.java");
+    writer.write(file, "hello");
+
+    assertThat(file).exists();
+    assertThat(Files.readString(file)).isEqualTo("hello");
+  }
+
+  @Test
+  void createsNestedDirectories() throws Exception {
+    var writer = new CodeWriter();
+    var dir = tempDir.resolve("x/y/z");
+    writer.createDirectories(dir);
+
+    assertThat(dir).exists().isDirectory();
   }
 }

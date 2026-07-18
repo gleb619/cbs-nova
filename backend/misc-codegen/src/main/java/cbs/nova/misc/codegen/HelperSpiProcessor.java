@@ -2,7 +2,14 @@ package cbs.nova.misc.codegen;
 
 import cbs.nova.dsl.Helper;
 import cbs.nova.dsl.utils.Substitutor;
-
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
@@ -13,15 +20,6 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic;
 import javax.tools.StandardLocation;
-
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @SupportedAnnotationTypes("cbs.nova.dsl.Helper")
 @SupportedSourceVersion(SourceVersion.RELEASE_25)
@@ -35,6 +33,10 @@ public class HelperSpiProcessor extends AbstractProcessor {
   private static String packageOf(String fqn) {
     var idx = fqn.lastIndexOf('.');
     return idx < 0 ? "" : fqn.substring(0, idx);
+  }
+
+  private static String simpleNameOf(String fqn) {
+    return fqn.substring(fqn.lastIndexOf('.') + 1);
   }
 
   private static String commonPackage(List<HelperEntry> entries) {
@@ -113,24 +115,25 @@ public class HelperSpiProcessor extends AbstractProcessor {
                 .collect(Collectors.joining());
         var registrations = entries.stream()
                 .map(entry -> {
-                  var simpleName = entry.fqn().substring(entry.fqn().lastIndexOf('.') + 1);
-                  return "    registrar.register(\"" + entry.name() + "\", new " + simpleName
-                          + "());\n";
+                  var simpleName = simpleNameOf(entry.fqn());
+                  return "    registrar.register(\"%s\", instanceResolver.resolve(%s.class));\n".formatted(entry.name(),
+                      simpleName);
                 })
                 .collect(Collectors.joining());
         var packageLine = resolverPackage.isEmpty()
                 ? ""
                 : "package " + resolverPackage + ";\n\n";
         var template = """
-                ${packageLine}import cbs.nova.dsl.Executable;
+                ${packageLine}import cbs.nova.dsl.HelperInstanceResolver;
                 import cbs.nova.dsl.HelperRegistrar;
                 import cbs.nova.dsl.HelperResolver;
                 ${imports}
 
                 public final class ${resolverClass} implements HelperResolver {
                   @Override
-                  public void registerHelpers(HelperRegistrar registrar) {
+                  public void registerHelpers(HelperRegistrar registrar, HelperInstanceResolver instanceResolver) {
                 ${registrations}  }
+
                 }
                 """;
         writer.print(Substitutor.format(template, Map.of(

@@ -3,6 +3,10 @@ package cbs.nova.dsl.codegen;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.GeneratedClassProvider;
 import cbs.nova.dsl.SemanticValidator;
+import cbs.nova.dsl.codegen.generator.GeneratedClassProviderGenerator;
+import cbs.nova.dsl.codegen.generator.ProcessCodeGenerator;
+import cbs.nova.dsl.codegen.generator.TransactionCodeGenerator;
+import cbs.nova.dsl.codegen.model.GeneratedSource;
 import cbs.nova.dsl.compact.CompactSourcePreprocessor;
 import cbs.nova.dsl.config.DescriptorFactory;
 import cbs.nova.dsl.function.FunctionDescriptor;
@@ -12,16 +16,15 @@ import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.registry.HelperRegistry;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.transaction.TransactionDslObject;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
-import org.slf4j.event.Level;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
+import org.slf4j.event.Level;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -125,7 +128,7 @@ public final class DslCompiler {
   private static @NonNull List<String> preprocessedDslSources(
           @NonNull Path srcDir,
           String targetPackage) throws IOException {
-    var dslDir = srcDir.resolve("dsl");
+    var dslDir = srcDir.resolve(CompilerConstants.DSL_FOLDER);
     if (!Files.isDirectory(dslDir)) {
       return List.of();
     }

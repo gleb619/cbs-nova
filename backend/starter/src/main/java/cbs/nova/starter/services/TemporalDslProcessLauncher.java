@@ -15,11 +15,10 @@ import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.common.RetryOptions;
 import io.temporal.workflow.Workflow;
+import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
-
-import java.time.Duration;
 
 /**
  * Temporal implementation of {@link TemporalProcessLauncher}. It resolves the generated workflow
@@ -63,7 +62,7 @@ public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
           @Nullable Class<?> inputType,
           @Nullable Class<?> outputType,
           @NonNull Context<?> ctx) {
-    GeneratedClassDescriptor descriptor = GlobalManager.getInstance()
+    GeneratedClassDescriptor descriptor = GlobalManager.globalManager()
             .findGeneratedProcess(processName)
             .orElseThrow(() -> new IllegalArgumentException(
                     "No generated Temporal process: " + processName));
@@ -80,10 +79,10 @@ public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
     try {
       DslTemporalProcess process = (DslTemporalProcess) stub;
       Object result = process.execute(new DslTemporalProcessRequest<>(ctx.runId(), ctx.body()));
-      if (result instanceof DslTemporalProcessFailure failure) {
+      if (result instanceof DslTemporalProcessFailure(String message, String detail)) {
         return Result.failure(new DslExecutionException(ctx.runId(),
-                failure.message() + ": " + failure.detail(),
-                new RuntimeException(failure.message())));
+            message + ": " + detail,
+                new RuntimeException(message)));
       }
       if (outputType != null && result != null && !outputType.isInstance(result)) {
         result = new ObjectMapper().convertValue(result, outputType);

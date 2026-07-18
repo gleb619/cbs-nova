@@ -1,20 +1,30 @@
 package cbs.nova.dsl.config;
 
+import cbs.nova.dsl.CompensationRegistry;
 import cbs.nova.dsl.ExecutionTraceCollector;
+import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.HelperInstanceResolver;
+import cbs.nova.dsl.HelperManager;
 import cbs.nova.dsl.RetryPolicy;
 import cbs.nova.dsl.TemporalProcessLauncher;
 import cbs.nova.dsl.TransactionInvoker;
+import cbs.nova.dsl.context.DefaultProcessContextFactory;
+import cbs.nova.dsl.process.ProcessManager;
 import cbs.nova.dsl.process.ProcessRunner;
+import cbs.nova.dsl.registry.DefaultHelperRegistry;
+import cbs.nova.dsl.registry.DefaultProcessRegistry;
+import cbs.nova.dsl.registry.DefaultTransactionRegistry;
+import cbs.nova.dsl.registry.GeneratedClassRegistry;
 import cbs.nova.dsl.runner.DefaultHelperRunner;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
 import cbs.nova.dsl.runner.HelperRunner;
+import cbs.nova.dsl.transaction.TransactionManager;
 import cbs.nova.dsl.transaction.TransactionRunner;
+import java.time.Duration;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
-
-import java.time.Duration;
 
 @Getter
 @RequiredArgsConstructor
@@ -49,7 +59,7 @@ public class DslConfig implements SingletonSupport {
   }
 
   public @NonNull Replaceable<TransactionInvoker> transactionInvoker() {
-    return singleton("transactionInvoker", () -> Replaceable.of(() -> null));
+    return replaceable();
   }
 
   public @NonNull Replaceable<TemporalProcessLauncher> temporalProcessLauncher() {
@@ -72,6 +82,26 @@ public class DslConfig implements SingletonSupport {
           @NonNull ExecutionTraceCollector executionTraceCollector,
           @NonNull ContextFactory contextFactory) {
     return singleton(() -> new DefaultHelperRunner(executionTraceCollector, contextFactory));
+  }
+
+  public @NonNull Replaceable<HelperInstanceResolver> helperInstanceResolver() {
+    return replaceable();
+  }
+
+  public @NonNull GlobalManager globalManager() {
+    var traceCollector = executionTraceCollector();
+    var contextFactory = contextFactory();
+    return new GlobalManager(
+            new ProcessManager(new DefaultProcessRegistry(),
+                    processRunner(traceCollector, contextFactory)),
+            new TransactionManager(new DefaultTransactionRegistry(),
+                    transactionRunner(traceCollector, contextFactory)),
+            new HelperManager(new DefaultHelperRegistry(),
+                    helperRunner(traceCollector, contextFactory)),
+            new GeneratedClassRegistry(),
+            new DefaultProcessContextFactory(),
+            new CompensationRegistry(),
+            helperInstanceResolver().get());
   }
 
   /* ============= */

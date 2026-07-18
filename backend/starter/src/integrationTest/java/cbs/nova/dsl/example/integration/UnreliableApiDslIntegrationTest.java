@@ -19,6 +19,7 @@ import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
+import java.time.Duration;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -30,9 +31,6 @@ import org.testcontainers.containers.wait.strategy.WaitAllStrategy;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
-
-import java.time.Duration;
-import java.util.List;
 
 /**
  * End-to-end test for Temporal retry, backoff, and compensation behavior using an unreliable helper
@@ -78,10 +76,10 @@ class UnreliableApiDslIntegrationTest {
 
   @BeforeAll
   static void setUp() {
-    GlobalManager.getInstance().resetForTests();
+    GlobalManager.globalManager().resetForTests();
     DslConfig.dslConfig().temporalProcessLauncher().replace(null);
 
-    var globalManager = GlobalManager.getInstance();
+    var globalManager = GlobalManager.globalManager();
     new DefinitionLoader().load(globalManager);
     globalManager.registerHelperResolvers();
 
@@ -113,12 +111,12 @@ class UnreliableApiDslIntegrationTest {
   }
 
   private static void registerProcess(Worker worker, String name) {
-    var descriptor = GlobalManager.getInstance().findGeneratedProcess(name).orElseThrow();
+    var descriptor = GlobalManager.globalManager().findGeneratedProcess(name).orElseThrow();
     worker.registerWorkflowImplementationTypes(descriptor.temporalImplementation());
   }
 
   private static void registerTransaction(Worker worker, String name) {
-    var descriptor = GlobalManager.getInstance().findGeneratedTransaction(name).orElseThrow();
+    var descriptor = GlobalManager.globalManager().findGeneratedTransaction(name).orElseThrow();
     Object instance;
     try {
       instance = descriptor.temporalImplementation().getDeclaredConstructor().newInstance();
@@ -185,7 +183,7 @@ class UnreliableApiDslIntegrationTest {
   }
 
   private static CompensationTrackerHelper tracker() {
-    return GlobalManager.getInstance().findHelper("compensationTracker")
+    return GlobalManager.globalManager().findHelper("compensationTracker")
             .map(CompensationTrackerHelper.class::cast)
             .orElseThrow(
                     () -> new IllegalStateException("compensationTracker helper not registered"));

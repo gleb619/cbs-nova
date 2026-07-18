@@ -1,6 +1,13 @@
 package cbs.nova.dsl.codegen;
 
 import cbs.nova.dsl.SemanticValidator;
+import cbs.nova.dsl.codegen.generator.DefinitionProviderGenerator;
+import cbs.nova.dsl.codegen.generator.GeneratedClassProviderGenerator;
+import cbs.nova.dsl.codegen.generator.ProcessCodeGenerator;
+import cbs.nova.dsl.codegen.generator.TransactionCodeGenerator;
+import cbs.nova.dsl.codegen.model.CodegenNaming;
+import cbs.nova.dsl.codegen.util.AstExtractor;
+import cbs.nova.dsl.codegen.util.Json;
 import cbs.nova.dsl.config.DescriptorFactory;
 import cbs.nova.dsl.config.SingletonSupport;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
@@ -37,7 +44,7 @@ public final class CompileConfig implements SingletonSupport {
 
   public @NonNull SourceCompiler sourceCompiler() {
     return singleton(() -> new SourceCompiler(
-            logLevel, definitionProviderGenerator()));
+            logLevel, definitionProviderGenerator(), codeWriter()));
   }
 
   public @NonNull DslSourceCompiler dslSourceCompiler() {
@@ -52,12 +59,21 @@ public final class CompileConfig implements SingletonSupport {
     return singleton(() -> new TransactionCodeGenerator(codegenNaming()));
   }
 
+  public @NonNull Json json() {
+    return singleton(Json::new);
+  }
+
+  public @NonNull AstExtractor executeAstJsonExtractor() {
+    return singleton(() -> new AstExtractor(json()));
+  }
+
   public @NonNull GeneratedClassProviderGenerator generatedClassProviderGenerator() {
-    return singleton(() -> new GeneratedClassProviderGenerator(codegenNaming()));
+    return singleton(
+            () -> new GeneratedClassProviderGenerator(codegenNaming(), executeAstJsonExtractor()));
   }
 
   public @NonNull DefinitionProviderGenerator definitionProviderGenerator() {
-    return singleton(() -> new DefinitionProviderGenerator(logLevel));
+    return singleton(() -> new DefinitionProviderGenerator(logLevel, codeWriter()));
   }
 
   public @NonNull CodeWriter codeWriter() {

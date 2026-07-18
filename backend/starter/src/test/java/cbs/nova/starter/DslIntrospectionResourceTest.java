@@ -21,8 +21,8 @@ class DslIntrospectionResourceTest {
 
   @BeforeEach
   void setUp() {
-    GlobalManager.getInstance().resetForTests();
-    GlobalManager.getInstance()
+    GlobalManager.globalManager().resetForTests();
+    GlobalManager.globalManager()
             .registerProcess(
                     Dsl.process("LoanDisbursement")
                             .execute(ctx -> Result.success("ok")).build());
@@ -33,7 +33,7 @@ class DslIntrospectionResourceTest {
 
   @AfterEach
   void tearDown() {
-    GlobalManager.getInstance().resetForTests();
+    GlobalManager.globalManager().resetForTests();
   }
 
   @Test
@@ -73,7 +73,7 @@ class DslIntrospectionResourceTest {
 
   @Test
   void processDetailEndpointReturnsInputSchemaForParameterBasedProcess() throws Exception {
-    GlobalManager.getInstance()
+    GlobalManager.globalManager()
             .registerProcess(
                     Dsl.process("ParamBasedProcess")
                             .parameters(p -> p.number("amount"))

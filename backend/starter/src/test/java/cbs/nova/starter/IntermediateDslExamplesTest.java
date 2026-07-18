@@ -18,15 +18,14 @@ import cbs.nova.dslexamples.InvoiceModels.InvoiceOut;
 import cbs.nova.dslexamples.LongWorkModels.LongWorkIn;
 import cbs.nova.dslexamples.LongWorkModels.LongWorkOut;
 import cbs.nova.starter.config.DslAutoConfiguration;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class IntermediateDslExamplesTest {
 
@@ -39,7 +38,7 @@ class IntermediateDslExamplesTest {
 
   @BeforeEach
   void loadCompactDsls() throws Exception {
-    GlobalManager.getInstance().resetForTests();
+    GlobalManager.globalManager().resetForTests();
     copyCompactDsl("BatchProcessingDsl.java");
     copyCompactDsl("InvoiceGenerationDsl.java");
     copyCompactDsl("LongWorkSimulationDsl.java");
@@ -51,7 +50,7 @@ class IntermediateDslExamplesTest {
 
   @AfterEach
   void cleanup() {
-    GlobalManager.getInstance().resetForTests();
+    GlobalManager.globalManager().resetForTests();
   }
 
   @Test
@@ -62,7 +61,7 @@ class IntermediateDslExamplesTest {
             new BatchItem("c", 12)));
     Context<BatchIn> ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
 
-    Result<?> result = GlobalManager.getInstance().runProcess("BatchProcessing", ctx);
+    Result<?> result = GlobalManager.globalManager().runProcess("BatchProcessing", ctx);
 
     assertThat(result.isSuccess()).isTrue();
     BatchOut out = (BatchOut) result.value();
@@ -77,7 +76,7 @@ class IntermediateDslExamplesTest {
             new InvoiceLine("gadget", 10.00, 2)));
     Context<InvoiceIn> ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
 
-    Result<?> result = GlobalManager.getInstance().runProcess("InvoiceGeneration", ctx);
+    Result<?> result = GlobalManager.globalManager().runProcess("InvoiceGeneration", ctx);
 
     assertThat(result.isSuccess()).isTrue();
     InvoiceOut out = (InvoiceOut) result.value();
@@ -93,7 +92,7 @@ class IntermediateDslExamplesTest {
     var input = new LongWorkIn("task-42", 5);
     Context<LongWorkIn> ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
 
-    Result<?> result = GlobalManager.getInstance().runTransaction("LongWorkSimulation", ctx);
+    Result<?> result = GlobalManager.globalManager().runTransaction("LongWorkSimulation", ctx);
 
     assertThat(result.isSuccess()).isTrue();
     LongWorkOut out = (LongWorkOut) result.value();

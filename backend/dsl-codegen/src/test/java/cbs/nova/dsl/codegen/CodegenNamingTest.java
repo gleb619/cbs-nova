@@ -2,6 +2,7 @@ package cbs.nova.dsl.codegen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.codegen.model.CodegenNaming;
 import org.junit.jupiter.api.Test;
 
 class CodegenNamingTest {

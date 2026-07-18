@@ -85,8 +85,8 @@ class CompensationRichContextTest {
 
   @Test
   void createdThroughGlobalManagerFactory() {
-    GlobalManager.getInstance().resetForTests();
-    var ctx = GlobalManager.getInstance()
+    GlobalManager.globalManager().resetForTests();
+    var ctx = GlobalManager.globalManager()
             .createCompensationContext(delegate, failure);
     assertThat(ctx.body()).isEqualTo("payload");
     assertThat(ctx.error()).isSameAs(failure);

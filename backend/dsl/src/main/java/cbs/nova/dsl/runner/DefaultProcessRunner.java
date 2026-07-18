@@ -14,10 +14,9 @@ import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.process.ProcessRichContext;
 import cbs.nova.dsl.process.ProcessRunner;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
-
-import java.util.Map;
 
 @RequiredArgsConstructor
 public final class DefaultProcessRunner implements ProcessRunner {
@@ -77,21 +76,21 @@ public final class DefaultProcessRunner implements ProcessRunner {
                   exec.input() != null ? exec.input() : Map.of(),
                   ExecutionMode.COMPENSATION,
                   exec.runId());
-          GlobalManager.getInstance().compensateTransaction(exec.transactionName(), txCtx,
+          GlobalManager.globalManager().compensateTransaction(exec.transactionName(), txCtx,
                   compensationError);
         }
         if (process.compensationLogic() != null) {
           var processCompCtxBase = contextFactory.of(
                   ctx.body(), ExecutionMode.COMPENSATION, ctx.runId());
           process.compensationLogic().apply(
-                  GlobalManager.getInstance().createCompensationContext(processCompCtxBase,
+                  GlobalManager.globalManager().createCompensationContext(processCompCtxBase,
                           compensationError));
         }
         if (process.userCompensationHandler() != null) {
           var userCompCtxBase = contextFactory.of(
                   ctx.body(), ExecutionMode.COMPENSATION, ctx.runId());
           process.userCompensationHandler().accept(
-                  GlobalManager.getInstance().createCompensationContext(userCompCtxBase,
+                  GlobalManager.globalManager().createCompensationContext(userCompCtxBase,
                           compensationError),
                   reverseHistory);
         }

@@ -11,14 +11,12 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
+import java.time.Instant;
+import java.util.Map;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.time.Instant;
-import java.util.Map;
 
 /**
  * Service-layer API for running DSL processes backed by Temporal. It keeps callers decoupled from
@@ -79,7 +77,7 @@ public class TemporalDslProcessService {
     Context<?> ctx = contextFactory.of(body, metadata, ExecutionMode.RUN, runId);
     Result<?> result;
     try {
-      result = GlobalManager.getInstance().runProcess(processName, ctx);
+      result = GlobalManager.globalManager().runProcess(processName, ctx);
     } catch (Exception ex) {
       result = Result.failure(ex);
     }

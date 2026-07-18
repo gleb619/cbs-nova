@@ -13,14 +13,13 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.generator.BpmnDiagramGenerator;
 import cbs.nova.dsl.generator.MermaidDiagramGenerator;
 import cbs.nova.dsl.generator.PlantUmlDiagramGenerator;
-import lombok.RequiredArgsConstructor;
-import org.jspecify.annotations.NonNull;
-import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
@@ -90,7 +89,7 @@ public class DevDslRuntime implements DslRuntime {
               ? "Executed " + name + " successfully"
               : "Execution of " + name + " failed: " + result.cause().getMessage();
 
-      GlobalManager gm2 = GlobalManager.getInstance();
+      GlobalManager gm2 = GlobalManager.globalManager();
       var mermaidGen = new MermaidDiagramGenerator();
       var plantGen = new PlantUmlDiagramGenerator();
       var bpmnGen = new BpmnDiagramGenerator();
@@ -168,7 +167,7 @@ public class DevDslRuntime implements DslRuntime {
   private Result<?> dispatch(String name, Context<?> ctx, ExecutionMode mode) {
     String runId = runIdFor(ctx);
     var modeCtx = contextFactory.of(ctx.body(), ctx.metadata(), mode, runId);
-    GlobalManager gm = GlobalManager.getInstance();
+    GlobalManager gm = GlobalManager.globalManager();
     if (gm.hasProcess(name)) {
       return gm.runProcess(name, modeCtx);
     }
