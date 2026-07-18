@@ -31,7 +31,7 @@ dependencies {
   implementation 'org.flywaydb:flyway-core'
   implementation 'com.fasterxml.jackson.core:jackson-databind'
   runtimeOnly 'org.postgresql:postgresql'
-  compileOnly libs.springdoc.openapi.starter.webmvc.ui
+  implementation libs.springdoc.openapi.starter.webmvc.ui
 
   api libs.temporal.sdk
   api libs.sentry.spring.boot.jakarta

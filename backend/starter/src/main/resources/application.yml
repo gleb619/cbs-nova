@@ -1,6 +1,13 @@
 temporal:
   connection-target: ${TEMPORAL_ADDRESS:127.0.0.1:7233}
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+  packages-to-scan: cbs.nova.starter.controllers
+
 management:
   endpoints:
     web:
