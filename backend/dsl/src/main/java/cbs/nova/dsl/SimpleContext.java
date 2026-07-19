@@ -1,9 +1,10 @@
 package cbs.nova.dsl;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Immutable context implementation. The stored body is returned as-is, so {@link MapInput} bodies

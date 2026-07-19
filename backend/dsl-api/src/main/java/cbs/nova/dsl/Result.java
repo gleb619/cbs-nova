@@ -1,8 +1,9 @@
 package cbs.nova.dsl;
 
-import java.util.Map;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+
+import java.util.Map;
 
 public sealed interface Result<T> permits Result.Success, Result.Failure {
 
