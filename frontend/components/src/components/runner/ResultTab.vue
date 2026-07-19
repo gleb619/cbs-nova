@@ -19,6 +19,6 @@ const isEmpty = computed(() => props.result === null || props.result === undefin
     <pre
       v-else
       class="bg-gray-900 text-gray-100 text-xs rounded-lg p-4 overflow-auto max-h-[60vh] whitespace-pre-wrap break-words"
-    >{{ formatted }}</pre>
+    >{{ _formatted }}</pre>
   </div>
 </template>

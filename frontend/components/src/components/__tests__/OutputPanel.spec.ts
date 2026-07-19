@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { RunnerOutput } from '../../types/runner'
 import CallTreeNode from '../runner/CallTreeNode.vue'
 import CallTreeTab from '../runner/CallTreeTab.vue'
+import DryRunLogsTab from '../runner/DryRunLogsTab.vue'
 import ErrorsTab from '../runner/ErrorsTab.vue'
 import ExplainOutput from '../runner/ExplainOutput.vue'
 import ExternalCallsBadge from '../runner/ExternalCallsBadge.vue'
@@ -33,6 +34,7 @@ function mountOutputPanel(props: Record<string, unknown>) {
         CallTreeTab,
         CallTreeNode,
         ExternalCallsBadge,
+        DryRunLogsTab,
       },
     },
   })
@@ -205,32 +207,79 @@ describe('OutputPanel', () => {
     expect(previewWrapper.findComponent(ResultTab).exists()).toBe(false)
   })
 
-  it('shows the Call Tree tab in explain mode and passes the astTree prop', async () => {
+  it('shows the Logs tab only in preview/explain mode and switches to it', async () => {
+    const runWrapper = mountOutputPanel({
+      output: makeOutput(),
+      mode: 'run',
+      status: 'success',
+    })
+    expect(runWrapper.findAll('button').map((b) => b.text())).not.toContain('Logs')
+    expect(runWrapper.findComponent(DryRunLogsTab).exists()).toBe(false)
+
+    const previewWrapper = mountOutputPanel({
+      output: makeOutput({
+        dryRunLogs: [
+          {
+            timestamp: '2026-07-19T10:00:00Z',
+            level: 'INFO',
+            logger: 'com.cbs.Preview',
+            message: 'Preview log',
+          },
+        ],
+      }),
+      mode: 'preview',
+      status: 'success',
+    })
+    const buttons = previewWrapper.findAll('button')
+    expect(buttons.map((b) => b.text())).toContain('Logs')
+
+    const logsButton = buttons.find((b) => b.text() === 'Logs')
+    expect(logsButton).toBeDefined()
+    await logsButton?.trigger('click')
+    expect(previewWrapper.findComponent(DryRunLogsTab).exists()).toBe(true)
+    expect(previewWrapper.findComponent(ResultTab).exists()).toBe(false)
+
+    const dryRunLogsTab = previewWrapper.findComponent(DryRunLogsTab)
+    expect(dryRunLogsTab.props('logs')).toEqual([
+      {
+        timestamp: '2026-07-19T10:00:00Z',
+        level: 'INFO',
+        logger: 'com.cbs.Preview',
+        message: 'Preview log',
+      },
+    ])
+  })
+
+  it('shows the Logs tab in explain mode', async () => {
     const wrapper = mountOutputPanel({
       output: makeOutput({
-        astTree: {
-          name: 'ExplainRoot',
-          kind: 'PROCESS',
-          success: true,
-          children: [],
-          externalCalls: [],
-        },
+        dryRunLogs: [
+          {
+            timestamp: '2026-07-19T10:00:00Z',
+            level: 'INFO',
+            logger: 'com.cbs.Explain',
+            message: 'Explain log',
+          },
+        ],
       }),
       mode: 'explain',
       status: 'success',
     })
-    expect(wrapper.findAll('button').map((b) => b.text())).toContain('Call Tree')
+    expect(wrapper.findAll('button').map((b) => b.text())).toContain('Logs')
 
-    const callTreeButton = wrapper.findAll('button').find((b) => b.text() === 'Call Tree')
-    expect(callTreeButton).toBeDefined()
-    await callTreeButton?.trigger('click')
+    const logsButton = wrapper.findAll('button').find((b) => b.text() === 'Logs')
+    expect(logsButton).toBeDefined()
+    await logsButton?.trigger('click')
 
-    const callTreeTab = wrapper.findComponent(CallTreeTab)
-    expect(callTreeTab.exists()).toBe(true)
-    expect(callTreeTab.props('tree')).toMatchObject({
-      name: 'ExplainRoot',
-      kind: 'PROCESS',
-      success: true,
-    })
+    const dryRunLogsTab = wrapper.findComponent(DryRunLogsTab)
+    expect(dryRunLogsTab.exists()).toBe(true)
+    expect(dryRunLogsTab.props('logs')).toEqual([
+      {
+        timestamp: '2026-07-19T10:00:00Z',
+        level: 'INFO',
+        logger: 'com.cbs.Explain',
+        message: 'Explain log',
+      },
+    ])
   })
 })

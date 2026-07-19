@@ -31,7 +31,7 @@ export { default as ExecutionsStatusBadge } from './components/executions/Status
 export { default as ExecutionsTraceNode } from './components/executions/TraceNode.vue'
 export { default as RunnerCallTreeNode } from './components/runner/CallTreeNode.vue'
 export { default as RunnerCallTreeTab } from './components/runner/CallTreeTab.vue'
-export { default as RunnerDefinitionSelector } from './components/runner/DefinitionSelector.vue'
+export { default as RunnerDryRunLogsTab } from './components/runner/DryRunLogsTab.vue'
 export { default as RunnerErrorsTab } from './components/runner/ErrorsTab.vue'
 export { default as RunnerExplainOutput } from './components/runner/ExplainOutput.vue'
 export { default as RunnerExternalCallsBadge } from './components/runner/ExternalCallsBadge.vue'
