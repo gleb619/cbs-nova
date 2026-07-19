@@ -65,8 +65,9 @@ public class ExternalCallTracker {
   private String normalizeType(String type) {
     String lowerType = type.toLowerCase().trim();
 
-    if (lowerType.contains("jdbc") || lowerType.contains("db") || lowerType.contains("sql") ||
-            lowerType.contains("hibernate") || lowerType.contains("jpa")
+    if (lowerType.contains("database") || lowerType.contains("jdbc")
+            || lowerType.contains("db") || lowerType.contains("sql")
+            || lowerType.contains("hibernate") || lowerType.contains("jpa")
             || lowerType.contains("datasource")) {
       return TYPE_DATABASE;
     }

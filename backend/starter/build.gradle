@@ -53,6 +53,7 @@ dependencies {
   testImplementation 'com.h2database:h2'
   testImplementation libs.rest.assured
   testImplementation libs.awaitility
+  testImplementation libs.spring.jdbc
 }
 
 processIntegrationTestResources {
