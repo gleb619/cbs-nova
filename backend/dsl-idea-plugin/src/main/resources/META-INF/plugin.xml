@@ -9,9 +9,11 @@
   <depends>com.intellij.gradle</depends>
 
   <extensions defaultExtensionNs="com.intellij">
-    <fileType name="CbsDsl" implementationClass="cbs.nova.dsl.idea.CbsDslFileType" fieldName="INSTANCE" language="CbsDsl" extensions=""/>
+    <fileType name="CbsDsl" implementationClass="cbs.nova.dsl.idea.CbsDslFileType"
+      fieldName="INSTANCE" language="CbsDsl" extensions=""/>
     <lang.syntaxHighlighterFactory language="CbsDsl" implementationClass="cbs.nova.dsl.idea.CbsDslSyntaxHighlighterFactory"/>
     <fileTypeOverrider implementation="cbs.nova.dsl.idea.DslFileTypeOverrider"/>
+    <!--<lang.parserDefinition language="CbsDsl" implementationClass="cbs.nova.dsl.idea.CbsDslParserDefinition"/>-->
     <!--
       Real extension point name confirmed via javap/plugin.xml inspection of the bundled
       com.intellij.gradle plugin (IC 2023.3.5): externalSystemTaskNotificationListener is a
@@ -31,7 +33,8 @@
   </extensions>
 
   <actions>
-    <action id="cbs.nova.dsl.idea.CompileDslAction" class="cbs.nova.dsl.idea.CompileDslAction" text="Compile DSL Sources" description="Runs ./gradlew :&lt;module&gt;:compileDsl">
+    <action id="cbs.nova.dsl.idea.CompileDslAction" class="cbs.nova.dsl.idea.CompileDslAction"
+      text="Compile DSL Sources" description="Runs ./gradlew :&lt;module&gt;:compileDsl">
       <add-to-group group-id="ToolsMenu" anchor="last"/>
     </action>
   </actions>

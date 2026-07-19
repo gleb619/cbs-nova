@@ -1,6 +1,8 @@
 package cbs.nova.dsl.idea;
 
 import com.intellij.openapi.fileTypes.LanguageFileType;
+import com.intellij.ui.IconManager;
+import com.intellij.ui.PlatformIcons;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.Icon;
@@ -30,6 +32,10 @@ public final class CbsDslFileType extends LanguageFileType {
 
   @Override
   public Icon getIcon() {
-    return null;
+    return IconManager.getInstance().getPlatformIcon(PlatformIcons.JavaFileType);
+  }
+
+  public boolean isJVMDebuggingSupported() {
+    return true;
   }
 }

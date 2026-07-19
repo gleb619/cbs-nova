@@ -2,6 +2,7 @@ package cbs.nova.dsl.idea;
 
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.configurations.GeneralCommandLine;
+import com.intellij.execution.executors.DefaultRunExecutor;
 import com.intellij.execution.filters.TextConsoleBuilderFactory;
 import com.intellij.execution.process.OSProcessHandler;
 import com.intellij.execution.ui.RunContentDescriptor;
@@ -21,10 +22,6 @@ import java.util.List;
  * {@code cbs.nova.dsl} Gradle plugin; this action is its only interactive entry point.
  */
 public final class CompileDslAction extends AnAction {
-
-  static List<String> gradleCommand(String moduleName) {
-    return List.of("./gradlew", ":" + moduleName + ":compileDsl");
-  }
 
   @Override
   public void actionPerformed(@NotNull AnActionEvent event) {
@@ -48,12 +45,16 @@ public final class CompileDslAction extends AnAction {
               .createBuilder(project).getConsole();
       console.attachToProcess(processHandler);
       RunContentManager.getInstance(project).showRunContent(
-              null,
+          DefaultRunExecutor.getRunExecutorInstance(),
               new RunContentDescriptor(console, processHandler, console.getComponent(),
                       "compileDsl"));
       processHandler.startNotify();
     } catch (ExecutionException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  List<String> gradleCommand(String moduleName) {
+    return List.of("./gradlew", ":%s:compileDsl".formatted(moduleName));
   }
 }

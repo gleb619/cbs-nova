@@ -135,3 +135,4 @@ node_modules
 .codegraph
 /.kiro/
 backend/.intellijPlatform/
+*.hprof

@@ -8,7 +8,7 @@ class CompileDslActionTest {
 
   @Test
   void buildsGradleCommandForModule() {
-    var command = CompileDslAction.gradleCommand("dsl-examples");
+    var command = new CompileDslAction().gradleCommand("dsl-examples");
     assertThat(command).containsExactly("./gradlew", ":dsl-examples:compileDsl");
   }
 }
