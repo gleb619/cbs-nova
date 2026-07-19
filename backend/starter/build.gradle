@@ -32,6 +32,7 @@ dependencies {
   implementation 'com.fasterxml.jackson.core:jackson-databind'
   runtimeOnly 'org.postgresql:postgresql'
   implementation libs.springdoc.openapi.starter.webmvc.ui
+  compileOnly libs.openfeign.core
 
   api libs.temporal.sdk
   api libs.sentry.spring.boot.jakarta
@@ -46,6 +47,7 @@ dependencies {
   testImplementation libs.bundles.spring.web
   testImplementation libs.bundles.spring.test
   testImplementation libs.temporal.testing
+  testImplementation libs.openfeign.core
   testImplementation libs.testcontainers.core
   testImplementation libs.testcontainers.junit.jupiter
   testImplementation libs.testcontainers.postgresql

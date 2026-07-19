@@ -6,6 +6,7 @@ junit = "5.12.2"
 assertj = "3.27.3"
 temporal = "1.27.0"
 javaparser = "3.28.1"
+openfeign = "13.6"
 wiremock = "3.13.2"
 testcontainers = "1.21.3"
 slf4j = "2.0.16"
@@ -38,6 +39,9 @@ orgjson = { module = "org.json:json", version.ref = "orgjson" }
 
 # -- JavaParser (used by dsl-codegen and dsl preprocessing) --
 javaparser = { module = "com.github.javaparser:javaparser-core", version.ref = "javaparser" }
+
+# -- OpenFeign --
+openfeign-core = { module = "io.github.openfeign:feign-core", version.ref = "openfeign" }
 
 # -- Testcontainers --
 testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
