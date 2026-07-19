@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+  <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+  <appender name="DRY_RUN" class="cbs.nova.starter.logging.DryRunLogbackAppender">
+    <maxEventsPerRun>1000</maxEventsPerRun>
+  </appender>
+
+  <root level="INFO">
+    <appender-ref ref="CONSOLE"/>
+    <appender-ref ref="DRY_RUN"/>
+  </root>
+</configuration>
