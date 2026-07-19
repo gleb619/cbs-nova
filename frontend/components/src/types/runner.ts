@@ -2,6 +2,18 @@ export type RunnerMode = 'preview' | 'run' | 'explain'
 
 export type RunnerStatus = 'idle' | 'loading' | 'success' | 'failed' | 'running'
 
+export type CallKind = 'PROCESS' | 'TRANSACTION' | 'HELPER' | 'FUNCTION'
+
+export interface CallNode {
+  name: string
+  kind: CallKind
+  input?: unknown
+  output?: unknown
+  success: boolean
+  children: CallNode[]
+  externalCalls: Array<Record<string, unknown>>
+}
+
 export interface DefinitionMeta {
   name: string
   type: string
@@ -21,4 +33,6 @@ export interface RunnerOutput {
   description?: string
   executionTrace?: string[]
   workflowId?: string
+  astTree?: CallNode
+  dryRunLogs?: Array<{ timestamp: string; level: string; logger: string; message: string }>
 }

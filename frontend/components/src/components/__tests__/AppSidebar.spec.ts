@@ -1,9 +1,9 @@
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { useSidebar } from '../../composables/useSidebar'
 import AppMobileDrawer from '../AppMobileDrawer.vue'
 import AppNavItem from '../AppNavItem.vue'
 import AppSidebar from '../AppSidebar.vue'
-import { useSidebar } from '../../composables/useSidebar'
 
 type NavItem = { to: string; label: string; icon?: string; isActive?: boolean }
 
@@ -60,7 +60,7 @@ describe('AppSidebar', () => {
 
     const { openMobile } = useSidebar()
     openMobile()
-    const drawer = mount(AppMobileDrawer, { props: { items } })
+    const _drawer = mount(AppMobileDrawer, { props: { items } })
     const drawerLinks = collectLinks(document)
 
     expect(sidebarLinks).toHaveLength(items.length)

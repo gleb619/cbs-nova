@@ -1,8 +1,7 @@
 import { mount, type VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import AppMobileDrawer from '../AppMobileDrawer.vue'
-import AppNavItem from '../AppNavItem.vue'
 import { useSidebar } from '../../composables/useSidebar'
+import AppMobileDrawer from '../AppMobileDrawer.vue'
 
 type NavItem = { to: string; label: string; icon?: string; isActive?: boolean }
 

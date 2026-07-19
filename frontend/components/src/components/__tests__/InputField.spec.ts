@@ -28,7 +28,7 @@ describe('InputField', () => {
     await input.setValue('alice')
     const emitted = wrapper.emitted('update:modelValue')
     expect(emitted).toBeTruthy()
-    expect(emitted![0]).toEqual(['alice'])
+    expect(emitted?.[0]).toEqual(['alice'])
   })
 
   it('renders a number input when type is number', () => {
@@ -48,7 +48,7 @@ describe('InputField', () => {
     await input.setValue('42')
     const emitted = wrapper.emitted('update:modelValue')
     expect(emitted).toBeTruthy()
-    expect(emitted![0]).toEqual(['42'])
+    expect(emitted?.[0]).toEqual(['42'])
   })
 
   it('renders a checkbox input when type is boolean', () => {

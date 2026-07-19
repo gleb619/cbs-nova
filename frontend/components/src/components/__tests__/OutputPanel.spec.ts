@@ -1,11 +1,14 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
-import OutputPanel from '../runner/OutputPanel.vue'
-import ExplainOutput from '../runner/ExplainOutput.vue'
-import ResultTab from '../runner/ResultTab.vue'
-import MetadataTab from '../runner/MetadataTab.vue'
-import ErrorsTab from '../runner/ErrorsTab.vue'
 import type { RunnerOutput } from '../../types/runner'
+import CallTreeNode from '../runner/CallTreeNode.vue'
+import CallTreeTab from '../runner/CallTreeTab.vue'
+import ErrorsTab from '../runner/ErrorsTab.vue'
+import ExplainOutput from '../runner/ExplainOutput.vue'
+import ExternalCallsBadge from '../runner/ExternalCallsBadge.vue'
+import MetadataTab from '../runner/MetadataTab.vue'
+import OutputPanel from '../runner/OutputPanel.vue'
+import ResultTab from '../runner/ResultTab.vue'
 
 function makeOutput(overrides: Partial<RunnerOutput> = {}): RunnerOutput {
   return {
@@ -27,6 +30,9 @@ function mountOutputPanel(props: Record<string, unknown>) {
         ResultTab,
         MetadataTab,
         ErrorsTab,
+        CallTreeTab,
+        CallTreeNode,
+        ExternalCallsBadge,
       },
     },
   })
@@ -54,7 +60,7 @@ describe('OutputPanel', () => {
 
     const metadataButton = wrapper.findAll('button').find((b) => b.text() === 'Metadata')
     expect(metadataButton).toBeDefined()
-    await metadataButton!.trigger('click')
+    await metadataButton?.trigger('click')
 
     expect(wrapper.findComponent(MetadataTab).exists()).toBe(true)
     expect(wrapper.findComponent(ResultTab).exists()).toBe(false)
@@ -69,7 +75,7 @@ describe('OutputPanel', () => {
 
     const errorsButton = wrapper.findAll('button').find((b) => b.text() === 'Errors')
     expect(errorsButton).toBeDefined()
-    await errorsButton!.trigger('click')
+    await errorsButton?.trigger('click')
 
     expect(wrapper.findComponent(ErrorsTab).exists()).toBe(true)
     expect(wrapper.findComponent(ResultTab).exists()).toBe(false)
@@ -85,9 +91,12 @@ describe('OutputPanel', () => {
     const buttons = wrapper.findAll('button')
     expect(buttons.map((b) => b.text())).toEqual(['Result', 'Metadata', 'Errors'])
 
-    const resultButton = buttons.find((b) => b.text() === 'Result')!
-    const metadataButton = buttons.find((b) => b.text() === 'Metadata')!
-    const errorsButton = buttons.find((b) => b.text() === 'Errors')!
+    const resultButton = buttons.find((b) => b.text() === 'Result')
+    const metadataButton = buttons.find((b) => b.text() === 'Metadata')
+    const errorsButton = buttons.find((b) => b.text() === 'Errors')
+    expect(resultButton).toBeDefined()
+    expect(metadataButton).toBeDefined()
+    expect(errorsButton).toBeDefined()
 
     expect(resultButton.classes()).toContain('border-blue-600')
     expect(metadataButton.classes()).not.toContain('border-blue-600')
@@ -147,7 +156,7 @@ describe('OutputPanel', () => {
         }),
         mode: 'run',
         status: 'success',
-      })
+      }),
     ).not.toThrow()
 
     const wrapper = mountOutputPanel({
@@ -162,5 +171,66 @@ describe('OutputPanel', () => {
 
     expect(wrapper.findComponent(ResultTab).exists()).toBe(true)
     expect(wrapper.findComponent(ResultTab).props('result')).toBeUndefined()
+  })
+
+  it('shows the Call Tree tab only in preview mode and switches to it', async () => {
+    const runWrapper = mountOutputPanel({
+      output: makeOutput(),
+      mode: 'run',
+      status: 'success',
+    })
+    expect(runWrapper.findAll('button').map((b) => b.text())).not.toContain('Call Tree')
+    expect(runWrapper.findComponent(CallTreeTab).exists()).toBe(false)
+
+    const previewWrapper = mountOutputPanel({
+      output: makeOutput({
+        astTree: {
+          name: 'PreviewRoot',
+          kind: 'PROCESS',
+          success: true,
+          children: [],
+          externalCalls: [],
+        },
+      }),
+      mode: 'preview',
+      status: 'success',
+    })
+    const buttons = previewWrapper.findAll('button')
+    expect(buttons.map((b) => b.text())).toContain('Call Tree')
+
+    const callTreeButton = buttons.find((b) => b.text() === 'Call Tree')
+    expect(callTreeButton).toBeDefined()
+    await callTreeButton?.trigger('click')
+    expect(previewWrapper.findComponent(CallTreeTab).exists()).toBe(true)
+    expect(previewWrapper.findComponent(ResultTab).exists()).toBe(false)
+  })
+
+  it('shows the Call Tree tab in explain mode and passes the astTree prop', async () => {
+    const wrapper = mountOutputPanel({
+      output: makeOutput({
+        astTree: {
+          name: 'ExplainRoot',
+          kind: 'PROCESS',
+          success: true,
+          children: [],
+          externalCalls: [],
+        },
+      }),
+      mode: 'explain',
+      status: 'success',
+    })
+    expect(wrapper.findAll('button').map((b) => b.text())).toContain('Call Tree')
+
+    const callTreeButton = wrapper.findAll('button').find((b) => b.text() === 'Call Tree')
+    expect(callTreeButton).toBeDefined()
+    await callTreeButton?.trigger('click')
+
+    const callTreeTab = wrapper.findComponent(CallTreeTab)
+    expect(callTreeTab.exists()).toBe(true)
+    expect(callTreeTab.props('tree')).toMatchObject({
+      name: 'ExplainRoot',
+      kind: 'PROCESS',
+      success: true,
+    })
   })
 })

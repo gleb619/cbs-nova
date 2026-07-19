@@ -1,7 +1,7 @@
-import { mount, flushPromises } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
-import InputForm from '../runner/InputForm.vue'
 import InputField from '../runner/InputField.vue'
+import InputForm from '../runner/InputForm.vue'
 
 const schemaFixture = {
   type: 'object',
@@ -52,7 +52,7 @@ describe('InputForm', () => {
     await flushPromises()
     const emitted = wrapper.emitted('update:modelValue')
     expect(emitted).toBeTruthy()
-    expect(emitted![emitted!.length - 1]).toEqual([{ name: 'alice' }])
+    expect(emitted?.[emitted?.length - 1]).toEqual([{ name: 'alice' }])
   })
 
   it('aggregates multiple schema field values into one object when the parent updates modelValue', async () => {
@@ -63,9 +63,7 @@ describe('InputForm', () => {
     await wrapper.find('#input-active').setValue(true)
     await flushPromises()
     const emitted = wrapper.emitted('update:modelValue')
-    expect(emitted![emitted!.length - 1]).toEqual([
-      { name: 'alice', age: '42', active: true },
-    ])
+    expect(emitted?.[emitted?.length - 1]).toEqual([{ name: 'alice', age: '42', active: true }])
   })
 
   it('honors the required flag from the schema', () => {
