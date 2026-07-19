@@ -1,0 +1,33 @@
+plugins {
+  id 'java'
+  id 'org.jetbrains.intellij.platform'   // no version — resolved via settings pluginManagement
+}
+
+dependencies {
+  intellijPlatform {
+    create("IC", "2023.3.5")
+    bundledPlugin("com.intellij.gradle")
+    bundledPlugin("com.intellij.java")
+    testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform.INSTANCE)
+  }
+  implementation project(':dsl-gradle-plugin')
+  testImplementation platform(libs.junit.bom)
+  testImplementation libs.junit.jupiter
+  testImplementation libs.assertj
+  testRuntimeOnly libs.junit.platform.launcher
+}
+
+intellijPlatform {
+  pluginConfiguration {
+    id = 'cbs.nova.dsl.idea'
+    name = 'cbs-nova DSL Support'
+    version = project.version
+    ideaVersion {
+      sinceBuild = '233'
+    }
+  }
+}
+
+test {
+  useJUnitPlatform()
+}

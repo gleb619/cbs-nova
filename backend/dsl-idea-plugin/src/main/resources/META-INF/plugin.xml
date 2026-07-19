@@ -1,0 +1,13 @@
+<idea-plugin>
+  <id>cbs.nova.dsl.idea</id>
+  <name>cbs-nova DSL Support</name>
+  <vendor>cbs-nova</vendor>
+  <description>Thin IDE layer for cbs-nova compact DSL/model sources. Delegates compilation to the cbs.nova.dsl Gradle plugin.</description>
+
+  <depends>com.intellij.modules.platform</depends>
+  <depends>com.intellij.modules.java</depends>
+  <depends>com.intellij.gradle</depends>
+
+  <extensions defaultExtensionNs="com.intellij">
+  </extensions>
+</idea-plugin>
