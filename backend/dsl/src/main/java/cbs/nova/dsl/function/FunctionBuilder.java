@@ -9,12 +9,13 @@ import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.ParameterRegistry;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.registry.DefaultParameterRegistry;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
 
 public final class FunctionBuilder<I, O> {
 

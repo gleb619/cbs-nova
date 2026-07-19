@@ -8,8 +8,9 @@ import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.transaction.TransactionDslObject;
-import java.util.List;
 import org.jspecify.annotations.NonNull;
+
+import java.util.List;
 
 public final class DescriptorFactory {
 
