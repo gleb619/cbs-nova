@@ -29,4 +29,10 @@
   <extensions defaultExtensionNs="org.jetbrains.plugins.gradle">
     <projectResolve implementation="cbs.nova.dsl.idea.sync.DslProjectResolverExtension"/>
   </extensions>
+
+  <actions>
+    <action id="cbs.nova.dsl.idea.CompileDslAction" class="cbs.nova.dsl.idea.CompileDslAction" text="Compile DSL Sources" description="Runs ./gradlew :&lt;module&gt;:compileDsl">
+      <add-to-group group-id="ToolsMenu" anchor="last"/>
+    </action>
+  </actions>
 </idea-plugin>
