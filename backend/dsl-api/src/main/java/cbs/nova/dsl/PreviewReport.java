@@ -13,6 +13,11 @@ public record PreviewReport(
         @Nullable Object output,
         @NonNull List<String> executionTrace,
         @NonNull List<Map<String, Object>> externalCalls,
-        @NonNull Map<String, Integer> callCounts) {
+        @NonNull Map<String, Integer> callCounts,
+        @Nullable CallNode astTree,
+        @NonNull List<Map<String, Object>> dryRunLogs) {
 
+  public PreviewReport {
+    dryRunLogs = dryRunLogs == null ? List.of() : List.copyOf(dryRunLogs);
+  }
 }

@@ -16,6 +16,11 @@ public record ExplainReport(
         @NonNull List<Map<String, Object>> externalCalls,
         @NonNull Map<String, Integer> callCounts,
         @Nullable ExecutableDescriptor executableDescriptor,
-        @Nullable DslDescriptor dslDescriptor) {
+        @Nullable DslDescriptor dslDescriptor,
+        @Nullable CallNode astTree,
+        @NonNull List<Map<String, Object>> dryRunLogs) {
 
+  public ExplainReport {
+    dryRunLogs = dryRunLogs == null ? List.of() : List.copyOf(dryRunLogs);
+  }
 }

@@ -34,13 +34,17 @@ public final class DefaultProcessRunner implements ProcessRunner {
 
   @Override
   public @NonNull Result<?> run(@NonNull ProcessDslObject process, @NonNull Context<?> ctx) {
-    var listener = new DefaultExecutionListener();
+    var historyListener = new DefaultExecutionListener();
+    var existingListener = ctx.executionListener();
+    var listener = existingListener == null
+            ? historyListener
+            : new ChainedExecutionListener(existingListener, historyListener);
     var listeningCtx = ctx.withExecutionListener(listener);
     var outcome = execute(process, listeningCtx);
     if (outcome.launchedByTemporal()) {
       return outcome.result();
     }
-    return compensateIfNeeded(process, ctx, outcome, listener.historyInReverse());
+    return compensateIfNeeded(process, ctx, outcome, historyListener.historyInReverse());
   }
 
   private ExecutionOutcome execute(ProcessDslObject process, Context<?> listeningCtx) {

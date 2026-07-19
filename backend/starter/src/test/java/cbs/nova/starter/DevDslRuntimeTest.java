@@ -2,6 +2,7 @@ package cbs.nova.starter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.CallKind;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExecutionTraceCollector;
@@ -42,6 +43,10 @@ class DevDslRuntimeTest {
     assertThat(report.executionTrace()).isNotEmpty();
     assertThat(report.executionTrace()).contains("started: Ping", "mode: PREVIEW",
             "completed successfully");
+    assertThat(report.astTree()).isNotNull();
+    assertThat(report.astTree().name()).isEqualTo("Ping");
+    assertThat(report.astTree().kind()).isEqualTo(CallKind.PROCESS);
+    assertThat(report.dryRunLogs()).isNotNull();
   }
 
   @Test
@@ -60,6 +65,32 @@ class DevDslRuntimeTest {
     assertThat(report.mermaidDiagram()).isNotBlank();
     assertThat(report.executionTrace()).isNotEmpty();
     assertThat(report.executionTrace()).contains("started: Ping");
+    assertThat(report.astTree()).isNotNull();
+    assertThat(report.astTree().name()).isEqualTo("Ping");
+    assertThat(report.astTree().kind()).isEqualTo(CallKind.PROCESS);
+    assertThat(report.dryRunLogs()).isNotNull();
+  }
+
+  @Test
+  void previewAstTreeContainsNestedTransaction() {
+    GlobalManager.globalManager()
+            .registerTransaction(Dsl.transaction("InnerTx")
+                    .execute(ctx -> Result.success("tx-out")).build());
+    GlobalManager.globalManager()
+            .registerProcess(Dsl.process("Outer")
+                    .execute(ctx -> ctx.runTransaction("InnerTx", ctx.body())).build());
+
+    var ctx = contextFactory.of("in", ExecutionMode.PREVIEW);
+    var result = runtime.preview("Outer", ctx);
+
+    assertThat(result.isSuccess()).isTrue();
+    var tree = result.value().astTree();
+    assertThat(tree).isNotNull();
+    assertThat(tree.name()).isEqualTo("Outer");
+    assertThat(tree.kind()).isEqualTo(CallKind.PROCESS);
+    assertThat(tree.children()).hasSize(1);
+    assertThat(tree.children().get(0).name()).isEqualTo("InnerTx");
+    assertThat(tree.children().get(0).kind()).isEqualTo(CallKind.TRANSACTION);
   }
 
   @Test
