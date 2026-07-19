@@ -10,6 +10,9 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.models.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -33,6 +36,7 @@ public class DslRuntimeResource {
 
   @PostMapping("/preview/{name}")
   @Operation(summary = "Preview a DSL process without side effects")
+  @ApiResponse(responseCode = "200", description = "Dry-run preview report including AST, execution trace, and captured external calls", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PreviewReport.class)))
   public ResponseEntity<?> preview(
           @PathVariable String name, @RequestBody DslRequest request) {
     var ctx = toContext(request, ExecutionMode.PREVIEW);
@@ -57,6 +61,7 @@ public class DslRuntimeResource {
 
   @PostMapping("/explain/{name}")
   @Operation(summary = "Return a static analysis report of a DSL process")
+  @ApiResponse(responseCode = "200", description = "Static analysis report including diagrams, AST, and dry-run logs", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExplainReport.class)))
   public ResponseEntity<ExplainReport> explain(
           @PathVariable String name, @RequestBody DslRequest request) {
     var ctx = toContext(request, ExecutionMode.EXPLAIN);
