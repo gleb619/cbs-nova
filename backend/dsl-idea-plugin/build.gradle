@@ -1,3 +1,5 @@
+import org.gradle.api.attributes.java.TargetJvmVersion
+
 plugins {
   id 'java'
   id 'org.jetbrains.intellij.platform'   // no version — resolved via settings pluginManagement
@@ -15,6 +17,11 @@ dependencies {
   testImplementation libs.junit.jupiter
   testImplementation libs.assertj
   testRuntimeOnly libs.junit.platform.launcher
+  // IntelliJ Platform's JUnit5 test session listener (bundled in the Platform test
+  // framework) references legacy junit.framework.TestCase at classload time even for
+  // pure JUnit 5 tests. Without this on the test runtime classpath, all tests fail with
+  // NoClassDefFoundError: junit/framework/TestCase before any test code runs.
+  testRuntimeOnly 'junit:junit:4.13.2'
 }
 
 intellijPlatform {
@@ -25,6 +32,28 @@ intellijPlatform {
     ideaVersion {
       sinceBuild = '233'
     }
+  }
+}
+
+// IntelliJ Community 2023.3.5's test framework always executes tests under a bundled
+// JetBrains Runtime (JBR 17), regardless of this module's compile toolchain. The
+// repo-wide toolchain default (gradle/java.gradle) is Java 25 — main/test classes
+// built at that level fail to load under JBR 17 (UnsupportedClassVersionError: 69.0
+// vs 61.0 max). Target release 17 for this module's own compiled classes so they're
+// loadable by the platform's JBR test runtime.
+tasks.named('compileJava') { options.release.set(17) }
+tasks.named('compileTestJava') { options.release.set(17) }
+
+// Setting release=17 above makes Gradle auto-derive a "must be JVM<=17" attribute on
+// this module's classpath configurations, which then rejects project(':dsl-gradle-plugin')
+// (built at the repo-default Java 25 and out of scope to change here) even though this
+// module's test/main code never loads a class from it. Restore the attribute to the
+// repo default so that dependency still resolves; this is safe because dsl-gradle-plugin
+// classes are never actually loaded by the JBR-17 test process — only classfile version
+// compatibility for classes this module itself defines and instantiates matters there.
+configurations.matching { it.name in ['compileClasspath', 'testCompileClasspath', 'runtimeClasspath', 'testRuntimeClasspath'] }.configureEach {
+  attributes {
+    attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 25)
   }
 }
 

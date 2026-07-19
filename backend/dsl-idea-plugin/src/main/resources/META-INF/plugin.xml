@@ -9,5 +9,7 @@
   <depends>com.intellij.gradle</depends>
 
   <extensions defaultExtensionNs="com.intellij">
+    <fileType name="CbsDsl" implementationClass="cbs.nova.dsl.idea.CbsDslFileType" fieldName="INSTANCE" language="CbsDsl" extensions=""/>
+    <lang.syntaxHighlighterFactory language="CbsDsl" implementationClass="cbs.nova.dsl.idea.CbsDslSyntaxHighlighterFactory"/>
   </extensions>
 </idea-plugin>
