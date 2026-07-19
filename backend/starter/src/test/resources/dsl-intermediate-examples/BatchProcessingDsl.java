@@ -16,7 +16,7 @@ List<DslObject> define() {
       .input(BatchIn.class)
       .output(BatchOut.class)
       .execute(ctx -> {
-        BatchIn in = (BatchIn) ctx.body();
+        BatchIn in = ctx.body();
         int total = 0;
         for (BatchItem item : in.items()) {
           total += item.value();

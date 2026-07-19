@@ -15,7 +15,7 @@ List<DslObject> define() {
       .input(ExceptionProbeIn.class)
       .output(ExceptionProbeOut.class)
       .execute(ctx -> {
-        ExceptionProbeIn in = (ExceptionProbeIn) ctx.body();
+        ExceptionProbeIn in = ctx.body();
         Result<?> r = ctx.runHelper("conditionalFailing",
             new ConditionalFailIn(in.shouldFail(), in.reason()));
         if (!r.isSuccess()) {

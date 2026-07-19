@@ -40,7 +40,7 @@ List<DslObject> define() {
   var process = Dsl.process("NestedCompensation")
       .input(NestedCompensationIn.class).output(NestedCompensationOut.class)
       .execute(ctx -> {
-        NestedCompensationIn in = (NestedCompensationIn) ctx.body();
+        NestedCompensationIn in = ctx.body();
         ctx.runTransaction("ncStep1", in);
         ctx.runTransaction("ncStep2", in);
         Result<?> r = ctx.runTransaction("ncStep3", in);

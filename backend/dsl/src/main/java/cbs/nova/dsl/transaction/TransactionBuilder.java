@@ -9,16 +9,16 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.RetryPolicy;
 import cbs.nova.dsl.TransactionContext;
 import cbs.nova.dsl.registry.DefaultParameterRegistry;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
-
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
-public final class TransactionBuilder {
+public final class TransactionBuilder<I, O> {
 
   private final String name;
   private String taskQueue;
@@ -26,16 +26,16 @@ public final class TransactionBuilder {
   private Class<?> inputType;
   private Class<?> outputType;
   private List<ParameterDescriptor> parameters;
-  private Function<TransactionContext<?>, Result<?>> executeLogic;
+  private Function<TransactionContext<I>, Result<?>> executeLogic;
   @Nullable
-  private Function<CompensationContext<?>, Result<?>> compensationLogic;
+  private Function<CompensationContext<I>, Result<?>> compensationLogic;
   private Duration startToCloseTimeout = Duration.ofSeconds(30);
   @Nullable
   private RetryPolicy retryPolicy;
   @Nullable
   private Duration heartbeatTimeout;
   @Nullable
-  private Function<TransactionContext<?>, Result<?>> previewLogic;
+  private Function<TransactionContext<I>, Result<?>> previewLogic;
   @Nullable
   private Supplier<DslDescriptor> descriptor;
 
@@ -44,65 +44,80 @@ public final class TransactionBuilder {
     this.taskQueue = name + "-queue";
   }
 
-  public TransactionBuilder input(@NonNull Class<?> type) {
+  /**
+   * Selects the typed branch and fixes the input body type.
+   */
+  @SuppressWarnings("unchecked")
+  public <T> TransactionBuilder<T, O> input(@NonNull Class<T> type) {
     this.inputType = type;
-    return this;
+    return (TransactionBuilder<T, O>) this;
   }
 
-  public TransactionBuilder output(@NonNull Class<?> type) {
+  /**
+   * Selects the typed branch and fixes the output/result type.
+   */
+  @SuppressWarnings("unchecked")
+  public <T> TransactionBuilder<I, T> output(@NonNull Class<T> type) {
     this.outputType = type;
-    return this;
+    return (TransactionBuilder<I, T>) this;
   }
 
-  public TransactionBuilder parameters(@NonNull Consumer<ParameterRegistry> registrar) {
+  /**
+   * Selects the map/parameter branch. The body is typed as {@code Map<String, Object>}.
+   */
+  @SuppressWarnings("unchecked")
+  public TransactionBuilder<Map<String, Object>, Map<String, Object>> parameters(
+          @NonNull Consumer<ParameterRegistry> registrar) {
     var registry = new DefaultParameterRegistry();
     registrar.accept(registry);
     this.parameters = registry.descriptors();
-    return this;
+    return (TransactionBuilder<Map<String, Object>, Map<String, Object>>) this;
   }
 
-  public TransactionBuilder taskQueue(@NonNull String queue) {
+  public TransactionBuilder<I, O> taskQueue(@NonNull String queue) {
     this.taskQueue = queue;
     return this;
   }
 
-  public TransactionBuilder version(@NonNull String version) {
+  public TransactionBuilder<I, O> version(@NonNull String version) {
     this.version = version;
     return this;
   }
 
-  public TransactionBuilder execute(@NonNull Function<TransactionContext<?>, Result<?>> logic) {
+  public TransactionBuilder<I, O> execute(
+          @NonNull Function<TransactionContext<I>, Result<?>> logic) {
     this.executeLogic = logic;
     return this;
   }
 
-  public TransactionBuilder compensation(
-          @NonNull Function<CompensationContext<?>, Result<?>> logic) {
+  public TransactionBuilder<I, O> compensation(
+          @NonNull Function<CompensationContext<I>, Result<?>> logic) {
     this.compensationLogic = logic;
     return this;
   }
 
-  public TransactionBuilder startToCloseTimeout(@NonNull Duration duration) {
+  public TransactionBuilder<I, O> startToCloseTimeout(@NonNull Duration duration) {
     this.startToCloseTimeout = duration;
     return this;
   }
 
-  public TransactionBuilder retryPolicy(@NonNull RetryPolicy policy) {
+  public TransactionBuilder<I, O> retryPolicy(@NonNull RetryPolicy policy) {
     this.retryPolicy = policy;
     return this;
   }
 
-  public TransactionBuilder heartbeatTimeout(@NonNull Duration duration) {
+  public TransactionBuilder<I, O> heartbeatTimeout(@NonNull Duration duration) {
     this.heartbeatTimeout = duration;
     return this;
   }
 
-  public TransactionBuilder preview(@NonNull Function<TransactionContext<?>, Result<?>> logic) {
+  public TransactionBuilder<I, O> preview(
+          @NonNull Function<TransactionContext<I>, Result<?>> logic) {
     this.previewLogic = logic;
     return this;
   }
 
-  public TransactionBuilder describe(@NonNull Supplier<DslDescriptor> desc) {
+  public TransactionBuilder<I, O> describe(@NonNull Supplier<DslDescriptor> desc) {
     this.descriptor = desc;
     return this;
   }
@@ -115,12 +130,42 @@ public final class TransactionBuilder {
       throw new IllegalStateException(
               "transaction '" + name + "' cannot have both .parameters() and .input()/.output()");
     }
-    return new TransactionDslObject(name, taskQueue, version, inputType, outputType, parameters,
-            executeLogic, compensationLogic, startToCloseTimeout, retryPolicy, heartbeatTimeout,
-            previewLogic, descriptor);
+    return new TransactionDslObject(
+            name,
+            taskQueue,
+            version,
+            inputType,
+            outputType,
+            parameters,
+            rawExecute(),
+            rawCompensation(),
+            startToCloseTimeout,
+            retryPolicy,
+            heartbeatTimeout,
+            rawPreview(),
+            descriptor);
   }
 
   public @NonNull List<DslObject> buildList() {
     return List.of(build());
+  }
+
+  @SuppressWarnings("unchecked")
+  private @NonNull Function<TransactionContext<?>, Result<?>> rawExecute() {
+    return (Function<TransactionContext<?>, Result<?>>) (Function<?, ?>) executeLogic;
+  }
+
+  @SuppressWarnings("unchecked")
+  private @Nullable Function<CompensationContext<?>, Result<?>> rawCompensation() {
+    return compensationLogic == null
+            ? null
+            : (Function<CompensationContext<?>, Result<?>>) (Function<?, ?>) compensationLogic;
+  }
+
+  @SuppressWarnings("unchecked")
+  private @Nullable Function<TransactionContext<?>, Result<?>> rawPreview() {
+    return previewLogic == null
+            ? null
+            : (Function<TransactionContext<?>, Result<?>>) (Function<?, ?>) previewLogic;
   }
 }

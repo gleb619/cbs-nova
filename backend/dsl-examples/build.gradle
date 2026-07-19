@@ -13,8 +13,8 @@ dependencyManagement {
 dependencies {
   implementation project(':dsl-api')
   implementation project(':dsl')
-  compileOnly project(':starter')
-  implementation libs.temporal.sdk
+  //compileOnly project(':starter')
+  compileOnly libs.temporal.sdk
   implementation libs.avaje.jsonb
   annotationProcessor libs.avaje.jsonb.generator
 

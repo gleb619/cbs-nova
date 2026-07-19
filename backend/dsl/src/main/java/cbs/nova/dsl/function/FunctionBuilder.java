@@ -7,21 +7,23 @@ import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.ParameterRegistry;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.registry.DefaultParameterRegistry;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
-
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
-public final class FunctionBuilder {
+public final class FunctionBuilder<I, O> {
 
   private final String name;
+  private Class<?> inputType;
+  private Class<?> outputType;
   private List<ParameterDescriptor> parameters;
-  private Function<FunctionContext<?>, Result<?>> executeLogic;
+  private Function<FunctionContext<I>, Result<?>> executeLogic;
   @Nullable
-  private Function<FunctionContext<?>, Result<?>> previewLogic;
+  private Function<FunctionContext<I>, Result<?>> previewLogic;
   @Nullable
   private Supplier<DslDescriptor> descriptor;
 
@@ -29,24 +31,47 @@ public final class FunctionBuilder {
     this.name = name;
   }
 
-  public FunctionBuilder parameters(@NonNull Consumer<ParameterRegistry> registrar) {
+  /**
+   * Selects the typed branch and fixes the input body type.
+   */
+  @SuppressWarnings("unchecked")
+  public <T> FunctionBuilder<T, O> input(@NonNull Class<T> type) {
+    this.inputType = type;
+    return (FunctionBuilder<T, O>) this;
+  }
+
+  /**
+   * Selects the typed branch and fixes the output/result type.
+   */
+  @SuppressWarnings("unchecked")
+  public <T> FunctionBuilder<I, T> output(@NonNull Class<T> type) {
+    this.outputType = type;
+    return (FunctionBuilder<I, T>) this;
+  }
+
+  /**
+   * Selects the map/parameter branch. The body is typed as {@code Map<String, Object>}.
+   */
+  @SuppressWarnings("unchecked")
+  public FunctionBuilder<Map<String, Object>, Map<String, Object>> parameters(
+          @NonNull Consumer<ParameterRegistry> registrar) {
     var registry = new DefaultParameterRegistry();
     registrar.accept(registry);
     this.parameters = registry.descriptors();
-    return this;
+    return (FunctionBuilder<Map<String, Object>, Map<String, Object>>) this;
   }
 
-  public FunctionBuilder execute(@NonNull Function<FunctionContext<?>, Result<?>> logic) {
+  public FunctionBuilder<I, O> execute(@NonNull Function<FunctionContext<I>, Result<?>> logic) {
     this.executeLogic = logic;
     return this;
   }
 
-  public FunctionBuilder preview(@NonNull Function<FunctionContext<?>, Result<?>> logic) {
+  public FunctionBuilder<I, O> preview(@NonNull Function<FunctionContext<I>, Result<?>> logic) {
     this.previewLogic = logic;
     return this;
   }
 
-  public FunctionBuilder describe(@NonNull Supplier<DslDescriptor> desc) {
+  public FunctionBuilder<I, O> describe(@NonNull Supplier<DslDescriptor> desc) {
     this.descriptor = desc;
     return this;
   }
@@ -55,10 +80,31 @@ public final class FunctionBuilder {
     if (executeLogic == null) {
       throw new IllegalStateException("execute() is required for function: " + name);
     }
-    return new FunctionDslObject(name, parameters, executeLogic, previewLogic, descriptor);
+    if (parameters != null && (inputType != null || outputType != null)) {
+      throw new IllegalStateException(
+              "function '" + name + "' cannot have both .parameters() and .input()/.output()");
+    }
+    return new FunctionDslObject(
+            name,
+            parameters,
+            rawExecute(),
+            rawPreview(),
+            descriptor);
   }
 
   public @NonNull List<DslObject> buildList() {
     return List.of(build());
+  }
+
+  @SuppressWarnings("unchecked")
+  private @NonNull Function<FunctionContext<?>, Result<?>> rawExecute() {
+    return (Function<FunctionContext<?>, Result<?>>) (Function<?, ?>) executeLogic;
+  }
+
+  @SuppressWarnings("unchecked")
+  private @Nullable Function<FunctionContext<?>, Result<?>> rawPreview() {
+    return previewLogic == null
+            ? null
+            : (Function<FunctionContext<?>, Result<?>>) (Function<?, ?>) previewLogic;
   }
 }

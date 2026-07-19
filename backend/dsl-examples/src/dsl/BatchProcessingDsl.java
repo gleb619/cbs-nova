@@ -1,17 +1,12 @@
-import cbs.nova.dsl.*;
 import cbs.nova.dslexamples.BatchModels.*;
-import java.util.List;
-import java.util.stream.Collectors;
 
-void main() {
-}
 
 List<DslObject> define() {
   return Dsl.process("BatchProcessing")
       .input(BatchIn.class)
       .output(BatchOut.class)
       .execute(ctx -> {
-        BatchIn in = (BatchIn) ctx.body();
+        BatchIn in = ctx.body();
         int total = 0;
         for (BatchItem item : in.items()) {
           total += item.value();

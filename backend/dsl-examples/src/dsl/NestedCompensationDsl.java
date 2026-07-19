@@ -1,14 +1,10 @@
-import cbs.nova.dsl.*;
 import cbs.nova.dslexamples.NestedCompensationModels.*;
-import java.util.List;
-import java.time.Duration;
 
-void main() {
-}
 
 List<DslObject> define() {
   var step1 = Dsl.transaction("ncStep1")
-      .input(NestedCompensationIn.class).output(String.class)
+      .input(NestedCompensationIn.class)
+      .output(String.class)
       .startToCloseTimeout(Duration.ofSeconds(5))
       .execute(ctx -> Result.success("step1-done"))
       .compensation(ctx -> {
@@ -17,7 +13,8 @@ List<DslObject> define() {
       })
       .build();
   var step2 = Dsl.transaction("ncStep2")
-      .input(NestedCompensationIn.class).output(String.class)
+      .input(NestedCompensationIn.class)
+      .output(String.class)
       .startToCloseTimeout(Duration.ofSeconds(5))
       .execute(ctx -> Result.success("step2-done"))
       .compensation(ctx -> {
@@ -26,7 +23,8 @@ List<DslObject> define() {
       })
       .build();
   var step3 = Dsl.transaction("ncStep3")
-      .input(NestedCompensationIn.class).output(String.class)
+      .input(NestedCompensationIn.class)
+      .output(String.class)
       .startToCloseTimeout(Duration.ofSeconds(5))
       .execute(ctx -> Result.failure(new RuntimeException("step3 deliberately failed")))
       .compensation(ctx -> {
@@ -35,12 +33,13 @@ List<DslObject> define() {
       })
       .build();
   var process = Dsl.process("NestedCompensation")
-      .input(NestedCompensationIn.class).output(NestedCompensationOut.class)
+      .input(NestedCompensationIn.class)
+      .output(NestedCompensationOut.class)
       .execute(ctx -> {
-        NestedCompensationIn in = (NestedCompensationIn) ctx.body();
+        NestedCompensationIn in = ctx.body();
         ctx.runTransaction("ncStep1", in);
         ctx.runTransaction("ncStep2", in);
-        Result<?> r = ctx.runTransaction("ncStep3", in);
+        var r = ctx.runTransaction("ncStep3", in);
         if (!r.isSuccess()) {
           return Result.failure(r.cause());
         }

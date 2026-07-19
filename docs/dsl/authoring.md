@@ -81,7 +81,7 @@ Dsl.transaction("KYC_CHECK")
     .execute(ctx -> {
         KycIn in = ctx.body();
         boolean verified = !"HIGH".equals(in.riskLevel());
-        return ctx.withBody(new KycOut(verified));
+        return Result.success(new KycOut(verified));
     })
     .build();
 ```
@@ -97,7 +97,7 @@ Dsl.function("formatCustomerMessage")
     .execute(ctx -> {
         MessageIn in = ctx.body();
         String text = "Customer " + in.customerId() + " requested loan of " + in.amount();
-        return ctx.withBody(new MessageOut(text));
+        return Result.success(new MessageOut(text));
     })
     .build();
 ```
@@ -111,7 +111,7 @@ Dsl.function("formatCustomerMessage")
 .output(KycOut.class)
 .execute(ctx -> {
     KycIn in = ctx.body();
-    return ctx.withBody(new KycOut(...));
+    return Result.success(new KycOut(...));
 })
 ```
 
@@ -126,7 +126,7 @@ Dsl.function("formatCustomerMessage")
     Map<String, Object> params = ctx.body();
     String customerId = (String) params.get("customerId");
     BigDecimal amount = (BigDecimal) params.get("amount");
-    return ctx.withBody(Map.of("customerId", customerId, "amount", amount));
+    return Result.success(Map.of("customerId", customerId, "amount", amount));
 })
 ```
 
@@ -251,7 +251,7 @@ List<DslObject> define() {
             .execute(ctx -> {
                 KycIn in = ctx.body();
                 boolean verified = !"HIGH".equals(in.riskLevel());
-                return ctx.withBody(new KycOut(verified));
+                return Result.success(new KycOut(verified));
             })
             .build(),
 
@@ -275,7 +275,7 @@ List<DslObject> define() {
                 Map<String, Object> params = ctx.body();
                 String customerId = (String) params.get("customerId");
                 BigDecimal amount = (BigDecimal) params.get("amount");
-                return ctx.withBody(Map.of(
+                return Result.success(Map.of(
                     "customerId", customerId,
                     "debitId", "D-123",
                     "amount", amount
@@ -289,7 +289,7 @@ List<DslObject> define() {
             .execute(ctx -> {
                 MessageIn in = ctx.body();
                 String text = "Customer " + in.customerId() + " requested loan of " + in.amount();
-                return ctx.withBody(new MessageOut(text));
+                return Result.success(new MessageOut(text));
             })
             .build(),
 
@@ -341,7 +341,7 @@ List<DslObject> define() {
 
                 ctx.log("Sending " + channel + " to " + customerId);
 
-                return ctx.withBody(Map.of(
+                return Result.success(Map.of(
                     "customerId", customerId,
                     "status", "SENT",
                     "sentAt", Instant.now().toString()

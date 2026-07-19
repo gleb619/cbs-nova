@@ -1,24 +1,22 @@
-import cbs.nova.dsl.*;
 import cbs.nova.dslexamples.UnreliableApiModels.*;
-import cbs.nova.starter.helpers.model.UnreliableApiIn;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
-void main() {
+public record UnreliableApiInDsl(
+    String operationId,
+    int failCount,
+    boolean jitter,
+    String reason) {
 }
 
 List<DslObject> define() {
   var resilientTx = Dsl.transaction("unreliableApiTxResilient")
-      .input(UnreliableApiIn.class)
-      .taskQueue("unreliable-api-queue")
+      .input(UnreliableApiInDsl.class)
       .output(String.class)
+      .taskQueue("unreliable-api-queue")
       .startToCloseTimeout(Duration.ofSeconds(5))
       .retryPolicy(new RetryPolicy(4, Duration.ofMillis(200), 1.0))
       .execute(ctx -> {
-        UnreliableApiIn in = (UnreliableApiIn) ctx.body();
-        Result<?> r = ctx.runHelper("unreliableApi");
+        UnreliableApiInDsl in = ctx.body();
+        var r = ctx.runHelper("unreliableApi");
         if (!r.isSuccess()) {
           return Result.failure(r.cause());
         }
@@ -31,14 +29,14 @@ List<DslObject> define() {
       .build();
 
   var fragileTx = Dsl.transaction("unreliableApiTxFragile")
-      .input(UnreliableApiIn.class)
+      .input(UnreliableApiInDsl.class)
       .taskQueue("unreliable-api-queue")
       .output(String.class)
       .startToCloseTimeout(Duration.ofSeconds(5))
       .retryPolicy(new RetryPolicy(1, Duration.ofMillis(100), 1.0))
       .execute(ctx -> {
-        UnreliableApiIn in = (UnreliableApiIn) ctx.body();
-        Result<?> r = ctx.runHelper("unreliableApi");
+        UnreliableApiInDsl in = ctx.body();
+        var r = ctx.runHelper("unreliableApi");
         if (!r.isSuccess()) {
           return Result.failure(r.cause());
         }
@@ -55,8 +53,8 @@ List<DslObject> define() {
       .taskQueue("unreliable-api-queue")
       .output(UnreliableProcessOut.class)
       .execute(ctx -> {
-        UnreliableProcessIn in = (UnreliableProcessIn) ctx.body();
-        Result<?> r = ctx.runTransaction("unreliableApiTxResilient", in.apiCall());
+        UnreliableProcessIn in = ctx.body();
+        var r = ctx.runTransaction("unreliableApiTxResilient", in.apiCall());
         if (!r.isSuccess()) {
           return Result.failure(r.cause());
         }
@@ -74,17 +72,18 @@ List<DslObject> define() {
       .taskQueue("unreliable-api-queue")
       .output(UnreliableProcessOut.class)
       .execute(ctx -> {
-        UnreliableProcessIn in = (UnreliableProcessIn) ctx.body();
-        Result<?> r = ctx.runTransaction("unreliableApiTxFragile", in.apiCall());
+        UnreliableProcessIn in = ctx.body();
+        var r = ctx.runTransaction("unreliableApiTxFragile", in.apiCall());
         if (!r.isSuccess()) {
           return Result.failure(r.cause());
         }
         return Result.success(new UnreliableProcessOut(in.scenario(), "SUCCESS", List.of()));
       })
       .compensation(ctx -> {
+        UnreliableProcessIn in = ctx.body();
         ctx.log("UnreliableApiCompensated compensated: " + ctx.error().getMessage());
         ctx.runHelper("compensationTracker",
-            Map.of("markerId", "UnreliableApiCompensated-" + ((UnreliableProcessIn) ctx.body()).scenario()));
+            Map.of("markerId", "UnreliableApiCompensated-" + in.scenario()));
         return Result.success("compensated");
       })
       .build();
@@ -94,8 +93,8 @@ List<DslObject> define() {
       .taskQueue("unreliable-api-queue")
       .output(UnreliableProcessOut.class)
       .execute(ctx -> {
-        UnreliableProcessIn in = (UnreliableProcessIn) ctx.body();
-        Result<?> r = ctx.runTransaction("unreliableApiTxFragile", in.apiCall());
+        UnreliableProcessIn in = ctx.body();
+        var r = ctx.runTransaction("unreliableApiTxFragile", in.apiCall());
         if (!r.isSuccess()) {
           return Result.failure(r.cause());
         }

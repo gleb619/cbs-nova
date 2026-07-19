@@ -1,10 +1,5 @@
-import cbs.nova.dsl.*;
 import cbs.nova.dslexamples.OrderSagaModels.*;
-import java.util.List;
-import java.time.Duration;
 
-void main() {
-}
 
 List<DslObject> define() {
   var inventoryTx = Dsl.transaction("reserveInventory")
@@ -39,12 +34,12 @@ List<DslObject> define() {
       .input(OrderSagaIn.class)
       .output(OrderSagaOut.class)
       .execute(ctx -> {
-        OrderSagaIn in = (OrderSagaIn) ctx.body();
-        Result<?> inv = ctx.runTransaction("reserveInventory", in);
+        OrderSagaIn in = ctx.body();
+        var inv = ctx.runTransaction("reserveInventory", in);
         if (!inv.isSuccess()) {
           return Result.failure(inv.cause());
         }
-        Result<?> pay = ctx.runTransaction("chargePayment", in);
+        var pay = ctx.runTransaction("chargePayment", in);
         if (!pay.isSuccess()) {
           return Result.failure(pay.cause());
         }

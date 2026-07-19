@@ -5,10 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.RetryPolicyFactory;
+import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.Map;
 
 class DslBuilderTest {
 
@@ -151,8 +150,7 @@ class DslBuilderTest {
     var proc = Dsl.process("ParamProcess")
             .parameters(reg -> reg.string("name"))
             .execute(ctx -> {
-              @SuppressWarnings("unchecked")
-              Map<String, Object> body = (Map<String, Object>) ctx.body();
+              Map<String, Object> body = ctx.body();
               return Result.success("hello " + body.get("name"));
             })
             .build();
@@ -184,6 +182,25 @@ class DslBuilderTest {
     @SuppressWarnings("unchecked")
     Map<String, Object> value = (Map<String, Object>) result.value();
     assertThat(value).containsEntry("name", "test");
+  }
+
+  @Test
+  void typedProcessBodyIsAvailableWithoutCast() {
+    GlobalManager.globalManager().resetForTests();
+    var gm = GlobalManager.globalManager();
+
+    var proc = Dsl.process("TypedBodyProc")
+            .input(String.class)
+            .output(String.class)
+            .execute(ctx -> Result.success("got " + ctx.body().toUpperCase()))
+            .build();
+    gm.registerProcess(proc);
+
+    var result = gm.runProcess("TypedBodyProc",
+            contextFactory.of("world", ExecutionMode.PREVIEW));
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value()).isEqualTo("got WORLD");
   }
 
   @AfterEach

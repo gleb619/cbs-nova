@@ -1,16 +1,12 @@
-import cbs.nova.dsl.*;
 import cbs.nova.dslexamples.InvoiceModels.*;
-import java.util.List;
 
-void main() {
-}
 
 List<DslObject> define() {
   return Dsl.process("InvoiceGeneration")
       .input(InvoiceIn.class)
       .output(InvoiceOut.class)
       .execute(ctx -> {
-        InvoiceIn in = (InvoiceIn) ctx.body();
+        InvoiceIn in = ctx.body();
         double subtotal = in.lines().stream()
             .mapToDouble(l -> l.unitPrice() * l.quantity())
             .sum();

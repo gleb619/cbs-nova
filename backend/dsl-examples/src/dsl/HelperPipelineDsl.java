@@ -1,27 +1,22 @@
-import cbs.nova.dsl.*;
 import cbs.nova.dslexamples.HelperPipelineModels.*;
 import cbs.nova.starter.helpers.model.FilterRecordsIn;
 import cbs.nova.starter.helpers.model.FilterRecordsOut;
-import cbs.nova.starter.helpers.model.SumValuesIn;
-import cbs.nova.starter.helpers.model.SumValuesOut;
 import cbs.nova.starter.helpers.model.FormatMessageIn;
 import cbs.nova.starter.helpers.model.FormatMessageOut;
 import cbs.nova.starter.helpers.model.JsonExtractIn;
 import cbs.nova.starter.helpers.model.JsonExtractOut;
-import java.util.List;
-import java.util.Map;
+import cbs.nova.starter.helpers.model.SumValuesIn;
+import cbs.nova.starter.helpers.model.SumValuesOut;
 
-void main() {
-}
 
 List<DslObject> define() {
   return Dsl.process("HelperPipeline")
       .input(PipelineIn.class)
       .output(PipelineOut.class)
       .execute(ctx -> {
-        PipelineIn in = (PipelineIn) ctx.body();
+        PipelineIn in = ctx.body();
 
-        Result<?> filtered = ctx.runHelper("filterRecords",
+        var filtered = ctx.runHelper("filterRecords",
             new FilterRecordsIn(in.records(), in.filterField(), in.filterValue()));
         if (!filtered.isSuccess()) {
           return Result.failure(filtered.cause());
@@ -32,13 +27,13 @@ List<DslObject> define() {
         List<Double> amounts = matched.stream()
             .map(r -> ((Number) r.get("amount")).doubleValue())
             .toList();
-        Result<?> summed = ctx.runHelper("sumValues", new SumValuesIn(amounts));
+        var summed = ctx.runHelper("sumValues", new SumValuesIn(amounts));
         if (!summed.isSuccess()) {
           return Result.failure(summed.cause());
         }
         SumValuesOut summedOut = summed.as(SumValuesOut.class);
 
-        Result<?> rendered = ctx.runHelper("formatMessage",
+        var rendered = ctx.runHelper("formatMessage",
             new FormatMessageIn(in.messageTemplate(),
                 Map.of("count", matched.size(), "total", summedOut.sum())));
         if (!rendered.isSuccess()) {
@@ -46,7 +41,7 @@ List<DslObject> define() {
         }
         FormatMessageOut renderedOut = rendered.as(FormatMessageOut.class);
 
-        Result<?> extracted = ctx.runHelper("jsonExtract",
+        var extracted = ctx.runHelper("jsonExtract",
             new JsonExtractIn(in.payloadJson(), in.extractPath()));
         if (!extracted.isSuccess()) {
           return Result.failure(extracted.cause());

@@ -10,11 +10,10 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class TemporalTransactionFailurePropagationTest {
 
@@ -48,7 +47,7 @@ class TemporalTransactionFailurePropagationTest {
     gm.registerTransaction(Dsl.transaction("CompensatedTx")
             .input(String.class)
             .execute(ctx -> Result.success("ok"))
-            .compensation((CompensationContext<?> ctx) -> {
+            .compensation((CompensationContext<String> ctx) -> {
               order.add("compensated:" + ctx.body());
               return Result.success(null);
             })

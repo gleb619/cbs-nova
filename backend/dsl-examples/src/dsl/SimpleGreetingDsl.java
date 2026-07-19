@@ -1,23 +1,16 @@
-import cbs.nova.dsl.*;
-import java.util.List;
-import java.util.Map;
-
 List<DslObject> define() {
   var greetFn = Dsl.function("greetFn")
       .execute(ctx -> {
-        @SuppressWarnings("unchecked")
-        var input = (Map<String, Object>) ctx.body();
+        var input = ctx.body();
         var name = String.valueOf(input.getOrDefault("name", "world"));
         return Result.success("Hello, " + name + "!");
       })
       .build();
 
   var process = Dsl.process("SimpleGreeting")
-      .input(Map.class)
-      .output(String.class)
+      .parameters(reg -> reg.string("name"))
       .execute(ctx -> {
-        @SuppressWarnings("unchecked")
-        var input = (Map<String, Object>) ctx.body();
+        var input = ctx.body();
         var greeting = ctx.runHelper(
             "greetFn",
             Map.of("name", input.getOrDefault("name", "world")));

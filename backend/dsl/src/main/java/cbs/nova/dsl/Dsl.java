@@ -9,15 +9,15 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class Dsl {
 
-  public static ProcessBuilder process(String name) {
-    return new ProcessBuilder(name);
+  public static ProcessBuilder<Object, Object> process(String name) {
+    return new ProcessBuilder<>(name);
   }
 
-  public static TransactionBuilder transaction(String name) {
-    return new TransactionBuilder(name);
+  public static TransactionBuilder<Object, Object> transaction(String name) {
+    return new TransactionBuilder<>(name);
   }
 
-  public static FunctionBuilder function(String name) {
-    return new FunctionBuilder(name);
+  public static FunctionBuilder<Object, Object> function(String name) {
+    return new FunctionBuilder<>(name);
   }
 }

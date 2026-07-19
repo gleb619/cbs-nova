@@ -9,16 +9,16 @@ import cbs.nova.dsl.ProcessContext;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.TransactionExecution;
 import cbs.nova.dsl.registry.DefaultParameterRegistry;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
-
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
-public final class ProcessBuilder {
+public final class ProcessBuilder<I, O> {
 
   private final String name;
   private String taskQueue;
@@ -26,13 +26,13 @@ public final class ProcessBuilder {
   private Class<?> inputType;
   private Class<?> outputType;
   private List<ParameterDescriptor> parameters;
-  private Function<ProcessContext<?>, Result<?>> executeLogic;
+  private Function<ProcessContext<I>, Result<?>> executeLogic;
   @Nullable
-  private Function<CompensationContext<?>, Result<?>> compensationLogic;
+  private Function<CompensationContext<I>, Result<?>> compensationLogic;
   @Nullable
-  private Function<ProcessContext<?>, Result<?>> previewLogic;
+  private Function<ProcessContext<I>, Result<?>> previewLogic;
   @Nullable
-  private BiConsumer<CompensationContext<?>, List<TransactionExecution>> userCompensationHandler;
+  private BiConsumer<CompensationContext<I>, List<TransactionExecution>> userCompensationHandler;
   private List<String> transactionRefs = List.of();
   @Nullable
   private Supplier<DslDescriptor> descriptor;
@@ -42,60 +42,74 @@ public final class ProcessBuilder {
     this.taskQueue = name + "-queue";
   }
 
-  public ProcessBuilder input(@NonNull Class<?> type) {
+  /**
+   * Selects the typed branch and fixes the input body type.
+   */
+  @SuppressWarnings("unchecked")
+  public <T> ProcessBuilder<T, O> input(@NonNull Class<T> type) {
     this.inputType = type;
-    return this;
+    return (ProcessBuilder<T, O>) this;
   }
 
-  public ProcessBuilder output(@NonNull Class<?> type) {
+  /**
+   * Selects the typed branch and fixes the output/result type.
+   */
+  @SuppressWarnings("unchecked")
+  public <T> ProcessBuilder<I, T> output(@NonNull Class<T> type) {
     this.outputType = type;
-    return this;
+    return (ProcessBuilder<I, T>) this;
   }
 
-  public ProcessBuilder parameters(@NonNull Consumer<ParameterRegistry> registrar) {
+  /**
+   * Selects the map/parameter branch. The body is typed as {@code Map<String, Object>}.
+   */
+  @SuppressWarnings("unchecked")
+  public ProcessBuilder<Map<String, Object>, Map<String, Object>> parameters(
+          @NonNull Consumer<ParameterRegistry> registrar) {
     var registry = new DefaultParameterRegistry();
     registrar.accept(registry);
     this.parameters = registry.descriptors();
-    return this;
+    return (ProcessBuilder<Map<String, Object>, Map<String, Object>>) this;
   }
 
-  public ProcessBuilder taskQueue(@NonNull String queue) {
+  public ProcessBuilder<I, O> taskQueue(@NonNull String queue) {
     this.taskQueue = queue;
     return this;
   }
 
-  public ProcessBuilder version(@NonNull String version) {
+  public ProcessBuilder<I, O> version(@NonNull String version) {
     this.version = version;
     return this;
   }
 
-  public ProcessBuilder execute(@NonNull Function<ProcessContext<?>, Result<?>> logic) {
+  public ProcessBuilder<I, O> execute(@NonNull Function<ProcessContext<I>, Result<?>> logic) {
     this.executeLogic = logic;
     return this;
   }
 
-  public ProcessBuilder compensation(@NonNull Function<CompensationContext<?>, Result<?>> logic) {
+  public ProcessBuilder<I, O> compensation(
+          @NonNull Function<CompensationContext<I>, Result<?>> logic) {
     this.compensationLogic = logic;
     return this;
   }
 
-  public ProcessBuilder compensation(
-          @NonNull BiConsumer<CompensationContext<?>, List<TransactionExecution>> handler) {
+  public ProcessBuilder<I, O> compensation(
+          @NonNull BiConsumer<CompensationContext<I>, List<TransactionExecution>> handler) {
     this.userCompensationHandler = handler;
     return this;
   }
 
-  public ProcessBuilder transactions(@NonNull List<String> refs) {
+  public ProcessBuilder<I, O> transactions(@NonNull List<String> refs) {
     this.transactionRefs = refs;
     return this;
   }
 
-  public ProcessBuilder preview(@NonNull Function<ProcessContext<?>, Result<?>> logic) {
+  public ProcessBuilder<I, O> preview(@NonNull Function<ProcessContext<I>, Result<?>> logic) {
     this.previewLogic = logic;
     return this;
   }
 
-  public ProcessBuilder describe(@NonNull Supplier<DslDescriptor> desc) {
+  public ProcessBuilder<I, O> describe(@NonNull Supplier<DslDescriptor> desc) {
     this.descriptor = desc;
     return this;
   }
@@ -108,12 +122,48 @@ public final class ProcessBuilder {
       throw new IllegalStateException(
               "process '" + name + "' cannot have both .parameters() and .input()/.output()");
     }
-    return new ProcessDslObject(name, taskQueue, version, inputType, outputType, parameters,
-            executeLogic, compensationLogic, previewLogic, descriptor, userCompensationHandler,
+    return new ProcessDslObject(
+            name,
+            taskQueue,
+            version,
+            inputType,
+            outputType,
+            parameters,
+            rawExecute(),
+            rawCompensation(),
+            rawPreview(),
+            descriptor,
+            rawUserCompensationHandler(),
             transactionRefs);
   }
 
   public @NonNull List<DslObject> buildList() {
     return List.of(build());
+  }
+
+  @SuppressWarnings("unchecked")
+  private @NonNull Function<ProcessContext<?>, Result<?>> rawExecute() {
+    return (Function<ProcessContext<?>, Result<?>>) (Function<?, ?>) executeLogic;
+  }
+
+  @SuppressWarnings("unchecked")
+  private @Nullable Function<CompensationContext<?>, Result<?>> rawCompensation() {
+    return compensationLogic == null
+            ? null
+            : (Function<CompensationContext<?>, Result<?>>) (Function<?, ?>) compensationLogic;
+  }
+
+  @SuppressWarnings("unchecked")
+  private @Nullable Function<ProcessContext<?>, Result<?>> rawPreview() {
+    return previewLogic == null
+            ? null
+            : (Function<ProcessContext<?>, Result<?>>) (Function<?, ?>) previewLogic;
+  }
+
+  @SuppressWarnings("unchecked")
+  private @Nullable BiConsumer<CompensationContext<?>, List<TransactionExecution>> rawUserCompensationHandler() {
+    return userCompensationHandler == null
+            ? null
+            : (BiConsumer<CompensationContext<?>, List<TransactionExecution>>) (BiConsumer<?, ?>) userCompensationHandler;
   }
 }

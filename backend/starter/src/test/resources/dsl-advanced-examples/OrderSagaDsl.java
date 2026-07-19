@@ -44,7 +44,7 @@ List<DslObject> define() {
       .input(OrderSagaIn.class)
       .output(OrderSagaOut.class)
       .execute(ctx -> {
-        OrderSagaIn in = (OrderSagaIn) ctx.body();
+        OrderSagaIn in = ctx.body();
         Result<?> inv = ctx.runTransaction("reserveInventory", in);
         if (!inv.isSuccess()) {
           return Result.failure(inv.cause());

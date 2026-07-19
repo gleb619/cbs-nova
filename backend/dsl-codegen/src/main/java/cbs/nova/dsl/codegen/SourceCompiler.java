@@ -5,16 +5,6 @@ import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.codegen.generator.DefinitionProviderGenerator;
 import cbs.nova.dsl.compact.CompactSourcePreprocessor;
 import cbs.nova.dsl.compact.ModelSourcePreprocessor;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
-import org.slf4j.event.Level;
-
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaCompiler;
-import javax.tools.JavaFileObject;
-import javax.tools.StandardJavaFileManager;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -28,6 +18,14 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Stream;
+import javax.tools.DiagnosticCollector;
+import javax.tools.JavaCompiler;
+import javax.tools.JavaFileObject;
+import javax.tools.StandardJavaFileManager;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
+import org.slf4j.event.Level;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -222,7 +220,14 @@ public final class SourceCompiler {
       var task = compiler.getTask(null, fm, diagnostics, options, null, units);
       if (!task.call()) {
         diagnostics.getDiagnostics().forEach(d -> log.atLevel(logLevel)
-                .log(() -> "[SourceCompiler] compilation: %s".formatted(d.getMessage(null))));
+                .log(() -> {
+                  String fileName = d.getSource().getName();
+                  long lineNumber = d.getLineNumber();
+                  return "[SourceCompiler] %s#L%s compilation: %s".formatted(
+                          fileName,
+                          lineNumber,
+                          d.getMessage(null));
+                }));
         return false;
       }
       return true;
@@ -247,7 +252,15 @@ public final class SourceCompiler {
       if (!task.call()) {
         diagnostics.getDiagnostics().forEach(
                 d -> log.atLevel(logLevel)
-                        .log(() -> "[SourceCompiler] provider: %s".formatted(d.getMessage(null))));
+                        .log(() -> {
+                          String fileName = d.getSource().getName();
+                          long lineNumber = d.getLineNumber();
+
+                          return "[SourceCompiler] %s#L%s provider: %s".formatted(
+                                  fileName,
+                                  lineNumber,
+                                  d.getMessage(null));
+                        }));
         throw new IllegalStateException("Failed to compile generated DSL definition provider");
       }
     } catch (IOException e) {
