@@ -13,7 +13,6 @@
       fieldName="INSTANCE" language="CbsDsl" extensions=""/>
     <lang.syntaxHighlighterFactory language="CbsDsl" implementationClass="cbs.nova.dsl.idea.CbsDslSyntaxHighlighterFactory"/>
     <fileTypeOverrider implementation="cbs.nova.dsl.idea.DslFileTypeOverrider"/>
-    <!--<lang.parserDefinition language="CbsDsl" implementationClass="cbs.nova.dsl.idea.CbsDslParserDefinition"/>-->
     <!--
       Real extension point name confirmed via javap/plugin.xml inspection of the bundled
       com.intellij.gradle plugin (IC 2023.3.5): externalSystemTaskNotificationListener is a

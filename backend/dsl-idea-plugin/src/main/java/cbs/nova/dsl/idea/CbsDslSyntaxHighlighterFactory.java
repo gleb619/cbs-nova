@@ -2,14 +2,10 @@ package cbs.nova.dsl.idea;
 
 import com.intellij.ide.highlighter.JavaClassFileType;
 import com.intellij.ide.highlighter.JavaFileHighlighter;
-import com.intellij.ide.highlighter.JavaHighlightingColors;
 import com.intellij.lang.Language;
 import com.intellij.lang.java.JavaLanguage;
-import com.intellij.lang.java.JavaParserDefinition;
-import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.fileTypes.SyntaxHighlighter;
-import com.intellij.openapi.fileTypes.SyntaxHighlighterBase;
 import com.intellij.openapi.fileTypes.SyntaxHighlighterFactory;
 import com.intellij.openapi.fileTypes.SyntaxHighlighterProvider;
 import com.intellij.openapi.project.Project;
@@ -19,8 +15,6 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.impl.JavaPsiImplementationHelper;
 import com.intellij.psi.impl.compiled.ClsFileImpl;
-import com.intellij.psi.tree.IElementType;
-import com.intellij.lexer.Lexer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -37,20 +31,6 @@ public final class CbsDslSyntaxHighlighterFactory extends SyntaxHighlighterFacto
           @Nullable VirtualFile file) {
     return new JavaFileHighlighter(project == null ? LanguageLevel.HIGHEST
         : JavaPsiImplementationHelper.getInstance(project).getEffectiveLanguageLevel(file));
-
-    /*
-    return new SyntaxHighlighterBase() {
-      @Override
-      public @NotNull Lexer getHighlightingLexer() {
-        return new JavaParserDefinition().createLexer(project);
-      }
-
-      @Override
-      public TextAttributesKey @NotNull [] getTokenHighlights(IElementType tokenType) {
-        return pack(JavaHighlightingColors.KEYWORD);
-      }
-    };
-    */
   }
 
   public @Nullable SyntaxHighlighter create(@NotNull FileType fileType, @Nullable Project project, @Nullable VirtualFile file) {
