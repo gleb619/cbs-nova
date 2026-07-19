@@ -13,6 +13,7 @@ public class DslSourceRootSyncContributorTest extends BasePlatformTestCase {
 
     new DslSourceRootSyncContributor().onSyncFinished(getProject(), dirs);
 
-    assertTrue(DslSyncedDirs.getInstance(getProject()).containsAncestorOf(Path.of("/tmp/example/src/dsl/Foo.java")));
+    assertTrue(DslSyncedDirs.getInstance(getProject())
+            .containsAncestorOf(Path.of("/tmp/example/src/dsl/Foo.java")));
   }
 }

@@ -16,10 +16,9 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 
 /**
- * Tools-menu action that shells out to {@code ./gradlew :<module>:compileDsl} for the
- * selected module. This plugin is a thin IDE layer — all actual DSL compilation is
- * delegated to the existing {@code cbs.nova.dsl} Gradle plugin; this action is its only
- * interactive entry point.
+ * Tools-menu action that shells out to {@code ./gradlew :<module>:compileDsl} for the selected
+ * module. This plugin is a thin IDE layer — all actual DSL compilation is delegated to the existing
+ * {@code cbs.nova.dsl} Gradle plugin; this action is its only interactive entry point.
  */
 public final class CompileDslAction extends AnAction {
 
@@ -50,7 +49,8 @@ public final class CompileDslAction extends AnAction {
       console.attachToProcess(processHandler);
       RunContentManager.getInstance(project).showRunContent(
               null,
-              new RunContentDescriptor(console, processHandler, console.getComponent(), "compileDsl"));
+              new RunContentDescriptor(console, processHandler, console.getComponent(),
+                      "compileDsl"));
       processHandler.startNotify();
     } catch (ExecutionException e) {
       throw new RuntimeException(e);

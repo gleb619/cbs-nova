@@ -9,9 +9,12 @@ public class DslFileTypeOverriderTest extends BasePlatformTestCase {
 
   public void testDefaultFallbackMatchesSrcDslAndSrcModels() {
     var overrider = new DslFileTypeOverrider();
-    var dslFile = myFixture.addFileToProject("src/dsl/SimpleGreetingDsl.java", "define stuff").getVirtualFile();
-    var modelFile = myFixture.addFileToProject("src/models/GreetingModels.java", "record stuff").getVirtualFile();
-    var otherFile = myFixture.addFileToProject("src/main/java/Foo.java", "class Foo {}").getVirtualFile();
+    var dslFile = myFixture.addFileToProject("src/dsl/SimpleGreetingDsl.java", "define stuff")
+            .getVirtualFile();
+    var modelFile = myFixture.addFileToProject("src/models/GreetingModels.java", "record stuff")
+            .getVirtualFile();
+    var otherFile = myFixture.addFileToProject("src/main/java/Foo.java", "class Foo {}")
+            .getVirtualFile();
 
     assertEquals(CbsDslFileType.INSTANCE, overrider.getOverriddenFileType(dslFile));
     assertEquals(CbsDslFileType.INSTANCE, overrider.getOverriddenFileType(modelFile));
@@ -20,7 +23,8 @@ public class DslFileTypeOverriderTest extends BasePlatformTestCase {
 
   public void testSyncedDirsTakePrecedenceOverFallback() {
     var overrider = new DslFileTypeOverrider();
-    var customFile = myFixture.addFileToProject("custom/dsl-src/Foo.java", "define stuff").getVirtualFile();
+    var customFile = myFixture.addFileToProject("custom/dsl-src/Foo.java", "define stuff")
+            .getVirtualFile();
     assertNull(overrider.getOverriddenFileType(customFile));
 
     DslSyncedDirs.getInstance(getProject()).replace(

@@ -15,11 +15,14 @@ import org.jetbrains.plugins.gradle.util.GradleConstants;
  * RESOLVE_PROJECT external-system task -- including data import into the IDE project model --
  * completes for a Gradle sync, which is the "end of sync" hook this plugin needs.
  *
- * <p>{@link ExternalSystemTaskId#findProject()} resolves the {@code Project} instance the task
- * ran against, letting this listener stay a thin adapter that just forwards to the plain,
+ * <p>
+ * {@link ExternalSystemTaskId#findProject()} resolves the {@code Project} instance the task ran
+ * against, letting this listener stay a thin adapter that just forwards to the plain,
  * directly-testable {@link DslSourceRootSyncContributor}.
  */
-public final class DslGradleSyncNotificationListener implements ExternalSystemTaskNotificationListener {
+public final class DslGradleSyncNotificationListener
+        implements
+          ExternalSystemTaskNotificationListener {
 
   private final DslSourceRootSyncContributor contributor = new DslSourceRootSyncContributor();
 
@@ -66,6 +69,6 @@ public final class DslGradleSyncNotificationListener implements ExternalSystemTa
   private boolean isGradleProjectResolve(ExternalSystemTaskId id) {
     ProjectSystemId systemId = id.getProjectSystemId();
     return id.getType() == ExternalSystemTaskType.RESOLVE_PROJECT
-        && GradleConstants.SYSTEM_ID.equals(systemId);
+            && GradleConstants.SYSTEM_ID.equals(systemId);
   }
 }

@@ -24,11 +24,15 @@ public class DslProjectResolverExtensionDrainTest extends BasePlatformTestCase {
     field.setAccessible(true);
     var discovered = (Map<ExternalSystemTaskId, Set<Path>>) field.get(null);
 
-    var taskA = ExternalSystemTaskId.create(GradleConstants.SYSTEM_ID, ExternalSystemTaskType.RESOLVE_PROJECT, "projectA");
-    var taskB = ExternalSystemTaskId.create(GradleConstants.SYSTEM_ID, ExternalSystemTaskType.RESOLVE_PROJECT, "projectB");
+    var taskA = ExternalSystemTaskId.create(GradleConstants.SYSTEM_ID,
+            ExternalSystemTaskType.RESOLVE_PROJECT, "projectA");
+    var taskB = ExternalSystemTaskId.create(GradleConstants.SYSTEM_ID,
+            ExternalSystemTaskType.RESOLVE_PROJECT, "projectB");
 
-    discovered.computeIfAbsent(taskA, id -> ConcurrentHashMap.newKeySet()).add(Path.of("/tmp/projectA/src/dsl"));
-    discovered.computeIfAbsent(taskB, id -> ConcurrentHashMap.newKeySet()).add(Path.of("/tmp/projectB/src/dsl"));
+    discovered.computeIfAbsent(taskA, id -> ConcurrentHashMap.newKeySet())
+            .add(Path.of("/tmp/projectA/src/dsl"));
+    discovered.computeIfAbsent(taskB, id -> ConcurrentHashMap.newKeySet())
+            .add(Path.of("/tmp/projectB/src/dsl"));
 
     var drainedA = DslProjectResolverExtension.drainDiscovered(taskA);
     assertEquals(Set.of(Path.of("/tmp/projectA/src/dsl")), drainedA);
