@@ -11,5 +11,6 @@
   <extensions defaultExtensionNs="com.intellij">
     <fileType name="CbsDsl" implementationClass="cbs.nova.dsl.idea.CbsDslFileType" fieldName="INSTANCE" language="CbsDsl" extensions=""/>
     <lang.syntaxHighlighterFactory language="CbsDsl" implementationClass="cbs.nova.dsl.idea.CbsDslSyntaxHighlighterFactory"/>
+    <fileTypeOverrider implementation="cbs.nova.dsl.idea.DslFileTypeOverrider"/>
   </extensions>
 </idea-plugin>

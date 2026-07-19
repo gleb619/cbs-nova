@@ -21,7 +21,15 @@ dependencies {
   // framework) references legacy junit.framework.TestCase at classload time even for
   // pure JUnit 5 tests. Without this on the test runtime classpath, all tests fail with
   // NoClassDefFoundError: junit/framework/TestCase before any test code runs.
-  testRuntimeOnly 'junit:junit:4.13.2'
+  // testImplementation (not testRuntimeOnly) because BasePlatformTestCase-based tests
+  // (added in Task 4) extend junit.framework.TestCase directly, so junit:junit must
+  // also be on the test *compile* classpath, not just the runtime classpath.
+  testImplementation 'junit:junit:4.13.2'
+  // BasePlatformTestCase (Task 4) is a JUnit3-style TestCase. The JUnit Platform runner
+  // (useJUnitPlatform() below) only discovers such tests via the Vintage engine, which
+  // bridges JUnit3/4 TestCase classes onto JUnit Platform. Without it, `test` silently
+  // reports "No tests found" for BasePlatformTestCase subclasses even though they compile.
+  testRuntimeOnly 'org.junit.vintage:junit-vintage-engine'
 }
 
 intellijPlatform {
