@@ -12,5 +12,21 @@
     <fileType name="CbsDsl" implementationClass="cbs.nova.dsl.idea.CbsDslFileType" fieldName="INSTANCE" language="CbsDsl" extensions=""/>
     <lang.syntaxHighlighterFactory language="CbsDsl" implementationClass="cbs.nova.dsl.idea.CbsDslSyntaxHighlighterFactory"/>
     <fileTypeOverrider implementation="cbs.nova.dsl.idea.DslFileTypeOverrider"/>
+    <!--
+      Real extension point name confirmed via javap/plugin.xml inspection of the bundled
+      com.intellij.gradle plugin (IC 2023.3.5): externalSystemTaskNotificationListener is a
+      top level com.intellij extension, not a Gradle specific one. onSuccess fires at the end of
+      a RESOLVE_PROJECT task, i.e. end of Gradle sync, after data import into the IDE model.
+    -->
+    <externalSystemTaskNotificationListener implementation="cbs.nova.dsl.idea.sync.DslGradleSyncNotificationListener"/>
+  </extensions>
+
+  <!--
+    Real extension point for Gradle project resolver extensions, confirmed via javap/plugin.xml
+    inspection of gradle.jar (IC 2023.3.5): org.jetbrains.plugins.gradle.projectResolve under
+    defaultExtensionNs="org.jetbrains.plugins.gradle" (not com.intellij.gradle.projectResolve).
+  -->
+  <extensions defaultExtensionNs="org.jetbrains.plugins.gradle">
+    <projectResolve implementation="cbs.nova.dsl.idea.sync.DslProjectResolverExtension"/>
   </extensions>
 </idea-plugin>
