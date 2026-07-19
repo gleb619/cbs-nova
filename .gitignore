@@ -134,3 +134,4 @@ node_modules
 /docs/superpowers2/
 .codegraph
 /.kiro/
+backend/.intellijPlatform/

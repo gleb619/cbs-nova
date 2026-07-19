@@ -12,7 +12,8 @@ public final class DefaultDslProjectModel implements DslProjectModel, Serializab
   private final String dslPackage;
 
   public DefaultDslProjectModel(
-          File sourceDir, String dslSubdir, String modelsSubdir, File outputDir, String dslPackage) {
+          File sourceDir, String dslSubdir, String modelsSubdir, File outputDir,
+          String dslPackage) {
     this.sourceDir = sourceDir;
     this.dslSubdir = dslSubdir;
     this.modelsSubdir = modelsSubdir;

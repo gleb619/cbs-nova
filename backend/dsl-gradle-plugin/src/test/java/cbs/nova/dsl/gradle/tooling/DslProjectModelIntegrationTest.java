@@ -2,6 +2,13 @@ package cbs.nova.dsl.gradle.tooling;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.gradle.tooling.GradleConnector;
+import org.gradle.tooling.ProjectConnection;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -9,13 +16,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
-
-import org.gradle.tooling.GradleConnector;
-import org.gradle.tooling.ProjectConnection;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 /**
  * End-to-end test that the {@code cbs.nova.dsl} Gradle plugin actually registers
@@ -34,10 +34,9 @@ class DslProjectModelIntegrationTest {
   @BeforeEach
   void setUpProject() throws IOException {
     List<String> implementationClasspath = readPluginUnderTestClasspath();
-    String classpathDeclaration =
-            implementationClasspath.stream()
-                    .map(entry -> "files('" + entry.replace("\\", "\\\\") + "')")
-                    .collect(Collectors.joining(", "));
+    String classpathDeclaration = implementationClasspath.stream()
+            .map(entry -> "files('" + entry.replace("\\", "\\\\") + "')")
+            .collect(Collectors.joining(", "));
 
     Files.writeString(
             projectDir.resolve("settings.gradle"),
@@ -88,7 +87,8 @@ class DslProjectModelIntegrationTest {
    * (and its dependencies) exactly as the real published plugin would.
    */
   private List<String> readPluginUnderTestClasspath() throws IOException {
-    File metadataFile = new File("build/pluginUnderTestMetadata/plugin-under-test-metadata.properties");
+    File metadataFile = new File(
+            "build/pluginUnderTestMetadata/plugin-under-test-metadata.properties");
     assertThat(metadataFile)
             .as("run the 'pluginUnderTestMetadata' task (a dependency of 'test') before this test")
             .exists();
