@@ -115,6 +115,8 @@ See [Runtime details](dsl/runtime.md) for the full contract, operational modes, 
 - **[Working with DSL examples](dsl/how-to-work-with-dsl-in-examples.md)** — source layout, building examples, the Testcontainers integration test, and tips for adding new flows.
 - **[Compile-time code generation](dsl/codegen.md)** — generated class naming/versioning, the Gradle module, the
   generation pipeline, and generated code samples.
+- **[IDEA plugin for DSL editing](dsl/idea-plugin.md)** — stops IntelliJ IDEA from flagging compact DSL/model sources
+  as broken Java, syncs source roots via Gradle Tooling API, and adds a Compile DSL Sources action.
 
 ## Primary goals
 
