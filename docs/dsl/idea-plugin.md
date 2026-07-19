@@ -11,8 +11,9 @@ Thin IntelliJ IDEA plugin so compact DSL/model sources in `src/dsl/` and `src/mo
   to `src/dsl` / `src/models` before sync completes) and assigns them a dedicated file type instead
   of letting IDEA's Java plugin parse them.
 - Applies Java-flavored syntax coloring only — no semantic parser, so there is nothing to error on.
-- Marks the dsl/models dirs as source roots and the configured output dir as a generated-sources
-  root, for navigation into generated workflow/activity classes.
+- Tracks the discovered dsl/models dirs (`DslSyncedDirs`) so the file-type-override mechanism above
+  can consult them after each sync. It does not mark these dirs as IDE source roots, and it does not
+  mark the configured output dir as a generated-sources root.
 - Adds a **Tools > Compile DSL Sources** action that runs `./gradlew :<module>:compileDsl`.
 
 ## What it deliberately does not do
