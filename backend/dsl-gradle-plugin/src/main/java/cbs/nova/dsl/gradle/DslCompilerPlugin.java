@@ -1,5 +1,6 @@
 package cbs.nova.dsl.gradle;
 
+import cbs.nova.dsl.gradle.tooling.DslModelBuilderService;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.plugins.JavaPlugin;
@@ -8,13 +9,25 @@ import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.language.jvm.tasks.ProcessResources;
+import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry;
+
+import javax.inject.Inject;
 
 import java.util.Map;
 
 public class DslCompilerPlugin implements Plugin<Project> {
 
+  private final ToolingModelBuilderRegistry registry;
+
+  @Inject
+  public DslCompilerPlugin(ToolingModelBuilderRegistry registry) {
+    this.registry = registry;
+  }
+
   @Override
   public void apply(Project project) {
+    registry.register(new DslModelBuilderService());
+
     var extension = project.getExtensions()
             .create("dslCompile", DslCompileExtension.class, project);
 

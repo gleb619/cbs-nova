@@ -7,10 +7,12 @@ dependencies {
   implementation "cbs.nova:dsl-codegen:${project.version}"
 
   testImplementation gradleTestKit()
+  testImplementation files(new File(gradle.gradleHomeDir, "lib/gradle-tooling-api-${org.gradle.util.GradleVersion.current().version}.jar"))
   testImplementation platform(libs.junit.bom)
   testImplementation libs.junit.jupiter
   testImplementation libs.assertj
   testRuntimeOnly libs.junit.platform.launcher
+  testRuntimeOnly libs.slf4j.simple
 }
 
 gradlePlugin {

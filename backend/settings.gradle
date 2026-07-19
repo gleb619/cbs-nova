@@ -11,6 +11,13 @@ pluginManagement {
       }
     }
   }
+  plugins {
+    id 'org.jetbrains.intellij.platform.settings' version '2.18.1'
+  }
+}
+
+plugins {
+  id 'org.jetbrains.intellij.platform.settings'
 }
 
 rootProject.name = 'cbs-nova-backend'
@@ -20,6 +27,7 @@ include 'dsl'
 include 'dsl-codegen'
 include 'dsl-examples'
 include 'dsl-gradle-plugin'
+include 'dsl-idea-plugin'
 include 'misc-codegen'
 include 'starter'
 
@@ -28,6 +36,9 @@ dependencyResolutionManagement {
   repositories {
     mavenLocal()
     mavenCentral()
+    intellijPlatform {
+      defaultRepositories()
+    }
   }
 }
 
