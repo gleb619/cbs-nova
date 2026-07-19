@@ -81,14 +81,25 @@ public final class DefaultProcessRunner implements ProcessRunner {
   }
 
   private ExecutionOutcome runDirectly(ProcessDslObject process, Context<?> listeningCtx) {
+    var listener = listeningCtx.executionListener();
     var richCtx = new ProcessRichContext<>(listeningCtx, traceCollector, contextFactory);
-    Result<?> result;
-    if (listeningCtx.mode() == ExecutionMode.EXPLAIN) {
-      result = process.executeLogic().apply(richCtx);
-    } else if (listeningCtx.mode() == ExecutionMode.PREVIEW) {
-      result = process.effectivePreview().apply(richCtx);
-    } else {
-      result = process.executeLogic().apply(richCtx);
+    if (listener != null) {
+      listener.onProcessStart(listeningCtx.runId(), process.name(), listeningCtx.body());
+    }
+    Result<?> result = null;
+    try {
+      if (listeningCtx.mode() == ExecutionMode.EXPLAIN) {
+        result = process.executeLogic().apply(richCtx);
+      } else if (listeningCtx.mode() == ExecutionMode.PREVIEW) {
+        result = process.effectivePreview().apply(richCtx);
+      } else {
+        result = process.executeLogic().apply(richCtx);
+      }
+    } finally {
+      if (listener != null) {
+        listener.onProcessEnd(listeningCtx.runId(), process.name(),
+                result != null ? result.value() : null, result != null && result.isSuccess());
+      }
     }
     return new ExecutionOutcome(result, false, null);
   }
