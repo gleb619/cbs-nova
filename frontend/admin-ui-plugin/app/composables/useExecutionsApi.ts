@@ -4,7 +4,12 @@ export function useExecutionsApi() {
   async function list(
     filters?: Record<string, unknown>,
   ): Promise<Execution[] | { items?: Execution[]; total?: number }> {
-    return $fetch('/api/v1/executions', { query: filters }) as
+    if (filters) {
+      return $fetch('/api/v1/executions', { query: filters }) as
+        | Execution[]
+        | { items?: Execution[]; total?: number }
+    }
+    return $fetch('/api/v1/executions') as
       | Execution[]
       | { items?: Execution[]; total?: number }
   }
