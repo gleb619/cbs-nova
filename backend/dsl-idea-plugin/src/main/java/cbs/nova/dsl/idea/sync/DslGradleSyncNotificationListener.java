@@ -46,7 +46,8 @@ public final class DslGradleSyncNotificationListener implements ExternalSystemTa
     }
     var project = id.findProject();
     if (project != null && !project.isDisposed()) {
-      contributor.onSyncFinished(project);
+      var dirs = DslProjectResolverExtension.drainDiscovered(id);
+      contributor.onSyncFinished(project, dirs);
     }
   }
 
