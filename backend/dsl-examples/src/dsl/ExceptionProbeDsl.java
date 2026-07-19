@@ -1,4 +1,5 @@
 import cbs.nova.dslexamples.ExceptionProbeModels.*;
+import cbs.nova.starter.helpers.model.ConditionalFailIn;
 
 
 List<DslObject> define() {

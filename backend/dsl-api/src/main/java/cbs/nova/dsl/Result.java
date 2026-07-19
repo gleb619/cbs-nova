@@ -1,9 +1,8 @@
 package cbs.nova.dsl;
 
+import java.util.Map;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
-
-import java.util.Map;
 
 public sealed interface Result<T> permits Result.Success, Result.Failure {
 
@@ -34,6 +33,9 @@ public sealed interface Result<T> permits Result.Success, Result.Failure {
     Object v = value();
     if (v instanceof Map<?, ?> m) {
       return (Map<String, Object>) m;
+    }
+    if (v instanceof MapOutput mapOutput) {
+      return mapOutput.asMap();
     }
     return v != null ? Map.of("value", v) : Map.of();
   }

@@ -1,10 +1,10 @@
 package cbs.nova.dsl.compact;
 
 import cbs.nova.dsl.DslCompactSource;
-import org.jspecify.annotations.NonNull;
-
 import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Turns a compact DSL source file (no package/class declaration, one {@code define()} method) into
@@ -14,6 +14,11 @@ public final class CompactSourcePreprocessor {
 
   private static final String COMPACT_SOURCE_INTERFACE = DslCompactSource.class.getName();
 
+  private static final List<String> DEFAULT_IMPORTS = List.of(
+          "import cbs.nova.dsl.*;",
+          "import java.time.*;",
+          "import java.util.*;",
+          "import java.util.stream.*;");
   private static final Pattern DEFINE_PATTERN = Pattern.compile(
           "(?m)^(\\s*)(?:public\\s+)?(?:java\\.util\\.)?List\\s*<\\s*(?:cbs\\.nova\\.dsl\\.)?DslObject\\s*>\\s+define\\s*\\(\\s*\\)\\s*\\{");
   private static final Pattern PACKAGE_PATTERN = Pattern.compile("(?m)^\\s*package\\s+");
@@ -90,8 +95,15 @@ public final class CompactSourcePreprocessor {
     if (targetPackage != null && !targetPackage.isBlank()) {
       sb.append("package ").append(targetPackage).append(";\n\n");
     }
+    for (var defaultImport : DEFAULT_IMPORTS) {
+      if (!imports.contains(defaultImport)) {
+        sb.append(defaultImport).append("\n");
+      }
+    }
     if (!imports.isEmpty()) {
       sb.append(imports).append("\n\n");
+    } else {
+      sb.append("\n");
     }
     sb.append("public class ").append(className)
             .append(" implements ").append(COMPACT_SOURCE_INTERFACE).append(" {\n")

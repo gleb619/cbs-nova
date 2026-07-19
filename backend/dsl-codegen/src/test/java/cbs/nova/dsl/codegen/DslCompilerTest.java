@@ -2,11 +2,10 @@ package cbs.nova.dsl.codegen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class DslCompilerTest {
 
@@ -130,7 +129,6 @@ class DslCompilerTest {
             """
                     import cbs.nova.dsl.*;
                     import java.util.List;
-                    import java.util.Map;
 
                     void main() {}
 
@@ -138,8 +136,8 @@ class DslCompilerTest {
                       return Dsl.process("ParamProcess")
                           .parameters(reg -> reg.string("name"))
                           .execute(ctx -> {
-                            Map<String, Object> body = (Map<String, Object>) ctx.body();
-                            return Result.success("hello " + body.get("name"));
+                            MapInput body = ctx.body();
+                            return Result.success("hello " + body.values().get("name"));
                           })
                           .buildList();
                     }

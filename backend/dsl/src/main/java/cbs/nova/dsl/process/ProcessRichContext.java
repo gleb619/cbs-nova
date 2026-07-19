@@ -11,12 +11,11 @@ import cbs.nova.dsl.ProcessContext;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.TransactionRouting;
 import cbs.nova.dsl.config.ContextFactory;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
-
-import java.util.Map;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -105,7 +104,10 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull MapInput input) {
-    return runHelper(name, input.values());
+    Result<?> result = GlobalManager.globalManager().runHelper(name,
+            contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
+    traceCollector.add(delegate.runId(), "called helper: " + name);
+    return result;
   }
 
   @Override
@@ -115,8 +117,8 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
       Map<String, Object> typed = (Map<String, Object>) map;
       return runHelper(name, typed);
     }
-    if (input instanceof MapInput(Map<String, Object> values)) {
-      return runHelper(name, values);
+    if (input instanceof MapInput mapInput) {
+      return runHelper(name, mapInput);
     }
     Result<?> result = GlobalManager.globalManager().runHelper(name,
             contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
@@ -141,7 +143,9 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
 
   @Override
   public @NonNull Result<?> runTransaction(@NonNull String name, @NonNull MapInput input) {
-    return runTransaction(name, input.values());
+    Result<?> result = invokeTransaction(name, input);
+    traceCollector.add(delegate.runId(), "executed transaction: " + name);
+    return result;
   }
 
   @Override
@@ -151,8 +155,8 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
       Map<String, Object> typed = (Map<String, Object>) map;
       return runTransaction(name, typed);
     }
-    if (input instanceof MapInput(Map<String, Object> values)) {
-      return runTransaction(name, values);
+    if (input instanceof MapInput mapInput) {
+      return runTransaction(name, mapInput);
     }
     Result<?> result = invokeTransaction(name, input);
     traceCollector.add(delegate.runId(), "executed transaction: " + name);

@@ -1,5 +1,7 @@
 List<DslObject> define() {
   var greetFn = Dsl.function("greetFn")
+      .input(Map.class)
+      .output(String.class)
       .execute(ctx -> {
         var input = ctx.body();
         var name = String.valueOf(input.getOrDefault("name", "world"));
@@ -13,7 +15,7 @@ List<DslObject> define() {
         var input = ctx.body();
         var greeting = ctx.runHelper(
             "greetFn",
-            Map.of("name", input.getOrDefault("name", "world")));
+            Map.of("name", input.values().getOrDefault("name", "world")));
         if (!greeting.isSuccess()) {
           return Result.failure(greeting.cause());
         }

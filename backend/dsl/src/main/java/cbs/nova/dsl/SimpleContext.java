@@ -1,14 +1,13 @@
 package cbs.nova.dsl;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 /**
- * Immutable context implementation. If the stored body is a {@link MapInput}, {@link #body()}
- * returns a fresh copy of the underlying map so DSL parameter blocks always see a mutable map.
+ * Immutable context implementation. The stored body is returned as-is, so {@link MapInput} bodies
+ * remain {@link MapInput} for parameter-based DSL definitions.
  */
 public final class SimpleContext<T> implements Context<T> {
 
@@ -67,10 +66,7 @@ public final class SimpleContext<T> implements Context<T> {
   @Override
   @SuppressWarnings("unchecked")
   public @NonNull T body() {
-    return switch (body) {
-      case MapInput mapInput -> (T) mapInput.asMap();
-      default -> (T) body;
-    };
+    return (T) body;
   }
 
   @Override
@@ -129,7 +125,7 @@ public final class SimpleContext<T> implements Context<T> {
 
   @Override
   public @NonNull Context<T> withSaga(@Nullable DslSaga saga) {
-    return new SimpleContext<>(body, metadata, mode, runId, transactionRouting, executionListener,
-            saga);
+    return new SimpleContext<>(body, metadata, mode, runId, transactionRouting,
+            executionListener, saga);
   }
 }

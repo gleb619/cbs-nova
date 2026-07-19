@@ -11,11 +11,10 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.TransactionContext;
 import cbs.nova.dsl.TransactionRouting;
 import cbs.nova.dsl.config.ContextFactory;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
-
-import java.util.Map;
 
 @RequiredArgsConstructor
 public final class TransactionRichContext<T> implements TransactionContext<T> {
@@ -103,6 +102,9 @@ public final class TransactionRichContext<T> implements TransactionContext<T> {
 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull MapInput input) {
-    return runHelper(name, input.values());
+    Result<?> result = GlobalManager.globalManager().runHelper(name,
+            contextFactory.of(input, delegate.mode(), delegate.runId()));
+    traceCollector.add(delegate.runId(), "called helper: " + name);
+    return result;
   }
 }

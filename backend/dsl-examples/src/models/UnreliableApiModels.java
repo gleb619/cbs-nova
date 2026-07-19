@@ -8,4 +8,11 @@ public class UnreliableApiModels {
 
   public record UnreliableProcessOut(String scenario, String status, List<String> logs) {
   }
+
+  public record UnreliableApiInDsl(
+      String operationId,
+      int failCount,
+      boolean jitter,
+      String reason) {
+  }
 }

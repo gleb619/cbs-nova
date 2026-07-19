@@ -1,11 +1,11 @@
 package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.config.ContextFactory;
-import org.junit.jupiter.api.Test;
-
 import java.util.Map;
+import org.junit.jupiter.api.Test;
 
 class SimpleContextTest {
 
@@ -75,28 +75,27 @@ class SimpleContextTest {
   }
 
   @Test
-  @SuppressWarnings({"rawtypes", "unchecked"})
-  void bodyUnwrapsMapInputIntoMutableMapCopy() {
+  void bodyPreservesMapInput() {
     var input = MapInput.of("a", 1, "b", 2);
-    Context rawCtx = contextFactory.of(input, ExecutionMode.RUN, "r1");
+    Context<MapInput> ctx = contextFactory.of(input, ExecutionMode.RUN, "r1");
 
-    Map<String, Object> body = (Map<String, Object>) rawCtx.body();
+    MapInput body = ctx.body();
 
-    assertThat(body).containsEntry("a", 1).containsEntry("b", 2);
-    body.put("c", 3);
-    assertThat(input.values()).doesNotContainKey("c");
+    assertThat(body).isEqualTo(input);
+    assertThat(body.values()).containsEntry("a", 1).containsEntry("b", 2);
+    assertThatThrownBy(() -> body.values().put("c", 3))
+            .isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
-  @SuppressWarnings({"rawtypes", "unchecked"})
-  void bodyUnwrapsMapInputEachCall() {
+  void bodyReturnsMapInputEachCall() {
     var input = MapInput.of("a", 1);
-    Context rawCtx = contextFactory.of(input, ExecutionMode.RUN, "r1");
+    Context<MapInput> ctx = contextFactory.of(input, ExecutionMode.RUN, "r1");
 
-    Map<String, Object> first = (Map<String, Object>) rawCtx.body();
-    Map<String, Object> second = (Map<String, Object>) rawCtx.body();
+    MapInput first = ctx.body();
+    MapInput second = ctx.body();
 
-    assertThat(first).isNotSameAs(second);
+    assertThat(first).isEqualTo(second);
   }
 
   @Test

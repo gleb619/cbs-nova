@@ -115,7 +115,7 @@ Dsl.function("formatCustomerMessage")
 })
 ```
 
-**Parameter-based definitions** use `.parameters(...)` and receive/return `Map<String, Object>`:
+**Parameter-based definitions** use `.parameters(...)` and receive/return `MapInput`/`MapOutput`:
 
 ```java
 .parameters(reg -> {
@@ -123,10 +123,10 @@ Dsl.function("formatCustomerMessage")
     reg.number("amount");
 })
 .execute(ctx -> {
-    Map<String, Object> params = ctx.body();
-    String customerId = (String) params.get("customerId");
-    BigDecimal amount = (BigDecimal) params.get("amount");
-    return Result.success(Map.of("customerId", customerId, "amount", amount));
+    MapInput params = ctx.body();
+    String customerId = (String) params.values().get("customerId");
+    BigDecimal amount = (BigDecimal) params.values().get("amount");
+    return Result.success(MapOutput.of("customerId", customerId, "amount", amount));
 })
 ```
 
@@ -149,7 +149,7 @@ MessageOut message = ctx.runHelper("formatCustomerMessage",
     .as(MessageOut.class);
 
 // Untyped map output
-Map<String, Object> result = ctx.runHelper("someHelper").asMap();
+MapOutput result = ctx.runHelper("someHelper").as(MapOutput.class);
 ```
 
 When called without explicit arguments, the manager/runner layer auto-resolves the required input fields from the
@@ -233,6 +233,7 @@ import com.example.dsl.Context;
 import com.example.dsl.Dsl;
 import com.example.dsl.DslObject;
 import com.example.dsl.MapInput;
+import com.example.dsl.MapOutput;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
@@ -264,18 +265,18 @@ List<DslObject> define() {
                 reg.number("amount");
             })
             .compensation(ctx -> {
-                Map<String, Object> in = ctx.body();
+                MapInput in = ctx.body();
                 ctx.runHelper("reverseDebit", MapInput.of(
-                    "customerId", in.get("customerId"),
-                    "amount", in.get("amount")
+                    "customerId", in.values().get("customerId"),
+                    "amount", in.values().get("amount")
                 ));
-                ctx.log("Reversed debit for customer " + in.get("customerId"));
+                ctx.log("Reversed debit for customer " + in.values().get("customerId"));
             })
             .execute(ctx -> {
-                Map<String, Object> params = ctx.body();
-                String customerId = (String) params.get("customerId");
-                BigDecimal amount = (BigDecimal) params.get("amount");
-                return Result.success(Map.of(
+                MapInput params = ctx.body();
+                String customerId = (String) params.values().get("customerId");
+                BigDecimal amount = (BigDecimal) params.values().get("amount");
+                return Result.success(MapOutput.of(
                     "customerId", customerId,
                     "debitId", "D-123",
                     "amount", amount
@@ -335,13 +336,13 @@ List<DslObject> define() {
                 reg.string("message");
             })
             .execute(ctx -> {
-                Map<String, Object> params = ctx.body();
-                String customerId = (String) params.get("customerId");
-                String channel = (String) params.get("channel");
+                MapInput params = ctx.body();
+                String customerId = (String) params.values().get("customerId");
+                String channel = (String) params.values().get("channel");
 
                 ctx.log("Sending " + channel + " to " + customerId);
 
-                return Result.success(Map.of(
+                return Result.success(MapOutput.of(
                     "customerId", customerId,
                     "status", "SENT",
                     "sentAt", Instant.now().toString()

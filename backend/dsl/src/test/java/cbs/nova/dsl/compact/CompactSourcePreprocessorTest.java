@@ -257,4 +257,44 @@ class CompactSourcePreprocessorTest {
     assertThat(CompactSourcePreprocessor.isValidCompactSource("public class X {}")).isFalse();
     assertThat(CompactSourcePreprocessor.isValidCompactSource("// no define here")).isFalse();
   }
+
+  // ---------------------------------------------------------------------
+  // 12. Default DSL imports are injected when the source provides none
+  // ---------------------------------------------------------------------
+
+  @Test
+  void defaultImportsAreInjectedForCompactSources() {
+    var source = """
+            List<DslObject> define() {
+              return Dsl.process("P").execute(ctx -> Result.success(Map.of())).buildList();
+            }
+            """;
+
+    var result = CompactSourcePreprocessor.preprocess("Sample.java", source);
+    var output = result.preprocessedSource();
+
+    assertThat(output).contains("import cbs.nova.dsl.*;");
+    assertThat(output).contains("import java.time.*;");
+    assertThat(output).contains("import java.util.*;");
+    assertThat(output).contains("import java.util.stream.*;");
+  }
+
+  @Test
+  void defaultImportsAreSkippedWhenAlreadyPresent() {
+    var source = """
+            import cbs.nova.dsl.*;
+            import java.util.List;
+
+            List<DslObject> define() {
+              return List.of();
+            }
+            """;
+
+    var result = CompactSourcePreprocessor.preprocess("Sample.java", source);
+    var output = result.preprocessedSource();
+
+    // The default import block should not duplicate the user-provided wildcard.
+    long count = output.lines().filter(l -> l.equals("import cbs.nova.dsl.*;")).count();
+    assertThat(count).isEqualTo(1);
+  }
 }

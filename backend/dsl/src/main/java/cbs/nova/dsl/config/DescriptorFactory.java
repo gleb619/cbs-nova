@@ -1,21 +1,21 @@
 package cbs.nova.dsl.config;
 
 import cbs.nova.dsl.MapInput;
+import cbs.nova.dsl.MapOutput;
 import cbs.nova.dsl.function.FunctionDescriptor;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.transaction.TransactionDslObject;
-import org.jspecify.annotations.NonNull;
-
 import java.util.List;
+import org.jspecify.annotations.NonNull;
 
 public final class DescriptorFactory {
 
   public ProcessDescriptor fromProcess(@NonNull ProcessDslObject obj) {
-    var inputType = resolveType(obj.inputType(), obj.parameters());
-    var outputType = resolveType(obj.outputType(), obj.parameters());
+    var inputType = resolveInputType(obj.inputType(), obj.parameters());
+    var outputType = resolveOutputType(obj.outputType(), obj.parameters());
     return new ProcessDescriptor(
             obj.name(),
             obj.version(),
@@ -28,8 +28,8 @@ public final class DescriptorFactory {
   }
 
   public TransactionDescriptor fromTransaction(@NonNull TransactionDslObject obj) {
-    var inputType = resolveType(obj.inputType(), obj.parameters());
-    var outputType = resolveType(obj.outputType(), obj.parameters());
+    var inputType = resolveInputType(obj.inputType(), obj.parameters());
+    var outputType = resolveOutputType(obj.outputType(), obj.parameters());
     return new TransactionDescriptor(
             obj.name(),
             obj.version(),
@@ -47,10 +47,17 @@ public final class DescriptorFactory {
     return new FunctionDescriptor(obj.name(), null, null);
   }
 
-  private static Class<?> resolveType(Class<?> declaredType, List<?> parameters) {
+  private static Class<?> resolveInputType(Class<?> declaredType, List<?> parameters) {
     if (declaredType != null) {
       return declaredType;
     }
     return parameters != null && !parameters.isEmpty() ? MapInput.class : null;
+  }
+
+  private static Class<?> resolveOutputType(Class<?> declaredType, List<?> parameters) {
+    if (declaredType != null) {
+      return declaredType;
+    }
+    return parameters != null && !parameters.isEmpty() ? MapOutput.class : null;
   }
 }

@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.RetryPolicyFactory;
-import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -89,7 +88,7 @@ class DslBuilderTest {
   void processWithParametersBuildsSuccessfully() {
     var obj = Dsl.process("ParamProcess")
             .parameters(reg -> reg.string("name").number("amount"))
-            .execute(ctx -> Result.success("done"))
+            .execute(ctx -> Result.success(MapOutput.of("done", true)))
             .build();
     assertThat(obj.parameters()).hasSize(2);
     assertThat(obj.parameters().get(0).name()).isEqualTo("name");
@@ -104,7 +103,7 @@ class DslBuilderTest {
   void transactionWithParametersBuildsSuccessfully() {
     var obj = Dsl.transaction("ParamTx")
             .parameters(reg -> reg.string("customerId").bool("verified"))
-            .execute(ctx -> Result.success("ok"))
+            .execute(ctx -> Result.success(MapOutput.of("ok", true)))
             .build();
     assertThat(obj.parameters()).hasSize(2);
     assertThat(obj.parameters().get(1).type()).isEqualTo(ParameterType.BOOLEAN);
@@ -115,7 +114,7 @@ class DslBuilderTest {
   void functionWithParametersBuildsSuccessfully() {
     var obj = Dsl.function("ParamFn")
             .parameters(reg -> reg.object("data", String.class))
-            .execute(ctx -> Result.success("fn-ok"))
+            .execute(ctx -> Result.success(MapOutput.of("fn-ok", true)))
             .build();
     assertThat(obj.parameters()).hasSize(1);
     assertThat(obj.parameters().get(0).type()).isEqualTo(ParameterType.OBJECT);
@@ -143,15 +142,15 @@ class DslBuilderTest {
   }
 
   @Test
-  void parameterBasedProcessReceivesMapBodyFromMapInput() {
+  void parameterBasedProcessReceivesMapInputBody() {
     GlobalManager.globalManager().resetForTests();
     var gm = GlobalManager.globalManager();
 
     var proc = Dsl.process("ParamProcess")
             .parameters(reg -> reg.string("name"))
             .execute(ctx -> {
-              Map<String, Object> body = ctx.body();
-              return Result.success("hello " + body.get("name"));
+              MapInput body = ctx.body();
+              return Result.success("hello " + body.values().get("name"));
             })
             .build();
     gm.registerProcess(proc);
@@ -179,9 +178,28 @@ class DslBuilderTest {
             contextFactory.of(MapInput.of("name", "ignored"), ExecutionMode.PREVIEW));
 
     assertThat(result.isSuccess()).isTrue();
-    @SuppressWarnings("unchecked")
-    Map<String, Object> value = (Map<String, Object>) result.value();
-    assertThat(value).containsEntry("name", "test");
+    MapInput value = result.as(MapInput.class);
+    assertThat(value.values()).containsEntry("name", "test");
+  }
+
+  @Test
+  void parameterBasedTransactionReturnsMapOutput() {
+    GlobalManager.globalManager().resetForTests();
+    var gm = GlobalManager.globalManager();
+
+    var tx = Dsl.transaction("ParamTx")
+            .parameters(reg -> reg.string("name"))
+            .execute(ctx -> Result
+                    .success(MapOutput.of("greeting", "hi " + ctx.body().values().get("name"))))
+            .build();
+    gm.registerTransaction(tx);
+
+    var result = gm.runTransaction("ParamTx",
+            contextFactory.of(MapInput.of("name", "world"), ExecutionMode.PREVIEW));
+
+    assertThat(result.isSuccess()).isTrue();
+    MapOutput value = result.as(MapOutput.class);
+    assertThat(value.values()).containsEntry("greeting", "hi world");
   }
 
   @Test

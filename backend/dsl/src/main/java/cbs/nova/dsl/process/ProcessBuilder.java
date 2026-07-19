@@ -3,6 +3,8 @@ package cbs.nova.dsl.process;
 import cbs.nova.dsl.CompensationContext;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
+import cbs.nova.dsl.MapInput;
+import cbs.nova.dsl.MapOutput;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.ParameterRegistry;
 import cbs.nova.dsl.ProcessContext;
@@ -10,7 +12,6 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.TransactionExecution;
 import cbs.nova.dsl.registry.DefaultParameterRegistry;
 import java.util.List;
-import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -61,15 +62,16 @@ public final class ProcessBuilder<I, O> {
   }
 
   /**
-   * Selects the map/parameter branch. The body is typed as {@code Map<String, Object>}.
+   * Selects the map/parameter branch. The body is typed as {@link MapInput} and the result is
+   * expected to be a {@link MapOutput}.
    */
   @SuppressWarnings("unchecked")
-  public ProcessBuilder<Map<String, Object>, Map<String, Object>> parameters(
+  public ProcessBuilder<MapInput, MapOutput> parameters(
           @NonNull Consumer<ParameterRegistry> registrar) {
     var registry = new DefaultParameterRegistry();
     registrar.accept(registry);
     this.parameters = registry.descriptors();
-    return (ProcessBuilder<Map<String, Object>, Map<String, Object>>) this;
+    return (ProcessBuilder<MapInput, MapOutput>) this;
   }
 
   public ProcessBuilder<I, O> taskQueue(@NonNull String queue) {

@@ -1,11 +1,5 @@
 import cbs.nova.dslexamples.UnreliableApiModels.*;
 
-public record UnreliableApiInDsl(
-    String operationId,
-    int failCount,
-    boolean jitter,
-    String reason) {
-}
 
 List<DslObject> define() {
   var resilientTx = Dsl.transaction("unreliableApiTxResilient")
