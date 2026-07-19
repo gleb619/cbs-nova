@@ -31,15 +31,26 @@ public final class DefaultHelperRunner implements HelperRunner {
       return Result
               .failure(new DslEntityNotFoundException(ctx.runId(), "Helper not found: " + name));
     }
+    var listener = ctx.executionListener();
+    if (listener != null) {
+      listener.onHelperStart(ctx.runId(), name, ctx.body());
+    }
+    Result<?> result = null;
     try {
       var cast = (Executable<Object, Object>) helper.get();
-      var result = ctx.mode() == ExecutionMode.PREVIEW
+      result = ctx.mode() == ExecutionMode.PREVIEW
               ? cast.preview((Context<Object>) ctx)
               : cast.execute((Context<Object>) ctx);
       return result;
     } catch (Exception ex) {
       String message = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
-      return Result.failure(new DslExecutionException(ctx.runId(), message, ex));
+      result = Result.failure(new DslExecutionException(ctx.runId(), message, ex));
+      return result;
+    } finally {
+      if (listener != null) {
+        listener.onHelperEnd(ctx.runId(), name,
+                result != null ? result.value() : null, result != null && result.isSuccess());
+      }
     }
   }
 
@@ -51,15 +62,27 @@ public final class DefaultHelperRunner implements HelperRunner {
       return Result
               .failure(new DslEntityNotFoundException(ctx.runId(), "Function not found: " + name));
     }
+    var listener = ctx.executionListener();
+    if (listener != null) {
+      listener.onFunctionStart(ctx.runId(), name, ctx.body());
+    }
+    Result<?> result = null;
     try {
       var richCtx = new FunctionRichContext<>(ctx, traceCollector, contextFactory);
       Function<FunctionContext<?>, Result<?>> logic = ctx.mode() == ExecutionMode.PREVIEW
               ? fn.get().effectivePreview()
               : fn.get().executeLogic();
-      return logic.apply(richCtx);
+      result = logic.apply(richCtx);
+      return result;
     } catch (Exception ex) {
       String message = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
-      return Result.failure(new DslExecutionException(ctx.runId(), message, ex));
+      result = Result.failure(new DslExecutionException(ctx.runId(), message, ex));
+      return result;
+    } finally {
+      if (listener != null) {
+        listener.onFunctionEnd(ctx.runId(), name,
+                result != null ? result.value() : null, result != null && result.isSuccess());
+      }
     }
   }
 }

@@ -30,7 +30,11 @@ public final class DefaultTransactionRunner implements TransactionRunner {
   @Override
   public @NonNull Result<?> run(
           @NonNull TransactionDslObject transaction, @NonNull Context<?> ctx) {
-    Result<?> result;
+    var listener = ctx.executionListener();
+    if (listener != null) {
+      listener.onTransactionStart(ctx.runId(), transaction.name(), ctx.body());
+    }
+    Result<?> result = null;
     try {
       var richCtx = new TransactionRichContext<>(ctx, traceCollector, contextFactory);
       if (ctx.mode() == ExecutionMode.EXPLAIN) {
@@ -50,6 +54,11 @@ public final class DefaultTransactionRunner implements TransactionRunner {
       var failure = Result.failure(new DslExecutionException(ctx.runId(), message, ex));
       notifyFailure(ctx, transaction, ex);
       return failure;
+    } finally {
+      if (listener != null) {
+        listener.onTransactionEnd(ctx.runId(), transaction.name(),
+                result != null ? result.value() : null, result != null && result.isSuccess());
+      }
     }
   }
 
