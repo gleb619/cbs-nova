@@ -88,6 +88,7 @@ public class DslIntrospectionResource {
             .orElse(ResponseEntity.notFound().build());
   }
 
+  // TODO: add endpoint to search helpers
   @GetMapping("/helpers")
   @Operation(summary = "List all registered DSL helper names")
   public ResponseEntity<NamesResponse> helpers() {

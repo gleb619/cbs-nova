@@ -1,3 +1,4 @@
+# TODO: move to a integration folder, starter cant have a settings file
 temporal:
   connection-target: ${TEMPORAL_ADDRESS:127.0.0.1:7233}
 

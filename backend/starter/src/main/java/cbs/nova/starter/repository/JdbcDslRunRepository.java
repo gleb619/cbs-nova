@@ -14,6 +14,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+//TODO: instead add config with `@Bean`
 @Repository
 @RequiredArgsConstructor
 @ConditionalOnBean(DataSource.class)
@@ -41,6 +42,7 @@ public class JdbcDslRunRepository implements DslRunRepository {
             .collect(Collectors.toList());
   }
 
+  // TODO: add mapstruct
   private DslRunEntity toEntity(DslRun run, DslRunEntity existing) {
     DslRunEntity entity = existing != null ? existing : new DslRunEntity();
     entity.setRunId(run.runId());
@@ -55,6 +57,7 @@ public class JdbcDslRunRepository implements DslRunRepository {
     return entity;
   }
 
+  // TODO: add mapstruct
   private DslRun toDomain(DslRunEntity entity) {
     return DslRun.builder()
             .runId(entity.getRunId())

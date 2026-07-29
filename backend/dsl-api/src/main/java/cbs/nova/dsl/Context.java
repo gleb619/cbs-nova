@@ -26,6 +26,39 @@ public interface Context<T> {
   Context<T> withMetadata(@NonNull String key, @Nullable Object value);
 
   /**
+   * Evaluates a lightweight sandboxed expression against this context.
+   *
+   * <p>
+   * The expression may contain variable placeholders ({@code {name}}) or arithmetic/string
+   * expressions ({@code ${a + b}}). The exact capabilities are implementation-specific, but callers
+   * can rely on at least simple interpolation.
+   *
+   * @param expression
+   *          the expression to evaluate
+   * @return the evaluation result
+   */
+  @NonNull
+  default Object eval(@NonNull String expression) {
+    return eval(expression, Map.of());
+  }
+
+  /**
+   * Evaluates a lightweight sandboxed expression using the supplied variables merged with the
+   * context's own resolver stack (metadata and, when applicable, body fields).
+   *
+   * @param expression
+   *          the expression to evaluate
+   * @param variables
+   *          additional variables to expose to the expression
+   * @return the evaluation result
+   */
+  @NonNull
+  default Object eval(@NonNull String expression, @NonNull Map<String, Object> variables) {
+    throw new UnsupportedOperationException(
+            "Expression evaluation is not available for this context implementation");
+  }
+
+  /**
    * Routing hint for transaction execution. Defaults to {@link TransactionRouting#LOCAL}.
    */
   @NonNull

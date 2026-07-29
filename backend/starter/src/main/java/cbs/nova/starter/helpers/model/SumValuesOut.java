@@ -1,5 +1,10 @@
 package cbs.nova.starter.helpers.model;
 
-public record SumValuesOut(double sum) {
+import java.math.BigDecimal;
 
+public record SumValuesOut(BigDecimal sum) {
+
+  public BigDecimal result() {
+    return sum;
+  }
 }

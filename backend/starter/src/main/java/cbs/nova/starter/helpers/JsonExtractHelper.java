@@ -11,9 +11,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jspecify.annotations.NonNull;
 
+//TODO: for later releases, we need a better json integration, dsl must be a json native. So it must be not a single helper but a core feature, that used in `context`, or be a part of functions
 @Helper(name = "jsonExtract")
 public class JsonExtractHelper implements Executable<JsonExtractIn, JsonExtractOut> {
 
+  // TODO: we need contructor that accept a mapper
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
   @Override

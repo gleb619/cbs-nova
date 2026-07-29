@@ -78,8 +78,10 @@ public class TemporalConfiguration {
   DevDslRuntime devDslRuntime(
           ExternalCallTracker externalCallTracker,
           ExecutionTraceCollector executionTraceCollector,
-          ContextFactory contextFactory) {
-    return new DevDslRuntime(externalCallTracker, executionTraceCollector, contextFactory);
+          ContextFactory contextFactory,
+          @Value("${cbs.nova.preview.callTree.maxDepth:32}") int previewCallTreeMaxDepth) {
+    return new DevDslRuntime(externalCallTracker, executionTraceCollector, contextFactory,
+            previewCallTreeMaxDepth);
   }
 
   @Bean

@@ -20,6 +20,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.net.http.HttpClient;
+import java.util.List;
 import java.util.Map;
 
 class HttpCallHelperTest {
@@ -32,7 +34,7 @@ class HttpCallHelperTest {
   void setUp() {
     wireMock = new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
     wireMock.start();
-    helper = new HttpCallHelper();
+    helper = new HttpCallHelper(HttpClient.newHttpClient());
   }
 
   @AfterEach
@@ -91,6 +93,20 @@ class HttpCallHelperTest {
     assertThat(failure.status()).isEqualTo(503);
     assertThat(failure.body()).isEqualTo("upstream broken");
     assertThat(failure.getMessage()).contains("503");
+  }
+
+  @Test
+  void customValidStatusOverridesDefault2xxCheck() {
+    wireMock.stubFor(get("/accepted")
+            .willReturn(aResponse()
+                    .withStatus(202)
+                    .withBody("accepted")));
+
+    Result<HttpCallOut> result = execute(new HttpCallIn(
+            baseUrl() + "/accepted", "GET", null, null, null, null, List.of(200, 202)));
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().status()).isEqualTo(202);
   }
 
   @Test

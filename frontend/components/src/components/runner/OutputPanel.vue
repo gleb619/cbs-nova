@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import type { RunnerMode, RunnerOutput, RunnerStatus } from '../../types/runner'
 
+defineOptions({ name: 'OutputPanel' })
+
 const props = defineProps<{
   output: RunnerOutput | null
   mode: RunnerMode
   status: RunnerStatus
+  lastRunOutput?: unknown
 }>()
 
 const activeTab = ref<'result' | 'metadata' | 'errors' | 'callTree' | 'dryRunLogs'>('result')
@@ -22,6 +25,7 @@ const tabs = computed(() => [
 ])
 
 const showExplain = computed(() => props.mode === 'explain')
+const showDiff = computed(() => props.mode === 'explain' && props.output !== null)
 
 const isEmpty = computed(() => !props.output)
 </script>
@@ -33,6 +37,10 @@ const isEmpty = computed(() => !props.output)
         :description="props.output?.description"
         :mermaid-diagram="props.output?.mermaidDiagram"
       />
+    </div>
+
+    <div v-if="showDiff">
+      <ExplainDiffView :explain-output="props.output?.result" :run-output="props.lastRunOutput" />
     </div>
 
     <div v-if="!isEmpty" class="border-b border-gray-200 flex gap-1">

@@ -55,6 +55,7 @@ public class DslWorkerConfiguration {
     var readerFactory = new CachingMetadataReaderFactory();
     // Generated implementations may live under the default cbs.nova.dsl.generated tree or under a
     // project-specific package such as cbs.nova.dslexamples. The dsl* wildcard covers both.
+    // TODO: use spi declaration instead
     String packageSearchPath = "classpath*:cbs/nova/dsl*/**/*.class";
     try {
       var resources = resolver.getResources(packageSearchPath);

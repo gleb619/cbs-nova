@@ -48,18 +48,46 @@ class SortRecordsHelperTest {
   }
 
   @Test
-  void sortsStringFieldLexicographically() {
+  void sortsUsingDirectionParameter() {
     var records = List.of(
-            Map.<String, Object>of("name", "charlie"),
-            Map.<String, Object>of("name", "alice"),
-            Map.<String, Object>of("name", "bob"));
-    var ctx = contextFactory.of(new SortRecordsIn(records, "name"),
+            Map.<String, Object>of("a", 2),
+            Map.<String, Object>of("a", 1));
+    var ctx = contextFactory.of(new SortRecordsIn(records, "a", true, null, "desc"),
+            ExecutionMode.PREVIEW);
+    Result<SortRecordsOut> result = helper.execute(ctx);
+    assertThat(result.value().records())
+            .map(r -> r.get("a"))
+            .containsExactly(2, 1);
+  }
+
+  @Test
+  void sortsStringFieldLexicographicallyWithStringAlgorithm() {
+    var records = List.<Map<String, Object>>of(
+            Map.of("name", "charlie"),
+            Map.of("name", "alice"),
+            Map.of("name", "bob"));
+    var ctx = contextFactory.of(new SortRecordsIn(records, "name", true, "string", null),
             ExecutionMode.PREVIEW);
     Result<SortRecordsOut> result = helper.execute(ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().records())
             .map(r -> r.get("name"))
             .containsExactly("alice", "bob", "charlie");
+  }
+
+  @Test
+  void sortsNumericStringsWithNumericAlgorithm() {
+    var records = List.<Map<String, Object>>of(
+            Map.of("a", "100"),
+            Map.of("a", "20"),
+            Map.of("a", "3"));
+    var ctx = contextFactory.of(new SortRecordsIn(records, "a", true, "numeric", null),
+            ExecutionMode.PREVIEW);
+    Result<SortRecordsOut> result = helper.execute(ctx);
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().records())
+            .map(r -> r.get("a"))
+            .containsExactly("3", "20", "100");
   }
 
   @Test

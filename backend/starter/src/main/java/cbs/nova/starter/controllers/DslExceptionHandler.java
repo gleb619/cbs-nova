@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
+// TODO: add sentry integration to a runner
 public class DslExceptionHandler {
 
   @ExceptionHandler(DslException.class)

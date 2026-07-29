@@ -1,3 +1,4 @@
+# TODO: instead put here only one dsl root config class, and add there another configs via `@Import`
 cbs.nova.starter.config.TemporalConfiguration
 cbs.nova.starter.config.DslAutoConfiguration
 cbs.nova.starter.config.DslWorkerConfiguration

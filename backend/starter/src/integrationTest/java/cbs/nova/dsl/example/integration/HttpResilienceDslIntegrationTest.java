@@ -42,6 +42,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 import tools.jackson.databind.ObjectMapper;
 
+import java.net.http.HttpClient;
 import java.time.Duration;
 
 /**

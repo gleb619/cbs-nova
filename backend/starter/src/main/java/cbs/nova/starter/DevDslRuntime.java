@@ -21,6 +21,7 @@ import ch.qos.logback.classic.Logger;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -32,35 +33,51 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class DevDslRuntime implements DslRuntime {
 
+  // TODO: remove ExternalCallTracker from here, instead add some system with
+  // listerners/interceptors, for easility tracking/addingn new features
   private final ExternalCallTracker externalCallTracker;
   private final ExecutionTraceCollector traceCollector;
   private final ContextFactory contextFactory;
+
+  @Value("${cbs.nova.preview.callTree.maxDepth:32}")
+  private final int previewCallTreeMaxDepth;
 
   @Override
   public @NonNull Result<PreviewReport> preview(@NonNull String name, @NonNull Context<?> ctx) {
     List<ExternalCallTracker.CallDetail> calls = new ArrayList<>();
     String runId = runIdFor(ctx);
-    var treeCollector = new ExecutionTreeCollector();
+    // TODO: we need to create a some new architecture, to reuse a tree collector across dsl calls,
+    // we need a system with listerners/interceptors, for easility tracking/addingn new features
+    var treeCollector = new ExecutionTreeCollector(previewCallTreeMaxDepth);
     externalCallTracker.startTracking(calls);
     traceCollector.start(runId);
     treeCollector.startRun(runId);
+    // TODO static access is forbidden, it must be some interface and impls, that installed in
+    // system with listerners/interceptors
     DryRunLoggingContext.enterDryRun(runId);
     Result<?> result;
     try {
       result = dispatch(name,
               contextFactory.of(ctx.body(), ctx.metadata(), ExecutionMode.PREVIEW, runId,
+                      // TODO: why TransactionRouting is hardcoded here?
                       TransactionRouting.LOCAL, treeCollector));
     } finally {
+      // TODO: due refacto to async way of execution, we need another way of finish signal
       DryRunLoggingContext.leaveDryRun();
       treeCollector.finishRun(runId);
       traceCollector.stop(runId);
       externalCallTracker.stopTracking();
     }
 
+    // TODO: refactor, it's a very bad solution for a string tracing, of a very naive messages
     List<String> trace = new ArrayList<>();
     trace.add("started: " + name);
     trace.add("mode: PREVIEW");
     trace.addAll(traceCollector.snapshot(runId));
+
+    // TODO: instead add a new record that extends of some suprt type(e.g. Result implment it, and a
+    // new Report type must implement it). As a result we just traverse troug a tree of Reports and
+    // create a PreviewReport
     if (result.isSuccess()) {
       trace.add("completed successfully");
       PreviewReport report = new PreviewReport(
@@ -92,10 +109,11 @@ public class DevDslRuntime implements DslRuntime {
   }
 
   @Override
+  // TODO: refactor explain too, we need a super type, and a new implementation
   public @NonNull ExplainReport explain(@NonNull String name, @NonNull Context<?> ctx) {
     List<ExternalCallTracker.CallDetail> calls = new ArrayList<>();
     String runId = runIdFor(ctx);
-    var treeCollector = new ExecutionTreeCollector();
+    var treeCollector = new ExecutionTreeCollector(previewCallTreeMaxDepth);
     externalCallTracker.startTracking(calls);
     traceCollector.start(runId);
     treeCollector.startRun(runId);
@@ -113,6 +131,8 @@ public class DevDslRuntime implements DslRuntime {
     }
 
     GlobalManager gm2 = GlobalManager.globalManager();
+    // TODO: it's a very bad solution, to add some strange if here, no, object itself, must know own
+    // name/type or whatever
     String entityKind = gm2.hasProcess(name)
             ? "Process"
             : gm2.hasTransaction(name)
@@ -124,21 +144,28 @@ public class DevDslRuntime implements DslRuntime {
     var plantGen = new PlantUmlDiagramGenerator();
     var bpmnGen = new BpmnDiagramGenerator();
 
+    // TODO: No, it's wrong, a new returned type(Explain) must jsut contain a some ast/tree that can
+    // be converted to a mermaid
     String mermaid = gm2.findProcess(name)
             .map(mermaidGen::forProcess)
             .or(() -> gm2.findTransaction(name).map(mermaidGen::forTransaction))
             .orElseGet(() -> mermaidGen.forHelper(name));
 
+    // TODO: No, it's wrong, a new returned type(Explain) must jsut contain a some ast/tree that can
+    // be converted to a plantUml
     String plantUml = gm2.findProcess(name)
             .map(plantGen::forProcess)
             .or(() -> gm2.findTransaction(name).map(plantGen::forTransaction))
             .orElseGet(() -> plantGen.forHelper(name));
 
+    // TODO: No, it's wrong, a new returned type(Explain) must jsut contain a some ast/tree that can
+    // be converted to a bpmn
     String bpmn = gm2.findProcess(name)
             .map(bpmnGen::forProcess)
             .or(() -> gm2.findTransaction(name).map(bpmnGen::forTransaction))
             .orElseGet(() -> bpmnGen.forHelper(name));
 
+    // TODO: No, it's a very naive way of logging, we need a better one
     var trace = new ArrayList<String>();
     trace.add("started: " + name);
     trace.add("mode: EXPLAIN");
@@ -170,6 +197,7 @@ public class DevDslRuntime implements DslRuntime {
             drainDryRunLogs(runId));
   }
 
+  // TODO: no, it must be a separate class for convertation
   private List<Map<String, Object>> toCallJson(List<ExternalCallTracker.CallDetail> calls) {
     List<Map<String, Object>> callsJson = new ArrayList<>();
     for (ExternalCallTracker.CallDetail call : calls) {
@@ -184,6 +212,7 @@ public class DevDslRuntime implements DslRuntime {
     return List.copyOf(callsJson);
   }
 
+  // TODO: no, it must be a separate class for convertation
   private Map<String, Integer> toCallCounts(List<ExternalCallTracker.CallDetail> calls) {
     Map<String, Integer> counts = new HashMap<>();
     for (ExternalCallTracker.CallDetail call : calls) {
@@ -192,6 +221,7 @@ public class DevDslRuntime implements DslRuntime {
     return Map.copyOf(counts);
   }
 
+  // TODO: add optional field, for direct run, like enum with 3 values(process, transaction, helper)
   private Result<?> dispatch(String name, Context<?> ctx, ExecutionMode mode) {
     String runId = runIdFor(ctx);
     var modeCtx = contextFactory.of(ctx.body(), ctx.metadata(), mode, runId);
@@ -208,6 +238,8 @@ public class DevDslRuntime implements DslRuntime {
     return Result.failure(new IllegalArgumentException("No DSL entity registered: " + name));
   }
 
+  // TODO: remove junk method, it can be only one for dispatch
+  @Deprecated(forRemoval = true)
   private Result<?> dispatch(String name, Context<?> ctx) {
     GlobalManager gm = GlobalManager.globalManager();
     if (gm.hasProcess(name)) {

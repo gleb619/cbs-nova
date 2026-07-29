@@ -16,26 +16,34 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class DryRunLogbackAppender extends AppenderBase<ILoggingEvent> {
 
+  // TODO: replace with contructor param, configure on sprinb config
   private static final int DEFAULT_MAX_EVENTS_PER_RUN = 1000;
 
+  // TODO: replace with some record instead of `List<Map<String, Object>>`, add correspondent
+  // methods
   private final ConcurrentHashMap<String, List<Map<String, Object>>> buffers = new ConcurrentHashMap<>();
 
+  // TODO: replace with contructor param, configure on sprinb config
   private int maxEventsPerRun = DEFAULT_MAX_EVENTS_PER_RUN;
 
+  // TODO: remove empty contructor
   public DryRunLogbackAppender() {
   }
 
+  // TODO: replace with lombok
   public DryRunLogbackAppender(int maxEventsPerRun) {
     this.maxEventsPerRun = maxEventsPerRun;
   }
 
   /** Maximum number of events retained per runId before older entries are dropped. */
+  // TODO: remove setter
   public void setMaxEventsPerRun(int maxEventsPerRun) {
     this.maxEventsPerRun = maxEventsPerRun;
   }
 
   @Override
   protected void append(ILoggingEvent event) {
+    // TODO: replace with use of GlobalManager instead
     String runId = DryRunLoggingContext.currentRunId();
     if (runId == null) {
       return;
@@ -58,6 +66,7 @@ public class DryRunLogbackAppender extends AppenderBase<ILoggingEvent> {
     return removed != null ? List.copyOf(removed) : List.of();
   }
 
+  // TODO: add runId
   private Map<String, Object> toEventMap(ILoggingEvent event) {
     Map<String, Object> map = new LinkedHashMap<>();
     map.put("timestamp", Instant.ofEpochMilli(event.getTimeStamp()));

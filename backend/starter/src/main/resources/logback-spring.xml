@@ -1,3 +1,4 @@
+<!-- TODO: instead put to integrationTest, starter cant have a logbackconfig. Or better add a spring config that confgiure logback programatic, like in opentelementry or like in spring sleuth  -->
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
   <include resource="org/springframework/boot/logging/logback/defaults.xml"/>

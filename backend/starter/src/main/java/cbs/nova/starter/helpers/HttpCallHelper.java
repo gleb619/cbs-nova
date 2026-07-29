@@ -4,6 +4,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Helper;
 import cbs.nova.dsl.Result;
+import cbs.nova.starter.helpers.model.HttpCallContext;
 import cbs.nova.starter.helpers.model.HttpCallIn;
 import cbs.nova.starter.helpers.model.HttpCallIn.RedirectPolicy;
 import cbs.nova.starter.helpers.model.HttpCallOut;
@@ -33,9 +34,9 @@ import java.util.Map;
  * <p>
  * Contract:
  * <ul>
- * <li>2xx → {@link Result#success} with the response in {@link HttpCallOut}.</li>
- * <li>non-2xx (including 5xx and 4xx) → {@link Result#failure} so callers (transactions, processes)
- * can map it to retry / compensation.</li>
+ * <li>2xx, or a status listed in {@link HttpCallIn#validStatuses()}, → {@link Result#success} with
+ * the response in {@link HttpCallOut}. Non-2xx → {@link Result#failure} so callers (transactions,
+ * processes) can map it to retry / compensation.</li>
  * <li>I/O failure (timeout, connection refused, DNS) → {@link Result#failure} with the underlying
  * exception wrapped.</li>
  * </ul>
@@ -45,32 +46,22 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
 
   private final HttpClient client;
 
-  /** Production constructor: builds a fresh {@link HttpClient}. */
-  public HttpCallHelper() {
-    this(HttpClient.newBuilder()
-            .followRedirects(HttpClient.Redirect.NEVER)
-            .connectTimeout(Duration.ofSeconds(5))
-            .build());
-  }
-
-  /** Test-friendly constructor for injecting a pre-configured client. */
+  /** Constructor for injecting a pre-configured {@link HttpClient}. */
   public HttpCallHelper(HttpClient client) {
     this.client = client;
   }
 
   @Override
   public @NonNull Result<HttpCallOut> execute(@NonNull Context<HttpCallIn> ctx) {
-    HttpCallIn input = ctx.body();
-    if (input == null) {
-      return Result.failure(new IllegalArgumentException("httpCall input is required"));
-    }
-    if (input.url() == null || input.url().isBlank()) {
+    HttpCallContext call = HttpCallContext.from(ctx.body());
+
+    if (call.url() == null || call.url().isBlank()) {
       return Result.failure(new IllegalArgumentException("httpCall.url is required"));
     }
 
     HttpRequest request;
     try {
-      request = buildRequest(input);
+      request = buildRequest(call);
     } catch (IllegalArgumentException e) {
       return Result.failure(e);
     }
@@ -81,12 +72,12 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
       Map<String, String> headers = collectHeaders(response);
       String body = response.body();
 
-      if (status >= 200 && status < 300) {
+      if (call.isValidStatus(status)) {
         return Result.success(new HttpCallOut(status, headers, body, true, null));
       }
       return Result.failure(new HttpCallFailure(status, body, headers,
               "httpCall %s %s returned non-2xx status %d".formatted(
-                      input.effectiveMethod(), input.url(), status)));
+                      call.method(), call.url(), status)));
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return Result.failure(new HttpCallTransportException(
@@ -94,33 +85,33 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
     } catch (Exception e) {
       return Result.failure(new HttpCallTransportException(
               "httpCall %s %s failed: %s".formatted(
-                      input.effectiveMethod(), input.url(), describeCause(e)),
+                      call.method(), call.url(), describeCause(e)),
               e));
     }
   }
 
-  private static @NonNull HttpRequest buildRequest(@NonNull HttpCallIn input) {
+  private static @NonNull HttpRequest buildRequest(@NonNull HttpCallContext call) {
     URI uri;
     try {
-      uri = URI.create(input.url());
+      uri = URI.create(call.url());
     } catch (IllegalArgumentException e) {
-      throw new IllegalArgumentException("httpCall.url is not a valid URI: " + input.url(), e);
+      throw new IllegalArgumentException("httpCall.url is not a valid URI: " + call.url(), e);
     }
 
     Builder builder = HttpRequest.newBuilder(uri)
-            .timeout(Duration.ofMillis(input.effectiveTimeoutMillis()));
+            .timeout(Duration.ofMillis(call.timeoutMillis()));
 
-    for (var entry : input.effectiveHeaders().entrySet()) {
+    for (var entry : call.headers().entrySet()) {
       if (entry.getKey() == null || entry.getValue() == null) {
         continue;
       }
       builder.header(entry.getKey(), entry.getValue());
     }
 
-    HttpRequest.BodyPublisher publisher = input.body() == null
+    HttpRequest.BodyPublisher publisher = call.body() == null
             ? BodyPublishers.noBody()
-            : BodyPublishers.ofString(input.body());
-    String method = input.effectiveMethod();
+            : BodyPublishers.ofString(call.body());
+    String method = call.method();
     try {
       builder.method(method, publisher);
     } catch (IllegalArgumentException e) {

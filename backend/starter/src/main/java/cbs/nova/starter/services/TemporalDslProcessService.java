@@ -25,6 +25,8 @@ public class TemporalDslProcessService {
   private final DslRunRepository runRepository;
   private final ObjectMapper objectMapper;
 
+  // TODO: refactor method, make it not blocking, instead if process is running, we need to return
+  // an intermidiate Result with correspondent status(pending or something like that)
   public @NonNull Result<?> runProcess(@NonNull String processName, @Nullable Object input) {
     return runProcess(processName, input, Map.of());
   }
@@ -57,23 +59,37 @@ public class TemporalDslProcessService {
           @Nullable Object input,
           @NonNull Map<String, Object> metadata) {
     Object body = input != null ? input : Map.of();
+    // TODO: we need to save a runId in mdc, sentry, opentelementry to tags/meta/headers(for better
+    // accociation)
     String runId = contextFactory.generateRunId();
+    // TODO: we need to use here a some codegenerated class, to handle known models type via avaje,
+    // fallback to jackson
     String inputJson = serialize(body);
+    // TODO: we need another service to control time(e.g. add to to dsl config, make replacable)
     Instant startedAt = Instant.now();
 
     DslRun running = DslRun.builder()
             .runId(runId)
             .processName(processName)
+            // TODO: along with running process, we need to start a separater thread, that will make
+            // a 'healthchecks' for running process, to check if it alive, via call of some '@Query'
+            // method or something like that. And add a new status for staled processes
             .status(DslRunStatus.RUNNING.name())
             .input(inputJson)
+            // TODO: instead null, make it empty object
             .output(null)
             .error(null)
             .startedAt(startedAt)
+            // TODO: same here
             .finishedAt(null)
             .executionMode(ExecutionMode.RUN.name())
             .build();
+
+    // TODO: db operation must be async
     runRepository.save(running);
 
+    // TODO: we cant use a commoon pool here, we need our own, with speing support(e.g. for
+    // security, logs, telemetry, etc, e.g.). We also need to use a teporal async support
     CompletableFuture<Result<?>> result = CompletableFuture.supplyAsync(
             () -> executeAndRecord(processName, body, metadata, runId, startedAt),
             ForkJoinPool.commonPool());
@@ -100,12 +116,14 @@ public class TemporalDslProcessService {
             .processName(processName)
             .status(result.isSuccess() ? DslRunStatus.COMPLETED.name() : DslRunStatus.FAILED.name())
             .input(serialize(body))
+            // TODO: reuse here codegenerated class, for avaje support
             .output(result.isSuccess() ? serialize(result.value()) : null)
             .error(result.isSuccess() ? null : messageOf(result.cause()))
             .startedAt(startedAt)
             .finishedAt(finishedAt)
             .executionMode(ExecutionMode.RUN.name())
             .build();
+    // TODO: instead of resave, make a special method, that update only several fields
     runRepository.save(finished);
 
     return result;

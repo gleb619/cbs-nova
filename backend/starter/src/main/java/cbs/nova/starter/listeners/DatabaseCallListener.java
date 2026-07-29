@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
+@Deprecated(forRemoval = true)
 public class DatabaseCallListener implements ExternalCallListener {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DatabaseCallListener.class);

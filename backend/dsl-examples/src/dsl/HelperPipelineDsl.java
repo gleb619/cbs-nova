@@ -24,8 +24,8 @@ List<DslObject> define() {
         FilterRecordsOut filteredOut = filtered.as(FilterRecordsOut.class);
         List<Map<String, Object>> matched = filteredOut.matched();
 
-        List<Double> amounts = matched.stream()
-            .map(r -> ((Number) r.get("amount")).doubleValue())
+        List<Number> amounts = matched.stream()
+            .map(r -> (Number) r.get("amount"))
             .toList();
         var summed = ctx.runHelper("sumValues", new SumValuesIn(amounts));
         if (!summed.isSuccess()) {
@@ -50,7 +50,7 @@ List<DslObject> define() {
 
         return Result.success(new PipelineOut(
             matched.size(),
-            summedOut.sum(),
+            summedOut.sum().doubleValue(),
             renderedOut.result(),
             extractedOut.value(),
             extractedOut.present()));

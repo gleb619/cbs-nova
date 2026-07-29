@@ -18,8 +18,10 @@ import java.util.Map;
  * <ul>
  * <li>{@code headers} — request headers (added as-is, may be empty or null)</li>
  * <li>{@code body} — request body (null for GET/DELETE-style calls)</li>
- * <li>{@code timeoutMillis} — request timeout, defaults to 30_000 when null/<=0</li>
+ * <li>{@code timeoutMillis} — request timeout, defaults to 30_000 when null/&lt;=0</li>
  * <li>{@code followRedirects} — JDK redirect policy hint, defaults to NEVER</li>
+ * <li>{@code validStatuses} — optional list of HTTP statuses that should be treated as success,
+ * overriding the default 2xx-only behavior</li>
  * </ul>
  */
 public record HttpCallIn(
@@ -28,7 +30,19 @@ public record HttpCallIn(
         @Nullable Map<String, String> headers,
         @Nullable String body,
         @Nullable Long timeoutMillis,
-        @Nullable RedirectPolicy followRedirects) {
+        @Nullable RedirectPolicy followRedirects,
+        @Nullable List<Integer> validStatuses) {
+
+  /** Convenience constructor for callers that do not need {@code validStatuses}. */
+  public HttpCallIn(
+          String url,
+          String method,
+          @Nullable Map<String, String> headers,
+          @Nullable String body,
+          @Nullable Long timeoutMillis,
+          @Nullable RedirectPolicy followRedirects) {
+    this(url, method, headers, body, timeoutMillis, followRedirects, null);
+  }
 
   /** Convenience factory for the common GET case. */
   public static HttpCallIn get(String url) {
@@ -66,6 +80,11 @@ public record HttpCallIn(
   /** Effective redirect policy; defaults to NEVER. */
   public RedirectPolicy effectiveRedirects() {
     return followRedirects == null ? RedirectPolicy.NEVER : followRedirects;
+  }
+
+  /** Effective list of valid HTTP statuses (never null). */
+  public List<Integer> effectiveValidStatuses() {
+    return validStatuses == null ? List.of() : List.copyOf(validStatuses);
   }
 
   public static final long DEFAULT_TIMEOUT_MILLIS = 30_000L;

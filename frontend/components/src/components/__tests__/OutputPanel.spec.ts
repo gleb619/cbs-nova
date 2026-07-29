@@ -5,6 +5,7 @@ import CallTreeNode from '../runner/CallTreeNode.vue'
 import CallTreeTab from '../runner/CallTreeTab.vue'
 import DryRunLogsTab from '../runner/DryRunLogsTab.vue'
 import ErrorsTab from '../runner/ErrorsTab.vue'
+import ExplainDiffView from '../runner/ExplainDiffView.vue'
 import ExplainOutput from '../runner/ExplainOutput.vue'
 import ExternalCallsBadge from '../runner/ExternalCallsBadge.vue'
 import MetadataTab from '../runner/MetadataTab.vue'
@@ -35,6 +36,7 @@ function mountOutputPanel(props: Record<string, unknown>) {
         CallTreeNode,
         ExternalCallsBadge,
         DryRunLogsTab,
+        ExplainDiffView,
       },
     },
   })

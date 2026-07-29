@@ -1,5 +1,6 @@
 package cbs.nova.dsl;
 
+import cbs.nova.dsl.utils.SimpleExpressionEvaluator;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -98,6 +99,27 @@ public final class SimpleContext<T> implements Context<T> {
   @Override
   public @Nullable DslSaga saga() {
     return saga;
+  }
+
+  @Override
+  public @NonNull Object eval(@NonNull String expression) {
+    return eval(expression, Map.of());
+  }
+
+  @Override
+  public @NonNull Object eval(@NonNull String expression,
+          @NonNull Map<String, Object> variables) {
+    Map<String, Object> merged = new LinkedHashMap<>();
+    merged.putAll(metadata);
+    if (body instanceof MapInput mapInput) {
+      merged.putAll(mapInput.asMap());
+    } else if (body instanceof Map<?, ?> map) {
+      @SuppressWarnings("unchecked")
+      Map<String, Object> typed = (Map<String, Object>) map;
+      merged.putAll(typed);
+    }
+    merged.putAll(variables);
+    return SimpleExpressionEvaluator.evaluate(expression, merged);
   }
 
   @Override

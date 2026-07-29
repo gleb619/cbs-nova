@@ -33,6 +33,7 @@ export { default as RunnerCallTreeNode } from './components/runner/CallTreeNode.
 export { default as RunnerCallTreeTab } from './components/runner/CallTreeTab.vue'
 export { default as RunnerDryRunLogsTab } from './components/runner/DryRunLogsTab.vue'
 export { default as RunnerErrorsTab } from './components/runner/ErrorsTab.vue'
+export { default as RunnerExplainDiffView } from './components/runner/ExplainDiffView.vue'
 export { default as RunnerExplainOutput } from './components/runner/ExplainOutput.vue'
 export { default as RunnerExternalCallsBadge } from './components/runner/ExternalCallsBadge.vue'
 export { default as RunnerInputField } from './components/runner/InputField.vue'

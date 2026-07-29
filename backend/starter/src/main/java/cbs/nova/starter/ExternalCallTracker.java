@@ -14,6 +14,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @Component
 @RequiredArgsConstructor
 @Deprecated(forRemoval = true)
+// TODO: refactor to a better system with listeners/interceptors, for better adding of new features
 public class ExternalCallTracker {
 
   public static final String TYPE_DATABASE = "database";

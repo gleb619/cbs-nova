@@ -7,8 +7,11 @@ import org.jspecify.annotations.Nullable;
  * Per-thread context that marks the current execution as a DSL dry-run (preview/explain) and holds
  * the runId used to correlate captured log events.
  */
+// TODO: instead add interface and two impls in `dsl`/`starter` modules, with replacable type
 public final class DryRunLoggingContext {
 
+  // TODO: replace with ScopedValue
+  // TODO: we also need support for a temporal, that can execute code on very different nodes
   private static final ThreadLocal<String> RUN_ID = new ThreadLocal<>();
 
   private DryRunLoggingContext() {

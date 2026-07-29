@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.InputStream;
+import java.net.http.HttpClient;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -104,6 +105,9 @@ class AdvancedDslExamplesTest {
   private static HelperInstanceResolver reflectiveHelperResolver() {
     return helperClass -> {
       try {
+        if (helperClass == cbs.nova.starter.helpers.HttpCallHelper.class) {
+          return new cbs.nova.starter.helpers.HttpCallHelper(HttpClient.newHttpClient());
+        }
         // TODO: remove reflection, use typed info instead
         return (Executable<?, ?>) helperClass.getDeclaredConstructor().newInstance();
       } catch (ReflectiveOperationException e) {

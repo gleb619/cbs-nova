@@ -1,4 +1,4 @@
-package cbs.nova.starter.helper;
+package cbs.nova.starter.resolver;
 
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.HelperInstanceResolver;
@@ -23,6 +23,7 @@ public final class SpringBeanHelperInstanceResolver implements HelperInstanceRes
 
   @SuppressWarnings("unchecked")
   @Deprecated(forRemoval = true)
+  // TODO: Instead reuse a registry/spi to work without reflection
   private static @NonNull Executable<?, ?> newInstance(@NonNull Class<?> helperClass) {
     try {
       // TODO: remove reflection, use typed info instead

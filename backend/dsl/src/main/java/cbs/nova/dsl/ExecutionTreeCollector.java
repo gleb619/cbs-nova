@@ -2,13 +2,17 @@ package cbs.nova.dsl;
 
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -21,8 +25,22 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class ExecutionTreeCollector implements ExecutionListener {
 
+  private static final Logger log = LoggerFactory.getLogger(ExecutionTreeCollector.class);
+
+  private final int maxDepth;
+
   private final Map<String, Deque<Frame>> stacks = new ConcurrentHashMap<>();
   private final Map<String, CallNode> roots = new ConcurrentHashMap<>();
+  private final Map<String, Set<String>> cycleSets = new ConcurrentHashMap<>();
+  private final Map<String, Integer> skipCounts = new ConcurrentHashMap<>();
+
+  public ExecutionTreeCollector() {
+    this(32);
+  }
+
+  public ExecutionTreeCollector(int maxDepth) {
+    this.maxDepth = maxDepth;
+  }
 
   /**
    * Prepare a fresh stack for the given runId. Any previously stored root for this runId is
@@ -47,6 +65,8 @@ public final class ExecutionTreeCollector implements ExecutionListener {
         stack.pop();
       }
     }
+    cycleSets.remove(runId);
+    skipCounts.remove(runId);
   }
 
   @Override
@@ -111,6 +131,9 @@ public final class ExecutionTreeCollector implements ExecutionListener {
    * ignored when no runId stack exists or the stack is empty.
    */
   public void attachExternalCall(@NonNull String runId, @NonNull Map<String, Object> call) {
+    if (skipCounts.getOrDefault(runId, 0) > 0) {
+      return;
+    }
     Deque<Frame> stack = stacks.get(runId);
     if (stack == null) {
       return;
@@ -135,7 +158,29 @@ public final class ExecutionTreeCollector implements ExecutionListener {
       return;
     }
     synchronized (stack) {
-      stack.push(new Frame(name, kind, input));
+      int skipCount = skipCounts.getOrDefault(runId, 0);
+      if (skipCount > 0) {
+        skipCounts.put(runId, skipCount + 1);
+        return;
+      }
+      if (stack.size() >= maxDepth) {
+        stack.push(new Frame("<truncated>", kind, null, true));
+        skipCounts.put(runId, 1);
+        log.warn("ExecutionTreeCollector: depth limit {} reached at '{}', truncating subtree",
+                maxDepth, name);
+        return;
+      }
+      String cycleKey = name + ":" + kind;
+      Set<String> cycleSet = cycleSets.computeIfAbsent(runId, k -> new HashSet<>());
+      if (cycleSet.contains(cycleKey)) {
+        stack.push(new Frame("<truncated>", kind, null, true));
+        skipCounts.put(runId, 1);
+        log.warn("ExecutionTreeCollector: cycle detected at '{}' ({}), truncating",
+                name, kind);
+        return;
+      }
+      stack.push(new Frame(name, kind, input, false));
+      cycleSet.add(cycleKey);
     }
   }
 
@@ -145,8 +190,32 @@ public final class ExecutionTreeCollector implements ExecutionListener {
       return;
     }
     synchronized (stack) {
+      int skipCount = skipCounts.getOrDefault(runId, 0);
+      if (skipCount > 0) {
+        skipCount--;
+        if (skipCount == 0) {
+          Frame sentinel = stack.poll();
+          if (sentinel != null && sentinel.sentinel) {
+            CallNode node = new CallNode(
+                    "<truncated>",
+                    sentinel.kind,
+                    null, null, false,
+                    List.of(), List.of());
+            Frame parent = stack.peek();
+            if (parent == null) {
+              roots.put(runId, node);
+            } else {
+              parent.children.add(node);
+            }
+          }
+          skipCounts.remove(runId);
+        } else {
+          skipCounts.put(runId, skipCount);
+        }
+        return;
+      }
       Frame frame = stack.poll();
-      if (frame == null) {
+      if (frame == null || frame.sentinel) {
         return;
       }
       frame.output = output;
@@ -165,6 +234,11 @@ public final class ExecutionTreeCollector implements ExecutionListener {
       } else {
         parent.children.add(node);
       }
+      String cycleKey = frame.name + ":" + frame.kind;
+      Set<String> cycleSet = cycleSets.get(runId);
+      if (cycleSet != null) {
+        cycleSet.remove(cycleKey);
+      }
     }
   }
 
@@ -175,13 +249,15 @@ public final class ExecutionTreeCollector implements ExecutionListener {
     final Object input;
     Object output;
     boolean success;
+    final boolean sentinel;
     final List<CallNode> children = new ArrayList<>();
     final List<Map<String, Object>> externalCalls = new ArrayList<>();
 
-    Frame(String name, CallKind kind, Object input) {
+    Frame(String name, CallKind kind, Object input, boolean sentinel) {
       this.name = name;
       this.kind = kind;
       this.input = input;
+      this.sentinel = sentinel;
     }
   }
 }

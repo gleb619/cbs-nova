@@ -24,6 +24,8 @@ import java.util.UUID;
  * This service uses the {@link DslTemporalProcess} contract to start workflows, so no reflection is
  * required to locate the workflow method.
  */
+// TODO: instead of adding a `@Service` annotation, we need to create a configs with `@Bean` for
+// better control
 @Service
 @RequiredArgsConstructor
 public class TemporalDslService {
@@ -41,6 +43,7 @@ public class TemporalDslService {
   /**
    * Executes a generated DSL process, optionally overriding default {@link WorkflowOptions}.
    */
+  // TODO: instead make a paramter object(record) with lomboks builder
   public <O> O execute(
           @NonNull String code,
           @NonNull Object input,
@@ -51,6 +54,7 @@ public class TemporalDslService {
             ? options
             : defaultOptions(descriptor);
 
+    // TODO: we need to create workerFactory once, to save resoures
     WorkerFactory workerFactory = WorkerFactory.newInstance(workflowClient);
     try {
       Worker worker = workerFactory.newWorker(descriptor.taskQueue());
@@ -58,16 +62,24 @@ public class TemporalDslService {
       workerFactory.start();
 
       Object preparedInput = prepareInput(input, descriptor.inputType());
+      // TODO: instead take a runId from a parameter object
       String runId = effectiveOptions.getWorkflowId();
       var stub = workflowClient.newWorkflowStub(descriptor.temporalInterface(), effectiveOptions);
+
+      // TODO: add if with instance of, else throw ex
       DslTemporalProcess process = (DslTemporalProcess) stub;
+
+      // TODO: by default make `execute` work async via temporal/spring thread pool
       Object result = process.execute(new DslTemporalProcessRequest<>(runId, preparedInput));
+
+      // TODO: add if, on else use codegenerated avaje, fallback to jackson to convert if needed
       return outputType.cast(result);
     } catch (RuntimeException e) {
       Throwable cause = e.getCause() != null ? e.getCause() : e;
       throw new RuntimeException(
               "DSL workflow " + code + " failed: " + cause.getMessage(), cause);
     } finally {
+      // TODO: shutdown only on app stop, e.g. optimize for a long running app
       workerFactory.shutdown();
     }
   }
@@ -87,6 +99,7 @@ public class TemporalDslService {
             .orElseThrow(() -> new IllegalArgumentException("No generated DSL process: " + code));
   }
 
+  // TODO: instead add check for a MapInput
   private Object prepareInput(Object input, Class<?> inputType) {
     if (inputType != null && input instanceof Map<?, ?> map) {
       @SuppressWarnings("unchecked")
@@ -96,6 +109,7 @@ public class TemporalDslService {
     return input;
   }
 
+  // TODO: no, reuse a parameter object, or use some context factory to generate a new runId
   private WorkflowOptions defaultOptions(GeneratedClassDescriptor descriptor) {
     return WorkflowOptions.newBuilder()
             .setWorkflowId(descriptor.name() + "-" + UUID.randomUUID())

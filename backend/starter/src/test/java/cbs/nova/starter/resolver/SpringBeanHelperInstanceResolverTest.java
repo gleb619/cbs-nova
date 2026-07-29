@@ -1,4 +1,4 @@
-package cbs.nova.starter.helper;
+package cbs.nova.starter.resolver;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

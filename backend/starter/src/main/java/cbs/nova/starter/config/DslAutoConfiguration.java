@@ -8,7 +8,7 @@ import cbs.nova.dsl.TemporalProcessLauncher;
 import cbs.nova.dsl.TransactionInvoker;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
-import cbs.nova.starter.helper.SpringBeanHelperInstanceResolver;
+import cbs.nova.starter.resolver.SpringBeanHelperInstanceResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;

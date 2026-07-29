@@ -45,7 +45,7 @@ public final class CompileDslAction extends AnAction {
               .createBuilder(project).getConsole();
       console.attachToProcess(processHandler);
       RunContentManager.getInstance(project).showRunContent(
-          DefaultRunExecutor.getRunExecutorInstance(),
+              DefaultRunExecutor.getRunExecutorInstance(),
               new RunContentDescriptor(console, processHandler, console.getComponent(),
                       "compileDsl"));
       processHandler.startNotify();

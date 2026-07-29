@@ -6,6 +6,7 @@ import cbs.nova.dsl.Helper;
 import cbs.nova.dsl.Result;
 import cbs.nova.starter.helpers.model.CurrentTimestampIn;
 import cbs.nova.starter.helpers.model.CurrentTimestampOut;
+import io.temporal.workflow.Workflow;
 import org.jspecify.annotations.NonNull;
 
 import java.time.Instant;
@@ -18,17 +19,29 @@ public class CurrentTimestampHelper implements Executable<CurrentTimestampIn, Cu
   @Override
   public @NonNull Result<CurrentTimestampOut> execute(@NonNull Context<CurrentTimestampIn> ctx) {
     CurrentTimestampIn input = ctx.body();
-    ZoneId zone;
+    ZoneId zone = resolveZone(input);
+    Instant now = now();
+    String timestamp = DateTimeFormatter.ISO_OFFSET_DATE_TIME
+            .withZone(zone)
+            .format(now);
+    return Result.success(new CurrentTimestampOut(timestamp));
+  }
+
+  private static ZoneId resolveZone(CurrentTimestampIn input) {
     try {
-      zone = (input.zone() != null && !input.zone().isBlank())
+      return (input.zone() != null && !input.zone().isBlank())
               ? ZoneId.of(input.zone())
               : ZoneId.of("UTC");
     } catch (Exception e) {
-      zone = ZoneId.of("UTC");
+      return ZoneId.of("UTC");
     }
-    String timestamp = DateTimeFormatter.ISO_OFFSET_DATE_TIME
-            .withZone(zone)
-            .format(Instant.now());
-    return Result.success(new CurrentTimestampOut(timestamp));
+  }
+
+  private static Instant now() {
+    try {
+      return Instant.ofEpochMilli(Workflow.currentTimeMillis());
+    } catch (Throwable e) {
+      return Instant.now();
+    }
   }
 }

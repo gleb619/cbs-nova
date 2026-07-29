@@ -162,6 +162,8 @@ then copies only the `:starter` fat jar into a smaller JRE runtime image.
 
 - **[DSL constructs & execution contract](dsl/constructs.md)** — `Executable`, `Context`, and the semantics of Process,
   Transaction, Function, and Helper.
+- **[Preview mode (dry-run)](dsl/preview-mode.md)** — how preview executes DSL flows locally without Temporal and returns
+  a report for coding-agent explainability.
 - **[Authoring DSL flows](dsl/authoring.md)** — source files, builder API, `Result` type, helper/transaction calls,
   compensation, and the full loan-disbursement example.
 - **[Working with DSL examples](dsl/examples.md)** — source layout, building examples, the Testcontainers integration test, and tips for adding new flows.

@@ -49,6 +49,8 @@ public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
   }
 
   @Override
+  // TODO: Simplify method, introduce a parameter object(record), that have 5 fields + lombok
+  // builder
   public @NonNull Result<?> launch(
           @NonNull String processName,
           @NonNull String taskQueue,
@@ -60,6 +62,8 @@ public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
             .orElseThrow(() -> new IllegalArgumentException(
                     "No generated Temporal process: " + processName));
 
+    // TODO: in dsl we configured some of next fields(like task queue, timeouts, retry), we need to
+    // use them here(we can configure a codegenerator for descriptor if needeed)
     var options = WorkflowOptions.newBuilder()
             .setTaskQueue(taskQueue)
             .setWorkflowId(ctx.runId())
@@ -70,6 +74,7 @@ public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
 
     var stub = workflowClient.newWorkflowStub(descriptor.temporalInterface(), options);
     try {
+      // TODO: instead of blind cast, use if with instanceof here, or else throw ex
       var process = (DslTemporalProcess) stub;
       Object result = process.execute(new DslTemporalProcessRequest<>(ctx.runId(), ctx.body()));
       if (result instanceof DslTemporalProcessFailure(String message, String detail)) {
@@ -78,9 +83,13 @@ public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
                 new RuntimeException(message)));
       }
       if (outputType != null && result != null && !outputType.isInstance(result)) {
+        // TODO: Modify one of codegenerated code, we need a special class, that know all records
+        // from a `models` folder, and can use avaje jsonb converter, and fallback to jackson
         result = objectMapper.convertValue(result, outputType);
       }
       return Result.success(result);
+      // TODO: create a new DslException at `dsl-api`, make project exceptions implement it(e.g.
+      // search usage of NullPointer, IllegalStatement exceptions and replace with a new ones)
     } catch (Exception e) {
       Throwable cause = e.getCause() != null ? e.getCause() : e;
       return Result.failure(new DslExecutionException(ctx.runId(),

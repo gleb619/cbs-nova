@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+//TODO: instead of hardcoded endpoints, make a config with conditional bean, that work with `org.springframework.web.servlet.function.RouterFunction`
 @RestController
 @RequestMapping("/api/dsl")
 @Tag(name = "DSL Admin", description = "Administrative operations for DSL runtime")
@@ -48,6 +49,8 @@ public class DslReloadResource {
     }
     GlobalManager.globalManager().resetForTests();
     try {
+      // TODO: add for reload a new special method, that uses a new classloader. Try to use here a
+      // spi mechanizm
       new DefinitionLoader().load(dir, GlobalManager.globalManager());
       return ResponseEntity.noContent().build();
     } catch (Exception e) {

@@ -35,6 +35,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 import tools.jackson.databind.ObjectMapper;
 
+import java.net.http.HttpClient;
 import java.time.Duration;
 
 /**
@@ -203,6 +204,9 @@ class UnreliableApiDslIntegrationTest {
   private static HelperInstanceResolver reflectiveHelperResolver() {
     return helperClass -> {
       try {
+        if (helperClass == cbs.nova.starter.helpers.HttpCallHelper.class) {
+          return new cbs.nova.starter.helpers.HttpCallHelper(HttpClient.newHttpClient());
+        }
         // TODO: remove reflection, use typed info instead
         return (Executable<?, ?>) helperClass.getDeclaredConstructor().newInstance();
       } catch (ReflectiveOperationException e) {

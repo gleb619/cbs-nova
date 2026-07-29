@@ -8,6 +8,8 @@ import cbs.nova.starter.helpers.model.FormatMessageIn;
 import cbs.nova.starter.helpers.model.FormatMessageOut;
 import org.jspecify.annotations.NonNull;
 
+import java.util.Map;
+
 @Helper(name = "formatMessage")
 public class FormatMessageHelper implements Executable<FormatMessageIn, FormatMessageOut> {
 
@@ -17,12 +19,16 @@ public class FormatMessageHelper implements Executable<FormatMessageIn, FormatMe
     if (input.template() == null) {
       return Result.failure(new IllegalArgumentException("template is required"));
     }
-    String result = input.template();
-    if (input.params() != null) {
-      for (var entry : input.params().entrySet()) {
-        result = result.replace("{" + entry.getKey() + "}", String.valueOf(entry.getValue()));
-      }
-    }
+    Map<String, Object> params = input.params() == null ? Map.of() : input.params();
+    Object evaluated = ctx.eval(input.template(), params);
+    String result = evaluated == null ? "" : formatValue(evaluated);
     return Result.success(new FormatMessageOut(result));
+  }
+
+  private static String formatValue(Object value) {
+    if (value instanceof java.math.BigDecimal bd) {
+      return bd.stripTrailingZeros().toPlainString();
+    }
+    return String.valueOf(value);
   }
 }

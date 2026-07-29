@@ -23,17 +23,20 @@ import org.jetbrains.annotations.Nullable;
  * custom lexer/parser/inspection logic — the goal is "not plain black text and no errors" for
  * compact-DSL {@code .java} sources, not full semantic fidelity.
  */
-public final class CbsDslSyntaxHighlighterFactory extends SyntaxHighlighterFactory implements
-    SyntaxHighlighterProvider {
+public final class CbsDslSyntaxHighlighterFactory extends SyntaxHighlighterFactory
+        implements
+          SyntaxHighlighterProvider {
 
   @Override
   public @NotNull SyntaxHighlighter getSyntaxHighlighter(@Nullable Project project,
           @Nullable VirtualFile file) {
-    return new JavaFileHighlighter(project == null ? LanguageLevel.HIGHEST
-        : JavaPsiImplementationHelper.getInstance(project).getEffectiveLanguageLevel(file));
+    return new JavaFileHighlighter(project == null
+            ? LanguageLevel.HIGHEST
+            : JavaPsiImplementationHelper.getInstance(project).getEffectiveLanguageLevel(file));
   }
 
-  public @Nullable SyntaxHighlighter create(@NotNull FileType fileType, @Nullable Project project, @Nullable VirtualFile file) {
+  public @Nullable SyntaxHighlighter create(@NotNull FileType fileType, @Nullable Project project,
+          @Nullable VirtualFile file) {
     if (project != null && file != null) {
       PsiFile psiFile = PsiManager.getInstance(project).findFile(file);
       if (fileType == JavaClassFileType.INSTANCE && psiFile != null) {
@@ -44,7 +47,7 @@ public final class CbsDslSyntaxHighlighterFactory extends SyntaxHighlighterFacto
       }
 
       if (psiFile instanceof ClsFileImpl) {
-        LanguageLevel sourceLevel = ((ClsFileImpl)psiFile).getLanguageLevel();
+        LanguageLevel sourceLevel = ((ClsFileImpl) psiFile).getLanguageLevel();
         return new JavaFileHighlighter(sourceLevel);
       }
     }

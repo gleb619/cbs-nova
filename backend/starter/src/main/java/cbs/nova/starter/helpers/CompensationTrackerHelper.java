@@ -6,34 +6,62 @@ import cbs.nova.dsl.Helper;
 import cbs.nova.dsl.Result;
 import org.jspecify.annotations.NonNull;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @Helper(name = "compensationTracker")
 public class CompensationTrackerHelper implements Executable<Map<String, Object>, String> {
 
-  private final Set<String> markers = ConcurrentHashMap.newKeySet();
+  private static final Duration DEFAULT_TTL = Duration.ofMinutes(5);
+  private static final long CLEANUP_INTERVAL_SECONDS = 30;
+
+  private final ConcurrentHashMap<String, Marker> markers = new ConcurrentHashMap<>();
+  private final ScheduledExecutorService cleanupScheduler = Executors
+          .newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "compensation-tracker-cleanup");
+            t.setDaemon(true);
+            return t;
+          });
+
+  public CompensationTrackerHelper() {
+    cleanupScheduler.scheduleAtFixedRate(
+            this::evictExpired, CLEANUP_INTERVAL_SECONDS, CLEANUP_INTERVAL_SECONDS,
+            TimeUnit.SECONDS);
+  }
 
   @Override
   public @NonNull Result<String> execute(@NonNull Context<Map<String, Object>> ctx) {
     Object marker = ctx.body().get("markerId");
     if (marker != null) {
-      markers.add(marker.toString());
+      markers.putIfAbsent(marker.toString(), new Marker(marker.toString(), Instant.now()));
     }
     return Result.success("recorded");
   }
 
   public boolean wasCompensated(String markerId) {
-    return markers.contains(markerId);
+    return markerId != null && markers.containsKey(markerId);
   }
 
   public void reset() {
     markers.clear();
+    cleanupScheduler.shutdownNow();
   }
 
-  public Set<String> markers() {
-    return Collections.unmodifiableSet(markers);
+  public Map<String, Marker> markers() {
+    return Collections.unmodifiableMap(markers);
+  }
+
+  private void evictExpired() {
+    Instant cutoff = Instant.now().minus(DEFAULT_TTL);
+    markers.values().removeIf(m -> m.createdAt().isBefore(cutoff));
+  }
+
+  public record Marker(String markerId, Instant createdAt) {
   }
 }

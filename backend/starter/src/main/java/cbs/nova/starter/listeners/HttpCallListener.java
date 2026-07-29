@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
+@Deprecated(forRemoval = true)
 public class HttpCallListener implements ExternalCallListener {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(HttpCallListener.class);
