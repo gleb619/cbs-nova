@@ -45,7 +45,7 @@ public class TemporalConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
-  TransactionInvoker transactionInvoker() {
+  TemporalTransactionInvoker temporalTransactionInvoker() {
     return new TemporalTransactionInvoker();
   }
 

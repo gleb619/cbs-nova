@@ -20,7 +20,8 @@ class DevDslRuntimeTest {
   private final ExternalCallTracker tracker = new ExternalCallTracker();
   private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
   private final ContextFactory contextFactory = new ContextFactory();
-  private final DevDslRuntime runtime = new DevDslRuntime(tracker, traceCollector, contextFactory);
+  private final DevDslRuntime runtime = new DevDslRuntime(tracker, traceCollector, contextFactory,
+          32);
 
   @BeforeEach
   void reset() {

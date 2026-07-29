@@ -23,6 +23,7 @@ public class ExternalCallTracker {
   public static final String TYPE_FILE_SYSTEM = "filesystem";
   public static final String TYPE_EXTERNAL_API = "external_api";
   public static final String TYPE_MICROSERVICE = "microservice";
+  public static final String TYPE_ACTIVITY = "activity";
   public static final String TYPE_OTHER = "other";
   private final ThreadLocal<List<CallDetail>> threadLocalCalls = new ThreadLocal<>();
   private final List<ExternalCallListener> listeners = new CopyOnWriteArrayList<>();
@@ -96,6 +97,10 @@ public class ExternalCallTracker {
             || lowerType.contains("thrift") ||
             lowerType.contains("soap") || lowerType.contains("rpc")) {
       return TYPE_MICROSERVICE;
+    }
+
+    if (lowerType.contains("activity") || lowerType.contains("temporal")) {
+      return TYPE_ACTIVITY;
     }
 
     if (lowerType.contains("api") || lowerType.contains("external")
