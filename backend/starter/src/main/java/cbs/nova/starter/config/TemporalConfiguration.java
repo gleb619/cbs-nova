@@ -6,7 +6,6 @@ import cbs.nova.dsl.TemporalProcessLauncher;
 import cbs.nova.dsl.TransactionInvoker;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.logging.DryRunLoggingContext;
-import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.starter.DevDslRuntime;
 import cbs.nova.starter.ExternalCallTracker;
 import cbs.nova.starter.logging.DryRunLoggingContextPropagator;
@@ -87,7 +86,7 @@ public class TemporalConfiguration {
   @Bean
   @ConditionalOnMissingBean
   DslRunRepository dslRunRepository() {
-    return new InMemoryDslRunRepository();
+    return new cbs.nova.dsl.repository.InMemoryDslRunRepository();
   }
 
   @Bean
@@ -103,11 +102,13 @@ public class TemporalConfiguration {
   }
 
   @Bean
-  TemporalDslProcessService temporalDslProcessService(ContextFactory contextFactory,
+  TemporalDslProcessService temporalDslProcessService(
+          ContextFactory contextFactory,
           DslRunRepository runRepository,
-          JsonMapper jsonMapper) {
+          JsonMapper jsonMapper,
+          ExecutionTraceCollector executionTraceCollector) {
     return new TemporalDslProcessService(contextFactory, runRepository,
-            JsonMapper.builder().build());
+            JsonMapper.builder().build(), executionTraceCollector);
   }
 
 }

@@ -1,4 +1,4 @@
-package cbs.nova.starter.repository;
+package cbs.nova.starter.persistence;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;
@@ -9,7 +9,6 @@ import java.time.Instant;
 
 @Data
 @Table("dsl_runs")
-// TODO: move entity to another package, make schema for entity configurable
 public class DslRunEntity {
 
   @Id
@@ -24,19 +23,17 @@ public class DslRunEntity {
   @Column("status")
   private String status;
 
-  // TODO: add encryption/decryption, on app level
   @Column("input_json")
   private String inputJson;
 
-  // TODO: add encryption/decryption, on app level
   @Column("output_json")
   private String outputJson;
 
   @Column("error_message")
   private String errorMessage;
 
-  // TODO: add another column with json, with trace/ast/call tree about, where in dsl error was
-  // thown
+  @Column("context_json")
+  private String contextJson;
 
   @Column("started_at")
   private Instant startedAt;

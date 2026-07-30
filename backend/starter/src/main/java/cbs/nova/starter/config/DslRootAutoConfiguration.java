@@ -17,10 +17,13 @@ import org.springframework.context.annotation.Import;
  * {@code DslRunRepository} (and other infra beans) win over the fallbacks declared in the DSL core
  * config. {@link DryRunLoggingAutoConfiguration} precedes {@link TemporalConfiguration} because the
  * latter depends on the dry-run logging context propagator bean.
+ * {@link DslRunRepositoryConfiguration} precedes {@link TemporalConfiguration} so the JDBC-backed
+ * {@code DslRunRepository} is registered before the in-memory fallback.
  */
 @AutoConfiguration
 @Import({
     DryRunLoggingAutoConfiguration.class,
+    DslRunRepositoryConfiguration.class,
     TemporalConfiguration.class,
     PropertyResolverConfiguration.class,
     DslAutoConfiguration.class,

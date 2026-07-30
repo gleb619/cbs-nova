@@ -25,6 +25,9 @@ dependencies {
   api libs.avaje.jsonb
   annotationProcessor libs.avaje.jsonb.generator
 
+  implementation 'org.mapstruct:mapstruct:1.6.3'
+  annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
+
   compileOnly libs.bundles.spring.web
   implementation libs.spring.boot.starter.actuator
   implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'

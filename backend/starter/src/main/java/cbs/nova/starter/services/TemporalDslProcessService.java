@@ -5,6 +5,7 @@ import cbs.nova.dsl.DslRun;
 import cbs.nova.dsl.DslRunRepository;
 import cbs.nova.dsl.DslRunStatus;
 import cbs.nova.dsl.ExecutionMode;
+import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
@@ -18,6 +19,7 @@ import org.slf4j.MDC;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;
@@ -28,6 +30,7 @@ public class TemporalDslProcessService {
   private final ContextFactory contextFactory;
   private final DslRunRepository runRepository;
   private final ObjectMapper objectMapper;
+  private final ExecutionTraceCollector traceCollector;
 
   // TODO: refactor method, make it not blocking, instead if process is running, we need to return
   // an intermidiate Result with correspondent status(pending or something like that)
@@ -46,7 +49,7 @@ public class TemporalDslProcessService {
    * Starts a process asynchronously, returning as soon as the {@link DslRun} is recorded as
    * {@code RUNNING} and the workflow has been launched. The returned handle exposes the generated
    * {@code runId} (useful for correlating side effects such as latch files) and a future that
-   * completes with the {@link Result} once the workflow finishes and the run is recorded as
+   * completes with the outcome once the workflow finishes and the run is recorded as
    * {@code COMPLETED} or {@code FAILED}.
    *
    * <p>
@@ -139,29 +142,26 @@ public class TemporalDslProcessService {
           @NonNull Map<String, Object> metadata,
           @NonNull String runId,
           @NonNull Instant startedAt) {
+    traceCollector.start(runId);
     Context<?> ctx = contextFactory.of(body, metadata, ExecutionMode.RUN, runId);
     Result<?> result;
     try {
       result = GlobalManager.globalManager().runProcess(processName, ctx);
     } catch (Exception ex) {
       result = Result.failure(ex);
+    } finally {
+      traceCollector.stop(runId);
     }
 
     Instant finishedAt = Instant.now();
-    DslRun finished = DslRun.builder()
-            .runId(runId)
-            .processName(processName)
-            .status(result.isSuccess() ? DslRunStatus.COMPLETED.name() : DslRunStatus.FAILED.name())
-            .input(serialize(body))
-            // TODO: reuse here codegenerated class, for avaje support
-            .output(result.isSuccess() ? serialize(result.value()) : null)
-            .error(result.isSuccess() ? null : messageOf(result.cause()))
-            .startedAt(startedAt)
-            .finishedAt(finishedAt)
-            .executionMode(ExecutionMode.RUN.name())
-            .build();
-    // TODO: instead of resave, make a special method, that update only several fields
-    runRepository.save(finished);
+    String contextJson = serializeTrace(traceCollector.snapshot(runId));
+    runRepository.updateFinished(
+            runId,
+            result.isSuccess() ? DslRunStatus.COMPLETED.name() : DslRunStatus.FAILED.name(),
+            result.isSuccess() ? serialize(result.value()) : null,
+            result.isSuccess() ? null : messageOf(result.cause()),
+            finishedAt,
+            contextJson);
 
     return result;
   }
@@ -172,6 +172,17 @@ public class TemporalDslProcessService {
     }
 
     return objectMapper.writeValueAsString(value);
+  }
+
+  private @Nullable String serializeTrace(@NonNull List<String> trace) {
+    if (trace.isEmpty()) {
+      return null;
+    }
+    try {
+      return objectMapper.writeValueAsString(Map.of("trace", trace));
+    } catch (Exception e) {
+      return null;
+    }
   }
 
   private @Nullable String messageOf(@Nullable Throwable cause) {

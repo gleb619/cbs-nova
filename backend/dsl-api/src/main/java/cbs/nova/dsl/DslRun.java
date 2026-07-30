@@ -14,6 +14,7 @@ public record DslRun(
         @Nullable String input,
         @Nullable String output,
         @Nullable String error,
+        @Nullable String contextJson,
         @NonNull Instant startedAt,
         @Nullable Instant finishedAt,
         @Nullable String executionMode) {

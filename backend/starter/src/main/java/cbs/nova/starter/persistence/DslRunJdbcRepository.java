@@ -1,12 +1,17 @@
-package cbs.nova.starter.repository;
+package cbs.nova.starter.persistence;
 
 import org.springframework.data.repository.CrudRepository;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
-@Repository
+/**
+ * Spring Data JDBC repository for {@link DslRunEntity} reads.
+ *
+ * <p>
+ * No {@code @Repository} annotation is used: Spring Data JDBC creates the implementation bean
+ * automatically during repository scanning.
+ */
 public interface DslRunJdbcRepository extends CrudRepository<DslRunEntity, Long> {
 
   Optional<DslRunEntity> findByRunId(String runId);

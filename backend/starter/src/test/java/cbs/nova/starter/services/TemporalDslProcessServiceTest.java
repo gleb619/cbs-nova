@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.DslEntityNotFoundException;
 import cbs.nova.dsl.ExecutionMode;
+import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.SimpleContext;
 import cbs.nova.dsl.config.ContextFactory;
@@ -39,7 +40,8 @@ class TemporalDslProcessServiceTest {
             Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
 
     TemporalDslProcessService service = new TemporalDslProcessService(
-            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper());
+            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper(),
+            new ExecutionTraceCollector());
     service.runProcess(unique(), "payload");
 
     Mockito.verify(contextFactory).of(
@@ -59,7 +61,8 @@ class TemporalDslProcessServiceTest {
             Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
 
     TemporalDslProcessService service = new TemporalDslProcessService(
-            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper());
+            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper(),
+            new ExecutionTraceCollector());
     service.runProcess(unique(), null, Map.of("k", "v"));
 
     ArgumentCaptor<Object> bodyCaptor = ArgumentCaptor.forClass(Object.class);
@@ -81,7 +84,8 @@ class TemporalDslProcessServiceTest {
             Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
 
     TemporalDslProcessService service = new TemporalDslProcessService(
-            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper());
+            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper(),
+            new ExecutionTraceCollector());
     service.runProcess(unique(), "payload", Map.of());
 
     Mockito.verify(contextFactory).generateRunId();
@@ -97,7 +101,8 @@ class TemporalDslProcessServiceTest {
     ContextFactory contextFactory = new ContextFactory();
     String missing = "missing-" + UUID.randomUUID();
     TemporalDslProcessService service = new TemporalDslProcessService(
-            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper());
+            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper(),
+            new ExecutionTraceCollector());
 
     Result<?> result = service.runProcess(missing, Map.of("k", "v"), Map.of("meta", "data"));
 
@@ -117,7 +122,8 @@ class TemporalDslProcessServiceTest {
             Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
 
     TemporalDslProcessService service = new TemporalDslProcessService(
-            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper());
+            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper(),
+            new ExecutionTraceCollector());
     service.runProcess(unique(), input, Map.of("meta", "data"));
 
     Mockito.verify(contextFactory).of(
@@ -149,7 +155,8 @@ class TemporalDslProcessServiceTest {
       });
 
       TemporalDslProcessService service = new TemporalDslProcessService(
-              contextFactory, new InMemoryDslRunRepository(), new ObjectMapper());
+              contextFactory, new InMemoryDslRunRepository(), new ObjectMapper(),
+              new ExecutionTraceCollector());
       service.runProcess(unique(), "payload", Map.of());
 
       assertThat(MDC.get("runId")).isNull();
