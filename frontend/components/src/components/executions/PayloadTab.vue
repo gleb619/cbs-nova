@@ -17,13 +17,13 @@ function _format(v: unknown): string {
       <h3 class="text-sm font-semibold text-gray-700 mb-2">Initial Input</h3>
       <pre
         class="text-xs bg-gray-50 border border-gray-200 rounded p-3 overflow-auto max-h-[500px]"
-      ><code>{{ format(input) }}</code></pre>
+      ><code>{{ _format(input) }}</code></pre>
     </div>
     <div class="bg-white border border-gray-200 rounded-lg p-4">
       <h3 class="text-sm font-semibold text-gray-700 mb-2">Final Output</h3>
       <pre
         class="text-xs bg-gray-50 border border-gray-200 rounded p-3 overflow-auto max-h-[500px]"
-      ><code>{{ format(output) }}</code></pre>
+      ><code>{{ _format(output) }}</code></pre>
     </div>
   </div>
 </template>
