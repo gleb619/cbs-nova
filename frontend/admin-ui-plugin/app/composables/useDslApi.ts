@@ -3,6 +3,17 @@ export function useDslApi() {
     return $fetch('/api/v1/dsl/definitions')
   }
 
+  async function searchHelpers(
+    filters: { name?: string; type?: string; description?: string } = {},
+  ) {
+    const query: Record<string, string> = {}
+    if (filters.name?.trim()) query.name = filters.name.trim()
+    if (filters.type?.trim()) query.type = filters.type.trim()
+    if (filters.description?.trim()) query.description = filters.description.trim()
+
+    return $fetch('/api/v1/helpers/search', { query })
+  }
+
   async function preview(
     name: string,
     body: unknown,
@@ -44,5 +55,5 @@ export function useDslApi() {
     return $fetch('/api/v1/dsl/reload', { method: 'POST' })
   }
 
-  return { getDefinitions, preview, run, explain, saveDraft, validateConstruct, reload }
+  return { getDefinitions, searchHelpers, preview, run, explain, saveDraft, validateConstruct, reload }
 }

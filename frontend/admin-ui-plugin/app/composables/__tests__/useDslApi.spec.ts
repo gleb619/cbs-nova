@@ -18,6 +18,28 @@ describe('useDslApi', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/definitions')
   })
 
+  it('searchHelpers GETs /api/v1/helpers/search with all filters', async () => {
+    fetchMock.mockResolvedValueOnce([])
+
+    const api = useDslApi()
+    await api.searchHelpers({ name: 'Foo', type: 'helper', description: 'bar' })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/helpers/search', {
+      query: { name: 'Foo', type: 'helper', description: 'bar' },
+    })
+  })
+
+  it('searchHelpers omits blank filters from the query', async () => {
+    fetchMock.mockResolvedValueOnce([])
+
+    const api = useDslApi()
+    await api.searchHelpers({ name: '', type: 'process' })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/helpers/search', {
+      query: { type: 'process' },
+    })
+  })
+
   it('preview POSTs to /api/v1/dsl/preview/{name} with body and metadata', async () => {
     fetchMock.mockResolvedValueOnce({})
     const api = useDslApi()

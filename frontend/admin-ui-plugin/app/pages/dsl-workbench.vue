@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { HelperSearchFilters, HelperSearchResult } from '@cbs/components'
+
 definePageMeta({ layout: 'default' })
 
 const workbench = useDslWorkbench()
@@ -14,9 +16,18 @@ const {
 } = workbench
 
 const explorerOpen = ref(true)
+const helperSearchOpen = ref(true)
+
+const dslApi = useDslApi()
+const helperSearch = useHelperSearch({
+  fetch: async (filters: HelperSearchFilters) =>
+    (await dslApi.searchHelpers(filters)) as HelperSearchResult[],
+  debounceMs: 250,
+})
 
 onMounted(() => {
   loadConstructs()
+  void helperSearch.execute()
 })
 </script>
 
@@ -90,6 +101,19 @@ onMounted(() => {
         </div>
         <DslProblemsPanel :errors="state.validationErrors" />
       </main>
+
+      <aside v-show="helperSearchOpen" class="w-80 shrink-0 border-l border-gray-800">
+        <DslHelperSearchPanel
+          v-model:name="helperSearch.filters.value.name"
+          v-model:type="helperSearch.filters.value.type"
+          v-model:description="helperSearch.filters.value.description"
+          :results="helperSearch.results.value"
+          :is-loading="helperSearch.isLoading.value"
+          :error="helperSearch.error.value"
+          @search="helperSearch.search"
+          @clear="helperSearch.clearFilters"
+        />
+      </aside>
     </div>
   </div>
 </template>

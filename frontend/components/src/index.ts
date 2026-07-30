@@ -11,6 +11,7 @@ export { default as DashboardStatCard } from './components/dashboard/StatCard.vu
 export { default as DslBodyEditor } from './components/dsl/BodyEditor.vue'
 export { default as DslCodeTab } from './components/dsl/CodeTab.vue'
 export { default as DslConstructExplorer } from './components/dsl/ConstructExplorer.vue'
+export { default as DslHelperSearchPanel } from './components/dsl/HelperSearchPanel.vue'
 export { default as DslInputMappingGrid } from './components/dsl/InputMappingGrid.vue'
 export { default as DslMetadataPanel } from './components/dsl/MetadataPanel.vue'
 export { default as DslProblemsPanel } from './components/dsl/ProblemsPanel.vue'
