@@ -8,6 +8,7 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.logging.DryRunLoggingContext;
 import cbs.nova.starter.DevDslRuntime;
 import cbs.nova.starter.ExternalCallTracker;
+import cbs.nova.starter.cache.PreviewResultCache;
 import cbs.nova.starter.logging.DryRunLoggingContextPropagator;
 import cbs.nova.starter.services.TemporalDslProcessLauncher;
 import cbs.nova.starter.services.TemporalDslProcessService;
@@ -96,9 +97,11 @@ public class TemporalConfiguration {
           ExecutionTraceCollector executionTraceCollector,
           ContextFactory contextFactory,
           DryRunLoggingContext dryRunLoggingContext,
-          @Value("${cbs.nova.preview.callTree.maxDepth:32}") int previewCallTreeMaxDepth) {
+          PreviewResultCache previewResultCache,
+          @Value("${cbs.nova.preview.callTree.maxDepth:32}") int previewCallTreeMaxDepth,
+          @Value("${cbs.nova.preview.cache.enabled:true}") boolean previewCacheEnabled) {
     return new DevDslRuntime(externalCallTracker, executionTraceCollector, contextFactory,
-            dryRunLoggingContext, previewCallTreeMaxDepth);
+            dryRunLoggingContext, previewResultCache, previewCallTreeMaxDepth, previewCacheEnabled);
   }
 
   @Bean

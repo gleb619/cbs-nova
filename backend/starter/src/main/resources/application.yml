@@ -1,0 +1,6 @@
+cbs:
+  nova:
+    preview:
+      cache:
+        enabled: true
+        ttlMs: 300000

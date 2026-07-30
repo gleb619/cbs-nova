@@ -19,41 +19,88 @@ import cbs.nova.dsl.generator.BpmnDiagramGenerator;
 import cbs.nova.dsl.generator.MermaidDiagramGenerator;
 import cbs.nova.dsl.generator.PlantUmlDiagramGenerator;
 import cbs.nova.dsl.logging.DryRunLoggingContext;
+import cbs.nova.starter.cache.PreviewCacheKey;
+import cbs.nova.starter.cache.PreviewResultCache;
 import cbs.nova.starter.logging.DryRunLogEvent;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.metrics.PreviewMetricsCollector;
 import ch.qos.logback.classic.Logger;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.json.JsonMapper;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
-@Service
-@Slf4j
-@RequiredArgsConstructor
 public class DevDslRuntime implements DslRuntime {
 
-  // TODO: remove ExternalCallTracker from here, instead add some system with
+  private static final org.slf4j.Logger log = org.slf4j.LoggerFactory
+          .getLogger(DevDslRuntime.class); // TODO: remove ExternalCallTracker from here, instead
+                                           // add some system with
   // listerners/interceptors, for easility tracking/addingn new features
   private final ExternalCallTracker externalCallTracker;
   private final ExecutionTraceCollector traceCollector;
   private final ContextFactory contextFactory;
   private final DryRunLoggingContext dryRunLoggingContext;
+  private final PreviewResultCache previewResultCache;
 
   @Value("${cbs.nova.preview.callTree.maxDepth:32}")
   private final int previewCallTreeMaxDepth;
 
+  @Value("${cbs.nova.preview.cache.enabled:true}")
+  private final boolean previewCacheEnabled;
+
+  private final JsonMapper jsonMapper = JsonMapper.builder().build();
+
+  public DevDslRuntime(ExternalCallTracker externalCallTracker,
+          ExecutionTraceCollector traceCollector,
+          ContextFactory contextFactory,
+          DryRunLoggingContext dryRunLoggingContext,
+          int previewCallTreeMaxDepth) {
+    this(externalCallTracker, traceCollector, contextFactory, dryRunLoggingContext, null,
+            previewCallTreeMaxDepth, true);
+  }
+
+  public DevDslRuntime(ExternalCallTracker externalCallTracker,
+          ExecutionTraceCollector traceCollector,
+          ContextFactory contextFactory,
+          DryRunLoggingContext dryRunLoggingContext,
+          PreviewResultCache previewResultCache,
+          int previewCallTreeMaxDepth,
+          boolean previewCacheEnabled) {
+    this.externalCallTracker = externalCallTracker;
+    this.traceCollector = traceCollector;
+    this.contextFactory = contextFactory;
+    this.dryRunLoggingContext = dryRunLoggingContext;
+    this.previewResultCache = previewResultCache;
+    this.previewCallTreeMaxDepth = previewCallTreeMaxDepth;
+    this.previewCacheEnabled = previewCacheEnabled;
+  }
+
   @Override
   public @NonNull Result<PreviewReport> preview(@NonNull String name, @NonNull Context<?> ctx) {
+    PreviewCacheKey cacheKey = null;
+    if (previewCacheEnabled && previewResultCache != null) {
+      cacheKey = computeCacheKey(name, ctx);
+      PreviewReport cached = previewResultCache.get(cacheKey);
+      if (cached != null) {
+        log.debug("Preview cache hit for {}", name);
+        return Result.success(cached);
+      }
+      log.debug("Preview cache miss for {}", name);
+    }
+
     List<ExternalCallTracker.CallDetail> calls = new ArrayList<>();
     String runId = runIdFor(ctx);
     // TODO: we need to create a some new architecture, to reuse a tree collector across dsl calls,
@@ -126,6 +173,9 @@ public class DevDslRuntime implements DslRuntime {
             toDryRunLogMaps(dryRunLogs),
             metricsSnapshot,
             List.copyOf(errors));
+    if (previewCacheEnabled && previewResultCache != null && cacheKey != null) {
+      previewResultCache.put(cacheKey, report);
+    }
     return Result.success(report);
   }
 
@@ -341,6 +391,64 @@ public class DevDslRuntime implements DslRuntime {
   private @NonNull String runIdFor(@NonNull Context<?> ctx) {
     String runId = ctx.runId();
     return (runId == null || runId.isBlank()) ? contextFactory.generateRunId() : runId;
+  }
+
+  private @NonNull String sha256Hex(@NonNull byte[] input) {
+    try {
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      byte[] hash = digest.digest(input);
+      StringBuilder sb = new StringBuilder();
+      for (byte b : hash) {
+        sb.append(String.format("%02x", b));
+      }
+      return sb.toString();
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException("SHA-256 not available", e);
+    }
+  }
+
+  private @NonNull PreviewCacheKey computeCacheKey(@NonNull String name, @NonNull Context<?> ctx) {
+    GlobalManager gm = GlobalManager.globalManager();
+    Optional<DslDescriptor> descriptor = gm.describeProcess(name)
+            .or(() -> gm.describeTransaction(name))
+            .or(() -> gm.describeHelper(name)
+                    .map(helper -> new DslDescriptor(
+                            name,
+                            cbs.nova.dsl.DslObject.DslType.FUNCTION,
+                            helper.description(),
+                            helper.inputType(),
+                            helper.outputType(),
+                            false,
+                            helper.hasSideEffects(),
+                            helper.previewBehavior(),
+                            helper.parameters(),
+                            null,
+                            null,
+                            null,
+                            null)));
+    String dslHash = descriptor.map(this::dslDescriptorHash).orElse("");
+    String inputHash = inputHash(ctx.body());
+    return new PreviewCacheKey(name, dslHash, inputHash);
+  }
+
+  private @NonNull String dslDescriptorHash(@NonNull DslDescriptor descriptor) {
+    try {
+      byte[] bytes = jsonMapper.writeValueAsBytes(descriptor);
+      return sha256Hex(bytes);
+    } catch (Exception e) {
+      throw new IllegalStateException("Failed to serialize DSL descriptor", e);
+    }
+  }
+
+  private @NonNull String inputHash(@Nullable Object input) {
+    try {
+      byte[] bytes = input == null
+              ? "null".getBytes(StandardCharsets.UTF_8)
+              : jsonMapper.writeValueAsBytes(input);
+      return sha256Hex(bytes);
+    } catch (Exception e) {
+      throw new IllegalStateException("Failed to serialize preview input", e);
+    }
   }
 
   private List<DryRunLogEvent> drainDryRunLogs(String runId) {

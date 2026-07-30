@@ -31,6 +31,7 @@ import org.springframework.context.annotation.Import;
     DataSourceCallAutoConfiguration.class,
     FeignCallAutoConfiguration.class,
     PreviewAutoConfiguration.class,
+    PreviewCacheAutoConfiguration.class,
     MessagingCallCaptureAutoConfiguration.class,
     PreviewMetricsAutoConfiguration.class,
     DslReloadRouterConfiguration.class

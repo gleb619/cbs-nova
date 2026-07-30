@@ -50,6 +50,7 @@ class DslRootAutoConfigurationTest {
             DataSourceCallAutoConfiguration.class,
             FeignCallAutoConfiguration.class,
             PreviewAutoConfiguration.class,
+            PreviewCacheAutoConfiguration.class,
             MessagingCallCaptureAutoConfiguration.class,
             PreviewMetricsAutoConfiguration.class,
             DslReloadRouterConfiguration.class);
