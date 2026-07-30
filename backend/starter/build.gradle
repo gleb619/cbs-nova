@@ -6,7 +6,7 @@ plugins {
 }
 
 bootJar {
-  enabled = true
+  enabled = false
 }
 
 jar {
