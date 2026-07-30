@@ -32,7 +32,8 @@ class ExplainReportTest {
             dsl,
             null,
             List.of(),
-            null);
+            null,
+            List.of());
 
     assertThat(report.name()).isEqualTo("echo");
     assertThat(report.description()).isEqualTo("Echoes input");
@@ -46,6 +47,7 @@ class ExplainReportTest {
     assertThat(report.dslDescriptor()).isSameAs(dsl);
     assertThat(report.astTree()).isNull();
     assertThat(report.dryRunLogs()).isEmpty();
+    assertThat(report.errors()).isEmpty();
   }
 
   @Test
@@ -53,19 +55,20 @@ class ExplainReportTest {
     var report = new ExplainReport(
             "n", "d", "m", "p", "b",
             List.of(), List.of(), Map.of(),
-            null, null, null, List.of(), null);
+            null, null, null, List.of(), null, List.of());
 
     assertThat(report.executableDescriptor()).isNull();
     assertThat(report.dslDescriptor()).isNull();
     assertThat(report.astTree()).isNull();
     assertThat(report.dryRunLogs()).isEmpty();
+    assertThat(report.errors()).isEmpty();
   }
 
   @Test
   void diagramFieldsAreDistinctAndExposed() {
     var report = new ExplainReport(
             "n", "d", "mermaid-only", "plantuml-only", "bpmn-only",
-            List.of(), List.of(), Map.of(), null, null, null, List.of(), null);
+            List.of(), List.of(), Map.of(), null, null, null, List.of(), null, List.of());
 
     assertThat(report.mermaidDiagram()).isEqualTo("mermaid-only");
     assertThat(report.plantUmlDiagram()).isEqualTo("plantuml-only");
@@ -76,7 +79,7 @@ class ExplainReportTest {
   void explainReportCarriesDistinctFieldsVersusPreviewReport() {
     var explain = new ExplainReport(
             "n", "shared description", "m", "p", "b",
-            List.of(), List.of(), Map.of(), null, null, null, List.of(), null);
+            List.of(), List.of(), Map.of(), null, null, null, List.of(), null, List.of());
 
     assertThat(explain.description()).isEqualTo("shared description");
     assertThat(explain).extracting("description", "mermaidDiagram", "plantUmlDiagram", "bpmnXml")
@@ -89,17 +92,19 @@ class ExplainReportTest {
     var calls = List.<Map<String, Object>>of();
     var counts = Map.<String, Integer>of("a", 1);
     var left = new ExplainReport(
-            "n", "d", "m", "p", "b", trace, calls, counts, null, null, null, List.of(), null);
+            "n", "d", "m", "p", "b", trace, calls, counts, null, null, null, List.of(), null,
+            List.of());
     var right = new ExplainReport(
             "n", "d", "m", "p", "b", List.of("step-1"), List.of(), Map.of("a", 1), null,
-            null, null, List.of(), null);
+            null, null, List.of(), null, List.of());
 
     assertThat(left).isEqualTo(right).hasSameHashCodeAs(right);
 
     var differentMermaid = new ExplainReport(
             "n", "d", "other", "p", "b", trace, calls, counts, null, null, null,
             List.of(),
-            null);
+            null,
+            List.of());
     assertThat(left).isNotEqualTo(differentMermaid);
 
     var executable = new ExecutableDescriptor(
@@ -107,7 +112,8 @@ class ExplainReportTest {
     var differentExecutable = new ExplainReport(
             "n", "d", "m", "p", "b", trace, calls, counts, executable, null, null,
             List.of(),
-            null);
+            null,
+            List.of());
     assertThat(left).isNotEqualTo(differentExecutable);
   }
 
@@ -116,7 +122,8 @@ class ExplainReportTest {
     var report = new ExplainReport(
             "n", "d", "m", "p", "b", List.of(), List.of(), Map.of(), null, null, null,
             List.of(),
-            null);
+            null,
+            List.of());
 
     String text = report.toString();
     assertThat(text)

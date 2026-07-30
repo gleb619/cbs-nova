@@ -9,6 +9,7 @@ import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.ExecutionTreeCollector;
 import cbs.nova.dsl.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.PreviewMetricsSnapshot;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
@@ -69,10 +70,14 @@ public class DevDslRuntime implements DslRuntime {
       dryRunLoggingContext.runWithRunId(runId, () -> {
         log.info("started: {}", name);
         log.info("mode: PREVIEW");
-        resultHolder[0] = dispatch(name,
-                contextFactory.of(ctx.body(), ctx.metadata(), ExecutionMode.PREVIEW, runId,
-                        // TODO: why TransactionRouting is hardcoded here?
-                        TransactionRouting.LOCAL, treeCollector));
+        try {
+          resultHolder[0] = dispatch(name,
+                  contextFactory.of(ctx.body(), ctx.metadata(), ExecutionMode.PREVIEW, runId,
+                          // TODO: why TransactionRouting is hardcoded here?
+                          TransactionRouting.LOCAL, treeCollector));
+        } catch (RuntimeException ex) {
+          resultHolder[0] = Result.failure(ex);
+        }
         traceCollector.snapshot(runId).forEach(line -> log.info("{}", line));
         if (resultHolder[0].isSuccess()) {
           log.info("completed successfully");
@@ -101,25 +106,27 @@ public class DevDslRuntime implements DslRuntime {
     List<DryRunLogEvent> dryRunLogs = drainDryRunLogs(runId);
     List<String> trace = dryRunLogs.stream().map(DryRunLogEvent::message).toList();
 
-    // TODO: instead add a new record that extends of some suprt type(e.g. Result implment it, and a
-    // new Report type must implement it). As a result we just traverse troug a tree of Reports and
-    // create a PreviewReport
-    if (result.isSuccess()) {
-      PreviewReport report = new PreviewReport(
-              name,
-              ExecutionMode.PREVIEW,
-              true,
-              result.value(),
-              List.copyOf(trace),
-              toCallJson(calls),
-              toCallCounts(calls),
-              treeCollector.tree(runId).orElse(null),
-              toDryRunLogMaps(dryRunLogs),
-              metricsSnapshot);
-      return Result.success(report);
-    } else {
-      return Result.failure(result.cause());
+    boolean success = result != null && result.isSuccess();
+    List<PreviewErrorDetail> errors = new ArrayList<>();
+    if (!success) {
+      Throwable cause = result != null ? result.cause() : null;
+      errors.add(PreviewErrorHandler.from(cause, name));
     }
+    Object output = success ? result.value() : null;
+
+    PreviewReport report = new PreviewReport(
+            name,
+            ExecutionMode.PREVIEW,
+            success,
+            output,
+            List.copyOf(trace),
+            toCallJson(calls),
+            toCallCounts(calls),
+            treeCollector.tree(runId).orElse(null),
+            toDryRunLogMaps(dryRunLogs),
+            metricsSnapshot,
+            List.copyOf(errors));
+    return Result.success(report);
   }
 
   @Override
@@ -148,9 +155,13 @@ public class DevDslRuntime implements DslRuntime {
     try {
       metricsCollector = PreviewMetricsCollector.start();
       dryRunLoggingContext.runWithRunId(runId, () -> {
-        resultHolder[0] = dispatch(name,
-                contextFactory.of(ctx.body(), ctx.metadata(), ExecutionMode.EXPLAIN, runId,
-                        TransactionRouting.LOCAL, treeCollector));
+        try {
+          resultHolder[0] = dispatch(name,
+                  contextFactory.of(ctx.body(), ctx.metadata(), ExecutionMode.EXPLAIN, runId,
+                          TransactionRouting.LOCAL, treeCollector));
+        } catch (RuntimeException ex) {
+          resultHolder[0] = Result.failure(ex);
+        }
       });
     } finally {
       if (metricsCollector != null) {
@@ -207,11 +218,15 @@ public class DevDslRuntime implements DslRuntime {
       log.info("started: {}", name);
       log.info("mode: EXPLAIN");
       traceCollector.snapshot(runId).forEach(line -> log.info("{}", line));
-      if (resultHolder[0].isSuccess()) {
+      if (resultHolder[0] != null && resultHolder[0].isSuccess()) {
         Object val = resultHolder[0].value();
         log.info("result: {}", val != null ? val.toString() : "null");
       } else {
-        log.info("result: failure: {}", resultHolder[0].cause().getMessage());
+        Throwable cause = resultHolder[0] != null ? resultHolder[0].cause() : null;
+        String message = cause != null && cause.getMessage() != null
+                ? cause.getMessage()
+                : "unknown";
+        log.info("result: failure: {}", message);
       }
     });
 
@@ -222,6 +237,11 @@ public class DevDslRuntime implements DslRuntime {
             .or(() -> gm2.describeTransaction(name))
             .or(() -> gm2.describeFunction(name))
             .orElse(null);
+
+    List<PreviewErrorDetail> errors = new ArrayList<>();
+    if (resultHolder[0] != null && !resultHolder[0].isSuccess()) {
+      errors.add(PreviewErrorHandler.from(resultHolder[0].cause(), name));
+    }
 
     return new ExplainReport(
             name,
@@ -236,7 +256,8 @@ public class DevDslRuntime implements DslRuntime {
             dslDesc,
             treeCollector.tree(runId).orElse(null),
             toDryRunLogMaps(dryRunLogs),
-            metricsSnapshot);
+            metricsSnapshot,
+            List.copyOf(errors));
   }
 
   // TODO: no, it must be a separate class for convertation

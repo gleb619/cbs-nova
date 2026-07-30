@@ -16,9 +16,11 @@ public record PreviewReport(
         @NonNull Map<String, Integer> callCounts,
         @Nullable CallNode astTree,
         @NonNull List<Map<String, Object>> dryRunLogs,
-        @Nullable PreviewMetricsSnapshot metrics) {
+        @Nullable PreviewMetricsSnapshot metrics,
+        @Nullable List<PreviewErrorDetail> errors) {
 
   public PreviewReport {
     dryRunLogs = dryRunLogs == null ? List.of() : List.copyOf(dryRunLogs);
+    errors = errors == null ? List.of() : List.copyOf(errors);
   }
 }

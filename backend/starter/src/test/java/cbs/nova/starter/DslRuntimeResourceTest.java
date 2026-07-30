@@ -14,6 +14,8 @@ import cbs.nova.dsl.DslException;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExplainReport;
+import cbs.nova.dsl.PreviewErrorCode;
+import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
@@ -55,7 +57,8 @@ class DslRuntimeResourceTest {
             Map.of(),
             null,
             List.of(),
-            null);
+            null,
+            List.of());
     doReturn(Result.success(report)).when(dslRuntime).preview(eq("Ping"), any());
 
     mockMvc
@@ -74,9 +77,20 @@ class DslRuntimeResourceTest {
 
   @Test
   void previewReturns422OnFailure() throws Exception {
-    doReturn(Result.failure(new RuntimeException("boom")))
-            .when(dslRuntime)
-            .preview(eq("Fail"), any());
+    PreviewReport report = new PreviewReport(
+            "Fail",
+            ExecutionMode.PREVIEW,
+            false,
+            null,
+            List.of(),
+            List.of(),
+            Map.of(),
+            null,
+            List.of(),
+            null,
+            List.of(new PreviewErrorDetail(PreviewErrorCode.UNKNOWN_ERROR,
+                    "boom", "Review the failure", Map.of())));
+    doReturn(Result.success(report)).when(dslRuntime).preview(eq("Fail"), any());
 
     mockMvc
             .perform(
@@ -84,7 +98,7 @@ class DslRuntimeResourceTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"body\": \"x\"}"))
             .andExpect(status().isUnprocessableEntity())
-            .andExpect(jsonPath("$.code").value("EXECUTION_FAILED"))
+            .andExpect(jsonPath("$.code").value("UNKNOWN_ERROR"))
             .andExpect(jsonPath("$.message").value("boom"))
             .andExpect(jsonPath("$.entityName").value("Fail"))
             .andExpect(jsonPath("$.runId").exists())
@@ -139,7 +153,7 @@ class DslRuntimeResourceTest {
   void explainReturns200WithReport() throws Exception {
     ExplainReport report = new ExplainReport(
             "P", "desc", "graph TD;", "<plantuml/>", "<bpmn/>",
-            List.of(), List.of(), Map.of(), null, null, null, List.of(), null);
+            List.of(), List.of(), Map.of(), null, null, null, List.of(), null, List.of());
     doReturn(report).when(dslRuntime).explain(eq("P"), any());
 
     mockMvc
@@ -164,7 +178,8 @@ class DslRuntimeResourceTest {
             Map.of(),
             null,
             List.of(),
-            null);
+            null,
+            List.of());
     doReturn(Result.success(report)).when(dslRuntime).preview(eq("Ping"), any());
 
     mockMvc
@@ -191,7 +206,8 @@ class DslRuntimeResourceTest {
             Map.of(),
             null,
             List.of(),
-            null);
+            null,
+            List.of());
     doReturn(Result.success(report)).when(dslRuntime).preview(eq("Ping"), any());
 
     mockMvc

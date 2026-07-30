@@ -23,7 +23,8 @@ class PreviewReportTest {
             counts,
             null,
             List.of(),
-            null);
+            null,
+            List.of());
 
     assertThat(report.name()).isEqualTo("greet");
     assertThat(report.mode()).isEqualTo(ExecutionMode.PREVIEW);
@@ -34,6 +35,7 @@ class PreviewReportTest {
     assertThat(report.callCounts()).containsExactly(Map.entry("log", 1));
     assertThat(report.astTree()).isNull();
     assertThat(report.dryRunLogs()).isEmpty();
+    assertThat(report.errors()).isEmpty();
   }
 
   @Test
@@ -48,17 +50,19 @@ class PreviewReportTest {
             Map.of(),
             null,
             List.of(),
-            null);
+            null,
+            List.of());
 
     assertThat(report.output()).isNull();
     assertThat(report.success()).isFalse();
+    assertThat(report.errors()).isEmpty();
   }
 
   @Test
   void modeExposesExecutionModeEnum() {
     var preview = new PreviewReport(
             "p", ExecutionMode.PREVIEW, true, null, List.of(), List.of(), Map.of(), null,
-            List.of(), null);
+            List.of(), null, List.of());
 
     assertThat(preview.mode()).isEqualTo(ExecutionMode.PREVIEW);
   }
@@ -67,12 +71,25 @@ class PreviewReportTest {
   void emptyTraceAndCallCollectionsAreReturned() {
     var report = new PreviewReport(
             "empty", ExecutionMode.PREVIEW, true, null, List.of(), List.of(), Map.of(), null,
-            List.of(), null);
+            List.of(), null, List.of());
 
     assertThat(report.executionTrace()).isEmpty();
     assertThat(report.externalCalls()).isEmpty();
     assertThat(report.callCounts()).isEmpty();
     assertThat(report.dryRunLogs()).isEmpty();
+    assertThat(report.errors()).isEmpty();
+  }
+
+  @Test
+  void errorsFieldExposesPopulatedList() {
+    var detail = new PreviewErrorDetail(PreviewErrorCode.HELPER_NOT_FOUND, "missing",
+            "register the helper", Map.of("name", "Missing"));
+    var report = new PreviewReport(
+            "p", ExecutionMode.PREVIEW, false, null, List.of(), List.of(), Map.of(), null,
+            List.of(), null, List.of(detail));
+
+    assertThat(report.errors()).containsExactly(detail);
+    assertThat(report.errors().get(0).code()).isEqualTo(PreviewErrorCode.HELPER_NOT_FOUND);
   }
 
   @Test
@@ -81,23 +98,27 @@ class PreviewReportTest {
     var calls = List.<Map<String, Object>>of();
     var counts = Map.<String, Integer>of("a", 1);
     var left = new PreviewReport(
-            "n", ExecutionMode.PREVIEW, true, "out", trace, calls, counts, null, List.of(), null);
+            "n", ExecutionMode.PREVIEW, true, "out", trace, calls, counts, null, List.of(), null,
+            List.of());
     var right = new PreviewReport(
             "n", ExecutionMode.PREVIEW, true, "out", List.of("step-1"), List.of(),
-            Map.of("a", 1), null, List.of(), null);
+            Map.of("a", 1), null, List.of(), null, List.of());
 
     assertThat(left).isEqualTo(right).hasSameHashCodeAs(right);
 
     var differentOutput = new PreviewReport(
-            "n", ExecutionMode.PREVIEW, true, "other", trace, calls, counts, null, List.of(), null);
+            "n", ExecutionMode.PREVIEW, true, "other", trace, calls, counts, null, List.of(), null,
+            List.of());
     assertThat(left).isNotEqualTo(differentOutput);
 
     var differentMode = new PreviewReport(
-            "n", ExecutionMode.EXPLAIN, true, "out", trace, calls, counts, null, List.of(), null);
+            "n", ExecutionMode.EXPLAIN, true, "out", trace, calls, counts, null, List.of(), null,
+            List.of());
     assertThat(left).isNotEqualTo(differentMode);
 
     var differentSuccess = new PreviewReport(
-            "n", ExecutionMode.PREVIEW, false, "out", trace, calls, counts, null, List.of(), null);
+            "n", ExecutionMode.PREVIEW, false, "out", trace, calls, counts, null, List.of(), null,
+            List.of());
     assertThat(left).isNotEqualTo(differentSuccess);
   }
 
@@ -105,7 +126,7 @@ class PreviewReportTest {
   void toStringContainsComponentNames() {
     var report = new PreviewReport(
             "n", ExecutionMode.PREVIEW, true, null, List.of(), List.of(), Map.of(), null,
-            List.of(), null);
+            List.of(), null, List.of());
 
     String text = report.toString();
     assertThat(text)
@@ -129,7 +150,8 @@ class PreviewReportTest {
             null,
             null,
             List.of(),
-            null);
+            null,
+            List.of());
 
     var preview = new PreviewReport(
             "n",
@@ -141,7 +163,8 @@ class PreviewReportTest {
             Map.of(),
             null,
             List.of(),
-            null);
+            null,
+            List.of());
 
     assertThat(preview).isNotEqualTo(explain);
   }

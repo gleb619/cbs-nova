@@ -157,8 +157,11 @@ class DevDslRuntimeTest {
   void unknownEntityReturnsFailure() {
     var ctx = contextFactory.of("x", ExecutionMode.PREVIEW);
     var result = runtime.preview("Unknown", ctx);
-    assertThat(result.isSuccess()).isFalse();
-    assertThat(result.value()).isNull();
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value()).isNotNull();
+    assertThat(result.value().success()).isFalse();
+    assertThat(result.value().errors()).isNotEmpty();
+    assertThat(result.value().errors().get(0).code().name()).isEqualTo("HELPER_NOT_FOUND");
   }
 
   @Test

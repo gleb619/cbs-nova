@@ -5,6 +5,7 @@ import cbs.nova.dsl.DslException;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExplainReport;
+import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
@@ -50,10 +51,22 @@ public class DslRuntimeResource {
     }
     try {
       Result<PreviewReport> result = dslRuntime.preview(name, ctx);
-      return result.isSuccess()
-              ? ResponseEntity.ok(result.value())
-              : ResponseEntity.unprocessableEntity()
-                      .body(toErrorResponse(name, ctx, result.cause()));
+      PreviewReport report = result.value();
+      boolean success = report != null && report.success();
+      if (success) {
+        return ResponseEntity.ok(report);
+      }
+      PreviewErrorDetail firstError = report != null && !report.errors().isEmpty()
+              ? report.errors().get(0)
+              : null;
+      String code = firstError != null ? firstError.code().name() : "EXECUTION_FAILED";
+      String message = firstError != null && firstError.message() != null
+              ? firstError.message()
+              : "Preview failed";
+      String runId = ctx.runId();
+      String exceptionId = runId + ":ex:" + UUID.randomUUID();
+      return ResponseEntity.unprocessableEntity()
+              .body(new ErrorResponse(code, message, name, runId, exceptionId));
     } finally {
       if (mocks != null && !mocks.isEmpty()) {
         externalCallTracker.stopMocking();

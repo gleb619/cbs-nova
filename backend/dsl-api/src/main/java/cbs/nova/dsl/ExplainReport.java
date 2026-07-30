@@ -19,9 +19,11 @@ public record ExplainReport(
         @Nullable DslDescriptor dslDescriptor,
         @Nullable CallNode astTree,
         @NonNull List<Map<String, Object>> dryRunLogs,
-        @Nullable PreviewMetricsSnapshot metrics) {
+        @Nullable PreviewMetricsSnapshot metrics,
+        @Nullable List<PreviewErrorDetail> errors) {
 
   public ExplainReport {
     dryRunLogs = dryRunLogs == null ? List.of() : List.copyOf(dryRunLogs);
+    errors = errors == null ? List.of() : List.copyOf(errors);
   }
 }
