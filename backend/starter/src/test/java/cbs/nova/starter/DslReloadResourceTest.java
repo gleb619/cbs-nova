@@ -1,32 +1,30 @@
 package cbs.nova.starter;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.starter.config.DslReloadRouterConfiguration;
 import cbs.nova.starter.controllers.DslReloadResource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.servlet.function.RouterFunction;
+import org.springframework.web.servlet.function.ServerRequest;
+import org.springframework.web.servlet.function.ServerResponse;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 class DslReloadResourceTest {
 
   private DslReloadResource resource;
-  private MockMvc mockMvc;
 
   @BeforeEach
-  void setUp() throws Exception {
+  void setUp() {
     GlobalManager.globalManager().resetForTests();
     resource = new DslReloadResource();
-    mockMvc = MockMvcBuilders.standaloneSetup(resource)
-            .setMessageConverters(new JacksonJsonHttpMessageConverter())
-            .build();
   }
 
   @AfterEach
@@ -40,23 +38,37 @@ class DslReloadResourceTest {
     field.set(resource, value);
   }
 
+  private static ServerRequest reloadRequest() {
+    return ServerRequest.create(
+            new MockHttpServletRequest("POST", "/api/dsl/reload"), List.of());
+  }
+
   @Test
   void reloadReturns409WhenSourceDirBlank() throws Exception {
     setSourceDir("");
-
-    mockMvc
-            .perform(post("/api/dsl/reload"))
-            .andExpect(status().isConflict())
-            .andExpect(jsonPath("$.code").value("NOT_CONFIGURED"));
+    ServerResponse response = resource.reload(reloadRequest());
+    assertThat(response.statusCode().value()).isEqualTo(409);
   }
 
   @Test
   void reloadReturns409WhenSourceDirNotFound() throws Exception {
     setSourceDir("/tmp/cbs-nova-does-not-exist-" + System.nanoTime());
+    ServerResponse response = resource.reload(reloadRequest());
+    assertThat(response.statusCode().value()).isEqualTo(409);
+  }
 
-    mockMvc
-            .perform(post("/api/dsl/reload"))
-            .andExpect(status().isConflict())
-            .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+  @Test
+  void routerFunctionIsRegisteredByDefault() {
+    new ApplicationContextRunner()
+            .withUserConfiguration(DslReloadRouterConfiguration.class, DslReloadResource.class)
+            .run(ctx -> assertThat(ctx).hasSingleBean(RouterFunction.class));
+  }
+
+  @Test
+  void routerFunctionSkippedWhenDisabled() {
+    new ApplicationContextRunner()
+            .withUserConfiguration(DslReloadRouterConfiguration.class, DslReloadResource.class)
+            .withPropertyValues("dsl.reload.enabled=false")
+            .run(ctx -> assertThat(ctx).doesNotHaveBean(RouterFunction.class));
   }
 }

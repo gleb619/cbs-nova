@@ -15,7 +15,6 @@ public class PropertyResolverConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
-  // TODO: create a test with PropertyResolver
   PropertyResolver dslPropertyResolver(Environment environment) {
     var props = new HashMap<String, String>();
     if (environment instanceof ConfigurableEnvironment ce) {

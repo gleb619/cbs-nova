@@ -1,20 +1,18 @@
 package cbs.nova.starter.config;
 
+import cbs.nova.dsl.GeneratedClassDescriptor;
+import cbs.nova.dsl.GeneratedClassProvider;
 import io.temporal.client.WorkflowClient;
 import io.temporal.worker.TypeAlreadyRegisteredException;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
-import io.temporal.workflow.WorkflowInterface;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.context.annotation.Bean;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
-import org.springframework.core.type.classreading.MetadataReader;
-import org.springframework.util.ClassUtils;
 
+import java.util.ServiceLoader;
 import java.util.concurrent.TimeUnit;
 
 @AutoConfiguration
@@ -49,51 +47,42 @@ public class DslWorkerConfiguration {
     return new WorkerFactoryLifecycle(dslWorkerFactory);
   }
 
-  @Deprecated(forRemoval = true)
+  /**
+   * Registers generated DSL workflows and activities on the worker via the
+   * {@link GeneratedClassProvider} SPI. The DSL compiler emits a provider implementation per
+   * generated entity plus a {@code META-INF/services} entry, so {@link ServiceLoader} discovers
+   * them without classpath scanning or hardcoded class references.
+   */
   private void registerGeneratedImplementations(Worker worker) {
-    var resolver = new PathMatchingResourcePatternResolver();
-    var readerFactory = new CachingMetadataReaderFactory();
-    // Generated implementations may live under the default cbs.nova.dsl.generated tree or under a
-    // project-specific package such as cbs.nova.dslexamples. The dsl* wildcard covers both.
-    // TODO: use spi declaration instead
-    String packageSearchPath = "classpath*:cbs/nova/dsl*/**/*.class";
-    try {
-      var resources = resolver.getResources(packageSearchPath);
-      for (var resource : resources) {
-        if (!resource.isReadable()) {
-          continue;
-        }
-        MetadataReader reader = readerFactory.getMetadataReader(resource);
-        String className = reader.getClassMetadata().getClassName();
-        Class<?> cls = ClassUtils.forName(className,
-                Thread.currentThread().getContextClassLoader());
-        String simpleName = cls.getSimpleName();
-
-        // TODO: remove reflection, use typed info instead
-        if (simpleName.endsWith("ProcessDefinition") && implementsWorkflowInterface(cls)) {
-          worker.registerWorkflowImplementationTypes(cls);
-        } else if (simpleName.endsWith("TransactionDefinition")) {
-          Object instance = cls.getDeclaredConstructor().newInstance();
-          try {
-            worker.registerActivitiesImplementations(instance);
-          } catch (TypeAlreadyRegisteredException ignored) {
-            // multiple generated transactions share the default activity method name;
-            // the first registration wins, subsequent duplicates are skipped
-          }
-        }
-      }
-    } catch (Exception e) {
-      throw new IllegalStateException("Failed to scan generated DSL implementations", e);
-    }
+    var classLoader = Thread.currentThread().getContextClassLoader();
+    ServiceLoader.load(GeneratedClassProvider.class, classLoader)
+            .forEach(provider -> registerDescriptor(worker, provider.descriptor()));
   }
 
-  private static boolean implementsWorkflowInterface(Class<?> cls) {
-    for (Class<?> iface : cls.getInterfaces()) {
-      if (iface.isAnnotationPresent(WorkflowInterface.class)) {
-        return true;
+  private void registerDescriptor(Worker worker, GeneratedClassDescriptor descriptor) {
+    switch (descriptor.type()) {
+      // TODO: remove reflection, use typed info instead
+      case PROCESS ->
+        worker.registerWorkflowImplementationTypes(descriptor.temporalImplementation());
+      case TRANSACTION -> {
+        Object instance;
+        try {
+          instance = descriptor.temporalImplementation().getDeclaredConstructor().newInstance();
+        } catch (Exception e) {
+          throw new IllegalStateException(
+                  "Failed to instantiate generated transaction: " + descriptor.name(), e);
+        }
+        try {
+          worker.registerActivitiesImplementations(instance);
+        } catch (TypeAlreadyRegisteredException ignored) {
+          // multiple generated transactions share the default activity method name;
+          // the first registration wins, subsequent duplicates are skipped
+        }
+      }
+      default -> {
+        // Functions are not generated as Temporal classes.
       }
     }
-    return false;
   }
 
   /**

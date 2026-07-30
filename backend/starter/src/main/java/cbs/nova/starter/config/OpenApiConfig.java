@@ -24,7 +24,7 @@ import java.util.Optional;
 @Configuration
 public class OpenApiConfig {
 
-  // TODO: add to build.gradle a git plugin, return here a version
+  /** Fallback version when {@link BuildProperties} is absent (e.g. IDE runs without buildInfo). */
   private static final String DEFAULT_VERSION = "0.0.1-SNAPSHOT";
 
   @Bean

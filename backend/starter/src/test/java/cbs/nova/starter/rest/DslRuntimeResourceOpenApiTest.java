@@ -5,18 +5,19 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
-import cbs.nova.starter.StarterApplication;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.context.WebApplicationContext;
 
-@SpringBootTest(classes = StarterApplication.class, webEnvironment = SpringBootTest.WebEnvironment.MOCK, properties = "dsl.worker.enabled=false")
+@SpringBootTest(classes = DslRuntimeResourceOpenApiTest.TestApplication.class, webEnvironment = SpringBootTest.WebEnvironment.MOCK, properties = "dsl.worker.enabled=false")
 class DslRuntimeResourceOpenApiTest {
 
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -87,5 +88,16 @@ class DslRuntimeResourceOpenApiTest {
     assertThat(ref)
             .as("Path '%s' 200 response should reference %s", path, schemaName)
             .endsWith("#/components/schemas/" + schemaName);
+  }
+
+  /**
+   * Local bootstrap so this unit test does not depend on the {@code integrationTest}-scoped
+   * {@code StarterApplication}, which the test source set cannot see.
+   */
+  @SpringBootApplication(scanBasePackages = "cbs.nova.starter")
+  static class TestApplication {
+    public static void main(String[] args) {
+      SpringApplication.run(TestApplication.class, args);
+    }
   }
 }

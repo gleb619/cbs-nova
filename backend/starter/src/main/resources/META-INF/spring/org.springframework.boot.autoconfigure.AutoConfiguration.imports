@@ -1,9 +1,1 @@
-cbs.nova.starter.config.DryRunLoggingAutoConfiguration
-cbs.nova.starter.config.TemporalConfiguration
-cbs.nova.starter.config.DslAutoConfiguration
-cbs.nova.starter.config.DslWorkerConfiguration
-cbs.nova.starter.config.PropertyResolverConfiguration
-cbs.nova.starter.config.DataSourceCallAutoConfiguration
-cbs.nova.starter.config.FeignCallAutoConfiguration
-cbs.nova.starter.config.PreviewAutoConfiguration
-cbs.nova.starter.preview.MessagingCallCaptureAutoConfiguration
+cbs.nova.starter.config.DslRootAutoConfiguration
