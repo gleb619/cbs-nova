@@ -23,6 +23,7 @@ import cbs.nova.dslexamples.LongWorkModels.LongWorkIn;
 import cbs.nova.dslexamples.LongWorkModels.LongWorkOut;
 import cbs.nova.starter.helpers.*;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -158,7 +159,7 @@ class IntermediateDslExamplesTest {
         return new HttpCallHelper(HttpClient.newHttpClient());
       }
       if (helperClass == JsonExtractHelper.class) {
-        return new JsonExtractHelper();
+        return new JsonExtractHelper(new ObjectMapper());
       }
       if (helperClass == SortRecordsHelper.class) {
         return new SortRecordsHelper();

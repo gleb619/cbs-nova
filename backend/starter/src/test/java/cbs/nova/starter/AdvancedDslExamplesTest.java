@@ -17,6 +17,7 @@ import cbs.nova.dslexamples.NestedCompensationModels.NestedCompensationIn;
 import cbs.nova.dslexamples.OrderSagaModels.OrderSagaIn;
 import cbs.nova.dslexamples.OrderSagaModels.OrderSagaOut;
 import cbs.nova.starter.helpers.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -127,7 +128,7 @@ class AdvancedDslExamplesTest {
         return new HttpCallHelper(HttpClient.newHttpClient());
       }
       if (helperClass == JsonExtractHelper.class) {
-        return new JsonExtractHelper();
+        return new JsonExtractHelper(new ObjectMapper());
       }
       if (helperClass == SortRecordsHelper.class) {
         return new SortRecordsHelper();

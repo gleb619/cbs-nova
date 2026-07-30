@@ -7,12 +7,13 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helpers.model.JsonExtractIn;
 import cbs.nova.starter.helpers.model.JsonExtractOut;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 class JsonExtractHelperTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
-  private final JsonExtractHelper helper = new JsonExtractHelper();
+  private final JsonExtractHelper helper = new JsonExtractHelper(new ObjectMapper());
 
   @Test
   void extractsTopLevelField() {

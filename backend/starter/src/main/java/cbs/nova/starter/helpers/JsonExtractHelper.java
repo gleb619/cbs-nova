@@ -11,12 +11,19 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jspecify.annotations.NonNull;
 
-//TODO: for later releases, we need a better json integration, dsl must be a json native. So it must be not a single helper but a core feature, that used in `context`, or be a part of functions
+// TODO: for later releases, we need a better json integration, dsl must be a json native. So it
+// must be not a single helper but a core feature, that used in `context`, or be a part of
+// functions. Promoted to a separate kanban task: "Make JSON a first-class DSL citizen (native
+// JSON path/function support)".
 @Helper(name = "jsonExtract")
 public class JsonExtractHelper implements Executable<JsonExtractIn, JsonExtractOut> {
 
-  // TODO: we need contructor that accept a mapper
-  private static final ObjectMapper MAPPER = new ObjectMapper();
+  private final @NonNull ObjectMapper mapper;
+
+  /** Constructor for injecting a pre-configured {@link ObjectMapper}. */
+  public JsonExtractHelper(@NonNull ObjectMapper mapper) {
+    this.mapper = mapper;
+  }
 
   @Override
   public @NonNull Result<JsonExtractOut> execute(@NonNull Context<JsonExtractIn> ctx) {
@@ -30,7 +37,7 @@ public class JsonExtractHelper implements Executable<JsonExtractIn, JsonExtractO
 
     JsonNode root;
     try {
-      root = MAPPER.readTree(input.json());
+      root = mapper.readTree(input.json());
     } catch (JsonProcessingException e) {
       return Result.failure(new IllegalArgumentException("Invalid JSON: " + e.getMessage()));
     }
@@ -63,6 +70,6 @@ public class JsonExtractHelper implements Executable<JsonExtractIn, JsonExtractO
         break;
       }
     }
-    return current != null ? current : MAPPER.missingNode();
+    return current != null ? current : mapper.missingNode();
   }
 }
