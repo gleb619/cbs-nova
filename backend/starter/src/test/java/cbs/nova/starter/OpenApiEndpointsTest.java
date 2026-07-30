@@ -47,7 +47,8 @@ class OpenApiEndpointsTest {
             .contains("/api/dsl/reload")
             .contains("/api/dsl/processes")
             .contains("/api/dsl/transactions")
-            .contains("/api/dsl/helpers");
+            .contains("/api/dsl/helpers")
+            .contains("/api/dsl/definitions");
   }
 
   @Test

@@ -170,6 +170,61 @@ class DslIntrospectionResourceTest {
             .andExpect(jsonPath("$[?(@.name=='sampleHelper')]").doesNotExist());
   }
 
+  @Test
+  void definitionsEndpointAggregatesAllEntityKinds() throws Exception {
+    registerSampleEntities();
+
+    mockMvc.perform(get("/api/dsl/definitions"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$").isArray())
+            .andExpect(
+                    jsonPath("$[?(@.name=='LoanDisbursement' && @.type=='process')]").exists())
+            .andExpect(
+                    jsonPath("$[?(@.name=='SampleTransaction' && @.type=='transaction')]").exists())
+            .andExpect(jsonPath("$[?(@.name=='sampleHelper' && @.type=='helper')]").exists())
+            .andExpect(
+                    jsonPath("$[?(@.name=='sampleFunction' && @.type=='function')]").exists());
+  }
+
+  @Test
+  void definitionsEndpointExposesInputSchemaForProcess() throws Exception {
+    registerSampleEntities();
+
+    mockMvc.perform(get("/api/dsl/definitions"))
+            .andExpect(status().isOk())
+            .andExpect(
+                    jsonPath("$[?(@.name=='LoanDisbursement')].inputSchema").exists());
+  }
+
+  @Test
+  void definitionsEndpointOmitsInputSchemaForHelper() throws Exception {
+    registerSampleEntities();
+
+    mockMvc.perform(get("/api/dsl/definitions"))
+            .andExpect(status().isOk())
+            // Helpers and functions carry no inputSchema — the field is omitted
+            // from the wire format via @JsonInclude(NON_NULL) to match the FE
+            // DefinitionMeta type ({ name, type, inputSchema? }).
+            .andExpect(
+                    jsonPath("$[?(@.name=='sampleHelper')].inputSchema").doesNotExist())
+            .andExpect(
+                    jsonPath("$[?(@.name=='sampleFunction')].inputSchema").doesNotExist())
+            .andExpect(
+                    jsonPath("$[?(@.name=='LoanDisbursement')].inputSchema").exists());
+  }
+
+  @Test
+  void definitionsEndpointReturnsOnlyTheSetupProcessWhenNoSamplesRegistered() throws Exception {
+    // The class-level @BeforeEach registers exactly one process ('LoanDisbursement');
+    // we assert the aggregator sees that single entry with type=process and an
+    // inputSchema object.
+    mockMvc.perform(get("/api/dsl/definitions"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(
+                    jsonPath("$[?(@.name=='LoanDisbursement' && @.type=='process')]").exists());
+  }
+
   private void registerSampleEntities() {
     GlobalManager.globalManager().registerTransaction(
             Dsl.transaction("SampleTransaction")

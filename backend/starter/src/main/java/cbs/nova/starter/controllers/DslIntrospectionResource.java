@@ -7,6 +7,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -126,6 +127,27 @@ public class DslIntrospectionResource {
     return ResponseEntity.ok(new NamesResponse(GlobalManager.globalManager().helperNames()));
   }
 
+  @GetMapping("/definitions")
+  @Operation(summary = "List all registered DSL definitions (processes, transactions, helpers, functions)")
+  @ApiResponse(responseCode = "200", description = "Aggregated DSL definitions", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = DefinitionMetaDto.class))))
+  public ResponseEntity<List<DefinitionMetaDto>> definitions() {
+    var gm = GlobalManager.globalManager();
+    List<DefinitionMetaDto> aggregate = new ArrayList<>();
+    gm.processNames().forEach(n -> gm.findProcess(n)
+            .ifPresent(p -> aggregate.add(
+                    new DefinitionMetaDto(p.name(), "process", inputSchema(p)))));
+    gm.transactionNames().forEach(n -> gm.findTransaction(n)
+            .ifPresent(t -> aggregate.add(
+                    new DefinitionMetaDto(t.name(), "transaction", inputSchema(t)))));
+    gm.helperNames().forEach(n -> {
+      gm.describeHelper(n).ifPresent(d -> aggregate.add(
+              new DefinitionMetaDto(n, "helper", null)));
+      gm.describeFunction(n).ifPresent(d -> aggregate.add(
+              new DefinitionMetaDto(d.name(), "function", null)));
+    });
+    return ResponseEntity.ok(aggregate);
+  }
+
   private static HelperSearchResult toResult(DslDescriptor descriptor) {
     return new HelperSearchResult(
             descriptor.name(),
@@ -196,6 +218,13 @@ public class DslIntrospectionResource {
           String description,
           String inputType,
           String outputType) {
+
+  }
+
+  public record DefinitionMetaDto(
+          String name,
+          String type,
+          @JsonInclude(JsonInclude.Include.NON_NULL) Map<String, Object> inputSchema) {
 
   }
 }

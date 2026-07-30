@@ -59,6 +59,27 @@ describe('dsl/definitions.get', () => {
     // No opts (3rd arg) → no method override, no body.
     expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
   })
+
+  it('returns the aggregated backend body verbatim (200 path, no reshaping)', async () => {
+    const aggregated = [
+      { name: 'LoanDisbursement', type: 'process', inputSchema: { type: 'object' } },
+      { name: 'SampleTransaction', type: 'transaction' },
+      { name: 'sampleHelper', type: 'helper' },
+      { name: 'sampleFunction', type: 'function' },
+    ]
+    proxyToBackendMock.mockResolvedValueOnce(aggregated)
+
+    const result = await definitionsHandler(fakeEvent)
+
+    // BFF is a thin passthrough — selector-friendly {name,type} shape is
+    // guaranteed by the backend DslIntrospectionResource. See
+    // docs/plans/T182-fix-definitions-introspection-wiring.md.
+    expect(result).toEqual(aggregated)
+    expect(result).toHaveLength(4)
+    expect((result as Array<{ type: string }>).map((d) => d.type).sort()).toEqual(
+      ['function', 'helper', 'process', 'transaction'],
+    )
+  })
 })
 
 describe('dsl/reload.post', () => {
