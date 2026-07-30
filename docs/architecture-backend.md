@@ -1,8 +1,12 @@
-# Temporal DSL Orchestration Engine — Architecture
+# Temporal DSL Orchestration Engine — Backend Architecture
 
 This project is a **declarative Java DSL for authoring Temporal workflows and activities** without writing Temporal
 boilerplate. Business flows are expressed as small, versioned definitions in a dedicated Gradle module; a custom DSL
 compiler turns them into production-ready Temporal classes at build time.
+
+This document focuses on the **backend runtime and starter** shipped through the `T146`–`T182` cycle. It is the
+authoritative backend architecture companion to [`architecture.md`](architecture.md) and
+[`architecture-ui.md`](architecture-ui.md).
 
 ## What the DSL is for
 
@@ -73,7 +77,7 @@ Three modes let the same definition behave differently depending on environment 
 │  • *ProcessDefinition                │  │  • Supports preview/explain modes      │
 │  • *TransactionActivity (interface)  │  │  • No generated Temporal classes needed│
 │  • *TransactionDefinition            │  │                                          │
-└──────────────────────────────────────┘  └────────────────────────────────────────┘
+└──────────────────────────────────────┘  └─────────────────────────────────────────┘
                                        │
                                        ▼
 ┌───────────────────────────────────────────────────────────────────────────────┐
@@ -118,6 +122,262 @@ The runtime is deliberately layered so generated code has a single entry point:
 
 See [Runtime details](dsl/runtime.md) for the full contract, operational modes, and REST endpoints.
 
+## Preview and Explain runtime (`DevDslRuntime`)
+
+The `cbs-nova-starter` module provides a Spring-backed implementation of the `DslRuntime` interface:
+`cbs.nova.starter.DevDslRuntime`. It powers both **Preview** and **Explain** and is intentionally kept as a single
+class so the lifecycle (start tracing, start call-tree capture, start metrics, run DSL, stop everything) is easy to
+follow. The implementation is still direct field access and hardcoded dispatch; there is no listener/SPI abstraction
+for report building (the `ExternalCallListener` interface exists but is only used for optional side notifications).
+
+### Call capture for external calls (`T146`–`T158`)
+
+Preview/Explain reports surface every external call the DSL makes so authors can see side effects without running them.
+Capture is implemented by interceptors in the starter:
+
+| Kind            | Interceptor class                                                                                                    | What it records                              |
+|-----------------|----------------------------------------------------------------------------------------------------------------------|----------------------------------------------|
+| **JDBC / DB**   | `capture.DataSourceProxyBeanPostProcessor` → `ConnectionInvocationHandler` → `PreparedStatementInvocationHandler`        | `executeQuery`/`executeUpdate`/`execute`/`executeBatch` calls, SQL target, first SQL token as operation |
+| **HTTP / Feign** | `capture.ExternalCallFeignInterceptor`                                                                               | Feign request method + URL                   |
+| **Temporal Activity** | `preview.TemporalActivityCallCaptureInterceptor` (wraps `TransactionInvoker`)                                            | Each transaction invocation as `activity`    |
+| **Messaging (Kafka)** | `preview.MessagingCallCaptureProducerFactoryBeanPostProcessor` → `MessagingCallCaptureProducerFactory` → `MessagingCallCaptureProducer` | Kafka `Producer.send` calls as `mq`          |
+
+All recorded calls are normalized by `ExternalCallTracker` into a canonical type (`database`, `http`, `mq`,
+`filesystem`, `external_api`, `microservice`, `activity`, `other`) and stored in a `ThreadLocal` list for the current
+preview run. The tracker also keeps global counts, but those are reset explicitly and are mostly used for diagnostics.
+
+### What-if mock injection (`T160`)
+
+`DslRuntimeResource.preview()` accepts a `mocks` map. `ExternalCallTracker.startMocking()` stores the map keyed by
+`type:target:operation`. During execution, when a mock is found, the behavior depends on the call type:
+
+- **Activity** and **MQ** calls are **actually short-circuited** — the mock value is returned and the real call is skipped.
+- **DB** and **HTTP** calls are **not short-circuited**. The mock is only recorded in call metadata as
+  `mockConfigured: true` and `mockApplied: false`. The underlying JDBC or Feign call still executes, so authors must not
+treat DB/HTTP mocks as safe substitutes in preview mode.
+
+Mocks are cleared in a `finally` block in `DslRuntimeResource` so they never leak across runs.
+
+### Runtime call-tree + depth/cycle guard (`T148`/`T155`)
+
+`DevDslRuntime.preview()` creates a fresh `ExecutionTreeCollector` per run, seeded with
+`cbs.nova.preview.callTree.maxDepth:32`. The collector builds a tree of `CallNode`s as the DSL dispatches processes,
+transactions, helpers, and functions. When the depth limit is exceeded, the collector emits a `<truncated>` sentinel
+so the UI can render the boundary instead of hanging or blowing the stack. The call tree is returned in the
+`PreviewReport` and also consumed by `PreviewMetricsCollector` to count `CallKind`s.
+
+### Dry-run logging (`T149`/`T173`)
+
+Logback is wired through a `DryRunLogbackAppender` named `DRY_RUN`. The appender only records events while a
+dry-run context is active; it stores them in a bounded `runId`-keyed buffer and can drain them by run.
+The context is implemented by `ThreadLocalDryRunLoggingContext`, which is exposed as a `ScopedValue`-style interface so
+that the same `runId` can be restored on Temporal worker nodes via the `DryRunLoggingContextPropagator`.
+
+A `PreviewReport` includes the drained log lines as a list of formatted strings, and `ExplainReport` includes the typed
+log events as maps (`level`, `message`, `timestamp`, `mdc`, `runId`). The `runId` is also placed in SLF4J MDC during
+the run, so any normal log line emitted during preview is correlated with the run.
+
+### Preview metrics (`T162`)
+
+`PreviewMetricsCollector` is a `ThreadLocal` collector started at the beginning of a preview run and stopped at the end.
+It records:
+
+- `executionDurationMs` — wall-clock time of the run.
+- `memoryUsedBytes` — heap delta from start to finish.
+- `callCounts` — counts by `CallKind` (`PROCESS`, `TRANSACTION`, `HELPER`, `FUNCTION`) from the call tree.
+- `externalCallCounts` — counts by normalized external-call type from `ExternalCallTracker`.
+
+The latest snapshot is kept in a static field and published as Micrometer gauges via
+`PreviewMetricsAutoConfiguration`: `cbs.nova.preview.execution.duration`,
+`cbs.nova.preview.memory.used`. The snapshot is returned in the `PreviewReport`/`ExplainReport`.
+
+### Preview result caching (`T164`)
+
+`PreviewResultCache` is a TTL-backed, in-memory cache keyed by `PreviewCacheKey` (entity name + DSL descriptor hash +
+input hash). It is enabled by default (`cbs.nova.preview.cache.enabled:true`) and uses a TTL of 5 minutes by default
+(`cbs.nova.preview.cache.ttlMs:300000`).
+
+- Cache hits/misses are exposed as Micrometer gauges `cbs.nova.preview.cache.hit.count` and
+  `cbs.nova.preview.cache.miss.count`.
+- `invalidateByDslHash()` can be called to drop every cached entry for a given DSL descriptor hash.
+- The cache lives in `DevDslRuntime`; when a hit is found, the cached `PreviewReport` is returned immediately without
+  executing the DSL.
+
+### Preview error handling (`T163`)
+
+`PreviewErrorHandler` maps exceptions thrown during preview/explain into a structured `PreviewErrorDetail`:
+
+| Code                         | Trigger                                                                   |
+|------------------------------|---------------------------------------------------------------------------|
+| `DSL_COMPILATION_ERROR`      | `DslValidationException`                                                  |
+| `HELPER_NOT_FOUND`           | Unknown DSL entity, helper lookup failure, or missing bean                |
+| `EXTERNAL_CALL_FAILED`       | `SQLException` during preview                                             |
+| `INPUT_VALIDATION_ERROR`     | `ClassCastException` or `IllegalArgumentException`                        |
+| `COMPENSATION_ERROR`         | `DslCompensationException`                                                |
+| `TIMEOUT_EXCEEDED`           | `TimeoutException`                                                        |
+| `UNKNOWN_ERROR`              | Everything else                                                           |
+
+Each error carries a `message`, `suggestion`, and a JSON-serializable `context` map. The `DslRuntimeResource` turns
+the first preview error into an HTTP 422 `ErrorResponse` with a generated `exceptionId`.
+
+### Known blocked / not-shipped items
+
+- **Preview execution sandboxing (`T165`)** — not shipped. `SecurityManager`-based sandboxing is infeasible on the
+  repo's JDK 25 because JEP 486 permanently disabled `SecurityManager` enforcement in JDK 24+. Any documentation that
+claims this exists would be wrong; it is a known gap requiring a human decision on an alternative isolation approach.
+- **Preview/Explain listener architecture / report supertype (`T168`)** — not shipped. The plan was stale; T162/T163/T164
+  layered metrics, error handling, and caching directly onto `DevDslRuntime.preview()` and T173 shipped without needing
+the listener SPI. `DevDslRuntime` still uses direct field access and hardcoded dispatch; there is no `Report` supertype
+or SPI-driven architecture today.
+
+## Run persistence (`T176`)
+
+Live runs are persisted through `DslRunRepository` so the UI and operators can inspect execution history. The starter
+ships a JDBC-backed implementation plus an in-memory fallback.
+
+### `DslRunEntity` schema
+
+`persistence.DslRunEntity` maps to the `dsl_runs` table (configurable schema/table name via
+`DslRunPersistenceProperties`):
+
+| Column              | Purpose                                               |
+|---------------------|-------------------------------------------------------|
+| `id`                | Surrogate key                                         |
+| `run_id`            | Public correlation id (also Temporal workflow id)   |
+| `process_name`      | Name of the DSL process                               |
+| `status`            | `RUNNING`, `COMPLETED`, `FAILED`, `STALE`, ...        |
+| `input_json`        | Serialized input                                      |
+| `output_json`       | Serialized output (or `{}` while running)             |
+| `error_message`     | Error text when failed                                |
+| `context_json`      | Serialized trace/AST/call-tree context                |
+| `started_at`        | Start instant                                         |
+| `finished_at`       | Finish instant                                         |
+| `execution_mode`    | `RUN`, `PREVIEW`, or `EXPLAIN`                        |
+
+### Application-level field encryption
+
+`persistence.AesFieldEncryptor` provides AES-256/GCM encryption for `input_json`, `output_json`, and `context_json`. The
+key is configured through `cbs.nova.persistence.run.encryption.key` (hashed with SHA-256 to derive a 32-byte key). When
+encryption is disabled, `NoOpFieldEncryptor` passes strings through unchanged. Encryption/decryption is applied inside
+`JdbcDslRunRepository` before/after the MapStruct entity mapping.
+
+### MapStruct conversion
+
+`persistence.DslRunMapper` maps between the domain `DslRun` record and `DslRunEntity`. The repository owns the encryption
+calls around the mapper so that the mapper stays a pure shape converter.
+
+## Observability (`T175`)
+
+### Sentry
+
+`controllers.DslExceptionHandler` captures `DslException` and generic `Exception` instances to Sentry, attaching the
+`runId` as a Sentry tag when available. The handler maps DSL failures to HTTP 422 `ErrorResponse` bodies and unknown
+failures to HTTP 500. Sentry is treated as optional: every call is guarded so an unconfigured SDK does not break the
+application.
+
+### OpenTelemetry and MDC propagation
+
+`runId` is the primary correlation key. It is placed into:
+
+- SLF4J MDC (`runId`).
+- Sentry tags (`runId`).
+- OpenTelemetry baggage and span attributes (`runId`).
+
+`TemporalConfiguration.cbsNovaDslContextDecorator()` is a Spring `TaskDecorator` that copies the submitting thread's
+MDC into the worker thread of the custom `cbsNovaDslProcessExecutor`. The same key is propagated across Temporal nodes
+via the `DryRunLoggingContextPropagator` so that dry-run logs from a worker are still attributed to the originating run.
+
+## Async process service (`T170`)
+
+`services.TemporalDslProcessService` is the non-blocking entry point for live process execution.
+
+- `startProcess(name, input, metadata)` returns a `ProcessRun` handle immediately: a generated `runId` and a
+  `CompletableFuture<Result<?>>` that completes once the workflow finishes and the repository is updated.
+- A configurable `Clock` is used for `startedAt` / staleness checks; it is mutable for tests.
+- A dedicated `ThreadPoolTaskExecutor` (`cbsNovaDslProcessExecutor`) handles async DB writes and workflow supervision,
+  bounded and named so the Spring lifecycle owns it.
+- A separate single-thread `ScheduledExecutorService` (`cbsNovaDslProcessHealthcheckExecutor`) runs the healthcheck.
+- DB writes are async by default (`cbs.nova.process.async-db-save:true`) and failures are logged but do not poison the
+  workflow outcome.
+
+### STALE status
+
+The healthcheck thread scans known process names for runs that are still `RUNNING` after a staleness threshold
+(`cbs.nova.process.healthcheck.stale-threshold:PT5M`, checked every
+`cbs.nova.process.healthcheck.interval:PT30S`). Runs exceeding the threshold are marked `STALE` with a synthetic error
+message. `NOT_FINISHED_AT` is used as a sentinel `finishedAt` value while a run is in flight, keeping the column
+non-null for serialization safety.
+
+## Temporal service lifecycle (`T169`)
+
+The Temporal client and worker are Spring-managed beans in `TemporalConfiguration` and `DslWorkerConfiguration`:
+
+- `WorkflowServiceStubs` and `WorkflowClient` are `@ConditionalOnMissingBean` beans.
+- `TemporalDslProcessLauncher` and `TemporalTransactionInvoker` are exposed as beans and registered into the DSL config
+  at startup.
+- `DslWorkerConfiguration` creates a single `WorkerFactory`, a single `Worker` for the configured task queue, and a
+  `SmartLifecycle` adapter that starts/stops the factory with the Spring context.
+- Generated workflow and activity implementations are discovered via the `GeneratedClassProvider` SPI and registered
+  without hardcoded class references.
+
+`services.TemporalTransactionInvoker` is the bridge from a DSL transaction to a Temporal Activity stub. If the
+transaction or generated class is missing, it falls back to local execution and logs a warning. Activity options are
+built from the DSL transaction's retry policy and timeouts, defaulting to `DslConfig.defaultRetryPolicy()` when no
+policy is set.
+
+## Serialization unification (`T171`)
+
+The original goal of a codegen-generated "models converter" bridging Avaje JSON-B and Jackson was dropped because
+cleanup work in `T167`, `T169`, and `T170` removed every other ad-hoc conversion site. The only concrete shipped change
+is that `helpers.JsonExtractHelper` now accepts an injected `ObjectMapper` constructor parameter, matching the pattern
+already used by `HttpCallHelper`. The backend still uses Jackson for runtime JSON and Avaje JSON-B annotation processing
+per record; there is no single unified converter class.
+
+## Spring Boot autoconfiguration & starter packaging (`T174`)
+
+`config.DslRootAutoConfiguration` is the single autoconfiguration entry point listed in
+`META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`. It `@Import`s all other starter
+autoconfigs so host applications only see one root import:
+
+- `DryRunLoggingAutoConfiguration`
+- `DslRunRepositoryConfiguration`
+- `TemporalConfiguration`
+- `PropertyResolverConfiguration`
+- `DslAutoConfiguration`
+- `DslWorkerConfiguration`
+- `DataSourceCallAutoConfiguration`
+- `FeignCallAutoConfiguration`
+- `PreviewAutoConfiguration`
+- `PreviewCacheAutoConfiguration`
+- `MessagingCallCaptureAutoConfiguration`
+- `PreviewMetricsAutoConfiguration`
+- `DslReloadRouterConfiguration`
+
+`OpenApiConfig` sources the OpenAPI version from Spring Boot `BuildProperties` (produced by the `buildInfo()` Gradle
+block), falling back to `0.0.1-SNAPSHOT` when build info is absent.
+
+## DSL reload endpoint (`T174`/`T175`)
+
+`POST /api/dsl/reload` is registered as a functional `RouterFunction` by `DslReloadRouterConfiguration` and gated by
+`dsl.reload.enabled` (on by default). `controllers.DslReloadResource` compiles sources from `dsl.source-dir` with the
+system Java compiler, builds a dedicated `URLClassLoader`, and reloads definitions via `DefinitionLoader` and the
+`DslDefinitionProvider` / `HelperResolver` SPIs. Compact-source files implementing `DslCompactSource` are also rescanned
+as a fallback. The global manager is reset before reload to avoid stale definitions.
+
+## DSL introspection (`T175`/`T177`/`T182`)
+
+`controllers.DslIntrospectionResource` exposes read-only metadata about registered DSL entities:
+
+- `GET /api/dsl/processes` and `/api/dsl/processes/{name}`
+- `GET /api/dsl/transactions` and `/api/dsl/transactions/{name}`
+- `GET /api/dsl/helpers`
+- `GET /api/dsl/helpers/search?name=&type=&description=` — search across processes, transactions, helpers, and
+  functions (`T177`).
+- `GET /api/dsl/definitions` — aggregate list of every registered definition with name, type, and optional input schema
+  (`T182`).
+
+Input schemas are generated by `JsonSchemaGenerator` from the entity's input type or parameters record.
+
 ## Actuator endpoints
 
 The `cbs-nova-starter` module ships Spring Boot Actuator on the runtime classpath and exposes a
@@ -159,6 +419,7 @@ When `docker compose up` is run, compose will use the locally available
 `build` context. The Dockerfile compiles the full backend in a JDK image and
 then copies only the `:starter` fat jar into a smaller JRE runtime image.
 
+## See also
 
 - **[DSL constructs & execution contract](dsl/constructs.md)** — `Executable`, `Context`, and the semantics of Process,
   Transaction, Function, and Helper.
@@ -184,17 +445,53 @@ then copies only the `:starter` fat jar into a smaller JRE runtime image.
   failure.
 - **Preview & Explain** — fast feedback loops and living documentation without deploying to Temporal.
 
-## Implementation roadmap (summary)
+## Implementation roadmap (T146–T182)
 
-1. **Core DSL model & builder API** — `DslObject`, builders, typed `Context`, `Result`, `@Helper`, compensation.
-2. **DSL parser & validation** — source scanner, AST, semantic validation, property placeholders.
-3. **Code generation** — Temporal interfaces/implementations, versioned packages, Saga wiring, function registration.
-4. **Runtime engine** — `DslRuntime` interface, development vs production wiring, REST endpoints.
-5. **Gradle DSL module & plugin** — standard module template and optional Gradle plugin.
-6. **Testing, documentation, & CI** — unit/integration tests, user guide, CI pipeline.
+The roadmap below reflects the kanban state as of the `T183` refresh:
+
+| ID   | Status      | Title                                                        | Notes                                                       |
+|:-----|:------------|:-------------------------------------------------------------|:------------------------------------------------------------|
+| T146 | Done | Preview/explain external-call capture (DataSource/Feign/Activity/MQ) | JDBC, Feign, Temporal Activity, and Kafka producer capture. |
+| T147 | Done | Preview call-tree visualization | Depth-limited runtime AST surfaced in reports and UI. |
+| T148 | Done | Preview runtime depth/cycle guard | `ExecutionTreeCollector` with `<truncated>` sentinel. |
+| T149 | Done | Dry-run logging capture | `DryRunLogbackAppender` + `DryRunLogEvent` + `runId` tagging. |
+| T153 | Done | Call-tree AST panel | Frontend component `CallTreeTab`. |
+| T154 | Done | Dry-run logs panel | Frontend component `DryRunLogsTab`. |
+| T155 | Done | Call-tree depth/cycle guard backend | `maxDepth` configuration. |
+| T156 | Done | Explain diff view | Frontend `ExplainDiffView` using shared `useDiffLines`. |
+| T158 | Done | External-call classification/counts | Normalized types and per-run counts. |
+| T159 | Done | External-calls panel | Frontend component `ExternalCallsTab`. |
+| T160 | Done | What-if mock injection | Activity/MQ fully mocked; DB/HTTP recorded but not applied. |
+| T161 | Done | What-if config UI | Frontend component `WhatIfConfigPanel`. |
+| T162 | Done | Preview metrics collection + UI | `PreviewMetricsCollector` + `MetricsDiffTable`. |
+| T163 | Done | Preview error classification | `PreviewErrorHandler` error codes + suggestions. |
+| T164 | Done | Preview result caching | DSL-hash + input keyed cache with Micrometer gauges. |
+| T165 | Blocked | Preview execution sandboxing | `SecurityManager` infeasible on JDK 25 (JEP 486). |
+| T166 | Done | Preview diff visualization | `PreviewDiffView` + `usePreviewDiff`. |
+| T167 | Done | Codegen & DSL internals cleanup | Reflection removal, typed records, DSL config reuse. |
+| T168 | Blocked | Preview/Explain listener architecture | Plan stale; metrics/caching/logging layered directly on runtime. |
+| T169 | Done | Temporal service lifecycle & transaction invoker cleanup | `@Bean` lifecycle, single `WorkerFactory`, SPI wiring. |
+| T170 | Done | Async process-service redesign | Non-blocking `startProcess`, STALE healthcheck, async DB. |
+| T171 | Done | JSON / Avaje serialization unification (reduced scope) | `JsonExtractHelper` injected `ObjectMapper`; no new converter. |
+| T172 | Done | Helper library hardening | Compensation, unreliable API, Temporal-aware latch/time. |
+| T173 | Done | Dry-run logging productionization | `ScopedValue`-style context, Temporal propagation, MDC tagging. |
+| T174 | Done | Spring Boot autoconfiguration & starter packaging cleanup | Single root autoconfig, SPI worker wiring, build-info OpenAPI. |
+| T175 | Done | REST controllers & observability improvements | Sentry, runId propagation, reload endpoint, introspection. |
+| T176 | Done | Run persistence with app-level encryption | `JdbcDslRunRepository`, AES-256/GCM, MapStruct. |
+| T177 | Done | Frontend helper-search wiring | `useHelperSearch` + BFF proxy for `/api/dsl/helpers/search`. |
+| T178 | Done | JDBC capture invocation-handler tests | Unit coverage for DataSource proxy handlers. |
+| T179 | Done | Executions panel component tests | Leaf/presentational component coverage. |
+| T180 | Done | Runner panel leaf component tests | `ResultTab`, `ModeSwitcher`, `DiffLine`, `StatusIndicator`, etc. |
+| T181 | Done | TemporalTransactionInvoker tests | Unit coverage for fallback and retry-option branches. |
+| T182 | Done | Fix definitions introspection wiring | `GET /api/dsl/definitions` aggregator endpoint. |
+
+T178–T181 are test-only additions; they increased coverage for the capture handlers, executions panel,
+runner panel, and `TemporalTransactionInvoker` respectively, but do not introduce user-facing features.
 
 ## Summary
 
-The Temporal DSL Orchestration Engine turns compact Java DSL definitions into durable, observable Temporal workflows. It
-unifies Processes, Transactions, Helpers, and Functions under one typed `Context`-based contract, supports declarative
-compensation, and exposes the same flow through Preview, Explain, and production Run modes.
+The Temporal DSL Orchestration Engine turns compact Java DSL definitions into durable, observable Temporal workflows.
+The T146–T182 cycle added call capture, dry-run observability, preview metrics/caching/error-handling, what-if mocking
+(with the DB/HTTP limitation), run persistence with field-level encryption, async process execution with STALE
+detection, and a cleaner Spring Boot autoconfiguration model. Two items remain blocked (sandboxing and the listener
+architecture) and are explicitly not documented as implemented.

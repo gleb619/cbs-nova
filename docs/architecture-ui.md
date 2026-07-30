@@ -1,7 +1,7 @@
 # Temporal DSL Orchestration Engine — UI Architecture
 
 This document describes the frontend tier of the cbs-nova project. It sits alongside the backend architecture
-documented in `architecture-backend.md` and uses the color system defined in `colors.md`.
+documented in [`architecture-backend.md`](architecture-backend.md) and uses the color system defined in [`colors.md`](colors.md).
 
 ## Purpose
 
@@ -102,9 +102,96 @@ color theme so that other projects can embed them without depending on the full 
 - Nuxt server routes request or refresh a JWT and forward authenticated calls to Spring Boot.
 - The JWT is kept on the server side; the browser only holds its own session cookie.
 
+## Runner panel components (`T153`, `T154`, `T159`, `T161`, `T162`, `T166`)
+
+The primary interactive surface for running, previewing, and explaining DSL definitions lives in
+`frontend/components/src/components/runner/`. Components are pure props-driven leaves and containers; the surrounding
+page wires them to the BFF.
+
+### Definition selector (`T182`)
+
+`DefinitionSelector` (built on the BFF route `/api/dsl/definitions` fixed in `T182`) lists all registered DSL
+entities with name and type. It is the runner's primary definition picker. The backend endpoint is `GET /api/dsl/definitions`
+(`controllers.DslIntrospectionResource.definitions()`), returning `{name, type, inputSchema?}`.
+
+### Input form and mode switcher
+
+- `InputForm` / `InputField` render the selected definition's input schema and produce a JSON payload for the
+  backend.
+- `ModeSwitcher` lets the user choose `run`, `preview`, or `explain` and drives the active styling.
+- `RunConfirmationModal` confirms destructive real runs.
+
+### Output panels
+
+`OutputPanel` is the container that switches between tabs based on the current mode and result shape:
+
+- `ResultTab` — rendered JSON output.
+- `MetadataTab` — execution metadata.
+- `ErrorsTab` — structured errors from `PreviewErrorDetail` / `ErrorResponse`.
+
+### Preview/Explain specific tabs
+
+When the mode is `preview` or `explain`, the output panel exposes three extra tabs:
+
+- **Call Tree (`T153`)** — `CallTreeTab` renders the recursive `CallNode` AST produced by the backend. The root is
+  passed as `tree`; `CallTreeNode` handles depth and expansion. The backend emits a `<truncated>` sentinel when the depth
+  limit is exceeded.
+- **External Calls (`T159`)** — `ExternalCallsTab` flattens every `externalCalls` entry under the call tree, grouped by
+  source node. It color-codes normalized call types (`database`, `http`, `mq`, `filesystem`, `external_api`,
+  `microservice`, `activity`, `other`) and formats timestamps.
+- **Dry-Run Logs (`T154`)** — `DryRunLogsTab` renders the typed `dryRunLogs` array. Each row shows timestamp, level
+  (color-coded), logger, and message. A "Copy all" button copies the plain-text dump to the clipboard.
+- **What-If Config (`T161`)** — `WhatIfConfigPanel` lets the user add mock entries keyed by
+  `type:target:operation` with a JSON payload. The payload is sent to `/api/dsl/preview/{name}` as the `mocks` map. The
+  panel validates that the payload is a JSON object and surfaces per-row errors. See the backend limitation in
+  [`architecture-backend.md`](architecture-backend.md): Activity and MQ mocks are fully applied; DB and HTTP mocks are only
+  recorded as metadata and the real call still executes.
+
+### Diff views
+
+- **Explain diff (`T156`)** — `ExplainDiffView` compares the structured `explain` output with a previous `run` result.
+  It offers a split view (explain vs. run) or a unified line-level diff. The unified diff is delegated to the shared
+  `useDiffLines` composable, which builds an LCS table over the two JSON-serialized outputs.
+- **Preview diff (`T166`)** — `PreviewDiffView` compares two preview results (baseline and current) across four tabs:
+  - **Output Diff** — side-by-side JSON plus a unified LCS diff line view (`DiffLine`).
+  - **AST Diff** — `ASTDiffNode` compares the two `CallNode` trees, marking nodes as `same`, `added`, `removed`, or
+    `modified` and surfacing `propertyChanges`.
+  - **External Calls Diff** — flattened call lists compared by `sourcePath|target|operation`, showing `added`/`removed`
+    rows and reusing the type color-coding from `ExternalCallsTab`.
+  - **Metrics Diff** — `MetricsDiffTable` compares `PreviewMetricsSnapshot` fields (execution duration, memory delta,
+    call counts, external call counts). Lower-is-better metrics (latency, memory, counts) are colored green on decrease and
+    red on increase.
+
+The `usePreviewDiff` composable (the backing logic for `PreviewDiffView`) delegates the output-text LCS to
+`useDiffLines` so the diff algorithm is not duplicated.
+
+## Helper search (`T177`)
+
+`frontend/components/src/composables/useHelperSearch.ts` provides a reusable search helper that wraps the backend
+`/api/dsl/helpers/search` endpoint (or the BFF proxy). It supports:
+
+- debounced keyword search (`name`, `type`, `description`).
+- `execute()` / `search()` / `clearFilters()` operations.
+- loading, error, and empty states.
+- a `hasActiveFilters` computed flag.
+
+The backend endpoint searches across processes, transactions, helpers, and functions and returns
+`{name, type, description, inputType, outputType}`.
+
+## Introspection surface (`T182`)
+
+Two complementary endpoints power the runner's discovery UI:
+
+- `GET /api/dsl/definitions` — flat list of all registered entities with type and optional input schema (used by the
+  definition picker).
+- `GET /api/dsl/helpers/search` — filterable search across the same entity set (used by the helper-search panel and
+  any global search bar).
+
+Both are wired through the BFF so the browser never calls Spring Boot directly.
+
 ## Styling
 
-All UI styling is based on the brandbook in `docs/colors.md`.
+All UI styling is based on the brandbook in [`colors.md`](colors.md).
 
 - `components/src/tailwind.config.ts` is the canonical implementation of the palette.
 - `admin-ui-plugin` imports the Tailwind preset from `@cbs/components` so the theme stays single-sourced.
@@ -137,10 +224,10 @@ Detailed UI design documentation lives in `docs/frontend/`:
 
 ## Relationship to other docs
 
-- `architecture-backend.md` — describes the Java / Temporal orchestration backend the admin UI consumes.
-- `colors.md` — defines the Tailwind color palette used by both `admin-ui-plugin` and `components`.
+- [`architecture-backend.md`](architecture-backend.md) — describes the Java / Temporal orchestration backend the admin UI consumes.
+- [`colors.md`](colors.md) — defines the Tailwind color palette used by both `admin-ui-plugin` and `components`.
 
 ## See also
 
-- `docs/architecture-backend.md` — backend architecture and implementation roadmap
-- `docs/colors.md` — admin UI color system
+- [`architecture-backend.md`](architecture-backend.md) — backend architecture and implementation roadmap
+- [`colors.md`](colors.md) — admin UI color system
