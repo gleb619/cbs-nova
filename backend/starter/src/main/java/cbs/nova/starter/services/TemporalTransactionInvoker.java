@@ -50,7 +50,7 @@ public final class TemporalTransactionInvoker implements TransactionInvoker {
     }
   }
 
-  private ActivityOptions buildActivityOptions(TransactionDslObject tx) {
+  ActivityOptions buildActivityOptions(TransactionDslObject tx) {
     RetryPolicy policy = tx.retryPolicy();
     if (policy == null) {
       policy = DslConfig.dslConfig().defaultRetryPolicy();
