@@ -8,6 +8,7 @@ import ErrorsTab from '../runner/ErrorsTab.vue'
 import ExplainDiffView from '../runner/ExplainDiffView.vue'
 import ExplainOutput from '../runner/ExplainOutput.vue'
 import ExternalCallsBadge from '../runner/ExternalCallsBadge.vue'
+import ExternalCallsTab from '../runner/ExternalCallsTab.vue'
 import MetadataTab from '../runner/MetadataTab.vue'
 import OutputPanel from '../runner/OutputPanel.vue'
 import ResultTab from '../runner/ResultTab.vue'
@@ -35,6 +36,7 @@ function mountOutputPanel(props: Record<string, unknown>) {
         CallTreeTab,
         CallTreeNode,
         ExternalCallsBadge,
+        ExternalCallsTab,
         DryRunLogsTab,
         ExplainDiffView,
       },
@@ -283,5 +285,123 @@ describe('OutputPanel', () => {
         message: 'Explain log',
       },
     ])
+  })
+
+  it('shows the External Calls tab only in preview/explain mode and switches to it', async () => {
+    const runWrapper = mountOutputPanel({
+      output: makeOutput(),
+      mode: 'run',
+      status: 'success',
+    })
+    expect(runWrapper.findAll('button').map((b) => b.text())).not.toContain('External Calls')
+    expect(runWrapper.findComponent(ExternalCallsTab).exists()).toBe(false)
+
+    const previewWrapper = mountOutputPanel({
+      output: makeOutput({
+        astTree: {
+          name: 'PreviewRoot',
+          kind: 'PROCESS',
+          success: true,
+          children: [
+            {
+              name: 'Child',
+              kind: 'TRANSACTION',
+              success: true,
+              children: [],
+              externalCalls: [
+                {
+                  type: 'database',
+                  target: 'orders',
+                  operation: 'select',
+                  timestamp: 1721404800000,
+                },
+              ],
+            },
+          ],
+          externalCalls: [
+            {
+              type: 'http',
+              target: 'api.example.com',
+              operation: 'GET',
+              timestamp: 1721404801000,
+            },
+          ],
+        },
+      }),
+      mode: 'preview',
+      status: 'success',
+    })
+
+    const buttons = previewWrapper.findAll('button')
+    expect(buttons.map((b) => b.text())).toContain('External Calls')
+
+    const externalCallsButton = buttons.find((b) => b.text() === 'External Calls')
+    expect(externalCallsButton).toBeDefined()
+    await externalCallsButton?.trigger('click')
+
+    const externalCallsTab = previewWrapper.findComponent(ExternalCallsTab)
+    expect(externalCallsTab.exists()).toBe(true)
+    expect(externalCallsTab.props('tree')).toEqual({
+      name: 'PreviewRoot',
+      kind: 'PROCESS',
+      success: true,
+      children: [
+        {
+          name: 'Child',
+          kind: 'TRANSACTION',
+          success: true,
+          children: [],
+          externalCalls: [
+            {
+              type: 'database',
+              target: 'orders',
+              operation: 'select',
+              timestamp: 1721404800000,
+            },
+          ],
+        },
+      ],
+      externalCalls: [
+        {
+          type: 'http',
+          target: 'api.example.com',
+          operation: 'GET',
+          timestamp: 1721404801000,
+        },
+      ],
+    })
+    expect(previewWrapper.findComponent(ResultTab).exists()).toBe(false)
+  })
+
+  it('shows the External Calls tab in explain mode', async () => {
+    const wrapper = mountOutputPanel({
+      output: makeOutput({
+        astTree: {
+          name: 'ExplainRoot',
+          kind: 'PROCESS',
+          success: true,
+          children: [],
+          externalCalls: [
+            {
+              type: 'database',
+              target: 'orders',
+              operation: 'select',
+              timestamp: 1721404800000,
+            },
+          ],
+        },
+      }),
+      mode: 'explain',
+      status: 'success',
+    })
+    expect(wrapper.findAll('button').map((b) => b.text())).toContain('External Calls')
+
+    const externalCallsButton = wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'External Calls')
+    expect(externalCallsButton).toBeDefined()
+    await externalCallsButton?.trigger('click')
+
+    expect(wrapper.findComponent(ExternalCallsTab).exists()).toBe(true)
   })
 })

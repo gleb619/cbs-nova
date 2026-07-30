@@ -10,7 +10,9 @@ const props = defineProps<{
   lastRunOutput?: unknown
 }>()
 
-const activeTab = ref<'result' | 'metadata' | 'errors' | 'callTree' | 'dryRunLogs'>('result')
+const activeTab = ref<
+  'result' | 'metadata' | 'errors' | 'callTree' | 'dryRunLogs' | 'externalCalls'
+>('result')
 
 const tabs = computed(() => [
   { value: 'result' as const, label: 'Result' },
@@ -20,6 +22,7 @@ const tabs = computed(() => [
     ? [
         { value: 'callTree' as const, label: 'Call Tree' },
         { value: 'dryRunLogs' as const, label: 'Logs' },
+        { value: 'externalCalls' as const, label: 'External Calls' },
       ]
     : []),
 ])
@@ -67,6 +70,10 @@ const isEmpty = computed(() => !props.output)
       <MetadataTab v-else-if="activeTab === 'metadata'" :metadata="props.output?.metadata" />
       <ErrorsTab v-else-if="activeTab === 'errors'" :errors="props.output?.errors" />
       <CallTreeTab v-else-if="activeTab === 'callTree'" :tree="props.output?.astTree" />
+      <ExternalCallsTab
+        v-else-if="activeTab === 'externalCalls'"
+        :tree="props.output?.astTree"
+      />
       <DryRunLogsTab v-else :logs="props.output?.dryRunLogs" />
     </div>
   </div>
