@@ -11,6 +11,7 @@ const {
   mode,
   status,
   formData,
+  mocks,
   output,
   showConfirmModal,
   selectDefinition,
@@ -169,6 +170,17 @@ onMounted(() => {
       <section class="bg-white border border-gray-200 rounded-xl p-5">
         <h2 class="text-sm font-semibold text-gray-700 mb-4">Output</h2>
         <RunnerOutputPanel :output="output" :mode="mode" :status="status" />
+      </section>
+
+      <section
+        v-if="mode === 'preview'"
+        class="bg-white border border-gray-200 rounded-xl p-5 lg:col-span-2"
+      >
+        <h2 class="text-sm font-semibold text-gray-700 mb-4">What-if mocks</h2>
+        <WhatIfConfigPanel
+          :model-value="mocks"
+          @update:model-value="(val) => (mocks = val)"
+        />
       </section>
     </div>
 

@@ -3,10 +3,16 @@ export function useDslApi() {
     return $fetch('/api/v1/dsl/definitions')
   }
 
-  async function preview(name: string, body: unknown, metadata?: Record<string, unknown>) {
+  async function preview(
+    name: string,
+    body: unknown,
+    metadata?: Record<string, unknown>,
+    mocks?: Record<string, Record<string, unknown>>,
+  ) {
+    const hasMocks = !!mocks && Object.keys(mocks).length > 0
     return $fetch(`/api/v1/dsl/preview/${name}`, {
       method: 'POST',
-      body: { body, metadata },
+      body: hasMocks ? { body, metadata, mocks } : { body, metadata },
     })
   }
 

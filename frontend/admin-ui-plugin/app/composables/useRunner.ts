@@ -5,6 +5,7 @@ const selectedDefinition = ref<string | null>(null)
 const mode = ref<RunnerMode>('preview')
 const status = ref<RunnerStatus>('idle')
 const formData = ref<Record<string, unknown>>({})
+const mocks = ref<Record<string, Record<string, unknown>>>({})
 const output = ref<RunnerOutput | null>(null)
 const showConfirmModal = ref(false)
 
@@ -21,6 +22,7 @@ export function useRunner() {
   function resetOutput() {
     output.value = null
     status.value = 'idle'
+    mocks.value = {}
   }
 
   async function submit() {
@@ -39,7 +41,7 @@ export function useRunner() {
       const payload = formData.value
       let response: unknown
       if (mode.value === 'preview') {
-        response = await api.preview(name, payload)
+        response = await api.preview(name, payload, undefined, mocks.value)
       } else if (mode.value === 'run') {
         response = await api.run(name, payload)
       } else {
@@ -119,6 +121,7 @@ export function useRunner() {
     mode,
     status,
     formData,
+    mocks,
     output,
     showConfirmModal,
     selectDefinition,
