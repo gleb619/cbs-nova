@@ -24,8 +24,8 @@ class DefinitionProviderGeneratorTest {
     assertThat(source).exists();
     var text = Files.readString(source);
     assertThat(text).contains("implements DslDefinitionProvider");
-    assertThat(text).contains("new FooDsl().define()");
-    assertThat(text).contains("new BarDsl().define()");
+    assertThat(text).contains("sources.add(new FooDsl());");
+    assertThat(text).contains("sources.add(new BarDsl());");
     assertThat(text).contains("@" + Generated.class.getSimpleName());
 
     var spi = outDir.resolve("META-INF/services/cbs.nova.dsl.DslDefinitionProvider");
@@ -44,7 +44,7 @@ class DefinitionProviderGeneratorTest {
     var source = outDir.resolve("GeneratedDslDefinitionProvider.java");
     var text = Files.readString(source);
     assertThat(text).contains("implements DslDefinitionProvider");
-    assertThat(text).doesNotContain("addAll");
+    assertThat(text).doesNotContain("sources.add");
     assertThat(fqcn).isEqualTo("GeneratedDslDefinitionProvider");
   }
 }

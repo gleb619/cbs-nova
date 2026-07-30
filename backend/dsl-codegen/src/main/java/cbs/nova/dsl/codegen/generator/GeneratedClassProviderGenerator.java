@@ -131,6 +131,11 @@ public final class GeneratedClassProviderGenerator {
                         return descriptor().executeJson();
                       }
 
+                      @Override
+                      public Object implementationInstance() {
+                        return new ${implName}();
+                      }
+
                     }
                     """,
             Map.ofEntries(

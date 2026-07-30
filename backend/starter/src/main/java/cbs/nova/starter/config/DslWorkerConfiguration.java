@@ -56,24 +56,17 @@ public class DslWorkerConfiguration {
   private void registerGeneratedImplementations(Worker worker) {
     var classLoader = Thread.currentThread().getContextClassLoader();
     ServiceLoader.load(GeneratedClassProvider.class, classLoader)
-            .forEach(provider -> registerDescriptor(worker, provider.descriptor()));
+            .forEach(provider -> registerDescriptor(worker, provider));
   }
 
-  private void registerDescriptor(Worker worker, GeneratedClassDescriptor descriptor) {
+  private void registerDescriptor(Worker worker, GeneratedClassProvider provider) {
+    var descriptor = provider.descriptor();
     switch (descriptor.type()) {
-      // TODO: remove reflection, use typed info instead
       case PROCESS ->
         worker.registerWorkflowImplementationTypes(descriptor.temporalImplementation());
       case TRANSACTION -> {
-        Object instance;
         try {
-          instance = descriptor.temporalImplementation().getDeclaredConstructor().newInstance();
-        } catch (Exception e) {
-          throw new IllegalStateException(
-                  "Failed to instantiate generated transaction: " + descriptor.name(), e);
-        }
-        try {
-          worker.registerActivitiesImplementations(instance);
+          worker.registerActivitiesImplementations(provider.implementationInstance());
         } catch (TypeAlreadyRegisteredException ignored) {
           // multiple generated transactions share the default activity method name;
           // the first registration wins, subsequent duplicates are skipped

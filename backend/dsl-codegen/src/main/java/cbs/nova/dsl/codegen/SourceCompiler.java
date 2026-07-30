@@ -23,6 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ServiceLoader;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -281,7 +282,7 @@ public final class SourceCompiler {
   @Deprecated(forRemoval = true)
   private @NonNull List<DslObject> loadDefinitions(
           @NonNull Path outputDir,
-          @NonNull String providerFqcn) {
+          @SuppressWarnings("unused") @NonNull String providerFqcn) {
     URL url;
     try {
       url = outputDir.toUri().toURL();
@@ -293,10 +294,12 @@ public final class SourceCompiler {
     var loader = new URLClassLoader(new URL[]{url},
             Thread.currentThread().getContextClassLoader());
     try {
-      var clazz = loader.loadClass(providerFqcn);
-      // TODO: remove reflection, use typed info
-      var provider = (DslDefinitionProvider) clazz.getDeclaredConstructor().newInstance();
-      return provider.definitions();
+      var providers = ServiceLoader.load(DslDefinitionProvider.class, loader);
+      for (var provider : providers) {
+        return provider.definitions();
+      }
+      log.atLevel(logLevel).log(
+              () -> "[SourceCompiler] No DslDefinitionProvider discovered in output directory");
     } catch (Exception e) {
       log.atLevel(logLevel).setCause(e)
               .log(() -> "[SourceCompiler] Failed to load DSL definitions: %s"

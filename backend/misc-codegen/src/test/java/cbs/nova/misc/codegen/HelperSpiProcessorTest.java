@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ServiceLoader;
 
 @Slf4j
 class HelperSpiProcessorTest {
@@ -84,11 +85,10 @@ class HelperSpiProcessorTest {
 
     try (var loader = new URLClassLoader(
             new URL[]{outputDir.toUri().toURL()}, getClass().getClassLoader())) {
-      Class<?> resolverCls = loader.loadClass("fixture.GeneratedHelperResolver");
-      // TODO: remove reflection, use typed info instead
-      HelperResolver resolver = (HelperResolver) resolverCls.getDeclaredConstructor().newInstance();
+      var resolvers = ServiceLoader.load(HelperResolver.class, loader);
       List<String> registered = new ArrayList<>();
-      resolver.registerHelpers((name, _) -> registered.add(name), clazz -> null);
+      resolvers.forEach(resolver -> resolver.registerHelpers(
+              (name, _) -> registered.add(name), clazz -> null));
       assertThat(registered).containsExactly("greetHelper");
     }
   }

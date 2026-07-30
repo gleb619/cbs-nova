@@ -21,6 +21,7 @@ import cbs.nova.dslexamples.InvoiceModels.InvoiceLine;
 import cbs.nova.dslexamples.InvoiceModels.InvoiceOut;
 import cbs.nova.dslexamples.LongWorkModels.LongWorkIn;
 import cbs.nova.dslexamples.LongWorkModels.LongWorkOut;
+import cbs.nova.starter.helpers.*;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,7 +48,7 @@ class IntermediateDslExamplesTest {
   @BeforeEach
   void loadCompactDsls() throws Exception {
     GlobalManager.globalManager().resetForTests();
-    DslConfig.dslConfig().helperInstanceResolver().replace(reflectiveHelperResolver());
+    DslConfig.dslConfig().helperInstanceResolver().replace(typedHelperResolver());
     copyCompactDsl("BatchProcessingDsl.java");
     copyCompactDsl("InvoiceGenerationDsl.java");
     copyCompactDsl("LongWorkSimulationDsl.java");
@@ -133,17 +134,42 @@ class IntermediateDslExamplesTest {
     }
   }
 
-  private static HelperInstanceResolver reflectiveHelperResolver() {
+  private static HelperInstanceResolver typedHelperResolver() {
     return helperClass -> {
-      try {
-        if (helperClass == cbs.nova.starter.helpers.HttpCallHelper.class) {
-          return new cbs.nova.starter.helpers.HttpCallHelper(HttpClient.newHttpClient());
-        }
-        // TODO: remove reflection, use typed info instead
-        return (Executable<?, ?>) helperClass.getDeclaredConstructor().newInstance();
-      } catch (ReflectiveOperationException e) {
-        throw new IllegalStateException("Cannot instantiate helper " + helperClass, e);
+      if (helperClass == ConditionalFailingHelper.class) {
+        return new ConditionalFailingHelper();
       }
+      if (helperClass == CompensationTrackerHelper.class) {
+        return new CompensationTrackerHelper();
+      }
+      if (helperClass == CurrentTimestampHelper.class) {
+        return new CurrentTimestampHelper();
+      }
+      if (helperClass == FileLatchHelper.class) {
+        return new FileLatchHelper();
+      }
+      if (helperClass == FilterRecordsHelper.class) {
+        return new FilterRecordsHelper();
+      }
+      if (helperClass == FormatMessageHelper.class) {
+        return new FormatMessageHelper();
+      }
+      if (helperClass == HttpCallHelper.class) {
+        return new HttpCallHelper(HttpClient.newHttpClient());
+      }
+      if (helperClass == JsonExtractHelper.class) {
+        return new JsonExtractHelper();
+      }
+      if (helperClass == SortRecordsHelper.class) {
+        return new SortRecordsHelper();
+      }
+      if (helperClass == SumValuesHelper.class) {
+        return new SumValuesHelper();
+      }
+      if (helperClass == UnreliableApiHelper.class) {
+        return new UnreliableApiHelper();
+      }
+      throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
     };
   }
 }

@@ -3,7 +3,10 @@ package cbs.nova.dsl.example.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.Executable;
+import cbs.nova.dsl.ExecutionTraceCollector;
+import cbs.nova.dsl.GeneratedClassProvider;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.HelperInstanceResolver;
 import cbs.nova.dsl.Result;
@@ -12,7 +15,7 @@ import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dslexamples.UnreliableApiModels.UnreliableProcessIn;
 import cbs.nova.dslexamples.UnreliableApiModels.UnreliableProcessOut;
-import cbs.nova.starter.helpers.CompensationTrackerHelper;
+import cbs.nova.starter.helpers.*;
 import cbs.nova.starter.helpers.model.UnreliableApiIn;
 import cbs.nova.starter.services.TemporalDslProcessLauncher;
 import cbs.nova.starter.services.TemporalDslProcessService;
@@ -37,6 +40,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.ServiceLoader;
 
 /**
  * End-to-end test for Temporal retry, backoff, and compensation behavior using an unreliable helper
@@ -87,7 +91,7 @@ class UnreliableApiDslIntegrationTest {
 
     var globalManager = GlobalManager.globalManager();
     new DefinitionLoader().load(globalManager);
-    DslConfig.dslConfig().helperInstanceResolver().replace(reflectiveHelperResolver());
+    DslConfig.dslConfig().helperInstanceResolver().replace(typedHelperResolver());
     globalManager.registerHelperResolvers();
 
     assertThat(globalManager.hasProcess("UnreliableApiSuccess")).isTrue();
@@ -123,15 +127,16 @@ class UnreliableApiDslIntegrationTest {
   }
 
   private static void registerTransaction(Worker worker, String name) {
-    var descriptor = GlobalManager.globalManager().findGeneratedTransaction(name).orElseThrow();
-    Object instance;
-    try {
-      // TODO: remove reflection, use typed info instead
-      instance = descriptor.temporalImplementation().getDeclaredConstructor().newInstance();
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to instantiate activity " + name, e);
-    }
-    worker.registerActivitiesImplementations(instance);
+    var provider = ServiceLoader.load(GeneratedClassProvider.class,
+            Thread.currentThread().getContextClassLoader())
+            .stream()
+            .map(ServiceLoader.Provider::get)
+            .filter(p -> p.descriptor().name().equals(name)
+                    && p.descriptor().type() == DslObject.DslType.TRANSACTION)
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException(
+                    "No generated provider for transaction " + name));
+    worker.registerActivitiesImplementations(provider.implementationInstance());
   }
 
   @AfterAll
@@ -147,7 +152,8 @@ class UnreliableApiDslIntegrationTest {
   @Test
   void resilientTransactionSucceedsAfterTemporalRetries() {
     var service = new TemporalDslProcessService(
-            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper());
+            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
+            new ExecutionTraceCollector());
     String runId = "unreliable-success-" + System.currentTimeMillis();
     var apiCall = new UnreliableApiIn(runId, 3, false, null);
     var input = new UnreliableProcessIn("success", apiCall);
@@ -171,7 +177,8 @@ class UnreliableApiDslIntegrationTest {
     String markerId = "UnreliableApiCompensated-" + input.scenario();
 
     Result<?> result = new TemporalDslProcessService(
-            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper())
+            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
+            new ExecutionTraceCollector())
             .runProcess("UnreliableApiCompensated", input);
 
     assertThat(result.isSuccess()).isFalse();
@@ -187,7 +194,8 @@ class UnreliableApiDslIntegrationTest {
     var input = new UnreliableProcessIn("uncaught", apiCall);
 
     Result<?> result = new TemporalDslProcessService(
-            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper())
+            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
+            new ExecutionTraceCollector())
             .runProcess("UnreliableApiUncaught", input);
 
     assertThat(result.isSuccess()).isFalse();
@@ -201,17 +209,42 @@ class UnreliableApiDslIntegrationTest {
                     () -> new IllegalStateException("compensationTracker helper not registered"));
   }
 
-  private static HelperInstanceResolver reflectiveHelperResolver() {
+  private static HelperInstanceResolver typedHelperResolver() {
     return helperClass -> {
-      try {
-        if (helperClass == cbs.nova.starter.helpers.HttpCallHelper.class) {
-          return new cbs.nova.starter.helpers.HttpCallHelper(HttpClient.newHttpClient());
-        }
-        // TODO: remove reflection, use typed info instead
-        return (Executable<?, ?>) helperClass.getDeclaredConstructor().newInstance();
-      } catch (ReflectiveOperationException e) {
-        throw new IllegalStateException("Cannot instantiate helper " + helperClass, e);
+      if (helperClass == ConditionalFailingHelper.class) {
+        return new ConditionalFailingHelper();
       }
+      if (helperClass == CompensationTrackerHelper.class) {
+        return new CompensationTrackerHelper();
+      }
+      if (helperClass == CurrentTimestampHelper.class) {
+        return new CurrentTimestampHelper();
+      }
+      if (helperClass == FileLatchHelper.class) {
+        return new FileLatchHelper();
+      }
+      if (helperClass == FilterRecordsHelper.class) {
+        return new FilterRecordsHelper();
+      }
+      if (helperClass == FormatMessageHelper.class) {
+        return new FormatMessageHelper();
+      }
+      if (helperClass == HttpCallHelper.class) {
+        return new HttpCallHelper(HttpClient.newHttpClient());
+      }
+      if (helperClass == JsonExtractHelper.class) {
+        return new JsonExtractHelper();
+      }
+      if (helperClass == SortRecordsHelper.class) {
+        return new SortRecordsHelper();
+      }
+      if (helperClass == SumValuesHelper.class) {
+        return new SumValuesHelper();
+      }
+      if (helperClass == UnreliableApiHelper.class) {
+        return new UnreliableApiHelper();
+      }
+      throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
     };
   }
 }

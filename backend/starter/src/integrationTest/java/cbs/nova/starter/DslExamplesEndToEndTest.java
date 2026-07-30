@@ -3,6 +3,7 @@ package cbs.nova.starter;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
@@ -63,7 +64,8 @@ class DslExamplesEndToEndTest extends BaseContainers {
     var input = new BatchIn(List.of(new BatchItem("a", 1), new BatchItem("b", 2)));
 
     var service = new TemporalDslProcessService(
-            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper());
+            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
+            new ExecutionTraceCollector());
     Result<?> result = service.runProcess("BatchProcessing", input);
 
     assertThat(result.isSuccess()).as("result cause: %s", result.cause()).isTrue();

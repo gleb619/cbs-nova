@@ -26,7 +26,8 @@ public final class DefinitionProviderGenerator {
           + DslDefinitionProvider.class.getName();
 
   private static final String SOURCE_TEMPLATE = """
-          ${packageLine}import cbs.nova.dsl.DslDefinitionProvider;
+          ${packageLine}import cbs.nova.dsl.DslCompactSource;
+          import cbs.nova.dsl.DslDefinitionProvider;
           import cbs.nova.dsl.DslObject;
           import cbs.nova.dsl.DslGenerated;
           import javax.annotation.processing.Generated;
@@ -37,10 +38,12 @@ public final class DefinitionProviderGenerator {
           public class ${className} implements DslDefinitionProvider {
             @Override
             public List<DslObject> definitions() {
-              //TODO: redo var result = new ArrayList<DslDslCompactSource>();
-              var result = new ArrayList<DslObject>();
+              var sources = new ArrayList<DslCompactSource>();
           ${registrations}
-              return result;
+              return sources.stream()
+                      .map(DslCompactSource::define)
+                      .flatMap(List::stream)
+                      .toList();
             }
           }
           """;
@@ -62,7 +65,7 @@ public final class DefinitionProviderGenerator {
     var sourceFile = sourcePath(outputDir, targetPackage);
 
     var registrations = classNames.stream()
-            .map("    result.addAll(new %s().define());"::formatted)
+            .map("    sources.add(new %s());"::formatted)
             .collect(Collectors.joining("\n"));
     if (!registrations.isEmpty()) {
       registrations = registrations + "\n";

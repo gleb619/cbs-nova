@@ -127,8 +127,7 @@ public interface SingletonSupport {
     }
 
     private <T> T rethrow(Exception e) {
-      // todo: implement util method
-      return null;
+      throw new IllegalStateException(e);
     }
 
     private <T> T onLameWay(Factory<T> factory) {

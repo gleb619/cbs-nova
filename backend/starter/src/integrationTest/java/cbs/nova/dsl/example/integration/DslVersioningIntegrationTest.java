@@ -7,6 +7,7 @@ import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.DslTemporalProcessRequest;
 import cbs.nova.dsl.Executable;
+import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.HelperInstanceResolver;
@@ -17,6 +18,7 @@ import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dslexamples.VersionProbeModels.VersionProbeIn;
 import cbs.nova.dslexamples.VersionProbeModels.VersionProbeOut;
 import cbs.nova.dslexamples.versionprobe.v1.VersionProbeProcessWorkflow;
+import cbs.nova.starter.helpers.*;
 import cbs.nova.starter.services.TemporalDslProcessLauncher;
 import cbs.nova.starter.services.TemporalDslProcessService;
 import cbs.nova.starter.services.TemporalTransactionInvoker;
@@ -39,6 +41,7 @@ import org.testcontainers.utility.DockerImageName;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.net.http.HttpClient;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -98,7 +101,7 @@ class DslVersioningIntegrationTest {
 
     var globalManager = GlobalManager.globalManager();
     new DefinitionLoader().load(globalManager);
-    DslConfig.dslConfig().helperInstanceResolver().replace(reflectiveHelperResolver());
+    DslConfig.dslConfig().helperInstanceResolver().replace(typedHelperResolver());
     globalManager.registerHelperResolvers();
 
     assertThat(globalManager.hasProcess("VersionProbe"))
@@ -157,7 +160,8 @@ class DslVersioningIntegrationTest {
   @Test
   void inFlightWorkflowKeepsUsingOriginalDslVersionAfterReload() throws Exception {
     var service = new TemporalDslProcessService(
-            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper());
+            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
+            new ExecutionTraceCollector());
 
     var firstRun = service.startProcess("VersionProbe", new VersionProbeIn("first"));
 
@@ -233,14 +237,42 @@ class DslVersioningIntegrationTest {
     }
   }
 
-  private static HelperInstanceResolver reflectiveHelperResolver() {
+  private static HelperInstanceResolver typedHelperResolver() {
     return helperClass -> {
-      try {
-        // TODO: remove reflection, use typed info instead
-        return (Executable<?, ?>) helperClass.getDeclaredConstructor().newInstance();
-      } catch (ReflectiveOperationException e) {
-        throw new IllegalStateException("Cannot instantiate helper " + helperClass, e);
+      if (helperClass == ConditionalFailingHelper.class) {
+        return new ConditionalFailingHelper();
       }
+      if (helperClass == CompensationTrackerHelper.class) {
+        return new CompensationTrackerHelper();
+      }
+      if (helperClass == CurrentTimestampHelper.class) {
+        return new CurrentTimestampHelper();
+      }
+      if (helperClass == FileLatchHelper.class) {
+        return new FileLatchHelper();
+      }
+      if (helperClass == FilterRecordsHelper.class) {
+        return new FilterRecordsHelper();
+      }
+      if (helperClass == FormatMessageHelper.class) {
+        return new FormatMessageHelper();
+      }
+      if (helperClass == HttpCallHelper.class) {
+        return new HttpCallHelper(HttpClient.newHttpClient());
+      }
+      if (helperClass == JsonExtractHelper.class) {
+        return new JsonExtractHelper();
+      }
+      if (helperClass == SortRecordsHelper.class) {
+        return new SortRecordsHelper();
+      }
+      if (helperClass == SumValuesHelper.class) {
+        return new SumValuesHelper();
+      }
+      if (helperClass == UnreliableApiHelper.class) {
+        return new UnreliableApiHelper();
+      }
+      throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
     };
   }
 }
