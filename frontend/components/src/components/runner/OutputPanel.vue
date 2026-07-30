@@ -8,10 +8,13 @@ const props = defineProps<{
   mode: RunnerMode
   status: RunnerStatus
   lastRunOutput?: unknown
+  baselineOutput?: RunnerOutput | null
 }>()
 
+const emit = defineEmits<(e: 'clear-baseline') => void>()
+
 const activeTab = ref<
-  'result' | 'metadata' | 'errors' | 'callTree' | 'dryRunLogs' | 'externalCalls'
+  'result' | 'metadata' | 'errors' | 'callTree' | 'dryRunLogs' | 'externalCalls' | 'diff'
 >('result')
 
 const tabs = computed(() => [
@@ -25,12 +28,22 @@ const tabs = computed(() => [
         { value: 'externalCalls' as const, label: 'External Calls' },
       ]
     : []),
+  ...(props.mode === 'preview' && props.baselineOutput
+    ? [{ value: 'diff' as const, label: 'Diff' }]
+    : []),
 ])
 
 const showExplain = computed(() => props.mode === 'explain')
 const showDiff = computed(() => props.mode === 'explain' && props.output !== null)
+const showPreviewDiff = computed(
+  () => props.mode === 'preview' && props.baselineOutput !== null && props.baselineOutput !== undefined,
+)
 
 const isEmpty = computed(() => !props.output)
+
+function onClearBaseline() {
+  emit('clear-baseline')
+}
 </script>
 
 <template>
@@ -46,11 +59,12 @@ const isEmpty = computed(() => !props.output)
       <ExplainDiffView :explain-output="props.output?.result" :run-output="props.lastRunOutput" />
     </div>
 
-    <div v-if="!isEmpty" class="border-b border-gray-200 flex gap-1">
+    <div v-if="!isEmpty" class="border-b border-gray-200 flex flex-wrap gap-1">
       <button
         v-for="t in tabs"
         :key="t.value"
         type="button"
+        :data-testid="`output-panel-tab-${t.value}`"
         :class="[
           'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
           activeTab === t.value
@@ -74,7 +88,20 @@ const isEmpty = computed(() => !props.output)
         v-else-if="activeTab === 'externalCalls'"
         :tree="props.output?.astTree"
       />
-      <DryRunLogsTab v-else :logs="props.output?.dryRunLogs" />
+      <DryRunLogsTab v-else-if="activeTab === 'dryRunLogs'" :logs="props.output?.dryRunLogs" />
+      <div v-else-if="activeTab === 'diff' && showPreviewDiff" class="flex flex-col gap-3" data-testid="output-panel-diff">
+        <PreviewDiffView :baseline="props.baselineOutput ?? null" :current="props.output" />
+        <div class="flex justify-end">
+          <button
+            type="button"
+            class="text-xs font-medium text-gray-500 hover:text-gray-800"
+            data-testid="output-panel-clear-baseline"
+            @click="onClearBaseline"
+          >
+            Clear baseline
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>

@@ -7,6 +7,7 @@ const status = ref<RunnerStatus>('idle')
 const formData = ref<Record<string, unknown>>({})
 const mocks = ref<Record<string, Record<string, unknown>>>({})
 const output = ref<RunnerOutput | null>(null)
+const baselineOutput = ref<RunnerOutput | null>(null)
 const showConfirmModal = ref(false)
 
 export function useRunner() {
@@ -23,6 +24,7 @@ export function useRunner() {
     output.value = null
     status.value = 'idle'
     mocks.value = {}
+    baselineOutput.value = null
   }
 
   async function submit() {
@@ -56,6 +58,22 @@ export function useRunner() {
     }
   }
 
+  /**
+   * Copy the current preview `output` into `baselineOutput` and run a fresh
+   * preview so the user can compare the previous result against the new one.
+   * No-op when there's nothing to use as a baseline or when not in preview mode.
+   */
+  async function compareWithPrevious() {
+    if (mode.value !== 'preview') return
+    if (!output.value) return
+    baselineOutput.value = cloneOutput(output.value)
+    await submit()
+  }
+
+  function clearBaseline() {
+    baselineOutput.value = null
+  }
+
   async function confirmRun() {
     if (mode.value === 'run') {
       showConfirmModal.value = true
@@ -75,6 +93,9 @@ export function useRunner() {
         description: typeof r.description === 'string' ? r.description : undefined,
         executionTrace: asStringArray(r.executionTrace),
         workflowId: typeof r.workflowId === 'string' ? r.workflowId : undefined,
+        astTree: asCallNode(r.astTree),
+        dryRunLogs: asDryRunLogs(r.dryRunLogs),
+        metrics: asMetrics(r.metrics),
       }
     }
     return { result: response }
@@ -116,6 +137,79 @@ export function useRunner() {
     return v.filter((x) => typeof x === 'string') as string[]
   }
 
+  function asCallNode(v: unknown): RunnerOutput['astTree'] {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined
+    const node = v as Record<string, unknown>
+    const kind = node.kind
+    if (kind !== 'PROCESS' && kind !== 'TRANSACTION' && kind !== 'HELPER' && kind !== 'FUNCTION') {
+      return undefined
+    }
+    const children = Array.isArray(node.children)
+      ? (node.children.map((c) => asCallNode(c)).filter(Boolean) as RunnerOutput['astTree'][])
+      : []
+    const externalCalls = Array.isArray(node.externalCalls)
+      ? (node.externalCalls.filter((c) => c && typeof c === 'object') as Array<Record<string, unknown>>)
+      : []
+    return {
+      name: typeof node.name === 'string' ? node.name : '',
+      kind,
+      success: node.success === true,
+      children,
+      externalCalls,
+      input: node.input,
+      output: node.output,
+    }
+  }
+
+  function asDryRunLogs(v: unknown): RunnerOutput['dryRunLogs'] {
+    if (!Array.isArray(v)) return undefined
+    return v
+      .filter((e) => e && typeof e === 'object')
+      .map((e) => {
+        const log = e as { timestamp?: unknown; level?: unknown; logger?: unknown; message?: unknown }
+        return {
+          timestamp: typeof log.timestamp === 'string' ? log.timestamp : '',
+          level: typeof log.level === 'string' ? log.level : '',
+          logger: typeof log.logger === 'string' ? log.logger : '',
+          message: typeof log.message === 'string' ? log.message : '',
+        }
+      })
+  }
+
+  function asMetrics(v: unknown): RunnerOutput['metrics'] {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined
+    const m = v as Record<string, unknown>
+    return {
+      executionDurationMs:
+        typeof m.executionDurationMs === 'number' && Number.isFinite(m.executionDurationMs)
+          ? m.executionDurationMs
+          : null,
+      memoryUsedBytes:
+        typeof m.memoryUsedBytes === 'number' && Number.isFinite(m.memoryUsedBytes) ? m.memoryUsedBytes : null,
+      callCounts: asNumericMap(m.callCounts),
+      externalCallCounts: asNumericMap(m.externalCallCounts),
+    }
+  }
+
+  function asNumericMap(v: unknown): Record<string, number> | undefined {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined
+    const out: Record<string, number> = {}
+    for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+      if (typeof val === 'number' && Number.isFinite(val)) out[k] = val
+    }
+    return out
+  }
+
+  function cloneOutput(value: RunnerOutput): RunnerOutput {
+    // `structuredClone` is available in Node 17+ and modern browsers; the
+    // admin UI targets the same environment, so a deep snapshot is safe and
+    // guarantees the baseline isn't mutated by the next preview run.
+    if (typeof structuredClone === 'function') {
+      return structuredClone(value)
+    }
+    return JSON.parse(JSON.stringify(value)) as RunnerOutput
+  }
+
   return {
     selectedDefinition,
     mode,
@@ -123,11 +217,14 @@ export function useRunner() {
     formData,
     mocks,
     output,
+    baselineOutput,
     showConfirmModal,
     selectDefinition,
     setMode,
     submit,
     confirmRun,
     resetOutput,
+    compareWithPrevious,
+    clearBaseline,
   }
 }

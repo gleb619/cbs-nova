@@ -39,6 +39,7 @@ export { default as RunnerExternalCallsBadge } from './components/runner/Externa
 export { default as RunnerInputField } from './components/runner/InputField.vue'
 export { default as RunnerInputForm } from './components/runner/InputForm.vue'
 export { default as RunnerMetadataTab } from './components/runner/MetadataTab.vue'
+export { default as RunnerPreviewDiffView } from './components/runner/PreviewDiffView.vue'
 export { default as RunnerModeSwitcher } from './components/runner/ModeSwitcher.vue'
 export { default as RunnerOutputPanel } from './components/runner/OutputPanel.vue'
 export { default as RunnerResultTab } from './components/runner/ResultTab.vue'

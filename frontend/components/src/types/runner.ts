@@ -14,6 +14,22 @@ export interface CallNode {
   externalCalls: Array<Record<string, unknown>>
 }
 
+/**
+ * Mirrors the backend `PreviewMetricsSnapshot` record (see
+ * `backend/dsl-api/src/main/java/cbs/nova/dsl/PreviewMetricsSnapshot.java`):
+ * `executionDurationMs` (long), `memoryUsedBytes` (long),
+ * `callCounts` (Map<CallKind, Integer>), `externalCallCounts` (Map<String, Integer>).
+ *
+ * All numeric fields are nullable to tolerate missing data — the diff view must
+ * stay usable when only one side reports metrics.
+ */
+export interface PreviewMetricsSnapshot {
+  executionDurationMs?: number | null
+  memoryUsedBytes?: number | null
+  callCounts?: Partial<Record<CallKind, number>>
+  externalCallCounts?: Record<string, number>
+}
+
 export interface DefinitionMeta {
   name: string
   type: string
@@ -35,4 +51,5 @@ export interface RunnerOutput {
   workflowId?: string
   astTree?: CallNode
   dryRunLogs?: Array<{ timestamp: string; level: string; logger: string; message: string }>
+  metrics?: PreviewMetricsSnapshot
 }

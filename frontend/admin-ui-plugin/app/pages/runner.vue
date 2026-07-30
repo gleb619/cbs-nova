@@ -13,12 +13,15 @@ const {
   formData,
   mocks,
   output,
+  baselineOutput,
   showConfirmModal,
   selectDefinition,
   setMode,
   submit,
   confirmRun,
   resetOutput,
+  compareWithPrevious,
+  clearBaseline,
 } = useRunner()
 
 const definitions = ref<DefinitionMeta[]>([])
@@ -97,6 +100,14 @@ function onCancelRun() {
   showConfirmModal.value = false
 }
 
+const canCompareWithPrevious = computed(
+  () => mode.value === 'preview' && output.value !== null && status.value !== 'loading' && status.value !== 'running',
+)
+
+async function onCompareWithPrevious() {
+  await compareWithPrevious()
+}
+
 const selectedSchema = computed<Record<string, unknown> | undefined>(() => {
   const def = definitions.value.find((d) => d.name === selectedDefinition.value)
   return def?.inputSchema
@@ -139,6 +150,16 @@ onMounted(() => {
 
       <div class="ml-auto flex gap-2">
         <button
+          v-if="mode === 'preview'"
+          type="button"
+          class="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+          :disabled="!canCompareWithPrevious"
+          data-testid="compare-with-previous-button"
+          @click="onCompareWithPrevious"
+        >
+          Compare with previous
+        </button>
+        <button
           type="button"
           class="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
           :disabled="!selectedDefinition || status === 'loading' || status === 'running'"
@@ -169,7 +190,13 @@ onMounted(() => {
 
       <section class="bg-white border border-gray-200 rounded-xl p-5">
         <h2 class="text-sm font-semibold text-gray-700 mb-4">Output</h2>
-        <RunnerOutputPanel :output="output" :mode="mode" :status="status" />
+        <RunnerOutputPanel
+          :output="output"
+          :mode="mode"
+          :status="status"
+          :baseline-output="baselineOutput"
+          @clear-baseline="clearBaseline"
+        />
       </section>
 
       <section
