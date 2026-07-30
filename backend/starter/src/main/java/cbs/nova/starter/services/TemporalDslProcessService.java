@@ -8,9 +8,13 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import io.opentelemetry.api.baggage.Baggage;
+import io.opentelemetry.api.trace.Span;
+import io.sentry.Sentry;
 import lombok.AllArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.MDC;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
@@ -59,41 +63,74 @@ public class TemporalDslProcessService {
           @Nullable Object input,
           @NonNull Map<String, Object> metadata) {
     Object body = input != null ? input : Map.of();
-    // TODO: we need to save a runId in mdc, sentry, opentelementry to tags/meta/headers(for better
-    // accociation)
     String runId = contextFactory.generateRunId();
-    // TODO: we need to use here a some codegenerated class, to handle known models type via avaje,
-    // fallback to jackson
-    String inputJson = serialize(body);
-    // TODO: we need another service to control time(e.g. add to to dsl config, make replacable)
-    Instant startedAt = Instant.now();
+    var runIdScope = propagateRunId(runId);
+    try {
+      String inputJson = serialize(body);
+      Instant startedAt = Instant.now();
 
-    DslRun running = DslRun.builder()
-            .runId(runId)
-            .processName(processName)
-            // TODO: along with running process, we need to start a separater thread, that will make
-            // a 'healthchecks' for running process, to check if it alive, via call of some '@Query'
-            // method or something like that. And add a new status for staled processes
-            .status(DslRunStatus.RUNNING.name())
-            .input(inputJson)
-            // TODO: instead null, make it empty object
-            .output(null)
-            .error(null)
-            .startedAt(startedAt)
-            // TODO: same here
-            .finishedAt(null)
-            .executionMode(ExecutionMode.RUN.name())
-            .build();
+      DslRun running = DslRun.builder()
+              .runId(runId)
+              .processName(processName)
+              // TODO: along with running process, we need to start a separater thread, that will
+              // make
+              // a 'healthchecks' for running process, to check if it alive, via call of some
+              // '@Query'
+              // method or something like that. And add a new status for staled processes
+              .status(DslRunStatus.RUNNING.name())
+              .input(inputJson)
+              // TODO: instead null, make it empty object
+              .output(null)
+              .error(null)
+              .startedAt(startedAt)
+              // TODO: same here
+              .finishedAt(null)
+              .executionMode(ExecutionMode.RUN.name())
+              .build();
 
-    // TODO: db operation must be async
-    runRepository.save(running);
+      // TODO: db operation must be async
+      runRepository.save(running);
 
-    // TODO: we cant use a commoon pool here, we need our own, with speing support(e.g. for
-    // security, logs, telemetry, etc, e.g.). We also need to use a teporal async support
-    CompletableFuture<Result<?>> result = CompletableFuture.supplyAsync(
-            () -> executeAndRecord(processName, body, metadata, runId, startedAt),
-            ForkJoinPool.commonPool());
-    return new ProcessRun(runId, result);
+      // TODO: we cant use a commoon pool here, we need our own, with speing support(e.g. for
+      // security, logs, telemetry, etc, e.g.). We also need to use a teporal async support
+      CompletableFuture<Result<?>> result = CompletableFuture.supplyAsync(
+              () -> executeAndRecord(processName, body, metadata, runId, startedAt),
+              ForkJoinPool.commonPool());
+      return new ProcessRun(runId, result);
+    } finally {
+      try {
+        runIdScope.close();
+      } catch (Exception ignored) {
+      }
+    }
+  }
+
+  private AutoCloseable propagateRunId(@NonNull String runId) {
+    MDC.put("runId", runId);
+    try {
+      Sentry.setTag("runId", runId);
+    } catch (Exception ignored) {
+      // Sentry is optional; unconfigured SDK calls are no-ops, but guard defensively.
+    }
+
+    AutoCloseable[] otelScope = new AutoCloseable[]{() -> {
+    }};
+    try {
+      otelScope[0] = Baggage.current().toBuilder().put("runId", runId).build().makeCurrent();
+      var span = Span.current();
+      if (span != null) {
+        span.setAttribute("runId", runId);
+      }
+    } catch (Exception ignored) {
+      // OTel api is a hard dep, but guard against any runtime issues.
+    }
+    return () -> {
+      MDC.remove("runId");
+      try {
+        otelScope[0].close();
+      } catch (Exception ignored) {
+      }
+    };
   }
 
   private @NonNull Result<?> executeAndRecord(

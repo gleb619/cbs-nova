@@ -4,9 +4,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.Executable;
+import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.starter.controllers.DslIntrospectionResource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +19,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import java.util.List;
 
 class DslIntrospectionResourceTest {
 
@@ -98,5 +105,114 @@ class DslIntrospectionResourceTest {
     mockMvc
             .perform(get("/api/dsl/transactions/Unknown"))
             .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void helpersSearchReturnsMatchingEntitiesWithoutFilters() throws Exception {
+    registerSampleEntities();
+
+    mockMvc.perform(get("/api/dsl/helpers/search"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$").isArray())
+            .andExpect(jsonPath("$[?(@.name=='LoanDisbursement' && @.type=='process')]").exists())
+            .andExpect(
+                    jsonPath("$[?(@.name=='SampleTransaction' && @.type=='transaction')]").exists())
+            .andExpect(jsonPath("$[?(@.name=='sampleHelper' && @.type=='helper')]").exists())
+            .andExpect(jsonPath("$[?(@.name=='sampleFunction' && @.type=='function')]").exists());
+  }
+
+  @Test
+  void helpersSearchFiltersByName() throws Exception {
+    registerSampleEntities();
+
+    mockMvc.perform(get("/api/dsl/helpers/search").param("name", "sample"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$").isArray())
+            .andExpect(jsonPath("$[?(@.name=='SampleTransaction')]").exists())
+            .andExpect(jsonPath("$[?(@.name=='sampleHelper')]").exists())
+            .andExpect(jsonPath("$[?(@.name=='sampleFunction')]").exists())
+            .andExpect(jsonPath("$[?(@.name=='LoanDisbursement')]").doesNotExist());
+  }
+
+  @Test
+  void helpersSearchFiltersByType() throws Exception {
+    registerSampleEntities();
+
+    mockMvc.perform(get("/api/dsl/helpers/search").param("type", "helper"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$").isArray())
+            .andExpect(jsonPath("$[?(@.type=='helper')]").exists())
+            .andExpect(jsonPath("$[?(@.type!='helper')]").doesNotExist());
+  }
+
+  @Test
+  void helpersSearchFiltersByDescription() throws Exception {
+    registerSampleEntities();
+
+    mockMvc.perform(get("/api/dsl/helpers/search").param("description", "greeting"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$").isArray())
+            .andExpect(jsonPath("$[?(@.name=='sampleHelper')]").exists())
+            .andExpect(jsonPath("$[?(@.name=='sampleFunction')]").exists())
+            .andExpect(jsonPath("$[?(@.name=='LoanDisbursement')]").doesNotExist());
+  }
+
+  @Test
+  void helpersSearchCombinesFilters() throws Exception {
+    registerSampleEntities();
+
+    mockMvc.perform(get("/api/dsl/helpers/search")
+            .param("name", "sample")
+            .param("type", "function"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$").isArray())
+            .andExpect(jsonPath("$[?(@.name=='sampleFunction')]").exists())
+            .andExpect(jsonPath("$[?(@.name=='sampleHelper')]").doesNotExist());
+  }
+
+  private void registerSampleEntities() {
+    GlobalManager.globalManager().registerTransaction(
+            Dsl.transaction("SampleTransaction")
+                    .execute(ctx -> Result.success("ok")).build());
+    GlobalManager.globalManager().registerHelper("sampleHelper", new SampleHelper());
+    GlobalManager.globalManager().registerFunction(new FunctionDslObject(
+            "sampleFunction",
+            List.of(),
+            ctx -> Result.success("ok"),
+            null,
+            () -> new cbs.nova.dsl.DslDescriptor(
+                    "sampleFunction",
+                    cbs.nova.dsl.DslObject.DslType.FUNCTION,
+                    "A greeting function",
+                    String.class,
+                    String.class,
+                    false,
+                    false,
+                    null,
+                    List.of(),
+                    null,
+                    null,
+                    null,
+                    null)));
+  }
+
+  private static class SampleHelper implements Executable<String, String> {
+
+    @Override
+    public Result<String> execute(Context<String> ctx) {
+      return Result.success(ctx.body());
+    }
+
+    @Override
+    public ExecutableDescriptor describe() {
+      return new ExecutableDescriptor(
+              "sampleHelper",
+              "A greeting helper",
+              String.class,
+              String.class,
+              false,
+              null,
+              List.of());
+    }
   }
 }

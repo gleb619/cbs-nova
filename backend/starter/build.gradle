@@ -38,6 +38,8 @@ dependencies {
   api libs.temporal.sdk
   api libs.sentry.spring.boot.jakarta
 
+  implementation 'io.opentelemetry:opentelemetry-api:1.48.0'
+
   annotationProcessor project(':misc-codegen')
 
   testAnnotationProcessor project(':dsl-codegen')

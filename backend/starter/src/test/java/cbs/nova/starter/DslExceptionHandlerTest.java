@@ -7,7 +7,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import cbs.nova.dsl.DslErrorCode;
 import cbs.nova.dsl.DslException;
 import cbs.nova.starter.controllers.DslExceptionHandler;
+import io.sentry.Sentry;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -32,6 +35,23 @@ class DslExceptionHandlerTest {
             .andExpect(jsonPath("$.entityName").doesNotExist())
             .andExpect(jsonPath("$.runId").doesNotExist())
             .andExpect(jsonPath("$.exceptionId").doesNotExist());
+  }
+
+  @Test
+  void generalExceptionTagsRunIdFromRequestAttributeForSentry() throws Exception {
+    try (MockedStatic<Sentry> sentry = Mockito.mockStatic(Sentry.class)) {
+      MockMvc mvc = MockMvcBuilders
+              .standaloneSetup(new ThrowingController())
+              .setControllerAdvice(new DslExceptionHandler())
+              .setMessageConverters(new JacksonJsonHttpMessageConverter())
+              .build();
+
+      mvc.perform(get("/throw/general").requestAttr("runId", "run-xyz"))
+              .andExpect(status().isInternalServerError());
+
+      sentry.verify(() -> Sentry.setTag("runId", "run-xyz"));
+      sentry.verify(() -> Sentry.captureException(Mockito.any(RuntimeException.class)));
+    }
   }
 
   @Test
@@ -67,6 +87,23 @@ class DslExceptionHandlerTest {
             .andExpect(jsonPath("$.message").value("dsl failed"))
             .andExpect(jsonPath("$.runId").value("run-abc"))
             .andExpect(jsonPath("$.exceptionId").isString());
+  }
+
+  @Test
+  void dslExceptionTagsRunIdFromExceptionForSentry() throws Exception {
+    try (MockedStatic<Sentry> sentry = Mockito.mockStatic(Sentry.class)) {
+      MockMvc mvc = MockMvcBuilders
+              .standaloneSetup(new ThrowingController())
+              .setControllerAdvice(new DslExceptionHandler())
+              .setMessageConverters(new JacksonJsonHttpMessageConverter())
+              .build();
+
+      mvc.perform(get("/throw/dsl"))
+              .andExpect(status().isUnprocessableEntity());
+
+      sentry.verify(() -> Sentry.setTag("runId", "run-abc"));
+      sentry.verify(() -> Sentry.captureException(Mockito.any(DslException.class)));
+    }
   }
 
   @RestController

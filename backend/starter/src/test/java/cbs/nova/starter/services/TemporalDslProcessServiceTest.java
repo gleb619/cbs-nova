@@ -8,15 +8,26 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.SimpleContext;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
+import io.opentelemetry.api.baggage.Baggage;
+import io.opentelemetry.api.baggage.BaggageBuilder;
+import io.sentry.Sentry;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+import org.slf4j.MDC;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.Map;
 import java.util.UUID;
 
 class TemporalDslProcessServiceTest {
+
+  @AfterEach
+  void tearDown() {
+    MDC.clear();
+  }
 
   @Test
   void runProcessSingleArgDefaultsMetadataToEmptyMap() {
@@ -114,6 +125,36 @@ class TemporalDslProcessServiceTest {
             Mockito.eq(Map.of("meta", "data")),
             Mockito.eq(ExecutionMode.RUN),
             Mockito.eq("run-id-4"));
+  }
+
+  @Test
+  void runProcessPropagatesRunIdToMdcAndSentry() {
+    ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
+    Mockito.when(contextFactory.generateRunId()).thenReturn("run-id-5");
+    SimpleContext<Object> stubCtx = new SimpleContext<>(
+            "payload", Map.of(), ExecutionMode.RUN, "run-id-5");
+    Mockito.doReturn(stubCtx).when(contextFactory).of(
+            Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+
+    try (MockedStatic<Sentry> sentry = Mockito.mockStatic(Sentry.class);
+            MockedStatic<Baggage> baggage = Mockito.mockStatic(Baggage.class)) {
+      Baggage current = Mockito.mock(Baggage.class);
+      BaggageBuilder builder = Mockito.mock(BaggageBuilder.class);
+      Baggage built = Mockito.mock(Baggage.class);
+      Mockito.when(Baggage.current()).thenReturn(current);
+      Mockito.when(current.toBuilder()).thenReturn(builder);
+      Mockito.when(builder.put("runId", "run-id-5")).thenReturn(builder);
+      Mockito.when(builder.build()).thenReturn(built);
+      Mockito.when(built.makeCurrent()).thenReturn(() -> {
+      });
+
+      TemporalDslProcessService service = new TemporalDslProcessService(
+              contextFactory, new InMemoryDslRunRepository(), new ObjectMapper());
+      service.runProcess(unique(), "payload", Map.of());
+
+      assertThat(MDC.get("runId")).isNull();
+      sentry.verify(() -> Sentry.setTag("runId", "run-id-5"));
+    }
   }
 
   private static String unique() {

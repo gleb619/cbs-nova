@@ -14,8 +14,12 @@ import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.stream.Stream;
 
 class DslReloadResourceTest {
 
@@ -70,5 +74,54 @@ class DslReloadResourceTest {
             .withUserConfiguration(DslReloadRouterConfiguration.class, DslReloadResource.class)
             .withPropertyValues("dsl.reload.enabled=false")
             .run(ctx -> assertThat(ctx).doesNotHaveBean(RouterFunction.class));
+  }
+
+  @Test
+  void reloadLoadsDefinitionsViaSpiAndNewClassLoader() throws Exception {
+    Path sourceDir = createTemporaryDslSourceDir();
+    try {
+      setSourceDir(sourceDir.toString());
+      ServerResponse response = resource.reload(reloadRequest());
+      assertThat(response.statusCode().value()).isEqualTo(204);
+      assertThat(GlobalManager.globalManager().hasProcess("ReloadTestProcess")).isTrue();
+    } finally {
+      deleteRecursively(sourceDir);
+    }
+  }
+
+  private Path createTemporaryDslSourceDir() throws IOException {
+    Path sourceDir = Files.createTempDirectory("dsl-reload-test-");
+    Path services = sourceDir.resolve("META-INF/services");
+    Files.createDirectories(services);
+    Files.writeString(services.resolve("cbs.nova.dsl.DslDefinitionProvider"),
+            "ReloadTestProvider\n");
+    Files.writeString(sourceDir.resolve("ReloadTestProvider.java"), """
+            import cbs.nova.dsl.Dsl;
+            import cbs.nova.dsl.DslDefinitionProvider;
+            import cbs.nova.dsl.DslObject;
+            import cbs.nova.dsl.Result;
+            import java.util.List;
+
+            public class ReloadTestProvider implements DslDefinitionProvider {
+              @Override
+              public List<DslObject> definitions() {
+                return List.of(
+                    Dsl.process("ReloadTestProcess").execute(ctx -> Result.success("ok")).build());
+              }
+            }
+            """);
+    return sourceDir;
+  }
+
+  private void deleteRecursively(Path path) throws IOException {
+    try (Stream<Path> stream = Files.walk(path)) {
+      stream.sorted((a, b) -> -a.compareTo(b)).forEach(p -> {
+        try {
+          Files.deleteIfExists(p);
+        } catch (IOException e) {
+          // ignore
+        }
+      });
+    }
   }
 }
