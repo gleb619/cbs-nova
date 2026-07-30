@@ -18,7 +18,8 @@ public record ExplainReport(
         @Nullable ExecutableDescriptor executableDescriptor,
         @Nullable DslDescriptor dslDescriptor,
         @Nullable CallNode astTree,
-        @NonNull List<Map<String, Object>> dryRunLogs) {
+        @NonNull List<Map<String, Object>> dryRunLogs,
+        @Nullable PreviewMetricsSnapshot metrics) {
 
   public ExplainReport {
     dryRunLogs = dryRunLogs == null ? List.of() : List.copyOf(dryRunLogs);

@@ -51,6 +51,7 @@ class DslRootAutoConfigurationTest {
             FeignCallAutoConfiguration.class,
             PreviewAutoConfiguration.class,
             MessagingCallCaptureAutoConfiguration.class,
+            PreviewMetricsAutoConfiguration.class,
             DslReloadRouterConfiguration.class);
   }
 }

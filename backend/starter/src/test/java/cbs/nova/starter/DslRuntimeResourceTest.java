@@ -54,7 +54,8 @@ class DslRuntimeResourceTest {
             List.of(),
             Map.of(),
             null,
-            List.of());
+            List.of(),
+            null);
     doReturn(Result.success(report)).when(dslRuntime).preview(eq("Ping"), any());
 
     mockMvc
@@ -138,7 +139,7 @@ class DslRuntimeResourceTest {
   void explainReturns200WithReport() throws Exception {
     ExplainReport report = new ExplainReport(
             "P", "desc", "graph TD;", "<plantuml/>", "<bpmn/>",
-            List.of(), List.of(), Map.of(), null, null, null, List.of());
+            List.of(), List.of(), Map.of(), null, null, null, List.of(), null);
     doReturn(report).when(dslRuntime).explain(eq("P"), any());
 
     mockMvc
@@ -162,7 +163,8 @@ class DslRuntimeResourceTest {
             List.of(),
             Map.of(),
             null,
-            List.of());
+            List.of(),
+            null);
     doReturn(Result.success(report)).when(dslRuntime).preview(eq("Ping"), any());
 
     mockMvc
@@ -188,7 +190,8 @@ class DslRuntimeResourceTest {
             List.of(),
             Map.of(),
             null,
-            List.of());
+            List.of(),
+            null);
     doReturn(Result.success(report)).when(dslRuntime).preview(eq("Ping"), any());
 
     mockMvc

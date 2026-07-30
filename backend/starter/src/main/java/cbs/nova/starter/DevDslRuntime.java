@@ -1,5 +1,6 @@
 package cbs.nova.starter;
 
+import cbs.nova.dsl.CallNode;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslRuntime;
@@ -8,6 +9,7 @@ import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.ExecutionTreeCollector;
 import cbs.nova.dsl.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.PreviewMetricsSnapshot;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.TransactionRouting;
@@ -18,6 +20,7 @@ import cbs.nova.dsl.generator.PlantUmlDiagramGenerator;
 import cbs.nova.dsl.logging.DryRunLoggingContext;
 import cbs.nova.starter.logging.DryRunLogEvent;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
+import cbs.nova.starter.metrics.PreviewMetricsCollector;
 import ch.qos.logback.classic.Logger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,7 +62,10 @@ public class DevDslRuntime implements DslRuntime {
     traceCollector.start(runId);
     treeCollector.startRun(runId);
     Result<?>[] resultHolder = new Result[1];
+    PreviewMetricsCollector metricsCollector = null;
+    PreviewMetricsSnapshot metricsSnapshot = null;
     try {
+      metricsCollector = PreviewMetricsCollector.start();
       dryRunLoggingContext.runWithRunId(runId, () -> {
         log.info("started: {}", name);
         log.info("mode: PREVIEW");
@@ -75,6 +81,16 @@ public class DevDslRuntime implements DslRuntime {
         }
       });
     } finally {
+      if (metricsCollector != null) {
+        var metricsTree = treeCollector.tree(runId).orElse(null);
+        if (metricsTree != null) {
+          countCallKinds(metricsTree, metricsCollector);
+        }
+        for (var call : calls) {
+          metricsCollector.recordExternalCall(call.type());
+        }
+        metricsSnapshot = metricsCollector.stop();
+      }
       // TODO: due refacto to async way of execution, we need another way of finish signal
       treeCollector.finishRun(runId);
       traceCollector.stop(runId);
@@ -98,7 +114,8 @@ public class DevDslRuntime implements DslRuntime {
               toCallJson(calls),
               toCallCounts(calls),
               treeCollector.tree(runId).orElse(null),
-              toDryRunLogMaps(dryRunLogs));
+              toDryRunLogMaps(dryRunLogs),
+              metricsSnapshot);
       return Result.success(report);
     } else {
       return Result.failure(result.cause());
@@ -126,13 +143,26 @@ public class DevDslRuntime implements DslRuntime {
     traceCollector.start(runId);
     treeCollector.startRun(runId);
     Result<?>[] resultHolder = new Result[1];
+    PreviewMetricsCollector metricsCollector = null;
+    PreviewMetricsSnapshot metricsSnapshot = null;
     try {
+      metricsCollector = PreviewMetricsCollector.start();
       dryRunLoggingContext.runWithRunId(runId, () -> {
         resultHolder[0] = dispatch(name,
                 contextFactory.of(ctx.body(), ctx.metadata(), ExecutionMode.EXPLAIN, runId,
                         TransactionRouting.LOCAL, treeCollector));
       });
     } finally {
+      if (metricsCollector != null) {
+        var metricsTree = treeCollector.tree(runId).orElse(null);
+        if (metricsTree != null) {
+          countCallKinds(metricsTree, metricsCollector);
+        }
+        for (var call : calls) {
+          metricsCollector.recordExternalCall(call.type());
+        }
+        metricsSnapshot = metricsCollector.stop();
+      }
       treeCollector.finishRun(runId);
       traceCollector.stop(runId);
       externalCallTracker.stopTracking();
@@ -205,7 +235,8 @@ public class DevDslRuntime implements DslRuntime {
             gm2.describeHelper(name).orElse(null),
             dslDesc,
             treeCollector.tree(runId).orElse(null),
-            toDryRunLogMaps(dryRunLogs));
+            toDryRunLogMaps(dryRunLogs),
+            metricsSnapshot);
   }
 
   // TODO: no, it must be a separate class for convertation
@@ -277,6 +308,13 @@ public class DevDslRuntime implements DslRuntime {
       return gm.runHelper(name, ctx);
     }
     return Result.failure(new IllegalArgumentException("No DSL entity registered: " + name));
+  }
+
+  private void countCallKinds(CallNode node, PreviewMetricsCollector collector) {
+    collector.recordCall(node.kind());
+    for (CallNode child : node.children()) {
+      countCallKinds(child, collector);
+    }
   }
 
   private @NonNull String runIdFor(@NonNull Context<?> ctx) {
