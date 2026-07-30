@@ -1,92 +1,106 @@
 package cbs.nova.starter.services;
 
+import cbs.nova.dsl.DslExecutionException;
 import cbs.nova.dsl.DslTemporalProcess;
 import cbs.nova.dsl.DslTemporalProcessRequest;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.MapInput;
 import cbs.nova.dsl.converter.MapInputConverter;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
-import lombok.RequiredArgsConstructor;
+import lombok.Builder;
 import org.jspecify.annotations.NonNull;
-import org.springframework.stereotype.Service;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Executes generated DSL workflows by their string code, hiding Temporal worker and stub wiring.
- *
- * <p>
- * This service uses the {@link DslTemporalProcess} contract to start workflows, so no reflection is
- * required to locate the workflow method.
- */
-// TODO: instead of adding a `@Service` annotation, we need to create a configs with `@Bean` for
-// better control
-@Service
-@RequiredArgsConstructor
 public class TemporalDslService {
 
   private final WorkflowClient workflowClient;
+  private final Set<String> registeredQueues = ConcurrentHashMap.newKeySet();
+  private volatile WorkerFactory workerFactory;
+  private volatile boolean started;
 
-  /**
-   * Executes a generated DSL process with an already typed input.
-   */
-  public <O> O execute(
-          @NonNull String code, @NonNull Object input, @NonNull Class<O> outputType) {
-    return execute(code, input, outputType, null);
+  public TemporalDslService(WorkflowClient workflowClient) {
+    this.workflowClient = workflowClient;
   }
 
-  /**
-   * Executes a generated DSL process, optionally overriding default {@link WorkflowOptions}.
-   */
-  // TODO: instead make a paramter object(record) with lomboks builder
-  public <O> O execute(
-          @NonNull String code,
-          @NonNull Object input,
-          @NonNull Class<O> outputType,
-          WorkflowOptions options) {
-    GeneratedClassDescriptor descriptor = resolveProcess(code);
-    WorkflowOptions effectiveOptions = options != null
-            ? options
-            : defaultOptions(descriptor);
+  private WorkerFactory workerFactory() {
+    if (workerFactory == null) {
+      synchronized (this) {
+        if (workerFactory == null) {
+          workerFactory = WorkerFactory.newInstance(workflowClient);
+        }
+      }
+    }
+    return workerFactory;
+  }
 
-    // TODO: we need to create workerFactory once, to save resoures
-    WorkerFactory workerFactory = WorkerFactory.newInstance(workflowClient);
-    try {
-      Worker worker = workerFactory.newWorker(descriptor.taskQueue());
-      worker.registerWorkflowImplementationTypes(descriptor.temporalImplementation());
-      workerFactory.start();
-
-      Object preparedInput = prepareInput(input, descriptor.inputType());
-      // TODO: instead take a runId from a parameter object
-      String runId = effectiveOptions.getWorkflowId();
-      var stub = workflowClient.newWorkflowStub(descriptor.temporalInterface(), effectiveOptions);
-
-      // TODO: add if with instance of, else throw ex
-      DslTemporalProcess process = (DslTemporalProcess) stub;
-
-      // TODO: by default make `execute` work async via temporal/spring thread pool
-      Object result = process.execute(new DslTemporalProcessRequest<>(runId, preparedInput));
-
-      // TODO: add if, on else use codegenerated avaje, fallback to jackson to convert if needed
-      return outputType.cast(result);
-    } catch (RuntimeException e) {
-      Throwable cause = e.getCause() != null ? e.getCause() : e;
-      throw new RuntimeException(
-              "DSL workflow " + code + " failed: " + cause.getMessage(), cause);
-    } finally {
-      // TODO: shutdown only on app stop, e.g. optimize for a long running app
-      workerFactory.shutdown();
+  private void ensureStarted() {
+    if (!started) {
+      synchronized (this) {
+        if (!started) {
+          workerFactory().start();
+          started = true;
+        }
+      }
     }
   }
 
-  /**
-   * Convenience overload for parameter-map inputs. The map is converted to the process input type.
-   */
+  @Builder
+  public record DslExecutionRequest(
+          @NonNull String code,
+          @NonNull Object input,
+          @NonNull Class<?> outputType,
+          @Nullable WorkflowOptions options,
+          @Nullable String runId) {
+  }
+
+  public <O> O execute(
+          @NonNull String code, @NonNull Object input, @NonNull Class<O> outputType) {
+    return execute(DslExecutionRequest.builder()
+            .code(code).input(input).outputType(outputType).build());
+  }
+
+  public <O> O execute(@NonNull DslExecutionRequest request) {
+    GeneratedClassDescriptor descriptor = resolveProcess(request.code());
+    WorkflowOptions effectiveOptions = request.options() != null
+            ? request.options()
+            : defaultOptions(descriptor);
+
+    ensureWorker(descriptor);
+
+    Object preparedInput = prepareInput(request.input(), descriptor.inputType());
+    String runId = request.runId() != null ? request.runId() : effectiveOptions.getWorkflowId();
+
+    var stub = workflowClient.newWorkflowStub(descriptor.temporalInterface(), effectiveOptions);
+
+    if (!(stub instanceof DslTemporalProcess)) {
+      throw new DslExecutionException(runId,
+              "Stub is not a DslTemporalProcess: " + stub.getClass().getName(), null);
+    }
+    @SuppressWarnings("unchecked")
+    DslTemporalProcess<Object> process = (DslTemporalProcess<Object>) stub;
+
+    try {
+      Object result = process.execute(new DslTemporalProcessRequest<>(runId, preparedInput));
+      @SuppressWarnings("unchecked")
+      O cast = (O) request.outputType().cast(result);
+      return cast;
+    } catch (RuntimeException e) {
+      Throwable cause = e.getCause() != null ? e.getCause() : e;
+      throw new DslExecutionException(runId,
+              "DSL workflow " + request.code() + " failed: " + cause.getMessage(), cause);
+    }
+  }
+
   public <O> O execute(
           @NonNull String code,
           @NonNull Map<String, Object> parameters,
@@ -94,22 +108,40 @@ public class TemporalDslService {
     return execute(code, (Object) parameters, outputType);
   }
 
+  public void close() {
+    WorkerFactory f = workerFactory;
+    if (f != null) {
+      f.shutdown();
+    }
+  }
+
+  private void ensureWorker(GeneratedClassDescriptor descriptor) {
+    if (registeredQueues.add(descriptor.taskQueue())) {
+      ensureStarted();
+      Worker worker = workerFactory().newWorker(descriptor.taskQueue());
+      worker.registerWorkflowImplementationTypes(descriptor.temporalImplementation());
+    }
+  }
+
   private GeneratedClassDescriptor resolveProcess(String code) {
     return GlobalManager.globalManager().findGeneratedProcess(code)
             .orElseThrow(() -> new IllegalArgumentException("No generated DSL process: " + code));
   }
 
-  // TODO: instead add check for a MapInput
   private Object prepareInput(Object input, Class<?> inputType) {
-    if (inputType != null && input instanceof Map<?, ?> map) {
-      @SuppressWarnings("unchecked")
-      Map<String, Object> parameters = (Map<String, Object>) map;
-      return MapInputConverter.convert(parameters, inputType);
+    if (inputType != null) {
+      if (input instanceof MapInput mapInput) {
+        return MapInputConverter.convert(mapInput.values(), inputType);
+      }
+      if (input instanceof Map<?, ?> map) {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> parameters = (Map<String, Object>) map;
+        return MapInputConverter.convert(parameters, inputType);
+      }
     }
     return input;
   }
 
-  // TODO: no, reuse a parameter object, or use some context factory to generate a new runId
   private WorkflowOptions defaultOptions(GeneratedClassDescriptor descriptor) {
     return WorkflowOptions.newBuilder()
             .setWorkflowId(descriptor.name() + "-" + UUID.randomUUID())

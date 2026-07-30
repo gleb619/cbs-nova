@@ -47,7 +47,8 @@ class TemporalDslProcessLauncherTest {
   @Test
   void canRunReturnsTrueOutsideWorkflowThread() {
     TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(
-            mock(WorkflowClient.class), new ObjectMapper());
+            mock(WorkflowClient.class), new ObjectMapper(), Duration.ofSeconds(30),
+            Duration.ofSeconds(5));
     SimpleContext<String> ctx = new SimpleContext<>(
             "body", Map.of(), ExecutionMode.RUN, "rid");
 
@@ -57,7 +58,8 @@ class TemporalDslProcessLauncherTest {
   @Test
   void canRunReturnsFalseForNonRunMode() {
     TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(
-            mock(WorkflowClient.class), new ObjectMapper());
+            mock(WorkflowClient.class), new ObjectMapper(), Duration.ofSeconds(30),
+            Duration.ofSeconds(5));
 
     assertThat(launcher.canRun(new SimpleContext<>(
             "body", Map.of(), ExecutionMode.PREVIEW, "rid"))).isFalse();
@@ -80,7 +82,7 @@ class TemporalDslProcessLauncherTest {
             .thenReturn(impl);
 
     TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(client,
-            new ObjectMapper());
+            new ObjectMapper(), Duration.ofSeconds(30), Duration.ofSeconds(5));
     launcher.launch(name, "task-queue-1", null, null, ctx);
 
     ArgumentCaptor<WorkflowOptions> captor = ArgumentCaptor.forClass(WorkflowOptions.class);
@@ -109,7 +111,7 @@ class TemporalDslProcessLauncherTest {
             .thenReturn(impl);
 
     TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(client,
-            new ObjectMapper());
+            new ObjectMapper(), Duration.ofSeconds(30), Duration.ofSeconds(5));
     Result<?> result = launcher.launch(name, "tq", null, null, ctx);
 
     assertThat(result.isSuccess()).isTrue();
@@ -131,7 +133,7 @@ class TemporalDslProcessLauncherTest {
             .thenReturn(impl);
 
     TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(client,
-            new ObjectMapper());
+            new ObjectMapper(), Duration.ofSeconds(30), Duration.ofSeconds(5));
     Result<?> result = launcher.launch(name, "tq", null, null, ctx);
 
     assertThat(result.isSuccess()).isFalse();
@@ -159,7 +161,7 @@ class TemporalDslProcessLauncherTest {
             .thenReturn(impl);
 
     TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(client,
-            new ObjectMapper());
+            new ObjectMapper(), Duration.ofSeconds(30), Duration.ofSeconds(5));
     Result<?> result = launcher.launch(name, "tq", null, null, ctx);
 
     assertThat(result.isSuccess()).isFalse();
@@ -184,7 +186,7 @@ class TemporalDslProcessLauncherTest {
             .thenReturn(impl);
 
     TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(client,
-            new ObjectMapper());
+            new ObjectMapper(), Duration.ofSeconds(30), Duration.ofSeconds(5));
     Result<?> result = launcher.launch(name, "tq", null, ConvertibleRecord.class, ctx);
 
     assertThat(result.isSuccess()).isTrue();
@@ -198,7 +200,7 @@ class TemporalDslProcessLauncherTest {
   void launchPropagatesIllegalArgumentExceptionForUnknownProcessName() {
     WorkflowClient client = mock(WorkflowClient.class);
     TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(client,
-            new ObjectMapper());
+            new ObjectMapper(), Duration.ofSeconds(30), Duration.ofSeconds(5));
     SimpleContext<String> ctx = new SimpleContext<>(
             "payload", Map.of(), ExecutionMode.RUN, "rid-launch-6");
     String missing = unique("missing");

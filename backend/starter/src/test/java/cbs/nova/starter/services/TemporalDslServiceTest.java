@@ -9,6 +9,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import cbs.nova.dsl.DslExecutionException;
 import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.DslTemporalProcess;
 import cbs.nova.dsl.DslTemporalProcessRequest;
@@ -67,6 +68,7 @@ class TemporalDslServiceTest {
       assertThat(result).contains(name);
       assertThat(result).endsWith(":payload");
       verify(factory).start();
+      service.close();
       verify(factory).shutdown();
     }
   }
@@ -108,10 +110,11 @@ class TemporalDslServiceTest {
 
       TemporalDslService service = new TemporalDslService(client);
       assertThatThrownBy(() -> service.execute(name, "any", String.class))
-              .isInstanceOf(RuntimeException.class)
+              .isInstanceOf(DslExecutionException.class)
               .hasMessageContaining("DSL workflow " + name + " failed: inner-detail")
               .hasCauseInstanceOf(IllegalStateException.class);
 
+      service.close();
       verify(factory).shutdown();
     }
   }
@@ -140,9 +143,12 @@ class TemporalDslServiceTest {
 
       TemporalDslService service = new TemporalDslService(client);
       assertThatThrownBy(() -> service.execute(name, "any", String.class))
-              .isInstanceOf(RuntimeException.class)
+              .isInstanceOf(DslExecutionException.class)
               .hasMessageContaining("DSL workflow " + name + " failed: original")
               .hasCauseInstanceOf(IllegalArgumentException.class);
+
+      service.close();
+      verify(factory).shutdown();
     }
   }
 

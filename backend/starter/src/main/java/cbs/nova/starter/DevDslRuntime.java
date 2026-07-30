@@ -184,7 +184,7 @@ public class DevDslRuntime implements DslRuntime {
     List<ExternalCallTracker.CallDetail> calls = new ArrayList<>();
     externalCallTracker.startTracking(calls);
     try {
-      return dispatch(name, ctx, ExecutionMode.RUN);
+      return dispatch(name, ctx, ExecutionMode.RUN, null);
     } finally {
       externalCallTracker.stopTracking();
     }
@@ -348,26 +348,21 @@ public class DevDslRuntime implements DslRuntime {
     return List.copyOf(maps);
   }
 
-  // TODO: add optional field, for direct run, like enum with 3 values(process, transaction, helper)
-  private Result<?> dispatch(String name, Context<?> ctx, ExecutionMode mode) {
-    String runId = runIdFor(ctx);
-    var modeCtx = contextFactory.of(ctx.body(), ctx.metadata(), mode, runId);
-    GlobalManager gm = GlobalManager.globalManager();
-    if (gm.hasProcess(name)) {
-      return gm.runProcess(name, modeCtx);
-    }
-    if (gm.hasTransaction(name)) {
-      return gm.runTransaction(name, modeCtx);
-    }
-    if (gm.hasHelper(name)) {
-      return gm.runHelper(name, modeCtx);
-    }
-    return Result.failure(new IllegalArgumentException("No DSL entity registered: " + name));
+  enum DirectRunEntity {
+    PROCESS, TRANSACTION, HELPER
   }
 
-  // TODO: remove junk method, it can be only one for dispatch
-  @Deprecated(forRemoval = true)
-  private Result<?> dispatch(String name, Context<?> ctx) {
+  private Result<?> dispatch(String name, Context<?> ctx, ExecutionMode mode,
+          @Nullable DirectRunEntity directType) {
+    if (directType != null) {
+      return dispatchDirect(name, ctx, mode, directType);
+    }
+    String runId = runIdFor(ctx);
+    var modeCtx = contextFactory.of(ctx.body(), ctx.metadata(), mode, runId);
+    return dispatchByLookup(name, modeCtx);
+  }
+
+  private Result<?> dispatchByLookup(String name, Context<?> ctx) {
     GlobalManager gm = GlobalManager.globalManager();
     if (gm.hasProcess(name)) {
       return gm.runProcess(name, ctx);
@@ -379,6 +374,22 @@ public class DevDslRuntime implements DslRuntime {
       return gm.runHelper(name, ctx);
     }
     return Result.failure(new IllegalArgumentException("No DSL entity registered: " + name));
+  }
+
+  private Result<?> dispatchDirect(String name, Context<?> ctx, ExecutionMode mode,
+          DirectRunEntity entity) {
+    String runId = runIdFor(ctx);
+    var modeCtx = contextFactory.of(ctx.body(), ctx.metadata(), mode, runId);
+    return switch (entity) {
+      case PROCESS -> GlobalManager.globalManager().runProcess(name, modeCtx);
+      case TRANSACTION -> GlobalManager.globalManager().runTransaction(name, modeCtx);
+      case HELPER -> GlobalManager.globalManager().runHelper(name, modeCtx);
+    };
+  }
+
+  @Deprecated(forRemoval = true)
+  private Result<?> dispatch(String name, Context<?> ctx) {
+    return dispatchByLookup(name, ctx);
   }
 
   private void countCallKinds(CallNode node, PreviewMetricsCollector collector) {

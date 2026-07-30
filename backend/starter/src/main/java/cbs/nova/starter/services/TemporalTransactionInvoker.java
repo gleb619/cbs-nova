@@ -14,8 +14,12 @@ import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
 import io.temporal.workflow.Workflow;
 import org.jspecify.annotations.NonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class TemporalTransactionInvoker implements TransactionInvoker {
+
+  private static final Logger log = LoggerFactory.getLogger(TemporalTransactionInvoker.class);
 
   @Override
   public @NonNull Result<?> invoke(@NonNull String name, @NonNull Object input,
@@ -23,7 +27,8 @@ public final class TemporalTransactionInvoker implements TransactionInvoker {
     var txOpt = GlobalManager.globalManager().findTransaction(name);
     var generatedOpt = GlobalManager.globalManager().findGeneratedTransaction(name);
     if (txOpt.isEmpty() || generatedOpt.isEmpty()) {
-      // TODO: add log here
+      log.warn("Transaction {} not found in Temporal registry, falling back to local execution",
+              name);
       return GlobalManager.globalManager().runTransaction(name, ctx);
     }
 
@@ -45,8 +50,6 @@ public final class TemporalTransactionInvoker implements TransactionInvoker {
     }
   }
 
-  // TODO: in dsl object we have similar firlds for retry, task queue, etc, e.g. we need to reuse it
-  // here too
   private ActivityOptions buildActivityOptions(TransactionDslObject tx) {
     RetryPolicy policy = tx.retryPolicy();
     if (policy == null) {

@@ -12,6 +12,7 @@ import cbs.nova.starter.cache.PreviewResultCache;
 import cbs.nova.starter.logging.DryRunLoggingContextPropagator;
 import cbs.nova.starter.services.TemporalDslProcessLauncher;
 import cbs.nova.starter.services.TemporalDslProcessService;
+import cbs.nova.starter.services.TemporalDslService;
 import cbs.nova.starter.services.TemporalTransactionInvoker;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowClientOptions;
@@ -24,6 +25,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.time.Duration;
 import java.util.List;
 
 @AutoConfiguration
@@ -56,8 +58,12 @@ public class TemporalConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
-  TemporalProcessLauncher temporalProcessLauncher(WorkflowClient workflowClient) {
-    return new TemporalDslProcessLauncher(workflowClient, JsonMapper.builder().build());
+  TemporalProcessLauncher temporalProcessLauncher(
+          WorkflowClient workflowClient,
+          @Value("${temporal.execution-timeout:30s}") Duration executionTimeout,
+          @Value("${temporal.task-timeout:5s}") Duration taskTimeout) {
+    return new TemporalDslProcessLauncher(workflowClient, JsonMapper.builder().build(),
+            executionTimeout, taskTimeout);
   }
 
   @Bean
@@ -112,6 +118,11 @@ public class TemporalConfiguration {
           ExecutionTraceCollector executionTraceCollector) {
     return new TemporalDslProcessService(contextFactory, runRepository,
             JsonMapper.builder().build(), executionTraceCollector);
+  }
+
+  @Bean
+  TemporalDslService temporalDslService(WorkflowClient workflowClient) {
+    return new TemporalDslService(workflowClient);
   }
 
 }
