@@ -33,6 +33,7 @@ dependencies {
   runtimeOnly 'org.postgresql:postgresql'
   implementation libs.springdoc.openapi.starter.webmvc.ui
   compileOnly libs.openfeign.core
+  compileOnly 'org.springframework.kafka:spring-kafka'
 
   api libs.temporal.sdk
   api libs.sentry.spring.boot.jakarta
@@ -57,6 +58,7 @@ dependencies {
   testImplementation libs.awaitility
   testImplementation libs.spring.jdbc
   testImplementation libs.wiremock
+  testImplementation 'org.springframework.kafka:spring-kafka'
 }
 
 processIntegrationTestResources {

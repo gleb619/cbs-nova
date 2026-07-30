@@ -83,7 +83,8 @@ public class ExternalCallTracker {
 
     if (lowerType.contains("mq") || lowerType.contains("jms") || lowerType.contains("kafka") ||
             lowerType.contains("amqp") || lowerType.contains("rabbit")
-            || lowerType.contains("activemq")) {
+            || lowerType.contains("activemq")
+            || lowerType.contains("messaging")) {
       return TYPE_MQ;
     }
 
