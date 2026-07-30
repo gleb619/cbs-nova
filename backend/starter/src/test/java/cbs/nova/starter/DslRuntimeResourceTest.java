@@ -1,5 +1,6 @@
 package cbs.nova.starter;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -30,12 +31,14 @@ import java.util.Map;
 class DslRuntimeResourceTest {
 
   private final DslRuntime dslRuntime = mock(DslRuntime.class);
+  private final ExternalCallTracker externalCallTracker = new ExternalCallTracker();
   private MockMvc mockMvc;
 
   @BeforeEach
   void setUp() {
     mockMvc = MockMvcBuilders
-            .standaloneSetup(new DslRuntimeResource(dslRuntime, new ContextFactory()))
+            .standaloneSetup(new DslRuntimeResource(dslRuntime, new ContextFactory(),
+                    externalCallTracker))
             .setMessageConverters(new JacksonJsonHttpMessageConverter())
             .build();
   }
@@ -146,5 +149,53 @@ class DslRuntimeResourceTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("P"))
             .andExpect(jsonPath("$.description").value("desc"));
+  }
+
+  @Test
+  void previewWithMocksStartsAndStopsMocking() throws Exception {
+    PreviewReport report = new PreviewReport(
+            "Ping",
+            ExecutionMode.PREVIEW,
+            true,
+            "pong",
+            List.of("started: Ping", "mode: PREVIEW", "completed successfully"),
+            List.of(),
+            Map.of(),
+            null,
+            List.of());
+    doReturn(Result.success(report)).when(dslRuntime).preview(eq("Ping"), any());
+
+    mockMvc
+            .perform(
+                    post("/api/dsl/preview/Ping")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(
+                                    "{\"body\": \"hello\", \"mocks\": {\"activity:MyActivity:execute\": {\"result\": \"mocked\"}}}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("Ping"));
+
+    assertThat(externalCallTracker.findMock("activity", "MyActivity", "execute")).isNull();
+  }
+
+  @Test
+  void previewWithEmptyMocksDoesNotConfigureMocking() throws Exception {
+    PreviewReport report = new PreviewReport(
+            "Ping",
+            ExecutionMode.PREVIEW,
+            true,
+            "pong",
+            List.of("started: Ping"),
+            List.of(),
+            Map.of(),
+            null,
+            List.of());
+    doReturn(Result.success(report)).when(dslRuntime).preview(eq("Ping"), any());
+
+    mockMvc
+            .perform(
+                    post("/api/dsl/preview/Ping")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"body\": \"hello\", \"mocks\": {}}"))
+            .andExpect(status().isOk());
   }
 }

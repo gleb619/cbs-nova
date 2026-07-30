@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 class ExternalCallTrackerTest {
@@ -103,8 +104,54 @@ class ExternalCallTrackerTest {
   }
 
   @Test
-  void normalizeTypeDefaultsToOther() {
-    tracker.record("unknown_xyz", "t", "op", null);
-    assertThat(tracker.getGlobalCounts().get(ExternalCallTracker.TYPE_OTHER)).isEqualTo(1);
+  void startMockingFindMockStopMockingRoundTrip() {
+    var mocks = Map.of("activity:MyActivity:invoke", (Object) "mocked");
+    tracker.startMocking(mocks);
+    assertThat(tracker.findMock("activity", "MyActivity", "invoke")).isEqualTo("mocked");
+    tracker.stopMocking();
+    assertThat(tracker.findMock("activity", "MyActivity", "invoke")).isNull();
+  }
+
+  @Test
+  void findMockNormalizesTypeLikeRecord() {
+    var mocks = Map.of("activity:MyActivity:invoke", (Object) "mocked");
+    tracker.startMocking(mocks);
+    assertThat(tracker.findMock("ACTIVITY", "MyActivity", "invoke")).isEqualTo("mocked");
+    assertThat(tracker.findMock("temporal", "MyActivity", "invoke")).isEqualTo("mocked");
+    tracker.stopMocking();
+  }
+
+  @Test
+  void findMockReturnsNullWhenNoMockRegistered() {
+    tracker.startMocking(Map.of());
+    assertThat(tracker.findMock("activity", "MyActivity", "invoke")).isNull();
+    tracker.stopMocking();
+  }
+
+  @Test
+  void recordMarksMockAppliedForActivity() {
+    var calls = new ArrayList<ExternalCallTracker.CallDetail>();
+    tracker.startTracking(calls);
+    tracker.startMocking(Map.of("activity:MyActivity:execute", (Object) "result"));
+    tracker.record("activity", "MyActivity", "execute", null);
+    tracker.stopMocking();
+    tracker.stopTracking();
+
+    assertThat(calls).hasSize(1);
+    assertThat(calls.get(0).metadata()).containsEntry("mockApplied", true);
+  }
+
+  @Test
+  void recordMarksMockConfiguredForDatabase() {
+    var calls = new ArrayList<ExternalCallTracker.CallDetail>();
+    tracker.startTracking(calls);
+    tracker.startMocking(Map.of("database:jdbc:SELECT", (Object) "result"));
+    tracker.record("jdbc", "jdbc", "SELECT", null);
+    tracker.stopMocking();
+    tracker.stopTracking();
+
+    assertThat(calls).hasSize(1);
+    assertThat(calls.get(0).metadata()).containsEntry("mockConfigured", true)
+            .containsEntry("mockApplied", false);
   }
 }

@@ -6,6 +6,7 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,6 +27,7 @@ public class ExternalCallTracker {
   public static final String TYPE_ACTIVITY = "activity";
   public static final String TYPE_OTHER = "other";
   private final ThreadLocal<List<CallDetail>> threadLocalCalls = new ThreadLocal<>();
+  private final ThreadLocal<Map<String, Object>> threadLocalMocks = new ThreadLocal<>();
   private final List<ExternalCallListener> listeners = new CopyOnWriteArrayList<>();
   private final Map<String, Integer> globalCounts = new ConcurrentHashMap<>();
 
@@ -35,6 +37,24 @@ public class ExternalCallTracker {
 
   public void stopTracking() {
     threadLocalCalls.remove();
+  }
+
+  public void startMocking(@NonNull Map<String, Object> mocks) {
+    threadLocalMocks.set(mocks);
+  }
+
+  public void stopMocking() {
+    threadLocalMocks.remove();
+  }
+
+  public @Nullable Object findMock(@NonNull String type, @NonNull String target,
+          @NonNull String operation) {
+    var mocks = threadLocalMocks.get();
+    if (mocks == null) {
+      return null;
+    }
+    var signature = normalizeType(type) + ":" + target + ":" + operation;
+    return mocks.get(signature);
   }
 
   public @Nullable List<CallDetail> getActiveTracking() {
@@ -48,8 +68,21 @@ public class ExternalCallTracker {
 
     List<CallDetail> local = threadLocalCalls.get();
     if (local != null) {
+      var metadata = new HashMap<String, Object>();
+      if (payload != null) {
+        metadata.put("payload", payload);
+      }
+      var mock = findMock(type, target, operation);
+      if (mock != null) {
+        if (TYPE_ACTIVITY.equals(normType) || TYPE_MQ.equals(normType)) {
+          metadata.put("mockApplied", true);
+        } else {
+          metadata.put("mockConfigured", true);
+          metadata.put("mockApplied", false);
+        }
+      }
       local.add(new CallDetail(normType, target, operation, System.currentTimeMillis(),
-              payload != null ? Map.of("payload", payload) : Map.of()));
+              metadata));
     }
 
     for (ExternalCallListener listener : listeners) {

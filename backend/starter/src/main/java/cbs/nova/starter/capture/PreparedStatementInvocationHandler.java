@@ -79,6 +79,8 @@ public class PreparedStatementInvocationHandler implements InvocationHandler {
       operation = firstSqlToken(effectiveSql);
       payload = effectiveSql;
     }
+    // DB response mocking needs the T168 interceptor SPI; this wrapper only observes.
+    externalCallTracker.findMock(ExternalCallTracker.TYPE_DATABASE, target, operation);
     externalCallTracker.record(ExternalCallTracker.TYPE_DATABASE, target, operation, payload);
   }
 

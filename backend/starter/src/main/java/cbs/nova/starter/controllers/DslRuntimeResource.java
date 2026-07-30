@@ -8,6 +8,7 @@ import cbs.nova.dsl.ExplainReport;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.starter.ExternalCallTracker;
 import cbs.nova.starter.models.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -33,6 +34,7 @@ public class DslRuntimeResource {
 
   private final DslRuntime dslRuntime;
   private final ContextFactory contextFactory;
+  private final ExternalCallTracker externalCallTracker;
 
   @PostMapping("/preview/{name}")
   @Operation(summary = "Preview a DSL process without side effects")
@@ -40,11 +42,23 @@ public class DslRuntimeResource {
   public ResponseEntity<?> preview(
           @PathVariable String name, @RequestBody DslRequest request) {
     var ctx = toContext(request, ExecutionMode.PREVIEW);
-    Result<PreviewReport> result = dslRuntime.preview(name, ctx);
-    return result.isSuccess()
-            ? ResponseEntity.ok(result.value())
-            : ResponseEntity.unprocessableEntity()
-                    .body(toErrorResponse(name, ctx, result.cause()));
+    var mocks = request.mocks();
+    if (mocks != null && !mocks.isEmpty()) {
+      @SuppressWarnings("unchecked")
+      Map<String, Object> typedMocks = (Map<String, Object>) (Map<?, ?>) mocks;
+      externalCallTracker.startMocking(typedMocks);
+    }
+    try {
+      Result<PreviewReport> result = dslRuntime.preview(name, ctx);
+      return result.isSuccess()
+              ? ResponseEntity.ok(result.value())
+              : ResponseEntity.unprocessableEntity()
+                      .body(toErrorResponse(name, ctx, result.cause()));
+    } finally {
+      if (mocks != null && !mocks.isEmpty()) {
+        externalCallTracker.stopMocking();
+      }
+    }
   }
 
   @PostMapping("/run/{name}")
@@ -87,7 +101,8 @@ public class DslRuntimeResource {
     return new ErrorResponse("EXECUTION_FAILED", message, entityName, runId, exceptionId);
   }
 
-  public record DslRequest(Object body, Map<String, Object> metadata) {
+  public record DslRequest(Object body, Map<String, Object> metadata,
+          Map<String, Map<String, Object>> mocks) {
 
   }
 }

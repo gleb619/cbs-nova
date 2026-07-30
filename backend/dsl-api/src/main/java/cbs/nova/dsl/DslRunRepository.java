@@ -25,7 +25,8 @@ public interface DslRunRepository {
    * Targeted update that mutates only the fields that change when a run finishes.
    *
    * @return the updated run
-   * @throws IllegalStateException if the runId does not exist
+   * @throws IllegalStateException
+   *           if the runId does not exist
    */
   @NonNull
   DslRun updateFinished(

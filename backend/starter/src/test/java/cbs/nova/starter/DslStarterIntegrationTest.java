@@ -36,7 +36,8 @@ class DslStarterIntegrationTest {
 
     var runtime = new DevDslRuntime(new ExternalCallTracker(), new ExecutionTraceCollector(),
             new ContextFactory(), new ThreadLocalDryRunLoggingContext(), 32);
-    var resource = new DslRuntimeResource(runtime, new ContextFactory());
+    var resource = new DslRuntimeResource(runtime, new ContextFactory(),
+            new ExternalCallTracker());
     mockMvc = MockMvcBuilders.standaloneSetup(resource)
             .setMessageConverters(new JacksonJsonHttpMessageConverter())
             .build();

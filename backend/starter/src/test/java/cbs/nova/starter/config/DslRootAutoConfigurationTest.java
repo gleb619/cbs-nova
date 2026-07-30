@@ -46,6 +46,7 @@ class DslRootAutoConfigurationTest {
             PropertyResolverConfiguration.class,
             DslAutoConfiguration.class,
             DslWorkerConfiguration.class,
+            DslRunRepositoryConfiguration.class,
             DataSourceCallAutoConfiguration.class,
             FeignCallAutoConfiguration.class,
             PreviewAutoConfiguration.class,

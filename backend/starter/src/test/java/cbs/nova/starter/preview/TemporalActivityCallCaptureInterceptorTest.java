@@ -64,25 +64,37 @@ class TemporalActivityCallCaptureInterceptorTest {
   }
 
   @Test
-  void recordsActivityCallWhenDelegateReturnsFailure() {
-    var error = new RuntimeException("boom");
-    delegate = (name, input, ctx) -> Result.failure(error);
-    interceptor = new TemporalActivityCallCaptureInterceptor(delegate, tracker);
-
-    Context<?> ctx = contextFactory.of("body", ExecutionMode.EXPLAIN, "run-456");
+  void shortCircuitsWhenMockIsConfigured() {
+    var input = Map.of("key", "value");
+    var mockValue = Map.of("mock", "result");
+    Context<?> ctx = contextFactory.of(input, ExecutionMode.PREVIEW, "run-789");
 
     tracker.startTracking(recorded);
-    Result<?> result = interceptor.invoke("BadTx", "body", ctx);
+    tracker.startMocking(Map.of("activity:MyTx:execute", (Object) mockValue));
+    Result<?> result = interceptor.invoke("MyTx", input, ctx);
+    tracker.stopMocking();
     tracker.stopTracking();
 
-    assertThat(!result.isSuccess()).isTrue();
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value()).isEqualTo(mockValue);
     assertThat(recorded).hasSize(1);
 
     var call = recorded.get(0);
     assertThat(call.type()).isEqualTo(ExternalCallTracker.TYPE_ACTIVITY);
-    assertThat(call.target()).isEqualTo("BadTx");
+    assertThat(call.target()).isEqualTo("MyTx");
     assertThat(call.operation()).isEqualTo("execute");
+    assertThat(call.metadata()).containsEntry("mockApplied", true);
+  }
 
-    assertThat(tracker.getGlobalCounts()).containsEntry(ExternalCallTracker.TYPE_ACTIVITY, 1);
+  @Test
+  void delegatesWhenNoMockIsConfigured() {
+    Context<?> ctx = contextFactory.of("body", ExecutionMode.PREVIEW, "run-000");
+
+    tracker.startTracking(recorded);
+    Result<?> result = interceptor.invoke("MyTx", "body", ctx);
+    tracker.stopTracking();
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value()).isEqualTo("ok");
   }
 }

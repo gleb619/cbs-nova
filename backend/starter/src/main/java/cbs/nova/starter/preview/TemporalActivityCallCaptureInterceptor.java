@@ -30,6 +30,12 @@ public class TemporalActivityCallCaptureInterceptor implements TransactionInvoke
     payload.put("mode", ctx.mode());
     payload.put("input", input);
 
+    var mock = externalCallTracker.findMock(ExternalCallTracker.TYPE_ACTIVITY, name, "execute");
+    if (mock != null) {
+      externalCallTracker.record(ExternalCallTracker.TYPE_ACTIVITY, name, "execute", payload);
+      return Result.success(mock);
+    }
+
     externalCallTracker.record(ExternalCallTracker.TYPE_ACTIVITY, name, "execute", payload);
 
     return delegate.invoke(name, input, ctx);
