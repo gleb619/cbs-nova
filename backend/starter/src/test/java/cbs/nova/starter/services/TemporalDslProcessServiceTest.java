@@ -3,6 +3,8 @@ package cbs.nova.starter.services;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.DslEntityNotFoundException;
+import cbs.nova.dsl.DslRun;
+import cbs.nova.dsl.DslRunStatus;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.Result;
@@ -18,10 +20,19 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.slf4j.MDC;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 class TemporalDslProcessServiceTest {
 
@@ -30,19 +41,28 @@ class TemporalDslProcessServiceTest {
     MDC.clear();
   }
 
-  @Test
-  void runProcessSingleArgDefaultsMetadataToEmptyMap() {
+  private static ContextFactory mockContextFactoryWith(String runId,
+          SimpleContext<Object> ctx) {
     ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
-    Mockito.when(contextFactory.generateRunId()).thenReturn("run-id-1");
-    SimpleContext<Object> stubCtx = new SimpleContext<>(
-            "payload", Map.of(), ExecutionMode.RUN, "run-id-1");
-    Mockito.doReturn(stubCtx).when(contextFactory).of(
-            Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+    Mockito.when(contextFactory.generateRunId()).thenReturn(runId);
+    Mockito.doReturn(ctx).when(contextFactory)
+            .of(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+    return contextFactory;
+  }
 
-    TemporalDslProcessService service = new TemporalDslProcessService(
+  private static TemporalDslProcessService newService(ContextFactory contextFactory) {
+    return new TemporalDslProcessService(
             contextFactory, new InMemoryDslRunRepository(), new ObjectMapper(),
             new ExecutionTraceCollector());
-    service.runProcess(unique(), "payload");
+  }
+
+  @Test
+  void runProcessSingleArgDefaultsMetadataToEmptyMap() {
+    SimpleContext<Object> stubCtx = new SimpleContext<>(
+            "payload", Map.of(), ExecutionMode.RUN, "run-id-1");
+    ContextFactory contextFactory = mockContextFactoryWith("run-id-1", stubCtx);
+
+    newService(contextFactory).runProcess(unique(), "payload");
 
     Mockito.verify(contextFactory).of(
             Mockito.eq("payload"),
@@ -52,18 +72,12 @@ class TemporalDslProcessServiceTest {
   }
 
   @Test
-  void runProcessThreeArgCoercesNullInputToEmptyMap() {
-    ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
-    Mockito.when(contextFactory.generateRunId()).thenReturn("run-id-2");
+  void startProcessThreeArgCoercesNullInputToEmptyMap() {
     SimpleContext<Object> stubCtx = new SimpleContext<>(
             Map.of(), Map.of("k", "v"), ExecutionMode.RUN, "run-id-2");
-    Mockito.doReturn(stubCtx).when(contextFactory).of(
-            Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+    ContextFactory contextFactory = mockContextFactoryWith("run-id-2", stubCtx);
 
-    TemporalDslProcessService service = new TemporalDslProcessService(
-            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper(),
-            new ExecutionTraceCollector());
-    service.runProcess(unique(), null, Map.of("k", "v"));
+    newService(contextFactory).startProcess(unique(), null, Map.of("k", "v"));
 
     ArgumentCaptor<Object> bodyCaptor = ArgumentCaptor.forClass(Object.class);
     Mockito.verify(contextFactory).of(
@@ -75,18 +89,12 @@ class TemporalDslProcessServiceTest {
   }
 
   @Test
-  void runProcessUsesRunIdGeneratedByContextFactory() {
-    ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
-    Mockito.when(contextFactory.generateRunId()).thenReturn("run-id-3");
+  void startProcessUsesRunIdGeneratedByContextFactory() {
     SimpleContext<Object> stubCtx = new SimpleContext<>(
             "payload", Map.of(), ExecutionMode.RUN, "run-id-3");
-    Mockito.doReturn(stubCtx).when(contextFactory).of(
-            Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+    ContextFactory contextFactory = mockContextFactoryWith("run-id-3", stubCtx);
 
-    TemporalDslProcessService service = new TemporalDslProcessService(
-            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper(),
-            new ExecutionTraceCollector());
-    service.runProcess(unique(), "payload", Map.of());
+    newService(contextFactory).startProcess(unique(), "payload", Map.of());
 
     Mockito.verify(contextFactory).generateRunId();
     Mockito.verify(contextFactory).of(
@@ -97,14 +105,15 @@ class TemporalDslProcessServiceTest {
   }
 
   @Test
-  void runProcessReachesGlobalManagerWithCorrectProcessName() {
-    ContextFactory contextFactory = new ContextFactory();
+  void startProcessReachesGlobalManagerWithCorrectProcessName() {
     String missing = "missing-" + UUID.randomUUID();
-    TemporalDslProcessService service = new TemporalDslProcessService(
-            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper(),
+    TemporalDslProcessService service = new TemporalDslProcessService(new ContextFactory(),
+            new InMemoryDslRunRepository(), new ObjectMapper(),
             new ExecutionTraceCollector());
 
-    Result<?> result = service.runProcess(missing, Map.of("k", "v"), Map.of("meta", "data"));
+    Result<?> result = service.startProcess(missing, Map.of("k", "v"), Map.of("meta", "data"))
+            .result()
+            .join();
 
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause()).isInstanceOf(DslEntityNotFoundException.class);
@@ -112,19 +121,13 @@ class TemporalDslProcessServiceTest {
   }
 
   @Test
-  void runContextCarriesNonEmptyInputThroughToContextFactory() {
-    ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
-    Mockito.when(contextFactory.generateRunId()).thenReturn("run-id-4");
+  void startContextCarriesNonEmptyInputThroughToContextFactory() {
     Map<String, Object> input = Map.of("a", 1, "b", "two");
     SimpleContext<Object> stubCtx = new SimpleContext<>(
             input, Map.of(), ExecutionMode.RUN, "run-id-4");
-    Mockito.doReturn(stubCtx).when(contextFactory).of(
-            Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+    ContextFactory contextFactory = mockContextFactoryWith("run-id-4", stubCtx);
 
-    TemporalDslProcessService service = new TemporalDslProcessService(
-            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper(),
-            new ExecutionTraceCollector());
-    service.runProcess(unique(), input, Map.of("meta", "data"));
+    newService(contextFactory).startProcess(unique(), input, Map.of("meta", "data"));
 
     Mockito.verify(contextFactory).of(
             Mockito.eq(input),
@@ -134,13 +137,10 @@ class TemporalDslProcessServiceTest {
   }
 
   @Test
-  void runProcessPropagatesRunIdToMdcAndSentry() {
-    ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
-    Mockito.when(contextFactory.generateRunId()).thenReturn("run-id-5");
+  void startProcessPropagatesRunIdToMdcAndSentry() {
     SimpleContext<Object> stubCtx = new SimpleContext<>(
             "payload", Map.of(), ExecutionMode.RUN, "run-id-5");
-    Mockito.doReturn(stubCtx).when(contextFactory).of(
-            Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+    ContextFactory contextFactory = mockContextFactoryWith("run-id-5", stubCtx);
 
     try (MockedStatic<Sentry> sentry = Mockito.mockStatic(Sentry.class);
             MockedStatic<Baggage> baggage = Mockito.mockStatic(Baggage.class)) {
@@ -157,10 +157,95 @@ class TemporalDslProcessServiceTest {
       TemporalDslProcessService service = new TemporalDslProcessService(
               contextFactory, new InMemoryDslRunRepository(), new ObjectMapper(),
               new ExecutionTraceCollector());
-      service.runProcess(unique(), "payload", Map.of());
+      service.startProcess(unique(), "payload", Map.of());
 
       assertThat(MDC.get("runId")).isNull();
       sentry.verify(() -> Sentry.setTag("runId", "run-id-5"));
+    }
+  }
+
+  @Test
+  void staleHealthcheckTransitionsRunningRunToStale() throws Exception {
+    ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    try {
+      ThreadPoolTaskExecutor exec = synchronousExecutor();
+      InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+      longAgoClock fixedClock = new longAgoClock();
+
+      ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
+      Mockito.when(contextFactory.generateRunId()).thenReturn("run-stale-1");
+      TemporalDslProcessService service = new TemporalDslProcessService(
+              contextFactory, repo, new ObjectMapper(), new ExecutionTraceCollector(),
+              exec, scheduler, Duration.ofMillis(1), Duration.ofMillis(100), false);
+      service.setClock(fixedClock);
+
+      // Persist a running run whose startedAt is far older than the 100ms staleness threshold.
+      repo.save(DslRun.builder()
+              .runId("run-stale-1")
+              .processName("ghost-process")
+              .status(DslRunStatus.RUNNING.name())
+              .input("{}")
+              .output("{}")
+              .startedAt(fixedClock.instant().minus(Duration.ofMinutes(10)))
+              .finishedAt(Instant.EPOCH)
+              .executionMode("RUN")
+              .build());
+
+      service.ensureHealthcheckForTest();
+
+      // Drive the scheduled sweep until the row flips to STALE or the deadline elapses.
+      long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+      DslRunStatus status = DslRunStatus.RUNNING;
+      while (System.nanoTime() < deadline) {
+        status = DslRunStatus.valueOf(repo.findByRunId("run-stale-1").orElseThrow().status());
+        if (status == DslRunStatus.STALE) {
+          break;
+        }
+        Thread.sleep(20);
+      }
+
+      assertThat(status).isEqualTo(DslRunStatus.STALE);
+    } finally {
+      scheduler.shutdownNow();
+    }
+  }
+
+  private static ThreadPoolTaskExecutor synchronousExecutor() {
+    ThreadPoolTaskExecutor exec = new ThreadPoolTaskExecutor() {
+      @Override
+      public void execute(Runnable command) {
+        command.run();
+      }
+    };
+    exec.setCorePoolSize(1);
+    exec.setMaxPoolSize(1);
+    exec.setQueueCapacity(0);
+    exec.setThreadNamePrefix("cbs-nova-dsl-test-sync-");
+    exec.initialize();
+    return exec;
+  }
+
+  /**
+   * {@link Clock} that returns a fixed instant so the staleness detector deterministically
+   * classifies the seeded run as overdue.
+   */
+  private static final class longAgoClock extends Clock {
+
+    private final Instant instant = Instant.parse("2026-01-01T00:00:00Z");
+
+    @Override
+    public Instant instant() {
+      return instant;
+    }
+
+    @Override
+    public ZoneId getZone() {
+      return ZoneOffset.UTC;
+    }
+
+    @Override
+    public Clock withZone(ZoneId zone) {
+      return this;
     }
   }
 

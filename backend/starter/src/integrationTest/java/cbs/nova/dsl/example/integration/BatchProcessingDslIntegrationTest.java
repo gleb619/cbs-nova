@@ -36,7 +36,6 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Duration;
 import java.util.List;
-
 /**
  * End-to-end test that exercises the public service API rather than a generated workflow interface.
  * The flow is:
@@ -105,7 +104,8 @@ class BatchProcessingDslIntegrationTest {
                     .build());
     workflowClient = WorkflowClient.newInstance(serviceStubs);
 
-    var launcher = new TemporalDslProcessLauncher(workflowClient, JsonMapper.builder().build());
+    var launcher = new TemporalDslProcessLauncher(workflowClient,
+            JsonMapper.builder().build(), Duration.ofSeconds(30), Duration.ofSeconds(5));
     DslConfig.dslConfig().temporalProcessLauncher().replace(launcher);
     DslConfig.dslConfig().transactionInvoker().replace(new TemporalTransactionInvoker());
 
@@ -137,7 +137,7 @@ class BatchProcessingDslIntegrationTest {
                     new BatchItem("b", 2),
                     new BatchItem("c", 3)));
 
-    Result<?> result = service.runProcess("BatchProcessing", input);
+    Result<?> result = service.runProcess("BatchProcessing", input).result().join();
 
     assertThat(result.isSuccess()).as("result cause: %s", result.cause()).isTrue();
     BatchOut out = result.as(BatchOut.class);

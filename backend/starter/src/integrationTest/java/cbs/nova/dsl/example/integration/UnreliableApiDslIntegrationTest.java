@@ -107,7 +107,8 @@ class UnreliableApiDslIntegrationTest {
                     .build());
     workflowClient = WorkflowClient.newInstance(serviceStubs);
 
-    var launcher = new TemporalDslProcessLauncher(workflowClient, new ObjectMapper());
+    var launcher = new TemporalDslProcessLauncher(workflowClient, new ObjectMapper(),
+            Duration.ofSeconds(30), Duration.ofSeconds(5));
     DslConfig.dslConfig().temporalProcessLauncher().replace(launcher);
     DslConfig.dslConfig().transactionInvoker().replace(new TemporalTransactionInvoker());
 
@@ -158,7 +159,7 @@ class UnreliableApiDslIntegrationTest {
     var apiCall = new UnreliableApiIn(runId, 3, false, null);
     var input = new UnreliableProcessIn("success", apiCall);
 
-    Result<?> result = service.runProcess("UnreliableApiSuccess", input);
+    Result<?> result = service.runProcess("UnreliableApiSuccess", input).result().join();
 
     assertThat(result.isSuccess())
             .as("success result cause: %s", result.cause())
@@ -179,7 +180,7 @@ class UnreliableApiDslIntegrationTest {
     Result<?> result = new TemporalDslProcessService(
             new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
             new ExecutionTraceCollector())
-            .runProcess("UnreliableApiCompensated", input);
+            .runProcess("UnreliableApiCompensated", input).result().join();
 
     assertThat(result.isSuccess()).isFalse();
     assertThat(tracker.wasCompensated(markerId)).isTrue();
@@ -196,7 +197,7 @@ class UnreliableApiDslIntegrationTest {
     Result<?> result = new TemporalDslProcessService(
             new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
             new ExecutionTraceCollector())
-            .runProcess("UnreliableApiUncaught", input);
+            .runProcess("UnreliableApiUncaught", input).result().join();
 
     assertThat(result.isSuccess()).isFalse();
     assertThat(tracker.wasCompensated(markerId)).isFalse();

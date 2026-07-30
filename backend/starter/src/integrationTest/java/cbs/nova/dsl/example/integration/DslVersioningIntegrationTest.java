@@ -120,7 +120,8 @@ class DslVersioningIntegrationTest {
                     .build());
     workflowClient = WorkflowClient.newInstance(serviceStubs);
 
-    var launcher = new TemporalDslProcessLauncher(workflowClient, new ObjectMapper());
+    var launcher = new TemporalDslProcessLauncher(workflowClient, new ObjectMapper(),
+            Duration.ofSeconds(30), Duration.ofSeconds(5));
     DslConfig.dslConfig().temporalProcessLauncher().replace(launcher);
     DslConfig.dslConfig().transactionInvoker().replace(new TemporalTransactionInvoker());
 

@@ -114,7 +114,8 @@ class HttpResilienceDslIntegrationTest {
                     .build());
     workflowClient = WorkflowClient.newInstance(serviceStubs);
 
-    var launcher = new TemporalDslProcessLauncher(workflowClient, new ObjectMapper());
+    var launcher = new TemporalDslProcessLauncher(workflowClient, new ObjectMapper(),
+            Duration.ofSeconds(30), Duration.ofSeconds(5));
     DslConfig.dslConfig().temporalProcessLauncher().replace(launcher);
     DslConfig.dslConfig().transactionInvoker().replace(new TemporalTransactionInvoker());
 
@@ -195,7 +196,7 @@ class HttpResilienceDslIntegrationTest {
     var input = new HttpResilienceProcessIn(runId,
             HttpCallIn.get(baseUrl() + "/probe"));
 
-    Result<?> result = service.runProcess("HttpResilienceSuccess", input);
+    Result<?> result = service.runProcess("HttpResilienceSuccess", input).result().join();
 
     assertThat(result.isSuccess())
             .as("success result cause: %s", result.cause())
@@ -219,7 +220,7 @@ class HttpResilienceDslIntegrationTest {
     Result<?> result = new TemporalDslProcessService(
             new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
             new ExecutionTraceCollector())
-            .runProcess("HttpResilienceCompensated", input);
+            .runProcess("HttpResilienceCompensated", input).result().join();
 
     assertThat(result.isSuccess()).isFalse();
     assertThat(tracker.wasCompensated(markerId)).isTrue();
@@ -239,7 +240,7 @@ class HttpResilienceDslIntegrationTest {
     Result<?> result = new TemporalDslProcessService(
             new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
             new ExecutionTraceCollector())
-            .runProcess("HttpResilienceUncaught", input);
+            .runProcess("HttpResilienceUncaught", input).result().join();
 
     assertThat(result.isSuccess()).isFalse();
     assertThat(tracker.wasCompensated(markerId)).isFalse();
@@ -260,7 +261,7 @@ class HttpResilienceDslIntegrationTest {
     Result<?> result = new TemporalDslProcessService(
             new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
             new ExecutionTraceCollector())
-            .runProcess("HttpResilienceUncaught", input);
+            .runProcess("HttpResilienceUncaught", input).result().join();
 
     assertThat(result.isSuccess()).isFalse();
   }

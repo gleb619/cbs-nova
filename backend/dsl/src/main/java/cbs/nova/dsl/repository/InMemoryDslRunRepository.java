@@ -6,9 +6,11 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -35,6 +37,15 @@ public final class InMemoryDslRunRepository implements DslRunRepository {
     return runs.values().stream()
             .filter(r -> processName.equals(r.processName()))
             .collect(Collectors.toList());
+  }
+
+  @Override
+  public @NonNull Set<String> knownProcessNames() {
+    Set<String> names = new HashSet<>();
+    for (DslRun run : runs.values()) {
+      names.add(run.processName());
+    }
+    return names;
   }
 
   @Override

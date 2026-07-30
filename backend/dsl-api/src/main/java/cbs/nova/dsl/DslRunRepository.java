@@ -6,6 +6,7 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Repository for persisting DSL process runs.
@@ -20,6 +21,15 @@ public interface DslRunRepository {
 
   @NonNull
   List<DslRun> findByProcessName(@NonNull String processName);
+
+  /**
+   * Returns the distinct set of process names that currently have at least one persisted run.
+   * Backed by the repository's internal bookkeeping; the default returns an empty set for
+   * implementations that do not track this (e.g. a thin facade).
+   */
+  default @NonNull Set<String> knownProcessNames() {
+    return java.util.Set.of();
+  }
 
   /**
    * Targeted update that mutates only the fields that change when a run finishes.

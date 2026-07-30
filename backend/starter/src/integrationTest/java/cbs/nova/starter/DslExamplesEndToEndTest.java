@@ -66,7 +66,7 @@ class DslExamplesEndToEndTest extends BaseContainers {
     var service = new TemporalDslProcessService(
             new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
             new ExecutionTraceCollector());
-    Result<?> result = service.runProcess("BatchProcessing", input);
+    Result<?> result = service.runProcess("BatchProcessing", input).result().join();
 
     assertThat(result.isSuccess()).as("result cause: %s", result.cause()).isTrue();
     BatchOut out = result.as(BatchOut.class);
