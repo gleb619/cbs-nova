@@ -15,21 +15,26 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.generator.BpmnDiagramGenerator;
 import cbs.nova.dsl.generator.MermaidDiagramGenerator;
 import cbs.nova.dsl.generator.PlantUmlDiagramGenerator;
+import cbs.nova.dsl.logging.DryRunLoggingContext;
+import cbs.nova.starter.logging.DryRunLogEvent;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
-import cbs.nova.starter.logging.DryRunLoggingContext;
 import ch.qos.logback.classic.Logger;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class DevDslRuntime implements DslRuntime {
 
@@ -38,6 +43,7 @@ public class DevDslRuntime implements DslRuntime {
   private final ExternalCallTracker externalCallTracker;
   private final ExecutionTraceCollector traceCollector;
   private final ContextFactory contextFactory;
+  private final DryRunLoggingContext dryRunLoggingContext;
 
   @Value("${cbs.nova.preview.callTree.maxDepth:32}")
   private final int previewCallTreeMaxDepth;
@@ -52,34 +58,37 @@ public class DevDslRuntime implements DslRuntime {
     externalCallTracker.startTracking(calls);
     traceCollector.start(runId);
     treeCollector.startRun(runId);
-    // TODO static access is forbidden, it must be some interface and impls, that installed in
-    // system with listerners/interceptors
-    DryRunLoggingContext.enterDryRun(runId);
-    Result<?> result;
+    Result<?>[] resultHolder = new Result[1];
     try {
-      result = dispatch(name,
-              contextFactory.of(ctx.body(), ctx.metadata(), ExecutionMode.PREVIEW, runId,
-                      // TODO: why TransactionRouting is hardcoded here?
-                      TransactionRouting.LOCAL, treeCollector));
+      dryRunLoggingContext.runWithRunId(runId, () -> {
+        log.info("started: {}", name);
+        log.info("mode: PREVIEW");
+        resultHolder[0] = dispatch(name,
+                contextFactory.of(ctx.body(), ctx.metadata(), ExecutionMode.PREVIEW, runId,
+                        // TODO: why TransactionRouting is hardcoded here?
+                        TransactionRouting.LOCAL, treeCollector));
+        traceCollector.snapshot(runId).forEach(line -> log.info("{}", line));
+        if (resultHolder[0].isSuccess()) {
+          log.info("completed successfully");
+        } else {
+          log.info("failed: {}", resultHolder[0].cause().getMessage());
+        }
+      });
     } finally {
       // TODO: due refacto to async way of execution, we need another way of finish signal
-      DryRunLoggingContext.leaveDryRun();
       treeCollector.finishRun(runId);
       traceCollector.stop(runId);
       externalCallTracker.stopTracking();
     }
 
-    // TODO: refactor, it's a very bad solution for a string tracing, of a very naive messages
-    List<String> trace = new ArrayList<>();
-    trace.add("started: " + name);
-    trace.add("mode: PREVIEW");
-    trace.addAll(traceCollector.snapshot(runId));
+    Result<?> result = resultHolder[0];
+    List<DryRunLogEvent> dryRunLogs = drainDryRunLogs(runId);
+    List<String> trace = dryRunLogs.stream().map(DryRunLogEvent::message).toList();
 
     // TODO: instead add a new record that extends of some suprt type(e.g. Result implment it, and a
     // new Report type must implement it). As a result we just traverse troug a tree of Reports and
     // create a PreviewReport
     if (result.isSuccess()) {
-      trace.add("completed successfully");
       PreviewReport report = new PreviewReport(
               name,
               ExecutionMode.PREVIEW,
@@ -89,10 +98,9 @@ public class DevDslRuntime implements DslRuntime {
               toCallJson(calls),
               toCallCounts(calls),
               treeCollector.tree(runId).orElse(null),
-              drainDryRunLogs(runId));
+              toDryRunLogMaps(dryRunLogs));
       return Result.success(report);
     } else {
-      trace.add("failed: " + result.cause().getMessage());
       return Result.failure(result.cause());
     }
   }
@@ -117,14 +125,14 @@ public class DevDslRuntime implements DslRuntime {
     externalCallTracker.startTracking(calls);
     traceCollector.start(runId);
     treeCollector.startRun(runId);
-    DryRunLoggingContext.enterDryRun(runId);
-    Result<?> result;
+    Result<?>[] resultHolder = new Result[1];
     try {
-      result = dispatch(name,
-              contextFactory.of(ctx.body(), ctx.metadata(), ExecutionMode.EXPLAIN, runId,
-                      TransactionRouting.LOCAL, treeCollector));
+      dryRunLoggingContext.runWithRunId(runId, () -> {
+        resultHolder[0] = dispatch(name,
+                contextFactory.of(ctx.body(), ctx.metadata(), ExecutionMode.EXPLAIN, runId,
+                        TransactionRouting.LOCAL, treeCollector));
+      });
     } finally {
-      DryRunLoggingContext.leaveDryRun();
       treeCollector.finishRun(runId);
       traceCollector.stop(runId);
       externalCallTracker.stopTracking();
@@ -165,17 +173,20 @@ public class DevDslRuntime implements DslRuntime {
             .or(() -> gm2.findTransaction(name).map(bpmnGen::forTransaction))
             .orElseGet(() -> bpmnGen.forHelper(name));
 
-    // TODO: No, it's a very naive way of logging, we need a better one
-    var trace = new ArrayList<String>();
-    trace.add("started: " + name);
-    trace.add("mode: EXPLAIN");
-    trace.addAll(traceCollector.snapshot(runId));
-    if (result.isSuccess()) {
-      Object val = result.value();
-      trace.add("result: " + (val != null ? val.toString() : "null"));
-    } else {
-      trace.add("result: failure: " + result.cause().getMessage());
-    }
+    dryRunLoggingContext.runWithRunId(runId, () -> {
+      log.info("started: {}", name);
+      log.info("mode: EXPLAIN");
+      traceCollector.snapshot(runId).forEach(line -> log.info("{}", line));
+      if (resultHolder[0].isSuccess()) {
+        Object val = resultHolder[0].value();
+        log.info("result: {}", val != null ? val.toString() : "null");
+      } else {
+        log.info("result: failure: {}", resultHolder[0].cause().getMessage());
+      }
+    });
+
+    List<DryRunLogEvent> dryRunLogs = drainDryRunLogs(runId);
+    List<String> trace = dryRunLogs.stream().map(DryRunLogEvent::message).toList();
 
     DslDescriptor dslDesc = gm2.describeProcess(name)
             .or(() -> gm2.describeTransaction(name))
@@ -194,7 +205,7 @@ public class DevDslRuntime implements DslRuntime {
             gm2.describeHelper(name).orElse(null),
             dslDesc,
             treeCollector.tree(runId).orElse(null),
-            drainDryRunLogs(runId));
+            toDryRunLogMaps(dryRunLogs));
   }
 
   // TODO: no, it must be a separate class for convertation
@@ -219,6 +230,20 @@ public class DevDslRuntime implements DslRuntime {
       counts.merge(call.type(), 1, Integer::sum);
     }
     return Map.copyOf(counts);
+  }
+
+  private List<Map<String, Object>> toDryRunLogMaps(List<DryRunLogEvent> events) {
+    List<Map<String, Object>> maps = new ArrayList<>();
+    for (DryRunLogEvent event : events) {
+      Map<String, Object> map = new LinkedHashMap<>();
+      map.put("level", event.level());
+      map.put("message", event.message());
+      map.put("timestamp", Instant.ofEpochMilli(event.timestampMillis()));
+      map.put("mdc", event.mdc());
+      map.put("runId", event.runId());
+      maps.add(map);
+    }
+    return List.copyOf(maps);
   }
 
   // TODO: add optional field, for direct run, like enum with 3 values(process, transaction, helper)
@@ -259,7 +284,7 @@ public class DevDslRuntime implements DslRuntime {
     return (runId == null || runId.isBlank()) ? contextFactory.generateRunId() : runId;
   }
 
-  private List<Map<String, Object>> drainDryRunLogs(String runId) {
+  private List<DryRunLogEvent> drainDryRunLogs(String runId) {
     var root = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
     var appender = root.getAppender("DRY_RUN");
     if (appender instanceof DryRunLogbackAppender dryRunAppender) {

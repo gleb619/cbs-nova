@@ -5,22 +5,29 @@ import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.TemporalProcessLauncher;
 import cbs.nova.dsl.TransactionInvoker;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.logging.DryRunLoggingContext;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.starter.DevDslRuntime;
 import cbs.nova.starter.ExternalCallTracker;
+import cbs.nova.starter.logging.DryRunLoggingContextPropagator;
 import cbs.nova.starter.services.TemporalDslProcessLauncher;
 import cbs.nova.starter.services.TemporalDslProcessService;
 import cbs.nova.starter.services.TemporalTransactionInvoker;
 import io.temporal.client.WorkflowClient;
+import io.temporal.client.WorkflowClientOptions;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.util.List;
+
 @AutoConfiguration
+@AutoConfigureAfter(DryRunLoggingAutoConfiguration.class)
 public class TemporalConfiguration {
 
   @Bean
@@ -33,8 +40,18 @@ public class TemporalConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
-  WorkflowClient workflowClient(WorkflowServiceStubs workflowServiceStubs) {
-    return WorkflowClient.newInstance(workflowServiceStubs);
+  WorkflowClient workflowClient(WorkflowServiceStubs workflowServiceStubs,
+          DryRunLoggingContextPropagator dryRunLoggingContextPropagator) {
+    WorkflowClientOptions options = WorkflowClientOptions.newBuilder()
+            .setContextPropagators(List.of(dryRunLoggingContextPropagator))
+            .build();
+    return WorkflowClient.newInstance(workflowServiceStubs, options);
+  }
+  @Bean
+  @ConditionalOnMissingBean
+  DryRunLoggingContextPropagator dryRunLoggingContextPropagator(
+          DryRunLoggingContext dryRunLoggingContext) {
+    return new DryRunLoggingContextPropagator(dryRunLoggingContext);
   }
 
   @Bean
@@ -79,9 +96,10 @@ public class TemporalConfiguration {
           ExternalCallTracker externalCallTracker,
           ExecutionTraceCollector executionTraceCollector,
           ContextFactory contextFactory,
+          DryRunLoggingContext dryRunLoggingContext,
           @Value("${cbs.nova.preview.callTree.maxDepth:32}") int previewCallTreeMaxDepth) {
     return new DevDslRuntime(externalCallTracker, executionTraceCollector, contextFactory,
-            previewCallTreeMaxDepth);
+            dryRunLoggingContext, previewCallTreeMaxDepth);
   }
 
   @Bean

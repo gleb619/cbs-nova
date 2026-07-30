@@ -10,6 +10,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.controllers.DslRuntimeResource;
+import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,7 +35,7 @@ class DslStarterIntegrationTest {
                             .build());
 
     var runtime = new DevDslRuntime(new ExternalCallTracker(), new ExecutionTraceCollector(),
-            new ContextFactory(), 32);
+            new ContextFactory(), new ThreadLocalDryRunLoggingContext(), 32);
     var resource = new DslRuntimeResource(runtime, new ContextFactory());
     mockMvc = MockMvcBuilders.standaloneSetup(resource)
             .setMessageConverters(new JacksonJsonHttpMessageConverter())

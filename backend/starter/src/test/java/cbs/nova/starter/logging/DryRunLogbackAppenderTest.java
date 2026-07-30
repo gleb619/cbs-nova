@@ -2,6 +2,7 @@ package cbs.nova.starter.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.logging.DryRunLoggingContext;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
@@ -11,11 +12,11 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.Map;
 
 class DryRunLogbackAppenderTest {
 
-  private final DryRunLogbackAppender appender = new DryRunLogbackAppender();
+  private final DryRunLoggingContext context = new ThreadLocalDryRunLoggingContext();
+  private final DryRunLogbackAppender appender = new DryRunLogbackAppender(context, 100);
   private final Logger logger;
 
   DryRunLogbackAppenderTest() {
@@ -33,7 +34,7 @@ class DryRunLogbackAppenderTest {
 
   @AfterEach
   void tearDown() {
-    DryRunLoggingContext.leaveDryRun();
+    context.clearRunId();
     logger.detachAppender(appender);
     appender.stop();
   }
@@ -41,17 +42,15 @@ class DryRunLogbackAppenderTest {
   @Test
   void logStatementInsideDryRunContextIsCaptured() {
     String runId = "run-1";
-    DryRunLoggingContext.enterDryRun(runId);
+    context.runWithRunId(runId, () -> logger.info("hello dry run"));
 
-    logger.info("hello dry run");
-
-    List<Map<String, Object>> events = appender.drain(runId);
+    List<DryRunLogEvent> events = appender.drain(runId);
     assertThat(events).hasSize(1);
-    assertThat(events.getFirst())
-            .containsEntry("level", "INFO")
-            .containsEntry("message", "hello dry run")
-            .containsEntry("logger", logger.getName())
-            .containsKey("timestamp");
+    DryRunLogEvent event = events.getFirst();
+    assertThat(event.level()).isEqualTo("INFO");
+    assertThat(event.message()).isEqualTo("hello dry run");
+    assertThat(event.runId()).isEqualTo(runId);
+    assertThat(event.timestampMillis()).isPositive();
   }
 
   @Test
@@ -60,20 +59,20 @@ class DryRunLogbackAppenderTest {
 
     logger.info("normal log");
 
-    List<Map<String, Object>> events = appender.drain(runId);
+    List<DryRunLogEvent> events = appender.drain(runId);
     assertThat(events).isEmpty();
   }
 
   @Test
   void drainReturnsCapturedEventsAndClearsBuffer() {
     String runId = "run-3";
-    DryRunLoggingContext.enterDryRun(runId);
+    context.runWithRunId(runId, () -> {
+      logger.info("first");
+      logger.info("second");
+    });
 
-    logger.info("first");
-    logger.info("second");
-
-    List<Map<String, Object>> firstDrain = appender.drain(runId);
-    List<Map<String, Object>> secondDrain = appender.drain(runId);
+    List<DryRunLogEvent> firstDrain = appender.drain(runId);
+    List<DryRunLogEvent> secondDrain = appender.drain(runId);
 
     assertThat(firstDrain).hasSize(2);
     assertThat(secondDrain).isEmpty();
@@ -84,20 +83,38 @@ class DryRunLogbackAppenderTest {
     String runIdA = "run-a";
     String runIdB = "run-b";
 
-    DryRunLoggingContext.enterDryRun(runIdA);
+    context.setRunId(runIdA);
     logger.info("event-a");
-    DryRunLoggingContext.leaveDryRun();
+    context.clearRunId();
 
-    DryRunLoggingContext.enterDryRun(runIdB);
+    context.setRunId(runIdB);
     logger.info("event-b");
-    DryRunLoggingContext.leaveDryRun();
+    context.clearRunId();
 
-    List<Map<String, Object>> eventsA = appender.drain(runIdA);
-    List<Map<String, Object>> eventsB = appender.drain(runIdB);
+    List<DryRunLogEvent> eventsA = appender.drain(runIdA);
+    List<DryRunLogEvent> eventsB = appender.drain(runIdB);
 
     assertThat(eventsA).hasSize(1);
-    assertThat(eventsA.getFirst()).containsEntry("message", "event-a");
+    assertThat(eventsA.getFirst().message()).isEqualTo("event-a");
+    assertThat(eventsA.getFirst().runId()).isEqualTo(runIdA);
     assertThat(eventsB).hasSize(1);
-    assertThat(eventsB.getFirst()).containsEntry("message", "event-b");
+    assertThat(eventsB.getFirst().message()).isEqualTo("event-b");
+    assertThat(eventsB.getFirst().runId()).isEqualTo(runIdB);
+  }
+
+  @Test
+  void bufferDropsOldestEventsWhenMaxIsReached() {
+    String runId = "run-full";
+    context.setRunId(runId);
+    for (int i = 0; i < 105; i++) {
+      logger.info("event-{}", i);
+    }
+    context.clearRunId();
+
+    List<DryRunLogEvent> events = appender.drain(runId);
+
+    assertThat(events).hasSize(100);
+    assertThat(events.getFirst().message()).isEqualTo("event-5");
+    assertThat(events.getLast().message()).isEqualTo("event-104");
   }
 }

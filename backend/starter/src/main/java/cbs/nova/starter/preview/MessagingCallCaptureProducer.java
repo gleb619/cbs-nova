@@ -1,7 +1,6 @@
 package cbs.nova.starter.preview;
 
 import cbs.nova.starter.ExternalCallTracker;
-import java.util.HashMap;
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.consumer.ConsumerGroupMetadata;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
@@ -19,6 +18,7 @@ import org.apache.kafka.common.metrics.KafkaMetric;
 import org.jspecify.annotations.NonNull;
 
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;

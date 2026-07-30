@@ -136,7 +136,8 @@ class MessagingCallCaptureAutoConfigurationTest {
   @Test
   void autoconfigurationProducesBeanPostProcessor() {
     var config = new MessagingCallCaptureAutoConfiguration();
-    var bean = MessagingCallCaptureAutoConfiguration.messagingCallCaptureProducerFactoryPostProcessor(tracker);
+    var bean = MessagingCallCaptureAutoConfiguration
+            .messagingCallCaptureProducerFactoryPostProcessor(tracker);
     assertThat(bean).isNotNull()
             .isInstanceOf(MessagingCallCaptureProducerFactoryBeanPostProcessor.class);
   }

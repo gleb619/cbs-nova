@@ -21,6 +21,7 @@ import cbs.nova.dslexamples.InvoiceModels.InvoiceLine;
 import cbs.nova.dslexamples.InvoiceModels.InvoiceOut;
 import cbs.nova.dslexamples.LongWorkModels.LongWorkIn;
 import cbs.nova.dslexamples.LongWorkModels.LongWorkOut;
+import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,8 +38,9 @@ class IntermediateDslExamplesTest {
   private final ContextFactory contextFactory = new ContextFactory();
   private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
   private final ExternalCallTracker tracker = new ExternalCallTracker();
+  private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
   private final DevDslRuntime runtime = new DevDslRuntime(tracker, traceCollector, contextFactory,
-          32);
+          dryRunLoggingContext, 32);
   @TempDir
   Path dslSourceDir;
 

@@ -10,8 +10,16 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.starter.logging.DryRunLogbackAppender;
+import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.Appender;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 
@@ -20,8 +28,12 @@ class DevDslRuntimeTest {
   private final ExternalCallTracker tracker = new ExternalCallTracker();
   private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
   private final ContextFactory contextFactory = new ContextFactory();
+  private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
+  private final DryRunLogbackAppender appender = new DryRunLogbackAppender(dryRunLoggingContext,
+          1000);
+  private Appender<ILoggingEvent> originalDryRunAppender;
   private final DevDslRuntime runtime = new DevDslRuntime(tracker, traceCollector, contextFactory,
-          32);
+          dryRunLoggingContext, 32);
 
   @BeforeEach
   void reset() {
@@ -29,6 +41,29 @@ class DevDslRuntimeTest {
     GlobalManager.globalManager()
             .registerProcess(Dsl.process("Ping")
                     .execute(ctx -> Result.success("pong")).build());
+
+    Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+    originalDryRunAppender = root.getAppender("DRY_RUN");
+    if (originalDryRunAppender != null) {
+      root.detachAppender(originalDryRunAppender);
+    }
+    appender.setContext(root.getLoggerContext());
+    appender.setName("DRY_RUN");
+    appender.start();
+    root.addAppender(appender);
+    root.setLevel(Level.INFO);
+  }
+
+  @AfterEach
+  void tearDown() {
+    dryRunLoggingContext.clearRunId();
+    Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+    root.detachAppender(appender);
+    appender.stop();
+    if (originalDryRunAppender != null) {
+      root.addAppender(originalDryRunAppender);
+    }
+    GlobalManager.globalManager().resetForTests();
   }
 
   @Test
