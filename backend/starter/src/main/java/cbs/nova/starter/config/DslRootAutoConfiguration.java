@@ -32,6 +32,7 @@ import org.springframework.context.annotation.Import;
     FeignCallAutoConfiguration.class,
     PreviewAutoConfiguration.class,
     MessagingCallCaptureAutoConfiguration.class,
+    PreviewMetricsAutoConfiguration.class,
     DslReloadRouterConfiguration.class
 })
 public class DslRootAutoConfiguration {
