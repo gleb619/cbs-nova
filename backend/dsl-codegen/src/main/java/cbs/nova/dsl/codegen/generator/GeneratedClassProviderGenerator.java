@@ -123,7 +123,7 @@ public final class GeneratedClassProviderGenerator {
                                 ${inputLiteral},
                                 ${outputLiteral},
                                 JSON_SPEC
-                                )
+                                );
                       }
                     
                       @Override

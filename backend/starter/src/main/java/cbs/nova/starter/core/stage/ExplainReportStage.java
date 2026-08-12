@@ -29,9 +29,9 @@ public final class ExplainReportStage implements DslPipeStage {
 
     GlobalManager gm = GlobalManager.globalManager();
     DslDescriptor dslDesc = gm.describeProcess(context.getName())
-        .or(() -> gm.describeTransaction(context.getName()))
-        .or(() -> gm.describeFunction(context.getName()))
-        .orElse(null);
+            .or(() -> gm.describeTransaction(context.getName()))
+            .or(() -> gm.describeFunction(context.getName()))
+            .orElse(null);
     String description = describeEntity(dslDesc, gm, context.getName());
 
     List<PreviewErrorDetail> errors = new ArrayList<>();
@@ -42,36 +42,36 @@ public final class ExplainReportStage implements DslPipeStage {
     @SuppressWarnings("unchecked")
     List<ExternalCall> calls = (List<ExternalCall>) context.getAttribute("externalCalls");
     List<Map<String, Object>> externalCalls = calls != null
-        ? ExternalCallConverter.toCallJson(calls)
-        : List.of();
+            ? ExternalCallConverter.toCallJson(calls)
+            : List.of();
     Map<String, Integer> callCounts = calls != null
-        ? ExternalCallConverter.toCallCounts(calls)
-        : Map.of();
+            ? ExternalCallConverter.toCallCounts(calls)
+            : Map.of();
 
     ExplainReport report = new ExplainReport(
-        context.getName(),
-        description,
-        attribute(context, "executionTrace", List.class, List.of()),
-        externalCalls,
-        callCounts,
-        gm.describeHelper(context.getName()).orElse(null),
-        dslDesc,
-        context.getAttribute("astTree", CallNode.class),
-        attribute(context, "dryRunLogs", List.class, List.of()),
-        context.getAttribute("metrics", PreviewMetricsSnapshot.class),
-        errors);
+            context.getName(),
+            description,
+            attribute(context, "executionTrace", List.class, List.of()),
+            externalCalls,
+            callCounts,
+            gm.describeHelper(context.getName()).orElse(null),
+            dslDesc,
+            context.getAttribute("astTree", CallNode.class),
+            attribute(context, "dryRunLogs", List.class, List.of()),
+            context.getAttribute("metrics", PreviewMetricsSnapshot.class),
+            errors);
 
     return Result.success(report);
   }
 
   private @NonNull String describeEntity(
-      DslDescriptor dslDesc, @NonNull GlobalManager gm, @NonNull String name) {
+          DslDescriptor dslDesc, @NonNull GlobalManager gm, @NonNull String name) {
     if (dslDesc != null) {
       return capitalize(dslDesc.type().name()) + ": " + dslDesc.name();
     }
     return gm.describeHelper(name)
-        .map(helper -> "Helper: " + name)
-        .orElse("Entity: " + name);
+            .map(helper -> "Helper: " + name)
+            .orElse("Entity: " + name);
   }
 
   private @NonNull String capitalize(@NonNull String value) {
@@ -83,7 +83,7 @@ public final class ExplainReportStage implements DslPipeStage {
 
   @SuppressWarnings("unchecked")
   private <T> T attribute(@NonNull DslPipeContext context, @NonNull String key,
-      @NonNull Class<T> type, T defaultValue) {
+          @NonNull Class<T> type, T defaultValue) {
     T value = context.getAttribute(key, type);
     return value != null ? value : defaultValue;
   }

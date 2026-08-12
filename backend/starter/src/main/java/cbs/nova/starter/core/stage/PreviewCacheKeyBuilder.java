@@ -21,22 +21,22 @@ final class PreviewCacheKeyBuilder {
   PreviewCacheKey build(@NonNull String name, @NonNull Context<?> ctx) {
     GlobalManager gm = GlobalManager.globalManager();
     Optional<DslDescriptor> descriptor = gm.describeProcess(name)
-        .or(() -> gm.describeTransaction(name))
-        .or(() -> gm.describeHelper(name)
-            .map(helper -> new DslDescriptor(
-                name,
-                DslObject.DslType.FUNCTION,
-                helper.description(),
-                helper.inputType(),
-                helper.outputType(),
-                false,
-                helper.hasSideEffects(),
-                helper.previewBehavior(),
-                helper.parameters(),
-                null,
-                null,
-                null,
-                null)));
+            .or(() -> gm.describeTransaction(name))
+            .or(() -> gm.describeHelper(name)
+                    .map(helper -> new DslDescriptor(
+                            name,
+                            DslObject.DslType.FUNCTION,
+                            helper.description(),
+                            helper.inputType(),
+                            helper.outputType(),
+                            false,
+                            helper.hasSideEffects(),
+                            helper.previewBehavior(),
+                            helper.parameters(),
+                            null,
+                            null,
+                            null,
+                            null)));
     String dslHash = descriptor.map(this::dslDescriptorHash).orElse("");
     String inputHash = inputHash(ctx.body());
     return new PreviewCacheKey(name, dslHash, inputHash);
@@ -54,8 +54,8 @@ final class PreviewCacheKeyBuilder {
   private @NonNull String inputHash(@Nullable Object input) {
     try {
       byte[] bytes = input == null
-          ? "null".getBytes(StandardCharsets.UTF_8)
-          : jsonMapper.writeValueAsBytes(input);
+              ? "null".getBytes(StandardCharsets.UTF_8)
+              : jsonMapper.writeValueAsBytes(input);
       return sha256Hex(bytes);
     } catch (Exception e) {
       throw new IllegalStateException("Failed to serialize preview input", e);

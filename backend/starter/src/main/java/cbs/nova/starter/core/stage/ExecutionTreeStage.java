@@ -25,12 +25,12 @@ public final class ExecutionTreeStage implements DslPipeStage {
     ExecutionTreeCollector collector = new ExecutionTreeCollector(maxDepth);
     collector.startRun(context.getRunId());
     Context<?> modeCtx = contextFactory.of(
-        context.getDslContext().body(),
-        context.getDslContext().metadata(),
-        context.getMode(),
-        context.getRunId(),
-        context.getDslContext().transactionRouting())
-        .withExecutionListener(collector);
+            context.getDslContext().body(),
+            context.getDslContext().metadata(),
+            context.getMode(),
+            context.getRunId(),
+            context.getDslContext().transactionRouting())
+            .withExecutionListener(collector);
     DslPipeContext wrappedContext = context.withDslContext(modeCtx);
     try {
       return next.proceed(wrappedContext);

@@ -38,7 +38,7 @@ public class DslExceptionHandler {
     return runId instanceof String s && !s.isBlank() ? s : null;
   }
 
-  //TODO: Instead of static, create interface and some impl, to end-user can override it
+  // TODO: Instead of static, create interface and some impl, to end-user can override it
   private static void capture(Exception ex, String runId) {
     try {
       if (runId != null) {

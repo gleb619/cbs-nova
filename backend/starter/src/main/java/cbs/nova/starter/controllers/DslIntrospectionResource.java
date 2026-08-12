@@ -38,13 +38,13 @@ public class DslIntrospectionResource {
   private static Map<String, Object> inputSchema(DslObject entity) {
     if (entity instanceof ProcessDslObject p) {
       return p.inputType() != null
-          ? JsonSchemaGenerator.generateSchema(p.inputType())
-          : JsonSchemaGenerator.generateSchema(p.parameters());
+              ? JsonSchemaGenerator.generateSchema(p.inputType())
+              : JsonSchemaGenerator.generateSchema(p.parameters());
     }
     if (entity instanceof TransactionDslObject t) {
       return t.inputType() != null
-          ? JsonSchemaGenerator.generateSchema(t.inputType())
-          : JsonSchemaGenerator.generateSchema(t.parameters());
+              ? JsonSchemaGenerator.generateSchema(t.inputType())
+              : JsonSchemaGenerator.generateSchema(t.parameters());
     }
     return JsonSchemaGenerator.generateSchema((Class<?>) null);
   }
@@ -59,18 +59,18 @@ public class DslIntrospectionResource {
   @Operation(summary = "Get metadata of a single DSL process")
   public ResponseEntity<?> processDetail(@PathVariable String name) {
     return GlobalManager.globalManager()
-        .findProcess(name)
-        .<ResponseEntity<?>>map(
-            p -> ResponseEntity.ok(
-                new ProcessDetail(
-                    p.name(),
-                    p.version(),
-                    p.taskQueue(),
-                    typeName(p.inputType()),
-                    typeName(p.outputType()),
-                    p.compensationLogic() != null,
-                    inputSchema(p))))
-        .orElse(ResponseEntity.notFound().build());
+            .findProcess(name)
+            .<ResponseEntity<?>>map(
+                    p -> ResponseEntity.ok(
+                            new ProcessDetail(
+                                    p.name(),
+                                    p.version(),
+                                    p.taskQueue(),
+                                    typeName(p.inputType()),
+                                    typeName(p.outputType()),
+                                    p.compensationLogic() != null,
+                                    inputSchema(p))))
+            .orElse(ResponseEntity.notFound().build());
   }
 
   @GetMapping("/transactions")
@@ -83,41 +83,41 @@ public class DslIntrospectionResource {
   @Operation(summary = "Get metadata of a single DSL transaction")
   public ResponseEntity<?> transactionDetail(@PathVariable String name) {
     return GlobalManager.globalManager()
-        .findTransaction(name)
-        .<ResponseEntity<?>>map(
-            t -> ResponseEntity.ok(
-                new TransactionDetail(
-                    t.name(),
-                    t.version(),
-                    t.taskQueue(),
-                    typeName(t.inputType()),
-                    typeName(t.outputType()),
-                    t.compensationLogic() != null,
-                    t.startToCloseTimeout().toMillis(),
-                    inputSchema(t))))
-        .orElse(ResponseEntity.notFound().build());
+            .findTransaction(name)
+            .<ResponseEntity<?>>map(
+                    t -> ResponseEntity.ok(
+                            new TransactionDetail(
+                                    t.name(),
+                                    t.version(),
+                                    t.taskQueue(),
+                                    typeName(t.inputType()),
+                                    typeName(t.outputType()),
+                                    t.compensationLogic() != null,
+                                    t.startToCloseTimeout().toMillis(),
+                                    inputSchema(t))))
+            .orElse(ResponseEntity.notFound().build());
   }
 
   @GetMapping("/helpers/search")
   @Operation(summary = "Search registered DSL helpers, processes, transactions and functions")
   @ApiResponse(responseCode = "200", description = "Matching DSL entities", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = HelperSearchResult.class))))
   public ResponseEntity<List<HelperSearchResult>> searchHelpers(
-      @RequestParam(name = "name", required = false) String name,
-      @RequestParam(name = "type", required = false) String type,
-      @RequestParam(name = "description", required = false) String description) {
+          @RequestParam(name = "name", required = false) String name,
+          @RequestParam(name = "type", required = false) String type,
+          @RequestParam(name = "description", required = false) String description) {
     var gm = GlobalManager.globalManager();
     List<HelperSearchResult> results = new ArrayList<>();
     gm.processNames().forEach(n -> gm.describeProcess(n)
-        .ifPresent(d -> results.add(toResult(d))));
+            .ifPresent(d -> results.add(toResult(d))));
     gm.transactionNames().forEach(n -> gm.describeTransaction(n)
-        .ifPresent(d -> results.add(toResult(d))));
+            .ifPresent(d -> results.add(toResult(d))));
     gm.helperNames().forEach(n -> {
       gm.describeHelper(n).ifPresent(d -> results.add(toResult(n, d)));
       gm.describeFunction(n).ifPresent(d -> results.add(toResult(d)));
     });
     var filtered = results.stream()
-        .filter(r -> matches(r, name, type, description))
-        .toList();
+            .filter(r -> matches(r, name, type, description))
+            .toList();
     return ResponseEntity.ok(filtered);
   }
 
@@ -134,46 +134,46 @@ public class DslIntrospectionResource {
     var gm = GlobalManager.globalManager();
     List<DefinitionMetaDto> aggregate = new ArrayList<>();
     gm.processNames().forEach(n -> gm.findProcess(n)
-        .ifPresent(p -> aggregate.add(
-            new DefinitionMetaDto(p.name(), "process", inputSchema(p)))));
+            .ifPresent(p -> aggregate.add(
+                    new DefinitionMetaDto(p.name(), "process", inputSchema(p)))));
     gm.transactionNames().forEach(n -> gm.findTransaction(n)
-        .ifPresent(t -> aggregate.add(
-            new DefinitionMetaDto(t.name(), "transaction", inputSchema(t)))));
+            .ifPresent(t -> aggregate.add(
+                    new DefinitionMetaDto(t.name(), "transaction", inputSchema(t)))));
     gm.helperNames().forEach(n -> {
       gm.describeHelper(n).ifPresent(d -> aggregate.add(
-          new DefinitionMetaDto(n, "helper", null)));
+              new DefinitionMetaDto(n, "helper", null)));
       gm.describeFunction(n).ifPresent(d -> aggregate.add(
-          new DefinitionMetaDto(d.name(), "function", null)));
+              new DefinitionMetaDto(d.name(), "function", null)));
     });
     return ResponseEntity.ok(aggregate);
   }
 
   private static HelperSearchResult toResult(DslDescriptor descriptor) {
     return new HelperSearchResult(
-        descriptor.name(),
-        descriptor.type().name().toLowerCase(Locale.ROOT),
-        descriptor.description(),
-        typeName(descriptor.inputType()),
-        typeName(descriptor.outputType()));
+            descriptor.name(),
+            descriptor.type().name().toLowerCase(Locale.ROOT),
+            descriptor.description(),
+            typeName(descriptor.inputType()),
+            typeName(descriptor.outputType()));
   }
 
   private static HelperSearchResult toResult(String name, ExecutableDescriptor descriptor) {
     return new HelperSearchResult(
-        name,
-        "helper",
-        descriptor.description(),
-        typeName(descriptor.inputType()),
-        typeName(descriptor.outputType()));
+            name,
+            "helper",
+            descriptor.description(),
+            typeName(descriptor.inputType()),
+            typeName(descriptor.outputType()));
   }
 
   private static boolean matches(HelperSearchResult result, String name, String type,
-      String description) {
+          String description) {
     if (name != null && !name.isBlank()
-        && !result.name().toLowerCase(Locale.ROOT).contains(name.toLowerCase(Locale.ROOT))) {
+            && !result.name().toLowerCase(Locale.ROOT).contains(name.toLowerCase(Locale.ROOT))) {
       return false;
     }
     if (type != null && !type.isBlank()
-        && !result.type().equalsIgnoreCase(type)) {
+            && !result.type().equalsIgnoreCase(type)) {
       return false;
     }
     if (description != null && !description.isBlank()) {
@@ -188,41 +188,41 @@ public class DslIntrospectionResource {
   }
 
   public record ProcessDetail(
-      String name,
-      String version,
-      String taskQueue,
-      String inputType,
-      String outputType,
-      boolean hasCompensation,
-      Map<String, Object> inputSchema) {
+          String name,
+          String version,
+          String taskQueue,
+          String inputType,
+          String outputType,
+          boolean hasCompensation,
+          Map<String, Object> inputSchema) {
 
   }
 
   public record TransactionDetail(
-      String name,
-      String version,
-      String taskQueue,
-      String inputType,
-      String outputType,
-      boolean hasCompensation,
-      long startToCloseTimeoutMs,
-      Map<String, Object> inputSchema) {
+          String name,
+          String version,
+          String taskQueue,
+          String inputType,
+          String outputType,
+          boolean hasCompensation,
+          long startToCloseTimeoutMs,
+          Map<String, Object> inputSchema) {
 
   }
 
   public record HelperSearchResult(
-      String name,
-      String type,
-      String description,
-      String inputType,
-      String outputType) {
+          String name,
+          String type,
+          String description,
+          String inputType,
+          String outputType) {
 
   }
 
   public record DefinitionMetaDto(
-      String name,
-      String type,
-      @JsonInclude(JsonInclude.Include.NON_NULL) Map<String, Object> inputSchema) {
+          String name,
+          String type,
+          @JsonInclude(JsonInclude.Include.NON_NULL) Map<String, Object> inputSchema) {
 
   }
 }

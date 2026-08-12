@@ -9,7 +9,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import cbs.nova.starter.ExternalCallTracker;
+import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -28,7 +28,7 @@ import java.sql.Statement;
  * Pure-unit tests for {@link ConnectionInvocationHandler}. Wraps a Mockito-mocked
  * {@link DataSource} (the only public constructor) and verifies the statement-factory wrapping
  * contract: returned statements are re-proxied through {@link PreparedStatementInvocationHandler}
- * and forward recorded calls to the {@link ExternalCallTracker} using the factory SQL.
+ * and forward recorded calls to the {@link ExternalCallRecorder} using the factory SQL.
  */
 class ConnectionInvocationHandlerTest {
 
@@ -36,7 +36,7 @@ class ConnectionInvocationHandlerTest {
   private static final String SELECT_SQL = "select id from orders where id = ?";
   private static final String CALL_SQL = "{ call my_proc(?) }";
 
-  private ExternalCallTracker tracker;
+  private ExternalCallRecorder externalCallRecorder;
   private DataSource dataSource;
   private Connection connection;
   private DatabaseMetaData metaData;
@@ -48,7 +48,7 @@ class ConnectionInvocationHandlerTest {
 
   @BeforeEach
   void setUp() throws SQLException {
-    tracker = mock(ExternalCallTracker.class);
+    externalCallRecorder = mock(ExternalCallRecorder.class);
     dataSource = mock(DataSource.class);
     connection = mock(Connection.class);
     metaData = mock(DatabaseMetaData.class);
@@ -63,7 +63,7 @@ class ConnectionInvocationHandlerTest {
     when(connection.prepareCall(CALL_SQL)).thenReturn(callableStatement);
     when(connection.createStatement()).thenReturn(statement);
 
-    handler = new ConnectionInvocationHandler(dataSource, tracker);
+    handler = new ConnectionInvocationHandler(dataSource, externalCallRecorder);
     dataSourceProxy = (DataSource) Proxy.newProxyInstance(
             getClass().getClassLoader(),
             new Class<?>[]{DataSource.class},
@@ -81,11 +81,11 @@ class ConnectionInvocationHandlerTest {
     assertThat(conn).isNotNull();
     assertThat(Proxy.isProxyClass(conn.getClass())).isTrue();
     verify(dataSource).getConnection();
-    verifyNoInteractions(tracker);
+    verifyNoInteractions(externalCallRecorder);
   }
 
   @Test
-  void prepareStatementReturnsReproxiedStatementWiredToSameTracker() throws SQLException {
+  void prepareStatementReturnsReproxiedStatementWiredToSameRecorder() throws SQLException {
     Connection conn = wrappedConnection();
     PreparedStatement wrapped = conn.prepareStatement(SELECT_SQL);
 
@@ -95,7 +95,7 @@ class ConnectionInvocationHandlerTest {
     verify(connection).getMetaData();
     verify(metaData).getURL();
     // Statement factory methods themselves do not record — the proxy only forwards.
-    verifyNoInteractions(tracker);
+    verifyNoInteractions(externalCallRecorder);
   }
 
   @Test
@@ -108,14 +108,15 @@ class ConnectionInvocationHandlerTest {
     ResultSet actual = wrapped.executeQuery();
 
     assertThat(actual).isSameAs(rs);
-    verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, URL, "SELECT");
-    verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, URL, "SELECT", SELECT_SQL);
+    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, URL, "SELECT");
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, URL, "SELECT",
+            SELECT_SQL);
     verify(preparedStatement).executeQuery();
-    verifyNoMoreInteractions(tracker);
+    verifyNoMoreInteractions(externalCallRecorder);
   }
 
   @Test
-  void prepareCallReturnsReproxiedCallableStatementWiredToSameTracker() throws SQLException {
+  void prepareCallReturnsReproxiedCallableStatementWiredToSameRecorder() throws SQLException {
     Connection conn = wrappedConnection();
     CallableStatement wrapped = conn.prepareCall(CALL_SQL);
 
@@ -124,7 +125,7 @@ class ConnectionInvocationHandlerTest {
     verify(connection).prepareCall(CALL_SQL);
     verify(connection).getMetaData();
     verify(metaData).getURL();
-    verifyNoInteractions(tracker);
+    verifyNoInteractions(externalCallRecorder);
   }
 
   @Test
@@ -137,10 +138,10 @@ class ConnectionInvocationHandlerTest {
 
     assertThat(executed).isTrue();
     // First whitespace-separated token of "{ call my_proc(?) }" is "{".
-    verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, URL, "{");
-    verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, URL, "{", CALL_SQL);
+    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, URL, "{");
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, URL, "{", CALL_SQL);
     verify(callableStatement).execute();
-    verifyNoMoreInteractions(tracker);
+    verifyNoMoreInteractions(externalCallRecorder);
   }
 
   @Test
@@ -153,7 +154,7 @@ class ConnectionInvocationHandlerTest {
     verify(connection).createStatement();
     verify(connection).getMetaData();
     verify(metaData).getURL();
-    verifyNoInteractions(tracker);
+    verifyNoInteractions(externalCallRecorder);
   }
 
   @Test
@@ -167,14 +168,14 @@ class ConnectionInvocationHandlerTest {
     ResultSet actual = wrapped.executeQuery(adHoc);
 
     assertThat(actual).isSameAs(rs);
-    verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, URL, "DELETE");
-    verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, URL, "DELETE", adHoc);
+    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, URL, "DELETE");
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, URL, "DELETE", adHoc);
     verify(statement).executeQuery(adHoc);
-    verifyNoMoreInteractions(tracker);
+    verifyNoMoreInteractions(externalCallRecorder);
   }
 
   @Test
-  void nonStatementFactoryMethodsForwardAndDoNotTouchTracker() throws SQLException {
+  void nonStatementFactoryMethodsForwardAndDoNotTouchRecorder() throws SQLException {
     when(connection.getAutoCommit()).thenReturn(false);
 
     Connection conn = wrappedConnection();
@@ -188,7 +189,7 @@ class ConnectionInvocationHandlerTest {
     verify(connection).setAutoCommit(true);
     verify(connection).getAutoCommit();
     verify(connection).close();
-    verifyNoInteractions(tracker);
+    verifyNoInteractions(externalCallRecorder);
   }
 
   @Test
@@ -201,7 +202,7 @@ class ConnectionInvocationHandlerTest {
             .isSameAs(cause);
 
     verify(connection).commit();
-    verifyNoInteractions(tracker);
+    verifyNoInteractions(externalCallRecorder);
   }
 
   @Test
@@ -216,10 +217,11 @@ class ConnectionInvocationHandlerTest {
             .isSameAs(cause);
 
     // Recording happens before delegation, so the call is observed even when the delegate throws.
-    verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, URL, "SELECT");
-    verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, URL, "SELECT", SELECT_SQL);
+    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, URL, "SELECT");
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, URL, "SELECT",
+            SELECT_SQL);
     verify(preparedStatement, times(1)).executeQuery();
-    verifyNoMoreInteractions(tracker);
+    verifyNoMoreInteractions(externalCallRecorder);
   }
 
   @Test
@@ -230,7 +232,7 @@ class ConnectionInvocationHandlerTest {
 
     assertThat(conn).isNull();
     verify(dataSource).getConnection();
-    verifyNoInteractions(tracker);
+    verifyNoInteractions(externalCallRecorder);
   }
 
   @Test
@@ -242,7 +244,7 @@ class ConnectionInvocationHandlerTest {
 
     assertThat(wrapped).isNull();
     verify(connection).prepareStatement(SELECT_SQL);
-    verifyNoInteractions(tracker);
+    verifyNoInteractions(externalCallRecorder);
   }
 
   @Test
@@ -260,9 +262,10 @@ class ConnectionInvocationHandlerTest {
     // resolveTarget() is invoked once per statement-factory call.
     verify(connection, times(2)).getMetaData();
     verify(metaData, times(2)).getURL();
-    verify(tracker, times(2)).findMock(ExternalCallTracker.TYPE_DATABASE, URL, "SELECT");
-    verify(tracker, times(2)).record(ExternalCallTracker.TYPE_DATABASE, URL, "SELECT",
+    verify(externalCallRecorder, times(2)).findMock(ExternalCallRecorder.TYPE_DATABASE, URL,
+            "SELECT");
+    verify(externalCallRecorder, times(2)).record(ExternalCallRecorder.TYPE_DATABASE, URL, "SELECT",
             SELECT_SQL);
-    verifyNoMoreInteractions(tracker);
+    verifyNoMoreInteractions(externalCallRecorder);
   }
 }

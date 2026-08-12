@@ -7,7 +7,7 @@ import java.util.Map;
 
 /**
  * Mock resolver backed by a plain signature -> mock map. Signatures are formed as
- * {@code type:target:operation} to match the legacy {@code ExternalCallTracker} mock format.
+ * {@code type:target:operation} to match the run-scoped recorder mock format.
  */
 public final class MapBasedMockResolver implements MockResolver {
 
@@ -19,7 +19,7 @@ public final class MapBasedMockResolver implements MockResolver {
 
   @Override
   public @Nullable Object findMock(@NonNull String type, @NonNull String target,
-      @NonNull String operation) {
+          @NonNull String operation) {
     return mocks.get(type + ":" + target + ":" + operation);
   }
 }

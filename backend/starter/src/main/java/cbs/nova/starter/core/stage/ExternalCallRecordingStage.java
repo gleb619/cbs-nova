@@ -5,7 +5,7 @@ import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import cbs.nova.starter.core.recorder.ExternalCall;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
-import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
+import cbs.nova.starter.core.recorder.MapBasedMockResolver;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
@@ -25,6 +25,7 @@ public final class ExternalCallRecordingStage implements DslPipeStage {
       return next.proceed(context);
     } finally {
       List<ExternalCall> calls = recorder.finishRun(context.getRunId());
+      recorder.stopMocking();
       context.setAttribute("externalCalls", calls);
     }
   }
@@ -34,7 +35,7 @@ public final class ExternalCallRecordingStage implements DslPipeStage {
     if (mocks instanceof Map<?, ?> map && !map.isEmpty()) {
       @SuppressWarnings("unchecked")
       Map<String, Object> typed = (Map<String, Object>) map;
-      recorder.startMocking(new RunScopedExternalCallRecorder.MapBasedMockResolver(typed));
+      recorder.startMocking(new MapBasedMockResolver(typed));
     }
   }
 }

@@ -29,17 +29,17 @@ public final class ExplainDslPipe implements DslExecutionPipe<ExplainReport> {
 
   @Override
   public @NonNull Result<ExplainReport> execute(@NonNull String name,
-      @NonNull Context<?> ctx) {
+          @NonNull Context<?> ctx) {
     return DslExecutionPipeline.<ExplainReport>builder()
-        .stage(new ExplainReportStage())
-        .stage(new MetricsStage())
-        .stage(new ExecutionTreeStage(contextFactory,
-            previewProperties.callTree().maxDepth()))
-        .stage(new DryRunLogStage(dryRunLoggingContext))
-        .stage(new ExecutionTraceStage(traceCollector))
-        .stage(new ExternalCallRecordingStage(recorder))
-        .stage(new DispatchStage(contextFactory))
-        .build()
-        .execute(name, ctx);
+            .stage(new ExplainReportStage())
+            .stage(new MetricsStage())
+            .stage(new ExecutionTreeStage(contextFactory,
+                    previewProperties.callTree().maxDepth()))
+            .stage(new DryRunLogStage(dryRunLoggingContext))
+            .stage(new ExecutionTraceStage(traceCollector))
+            .stage(new ExternalCallRecordingStage(recorder))
+            .stage(new DispatchStage(contextFactory))
+            .build()
+            .execute(name, ctx);
   }
 }

@@ -16,12 +16,12 @@ public final class RunDslPipe implements DslExecutionPipe<Object> {
   private final ExecutionTraceCollector traceCollector;
 
   @Override
-  public @NonNull cbs.nova.dsl.Result<Object> execute(@NonNull String name,
-      @NonNull cbs.nova.dsl.Context<?> ctx) {
+  public @NonNull Result<Object> execute(@NonNull String name,
+          @NonNull Context<?> ctx) {
     return DslExecutionPipeline.<Object>builder()
-        .stage(new ExecutionTraceStage(traceCollector))
-        .stage(new DispatchStage(contextFactory))
-        .build()
-        .execute(name, ctx);
+            .stage(new ExecutionTraceStage(traceCollector))
+            .stage(new DispatchStage(contextFactory))
+            .build()
+            .execute(name, ctx);
   }
 }

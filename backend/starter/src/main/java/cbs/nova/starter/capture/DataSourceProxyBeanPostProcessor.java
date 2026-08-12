@@ -1,16 +1,16 @@
 package cbs.nova.starter.capture;
 
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
-import java.sql.Wrapper;
-import javax.sql.CommonDataSource;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 
+import javax.sql.CommonDataSource;
 import javax.sql.DataSource;
 
 import java.io.Closeable;
 import java.lang.reflect.Proxy;
+import java.sql.Wrapper;
 import java.util.Set;
 
 /**
@@ -18,7 +18,7 @@ import java.util.Set;
  * proxy. The proxy records every JDBC call (executeQuery / executeUpdate / execute / executeBatch)
  * into the supplied {@link ExternalCallRecorder}.
  */
-//TODO: Usage of reflection is forbidden, add typed handler here
+// TODO: Usage of reflection is forbidden, add typed handler here
 public class DataSourceProxyBeanPostProcessor implements BeanPostProcessor {
 
   private static final Set<Class<?>> DATA_SOURCE_INTERFACES = Set.of(

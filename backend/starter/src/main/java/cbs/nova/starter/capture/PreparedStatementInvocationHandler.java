@@ -22,7 +22,7 @@ import java.util.Set;
  * SQL (upper-cased) is used as the recorded operation; {@code executeBatch} is always recorded as
  * {@code BATCH}.
  */
-//TODO: Usage of reflection is forbidden, add typed handler here
+// TODO: Usage of reflection is forbidden, add typed handler here
 public class PreparedStatementInvocationHandler implements InvocationHandler {
 
   private static final Set<String> RECORDED_METHODS = Set.of(

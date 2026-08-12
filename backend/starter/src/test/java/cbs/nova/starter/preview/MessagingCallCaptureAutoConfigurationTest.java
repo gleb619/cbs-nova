@@ -5,7 +5,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import cbs.nova.starter.ExternalCallTracker;
+import cbs.nova.starter.core.recorder.ExternalCall;
+import cbs.nova.starter.core.recorder.ExternalCallRecorder;
+import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -22,20 +24,19 @@ import java.util.concurrent.Future;
 
 class MessagingCallCaptureAutoConfigurationTest {
 
-  private ExternalCallTracker tracker;
-  private List<ExternalCallTracker.CallDetail> recorded;
+  private RunScopedExternalCallRecorder recorder;
+  private List<ExternalCall> recorded;
 
   @BeforeEach
   void setUp() {
-    tracker = new ExternalCallTracker();
-    tracker.resetGlobalCounts();
+    recorder = new RunScopedExternalCallRecorder(null);
+    recorder.resetGlobalCounts();
     recorded = new ArrayList<>();
   }
 
   @AfterEach
   void tearDown() {
-    tracker.stopTracking();
-    tracker.resetGlobalCounts();
+    recorder.resetGlobalCounts();
   }
 
   @Test
@@ -45,16 +46,16 @@ class MessagingCallCaptureAutoConfigurationTest {
     when(delegate.send(new ProducerRecord<>("orders", "key-1", "value-1")))
             .thenReturn(mock(Future.class));
 
-    var capture = new MessagingCallCaptureProducer<>(delegate, tracker);
-    tracker.startTracking(recorded);
+    var capture = new MessagingCallCaptureProducer<>(delegate, recorder);
+    recorder.startRun("run-1");
     capture.send(new ProducerRecord<>("orders", "key-1", "value-1"));
-    tracker.stopTracking();
+    recorded.addAll(recorder.finishRun("run-1"));
 
     verify(delegate).send(new ProducerRecord<>("orders", "key-1", "value-1"));
     assertThat(recorded).hasSize(1);
 
-    ExternalCallTracker.CallDetail call = recorded.get(0);
-    assertThat(call.type()).isEqualTo(ExternalCallTracker.TYPE_MQ);
+    ExternalCall call = recorded.get(0);
+    assertThat(call.type()).isEqualTo(ExternalCallRecorder.TYPE_MQ);
     assertThat(call.target()).isEqualTo("orders");
     assertThat(call.operation()).isEqualTo("send");
 
@@ -73,10 +74,10 @@ class MessagingCallCaptureAutoConfigurationTest {
     when(delegate.send(new ProducerRecord<>("events", "k", "v"), callback))
             .thenReturn(mock(Future.class));
 
-    var capture = new MessagingCallCaptureProducer<>(delegate, tracker);
-    tracker.startTracking(recorded);
+    var capture = new MessagingCallCaptureProducer<>(delegate, recorder);
+    recorder.startRun("run-1");
     capture.send(new ProducerRecord<>("events", "k", "v"), callback);
-    tracker.stopTracking();
+    recorded.addAll(recorder.finishRun("run-1"));
 
     assertThat(recorded).hasSize(1);
     assertThat(recorded.get(0).target()).isEqualTo("events");
@@ -92,11 +93,11 @@ class MessagingCallCaptureAutoConfigurationTest {
     ProducerFactory<String, String> delegate = mock(ProducerFactory.class);
     when(delegate.createProducer()).thenReturn(realProducer);
 
-    var factory = new MessagingCallCaptureProducerFactory<>(delegate, tracker);
-    tracker.startTracking(recorded);
+    var factory = new MessagingCallCaptureProducerFactory<>(delegate, recorder);
+    recorder.startRun("run-1");
     Producer<String, String> wrapped = factory.createProducer();
     wrapped.send(new ProducerRecord<>("metrics", "x"));
-    tracker.stopTracking();
+    recorded.addAll(recorder.finishRun("run-1"));
 
     verify(delegate).createProducer();
     assertThat(recorded).hasSize(1);
@@ -111,16 +112,16 @@ class MessagingCallCaptureAutoConfigurationTest {
 
     ProducerFactory<String, String> bean = () -> realProducer;
 
-    var postProcessor = new MessagingCallCaptureProducerFactoryBeanPostProcessor(tracker);
+    var postProcessor = new MessagingCallCaptureProducerFactoryBeanPostProcessor(recorder);
     Object processed = postProcessor.postProcessAfterInitialization(bean, "producerFactory");
 
     assertThat(processed).isInstanceOf(MessagingCallCaptureProducerFactory.class);
     assertThat(processed).isNotSameAs(bean);
 
-    tracker.startTracking(recorded);
+    recorder.startRun("run-1");
     ((ProducerFactory<String, String>) processed).createProducer()
             .send(new ProducerRecord<>("logs", "y"));
-    tracker.stopTracking();
+    recorded.addAll(recorder.finishRun("run-1"));
 
     assertThat(recorded).hasSize(1);
     assertThat(recorded.get(0).target()).isEqualTo("logs");
@@ -128,7 +129,7 @@ class MessagingCallCaptureAutoConfigurationTest {
 
   @Test
   void beanPostProcessorLeavesOtherBeansUnchanged() {
-    var postProcessor = new MessagingCallCaptureProducerFactoryBeanPostProcessor(tracker);
+    var postProcessor = new MessagingCallCaptureProducerFactoryBeanPostProcessor(recorder);
     Object plain = new Object();
     assertThat(postProcessor.postProcessAfterInitialization(plain, "plain")).isSameAs(plain);
   }
@@ -137,7 +138,7 @@ class MessagingCallCaptureAutoConfigurationTest {
   void autoconfigurationProducesBeanPostProcessor() {
     var config = new MessagingCallCaptureAutoConfiguration();
     var bean = MessagingCallCaptureAutoConfiguration
-            .messagingCallCaptureProducerFactoryPostProcessor(tracker);
+            .messagingCallCaptureProducerFactoryPostProcessor(recorder);
     assertThat(bean).isNotNull()
             .isInstanceOf(MessagingCallCaptureProducerFactoryBeanPostProcessor.class);
   }

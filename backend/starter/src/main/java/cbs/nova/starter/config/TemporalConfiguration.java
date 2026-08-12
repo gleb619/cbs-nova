@@ -98,8 +98,7 @@ public class TemporalConfiguration {
   @Bean
   @ConditionalOnMissingBean
   ExternalCallRecorder externalCallRecorder(
-      @Autowired(
-          required = false) @Nullable DslExecutionEventBus eventBus) {
+          @Autowired(required = false) @Nullable DslExecutionEventBus eventBus) {
     return new RunScopedExternalCallRecorder(eventBus);
   }
 
@@ -124,42 +123,42 @@ public class TemporalConfiguration {
   @Bean
   @ConditionalOnMissingBean
   PreviewDslPipe previewDslPipe(
-      ExternalCallRecorder externalCallRecorder,
-      ContextFactory contextFactory,
-      DryRunLoggingContext dryRunLoggingContext,
-      PreviewResultCache previewResultCache,
-      CbsNovaPreviewProperties previewProperties,
-      ExecutionTraceCollector executionTraceCollector) {
+          ExternalCallRecorder externalCallRecorder,
+          ContextFactory contextFactory,
+          DryRunLoggingContext dryRunLoggingContext,
+          PreviewResultCache previewResultCache,
+          CbsNovaPreviewProperties previewProperties,
+          ExecutionTraceCollector executionTraceCollector) {
     return new PreviewDslPipe(externalCallRecorder, contextFactory, dryRunLoggingContext,
-        previewResultCache, previewProperties, executionTraceCollector);
+            previewResultCache, previewProperties, executionTraceCollector);
   }
 
   @Bean
   @ConditionalOnMissingBean
   RunDslPipe runDslPipe(
-      ContextFactory contextFactory,
-      ExecutionTraceCollector executionTraceCollector) {
+          ContextFactory contextFactory,
+          ExecutionTraceCollector executionTraceCollector) {
     return new RunDslPipe(contextFactory, executionTraceCollector);
   }
 
   @Bean
   @ConditionalOnMissingBean
   ExplainDslPipe explainDslPipe(
-      ExternalCallRecorder externalCallRecorder,
-      ContextFactory contextFactory,
-      DryRunLoggingContext dryRunLoggingContext,
-      CbsNovaPreviewProperties previewProperties,
-      ExecutionTraceCollector executionTraceCollector) {
+          ExternalCallRecorder externalCallRecorder,
+          ContextFactory contextFactory,
+          DryRunLoggingContext dryRunLoggingContext,
+          CbsNovaPreviewProperties previewProperties,
+          ExecutionTraceCollector executionTraceCollector) {
     return new ExplainDslPipe(externalCallRecorder, contextFactory, dryRunLoggingContext,
-        previewProperties, executionTraceCollector);
+            previewProperties, executionTraceCollector);
   }
 
   @Bean
   @ConditionalOnMissingBean
   DevDslRuntime devDslRuntime(
-      PreviewDslPipe previewDslPipe,
-      RunDslPipe runDslPipe,
-      ExplainDslPipe explainDslPipe) {
+          PreviewDslPipe previewDslPipe,
+          RunDslPipe runDslPipe,
+          ExplainDslPipe explainDslPipe) {
     return new DevDslRuntime(previewDslPipe, runDslPipe, explainDslPipe);
   }
 

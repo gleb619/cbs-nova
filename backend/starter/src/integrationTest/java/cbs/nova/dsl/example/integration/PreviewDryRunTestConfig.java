@@ -4,7 +4,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Helper;
 import cbs.nova.dsl.Result;
-import cbs.nova.starter.ExternalCallTracker;
+import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import feign.Feign;
@@ -99,8 +99,8 @@ public class PreviewDryRunTestConfig {
   PreviewSideEffectsHelper previewSideEffectsHelper(
           JdbcTemplate jdbcTemplate,
           PreviewDryRunHttpApi previewDryRunHttpApi,
-          ExternalCallTracker externalCallTracker) {
-    return new PreviewSideEffectsHelper(jdbcTemplate, previewDryRunHttpApi, externalCallTracker);
+          ExternalCallRecorder externalCallRecorder) {
+    return new PreviewSideEffectsHelper(jdbcTemplate, previewDryRunHttpApi, externalCallRecorder);
   }
 
   @Helper(name = "previewSideEffectsHelper")
@@ -111,15 +111,15 @@ public class PreviewDryRunTestConfig {
     private static final Logger log = LoggerFactory.getLogger(PreviewSideEffectsHelper.class);
     private final JdbcTemplate jdbcTemplate;
     private final PreviewDryRunHttpApi httpApi;
-    private final ExternalCallTracker externalCallTracker;
+    private final ExternalCallRecorder externalCallRecorder;
 
     public PreviewSideEffectsHelper(
             JdbcTemplate jdbcTemplate,
             PreviewDryRunHttpApi httpApi,
-            ExternalCallTracker externalCallTracker) {
+            ExternalCallRecorder externalCallRecorder) {
       this.jdbcTemplate = jdbcTemplate;
       this.httpApi = httpApi;
-      this.externalCallTracker = externalCallTracker;
+      this.externalCallRecorder = externalCallRecorder;
     }
 
     @Override
@@ -141,7 +141,7 @@ public class PreviewDryRunTestConfig {
       log.info("Preview dry-run for requestId={}", input.requestId());
       ensureTable();
       jdbcTemplate.queryForObject("SELECT COUNT(*) FROM preview_dry_run", Integer.class);
-      externalCallTracker.record(
+      externalCallRecorder.record(
               "http",
               "http://localhost/probe",
               "GET",

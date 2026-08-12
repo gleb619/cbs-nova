@@ -23,7 +23,7 @@ public final class DslPipeContext {
   @Getter
   private final @NonNull String runId;
 
-  private final Map<String, Object> attributes = new ConcurrentHashMap<>();
+  private Map<String, Object> attributes = new ConcurrentHashMap<>();
 
   public DslPipeContext(
           @NonNull String name,
@@ -34,6 +34,19 @@ public final class DslPipeContext {
     this.dslContext = dslContext;
     this.mode = mode;
     this.runId = runId;
+  }
+
+  private DslPipeContext(
+          @NonNull String name,
+          @NonNull Context<?> dslContext,
+          @NonNull ExecutionMode mode,
+          @NonNull String runId,
+          @NonNull Map<String, Object> attributes) {
+    this.name = name;
+    this.dslContext = dslContext;
+    this.mode = mode;
+    this.runId = runId;
+    this.attributes = attributes;
   }
 
   public @Nullable Object getAttribute(@NonNull String key) {
@@ -55,8 +68,6 @@ public final class DslPipeContext {
   }
 
   public @NonNull DslPipeContext withDslContext(@NonNull Context<?> dslContext) {
-    DslPipeContext copy = new DslPipeContext(name, dslContext, mode, runId);
-    copy.attributes.putAll(attributes);
-    return copy;
+    return new DslPipeContext(name, dslContext, mode, runId, attributes);
   }
 }

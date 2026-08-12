@@ -21,6 +21,11 @@ import cbs.nova.dslexamples.InvoiceModels.InvoiceLine;
 import cbs.nova.dslexamples.InvoiceModels.InvoiceOut;
 import cbs.nova.dslexamples.LongWorkModels.LongWorkIn;
 import cbs.nova.dslexamples.LongWorkModels.LongWorkOut;
+import cbs.nova.starter.config.CbsNovaPreviewProperties;
+import cbs.nova.starter.core.pipe.ExplainDslPipe;
+import cbs.nova.starter.core.pipe.PreviewDslPipe;
+import cbs.nova.starter.core.pipe.RunDslPipe;
+import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
 import cbs.nova.starter.helpers.*;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,11 +43,18 @@ import java.util.List;
 class IntermediateDslExamplesTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
-  private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
-  private final ExternalCallTracker tracker = new ExternalCallTracker();
+  private final ExecutionTraceCollector traceCollector = DslConfig.dslConfig()
+          .executionTraceCollector();
+  private final RunScopedExternalCallRecorder recorder = new RunScopedExternalCallRecorder(null);
   private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
-  private final DevDslRuntime runtime = new DevDslRuntime(tracker, traceCollector, contextFactory,
-          dryRunLoggingContext, 32);
+  private final CbsNovaPreviewProperties previewProperties = new CbsNovaPreviewProperties(null,
+          null);
+  private final PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
+          dryRunLoggingContext, null, previewProperties, traceCollector);
+  private final RunDslPipe runPipe = new RunDslPipe(contextFactory, traceCollector);
+  private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
+          dryRunLoggingContext, previewProperties, traceCollector);
+  private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
   @TempDir
   Path dslSourceDir;
 

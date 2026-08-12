@@ -10,7 +10,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import cbs.nova.starter.ExternalCallTracker;
+import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -24,7 +24,7 @@ import java.sql.Statement;
 
 /**
  * Pure-unit tests for {@link PreparedStatementInvocationHandler}. Uses Mockito-mocked delegates and
- * a mocked {@link ExternalCallTracker} so the handler is exercised without any DB or Spring
+ * a mocked {@link ExternalCallRecorder} so the handler is exercised without any DB or Spring
  * context. Verifies SQL extraction, op classification, record-before-delegate ordering, and
  * pass-through behaviour for non-recorded methods.
  */
@@ -33,18 +33,18 @@ class PreparedStatementInvocationHandlerTest {
   private static final String TARGET = "jdbc:h2:mem:test";
   private static final String SQL_SELECT = "select id from orders where id = ?";
 
-  private ExternalCallTracker tracker;
+  private ExternalCallRecorder externalCallRecorder;
   private PreparedStatement delegate;
 
   @BeforeEach
   void setUp() {
-    tracker = mock(ExternalCallTracker.class);
+    externalCallRecorder = mock(ExternalCallRecorder.class);
     delegate = mock(PreparedStatement.class);
   }
 
   private PreparedStatement newProxy(String sql) {
     PreparedStatementInvocationHandler handler = new PreparedStatementInvocationHandler(
-            delegate, sql, TARGET, tracker);
+            delegate, sql, TARGET, externalCallRecorder);
     return (PreparedStatement) Proxy.newProxyInstance(
             getClass().getClassLoader(),
             new Class<?>[]{PreparedStatement.class, Statement.class},
@@ -60,10 +60,11 @@ class PreparedStatementInvocationHandlerTest {
     ResultSet actual = proxy.executeQuery();
 
     assertThat(actual).isSameAs(rs);
-    verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, TARGET, "SELECT");
-    verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, TARGET, "SELECT", SQL_SELECT);
+    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT");
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT",
+            SQL_SELECT);
     verify(delegate).executeQuery();
-    verifyNoMoreInteractions(tracker, delegate);
+    verifyNoMoreInteractions(externalCallRecorder, delegate);
   }
 
   @Test
@@ -74,10 +75,11 @@ class PreparedStatementInvocationHandlerTest {
     int updated = proxy.executeUpdate();
 
     assertThat(updated).isEqualTo(7);
-    verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, TARGET, "SELECT");
-    verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, TARGET, "SELECT", SQL_SELECT);
+    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT");
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT",
+            SQL_SELECT);
     verify(delegate).executeUpdate();
-    verifyNoMoreInteractions(tracker, delegate);
+    verifyNoMoreInteractions(externalCallRecorder, delegate);
   }
 
   @Test
@@ -88,10 +90,11 @@ class PreparedStatementInvocationHandlerTest {
     boolean executed = proxy.execute();
 
     assertThat(executed).isTrue();
-    verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, TARGET, "SELECT");
-    verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, TARGET, "SELECT", SQL_SELECT);
+    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT");
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT",
+            SQL_SELECT);
     verify(delegate).execute();
-    verifyNoMoreInteractions(tracker, delegate);
+    verifyNoMoreInteractions(externalCallRecorder, delegate);
   }
 
   @Test
@@ -103,10 +106,11 @@ class PreparedStatementInvocationHandlerTest {
     int[] actual = proxy.executeBatch();
 
     assertThat(actual).isSameAs(counts);
-    verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, TARGET, "BATCH");
-    verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, TARGET, "BATCH", SQL_SELECT);
+    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH");
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH",
+            SQL_SELECT);
     verify(delegate).executeBatch();
-    verifyNoMoreInteractions(tracker, delegate);
+    verifyNoMoreInteractions(externalCallRecorder, delegate);
   }
 
   @Test
@@ -117,10 +121,11 @@ class PreparedStatementInvocationHandlerTest {
     long updated = proxy.executeLargeUpdate();
 
     assertThat(updated).isEqualTo(42L);
-    verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, TARGET, "SELECT");
-    verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, TARGET, "SELECT", SQL_SELECT);
+    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT");
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT",
+            SQL_SELECT);
     verify(delegate).executeLargeUpdate();
-    verifyNoMoreInteractions(tracker, delegate);
+    verifyNoMoreInteractions(externalCallRecorder, delegate);
   }
 
   @Test
@@ -132,10 +137,11 @@ class PreparedStatementInvocationHandlerTest {
     long[] actual = proxy.executeLargeBatch();
 
     assertThat(actual).isSameAs(counts);
-    verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, TARGET, "BATCH");
-    verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, TARGET, "BATCH", SQL_SELECT);
+    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH");
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH",
+            SQL_SELECT);
     verify(delegate).executeLargeBatch();
-    verifyNoMoreInteractions(tracker, delegate);
+    verifyNoMoreInteractions(externalCallRecorder, delegate);
   }
 
   @Test
@@ -146,10 +152,11 @@ class PreparedStatementInvocationHandlerTest {
     PreparedStatement proxy = newProxy(mixedCaseSql);
     proxy.execute();
 
-    verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, TARGET, "INSERT");
-    verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, TARGET, "INSERT", mixedCaseSql);
+    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT");
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
+            mixedCaseSql);
     verify(delegate).execute();
-    verifyNoMoreInteractions(tracker, delegate);
+    verifyNoMoreInteractions(externalCallRecorder, delegate);
   }
 
   @Test
@@ -161,10 +168,11 @@ class PreparedStatementInvocationHandlerTest {
     boolean executed = proxy.execute(adHocSql);
 
     assertThat(executed).isFalse();
-    verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, TARGET, "DELETE");
-    verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, TARGET, "DELETE", adHocSql);
+    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "DELETE");
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "DELETE",
+            adHocSql);
     verify(delegate).execute(adHocSql);
-    verifyNoMoreInteractions(tracker, delegate);
+    verifyNoMoreInteractions(externalCallRecorder, delegate);
   }
 
   @Test
@@ -176,10 +184,11 @@ class PreparedStatementInvocationHandlerTest {
     int updated = proxy.executeUpdate(argSql);
 
     assertThat(updated).isEqualTo(3);
-    verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, TARGET, "SELECT");
-    verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, TARGET, "SELECT", SQL_SELECT);
+    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT");
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT",
+            SQL_SELECT);
     verify(delegate).executeUpdate(argSql);
-    verifyNoMoreInteractions(tracker, delegate);
+    verifyNoMoreInteractions(externalCallRecorder, delegate);
   }
 
   @Test
@@ -189,10 +198,11 @@ class PreparedStatementInvocationHandlerTest {
     PreparedStatement proxy = newProxy(null);
     proxy.executeQuery();
 
-    verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, TARGET, "UNKNOWN");
-    verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, TARGET, "UNKNOWN", null);
+    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UNKNOWN");
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UNKNOWN",
+            null);
     verify(delegate).executeQuery();
-    verifyNoMoreInteractions(tracker, delegate);
+    verifyNoMoreInteractions(externalCallRecorder, delegate);
   }
 
   @Test
@@ -202,10 +212,11 @@ class PreparedStatementInvocationHandlerTest {
     PreparedStatement proxy = newProxy("   ");
     proxy.executeQuery();
 
-    verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, TARGET, "UNKNOWN");
-    verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, TARGET, "UNKNOWN", "   ");
+    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UNKNOWN");
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UNKNOWN",
+            "   ");
     verify(delegate).executeQuery();
-    verifyNoMoreInteractions(tracker, delegate);
+    verifyNoMoreInteractions(externalCallRecorder, delegate);
   }
 
   @Test
@@ -216,25 +227,26 @@ class PreparedStatementInvocationHandlerTest {
     PreparedStatement proxy = newProxy(SQL_SELECT);
     proxy.executeBatch();
 
-    verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, TARGET, "BATCH");
-    verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, TARGET, "BATCH", SQL_SELECT);
+    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH");
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH",
+            SQL_SELECT);
     verify(delegate).executeBatch();
-    verifyNoMoreInteractions(tracker, delegate);
+    verifyNoMoreInteractions(externalCallRecorder, delegate);
   }
 
   @Test
-  void nonRecordedMethodsForwardAndDoNotTouchTracker() throws SQLException {
+  void nonRecordedMethodsForwardAndDoNotTouchRecorder() throws SQLException {
     PreparedStatement proxy = newProxy(SQL_SELECT);
     proxy.setString(1, "abc");
     proxy.close();
 
     verify(delegate).setString(1, "abc");
     verify(delegate).close();
-    verifyNoInteractions(tracker);
+    verifyNoInteractions(externalCallRecorder);
   }
 
   @Test
-  void getterMethodsForwardAndDoNotTouchTracker() throws SQLException {
+  void getterMethodsForwardAndDoNotTouchRecorder() throws SQLException {
     when(delegate.getResultSet()).thenReturn(mock(ResultSet.class));
     when(delegate.getUpdateCount()).thenReturn(11);
 
@@ -246,7 +258,7 @@ class PreparedStatementInvocationHandlerTest {
     assertThat(count).isEqualTo(11);
     verify(delegate).getResultSet();
     verify(delegate).getUpdateCount();
-    verifyNoInteractions(tracker);
+    verifyNoInteractions(externalCallRecorder);
   }
 
   @Test
@@ -256,12 +268,14 @@ class PreparedStatementInvocationHandlerTest {
     PreparedStatement proxy = newProxy(SQL_SELECT);
     proxy.executeUpdate();
 
-    InOrder ordered = inOrder(tracker, delegate);
-    ordered.verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, TARGET, "SELECT");
-    ordered.verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, TARGET, "SELECT",
+    InOrder ordered = inOrder(externalCallRecorder, delegate);
+    ordered.verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET,
+            "SELECT");
+    ordered.verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET,
+            "SELECT",
             SQL_SELECT);
     ordered.verify(delegate).executeUpdate();
-    verifyNoMoreInteractions(tracker, delegate);
+    verifyNoMoreInteractions(externalCallRecorder, delegate);
   }
 
   @Test
@@ -273,10 +287,11 @@ class PreparedStatementInvocationHandlerTest {
     assertThatThrownBy(proxy::executeUpdate)
             .isSameAs(cause);
 
-    verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, TARGET, "SELECT");
-    verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, TARGET, "SELECT", SQL_SELECT);
+    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT");
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT",
+            SQL_SELECT);
     verify(delegate, times(1)).executeUpdate();
-    verifyNoMoreInteractions(tracker, delegate);
+    verifyNoMoreInteractions(externalCallRecorder, delegate);
   }
 
   @Test
@@ -288,10 +303,11 @@ class PreparedStatementInvocationHandlerTest {
     assertThatThrownBy(proxy::executeBatch)
             .isSameAs(cause);
 
-    verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, TARGET, "BATCH");
-    verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, TARGET, "BATCH", SQL_SELECT);
+    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH");
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH",
+            SQL_SELECT);
     verify(delegate).executeBatch();
-    verifyNoMoreInteractions(tracker, delegate);
+    verifyNoMoreInteractions(externalCallRecorder, delegate);
   }
 
   @Test
@@ -302,15 +318,16 @@ class PreparedStatementInvocationHandlerTest {
     String insertSql = "insert into t values (?)";
     PreparedStatement proxy = newProxy(insertSql);
     PreparedStatementInvocationHandler handler = new PreparedStatementInvocationHandler(
-            delegate, insertSql, TARGET, tracker);
+            delegate, insertSql, TARGET, externalCallRecorder);
 
     Object result = handler.invoke(proxy, executeMethod, null);
 
     assertThat(result).isEqualTo(Boolean.TRUE);
-    verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, TARGET, "INSERT");
-    verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, TARGET, "INSERT", insertSql);
+    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT");
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
+            insertSql);
     verify(delegate).execute();
-    verifyNoMoreInteractions(tracker, delegate);
+    verifyNoMoreInteractions(externalCallRecorder, delegate);
   }
 
   @Test
@@ -325,7 +342,7 @@ class PreparedStatementInvocationHandlerTest {
             "executeBatch",
             "executeLargeUpdate",
             "executeLargeBatch");
-    verifyNoInteractions(tracker, delegate);
+    verifyNoInteractions(externalCallRecorder, delegate);
   }
 
   @Test
@@ -336,10 +353,11 @@ class PreparedStatementInvocationHandlerTest {
     PreparedStatement proxy = newProxy(null);
     proxy.executeUpdate(adHoc);
 
-    verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, TARGET, "UPDATE");
-    verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, TARGET, "UPDATE", adHoc);
+    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UPDATE");
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UPDATE",
+            adHoc);
     verify(delegate).executeUpdate(adHoc);
-    verifyNoMoreInteractions(tracker, delegate);
+    verifyNoMoreInteractions(externalCallRecorder, delegate);
   }
 
   @Test
@@ -349,9 +367,10 @@ class PreparedStatementInvocationHandlerTest {
     PreparedStatement proxy = newProxy(null);
     proxy.executeUpdate();
 
-    verify(tracker).findMock(ExternalCallTracker.TYPE_DATABASE, TARGET, "UNKNOWN");
-    verify(tracker).record(ExternalCallTracker.TYPE_DATABASE, TARGET, "UNKNOWN", null);
+    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UNKNOWN");
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UNKNOWN",
+            null);
     verify(delegate).executeUpdate();
-    verifyNoMoreInteractions(tracker, delegate);
+    verifyNoMoreInteractions(externalCallRecorder, delegate);
   }
 }

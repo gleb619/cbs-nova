@@ -32,18 +32,18 @@ public final class PreviewDslPipe implements DslExecutionPipe<PreviewReport> {
 
   @Override
   public @NonNull Result<PreviewReport> execute(@NonNull String name,
-      @NonNull Context<?> ctx) {
+          @NonNull Context<?> ctx) {
     return DslExecutionPipeline.<PreviewReport>builder()
-        .stage(new PreviewCacheStage(cache))
-        .stage(new PreviewReportStage())
-        .stage(new MetricsStage())
-        .stage(new ExecutionTreeStage(contextFactory,
-            previewProperties.callTree().maxDepth()))
-        .stage(new DryRunLogStage(dryRunLoggingContext))
-        .stage(new ExecutionTraceStage(traceCollector))
-        .stage(new ExternalCallRecordingStage(recorder))
-        .stage(new DispatchStage(contextFactory))
-        .build()
-        .execute(name, ctx);
+            .stage(new PreviewCacheStage(cache))
+            .stage(new PreviewReportStage())
+            .stage(new MetricsStage())
+            .stage(new ExecutionTreeStage(contextFactory,
+                    previewProperties.callTree().maxDepth()))
+            .stage(new DryRunLogStage(dryRunLoggingContext))
+            .stage(new ExecutionTraceStage(traceCollector))
+            .stage(new ExternalCallRecordingStage(recorder))
+            .stage(new DispatchStage(contextFactory))
+            .build()
+            .execute(name, ctx);
   }
 }

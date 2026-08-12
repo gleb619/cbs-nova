@@ -2,7 +2,9 @@ package cbs.nova.starter.capture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.starter.ExternalCallTracker;
+import cbs.nova.starter.core.recorder.ExternalCall;
+import cbs.nova.starter.core.recorder.ExternalCallRecorder;
+import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,23 +18,22 @@ import java.util.List;
 
 class DataSourceCallAutoConfigurationTest {
 
-  private ExternalCallTracker tracker;
+  private RunScopedExternalCallRecorder recorder;
   private DataSourceProxyBeanPostProcessor postProcessor;
   private JdbcDataSource realDataSource;
   private DataSource wrappedDataSource;
 
   @BeforeEach
   void setUp() {
-    tracker = new ExternalCallTracker();
-    tracker.resetGlobalCounts();
-    tracker.stopTracking();
+    recorder = new RunScopedExternalCallRecorder(null);
+    recorder.resetGlobalCounts();
 
     realDataSource = new JdbcDataSource();
     realDataSource.setURL("jdbc:h2:mem:t146;DB_CLOSE_DELAY=-1");
     realDataSource.setUser("sa");
     realDataSource.setPassword("");
 
-    postProcessor = new DataSourceProxyBeanPostProcessor(tracker);
+    postProcessor = new DataSourceProxyBeanPostProcessor(recorder);
     Object processed = postProcessor.postProcessAfterInitialization(realDataSource, "ds");
     assertThat(processed).isInstanceOf(DataSource.class);
     wrappedDataSource = (DataSource) processed;
@@ -40,36 +41,33 @@ class DataSourceCallAutoConfigurationTest {
 
   @AfterEach
   void tearDown() {
-    tracker.stopTracking();
-    tracker.resetGlobalCounts();
+    recorder.resetGlobalCounts();
   }
 
   @Test
   void capturesCreateInsertAndSelectAsDatabaseCalls() {
     JdbcTemplate jdbc = new JdbcTemplate(wrappedDataSource);
 
-    List<ExternalCallTracker.CallDetail> calls = new ArrayList<>();
-    tracker.startTracking(calls);
-    assertThat(tracker.getActiveTracking()).isNotNull();
+    recorder.startRun("run-1");
 
     jdbc.execute("CREATE TABLE t (id INT)");
     jdbc.update("INSERT INTO t VALUES (1)");
     Integer selected = jdbc.queryForObject("SELECT id FROM t", Integer.class);
 
-    tracker.stopTracking();
+    List<ExternalCall> calls = recorder.finishRun("run-1");
 
     assertThat(selected).isEqualTo(1);
-    assertThat(tracker.getGlobalCounts().get(ExternalCallTracker.TYPE_DATABASE))
+    assertThat(recorder.getGlobalCounts().get(ExternalCallRecorder.TYPE_DATABASE))
             .isGreaterThanOrEqualTo(1);
 
     assertThat(calls).isNotEmpty();
     assertThat(calls).allSatisfy(call -> {
-      assertThat(call.type()).isEqualTo(ExternalCallTracker.TYPE_DATABASE);
+      assertThat(call.type()).isEqualTo(ExternalCallRecorder.TYPE_DATABASE);
       assertThat(call.target()).startsWith("jdbc:h2:mem:t146");
       assertThat(call.metadata()).containsKey("payload");
     });
 
-    assertThat(calls).extracting(ExternalCallTracker.CallDetail::operation)
+    assertThat(calls).extracting(ExternalCall::operation)
             .contains("CREATE", "INSERT", "SELECT");
 
     assertThat(calls).extracting(call -> call.metadata().get("payload"))

@@ -36,31 +36,31 @@ public final class PreviewReportStage implements DslPipeStage {
     @SuppressWarnings("unchecked")
     List<ExternalCall> calls = (List<ExternalCall>) context.getAttribute("externalCalls");
     List<Map<String, Object>> externalCalls = calls != null
-        ? ExternalCallConverter.toCallJson(calls)
-        : List.of();
+            ? ExternalCallConverter.toCallJson(calls)
+            : List.of();
     Map<String, Integer> callCounts = calls != null
-        ? ExternalCallConverter.toCallCounts(calls)
-        : Map.of();
+            ? ExternalCallConverter.toCallCounts(calls)
+            : Map.of();
 
     PreviewReport report = new PreviewReport(
-        context.getName(),
-        ExecutionMode.PREVIEW,
-        success,
-        output,
-        attribute(context, "executionTrace", List.class, List.of()),
-        externalCalls,
-        callCounts,
-        context.getAttribute("astTree", CallNode.class),
-        attribute(context, "dryRunLogs", List.class, List.of()),
-        context.getAttribute("metrics", PreviewMetricsSnapshot.class),
-        errors);
+            context.getName(),
+            ExecutionMode.PREVIEW,
+            success,
+            output,
+            attribute(context, "executionTrace", List.class, List.of()),
+            externalCalls,
+            callCounts,
+            context.getAttribute("astTree", CallNode.class),
+            attribute(context, "dryRunLogs", List.class, List.of()),
+            context.getAttribute("metrics", PreviewMetricsSnapshot.class),
+            errors);
 
     return Result.success(report);
   }
 
   @SuppressWarnings("unchecked")
   private <T> T attribute(@NonNull DslPipeContext context, @NonNull String key,
-      @NonNull Class<T> type, T defaultValue) {
+          @NonNull Class<T> type, T defaultValue) {
     T value = context.getAttribute(key, type);
     return value != null ? value : defaultValue;
   }

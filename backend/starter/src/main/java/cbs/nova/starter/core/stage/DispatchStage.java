@@ -28,18 +28,18 @@ public final class DispatchStage implements DslPipeStage {
   private @NonNull Context<?> buildModeContext(@NonNull DslPipeContext context) {
     Context<?> original = context.getDslContext();
     Context<?> modeCtx = contextFactory.of(
-        original.body(),
-        original.metadata(),
-        context.getMode(),
-        context.getRunId(),
-        original.transactionRouting());
+            original.body(),
+            original.metadata(),
+            context.getMode(),
+            context.getRunId(),
+            original.transactionRouting());
     modeCtx = withExistingListener(modeCtx, original.executionListener());
     modeCtx = withExistingSaga(modeCtx, original.saga());
     return modeCtx;
   }
 
   private @NonNull Context<?> withExistingListener(@NonNull Context<?> ctx,
-      @Nullable ExecutionListener listener) {
+          @Nullable ExecutionListener listener) {
     return listener != null ? ctx.withExecutionListener(listener) : ctx;
   }
 

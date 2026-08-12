@@ -28,7 +28,8 @@ import java.util.Set;
  * the returned statement in a JDK proxy so that JDBC execution calls can be recorded into the
  * {@link ExternalCallRecorder}.
  */
-//TODO: Usage of reflection here is forbidden, we need a typed handler here(e.g. create what needed, and replace reflection)
+// TODO: Usage of reflection here is forbidden, we need a typed handler here(e.g. create what
+// needed, and replace reflection)
 public class ConnectionInvocationHandler implements InvocationHandler {
 
   public static final String FALLBACK_TARGET = "jdbc:datasource";

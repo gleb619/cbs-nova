@@ -54,8 +54,8 @@ public final class DryRunLogStage implements DslPipeStage {
 
   private @NonNull List<DryRunLogEvent> drainDryRunLogs(@NonNull String runId) {
     Logger root = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
-    ch.qos.logback.core.Appender<ch.qos.logback.classic.spi.ILoggingEvent> appender =
-        root.getAppender("DRY_RUN");
+    ch.qos.logback.core.Appender<ch.qos.logback.classic.spi.ILoggingEvent> appender = root
+            .getAppender("DRY_RUN");
     if (appender instanceof DryRunLogbackAppender dryRunAppender) {
       return dryRunAppender.drain(runId);
     }

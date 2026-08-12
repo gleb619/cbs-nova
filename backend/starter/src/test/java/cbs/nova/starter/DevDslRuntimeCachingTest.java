@@ -12,7 +12,13 @@ import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.ParameterType;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.starter.cache.PreviewResultCache;
+import cbs.nova.starter.config.CbsNovaPreviewProperties;
+import cbs.nova.starter.core.pipe.ExplainDslPipe;
+import cbs.nova.starter.core.pipe.PreviewDslPipe;
+import cbs.nova.starter.core.pipe.RunDslPipe;
+import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import ch.qos.logback.classic.Level;
@@ -25,13 +31,13 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 class DevDslRuntimeCachingTest {
 
-  private final ExternalCallTracker tracker = new ExternalCallTracker();
-  private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
+  private final RunScopedExternalCallRecorder recorder = new RunScopedExternalCallRecorder(null);
+  private final ExecutionTraceCollector traceCollector = DslConfig.dslConfig()
+          .executionTraceCollector();
   private final ContextFactory contextFactory = new ContextFactory();
   private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
   private final DryRunLogbackAppender appender = new DryRunLogbackAppender(dryRunLoggingContext,
@@ -51,8 +57,13 @@ class DevDslRuntimeCachingTest {
                     .build());
 
     cache = new PreviewResultCache(60_000);
-    runtime = new DevDslRuntime(tracker, traceCollector, contextFactory, dryRunLoggingContext,
-            cache, 32, true);
+    CbsNovaPreviewProperties previewProperties = new CbsNovaPreviewProperties(null, null);
+    PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
+            dryRunLoggingContext, cache, previewProperties, traceCollector);
+    RunDslPipe runPipe = new RunDslPipe(contextFactory, traceCollector);
+    ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
+            dryRunLoggingContext, previewProperties, traceCollector);
+    runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
 
     Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
     originalDryRunAppender = root.getAppender("DRY_RUN");

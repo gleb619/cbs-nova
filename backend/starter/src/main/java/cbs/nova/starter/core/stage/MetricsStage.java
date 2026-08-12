@@ -31,7 +31,7 @@ public final class MetricsStage implements DslPipeStage {
   }
 
   private void countCallKinds(@NonNull DslPipeContext context,
-      @NonNull PreviewMetricsCollector collector) {
+          @NonNull PreviewMetricsCollector collector) {
     CallNode tree = context.getAttribute("astTree", CallNode.class);
     if (tree != null) {
       countNode(tree, collector);
@@ -47,7 +47,7 @@ public final class MetricsStage implements DslPipeStage {
 
   @SuppressWarnings("unchecked")
   private void countExternalCalls(@NonNull DslPipeContext context,
-      @NonNull PreviewMetricsCollector collector) {
+          @NonNull PreviewMetricsCollector collector) {
     List<ExternalCall> calls = (List<ExternalCall>) context.getAttribute("externalCalls");
     if (calls != null) {
       for (ExternalCall call : calls) {

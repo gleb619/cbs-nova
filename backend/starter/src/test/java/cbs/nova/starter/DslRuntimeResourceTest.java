@@ -19,7 +19,9 @@ import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.starter.controllers.DslRuntimeResource;
+import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -33,14 +35,15 @@ import java.util.Map;
 class DslRuntimeResourceTest {
 
   private final DslRuntime dslRuntime = mock(DslRuntime.class);
-  private final ExternalCallTracker externalCallTracker = new ExternalCallTracker();
+  private final RunScopedExternalCallRecorder externalCallRecorder = new RunScopedExternalCallRecorder(
+          null);
   private MockMvc mockMvc;
 
   @BeforeEach
   void setUp() {
     mockMvc = MockMvcBuilders
             .standaloneSetup(new DslRuntimeResource(dslRuntime, new ContextFactory(),
-                    externalCallTracker))
+                    externalCallRecorder))
             .setMessageConverters(new JacksonJsonHttpMessageConverter())
             .build();
   }
@@ -191,7 +194,7 @@ class DslRuntimeResourceTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("Ping"));
 
-    assertThat(externalCallTracker.findMock("activity", "MyActivity", "execute")).isNull();
+    assertThat(externalCallRecorder.findMock("activity", "MyActivity", "execute")).isNull();
   }
 
   @Test

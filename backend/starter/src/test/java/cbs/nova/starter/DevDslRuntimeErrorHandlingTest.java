@@ -11,6 +11,12 @@ import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.starter.config.CbsNovaPreviewProperties;
+import cbs.nova.starter.core.pipe.ExplainDslPipe;
+import cbs.nova.starter.core.pipe.PreviewDslPipe;
+import cbs.nova.starter.core.pipe.RunDslPipe;
+import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import ch.qos.logback.classic.Level;
@@ -26,15 +32,22 @@ class DevDslRuntimeErrorHandlingTest {
 
   private static final String MISSING_HELPER = "MissingHelper";
 
-  private final ExternalCallTracker tracker = new ExternalCallTracker();
-  private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
+  private final RunScopedExternalCallRecorder recorder = new RunScopedExternalCallRecorder(null);
+  private final ExecutionTraceCollector traceCollector = DslConfig.dslConfig()
+          .executionTraceCollector();
   private final ContextFactory contextFactory = new ContextFactory();
   private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
   private final DryRunLogbackAppender appender = new DryRunLogbackAppender(dryRunLoggingContext,
           1000);
   private Appender<ILoggingEvent> originalDryRunAppender;
-  private final DevDslRuntime runtime = new DevDslRuntime(tracker, traceCollector, contextFactory,
-          dryRunLoggingContext, 32);
+  private final CbsNovaPreviewProperties previewProperties = new CbsNovaPreviewProperties(null,
+          null);
+  private final PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
+          dryRunLoggingContext, null, previewProperties, traceCollector);
+  private final RunDslPipe runPipe = new RunDslPipe(contextFactory, traceCollector);
+  private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
+          dryRunLoggingContext, previewProperties, traceCollector);
+  private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
 
   @BeforeEach
   void setUp() {

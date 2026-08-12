@@ -3,8 +3,10 @@ package cbs.nova.starter.capture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 
-import cbs.nova.starter.ExternalCallTracker;
 import cbs.nova.starter.config.FeignCallAutoConfiguration;
+import cbs.nova.starter.core.recorder.ExternalCall;
+import cbs.nova.starter.core.recorder.ExternalCallRecorder;
+import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -12,7 +14,6 @@ import feign.Body;
 import feign.Feign;
 import feign.Headers;
 import feign.RequestLine;
-import feign.Target;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,14 +21,15 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 class FeignCallAutoConfigurationTest {
 
   private HttpServer httpServer;
   private String baseUrl;
-  private ExternalCallTracker tracker;
-  private ArrayList<ExternalCallTracker.CallDetail> recorded;
+  private RunScopedExternalCallRecorder recorder;
+  private List<ExternalCall> recorded;
 
   interface StubClient {
     @RequestLine("GET /ping")
@@ -55,15 +57,14 @@ class FeignCallAutoConfigurationTest {
     httpServer.start();
     baseUrl = "http://127.0.0.1:" + httpServer.getAddress().getPort();
 
-    tracker = new ExternalCallTracker();
-    tracker.resetGlobalCounts();
+    recorder = new RunScopedExternalCallRecorder(null);
+    recorder.resetGlobalCounts();
     recorded = new ArrayList<>();
   }
 
   @AfterEach
   void tearDown() {
-    tracker.stopTracking();
-    tracker.resetGlobalCounts();
+    recorder.resetGlobalCounts();
     if (httpServer != null) {
       httpServer.stop(0);
     }
@@ -71,21 +72,21 @@ class FeignCallAutoConfigurationTest {
 
   @Test
   void interceptorRecordsHttpCalls() {
-    var interceptor = new ExternalCallFeignInterceptor(tracker);
+    var interceptor = new ExternalCallFeignInterceptor(recorder);
     var client = Feign.builder()
             .requestInterceptor(interceptor)
             .target(StubClient.class, baseUrl);
 
-    tracker.startTracking(recorded);
+    recorder.startRun("run-1");
     client.ping();
     client.echo("hello");
-    tracker.stopTracking();
+    recorded.addAll(recorder.finishRun("run-1"));
 
-    assertThat(tracker.getGlobalCounts()).contains(entry(ExternalCallTracker.TYPE_HTTP, 2));
+    assertThat(recorder.getGlobalCounts()).contains(entry(ExternalCallRecorder.TYPE_HTTP, 2));
     assertThat(recorded).hasSize(2);
 
     var ping = recorded.get(0);
-    assertThat(ping.type()).isEqualTo(ExternalCallTracker.TYPE_HTTP);
+    assertThat(ping.type()).isEqualTo(ExternalCallRecorder.TYPE_HTTP);
     assertThat(ping.operation()).isEqualTo("GET");
     assertThat(ping.target()).contains("/ping");
     assertThat(ping.metadata()).containsKey("payload");
@@ -97,7 +98,7 @@ class FeignCallAutoConfigurationTest {
     assertThat(pingPayload).containsEntry("bodyLength", 0);
 
     var echo = recorded.get(1);
-    assertThat(echo.type()).isEqualTo(ExternalCallTracker.TYPE_HTTP);
+    assertThat(echo.type()).isEqualTo(ExternalCallRecorder.TYPE_HTTP);
     assertThat(echo.operation()).isEqualTo("POST");
     assertThat(echo.target()).contains("/echo");
 
@@ -110,7 +111,7 @@ class FeignCallAutoConfigurationTest {
   @Test
   void autoconfigurationBeanProducesInterceptor() {
     var config = new FeignCallAutoConfiguration();
-    var interceptor = config.externalCallFeignInterceptor(tracker);
+    var interceptor = config.externalCallFeignInterceptor(recorder);
 
     assertThat(interceptor).isNotNull();
   }

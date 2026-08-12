@@ -6,7 +6,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import cbs.nova.starter.ExternalCallTracker;
+import cbs.nova.starter.core.recorder.ExternalCall;
+import cbs.nova.starter.core.recorder.ExternalCallRecorder;
+import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -16,26 +18,26 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
 
 class MessagingCallCaptureProducerTest {
 
-  private ExternalCallTracker tracker;
-  private ArrayList<ExternalCallTracker.CallDetail> recorded;
+  private RunScopedExternalCallRecorder recorder;
+  private List<ExternalCall> recorded;
 
   @BeforeEach
   void setUp() {
-    tracker = new ExternalCallTracker();
-    tracker.resetGlobalCounts();
+    recorder = new RunScopedExternalCallRecorder(null);
+    recorder.resetGlobalCounts();
     recorded = new ArrayList<>();
   }
 
   @AfterEach
   void tearDown() {
-    tracker.stopTracking();
-    tracker.stopMocking();
-    tracker.resetGlobalCounts();
+    recorder.stopMocking();
+    recorder.resetGlobalCounts();
   }
 
   @Test
@@ -45,20 +47,21 @@ class MessagingCallCaptureProducerTest {
     @SuppressWarnings("unchecked")
     Future<RecordMetadata> mockFuture = mock(Future.class);
 
-    var capture = new MessagingCallCaptureProducer<>(delegate, tracker);
-    tracker.startTracking(recorded);
-    tracker.startMocking(Map.of("mq:orders:send", (Object) mockFuture));
+    var capture = new MessagingCallCaptureProducer<>(delegate, recorder);
+    recorder.startRun("run-1");
+    recorder.startMocking(new RunScopedExternalCallRecorder.MapBasedMockResolver(
+            Map.of("mq:orders:send", (Object) mockFuture)));
     Future<RecordMetadata> result = capture
             .send(new ProducerRecord<>("orders", "key-1", "value-1"));
-    tracker.stopMocking();
-    tracker.stopTracking();
+    recorder.stopMocking();
+    recorded.addAll(recorder.finishRun("run-1"));
 
     assertThat(result).isSameAs(mockFuture);
     verifyNoInteractions(delegate);
     assertThat(recorded).hasSize(1);
 
-    ExternalCallTracker.CallDetail call = recorded.get(0);
-    assertThat(call.type()).isEqualTo(ExternalCallTracker.TYPE_MQ);
+    ExternalCall call = recorded.get(0);
+    assertThat(call.type()).isEqualTo(ExternalCallRecorder.TYPE_MQ);
     assertThat(call.target()).isEqualTo("orders");
     assertThat(call.operation()).isEqualTo("send");
     assertThat(call.metadata()).containsEntry("mockApplied", true);
@@ -72,13 +75,14 @@ class MessagingCallCaptureProducerTest {
     @SuppressWarnings("unchecked")
     Future<RecordMetadata> mockFuture = mock(Future.class);
 
-    var capture = new MessagingCallCaptureProducer<>(delegate, tracker);
-    tracker.startTracking(recorded);
-    tracker.startMocking(Map.of("mq:events:send", (Object) mockFuture));
+    var capture = new MessagingCallCaptureProducer<>(delegate, recorder);
+    recorder.startRun("run-1");
+    recorder.startMocking(new RunScopedExternalCallRecorder.MapBasedMockResolver(
+            Map.of("mq:events:send", (Object) mockFuture)));
     Future<RecordMetadata> result = capture.send(new ProducerRecord<>("events", "k", "v"),
             callback);
-    tracker.stopMocking();
-    tracker.stopTracking();
+    recorder.stopMocking();
+    recorded.addAll(recorder.finishRun("run-1"));
 
     assertThat(result).isSameAs(mockFuture);
     verifyNoInteractions(delegate);
@@ -94,10 +98,10 @@ class MessagingCallCaptureProducerTest {
     Future<RecordMetadata> mockFuture = mock(Future.class);
     when(delegate.send(new ProducerRecord<>("metrics", "x"))).thenReturn(mockFuture);
 
-    var capture = new MessagingCallCaptureProducer<>(delegate, tracker);
-    tracker.startTracking(recorded);
+    var capture = new MessagingCallCaptureProducer<>(delegate, recorder);
+    recorder.startRun("run-1");
     Future<RecordMetadata> result = capture.send(new ProducerRecord<>("metrics", "x"));
-    tracker.stopTracking();
+    recorded.addAll(recorder.finishRun("run-1"));
 
     assertThat(result).isSameAs(mockFuture);
     verify(delegate).send(new ProducerRecord<>("metrics", "x"));
