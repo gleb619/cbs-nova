@@ -1,6 +1,6 @@
 package cbs.nova.starter.capture;
 
-import cbs.nova.starter.ExternalCallTracker;
+import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
 import feign.Target;
@@ -14,14 +14,14 @@ import java.util.Map;
 
 /**
  * Feign {@link RequestInterceptor} that records each outgoing HTTP request as an external "http"
- * call via {@link ExternalCallTracker}. The interceptor only observes; it does not modify or block
+ * call via {@link ExternalCallRecorder}. The interceptor only observes; it does not modify or block
  * the request.
  */
 @Slf4j
 @RequiredArgsConstructor
 public class ExternalCallFeignInterceptor implements RequestInterceptor {
 
-  private final @NonNull ExternalCallTracker externalCallTracker;
+  private final @NonNull ExternalCallRecorder externalCallRecorder;
 
   @Override
   public void apply(@NonNull RequestTemplate template) {
@@ -31,8 +31,8 @@ public class ExternalCallFeignInterceptor implements RequestInterceptor {
       var payload = buildPayload(method, url, template.body());
 
       // HTTP response mocking needs the T168 interceptor SPI; this interceptor only observes.
-      externalCallTracker.findMock(ExternalCallTracker.TYPE_HTTP, url, method);
-      externalCallTracker.record("http", url, method, payload);
+      externalCallRecorder.findMock(ExternalCallRecorder.TYPE_HTTP, url, method);
+      externalCallRecorder.record("http", url, method, payload);
     } catch (Exception ex) {
       log.debug("Failed to record Feign HTTP call", ex);
     }

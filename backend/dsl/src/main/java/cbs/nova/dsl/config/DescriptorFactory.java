@@ -48,14 +48,14 @@ public final class DescriptorFactory {
     return new FunctionDescriptor(obj.name(), null, null);
   }
 
-  private static Class<?> resolveInputType(Class<?> declaredType, List<?> parameters) {
+  private Class<?> resolveInputType(Class<?> declaredType, List<?> parameters) {
     if (declaredType != null) {
       return declaredType;
     }
     return parameters != null && !parameters.isEmpty() ? MapInput.class : null;
   }
 
-  private static Class<?> resolveOutputType(Class<?> declaredType, List<?> parameters) {
+  private Class<?> resolveOutputType(Class<?> declaredType, List<?> parameters) {
     if (declaredType != null) {
       return declaredType;
     }

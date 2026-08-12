@@ -6,9 +6,15 @@ import cbs.nova.dsl.TemporalProcessLauncher;
 import cbs.nova.dsl.TransactionInvoker;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.logging.DryRunLoggingContext;
+import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.starter.DevDslRuntime;
-import cbs.nova.starter.ExternalCallTracker;
 import cbs.nova.starter.cache.PreviewResultCache;
+import cbs.nova.starter.core.listener.DslExecutionEventBus;
+import cbs.nova.starter.core.pipe.ExplainDslPipe;
+import cbs.nova.starter.core.pipe.PreviewDslPipe;
+import cbs.nova.starter.core.pipe.RunDslPipe;
+import cbs.nova.starter.core.recorder.ExternalCallRecorder;
+import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLoggingContextPropagator;
 import cbs.nova.starter.services.TemporalDslProcessLauncher;
 import cbs.nova.starter.services.TemporalDslProcessService;
@@ -18,10 +24,15 @@ import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowClientOptions;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.task.TaskDecorator;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -35,6 +46,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 @AutoConfiguration
 @AutoConfigureAfter(DryRunLoggingAutoConfiguration.class)
+@EnableConfigurationProperties(CbsNovaPreviewProperties.class)
 public class TemporalConfiguration {
 
   @Bean
@@ -79,8 +91,16 @@ public class TemporalConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
-  ExternalCallTracker externalCallTracker() {
-    return new ExternalCallTracker();
+  DslExecutionEventBus dslExecutionEventBus() {
+    return new DslExecutionEventBus();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  ExternalCallRecorder externalCallRecorder(
+      @Autowired(
+          required = false) @Nullable DslExecutionEventBus eventBus) {
+    return new RunScopedExternalCallRecorder(eventBus);
   }
 
   @Bean
@@ -98,21 +118,49 @@ public class TemporalConfiguration {
   @Bean
   @ConditionalOnMissingBean
   DslRunRepository dslRunRepository() {
-    return new cbs.nova.dsl.repository.InMemoryDslRunRepository();
+    return new InMemoryDslRunRepository();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  PreviewDslPipe previewDslPipe(
+      ExternalCallRecorder externalCallRecorder,
+      ContextFactory contextFactory,
+      DryRunLoggingContext dryRunLoggingContext,
+      PreviewResultCache previewResultCache,
+      CbsNovaPreviewProperties previewProperties,
+      ExecutionTraceCollector executionTraceCollector) {
+    return new PreviewDslPipe(externalCallRecorder, contextFactory, dryRunLoggingContext,
+        previewResultCache, previewProperties, executionTraceCollector);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  RunDslPipe runDslPipe(
+      ContextFactory contextFactory,
+      ExecutionTraceCollector executionTraceCollector) {
+    return new RunDslPipe(contextFactory, executionTraceCollector);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  ExplainDslPipe explainDslPipe(
+      ExternalCallRecorder externalCallRecorder,
+      ContextFactory contextFactory,
+      DryRunLoggingContext dryRunLoggingContext,
+      CbsNovaPreviewProperties previewProperties,
+      ExecutionTraceCollector executionTraceCollector) {
+    return new ExplainDslPipe(externalCallRecorder, contextFactory, dryRunLoggingContext,
+        previewProperties, executionTraceCollector);
   }
 
   @Bean
   @ConditionalOnMissingBean
   DevDslRuntime devDslRuntime(
-          ExternalCallTracker externalCallTracker,
-          ExecutionTraceCollector executionTraceCollector,
-          ContextFactory contextFactory,
-          DryRunLoggingContext dryRunLoggingContext,
-          PreviewResultCache previewResultCache,
-          @Value("${cbs.nova.preview.callTree.maxDepth:32}") int previewCallTreeMaxDepth,
-          @Value("${cbs.nova.preview.cache.enabled:true}") boolean previewCacheEnabled) {
-    return new DevDslRuntime(externalCallTracker, executionTraceCollector, contextFactory,
-            dryRunLoggingContext, previewResultCache, previewCallTreeMaxDepth, previewCacheEnabled);
+      PreviewDslPipe previewDslPipe,
+      RunDslPipe runDslPipe,
+      ExplainDslPipe explainDslPipe) {
+    return new DevDslRuntime(previewDslPipe, runDslPipe, explainDslPipe);
   }
 
   /**
@@ -168,21 +216,21 @@ public class TemporalConfiguration {
   @ConditionalOnMissingBean
   TaskDecorator cbsNovaDslContextDecorator() {
     return runnable -> {
-      Map<String, String> mdc = org.slf4j.MDC.getCopyOfContextMap();
+      Map<String, String> mdc = MDC.getCopyOfContextMap();
       return () -> {
-        Map<String, String> previous = org.slf4j.MDC.getCopyOfContextMap();
+        Map<String, String> previous = MDC.getCopyOfContextMap();
         if (mdc != null) {
-          org.slf4j.MDC.setContextMap(mdc);
+          MDC.setContextMap(mdc);
         } else {
-          org.slf4j.MDC.clear();
+          MDC.clear();
         }
         try {
           runnable.run();
         } finally {
           if (previous != null) {
-            org.slf4j.MDC.setContextMap(previous);
+            MDC.setContextMap(previous);
           } else {
-            org.slf4j.MDC.clear();
+            MDC.clear();
           }
         }
       };
@@ -195,8 +243,8 @@ public class TemporalConfiguration {
           DslRunRepository runRepository,
           JsonMapper jsonMapper,
           ExecutionTraceCollector executionTraceCollector,
-          @org.springframework.beans.factory.annotation.Qualifier("cbsNovaDslProcessExecutor") ThreadPoolTaskExecutor dslProcessExecutor,
-          @org.springframework.beans.factory.annotation.Qualifier("cbsNovaDslProcessHealthcheckExecutor") ScheduledExecutorService healthcheckExecutor,
+          @Qualifier("cbsNovaDslProcessExecutor") ThreadPoolTaskExecutor dslProcessExecutor,
+          @Qualifier("cbsNovaDslProcessHealthcheckExecutor") ScheduledExecutorService healthcheckExecutor,
           @Value("${cbs.nova.process.healthcheck.interval:PT30S}") Duration healthcheckInterval,
           @Value("${cbs.nova.process.healthcheck.stale-threshold:PT5M}") Duration staleThreshold,
           @Value("${cbs.nova.process.async-db-save:true}") boolean asyncDbSave) {

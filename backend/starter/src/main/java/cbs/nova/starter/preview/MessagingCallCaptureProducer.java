@@ -1,6 +1,6 @@
 package cbs.nova.starter.preview;
 
-import cbs.nova.starter.ExternalCallTracker;
+import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.consumer.ConsumerGroupMetadata;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
@@ -26,7 +26,7 @@ import java.util.concurrent.Future;
 
 /**
  * {@link Producer} decorator that records every {@code send} call as an external "messaging" call
- * via {@link ExternalCallTracker}, then delegates to the real Kafka producer.
+ * via {@link ExternalCallRecorder}, then delegates to the real Kafka producer.
  */
 @RequiredArgsConstructor
 public class MessagingCallCaptureProducer<K, V> implements Producer<K, V> {
@@ -34,7 +34,7 @@ public class MessagingCallCaptureProducer<K, V> implements Producer<K, V> {
   private static final String TYPE_MESSAGING = "messaging";
 
   private final Producer<K, V> delegate;
-  private final ExternalCallTracker externalCallTracker;
+  private final ExternalCallRecorder externalCallRecorder;
 
   @Override
   public Future<RecordMetadata> send(ProducerRecord<K, V> record) {
@@ -128,12 +128,12 @@ public class MessagingCallCaptureProducer<K, V> implements Producer<K, V> {
 
   private @Nullable Object findMock(ProducerRecord<K, V> record) {
     var topic = record != null ? record.topic() : "unknown";
-    return externalCallTracker.findMock(TYPE_MESSAGING, topic, "send");
+    return externalCallRecorder.findMock(TYPE_MESSAGING, topic, "send");
   }
 
   private void recordCall(ProducerRecord<K, V> record) {
     if (record == null) {
-      externalCallTracker.record(TYPE_MESSAGING, "unknown", "send", null);
+      externalCallRecorder.record(TYPE_MESSAGING, "unknown", "send", null);
       return;
     }
 
@@ -145,6 +145,6 @@ public class MessagingCallCaptureProducer<K, V> implements Producer<K, V> {
     payload.put("timestamp", record.timestamp());
     payload.put("headers", record.headers() != null ? record.headers().toArray().length : 0);
 
-    externalCallTracker.record(TYPE_MESSAGING, record.topic(), "send", payload);
+    externalCallRecorder.record(TYPE_MESSAGING, record.topic(), "send", payload);
   }
 }

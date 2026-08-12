@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+//TODO: class can cause a memory leak, to remove, change to a new pipe stage
 public final class DefaultExecutionListener implements ExecutionListener {
 
   private final List<TransactionExecution> successful = Collections

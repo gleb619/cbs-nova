@@ -114,4 +114,51 @@ class InMemoryDslRunRepositoryTest {
             .hasSize(1)
             .containsExactly(run);
   }
+
+  @Test
+  void retainsOnlyLastOneHundredSavedRuns() {
+    var repo = new InMemoryDslRunRepository();
+    for (int i = 1; i <= 101; i++) {
+      repo.save(run("run-" + i, "OrderProcess", DslRunStatus.RUNNING.name()));
+    }
+
+    assertThat(repo.findByRunId("run-1")).isEmpty();
+    assertThat(repo.findByRunId("run-2")).isPresent();
+    assertThat(repo.findByRunId("run-101")).isPresent();
+    assertThat(repo.findByProcessName("OrderProcess")).hasSize(100);
+  }
+
+  @Test
+  void updatingExistingRunDoesNotChangeEvictionOrder() {
+    var repo = new InMemoryDslRunRepository();
+    for (int i = 1; i <= 100; i++) {
+      repo.save(run("run-" + i, "OrderProcess", DslRunStatus.RUNNING.name()));
+    }
+
+    repo.updateFinished(
+            "run-1",
+            DslRunStatus.COMPLETED.name(),
+            null,
+            null,
+            Instant.now(),
+            null);
+    repo.save(run("run-101", "OrderProcess", DslRunStatus.RUNNING.name()));
+
+    assertThat(repo.findByRunId("run-1")).isEmpty();
+    assertThat(repo.findByRunId("run-2")).isPresent();
+    assertThat(repo.findByRunId("run-101")).isPresent();
+  }
+
+  @Test
+  void evictedRunsAreRemovedFromKnownProcessNames() {
+    var repo = new InMemoryDslRunRepository();
+    repo.save(run("old-a", "OrderProcess", DslRunStatus.RUNNING.name()));
+    for (int i = 1; i <= 100; i++) {
+      repo.save(run("run-" + i, "InvoiceProcess", DslRunStatus.RUNNING.name()));
+    }
+
+    assertThat(repo.knownProcessNames())
+            .doesNotContain("OrderProcess")
+            .contains("InvoiceProcess");
+  }
 }

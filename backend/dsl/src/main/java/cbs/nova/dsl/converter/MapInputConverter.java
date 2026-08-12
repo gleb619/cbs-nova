@@ -1,6 +1,8 @@
 package cbs.nova.dsl.converter;
 
 import cbs.nova.dsl.MapInput;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -10,18 +12,16 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Converts a flat {@code Map<String, Object>} (or already-typed value) into the target input type
- * expected by a generated Temporal workflow/activity.
- */
+//TODO: convert to a bean, add to config `backend/dsl/src/main/java/cbs/nova/dsl/config/DslConfig.java`
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class MapInputConverter {
 
-  private MapInputConverter() {
-  }
+  private final AvajeMapConverter avajeMapConverter = AvajeMapConverter.create();
 
   public static @Nullable Object convert(@Nullable Object value, @NonNull Type targetType) {
     if (value == null) {
@@ -132,7 +132,7 @@ public final class MapInputConverter {
     }
 
     try {
-      Class<?>[] componentTypes = java.util.Arrays.stream(components)
+      Class<?>[] componentTypes = Arrays.stream(components)
               .map(RecordComponent::getType)
               .toArray(Class[]::new);
       Constructor<?> ctor = recordClass.getDeclaredConstructor(componentTypes);

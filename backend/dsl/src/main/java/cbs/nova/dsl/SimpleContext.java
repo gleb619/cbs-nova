@@ -1,6 +1,7 @@
 package cbs.nova.dsl;
 
-import cbs.nova.dsl.utils.SimpleExpressionEvaluator;
+import cbs.nova.dsl.config.DslConfig;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -11,6 +12,7 @@ import java.util.Map;
  * Immutable context implementation. The stored body is returned as-is, so {@link MapInput} bodies
  * remain {@link MapInput} for parameter-based DSL definitions.
  */
+//TODO: Remove extra contructors, add lombok's builder and @RequiredArgsConstructor
 public final class SimpleContext<T> implements Context<T> {
 
   private final Object body;
@@ -119,7 +121,7 @@ public final class SimpleContext<T> implements Context<T> {
       merged.putAll(typed);
     }
     merged.putAll(variables);
-    return SimpleExpressionEvaluator.evaluate(expression, merged);
+    return DslConfig.dslConfig().expressionEvaluator().get().evaluate(expression, merged);
   }
 
   @Override

@@ -56,7 +56,7 @@ public final class TransactionCodeGenerator {
             "import %s;".formatted(DslGenerated.class.getCanonicalName()),
             "import %s;".formatted(Generated.class.getCanonicalName()));
     String annotation = GeneratorMetadata.annotation(TransactionCodeGenerator.class);
-    return Substitutor.format(
+    return Substitutor.format(//language=java
             """
                     package ${pkg};${importBlock}
                     import cbs.nova.dsl.GeneratedTransactionActivity;
@@ -95,7 +95,7 @@ public final class TransactionCodeGenerator {
             "import %s;".formatted(DslGenerated.class.getCanonicalName()),
             "import %s;".formatted(Generated.class.getCanonicalName()));
     String annotation = GeneratorMetadata.annotation(TransactionCodeGenerator.class);
-    return Substitutor.format(
+    return Substitutor.format(//language=java
             """
                     package ${pkg};${importBlock}
                     import cbs.nova.dsl.GlobalManager;
@@ -143,7 +143,10 @@ public final class TransactionCodeGenerator {
     imports.add(requestImport);
     imports.add(generatedImport);
     imports.add(javaxGeneratedImport);
-    return "\n" + String.join("\n", imports) + "\n";
+
+    String result = String.join("\n", imports);
+
+    return "\n%s\n".formatted(result);
   }
 
   private String typeName(Class<?> type) {

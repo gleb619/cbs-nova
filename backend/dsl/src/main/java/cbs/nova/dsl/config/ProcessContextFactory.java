@@ -1,17 +1,15 @@
-package cbs.nova.dsl.context;
+package cbs.nova.dsl.config;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.ProcessContextFactory;
 import cbs.nova.dsl.SimpleContext;
 import cbs.nova.dsl.TransactionRouting;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Map;
 
-public final class DefaultProcessContextFactory implements ProcessContextFactory {
+public final class ProcessContextFactory {
 
-  @Override
   public @NonNull Context<?> create(
           @NonNull Object body,
           @NonNull Map<String, Object> metadata,
@@ -20,7 +18,6 @@ public final class DefaultProcessContextFactory implements ProcessContextFactory
     return new SimpleContext<>(body, metadata, mode, runId);
   }
 
-  @Override
   public @NonNull Context<?> create(
           @NonNull Object body,
           @NonNull Map<String, Object> metadata,

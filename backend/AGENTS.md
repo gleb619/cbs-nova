@@ -56,12 +56,37 @@ backend/
 
 ### Coding Practices & Constraints
 
-- **Java**: Indentation is 2 spaces (Spotless). Default DTOs/payloads to `record`s.
+- **Java**: Default DTOs/payloads to `record`s.
 - **Nullability**: Annotate with `jspecify` annotations (`libs.jspecify`).
 - **Context**: Context is immutable. Modify state using `ctx.withBody(...)` / `ctx.withMetadata(...)`.
 - **GlobalManager**: Never bypass this facade or registries in generated code.
 - **Do Not Edit Generated Code**: `dsl-codegen` outputs `*ProcessWorkflow`, `*ProcessDefinition`,
   `*TransactionActivity`, `*TransactionDefinition`. Edit the templates/source DSL instead.
+
+### Code Style & Language Rules
+
+- **Lombok**: Prefer Lombok annotations to reduce boilerplate. Use `@Getter`, `@Setter`, `@Builder`,
+  `@EqualsAndHashCode`, etc. where appropriate instead of hand-written implementations.
+- **Constructors**: Never write manual constructors for dependency injection or simple field assignment.
+  Use `@RequiredArgsConstructor` (or `@AllArgsConstructor` when needed) from Lombok.
+- **DTO conversions**: Use MapStruct for all mapping/conversion between entities, DTOs, records, and
+  domain objects. Avoid manual mapping code.
+- **Indentation**: 2 spaces, enforced by Spotless via `backend/gradle/code-style.gradle`.
+  See `backend/gradle/eclipse-formatter.xml` for the full formatter configuration.
+- **Functional style**: Prefer a functional, pipe-oriented style using the Stream API and immutable
+  transformations. Favor method chaining (`stream().map(...).filter(...).collect(...)`) over
+  imperative loops and mutable accumulators.
+- **Clean code / small methods**: Keep implementation methods short and focused on a single responsibility.
+  Extract helper methods liberally. **Keep source files under 300 lines** whenever practical; split
+  large classes into focused collaborators.
+- **Builder over constructor**: Prefer Lombok `@Builder` for constructing objects with multiple fields
+  instead of manual constructors or long parameter lists. Use `@RequiredArgsConstructor` only for simple
+  dependency injection, and never write hand-rolled constructors for DTO/value-object assembly.
+- **Records over classes**: Default DTOs, payloads, and immutable value objects to Java `record`s.
+  Use regular classes only when mutable state, inheritance, or complex behavior is required.
+- **Functional interfaces over monolithic classes**: Use `@FunctionalInterface` for single-method
+  abstractions and provide multiple small implementation classes rather than one large class that hardcodes
+  many responsibilities. Split behavior into focused collaborators.
 
 ---
 
@@ -79,6 +104,11 @@ backend/
 ---
 
 ## CodeGraph
+
+> **Prerequisite**: switch to Node v22 before running CodeGraph commands:
+> ```bash
+> nvm use v22.20.0
+> ```
 
 The backend has its own isolated CodeGraph index under `backend/.codegraph/`.
 Run all CodeGraph commands from `backend/` so only Java/Kotlin sources are indexed:

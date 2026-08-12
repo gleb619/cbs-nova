@@ -3,7 +3,7 @@ package cbs.nova.starter.preview;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.TransactionInvoker;
-import cbs.nova.starter.ExternalCallTracker;
+import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
@@ -12,7 +12,7 @@ import java.util.Map;
 
 /**
  * {@link TransactionInvoker} decorator that records each delegated transaction invocation as an
- * external {@value ExternalCallTracker#TYPE_ACTIVITY} call via {@link ExternalCallTracker}. This
+ * external {@value ExternalCallRecorder#TYPE_ACTIVITY} call via {@link ExternalCallRecorder}. This
  * lets preview/explain reports (and any other tracking context) see Temporal Activity-style
  * executions alongside HTTP and database calls.
  */
@@ -20,7 +20,7 @@ import java.util.Map;
 public class TemporalActivityCallCaptureInterceptor implements TransactionInvoker {
 
   private final @NonNull TransactionInvoker delegate;
-  private final @NonNull ExternalCallTracker externalCallTracker;
+  private final @NonNull ExternalCallRecorder externalCallRecorder;
 
   @Override
   public @NonNull Result<?> invoke(@NonNull String name, @NonNull Object input,
@@ -30,13 +30,13 @@ public class TemporalActivityCallCaptureInterceptor implements TransactionInvoke
     payload.put("mode", ctx.mode());
     payload.put("input", input);
 
-    var mock = externalCallTracker.findMock(ExternalCallTracker.TYPE_ACTIVITY, name, "execute");
+    var mock = externalCallRecorder.findMock(ExternalCallRecorder.TYPE_ACTIVITY, name, "execute");
     if (mock != null) {
-      externalCallTracker.record(ExternalCallTracker.TYPE_ACTIVITY, name, "execute", payload);
+      externalCallRecorder.record(ExternalCallRecorder.TYPE_ACTIVITY, name, "execute", payload);
       return Result.success(mock);
     }
 
-    externalCallTracker.record(ExternalCallTracker.TYPE_ACTIVITY, name, "execute", payload);
+    externalCallRecorder.record(ExternalCallRecorder.TYPE_ACTIVITY, name, "execute", payload);
 
     return delegate.invoke(name, input, ctx);
   }

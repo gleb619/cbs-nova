@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+//TODO: add interface, remove usage of `synchronized`
 @RequiredArgsConstructor
 public final class CompensationRegistry {
 

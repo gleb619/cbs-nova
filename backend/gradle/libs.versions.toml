@@ -14,6 +14,9 @@ mockito = "5.23.0"
 awaitility = "4.3.0"
 sentry = "7.0.0"
 lombok = "1.18.38"
+mapstruct = "1.6.3"
+opentelemetry = "1.48.0"
+mvel = "2.5.2.Final"
 keycloak-admin-client = "22.0.0"
 rest-assured = "5.5.0"
 springdoc-openapi = "3.0.2"
@@ -36,6 +39,7 @@ temporal-testing = { module = "io.temporal:temporal-testing", version.ref = "tem
 avaje-jsonb = { module = "io.avaje:avaje-jsonb", version.ref = "avaje-jsonb" }
 avaje-jsonb-generator = { module = "io.avaje:avaje-jsonb-generator", version.ref = "avaje-jsonb-generator" }
 orgjson = { module = "org.json:json", version.ref = "orgjson" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind" }
 
 # -- JavaParser (used by dsl-codegen and dsl preprocessing) --
 javaparser = { module = "com.github.javaparser:javaparser-core", version.ref = "javaparser" }
@@ -70,6 +74,8 @@ spring-boot-starter-validation = { module = "org.springframework.boot:spring-boo
 spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
 spring-boot-starter-jdbc = { module = "org.springframework.boot:spring-boot-starter-jdbc" }
+spring-boot-starter-data-jdbc = { module = "org.springframework.boot:spring-boot-starter-data-jdbc" }
+spring-kafka = { module = "org.springframework.kafka:spring-kafka" }
 spring-jdbc = { module = "org.springframework:spring-jdbc" }
 sentry-spring-boot-jakarta = { module = "io.sentry:sentry-spring-boot-starter-jakarta", version.ref = "sentry" }
 
@@ -82,6 +88,18 @@ h2 = { module = "com.h2database:h2", version.ref = "h2" }
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 keycloak-admin-client = { module = "org.keycloak:keycloak-admin-client", version.ref = "keycloak-admin-client" }
+
+# -- MapStruct --
+mapstruct = { module = "org.mapstruct:mapstruct", version.ref = "mapstruct" }
+mapstruct-processor = { module = "org.mapstruct:mapstruct-processor", version.ref = "mapstruct" }
+
+# -- OpenTelemetry --
+opentelemetry-api = { module = "io.opentelemetry:opentelemetry-api", version.ref = "opentelemetry" }
+mvel2 = { module = "org.mvel:mvel2", version.ref = "mvel" }
+
+# -- Databases --
+flyway-core = { module = "org.flywaydb:flyway-core" }
+postgresql = { module = "org.postgresql:postgresql" }
 
 [bundles]
 spring-web = ["spring-boot-starter-web", "spring-boot-starter-validation", "spring-boot-starter-actuator"]

@@ -8,6 +8,8 @@ import cbs.nova.dsl.TemporalProcessLauncher;
 import cbs.nova.dsl.TransactionInvoker;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
+import cbs.nova.dsl.utils.ExpressionEvaluator;
+import cbs.nova.starter.expression.MvelExpressionEvaluator;
 import cbs.nova.starter.resolver.SpringBeanHelperInstanceResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,14 +30,17 @@ public class DslAutoConfiguration {
   @Bean
   @ConditionalOnProperty(name = "dsl.source-dir")
   public ApplicationRunner dslApplicationRunner(HelperInstanceResolver helperInstanceResolver,
+          ExpressionEvaluator expressionEvaluator,
           TransactionInvoker transactionInvoker,
           TemporalProcessLauncher temporalProcessLauncher,
+          // TODO: replace with a configuration properties record instead
           @Value("${dsl.source-dir}") String sourceDirProperty) {
     return _ -> {
       var dir = acquireSourceDir(sourceDirProperty);
       new DefinitionLoader().load(dir, GlobalManager.globalManager());
 
       registerHelperResolvers();
+      registerExpressionEvaluator(expressionEvaluator);
       registerTemporalProcessLauncher(temporalProcessLauncher);
       registerTransactionInvoker(transactionInvoker);
       registerHelperInstanceResolver(helperInstanceResolver);
@@ -53,6 +58,16 @@ public class DslAutoConfiguration {
   @ConditionalOnMissingBean(DslRunRepository.class)
   public DslRunRepository dslRunRepository() {
     return new InMemoryDslRunRepository();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(ExpressionEvaluator.class)
+  public ExpressionEvaluator expressionEvaluator() {
+    return new MvelExpressionEvaluator();
+  }
+
+  private void registerExpressionEvaluator(ExpressionEvaluator expressionEvaluator) {
+    DslConfig.dslConfig().expressionEvaluator().replace(expressionEvaluator);
   }
 
   private void registerHelperInstanceResolver(HelperInstanceResolver helperInstanceResolver) {

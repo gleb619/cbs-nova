@@ -4,6 +4,8 @@ import cbs.nova.dsl.gradle.tooling.DslProjectModel;
 import com.intellij.openapi.externalSystem.model.DataNode;
 import com.intellij.openapi.externalSystem.model.project.ModuleData;
 import com.intellij.openapi.externalSystem.model.task.ExternalSystemTaskId;
+import java.util.Map;
+import org.gradle.tooling.model.idea.IdeaModule;
 import org.jetbrains.plugins.gradle.service.project.AbstractProjectResolverExtension;
 
 import java.nio.file.Path;
@@ -47,7 +49,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class DslProjectResolverExtension extends AbstractProjectResolverExtension {
 
-  private static final ConcurrentHashMap<ExternalSystemTaskId, Set<Path>> DISCOVERED = new ConcurrentHashMap<>();
+  private static final Map<ExternalSystemTaskId, Set<Path>> DISCOVERED = new ConcurrentHashMap<>();
 
   @Override
   public Set<Class<?>> getExtraProjectModelClasses() {
@@ -55,7 +57,7 @@ public final class DslProjectResolverExtension extends AbstractProjectResolverEx
   }
 
   @Override
-  public void populateModuleExtraModels(org.gradle.tooling.model.idea.IdeaModule gradleModule,
+  public void populateModuleExtraModels(IdeaModule gradleModule,
           DataNode<ModuleData> ideModule) {
     var model = resolverCtx.getExtraProject(gradleModule, DslProjectModel.class);
     if (model != null) {

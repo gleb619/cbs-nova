@@ -12,6 +12,7 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
+import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -96,9 +97,10 @@ class DevDslRuntimeTest {
   void explainReturnsReport() {
     var ctx = contextFactory.of("input", ExecutionMode.EXPLAIN);
     var report = runtime.explain("Ping", ctx);
+    var renderer = new ExplainDiagramRenderer();
     assertThat(report.name()).isEqualTo("Ping");
     assertThat(report.description()).isEqualTo("Process: Ping");
-    assertThat(report.mermaidDiagram()).isNotBlank();
+    assertThat(renderer.mermaidDiagram(report)).isNotBlank();
     assertThat(report.executionTrace()).isNotEmpty();
     assertThat(report.executionTrace()).contains("started: Ping");
     assertThat(report.astTree()).isNotNull();
@@ -177,10 +179,11 @@ class DevDslRuntimeTest {
 
     var ctx = contextFactory.of("input", ExecutionMode.EXPLAIN);
     var report = runtime.explain("TrackedProcess", ctx);
+    var renderer = new ExplainDiagramRenderer();
 
     assertThat(report.name()).isEqualTo("TrackedProcess");
-    assertThat(report.plantUmlDiagram()).contains("TrackedProcess");
-    assertThat(report.bpmnXml()).contains("bpmn:process");
+    assertThat(renderer.plantUmlDiagram(report)).contains("TrackedProcess");
+    assertThat(renderer.bpmnXml(report)).contains("bpmn:process");
     assertThat(report.callCounts()).containsEntry("database", 1);
     assertThat(report.callCounts()).containsEntry("http", 1);
     assertThat(report.externalCalls()).hasSize(2);

@@ -12,6 +12,7 @@ public class TemporalTestConfiguration {
 
   @Bean
   @Primary
+  // TODO: replace with a configuration properties record instead
   WorkflowServiceStubs workflowServiceStubs(@Value("${temporal.target}") String target) {
     return WorkflowServiceStubs.newInstance(
             WorkflowServiceStubsOptions.newBuilder()

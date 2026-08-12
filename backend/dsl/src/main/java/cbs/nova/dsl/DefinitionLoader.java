@@ -65,6 +65,7 @@ public final class DefinitionLoader {
   }
 
   // TODO: experimental
+  @Deprecated(forRemoval = true)
   public @NonNull List<DslObject> loadObjects(@NonNull Path sourceDir) {
     var compiler = ToolProvider.getSystemJavaCompiler();
     if (compiler == null) {

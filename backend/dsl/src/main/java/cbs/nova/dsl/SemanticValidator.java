@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+//TODO: move to `backend/dsl-codegen/src/main/java/cbs/nova/dsl/codegen` instead
 public final class SemanticValidator {
 
   public void validate(

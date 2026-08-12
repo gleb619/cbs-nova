@@ -38,7 +38,7 @@ public class DryRunLoggingAutoConfiguration {
 
   /**
    * Optional scoped-value implementation for callers that can bind the runId to a
-   * {@link java.lang.ScopedValue} carrier block.
+   * {@link ScopedValue} carrier block.
    */
   @Bean
   @ConditionalOnProperty(name = "cbs.nova.dryRun.context.type", havingValue = "scoped")
@@ -50,6 +50,7 @@ public class DryRunLoggingAutoConfiguration {
   @ConditionalOnMissingBean(DryRunLogbackAppender.class)
   public DryRunLogbackAppender dryRunLogbackAppender(
           DryRunLoggingContext dryRunLoggingContext,
+          // TODO: replace with a configuration properties record instead
           @Value("${cbs.nova.dryRun.log.maxEventsPerRun:1000}") int maxEventsPerRun) {
     var appender = new DryRunLogbackAppender(dryRunLoggingContext, maxEventsPerRun);
     appender.setName("DRY_RUN");

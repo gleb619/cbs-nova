@@ -10,6 +10,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean;
 
 @AutoConfiguration
+// TODO: replace with a configuration properties record instead
 public class PreviewCacheAutoConfiguration {
 
   @Bean

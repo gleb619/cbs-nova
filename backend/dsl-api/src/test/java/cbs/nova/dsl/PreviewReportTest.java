@@ -96,7 +96,7 @@ class PreviewReportTest {
   void equalsAndHashCodeBasedOnAllComponents() {
     var trace = List.of("step-1");
     var calls = List.<Map<String, Object>>of();
-    var counts = Map.<String, Integer>of("a", 1);
+    var counts = Map.of("a", 1);
     var left = new PreviewReport(
             "n", ExecutionMode.PREVIEW, true, "out", trace, calls, counts, null, List.of(), null,
             List.of());
@@ -140,9 +140,6 @@ class PreviewReportTest {
     var explain = new ExplainReport(
             "n",
             "d",
-            "mermaid",
-            "plant",
-            "bpmn",
             List.of("step-1"),
             List.of(),
             Map.of(),

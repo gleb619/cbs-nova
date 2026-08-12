@@ -5,6 +5,7 @@ import cbs.nova.dsl.DslEntityNotFoundException;
 import cbs.nova.dsl.DslValidationException;
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.PreviewErrorDetail;
+import lombok.NoArgsConstructor;
 import lombok.experimental.UtilityClass;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -20,7 +21,7 @@ import java.util.concurrent.TimeoutException;
  * {@link PreviewErrorDetail} carrying an error code, message, recovery suggestion, and
  * JSON-serializable context map.
  */
-@UtilityClass
+@NoArgsConstructor
 public class PreviewErrorHandler {
 
   private static final String UNKNOWN_ENTITY_PREFIX = "No DSL entity registered: ";
@@ -29,7 +30,7 @@ public class PreviewErrorHandler {
   /**
    * Map an exception to a {@link PreviewErrorDetail} using only the throwable as context.
    */
-  public @NonNull PreviewErrorDetail from(@Nullable Throwable cause) {
+  public static @NonNull PreviewErrorDetail from(@Nullable Throwable cause) {
     return from(cause, null);
   }
 
@@ -38,7 +39,7 @@ public class PreviewErrorHandler {
    * always added to the context map under {@code name} so callers can correlate the failure with
    * the DSL entity that was being dispatched.
    */
-  public @NonNull PreviewErrorDetail from(@Nullable Throwable cause,
+  public static @NonNull PreviewErrorDetail from(@Nullable Throwable cause,
           @Nullable String entityName) {
     if (cause == null) {
       return build(PreviewErrorCode.UNKNOWN_ERROR, "Preview failed with no cause", Map.of(),
@@ -98,7 +99,7 @@ public class PreviewErrorHandler {
             Map.of("exceptionType", cause.getClass().getName()), entityName);
   }
 
-  private @NonNull PreviewErrorDetail helperNotFound(@NonNull String message,
+  private static @NonNull PreviewErrorDetail helperNotFound(@NonNull String message,
           @Nullable String helperName, @Nullable String entityName) {
     Map<String, Object> ctx = new HashMap<>();
     String name = helperName != null && !helperName.isBlank()
@@ -112,7 +113,7 @@ public class PreviewErrorHandler {
             ctx);
   }
 
-  private @NonNull PreviewErrorDetail build(@NonNull PreviewErrorCode code,
+  private static @NonNull PreviewErrorDetail build(@NonNull PreviewErrorCode code,
           @Nullable String message, @NonNull Map<String, Object> ctx, @Nullable String entityName) {
     String msg = message != null ? message : code.name();
     Map<String, Object> merged = new HashMap<>(ctx);
@@ -122,7 +123,7 @@ public class PreviewErrorHandler {
     return new PreviewErrorDetail(code, msg, defaultSuggestion(code), merged);
   }
 
-  private @NonNull PreviewErrorDetail externalCallFailed(@NonNull String message,
+  private static @NonNull PreviewErrorDetail externalCallFailed(@NonNull String message,
           @NonNull SQLException sql, @Nullable String entityName) {
     Map<String, Object> ctx = new HashMap<>();
     ctx.put("sqlState", sql.getSQLState());
@@ -138,7 +139,7 @@ public class PreviewErrorHandler {
             ctx);
   }
 
-  private @NonNull PreviewErrorDetail inputValidationError(@NonNull String message,
+  private static @NonNull PreviewErrorDetail inputValidationError(@NonNull String message,
           @NonNull ClassCastException cce, @Nullable String entityName) {
     Map<String, Object> ctx = new HashMap<>();
     ctx.put("exceptionType", cce.getClass().getName());
@@ -150,7 +151,7 @@ public class PreviewErrorHandler {
             ctx);
   }
 
-  private @NonNull PreviewErrorDetail timeoutExceeded(@Nullable String message,
+  private static @NonNull PreviewErrorDetail timeoutExceeded(@Nullable String message,
           @Nullable String entityName) {
     String msg = message != null ? message : "Preview execution exceeded the allowed timeout";
     Map<String, Object> ctx = new HashMap<>();
@@ -161,7 +162,7 @@ public class PreviewErrorHandler {
             "Increase the preview timeout or simplify the DSL to reduce execution time.", ctx);
   }
 
-  private @NonNull String defaultSuggestion(@NonNull PreviewErrorCode code) {
+  private static @NonNull String defaultSuggestion(@NonNull PreviewErrorCode code) {
     return switch (code) {
       case DSL_COMPILATION_ERROR ->
         "Check the DSL source for syntax or validation errors; review the referenced entity names.";
@@ -180,15 +181,15 @@ public class PreviewErrorHandler {
     };
   }
 
-  private @Nullable String messageOf(@Nullable Throwable t) {
+  private static @Nullable String messageOf(@Nullable Throwable t) {
     return t == null ? null : t.getMessage();
   }
 
-  private @Nullable String extractBeanName(@Nullable String beanName) {
+  private static @Nullable String extractBeanName(@Nullable String beanName) {
     return beanName != null && !beanName.isBlank() ? beanName : null;
   }
 
-  private @Nullable String extractAfterPrefix(@NonNull String message,
+  private static @Nullable String extractAfterPrefix(@NonNull String message,
           @NonNull String prefix) {
     String tail = message.substring(prefix.length()).trim();
     if (tail.isEmpty()) {

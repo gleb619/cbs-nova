@@ -1,6 +1,6 @@
 package cbs.nova.starter.preview;
 
-import cbs.nova.starter.ExternalCallTracker;
+import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.common.serialization.Serializer;
@@ -22,7 +22,7 @@ import java.util.function.Supplier;
 public class MessagingCallCaptureProducerFactory<K, V> implements ProducerFactory<K, V> {
 
   private final ProducerFactory<K, V> delegate;
-  private final ExternalCallTracker externalCallTracker;
+  private final ExternalCallRecorder externalCallRecorder;
 
   @Override
   public Producer<K, V> createProducer() {
@@ -145,6 +145,6 @@ public class MessagingCallCaptureProducerFactory<K, V> implements ProducerFactor
   }
 
   private Producer<K, V> wrap(Producer<K, V> producer) {
-    return new MessagingCallCaptureProducer<>(producer, externalCallTracker);
+    return new MessagingCallCaptureProducer<>(producer, externalCallRecorder);
   }
 }

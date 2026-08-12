@@ -64,7 +64,7 @@ public final class ProcessCodeGenerator {
     String importBlock = imports.isEmpty() ? "" : "\n" + String.join("\n", imports) + "\n";
     String annotation = GeneratorMetadata.annotation(ProcessCodeGenerator.class);
 
-    return Substitutor.format(
+    return Substitutor.format(//language=java
             """
                     package ${pkg};${importBlock}
                     import io.temporal.workflow.QueryMethod;
@@ -108,7 +108,8 @@ public final class ProcessCodeGenerator {
     String importBlock = "\n" + String.join("\n", imports) + "\n";
     String annotation = GeneratorMetadata.annotation(ProcessCodeGenerator.class);
 
-    String template = """
+    String template = //language=java
+            """
             package ${pkg};${importBlock}
             ${annotation}
             public class ${implName} implements ${interfaceName} {
@@ -153,10 +154,11 @@ public final class ProcessCodeGenerator {
     if (refs.isEmpty()) {
       return "List.of()";
     }
-    return "List.of(" + refs.stream()
-            .map(s -> String.format("\"%s\"", s))
-            .collect(Collectors.joining(", "))
-            + ")";
+    String list = refs.stream()
+        .map(s -> String.format("\"%s\"", s))
+        .collect(Collectors.joining(", "));
+
+    return "List.of(%s)".formatted(list);
   }
 
   private String typeName(Class<?> type) {

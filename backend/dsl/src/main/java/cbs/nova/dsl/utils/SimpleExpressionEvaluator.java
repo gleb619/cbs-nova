@@ -1,5 +1,6 @@
 package cbs.nova.dsl.utils;
 
+import lombok.NoArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
 import java.math.BigDecimal;
@@ -18,14 +19,12 @@ import java.util.regex.Pattern;
  * ({@code ${a + b}}). Only basic operators ({@code + - * /}) and parentheses are allowed; no
  * reflection or external calls are performed.
  */
-public final class SimpleExpressionEvaluator {
+public final class SimpleExpressionEvaluator implements ExpressionEvaluator {
 
   private static final Pattern PLACEHOLDER = Pattern.compile("(\\$?\\{([^{}]+)\\})");
 
-  private SimpleExpressionEvaluator() {
-  }
-
-  public static @NonNull Object evaluate(@NonNull String expression,
+  @Override
+  public @NonNull Object evaluate(@NonNull String expression,
           @NonNull Map<String, Object> variables) {
     Matcher matcher = PLACEHOLDER.matcher(expression);
     if (isSinglePlaceholder(expression, matcher)) {
@@ -52,18 +51,18 @@ public final class SimpleExpressionEvaluator {
     return result.toString();
   }
 
-  private static boolean isSinglePlaceholder(@NonNull String expression, @NonNull Matcher matcher) {
+  private boolean isSinglePlaceholder(@NonNull String expression, @NonNull Matcher matcher) {
     return matcher.matches();
   }
 
-  private static String renderValue(Object value) {
+  private String renderValue(Object value) {
     if (value instanceof BigDecimal bd) {
       return bd.stripTrailingZeros().toPlainString();
     }
     return value == null ? "" : String.valueOf(value);
   }
 
-  private static @NonNull Object resolveVariable(@NonNull String name,
+  private @NonNull Object resolveVariable(@NonNull String name,
           @NonNull Map<String, Object> variables) {
     if (variables.containsKey(name)) {
       Object value = variables.get(name);
@@ -72,7 +71,7 @@ public final class SimpleExpressionEvaluator {
     return "";
   }
 
-  private static @NonNull Object evalExpression(@NonNull String expression,
+  private @NonNull Object evalExpression(@NonNull String expression,
           @NonNull Map<String, Object> variables) {
     List<Token> tokens = tokenize(expression);
     Parser parser = new Parser(tokens, variables);
@@ -83,7 +82,7 @@ public final class SimpleExpressionEvaluator {
     return result;
   }
 
-  private static List<Token> tokenize(String expression) {
+  private List<Token> tokenize(String expression) {
     List<Token> tokens = new ArrayList<>();
     int i = 0;
     int n = expression.length();
@@ -142,7 +141,7 @@ public final class SimpleExpressionEvaluator {
   private record Token(TokenType type, String text) {
   }
 
-  private static final class Parser {
+  private final class Parser {
 
     private final List<Token> tokens;
     private final Map<String, Object> variables;
@@ -238,7 +237,7 @@ public final class SimpleExpressionEvaluator {
       return tokens.get(pos++);
     }
 
-    private static Object applyBinary(String op, Object left, Object right) {
+    private Object applyBinary(String op, Object left, Object right) {
       if ("+".equals(op) && (isString(left) || isString(right))) {
         return String.valueOf(left) + right;
       }
@@ -253,15 +252,15 @@ public final class SimpleExpressionEvaluator {
       };
     }
 
-    private static Object negate(Object value) {
+    private Object negate(Object value) {
       return toBigDecimal(value).negate().stripTrailingZeros();
     }
 
-    private static boolean isString(Object value) {
+    private boolean isString(Object value) {
       return value instanceof String;
     }
 
-    private static BigDecimal toBigDecimal(Object value) {
+    private BigDecimal toBigDecimal(Object value) {
       if (value instanceof BigDecimal bd) {
         return bd;
       }

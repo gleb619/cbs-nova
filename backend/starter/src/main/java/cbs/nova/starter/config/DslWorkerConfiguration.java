@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 @ConditionalOnProperty(name = "dsl.worker.enabled", havingValue = "true")
 public class DslWorkerConfiguration {
 
+  // TODO: replace with a configuration properties record instead
   @Value("${dsl.task-queue:dsl-task-queue}")
   private String taskQueue;
 

@@ -152,7 +152,7 @@ class DslRuntimeResourceTest {
   @Test
   void explainReturns200WithReport() throws Exception {
     ExplainReport report = new ExplainReport(
-            "P", "desc", "graph TD;", "<plantuml/>", "<bpmn/>",
+            "P", "desc",
             List.of(), List.of(), Map.of(), null, null, null, List.of(), null, List.of());
     doReturn(report).when(dslRuntime).explain(eq("P"), any());
 

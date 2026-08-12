@@ -125,6 +125,7 @@ node_modules
 /dsl-examples/.project
 /dsl-examples/.settings/
 /dsl-examples/bin/
+/backend/dsl-gradle-plugin/.gradle/
 /docs/superpowers/
 
 # temporary

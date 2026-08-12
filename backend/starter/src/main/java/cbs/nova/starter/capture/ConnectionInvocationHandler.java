@@ -1,6 +1,6 @@
 package cbs.nova.starter.capture;
 
-import cbs.nova.starter.ExternalCallTracker;
+import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -26,39 +26,40 @@ import java.util.Set;
  * connection in a JDK proxy. For a {@link Connection} delegate, the statement factory methods
  * ({@code prepareStatement}, {@code prepareCall}, {@code createStatement}) are intercepted to wrap
  * the returned statement in a JDK proxy so that JDBC execution calls can be recorded into the
- * {@link ExternalCallTracker}.
+ * {@link ExternalCallRecorder}.
  */
+//TODO: Usage of reflection here is forbidden, we need a typed handler here(e.g. create what needed, and replace reflection)
 public class ConnectionInvocationHandler implements InvocationHandler {
 
-  static final String FALLBACK_TARGET = "jdbc:datasource";
+  public static final String FALLBACK_TARGET = "jdbc:datasource";
 
-  private static final Set<Method> GET_CONNECTION_METHODS = Set.of(
+  private final Set<Method> GET_CONNECTION_METHODS = Set.of(
           methodOrThrow(DataSource.class, "getConnection"),
           methodOrThrow(DataSource.class, "getConnection", String.class, String.class));
 
-  private static final Set<String> CONNECTION_FACTORY_METHODS = Set.of(
+  private final Set<String> CONNECTION_FACTORY_METHODS = Set.of(
           "prepareStatement", "prepareCall", "createStatement");
 
   private final Object delegate;
-  private final ExternalCallTracker externalCallTracker;
+  private final ExternalCallRecorder externalCallRecorder;
   private final boolean delegateIsDataSource;
 
   public ConnectionInvocationHandler(@NonNull DataSource dataSource,
-          @NonNull ExternalCallTracker externalCallTracker) {
-    this(dataSource, dataSource, externalCallTracker, true);
+          @NonNull ExternalCallRecorder externalCallRecorder) {
+    this(dataSource, dataSource, externalCallRecorder, true);
   }
 
   private ConnectionInvocationHandler(@NonNull Connection connection,
-          @NonNull ExternalCallTracker externalCallTracker) {
-    this(connection, connection, externalCallTracker, false);
+          @NonNull ExternalCallRecorder externalCallRecorder) {
+    this(connection, connection, externalCallRecorder, false);
   }
 
   private ConnectionInvocationHandler(@NonNull Object primaryDelegate,
           @NonNull Object typeProbe,
-          @NonNull ExternalCallTracker externalCallTracker,
+          @NonNull ExternalCallRecorder externalCallRecorder,
           boolean delegateIsDataSource) {
     this.delegate = primaryDelegate;
-    this.externalCallTracker = externalCallTracker;
+    this.externalCallRecorder = externalCallRecorder;
     this.delegateIsDataSource = delegateIsDataSource;
   }
 
@@ -94,7 +95,7 @@ public class ConnectionInvocationHandler implements InvocationHandler {
 
   private Object wrapConnection(@NonNull Connection connection) {
     ConnectionInvocationHandler handler = new ConnectionInvocationHandler(
-            connection, externalCallTracker);
+            connection, externalCallRecorder);
     ClassLoader classLoader = connection.getClass().getClassLoader();
     if (classLoader == null) {
       classLoader = ConnectionInvocationHandler.class.getClassLoader();
@@ -121,7 +122,7 @@ public class ConnectionInvocationHandler implements InvocationHandler {
     return wrapStatement(statement, sql, target);
   }
 
-  private static @Nullable String extractSql(@NonNull Method method, @Nullable Object[] args) {
+  private @Nullable String extractSql(@NonNull Method method, @Nullable Object[] args) {
     if (args == null) {
       return null;
     }
@@ -151,7 +152,7 @@ public class ConnectionInvocationHandler implements InvocationHandler {
     }
   }
 
-  private static @NonNull String resolveTargetFromConnection(@NonNull Connection connection) {
+  private @NonNull String resolveTargetFromConnection(@NonNull Connection connection) {
     try {
       String url = connection.getMetaData().getURL();
       if (url != null && !url.isBlank()) {
@@ -171,11 +172,11 @@ public class ConnectionInvocationHandler implements InvocationHandler {
     }
     Class<?>[] interfaces = statementInterfaces(statement);
     PreparedStatementInvocationHandler handler = new PreparedStatementInvocationHandler(
-            statement, sql, target, externalCallTracker);
+            statement, sql, target, externalCallRecorder);
     return Proxy.newProxyInstance(classLoader, interfaces, handler);
   }
 
-  private static Class<?>[] statementInterfaces(@NonNull Object statement) {
+  private Class<?>[] statementInterfaces(@NonNull Object statement) {
     if (statement instanceof CallableStatement) {
       return new Class<?>[]{CallableStatement.class, PreparedStatement.class, Statement.class};
     }
@@ -185,7 +186,7 @@ public class ConnectionInvocationHandler implements InvocationHandler {
     return new Class<?>[]{Statement.class};
   }
 
-  private static Method methodOrThrow(Class<?> owner, String name, Class<?>... params) {
+  private Method methodOrThrow(Class<?> owner, String name, Class<?>... params) {
     try {
       return owner.getMethod(name, params);
     } catch (NoSuchMethodException ex) {

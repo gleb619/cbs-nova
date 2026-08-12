@@ -4,7 +4,7 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 /**
- * {@link DryRunLoggingContext} implementation based on {@link java.lang.ScopedValue}.
+ * {@link DryRunLoggingContext} implementation based on {@link ScopedValue}.
  *
  * <p>
  * Requires JDK 21+ (the project toolchain is JDK 25). Because scoped values can only be bound for
@@ -12,6 +12,7 @@ import org.jspecify.annotations.Nullable;
  * {@link #setRunId(String)} and {@link #clearRunId()} are unsupported; callers must use
  * {@link #runWithRunId(String, Runnable)}.
  */
+// TODO: to remove, change to a new pipe stage
 public final class ScopedValueDryRunLoggingContext implements DryRunLoggingContext {
 
   private static final ScopedValue<String> RUN_ID = ScopedValue.newInstance();

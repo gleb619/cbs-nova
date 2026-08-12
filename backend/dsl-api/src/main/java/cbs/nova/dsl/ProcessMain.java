@@ -7,6 +7,8 @@ import org.jspecify.annotations.NonNull;
  * {@link GlobalManager} saga runner. It represents the main process logic that should be executed
  * under compensation.
  */
+//TODO: remove, unused
+@Deprecated(forRemoval = true)
 @FunctionalInterface
 public interface ProcessMain {
 

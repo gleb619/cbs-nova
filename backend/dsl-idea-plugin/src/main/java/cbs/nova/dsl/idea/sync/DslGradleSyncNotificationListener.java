@@ -28,22 +28,27 @@ public final class DslGradleSyncNotificationListener
 
   @Override
   public void onStart(ExternalSystemTaskId id) {
+    log("onStart, id=" + id);
   }
 
   @Override
   public void onStatusChange(ExternalSystemTaskNotificationEvent event) {
+    log("onStatusChange, event=" + event);
   }
 
   @Override
   public void onTaskOutput(ExternalSystemTaskId id, String text, boolean stdOut) {
+    log("onTaskOutput, id=" + id);
   }
 
   @Override
   public void onEnd(ExternalSystemTaskId id) {
+    log("onEnd, id=" + id);
   }
 
   @Override
   public void onSuccess(ExternalSystemTaskId id) {
+    log("onSuccess, id=" + id);
     if (!isGradleProjectResolve(id)) {
       return;
     }
@@ -56,14 +61,17 @@ public final class DslGradleSyncNotificationListener
 
   @Override
   public void onFailure(ExternalSystemTaskId id, Exception e) {
+    log("onFailure, id=" + id);
   }
 
   @Override
   public void beforeCancel(ExternalSystemTaskId id) {
+    log("beforeCancel, id=" + id);
   }
 
   @Override
   public void onCancel(ExternalSystemTaskId id) {
+    log("onCancel, id=" + id);
   }
 
   private boolean isGradleProjectResolve(ExternalSystemTaskId id) {
@@ -71,4 +79,9 @@ public final class DslGradleSyncNotificationListener
     return id.getType() == ExternalSystemTaskType.RESOLVE_PROJECT
             && GradleConstants.SYSTEM_ID.equals(systemId);
   }
+
+  public void log(String message) {
+    System.out.println("DslGradleSyncNotificationListener.log: " + message);
+  }
+
 }

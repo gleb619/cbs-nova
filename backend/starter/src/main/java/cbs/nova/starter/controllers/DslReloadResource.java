@@ -48,6 +48,7 @@ public class DslReloadResource {
 
   private static final String RELOAD_TEMP_PREFIX = "dsl-reload-";
 
+  // TODO: replace with a configuration properties record instead
   @Value("${dsl.source-dir:}")
   private String sourceDirProperty;
 

@@ -3,6 +3,7 @@ package cbs.nova.misc.codegen;
 import cbs.nova.dsl.Helper;
 import cbs.nova.dsl.utils.Substitutor;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
@@ -30,44 +31,15 @@ public class HelperSpiProcessor extends AbstractProcessor {
   private static final String RESOLVER_CLASS = "GeneratedHelperResolver";
 
   private final List<HelperEntry> entries = new ArrayList<>();
-  private boolean wrote = false;
-
-  private static String packageOf(String fqn) {
-    var idx = fqn.lastIndexOf('.');
-    return idx < 0 ? "" : fqn.substring(0, idx);
-  }
-
-  private static String simpleNameOf(String fqn) {
-    return fqn.substring(fqn.lastIndexOf('.') + 1);
-  }
-
-  private static String commonPackage(List<HelperEntry> entries) {
-    if (entries.isEmpty()) {
-      return "";
-    }
-    var first = packageOf(entries.get(0).fqn()).split("\\.");
-    var common = first.length;
-    for (var i = 1; i < entries.size(); i++) {
-      var segs = packageOf(entries.get(i).fqn()).split("\\.");
-      var matched = 0;
-      while (matched < common && matched < segs.length && segs[matched].equals(first[matched])) {
-        matched++;
-      }
-      common = matched;
-      if (common == 0) {
-        return "";
-      }
-    }
-    return String.join(".", Arrays.copyOf(first, common));
-  }
+  private final AtomicBoolean wrote = new AtomicBoolean(false);
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     if (roundEnv.processingOver()) {
-      if (!wrote && !entries.isEmpty()) {
+      if (!wrote.get() && !entries.isEmpty()) {
         writeSimpleResolver();
         writeServiceFile();
-        wrote = true;
+        wrote.set(true);
       }
       return false;
     }
@@ -126,7 +98,8 @@ public class HelperSpiProcessor extends AbstractProcessor {
         var packageLine = resolverPackage.isEmpty()
                 ? ""
                 : "package " + resolverPackage + ";\n\n";
-        var template = """
+        var template = //language=java
+                """
                 ${packageLine}import cbs.nova.dsl.HelperInstanceResolver;
                 import cbs.nova.dsl.HelperRegistrar;
                 import cbs.nova.dsl.HelperResolver;
@@ -169,7 +142,37 @@ public class HelperSpiProcessor extends AbstractProcessor {
     }
   }
 
+  private String packageOf(String fqn) {
+    var idx = fqn.lastIndexOf('.');
+    return idx < 0 ? "" : fqn.substring(0, idx);
+  }
+
+  private String simpleNameOf(String fqn) {
+    return fqn.substring(fqn.lastIndexOf('.') + 1);
+  }
+
+  private String commonPackage(List<HelperEntry> entries) {
+    if (entries.isEmpty()) {
+      return "";
+    }
+    var first = packageOf(entries.get(0).fqn()).split("\\.");
+    var common = first.length;
+    for (var i = 1; i < entries.size(); i++) {
+      var segs = packageOf(entries.get(i).fqn()).split("\\.");
+      var matched = 0;
+      while (matched < common && matched < segs.length && segs[matched].equals(first[matched])) {
+        matched++;
+      }
+      common = matched;
+      if (common == 0) {
+        return "";
+      }
+    }
+    return String.join(".", Arrays.copyOf(first, common));
+  }
+
   private record HelperEntry(String fqn, String name) {
 
   }
+
 }

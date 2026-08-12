@@ -1,5 +1,6 @@
 package cbs.nova.dsl;
 
+import java.lang.annotation.Annotation;
 import org.jspecify.annotations.Nullable;
 
 import java.lang.reflect.ParameterizedType;
@@ -18,6 +19,81 @@ import java.util.Map;
  * <p>
  * The schema is returned as a plain {@link Map} so it can be serialized to JSON by any mapper.
  */
+/*
+To generate a JSON schema from a Java class using Jackson, you can choose between two primary methods depending on your target JSON Schema draft version.The FasterXML Jackson Module natively supports older Draft 3 schemas. For modern standards like Draft 2020-12, the industry standard is to use the victools JSON Schema Generator alongside its Jackson integration module.Option 1: Modern Drafts via Victools Generator (Recommended)This approach supports modern JSON Schema drafts (such as Draft 2020-12) and honors Jackson serialization configurations and annotations.1. Add DependenciesAdd these dependencies to your pom.xml:xml<dependency>
+    <groupId>com.github.victools</groupId>
+    <artifactId>jsonschema-generator</artifactId>
+    <version>4.31.1</version>
+</dependency>
+<dependency>
+    <groupId>com.github.victools</groupId>
+    <artifactId>jsonschema-module-jackson</artifactId>
+    <version>4.31.1</version>
+</dependency>
+Use code with caution.2. Java Code Implementationjavaimport com.fasterxml.jackson.databind.JsonNode;
+import com.github.victools.jsonschema.generator.*;
+import com.github.victools.jsonschema.module.jackson.JacksonModule;
+
+public class SchemaGeneratorExample {
+    public static void main(String[] args) {
+        // 1. Configure the builder to use modern Draft 2020-12
+        SchemaGeneratorConfigBuilder configBuilder = new SchemaGeneratorConfigBuilder(
+                SchemaVersion.DRAFT_2020_12,
+                OptionPreset.PLAIN_JSON
+        );
+
+        // 2. Register the Jackson module to respect your Jackson annotations
+        configBuilder.with(new JacksonModule());
+
+        // 3. Build configuration and generate schema
+        SchemaGeneratorConfig config = configBuilder.build();
+        SchemaGenerator generator = new SchemaGenerator(config);
+
+        JsonNode jsonSchema = generator.generateSchema(Product.class);
+
+        // 4. Output the beautiful, valid JSON schema string
+        System.out.println(jsonSchema.toPrettyString());
+    }
+}
+Use code with caution.Option 2: Native Jackson Module (Legacy Draft 3)If your ecosystem specifically requires older Draft 3 definitions, use the legacy module maintained by FasterXML.1. Add Dependencyxml<dependency>
+    <groupId>com.fasterxml.jackson.module</groupId>
+    <artifactId>jackson-module-jsonSchema</artifactId>
+    <version>2.15.2</version>
+</dependency>
+Use code with caution.2. Java Code Implementationjavaimport com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.module.jsonSchema.JsonSchema;
+import com.fasterxml.jackson.module.jsonSchema.JsonSchemaGenerator;
+
+public class LegacySchemaExample {
+    public static void main(String[] args) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+
+        // Instantiate the official native generator wrapper
+        JsonSchemaGenerator schemaGen = new JsonSchemaGenerator(mapper);
+        JsonSchema schema = schemaGen.generateSchema(Product.class);
+
+        // Print out your JSON string payload representation
+        String schemaText = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(schema);
+        System.out.println(schemaText);
+    }
+}
+Use code with caution.Target POJO Class StructureBoth setups will parse a standard Java object configured with Jackson annotations:javaimport com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+
+public class Product {
+    @JsonProperty(required = true)
+    @JsonPropertyDescription("The unique identifier for the product")
+    private int id;
+
+    @JsonProperty("product_name")
+    private String name;
+
+    // Getters and Setters...
+}
+*/
+//TODO: use library instead of handwritten schemas
+@Deprecated
+//TODO: instead of static access, create a some bean
 public final class JsonSchemaGenerator {
 
   private static final String DRAFT_URI = "https://json-schema.org/draft/2020-12/schema";
@@ -179,7 +255,7 @@ public final class JsonSchemaGenerator {
             || hasNullableAnnotation(component.getAccessor().getAnnotations());
   }
 
-  private static boolean hasNullableAnnotation(java.lang.annotation.Annotation[] annotations) {
+  private static boolean hasNullableAnnotation(Annotation[] annotations) {
     return Arrays.stream(annotations)
             .anyMatch(a -> a.annotationType().getSimpleName().equals("Nullable"));
   }

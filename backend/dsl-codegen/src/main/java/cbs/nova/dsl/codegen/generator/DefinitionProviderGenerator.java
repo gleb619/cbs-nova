@@ -25,7 +25,8 @@ public final class DefinitionProviderGenerator {
   public static final String SERVICE_PATH = "META-INF/services/"
           + DslDefinitionProvider.class.getName();
 
-  private static final String SOURCE_TEMPLATE = """
+  private static final String SOURCE_TEMPLATE = //language=java
+          """
           ${packageLine}import cbs.nova.dsl.DslCompactSource;
           import cbs.nova.dsl.DslDefinitionProvider;
           import cbs.nova.dsl.DslObject;
@@ -64,12 +65,7 @@ public final class DefinitionProviderGenerator {
     var providerFqcn = providerFqcn(targetPackage);
     var sourceFile = sourcePath(outputDir, targetPackage);
 
-    var registrations = classNames.stream()
-            .map("    sources.add(new %s());"::formatted)
-            .collect(Collectors.joining("\n"));
-    if (!registrations.isEmpty()) {
-      registrations = registrations + "\n";
-    }
+    var registrations = createRegistrations(classNames);
     var annotation = GeneratorMetadata.annotation(DefinitionProviderGenerator.class);
     var source = Substitutor.format(SOURCE_TEMPLATE, Map.of(
             "packageLine", packageLine,
@@ -100,5 +96,16 @@ public final class DefinitionProviderGenerator {
       return outputDir.resolve(PROVIDER_CLASS + ".java");
     }
     return outputDir.resolve(targetPackage.replace('.', '/')).resolve(PROVIDER_CLASS + ".java");
+  }
+
+  private String createRegistrations(List<String> classNames) {
+    var registrations = classNames.stream()
+        .map("    sources.add(new %s());"::formatted)
+        .collect(Collectors.joining("\n"));
+
+    if (!registrations.isEmpty()) {
+      return registrations + "\n";
+    }
+    return registrations;
   }
 }

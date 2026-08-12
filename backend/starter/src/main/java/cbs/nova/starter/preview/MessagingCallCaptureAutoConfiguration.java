@@ -1,6 +1,6 @@
 package cbs.nova.starter.preview;
 
-import cbs.nova.starter.ExternalCallTracker;
+import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -20,7 +20,7 @@ public class MessagingCallCaptureAutoConfiguration {
 
   @Bean
   static BeanPostProcessor messagingCallCaptureProducerFactoryPostProcessor(
-          ExternalCallTracker externalCallTracker) {
-    return new MessagingCallCaptureProducerFactoryBeanPostProcessor(externalCallTracker);
+          ExternalCallRecorder externalCallRecorder) {
+    return new MessagingCallCaptureProducerFactoryBeanPostProcessor(externalCallRecorder);
   }
 }

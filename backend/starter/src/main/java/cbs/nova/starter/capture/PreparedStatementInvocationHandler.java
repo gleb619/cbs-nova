@@ -1,6 +1,6 @@
 package cbs.nova.starter.capture;
 
-import cbs.nova.starter.ExternalCallTracker;
+import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -12,7 +12,7 @@ import java.util.Set;
 /**
  * InvocationHandler that records every JDBC execution call made on a proxied
  * {@link java.sql.Statement}, {@link java.sql.PreparedStatement} or
- * {@link java.sql.CallableStatement} into the supplied {@link ExternalCallTracker}, then delegates
+ * {@link java.sql.CallableStatement} into the supplied {@link ExternalCallRecorder}, then delegates
  * the call to the real statement.
  *
  * <p>
@@ -22,6 +22,7 @@ import java.util.Set;
  * SQL (upper-cased) is used as the recorded operation; {@code executeBatch} is always recorded as
  * {@code BATCH}.
  */
+//TODO: Usage of reflection is forbidden, add typed handler here
 public class PreparedStatementInvocationHandler implements InvocationHandler {
 
   private static final Set<String> RECORDED_METHODS = Set.of(
@@ -37,14 +38,14 @@ public class PreparedStatementInvocationHandler implements InvocationHandler {
   private final Object delegate;
   private final String sql;
   private final String target;
-  private final ExternalCallTracker externalCallTracker;
+  private final ExternalCallRecorder externalCallRecorder;
 
   public PreparedStatementInvocationHandler(@NonNull Object delegate, @Nullable String sql,
-          @NonNull String target, @NonNull ExternalCallTracker externalCallTracker) {
+          @NonNull String target, @NonNull ExternalCallRecorder externalCallRecorder) {
     this.delegate = delegate;
     this.sql = sql;
     this.target = target;
-    this.externalCallTracker = externalCallTracker;
+    this.externalCallRecorder = externalCallRecorder;
   }
 
   @Override
@@ -80,8 +81,8 @@ public class PreparedStatementInvocationHandler implements InvocationHandler {
       payload = effectiveSql;
     }
     // DB response mocking needs the T168 interceptor SPI; this wrapper only observes.
-    externalCallTracker.findMock(ExternalCallTracker.TYPE_DATABASE, target, operation);
-    externalCallTracker.record(ExternalCallTracker.TYPE_DATABASE, target, operation, payload);
+    externalCallRecorder.findMock(ExternalCallRecorder.TYPE_DATABASE, target, operation);
+    externalCallRecorder.record(ExternalCallRecorder.TYPE_DATABASE, target, operation, payload);
   }
 
   private static @NonNull String firstSqlToken(@Nullable String sql) {

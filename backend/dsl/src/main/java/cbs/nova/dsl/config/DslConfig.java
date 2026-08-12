@@ -8,7 +8,6 @@ import cbs.nova.dsl.HelperManager;
 import cbs.nova.dsl.RetryPolicy;
 import cbs.nova.dsl.TemporalProcessLauncher;
 import cbs.nova.dsl.TransactionInvoker;
-import cbs.nova.dsl.context.DefaultProcessContextFactory;
 import cbs.nova.dsl.process.ProcessManager;
 import cbs.nova.dsl.process.ProcessRunner;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
@@ -21,6 +20,8 @@ import cbs.nova.dsl.runner.DefaultTransactionRunner;
 import cbs.nova.dsl.runner.HelperRunner;
 import cbs.nova.dsl.transaction.TransactionManager;
 import cbs.nova.dsl.transaction.TransactionRunner;
+import cbs.nova.dsl.utils.ExpressionEvaluator;
+import cbs.nova.dsl.utils.SimpleExpressionEvaluator;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
@@ -61,6 +62,10 @@ public class DslConfig implements SingletonSupport {
 
   public @NonNull Replaceable<TransactionInvoker> transactionInvoker() {
     return replaceable("transactionInvoker");
+  }
+
+  public @NonNull Replaceable<ExpressionEvaluator> expressionEvaluator() {
+    return replaceable(SimpleExpressionEvaluator::new);
   }
 
   public @NonNull Replaceable<TemporalProcessLauncher> temporalProcessLauncher() {
@@ -105,7 +110,7 @@ public class DslConfig implements SingletonSupport {
             new HelperManager(new DefaultHelperRegistry(),
                     helperRunner(traceCollector, contextFactory)),
             new GeneratedClassRegistry(),
-            new DefaultProcessContextFactory(),
+            new ProcessContextFactory(),
             compensationRegistry);
   }
 

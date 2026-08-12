@@ -9,7 +9,8 @@ import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
-import cbs.nova.starter.ExternalCallTracker;
+import cbs.nova.starter.core.recorder.ExternalCallRecorder;
+import cbs.nova.starter.core.recorder.MapBasedMockResolver;
 import cbs.nova.starter.models.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -35,7 +36,7 @@ public class DslRuntimeResource {
 
   private final DslRuntime dslRuntime;
   private final ContextFactory contextFactory;
-  private final ExternalCallTracker externalCallTracker;
+  private final ExternalCallRecorder externalCallRecorder;
 
   @PostMapping("/preview/{name}")
   @Operation(summary = "Preview a DSL process without side effects")
@@ -47,7 +48,7 @@ public class DslRuntimeResource {
     if (mocks != null && !mocks.isEmpty()) {
       @SuppressWarnings("unchecked")
       Map<String, Object> typedMocks = (Map<String, Object>) (Map<?, ?>) mocks;
-      externalCallTracker.startMocking(typedMocks);
+      externalCallRecorder.startMocking(new MapBasedMockResolver(typedMocks));
     }
     try {
       Result<PreviewReport> result = dslRuntime.preview(name, ctx);
@@ -69,7 +70,7 @@ public class DslRuntimeResource {
               .body(new ErrorResponse(code, message, name, runId, exceptionId));
     } finally {
       if (mocks != null && !mocks.isEmpty()) {
-        externalCallTracker.stopMocking();
+        externalCallRecorder.stopMocking();
       }
     }
   }

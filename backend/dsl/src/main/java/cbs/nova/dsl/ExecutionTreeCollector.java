@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * tree of {@link CallNode} entries per runId. Designed to be activated by the preview/explain entry
  * points (T150) and consumed once a run finishes.
  */
+//TODO: class can cause a memory leak, to remove, change to a new pipe stage
 public final class ExecutionTreeCollector implements ExecutionListener {
 
   private static final Logger log = LoggerFactory.getLogger(ExecutionTreeCollector.class);

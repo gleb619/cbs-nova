@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
+//TODO: class can cause a memory leak, to remove, change to a new pipe stage
 public final class ExecutionTraceCollector {
 
   private final ConcurrentHashMap<String, List<String>> traces = new ConcurrentHashMap<>();

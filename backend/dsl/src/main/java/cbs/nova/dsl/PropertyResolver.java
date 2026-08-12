@@ -5,6 +5,8 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.Map;
 
+//TODO: remove, as unused
+@Deprecated
 public final class PropertyResolver {
 
   private final Map<String, String> properties;

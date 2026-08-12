@@ -25,23 +25,28 @@ dependencies {
   api libs.avaje.jsonb
   annotationProcessor libs.avaje.jsonb.generator
 
-  implementation 'org.mapstruct:mapstruct:1.6.3'
-  annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
+  implementation libs.mapstruct
+  annotationProcessor libs.mapstruct.processor
+
+  compileOnly libs.lombok
+  annotationProcessor libs.lombok
 
   compileOnly libs.bundles.spring.web
-  implementation libs.spring.boot.starter.actuator
-  implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
-  implementation 'org.flywaydb:flyway-core'
-  implementation 'com.fasterxml.jackson.core:jackson-databind'
-  runtimeOnly 'org.postgresql:postgresql'
-  implementation libs.springdoc.openapi.starter.webmvc.ui
+  compileOnly libs.spring.boot.starter.actuator
+  compileOnly libs.springdoc.openapi.starter.webmvc.ui
   compileOnly libs.openfeign.core
-  compileOnly 'org.springframework.kafka:spring-kafka'
+  compileOnly libs.spring.kafka
+  implementation libs.spring.boot.starter.data.jdbc
+  implementation libs.jackson.databind
+  implementation libs.mvel2
+
+  implementation libs.flyway.core
+  runtimeOnly libs.postgresql
 
   api libs.temporal.sdk
   api libs.sentry.spring.boot.jakarta
 
-  implementation 'io.opentelemetry:opentelemetry-api:1.48.0'
+  implementation libs.opentelemetry.api
 
   annotationProcessor project(':misc-codegen')
 
@@ -58,12 +63,12 @@ dependencies {
   testImplementation libs.testcontainers.junit.jupiter
   testImplementation libs.testcontainers.postgresql
   testImplementation libs.keycloak.admin.client
-  testImplementation 'com.h2database:h2'
+  testImplementation libs.h2
   testImplementation libs.rest.assured
   testImplementation libs.awaitility
   testImplementation libs.spring.jdbc
   testImplementation libs.wiremock
-  testImplementation 'org.springframework.kafka:spring-kafka'
+  testImplementation libs.spring.kafka
 }
 
 processIntegrationTestResources {

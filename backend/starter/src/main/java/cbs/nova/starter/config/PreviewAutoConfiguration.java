@@ -1,7 +1,7 @@
 package cbs.nova.starter.config;
 
 import cbs.nova.dsl.TransactionInvoker;
-import cbs.nova.starter.ExternalCallTracker;
+import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import cbs.nova.starter.preview.TemporalActivityCallCaptureInterceptor;
 import cbs.nova.starter.services.TemporalTransactionInvoker;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -19,8 +19,8 @@ public class PreviewAutoConfiguration {
   @Bean
   TransactionInvoker transactionInvoker(
           TemporalTransactionInvoker temporalTransactionInvoker,
-          ExternalCallTracker externalCallTracker) {
+          ExternalCallRecorder externalCallRecorder) {
     return new TemporalActivityCallCaptureInterceptor(temporalTransactionInvoker,
-            externalCallTracker);
+            externalCallRecorder);
   }
 }
