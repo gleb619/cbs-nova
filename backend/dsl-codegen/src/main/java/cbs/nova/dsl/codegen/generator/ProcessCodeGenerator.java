@@ -64,7 +64,7 @@ public final class ProcessCodeGenerator {
     String importBlock = imports.isEmpty() ? "" : "\n" + String.join("\n", imports) + "\n";
     String annotation = GeneratorMetadata.annotation(ProcessCodeGenerator.class);
 
-    return Substitutor.format(//language=java
+    return Substitutor.format(// language=java
             """
                     package ${pkg};${importBlock}
                     import io.temporal.workflow.QueryMethod;
@@ -108,32 +108,32 @@ public final class ProcessCodeGenerator {
     String importBlock = "\n" + String.join("\n", imports) + "\n";
     String annotation = GeneratorMetadata.annotation(ProcessCodeGenerator.class);
 
-    String template = //language=java
+    String template = // language=java
             """
-            package ${pkg};${importBlock}
-            ${annotation}
-            public class ${implName} implements ${interfaceName} {
+                    package ${pkg};${importBlock}
+                    ${annotation}
+                    public class ${implName} implements ${interfaceName} {
 
-              private static final String VERSION = "${version}";
-              private static final List<String> TRANSACTION_REFS = ${transactionRefs};
+                      private static final String VERSION = "${version}";
+                      private static final List<String> TRANSACTION_REFS = ${transactionRefs};
 
-              @Override
-              public String getVersion() {
-                return VERSION;
-              }
+                      @Override
+                      public String getVersion() {
+                        return VERSION;
+                      }
 
-              @Override
-              public Object execute(DslTemporalProcessRequest<${inputTypeName}> request) {
-                ${inputTypeName} input = request.payload();
-                return GlobalManager.globalManager().runProcessWithCompensation(
-                        request.runId(),
-                        input,
-                        ctx -> GlobalManager.globalManager().runProcess("${processName}", VERSION, ctx),
-                        (compCtx, error) -> GlobalManager.globalManager()
-                                .compensateProcess("${processName}", compCtx, error));
-              }
-            }
-            """;
+                      @Override
+                      public Object execute(DslTemporalProcessRequest<${inputTypeName}> request) {
+                        ${inputTypeName} input = request.payload();
+                        return GlobalManager.globalManager().runProcessWithCompensation(
+                                request.runId(),
+                                input,
+                                ctx -> GlobalManager.globalManager().runProcess("${processName}", VERSION, ctx),
+                                (compCtx, error) -> GlobalManager.globalManager()
+                                        .compensateProcess("${processName}", compCtx, error));
+                      }
+                    }
+                    """;
 
     String transactionRefsValue = transactionRefsLiteral(transactionRefs);
     return Substitutor.format(
@@ -155,8 +155,8 @@ public final class ProcessCodeGenerator {
       return "List.of()";
     }
     String list = refs.stream()
-        .map(s -> String.format("\"%s\"", s))
-        .collect(Collectors.joining(", "));
+            .map(s -> String.format("\"%s\"", s))
+            .collect(Collectors.joining(", "));
 
     return "List.of(%s)".formatted(list);
   }

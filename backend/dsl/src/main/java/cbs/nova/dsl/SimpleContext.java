@@ -12,7 +12,7 @@ import java.util.Map;
  * Immutable context implementation. The stored body is returned as-is, so {@link MapInput} bodies
  * remain {@link MapInput} for parameter-based DSL definitions.
  */
-//TODO: Remove extra contructors, add lombok's builder and @RequiredArgsConstructor
+// TODO: Remove extra contructors, add lombok's builder and @RequiredArgsConstructor
 public final class SimpleContext<T> implements Context<T> {
 
   private final Object body;

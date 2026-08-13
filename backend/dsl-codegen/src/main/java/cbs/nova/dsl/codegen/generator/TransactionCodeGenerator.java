@@ -56,7 +56,7 @@ public final class TransactionCodeGenerator {
             "import %s;".formatted(DslGenerated.class.getCanonicalName()),
             "import %s;".formatted(Generated.class.getCanonicalName()));
     String annotation = GeneratorMetadata.annotation(TransactionCodeGenerator.class);
-    return Substitutor.format(//language=java
+    return Substitutor.format(// language=java
             """
                     package ${pkg};${importBlock}
                     import cbs.nova.dsl.GeneratedTransactionActivity;
@@ -95,7 +95,7 @@ public final class TransactionCodeGenerator {
             "import %s;".formatted(DslGenerated.class.getCanonicalName()),
             "import %s;".formatted(Generated.class.getCanonicalName()));
     String annotation = GeneratorMetadata.annotation(TransactionCodeGenerator.class);
-    return Substitutor.format(//language=java
+    return Substitutor.format(// language=java
             """
                     package ${pkg};${importBlock}
                     import cbs.nova.dsl.GlobalManager;
