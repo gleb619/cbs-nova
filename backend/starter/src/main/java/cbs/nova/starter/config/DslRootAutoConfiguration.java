@@ -33,7 +33,8 @@ import org.springframework.context.annotation.Import;
     PreviewCacheAutoConfiguration.class,
     MessagingCallCaptureAutoConfiguration.class,
     PreviewMetricsAutoConfiguration.class,
-    DslReloadRouterConfiguration.class
+    DslReloadRouterConfiguration.class,
+    DslErrorHandlingAutoConfiguration.class
 })
 public class DslRootAutoConfiguration {
 }

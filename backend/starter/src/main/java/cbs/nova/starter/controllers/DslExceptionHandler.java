@@ -1,52 +1,38 @@
 package cbs.nova.starter.controllers;
 
 import cbs.nova.dsl.DslException;
+import cbs.nova.starter.error.DslExceptionMapper;
 import cbs.nova.starter.models.ErrorResponse;
-import io.sentry.Sentry;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
+/**
+ * Translates exceptions thrown by cbs-nova controllers into {@link ErrorResponse} bodies. All
+ * mapping logic is delegated to the injected {@link DslExceptionMapper} so host applications can
+ * supply a custom implementation.
+ */
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class DslExceptionHandler {
 
+  private final DslExceptionMapper dslExceptionMapper;
+
   @ExceptionHandler(DslException.class)
-  public ResponseEntity<ErrorResponse> handleDslException(DslException ex) {
-    capture(ex, ex.runId());
-    return ResponseEntity.unprocessableEntity()
-            .body(new ErrorResponse(ex.code().name(), ex.getMessage(), null, ex.runId(),
-                    ex.exceptionId()));
+  public ResponseEntity<ErrorResponse> handleDslException(DslException ex, WebRequest request) {
+    return dslExceptionMapper.handle(ex, request);
   }
 
   @ExceptionHandler(IllegalArgumentException.class)
-  public ResponseEntity<ErrorResponse> handleBadRequest(IllegalArgumentException ex) {
-    return ResponseEntity.badRequest()
-            .body(new ErrorResponse("BAD_REQUEST", ex.getMessage(), null, null, null));
+  public ResponseEntity<ErrorResponse> handleBadRequest(IllegalArgumentException ex,
+          WebRequest request) {
+    return dslExceptionMapper.handle(ex, request);
   }
 
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ErrorResponse> handleGeneral(Exception ex, WebRequest request) {
-    String runId = runIdFrom(request);
-    capture(ex, runId);
-    return ResponseEntity.internalServerError()
-            .body(new ErrorResponse("INTERNAL_ERROR", ex.getMessage(), null, null, null));
-  }
-
-  private static String runIdFrom(WebRequest request) {
-    Object runId = request.getAttribute("runId", WebRequest.SCOPE_REQUEST);
-    return runId instanceof String s && !s.isBlank() ? s : null;
-  }
-
-  // TODO: Instead of static, create interface and some impl, to end-user can override it
-  private static void capture(Exception ex, String runId) {
-    try {
-      if (runId != null) {
-        Sentry.setTag("runId", runId);
-      }
-      Sentry.captureException(ex);
-    } catch (Exception ignored) {
-      // Sentry is optional; unconfigured SDK calls are no-ops, but guard defensively.
-    }
+    return dslExceptionMapper.handle(ex, request);
   }
 }

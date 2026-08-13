@@ -7,15 +7,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import cbs.nova.dsl.DslErrorCode;
 import cbs.nova.dsl.DslException;
 import cbs.nova.starter.controllers.DslExceptionHandler;
+import cbs.nova.starter.error.DefaultDslExceptionMapper;
+import cbs.nova.starter.error.DslExceptionMapper;
+import cbs.nova.starter.models.ErrorResponse;
 import io.sentry.Sentry;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.WebRequest;
 
 class DslExceptionHandlerTest {
 
@@ -23,7 +29,7 @@ class DslExceptionHandlerTest {
   void generalExceptionMapsTo500WithInternalErrorCode() throws Exception {
     MockMvc mvc = MockMvcBuilders
             .standaloneSetup(new ThrowingController())
-            .setControllerAdvice(new DslExceptionHandler())
+            .setControllerAdvice(new DslExceptionHandler(new DefaultDslExceptionMapper()))
             .setMessageConverters(new JacksonJsonHttpMessageConverter())
             .build();
 
@@ -42,7 +48,7 @@ class DslExceptionHandlerTest {
     try (MockedStatic<Sentry> sentry = Mockito.mockStatic(Sentry.class)) {
       MockMvc mvc = MockMvcBuilders
               .standaloneSetup(new ThrowingController())
-              .setControllerAdvice(new DslExceptionHandler())
+              .setControllerAdvice(new DslExceptionHandler(new DefaultDslExceptionMapper()))
               .setMessageConverters(new JacksonJsonHttpMessageConverter())
               .build();
 
@@ -58,7 +64,7 @@ class DslExceptionHandlerTest {
   void illegalArgumentExceptionMapsTo400WithBadRequestCode() throws Exception {
     MockMvc mvc = MockMvcBuilders
             .standaloneSetup(new ThrowingController())
-            .setControllerAdvice(new DslExceptionHandler())
+            .setControllerAdvice(new DslExceptionHandler(new DefaultDslExceptionMapper()))
             .setMessageConverters(new JacksonJsonHttpMessageConverter())
             .build();
 
@@ -76,7 +82,7 @@ class DslExceptionHandlerTest {
   void dslExceptionMapsTo422WithStructuredFields() throws Exception {
     MockMvc mvc = MockMvcBuilders
             .standaloneSetup(new ThrowingController())
-            .setControllerAdvice(new DslExceptionHandler())
+            .setControllerAdvice(new DslExceptionHandler(new DefaultDslExceptionMapper()))
             .setMessageConverters(new JacksonJsonHttpMessageConverter())
             .build();
 
@@ -94,7 +100,7 @@ class DslExceptionHandlerTest {
     try (MockedStatic<Sentry> sentry = Mockito.mockStatic(Sentry.class)) {
       MockMvc mvc = MockMvcBuilders
               .standaloneSetup(new ThrowingController())
-              .setControllerAdvice(new DslExceptionHandler())
+              .setControllerAdvice(new DslExceptionHandler(new DefaultDslExceptionMapper()))
               .setMessageConverters(new JacksonJsonHttpMessageConverter())
               .build();
 
@@ -104,6 +110,33 @@ class DslExceptionHandlerTest {
       sentry.verify(() -> Sentry.setTag("runId", "run-abc"));
       sentry.verify(() -> Sentry.captureException(Mockito.any(DslException.class)));
     }
+  }
+
+  @Test
+  void customMapperOverridesResponseStatusAndBody() throws Exception {
+    DslExceptionMapper customMapper = new DslExceptionMapper() {
+      @Override
+      public ResponseEntity<ErrorResponse> handle(Exception exception, WebRequest request) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ErrorResponse("CUSTOM_CODE", "custom msg", "customEntity", "custom-run",
+                        "custom-ex"));
+      }
+    };
+
+    MockMvc mvc = MockMvcBuilders
+            .standaloneSetup(new ThrowingController())
+            .setControllerAdvice(new DslExceptionHandler(customMapper))
+            .setMessageConverters(new JacksonJsonHttpMessageConverter())
+            .build();
+
+    mvc
+            .perform(get("/throw/general"))
+            .andExpect(status().isServiceUnavailable())
+            .andExpect(jsonPath("$.code").value("CUSTOM_CODE"))
+            .andExpect(jsonPath("$.message").value("custom msg"))
+            .andExpect(jsonPath("$.entityName").value("customEntity"))
+            .andExpect(jsonPath("$.runId").value("custom-run"))
+            .andExpect(jsonPath("$.exceptionId").value("custom-ex"));
   }
 
   @RestController
