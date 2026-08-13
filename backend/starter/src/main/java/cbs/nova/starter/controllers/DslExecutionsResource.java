@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 
@@ -40,6 +41,7 @@ public class DslExecutionsResource {
   private static final int MAX_LIMIT = 500;
 
   private final DslRunRepository runRepository;
+  private final ObjectMapper objectMapper;
 
   @GetMapping
   @Operation(summary = "List DSL execution runs")
@@ -66,7 +68,8 @@ public class DslExecutionsResource {
   @ApiResponse(responseCode = "404", description = "No run with the given id", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
   public ResponseEntity<?> detail(@PathVariable String id) {
     return runRepository.findByRunId(id)
-            .<ResponseEntity<?>>map(run -> ResponseEntity.ok(ExecutionDto.from(run)))
+            .<ResponseEntity<?>>map(
+                    run -> ResponseEntity.ok(ExecutionDto.fromDetail(run, objectMapper)))
             .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ErrorResponse("NOT_FOUND", "Execution run not found: " + id, null,
                             id, null)));

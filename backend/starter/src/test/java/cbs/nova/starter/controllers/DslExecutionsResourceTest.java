@@ -11,18 +11,20 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 
 class DslExecutionsResourceTest {
 
   private final InMemoryDslRunRepository repository = new InMemoryDslRunRepository();
+  private final ObjectMapper objectMapper = new ObjectMapper();
   private MockMvc mockMvc;
 
   @BeforeEach
   void setUp() {
     mockMvc = MockMvcBuilders
-            .standaloneSetup(new DslExecutionsResource(repository))
+            .standaloneSetup(new DslExecutionsResource(repository, objectMapper))
             .setMessageConverters(new JacksonJsonHttpMessageConverter())
             .build();
   }
@@ -156,8 +158,74 @@ class DslExecutionsResourceTest {
             .andExpect(jsonPath("$.runId").value("missing"));
   }
 
+  @Test
+  void getByKnownIdParsesValidJsonInputOutputAndMapsError() throws Exception {
+    repository.save(run("run-json", "LoanDisbursement", "FAILED", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", "RUN",
+            "{\"amount\":100,\"currency\":\"USD\"}",
+            "{\"approved\":false}",
+            "insufficient funds"));
+
+    mockMvc.perform(get("/api/executions/run-json"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.input.amount").value(100))
+            .andExpect(jsonPath("$.input.currency").value("USD"))
+            .andExpect(jsonPath("$.output.approved").value(false))
+            .andExpect(jsonPath("$.errors.length()").value(1))
+            .andExpect(jsonPath("$.errors[0].message").value("insufficient funds"))
+            .andExpect(jsonPath("$.errors[0].code").doesNotExist())
+            .andExpect(jsonPath("$.errors[0].stackTrace").doesNotExist());
+  }
+
+  @Test
+  void getByKnownIdFallsBackToRawStringForMalformedInputOutputJson() throws Exception {
+    repository.save(run("run-raw", "LoanDisbursement", "COMPLETED", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", "RUN",
+            "not json {{{",
+            "plain-text-output",
+            null));
+
+    mockMvc.perform(get("/api/executions/run-raw"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.input").value("not json {{{"))
+            .andExpect(jsonPath("$.output").value("plain-text-output"))
+            .andExpect(jsonPath("$.errors").isArray())
+            .andExpect(jsonPath("$.errors.length()").value(0));
+  }
+
+  @Test
+  void getByKnownIdOmitsInputOutputWhenAbsentAndReturnsEmptyErrorsWhenNoError() throws Exception {
+    repository.save(run("run-empty", "LoanDisbursement", "COMPLETED", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", "RUN"));
+
+    mockMvc.perform(get("/api/executions/run-empty"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.input").doesNotExist())
+            .andExpect(jsonPath("$.output").doesNotExist())
+            .andExpect(jsonPath("$.errors").isArray())
+            .andExpect(jsonPath("$.errors.length()").value(0));
+  }
+
+  @Test
+  void listEndpointOmitsInputOutputAndErrorsFields() throws Exception {
+    repository.save(run("run-1", "LoanDisbursement", "FAILED", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", "RUN",
+            "{\"amount\":1}", "{\"approved\":true}", "boom"));
+
+    mockMvc.perform(get("/api/executions"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items[0].input").doesNotExist())
+            .andExpect(jsonPath("$.items[0].output").doesNotExist())
+            .andExpect(jsonPath("$.items[0].errors").doesNotExist());
+  }
+
   private DslRun run(String id, String processName, String status, String startedAt,
           String finishedAt, String mode) {
+    return run(id, processName, status, startedAt, finishedAt, mode, null, null, null);
+  }
+
+  private DslRun run(String id, String processName, String status, String startedAt,
+          String finishedAt, String mode, String input, String output, String error) {
     return DslRun.builder()
             .runId(id)
             .processName(processName)
@@ -165,6 +233,9 @@ class DslExecutionsResourceTest {
             .startedAt(Instant.parse(startedAt))
             .finishedAt(finishedAt != null ? Instant.parse(finishedAt) : null)
             .executionMode(mode)
+            .input(input)
+            .output(output)
+            .error(error)
             .build();
   }
 }
