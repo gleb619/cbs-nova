@@ -13,10 +13,12 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.starter.cache.PreviewResultCache;
+import cbs.nova.starter.config.CbsNovaFakesProperties;
 import cbs.nova.starter.config.CbsNovaPreviewProperties;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
+import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
 import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
@@ -59,11 +61,13 @@ class DevDslRuntimeCachingTest {
     CbsNovaPreviewProperties previewProperties = new CbsNovaPreviewProperties(null, null);
     PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
             dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
-            cache, previewProperties);
-    RunDslPipe runPipe = new RunDslPipe(contextFactory);
+            cache, previewProperties, new CbsNovaFakesProperties(false, null),
+            new RunScopedFakeConfig());
+    RunDslPipe runPipe = new RunDslPipe(contextFactory, recorder,
+            new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig());
     ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
             dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
-            previewProperties);
+            previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig());
     runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
 
     Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);

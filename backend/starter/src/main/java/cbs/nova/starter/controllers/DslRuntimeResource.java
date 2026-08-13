@@ -9,8 +9,6 @@ import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
-import cbs.nova.starter.core.recorder.ExternalCallRecorder;
-import cbs.nova.starter.core.recorder.MapBasedMockResolver;
 import cbs.nova.starter.models.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -36,7 +34,6 @@ public class DslRuntimeResource {
 
   private final DslRuntime dslRuntime;
   private final ContextFactory contextFactory;
-  private final ExternalCallRecorder externalCallRecorder;
 
   @PostMapping("/preview/{name}")
   @Operation(summary = "Preview a DSL process without side effects")
@@ -44,35 +41,23 @@ public class DslRuntimeResource {
   public ResponseEntity<?> preview(
           @PathVariable String name, @RequestBody DslRequest request) {
     var ctx = toContext(request, ExecutionMode.PREVIEW);
-    var mocks = request.mocks();
-    if (mocks != null && !mocks.isEmpty()) {
-      @SuppressWarnings("unchecked")
-      Map<String, Object> typedMocks = (Map<String, Object>) (Map<?, ?>) mocks;
-      externalCallRecorder.startMocking(new MapBasedMockResolver(typedMocks));
+    Result<PreviewReport> result = dslRuntime.preview(name, ctx);
+    PreviewReport report = result.value();
+    boolean success = report != null && report.success();
+    if (success) {
+      return ResponseEntity.ok(report);
     }
-    try {
-      Result<PreviewReport> result = dslRuntime.preview(name, ctx);
-      PreviewReport report = result.value();
-      boolean success = report != null && report.success();
-      if (success) {
-        return ResponseEntity.ok(report);
-      }
-      PreviewErrorDetail firstError = report != null && !report.errors().isEmpty()
-              ? report.errors().get(0)
-              : null;
-      String code = firstError != null ? firstError.code().name() : "EXECUTION_FAILED";
-      String message = firstError != null && firstError.message() != null
-              ? firstError.message()
-              : "Preview failed";
-      String runId = ctx.runId();
-      String exceptionId = runId + ":ex:" + UUID.randomUUID();
-      return ResponseEntity.unprocessableEntity()
-              .body(new ErrorResponse(code, message, name, runId, exceptionId));
-    } finally {
-      if (mocks != null && !mocks.isEmpty()) {
-        externalCallRecorder.stopMocking();
-      }
-    }
+    PreviewErrorDetail firstError = report != null && !report.errors().isEmpty()
+            ? report.errors().get(0)
+            : null;
+    String code = firstError != null ? firstError.code().name() : "EXECUTION_FAILED";
+    String message = firstError != null && firstError.message() != null
+            ? firstError.message()
+            : "Preview failed";
+    String runId = ctx.runId();
+    String exceptionId = runId + ":ex:" + UUID.randomUUID();
+    return ResponseEntity.unprocessableEntity()
+            .body(new ErrorResponse(code, message, name, runId, exceptionId));
   }
 
   @PostMapping("/run/{name}")
@@ -115,8 +100,7 @@ public class DslRuntimeResource {
     return new ErrorResponse("EXECUTION_FAILED", message, entityName, runId, exceptionId);
   }
 
-  public record DslRequest(Object body, Map<String, Object> metadata,
-          Map<String, Map<String, Object>> mocks) {
+  public record DslRequest(Object body, Map<String, Object> metadata) {
 
   }
 }

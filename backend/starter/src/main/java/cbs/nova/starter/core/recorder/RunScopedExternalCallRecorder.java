@@ -17,7 +17,6 @@ public final class RunScopedExternalCallRecorder implements ExternalCallRecorder
 
   private final ThreadLocal<String> currentRunId = new ThreadLocal<>();
   private final ThreadLocal<List<ExternalCall>> threadLocalCalls = new ThreadLocal<>();
-  private final ThreadLocal<MockResolver> threadLocalMocks = new ThreadLocal<>();
   private final List<DslExecutionListener> listeners = new CopyOnWriteArrayList<>();
   private final Map<String, Integer> globalCounts = new ConcurrentHashMap<>();
   private final DslExecutionEventBus eventBus;
@@ -37,7 +36,6 @@ public final class RunScopedExternalCallRecorder implements ExternalCallRecorder
     List<ExternalCall> calls = threadLocalCalls.get();
     currentRunId.remove();
     threadLocalCalls.remove();
-    threadLocalMocks.remove();
     return calls != null ? List.copyOf(calls) : List.of();
   }
 
@@ -50,19 +48,6 @@ public final class RunScopedExternalCallRecorder implements ExternalCallRecorder
     Map<String, Object> metadata = new HashMap<>();
     if (payload != null) {
       metadata.put("payload", payload);
-    }
-    MockResolver resolver = threadLocalMocks.get();
-    if (resolver != null) {
-      Object mock = resolver.findMock(type, target, operation);
-      if (mock != null) {
-        if (ExternalCallRecorder.TYPE_ACTIVITY.equals(normType)
-                || ExternalCallRecorder.TYPE_MQ.equals(normType)) {
-          metadata.put("mockApplied", true);
-        } else {
-          metadata.put("mockConfigured", true);
-          metadata.put("mockApplied", false);
-        }
-      }
     }
 
     ExternalCall call = new ExternalCall(normType, target, operation,
@@ -88,13 +73,6 @@ public final class RunScopedExternalCallRecorder implements ExternalCallRecorder
   }
 
   @Override
-  public @Nullable Object findMock(@NonNull String type, @NonNull String target,
-          @NonNull String operation) {
-    MockResolver resolver = threadLocalMocks.get();
-    return resolver != null ? resolver.findMock(type, target, operation) : null;
-  }
-
-  @Override
   public void registerListener(@NonNull DslExecutionListener listener) {
     listeners.add(listener);
   }
@@ -107,14 +85,6 @@ public final class RunScopedExternalCallRecorder implements ExternalCallRecorder
   @Override
   public void resetGlobalCounts() {
     globalCounts.clear();
-  }
-
-  public void startMocking(@NonNull MockResolver resolver) {
-    threadLocalMocks.set(resolver);
-  }
-
-  public void stopMocking() {
-    threadLocalMocks.remove();
   }
 
   private @Nullable String currentRunId() {
@@ -157,21 +127,5 @@ public final class RunScopedExternalCallRecorder implements ExternalCallRecorder
       }
     }
     return false;
-  }
-
-  public static final class MapBasedMockResolver implements MockResolver {
-
-    private final Map<String, Object> mocks;
-
-    public MapBasedMockResolver(@NonNull Map<String, Object> mocks) {
-      this.mocks = Map.copyOf(mocks);
-    }
-
-    @Override
-    public @Nullable Object findMock(@NonNull String type, @NonNull String target,
-            @NonNull String operation) {
-      String key = normalizeType(type) + ":" + target + ":" + operation;
-      return mocks.get(key);
-    }
   }
 }

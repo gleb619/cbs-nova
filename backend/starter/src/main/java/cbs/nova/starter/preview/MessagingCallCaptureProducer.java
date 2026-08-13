@@ -16,7 +16,6 @@ import org.apache.kafka.common.Uuid;
 import org.apache.kafka.common.errors.ProducerFencedException;
 import org.apache.kafka.common.metrics.KafkaMetric;
 import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -38,22 +37,12 @@ public class MessagingCallCaptureProducer<K, V> implements Producer<K, V> {
 
   @Override
   public Future<RecordMetadata> send(ProducerRecord<K, V> record) {
-    var mock = findMock(record);
-    if (mock != null) {
-      recordCall(record);
-      return (Future<RecordMetadata>) mock;
-    }
     recordCall(record);
     return delegate.send(record);
   }
 
   @Override
   public Future<RecordMetadata> send(ProducerRecord<K, V> record, Callback callback) {
-    var mock = findMock(record);
-    if (mock != null) {
-      recordCall(record);
-      return (Future<RecordMetadata>) mock;
-    }
     recordCall(record);
     return delegate.send(record, callback);
   }
@@ -124,11 +113,6 @@ public class MessagingCallCaptureProducer<K, V> implements Producer<K, V> {
   @Override
   public void close(Duration timeout) {
     delegate.close(timeout);
-  }
-
-  private @Nullable Object findMock(ProducerRecord<K, V> record) {
-    var topic = record != null ? record.topic() : "unknown";
-    return externalCallRecorder.findMock(TYPE_MESSAGING, topic, "send");
   }
 
   private void recordCall(ProducerRecord<K, V> record) {

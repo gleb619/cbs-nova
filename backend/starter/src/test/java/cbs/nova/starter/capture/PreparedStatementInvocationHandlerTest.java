@@ -69,7 +69,6 @@ class PreparedStatementInvocationHandlerTest {
     ResultSet actual = proxy.executeQuery();
 
     assertThat(actual).isSameAs(rs);
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT",
             SQL_SELECT);
     verify(delegate).executeQuery();
@@ -84,7 +83,6 @@ class PreparedStatementInvocationHandlerTest {
     int updated = proxy.executeUpdate();
 
     assertThat(updated).isEqualTo(7);
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT",
             SQL_SELECT);
     verify(delegate).executeUpdate();
@@ -99,7 +97,6 @@ class PreparedStatementInvocationHandlerTest {
     boolean executed = proxy.execute();
 
     assertThat(executed).isTrue();
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT",
             SQL_SELECT);
     verify(delegate).execute();
@@ -115,7 +112,6 @@ class PreparedStatementInvocationHandlerTest {
     int[] actual = proxy.executeBatch();
 
     assertThat(actual).isSameAs(counts);
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH",
             SQL_SELECT);
     verify(delegate).executeBatch();
@@ -130,7 +126,6 @@ class PreparedStatementInvocationHandlerTest {
     long updated = proxy.executeLargeUpdate();
 
     assertThat(updated).isEqualTo(42L);
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT",
             SQL_SELECT);
     verify(delegate).executeLargeUpdate();
@@ -146,7 +141,6 @@ class PreparedStatementInvocationHandlerTest {
     long[] actual = proxy.executeLargeBatch();
 
     assertThat(actual).isSameAs(counts);
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH",
             SQL_SELECT);
     verify(delegate).executeLargeBatch();
@@ -161,7 +155,6 @@ class PreparedStatementInvocationHandlerTest {
     PreparedStatement proxy = newProxy(mixedCaseSql);
     proxy.execute();
 
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
             mixedCaseSql);
     verify(delegate).execute();
@@ -177,7 +170,6 @@ class PreparedStatementInvocationHandlerTest {
     boolean executed = proxy.execute(adHocSql);
 
     assertThat(executed).isFalse();
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "DELETE");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "DELETE",
             adHocSql);
     verify(delegate).execute(adHocSql);
@@ -193,7 +185,6 @@ class PreparedStatementInvocationHandlerTest {
     int updated = proxy.executeUpdate(argSql);
 
     assertThat(updated).isEqualTo(3);
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT",
             SQL_SELECT);
     verify(delegate).executeUpdate(argSql);
@@ -207,7 +198,6 @@ class PreparedStatementInvocationHandlerTest {
     PreparedStatement proxy = newProxy(null);
     proxy.executeQuery();
 
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UNKNOWN");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UNKNOWN",
             null);
     verify(delegate).executeQuery();
@@ -221,7 +211,6 @@ class PreparedStatementInvocationHandlerTest {
     PreparedStatement proxy = newProxy("   ");
     proxy.executeQuery();
 
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UNKNOWN");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UNKNOWN",
             "   ");
     verify(delegate).executeQuery();
@@ -236,7 +225,6 @@ class PreparedStatementInvocationHandlerTest {
     PreparedStatement proxy = newProxy(SQL_SELECT);
     proxy.executeBatch();
 
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH",
             SQL_SELECT);
     verify(delegate).executeBatch();
@@ -278,8 +266,6 @@ class PreparedStatementInvocationHandlerTest {
     proxy.executeUpdate();
 
     InOrder ordered = inOrder(externalCallRecorder, delegate);
-    ordered.verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET,
-            "SELECT");
     ordered.verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET,
             "SELECT",
             SQL_SELECT);
@@ -296,7 +282,6 @@ class PreparedStatementInvocationHandlerTest {
     assertThatThrownBy(proxy::executeUpdate)
             .isSameAs(cause);
 
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT",
             SQL_SELECT);
     verify(delegate, times(1)).executeUpdate();
@@ -312,7 +297,6 @@ class PreparedStatementInvocationHandlerTest {
     assertThatThrownBy(proxy::executeBatch)
             .isSameAs(cause);
 
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH",
             SQL_SELECT);
     verify(delegate).executeBatch();
@@ -332,7 +316,6 @@ class PreparedStatementInvocationHandlerTest {
     Object result = handler.invoke(proxy, executeMethod, null);
 
     assertThat(result).isEqualTo(Boolean.TRUE);
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
             insertSql);
     verify(delegate).execute();
@@ -362,7 +345,6 @@ class PreparedStatementInvocationHandlerTest {
     PreparedStatement proxy = newProxy(null);
     proxy.executeUpdate(adHoc);
 
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UPDATE");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UPDATE",
             adHoc);
     verify(delegate).executeUpdate(adHoc);
@@ -376,7 +358,6 @@ class PreparedStatementInvocationHandlerTest {
     PreparedStatement proxy = newProxy(null);
     proxy.executeUpdate();
 
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UNKNOWN");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UNKNOWN",
             null);
     verify(delegate).executeUpdate();
@@ -432,7 +413,6 @@ class PreparedStatementInvocationHandlerTest {
     int updated = proxy.executeUpdate(adHoc);
 
     assertThat(updated).isEqualTo(4);
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UPDATE");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UPDATE",
             adHoc);
     verify(delegate).executeUpdate(adHoc);
@@ -449,7 +429,6 @@ class PreparedStatementInvocationHandlerTest {
     int updated = proxy.executeUpdate(adHoc, Statement.RETURN_GENERATED_KEYS);
 
     assertThat(updated).isEqualTo(1);
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
             adHoc);
     verify(delegate).executeUpdate(adHoc, Statement.RETURN_GENERATED_KEYS);
@@ -466,7 +445,6 @@ class PreparedStatementInvocationHandlerTest {
     int updated = proxy.executeUpdate(adHoc, keys);
 
     assertThat(updated).isEqualTo(1);
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
             adHoc);
     verify(delegate).executeUpdate(adHoc, keys);
@@ -483,7 +461,6 @@ class PreparedStatementInvocationHandlerTest {
     int updated = proxy.executeUpdate(adHoc, columns);
 
     assertThat(updated).isEqualTo(1);
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
             adHoc);
     verify(delegate).executeUpdate(adHoc, columns);
@@ -499,7 +476,6 @@ class PreparedStatementInvocationHandlerTest {
     boolean executed = proxy.execute(adHoc);
 
     assertThat(executed).isTrue();
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT",
             adHoc);
     verify(delegate).execute(adHoc);
@@ -515,7 +491,6 @@ class PreparedStatementInvocationHandlerTest {
     boolean executed = proxy.execute(adHoc, Statement.RETURN_GENERATED_KEYS);
 
     assertThat(executed).isTrue();
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
             adHoc);
     verify(delegate).execute(adHoc, Statement.RETURN_GENERATED_KEYS);
@@ -532,7 +507,6 @@ class PreparedStatementInvocationHandlerTest {
     boolean executed = proxy.execute(adHoc, keys);
 
     assertThat(executed).isTrue();
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
             adHoc);
     verify(delegate).execute(adHoc, keys);
@@ -549,7 +523,6 @@ class PreparedStatementInvocationHandlerTest {
     boolean executed = proxy.execute(adHoc, columns);
 
     assertThat(executed).isTrue();
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
             adHoc);
     verify(delegate).execute(adHoc, columns);
@@ -565,7 +538,6 @@ class PreparedStatementInvocationHandlerTest {
     long updated = proxy.executeLargeUpdate(adHoc);
 
     assertThat(updated).isEqualTo(8L);
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UPDATE");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UPDATE",
             adHoc);
     verify(delegate).executeLargeUpdate(adHoc);
@@ -582,7 +554,6 @@ class PreparedStatementInvocationHandlerTest {
     long updated = proxy.executeLargeUpdate(adHoc, Statement.RETURN_GENERATED_KEYS);
 
     assertThat(updated).isEqualTo(1L);
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
             adHoc);
     verify(delegate).executeLargeUpdate(adHoc, Statement.RETURN_GENERATED_KEYS);
@@ -600,7 +571,6 @@ class PreparedStatementInvocationHandlerTest {
     long updated = proxy.executeLargeUpdate(adHoc, keys);
 
     assertThat(updated).isEqualTo(1L);
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
             adHoc);
     verify(delegate).executeLargeUpdate(adHoc, keys);
@@ -618,7 +588,6 @@ class PreparedStatementInvocationHandlerTest {
     long updated = proxy.executeLargeUpdate(adHoc, columns);
 
     assertThat(updated).isEqualTo(1L);
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
             adHoc);
     verify(delegate).executeLargeUpdate(adHoc, columns);
@@ -634,7 +603,6 @@ class PreparedStatementInvocationHandlerTest {
     int[] actual = proxy.executeBatch();
 
     assertThat(actual).isSameAs(counts);
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH",
             null);
     verify(delegate).executeBatch();
@@ -650,7 +618,6 @@ class PreparedStatementInvocationHandlerTest {
     long[] actual = proxy.executeLargeBatch();
 
     assertThat(actual).isSameAs(counts);
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH",
             null);
     verify(delegate).executeLargeBatch();

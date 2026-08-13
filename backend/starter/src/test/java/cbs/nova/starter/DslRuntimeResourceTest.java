@@ -1,6 +1,5 @@
 package cbs.nova.starter;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -21,7 +20,6 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.starter.controllers.DslRuntimeResource;
-import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -35,15 +33,12 @@ import java.util.Map;
 class DslRuntimeResourceTest {
 
   private final DslRuntime dslRuntime = mock(DslRuntime.class);
-  private final RunScopedExternalCallRecorder externalCallRecorder = new RunScopedExternalCallRecorder(
-          null);
   private MockMvc mockMvc;
 
   @BeforeEach
   void setUp() {
     mockMvc = MockMvcBuilders
-            .standaloneSetup(new DslRuntimeResource(dslRuntime, new ContextFactory(),
-                    externalCallRecorder))
+            .standaloneSetup(new DslRuntimeResource(dslRuntime, new ContextFactory()))
             .setMessageConverters(new JacksonJsonHttpMessageConverter())
             .build();
   }
@@ -170,35 +165,7 @@ class DslRuntimeResourceTest {
   }
 
   @Test
-  void previewWithMocksStartsAndStopsMocking() throws Exception {
-    PreviewReport report = new PreviewReport(
-            "Ping",
-            ExecutionMode.PREVIEW,
-            true,
-            "pong",
-            List.of("started: Ping", "mode: PREVIEW", "completed successfully"),
-            List.of(),
-            Map.of(),
-            null,
-            List.of(),
-            null,
-            List.of());
-    doReturn(Result.success(report)).when(dslRuntime).preview(eq("Ping"), any());
-
-    mockMvc
-            .perform(
-                    post("/api/dsl/preview/Ping")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(
-                                    "{\"body\": \"hello\", \"mocks\": {\"activity:MyActivity:execute\": {\"result\": \"mocked\"}}}"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.name").value("Ping"));
-
-    assertThat(externalCallRecorder.findMock("activity", "MyActivity", "execute")).isNull();
-  }
-
-  @Test
-  void previewWithEmptyMocksDoesNotConfigureMocking() throws Exception {
+  void previewAcceptsRequestWithoutMocksField() throws Exception {
     PreviewReport report = new PreviewReport(
             "Ping",
             ExecutionMode.PREVIEW,
@@ -217,7 +184,8 @@ class DslRuntimeResourceTest {
             .perform(
                     post("/api/dsl/preview/Ping")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"body\": \"hello\", \"mocks\": {}}"))
-            .andExpect(status().isOk());
+                            .content("{\"body\": \"hello\", \"metadata\": {}}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("Ping"));
   }
 }

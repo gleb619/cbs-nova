@@ -26,26 +26,10 @@ public interface ExternalCallRecorder {
   void record(@NonNull String type, @NonNull String target, @NonNull String operation,
           @Nullable Object payload);
 
-  @Nullable
-  Object findMock(@NonNull String type, @NonNull String target, @NonNull String operation);
-
   void registerListener(@NonNull DslExecutionListener listener);
 
   @NonNull
   Map<String, Integer> getGlobalCounts();
 
   void resetGlobalCounts();
-
-  /**
-   * Activates a mock resolver for the current run. Default implementation is a no-op for recorders
-   * that do not support mocking.
-   */
-  default void startMocking(@NonNull MockResolver resolver) {
-  }
-
-  /**
-   * Deactivates the mock resolver for the current run. Default implementation is a no-op.
-   */
-  default void stopMocking() {
-  }
 }

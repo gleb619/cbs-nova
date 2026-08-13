@@ -13,6 +13,7 @@ import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
+import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
@@ -47,7 +48,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 @AutoConfiguration
 @AutoConfigureAfter(DryRunLoggingAutoConfiguration.class)
-@EnableConfigurationProperties(CbsNovaPreviewProperties.class)
+@EnableConfigurationProperties({CbsNovaPreviewProperties.class, CbsNovaFakesProperties.class})
 public class TemporalConfiguration {
 
   @Bean
@@ -112,6 +113,12 @@ public class TemporalConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
+  RunScopedFakeConfig runScopedFakeConfig() {
+    return new RunScopedFakeConfig();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
   DslRunRepository dslRunRepository() {
     return new InMemoryDslRunRepository();
   }
@@ -125,16 +132,23 @@ public class TemporalConfiguration {
           DryRunLogBufferRegistry bufferRegistry,
           DryRunProperties dryRunProperties,
           PreviewResultCache previewResultCache,
-          CbsNovaPreviewProperties previewProperties) {
+          CbsNovaPreviewProperties previewProperties,
+          CbsNovaFakesProperties fakesProperties,
+          RunScopedFakeConfig runScopedFakeConfig) {
     return new PreviewDslPipe(externalCallRecorder, contextFactory, dryRunLoggingContext,
             bufferRegistry, dryRunProperties.log().maxEventsPerRun(), previewResultCache,
-            previewProperties);
+            previewProperties, fakesProperties, runScopedFakeConfig);
   }
 
   @Bean
   @ConditionalOnMissingBean
-  RunDslPipe runDslPipe(ContextFactory contextFactory) {
-    return new RunDslPipe(contextFactory);
+  RunDslPipe runDslPipe(
+          ContextFactory contextFactory,
+          ExternalCallRecorder externalCallRecorder,
+          CbsNovaFakesProperties fakesProperties,
+          RunScopedFakeConfig runScopedFakeConfig) {
+    return new RunDslPipe(contextFactory, externalCallRecorder, fakesProperties,
+            runScopedFakeConfig);
   }
 
   @Bean
@@ -145,9 +159,12 @@ public class TemporalConfiguration {
           DryRunLoggingContext dryRunLoggingContext,
           DryRunLogBufferRegistry bufferRegistry,
           DryRunProperties dryRunProperties,
-          CbsNovaPreviewProperties previewProperties) {
+          CbsNovaPreviewProperties previewProperties,
+          CbsNovaFakesProperties fakesProperties,
+          RunScopedFakeConfig runScopedFakeConfig) {
     return new ExplainDslPipe(externalCallRecorder, contextFactory, dryRunLoggingContext,
-            bufferRegistry, dryRunProperties.log().maxEventsPerRun(), previewProperties);
+            bufferRegistry, dryRunProperties.log().maxEventsPerRun(), previewProperties,
+            fakesProperties, runScopedFakeConfig);
   }
 
   @Bean

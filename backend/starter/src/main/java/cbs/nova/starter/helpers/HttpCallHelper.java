@@ -40,6 +40,12 @@ import java.util.Map;
  * <li>I/O failure (timeout, connection refused, DNS) → {@link Result#failure} with the underlying
  * exception wrapped.</li>
  * </ul>
+ *
+ * <p>
+ * Faking: this helper never injects {@code ExternalCallRecorder}. To short-circuit it without a
+ * real network call, declare a startup fake in {@code application.yml} with {@code type: helper},
+ * {@code code: httpCall}; the {@code HelperInterceptor} returns the configured response before the
+ * helper runs.
  */
 @Helper(name = "httpCall")
 public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {

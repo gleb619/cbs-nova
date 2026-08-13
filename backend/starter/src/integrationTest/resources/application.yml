@@ -1,6 +1,30 @@
 temporal:
   connection-target: ${TEMPORAL_ADDRESS:127.0.0.1:7233}
 
+cbs:
+  nova:
+    fakes:
+      enabled: true
+      config:
+        entries:
+          - type: helper
+            code: httpCall
+            response:
+              status: 200
+              body: "fake-http-body"
+              headers: {}
+              success: true
+              error: null
+          - type: helper
+            code: unreliableApi
+            response:
+              attempts: 1
+              status: "ok"
+          - type: helper
+            code: myCustomHelper
+            response:
+              value: "fake-value"
+
 springdoc:
   api-docs:
     path: /v3/api-docs

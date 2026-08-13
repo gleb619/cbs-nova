@@ -108,56 +108,12 @@ class RunScopedExternalCallRecorderTest {
   }
 
   @Test
-  void startMockingFindMockStopMockingRoundTrip() {
-    Map<String, Object> mocks = Map.of("activity:MyActivity:invoke", "mocked");
-    recorder.startMocking(new RunScopedExternalCallRecorder.MapBasedMockResolver(mocks));
-    assertThat(recorder.findMock("activity", "MyActivity", "invoke")).isEqualTo("mocked");
-    recorder.stopMocking();
-    assertThat(recorder.findMock("activity", "MyActivity", "invoke")).isNull();
-  }
-
-  @Test
-  void findMockNormalizesTypeLikeRecord() {
-    Map<String, Object> mocks = Map.of("activity:MyActivity:invoke", "mocked");
-    recorder.startMocking(new RunScopedExternalCallRecorder.MapBasedMockResolver(mocks));
-    assertThat(recorder.findMock("ACTIVITY", "MyActivity", "invoke")).isEqualTo("mocked");
-    assertThat(recorder.findMock("temporal", "MyActivity", "invoke")).isEqualTo("mocked");
-    recorder.stopMocking();
-  }
-
-  @Test
-  void findMockReturnsNullWhenNoMockRegistered() {
-    recorder.startMocking(new RunScopedExternalCallRecorder.MapBasedMockResolver(Map.of()));
-    assertThat(recorder.findMock("activity", "MyActivity", "invoke")).isNull();
-    recorder.stopMocking();
-  }
-
-  @Test
-  void recordMarksMockAppliedForActivity() {
+  void recordCapturesPayloadMetadataWithoutMockMarkers() {
     recorder.startRun("r1");
-    recorder.startMocking(
-            new RunScopedExternalCallRecorder.MapBasedMockResolver(
-                    Map.of("activity:MyActivity:execute", "result")));
-    recorder.record("activity", "MyActivity", "execute", null);
-    recorder.stopMocking();
+    recorder.record("activity", "MyActivity", "execute", Map.of("result", "value"));
     List<ExternalCall> calls = recorder.finishRun("r1");
 
     assertThat(calls).hasSize(1);
-    assertThat(calls.get(0).metadata()).containsEntry("mockApplied", true);
-  }
-
-  @Test
-  void recordMarksMockConfiguredForDatabase() {
-    recorder.startRun("r1");
-    recorder.startMocking(
-            new RunScopedExternalCallRecorder.MapBasedMockResolver(
-                    Map.of("database:jdbc:SELECT", "result")));
-    recorder.record("jdbc", "jdbc", "SELECT", null);
-    recorder.stopMocking();
-    List<ExternalCall> calls = recorder.finishRun("r1");
-
-    assertThat(calls).hasSize(1);
-    assertThat(calls.get(0).metadata()).containsEntry("mockConfigured", true)
-            .containsEntry("mockApplied", false);
+    assertThat(calls.get(0).metadata()).containsOnlyKeys("payload");
   }
 }

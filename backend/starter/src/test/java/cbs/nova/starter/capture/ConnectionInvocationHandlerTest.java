@@ -108,7 +108,6 @@ class ConnectionInvocationHandlerTest {
     ResultSet actual = wrapped.executeQuery();
 
     assertThat(actual).isSameAs(rs);
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, URL, "SELECT");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, URL, "SELECT",
             SELECT_SQL);
     verify(preparedStatement).executeQuery();
@@ -138,7 +137,6 @@ class ConnectionInvocationHandlerTest {
 
     assertThat(executed).isTrue();
     // First whitespace-separated token of "{ call my_proc(?) }" is "{".
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, URL, "{");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, URL, "{", CALL_SQL);
     verify(callableStatement).execute();
     verifyNoMoreInteractions(externalCallRecorder);
@@ -168,7 +166,6 @@ class ConnectionInvocationHandlerTest {
     ResultSet actual = wrapped.executeQuery(adHoc);
 
     assertThat(actual).isSameAs(rs);
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, URL, "DELETE");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, URL, "DELETE", adHoc);
     verify(statement).executeQuery(adHoc);
     verifyNoMoreInteractions(externalCallRecorder);
@@ -217,7 +214,6 @@ class ConnectionInvocationHandlerTest {
             .isSameAs(cause);
 
     // Recording happens before delegation, so the call is observed even when the delegate throws.
-    verify(externalCallRecorder).findMock(ExternalCallRecorder.TYPE_DATABASE, URL, "SELECT");
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, URL, "SELECT",
             SELECT_SQL);
     verify(preparedStatement, times(1)).executeQuery();
@@ -262,8 +258,6 @@ class ConnectionInvocationHandlerTest {
     // resolveTarget() is invoked once per statement-factory call.
     verify(connection, times(2)).getMetaData();
     verify(metaData, times(2)).getURL();
-    verify(externalCallRecorder, times(2)).findMock(ExternalCallRecorder.TYPE_DATABASE, URL,
-            "SELECT");
     verify(externalCallRecorder, times(2)).record(ExternalCallRecorder.TYPE_DATABASE, URL, "SELECT",
             SELECT_SQL);
     verifyNoMoreInteractions(externalCallRecorder);

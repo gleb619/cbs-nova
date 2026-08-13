@@ -3,7 +3,6 @@ package cbs.nova.starter.preview;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import cbs.nova.starter.core.recorder.ExternalCall;
@@ -19,7 +18,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Future;
 
 class MessagingCallCaptureProducerTest {
@@ -36,76 +34,53 @@ class MessagingCallCaptureProducerTest {
 
   @AfterEach
   void tearDown() {
-    recorder.stopMocking();
     recorder.resetGlobalCounts();
   }
 
   @Test
-  void shortCircuitsSendWhenMockIsConfigured() {
+  void recordsAndDelegatesSend() {
     @SuppressWarnings("unchecked")
     Producer<String, String> delegate = mock(Producer.class);
     @SuppressWarnings("unchecked")
-    Future<RecordMetadata> mockFuture = mock(Future.class);
+    Future<RecordMetadata> delegateFuture = mock(Future.class);
+    when(delegate.send(new ProducerRecord<>("orders", "key-1", "value-1")))
+            .thenReturn(delegateFuture);
 
     var capture = new MessagingCallCaptureProducer<>(delegate, recorder);
     recorder.startRun("run-1");
-    recorder.startMocking(new RunScopedExternalCallRecorder.MapBasedMockResolver(
-            Map.of("mq:orders:send", (Object) mockFuture)));
     Future<RecordMetadata> result = capture
             .send(new ProducerRecord<>("orders", "key-1", "value-1"));
-    recorder.stopMocking();
     recorded.addAll(recorder.finishRun("run-1"));
 
-    assertThat(result).isSameAs(mockFuture);
-    verifyNoInteractions(delegate);
+    assertThat(result).isSameAs(delegateFuture);
+    verify(delegate).send(new ProducerRecord<>("orders", "key-1", "value-1"));
     assertThat(recorded).hasSize(1);
 
     ExternalCall call = recorded.get(0);
     assertThat(call.type()).isEqualTo(ExternalCallRecorder.TYPE_MQ);
     assertThat(call.target()).isEqualTo("orders");
     assertThat(call.operation()).isEqualTo("send");
-    assertThat(call.metadata()).containsEntry("mockApplied", true);
   }
 
   @Test
-  void shortCircuitsSendWithCallbackWhenMockIsConfigured() {
+  void recordsAndDelegatesSendWithCallback() {
     @SuppressWarnings("unchecked")
     Producer<String, String> delegate = mock(Producer.class);
     Callback callback = mock(Callback.class);
     @SuppressWarnings("unchecked")
-    Future<RecordMetadata> mockFuture = mock(Future.class);
+    Future<RecordMetadata> delegateFuture = mock(Future.class);
+    when(delegate.send(new ProducerRecord<>("events", "k", "v"), callback))
+            .thenReturn(delegateFuture);
 
     var capture = new MessagingCallCaptureProducer<>(delegate, recorder);
     recorder.startRun("run-1");
-    recorder.startMocking(new RunScopedExternalCallRecorder.MapBasedMockResolver(
-            Map.of("mq:events:send", (Object) mockFuture)));
     Future<RecordMetadata> result = capture.send(new ProducerRecord<>("events", "k", "v"),
             callback);
-    recorder.stopMocking();
     recorded.addAll(recorder.finishRun("run-1"));
 
-    assertThat(result).isSameAs(mockFuture);
-    verifyNoInteractions(delegate);
+    assertThat(result).isSameAs(delegateFuture);
+    verify(delegate).send(new ProducerRecord<>("events", "k", "v"), callback);
     assertThat(recorded).hasSize(1);
     assertThat(recorded.get(0).target()).isEqualTo("events");
-  }
-
-  @Test
-  void delegatesWhenNoMockIsConfigured() {
-    @SuppressWarnings("unchecked")
-    Producer<String, String> delegate = mock(Producer.class);
-    @SuppressWarnings("unchecked")
-    Future<RecordMetadata> mockFuture = mock(Future.class);
-    when(delegate.send(new ProducerRecord<>("metrics", "x"))).thenReturn(mockFuture);
-
-    var capture = new MessagingCallCaptureProducer<>(delegate, recorder);
-    recorder.startRun("run-1");
-    Future<RecordMetadata> result = capture.send(new ProducerRecord<>("metrics", "x"));
-    recorded.addAll(recorder.finishRun("run-1"));
-
-    assertThat(result).isSameAs(mockFuture);
-    verify(delegate).send(new ProducerRecord<>("metrics", "x"));
-    assertThat(recorded).hasSize(1);
-    assertThat(recorded.get(0).target()).isEqualTo("metrics");
   }
 }

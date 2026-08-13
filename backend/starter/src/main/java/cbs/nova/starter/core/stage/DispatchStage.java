@@ -5,6 +5,7 @@ import cbs.nova.dsl.DslSaga;
 import cbs.nova.dsl.ExecutionListener;
 import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.HelperInterceptor;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.core.pipe.DslPipeContext;
@@ -17,13 +18,20 @@ import org.jspecify.annotations.Nullable;
 public final class DispatchStage implements DslPipeStage {
 
   private final ContextFactory contextFactory;
+  private final HelperInterceptor helperInterceptor;
 
   @Override
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
     Context<?> modeCtx = buildModeContext(context);
-    Result<?> result = dispatch(context.getName(), modeCtx);
-    context.setAttribute("dslResult", result);
-    return next.proceed(context);
+    GlobalManager gm = GlobalManager.globalManager();
+    gm.registerHelperInterceptor(helperInterceptor);
+    try {
+      Result<?> result = dispatch(context.getName(), modeCtx, gm);
+      context.setAttribute("dslResult", result);
+      return next.proceed(context);
+    } finally {
+      gm.registerHelperInterceptor(null);
+    }
   }
 
   private @NonNull Context<?> buildModeContext(@NonNull DslPipeContext context) {
@@ -54,8 +62,8 @@ public final class DispatchStage implements DslPipeStage {
     return collector != null ? ctx.withExecutionTraceCollector(collector) : ctx;
   }
 
-  private @NonNull Result<?> dispatch(@NonNull String name, @NonNull Context<?> ctx) {
-    GlobalManager gm = GlobalManager.globalManager();
+  private @NonNull Result<?> dispatch(@NonNull String name, @NonNull Context<?> ctx,
+          @NonNull GlobalManager gm) {
     if (gm.hasProcess(name)) {
       return gm.runProcess(name, ctx);
     }

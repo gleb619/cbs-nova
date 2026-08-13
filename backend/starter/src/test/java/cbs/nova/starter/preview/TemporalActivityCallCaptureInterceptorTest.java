@@ -66,30 +66,6 @@ class TemporalActivityCallCaptureInterceptorTest {
   }
 
   @Test
-  void shortCircuitsWhenMockIsConfigured() {
-    var input = Map.of("key", "value");
-    var mockValue = Map.of("mock", "result");
-    Context<?> ctx = contextFactory.of(input, ExecutionMode.PREVIEW, "run-789");
-
-    recorder.startRun("run-789");
-    recorder.startMocking(new RunScopedExternalCallRecorder.MapBasedMockResolver(
-            Map.of("activity:MyTx:execute", (Object) mockValue)));
-    Result<?> result = interceptor.invoke("MyTx", input, ctx);
-    recorder.stopMocking();
-    recorded.addAll(recorder.finishRun("run-789"));
-
-    assertThat(result.isSuccess()).isTrue();
-    assertThat(result.value()).isEqualTo(mockValue);
-    assertThat(recorded).hasSize(1);
-
-    var call = recorded.get(0);
-    assertThat(call.type()).isEqualTo(ExternalCallRecorder.TYPE_ACTIVITY);
-    assertThat(call.target()).isEqualTo("MyTx");
-    assertThat(call.operation()).isEqualTo("execute");
-    assertThat(call.metadata()).containsEntry("mockApplied", true);
-  }
-
-  @Test
   void delegatesWhenNoMockIsConfigured() {
     Context<?> ctx = contextFactory.of("body", ExecutionMode.PREVIEW, "run-000");
 

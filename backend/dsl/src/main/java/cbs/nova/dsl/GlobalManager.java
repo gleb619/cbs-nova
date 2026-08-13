@@ -11,6 +11,7 @@ import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.dsl.transaction.TransactionManager;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
@@ -55,6 +56,10 @@ public final class GlobalManager {
 
   public void registerHelpers(@NonNull HelperResolver resolver) {
     resolver.registerHelpers(helperManager, DslConfig.dslConfig().helperInstanceResolver().get());
+  }
+
+  public void registerHelperInterceptor(@Nullable HelperInterceptor interceptor) {
+    helperManager.setInterceptor(interceptor);
   }
 
   public void registerHelperResolvers() {

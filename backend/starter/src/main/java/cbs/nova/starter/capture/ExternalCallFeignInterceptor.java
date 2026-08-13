@@ -30,8 +30,7 @@ public class ExternalCallFeignInterceptor implements RequestInterceptor {
       var url = safeUrl(template);
       var payload = buildPayload(method, url, template.body());
 
-      // HTTP response mocking needs the T168 interceptor SPI; this interceptor only observes.
-      externalCallRecorder.findMock(ExternalCallRecorder.TYPE_HTTP, url, method);
+      // HTTP response faking happens at the helper boundary; this interceptor only observes.
       externalCallRecorder.record("http", url, method, payload);
     } catch (Exception ex) {
       log.debug("Failed to record Feign HTTP call", ex);

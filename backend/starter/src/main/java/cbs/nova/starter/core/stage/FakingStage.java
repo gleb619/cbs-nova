@@ -1,28 +1,28 @@
 package cbs.nova.starter.core.stage;
 
 import cbs.nova.dsl.Result;
+import cbs.nova.starter.config.CbsNovaFakesProperties;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
-import cbs.nova.starter.core.recorder.ExternalCall;
-import cbs.nova.starter.core.recorder.ExternalCallRecorder;
+import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
-import java.util.List;
-
 @RequiredArgsConstructor
-public final class ExternalCallRecordingStage implements DslPipeStage {
+public final class FakingStage implements DslPipeStage {
 
-  private final ExternalCallRecorder recorder;
+  private final CbsNovaFakesProperties properties;
+  private final RunScopedFakeConfig runScopedFakeConfig;
 
   @Override
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
-    recorder.startRun(context.getRunId());
+    if (properties.enabled()) {
+      runScopedFakeConfig.register(context.getRunId(), properties.config());
+    }
     try {
       return next.proceed(context);
     } finally {
-      List<ExternalCall> calls = recorder.finishRun(context.getRunId());
-      context.setAttribute("externalCalls", calls);
+      runScopedFakeConfig.remove(context.getRunId());
     }
   }
 }

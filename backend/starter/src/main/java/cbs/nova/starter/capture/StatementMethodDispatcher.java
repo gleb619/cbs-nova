@@ -1092,13 +1092,11 @@ public final class StatementMethodDispatcher {
 
   private void recordCall(@Nullable String effectiveSql) {
     String operation = firstSqlToken(effectiveSql);
-    externalCallRecorder.findMock(ExternalCallRecorder.TYPE_DATABASE, target, operation);
     externalCallRecorder.record(ExternalCallRecorder.TYPE_DATABASE, target, operation,
             effectiveSql);
   }
 
   private void recordBatch() {
-    externalCallRecorder.findMock(ExternalCallRecorder.TYPE_DATABASE, target, OPERATION_BATCH);
     externalCallRecorder.record(ExternalCallRecorder.TYPE_DATABASE, target, OPERATION_BATCH, sql);
   }
 

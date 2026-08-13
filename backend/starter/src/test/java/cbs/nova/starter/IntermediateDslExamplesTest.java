@@ -20,10 +20,12 @@ import cbs.nova.dslexamples.InvoiceModels.InvoiceLine;
 import cbs.nova.dslexamples.InvoiceModels.InvoiceOut;
 import cbs.nova.dslexamples.LongWorkModels.LongWorkIn;
 import cbs.nova.dslexamples.LongWorkModels.LongWorkOut;
+import cbs.nova.starter.config.CbsNovaFakesProperties;
 import cbs.nova.starter.config.CbsNovaPreviewProperties;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
+import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
 import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
 import cbs.nova.starter.helpers.*;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
@@ -51,11 +53,13 @@ class IntermediateDslExamplesTest {
           null);
   private final PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
           dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
-          null, previewProperties);
-  private final RunDslPipe runPipe = new RunDslPipe(contextFactory);
+          null, previewProperties, new CbsNovaFakesProperties(false, null),
+          new RunScopedFakeConfig());
+  private final RunDslPipe runPipe = new RunDslPipe(contextFactory, recorder,
+          new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig());
   private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
           dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
-          previewProperties);
+          previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig());
   private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
   @TempDir
   Path dslSourceDir;

@@ -4,11 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.starter.preview.MessagingCallCaptureAutoConfiguration;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.io.ClassPathResource;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
 
@@ -54,5 +57,16 @@ class DslRootAutoConfigurationTest {
             PreviewMetricsAutoConfiguration.class,
             DslReloadRouterConfiguration.class,
             DslErrorHandlingAutoConfiguration.class);
+  }
+
+  @Test
+  void temporalConfigurationBindsCbsNovaFakesProperties() {
+    var enable = AnnotationUtils.findAnnotation(TemporalConfiguration.class,
+            EnableConfigurationProperties.class);
+    assertThat(enable).as("TemporalConfiguration must declare @EnableConfigurationProperties")
+            .isNotNull();
+    var bound = Arrays.asList(enable.value());
+    assertThat(bound).contains(CbsNovaFakesProperties.class,
+            CbsNovaPreviewProperties.class);
   }
 }

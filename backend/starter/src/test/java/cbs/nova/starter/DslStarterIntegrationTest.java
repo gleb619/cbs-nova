@@ -9,11 +9,13 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.starter.config.CbsNovaFakesProperties;
 import cbs.nova.starter.config.CbsNovaPreviewProperties;
 import cbs.nova.starter.controllers.DslRuntimeResource;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
+import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
 import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
@@ -48,12 +50,14 @@ class DslStarterIntegrationTest {
     var previewProperties = new CbsNovaPreviewProperties(null, null);
     var previewPipe = new PreviewDslPipe(recorder, contextFactory, dryRunLoggingContext,
             bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, null,
-            previewProperties);
-    var runPipe = new RunDslPipe(contextFactory);
+            previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig());
+    var runPipe = new RunDslPipe(contextFactory, recorder, new CbsNovaFakesProperties(false, null),
+            new RunScopedFakeConfig());
     var explainPipe = new ExplainDslPipe(recorder, contextFactory, dryRunLoggingContext,
-            bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, previewProperties);
+            bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, previewProperties,
+            new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig());
     var runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
-    var resource = new DslRuntimeResource(runtime, contextFactory, recorder);
+    var resource = new DslRuntimeResource(runtime, contextFactory);
     mockMvc = MockMvcBuilders.standaloneSetup(resource)
             .setMessageConverters(new JacksonJsonHttpMessageConverter())
             .build();
