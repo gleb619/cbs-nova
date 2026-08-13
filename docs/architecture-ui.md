@@ -131,7 +131,7 @@ entities with name and type. It is the runner's primary definition picker. The b
 
 ### Preview/Explain specific tabs
 
-When the mode is `preview` or `explain`, the output panel exposes three extra tabs:
+When the mode is `preview` or `explain`, the output panel exposes extra tabs:
 
 - **Call Tree (`T153`)** — `CallTreeTab` renders the recursive `CallNode` AST produced by the backend. The root is
   passed as `tree`; `CallTreeNode` handles depth and expansion. The backend emits a `<truncated>` sentinel when the depth
@@ -141,11 +141,12 @@ When the mode is `preview` or `explain`, the output panel exposes three extra ta
   `microservice`, `activity`, `other`) and formats timestamps.
 - **Dry-Run Logs (`T154`)** — `DryRunLogsTab` renders the typed `dryRunLogs` array. Each row shows timestamp, level
   (color-coded), logger, and message. A "Copy all" button copies the plain-text dump to the clipboard.
-- **What-If Config (`T161`)** — `WhatIfConfigPanel` lets the user add mock entries keyed by
-  `type:target:operation` with a JSON payload. The payload is sent to `/api/dsl/preview/{name}` as the `mocks` map. The
-  panel validates that the payload is a JSON object and surfaces per-row errors. See the backend limitation in
-  [`architecture-backend.md`](architecture-backend.md): Activity and MQ mocks are fully applied; DB and HTTP mocks are only
-  recorded as metadata and the real call still executes.
+
+The former **What-If Config** tab (`T161`, `WhatIfConfigPanel`) was removed in `T202`: `T198` deleted per-request
+mocking from the backend entirely (`DslRuntimeResource.DslRequest` no longer has a `mocks` field), so the panel had
+nothing left to configure. Faking external dependencies is now an operator-only concern, done via startup `cbs.nova.fakes`
+YAML on the backend — see [`architecture-backend.md`](architecture-backend.md#fake-configuration-t198). There is no
+runner-UI equivalent.
 
 ### Diff views
 
@@ -188,6 +189,35 @@ Two complementary endpoints power the runner's discovery UI:
   any global search bar).
 
 Both are wired through the BFF so the browser never calls Spring Boot directly.
+
+## Executions page (`T186`/`T199`/`T200`)
+
+The Executions page lists past and in-flight DSL runs. Before `T200` it had no working backend — the page was dead.
+
+- **Backend (`T200`)** — `controllers.DslExecutionsResource` exposes `GET /api/executions` (filterable by
+  `processName`/`status`, `limit`-capped list) and `GET /api/executions/{id}` (single-run detail), both reading
+  through the existing `DslRunRepository`. Both are wired through the BFF like every other backend call.
+- **STALE status (`T186`)** — the frontend `ExecutionStatus` type and status badge gained a `Stale` state, matching
+  the backend `STALE` value set by the async process service's healthcheck (see
+  [`architecture-backend.md`](architecture-backend.md) § "STALE status").
+- **Auto-polling (`T199`)** — `frontend/admin-ui-plugin/app/composables/useStalePolling.ts` polls
+  `GET /api/v1/executions/{id}` while a watched run is `Stale`, at a configurable interval
+  (`public.stalePollMs`, default `5000`ms). Polling pauses while the browser tab is hidden (Page Visibility API) and
+  fires one immediate re-check when the tab becomes visible again. As soon as a poll observes any status other than
+  `Stale`, the composable pushes the new status into the caller's ref and stops — no further polling for that run.
+
+## Workbench draft autosave (`T201`)
+
+The DSL Workbench edits construct definitions (JSON/YAML) but previously lost all in-progress edits on a browser
+refresh. `frontend/admin-ui-plugin/app/composables/useWorkbenchDraft.ts` adds client-only autosave:
+
+- Body changes are debounced 250ms and written to `localStorage` under a per-construct key.
+- Drafts expire after a 24h TTL — read attempts on an expired draft discard it and behave as if none existed.
+- Scope is deliberately single-tab: there is no `storage` event listener, so concurrent tabs editing the same
+  construct do not sync with each other.
+- On restore, `restoredFromDraft` flips true so the caller can show a restore banner; `clearDraft()` discards the
+  draft and resets the editor.
+- SSR-safe: every `window`/`localStorage` access is guarded, so calling the composable during SSR is a no-op.
 
 ## Styling
 

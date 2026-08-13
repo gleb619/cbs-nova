@@ -4,7 +4,7 @@ This project is a **declarative Java DSL for authoring Temporal workflows and ac
 boilerplate. Business flows are expressed as small, versioned definitions in a dedicated Gradle module; a custom DSL
 compiler turns them into production-ready Temporal classes at build time.
 
-This document focuses on the **backend runtime and starter** shipped through the `T146`–`T182` cycle. It is the
+This document focuses on the **backend runtime and starter** shipped through the `T146`–`T201` cycle. It is the
 authoritative backend architecture companion to [`architecture.md`](architecture.md) and
 [`architecture-ui.md`](architecture-ui.md).
 
@@ -122,13 +122,20 @@ The runtime is deliberately layered so generated code has a single entry point:
 
 See [Runtime details](dsl/runtime.md) for the full contract, operational modes, and REST endpoints.
 
-## Preview and Explain runtime (`DevDslRuntime`)
+## Preview, Explain, and Run pipelines (`DevDslRuntime`, `T187`)
 
 The `cbs-nova-starter` module provides a Spring-backed implementation of the `DslRuntime` interface:
-`cbs.nova.starter.DevDslRuntime`. It powers both **Preview** and **Explain** and is intentionally kept as a single
-class so the lifecycle (start tracing, start call-tree capture, start metrics, run DSL, stop everything) is easy to
-follow. The implementation is still direct field access and hardcoded dispatch; there is no listener/SPI abstraction
-for report building (the `ExternalCallListener` interface exists but is only used for optional side notifications).
+`cbs.nova.starter.DevDslRuntime`. It is now a thin dispatcher — `preview()`, `run()`, and `explain()` each delegate
+to a dedicated pipe (`PreviewDslPipe`, `RunDslPipe`, `ExplainDslPipe`).
+
+`T187` replaced the earlier direct-field-access/hardcoded-dispatch implementation (and the leak-prone
+`runId`-keyed singleton collectors it relied on) with a proper middleware chain: `DslExecutionPipeline` runs an
+ordered list of `DslPipeStage`s (a `(context, next) -> Result<?>` SPI, assembled per pipe via a `Builder`) around a
+terminal `DispatchStage`. Each stage owns per-run, per-instance state (e.g. `ExecutionTreeStage`, `MetricsStage`,
+`DryRunLogStage`, `FakingStage`) and is composed declaratively rather than called by name from a single class. A
+separate `HelperInterceptor` SPI (see "Fake configuration" below) lets a stage short-circuit an individual helper
+call from inside `DispatchStage` without every pipe needing to know about it. The `ExternalCallListener` interface
+still exists and is still used only for optional side notifications, not report building.
 
 ### Call capture for external calls (`T146`–`T158`)
 
@@ -142,36 +149,57 @@ Capture is implemented by interceptors in the starter:
 | **Temporal Activity** | `preview.TemporalActivityCallCaptureInterceptor` (wraps `TransactionInvoker`)                                            | Each transaction invocation as `activity`    |
 | **Messaging (Kafka)** | `preview.MessagingCallCaptureProducerFactoryBeanPostProcessor` → `MessagingCallCaptureProducerFactory` → `MessagingCallCaptureProducer` | Kafka `Producer.send` calls as `mq`          |
 
-All recorded calls are normalized by `ExternalCallTracker` into a canonical type (`database`, `http`, `mq`,
-`filesystem`, `external_api`, `microservice`, `activity`, `other`) and stored in a `ThreadLocal` list for the current
-preview run. The tracker also keeps global counts, but those are reset explicitly and are mostly used for diagnostics.
+All recorded calls are normalized by `ExternalCallRecorder` (implemented by `RunScopedExternalCallRecorder`, renamed
+from the earlier `ExternalCallTracker`) into a canonical type (`database`, `http`, `mq`, `filesystem`, `external_api`,
+`microservice`, `activity`, `other`) and stored in a `ThreadLocal` list for the current preview run. The recorder's
+`startRun`/`finishRun` are called around the pipeline by `ExternalCallRecordingStage`. It also keeps global counts,
+but those are reset explicitly and are mostly used for diagnostics.
 
-### What-if mock injection (`T160`)
+### Fake configuration (`T198`)
 
-`DslRuntimeResource.preview()` accepts a `mocks` map. `ExternalCallTracker.startMocking()` stores the map keyed by
-`type:target:operation`. During execution, when a mock is found, the behavior depends on the call type:
+Per-request mocking was removed entirely: `DslRuntimeResource.DslRequest` is now just `(body, metadata)` — there is no
+`mocks` field, and `ExternalCallTracker.startMocking()` no longer exists. "Mocks" were renamed to **fakes**, and
+faking is now driven exclusively by **startup-only YAML** under `cbs.nova.fakes` (bound to `CbsNovaFakesProperties`,
+a `FakeConfig` of `(type, code, response)` entries).
 
-- **Activity** and **MQ** calls are **actually short-circuited** — the mock value is returned and the real call is skipped.
-- **DB** and **HTTP** calls are **not short-circuited**. The mock is only recorded in call metadata as
-  `mockConfigured: true` and `mockApplied: false`. The underlying JDBC or Feign call still executes, so authors must not
-treat DB/HTTP mocks as safe substitutes in preview mode.
+Faking happens at the **helper-execution boundary**, not per external-call-kind:
 
-Mocks are cleared in a `finally` block in `DslRuntimeResource` so they never leak across runs.
+- `FakingStage` (a `DslPipeStage` wired into the `Run`, `Preview`, and `Explain` pipes alike) registers the
+  configured `FakeConfig` for the current `runId` in `RunScopedFakeConfig` before the DSL executes, and removes it in
+  a `finally` block so it never leaks across runs.
+- `FakeHelperInterceptor` implements the `HelperInterceptor` SPI. Before a helper or function actually runs, it looks
+  up a configured response by `helper`/`function` type + name in the run-scoped `FakeConfig`; if found, it returns
+  that response directly instead of invoking the real helper.
+
+Because faking short-circuits at the helper boundary — not the DB/HTTP/Activity/MQ call-capture interceptors described
+above — there is no longer a DB/HTTP-not-short-circuited limitation: a faked helper never reaches its underlying
+JDBC/Feign/Activity/MQ call at all. Fakes apply uniformly across Run, Preview, and Explain, since the same
+`FakingStage`/`FakeHelperInterceptor` pair is wired into all three pipes.
+
+`T202` removed the now-dead `WhatIfConfigPanel` from the frontend runner UI — the panel built a per-request `mocks`
+payload that the backend no longer accepts. Fakes are configured by operators via `application.yml`, not per-request
+from the UI.
 
 ### Runtime call-tree + depth/cycle guard (`T148`/`T155`)
 
-`DevDslRuntime.preview()` creates a fresh `ExecutionTreeCollector` per run, seeded with
-`cbs.nova.preview.callTree.maxDepth:32`. The collector builds a tree of `CallNode`s as the DSL dispatches processes,
+`ExecutionTreeStage` (a `DslPipeStage`, skipped in `RUN` mode) creates a fresh `ExecutionTreeCollector` per run, seeded
+with `cbs.nova.preview.callTree.maxDepth:32`. The collector builds a tree of `CallNode`s as the DSL dispatches processes,
 transactions, helpers, and functions. When the depth limit is exceeded, the collector emits a `<truncated>` sentinel
 so the UI can render the boundary instead of hanging or blowing the stack. The call tree is returned in the
 `PreviewReport` and also consumed by `PreviewMetricsCollector` to count `CallKind`s.
 
-### Dry-run logging (`T149`/`T173`)
+### Dry-run logging (`T149`/`T173`/`T197`)
 
 Logback is wired through a `DryRunLogbackAppender` named `DRY_RUN`. The appender only records events while a
-dry-run context is active; it stores them in a bounded `runId`-keyed buffer and can drain them by run.
-The context is implemented by `ThreadLocalDryRunLoggingContext`, which is exposed as a `ScopedValue`-style interface so
-that the same `runId` can be restored on Temporal worker nodes via the `DryRunLoggingContextPropagator`.
+dry-run context is active, routing them into a per-run `DryRunLogBuffer`.
+
+`T197` removed the `ScopedValue`-based `ScopedValueDryRunLoggingContext` entirely. Log accumulation is now owned by
+the DSL pipe itself: `DryRunLogStage` (a `DslPipeStage`, skipped in `RUN` mode) creates a fresh `DryRunLogBuffer` per
+run, registers it under the `runId` in `DryRunLogBufferRegistry` so the appender can route events into it, sets the
+`runId` on the `DryRunLoggingContext` for the duration of the run, and — in a `finally` block — drains the buffer into
+the pipe context, removes it from the registry, and clears the context. This avoids the leak-prone pattern of a
+long-lived `runId`-keyed map that only the DSL author remembers to clean up. The `runId` is still restored on Temporal
+worker nodes via `DryRunLoggingContextPropagator`.
 
 A `PreviewReport` includes the drained log lines as a list of formatted strings, and `ExplainReport` includes the typed
 log events as maps (`level`, `message`, `timestamp`, `mdc`, `runId`). The `runId` is also placed in SLF4J MDC during
@@ -185,7 +213,7 @@ It records:
 - `executionDurationMs` — wall-clock time of the run.
 - `memoryUsedBytes` — heap delta from start to finish.
 - `callCounts` — counts by `CallKind` (`PROCESS`, `TRANSACTION`, `HELPER`, `FUNCTION`) from the call tree.
-- `externalCallCounts` — counts by normalized external-call type from `ExternalCallTracker`.
+- `externalCallCounts` — counts by normalized external-call type from `ExternalCallRecorder`.
 
 The latest snapshot is kept in a static field and published as Micrometer gauges via
 `PreviewMetricsAutoConfiguration`: `cbs.nova.preview.execution.duration`,
@@ -200,8 +228,8 @@ input hash). It is enabled by default (`cbs.nova.preview.cache.enabled:true`) an
 - Cache hits/misses are exposed as Micrometer gauges `cbs.nova.preview.cache.hit.count` and
   `cbs.nova.preview.cache.miss.count`.
 - `invalidateByDslHash()` can be called to drop every cached entry for a given DSL descriptor hash.
-- The cache lives in `DevDslRuntime`; when a hit is found, the cached `PreviewReport` is returned immediately without
-  executing the DSL.
+- `PreviewCacheStage` wraps the pipeline; when a hit is found, the cached `PreviewReport` is returned immediately
+  without executing the rest of the pipeline (including the DSL run itself).
 
 ### Preview error handling (`T163`)
 
@@ -225,10 +253,13 @@ the first preview error into an HTTP 422 `ErrorResponse` with a generated `excep
 - **Preview execution sandboxing (`T165`)** — not shipped. `SecurityManager`-based sandboxing is infeasible on the
   repo's JDK 25 because JEP 486 permanently disabled `SecurityManager` enforcement in JDK 24+. Any documentation that
 claims this exists would be wrong; it is a known gap requiring a human decision on an alternative isolation approach.
-- **Preview/Explain listener architecture / report supertype (`T168`)** — not shipped. The plan was stale; T162/T163/T164
-  layered metrics, error handling, and caching directly onto `DevDslRuntime.preview()` and T173 shipped without needing
-the listener SPI. `DevDslRuntime` still uses direct field access and hardcoded dispatch; there is no `Report` supertype
-or SPI-driven architecture today.
+- **Preview/Explain report supertype (`T168`)** — still not shipped. `T187` did land a general-purpose `DslPipeStage`
+  middleware SPI (see "Preview, Explain, and Run pipelines" above) that subsumes most of what T168's listener
+  architecture would have provided — metrics, dry-run logging, call-tree capture, caching, and fakes are all
+  independent, composable stages today, not hardcoded field access. What T168 originally asked for and still does not
+  exist is a common `Report` supertype: `PreviewReport` and `ExplainReport` remain separate, unrelated types, so a
+  consumer cannot treat the two report shapes polymorphically. T168 stays blocked pending a replanning pass to decide
+  whether a report supertype is still worth introducing given the pipe-stage SPI now largely does the same job.
 
 ## Run persistence (`T176`)
 
@@ -333,6 +364,15 @@ is that `helpers.JsonExtractHelper` now accepts an injected `ObjectMapper` const
 already used by `HttpCallHelper`. The backend still uses Jackson for runtime JSON and Avaje JSON-B annotation processing
 per record; there is no single unified converter class.
 
+## JSON-native DSL access (`T194`)
+
+`Context` exposes JSON access natively: `Context#json()`/`asJsonValue()` return the request body as a `JsonValue`
+(a `dsl-api` interface with a Jackson-backed implementation), and `.json(value)`/`asJsonValue(value)` wrap any object
+the same way. The expression evaluator supports `.json()` path navigation directly on interpolated values.
+`helpers.JsonExtractHelper` (see "Serialization unification (`T171`)" above) is now a **deprecated facade** over this
+native engine, retained only for backward compatibility with existing DSL flows — new flows should use
+`Context`/expression JSON access directly instead of the helper.
+
 ## Spring Boot autoconfiguration & starter packaging (`T174`)
 
 `config.DslRootAutoConfiguration` is the single autoconfiguration entry point listed in
@@ -376,7 +416,9 @@ as a fallback. The global manager is reset before reload to avoid stale definiti
 - `GET /api/dsl/definitions` — aggregate list of every registered definition with name, type, and optional input schema
   (`T182`).
 
-Input schemas are generated by `JsonSchemaGenerator` from the entity's input type or parameters record.
+Input schemas are generated by `JsonSchemaGenerator`, an interface with a victools-library-backed instance bean
+(`VictoolsJsonSchemaGenerator`, `T192`) from the entity's input type or parameters record — it replaced a static,
+hand-written schema-building utility.
 
 ## Actuator endpoints
 
@@ -445,9 +487,9 @@ then copies only the `:starter` fat jar into a smaller JRE runtime image.
   failure.
 - **Preview & Explain** — fast feedback loops and living documentation without deploying to Temporal.
 
-## Implementation roadmap (T146–T182)
+## Implementation roadmap (T146–T201)
 
-The roadmap below reflects the kanban state as of the `T183` refresh:
+The roadmap below reflects the kanban state as of the `T203` refresh:
 
 | ID   | Status      | Title                                                        | Notes                                                       |
 |:-----|:------------|:-------------------------------------------------------------|:------------------------------------------------------------|
@@ -484,14 +526,38 @@ The roadmap below reflects the kanban state as of the `T183` refresh:
 | T180 | Done | Runner panel leaf component tests | `ResultTab`, `ModeSwitcher`, `DiffLine`, `StatusIndicator`, etc. |
 | T181 | Done | TemporalTransactionInvoker tests | Unit coverage for fallback and retry-option branches. |
 | T182 | Done | Fix definitions introspection wiring | `GET /api/dsl/definitions` aggregator endpoint. |
+| T184 | Done | AesFieldEncryptor tests | Unit coverage for the T176 field-encryption path. |
+| T185 | Done | SimpleExpressionEvaluator tests | Unit coverage for the sandboxed expression engine behind `Context#eval`. |
+| T186 | Done | Surface STALE run status in frontend | `ExecutionStatus`/status badge gained a `Stale` state. |
+| T187 | Done | Execution trace/tree collector → pipe-stage scoping | `DslExecutionPipeline`/`DslPipeStage` SPI; per-run collector instances replace leak-prone `runId`-keyed singletons. |
+| T188 | Done | JDBC capture: remove reflective dispatch | `DataSourceProxyBeanPostProcessor` chain no longer uses `Method.invoke`. |
+| T189 | Done | `SourceCompiler` classpath sourcing | Fixed TODO in `dsl-codegen`'s compact-source compiler. |
+| T190 | Done | Typed `@ConfigurationProperties` records | Replaced ad-hoc `@Value`/manual binding across seven starter config sites. |
+| T191 | Done | `CompensationRegistry` interface | Extracted interface + `DefaultCompensationRegistry` (lock-free `ConcurrentLinkedDeque`, was `synchronized`). |
+| T192 | Done | JSON schema generator library + Spring bean | `VictoolsJsonSchemaGenerator` behind the `JsonSchemaGenerator` interface; replaced hand-written static generator. |
+| T193 | Done | DSL package cleanup & dead-code removal | TODO cleanup across `dsl`/`dsl-api`/`dsl-codegen`; `MapInputConverter` became an instance bean. |
+| T194 | Done | JSON-native DSL helper | `JsonValue` interface + Jackson impl, `Context.json()`/`.json()` path nav; `JsonExtractHelper` now a deprecated facade. |
+| T195 | Done | DSL exception handler SPI | Replaced static dispatch with an overridable interface + impl. |
+| T196 | Done | DSL Gradle plugin optional starter module | Decoupled the Gradle plugin from a hard `starter` dependency. |
+| T197 | Done | `ScopedValue` dry-run context → pipe stage | Deleted `ScopedValueDryRunLoggingContext`; `DryRunLogStage` owns a per-run `DryRunLogBuffer`. |
+| T198 | Done | Two-way fake config, mock → fake rename | Per-request `mocks` removed; startup-only `cbs.nova.fakes` YAML + `HelperInterceptor`/`FakingStage`. |
+| T199 | Done | Frontend STALE auto-refresh | `useStalePolling` auto-polls (default 5000ms), pauses when tab hidden. |
+| T200 | Done | `DslExecutionsResource` | `GET /api/executions` and `/api/executions/{id}` — Executions page now has a working backend. |
+| T201 | Done | Workbench draft autosave | `useWorkbenchDraft` — debounced `localStorage` autosave, 24h TTL, restore banner. |
 
-T178–T181 are test-only additions; they increased coverage for the capture handlers, executions panel,
-runner panel, and `TemporalTransactionInvoker` respectively, but do not introduce user-facing features.
+T178–T181 and T184–T185 are test-only additions; they increased coverage for the capture handlers, executions panel,
+runner panel, `TemporalTransactionInvoker`, `AesFieldEncryptor`, and `SimpleExpressionEvaluator` respectively, but do
+not introduce user-facing features.
 
 ## Summary
 
 The Temporal DSL Orchestration Engine turns compact Java DSL definitions into durable, observable Temporal workflows.
 The T146–T182 cycle added call capture, dry-run observability, preview metrics/caching/error-handling, what-if mocking
 (with the DB/HTTP limitation), run persistence with field-level encryption, async process execution with STALE
-detection, and a cleaner Spring Boot autoconfiguration model. Two items remain blocked (sandboxing and the listener
-architecture) and are explicitly not documented as implemented.
+detection, and a cleaner Spring Boot autoconfiguration model. The following T184–T201 cycle replaced the leak-prone
+singleton-collector runtime with a composable `DslPipeStage` pipeline (`T187`), renamed mocks to fakes and moved
+faking to startup-only YAML at the helper boundary (`T198`), deleted the `ScopedValue`-based dry-run context in favor
+of a pipe-stage-owned log buffer (`T197`), replaced the hand-written `JsonSchemaGenerator` with a victools-backed bean
+(`T192`), added a native `JsonValue`/`Context.json()` engine that deprecates `JsonExtractHelper` (`T194`), and wired
+up the Executions page end-to-end (`T200`) with frontend STALE auto-polling (`T199`). Two items remain blocked
+(sandboxing and the preview/explain report-supertype architecture) and are explicitly not documented as implemented.
