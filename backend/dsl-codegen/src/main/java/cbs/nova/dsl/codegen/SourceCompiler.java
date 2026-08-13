@@ -47,7 +47,8 @@ public final class SourceCompiler {
 
     var dslDir = srcDir.resolve(CompilerConstants.DSL_FOLDER);
     var modelsDir = srcDir.resolve(CompilerConstants.MODELS_FOLDER);
-    //TODO: make var optional, accept from a gradle plugin info about classpath, fallback to a system property
+    // TODO: make var optional, accept from a gradle plugin info about classpath, fallback to a
+    // system property
     var classpath = System.getProperty("java.class.path");
 
     var dslSources = collectJavaSources(dslDir);

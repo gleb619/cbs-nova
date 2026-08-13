@@ -33,17 +33,18 @@ public class DslCompilerPlugin implements Plugin<Project> {
 
     var dslCompiler = project.getConfigurations().create("dslCompiler");
 
-//    dslCompiler.exclude(Map.of("group", "ch.qos.logback"));
-//    dslCompiler.exclude(Map.of(
-//            "group", "org.springframework.boot",
-//            "module", "spring-boot-starter-logging"));
+    // dslCompiler.exclude(Map.of("group", "ch.qos.logback"));
+    // dslCompiler.exclude(Map.of(
+    // "group", "org.springframework.boot",
+    // "module", "spring-boot-starter-logging"));
 
     dslCompiler.defaultDependencies(dependencies -> {
       var version = extension.getDslVersion().get();
       dependencies.add(project.getDependencies().create("cbs.nova:dsl-codegen:" + version));
       dependencies.add(project.getDependencies().create("cbs.nova:dsl:" + version));
       dependencies.add(project.getDependencies().create("cbs.nova:dsl-api:" + version));
-      //TODO: starter module is optional, it could be some other, we need a config at `DslCompileExtension`/`DslCompileTask` for that
+      // TODO: starter module is optional, it could be some other, we need a config at
+      // `DslCompileExtension`/`DslCompileTask` for that
       dependencies.add(project.getDependencies().create("cbs.nova:starter:" + version));
     });
 

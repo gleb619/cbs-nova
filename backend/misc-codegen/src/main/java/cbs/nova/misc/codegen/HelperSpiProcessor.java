@@ -3,7 +3,6 @@ package cbs.nova.misc.codegen;
 import cbs.nova.dsl.Helper;
 import cbs.nova.dsl.utils.Substitutor;
 
-import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
@@ -22,6 +21,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 @SupportedAnnotationTypes("cbs.nova.dsl.Helper")
@@ -98,20 +98,20 @@ public class HelperSpiProcessor extends AbstractProcessor {
         var packageLine = resolverPackage.isEmpty()
                 ? ""
                 : "package " + resolverPackage + ";\n\n";
-        var template = //language=java
+        var template = // language=java
                 """
-                ${packageLine}import cbs.nova.dsl.HelperInstanceResolver;
-                import cbs.nova.dsl.HelperRegistrar;
-                import cbs.nova.dsl.HelperResolver;
-                ${imports}
+                        ${packageLine}import cbs.nova.dsl.HelperInstanceResolver;
+                        import cbs.nova.dsl.HelperRegistrar;
+                        import cbs.nova.dsl.HelperResolver;
+                        ${imports}
 
-                public final class ${resolverClass} implements HelperResolver {
-                  @Override
-                  public void registerHelpers(HelperRegistrar registrar, HelperInstanceResolver instanceResolver) {
-                ${registrations}  }
+                        public final class ${resolverClass} implements HelperResolver {
+                          @Override
+                          public void registerHelpers(HelperRegistrar registrar, HelperInstanceResolver instanceResolver) {
+                        ${registrations}  }
 
-                }
-                """;
+                        }
+                        """;
         writer.print(Substitutor.format(template, Map.of(
                 "packageLine", packageLine,
                 "imports", imports,
