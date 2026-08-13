@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ExecutionFilters } from '~/types'
 
-const { executions, loading, loadExecutions, applyFilters } = useExecutions()
+const { executions, loading, loadExecutions, applyFilters, stalePollingIds } = useExecutions()
 
 await loadExecutions()
 
@@ -20,6 +20,11 @@ function onSelect(id: string) {
       <h1 class="text-2xl font-bold text-gray-900">Executions</h1>
     </header>
     <ExecutionsExecutionFilters @filter="onFilter" />
-    <ExecutionsExecutionList :executions="executions" :loading="loading" @select="onSelect" />
+    <ExecutionsExecutionList
+      :executions="executions"
+      :loading="loading"
+      :stale-polling-ids="stalePollingIds"
+      @select="onSelect"
+    />
   </div>
 </template>

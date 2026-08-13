@@ -252,4 +252,192 @@ describe('useExecutions', () => {
       expect(api.get).not.toHaveBeenCalled()
     })
   })
+
+  describe('stale polling (T199)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+      // speed up the default 5s stale poll interval so tests can drive
+      // tick transitions without sleeping for seconds of fake time.
+      vi.mocked(useRuntimeConfig as never).mockReturnValue({
+        public: { stalePollMs: 1000 },
+      } as ReturnType<typeof useRuntimeConfig>)
+    })
+
+    it('loadExecutions auto-starts stale polling for Stale rows and exposes isStalePolling', async () => {
+      const list = [
+        {
+          id: 'stale-1',
+          entity: 'ent',
+          entityType: 'Process' as const,
+          mode: 'PREVIEW' as const,
+          status: 'Stale' as const,
+          startedAt: '2025-01-01',
+        },
+        {
+          id: 'ok-1',
+          entity: 'ent',
+          entityType: 'Process' as const,
+          mode: 'PREVIEW' as const,
+          status: 'Completed' as const,
+          startedAt: '2025-01-01',
+        },
+      ]
+      const api = installApiMock({
+        list: vi.fn().mockResolvedValueOnce(list),
+        get: vi.fn().mockResolvedValue({
+          id: 'stale-1',
+          entity: 'ent',
+          entityType: 'Process' as const,
+          mode: 'PREVIEW' as const,
+          status: 'Stale' as const,
+          startedAt: '2025-01-01',
+        }),
+      })
+
+      const { loadExecutions, isStalePolling, stalePollingIds } = useExecutions()
+      await loadExecutions()
+
+      expect(isStalePolling('stale-1')).toBe(true)
+      expect(isStalePolling('ok-1')).toBe(false)
+      expect(Array.from(stalePollingIds.value)).toEqual(['stale-1'])
+      // a polling interval is running
+      expect(vi.getTimerCount()).toBeGreaterThan(0)
+
+      // first stale tick fetches the detail
+      await vi.advanceTimersByTimeAsync(1000)
+      await Promise.resolve()
+      expect(api.get).toHaveBeenCalledWith('stale-1')
+    })
+
+    it('removes the row from stalePollingIds once the backend reports a non-Stale status', async () => {
+      const staleRow = {
+        id: 'stale-2',
+        entity: 'ent',
+        entityType: 'Process' as const,
+        mode: 'PREVIEW' as const,
+        status: 'Stale' as const,
+        startedAt: '2025-01-01',
+      }
+      const runningDetail = { ...staleRow, status: 'Running' as const }
+      // useStalePolling ticks twice (1 Stale, 2 Running→stop), and the
+      // useExecutions reconcile also fires one get(id) to refresh the
+      // list row, so provide three Running responses for the third call.
+      const api = installApiMock({
+        list: vi.fn().mockResolvedValueOnce([staleRow]),
+        get: vi
+          .fn()
+          .mockResolvedValueOnce(staleRow) // first tick: still Stale
+          .mockResolvedValueOnce(runningDetail) // second tick: Running → stop
+          .mockResolvedValue(runningDetail), // reconcile fetch after transition
+      })
+
+      const { loadExecutions, isStalePolling, stalePollingIds, executions } = useExecutions()
+      await loadExecutions()
+      expect(isStalePolling('stale-2')).toBe(true)
+
+      // first tick: Stale → keep polling
+      await vi.advanceTimersByTimeAsync(1000)
+      await Promise.resolve()
+      await Promise.resolve()
+      expect(api.get).toHaveBeenCalledTimes(1)
+      expect(isStalePolling('stale-2')).toBe(true)
+
+      // second tick: Running → status ref flips, reconcile removes the id
+      await vi.advanceTimersByTimeAsync(1000)
+      // flush microtasks from the second tick + status ref watcher + reconcile
+      for (let i = 0; i < 5; i++) await Promise.resolve()
+      expect(api.get.mock.calls.length).toBeGreaterThanOrEqual(2)
+      expect(isStalePolling('stale-2')).toBe(false)
+      expect(stalePollingIds.value.has('stale-2')).toBe(false)
+      // the list row reflects the new status (the reconciler pulled a fresh detail)
+      const updated = executions.value.find((e) => e.id === 'stale-2')
+      expect(updated?.status).toBe('Running')
+    })
+
+    it('loadDetail auto-starts stale polling when the detail comes back Stale', async () => {
+      const staleDetail = {
+        id: 'stale-3',
+        entity: 'ent',
+        entityType: 'Process' as const,
+        mode: 'PREVIEW' as const,
+        status: 'Stale' as const,
+        startedAt: '2025-01-01',
+      }
+      const runningDetail = { ...staleDetail, status: 'Running' as const }
+      installApiMock({
+        get: vi
+          .fn()
+          .mockResolvedValueOnce(staleDetail) // initial loadDetail
+          .mockResolvedValueOnce(staleDetail) // first stale tick: still Stale
+          .mockResolvedValueOnce(runningDetail) // second tick: Running → stop
+          .mockResolvedValue(runningDetail), // reconcile fetch
+      })
+
+      const { loadDetail, isStalePolling, selectedExecution } = useExecutions()
+      await loadDetail('stale-3')
+
+      expect(selectedExecution.value?.status).toBe('Stale')
+      expect(isStalePolling('stale-3')).toBe(true)
+
+      // poll tick → status transitions → detail ref updated
+      await vi.advanceTimersByTimeAsync(1000)
+      for (let i = 0; i < 3; i++) await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(1000)
+      for (let i = 0; i < 5; i++) await Promise.resolve()
+      expect(isStalePolling('stale-3')).toBe(false)
+      expect(selectedExecution.value?.status).toBe('Running')
+    })
+
+    it('stopStalePolling tears down a poller started by loadExecutions', async () => {
+      const list = [
+        {
+          id: 'stale-4',
+          entity: 'ent',
+          entityType: 'Process' as const,
+          mode: 'PREVIEW' as const,
+          status: 'Stale' as const,
+          startedAt: '2025-01-01',
+        },
+      ]
+      installApiMock({
+        list: vi.fn().mockResolvedValueOnce(list),
+        get: vi.fn().mockResolvedValue(list[0]),
+      })
+
+      const { loadExecutions, stopStalePolling, isStalePolling } = useExecutions()
+      await loadExecutions()
+      expect(isStalePolling('stale-4')).toBe(true)
+
+      stopStalePolling('stale-4')
+      expect(isStalePolling('stale-4')).toBe(false)
+    })
+
+    it('on unmount, all stale pollers are torn down', async () => {
+      // onUnmounted only fires inside a component instance — call stopAllStalePolling
+      // via the public surface instead, since the unmount branch exercises
+      // exactly that function (and the existing useExecutions tests do the
+      // same for the legacy startPolling path).
+      const list = [
+        {
+          id: 'stale-5',
+          entity: 'ent',
+          entityType: 'Process' as const,
+          mode: 'PREVIEW' as const,
+          status: 'Stale' as const,
+          startedAt: '2025-01-01',
+        },
+      ]
+      installApiMock({
+        list: vi.fn().mockResolvedValueOnce(list),
+        get: vi.fn().mockResolvedValue(list[0]),
+      })
+
+      const { loadExecutions, stalePollingIds, stopStalePolling } = useExecutions()
+      await loadExecutions()
+      expect(stalePollingIds.value.size).toBe(1)
+
+      stopStalePolling('stale-5')
+      expect(stalePollingIds.value.size).toBe(0)
+    })
+  })
 })

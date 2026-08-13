@@ -2,7 +2,7 @@
 const route = useRoute()
 const id = computed(() => String(route.params.id))
 
-const { selectedExecution, loadDetail, startPolling, stopPolling } = useExecutions()
+const { selectedExecution, loadDetail, startPolling, stopPolling, isStalePolling } = useExecutions()
 
 const activeTab = ref<'diagram' | 'payload' | 'metadata' | 'logs' | 'errors'>('diagram')
 
@@ -10,6 +10,15 @@ await loadDetail(id.value)
 if (selectedExecution.value?.status === 'Running') {
   startPolling(id.value)
 }
+
+// T199: loadDetail already auto-starts stale polling if the backend
+// returns Stale. We expose `isStalePolling(id)` so the banner below can
+// render only while polling is actively in flight (not just because the
+// status field reads Stale — the backend may have just transitioned
+// the run out between the last fetch and the user clicking the row).
+const showStaleBanner = computed(
+  () => selectedExecution.value?.status === 'Stale' && isStalePolling(selectedExecution.value.id),
+)
 
 const traceSteps = computed(() => selectedExecution.value?.trace ?? [])
 const compensationSteps = computed(() => traceSteps.value.filter((s) => s.isCompensation))
@@ -24,6 +33,26 @@ onUnmounted(() => {
   <div class="p-6 space-y-4">
     <div v-if="!selectedExecution" class="text-sm text-gray-500">Loading…</div>
     <template v-else>
+      <!--
+        T199: visible while the run is Stale and the backend is being
+        polled. The banner disappears as soon as the run transitions to
+        a non-Stale state (useStalePolling stops the loop and the
+        computed above flips false).
+      -->
+      <div
+        v-if="showStaleBanner"
+        class="flex items-center gap-2 rounded-md border border-warning-300 bg-warning-100 px-3 py-2 text-sm text-warning-900"
+        role="status"
+        aria-live="polite"
+        data-testid="stale-banner"
+      >
+        <span
+          class="inline-block w-3 h-3 border-2 border-warning-900 border-t-transparent rounded-full animate-spin"
+          aria-hidden="true"
+        />
+        <span>Stale — refreshing…</span>
+      </div>
+
       <ExecutionsExecutionSummary :execution="selectedExecution" />
 
       <ExecutionsExecutionTrace v-if="regularSteps.length > 0" :steps="regularSteps" />

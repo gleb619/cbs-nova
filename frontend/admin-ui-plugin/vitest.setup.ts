@@ -1,4 +1,4 @@
-import { computed, onUnmounted, readonly, ref } from 'vue'
+import { computed, onUnmounted, readonly, ref, watch } from 'vue'
 import { vi } from 'vitest'
 
 const g = globalThis as Record<string, unknown>
@@ -7,6 +7,7 @@ g.ref = ref
 g.computed = computed
 g.readonly = readonly
 g.onUnmounted = onUnmounted
+g.watch = watch
 
 g.useState = (_key: string, init: () => unknown) => ref(init())
 

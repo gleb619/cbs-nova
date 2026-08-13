@@ -1,7 +1,24 @@
 <script setup lang="ts">
 import type { Execution } from '../../types/execution'
 
-defineProps<{ executions: Execution[]; loading: boolean }>()
+const props = withDefaults(
+  defineProps<{
+    executions: Execution[]
+    loading: boolean
+    /**
+     * T199: ids of rows whose backend is currently being polled because
+     * they are in the Stale state. The list renders a pulse indicator
+     * on the status badge for these rows so the operator can see that
+     * auto-refresh is in flight.
+     */
+    stalePollingIds?: string[] | Set<string>
+  }>(),
+  { stalePollingIds: () => [] as string[] },
+)
+
+defineEmits<{
+  select: [id: string]
+}>()
 
 function truncate(id: string, len = 8) {
   return id.length > len ? `${id.slice(0, len)}…` : id
@@ -16,6 +33,13 @@ function formatDuration(ms?: number) {
   if (ms == null) return '—'
   if (ms < 1000) return `${ms}ms`
   return `${(ms / 1000).toFixed(2)}s`
+}
+
+function isStalePolling(id: string): boolean {
+  const ids = props.stalePollingIds
+  if (!ids) return false
+  if (Array.isArray(ids)) return ids.includes(id)
+  return ids.has(id)
 }
 </script>
 
@@ -61,7 +85,9 @@ function formatDuration(ms?: number) {
               {{ exec.entity }} <span class="text-gray-400 text-xs">({{ exec.entityType }})</span>
             </td>
             <td class="px-3 py-2 font-mono text-xs">{{ exec.mode }}</td>
-            <td class="px-3 py-2"><ExecutionsStatusBadge :status="exec.status" /></td>
+            <td class="px-3 py-2">
+              <ExecutionsStatusBadge :status="exec.status" :polling="isStalePolling(exec.id)" />
+            </td>
             <td class="px-3 py-2 text-xs">{{ formatDate(exec.startedAt) }}</td>
             <td class="px-3 py-2 text-xs">{{ formatDuration(exec.duration) }}</td>
             <td class="px-3 py-2 text-xs">{{ exec.retries ?? 0 }}</td>
