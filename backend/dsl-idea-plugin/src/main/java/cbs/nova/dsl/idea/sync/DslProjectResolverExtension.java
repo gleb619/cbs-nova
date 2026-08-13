@@ -4,11 +4,11 @@ import cbs.nova.dsl.gradle.tooling.DslProjectModel;
 import com.intellij.openapi.externalSystem.model.DataNode;
 import com.intellij.openapi.externalSystem.model.project.ModuleData;
 import com.intellij.openapi.externalSystem.model.task.ExternalSystemTaskId;
-import java.util.Map;
 import org.gradle.tooling.model.idea.IdeaModule;
 import org.jetbrains.plugins.gradle.service.project.AbstractProjectResolverExtension;
 
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
