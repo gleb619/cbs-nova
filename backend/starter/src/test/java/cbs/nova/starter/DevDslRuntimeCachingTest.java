@@ -18,6 +18,7 @@ import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
 import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
+import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import ch.qos.logback.classic.Level;
@@ -37,8 +38,9 @@ class DevDslRuntimeCachingTest {
   private final RunScopedExternalCallRecorder recorder = new RunScopedExternalCallRecorder(null);
   private final ContextFactory contextFactory = new ContextFactory();
   private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
+  private final DryRunLogBufferRegistry bufferRegistry = new DryRunLogBufferRegistry();
   private final DryRunLogbackAppender appender = new DryRunLogbackAppender(dryRunLoggingContext,
-          1000);
+          bufferRegistry);
   private Appender<ILoggingEvent> originalDryRunAppender;
   private PreviewResultCache cache;
   private DevDslRuntime runtime;
@@ -56,10 +58,12 @@ class DevDslRuntimeCachingTest {
     cache = new PreviewResultCache(60_000);
     CbsNovaPreviewProperties previewProperties = new CbsNovaPreviewProperties(null, null);
     PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
-            dryRunLoggingContext, cache, previewProperties);
+            dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
+            cache, previewProperties);
     RunDslPipe runPipe = new RunDslPipe(contextFactory);
     ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
-            dryRunLoggingContext, previewProperties);
+            dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
+            previewProperties);
     runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
 
     Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);

@@ -29,13 +29,20 @@ class DryRunPropertiesTest {
   void customValuesAreBound() {
     runner
             .withPropertyValues(
-                    "cbs.nova.dryRun.context.type=scoped",
+                    "cbs.nova.dryRun.context.type=threadlocal",
                     "cbs.nova.dryRun.log.maxEventsPerRun=100")
             .run(ctx -> {
               DryRunProperties properties = ctx.getBean(DryRunProperties.class);
-              assertThat(properties.context().type()).isEqualTo("scoped");
+              assertThat(properties.context().type()).isEqualTo("threadlocal");
               assertThat(properties.log().maxEventsPerRun()).isEqualTo(100);
             });
+  }
+
+  @Test
+  void scopedContextTypeIsRejected() {
+    runner
+            .withPropertyValues("cbs.nova.dryRun.context.type=scoped")
+            .run(ctx -> assertThat(ctx).hasFailed());
   }
 
   @Test

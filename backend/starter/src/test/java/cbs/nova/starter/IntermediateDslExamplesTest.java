@@ -26,6 +26,8 @@ import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
 import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
 import cbs.nova.starter.helpers.*;
+import cbs.nova.starter.logging.DryRunLogBufferRegistry;
+import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
@@ -44,13 +46,16 @@ class IntermediateDslExamplesTest {
   private final ContextFactory contextFactory = new ContextFactory();
   private final RunScopedExternalCallRecorder recorder = new RunScopedExternalCallRecorder(null);
   private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
+  private final DryRunLogBufferRegistry bufferRegistry = new DryRunLogBufferRegistry();
   private final CbsNovaPreviewProperties previewProperties = new CbsNovaPreviewProperties(null,
           null);
   private final PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
-          dryRunLoggingContext, null, previewProperties);
+          dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
+          null, previewProperties);
   private final RunDslPipe runPipe = new RunDslPipe(contextFactory);
   private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
-          dryRunLoggingContext, previewProperties);
+          dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
+          previewProperties);
   private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
   @TempDir
   Path dslSourceDir;

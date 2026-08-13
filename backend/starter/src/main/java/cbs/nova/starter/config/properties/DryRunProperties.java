@@ -17,6 +17,13 @@ public record DryRunProperties(
   }
 
   public record Context(@DefaultValue("threadlocal") String type) {
+    public Context {
+      if (!"threadlocal".equals(type)) {
+        throw new IllegalArgumentException(
+                "Invalid cbs.nova.dry-run.context.type '" + type
+                        + "'; only 'threadlocal' is supported");
+      }
+    }
   }
 
   public record Log(

@@ -15,6 +15,8 @@ import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
 import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
+import cbs.nova.starter.logging.DryRunLogBufferRegistry;
+import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,12 +44,14 @@ class DslStarterIntegrationTest {
     var recorder = new RunScopedExternalCallRecorder(null);
     var contextFactory = new ContextFactory();
     var dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
+    var bufferRegistry = new DryRunLogBufferRegistry();
     var previewProperties = new CbsNovaPreviewProperties(null, null);
-    var previewPipe = new PreviewDslPipe(recorder, contextFactory, dryRunLoggingContext, null,
+    var previewPipe = new PreviewDslPipe(recorder, contextFactory, dryRunLoggingContext,
+            bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, null,
             previewProperties);
     var runPipe = new RunDslPipe(contextFactory);
     var explainPipe = new ExplainDslPipe(recorder, contextFactory, dryRunLoggingContext,
-            previewProperties);
+            bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, previewProperties);
     var runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
     var resource = new DslRuntimeResource(runtime, contextFactory, recorder);
     mockMvc = MockMvcBuilders.standaloneSetup(resource)

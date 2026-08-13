@@ -7,10 +7,10 @@ import org.jspecify.annotations.Nullable;
  * SPI for correlating log events with a dry-run (preview/explain) execution identifier.
  *
  * <p>
- * Implementations store the active {@code runId} in a thread- or scope-bound carrier and expose it
- * to callers via {@link #currentRunId()}. The canonical way to activate a dry-run context for a
- * block of work is {@link #runWithRunId(String, Runnable)}; this works for both {@link ThreadLocal}
- * and {@link java.lang.ScopedValue} based implementations.
+ * Implementations store the active {@code runId} in a thread-bound carrier and expose it to callers
+ * via {@link #currentRunId()}. The canonical way to activate a dry-run context for a block of work
+ * is {@link #runWithRunId(String, Runnable)}; this works for both explicit
+ * {@link #setRunId(String)}/{@link #clearRunId()} implementations.
  *
  * <p>
  * The header key below is used when propagating the runId across Temporal workflow/activity nodes.

@@ -14,16 +14,42 @@ import cbs.nova.starter.core.stage.ExecutionTreeStage;
 import cbs.nova.starter.core.stage.ExplainReportStage;
 import cbs.nova.starter.core.stage.ExternalCallRecordingStage;
 import cbs.nova.starter.core.stage.MetricsStage;
-import lombok.RequiredArgsConstructor;
+import cbs.nova.starter.logging.DryRunLogBufferRegistry;
+import cbs.nova.starter.logging.DryRunLogbackAppender;
 import org.jspecify.annotations.NonNull;
 
-@RequiredArgsConstructor
 public final class ExplainDslPipe implements DslExecutionPipe<ExplainReport> {
 
   private final ExternalCallRecorder recorder;
   private final ContextFactory contextFactory;
   private final DryRunLoggingContext dryRunLoggingContext;
+  private final DryRunLogBufferRegistry bufferRegistry;
+  private final int maxEventsPerRun;
   private final CbsNovaPreviewProperties previewProperties;
+
+  public ExplainDslPipe(
+          ExternalCallRecorder recorder,
+          ContextFactory contextFactory,
+          DryRunLoggingContext dryRunLoggingContext,
+          DryRunLogBufferRegistry bufferRegistry,
+          int maxEventsPerRun,
+          CbsNovaPreviewProperties previewProperties) {
+    this.recorder = recorder;
+    this.contextFactory = contextFactory;
+    this.dryRunLoggingContext = dryRunLoggingContext;
+    this.bufferRegistry = bufferRegistry;
+    this.maxEventsPerRun = maxEventsPerRun;
+    this.previewProperties = previewProperties;
+  }
+
+  public ExplainDslPipe(
+          ExternalCallRecorder recorder,
+          ContextFactory contextFactory,
+          DryRunLoggingContext dryRunLoggingContext,
+          CbsNovaPreviewProperties previewProperties) {
+    this(recorder, contextFactory, dryRunLoggingContext, new DryRunLogBufferRegistry(),
+            DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, previewProperties);
+  }
 
   @Override
   public @NonNull Result<ExplainReport> execute(@NonNull String name,
@@ -33,7 +59,7 @@ public final class ExplainDslPipe implements DslExecutionPipe<ExplainReport> {
             .stage(new MetricsStage())
             .stage(new ExecutionTreeStage(contextFactory,
                     previewProperties.callTree().maxDepth()))
-            .stage(new DryRunLogStage(dryRunLoggingContext))
+            .stage(new DryRunLogStage(dryRunLoggingContext, bufferRegistry, maxEventsPerRun))
             .stage(new ExecutionTraceStage())
             .stage(new ExternalCallRecordingStage(recorder))
             .stage(new DispatchStage(contextFactory))

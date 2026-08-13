@@ -8,12 +8,14 @@ import cbs.nova.dsl.logging.DryRunLoggingContext;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.starter.DevDslRuntime;
 import cbs.nova.starter.cache.PreviewResultCache;
+import cbs.nova.starter.config.properties.DryRunProperties;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
+import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLoggingContextPropagator;
 import cbs.nova.starter.services.TemporalDslProcessLauncher;
 import cbs.nova.starter.services.TemporalDslProcessService;
@@ -120,10 +122,13 @@ public class TemporalConfiguration {
           ExternalCallRecorder externalCallRecorder,
           ContextFactory contextFactory,
           DryRunLoggingContext dryRunLoggingContext,
+          DryRunLogBufferRegistry bufferRegistry,
+          DryRunProperties dryRunProperties,
           PreviewResultCache previewResultCache,
           CbsNovaPreviewProperties previewProperties) {
     return new PreviewDslPipe(externalCallRecorder, contextFactory, dryRunLoggingContext,
-            previewResultCache, previewProperties);
+            bufferRegistry, dryRunProperties.log().maxEventsPerRun(), previewResultCache,
+            previewProperties);
   }
 
   @Bean
@@ -138,9 +143,11 @@ public class TemporalConfiguration {
           ExternalCallRecorder externalCallRecorder,
           ContextFactory contextFactory,
           DryRunLoggingContext dryRunLoggingContext,
+          DryRunLogBufferRegistry bufferRegistry,
+          DryRunProperties dryRunProperties,
           CbsNovaPreviewProperties previewProperties) {
     return new ExplainDslPipe(externalCallRecorder, contextFactory, dryRunLoggingContext,
-            previewProperties);
+            bufferRegistry, dryRunProperties.log().maxEventsPerRun(), previewProperties);
   }
 
   @Bean

@@ -1,8 +1,8 @@
 package cbs.nova.starter.config;
 
 import cbs.nova.dsl.logging.DryRunLoggingContext;
-import cbs.nova.dsl.logging.ScopedValueDryRunLoggingContext;
 import cbs.nova.starter.config.properties.DryRunProperties;
+import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import ch.qos.logback.classic.Logger;
@@ -18,10 +18,9 @@ import org.springframework.context.annotation.Bean;
  * Autoconfiguration for dry-run log capture.
  *
  * <p>
- * Provides a {@link DryRunLoggingContext} implementation (defaulting to thread-local, with an
- * opt-in scoped-value variant) and registers the {@link DryRunLogbackAppender} on the Logback root
- * logger under the name {@code DRY_RUN}. The appender is configured from Spring constructor
- * parameters instead of Logback XML.
+ * Provides a thread-local {@link DryRunLoggingContext} implementation and registers the
+ * {@link DryRunLogbackAppender} on the Logback root logger under the name {@code DRY_RUN}. The
+ * appender is configured from Spring constructor parameters instead of Logback XML.
  */
 @AutoConfiguration
 @EnableConfigurationProperties(DryRunProperties.class)
@@ -38,23 +37,18 @@ public class DryRunLoggingAutoConfiguration {
     return new ThreadLocalDryRunLoggingContext();
   }
 
-  /**
-   * Optional scoped-value implementation for callers that can bind the runId to a
-   * {@link ScopedValue} carrier block.
-   */
   @Bean
-  @ConditionalOnProperty(name = "cbs.nova.dryRun.context.type", havingValue = "scoped")
-  public DryRunLoggingContext scopedDryRunLoggingContext() {
-    return new ScopedValueDryRunLoggingContext();
+  @ConditionalOnMissingBean(DryRunLogBufferRegistry.class)
+  public DryRunLogBufferRegistry dryRunLogBufferRegistry() {
+    return new DryRunLogBufferRegistry();
   }
 
   @Bean
   @ConditionalOnMissingBean(DryRunLogbackAppender.class)
   public DryRunLogbackAppender dryRunLogbackAppender(
           DryRunLoggingContext dryRunLoggingContext,
-          DryRunProperties properties) {
-    var appender = new DryRunLogbackAppender(dryRunLoggingContext,
-            properties.log().maxEventsPerRun());
+          DryRunLogBufferRegistry bufferRegistry) {
+    var appender = new DryRunLogbackAppender(dryRunLoggingContext, bufferRegistry);
     appender.setName("DRY_RUN");
     return appender;
   }

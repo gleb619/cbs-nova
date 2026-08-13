@@ -15,8 +15,11 @@ import java.util.List;
 
 class DryRunLogbackAppenderTest {
 
+  private static final int MAX_EVENTS = 100;
+
   private final DryRunLoggingContext context = new ThreadLocalDryRunLoggingContext();
-  private final DryRunLogbackAppender appender = new DryRunLogbackAppender(context, 100);
+  private final DryRunLogBufferRegistry registry = new DryRunLogBufferRegistry();
+  private final DryRunLogbackAppender appender = new DryRunLogbackAppender(context, registry);
   private final Logger logger;
 
   DryRunLogbackAppenderTest() {
@@ -39,12 +42,20 @@ class DryRunLogbackAppenderTest {
     appender.stop();
   }
 
+  private DryRunLogBuffer registerBuffer(String runId) {
+    DryRunLogBuffer buffer = new DryRunLogBuffer(MAX_EVENTS);
+    registry.register(runId, buffer);
+    return buffer;
+  }
+
   @Test
   void logStatementInsideDryRunContextIsCaptured() {
     String runId = "run-1";
+    DryRunLogBuffer buffer = registerBuffer(runId);
+
     context.runWithRunId(runId, () -> logger.info("hello dry run"));
 
-    List<DryRunLogEvent> events = appender.drain(runId);
+    List<DryRunLogEvent> events = buffer.drain();
     assertThat(events).hasSize(1);
     DryRunLogEvent event = events.getFirst();
     assertThat(event.level()).isEqualTo("INFO");
@@ -56,23 +67,26 @@ class DryRunLogbackAppenderTest {
   @Test
   void logStatementOutsideDryRunContextIsNotCaptured() {
     String runId = "run-2";
+    DryRunLogBuffer buffer = registerBuffer(runId);
 
     logger.info("normal log");
 
-    List<DryRunLogEvent> events = appender.drain(runId);
+    List<DryRunLogEvent> events = buffer.drain();
     assertThat(events).isEmpty();
   }
 
   @Test
   void drainReturnsCapturedEventsAndClearsBuffer() {
     String runId = "run-3";
+    DryRunLogBuffer buffer = registerBuffer(runId);
+
     context.runWithRunId(runId, () -> {
       logger.info("first");
       logger.info("second");
     });
 
-    List<DryRunLogEvent> firstDrain = appender.drain(runId);
-    List<DryRunLogEvent> secondDrain = appender.drain(runId);
+    List<DryRunLogEvent> firstDrain = buffer.drain();
+    List<DryRunLogEvent> secondDrain = buffer.drain();
 
     assertThat(firstDrain).hasSize(2);
     assertThat(secondDrain).isEmpty();
@@ -82,6 +96,8 @@ class DryRunLogbackAppenderTest {
   void eventsFromDifferentRunIdsAreIsolated() {
     String runIdA = "run-a";
     String runIdB = "run-b";
+    DryRunLogBuffer bufferA = registerBuffer(runIdA);
+    DryRunLogBuffer bufferB = registerBuffer(runIdB);
 
     context.setRunId(runIdA);
     logger.info("event-a");
@@ -91,8 +107,8 @@ class DryRunLogbackAppenderTest {
     logger.info("event-b");
     context.clearRunId();
 
-    List<DryRunLogEvent> eventsA = appender.drain(runIdA);
-    List<DryRunLogEvent> eventsB = appender.drain(runIdB);
+    List<DryRunLogEvent> eventsA = bufferA.drain();
+    List<DryRunLogEvent> eventsB = bufferB.drain();
 
     assertThat(eventsA).hasSize(1);
     assertThat(eventsA.getFirst().message()).isEqualTo("event-a");
@@ -105,16 +121,28 @@ class DryRunLogbackAppenderTest {
   @Test
   void bufferDropsOldestEventsWhenMaxIsReached() {
     String runId = "run-full";
+    DryRunLogBuffer buffer = registerBuffer(runId);
     context.setRunId(runId);
     for (int i = 0; i < 105; i++) {
       logger.info("event-{}", i);
     }
     context.clearRunId();
 
-    List<DryRunLogEvent> events = appender.drain(runId);
+    List<DryRunLogEvent> events = buffer.drain();
 
     assertThat(events).hasSize(100);
     assertThat(events.getFirst().message()).isEqualTo("event-5");
     assertThat(events.getLast().message()).isEqualTo("event-104");
+  }
+
+  @Test
+  void eventsWithoutRegisteredBufferAreIgnored() {
+    String runId = "run-no-buffer";
+
+    context.setRunId(runId);
+    logger.info("orphan");
+    context.clearRunId();
+
+    assertThat(registry.get(runId)).isNull();
   }
 }
