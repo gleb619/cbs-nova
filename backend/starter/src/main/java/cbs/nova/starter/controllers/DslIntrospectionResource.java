@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,24 +30,27 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/dsl")
 @Tag(name = "DSL Introspection", description = "Inspect registered DSL entities")
+@RequiredArgsConstructor
 public class DslIntrospectionResource {
+
+  private final JsonSchemaGenerator jsonSchemaGenerator;
 
   private static String typeName(Class<?> type) {
     return type == null ? null : type.getSimpleName();
   }
 
-  private static Map<String, Object> inputSchema(DslObject entity) {
+  private Map<String, Object> inputSchema(DslObject entity) {
     if (entity instanceof ProcessDslObject p) {
       return p.inputType() != null
-              ? JsonSchemaGenerator.generateSchema(p.inputType())
-              : JsonSchemaGenerator.generateSchema(p.parameters());
+              ? jsonSchemaGenerator.generateSchema(p.inputType())
+              : jsonSchemaGenerator.generateSchema(p.parameters());
     }
     if (entity instanceof TransactionDslObject t) {
       return t.inputType() != null
-              ? JsonSchemaGenerator.generateSchema(t.inputType())
-              : JsonSchemaGenerator.generateSchema(t.parameters());
+              ? jsonSchemaGenerator.generateSchema(t.inputType())
+              : jsonSchemaGenerator.generateSchema(t.parameters());
     }
-    return JsonSchemaGenerator.generateSchema((Class<?>) null);
+    return jsonSchemaGenerator.generateSchema((Class<?>) null);
   }
 
   @GetMapping("/processes")

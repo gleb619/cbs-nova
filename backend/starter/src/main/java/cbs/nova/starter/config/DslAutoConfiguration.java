@@ -4,6 +4,7 @@ import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.DslRunRepository;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.HelperInstanceResolver;
+import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.TemporalProcessLauncher;
 import cbs.nova.dsl.TransactionInvoker;
 import cbs.nova.dsl.config.DslConfig;
@@ -35,6 +36,7 @@ public class DslAutoConfiguration {
           ExpressionEvaluator expressionEvaluator,
           TransactionInvoker transactionInvoker,
           TemporalProcessLauncher temporalProcessLauncher,
+          JsonSchemaGenerator jsonSchemaGenerator,
           DslProperties dslProperties) {
     return _ -> {
       var dir = acquireSourceDir(dslProperties.sourceDir());
@@ -45,6 +47,7 @@ public class DslAutoConfiguration {
       registerTemporalProcessLauncher(temporalProcessLauncher);
       registerTransactionInvoker(transactionInvoker);
       registerHelperInstanceResolver(helperInstanceResolver);
+      registerJsonSchemaGenerator(jsonSchemaGenerator);
     };
   }
 
@@ -65,6 +68,12 @@ public class DslAutoConfiguration {
   @ConditionalOnMissingBean(ExpressionEvaluator.class)
   public ExpressionEvaluator expressionEvaluator() {
     return new MvelExpressionEvaluator();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(JsonSchemaGenerator.class)
+  public JsonSchemaGenerator jsonSchemaGenerator() {
+    return DslConfig.dslConfig().jsonSchemaGenerator().get();
   }
 
   private void registerExpressionEvaluator(ExpressionEvaluator expressionEvaluator) {
@@ -88,6 +97,10 @@ public class DslAutoConfiguration {
   private void registerTransactionInvoker(TransactionInvoker transactionInvoker) {
     DslConfig.dslConfig().transactionInvoker()
             .replace(transactionInvoker);
+  }
+
+  private void registerJsonSchemaGenerator(JsonSchemaGenerator jsonSchemaGenerator) {
+    DslConfig.dslConfig().jsonSchemaGenerator().replace(jsonSchemaGenerator);
   }
 
   private Path acquireSourceDir(String sourceDirProperty) {

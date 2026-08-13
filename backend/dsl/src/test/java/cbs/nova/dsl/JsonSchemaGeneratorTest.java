@@ -2,7 +2,9 @@ package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.jsonschema.VictoolsJsonSchemaGenerator;
 import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -22,21 +24,31 @@ class JsonSchemaGeneratorTest {
   private record WithList(List<String> tags, List<Address> addresses) {
   }
 
+  private record WithMap(Map<String, String> metadata) {
+  }
+
   private record Empty() {
   }
 
   private static final String DRAFT_URI = "https://json-schema.org/draft/2020-12/schema";
 
+  private JsonSchemaGenerator generator;
+
+  @BeforeEach
+  void setUp() {
+    generator = new VictoolsJsonSchemaGenerator();
+  }
+
   @Test
   void emptyParametersReturnsGenericObjectSchema() {
-    Map<String, Object> schema = JsonSchemaGenerator.generateSchema(List.of());
+    Map<String, Object> schema = generator.generateSchema(List.of());
     assertThat(schema).containsEntry("$schema", DRAFT_URI).containsEntry("type", "object");
     assertThat(schema).doesNotContainKey("properties");
   }
 
   @Test
   void stringParameter() {
-    Map<String, Object> schema = JsonSchemaGenerator
+    Map<String, Object> schema = generator
             .generateSchema(List.of(ParameterDescriptor.ofString("name")));
     assertSchemaHeader(schema);
     assertThat(schema).hasEntrySatisfying("properties", props -> {
@@ -48,7 +60,7 @@ class JsonSchemaGeneratorTest {
 
   @Test
   void numberParameter() {
-    Map<String, Object> schema = JsonSchemaGenerator
+    Map<String, Object> schema = generator
             .generateSchema(List.of(ParameterDescriptor.ofNumber("amount")));
     assertSchemaHeader(schema);
     assertThat(getProperties(schema)).containsEntry("amount", Map.of("type", "number"));
@@ -57,7 +69,7 @@ class JsonSchemaGeneratorTest {
 
   @Test
   void booleanParameter() {
-    Map<String, Object> schema = JsonSchemaGenerator
+    Map<String, Object> schema = generator
             .generateSchema(List.of(ParameterDescriptor.ofBoolean("flag")));
     assertSchemaHeader(schema);
     assertThat(getProperties(schema)).containsEntry("flag", Map.of("type", "boolean"));
@@ -66,7 +78,7 @@ class JsonSchemaGeneratorTest {
 
   @Test
   void objectParameterWithRecordType() {
-    Map<String, Object> schema = JsonSchemaGenerator
+    Map<String, Object> schema = generator
             .generateSchema(List.of(ParameterDescriptor.ofObject("person", Person.class)));
     assertSchemaHeader(schema);
 
@@ -81,7 +93,7 @@ class JsonSchemaGeneratorTest {
 
   @Test
   void objectParameterWithoutObjectTypeFallsBackToGenericObject() {
-    Map<String, Object> schema = JsonSchemaGenerator.generateSchema(
+    Map<String, Object> schema = generator.generateSchema(
             List.of(new ParameterDescriptor("payload", ParameterType.OBJECT, null)));
     assertSchemaHeader(schema);
     assertThat(getProperties(schema)).containsEntry("payload", Map.of("type", "object"));
@@ -89,7 +101,7 @@ class JsonSchemaGeneratorTest {
 
   @Test
   void mixedParametersKeepOrderAndMarkRequired() {
-    Map<String, Object> schema = JsonSchemaGenerator.generateSchema(
+    Map<String, Object> schema = generator.generateSchema(
             List.of(
                     ParameterDescriptor.ofString("first"),
                     ParameterDescriptor.ofNumber("second"),
@@ -100,7 +112,7 @@ class JsonSchemaGeneratorTest {
 
   @Test
   void recordReflectionMarksNullableFieldsOptional() {
-    Map<String, Object> schema = JsonSchemaGenerator.generateSchema(Person.class);
+    Map<String, Object> schema = generator.generateSchema(Person.class);
     assertSchemaHeader(schema);
     assertThat(getRequired(schema))
             .containsExactly("name", "age", "active")
@@ -114,7 +126,7 @@ class JsonSchemaGeneratorTest {
 
   @Test
   void recordReflectionHandlesNestedRecords() {
-    Map<String, Object> schema = JsonSchemaGenerator.generateSchema(NestedPerson.class);
+    Map<String, Object> schema = generator.generateSchema(NestedPerson.class);
     assertSchemaHeader(schema);
 
     Map<String, Object> addressSchema = getProperty(schema, "address");
@@ -125,7 +137,7 @@ class JsonSchemaGeneratorTest {
 
   @Test
   void recordReflectionHandlesListComponents() {
-    Map<String, Object> schema = JsonSchemaGenerator.generateSchema(WithList.class);
+    Map<String, Object> schema = generator.generateSchema(WithList.class);
     assertSchemaHeader(schema);
 
     Map<String, Object> tagsSchema = getProperty(schema, "tags");
@@ -138,15 +150,24 @@ class JsonSchemaGeneratorTest {
   }
 
   @Test
+  void recordReflectionHandlesMapComponents() {
+    Map<String, Object> schema = generator.generateSchema(WithMap.class);
+    assertSchemaHeader(schema);
+
+    Map<String, Object> metadataSchema = getProperty(schema, "metadata");
+    assertThat(metadataSchema.get("type")).isEqualTo("object");
+  }
+
+  @Test
   void nonRecordClassFallsBackToGenericObject() {
-    Map<String, Object> schema = JsonSchemaGenerator.generateSchema(String.class);
+    Map<String, Object> schema = generator.generateSchema(String.class);
     assertThat(schema).containsEntry("$schema", DRAFT_URI).containsEntry("type", "object");
     assertThat(schema).doesNotContainKey("properties");
   }
 
   @Test
   void recordWithNoComponentsFallsBackToGenericObject() {
-    Map<String, Object> schema = JsonSchemaGenerator.generateSchema(Empty.class);
+    Map<String, Object> schema = generator.generateSchema(Empty.class);
     assertThat(schema).containsEntry("$schema", DRAFT_URI).containsEntry("type", "object");
     assertThat(schema).doesNotContainKey("properties");
   }
@@ -169,6 +190,7 @@ class JsonSchemaGeneratorTest {
   private static List<String> getRequired(Map<String, Object> schema) {
     return (List<String>) schema.get("required");
   }
+
   @SuppressWarnings("unchecked")
   private static Map<String, Object> getProperty(Map<String, Object> schema, String key) {
     return (Map<String, Object>) getProperties(schema).get(key);

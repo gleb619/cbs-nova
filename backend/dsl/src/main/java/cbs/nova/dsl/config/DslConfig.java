@@ -4,9 +4,11 @@ import cbs.nova.dsl.CompensationRegistry;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.HelperInstanceResolver;
 import cbs.nova.dsl.HelperManager;
+import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.RetryPolicy;
 import cbs.nova.dsl.TemporalProcessLauncher;
 import cbs.nova.dsl.TransactionInvoker;
+import cbs.nova.dsl.jsonschema.VictoolsJsonSchemaGenerator;
 import cbs.nova.dsl.process.ProcessManager;
 import cbs.nova.dsl.process.ProcessRunner;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
@@ -82,6 +84,10 @@ public class DslConfig implements SingletonSupport {
 
   public @NonNull HelperRunner helperRunner(@NonNull ContextFactory contextFactory) {
     return singleton(() -> new DefaultHelperRunner(contextFactory));
+  }
+
+  public @NonNull Replaceable<JsonSchemaGenerator> jsonSchemaGenerator() {
+    return singleton("jsonSchemaGenerator", () -> Replaceable.of(VictoolsJsonSchemaGenerator::new));
   }
 
   public @NonNull Replaceable<HelperInstanceResolver> helperInstanceResolver() {

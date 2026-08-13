@@ -39,6 +39,8 @@ temporal-testing = { module = "io.temporal:temporal-testing", version.ref = "tem
 avaje-jsonb = { module = "io.avaje:avaje-jsonb", version.ref = "avaje-jsonb" }
 avaje-jsonb-generator = { module = "io.avaje:avaje-jsonb-generator", version.ref = "avaje-jsonb-generator" }
 orgjson = { module = "org.json:json", version.ref = "orgjson" }
+victools-jsonschema-generator = { module = "com.github.victools:jsonschema-generator", version = "4.31.1" }
+victools-jsonschema-module-jackson = { module = "com.github.victools:jsonschema-module-jackson", version = "4.31.1" }
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind" }
 
 # -- JavaParser (used by dsl-codegen and dsl preprocessing) --

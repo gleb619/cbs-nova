@@ -6,6 +6,8 @@ dependencies {
   api project(":dsl-api")
   implementation libs.slf4j.api
   implementation libs.javaparser
+  implementation libs.victools.jsonschema.generator
+  implementation libs.victools.jsonschema.module.jackson
   annotationProcessor libs.avaje.jsonb.generator
 
   testImplementation platform(libs.junit.bom)
