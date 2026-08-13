@@ -18,7 +18,6 @@ import java.util.Set;
  * proxy. The proxy records every JDBC call (executeQuery / executeUpdate / execute / executeBatch)
  * into the supplied {@link ExternalCallRecorder}.
  */
-// TODO: Usage of reflection is forbidden, add typed handler here
 public class DataSourceProxyBeanPostProcessor implements BeanPostProcessor {
 
   private static final Set<Class<?>> DATA_SOURCE_INTERFACES = Set.of(
@@ -43,7 +42,7 @@ public class DataSourceProxyBeanPostProcessor implements BeanPostProcessor {
     if (classLoader == null) {
       classLoader = DataSourceProxyBeanPostProcessor.class.getClassLoader();
     }
-    ConnectionInvocationHandler handler = new ConnectionInvocationHandler(
+    DataSourceInvocationHandler handler = new DataSourceInvocationHandler(
             dataSource, externalCallRecorder);
     Class<?>[] interfaces = DATA_SOURCE_INTERFACES.toArray(new Class<?>[0]);
     return Proxy.newProxyInstance(classLoader, interfaces, handler);

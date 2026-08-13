@@ -25,10 +25,10 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 /**
- * Pure-unit tests for {@link ConnectionInvocationHandler}. Wraps a Mockito-mocked
- * {@link DataSource} (the only public constructor) and verifies the statement-factory wrapping
- * contract: returned statements are re-proxied through {@link PreparedStatementInvocationHandler}
- * and forward recorded calls to the {@link ExternalCallRecorder} using the factory SQL.
+ * Pure-unit tests for the JDBC capture handlers. Wraps a Mockito-mocked {@link DataSource} with
+ * {@link DataSourceInvocationHandler} and verifies the statement-factory wrapping contract:
+ * returned connections and statements are re-proxied through their typed handlers and recorded
+ * calls flow to the {@link ExternalCallRecorder} using the factory SQL.
  */
 class ConnectionInvocationHandlerTest {
 
@@ -44,7 +44,6 @@ class ConnectionInvocationHandlerTest {
   private CallableStatement callableStatement;
   private Statement statement;
   private DataSource dataSourceProxy;
-  private ConnectionInvocationHandler handler;
 
   @BeforeEach
   void setUp() throws SQLException {
@@ -63,7 +62,8 @@ class ConnectionInvocationHandlerTest {
     when(connection.prepareCall(CALL_SQL)).thenReturn(callableStatement);
     when(connection.createStatement()).thenReturn(statement);
 
-    handler = new ConnectionInvocationHandler(dataSource, externalCallRecorder);
+    DataSourceInvocationHandler handler = new DataSourceInvocationHandler(
+            dataSource, externalCallRecorder);
     dataSourceProxy = (DataSource) Proxy.newProxyInstance(
             getClass().getClassLoader(),
             new Class<?>[]{DataSource.class},
@@ -267,5 +267,48 @@ class ConnectionInvocationHandlerTest {
     verify(externalCallRecorder, times(2)).record(ExternalCallRecorder.TYPE_DATABASE, URL, "SELECT",
             SELECT_SQL);
     verifyNoMoreInteractions(externalCallRecorder);
+  }
+
+  @Test
+  void connectionProxyIdentityMethodsReturnConsistentValues() throws SQLException {
+    Connection conn = wrappedConnection();
+    Connection otherConn = (Connection) Proxy.newProxyInstance(
+            getClass().getClassLoader(),
+            new Class<?>[]{Connection.class},
+            new ConnectionInvocationHandler(connection, externalCallRecorder));
+
+    assertThat(conn.equals(conn)).isTrue();
+    assertThat(conn.equals(connection)).isFalse();
+    assertThat(conn.equals(otherConn)).isFalse();
+    assertThat(conn.hashCode()).isEqualTo(System.identityHashCode(conn));
+    assertThat(conn.toString()).contains("ConnectionProxy");
+  }
+
+  @Test
+  void connectionWrapperMethodsForwardToDelegate() throws SQLException {
+    when(connection.isWrapperFor(Connection.class)).thenReturn(true);
+    when(connection.unwrap(Connection.class)).thenReturn(connection);
+
+    Connection conn = wrappedConnection();
+    boolean wrapper = conn.isWrapperFor(Connection.class);
+    Connection unwrapped = conn.unwrap(Connection.class);
+
+    assertThat(wrapper).isTrue();
+    assertThat(unwrapped).isSameAs(connection);
+    verify(connection).isWrapperFor(Connection.class);
+    verify(connection).unwrap(Connection.class);
+    verifyNoInteractions(externalCallRecorder);
+  }
+
+  @Test
+  void connectionIsClosedForwardsWithoutRecording() throws SQLException {
+    when(connection.isClosed()).thenReturn(true);
+
+    Connection conn = wrappedConnection();
+    boolean closed = conn.isClosed();
+
+    assertThat(closed).isTrue();
+    verify(connection).isClosed();
+    verifyNoInteractions(externalCallRecorder);
   }
 }

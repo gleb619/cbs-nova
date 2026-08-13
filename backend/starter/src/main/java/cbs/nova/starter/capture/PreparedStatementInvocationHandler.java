@@ -5,102 +5,33 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Set;
 
 /**
- * InvocationHandler that records every JDBC execution call made on a proxied
- * {@link java.sql.Statement}, {@link java.sql.PreparedStatement} or
- * {@link java.sql.CallableStatement} into the supplied {@link ExternalCallRecorder}, then delegates
- * the call to the real statement.
- *
- * <p>
- * The captured SQL string is the one passed to the factory method ({@code prepareStatement} /
- * {@code prepareCall}) or, for raw {@link java.sql.Statement#execute(String) Statement.execute}
- * family calls, the SQL supplied as the first argument. The first whitespace-separated token of the
- * SQL (upper-cased) is used as the recorded operation; {@code executeBatch} is always recorded as
- * {@code BATCH}.
+ * Typed {@link InvocationHandler} for a proxied {@link java.sql.Statement},
+ * {@link java.sql.PreparedStatement} or {@link java.sql.CallableStatement}. Records captured JDBC
+ * execution calls into the supplied {@link ExternalCallRecorder} and forwards every other method
+ * via typed calls to the real delegate.
  */
-// TODO: Usage of reflection is forbidden, add typed handler here
 public class PreparedStatementInvocationHandler implements InvocationHandler {
 
-  private static final Set<String> RECORDED_METHODS = Set.of(
-          "executeQuery",
-          "executeUpdate",
-          "execute",
-          "executeBatch",
-          "executeLargeUpdate",
-          "executeLargeBatch");
-
-  private static final String OPERATION_BATCH = "BATCH";
-
   private final Object delegate;
-  private final String sql;
-  private final String target;
-  private final ExternalCallRecorder externalCallRecorder;
+  private final StatementMethodDispatcher dispatcher;
 
   public PreparedStatementInvocationHandler(@NonNull Object delegate, @Nullable String sql,
           @NonNull String target, @NonNull ExternalCallRecorder externalCallRecorder) {
     this.delegate = delegate;
-    this.sql = sql;
-    this.target = target;
-    this.externalCallRecorder = externalCallRecorder;
+    this.dispatcher = new StatementMethodDispatcher(delegate, sql, target, externalCallRecorder);
   }
 
   @Override
   public Object invoke(@NonNull Object proxy, @NonNull Method method, @Nullable Object[] args)
           throws Throwable {
-    if (RECORDED_METHODS.contains(method.getName())) {
-      recordCall(method, args);
-    }
-    try {
-      return method.invoke(delegate, args);
-    } catch (InvocationTargetException ex) {
-      throw ex.getCause();
-    }
-  }
-
-  private void recordCall(@NonNull Method method, @Nullable Object[] args) {
-    String operation;
-    String payload;
-    if ("executeBatch".equals(method.getName()) || "executeLargeBatch".equals(method.getName())) {
-      operation = OPERATION_BATCH;
-      payload = sql;
-    } else {
-      String effectiveSql = sql;
-      if (effectiveSql == null && args != null) {
-        for (Object arg : args) {
-          if (arg instanceof String s) {
-            effectiveSql = s;
-            break;
-          }
-        }
-      }
-      operation = firstSqlToken(effectiveSql);
-      payload = effectiveSql;
-    }
-    // DB response mocking needs the T168 interceptor SPI; this wrapper only observes.
-    externalCallRecorder.findMock(ExternalCallRecorder.TYPE_DATABASE, target, operation);
-    externalCallRecorder.record(ExternalCallRecorder.TYPE_DATABASE, target, operation, payload);
-  }
-
-  private static @NonNull String firstSqlToken(@Nullable String sql) {
-    if (sql == null) {
-      return "UNKNOWN";
-    }
-    String trimmed = sql.trim();
-    if (trimmed.isEmpty()) {
-      return "UNKNOWN";
-    }
-    int idx = 0;
-    while (idx < trimmed.length() && Character.isWhitespace(trimmed.charAt(idx))) {
-      idx++;
-    }
-    int end = idx;
-    while (end < trimmed.length() && !Character.isWhitespace(trimmed.charAt(end))) {
-      end++;
-    }
-    return trimmed.substring(idx, end).toUpperCase();
+    return switch (method.getName()) {
+      case "equals" -> proxy == args[0];
+      case "hashCode" -> System.identityHashCode(proxy);
+      case "toString" -> "StatementProxy[" + delegate + "]";
+      default -> dispatcher.dispatch(method, args);
+    };
   }
 }
