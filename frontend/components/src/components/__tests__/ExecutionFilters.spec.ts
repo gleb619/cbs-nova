@@ -84,4 +84,18 @@ describe('ExecutionFilters', () => {
       },
     ])
   })
+
+  it('offers Stale as a status option and emits it when selected', async () => {
+    const wrapper = mount(ExecutionFilters)
+
+    const statusSelect = wrapper.find('#filter-status')
+    const optionValues = statusSelect.findAll('option').map((o) => o.attributes('value'))
+    expect(optionValues).toContain('Stale')
+
+    await statusSelect.setValue('Stale')
+    await wrapper.find('button').trigger('click')
+
+    expect(wrapper.emitted('filter')).toHaveLength(1)
+    expect(wrapper.emitted('filter')?.[0]).toEqual([{ status: 'Stale' }])
+  })
 })

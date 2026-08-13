@@ -9,6 +9,7 @@ const styles: Record<ExecutionStatus, string> = {
   Completed: 'bg-green-500 text-white',
   Failed: 'bg-red-500 text-white',
   Compensated: 'bg-orange-500 text-white',
+  Stale: 'bg-warning-500 text-white',
 }
 </script>
 

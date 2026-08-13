@@ -52,6 +52,7 @@ function reset() {
           <option value="Completed">Completed</option>
           <option value="Failed">Failed</option>
           <option value="Compensated">Compensated</option>
+          <option value="Stale">Stale</option>
         </select>
       </div>
       <div>

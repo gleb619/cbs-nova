@@ -10,6 +10,7 @@ describe('StatusBadge', () => {
     { status: 'Completed', expectedClasses: ['bg-green-500', 'text-white'] },
     { status: 'Failed', expectedClasses: ['bg-red-500', 'text-white'] },
     { status: 'Compensated', expectedClasses: ['bg-orange-500', 'text-white'] },
+    { status: 'Stale', expectedClasses: ['bg-warning-500', 'text-white'] },
   ])('renders $status with the correct color classes and text', ({ status, expectedClasses }) => {
     const wrapper = mount(StatusBadge, { props: { status } })
 

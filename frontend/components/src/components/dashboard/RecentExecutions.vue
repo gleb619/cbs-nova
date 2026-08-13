@@ -27,6 +27,8 @@ function statusClass(status: ExecutionStatus) {
       return 'bg-red-100 text-red-800'
     case 'RUNNING':
       return 'bg-yellow-100 text-yellow-800'
+    case 'Stale':
+      return 'bg-amber-100 text-amber-800'
     default:
       return 'bg-gray-100 text-gray-800'
   }

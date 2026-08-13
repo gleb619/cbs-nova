@@ -1,4 +1,10 @@
-export type ExecutionStatus = 'Pending' | 'Running' | 'Completed' | 'Failed' | 'Compensated'
+export type ExecutionStatus =
+  | 'Pending'
+  | 'Running'
+  | 'Completed'
+  | 'Failed'
+  | 'Compensated'
+  | 'Stale'
 export type ExecutionMode = 'PREVIEW' | 'RUN' | 'EXPLAIN'
 export type StepType = 'Process' | 'Transaction' | 'Function' | 'Helper'
 
