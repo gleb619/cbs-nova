@@ -71,17 +71,28 @@ public final class DslCompiler {
           String version,
           String targetPackage,
           Level logLevel) throws IOException {
+    compile(srcDir, outputDir, version, targetPackage, logLevel, null);
+  }
+
+  public static void compile(
+          Path srcDir,
+          Path outputDir,
+          String version,
+          String targetPackage,
+          Level logLevel,
+          String classpath) throws IOException {
     CompileConfig.compileConfig(logLevel)
             .dslCompiler()
-            .compileInternal(srcDir, outputDir, version, targetPackage);
+            .compileInternal(srcDir, outputDir, version, targetPackage, classpath);
   }
 
   private void compileInternal(
           @NonNull Path srcDir,
           @NonNull Path outputDir,
           String version,
-          String targetPackage) throws IOException {
-    var options = new SourceCompiler.CompileOptions(version, targetPackage, logLevel);
+          String targetPackage,
+          String classpath) throws IOException {
+    var options = new SourceCompiler.CompileOptions(version, targetPackage, logLevel, classpath);
     List<DslObject> objects = dslSourceCompiler.compileAndLoad(srcDir, outputDir, options);
     List<String> preprocessedSources = preprocessedDslSources(srcDir, targetPackage);
 

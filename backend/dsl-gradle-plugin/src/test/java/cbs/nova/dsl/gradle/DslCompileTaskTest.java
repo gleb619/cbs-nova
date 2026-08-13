@@ -2,6 +2,7 @@ package cbs.nova.dsl.gradle;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.codegen.CompilerConstants;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.Test;
@@ -64,5 +65,32 @@ class DslCompileTaskTest {
             .get();
 
     assertThat(task.getClasspath().getFiles()).containsExactly(fakeJar);
+  }
+
+  @Test
+  void materializesClasspathIntoCompilerClasspathSystemPropertyBeforeExecution() {
+    var project = ProjectBuilder.builder().build();
+    var fakeJar = new File(project.getProjectDir(), "fake.jar");
+    var config = project.getConfigurations().detachedConfiguration(
+            project.getDependencies().create(project.files(fakeJar)));
+    var task = project.getTasks()
+            .register("compileDsl", DslCompileTask.class, t -> {
+              t.setClasspath(config);
+              t.getSourceDir().set(project.file("src"));
+              t.getOutputDir().set(project.getLayout().getBuildDirectory().dir("generated"));
+              t.getBuildVersion().set("");
+              t.getDslPackage().set("");
+            })
+            .get();
+
+    try {
+      task.exec();
+    } catch (Exception expected) {
+      // The JavaExec cannot launch DslCompiler from the fake jar; the classpath system
+      // property is already materialized by the time the process would start.
+    }
+
+    assertThat(task.getSystemProperties()).containsEntry(
+            CompilerConstants.COMPILER_CLASSPATH_PROPERTY, fakeJar.getAbsolutePath());
   }
 }

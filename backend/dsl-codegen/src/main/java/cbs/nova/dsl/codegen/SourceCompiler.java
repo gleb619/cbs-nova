@@ -47,9 +47,7 @@ public final class SourceCompiler {
 
     var dslDir = srcDir.resolve(CompilerConstants.DSL_FOLDER);
     var modelsDir = srcDir.resolve(CompilerConstants.MODELS_FOLDER);
-    // TODO: make var optional, accept from a gradle plugin info about classpath, fallback to a
-    // system property
-    var classpath = System.getProperty("java.class.path");
+    var classpath = resolveClasspath(options);
 
     var dslSources = collectJavaSources(dslDir);
     var modelSources = collectJavaSources(modelsDir);
@@ -281,6 +279,24 @@ public final class SourceCompiler {
             : className;
   }
 
+  private @NonNull String resolveClasspath(CompileOptions options) {
+    if (options != null && options.classpath() != null && !options.classpath().isBlank()) {
+      return options.classpath();
+    }
+    var fromProperty = System.getProperty(CompilerConstants.COMPILER_CLASSPATH_PROPERTY);
+    if (fromProperty != null && !fromProperty.isBlank()) {
+      return fromProperty;
+    }
+    var defaultClasspath = System.getProperty("java.class.path");
+    if (defaultClasspath == null || defaultClasspath.isBlank()) {
+      throw new IllegalStateException(
+              "[SourceCompiler] No classpath available: provide CompileOptions.classpath(), "
+                      + "the '%s' system property, or 'java.class.path'".formatted(
+                              CompilerConstants.COMPILER_CLASSPATH_PROPERTY));
+    }
+    return defaultClasspath;
+  }
+
   @Deprecated(forRemoval = true)
   private @NonNull List<DslObject> loadDefinitions(
           @NonNull Path outputDir,
@@ -324,7 +340,8 @@ public final class SourceCompiler {
   public record CompileOptions(
           String buildVersion,
           String targetPackage,
-          Level logLevel) {
+          Level logLevel,
+          String classpath) {
   }
 
   private record PreprocessedSource(@NonNull String className, @NonNull Path sourceFile) {

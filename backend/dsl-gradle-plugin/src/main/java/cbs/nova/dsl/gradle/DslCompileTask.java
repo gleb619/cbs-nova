@@ -1,5 +1,6 @@
 package cbs.nova.dsl.gradle;
 
+import cbs.nova.dsl.codegen.CompilerConstants;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.CacheableTask;
@@ -86,6 +87,10 @@ public abstract class DslCompileTask extends JavaExec {
     }
 
     setArgs(args);
+    var classpath = getClasspath();
+    if (classpath != null) {
+      systemProperty(CompilerConstants.COMPILER_CLASSPATH_PROPERTY, classpath.getAsPath());
+    }
     super.exec();
   }
 
