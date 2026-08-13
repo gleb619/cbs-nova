@@ -90,12 +90,7 @@ describe('useRunner', () => {
     statusOrder.push(r.status.value as string)
     await p
 
-    expect(getApiMocks().preview).toHaveBeenCalledWith(
-      'previewDef',
-      r.formData.value,
-      undefined,
-      r.mocks.value,
-    )
+    expect(getApiMocks().preview).toHaveBeenCalledWith('previewDef', r.formData.value)
     expect(r.output.value).toMatchObject({
       result: 'r1',
       metadata: { k: 'v' },
@@ -196,62 +191,4 @@ describe('useRunner', () => {
     expect(getApiMocks().run).not.toHaveBeenCalled()
   })
 
-  it('mocks ref resets when selectDefinition is called with a new value', () => {
-    const r = useRunner()
-    r.selectDefinition('defA')
-    r.mocks.value = { 'activity:A:invoke': { result: 'x' } }
-    expect(r.mocks.value).toEqual({ 'activity:A:invoke': { result: 'x' } })
-
-    r.selectDefinition('defB')
-
-    expect(r.mocks.value).toEqual({})
-  })
-
-  it('mocks ref resets when resetOutput is called', () => {
-    const r = useRunner()
-    r.mocks.value = { 'mq:topic:send': { ok: true } }
-    r.resetOutput()
-    expect(r.mocks.value).toEqual({})
-  })
-
-  it('submit() in preview mode forwards non-empty mocks as the 4th preview argument', async () => {
-    const r = useRunner()
-    r.selectDefinition('previewMocks')
-    r.setMode('preview')
-    r.mocks.value = {
-      'activity:MyActivity:invoke': { result: 'mocked' },
-      'mq:orders-topic:send': { ok: true },
-    }
-    getApiMocks().preview.mockResolvedValueOnce({ result: 'ok' })
-
-    await r.submit()
-
-    expect(getApiMocks().preview).toHaveBeenCalledWith(
-      'previewMocks',
-      r.formData.value,
-      undefined,
-      r.mocks.value,
-    )
-    expect(r.mocks.value).toEqual({
-      'activity:MyActivity:invoke': { result: 'mocked' },
-      'mq:orders-topic:send': { ok: true },
-    })
-  })
-
-  it('submit() in preview mode still passes mocks (possibly empty) as the 4th arg', async () => {
-    const r = useRunner()
-    r.selectDefinition('previewNoMocks')
-    r.setMode('preview')
-    // mocks.value remains the default {}
-    getApiMocks().preview.mockResolvedValueOnce({ result: 'ok' })
-
-    await r.submit()
-
-    expect(getApiMocks().preview).toHaveBeenCalledWith(
-      'previewNoMocks',
-      r.formData.value,
-      undefined,
-      {},
-    )
-  })
 })
