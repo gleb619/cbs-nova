@@ -4,13 +4,20 @@ const props = defineProps<{
   readOnly?: boolean
 }>()
 
+const emit = defineEmits<{
+  'update:code': [value: string]
+}>()
+
 const localCode = ref(props.code)
 watch(
   () => props.code,
   (v) => {
-    localCode.value = v
+    if (v !== localCode.value) localCode.value = v
   },
 )
+watch(localCode, (v) => {
+  emit('update:code', v)
+})
 </script>
 
 <template>

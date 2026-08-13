@@ -1,19 +1,48 @@
 <script setup lang="ts">
 import type { DslConstruct, StepDef } from '../../types/dsl'
 
-const props = defineProps<{ construct: DslConstruct | null }>()
+const props = defineProps<{
+  construct: DslConstruct | null
+  /**
+   * Optional controlled body content (e.g. driven by `useWorkbenchDraft`).
+   * When omitted, the editor falls back to its own internal stub state so
+   * existing callers keep working unchanged.
+   */
+  code?: string
+}>()
+
+const emit = defineEmits<{
+  'update:code': [value: string]
+}>()
 
 const tab = ref<'structure' | 'code'>('structure')
 
-// stubs — future: derive from construct introspection
+// stub — future: derive from construct introspection
 const steps = ref<StepDef[]>([])
-const code = ref('')
+
+// Internal fallback body, used only when the caller doesn't pass `code`.
+const internalCode = ref('')
+
+const isControlled = computed(() => props.code !== undefined)
+
+const code = computed<string>({
+  get: () => (isControlled.value ? (props.code ?? '') : internalCode.value),
+  set: (value: string) => {
+    if (isControlled.value) {
+      emit('update:code', value)
+    } else {
+      internalCode.value = value
+    }
+  },
+})
 
 watch(
   () => props.construct?.name,
   () => {
     steps.value = []
-    code.value = ''
+    if (!isControlled.value) {
+      internalCode.value = ''
+    }
   },
   { immediate: true },
 )
@@ -41,7 +70,7 @@ watch(
     </div>
     <div class="flex-1 overflow-auto">
       <StructureTab v-show="tab === 'structure'" :steps="steps" />
-      <CodeTab v-show="tab === 'code'" :code="code" :read-only="!construct" />
+      <CodeTab v-show="tab === 'code'" v-model:code="code" :read-only="!construct" />
     </div>
   </div>
 </template>

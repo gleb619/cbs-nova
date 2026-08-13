@@ -13,6 +13,7 @@ const {
   validateConstruct,
   publishConstruct,
   reloadDefinitions,
+  markDirty,
 } = workbench
 
 const explorerOpen = ref(true)
@@ -23,6 +24,14 @@ const helperSearch = useHelperSearch({
   fetch: async (filters: HelperSearchFilters) =>
     (await dslApi.searchHelpers(filters)) as HelperSearchResult[],
   debounceMs: 250,
+})
+
+const draftName = computed(() => selectedConstruct.value?.name ?? '')
+const { body: draftBody, clearDraft, lastSavedAt: draftSavedAt, restoredFromDraft } =
+  useWorkbenchDraft(draftName)
+
+watch(draftBody, () => {
+  if (selectedConstruct.value) markDirty()
 })
 
 onMounted(() => {
@@ -96,8 +105,11 @@ onMounted(() => {
 
       <main class="flex-1 flex flex-col overflow-hidden">
         <DslMetadataPanel :construct="selectedConstruct" />
+        <div v-if="restoredFromDraft" class="px-3 pt-2">
+          <DslDraftRestoreBanner :saved-at="draftSavedAt" @discard="clearDraft" />
+        </div>
         <div class="flex-1 overflow-hidden">
-          <DslBodyEditor :construct="selectedConstruct" />
+          <DslBodyEditor v-model:code="draftBody" :construct="selectedConstruct" />
         </div>
         <DslProblemsPanel :errors="state.validationErrors" />
       </main>
