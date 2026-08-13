@@ -9,14 +9,15 @@ import cbs.nova.dsl.TransactionInvoker;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dsl.utils.ExpressionEvaluator;
+import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.expression.MvelExpressionEvaluator;
 import cbs.nova.starter.resolver.SpringBeanHelperInstanceResolver;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 
@@ -25,6 +26,7 @@ import java.nio.file.Path;
 
 @Slf4j
 @AutoConfiguration
+@EnableConfigurationProperties(DslProperties.class)
 public class DslAutoConfiguration {
 
   @Bean
@@ -33,10 +35,9 @@ public class DslAutoConfiguration {
           ExpressionEvaluator expressionEvaluator,
           TransactionInvoker transactionInvoker,
           TemporalProcessLauncher temporalProcessLauncher,
-          // TODO: replace with a configuration properties record instead
-          @Value("${dsl.source-dir}") String sourceDirProperty) {
+          DslProperties dslProperties) {
     return _ -> {
-      var dir = acquireSourceDir(sourceDirProperty);
+      var dir = acquireSourceDir(dslProperties.sourceDir());
       new DefinitionLoader().load(dir, GlobalManager.globalManager());
 
       registerHelperResolvers();

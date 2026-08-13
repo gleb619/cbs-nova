@@ -8,12 +8,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import cbs.nova.starter.config.DslWorkerConfiguration;
+import cbs.nova.starter.config.properties.DslProperties;
 import io.temporal.client.WorkflowClient;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.SmartLifecycle;
+import org.springframework.context.annotation.Configuration;
 
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -22,7 +25,7 @@ class DslWorkerConfigurationTest {
   @Test
   void workerBeanNotCreatedWhenDisabled() {
     new ApplicationContextRunner()
-            .withUserConfiguration(DslWorkerConfiguration.class)
+            .withUserConfiguration(DslPropertiesConfiguration.class, DslWorkerConfiguration.class)
             .withPropertyValues("dsl.worker.enabled=false")
             .run(ctx -> assertThat(ctx).doesNotHaveBean(Worker.class));
   }
@@ -30,7 +33,7 @@ class DslWorkerConfigurationTest {
   @Test
   void workerBeanNotCreatedWhenPropertyAbsent() {
     new ApplicationContextRunner()
-            .withUserConfiguration(DslWorkerConfiguration.class)
+            .withUserConfiguration(DslPropertiesConfiguration.class, DslWorkerConfiguration.class)
             .run(ctx -> assertThat(ctx).doesNotHaveBean(Worker.class));
   }
 
@@ -43,7 +46,8 @@ class DslWorkerConfigurationTest {
     try {
       AtomicReference<SmartLifecycle> lifecycleRef = new AtomicReference<>();
       new ApplicationContextRunner()
-              .withUserConfiguration(TestableDslWorkerConfiguration.class, MockWorkflowClient.class)
+              .withUserConfiguration(DslPropertiesConfiguration.class,
+                      TestableDslWorkerConfiguration.class, MockWorkflowClient.class)
               .withPropertyValues("dsl.worker.enabled=true")
               .run(ctx -> {
                 assertThat(ctx).hasSingleBean(Worker.class);
@@ -85,5 +89,10 @@ class DslWorkerConfigurationTest {
     protected WorkerFactory createWorkerFactory(WorkflowClient workflowClient) {
       return OVERRIDE_FACTORY;
     }
+  }
+
+  @Configuration
+  @EnableConfigurationProperties(DslProperties.class)
+  static class DslPropertiesConfiguration {
   }
 }

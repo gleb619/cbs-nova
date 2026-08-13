@@ -4,18 +4,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.starter.config.DslReloadRouterConfiguration;
+import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controllers.DslReloadResource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -28,7 +30,7 @@ class DslReloadResourceTest {
   @BeforeEach
   void setUp() {
     GlobalManager.globalManager().resetForTests();
-    resource = new DslReloadResource();
+    resource = new DslReloadResource(new DslProperties(null, null, null, null));
   }
 
   @AfterEach
@@ -36,10 +38,8 @@ class DslReloadResourceTest {
     GlobalManager.globalManager().resetForTests();
   }
 
-  private void setSourceDir(String value) throws Exception {
-    Field field = DslReloadResource.class.getDeclaredField("sourceDirProperty");
-    field.setAccessible(true);
-    field.set(resource, value);
+  private void setSourceDir(String value) {
+    resource = new DslReloadResource(new DslProperties(value, null, null, null));
   }
 
   private static ServerRequest reloadRequest() {
@@ -64,14 +64,16 @@ class DslReloadResourceTest {
   @Test
   void routerFunctionIsRegisteredByDefault() {
     new ApplicationContextRunner()
-            .withUserConfiguration(DslReloadRouterConfiguration.class, DslReloadResource.class)
+            .withUserConfiguration(DslPropertiesConfiguration.class,
+                    DslReloadRouterConfiguration.class, DslReloadResource.class)
             .run(ctx -> assertThat(ctx).hasSingleBean(RouterFunction.class));
   }
 
   @Test
   void routerFunctionSkippedWhenDisabled() {
     new ApplicationContextRunner()
-            .withUserConfiguration(DslReloadRouterConfiguration.class, DslReloadResource.class)
+            .withUserConfiguration(DslPropertiesConfiguration.class,
+                    DslReloadRouterConfiguration.class, DslReloadResource.class)
             .withPropertyValues("dsl.reload.enabled=false")
             .run(ctx -> assertThat(ctx).doesNotHaveBean(RouterFunction.class));
   }
@@ -123,5 +125,10 @@ class DslReloadResourceTest {
         }
       });
     }
+  }
+
+  @Configuration
+  @EnableConfigurationProperties(DslProperties.class)
+  static class DslPropertiesConfiguration {
   }
 }

@@ -11,9 +11,9 @@ import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
+import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.models.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -48,11 +48,10 @@ public class DslReloadResource {
 
   private static final String RELOAD_TEMP_PREFIX = "dsl-reload-";
 
-  // TODO: replace with a configuration properties record instead
-  @Value("${dsl.source-dir:}")
-  private String sourceDirProperty;
+  private final DslProperties dslProperties;
 
-  public DslReloadResource() {
+  public DslReloadResource(DslProperties dslProperties) {
+    this.dslProperties = dslProperties;
   }
 
   /**
@@ -60,6 +59,7 @@ public class DslReloadResource {
    * the SPI mechanisms {@link DslDefinitionProvider} and {@link HelperResolver}.
    */
   public ServerResponse reload(ServerRequest request) throws IOException {
+    var sourceDirProperty = dslProperties.sourceDir();
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
       return error(HttpStatus.CONFLICT, new ErrorResponse(
               "NOT_CONFIGURED", "dsl.source-dir is not configured", null, null, null));
