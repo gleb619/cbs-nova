@@ -1,10 +1,9 @@
+import cbs.nova.dsl.JsonValue;
 import cbs.nova.dslexamples.HelperPipelineModels.*;
 import cbs.nova.starter.helpers.model.FilterRecordsIn;
 import cbs.nova.starter.helpers.model.FilterRecordsOut;
 import cbs.nova.starter.helpers.model.FormatMessageIn;
 import cbs.nova.starter.helpers.model.FormatMessageOut;
-import cbs.nova.starter.helpers.model.JsonExtractIn;
-import cbs.nova.starter.helpers.model.JsonExtractOut;
 import cbs.nova.starter.helpers.model.SumValuesIn;
 import cbs.nova.starter.helpers.model.SumValuesOut;
 
@@ -41,19 +40,35 @@ List<DslObject> define() {
         }
         FormatMessageOut renderedOut = rendered.as(FormatMessageOut.class);
 
-        var extracted = ctx.runHelper("jsonExtract",
-            new JsonExtractIn(in.payloadJson(), in.extractPath()));
-        if (!extracted.isSuccess()) {
-          return Result.failure(extracted.cause());
+        JsonValue payload = ctx.asJsonValue(in.payloadJson());
+        JsonValue extracted = payload;
+        for (String segment : in.extractPath().split("\\.")) {
+          if (segment.isBlank()) {
+            continue;
+          }
+          if (extracted.isArray()) {
+            int index;
+            try {
+              index = Integer.parseInt(segment);
+            } catch (NumberFormatException e) {
+              extracted = cbs.nova.dsl.json.JsonValues.missing();
+              break;
+            }
+            extracted = extracted.get(index);
+          } else {
+            extracted = extracted.get(segment);
+          }
+          if (!extracted.isPresent()) {
+            break;
+          }
         }
-        JsonExtractOut extractedOut = extracted.as(JsonExtractOut.class);
 
         return Result.success(new PipelineOut(
             matched.size(),
             summedOut.sum().doubleValue(),
             renderedOut.result(),
-            extractedOut.value(),
-            extractedOut.present()));
+            extracted.isPresent() ? extracted.asString() : null,
+            extracted.isPresent()));
       })
       .compensation(ctx -> {
         ctx.log("HelperPipeline compensated: " + ctx.error().getMessage());

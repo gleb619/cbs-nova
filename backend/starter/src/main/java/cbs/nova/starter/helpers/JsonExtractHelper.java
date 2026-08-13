@@ -3,18 +3,20 @@ package cbs.nova.starter.helpers;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Helper;
+import cbs.nova.dsl.JsonValue;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.json.JsonValues;
 import cbs.nova.starter.helpers.model.JsonExtractIn;
 import cbs.nova.starter.helpers.model.JsonExtractOut;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jspecify.annotations.NonNull;
 
-// TODO: for later releases, we need a better json integration, dsl must be a json native. So it
-// must be not a single helper but a core feature, that used in `context`, or be a part of
-// functions. Promoted to a separate kanban task: "Make JSON a first-class DSL citizen (native
-// JSON path/function support)".
+/**
+ * Deprecated facade over the native {@link JsonValue} engine. Retained for backward compatibility
+ * with existing DSL flows; new code should use context/expression JSON access directly.
+ */
+@Deprecated
 @Helper(name = "jsonExtract")
 public class JsonExtractHelper implements Executable<JsonExtractIn, JsonExtractOut> {
 
@@ -35,41 +37,42 @@ public class JsonExtractHelper implements Executable<JsonExtractIn, JsonExtractO
       return Result.success(new JsonExtractOut(null, false));
     }
 
-    JsonNode root;
+    JsonValue value;
     try {
-      root = mapper.readTree(input.json());
-    } catch (JsonProcessingException e) {
-      return Result.failure(new IllegalArgumentException("Invalid JSON: " + e.getMessage()));
+      value = JsonValues.of(input.json(), mapper);
+    } catch (IllegalArgumentException e) {
+      return Result.failure(new IllegalArgumentException("Invalid JSON: " + e.getMessage(), e));
     }
 
-    JsonNode node = navigate(root, input.path().split("\\."));
-    if (node == null || node.isMissingNode()) {
+    JsonValue terminal = navigate(value, input.path().split("\\."));
+    if (!terminal.isPresent()) {
       return Result.success(new JsonExtractOut(null, false));
     }
-    return Result.success(new JsonExtractOut(node.asText(), true));
+    JsonNode raw = (JsonNode) terminal.raw();
+    return Result.success(new JsonExtractOut(raw == null ? null : raw.asText(), true));
   }
 
-  private @NonNull JsonNode navigate(@NonNull JsonNode root, @NonNull String[] segments) {
-    JsonNode current = root;
+  private @NonNull JsonValue navigate(@NonNull JsonValue root, @NonNull String[] segments) {
+    JsonValue current = root;
     for (String segment : segments) {
       if (segment.isBlank()) {
-        return current;
+        continue;
       }
       if (current.isArray()) {
         int index;
         try {
           index = Integer.parseInt(segment);
         } catch (NumberFormatException e) {
-          return current.get(segment);
+          return JsonValues.missing();
         }
         current = current.get(index);
       } else {
         current = current.get(segment);
       }
-      if (current == null) {
+      if (!current.isPresent()) {
         break;
       }
     }
-    return current != null ? current : mapper.missingNode();
+    return current;
   }
 }

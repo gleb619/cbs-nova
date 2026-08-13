@@ -1,5 +1,9 @@
 package cbs.nova.dsl.utils;
 
+import cbs.nova.dsl.JsonValue;
+import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.dsl.json.JsonValues;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
@@ -18,10 +22,18 @@ import java.util.regex.Pattern;
  * Supports mixed-text variable interpolation ({@code {name}}) and arithmetic/string expressions
  * ({@code ${a + b}}). Only basic operators ({@code + - * /}) and parentheses are allowed; no
  * reflection or external calls are performed.
+ *
+ * <p>
+ * JSON-native access is gated behind the explicit {@code .json()} marker:
+ * {@code {body.json().items[0].id}} navigates JSON objects and arrays. Field names and integer
+ * indices may be chained; wildcards and slicing are not supported.
  */
 public final class SimpleExpressionEvaluator implements ExpressionEvaluator {
 
   private static final Pattern PLACEHOLDER = Pattern.compile("(\\$?\\{([^{}]+)\\})");
+  private static final String JSON_MARKER = ".json()";
+
+  private final ObjectMapper mapper = DslConfig.dslConfig().jsonMapper();
 
   @Override
   public @NonNull Object evaluate(@NonNull String expression,
@@ -56,6 +68,10 @@ public final class SimpleExpressionEvaluator implements ExpressionEvaluator {
   }
 
   private String renderValue(Object value) {
+    if (value instanceof JsonValue jsonValue) {
+      String text = jsonValue.asString();
+      return text == null ? "" : text;
+    }
     if (value instanceof BigDecimal bd) {
       return bd.stripTrailingZeros().toPlainString();
     }
@@ -64,11 +80,66 @@ public final class SimpleExpressionEvaluator implements ExpressionEvaluator {
 
   private @NonNull Object resolveVariable(@NonNull String name,
           @NonNull Map<String, Object> variables) {
+    if (name.contains(JSON_MARKER)) {
+      Object resolved = resolveJsonPath(name, variables);
+      return resolved == null ? "" : resolved;
+    }
     if (variables.containsKey(name)) {
       Object value = variables.get(name);
       return value == null ? "" : value;
     }
     return "";
+  }
+
+  private @NonNull Object resolveJsonPath(@NonNull String name,
+          @NonNull Map<String, Object> variables) {
+    int marker = name.indexOf(JSON_MARKER);
+    String rootName = name.substring(0, marker);
+    Object root = variables.get(rootName);
+    if (root == null) {
+      return JsonValues.missing();
+    }
+    JsonValue current = root instanceof JsonValue jsonValue
+            ? jsonValue
+            : JsonValues.of(root, mapper);
+    String remaining = name.substring(marker + JSON_MARKER.length());
+    return navigateJsonPath(current, remaining);
+  }
+
+  private @NonNull JsonValue navigateJsonPath(@NonNull JsonValue initial, @NonNull String path) {
+    JsonValue current = initial;
+    int i = 0;
+    int n = path.length();
+    while (i < n) {
+      char c = path.charAt(i);
+      if (c == '.') {
+        int start = ++i;
+        while (i < n && path.charAt(i) != '.' && path.charAt(i) != '[') {
+          i++;
+        }
+        String field = path.substring(start, i);
+        current = current.get(field);
+      } else if (c == '[') {
+        int end = path.indexOf(']', i);
+        if (end == -1) {
+          throw new IllegalArgumentException("Unterminated array index in JSON path: " + path);
+        }
+        String indexText = path.substring(i + 1, end);
+        int index;
+        try {
+          index = Integer.parseInt(indexText);
+        } catch (NumberFormatException e) {
+          throw new IllegalArgumentException(
+                  "Array index must be an integer in JSON path: " + path);
+        }
+        current = current.get(index);
+        i = end + 1;
+      } else {
+        throw new IllegalArgumentException(
+                "Unexpected character '" + c + "' in JSON path: " + path);
+      }
+    }
+    return current;
   }
 
   private @NonNull Object evalExpression(@NonNull String expression,
@@ -92,7 +163,7 @@ public final class SimpleExpressionEvaluator implements ExpressionEvaluator {
         i++;
         continue;
       }
-      if (c == '\"' || c == '\'') {
+      if (c == '"' || c == '\'') {
         int start = i;
         char quote = c;
         i++;
@@ -125,6 +196,16 @@ public final class SimpleExpressionEvaluator implements ExpressionEvaluator {
         int start = i;
         while (i < n && Character.isJavaIdentifierPart(expression.charAt(i))) {
           i++;
+        }
+        // JSON-native paths are gated behind the explicit .json() marker so that plain dotted
+        // identifiers (e.g. process.env) continue to be rejected as unexpected characters.
+        if (i < n && expression.startsWith(JSON_MARKER, i)) {
+          i += JSON_MARKER.length();
+          while (i < n && (Character.isJavaIdentifierPart(expression.charAt(i))
+                  || expression.charAt(i) == '.' || expression.charAt(i) == '['
+                  || expression.charAt(i) == ']' || Character.isDigit(expression.charAt(i)))) {
+            i++;
+          }
         }
         tokens.add(new Token(TokenType.IDENTIFIER, expression.substring(start, i)));
         continue;
@@ -204,9 +285,30 @@ public final class SimpleExpressionEvaluator implements ExpressionEvaluator {
       return switch (token.type()) {
         case NUMBER -> new BigDecimal(token.text());
         case STRING -> token.text();
-        case IDENTIFIER -> resolveVariable(token.text(), variables);
+        case IDENTIFIER -> unwrapExpressionValue(resolveVariable(token.text(), variables));
         default -> throw new IllegalArgumentException("Unexpected token: " + token.text());
       };
+    }
+
+    private Object unwrapExpressionValue(Object value) {
+      if (value instanceof JsonValue jsonValue && jsonValue.isPresent()) {
+        if (jsonValue.isNull()) {
+          return null;
+        }
+        BigDecimal decimal = jsonValue.asDecimal();
+        if (decimal != null) {
+          return decimal;
+        }
+        Boolean bool = jsonValue.asBoolean();
+        if (bool != null) {
+          return bool;
+        }
+        String string = jsonValue.asString();
+        if (string != null) {
+          return string;
+        }
+      }
+      return value;
     }
 
     private boolean match(String... ops) {
@@ -257,12 +359,29 @@ public final class SimpleExpressionEvaluator implements ExpressionEvaluator {
     }
 
     private boolean isString(Object value) {
-      return value instanceof String;
+      if (value instanceof String) {
+        return true;
+      }
+      if (value instanceof JsonValue jsonValue && jsonValue.isPresent()) {
+        return jsonValue.asDecimal() == null && jsonValue.asBoolean() == null
+                && !jsonValue.isNull();
+      }
+      return false;
     }
 
     private BigDecimal toBigDecimal(Object value) {
       if (value instanceof BigDecimal bd) {
         return bd;
+      }
+      if (value instanceof JsonValue jsonValue && jsonValue.isPresent()) {
+        BigDecimal decimal = jsonValue.asDecimal();
+        if (decimal != null) {
+          return decimal;
+        }
+        String string = jsonValue.asString();
+        if (string != null) {
+          return new BigDecimal(string);
+        }
       }
       if (value instanceof Number n) {
         return BigDecimal.valueOf(n.doubleValue());

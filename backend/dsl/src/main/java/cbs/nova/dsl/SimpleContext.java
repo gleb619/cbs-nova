@@ -1,6 +1,7 @@
 package cbs.nova.dsl;
 
 import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.dsl.json.JsonValues;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
@@ -68,6 +69,16 @@ public final class SimpleContext<T> implements Context<T> {
   }
 
   @Override
+  public @NonNull JsonValue json() {
+    return JsonValues.of(body, DslConfig.dslConfig().jsonMapper());
+  }
+
+  @Override
+  public @NonNull JsonValue json(@Nullable Object value) {
+    return JsonValues.of(value, DslConfig.dslConfig().jsonMapper());
+  }
+
+  @Override
   public @NonNull Object eval(@NonNull String expression) {
     return eval(expression, Map.of());
   }
@@ -77,6 +88,7 @@ public final class SimpleContext<T> implements Context<T> {
           @NonNull Map<String, Object> variables) {
     Map<String, Object> merged = new LinkedHashMap<>();
     merged.putAll(metadata);
+    merged.put("body", body);
     if (body instanceof MapInput mapInput) {
       merged.putAll(mapInput.asMap());
     } else if (body instanceof Map<?, ?> map) {

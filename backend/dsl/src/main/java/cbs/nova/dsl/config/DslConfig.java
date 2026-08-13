@@ -25,6 +25,7 @@ import cbs.nova.dsl.transaction.TransactionManager;
 import cbs.nova.dsl.transaction.TransactionRunner;
 import cbs.nova.dsl.utils.ExpressionEvaluator;
 import cbs.nova.dsl.utils.SimpleExpressionEvaluator;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
@@ -97,6 +98,13 @@ public class DslConfig implements SingletonSupport {
 
   public @NonNull Replaceable<HelperInstanceResolver> helperInstanceResolver() {
     return replaceable("helperInstanceResolver");
+  }
+
+  /**
+   * Returns the default {@link ObjectMapper} used by the DSL JSON runtime.
+   */
+  public @NonNull ObjectMapper jsonMapper() {
+    return singleton(ObjectMapper::new);
   }
 
   public @NonNull GlobalManager globalManager() {

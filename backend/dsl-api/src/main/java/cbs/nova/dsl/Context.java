@@ -26,6 +26,48 @@ public interface Context<T> {
   Context<T> withMetadata(@NonNull String key, @Nullable Object value);
 
   /**
+   * Returns the body as a {@link JsonValue}. Context implementations that do not support JSON
+   * evaluation should override this method.
+   *
+   * @throws UnsupportedOperationException
+   *           if JSON support is not available
+   */
+  @NonNull
+  default JsonValue json() {
+    throw new UnsupportedOperationException(
+            "JSON value access is not available for this context implementation");
+  }
+
+  /**
+   * Alias for {@link #json()} returning the body as a {@link JsonValue}.
+   */
+  @NonNull
+  default JsonValue asJsonValue() {
+    return json();
+  }
+
+  /**
+   * Converts the supplied value into a {@link JsonValue}. Context implementations that do not
+   * support JSON evaluation should override this method.
+   *
+   * @throws UnsupportedOperationException
+   *           if JSON support is not available
+   */
+  @NonNull
+  default JsonValue json(@Nullable Object value) {
+    throw new UnsupportedOperationException(
+            "JSON value access is not available for this context implementation");
+  }
+
+  /**
+   * Alias for {@link #json(Object)} converting the supplied value into a {@link JsonValue}.
+   */
+  @NonNull
+  default JsonValue asJsonValue(@Nullable Object value) {
+    return json(value);
+  }
+
+  /**
    * Evaluates a lightweight sandboxed expression against this context.
    *
    * <p>
