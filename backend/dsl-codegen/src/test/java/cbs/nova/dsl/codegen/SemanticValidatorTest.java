@@ -1,9 +1,12 @@
-package cbs.nova.dsl;
+package cbs.nova.dsl.codegen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 
+import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.Result;
+import cbs.nova.dsl.ValidationException;
 import cbs.nova.dsl.config.DescriptorFactory;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;

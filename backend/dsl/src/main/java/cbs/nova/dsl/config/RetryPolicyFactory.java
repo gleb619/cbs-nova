@@ -1,6 +1,6 @@
 package cbs.nova.dsl.config;
 
-import cbs.nova.dsl.RetryPolicy;
+import cbs.nova.dsl.model.RetryPolicy;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 

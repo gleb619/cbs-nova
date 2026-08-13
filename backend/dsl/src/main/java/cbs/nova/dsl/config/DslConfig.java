@@ -5,10 +5,11 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.HelperInstanceResolver;
 import cbs.nova.dsl.HelperManager;
 import cbs.nova.dsl.JsonSchemaGenerator;
-import cbs.nova.dsl.RetryPolicy;
 import cbs.nova.dsl.TemporalProcessLauncher;
 import cbs.nova.dsl.TransactionInvoker;
+import cbs.nova.dsl.converter.MapInputConverter;
 import cbs.nova.dsl.jsonschema.VictoolsJsonSchemaGenerator;
+import cbs.nova.dsl.model.RetryPolicy;
 import cbs.nova.dsl.process.ProcessManager;
 import cbs.nova.dsl.process.ProcessRunner;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
@@ -52,6 +53,10 @@ public class DslConfig implements SingletonSupport {
 
   public @NonNull ContextFactory contextFactory() {
     return singleton(ContextFactory::new);
+  }
+
+  public @NonNull MapInputConverter mapInputConverter() {
+    return singleton(MapInputConverter::new);
   }
 
   public @NonNull RetryPolicyFactory retryPolicyFactory() {

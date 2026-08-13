@@ -1,6 +1,6 @@
 package cbs.nova.dsl.transaction;
 
-import cbs.nova.dsl.RetryPolicy;
+import cbs.nova.dsl.model.RetryPolicy;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 

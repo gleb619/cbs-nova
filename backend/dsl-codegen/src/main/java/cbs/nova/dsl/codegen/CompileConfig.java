@@ -1,6 +1,6 @@
 package cbs.nova.dsl.codegen;
 
-import cbs.nova.dsl.SemanticValidator;
+import cbs.nova.dsl.codegen.SemanticValidator;
 import cbs.nova.dsl.codegen.generator.DefinitionProviderGenerator;
 import cbs.nova.dsl.codegen.generator.GeneratedClassProviderGenerator;
 import cbs.nova.dsl.codegen.generator.ProcessCodeGenerator;

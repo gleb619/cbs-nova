@@ -17,6 +17,7 @@ public final class CompactSourcePreprocessor {
 
   private static final List<String> DEFAULT_IMPORTS = List.of(
           "import cbs.nova.dsl.*;",
+          "import cbs.nova.dsl.model.*;",
           "import java.time.*;",
           "import java.util.*;",
           "import java.util.stream.*;");

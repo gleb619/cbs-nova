@@ -25,7 +25,6 @@ import org.springframework.context.annotation.Import;
     DryRunLoggingAutoConfiguration.class,
     DslRunRepositoryConfiguration.class,
     TemporalConfiguration.class,
-    PropertyResolverConfiguration.class,
     DslAutoConfiguration.class,
     DslWorkerConfiguration.class,
     DataSourceCallAutoConfiguration.class,

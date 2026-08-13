@@ -1,5 +1,6 @@
-package cbs.nova.dsl;
+package cbs.nova.dsl.codegen;
 
+import cbs.nova.dsl.ValidationException;
 import cbs.nova.dsl.function.FunctionDescriptor;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.registry.HelperRegistry;
@@ -15,7 +16,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-//TODO: move to `backend/dsl-codegen/src/main/java/cbs/nova/dsl/codegen` instead
 public final class SemanticValidator {
 
   public void validate(

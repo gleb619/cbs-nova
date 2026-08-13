@@ -1,6 +1,7 @@
 package cbs.nova.dsl;
 
 import cbs.nova.dsl.config.DslConfig;
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -12,7 +13,8 @@ import java.util.Map;
  * Immutable context implementation. The stored body is returned as-is, so {@link MapInput} bodies
  * remain {@link MapInput} for parameter-based DSL definitions.
  */
-// TODO: Remove extra contructors, add lombok's builder and @RequiredArgsConstructor
+@Builder
+@RequiredArgsConstructor
 public final class SimpleContext<T> implements Context<T> {
 
   private final Object body;
@@ -23,63 +25,6 @@ public final class SimpleContext<T> implements Context<T> {
   private final ExecutionListener executionListener;
   private final DslSaga saga;
   private final ExecutionTraceCollector executionTraceCollector;
-
-  public SimpleContext(
-          @NonNull Object body,
-          @NonNull Map<String, Object> metadata,
-          @NonNull ExecutionMode mode,
-          @NonNull String runId) {
-    this(body, metadata, mode, runId, TransactionRouting.LOCAL, null, null, null);
-  }
-
-  public SimpleContext(
-          @NonNull Object body,
-          @NonNull Map<String, Object> metadata,
-          @NonNull ExecutionMode mode,
-          @NonNull String runId,
-          @NonNull TransactionRouting transactionRouting) {
-    this(body, metadata, mode, runId, transactionRouting, null, null, null);
-  }
-
-  public SimpleContext(
-          @NonNull Object body,
-          @NonNull Map<String, Object> metadata,
-          @NonNull ExecutionMode mode,
-          @NonNull String runId,
-          @NonNull TransactionRouting transactionRouting,
-          @Nullable ExecutionListener executionListener) {
-    this(body, metadata, mode, runId, transactionRouting, executionListener, null, null);
-  }
-
-  public SimpleContext(
-          @NonNull Object body,
-          @NonNull Map<String, Object> metadata,
-          @NonNull ExecutionMode mode,
-          @NonNull String runId,
-          @NonNull TransactionRouting transactionRouting,
-          @Nullable ExecutionListener executionListener,
-          @Nullable DslSaga saga) {
-    this(body, metadata, mode, runId, transactionRouting, executionListener, saga, null);
-  }
-
-  public SimpleContext(
-          @NonNull Object body,
-          @NonNull Map<String, Object> metadata,
-          @NonNull ExecutionMode mode,
-          @NonNull String runId,
-          @NonNull TransactionRouting transactionRouting,
-          @Nullable ExecutionListener executionListener,
-          @Nullable DslSaga saga,
-          @Nullable ExecutionTraceCollector executionTraceCollector) {
-    this.body = body;
-    this.metadata = metadata;
-    this.mode = mode;
-    this.runId = runId;
-    this.transactionRouting = transactionRouting;
-    this.executionListener = executionListener;
-    this.saga = saga;
-    this.executionTraceCollector = executionTraceCollector;
-  }
 
   @Override
   @SuppressWarnings("unchecked")

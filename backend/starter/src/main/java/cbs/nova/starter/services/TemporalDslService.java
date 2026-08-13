@@ -6,7 +6,7 @@ import cbs.nova.dsl.DslTemporalProcessRequest;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.MapInput;
-import cbs.nova.dsl.converter.MapInputConverter;
+import cbs.nova.dsl.config.DslConfig;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.worker.Worker;
@@ -131,12 +131,12 @@ public class TemporalDslService {
   private Object prepareInput(Object input, Class<?> inputType) {
     if (inputType != null) {
       if (input instanceof MapInput mapInput) {
-        return MapInputConverter.convert(mapInput.values(), inputType);
+        return DslConfig.dslConfig().mapInputConverter().convert(mapInput.values(), inputType);
       }
       if (input instanceof Map<?, ?> map) {
         @SuppressWarnings("unchecked")
         Map<String, Object> parameters = (Map<String, Object>) map;
-        return MapInputConverter.convert(parameters, inputType);
+        return DslConfig.dslConfig().mapInputConverter().convert(parameters, inputType);
       }
     }
     return input;

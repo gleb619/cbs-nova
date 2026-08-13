@@ -43,7 +43,6 @@ class DslRootAutoConfigurationTest {
     assertThat(imported).containsExactlyInAnyOrder(
             DryRunLoggingAutoConfiguration.class,
             TemporalConfiguration.class,
-            PropertyResolverConfiguration.class,
             DslAutoConfiguration.class,
             DslWorkerConfiguration.class,
             DslRunRepositoryConfiguration.class,

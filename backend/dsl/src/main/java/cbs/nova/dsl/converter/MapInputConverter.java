@@ -1,8 +1,6 @@
 package cbs.nova.dsl.converter;
 
 import cbs.nova.dsl.MapInput;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -17,13 +15,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-//TODO: convert to a bean, add to config `backend/dsl/src/main/java/cbs/nova/dsl/config/DslConfig.java`
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
-public final class MapInputConverter {
+public class MapInputConverter {
 
   private final AvajeMapConverter avajeMapConverter = AvajeMapConverter.create();
 
-  public static @Nullable Object convert(@Nullable Object value, @NonNull Type targetType) {
+  public @Nullable Object convert(@Nullable Object value, @NonNull Type targetType) {
     if (value == null) {
       return null;
     }
@@ -43,7 +39,7 @@ public final class MapInputConverter {
     return value;
   }
 
-  private static Object toMapInput(Object value) {
+  private Object toMapInput(Object value) {
     if (value instanceof MapInput mapInput) {
       return mapInput;
     }
@@ -55,7 +51,7 @@ public final class MapInputConverter {
     return value;
   }
 
-  private static Object convertToClass(Object value, Class<?> target) {
+  private Object convertToClass(Object value, Class<?> target) {
     if (target.isInstance(value)) {
       return value;
     }
@@ -94,7 +90,7 @@ public final class MapInputConverter {
             "Cannot convert " + value.getClass().getName() + " to " + target.getName());
   }
 
-  private static Object convertToParameterized(Object value, ParameterizedType parameterized) {
+  private Object convertToParameterized(Object value, ParameterizedType parameterized) {
     Type rawType = parameterized.getRawType();
     if (!(rawType instanceof Class<?> rawClass)) {
       return value;
@@ -116,7 +112,7 @@ public final class MapInputConverter {
     return convertToClass(value, rawClass);
   }
 
-  private static Object convertRecord(Object value, Class<?> recordClass) {
+  private Object convertRecord(Object value, Class<?> recordClass) {
     if (!(value instanceof Map<?, ?> source)) {
       throw new IllegalArgumentException(
               "Record " + recordClass.getName() + " requires a Map input, got "
@@ -144,7 +140,7 @@ public final class MapInputConverter {
     }
   }
 
-  private static Object convertArray(Object value, Class<?> componentType) {
+  private Object convertArray(Object value, Class<?> componentType) {
     if (!(value instanceof Collection<?> collection)) {
       throw new IllegalArgumentException(
               "Array target requires a Collection input, got " + value.getClass().getName());
@@ -158,7 +154,7 @@ public final class MapInputConverter {
     return array;
   }
 
-  private static Object convertPrimitive(Object value, Class<?> target) {
+  private Object convertPrimitive(Object value, Class<?> target) {
     if (target == boolean.class || target == Boolean.class) {
       return Boolean.parseBoolean(String.valueOf(value));
     }
@@ -186,7 +182,7 @@ public final class MapInputConverter {
     throw new IllegalArgumentException("Unsupported primitive type: " + target.getName());
   }
 
-  private static boolean isWrapper(Class<?> type) {
+  private boolean isWrapper(Class<?> type) {
     return type == Boolean.class
             || type == Byte.class
             || type == Short.class

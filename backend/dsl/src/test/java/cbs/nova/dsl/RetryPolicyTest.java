@@ -3,6 +3,7 @@ package cbs.nova.dsl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.RetryPolicyFactory;
+import cbs.nova.dsl.model.RetryPolicy;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;

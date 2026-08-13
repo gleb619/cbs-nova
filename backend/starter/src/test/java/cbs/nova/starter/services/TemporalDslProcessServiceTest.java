@@ -8,6 +8,7 @@ import cbs.nova.dsl.DslRunStatus;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.SimpleContext;
+import cbs.nova.dsl.TransactionRouting;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import io.opentelemetry.api.baggage.Baggage;
@@ -56,8 +57,8 @@ class TemporalDslProcessServiceTest {
 
   @Test
   void runProcessSingleArgDefaultsMetadataToEmptyMap() {
-    SimpleContext<Object> stubCtx = new SimpleContext<>(
-            "payload", Map.of(), ExecutionMode.RUN, "run-id-1");
+    SimpleContext<Object> stubCtx = new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
+            "run-id-1", TransactionRouting.LOCAL, null, null, null);
     ContextFactory contextFactory = mockContextFactoryWith("run-id-1", stubCtx);
 
     newService(contextFactory).runProcess(unique(), "payload");
@@ -71,8 +72,8 @@ class TemporalDslProcessServiceTest {
 
   @Test
   void startProcessThreeArgCoercesNullInputToEmptyMap() {
-    SimpleContext<Object> stubCtx = new SimpleContext<>(
-            Map.of(), Map.of("k", "v"), ExecutionMode.RUN, "run-id-2");
+    SimpleContext<Object> stubCtx = new SimpleContext<>(Map.of(), Map.of("k", "v"),
+            ExecutionMode.RUN, "run-id-2", TransactionRouting.LOCAL, null, null, null);
     ContextFactory contextFactory = mockContextFactoryWith("run-id-2", stubCtx);
 
     newService(contextFactory).startProcess(unique(), null, Map.of("k", "v"));
@@ -88,8 +89,8 @@ class TemporalDslProcessServiceTest {
 
   @Test
   void startProcessUsesRunIdGeneratedByContextFactory() {
-    SimpleContext<Object> stubCtx = new SimpleContext<>(
-            "payload", Map.of(), ExecutionMode.RUN, "run-id-3");
+    SimpleContext<Object> stubCtx = new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
+            "run-id-3", TransactionRouting.LOCAL, null, null, null);
     ContextFactory contextFactory = mockContextFactoryWith("run-id-3", stubCtx);
 
     newService(contextFactory).startProcess(unique(), "payload", Map.of());
@@ -120,8 +121,8 @@ class TemporalDslProcessServiceTest {
   @Test
   void startContextCarriesNonEmptyInputThroughToContextFactory() {
     Map<String, Object> input = Map.of("a", 1, "b", "two");
-    SimpleContext<Object> stubCtx = new SimpleContext<>(
-            input, Map.of(), ExecutionMode.RUN, "run-id-4");
+    SimpleContext<Object> stubCtx = new SimpleContext<>(input, Map.of(), ExecutionMode.RUN,
+            "run-id-4", TransactionRouting.LOCAL, null, null, null);
     ContextFactory contextFactory = mockContextFactoryWith("run-id-4", stubCtx);
 
     newService(contextFactory).startProcess(unique(), input, Map.of("meta", "data"));
@@ -135,8 +136,8 @@ class TemporalDslProcessServiceTest {
 
   @Test
   void startProcessPropagatesRunIdToMdcAndSentry() {
-    SimpleContext<Object> stubCtx = new SimpleContext<>(
-            "payload", Map.of(), ExecutionMode.RUN, "run-id-5");
+    SimpleContext<Object> stubCtx = new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
+            "run-id-5", TransactionRouting.LOCAL, null, null, null);
     ContextFactory contextFactory = mockContextFactoryWith("run-id-5", stubCtx);
 
     try (MockedStatic<Sentry> sentry = Mockito.mockStatic(Sentry.class);

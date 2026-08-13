@@ -64,9 +64,7 @@ public final class DefinitionLoader {
     });
   }
 
-  // TODO: experimental
-  @Deprecated(forRemoval = true)
-  public @NonNull List<DslObject> loadObjects(@NonNull Path sourceDir) {
+  private @NonNull List<DslObject> loadObjects(@NonNull Path sourceDir) {
     var compiler = ToolProvider.getSystemJavaCompiler();
     if (compiler == null) {
       throw new IllegalStateException("No system Java compiler available (JDK required)");
@@ -125,7 +123,6 @@ public final class DefinitionLoader {
     return Collections.unmodifiableList(result);
   }
 
-  @Deprecated(forRemoval = true)
   private @NonNull List<DslObject> loadViaReflection(@NonNull Path outputDir,
           @NonNull List<String> classNames) {
     var parent = Thread.currentThread().getContextClassLoader();

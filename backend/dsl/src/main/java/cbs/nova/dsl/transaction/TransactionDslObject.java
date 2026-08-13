@@ -5,8 +5,8 @@ import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.RetryPolicy;
 import cbs.nova.dsl.TransactionContext;
+import cbs.nova.dsl.model.RetryPolicy;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 

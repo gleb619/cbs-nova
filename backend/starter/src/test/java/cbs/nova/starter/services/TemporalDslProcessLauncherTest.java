@@ -18,6 +18,7 @@ import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.SimpleContext;
+import cbs.nova.dsl.TransactionRouting;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import org.junit.jupiter.api.Test;
@@ -49,8 +50,8 @@ class TemporalDslProcessLauncherTest {
     TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(
             mock(WorkflowClient.class), new ObjectMapper(), Duration.ofSeconds(30),
             Duration.ofSeconds(5));
-    SimpleContext<String> ctx = new SimpleContext<>(
-            "body", Map.of(), ExecutionMode.RUN, "rid");
+    SimpleContext<String> ctx = new SimpleContext<>("body", Map.of(), ExecutionMode.RUN, "rid",
+            TransactionRouting.LOCAL, null, null, null);
 
     assertThat(launcher.canRun(ctx)).isTrue();
   }
@@ -61,18 +62,18 @@ class TemporalDslProcessLauncherTest {
             mock(WorkflowClient.class), new ObjectMapper(), Duration.ofSeconds(30),
             Duration.ofSeconds(5));
 
-    assertThat(launcher.canRun(new SimpleContext<>(
-            "body", Map.of(), ExecutionMode.PREVIEW, "rid"))).isFalse();
-    assertThat(launcher.canRun(new SimpleContext<>(
-            "body", Map.of(), ExecutionMode.EXPLAIN, "rid"))).isFalse();
+    assertThat(launcher.canRun(new SimpleContext<>("body", Map.of(), ExecutionMode.PREVIEW, "rid",
+            TransactionRouting.LOCAL, null, null, null))).isFalse();
+    assertThat(launcher.canRun(new SimpleContext<>("body", Map.of(), ExecutionMode.EXPLAIN, "rid",
+            TransactionRouting.LOCAL, null, null, null))).isFalse();
   }
 
   @Test
   void launchBuildsExpectedWorkflowOptions() {
     String name = unique("tl-opts");
     registerDescriptor(name);
-    SimpleContext<String> ctx = new SimpleContext<>(
-            "payload", Map.of(), ExecutionMode.RUN, "rid-launch-1");
+    SimpleContext<String> ctx = new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
+            "rid-launch-1", TransactionRouting.LOCAL, null, null, null);
     LauncherTestProcessImpl impl = new LauncherTestProcessImpl();
     impl.handler = req -> "ok";
 
@@ -100,8 +101,8 @@ class TemporalDslProcessLauncherTest {
   void launchReturnsSuccessForSuccessfulExecution() {
     String name = unique("tl-success");
     registerDescriptor(name);
-    SimpleContext<String> ctx = new SimpleContext<>(
-            "payload", Map.of(), ExecutionMode.RUN, "rid-launch-2");
+    SimpleContext<String> ctx = new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
+            "rid-launch-2", TransactionRouting.LOCAL, null, null, null);
     LauncherTestProcessImpl impl = new LauncherTestProcessImpl();
     impl.handler = req -> "echoed:" + req.payload();
 
@@ -122,8 +123,8 @@ class TemporalDslProcessLauncherTest {
   void launchMapsDslTemporalProcessFailureResultToDslExecutionException() {
     String name = unique("tl-fail-marker");
     registerDescriptor(name);
-    SimpleContext<String> ctx = new SimpleContext<>(
-            "payload", Map.of(), ExecutionMode.RUN, "rid-launch-3");
+    SimpleContext<String> ctx = new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
+            "rid-launch-3", TransactionRouting.LOCAL, null, null, null);
     LauncherTestProcessImpl impl = new LauncherTestProcessImpl();
     impl.handler = req -> new DslTemporalProcessFailure("the-message", "the-detail");
 
@@ -147,8 +148,8 @@ class TemporalDslProcessLauncherTest {
   void launchWrapsThrownExceptionInDslExecutionExceptionWithUnwrappedCause() {
     String name = unique("tl-throws");
     registerDescriptor(name);
-    SimpleContext<String> ctx = new SimpleContext<>(
-            "payload", Map.of(), ExecutionMode.RUN, "rid-launch-4");
+    SimpleContext<String> ctx = new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
+            "rid-launch-4", TransactionRouting.LOCAL, null, null, null);
     LauncherTestProcessImpl impl = new LauncherTestProcessImpl();
     IllegalStateException inner = new IllegalStateException("inner-boom");
     impl.handler = req -> {
@@ -175,8 +176,8 @@ class TemporalDslProcessLauncherTest {
   void launchConvertsResultToDeclaredOutputTypeWhenNotAlreadyInstance() {
     String name = unique("tl-convert");
     registerDescriptor(name);
-    SimpleContext<Map<String, Object>> ctx = new SimpleContext<>(
-            Map.of(), Map.of(), ExecutionMode.RUN, "rid-launch-5");
+    SimpleContext<Map<String, Object>> ctx = new SimpleContext<>(Map.of(), Map.of(),
+            ExecutionMode.RUN, "rid-launch-5", TransactionRouting.LOCAL, null, null, null);
     LauncherTestProcessImpl impl = new LauncherTestProcessImpl();
     impl.handler = req -> Map.of("a", 1, "b", "two");
 
@@ -201,8 +202,8 @@ class TemporalDslProcessLauncherTest {
     WorkflowClient client = mock(WorkflowClient.class);
     TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(client,
             new ObjectMapper(), Duration.ofSeconds(30), Duration.ofSeconds(5));
-    SimpleContext<String> ctx = new SimpleContext<>(
-            "payload", Map.of(), ExecutionMode.RUN, "rid-launch-6");
+    SimpleContext<String> ctx = new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
+            "rid-launch-6", TransactionRouting.LOCAL, null, null, null);
     String missing = unique("missing");
 
     assertThatThrownBy(() -> launcher.launch(missing, "tq", null, null, ctx))
