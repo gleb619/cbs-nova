@@ -38,15 +38,22 @@ public class DslCompilerPlugin implements Plugin<Project> {
     // "group", "org.springframework.boot",
     // "module", "spring-boot-starter-logging"));
 
-    dslCompiler.defaultDependencies(dependencies -> {
-      var version = extension.getDslVersion().get();
-      dependencies.add(project.getDependencies().create("cbs.nova:dsl-codegen:" + version));
-      dependencies.add(project.getDependencies().create("cbs.nova:dsl:" + version));
-      dependencies.add(project.getDependencies().create("cbs.nova:dsl-api:" + version));
-      // TODO: starter module is optional, it could be some other, we need a config at
-      // `DslCompileExtension`/`DslCompileTask` for that
-      dependencies.add(project.getDependencies().create("cbs.nova:starter:" + version));
-    });
+    dslCompiler.getDependencies().addLater(
+            extension.getDslVersion()
+                    .map(v -> project.getDependencies().create("cbs.nova:dsl-codegen:" + v)));
+    dslCompiler.getDependencies().addLater(
+            extension.getDslVersion()
+                    .map(v -> project.getDependencies().create("cbs.nova:dsl:" + v)));
+    dslCompiler.getDependencies().addLater(
+            extension.getDslVersion()
+                    .map(v -> project.getDependencies().create("cbs.nova:dsl-api:" + v)));
+    dslCompiler.getDependencies().addLater(extension
+            .getRuntimeModule().zip(extension.getDslVersion(),
+                    (runtimeModule, v) -> runtimeModule.isBlank()
+                            ? null
+                            : project.getDependencies()
+                                    .create("cbs.nova:" + runtimeModule + ":" + v))
+            .filter(java.util.Objects::nonNull));
 
     var compileDsl = project.getTasks().register("compileDsl", DslCompileTask.class, task -> {
       task.setGroup("build");
@@ -56,6 +63,7 @@ public class DslCompilerPlugin implements Plugin<Project> {
       task.getDslPackage().set(extension.getDslPackage());
       task.getBuildVersion().set(extension.getBuildVersion());
       task.getLogLevel().set(extension.getLogLevel());
+      task.getRuntimeModule().convention(extension.getRuntimeModule());
       task.setClasspath(dslCompiler);
     });
 

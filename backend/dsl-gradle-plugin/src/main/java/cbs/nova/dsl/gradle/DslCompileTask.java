@@ -41,6 +41,10 @@ public abstract class DslCompileTask extends JavaExec {
   @Optional
   public abstract Property<String> getLogLevel();
 
+  @Input
+  @Optional
+  public abstract Property<String> getRuntimeModule();
+
   @Inject
   public abstract ExecOperations getExecOperations();
 

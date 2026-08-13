@@ -68,6 +68,20 @@ class DslCompileTaskTest {
   }
 
   @Test
+  void runtimeModuleConventionedFromExtension() {
+    var project = ProjectBuilder.builder().build();
+    project.getPlugins().apply(DslCompilerPlugin.class);
+    var task = project.getTasks().named("compileDsl", DslCompileTask.class).get();
+    var extension = project.getExtensions().getByType(DslCompileExtension.class);
+
+    assertThat(task.getRuntimeModule().get()).isEqualTo(extension.getRuntimeModule().get());
+    assertThat(task.getRuntimeModule().get()).isEqualTo("starter");
+
+    extension.getRuntimeModule().set("my-runtime");
+    assertThat(task.getRuntimeModule().get()).isEqualTo("my-runtime");
+  }
+
+  @Test
   void materializesClasspathIntoCompilerClasspathSystemPropertyBeforeExecution() {
     var project = ProjectBuilder.builder().build();
     var fakeJar = new File(project.getProjectDir(), "fake.jar");

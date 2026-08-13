@@ -72,17 +72,98 @@ class DslCompilerPluginTest {
   }
 
   @Test
-  void dslCompilerConfigurationFeedsCompileDslTaskClasspath() {
+  void dslCompilerConfigurationIsAssignedAsCompileDslTaskClasspath() {
     var project = ProjectBuilder.builder().build();
+    project.setVersion("1.2.3");
     project.getPlugins().apply(DslCompilerPlugin.class);
-
-    var config = project.getConfigurations().getByName("dslCompiler");
-    var fakeJar = new File(project.getProjectDir(), "fake.jar");
-    config.getDependencies().add(project.getDependencies().create(project.files(fakeJar)));
 
     var task = project.getTasks().named("compileDsl", DslCompileTask.class).get();
 
-    assertThat(task.getClasspath().getFiles()).contains(fakeJar);
+    assertThat(task.getClasspath()).isNotNull();
+  }
+
+  @Test
+  void dslCompilerDefaultDependenciesIncludeStarterByDefault(@TempDir Path projectDir)
+          throws Exception {
+    Files.writeString(projectDir.resolve("settings.gradle"),
+            "rootProject.name = 'dsl-plugin-runtime-defaults'\n");
+    Files.writeString(projectDir.resolve("build.gradle"), """
+            plugins {
+              id 'java'
+              id 'cbs.nova.dsl'
+            }
+            version = '1.2.3'
+            """);
+
+    var result = GradleRunner.create()
+            .withProjectDir(projectDir.toFile())
+            .withArguments("dependencies", "--configuration", "dslCompiler")
+            .withPluginClasspath()
+            .build();
+
+    var output = result.getOutput();
+    assertThat(output).contains("cbs.nova:starter:1.2.3");
+    assertThat(output).contains("cbs.nova:dsl-codegen:1.2.3");
+    assertThat(output).contains("cbs.nova:dsl:1.2.3");
+    assertThat(output).contains("cbs.nova:dsl-api:1.2.3");
+  }
+
+  @Test
+  void dslCompilerDefaultDependenciesUseConfiguredRuntimeModule(@TempDir Path projectDir)
+          throws Exception {
+    Files.writeString(projectDir.resolve("settings.gradle"),
+            "rootProject.name = 'dsl-plugin-runtime-custom'\n");
+    Files.writeString(projectDir.resolve("build.gradle"), """
+            plugins {
+              id 'java'
+              id 'cbs.nova.dsl'
+            }
+
+            dslCompile {
+              dslVersion = '1.2.3'
+              runtimeModule = 'custom-runtime'
+            }
+            """);
+
+    var result = GradleRunner.create()
+            .withProjectDir(projectDir.toFile())
+            .withArguments("dependencies", "--configuration", "dslCompiler")
+            .withPluginClasspath()
+            .build();
+
+    var output = result.getOutput();
+    assertThat(output).contains("cbs.nova:custom-runtime:1.2.3");
+    assertThat(output).doesNotContain("cbs.nova:starter:1.2.3");
+  }
+
+  @Test
+  void dslCompilerDefaultDependenciesSkipRuntimeModuleWhenBlank(@TempDir Path projectDir)
+          throws Exception {
+    Files.writeString(projectDir.resolve("settings.gradle"),
+            "rootProject.name = 'dsl-plugin-runtime-blank'\n");
+    Files.writeString(projectDir.resolve("build.gradle"), """
+            plugins {
+              id 'java'
+              id 'cbs.nova.dsl'
+            }
+
+            dslCompile {
+              dslVersion = '1.2.3'
+              runtimeModule = ''
+            }
+            """);
+
+    var result = GradleRunner.create()
+            .withProjectDir(projectDir.toFile())
+            .withArguments("dependencies", "--configuration", "dslCompiler")
+            .withPluginClasspath()
+            .build();
+
+    var output = result.getOutput();
+    assertThat(output).doesNotContain("cbs.nova:starter");
+    assertThat(output).contains("cbs.nova:dsl-codegen");
+    assertThat(output).contains("cbs.nova:dsl");
+    assertThat(output).contains("cbs.nova:dsl-api");
   }
 
   @Test

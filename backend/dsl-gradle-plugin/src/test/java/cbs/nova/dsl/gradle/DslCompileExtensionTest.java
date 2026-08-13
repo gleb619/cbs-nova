@@ -24,5 +24,6 @@ class DslCompileExtensionTest {
     assertThat(extension.getDslPackage().get()).isEmpty();
     assertThat(extension.getBuildVersion().get()).isEmpty();
     assertThat(extension.getLogLevel().get()).isEqualTo("TRACE");
+    assertThat(extension.getRuntimeModule().get()).isEqualTo("starter");
   }
 }
