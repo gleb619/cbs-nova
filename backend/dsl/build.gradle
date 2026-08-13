@@ -8,6 +8,7 @@ dependencies {
   implementation libs.javaparser
   implementation libs.victools.jsonschema.generator
   implementation libs.victools.jsonschema.module.jackson
+  implementation libs.jackson.databind
   annotationProcessor libs.avaje.jsonb.generator
 
   testImplementation platform(libs.junit.bom)
