@@ -1,8 +1,8 @@
 package cbs.nova.dsl;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.registry.DefaultCompensationRegistry;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import org.junit.jupiter.api.Test;
@@ -12,7 +12,7 @@ import java.util.ArrayList;
 class DefaultTransactionRunnerTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
-  private final CompensationRegistry compensationRegistry = new CompensationRegistry();
+  private final CompensationRegistry compensationRegistry = new DefaultCompensationRegistry();
 
   private final DefaultTransactionRunner runner = new DefaultTransactionRunner(contextFactory,
           compensationRegistry);

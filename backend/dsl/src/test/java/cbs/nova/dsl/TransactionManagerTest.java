@@ -1,8 +1,8 @@
 package cbs.nova.dsl;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.registry.DefaultCompensationRegistry;
 import cbs.nova.dsl.registry.DefaultTransactionRegistry;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
 import cbs.nova.dsl.transaction.TransactionDslObject;
@@ -19,7 +19,7 @@ class TransactionManagerTest {
   @BeforeEach
   void setUp() {
     manager = new TransactionManager(new DefaultTransactionRegistry(),
-            new DefaultTransactionRunner(contextFactory, new CompensationRegistry()));
+            new DefaultTransactionRunner(contextFactory, new DefaultCompensationRegistry()));
   }
 
   private TransactionDslObject tx(String name) {

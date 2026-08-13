@@ -1,8 +1,8 @@
 package cbs.nova.dsl;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.registry.DefaultCompensationRegistry;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
 import cbs.nova.dsl.transaction.TransactionRunner;
 import org.jspecify.annotations.NonNull;
@@ -14,7 +14,7 @@ class TransactionExecutionListenerTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
   private final TransactionRunner runner = new DefaultTransactionRunner(contextFactory,
-          new CompensationRegistry());
+          new DefaultCompensationRegistry());
 
   @Test
   void successfulTransactionNotifiesListener() {

@@ -1,9 +1,9 @@
 package cbs.nova.dsl;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.process.ProcessRunner;
+import cbs.nova.dsl.registry.DefaultCompensationRegistry;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
 import cbs.nova.dsl.runner.DefaultHelperRunner;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 class RunnerTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
-  private final CompensationRegistry compensationRegistry = new CompensationRegistry();
+  private final CompensationRegistry compensationRegistry = new DefaultCompensationRegistry();
   private final ProcessRunner processRunner = new DefaultProcessRunner(contextFactory,
           compensationRegistry);
   private final TransactionRunner txRunner = new DefaultTransactionRunner(contextFactory,

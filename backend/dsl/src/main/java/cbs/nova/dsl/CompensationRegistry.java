@@ -2,93 +2,66 @@ package cbs.nova.dsl;
 
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.transaction.TransactionDslObject;
-import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+/**
+ * Per-run registry of transaction compensations.
+ *
+ * <p>
+ * Implementations must be thread-safe. All public methods establish happens-before edges through
+ * concurrent collections, so actions in a successfully executed compensation are visible to
+ * subsequent callers.
+ *
+ * <p>
+ * Each compensation entry is executed at most once: even if {@link #compensate} and
+ * {@link #compensateAll} race for the same entry, only one caller will win and run it; after it has
+ * been removed from the registry it will never run again.
+ *
+ * <p>
+ * Compensations are stored per {@code runId}. {@link #clear()} drops every known run.
+ */
+public interface CompensationRegistry {
 
-//TODO: add interface, remove usage of `synchronized`
-@RequiredArgsConstructor
-public final class CompensationRegistry {
-
-  private final Map<String, List<CompensationEntry>> entries = new ConcurrentHashMap<>();
-
-  public boolean register(
+  /**
+   * Registers the compensation of {@code transaction} for {@code runId}.
+   *
+   * @return {@code true} if a compensation logic exists and was stored, {@code false} otherwise
+   */
+  boolean register(
           @NonNull String transactionName,
           @NonNull String runId,
           @NonNull Context<?> baseCtx,
-          @NonNull TransactionDslObject transaction) {
-    if (transaction.compensationLogic() == null) {
-      return false;
-    }
-    entries.computeIfAbsent(key(runId), k -> Collections.synchronizedList(new ArrayList<>()))
-            .add(new CompensationEntry(transactionName, transaction, baseCtx));
-    return true;
-  }
+          @NonNull TransactionDslObject transaction);
 
-  public void compensate(
+  /**
+   * Finds the most recently registered matching compensation for {@code transactionName} and
+   * {@code runId}, removes it, and executes it with the supplied error.
+   *
+   * <p>
+   * If no matching compensation exists, this method does nothing.
+   */
+  void compensate(
           @NonNull String transactionName,
           @NonNull String runId,
           @NonNull Throwable error,
-          @NonNull ContextFactory contextFactory) {
-    var list = entries.get(key(runId));
-    if (list == null) {
-      return;
-    }
-    synchronized (list) {
-      for (int i = list.size() - 1; i >= 0; i--) {
-        var entry = list.get(i);
-        if (entry.transactionName().equals(transactionName)) {
-          list.remove(i);
-          entry.run(error, contextFactory);
-          return;
-        }
-      }
-    }
-  }
+          @NonNull ContextFactory contextFactory);
 
-  public void compensateAll(
+  /**
+   * Removes and executes every compensation registered for {@code runId} in reverse registration
+   * order (LIFO).
+   *
+   * <p>
+   * Entries that have already been executed by a concurrent {@link #compensate} call are skipped so
+   * that each compensation runs at most once.
+   */
+  void compensateAll(
           @NonNull String runId,
           @NonNull Throwable error,
-          @NonNull ContextFactory contextFactory) {
-    var list = entries.remove(key(runId));
-    if (list == null) {
-      return;
-    }
-    synchronized (list) {
-      for (int i = list.size() - 1; i >= 0; i--) {
-        list.get(i).run(error, contextFactory);
-      }
-    }
-  }
+          @NonNull ContextFactory contextFactory);
 
-  public boolean hasCompensation(@NonNull String runId) {
-    var list = entries.get(key(runId));
-    return list != null && !list.isEmpty();
-  }
+  /** Returns {@code true} if there is at least one pending compensation for {@code runId}. */
+  boolean hasCompensation(@NonNull String runId);
 
-  public void clear() {
-    entries.clear();
-  }
-
-  private static String key(String runId) {
-    return runId;
-  }
-
-  private record CompensationEntry(
-          String transactionName,
-          TransactionDslObject transaction,
-          Context<?> baseCtx) {
-
-    void run(
-            Throwable error,
-            ContextFactory contextFactory) {
-      var compCtx = new CompensationRichContext<>(baseCtx, error, contextFactory);
-      transaction.compensationLogic().apply(compCtx);
-    }
-  }
+  /** Clears all pending compensations for all runs. */
+  void clear();
 }

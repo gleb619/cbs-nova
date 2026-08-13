@@ -1,15 +1,23 @@
 package cbs.nova.dsl;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.registry.DefaultCompensationRegistry;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
@@ -21,7 +29,7 @@ class CompensationRegistryTest {
 
   @BeforeEach
   void setUp() {
-    registry = new CompensationRegistry();
+    registry = new DefaultCompensationRegistry();
   }
 
   @Test
@@ -198,5 +206,80 @@ class CompensationRegistryTest {
       }
       return Result.success(null);
     };
+  }
+
+  @Test
+  void concurrentRegisterAndCompensateAllIsSafeLifoAndExactlyOnce() throws InterruptedException {
+    int runCount = 5;
+    int entriesPerRun = 50;
+    int registerThreads = 4;
+    int compensateThreads = 4;
+
+    @SuppressWarnings("unchecked")
+    List<String>[] registeredOrder = new List[runCount];
+    @SuppressWarnings("unchecked")
+    List<String>[] executedOrder = new List[runCount];
+    for (int i = 0; i < runCount; i++) {
+      registeredOrder[i] = Collections.synchronizedList(new ArrayList<>());
+      executedOrder[i] = Collections.synchronizedList(new ArrayList<>());
+    }
+
+    var firedMarkers = new ConcurrentHashMap<String, AtomicInteger>();
+
+    CountDownLatch registeredLatch = new CountDownLatch(runCount * entriesPerRun);
+    ExecutorService registerPool = Executors.newFixedThreadPool(registerThreads);
+    for (int run = 0; run < runCount; run++) {
+      for (int entry = 0; entry < entriesPerRun; entry++) {
+        final int runIndex = run;
+        final int entryIndex = entry;
+        registerPool.submit(() -> {
+          var runId = "concurrent-run-" + runIndex;
+          var marker = "R" + runIndex + "-T" + entryIndex;
+          var ctx = contextFactory.of("body", ExecutionMode.RUN, runId);
+          var tx = tx(marker, _ctx -> {
+            executedOrder[runIndex].add(marker);
+            firedMarkers.computeIfAbsent(marker, _ -> new AtomicInteger(0)).incrementAndGet();
+            return Result.success(null);
+          });
+          synchronized (registeredOrder[runIndex]) {
+            registeredOrder[runIndex].add(marker);
+            registry.register(marker, runId, ctx, tx);
+          }
+          registeredLatch.countDown();
+        });
+      }
+    }
+    assertThat(registeredLatch.await(10, TimeUnit.SECONDS)).isTrue();
+
+    CountDownLatch compensatedLatch = new CountDownLatch(compensateThreads);
+    ExecutorService compensatePool = Executors.newFixedThreadPool(compensateThreads);
+    for (int i = 0; i < compensateThreads; i++) {
+      compensatePool.submit(() -> {
+        try {
+          for (int run = 0; run < runCount; run++) {
+            registry.compensateAll("concurrent-run-" + run, new RuntimeException("boom"),
+                    contextFactory);
+          }
+        } finally {
+          compensatedLatch.countDown();
+        }
+      });
+    }
+    assertThat(compensatedLatch.await(10, TimeUnit.SECONDS)).isTrue();
+
+    for (int run = 0; run < runCount; run++) {
+      var expected = new ArrayList<>(registeredOrder[run]);
+      Collections.reverse(expected);
+      assertThat(executedOrder[run]).containsExactlyElementsOf(expected);
+      assertThat(registry.hasCompensation("concurrent-run-" + run)).isFalse();
+    }
+
+    assertThat(firedMarkers).hasSize(runCount * entriesPerRun);
+    firedMarkers.values().forEach(counter -> assertThat(counter.get()).isEqualTo(1));
+
+    registerPool.shutdown();
+    compensatePool.shutdown();
+    assertThat(registerPool.awaitTermination(5, TimeUnit.SECONDS)).isTrue();
+    assertThat(compensatePool.awaitTermination(5, TimeUnit.SECONDS)).isTrue();
   }
 }

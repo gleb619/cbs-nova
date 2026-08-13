@@ -1,9 +1,9 @@
 package cbs.nova.dsl;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.process.ProcessRunner;
+import cbs.nova.dsl.registry.DefaultCompensationRegistry;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
 import org.junit.jupiter.api.Test;
 
@@ -13,7 +13,7 @@ class CompensationExecutionModeTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
   private final ProcessRunner runner = new DefaultProcessRunner(contextFactory,
-          new CompensationRegistry());
+          new DefaultCompensationRegistry());
 
   @Test
   void compensationBlockSeesCompensationMode() {

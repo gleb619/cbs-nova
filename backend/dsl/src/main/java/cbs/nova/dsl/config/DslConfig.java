@@ -9,6 +9,7 @@ import cbs.nova.dsl.TemporalProcessLauncher;
 import cbs.nova.dsl.TransactionInvoker;
 import cbs.nova.dsl.process.ProcessManager;
 import cbs.nova.dsl.process.ProcessRunner;
+import cbs.nova.dsl.registry.DefaultCompensationRegistry;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
 import cbs.nova.dsl.registry.DefaultProcessRegistry;
 import cbs.nova.dsl.registry.DefaultTransactionRegistry;
@@ -103,7 +104,7 @@ public class DslConfig implements SingletonSupport {
   }
 
   public @NonNull CompensationRegistry compensationRegistry() {
-    return singleton(CompensationRegistry::new);
+    return singleton(DefaultCompensationRegistry::new);
   }
 
   /* ============= */
