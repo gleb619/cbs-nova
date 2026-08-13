@@ -52,6 +52,29 @@ set, the plugin resolves the current git short SHA at execution time.
 The `logLevel` is passed to the compiler process as a JVM system property and as the last
 positional argument. It controls the SLF4J/simple logger level. The default is `TRACE`.
 
+By default the plugin adds `cbs.nova:starter:${dslVersion}` to the `dslCompiler` configuration
+so the compiler can resolve the runtime conventions contributed by `starter`. Configure which
+runtime module is added via the `runtimeModule` property:
+
+```groovy
+dslCompile {
+  runtimeModule = 'dsl-runtime'          // replaces 'starter' (default)
+  runtimeModule = ''                     // opt out: add the runtime dependency manually
+}
+```
+
+When `runtimeModule` is empty the plugin adds no automatic runtime dependency. Declare the
+runtime modules you need directly on the `dslCompiler` configuration:
+
+```groovy
+dependencies {
+  dslCompiler project(':dsl-runtime')
+}
+```
+
+The same `runtimeModule` property is wired onto the `compileDsl` task via convention, so the
+configured runtime is visible to the task's input fingerprint.
+
 ## Tasks
 
 - `compileDsl` — compacts DSL and model sources with `cbs.nova.dsl.codegen.DslCompiler`

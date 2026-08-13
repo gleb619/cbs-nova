@@ -27,10 +27,6 @@ dependencies {
   implementation libs.avaje.jsonb
   annotationProcessor libs.avaje.jsonb.generator
 
-  dslCompiler project(':dsl-api')
-  dslCompiler project(':dsl')
-  dslCompiler project(':dsl-codegen')
-  dslCompiler project(':starter')
   dslCompiler libs.avaje.jsonb.generator
 
 //  compileOnly files(layout.buildDirectory.dir('generated').get().asFile)
