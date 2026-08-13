@@ -23,20 +23,22 @@ public final class ExecutionTreeStage implements DslPipeStage {
       return next.proceed(context);
     }
     ExecutionTreeCollector collector = new ExecutionTreeCollector(maxDepth);
-    collector.startRun(context.getRunId());
+    collector.start();
+    Context<?> original = context.getDslContext();
     Context<?> modeCtx = contextFactory.of(
-            context.getDslContext().body(),
-            context.getDslContext().metadata(),
+            original.body(),
+            original.metadata(),
             context.getMode(),
             context.getRunId(),
-            context.getDslContext().transactionRouting())
-            .withExecutionListener(collector);
+            original.transactionRouting())
+            .withExecutionListener(collector)
+            .withExecutionTraceCollector(original.executionTraceCollector());
     DslPipeContext wrappedContext = context.withDslContext(modeCtx);
     try {
       return next.proceed(wrappedContext);
     } finally {
-      collector.finishRun(context.getRunId());
-      context.setAttribute("astTree", collector.tree(context.getRunId()).orElse(null));
+      collector.finish();
+      context.setAttribute("astTree", collector.tree().orElse(null));
     }
   }
 }

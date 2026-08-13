@@ -7,7 +7,6 @@ import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.DslTemporalProcessRequest;
 import cbs.nova.dsl.Executable;
-import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.HelperInstanceResolver;
@@ -160,9 +159,8 @@ class DslVersioningIntegrationTest {
 
   @Test
   void inFlightWorkflowKeepsUsingOriginalDslVersionAfterReload() throws Exception {
-    var service = new TemporalDslProcessService(
-            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
-            new ExecutionTraceCollector());
+    var service = new TemporalDslProcessService(new ContextFactory(),
+            new InMemoryDslRunRepository(), new ObjectMapper());
 
     var firstRun = service.startProcess("VersionProbe", new VersionProbeIn("first"));
 

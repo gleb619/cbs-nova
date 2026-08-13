@@ -17,14 +17,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 class RunnerTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
-  private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
   private final CompensationRegistry compensationRegistry = new CompensationRegistry();
-  private final ProcessRunner processRunner = new DefaultProcessRunner(traceCollector,
-          contextFactory,
+  private final ProcessRunner processRunner = new DefaultProcessRunner(contextFactory,
           compensationRegistry);
-  private final TransactionRunner txRunner = new DefaultTransactionRunner(traceCollector,
-          contextFactory, compensationRegistry);
-  private final HelperRunner helperRunner = new DefaultHelperRunner(traceCollector, contextFactory);
+  private final TransactionRunner txRunner = new DefaultTransactionRunner(contextFactory,
+          compensationRegistry);
+  private final HelperRunner helperRunner = new DefaultHelperRunner(contextFactory);
 
   @Test
   void processRunnerPreviewSuccess() {

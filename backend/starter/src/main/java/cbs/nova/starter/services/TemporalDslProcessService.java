@@ -51,7 +51,6 @@ public class TemporalDslProcessService {
   private final ContextFactory contextFactory;
   private final DslRunRepository runRepository;
   private final ObjectMapper objectMapper;
-  private final ExecutionTraceCollector traceCollector;
   private final ThreadPoolTaskExecutor dslProcessExecutor;
   private final ScheduledExecutorService healthcheckExecutor;
   private final Duration healthcheckInterval;
@@ -76,7 +75,6 @@ public class TemporalDslProcessService {
           @NonNull ContextFactory contextFactory,
           @NonNull DslRunRepository runRepository,
           @NonNull ObjectMapper objectMapper,
-          @NonNull ExecutionTraceCollector traceCollector,
           @NonNull ThreadPoolTaskExecutor dslProcessExecutor,
           @NonNull ScheduledExecutorService healthcheckExecutor,
           @NonNull Duration healthcheckInterval,
@@ -85,7 +83,6 @@ public class TemporalDslProcessService {
     this.contextFactory = contextFactory;
     this.runRepository = runRepository;
     this.objectMapper = objectMapper;
-    this.traceCollector = traceCollector;
     this.dslProcessExecutor = dslProcessExecutor;
     this.healthcheckExecutor = healthcheckExecutor;
     this.healthcheckInterval = healthcheckInterval;
@@ -96,15 +93,14 @@ public class TemporalDslProcessService {
   /**
    * Legacy constructor retained for callers that want to wire the service by hand (test setups,
    * standalone scripts). Internally wires a synchronous executor and a disabled healthcheck so
-   * existing fully-blocking semantics are preserved. Production wiring should use the public 9-arg
-   * constructor through {@link TemporalConfiguration}.
+   * existing fully-blocking semantics are preserved. Production wiring should use the public 8-arg
+   * constructor through {@link cbs.nova.starter.config.TemporalConfiguration}.
    */
   public TemporalDslProcessService(
           ContextFactory contextFactory,
           DslRunRepository runRepository,
-          ObjectMapper objectMapper,
-          ExecutionTraceCollector traceCollector) {
-    this(contextFactory, runRepository, objectMapper, traceCollector, sameThreadExecutor(),
+          ObjectMapper objectMapper) {
+    this(contextFactory, runRepository, objectMapper, sameThreadExecutor(),
             disabledScheduledExecutor(),
             Duration.ofSeconds(30), Duration.ofMinutes(5), false);
   }
@@ -133,8 +129,7 @@ public class TemporalDslProcessService {
    * Starts a process asynchronously, returning as soon as the {@link DslRun} is recorded as
    * {@code RUNNING} and the workflow has been launched. The returned handle exposes the generated
    * {@code runId} (useful for correlating side effects such as latch files) and a future that
-   * completes with the outcome once the workflow finishes and the run is recorded as
-   * {@code COMPLETED} or {@code FAILED}.
+   * completes with the outcome once the run is recorded as {@code COMPLETED} or {@code FAILED}.
    *
    * <p>
    * This is the non-blocking counterpart of the historical blocking API and is required for
@@ -297,19 +292,21 @@ public class TemporalDslProcessService {
           @NonNull Map<String, Object> metadata,
           @NonNull String runId,
           @NonNull Instant startedAt) {
-    traceCollector.start(runId);
-    Context<?> ctx = contextFactory.of(body, metadata, ExecutionMode.RUN, runId);
+    ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
+    Context<?> ctx = contextFactory.of(body, metadata, ExecutionMode.RUN, runId)
+            .withExecutionTraceCollector(traceCollector);
+    traceCollector.start();
     Result<?> result;
     try {
       result = GlobalManager.globalManager().runProcess(processName, ctx);
     } catch (Exception ex) {
       result = Result.failure(ex);
     } finally {
-      traceCollector.stop(runId);
+      traceCollector.stop();
     }
 
     Instant finishedAt = now();
-    String contextJson = serializeTrace(traceCollector.snapshot(runId));
+    String contextJson = serializeTrace(traceCollector.snapshot());
     String status = result.isSuccess()
             ? DslRunStatus.COMPLETED.name()
             : DslRunStatus.FAILED.name();

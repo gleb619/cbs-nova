@@ -11,9 +11,7 @@ import org.junit.jupiter.api.Test;
 class DefaultHelperRunnerUnknownNameTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
-  private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
-  private final DefaultHelperRunner runner = new DefaultHelperRunner(traceCollector,
-          contextFactory);
+  private final DefaultHelperRunner runner = new DefaultHelperRunner(contextFactory);
 
   @Test
   void runHelperWithUnregisteredNameReturnsEntityNotFoundFailure() {

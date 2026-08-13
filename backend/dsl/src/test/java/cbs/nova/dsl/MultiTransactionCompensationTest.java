@@ -15,8 +15,8 @@ class MultiTransactionCompensationTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
   private final CompensationRegistry compensationRegistry = new CompensationRegistry();
-  private final ProcessRunner runner = new DefaultProcessRunner(
-          new ExecutionTraceCollector(), contextFactory, compensationRegistry);
+  private final ProcessRunner runner = new DefaultProcessRunner(contextFactory,
+          compensationRegistry);
 
   @Test
   void compensationsRunInReverseOrderAfterFailure() {

@@ -23,7 +23,6 @@ import java.util.Map;
 public final class ProcessRichContext<T> implements ProcessContext<T> {
 
   private final Context<T> delegate;
-  private final ExecutionTraceCollector traceCollector;
   private final ContextFactory contextFactory;
 
   @Override
@@ -62,6 +61,11 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   }
 
   @Override
+  public @Nullable ExecutionTraceCollector executionTraceCollector() {
+    return delegate.executionTraceCollector();
+  }
+
+  @Override
   public @NonNull <U> Context<U> withBody(@NonNull U body) {
     return delegate.withBody(body);
   }
@@ -73,25 +77,37 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
 
   @Override
   public @NonNull Context<T> withTransactionRouting(@NonNull TransactionRouting routing) {
-    return new ProcessRichContext<>(delegate.withTransactionRouting(routing), traceCollector,
-            contextFactory);
+    return new ProcessRichContext<>(delegate.withTransactionRouting(routing), contextFactory);
   }
 
   @Override
   public @NonNull Context<T> withExecutionListener(@NonNull ExecutionListener listener) {
-    return new ProcessRichContext<>(delegate.withExecutionListener(listener), traceCollector,
-            contextFactory);
+    return new ProcessRichContext<>(delegate.withExecutionListener(listener), contextFactory);
   }
 
   @Override
   public @NonNull Context<T> withSaga(@Nullable DslSaga saga) {
-    return new ProcessRichContext<>(delegate.withSaga(saga), traceCollector, contextFactory);
+    return new ProcessRichContext<>(delegate.withSaga(saga), contextFactory);
+  }
+
+  @Override
+  public @NonNull Context<T> withExecutionTraceCollector(
+          @Nullable ExecutionTraceCollector executionTraceCollector) {
+    return new ProcessRichContext<>(
+            delegate.withExecutionTraceCollector(executionTraceCollector), contextFactory);
+  }
+
+  private void trace(@NonNull String entry) {
+    ExecutionTraceCollector collector = delegate.executionTraceCollector();
+    if (collector != null) {
+      collector.add(entry);
+    }
   }
 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name) {
     Result<?> result = GlobalManager.globalManager().runHelper(name, delegate);
-    traceCollector.add(delegate.runId(), "called helper: " + name);
+    trace("called helper: " + name);
     return result;
   }
 
@@ -99,7 +115,7 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input) {
     Result<?> result = GlobalManager.globalManager().runHelper(name,
             contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
-    traceCollector.add(delegate.runId(), "called helper: " + name);
+    trace("called helper: " + name);
     return result;
   }
 
@@ -107,7 +123,7 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull MapInput input) {
     Result<?> result = GlobalManager.globalManager().runHelper(name,
             contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
-    traceCollector.add(delegate.runId(), "called helper: " + name);
+    trace("called helper: " + name);
     return result;
   }
 
@@ -123,14 +139,14 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
     }
     Result<?> result = GlobalManager.globalManager().runHelper(name,
             contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
-    traceCollector.add(delegate.runId(), "called helper: " + name);
+    trace("called helper: " + name);
     return result;
   }
 
   @Override
   public @NonNull Result<?> runTransaction(@NonNull String name) {
     Result<?> result = invokeTransaction(name, delegate.body());
-    traceCollector.add(delegate.runId(), "executed transaction: " + name);
+    trace("executed transaction: " + name);
     return result;
   }
 
@@ -138,14 +154,14 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   public @NonNull Result<?> runTransaction(@NonNull String name,
           @NonNull Map<String, Object> input) {
     Result<?> result = invokeTransaction(name, input);
-    traceCollector.add(delegate.runId(), "executed transaction: " + name);
+    trace("executed transaction: " + name);
     return result;
   }
 
   @Override
   public @NonNull Result<?> runTransaction(@NonNull String name, @NonNull MapInput input) {
     Result<?> result = invokeTransaction(name, input);
-    traceCollector.add(delegate.runId(), "executed transaction: " + name);
+    trace("executed transaction: " + name);
     return result;
   }
 
@@ -160,14 +176,15 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
       return runTransaction(name, mapInput);
     }
     Result<?> result = invokeTransaction(name, input);
-    traceCollector.add(delegate.runId(), "executed transaction: " + name);
+    trace("executed transaction: " + name);
     return result;
   }
 
   private @NonNull Result<?> invokeTransaction(@NonNull String name, @NonNull Object input) {
     Context<Object> ctx = contextFactory.of(input, delegate.metadata(), delegate.mode(),
             delegate.runId(), delegate.transactionRouting(), delegate.executionListener(),
-            delegate.saga());
+            delegate.saga())
+            .withExecutionTraceCollector(delegate.executionTraceCollector());
     if (delegate.transactionRouting() == TransactionRouting.TEMPORAL_ACTIVITY) {
       var invoker = GlobalManager.globalManager().transactionInvoker().orElse(null);
       if (invoker != null) {

@@ -22,13 +22,14 @@ public final class SimpleContext<T> implements Context<T> {
   private final TransactionRouting transactionRouting;
   private final ExecutionListener executionListener;
   private final DslSaga saga;
+  private final ExecutionTraceCollector executionTraceCollector;
 
   public SimpleContext(
           @NonNull Object body,
           @NonNull Map<String, Object> metadata,
           @NonNull ExecutionMode mode,
           @NonNull String runId) {
-    this(body, metadata, mode, runId, TransactionRouting.LOCAL, null, null);
+    this(body, metadata, mode, runId, TransactionRouting.LOCAL, null, null, null);
   }
 
   public SimpleContext(
@@ -37,7 +38,7 @@ public final class SimpleContext<T> implements Context<T> {
           @NonNull ExecutionMode mode,
           @NonNull String runId,
           @NonNull TransactionRouting transactionRouting) {
-    this(body, metadata, mode, runId, transactionRouting, null, null);
+    this(body, metadata, mode, runId, transactionRouting, null, null, null);
   }
 
   public SimpleContext(
@@ -47,7 +48,7 @@ public final class SimpleContext<T> implements Context<T> {
           @NonNull String runId,
           @NonNull TransactionRouting transactionRouting,
           @Nullable ExecutionListener executionListener) {
-    this(body, metadata, mode, runId, transactionRouting, executionListener, null);
+    this(body, metadata, mode, runId, transactionRouting, executionListener, null, null);
   }
 
   public SimpleContext(
@@ -58,6 +59,18 @@ public final class SimpleContext<T> implements Context<T> {
           @NonNull TransactionRouting transactionRouting,
           @Nullable ExecutionListener executionListener,
           @Nullable DslSaga saga) {
+    this(body, metadata, mode, runId, transactionRouting, executionListener, saga, null);
+  }
+
+  public SimpleContext(
+          @NonNull Object body,
+          @NonNull Map<String, Object> metadata,
+          @NonNull ExecutionMode mode,
+          @NonNull String runId,
+          @NonNull TransactionRouting transactionRouting,
+          @Nullable ExecutionListener executionListener,
+          @Nullable DslSaga saga,
+          @Nullable ExecutionTraceCollector executionTraceCollector) {
     this.body = body;
     this.metadata = metadata;
     this.mode = mode;
@@ -65,6 +78,7 @@ public final class SimpleContext<T> implements Context<T> {
     this.transactionRouting = transactionRouting;
     this.executionListener = executionListener;
     this.saga = saga;
+    this.executionTraceCollector = executionTraceCollector;
   }
 
   @Override
@@ -104,6 +118,11 @@ public final class SimpleContext<T> implements Context<T> {
   }
 
   @Override
+  public @Nullable ExecutionTraceCollector executionTraceCollector() {
+    return executionTraceCollector;
+  }
+
+  @Override
   public @NonNull Object eval(@NonNull String expression) {
     return eval(expression, Map.of());
   }
@@ -127,7 +146,7 @@ public final class SimpleContext<T> implements Context<T> {
   @Override
   public <U> @NonNull Context<U> withBody(@NonNull U newBody) {
     return new SimpleContext<>(newBody, metadata, mode, runId, transactionRouting,
-            executionListener, saga);
+            executionListener, saga, executionTraceCollector);
   }
 
   @Override
@@ -135,22 +154,31 @@ public final class SimpleContext<T> implements Context<T> {
     var updated = new LinkedHashMap<>(metadata);
     updated.put(key, value);
     return new SimpleContext<>(body, Map.copyOf(updated), mode, runId, transactionRouting,
-            executionListener, saga);
+            executionListener, saga, executionTraceCollector);
   }
 
   @Override
   public @NonNull Context<T> withTransactionRouting(@NonNull TransactionRouting routing) {
-    return new SimpleContext<>(body, metadata, mode, runId, routing, executionListener, saga);
+    return new SimpleContext<>(body, metadata, mode, runId, routing, executionListener, saga,
+            executionTraceCollector);
   }
 
   @Override
   public @NonNull Context<T> withExecutionListener(@NonNull ExecutionListener listener) {
-    return new SimpleContext<>(body, metadata, mode, runId, transactionRouting, listener, saga);
+    return new SimpleContext<>(body, metadata, mode, runId, transactionRouting, listener, saga,
+            executionTraceCollector);
   }
 
   @Override
   public @NonNull Context<T> withSaga(@Nullable DslSaga saga) {
     return new SimpleContext<>(body, metadata, mode, runId, transactionRouting,
-            executionListener, saga);
+            executionListener, saga, executionTraceCollector);
+  }
+
+  @Override
+  public @NonNull Context<T> withExecutionTraceCollector(
+          @Nullable ExecutionTraceCollector executionTraceCollector) {
+    return new SimpleContext<>(body, metadata, mode, runId, transactionRouting,
+            executionListener, saga, executionTraceCollector);
   }
 }

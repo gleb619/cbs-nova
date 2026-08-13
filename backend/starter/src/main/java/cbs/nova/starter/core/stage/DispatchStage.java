@@ -3,6 +3,7 @@ package cbs.nova.starter.core.stage;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslSaga;
 import cbs.nova.dsl.ExecutionListener;
+import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
@@ -35,6 +36,7 @@ public final class DispatchStage implements DslPipeStage {
             original.transactionRouting());
     modeCtx = withExistingListener(modeCtx, original.executionListener());
     modeCtx = withExistingSaga(modeCtx, original.saga());
+    modeCtx = withExistingCollector(modeCtx, original.executionTraceCollector());
     return modeCtx;
   }
 
@@ -45,6 +47,11 @@ public final class DispatchStage implements DslPipeStage {
 
   private @NonNull Context<?> withExistingSaga(@NonNull Context<?> ctx, @Nullable DslSaga saga) {
     return saga != null ? ctx.withSaga(saga) : ctx;
+  }
+
+  private @NonNull Context<?> withExistingCollector(@NonNull Context<?> ctx,
+          @Nullable ExecutionTraceCollector collector) {
+    return collector != null ? ctx.withExecutionTraceCollector(collector) : ctx;
   }
 
   private @NonNull Result<?> dispatch(@NonNull String name, @NonNull Context<?> ctx) {

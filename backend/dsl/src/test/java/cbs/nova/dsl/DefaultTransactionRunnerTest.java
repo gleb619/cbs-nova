@@ -12,11 +12,10 @@ import java.util.ArrayList;
 class DefaultTransactionRunnerTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
-  private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
   private final CompensationRegistry compensationRegistry = new CompensationRegistry();
 
-  private final DefaultTransactionRunner runner = new DefaultTransactionRunner(traceCollector,
-          contextFactory, compensationRegistry);
+  private final DefaultTransactionRunner runner = new DefaultTransactionRunner(contextFactory,
+          compensationRegistry);
 
   private TransactionDslObject tx(String name) {
     return Dsl.transaction(name).execute(ctx -> Result.success("ok-" + name)).build();
@@ -113,8 +112,7 @@ class DefaultTransactionRunnerTest {
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(compensationRegistry.hasCompensation("r-reg")).isTrue();
-    compensationRegistry.compensateAll("r-reg", new RuntimeException("boom"), traceCollector,
-            contextFactory);
+    compensationRegistry.compensateAll("r-reg", new RuntimeException("boom"), contextFactory);
     assertThat(order).containsExactly("compensated:in");
   }
 

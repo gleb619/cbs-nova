@@ -1,7 +1,6 @@
 package cbs.nova.starter.config;
 
 import cbs.nova.dsl.DslRunRepository;
-import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.TemporalProcessLauncher;
 import cbs.nova.dsl.TransactionInvoker;
 import cbs.nova.dsl.config.ContextFactory;
@@ -66,6 +65,7 @@ public class TemporalConfiguration {
             .build();
     return WorkflowClient.newInstance(workflowServiceStubs, options);
   }
+
   @Bean
   @ConditionalOnMissingBean
   DryRunLoggingContextPropagator dryRunLoggingContextPropagator(
@@ -104,12 +104,6 @@ public class TemporalConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
-  ExecutionTraceCollector executionTraceCollector() {
-    return new ExecutionTraceCollector();
-  }
-
-  @Bean
-  @ConditionalOnMissingBean
   ContextFactory contextFactory() {
     return new ContextFactory();
   }
@@ -127,18 +121,15 @@ public class TemporalConfiguration {
           ContextFactory contextFactory,
           DryRunLoggingContext dryRunLoggingContext,
           PreviewResultCache previewResultCache,
-          CbsNovaPreviewProperties previewProperties,
-          ExecutionTraceCollector executionTraceCollector) {
+          CbsNovaPreviewProperties previewProperties) {
     return new PreviewDslPipe(externalCallRecorder, contextFactory, dryRunLoggingContext,
-            previewResultCache, previewProperties, executionTraceCollector);
+            previewResultCache, previewProperties);
   }
 
   @Bean
   @ConditionalOnMissingBean
-  RunDslPipe runDslPipe(
-          ContextFactory contextFactory,
-          ExecutionTraceCollector executionTraceCollector) {
-    return new RunDslPipe(contextFactory, executionTraceCollector);
+  RunDslPipe runDslPipe(ContextFactory contextFactory) {
+    return new RunDslPipe(contextFactory);
   }
 
   @Bean
@@ -147,10 +138,9 @@ public class TemporalConfiguration {
           ExternalCallRecorder externalCallRecorder,
           ContextFactory contextFactory,
           DryRunLoggingContext dryRunLoggingContext,
-          CbsNovaPreviewProperties previewProperties,
-          ExecutionTraceCollector executionTraceCollector) {
+          CbsNovaPreviewProperties previewProperties) {
     return new ExplainDslPipe(externalCallRecorder, contextFactory, dryRunLoggingContext,
-            previewProperties, executionTraceCollector);
+            previewProperties);
   }
 
   @Bean
@@ -241,14 +231,13 @@ public class TemporalConfiguration {
           ContextFactory contextFactory,
           DslRunRepository runRepository,
           JsonMapper jsonMapper,
-          ExecutionTraceCollector executionTraceCollector,
           @Qualifier("cbsNovaDslProcessExecutor") ThreadPoolTaskExecutor dslProcessExecutor,
           @Qualifier("cbsNovaDslProcessHealthcheckExecutor") ScheduledExecutorService healthcheckExecutor,
           @Value("${cbs.nova.process.healthcheck.interval:PT30S}") Duration healthcheckInterval,
           @Value("${cbs.nova.process.healthcheck.stale-threshold:PT5M}") Duration staleThreshold,
           @Value("${cbs.nova.process.async-db-save:true}") boolean asyncDbSave) {
     return new TemporalDslProcessService(contextFactory, runRepository,
-            JsonMapper.builder().build(), executionTraceCollector,
+            JsonMapper.builder().build(),
             dslProcessExecutor, healthcheckExecutor,
             healthcheckInterval, staleThreshold, asyncDbSave);
   }

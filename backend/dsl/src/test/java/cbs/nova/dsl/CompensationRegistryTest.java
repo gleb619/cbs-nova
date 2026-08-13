@@ -16,7 +16,6 @@ import java.util.function.Function;
 class CompensationRegistryTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
-  private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
 
   private CompensationRegistry registry;
 
@@ -56,7 +55,7 @@ class CompensationRegistryTest {
     var tx = tx("Tx", marker("Tx", order, captured));
 
     registry.register("Tx", "run-1", ctx, tx);
-    registry.compensate("Tx", "run-1", error, traceCollector, contextFactory);
+    registry.compensate("Tx", "run-1", error, contextFactory);
 
     assertThat(order).containsExactly("Tx");
     assertThat(captured.get()).isSameAs(error);
@@ -74,19 +73,18 @@ class CompensationRegistryTest {
     registry.register("SameName", "run-1", ctx, first);
     registry.register("SameName", "run-1", ctx, second);
 
-    registry.compensate("SameName", "run-1", error, traceCollector, contextFactory);
+    registry.compensate("SameName", "run-1", error, contextFactory);
     assertThat(order).containsExactly("second");
     assertThat(registry.hasCompensation("run-1")).isTrue();
 
-    registry.compensate("SameName", "run-1", error, traceCollector, contextFactory);
+    registry.compensate("SameName", "run-1", error, contextFactory);
     assertThat(order).containsExactly("second", "first");
     assertThat(registry.hasCompensation("run-1")).isFalse();
   }
 
   @Test
   void compensateIsNoOpForUnknownRunId() {
-    registry.compensate("Tx", "unknown-run", new RuntimeException("boom"),
-            traceCollector, contextFactory);
+    registry.compensate("Tx", "unknown-run", new RuntimeException("boom"), contextFactory);
     assertThat(registry.hasCompensation("unknown-run")).isFalse();
   }
 
@@ -97,8 +95,7 @@ class CompensationRegistryTest {
     var tx = tx("TxA", marker("TxA", order));
 
     registry.register("TxA", "run-1", ctx, tx);
-    registry.compensate("TxB", "run-1", new RuntimeException("boom"),
-            traceCollector, contextFactory);
+    registry.compensate("TxB", "run-1", new RuntimeException("boom"), contextFactory);
 
     assertThat(order).isEmpty();
     assertThat(registry.hasCompensation("run-1")).isTrue();
@@ -115,7 +112,7 @@ class CompensationRegistryTest {
     registry.register("T2", "run-1", ctx, tx("T2", marker("T2", order, captured)));
     registry.register("T3", "run-1", ctx, tx("T3", marker("T3", order, captured)));
 
-    registry.compensateAll("run-1", error, traceCollector, contextFactory);
+    registry.compensateAll("run-1", error, contextFactory);
 
     assertThat(order).containsExactly("T3", "T2", "T1");
     assertThat(captured.get()).isSameAs(error);
@@ -124,8 +121,7 @@ class CompensationRegistryTest {
 
   @Test
   void compensateAllIsNoOpForUnknownRunId() {
-    registry.compensateAll("unknown-run", new RuntimeException("boom"),
-            traceCollector, contextFactory);
+    registry.compensateAll("unknown-run", new RuntimeException("boom"), contextFactory);
     assertThat(registry.hasCompensation("unknown-run")).isFalse();
   }
 
@@ -142,15 +138,13 @@ class CompensationRegistryTest {
     assertThat(registry.hasCompensation("run-1")).isTrue();
     assertThat(registry.hasCompensation("run-2")).isTrue();
 
-    registry.compensate("T1", "run-1", new RuntimeException("boom"),
-            traceCollector, contextFactory);
+    registry.compensate("T1", "run-1", new RuntimeException("boom"), contextFactory);
     assertThat(order1).containsExactly("T1");
     assertThat(order2).isEmpty();
     assertThat(registry.hasCompensation("run-1")).isFalse();
     assertThat(registry.hasCompensation("run-2")).isTrue();
 
-    registry.compensateAll("run-2", new RuntimeException("all-boom"),
-            traceCollector, contextFactory);
+    registry.compensateAll("run-2", new RuntimeException("all-boom"), contextFactory);
     assertThat(order2).containsExactly("T2");
     assertThat(registry.hasCompensation("run-2")).isFalse();
   }

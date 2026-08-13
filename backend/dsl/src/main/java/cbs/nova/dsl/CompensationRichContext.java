@@ -14,7 +14,6 @@ public final class CompensationRichContext<T> implements CompensationContext<T> 
 
   private final Context<T> delegate;
   private final Throwable error;
-  private final ExecutionTraceCollector traceCollector;
   private final ContextFactory contextFactory;
 
   @Override
@@ -58,6 +57,11 @@ public final class CompensationRichContext<T> implements CompensationContext<T> 
   }
 
   @Override
+  public @Nullable ExecutionTraceCollector executionTraceCollector() {
+    return delegate.executionTraceCollector();
+  }
+
+  @Override
   public @NonNull <U> Context<U> withBody(@NonNull U body) {
     return delegate.withBody(body);
   }
@@ -70,25 +74,38 @@ public final class CompensationRichContext<T> implements CompensationContext<T> 
   @Override
   public @NonNull Context<T> withTransactionRouting(@NonNull TransactionRouting routing) {
     return new CompensationRichContext<>(delegate.withTransactionRouting(routing), error,
-            traceCollector, contextFactory);
+            contextFactory);
   }
 
   @Override
   public @NonNull Context<T> withExecutionListener(@NonNull ExecutionListener listener) {
     return new CompensationRichContext<>(delegate.withExecutionListener(listener), error,
-            traceCollector, contextFactory);
+            contextFactory);
   }
 
   @Override
   public @NonNull Context<T> withSaga(@Nullable DslSaga saga) {
-    return new CompensationRichContext<>(delegate.withSaga(saga), error, traceCollector,
-            contextFactory);
+    return new CompensationRichContext<>(delegate.withSaga(saga), error, contextFactory);
+  }
+
+  @Override
+  public @NonNull Context<T> withExecutionTraceCollector(
+          @Nullable ExecutionTraceCollector executionTraceCollector) {
+    return new CompensationRichContext<>(
+            delegate.withExecutionTraceCollector(executionTraceCollector), error, contextFactory);
+  }
+
+  private void trace(@NonNull String entry) {
+    ExecutionTraceCollector collector = delegate.executionTraceCollector();
+    if (collector != null) {
+      collector.add(entry);
+    }
   }
 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name) {
     Result<?> result = GlobalManager.globalManager().runHelper(name, delegate);
-    traceCollector.add(delegate.runId(), "called helper: " + name);
+    trace("called helper: " + name);
     return result;
   }
 
@@ -96,7 +113,7 @@ public final class CompensationRichContext<T> implements CompensationContext<T> 
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input) {
     Result<?> result = GlobalManager.globalManager().runHelper(name,
             contextFactory.of(input, delegate.mode(), delegate.runId()));
-    traceCollector.add(delegate.runId(), "called helper: " + name);
+    trace("called helper: " + name);
     return result;
   }
 
@@ -104,13 +121,13 @@ public final class CompensationRichContext<T> implements CompensationContext<T> 
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull MapInput input) {
     Result<?> result = GlobalManager.globalManager().runHelper(name,
             contextFactory.of(input, delegate.mode(), delegate.runId()));
-    traceCollector.add(delegate.runId(), "called helper: " + name);
+    trace("called helper: " + name);
     return result;
   }
 
   @Override
   public @NonNull CompensationContext<T> log(@NonNull String message) {
-    traceCollector.add(delegate.runId(), "compensation log: " + message);
+    trace("compensation log: " + message);
     log.info("[DSL:{}][runId:{}] [compensation] {}", delegate.mode(), delegate.runId(), message);
     return this;
   }

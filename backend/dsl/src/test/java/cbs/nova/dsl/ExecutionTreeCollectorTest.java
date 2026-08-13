@@ -15,18 +15,17 @@ import java.util.Map;
 class ExecutionTreeCollectorTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
-  private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
   private final CompensationRegistry compensationRegistry = new CompensationRegistry();
 
   @Test
   void singleLevelProducesLeafRoot() {
     var collector = new ExecutionTreeCollector();
-    collector.startRun("r1");
+    collector.start();
     collector.onProcessStart("r1", "p", "in");
     collector.onProcessEnd("r1", "p", "out", true);
-    collector.finishRun("r1");
+    collector.finish();
 
-    var tree = collector.tree("r1");
+    var tree = collector.tree();
     assertThat(tree).isPresent();
     var root = tree.get();
     assertThat(root.name()).isEqualTo("p");
@@ -41,16 +40,16 @@ class ExecutionTreeCollectorTest {
   @Test
   void nestedProcessHelperTransactionBuildsTree() {
     var collector = new ExecutionTreeCollector();
-    collector.startRun("r2");
+    collector.start();
     collector.onProcessStart("r2", "p", "in");
     collector.onHelperStart("r2", "h", "hi");
     collector.onTransactionStart("r2", "t", "ti");
     collector.onTransactionEnd("r2", "t", "to", true);
     collector.onHelperEnd("r2", "h", "ho", true);
     collector.onProcessEnd("r2", "p", "po", true);
-    collector.finishRun("r2");
+    collector.finish();
 
-    var tree = collector.tree("r2");
+    var tree = collector.tree();
     assertThat(tree).isPresent();
     var root = tree.get();
     assertThat(root.kind()).isEqualTo(CallKind.PROCESS);
@@ -69,26 +68,26 @@ class ExecutionTreeCollectorTest {
   }
 
   @Test
-  void runIdsAreIsolated() {
-    var collector = new ExecutionTreeCollector();
-    collector.startRun("rA");
-    collector.startRun("rB");
+  void perRunInstancesAreIsolated() {
+    var collectorA = new ExecutionTreeCollector();
+    collectorA.start();
+    collectorA.onProcessStart("rA", "pA", null);
+    collectorA.onProcessEnd("rA", "pA", "outA", true);
+    collectorA.finish();
 
-    collector.onProcessStart("rA", "pA", null);
-    collector.onProcessEnd("rA", "pA", "outA", true);
-    collector.finishRun("rA");
+    var collectorB = new ExecutionTreeCollector();
+    collectorB.start();
+    collectorB.onProcessStart("rB", "pB", null);
+    collectorB.onHelperStart("rB", "hB", null);
+    collectorB.onHelperEnd("rB", "hB", null, true);
+    collectorB.onProcessEnd("rB", "pB", "outB", true);
+    collectorB.finish();
 
-    collector.onProcessStart("rB", "pB", null);
-    collector.onHelperStart("rB", "hB", null);
-    collector.onHelperEnd("rB", "hB", null, true);
-    collector.onProcessEnd("rB", "pB", "outB", true);
-    collector.finishRun("rB");
-
-    var a = collector.tree("rA").orElseThrow();
+    var a = collectorA.tree().orElseThrow();
     assertThat(a.name()).isEqualTo("pA");
     assertThat(a.children()).isEmpty();
 
-    var b = collector.tree("rB").orElseThrow();
+    var b = collectorB.tree().orElseThrow();
     assertThat(b.name()).isEqualTo("pB");
     assertThat(b.children()).hasSize(1);
     assertThat(b.children().get(0).kind()).isEqualTo(CallKind.HELPER);
@@ -97,15 +96,15 @@ class ExecutionTreeCollectorTest {
   @Test
   void externalCallsAttachToActiveFrame() {
     var collector = new ExecutionTreeCollector();
-    collector.startRun("r3");
+    collector.start();
     collector.onProcessStart("r3", "p", null);
     collector.onHelperStart("r3", "h", null);
-    collector.attachExternalCall("r3", Map.of("type", "database", "sql", "SELECT 1"));
+    collector.attachExternalCall(Map.of("type", "database", "sql", "SELECT 1"));
     collector.onHelperEnd("r3", "h", null, true);
     collector.onProcessEnd("r3", "p", null, true);
-    collector.finishRun("r3");
+    collector.finish();
 
-    var root = collector.tree("r3").orElseThrow();
+    var root = collector.tree().orElseThrow();
     var helper = root.children().get(0);
     assertThat(helper.externalCalls()).hasSize(1);
     assertThat(helper.externalCalls().get(0)).containsEntry("type", "database")
@@ -114,49 +113,49 @@ class ExecutionTreeCollectorTest {
   }
 
   @Test
-  void treeForUnknownRunIdIsEmpty() {
+  void treeForUnusedCollectorIsEmpty() {
     var collector = new ExecutionTreeCollector();
-    assertThat(collector.tree("ghost")).isEmpty();
+    assertThat(collector.tree()).isEmpty();
   }
 
   @Test
-  void eventsWithoutStartRunAreIgnored() {
+  void eventsWithoutStartAreIgnored() {
     var collector = new ExecutionTreeCollector();
     collector.onProcessStart("unknown", "p", null);
     collector.onProcessEnd("unknown", "p", null, true);
-    assertThat(collector.tree("unknown")).isEmpty();
+    assertThat(collector.tree()).isEmpty();
   }
 
   @Test
-  void startRunClearsPriorTree() {
+  void startClearsPriorTree() {
     var collector = new ExecutionTreeCollector();
-    collector.startRun("r4");
+    collector.start();
     collector.onProcessStart("r4", "p1", null);
     collector.onProcessEnd("r4", "p1", null, true);
-    collector.finishRun("r4");
-    assertThat(collector.tree("r4")).isPresent();
+    collector.finish();
+    assertThat(collector.tree()).isPresent();
 
-    collector.startRun("r4");
-    assertThat(collector.tree("r4")).isEmpty();
+    collector.start();
+    assertThat(collector.tree()).isEmpty();
     collector.onProcessStart("r4", "p2", null);
     collector.onProcessEnd("r4", "p2", null, true);
-    collector.finishRun("r4");
-    assertThat(collector.tree("r4")).map(CallNode::name).contains("p2");
+    collector.finish();
+    assertThat(collector.tree()).map(CallNode::name).contains("p2");
   }
 
   @Test
   void transactionRunnerForwardsEventsToListener() {
     var collector = new ExecutionTreeCollector();
-    collector.startRun("rt");
+    collector.start();
     var ctx = contextFactory.of("in", ExecutionMode.PREVIEW, "rt").withExecutionListener(collector);
     var tx = Dsl.transaction("T")
             .execute(c -> Result.success("done"))
             .build();
-    var runner = new DefaultTransactionRunner(traceCollector, contextFactory, compensationRegistry);
+    var runner = new DefaultTransactionRunner(contextFactory, compensationRegistry);
     runner.run(tx, ctx);
-    collector.finishRun("rt");
+    collector.finish();
 
-    var root = collector.tree("rt").orElseThrow();
+    var root = collector.tree().orElseThrow();
     assertThat(root.kind()).isEqualTo(CallKind.TRANSACTION);
     assertThat(root.name()).isEqualTo("T");
     assertThat(root.success()).isTrue();
@@ -166,15 +165,15 @@ class ExecutionTreeCollectorTest {
   @Test
   void helperRunnerForwardsEventsToListener() {
     var collector = new ExecutionTreeCollector();
-    collector.startRun("rh");
+    collector.start();
     var ctx = contextFactory.of("input", ExecutionMode.RUN, "rh").withExecutionListener(collector);
     var registry = new DefaultHelperRegistry();
     registry.registerHelper("echo", new EchoHelper());
-    var runner = new DefaultHelperRunner(traceCollector, contextFactory);
+    var runner = new DefaultHelperRunner(contextFactory);
     runner.runHelper("echo", ctx, registry);
-    collector.finishRun("rh");
+    collector.finish();
 
-    var root = collector.tree("rh").orElseThrow();
+    var root = collector.tree().orElseThrow();
     assertThat(root.kind()).isEqualTo(CallKind.HELPER);
     assertThat(root.name()).isEqualTo("echo");
     assertThat(root.success()).isTrue();
@@ -184,17 +183,17 @@ class ExecutionTreeCollectorTest {
   @Test
   void functionRunnerForwardsEventsToListener() {
     var collector = new ExecutionTreeCollector();
-    collector.startRun("rf");
+    collector.start();
     var ctx = contextFactory.of("input", ExecutionMode.RUN, "rf").withExecutionListener(collector);
     var registry = new DefaultHelperRegistry();
     registry.registerFunction(Dsl.function("fn")
             .execute(c -> Result.success("FN_OUT"))
             .build());
-    var runner = new DefaultHelperRunner(traceCollector, contextFactory);
+    var runner = new DefaultHelperRunner(contextFactory);
     runner.runFunction("fn", ctx, registry);
-    collector.finishRun("rf");
+    collector.finish();
 
-    var root = collector.tree("rf").orElseThrow();
+    var root = collector.tree().orElseThrow();
     assertThat(root.kind()).isEqualTo(CallKind.FUNCTION);
     assertThat(root.name()).isEqualTo("fn");
     assertThat(root.output()).isEqualTo("FN_OUT");

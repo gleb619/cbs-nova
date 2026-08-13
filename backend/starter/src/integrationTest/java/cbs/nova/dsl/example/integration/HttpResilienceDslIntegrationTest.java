@@ -7,7 +7,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.Executable;
-import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.HelperInstanceResolver;
 import cbs.nova.dsl.Result;
@@ -17,6 +16,8 @@ import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dslexamples.HttpResilienceModels.HttpResilienceProcessIn;
 import cbs.nova.dslexamples.HttpResilienceModels.HttpResilienceProcessOut;
 import cbs.nova.starter.helpers.CompensationTrackerHelper;
+import cbs.nova.starter.helpers.HttpCallHelper;
+import cbs.nova.starter.helpers.JsonExtractHelper;
 import cbs.nova.starter.helpers.model.HttpCallIn;
 import cbs.nova.starter.services.TemporalDslProcessLauncher;
 import cbs.nova.starter.services.TemporalDslProcessService;
@@ -98,7 +99,7 @@ class HttpResilienceDslIntegrationTest {
 
     var globalManager = GlobalManager.globalManager();
     new DefinitionLoader().load(globalManager);
-    DslConfig.dslConfig().helperInstanceResolver().replace(reflectiveHelperResolver());
+    DslConfig.dslConfig().helperInstanceResolver().replace(typedHelperResolver());
     globalManager.registerHelperResolvers();
 
     assertThat(globalManager.hasProcess("HttpResilienceSuccess")).isTrue();
@@ -189,9 +190,8 @@ class HttpResilienceDslIntegrationTest {
             .whenScenarioStateIs("failed-twice")
             .willReturn(aResponse().withStatus(200).withBody("ok")));
 
-    var service = new TemporalDslProcessService(
-            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
-            new ExecutionTraceCollector());
+    var service = new TemporalDslProcessService(new ContextFactory(),
+            new InMemoryDslRunRepository(), new ObjectMapper());
     String runId = "http-resilience-success-" + System.currentTimeMillis();
     var input = new HttpResilienceProcessIn(runId,
             HttpCallIn.get(baseUrl() + "/probe"));
@@ -217,9 +217,8 @@ class HttpResilienceDslIntegrationTest {
             HttpCallIn.get(baseUrl() + "/probe"));
     String markerId = "HttpResilienceCompensated-" + input.scenario();
 
-    Result<?> result = new TemporalDslProcessService(
-            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
-            new ExecutionTraceCollector())
+    Result<?> result = new TemporalDslProcessService(new ContextFactory(),
+            new InMemoryDslRunRepository(), new ObjectMapper())
             .runProcess("HttpResilienceCompensated", input).result().join();
 
     assertThat(result.isSuccess()).isFalse();
@@ -237,9 +236,8 @@ class HttpResilienceDslIntegrationTest {
     var input = new HttpResilienceProcessIn(runId,
             HttpCallIn.get(baseUrl() + "/probe"));
 
-    Result<?> result = new TemporalDslProcessService(
-            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
-            new ExecutionTraceCollector())
+    Result<?> result = new TemporalDslProcessService(new ContextFactory(),
+            new InMemoryDslRunRepository(), new ObjectMapper())
             .runProcess("HttpResilienceUncaught", input).result().join();
 
     assertThat(result.isSuccess()).isFalse();
@@ -258,9 +256,8 @@ class HttpResilienceDslIntegrationTest {
     var input = new HttpResilienceProcessIn(runId,
             new HttpCallIn(baseUrl() + "/slow", "GET", null, null, 200L, null));
 
-    Result<?> result = new TemporalDslProcessService(
-            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
-            new ExecutionTraceCollector())
+    Result<?> result = new TemporalDslProcessService(new ContextFactory(),
+            new InMemoryDslRunRepository(), new ObjectMapper())
             .runProcess("HttpResilienceUncaught", input).result().join();
 
     assertThat(result.isSuccess()).isFalse();
@@ -273,12 +270,18 @@ class HttpResilienceDslIntegrationTest {
                     () -> new IllegalStateException("compensationTracker helper not registered"));
   }
 
-  private static HelperInstanceResolver reflectiveHelperResolver() {
+  private static HelperInstanceResolver typedHelperResolver() {
     return helperClass -> {
+      if (helperClass == HttpCallHelper.class) {
+        return new HttpCallHelper(HttpClient.newHttpClient());
+      }
+      if (helperClass == JsonExtractHelper.class) {
+        return new JsonExtractHelper(new com.fasterxml.jackson.databind.ObjectMapper());
+      }
       try {
         return (Executable<?, ?>) helperClass.getDeclaredConstructor().newInstance();
       } catch (ReflectiveOperationException e) {
-        throw new IllegalStateException("Cannot instantiate helper " + helperClass, e);
+        throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName(), e);
       }
     };
   }

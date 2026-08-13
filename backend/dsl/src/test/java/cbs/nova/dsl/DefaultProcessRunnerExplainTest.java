@@ -13,9 +13,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 class DefaultProcessRunnerExplainTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
-  private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
 
-  private final ProcessRunner runner = new DefaultProcessRunner(traceCollector, contextFactory,
+  private final ProcessRunner runner = new DefaultProcessRunner(contextFactory,
           new CompensationRegistry());
 
   @Test

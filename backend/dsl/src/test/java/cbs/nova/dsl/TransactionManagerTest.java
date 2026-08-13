@@ -13,15 +13,13 @@ import org.junit.jupiter.api.Test;
 class TransactionManagerTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
-  private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
 
   private TransactionManager manager;
 
   @BeforeEach
   void setUp() {
     manager = new TransactionManager(new DefaultTransactionRegistry(),
-            new DefaultTransactionRunner(traceCollector, contextFactory,
-                    new CompensationRegistry()));
+            new DefaultTransactionRunner(contextFactory, new CompensationRegistry()));
   }
 
   private TransactionDslObject tx(String name) {

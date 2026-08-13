@@ -88,8 +88,7 @@ public final class GlobalManager {
           @NonNull Context<?> ctx,
           @NonNull Throwable error) {
     var config = DslConfig.dslConfig();
-    return new CompensationRichContext<>(ctx, error, config.executionTraceCollector(),
-            config.contextFactory());
+    return new CompensationRichContext<>(ctx, error, config.contextFactory());
   }
 
   public @NonNull Result<?> runProcess(@NonNull String name, @NonNull Context<?> ctx) {
@@ -242,8 +241,7 @@ public final class GlobalManager {
   public void compensateTransaction(@NonNull String name, @NonNull String runId,
           @NonNull Throwable error) {
     var config = DslConfig.dslConfig();
-    compensationRegistry.compensate(name, runId, error, config.executionTraceCollector(),
-            config.contextFactory());
+    compensationRegistry.compensate(name, runId, error, config.contextFactory());
   }
 
   public void compensateTransaction(

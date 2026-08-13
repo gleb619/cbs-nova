@@ -84,6 +84,15 @@ public interface Context<T> {
   }
 
   /**
+   * Returns the per-run execution-trace collector attached to this context, if any. When present,
+   * rich contexts append execution-trace entries to it.
+   */
+  @Nullable
+  default ExecutionTraceCollector executionTraceCollector() {
+    return null;
+  }
+
+  /**
    * Returns a context with the given transaction routing hint.
    */
   @NonNull
@@ -104,6 +113,16 @@ public interface Context<T> {
    */
   @NonNull
   default Context<T> withSaga(@Nullable DslSaga saga) {
+    return this;
+  }
+
+  /**
+   * Returns a context with the given per-run execution-trace collector attached. Rich contexts
+   * resolve the collector from here rather than from a shared singleton.
+   */
+  @NonNull
+  default Context<T> withExecutionTraceCollector(
+          @Nullable ExecutionTraceCollector executionTraceCollector) {
     return this;
   }
 }

@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.PreviewErrorDetail;
@@ -33,8 +32,6 @@ class DevDslRuntimeErrorHandlingTest {
   private static final String MISSING_HELPER = "MissingHelper";
 
   private final RunScopedExternalCallRecorder recorder = new RunScopedExternalCallRecorder(null);
-  private final ExecutionTraceCollector traceCollector = DslConfig.dslConfig()
-          .executionTraceCollector();
   private final ContextFactory contextFactory = new ContextFactory();
   private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
   private final DryRunLogbackAppender appender = new DryRunLogbackAppender(dryRunLoggingContext,
@@ -43,10 +40,10 @@ class DevDslRuntimeErrorHandlingTest {
   private final CbsNovaPreviewProperties previewProperties = new CbsNovaPreviewProperties(null,
           null);
   private final PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
-          dryRunLoggingContext, null, previewProperties, traceCollector);
-  private final RunDslPipe runPipe = new RunDslPipe(contextFactory, traceCollector);
+          dryRunLoggingContext, null, previewProperties);
+  private final RunDslPipe runPipe = new RunDslPipe(contextFactory);
   private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
-          dryRunLoggingContext, previewProperties, traceCollector);
+          dryRunLoggingContext, previewProperties);
   private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
 
   @BeforeEach

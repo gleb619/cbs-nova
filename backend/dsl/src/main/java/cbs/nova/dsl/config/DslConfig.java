@@ -1,7 +1,6 @@
 package cbs.nova.dsl.config;
 
 import cbs.nova.dsl.CompensationRegistry;
-import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.HelperInstanceResolver;
 import cbs.nova.dsl.HelperManager;
@@ -48,10 +47,6 @@ public class DslConfig implements SingletonSupport {
     return singleton(() -> new RetryPolicy(3, Duration.ofSeconds(1), 2.0));
   }
 
-  public @NonNull ExecutionTraceCollector executionTraceCollector() {
-    return singleton(ExecutionTraceCollector::new);
-  }
-
   public @NonNull ContextFactory contextFactory() {
     return singleton(ContextFactory::new);
   }
@@ -73,25 +68,19 @@ public class DslConfig implements SingletonSupport {
   }
 
   public @NonNull ProcessRunner processRunner(
-          @NonNull ExecutionTraceCollector executionTraceCollector,
           @NonNull ContextFactory contextFactory,
           @NonNull CompensationRegistry compensationRegistry) {
-    return singleton(() -> new DefaultProcessRunner(executionTraceCollector, contextFactory,
-            compensationRegistry));
+    return singleton(() -> new DefaultProcessRunner(contextFactory, compensationRegistry));
   }
 
   public @NonNull TransactionRunner transactionRunner(
-          @NonNull ExecutionTraceCollector executionTraceCollector,
           @NonNull ContextFactory contextFactory,
           @NonNull CompensationRegistry compensationRegistry) {
-    return singleton(() -> new DefaultTransactionRunner(executionTraceCollector, contextFactory,
-            compensationRegistry));
+    return singleton(() -> new DefaultTransactionRunner(contextFactory, compensationRegistry));
   }
 
-  public @NonNull HelperRunner helperRunner(
-          @NonNull ExecutionTraceCollector executionTraceCollector,
-          @NonNull ContextFactory contextFactory) {
-    return singleton(() -> new DefaultHelperRunner(executionTraceCollector, contextFactory));
+  public @NonNull HelperRunner helperRunner(@NonNull ContextFactory contextFactory) {
+    return singleton(() -> new DefaultHelperRunner(contextFactory));
   }
 
   public @NonNull Replaceable<HelperInstanceResolver> helperInstanceResolver() {
@@ -99,16 +88,15 @@ public class DslConfig implements SingletonSupport {
   }
 
   public @NonNull GlobalManager globalManager() {
-    var traceCollector = executionTraceCollector();
     var contextFactory = contextFactory();
     var compensationRegistry = compensationRegistry();
     return new GlobalManager(
             new ProcessManager(new DefaultProcessRegistry(),
-                    processRunner(traceCollector, contextFactory, compensationRegistry)),
+                    processRunner(contextFactory, compensationRegistry)),
             new TransactionManager(new DefaultTransactionRegistry(),
-                    transactionRunner(traceCollector, contextFactory, compensationRegistry)),
+                    transactionRunner(contextFactory, compensationRegistry)),
             new HelperManager(new DefaultHelperRegistry(),
-                    helperRunner(traceCollector, contextFactory)),
+                    helperRunner(contextFactory)),
             new GeneratedClassRegistry(),
             new ProcessContextFactory(),
             compensationRegistry);

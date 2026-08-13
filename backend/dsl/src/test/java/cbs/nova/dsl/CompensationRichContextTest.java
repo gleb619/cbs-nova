@@ -17,18 +17,19 @@ class CompensationRichContextTest {
 
   @BeforeEach
   void setUp() {
-    delegate = contextFactory.of("payload", ExecutionMode.RUN, RUN_ID);
+    delegate = contextFactory.of("payload", ExecutionMode.RUN, RUN_ID)
+            .withExecutionTraceCollector(traceCollector);
     failure = new RuntimeException("execute failed");
-    traceCollector.start(RUN_ID);
+    traceCollector.start();
   }
 
   @AfterEach
   void tearDown() {
-    traceCollector.stop(RUN_ID);
+    traceCollector.stop();
   }
 
   private CompensationRichContext<String> newContext() {
-    return new CompensationRichContext<>(delegate, failure, traceCollector, contextFactory);
+    return new CompensationRichContext<>(delegate, failure, contextFactory);
   }
 
   @Test
@@ -79,7 +80,7 @@ class CompensationRichContextTest {
   void logAddsToTrace() {
     var ctx = newContext();
     ctx.log("rollback done");
-    assertThat(traceCollector.snapshot(RUN_ID))
+    assertThat(traceCollector.snapshot())
             .anyMatch(e -> e.contains("rollback done"));
   }
 

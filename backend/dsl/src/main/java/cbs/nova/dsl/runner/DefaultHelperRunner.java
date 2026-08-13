@@ -5,7 +5,6 @@ import cbs.nova.dsl.DslEntityNotFoundException;
 import cbs.nova.dsl.DslExecutionException;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.FunctionContext;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
@@ -19,7 +18,6 @@ import java.util.function.Function;
 @RequiredArgsConstructor
 public final class DefaultHelperRunner implements HelperRunner {
 
-  private final ExecutionTraceCollector traceCollector;
   private final ContextFactory contextFactory;
 
   @Override
@@ -68,7 +66,7 @@ public final class DefaultHelperRunner implements HelperRunner {
     }
     Result<?> result = null;
     try {
-      var richCtx = new FunctionRichContext<>(ctx, traceCollector, contextFactory);
+      var richCtx = new FunctionRichContext<>(ctx, contextFactory);
       Function<FunctionContext<?>, Result<?>> logic = ctx.mode() == ExecutionMode.PREVIEW
               ? fn.get().effectivePreview()
               : fn.get().executeLogic();

@@ -11,7 +11,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 class ProcessPreviewDescribeTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
-  private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
 
   @Test
   void processWithPreviewReturnsMockInPreviewMode() {
@@ -26,7 +25,7 @@ class ProcessPreviewDescribeTest {
             .preview(ctx -> Result.success("PREVIEW_MOCK"))
             .build();
 
-    var runner = new DefaultProcessRunner(traceCollector, contextFactory,
+    var runner = new DefaultProcessRunner(contextFactory,
             new CompensationRegistry());
     var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
     var result = runner.run(process, ctx);
@@ -44,7 +43,7 @@ class ProcessPreviewDescribeTest {
             .execute(ctx -> Result.success("EXEC"))
             .build();
 
-    var runner = new DefaultProcessRunner(traceCollector, contextFactory,
+    var runner = new DefaultProcessRunner(contextFactory,
             new CompensationRegistry());
     var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
     var result = runner.run(process, ctx);

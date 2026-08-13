@@ -6,7 +6,6 @@ import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.ParameterType;
@@ -36,8 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 class DevDslRuntimeCachingTest {
 
   private final RunScopedExternalCallRecorder recorder = new RunScopedExternalCallRecorder(null);
-  private final ExecutionTraceCollector traceCollector = DslConfig.dslConfig()
-          .executionTraceCollector();
   private final ContextFactory contextFactory = new ContextFactory();
   private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
   private final DryRunLogbackAppender appender = new DryRunLogbackAppender(dryRunLoggingContext,
@@ -59,10 +56,10 @@ class DevDslRuntimeCachingTest {
     cache = new PreviewResultCache(60_000);
     CbsNovaPreviewProperties previewProperties = new CbsNovaPreviewProperties(null, null);
     PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
-            dryRunLoggingContext, cache, previewProperties, traceCollector);
-    RunDslPipe runPipe = new RunDslPipe(contextFactory, traceCollector);
+            dryRunLoggingContext, cache, previewProperties);
+    RunDslPipe runPipe = new RunDslPipe(contextFactory);
     ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
-            dryRunLoggingContext, previewProperties, traceCollector);
+            dryRunLoggingContext, previewProperties);
     runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
 
     Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);

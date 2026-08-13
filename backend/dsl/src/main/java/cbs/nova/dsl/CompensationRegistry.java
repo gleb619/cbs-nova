@@ -34,7 +34,6 @@ public final class CompensationRegistry {
           @NonNull String transactionName,
           @NonNull String runId,
           @NonNull Throwable error,
-          @NonNull ExecutionTraceCollector traceCollector,
           @NonNull ContextFactory contextFactory) {
     var list = entries.get(key(runId));
     if (list == null) {
@@ -45,7 +44,7 @@ public final class CompensationRegistry {
         var entry = list.get(i);
         if (entry.transactionName().equals(transactionName)) {
           list.remove(i);
-          entry.run(error, traceCollector, contextFactory);
+          entry.run(error, contextFactory);
           return;
         }
       }
@@ -55,7 +54,6 @@ public final class CompensationRegistry {
   public void compensateAll(
           @NonNull String runId,
           @NonNull Throwable error,
-          @NonNull ExecutionTraceCollector traceCollector,
           @NonNull ContextFactory contextFactory) {
     var list = entries.remove(key(runId));
     if (list == null) {
@@ -63,7 +61,7 @@ public final class CompensationRegistry {
     }
     synchronized (list) {
       for (int i = list.size() - 1; i >= 0; i--) {
-        list.get(i).run(error, traceCollector, contextFactory);
+        list.get(i).run(error, contextFactory);
       }
     }
   }
@@ -88,10 +86,8 @@ public final class CompensationRegistry {
 
     void run(
             Throwable error,
-            ExecutionTraceCollector traceCollector,
             ContextFactory contextFactory) {
-      var compCtx = new CompensationRichContext<>(baseCtx, error, traceCollector,
-              contextFactory);
+      var compCtx = new CompensationRichContext<>(baseCtx, error, contextFactory);
       transaction.compensationLogic().apply(compCtx);
     }
   }

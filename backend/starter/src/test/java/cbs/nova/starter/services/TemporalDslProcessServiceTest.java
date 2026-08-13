@@ -6,7 +6,6 @@ import cbs.nova.dsl.DslEntityNotFoundException;
 import cbs.nova.dsl.DslRun;
 import cbs.nova.dsl.DslRunStatus;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.SimpleContext;
 import cbs.nova.dsl.config.ContextFactory;
@@ -52,8 +51,7 @@ class TemporalDslProcessServiceTest {
 
   private static TemporalDslProcessService newService(ContextFactory contextFactory) {
     return new TemporalDslProcessService(
-            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper(),
-            new ExecutionTraceCollector());
+            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper());
   }
 
   @Test
@@ -108,8 +106,7 @@ class TemporalDslProcessServiceTest {
   void startProcessReachesGlobalManagerWithCorrectProcessName() {
     String missing = "missing-" + UUID.randomUUID();
     TemporalDslProcessService service = new TemporalDslProcessService(new ContextFactory(),
-            new InMemoryDslRunRepository(), new ObjectMapper(),
-            new ExecutionTraceCollector());
+            new InMemoryDslRunRepository(), new ObjectMapper());
 
     Result<?> result = service.startProcess(missing, Map.of("k", "v"), Map.of("meta", "data"))
             .result()
@@ -155,8 +152,7 @@ class TemporalDslProcessServiceTest {
       });
 
       TemporalDslProcessService service = new TemporalDslProcessService(
-              contextFactory, new InMemoryDslRunRepository(), new ObjectMapper(),
-              new ExecutionTraceCollector());
+              contextFactory, new InMemoryDslRunRepository(), new ObjectMapper());
       service.startProcess(unique(), "payload", Map.of());
 
       assertThat(MDC.get("runId")).isNull();
@@ -175,7 +171,7 @@ class TemporalDslProcessServiceTest {
       ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
       Mockito.when(contextFactory.generateRunId()).thenReturn("run-stale-1");
       TemporalDslProcessService service = new TemporalDslProcessService(
-              contextFactory, repo, new ObjectMapper(), new ExecutionTraceCollector(),
+              contextFactory, repo, new ObjectMapper(),
               exec, scheduler, Duration.ofMillis(1), Duration.ofMillis(100), false);
       service.setClock(fixedClock);
 
@@ -186,6 +182,7 @@ class TemporalDslProcessServiceTest {
               .status(DslRunStatus.RUNNING.name())
               .input("{}")
               .output("{}")
+              .error(null)
               .startedAt(fixedClock.instant().minus(Duration.ofMinutes(10)))
               .finishedAt(Instant.EPOCH)
               .executionMode("RUN")

@@ -3,7 +3,6 @@ package cbs.nova.dsl.example.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.DefinitionLoader;
-import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
@@ -127,9 +126,8 @@ class BatchProcessingDslIntegrationTest {
 
   @Test
   void runsBatchProcessingDslThroughServiceApi() {
-    var service = new TemporalDslProcessService(
-            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
-            new ExecutionTraceCollector());
+    var service = new TemporalDslProcessService(new ContextFactory(),
+            new InMemoryDslRunRepository(), new ObjectMapper());
 
     var input = new BatchIn(
             List.of(

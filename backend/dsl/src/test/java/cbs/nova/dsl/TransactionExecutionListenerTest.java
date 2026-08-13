@@ -13,8 +13,8 @@ import java.util.ArrayList;
 class TransactionExecutionListenerTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
-  private final TransactionRunner runner = new DefaultTransactionRunner(
-          new ExecutionTraceCollector(), contextFactory, new CompensationRegistry());
+  private final TransactionRunner runner = new DefaultTransactionRunner(contextFactory,
+          new CompensationRegistry());
 
   @Test
   void successfulTransactionNotifiesListener() {

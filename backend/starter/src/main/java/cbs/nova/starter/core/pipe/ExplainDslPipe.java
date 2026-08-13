@@ -1,7 +1,6 @@
 package cbs.nova.starter.core.pipe;
 
 import cbs.nova.dsl.Context;
-import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.ExplainReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
@@ -25,7 +24,6 @@ public final class ExplainDslPipe implements DslExecutionPipe<ExplainReport> {
   private final ContextFactory contextFactory;
   private final DryRunLoggingContext dryRunLoggingContext;
   private final CbsNovaPreviewProperties previewProperties;
-  private final ExecutionTraceCollector traceCollector;
 
   @Override
   public @NonNull Result<ExplainReport> execute(@NonNull String name,
@@ -36,7 +34,7 @@ public final class ExplainDslPipe implements DslExecutionPipe<ExplainReport> {
             .stage(new ExecutionTreeStage(contextFactory,
                     previewProperties.callTree().maxDepth()))
             .stage(new DryRunLogStage(dryRunLoggingContext))
-            .stage(new ExecutionTraceStage(traceCollector))
+            .stage(new ExecutionTraceStage())
             .stage(new ExternalCallRecordingStage(recorder))
             .stage(new DispatchStage(contextFactory))
             .build()

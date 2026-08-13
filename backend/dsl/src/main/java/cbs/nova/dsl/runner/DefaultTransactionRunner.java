@@ -6,7 +6,6 @@ import cbs.nova.dsl.DslExecutionException;
 import cbs.nova.dsl.DslSaga;
 import cbs.nova.dsl.ExecutionListener;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.TransactionExecution;
@@ -23,7 +22,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public final class DefaultTransactionRunner implements TransactionRunner {
 
-  private final ExecutionTraceCollector traceCollector;
   private final ContextFactory contextFactory;
   private final CompensationRegistry compensationRegistry;
 
@@ -36,7 +34,7 @@ public final class DefaultTransactionRunner implements TransactionRunner {
     }
     Result<?> result = null;
     try {
-      var richCtx = new TransactionRichContext<>(ctx, traceCollector, contextFactory);
+      var richCtx = new TransactionRichContext<>(ctx, contextFactory);
       if (ctx.mode() == ExecutionMode.EXPLAIN) {
         result = transaction.executeLogic().apply(richCtx);
       } else if (ctx.mode() == ExecutionMode.PREVIEW) {
@@ -73,7 +71,8 @@ public final class DefaultTransactionRunner implements TransactionRunner {
         Object compensationBody = ctx.body();
         var compCtxBase = contextFactory.of(compensationBody, Map.of(),
                 ExecutionMode.COMPENSATION, ctx.runId(), ctx.transactionRouting(),
-                ctx.executionListener(), ctx.saga());
+                ctx.executionListener(), ctx.saga())
+                .withExecutionTraceCollector(ctx.executionTraceCollector());
         var compCtx = GlobalManager.globalManager().createCompensationContext(compCtxBase,
                 new RuntimeException("compensation triggered"));
         transaction.compensationLogic().apply(compCtx);

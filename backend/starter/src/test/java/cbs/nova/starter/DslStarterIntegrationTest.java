@@ -5,7 +5,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cbs.nova.dsl.Dsl;
-import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
@@ -41,15 +40,14 @@ class DslStarterIntegrationTest {
                             .build());
 
     var recorder = new RunScopedExternalCallRecorder(null);
-    var traceCollector = DslConfig.dslConfig().executionTraceCollector();
     var contextFactory = new ContextFactory();
     var dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
     var previewProperties = new CbsNovaPreviewProperties(null, null);
     var previewPipe = new PreviewDslPipe(recorder, contextFactory, dryRunLoggingContext, null,
-            previewProperties, traceCollector);
-    var runPipe = new RunDslPipe(contextFactory, traceCollector);
+            previewProperties);
+    var runPipe = new RunDslPipe(contextFactory);
     var explainPipe = new ExplainDslPipe(recorder, contextFactory, dryRunLoggingContext,
-            previewProperties, traceCollector);
+            previewProperties);
     var runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
     var resource = new DslRuntimeResource(runtime, contextFactory, recorder);
     mockMvc = MockMvcBuilders.standaloneSetup(resource)

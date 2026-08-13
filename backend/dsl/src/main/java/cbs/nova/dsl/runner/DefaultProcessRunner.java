@@ -6,7 +6,6 @@ import cbs.nova.dsl.DslCompensationException;
 import cbs.nova.dsl.DslExecutionException;
 import cbs.nova.dsl.DslSaga;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.TemporalProcessLauncher;
@@ -25,7 +24,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public final class DefaultProcessRunner implements ProcessRunner {
 
-  private final ExecutionTraceCollector traceCollector;
   private final ContextFactory contextFactory;
   private final CompensationRegistry compensationRegistry;
 
@@ -86,7 +84,7 @@ public final class DefaultProcessRunner implements ProcessRunner {
 
   private ExecutionOutcome runDirectly(ProcessDslObject process, Context<?> listeningCtx) {
     var listener = listeningCtx.executionListener();
-    var richCtx = new ProcessRichContext<>(listeningCtx, traceCollector, contextFactory);
+    var richCtx = new ProcessRichContext<>(listeningCtx, contextFactory);
     if (listener != null) {
       listener.onProcessStart(listeningCtx.runId(), process.name(), listeningCtx.body());
     }
@@ -143,8 +141,7 @@ public final class DefaultProcessRunner implements ProcessRunner {
       if (saga != null && saga.hasCompensations()) {
         saga.compensate();
       } else if (compensationRegistry.hasCompensation(ctx.runId())) {
-        compensationRegistry.compensateAll(ctx.runId(), compensationError, traceCollector,
-                contextFactory);
+        compensationRegistry.compensateAll(ctx.runId(), compensationError, contextFactory);
       } else {
         compensateTransactions(history, compensationError);
         compensateProcessLogic(process, ctx, compensationError);

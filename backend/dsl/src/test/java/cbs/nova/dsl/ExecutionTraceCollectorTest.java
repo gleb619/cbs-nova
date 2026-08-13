@@ -14,82 +14,64 @@ class ExecutionTraceCollectorTest {
 
   @Test
   void collectsEntriesWhileStarted() {
-    String runId = "run-1";
-    traceCollector.start(runId);
-    try {
-      traceCollector.add(runId, "step-1");
-      traceCollector.add(runId, "step-2");
-      assertThat(traceCollector.snapshot(runId)).containsExactly("step-1", "step-2");
-    } finally {
-      traceCollector.stop(runId);
-    }
+    traceCollector.start();
+    traceCollector.add("step-1");
+    traceCollector.add("step-2");
+    assertThat(traceCollector.snapshot()).containsExactly("step-1", "step-2");
+    traceCollector.stop();
   }
 
   @Test
   void returnsEmptyAfterStop() {
-    String runId = "run-2";
-    traceCollector.start(runId);
-    traceCollector.add(runId, "x");
-    traceCollector.stop(runId);
-    assertThat(traceCollector.snapshot(runId)).isEmpty();
+    traceCollector.start();
+    traceCollector.add("x");
+    traceCollector.stop();
+    assertThat(traceCollector.snapshot()).isEmpty();
   }
 
   @Test
   void addsAreNoopWhenNotStarted() {
-    String runId = "run-3";
-    traceCollector.add(runId, "ignored");
-    assertThat(traceCollector.snapshot(runId)).isEmpty();
+    traceCollector.add("ignored");
+    assertThat(traceCollector.snapshot()).isEmpty();
   }
 
   @Test
-  void concurrentRunIdIsolation() {
-    String runA = "run-A";
-    String runB = "run-B";
-    traceCollector.start(runA);
-    traceCollector.start(runB);
-    traceCollector.add(runA, "a-1");
-    traceCollector.add(runB, "b-1");
-    traceCollector.add(runA, "a-2");
-    traceCollector.add(runB, "b-2");
-
-    assertThat(traceCollector.snapshot(runA)).containsExactly("a-1", "a-2");
-    assertThat(traceCollector.snapshot(runB)).containsExactly("b-1", "b-2");
-
-    traceCollector.stop(runA);
-    traceCollector.stop(runB);
+  void addsAreNoopAfterStop() {
+    traceCollector.start();
+    traceCollector.add("before");
+    traceCollector.stop();
+    traceCollector.add("after");
+    assertThat(traceCollector.snapshot()).isEmpty();
   }
 
   @Test
-  void orphanStopSafety() {
-    assertThat(traceCollector.snapshot("never-started")).isEmpty();
-    traceCollector.stop("never-started");
-    assertThat(traceCollector.snapshot("never-started")).isEmpty();
+  void stopWithoutStartIsSafe() {
+    traceCollector.stop();
+    assertThat(traceCollector.snapshot()).isEmpty();
   }
 
   @Test
   void snapshotImmutability() {
-    String runId = "run-immutable";
-    traceCollector.start(runId);
-    traceCollector.add(runId, "entry");
+    traceCollector.start();
+    traceCollector.add("entry");
 
-    List<String> snapshot = traceCollector.snapshot(runId);
+    List<String> snapshot = traceCollector.snapshot();
     assertThatThrownBy(() -> snapshot.add("mutant"))
             .isInstanceOf(UnsupportedOperationException.class);
-    assertThat(traceCollector.snapshot(runId)).containsExactly("entry");
+    assertThat(traceCollector.snapshot()).containsExactly("entry");
 
-    traceCollector.stop(runId);
+    traceCollector.stop();
   }
 
   @Test
   void activityThreadSimulation() throws InterruptedException {
-    String runId = "cross-thread-run";
-    traceCollector.start(runId);
+    traceCollector.start();
 
     CountDownLatch added = new CountDownLatch(1);
     CountDownLatch proceed = new CountDownLatch(1);
 
     Thread activityThread = new Thread(() -> {
-      traceCollector.add(runId, "activity-entry");
+      traceCollector.add("activity-entry");
       added.countDown();
       try {
         proceed.await();
@@ -101,12 +83,45 @@ class ExecutionTraceCollectorTest {
     activityThread.start();
     added.await();
 
-    assertThat(traceCollector.snapshot(runId)).containsExactly("activity-entry");
+    assertThat(traceCollector.snapshot()).containsExactly("activity-entry");
 
     proceed.countDown();
     activityThread.join();
 
-    assertThat(traceCollector.snapshot(runId)).containsExactly("activity-entry");
-    traceCollector.stop(runId);
+    assertThat(traceCollector.snapshot()).containsExactly("activity-entry");
+    traceCollector.stop();
+  }
+
+  @Test
+  void perRunIsolation() {
+    ExecutionTraceCollector runA = new ExecutionTraceCollector();
+    runA.start();
+    runA.add("a-1");
+
+    ExecutionTraceCollector runB = new ExecutionTraceCollector();
+    runB.start();
+    runB.add("b-1");
+    runB.add("b-2");
+
+    assertThat(runA.snapshot()).containsExactly("a-1");
+    assertThat(runB.snapshot()).containsExactly("b-1", "b-2");
+
+    runA.stop();
+    runB.stop();
+  }
+
+  @Test
+  void exceptionSafetyLeavesNoResidualState() {
+    ExecutionTraceCollector collector = new ExecutionTraceCollector();
+    collector.start();
+    collector.add("entry");
+
+    try {
+      throw new RuntimeException("boom");
+    } catch (RuntimeException expected) {
+      collector.stop();
+    }
+
+    assertThat(collector.snapshot()).isEmpty();
   }
 }

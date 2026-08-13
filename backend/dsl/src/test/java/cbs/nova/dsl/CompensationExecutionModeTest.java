@@ -12,8 +12,8 @@ import java.util.concurrent.atomic.AtomicReference;
 class CompensationExecutionModeTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
-  private final ProcessRunner runner = new DefaultProcessRunner(
-          new ExecutionTraceCollector(), contextFactory, new CompensationRegistry());
+  private final ProcessRunner runner = new DefaultProcessRunner(contextFactory,
+          new CompensationRegistry());
 
   @Test
   void compensationBlockSeesCompensationMode() {

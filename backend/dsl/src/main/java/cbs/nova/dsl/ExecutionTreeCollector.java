@@ -13,27 +13,27 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * RunId-scoped nested call-tree collector.
+ * Per-run nested call-tree collector.
  *
  * <p>
  * Receives start/end events from runners via {@link ExecutionListener} and assembles an immutable
- * tree of {@link CallNode} entries per runId. Designed to be activated by the preview/explain entry
- * points (T150) and consumed once a run finishes.
+ * tree of {@link CallNode} entries. One instance corresponds to exactly one run: it is created by
+ * the owning pipe stage ({@code ExecutionTreeStage}) at run entry and dropped when the run ends, so
+ * there is no runId-keyed map and no shared singleton that could leak state across runs.
  */
-// TODO: class can cause a memory leak, to remove, change to a new pipe stage
 public final class ExecutionTreeCollector implements ExecutionListener {
 
   private static final Logger log = LoggerFactory.getLogger(ExecutionTreeCollector.class);
 
   private final int maxDepth;
 
-  private final Map<String, Deque<Frame>> stacks = new ConcurrentHashMap<>();
-  private final Map<String, CallNode> roots = new ConcurrentHashMap<>();
-  private final Map<String, Set<String>> cycleSets = new ConcurrentHashMap<>();
-  private final Map<String, Integer> skipCounts = new ConcurrentHashMap<>();
+  private final Deque<Frame> stack = new ArrayDeque<>();
+  private CallNode root;
+  private final Set<String> cycleSet = new HashSet<>();
+  private int skipCount;
+  private boolean active;
 
   public ExecutionTreeCollector() {
     this(32);
@@ -43,36 +43,30 @@ public final class ExecutionTreeCollector implements ExecutionListener {
     this.maxDepth = maxDepth;
   }
 
-  /**
-   * Prepare a fresh stack for the given runId. Any previously stored root for this runId is
-   * discarded.
-   */
-  public void startRun(@NonNull String runId) {
-    stacks.put(runId, new ArrayDeque<>());
-    roots.remove(runId);
+  /** Prepare a fresh stack. Any previously stored root is discarded. */
+  public void start() {
+    synchronized (stack) {
+      stack.clear();
+      active = true;
+    }
+    root = null;
+    cycleSet.clear();
+    skipCount = 0;
   }
 
-  /**
-   * Tear down the stack for the given runId. Any in-progress frames are popped defensively so that
-   * callers may safely abandon a run.
-   */
-  public void finishRun(@NonNull String runId) {
-    Deque<Frame> stack = stacks.remove(runId);
-    if (stack == null) {
-      return;
-    }
+  /** Tear down the stack. Any in-progress frames are popped defensively. */
+  public void finish() {
     synchronized (stack) {
       while (!stack.isEmpty()) {
         stack.pop();
       }
+      active = false;
     }
-    cycleSets.remove(runId);
-    skipCounts.remove(runId);
   }
 
   @Override
   public void onProcessStart(@NonNull String runId, @NonNull String name, @Nullable Object input) {
-    pushFrame(runId, name, CallKind.PROCESS, input);
+    pushFrame(name, CallKind.PROCESS, input);
   }
 
   @Override
@@ -89,54 +83,50 @@ public final class ExecutionTreeCollector implements ExecutionListener {
   @Override
   public void onProcessEnd(@NonNull String runId, @NonNull String name,
           @Nullable Object output, boolean success) {
-    popFrame(runId, name, output, success);
+    popFrame(name, output, success);
   }
 
   @Override
   public void onTransactionStart(@NonNull String runId, @NonNull String name,
           @Nullable Object input) {
-    pushFrame(runId, name, CallKind.TRANSACTION, input);
+    pushFrame(name, CallKind.TRANSACTION, input);
   }
 
   @Override
   public void onTransactionEnd(@NonNull String runId, @NonNull String name,
           @Nullable Object output, boolean success) {
-    popFrame(runId, name, output, success);
+    popFrame(name, output, success);
   }
 
   @Override
   public void onHelperStart(@NonNull String runId, @NonNull String name, @Nullable Object input) {
-    pushFrame(runId, name, CallKind.HELPER, input);
+    pushFrame(name, CallKind.HELPER, input);
   }
 
   @Override
   public void onHelperEnd(@NonNull String runId, @NonNull String name,
           @Nullable Object output, boolean success) {
-    popFrame(runId, name, output, success);
+    popFrame(name, output, success);
   }
 
   @Override
   public void onFunctionStart(@NonNull String runId, @NonNull String name,
           @Nullable Object input) {
-    pushFrame(runId, name, CallKind.FUNCTION, input);
+    pushFrame(name, CallKind.FUNCTION, input);
   }
 
   @Override
   public void onFunctionEnd(@NonNull String runId, @NonNull String name,
           @Nullable Object output, boolean success) {
-    popFrame(runId, name, output, success);
+    popFrame(name, output, success);
   }
 
   /**
    * Append a captured external call (e.g. JDBC/HTTP) to the currently active frame. Silently
-   * ignored when no runId stack exists or the stack is empty.
+   * ignored when the stack is empty or the collector has not been started.
    */
-  public void attachExternalCall(@NonNull String runId, @NonNull Map<String, Object> call) {
-    if (skipCounts.getOrDefault(runId, 0) > 0) {
-      return;
-    }
-    Deque<Frame> stack = stacks.get(runId);
-    if (stack == null) {
+  public void attachExternalCall(@NonNull Map<String, Object> call) {
+    if (!active || skipCount > 0) {
       return;
     }
     synchronized (stack) {
@@ -148,34 +138,31 @@ public final class ExecutionTreeCollector implements ExecutionListener {
     }
   }
 
-  /** Returns the assembled root tree for the given runId, if any. */
-  public @NonNull Optional<CallNode> tree(@NonNull String runId) {
-    return Optional.ofNullable(roots.get(runId));
+  /** Returns the assembled root tree, if any. */
+  public @NonNull Optional<CallNode> tree() {
+    return Optional.ofNullable(root);
   }
 
-  private void pushFrame(String runId, String name, CallKind kind, Object input) {
-    Deque<Frame> stack = stacks.get(runId);
-    if (stack == null) {
-      return;
-    }
+  private void pushFrame(String name, CallKind kind, Object input) {
     synchronized (stack) {
-      int skipCount = skipCounts.getOrDefault(runId, 0);
+      if (!active) {
+        return;
+      }
       if (skipCount > 0) {
-        skipCounts.put(runId, skipCount + 1);
+        skipCount++;
         return;
       }
       if (stack.size() >= maxDepth) {
         stack.push(new Frame("<truncated>", kind, null, true));
-        skipCounts.put(runId, 1);
+        skipCount = 1;
         log.warn("ExecutionTreeCollector: depth limit {} reached at '{}', truncating subtree",
                 maxDepth, name);
         return;
       }
       String cycleKey = name + ":" + kind;
-      Set<String> cycleSet = cycleSets.computeIfAbsent(runId, k -> new HashSet<>());
       if (cycleSet.contains(cycleKey)) {
         stack.push(new Frame("<truncated>", kind, null, true));
-        skipCounts.put(runId, 1);
+        skipCount = 1;
         log.warn("ExecutionTreeCollector: cycle detected at '{}' ({}), truncating",
                 name, kind);
         return;
@@ -185,13 +172,11 @@ public final class ExecutionTreeCollector implements ExecutionListener {
     }
   }
 
-  private void popFrame(String runId, String name, Object output, boolean success) {
-    Deque<Frame> stack = stacks.get(runId);
-    if (stack == null) {
-      return;
-    }
+  private void popFrame(String name, Object output, boolean success) {
     synchronized (stack) {
-      int skipCount = skipCounts.getOrDefault(runId, 0);
+      if (!active) {
+        return;
+      }
       if (skipCount > 0) {
         skipCount--;
         if (skipCount == 0) {
@@ -204,14 +189,11 @@ public final class ExecutionTreeCollector implements ExecutionListener {
                     List.of(), List.of());
             Frame parent = stack.peek();
             if (parent == null) {
-              roots.put(runId, node);
+              root = node;
             } else {
               parent.children.add(node);
             }
           }
-          skipCounts.remove(runId);
-        } else {
-          skipCounts.put(runId, skipCount);
         }
         return;
       }
@@ -231,15 +213,12 @@ public final class ExecutionTreeCollector implements ExecutionListener {
               List.copyOf(frame.externalCalls));
       Frame parent = stack.peek();
       if (parent == null) {
-        roots.put(runId, node);
+        root = node;
       } else {
         parent.children.add(node);
       }
       String cycleKey = frame.name + ":" + frame.kind;
-      Set<String> cycleSet = cycleSets.get(runId);
-      if (cycleSet != null) {
-        cycleSet.remove(cycleKey);
-      }
+      cycleSet.remove(cycleKey);
     }
   }
 

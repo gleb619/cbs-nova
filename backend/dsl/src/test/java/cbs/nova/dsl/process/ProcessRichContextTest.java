@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.TransactionInvoker;
@@ -19,7 +18,6 @@ import java.util.concurrent.atomic.AtomicReference;
 class ProcessRichContextTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
-  private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
 
   @BeforeEach
   void reset() {
@@ -33,7 +31,7 @@ class ProcessRichContextTest {
             Dsl.transaction("TestTx").execute(ctx -> Result.success("local")).build());
 
     var ctx = contextFactory.of("body", ExecutionMode.RUN, "r1");
-    var rich = new ProcessRichContext<>(ctx, traceCollector, contextFactory);
+    var rich = new ProcessRichContext<>(ctx, contextFactory);
 
     var result = rich.runTransaction("TestTx");
     assertThat(result.isSuccess()).isTrue();
@@ -55,7 +53,7 @@ class ProcessRichContextTest {
 
     var ctx = contextFactory.of("body", ExecutionMode.RUN, "r1")
             .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);
-    var rich = new ProcessRichContext<>(ctx, traceCollector, contextFactory);
+    var rich = new ProcessRichContext<>(ctx, contextFactory);
 
     var result = rich.runTransaction("TestTx");
     assertThat(result.isSuccess()).isTrue();
@@ -71,7 +69,7 @@ class ProcessRichContextTest {
 
     var ctx = contextFactory.of("body", ExecutionMode.RUN, "r1")
             .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);
-    var rich = new ProcessRichContext<>(ctx, traceCollector, contextFactory);
+    var rich = new ProcessRichContext<>(ctx, contextFactory);
 
     var result = rich.runTransaction("TestTx");
     assertThat(result.isSuccess()).isTrue();
@@ -81,7 +79,7 @@ class ProcessRichContextTest {
   @Test
   void withTransactionRoutingReturnsProcessRichContextWithUpdatedDelegate() {
     var ctx = contextFactory.of("body", ExecutionMode.RUN, "r1");
-    var rich = new ProcessRichContext<>(ctx, traceCollector, contextFactory);
+    var rich = new ProcessRichContext<>(ctx, contextFactory);
     var updated = rich.withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);
 
     assertThat(updated).isInstanceOf(ProcessRichContext.class);

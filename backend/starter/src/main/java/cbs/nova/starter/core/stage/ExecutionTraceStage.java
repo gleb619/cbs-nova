@@ -1,25 +1,31 @@
 package cbs.nova.starter.core.stage;
 
+import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.Result;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
-import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
-@RequiredArgsConstructor
+/**
+ * Owns a fresh {@link ExecutionTraceCollector} per run. The collector is created at stage entry,
+ * threaded into the DSL {@link Context} so rich contexts append to it, snapshotted into the
+ * {@code executionTrace} attribute in a {@code finally} block, and then dropped with the run. One
+ * instance == one run, so there is no runId-keyed map to leak.
+ */
 public final class ExecutionTraceStage implements DslPipeStage {
-
-  private final ExecutionTraceCollector traceCollector;
 
   @Override
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
-    traceCollector.start(context.getRunId());
+    ExecutionTraceCollector collector = new ExecutionTraceCollector();
+    Context<?> ctx = context.getDslContext().withExecutionTraceCollector(collector);
+    DslPipeContext wrappedContext = context.withDslContext(ctx);
+    collector.start();
     try {
-      return next.proceed(context);
+      return next.proceed(wrappedContext);
     } finally {
-      context.setAttribute("executionTrace", traceCollector.snapshot(context.getRunId()));
-      traceCollector.stop(context.getRunId());
+      context.setAttribute("executionTrace", collector.snapshot());
+      collector.stop();
     }
   }
 }

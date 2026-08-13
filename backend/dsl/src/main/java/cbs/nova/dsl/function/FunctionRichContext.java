@@ -20,7 +20,6 @@ import java.util.Map;
 public final class FunctionRichContext<T> implements FunctionContext<T> {
 
   private final Context<T> delegate;
-  private final ExecutionTraceCollector traceCollector;
   private final ContextFactory contextFactory;
 
   @Override
@@ -49,6 +48,16 @@ public final class FunctionRichContext<T> implements FunctionContext<T> {
   }
 
   @Override
+  public @Nullable ExecutionListener executionListener() {
+    return delegate.executionListener();
+  }
+
+  @Override
+  public @Nullable ExecutionTraceCollector executionTraceCollector() {
+    return delegate.executionTraceCollector();
+  }
+
+  @Override
   public @NonNull <U> Context<U> withBody(@NonNull U body) {
     return delegate.withBody(body);
   }
@@ -60,14 +69,32 @@ public final class FunctionRichContext<T> implements FunctionContext<T> {
 
   @Override
   public @NonNull Context<T> withTransactionRouting(@NonNull TransactionRouting routing) {
-    return new FunctionRichContext<>(delegate.withTransactionRouting(routing), traceCollector,
-            contextFactory);
+    return new FunctionRichContext<>(delegate.withTransactionRouting(routing), contextFactory);
+  }
+
+  @Override
+  public @NonNull Context<T> withExecutionListener(@NonNull ExecutionListener listener) {
+    return new FunctionRichContext<>(delegate.withExecutionListener(listener), contextFactory);
+  }
+
+  @Override
+  public @NonNull Context<T> withExecutionTraceCollector(
+          @Nullable ExecutionTraceCollector executionTraceCollector) {
+    return new FunctionRichContext<>(
+            delegate.withExecutionTraceCollector(executionTraceCollector), contextFactory);
+  }
+
+  private void trace(@NonNull String entry) {
+    ExecutionTraceCollector collector = delegate.executionTraceCollector();
+    if (collector != null) {
+      collector.add(entry);
+    }
   }
 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name) {
     Result<?> result = GlobalManager.globalManager().runHelper(name, delegate);
-    traceCollector.add(delegate.runId(), "called helper: " + name);
+    trace("called helper: " + name);
     return result;
   }
 
@@ -75,7 +102,7 @@ public final class FunctionRichContext<T> implements FunctionContext<T> {
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input) {
     Result<?> result = GlobalManager.globalManager().runHelper(name,
             contextFactory.of(input, delegate.mode(), delegate.runId()));
-    traceCollector.add(delegate.runId(), "called helper: " + name);
+    trace("called helper: " + name);
     return result;
   }
 
@@ -83,18 +110,7 @@ public final class FunctionRichContext<T> implements FunctionContext<T> {
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull MapInput input) {
     Result<?> result = GlobalManager.globalManager().runHelper(name,
             contextFactory.of(input, delegate.mode(), delegate.runId()));
-    traceCollector.add(delegate.runId(), "called helper: " + name);
+    trace("called helper: " + name);
     return result;
-  }
-
-  @Override
-  public @Nullable ExecutionListener executionListener() {
-    return delegate.executionListener();
-  }
-
-  @Override
-  public @NonNull Context<T> withExecutionListener(@NonNull ExecutionListener listener) {
-    return new FunctionRichContext<>(delegate.withExecutionListener(listener), traceCollector,
-            contextFactory);
   }
 }

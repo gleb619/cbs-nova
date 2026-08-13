@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.Executable;
-import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GeneratedClassProvider;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.HelperInstanceResolver;
@@ -152,9 +151,8 @@ class UnreliableApiDslIntegrationTest {
 
   @Test
   void resilientTransactionSucceedsAfterTemporalRetries() {
-    var service = new TemporalDslProcessService(
-            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
-            new ExecutionTraceCollector());
+    var service = new TemporalDslProcessService(new ContextFactory(),
+            new InMemoryDslRunRepository(), new ObjectMapper());
     String runId = "unreliable-success-" + System.currentTimeMillis();
     var apiCall = new UnreliableApiIn(runId, 3, false, null);
     var input = new UnreliableProcessIn("success", apiCall);
@@ -177,9 +175,8 @@ class UnreliableApiDslIntegrationTest {
     var input = new UnreliableProcessIn("compensated", apiCall);
     String markerId = "UnreliableApiCompensated-" + input.scenario();
 
-    Result<?> result = new TemporalDslProcessService(
-            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
-            new ExecutionTraceCollector())
+    Result<?> result = new TemporalDslProcessService(new ContextFactory(),
+            new InMemoryDslRunRepository(), new ObjectMapper())
             .runProcess("UnreliableApiCompensated", input).result().join();
 
     assertThat(result.isSuccess()).isFalse();
@@ -194,9 +191,8 @@ class UnreliableApiDslIntegrationTest {
     var apiCall = new UnreliableApiIn(runId, 5, false, null);
     var input = new UnreliableProcessIn("uncaught", apiCall);
 
-    Result<?> result = new TemporalDslProcessService(
-            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
-            new ExecutionTraceCollector())
+    Result<?> result = new TemporalDslProcessService(new ContextFactory(),
+            new InMemoryDslRunRepository(), new ObjectMapper())
             .runProcess("UnreliableApiUncaught", input).result().join();
 
     assertThat(result.isSuccess()).isFalse();

@@ -7,7 +7,6 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.HelperInstanceResolver;
 import cbs.nova.dsl.Result;
@@ -130,14 +129,6 @@ class DslConfigTest {
   }
 
   @Test
-  void executionTraceCollectorReturnsSameInstanceAcrossCalls() {
-    ExecutionTraceCollector first = dsl.executionTraceCollector();
-    ExecutionTraceCollector second = dsl.executionTraceCollector();
-
-    assertThat(first).isNotNull().isSameAs(second);
-  }
-
-  @Test
   void defaultRetryPolicyReturnsSameInstanceAcrossCalls() {
     RetryPolicy first = dsl.defaultRetryPolicy();
     RetryPolicy second = dsl.defaultRetryPolicy();
@@ -166,58 +157,54 @@ class DslConfigTest {
 
   @Test
   void processRunnerReturnsSameInstanceForSameArguments() {
-    ExecutionTraceCollector trace = dsl.executionTraceCollector();
     ContextFactory ctxFactory = dsl.contextFactory();
     CompensationRegistry registry = dsl.compensationRegistry();
 
-    ProcessRunner first = dsl.processRunner(trace, ctxFactory, registry);
-    ProcessRunner second = dsl.processRunner(trace, ctxFactory, registry);
+    ProcessRunner first = dsl.processRunner(ctxFactory, registry);
+    ProcessRunner second = dsl.processRunner(ctxFactory, registry);
 
     assertThat(first).isNotNull().isSameAs(second);
   }
 
   @Test
   void transactionRunnerReturnsSameInstanceForSameArguments() {
-    ExecutionTraceCollector trace = dsl.executionTraceCollector();
     ContextFactory ctxFactory = dsl.contextFactory();
     CompensationRegistry registry = dsl.compensationRegistry();
 
-    TransactionRunner first = dsl.transactionRunner(trace, ctxFactory, registry);
-    TransactionRunner second = dsl.transactionRunner(trace, ctxFactory, registry);
+    TransactionRunner first = dsl.transactionRunner(ctxFactory, registry);
+    TransactionRunner second = dsl.transactionRunner(ctxFactory, registry);
 
     assertThat(first).isNotNull().isSameAs(second);
   }
 
   @Test
   void helperRunnerReturnsSameInstanceForSameArguments() {
-    ExecutionTraceCollector trace = dsl.executionTraceCollector();
     ContextFactory ctxFactory = dsl.contextFactory();
 
-    HelperRunner first = dsl.helperRunner(trace, ctxFactory);
-    HelperRunner second = dsl.helperRunner(trace, ctxFactory);
+    HelperRunner first = dsl.helperRunner(ctxFactory);
+    HelperRunner second = dsl.helperRunner(ctxFactory);
 
     assertThat(first).isNotNull().isSameAs(second);
   }
 
   @Test
   void processRunnerIsInstanceOfDefaultProcessRunner() {
-    ProcessRunner runner = dsl.processRunner(dsl.executionTraceCollector(), dsl.contextFactory(),
-            dsl.compensationRegistry());
+    ProcessRunner runner = dsl.processRunner(dsl.contextFactory(), dsl.compensationRegistry());
 
     assertThat(runner).isInstanceOf(DefaultProcessRunner.class);
   }
 
   @Test
   void transactionRunnerIsInstanceOfDefaultTransactionRunner() {
-    TransactionRunner runner = dsl.transactionRunner(dsl.executionTraceCollector(),
-            dsl.contextFactory(), dsl.compensationRegistry());
+    TransactionRunner runner = dsl.transactionRunner(dsl.contextFactory(),
+            dsl.compensationRegistry());
 
     assertThat(runner).isInstanceOf(DefaultTransactionRunner.class);
   }
 
   @Test
   void helperRunnerIsInstanceOfDefaultHelperRunner() {
-    HelperRunner runner = dsl.helperRunner(dsl.executionTraceCollector(), dsl.contextFactory());
+    HelperRunner runner = dsl.helperRunner(dsl.contextFactory());
 
     assertThat(runner).isInstanceOf(DefaultHelperRunner.class);
   }
@@ -283,7 +270,6 @@ class DslConfigTest {
     Context<String> ctx = dsl.contextFactory().of("input", ExecutionMode.RUN, "run-regression");
 
     DefaultProcessRunner runner = new DefaultProcessRunner(
-            dsl.executionTraceCollector(),
             dsl.contextFactory(),
             dsl.compensationRegistry());
 
@@ -317,7 +303,6 @@ class DslConfigTest {
     Context<String> ctx = dsl.contextFactory().of("input", ExecutionMode.RUN, "run-no-launcher");
 
     DefaultProcessRunner runner = new DefaultProcessRunner(
-            dsl.executionTraceCollector(),
             dsl.contextFactory(),
             dsl.compensationRegistry());
 
@@ -347,21 +332,21 @@ class DslConfigTest {
     // We assert the call returns a non-null ProcessRunner (the call
     // succeeds with nulls leaking through), which is the observable
     // current behavior.
-    ProcessRunner runner = dsl.processRunner(null, null, null);
+    ProcessRunner runner = dsl.processRunner(null, null);
 
     assertThat(runner).isNotNull();
   }
 
   @Test
   void transactionRunnerDoesNotRejectNullArgsAtRuntime() {
-    TransactionRunner runner = dsl.transactionRunner(null, null, null);
+    TransactionRunner runner = dsl.transactionRunner(null, null);
 
     assertThat(runner).isNotNull();
   }
 
   @Test
   void helperRunnerDoesNotRejectNullArgsAtRuntime() {
-    HelperRunner runner = dsl.helperRunner(null, null);
+    HelperRunner runner = dsl.helperRunner(null);
 
     assertThat(runner).isNotNull();
   }

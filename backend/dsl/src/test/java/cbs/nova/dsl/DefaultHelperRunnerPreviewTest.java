@@ -13,13 +13,12 @@ import java.util.List;
 class DefaultHelperRunnerPreviewTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
-  private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
 
   @Test
   void previewModeInvokesPreviewHook() {
     var registry = new DefaultHelperRegistry();
     registry.registerHelper("mock", new MockHelper());
-    var runner = new DefaultHelperRunner(traceCollector, contextFactory);
+    var runner = new DefaultHelperRunner(contextFactory);
     var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
     var result = runner.runHelper("mock", ctx, registry);
     assertThat(result.isSuccess()).isTrue();
@@ -30,7 +29,7 @@ class DefaultHelperRunnerPreviewTest {
   void runModeInvokesExecuteHook() {
     var registry = new DefaultHelperRegistry();
     registry.registerHelper("mock", new MockHelper());
-    var runner = new DefaultHelperRunner(traceCollector, contextFactory);
+    var runner = new DefaultHelperRunner(contextFactory);
     var ctx = contextFactory.of("input", ExecutionMode.RUN);
     var result = runner.runHelper("mock", ctx, registry);
     assertThat(result.isSuccess()).isTrue();
