@@ -2,8 +2,8 @@ package cbs.nova.dsl.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.DslRun;
-import cbs.nova.dsl.DslRunStatus;
+import cbs.nova.dsl.history.DslRun;
+import cbs.nova.dsl.history.DslRunStatus;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;

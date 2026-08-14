@@ -2,11 +2,11 @@ package cbs.nova.dsl.config;
 
 import cbs.nova.dsl.CompensationRegistry;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.HelperInstanceResolver;
+import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.HelperManager;
 import cbs.nova.dsl.JsonSchemaGenerator;
-import cbs.nova.dsl.TemporalProcessLauncher;
-import cbs.nova.dsl.TransactionInvoker;
+import cbs.nova.dsl.process.TemporalProcessLauncher;
+import cbs.nova.dsl.transaction.TransactionInvoker;
 import cbs.nova.dsl.converter.MapInputConverter;
 import cbs.nova.dsl.jsonschema.VictoolsJsonSchemaGenerator;
 import cbs.nova.dsl.model.RetryPolicy;

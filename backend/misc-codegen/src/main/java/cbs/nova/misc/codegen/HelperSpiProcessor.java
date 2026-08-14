@@ -1,6 +1,6 @@
 package cbs.nova.misc.codegen;
 
-import cbs.nova.dsl.Helper;
+import cbs.nova.dsl.annotation.Helper;
 import cbs.nova.dsl.utils.Substitutor;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -24,7 +24,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-@SupportedAnnotationTypes("cbs.nova.dsl.Helper")
+@SupportedAnnotationTypes("cbs.nova.dsl.annotation.Helper")
 @SupportedSourceVersion(SourceVersion.RELEASE_25)
 public class HelperSpiProcessor extends AbstractProcessor {
 
@@ -100,10 +100,10 @@ public class HelperSpiProcessor extends AbstractProcessor {
                 : "package " + resolverPackage + ";\n\n";
         var template = // language=java
                 """
-                        ${packageLine}import cbs.nova.dsl.HelperInstanceResolver;
-                        import cbs.nova.dsl.HelperRegistrar;
-                        import cbs.nova.dsl.HelperResolver;
-                        ${imports}
+                        ${packageLine}import cbs.nova.dsl.helper.HelperInstanceResolver;
+                        import cbs.nova.dsl.helper.HelperRegistrar;
+                        import cbs.nova.dsl.helper.HelperResolver;
+                                                ${imports}
 
                         public final class ${resolverClass} implements HelperResolver {
                           @Override
@@ -132,7 +132,7 @@ public class HelperSpiProcessor extends AbstractProcessor {
     try {
       var resource = processingEnv.getFiler().createResource(
               StandardLocation.CLASS_OUTPUT, "",
-              "META-INF/services/cbs.nova.dsl.HelperResolver");
+              "META-INF/services/cbs.nova.dsl.helper.HelperResolver");
       try (var writer = new PrintWriter(resource.openWriter())) {
         writer.print(String.format("%s%n", resolverFqn));
       }

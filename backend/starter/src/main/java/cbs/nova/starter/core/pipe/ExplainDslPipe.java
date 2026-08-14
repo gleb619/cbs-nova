@@ -2,7 +2,7 @@ package cbs.nova.starter.core.pipe;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExplainReport;
-import cbs.nova.dsl.HelperInterceptor;
+import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.logging.DryRunLoggingContext;

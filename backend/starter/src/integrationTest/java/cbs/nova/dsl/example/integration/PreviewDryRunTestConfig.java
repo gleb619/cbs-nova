@@ -2,10 +2,10 @@ package cbs.nova.dsl.example.integration;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
-import cbs.nova.dsl.Helper;
+import cbs.nova.dsl.annotation.Helper;
 import cbs.nova.dsl.Result;
+import cbs.nova.starter.capture.ExternalCallFeignInterceptor;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
-import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import feign.Feign;
 import feign.Param;
@@ -87,7 +87,7 @@ public class PreviewDryRunTestConfig {
 
   @Bean
   PreviewDryRunHttpApi previewDryRunHttpApi(
-          cbs.nova.starter.capture.ExternalCallFeignInterceptor externalCallFeignInterceptor,
+          ExternalCallFeignInterceptor externalCallFeignInterceptor,
           PreviewDryRunHttpServer previewDryRunHttpServer) {
     String baseUrl = "http://localhost:" + previewDryRunHttpServer.server().getAddress().getPort();
     return Feign.builder()

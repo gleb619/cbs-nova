@@ -3,6 +3,8 @@ package cbs.nova.dsl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.exception.DslEntityNotFoundException;
+import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
 import cbs.nova.dsl.runner.DefaultHelperRunner;
 import org.jspecify.annotations.NonNull;

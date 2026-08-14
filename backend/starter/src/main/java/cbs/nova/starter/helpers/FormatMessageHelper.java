@@ -2,10 +2,11 @@ package cbs.nova.starter.helpers;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
-import cbs.nova.dsl.Helper;
+import cbs.nova.dsl.annotation.Helper;
 import cbs.nova.dsl.Result;
 import cbs.nova.starter.helpers.model.FormatMessageIn;
 import cbs.nova.starter.helpers.model.FormatMessageOut;
+import java.math.BigDecimal;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Map;
@@ -26,7 +27,7 @@ public class FormatMessageHelper implements Executable<FormatMessageIn, FormatMe
   }
 
   private static String formatValue(Object value) {
-    if (value instanceof java.math.BigDecimal bd) {
+    if (value instanceof BigDecimal bd) {
       return bd.stripTrailingZeros().toPlainString();
     }
     return String.valueOf(value);

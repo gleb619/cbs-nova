@@ -1,7 +1,7 @@
 package cbs.nova.starter.models;
 
-import cbs.nova.dsl.DslRun;
-import cbs.nova.dsl.DslRunStatus;
+import cbs.nova.dsl.history.DslRun;
+import cbs.nova.dsl.history.DslRunStatus;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import tools.jackson.databind.ObjectMapper;
 

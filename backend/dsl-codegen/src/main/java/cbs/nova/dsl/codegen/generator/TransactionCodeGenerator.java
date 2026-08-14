@@ -1,7 +1,7 @@
 package cbs.nova.dsl.codegen.generator;
 
-import cbs.nova.dsl.DslGenerated;
-import cbs.nova.dsl.DslTemporalTransactionRequest;
+import cbs.nova.dsl.annotation.DslGenerated;
+import cbs.nova.dsl.transaction.DslTemporalTransactionRequest;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.model.GeneratedSource;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
@@ -60,7 +60,7 @@ public final class TransactionCodeGenerator {
             """
                     package ${pkg};${importBlock}
                     import cbs.nova.dsl.GeneratedTransactionActivity;
-                    import io.temporal.activity.ActivityInterface;
+                    import cbs.nova.dsl.transaction.DslTemporalTransactionRequest;import io.temporal.activity.ActivityInterface;
                     import io.temporal.activity.ActivityMethod;
 
                     ${annotation}
@@ -98,7 +98,7 @@ public final class TransactionCodeGenerator {
     return Substitutor.format(// language=java
             """
                     package ${pkg};${importBlock}
-                    import cbs.nova.dsl.GlobalManager;
+                    import cbs.nova.dsl.transaction.DslTemporalTransactionRequest;
 
                     ${annotation}
                     public class ${implName} implements ${interfaceName} {

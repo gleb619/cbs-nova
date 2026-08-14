@@ -5,11 +5,10 @@ import static org.awaitility.Awaitility.await;
 
 import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.DslObject;
-import cbs.nova.dsl.DslTemporalProcessRequest;
-import cbs.nova.dsl.Executable;
+import cbs.nova.dsl.process.DslTemporalProcessRequest;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.HelperInstanceResolver;
+import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;

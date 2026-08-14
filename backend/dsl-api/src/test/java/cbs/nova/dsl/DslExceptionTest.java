@@ -2,6 +2,10 @@ package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.exception.DslCompensationException;
+import cbs.nova.dsl.exception.DslEntityNotFoundException;
+import cbs.nova.dsl.exception.DslExecutionException;
+import cbs.nova.dsl.exception.DslValidationException;
 import org.junit.jupiter.api.Test;
 
 class DslExceptionTest {

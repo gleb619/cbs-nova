@@ -1,11 +1,11 @@
 package cbs.nova.dsl.codegen.generator;
 
-import cbs.nova.dsl.DslGenerated;
-import cbs.nova.dsl.DslTemporalProcess;
-import cbs.nova.dsl.DslTemporalProcessRequest;
+import cbs.nova.dsl.annotation.DslGenerated;
+import cbs.nova.dsl.process.DslTemporalProcess;
+import cbs.nova.dsl.process.DslTemporalProcessRequest;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.ProcessCompensation;
-import cbs.nova.dsl.ProcessMain;
+import cbs.nova.dsl.process.ProcessCompensation;
+import cbs.nova.dsl.process.ProcessMain;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.model.GeneratedSource;
 import cbs.nova.dsl.process.ProcessDescriptor;
@@ -67,7 +67,7 @@ public final class ProcessCodeGenerator {
     return Substitutor.format(// language=java
             """
                     package ${pkg};${importBlock}
-                    import io.temporal.workflow.QueryMethod;
+                    import cbs.nova.dsl.process.DslTemporalProcessRequest;import io.temporal.workflow.QueryMethod;
                     import io.temporal.workflow.WorkflowInterface;
                     import io.temporal.workflow.WorkflowMethod;
 
@@ -110,7 +110,7 @@ public final class ProcessCodeGenerator {
 
     String template = // language=java
             """
-                    package ${pkg};${importBlock}
+                    package $ import cbs.nova.dsl.process.DslTemporalProcessRequest;{pkg};${importBlock}
                     ${annotation}
                     public class ${implName} implements ${interfaceName} {
 

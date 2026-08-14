@@ -4,9 +4,8 @@ import cbs.nova.dsl.CompensationContext;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.ParameterDescriptor;
-import cbs.nova.dsl.ProcessContext;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.TransactionExecution;
+import cbs.nova.dsl.transaction.TransactionExecution;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 

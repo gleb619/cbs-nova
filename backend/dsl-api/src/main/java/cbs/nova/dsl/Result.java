@@ -1,5 +1,6 @@
 package cbs.nova.dsl;
 
+import cbs.nova.dsl.model.MapOutput;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 

@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.RetryPolicyFactory;
+import cbs.nova.dsl.model.MapInput;
+import cbs.nova.dsl.model.MapOutput;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 

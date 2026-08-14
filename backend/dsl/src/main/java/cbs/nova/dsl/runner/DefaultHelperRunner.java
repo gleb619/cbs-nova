@@ -1,8 +1,8 @@
 package cbs.nova.dsl.runner;
 
 import cbs.nova.dsl.Context;
-import cbs.nova.dsl.DslEntityNotFoundException;
-import cbs.nova.dsl.DslExecutionException;
+import cbs.nova.dsl.exception.DslEntityNotFoundException;
+import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.FunctionContext;

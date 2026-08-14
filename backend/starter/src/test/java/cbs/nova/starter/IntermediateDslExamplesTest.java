@@ -4,10 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DefinitionLoader;
-import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.HelperInstanceResolver;
+import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;

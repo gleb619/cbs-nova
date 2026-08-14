@@ -5,7 +5,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cbs.nova.dsl.DslErrorCode;
-import cbs.nova.dsl.DslException;
+import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.controllers.DslExceptionHandler;
 import cbs.nova.starter.error.DefaultDslExceptionMapper;
 import cbs.nova.starter.error.DslExceptionMapper;

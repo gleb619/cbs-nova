@@ -3,7 +3,8 @@ package cbs.nova.dsl.converter;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import cbs.nova.dsl.MapInput;
+import cbs.nova.dsl.model.MapInput;
+import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.ParameterizedType;
@@ -160,7 +161,7 @@ class MapInputConverterTest {
 
   @Test
   void unsupportedClassPairThrows() {
-    assertThatThrownBy(() -> converter.convert("x", java.time.LocalDate.class))
+    assertThatThrownBy(() -> converter.convert("x", LocalDate.class))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("Cannot convert");
   }

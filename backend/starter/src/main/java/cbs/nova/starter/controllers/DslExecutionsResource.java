@@ -1,7 +1,7 @@
 package cbs.nova.starter.controllers;
 
-import cbs.nova.dsl.DslRun;
-import cbs.nova.dsl.DslRunRepository;
+import cbs.nova.dsl.history.DslRun;
+import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.starter.models.ErrorResponse;
 import cbs.nova.starter.models.ExecutionDto;
 import cbs.nova.starter.models.ExecutionListResponse;

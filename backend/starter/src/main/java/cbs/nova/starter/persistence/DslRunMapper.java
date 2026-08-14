@@ -1,6 +1,6 @@
 package cbs.nova.starter.persistence;
 
-import cbs.nova.dsl.DslRun;
+import cbs.nova.dsl.history.DslRun;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;

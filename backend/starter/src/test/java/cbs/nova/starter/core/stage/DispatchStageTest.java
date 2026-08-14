@@ -7,7 +7,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.HelperInterceptor;
+import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.core.pipe.DslPipeContext;

@@ -1,7 +1,7 @@
 package cbs.nova.dsl.runner;
 
 import cbs.nova.dsl.ExecutionListener;
-import cbs.nova.dsl.TransactionExecution;
+import cbs.nova.dsl.transaction.TransactionExecution;
 import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;

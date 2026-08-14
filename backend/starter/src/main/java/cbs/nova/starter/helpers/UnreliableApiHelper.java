@@ -2,9 +2,8 @@ package cbs.nova.starter.helpers;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
-import cbs.nova.dsl.Helper;
+import cbs.nova.dsl.annotation.Helper;
 import cbs.nova.dsl.Result;
-import cbs.nova.starter.helpers.model.UnreliableApiFailurePattern;
 import cbs.nova.starter.helpers.model.UnreliableApiIn;
 import cbs.nova.starter.helpers.model.UnreliableApiOut;
 import org.jspecify.annotations.NonNull;

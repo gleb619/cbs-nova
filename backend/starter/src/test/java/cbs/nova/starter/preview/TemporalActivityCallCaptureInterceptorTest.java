@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.TransactionInvoker;
+import cbs.nova.dsl.transaction.TransactionInvoker;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.core.recorder.ExternalCall;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;

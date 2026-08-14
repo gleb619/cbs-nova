@@ -107,7 +107,7 @@ backend/
 
 > **Prerequisite**: switch to Node v22 before running CodeGraph commands:
 > ```bash
-> nvm use v22.20.0
+> source ~/.nvm/nvm.sh && nvm use v22.20.0
 > ```
 
 The backend has its own isolated CodeGraph index under `backend/.codegraph/`.

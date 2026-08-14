@@ -1,7 +1,7 @@
 package cbs.nova.starter.persistence;
 
-import cbs.nova.dsl.DslRun;
-import cbs.nova.dsl.DslRunRepository;
+import cbs.nova.dsl.history.DslRun;
+import cbs.nova.dsl.history.DslRunRepository;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;

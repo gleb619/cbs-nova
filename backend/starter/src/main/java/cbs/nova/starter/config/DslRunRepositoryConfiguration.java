@@ -1,6 +1,6 @@
 package cbs.nova.starter.config;
 
-import cbs.nova.dsl.DslRunRepository;
+import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.starter.persistence.AesFieldEncryptor;
 import cbs.nova.starter.persistence.DslRunJdbcRepository;
 import cbs.nova.starter.persistence.DslRunMapper;

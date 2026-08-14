@@ -1,7 +1,7 @@
 package cbs.nova.starter.core.pipe;
 
 import cbs.nova.dsl.Context;
-import cbs.nova.dsl.HelperInterceptor;
+import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.config.CbsNovaFakesProperties;
@@ -25,7 +25,7 @@ public final class RunDslPipe implements DslExecutionPipe<Object> {
   public @NonNull Result<Object> execute(@NonNull String name,
           @NonNull Context<?> ctx) {
     HelperInterceptor fakeInterceptor = new FakeHelperInterceptor(runScopedFakeConfig, recorder);
-    return DslExecutionPipeline.<Object>builder()
+    return DslExecutionPipeline.builder()
             .stage(new ExecutionTraceStage())
             .stage(new FakingStage(fakesProperties, runScopedFakeConfig))
             .stage(new ExternalCallRecordingStage(recorder))

@@ -2,11 +2,10 @@ package cbs.nova.misc.codegen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.HelperResolver;
+import cbs.nova.dsl.helper.HelperResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.mockito.Mock;
 
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaFileObject;
@@ -36,7 +35,7 @@ class HelperSpiProcessorTest {
 
             import cbs.nova.dsl.Context;
             import cbs.nova.dsl.Executable;
-            import cbs.nova.dsl.Helper;
+            import cbs.nova.dsl.annotation.Helper;
             import cbs.nova.dsl.Result;
 
             @Helper(name = "greetHelper")
@@ -78,7 +77,7 @@ class HelperSpiProcessorTest {
     var resolverClass = outputDir.resolve("fixture/GeneratedHelperResolver.class");
     assertThat(resolverClass).exists();
 
-    var spiFile = outputDir.resolve("META-INF/services/cbs.nova.dsl.HelperResolver");
+    var spiFile = outputDir.resolve("META-INF/services/cbs.nova.dsl.helper.HelperResolver");
     assertThat(spiFile).exists();
     assertThat(Files.readString(spiFile).strip())
             .isEqualTo("fixture.GeneratedHelperResolver");
@@ -101,7 +100,7 @@ class HelperSpiProcessorTest {
     Files.writeString(fixtureSource, """
             import cbs.nova.dsl.Context;
             import cbs.nova.dsl.Executable;
-            import cbs.nova.dsl.Helper;
+            import cbs.nova.dsl.annotation.Helper;
             import cbs.nova.dsl.Result;
 
             @Helper(name = "abstractHelper")

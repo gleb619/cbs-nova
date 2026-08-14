@@ -1,7 +1,6 @@
 package cbs.nova.dsl.registry;
 
 import cbs.nova.dsl.ParameterDescriptor;
-import cbs.nova.dsl.ParameterRegistry;
 import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;

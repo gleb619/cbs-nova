@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.GeneratedClassProvider;
-import cbs.nova.dsl.MapInput;
+import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.codegen.generator.GeneratedClassProviderGenerator;
 import cbs.nova.dsl.codegen.model.CodegenNaming;

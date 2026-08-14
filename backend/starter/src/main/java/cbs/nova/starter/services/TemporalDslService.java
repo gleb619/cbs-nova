@@ -1,11 +1,11 @@
 package cbs.nova.starter.services;
 
-import cbs.nova.dsl.DslExecutionException;
-import cbs.nova.dsl.DslTemporalProcess;
-import cbs.nova.dsl.DslTemporalProcessRequest;
+import cbs.nova.dsl.exception.DslExecutionException;
+import cbs.nova.dsl.process.DslTemporalProcess;
+import cbs.nova.dsl.process.DslTemporalProcessRequest;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.MapInput;
+import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.config.DslConfig;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
@@ -130,8 +130,8 @@ public class TemporalDslService {
 
   private Object prepareInput(Object input, Class<?> inputType) {
     if (inputType != null) {
-      if (input instanceof MapInput mapInput) {
-        return DslConfig.dslConfig().mapInputConverter().convert(mapInput.values(), inputType);
+      if (input instanceof MapInput(Map<String, Object> values)) {
+        return DslConfig.dslConfig().mapInputConverter().convert(values, inputType);
       }
       if (input instanceof Map<?, ?> map) {
         @SuppressWarnings("unchecked")

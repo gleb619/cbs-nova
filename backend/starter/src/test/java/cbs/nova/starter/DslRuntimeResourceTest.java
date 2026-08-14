@@ -9,7 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cbs.nova.dsl.DslErrorCode;
-import cbs.nova.dsl.DslException;
+import cbs.nova.dsl.exception.DslException;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExplainReport;
@@ -18,7 +18,6 @@ import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
-import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.starter.controllers.DslRuntimeResource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

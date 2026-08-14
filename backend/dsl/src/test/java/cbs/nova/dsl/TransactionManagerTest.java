@@ -2,6 +2,7 @@ package cbs.nova.dsl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.exception.DslEntityNotFoundException;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
 import cbs.nova.dsl.registry.DefaultTransactionRegistry;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;

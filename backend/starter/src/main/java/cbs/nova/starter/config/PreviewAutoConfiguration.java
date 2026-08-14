@@ -1,6 +1,6 @@
 package cbs.nova.starter.config;
 
-import cbs.nova.dsl.TransactionInvoker;
+import cbs.nova.dsl.transaction.TransactionInvoker;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import cbs.nova.starter.preview.TemporalActivityCallCaptureInterceptor;
 import cbs.nova.starter.services.TemporalTransactionInvoker;

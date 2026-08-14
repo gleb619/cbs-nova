@@ -1,6 +1,6 @@
 package cbs.nova.dsl.converter;
 
-import cbs.nova.dsl.MapInput;
+import cbs.nova.dsl.model.MapInput;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 

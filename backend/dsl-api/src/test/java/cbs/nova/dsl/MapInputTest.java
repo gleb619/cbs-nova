@@ -3,9 +3,9 @@ package cbs.nova.dsl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import cbs.nova.dsl.model.MapInput;
+import java.util.LinkedHashMap;
 import org.junit.jupiter.api.Test;
-
-import java.util.Map;
 
 class MapInputTest {
 
@@ -57,7 +57,7 @@ class MapInputTest {
 
   @Test
   void fromMapCopiesValues() {
-    var source = new java.util.LinkedHashMap<String, Object>();
+    var source = new LinkedHashMap<String, Object>();
     source.put("a", 1);
     var input = MapInput.fromMap(source);
     source.put("b", 2);

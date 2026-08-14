@@ -1,7 +1,7 @@
 package cbs.nova.starter.controllers;
 
 import cbs.nova.dsl.Context;
-import cbs.nova.dsl.DslException;
+import cbs.nova.dsl.exception.DslException;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExplainReport;

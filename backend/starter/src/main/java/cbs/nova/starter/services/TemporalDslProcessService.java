@@ -1,9 +1,9 @@
 package cbs.nova.starter.services;
 
 import cbs.nova.dsl.Context;
-import cbs.nova.dsl.DslRun;
-import cbs.nova.dsl.DslRunRepository;
-import cbs.nova.dsl.DslRunStatus;
+import cbs.nova.dsl.history.DslRun;
+import cbs.nova.dsl.history.DslRunRepository;
+import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;

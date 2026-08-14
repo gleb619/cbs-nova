@@ -9,10 +9,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import cbs.nova.dsl.DslExecutionException;
+import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.DslObject.DslType;
-import cbs.nova.dsl.DslTemporalProcess;
-import cbs.nova.dsl.DslTemporalProcessRequest;
+import cbs.nova.dsl.process.DslTemporalProcess;
+import cbs.nova.dsl.process.DslTemporalProcessRequest;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import io.temporal.client.WorkflowClient;

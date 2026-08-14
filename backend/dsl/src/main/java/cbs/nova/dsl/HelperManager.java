@@ -1,6 +1,8 @@
 package cbs.nova.dsl;
 
 import cbs.nova.dsl.function.FunctionDslObject;
+import cbs.nova.dsl.helper.HelperInterceptor;
+import cbs.nova.dsl.helper.HelperRegistrar;
 import cbs.nova.dsl.registry.HelperRegistry;
 import cbs.nova.dsl.runner.HelperRunner;
 import lombok.RequiredArgsConstructor;

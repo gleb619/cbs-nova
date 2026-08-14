@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.CompensationContext;
 import cbs.nova.dsl.Dsl;
-import cbs.nova.dsl.DslExecutionException;
+import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;

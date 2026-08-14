@@ -5,7 +5,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import cbs.nova.dsl.DslErrorCode;
-import cbs.nova.dsl.DslException;
+import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.error.DefaultDslExceptionMapper;
 import cbs.nova.starter.error.DslExceptionMapper;
 import cbs.nova.starter.models.ErrorResponse;

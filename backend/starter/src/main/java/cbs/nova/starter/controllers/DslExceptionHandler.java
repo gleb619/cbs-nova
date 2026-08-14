@@ -1,6 +1,6 @@
 package cbs.nova.starter.controllers;
 
-import cbs.nova.dsl.DslException;
+import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.error.DslExceptionMapper;
 import cbs.nova.starter.models.ErrorResponse;
 import lombok.RequiredArgsConstructor;

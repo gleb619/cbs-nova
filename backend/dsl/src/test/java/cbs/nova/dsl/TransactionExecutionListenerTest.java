@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
+import cbs.nova.dsl.transaction.TransactionExecution;
 import cbs.nova.dsl.transaction.TransactionRunner;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;

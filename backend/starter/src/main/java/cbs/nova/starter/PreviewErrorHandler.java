@@ -1,12 +1,11 @@
 package cbs.nova.starter;
 
-import cbs.nova.dsl.DslCompensationException;
-import cbs.nova.dsl.DslEntityNotFoundException;
-import cbs.nova.dsl.DslValidationException;
+import cbs.nova.dsl.exception.DslCompensationException;
+import cbs.nova.dsl.exception.DslEntityNotFoundException;
+import cbs.nova.dsl.exception.DslValidationException;
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.PreviewErrorDetail;
 import lombok.NoArgsConstructor;
-import lombok.experimental.UtilityClass;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;

@@ -3,6 +3,7 @@ package cbs.nova.dsl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.exception.DslEntityNotFoundException;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.process.ProcessManager;
 import cbs.nova.dsl.process.ProcessRegistry;
