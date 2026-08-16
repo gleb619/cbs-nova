@@ -2,7 +2,7 @@ package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.jsonschema.VictoolsJsonSchemaGenerator;
+import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,7 +36,7 @@ class JsonSchemaGeneratorTest {
 
   @BeforeEach
   void setUp() {
-    generator = new VictoolsJsonSchemaGenerator();
+    generator = new JacksonJsonSchemaGenerator();
   }
 
   @Test
