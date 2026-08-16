@@ -248,6 +248,65 @@ pnpm build              # build admin-ui-plugin standalone
 pnpm build:components   # build component library
 ```
 
+## Operator portal host app (`app/ui`)
+
+`app/ui` is the **reference host Nuxt application** that consumes `@cbs/admin-ui-plugin` — it
+stands in for what a real customer's admin portal looks like. Its `package.json` names it
+`@cbs/operator-portal`. It does not duplicate any of the plugin's internals; it only wires
+them into a host shell.
+
+### What it demonstrates
+
+- A client Nuxt 3 app with its own landing page and shell layout.
+- The CBS Nova admin UI mounted under `/nova-admin` via the plugin module — same `defineNuxtConfig`
+  + `modules: ['@cbs/admin-ui-plugin']` pattern documented above, with `routePrefix: '/nova-admin'`.
+- The BFF routes merged automatically from the plugin (the plugin's `server/` directory is merged
+  into the host's Nitro server, so `/api/v1/**` is served from the host process and the browser
+  never calls Spring Boot directly).
+- Local package distribution via `pnpm pack` (the npm equivalent of `mavenLocal`): the host
+  resolves the plugin from a local tarball, not a remote registry.
+
+### Local-registry flow
+
+The host does not depend on a remote npm registry. Instead, `app/ui/local-registry/` holds
+freshly packed tarballs of `frontend/components` and `frontend/admin-ui-plugin`. The
+`pack:local` script in `app/ui/package.json` rebuilds the tarballs and rewrites the host
+`package.json` to point at the new versions:
+
+```bash
+cd app/ui
+pnpm install
+pnpm pack:local          # pack frontend/components + frontend/admin-ui-plugin into local-registry/
+pnpm install             # reinstall against the new tarballs
+pnpm dev                 # host Nuxt + mounted /nova-admin at http://localhost:3000
+```
+
+This is the same operational pattern a customer would use to integrate CBS Nova into their
+own admin portal: produce a package, point the host at it, mount the module.
+
+### Smoke test
+
+`app/ui/tests/` contains a minimal Vitest smoke test that mounts the host landing page and
+asserts the portal branding and the admin entry link are rendered. Run it with `pnpm test`
+from `app/ui`. It is the counterpart to the backend's `ComposeStackValidationTest` — each
+layer of the deployment topology has at least one wire-it-up test that proves the compose /
+host wiring actually starts.
+
+### Architecture notes
+
+- The host app uses **explicit Vue/Nuxt imports** for plugin pages, composables, and the shared
+  component library so they resolve reliably when consumed from `node_modules`.
+- The plugin exposes its composables via package subpath exports (`@cbs/admin-ui-plugin/composables/*`)
+  so host apps and plugin pages can import them without brittle relative paths.
+- The plugin module registers `@cbs/components` with `pathPrefix: false` so the library's
+  internal SFC references resolve correctly when mounted from the host.
+
+The compose-side relationship (browser → host → BFF → Spring Boot `app/server`) is identical
+to the diagram in the "Communication with the backend" section above; the operator portal
+adds the host shell around the plugin and the local-registry tarball flow around the dependency.
+See [`architecture-backend.md`](architecture-backend.md#app-deployment-topology) for the
+shared Postgres + per-domain DB topology and the full compose diagram.
+
 ## Frontend design details
 
 Detailed UI design documentation lives in `docs/frontend/`:
