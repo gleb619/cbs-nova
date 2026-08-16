@@ -13,9 +13,11 @@ import org.jspecify.annotations.NonNull;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.LinkedBlockingDeque;
 
 @RequiredArgsConstructor
 public final class DryRunLogStage implements DslPipeStage {
@@ -30,7 +32,8 @@ public final class DryRunLogStage implements DslPipeStage {
       return next.proceed(context);
     }
 
-    DryRunLogBuffer buffer = new DryRunLogBuffer(maxEventsPerRun);
+    Deque<DryRunLogEvent> queue = new LinkedBlockingDeque<>(maxEventsPerRun);
+    DryRunLogBuffer buffer = new DryRunLogBuffer(maxEventsPerRun, queue);
     String runId = context.getRunId();
     bufferRegistry.register(runId, buffer);
     context.setAttribute("dryRunLogBuffer", buffer);

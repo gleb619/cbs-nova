@@ -1,38 +1,30 @@
 package cbs.nova.starter.logging;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 
+@RequiredArgsConstructor
 public final class DryRunLogBuffer {
 
   private final int maxEventsPerRun;
-  private final List<DryRunLogEvent> events;
-
-  public DryRunLogBuffer(int maxEventsPerRun) {
-    this.maxEventsPerRun = maxEventsPerRun;
-    this.events = Collections.synchronizedList(new ArrayList<>(maxEventsPerRun));
-  }
+  private final Deque<DryRunLogEvent> events;
 
   public void add(@NonNull ILoggingEvent event, @NonNull String runId) {
-    synchronized (events) {
-      if (events.size() >= maxEventsPerRun) {
-        events.removeFirst();
-      }
-      events.add(toEvent(event, runId));
+    if (events.size() >= maxEventsPerRun) {
+      events.pollFirst();
     }
+    events.offerLast(toEvent(event, runId));
   }
 
   public @NonNull List<DryRunLogEvent> drain() {
-    synchronized (events) {
-      List<DryRunLogEvent> snapshot = List.copyOf(events);
-      events.clear();
-      return snapshot;
-    }
+    List<DryRunLogEvent> snapshot = List.copyOf(events);
+    events.clear();
+    return snapshot;
   }
 
   private DryRunLogEvent toEvent(ILoggingEvent event, String runId) {

@@ -11,7 +11,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
+import java.util.Deque;
 import java.util.List;
+import java.util.concurrent.LinkedBlockingDeque;
 
 class DryRunLogbackAppenderTest {
 
@@ -43,7 +45,8 @@ class DryRunLogbackAppenderTest {
   }
 
   private DryRunLogBuffer registerBuffer(String runId) {
-    DryRunLogBuffer buffer = new DryRunLogBuffer(MAX_EVENTS);
+    Deque<DryRunLogEvent> queue = new LinkedBlockingDeque<>(MAX_EVENTS);
+    DryRunLogBuffer buffer = new DryRunLogBuffer(MAX_EVENTS, queue);
     registry.register(runId, buffer);
     return buffer;
   }
