@@ -6,51 +6,58 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
-import java.util.LinkedHashMap;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.stream.Collectors;
 
 public final class InMemoryDslRunRepository implements DslRunRepository {
 
   private static final int CAPACITY = 100;
 
-  private final Map<String, DslRun> runs = new LinkedHashMap<>(CAPACITY, 0.75f, false) {
-    @Override
-    protected boolean removeEldestEntry(Map.Entry<String, DslRun> eldest) {
-      return size() > CAPACITY;
-    }
-  };
+  private final Map<String, DslRun> runs = new ConcurrentHashMap<>();
+  private final Deque<String> insertionOrder = new ConcurrentLinkedDeque<>();
 
   @Override
-  public synchronized @NonNull DslRun save(@NonNull DslRun run) {
-    runs.put(run.runId(), run);
+  public @NonNull DslRun save(@NonNull DslRun run) {
+    DslRun previous = runs.put(run.runId(), run);
+    if (previous == null) {
+      insertionOrder.addLast(run.runId());
+      if (insertionOrder.size() > CAPACITY) {
+        String oldest = insertionOrder.pollFirst();
+        if (oldest != null) {
+          runs.remove(oldest);
+        }
+      }
+    }
     return run;
   }
 
   @Override
-  public synchronized @NonNull Optional<DslRun> findByRunId(@NonNull String runId) {
+  public @NonNull Optional<DslRun> findByRunId(@NonNull String runId) {
     return Optional.ofNullable(runs.get(runId));
   }
 
   @Override
-  public synchronized @NonNull List<DslRun> findByProcessName(@NonNull String processName) {
+  public @NonNull List<DslRun> findByProcessName(@NonNull String processName) {
     return runs.values().stream()
             .filter(r -> processName.equals(r.processName()))
             .collect(Collectors.toList());
   }
 
   @Override
-  public synchronized @NonNull Set<String> knownProcessNames() {
+  public @NonNull Set<String> knownProcessNames() {
     return runs.values().stream()
             .map(DslRun::processName)
             .collect(Collectors.toSet());
   }
 
   @Override
-  public synchronized @NonNull DslRun updateFinished(
+  public @NonNull DslRun updateFinished(
           @NonNull String runId,
           @NonNull String status,
           @Nullable String output,
