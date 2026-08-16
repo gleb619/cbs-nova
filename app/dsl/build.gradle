@@ -1,0 +1,59 @@
+plugins {
+  id 'java'
+  id 'maven-publish'
+  id 'cbs.nova.dsl' version '0.0.1-SNAPSHOT'
+}
+
+group = 'cbs.nova'
+version = '0.0.1-SNAPSHOT'
+
+repositories {
+  mavenLocal()
+  mavenCentral()
+}
+
+dependencies {
+  implementation 'cbs.nova:dsl-api:0.0.1-SNAPSHOT'
+  implementation 'cbs.nova:dsl:0.0.1-SNAPSHOT'
+  implementation 'io.temporal:temporal-sdk:1.27.0'
+  implementation 'io.avaje:avaje-jsonb:3.4'
+  annotationProcessor 'io.avaje:avaje-jsonb-generator:3.4'
+
+  testImplementation 'org.junit.jupiter:junit-jupiter:5.12.2'
+  testImplementation 'org.assertj:assertj-core:3.27.3'
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.12.2'
+}
+
+dslCompile {
+  dslPackage = 'cbs.nova.app.dsl'
+  runtimeModule = ''
+  buildVersion = providers.exec {
+    commandLine 'git', 'rev-parse', '--short', 'HEAD'
+  }.standardOutput.asText.get().trim()
+  logLevel = 'INFO'
+}
+
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(25)
+  }
+}
+
+tasks.named('test') {
+  useJUnitPlatform()
+}
+
+publishing {
+  publications {
+    mavenJava(MavenPublication) {
+      from components.java
+    }
+  }
+  repositories {
+    mavenLocal()
+  }
+}
+
+tasks.named('compileTestJava') {
+  dependsOn 'copyGeneratedClasses'
+}

@@ -1,0 +1,16 @@
+pluginManagement {
+  repositories {
+    mavenLocal()
+    gradlePluginPortal()
+    mavenCentral()
+  }
+  resolutionStrategy {
+    eachPlugin {
+      if (requested.id.id == 'cbs.nova.dsl') {
+        useModule("cbs.nova:dsl-gradle-plugin:${requested.version ?: '0.0.1-SNAPSHOT'}")
+      }
+    }
+  }
+}
+
+rootProject.name = 'app-dsl'
