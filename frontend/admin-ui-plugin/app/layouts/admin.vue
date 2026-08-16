@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'nuxt/app'
 import { AppShell, AppSidebarToggle } from '@cbs/components'
 import { NuxtLink } from '#components'
 

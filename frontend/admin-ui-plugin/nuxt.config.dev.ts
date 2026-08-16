@@ -8,4 +8,5 @@ export default defineNuxtConfig({
   modules: [AdminUiPlugin],
   devtools: { enabled: true },
   compatibilityDate: '2024-04-03',
+  pages: true,
 })

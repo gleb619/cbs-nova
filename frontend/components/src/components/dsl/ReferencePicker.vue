@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
+
 import type { ConstructType, DslConstruct } from '../../types/dsl'
 
 const props = defineProps<{

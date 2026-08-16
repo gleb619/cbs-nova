@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 const props = defineProps<{ metadata: Record<string, unknown> | undefined }>()
 
 const entries = computed(() => {

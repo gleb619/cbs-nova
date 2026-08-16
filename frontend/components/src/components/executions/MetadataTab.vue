@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 import type { Execution } from '../../types/execution'
 
 const props = defineProps<{

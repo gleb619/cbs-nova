@@ -1,7 +1,19 @@
 <script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'nuxt/app'
+import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
+import { useRunner } from '@cbs/admin-ui-plugin/composables/useRunner'
+import {
+  RunnerDefinitionSelector,
+  RunnerInputForm,
+  RunnerModeSwitcher,
+  RunnerOutputPanel,
+  RunnerRunConfirmationModal,
+  RunnerStatusIndicator,
+} from '@cbs/components'
+
 import type { DefinitionMeta, RunnerMode } from '~/types'
 
-definePageMeta({ layout: 'default' })
 
 const route = useRoute()
 const router = useRouter()

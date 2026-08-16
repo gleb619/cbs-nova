@@ -1,3 +1,4 @@
+import { $fetch } from 'ofetch'
 import type { Execution, ExecutionDetail } from '~/types'
 
 export function useExecutionsApi() {

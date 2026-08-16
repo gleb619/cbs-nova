@@ -1,27 +1,8 @@
 import type { Execution, ExecutionDetail, ExecutionFilters, ExecutionStatus } from '~/types'
-import { useStalePolling } from './useStalePolling'
+import { computed, onUnmounted, ref, watch } from 'vue'
+import { useExecutionsApi } from '@cbs/admin-ui-plugin/composables/useExecutionsApi'
+import { useStalePolling } from '@cbs/admin-ui-plugin/composables/useStalePolling'
 
-/**
- * useExecutions
- *
- * Singleton-shaped composable for the executions list and detail pages.
- * Owns the `executions` list, the `selectedExecution` detail, the
- * filter/page state, and two flavours of polling:
- *
- *   - `startPolling(id)` — existing Running polling (3s tick), kept for
- *     backwards compatibility with consumers that explicitly opt in.
- *   - Stale polling — automatic. Whenever a loaded result contains a row
- *     whose status is `Stale`, a polling loop is started for that id
- *     using the canonical `useStalePolling` composable. The id is added
- *     to `stalePollingIds` so the UI (StatusBadge, ExecutionList) can
- *     render a pulse indicator. When the backend reports a non-Stale
- *     status, the loop is torn down and the row's status is updated in
- *     place so the badge re-renders.
- *
- * Cleanup is bound to `onUnmounted`, so route changes and host
- * unmounts automatically tear down both the legacy poll handle and the
- * map of stale pollers — no leaks.
- */
 export function useExecutions() {
   const executions = ref<Execution[]>([])
   const filters = ref<ExecutionFilters>({})

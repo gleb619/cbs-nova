@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 import type { CallNode } from '../../types/runner'
 
 type FlatCall = {

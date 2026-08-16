@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 const props = defineProps<{ mappings: Record<string, string> }>()
 
 const entries = computed(() => Object.entries(props.mappings))

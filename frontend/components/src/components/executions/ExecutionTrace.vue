@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 import type { TraceStep } from '../../types/execution'
 
 const props = defineProps<{ steps: TraceStep[] }>()

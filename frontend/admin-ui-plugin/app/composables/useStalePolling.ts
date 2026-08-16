@@ -1,13 +1,7 @@
 import type { ExecutionDetail, ExecutionStatus } from '~/types'
+import { onUnmounted, ref, watch } from 'vue'
+import { useExecutionsApi } from '@cbs/admin-ui-plugin/composables/useExecutionsApi'
 
-/**
- * Polling interval read from the Nuxt runtime config (`public.stalePollMs`),
- * with a hard fallback for non-Nuxt contexts (unit tests, scripts).
- *
- * Kept as a constant so the value is fixed at module load. We deliberately
- * do not call `useRuntimeConfig` at the top of the file — it would run
- * outside a Nuxt request context in tests and throw.
- */
 function resolveIntervalMs(explicit?: number): number {
   if (typeof explicit === 'number' && explicit > 0) return explicit
   try {

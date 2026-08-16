@@ -1,3 +1,5 @@
+import { useRuntimeConfig } from 'nitropack/runtime'
+
 export function useBackendConfig() {
   const config = useRuntimeConfig()
   return {

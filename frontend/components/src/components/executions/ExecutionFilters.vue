@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { reactive } from 'vue'
+
 import type { ExecutionFilters } from '../../types/execution'
 
 const emit = defineEmits<{ filter: [filters: ExecutionFilters] }>()

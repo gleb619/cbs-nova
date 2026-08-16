@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { addLayout, createResolver, defineNuxtModule, extendPages, resolvePath } from '@nuxt/kit'
 
 // ---------------------------------------------------------------------------
@@ -95,14 +96,15 @@ export default defineNuxtModule<ModuleOptions>({
 
     // -----------------------------------------------------------------------
     // Component resolution — plugin-local components and @cbs/components SFCs
+    // Use the components:dirs hook so Nuxt actually scans directories added
+    // by a module. The @cbs/components library references its child SFCs by
+    // unprefixed PascalCase names, so pathPrefix must be false there.
     // -----------------------------------------------------------------------
-    nuxt.options.components = nuxt.options.components || { dirs: [] }
-    nuxt.options.components.dirs = nuxt.options.components.dirs || []
     const componentsPackageDir = await resolvePath('@cbs/components/src/components')
-    nuxt.options.components.dirs.push(
-      { path: resolve('./app/components'), pathPrefix: true },
-      { path: componentsPackageDir, pathPrefix: true },
-    )
+    nuxt.hook('components:dirs', (dirs) => {
+      dirs.push({ path: resolve('./app/components'), pathPrefix: true })
+      dirs.push({ path: componentsPackageDir, pathPrefix: false })
+    })
 
     // -----------------------------------------------------------------------
     // Pinia
@@ -116,8 +118,8 @@ export default defineNuxtModule<ModuleOptions>({
     // Layouts — register the default shell layout from this plugin
     // -----------------------------------------------------------------------
     addLayout(
-      { src: resolve('./app/layouts/default.vue'), filename: 'cbs-admin-default.vue' },
-      'default',
+      { src: resolve('./app/layouts/admin.vue'), filename: 'cbs-admin.vue' },
+      'cbs-admin',
     )
 
     // -----------------------------------------------------------------------
@@ -131,26 +133,31 @@ export default defineNuxtModule<ModuleOptions>({
           name: 'cbs-admin-dashboard',
           path: `${prefix}/`,
           file: resolve('./app/pages/index.vue'),
+          meta: { layout: 'cbs-admin' },
         },
         {
           name: 'cbs-admin-runner',
           path: `${prefix}/runner`,
           file: resolve('./app/pages/runner.vue'),
+          meta: { layout: 'cbs-admin' },
         },
         {
           name: 'cbs-admin-dsl-workbench',
           path: `${prefix}/dsl-workbench`,
           file: resolve('./app/pages/dsl-workbench.vue'),
+          meta: { layout: 'cbs-admin' },
         },
         {
           name: 'cbs-admin-executions',
           path: `${prefix}/executions`,
           file: resolve('./app/pages/executions/index.vue'),
+          meta: { layout: 'cbs-admin' },
         },
         {
           name: 'cbs-admin-execution-detail',
           path: `${prefix}/executions/:id`,
           file: resolve('./app/pages/executions/[id].vue'),
+          meta: { layout: 'cbs-admin' },
         },
       )
     })
@@ -169,7 +176,10 @@ export default defineNuxtModule<ModuleOptions>({
     // -----------------------------------------------------------------------
     nuxt.hook('nitro:config', (nitroConfig) => {
       nitroConfig.scanDirs = nitroConfig.scanDirs || []
-      nitroConfig.scanDirs.push(resolve('./server'))
+      // Use pre-built JS server routes when the plugin is installed as a package,
+      // otherwise use the workspace TypeScript sources for local development.
+      const serverDir = existsSync(resolve('./dist/server')) ? resolve('./dist/server') : resolve('./server')
+      nitroConfig.scanDirs.push(serverDir)
     })
 
     // -----------------------------------------------------------------------

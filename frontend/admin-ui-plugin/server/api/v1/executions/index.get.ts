@@ -1,5 +1,6 @@
-import { proxyToBackend } from '~/server/utils/httpClient'
 
+import { defineEventHandler, getQuery } from 'h3'
+import { proxyToBackend } from '~/server/utils/httpClient'
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const params: Record<string, string> = {}

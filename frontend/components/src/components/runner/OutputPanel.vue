@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
+
 import type { RunnerMode, RunnerOutput, RunnerStatus } from '../../types/runner'
 
 defineOptions({ name: 'OutputPanel' })

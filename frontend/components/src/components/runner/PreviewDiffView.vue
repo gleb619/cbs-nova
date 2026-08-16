@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
+
 import { usePreviewDiff } from '../../composables/usePreviewDiff'
 import type { RunnerOutput } from '../../types/runner'
 

@@ -1,3 +1,4 @@
+import { $fetch } from 'ofetch'
 export function useDslApi() {
   async function getDefinitions() {
     return $fetch('/api/v1/dsl/definitions')

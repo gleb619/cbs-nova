@@ -1,4 +1,7 @@
 import type { H3Event } from 'h3'
+import { createError, getHeader } from 'h3'
+import { $fetch } from 'ofetch'
+import { useBackendConfig } from './config'
 
 export async function proxyToBackend<T>(
   event: H3Event,

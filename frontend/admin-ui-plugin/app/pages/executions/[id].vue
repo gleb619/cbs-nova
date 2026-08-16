@@ -1,4 +1,13 @@
 <script setup lang="ts">
+import { computed, onUnmounted, ref } from 'vue'
+import { useRoute } from 'nuxt/app'
+import { useExecutions } from '@cbs/admin-ui-plugin/composables/useExecutions'
+import {
+  ExecutionsCompensationLane,
+  ExecutionsExecutionSummary,
+  ExecutionsExecutionTrace,
+} from '@cbs/components'
+
 const route = useRoute()
 const id = computed(() => String(route.params.id))
 

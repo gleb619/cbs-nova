@@ -1,0 +1,13 @@
+# Nuxt / Node
+.nuxt
+.output
+node_modules
+*.log
+
+# Local registry tarballs
+local-registry/*.tgz
+
+# Local environment
+.env
+.env.*
+!.env.example

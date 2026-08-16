@@ -1,7 +1,20 @@
 <script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue'
+import { useHelperSearch } from '@cbs/components'
+import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
+import { useDslWorkbench } from '@cbs/admin-ui-plugin/composables/useDslWorkbench'
+import { useWorkbenchDraft } from '@cbs/admin-ui-plugin/composables/useWorkbenchDraft'
+import {
+  DslBodyEditor,
+  DslConstructExplorer,
+  DslDraftRestoreBanner,
+  DslHelperSearchPanel,
+  DslMetadataPanel,
+  DslProblemsPanel,
+} from '@cbs/components'
+
 import type { HelperSearchFilters, HelperSearchResult } from '@cbs/components'
 
-definePageMeta({ layout: 'default' })
 
 const workbench = useDslWorkbench()
 const {

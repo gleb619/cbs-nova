@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+
 const props = defineProps<{
   errors: Array<{ message: string; code?: string; stackTrace?: string }> | undefined
 }>()

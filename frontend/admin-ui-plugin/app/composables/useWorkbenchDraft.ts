@@ -1,30 +1,4 @@
-import type { ComputedRef, Ref } from 'vue'
-
-/**
- * useWorkbenchDraft
- *
- * Client-side auto-save for the DSL Workbench body editor. Persists the
- * in-progress construct body to `localStorage` (debounced) so a browser
- * refresh doesn't wipe out unsaved edits, and restores it on the next visit
- * to the same construct while the draft is still fresh (< 24h old).
- *
- * Scope is deliberately single-tab: there is no `storage` event listener,
- * so concurrent tabs editing the same construct do not sync with each
- * other. Cross-tab sync is a separate feature.
- *
- * SSR-safe: every `window`/`localStorage` touch is guarded by a
- * `typeof window !== 'undefined'` check (the convention already used by
- * `useStalePolling`'s `typeof document`/`typeof window` guards in this
- * directory), so calling this composable during SSR is a safe no-op.
- *
- * Usage:
- *   const name = computed(() => selectedConstruct.value?.name ?? '')
- *   const { body, dirty, clearDraft, lastSavedAt, restoredFromDraft } =
- *     useWorkbenchDraft(name)
- *
- *   // in template:
- *   <DraftRestoreBanner v-if="restoredFromDraft" @discard="clearDraft" />
- */
+import { computed, onUnmounted, ref, watch, type ComputedRef, type Ref } from 'vue'
 
 export interface WorkbenchDraftPayload {
   body: string

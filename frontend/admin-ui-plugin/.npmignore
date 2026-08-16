@@ -1,0 +1,22 @@
+# Build artifacts
+.nuxt
+.output
+node_modules
+*.log
+
+# Local env / secrets
+.env
+.env.*
+
+# Test files
+__tests__
+*.spec.ts
+vitest.config.ts
+vitest.setup.ts
+
+# Workspace-only files
+nuxt.config.ts
+nuxt.config.dev.ts
+
+# Backup files
+*.bak

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 import type { RunnerStatus } from '../../types/runner'
 
 const props = defineProps<{ status: RunnerStatus }>()

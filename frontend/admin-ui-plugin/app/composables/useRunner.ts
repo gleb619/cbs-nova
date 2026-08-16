@@ -1,5 +1,6 @@
 import type { RunnerMode, RunnerOutput, RunnerStatus } from '~/types'
-import { useDslApi } from './useDslApi'
+import { ref } from 'vue'
+import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 
 const selectedDefinition = ref<string | null>(null)
 const mode = ref<RunnerMode>('preview')

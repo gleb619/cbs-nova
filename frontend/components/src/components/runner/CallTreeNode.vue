@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
+
 import type { CallKind, CallNode } from '../../types/runner'
 
 const props = defineProps<{
