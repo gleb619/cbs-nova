@@ -38,7 +38,7 @@ dslCompile {
   dslVersion = '0.0.1-SNAPSHOT'
   dslPackage = 'cbs.nova.dslexamples'
   buildVersion = 'abc1234'   // defaults to the current git short SHA
-  logLevel = 'TRACE'         // defaults to TRACE; passed to the compiler JVM
+  logLevel = 'INFO'         // defaults to INFO; passed to the compiler JVM
 }
 ```
 
@@ -50,7 +50,7 @@ Temporal workflow/activity packages (e.g. `cbs.nova.dsl.generated.<flow>.<buildV
 set, the plugin resolves the current git short SHA at execution time.
 
 The `logLevel` is passed to the compiler process as a JVM system property and as the last
-positional argument. It controls the SLF4J/simple logger level. The default is `TRACE`.
+positional argument. It controls the SLF4J/simple logger level. The default is `INFO`.
 
 By default the plugin adds `cbs.nova:starter:${dslVersion}` to the `dslCompiler` configuration
 so the compiler can resolve the runtime conventions contributed by `starter`. Configure which

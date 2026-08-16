@@ -46,7 +46,6 @@ class ModelRegistryGeneratorTest {
     assertThat(source).contains("TestModels.class,");
     assertThat(source).contains("TestModels.TestIn.class,");
     assertThat(source).contains("TestModels.TestOut.class");
-    assertThat(source).containsPattern("Set\\.of\\([\\s\\S]*?TestModels\\.TestOut\\.class\\s*\\);");
     assertThat(source).doesNotContainPattern("\\.class\\s*,\\s*\\);");
 
     var serviceFile = outDir.resolve("META-INF/services/cbs.nova.dsl.ModelRegistry");

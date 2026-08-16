@@ -36,20 +36,20 @@ public final class ModelRegistryGenerator {
   private static final String SOURCE_TEMPLATE = // language=java
           """
                   package ${pkg};
-                  
+
                   import cbs.nova.dsl.ModelRegistry;
                   import cbs.nova.dsl.annotation.DslGenerated;
                   import java.util.Set;
                   import org.jspecify.annotations.NonNull;
                   import javax.annotation.processing.Generated;
-                  
+
                   ${annotation}
                   public final class ${className} implements ModelRegistry {
-                  
+
                     private static final Set<Class<?>> MODEL_TYPES = Set.of(
                   ${entries}
-                    )
-                  
+                    );
+
                     @Override
                     public @NonNull Set<Class<?>> modelTypes() {
                       return MODEL_TYPES;

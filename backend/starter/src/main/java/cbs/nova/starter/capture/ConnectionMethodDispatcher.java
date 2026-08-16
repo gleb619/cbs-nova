@@ -1,11 +1,6 @@
 package cbs.nova.starter.capture;
 
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
-import java.sql.SQLClientInfoException;
-import java.sql.Savepoint;
-import java.sql.ShardingKey;
-import java.util.Map;
-import java.util.Properties;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -14,8 +9,13 @@ import java.lang.reflect.Proxy;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.SQLClientInfoException;
 import java.sql.SQLException;
+import java.sql.Savepoint;
+import java.sql.ShardingKey;
 import java.sql.Statement;
+import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.Executor;
 
 public final class ConnectionMethodDispatcher {

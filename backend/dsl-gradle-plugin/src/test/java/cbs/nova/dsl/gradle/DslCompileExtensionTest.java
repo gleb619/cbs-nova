@@ -23,7 +23,7 @@ class DslCompileExtensionTest {
     assertThat(extension.getDslVersion().get()).isEqualTo("1.2.3");
     assertThat(extension.getDslPackage().get()).isEmpty();
     assertThat(extension.getBuildVersion().get()).isEmpty();
-    assertThat(extension.getLogLevel().get()).isEqualTo("TRACE");
+    assertThat(extension.getLogLevel().get()).isEqualTo("INFO");
     assertThat(extension.getRuntimeModule().get()).isEqualTo("starter");
   }
 }

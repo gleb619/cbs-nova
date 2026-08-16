@@ -116,12 +116,12 @@ public final class GeneratedClassProviderGenerator {
                     import cbs.nova.dsl.GeneratedClassDescriptor;
                     import cbs.nova.dsl.GeneratedClassProvider;
                     import javax.annotation.processing.Generated;
-                    
+
                     ${annotation}
                     public final class ${providerClass} implements GeneratedClassProvider {
-                    
+
                       private static final String JSON_SPEC = "${executeJsonLiteral}";
-                    
+
                       @Override
                       public GeneratedClassDescriptor descriptor() {
                         return new GeneratedClassDescriptor(
@@ -134,19 +134,19 @@ public final class GeneratedClassProviderGenerator {
                                 ${inputLiteral},
                                 ${outputLiteral},
                                 JSON_SPEC
-                                )
+                                );
                       }
-                    
+
                       @Override
                       public String executeJson() {
                         return descriptor().executeJson();
                       }
-                    
+
                       @Override
                       public Object implementationInstance() {
                         return new ${implName}();
                       }
-                    
+
                     }
                     """,
             Map.ofEntries(

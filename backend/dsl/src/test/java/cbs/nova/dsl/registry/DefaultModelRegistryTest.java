@@ -2,10 +2,10 @@ package cbs.nova.dsl.registry;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.net.URL;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;

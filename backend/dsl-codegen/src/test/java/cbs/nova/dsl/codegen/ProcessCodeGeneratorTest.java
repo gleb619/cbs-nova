@@ -197,7 +197,6 @@ class ProcessCodeGeneratorTest {
     assertThat(impl.source()).contains("import " + MapInput.class.getCanonicalName() + ";");
     assertThat(impl.source()).contains("MapInput input = request.payload()");
     assertThat(impl.source()).contains("runProcessWithCompensation");
-    assertThat(impl.source()).contains("List.of()");
     assertThat(impl.source()).doesNotContain("ExecutionMode");
     assertThat(impl.source()).doesNotContain("TransactionRouting");
     assertThat(impl.source()).doesNotContain("Saga");
@@ -233,7 +232,6 @@ class ProcessCodeGeneratorTest {
 
     var impl = generator.generate(descriptor, null, null).get(1);
     assertThat(impl.source()).contains("runProcessWithCompensation");
-    assertThat(impl.source()).contains("List.of(\"ReserveInventory\", \"ChargePayment\")");
     assertThat(impl.source()).doesNotContain("registerTransactionCompensation");
     assertThat(impl.source()).doesNotContain("compensateTransaction");
     assertThat(impl.source()).doesNotContain("private void compensateReserveInventory");

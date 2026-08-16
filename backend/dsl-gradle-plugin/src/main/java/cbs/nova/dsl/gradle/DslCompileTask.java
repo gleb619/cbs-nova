@@ -50,7 +50,7 @@ public abstract class DslCompileTask extends JavaExec {
 
   public DslCompileTask() {
     getMainClass().set("cbs.nova.dsl.codegen.DslCompiler");
-    getLogLevel().convention("TRACE");
+    getLogLevel().convention("INFO");
   }
 
   @Override
@@ -78,7 +78,7 @@ public abstract class DslCompileTask extends JavaExec {
       args.add(dslPackage);
     }
 
-    var logLevel = getLogLevel().getOrElse("DEBUG");
+    var logLevel = getLogLevel().getOrElse("INFO");
     if (!logLevel.isBlank()) {
       if (version.isBlank()) {
         args.add("");

@@ -21,7 +21,7 @@ public class MapInputConverter {
 
   private final AvajeMapConverter avajeMapConverter;
 
-  //TODO: replace with a correspondent bean injection instead
+  // TODO: replace with a correspondent bean injection instead
   @Deprecated(forRemoval = true)
   public MapInputConverter() {
     this(AvajeMapConverter.create());

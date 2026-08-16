@@ -1,7 +1,6 @@
 package cbs.nova.starter.capture;
 
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
-import java.sql.SQLException;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -23,6 +22,7 @@ import java.sql.Ref;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.RowId;
+import java.sql.SQLException;
 import java.sql.SQLType;
 import java.sql.SQLWarning;
 import java.sql.SQLXML;

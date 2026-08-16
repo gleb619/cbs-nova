@@ -1,13 +1,13 @@
 package cbs.nova.starter.capture;
 
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
-import java.io.PrintWriter;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import javax.sql.DataSource;
 
 import java.io.Closeable;
+import java.io.PrintWriter;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.sql.Connection;

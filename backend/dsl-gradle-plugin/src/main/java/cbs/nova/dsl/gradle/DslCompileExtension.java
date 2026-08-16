@@ -26,7 +26,7 @@ public abstract class DslCompileExtension {
     getDslVersion().convention(project.provider(() -> project.getVersion().toString()));
     getDslPackage().convention("");
     getBuildVersion().convention("");
-    getLogLevel().convention("TRACE");
+    getLogLevel().convention("INFO");
     getRuntimeModule().convention("starter");
   }
 }

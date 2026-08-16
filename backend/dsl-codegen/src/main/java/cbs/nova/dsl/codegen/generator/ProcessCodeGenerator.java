@@ -45,8 +45,7 @@ public final class ProcessCodeGenerator {
                     generateInterface(pkg, interfaceName, descriptor)),
             new GeneratedSource(
                     pkg, implName, generateImpl(pkg, name, interfaceName, implName,
-                            versionConstant, descriptor.inputType(),
-                            descriptor.transactionRefs())));
+                            versionConstant, descriptor.inputType())));
     log.atLevel(Level.DEBUG)
             .log(() -> "[ProcessCodeGenerator] Generated process %s v%s in package %s"
                     .formatted(name, versionConstant, pkg));
@@ -100,7 +99,7 @@ public final class ProcessCodeGenerator {
 
   private String generateImpl(
           String pkg, String processName, String interfaceName, String implName,
-          String versionConstant, Class<?> inputType, List<String> transactionRefs) {
+          String versionConstant, Class<?> inputType) {
     String inputTypeName = typeName(inputType);
     List<String> imports = new ArrayList<>();
     addImport(imports, DslTemporalProcessRequest.class);
@@ -122,7 +121,6 @@ public final class ProcessCodeGenerator {
                     public class ${implName} implements ${interfaceName} {
 
                       private static final String VERSION = "${version}";
-                      private static final List<String> TRANSACTION_REFS = ${transactionRefs};
 
                       @Override
                       public String getVersion() {
@@ -142,7 +140,6 @@ public final class ProcessCodeGenerator {
                     }
                     """;
 
-    String transactionRefsValue = transactionRefsLiteral(transactionRefs);
     return Substitutor.format(
             template,
             Map.ofEntries(
@@ -153,19 +150,7 @@ public final class ProcessCodeGenerator {
                     Map.entry("interfaceName", interfaceName),
                     Map.entry("implName", implName),
                     Map.entry("version", versionConstant),
-                    Map.entry("inputTypeName", inputTypeName),
-                    Map.entry("transactionRefs", transactionRefsValue)));
-  }
-
-  private String transactionRefsLiteral(List<String> refs) {
-    if (refs.isEmpty()) {
-      return "List.of()";
-    }
-    String list = refs.stream()
-            .map(s -> String.format("\"%s\"", s))
-            .collect(Collectors.joining(", "));
-
-    return "List.of(%s)".formatted(list);
+                    Map.entry("inputTypeName", inputTypeName)));
   }
 
   private String typeName(Class<?> type) {

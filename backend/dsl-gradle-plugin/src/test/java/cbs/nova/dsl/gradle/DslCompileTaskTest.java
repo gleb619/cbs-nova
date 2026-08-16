@@ -16,7 +16,7 @@ class DslCompileTaskTest {
     var project = ProjectBuilder.builder().build();
     var task = project.getTasks().register("compileDsl", DslCompileTask.class).get();
 
-    assertThat(task.getLogLevel().get()).isEqualTo("TRACE");
+    assertThat(task.getLogLevel().get()).isEqualTo("INFO");
   }
 
   @Test

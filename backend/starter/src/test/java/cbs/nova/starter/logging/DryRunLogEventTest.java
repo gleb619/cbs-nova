@@ -2,9 +2,9 @@ package cbs.nova.starter.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.HashMap;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.Map;
 
 class DryRunLogEventTest {

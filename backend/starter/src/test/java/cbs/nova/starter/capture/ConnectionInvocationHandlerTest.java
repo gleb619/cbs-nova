@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import javax.sql.DataSource;
 
@@ -23,7 +24,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import org.mockito.Mockito;
 
 /**
  * Pure-unit tests for the JDBC capture handlers. Wraps a Mockito-mocked {@link DataSource} with
