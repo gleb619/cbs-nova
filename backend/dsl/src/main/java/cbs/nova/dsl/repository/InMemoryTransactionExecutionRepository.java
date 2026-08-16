@@ -1,0 +1,35 @@
+package cbs.nova.dsl.repository;
+
+import cbs.nova.dsl.history.TransactionExecutionRepository;
+import cbs.nova.dsl.transaction.TransactionExecution;
+import org.jspecify.annotations.NonNull;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+public final class InMemoryTransactionExecutionRepository
+        implements
+          TransactionExecutionRepository {
+
+  private final Map<String, List<TransactionExecution>> executions = new ConcurrentHashMap<>();
+
+  @Override
+  public synchronized @NonNull TransactionExecution save(@NonNull TransactionExecution execution) {
+    executions.computeIfAbsent(execution.runId(), _ -> new CopyOnWriteArrayList<>()).add(execution);
+    return execution;
+  }
+
+  @Override
+  public @NonNull List<TransactionExecution> findByRunId(@NonNull String runId) {
+    List<TransactionExecution> list = executions.get(runId);
+    return list == null ? List.of() : new ArrayList<>(list);
+  }
+
+  @Override
+  public synchronized void deleteByRunId(@NonNull String runId) {
+    executions.remove(runId);
+  }
+}

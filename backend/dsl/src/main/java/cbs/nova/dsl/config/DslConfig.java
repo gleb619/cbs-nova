@@ -6,6 +6,7 @@ import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.ModelRegistry;
 import cbs.nova.dsl.converter.AvajeMapConverter;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
+import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
 import cbs.nova.dsl.model.RetryPolicy;
 import cbs.nova.dsl.process.ProcessManager;
@@ -17,6 +18,7 @@ import cbs.nova.dsl.registry.DefaultModelRegistry;
 import cbs.nova.dsl.registry.DefaultProcessRegistry;
 import cbs.nova.dsl.registry.DefaultTransactionRegistry;
 import cbs.nova.dsl.registry.GeneratedClassRegistry;
+import cbs.nova.dsl.repository.InMemoryTransactionExecutionRepository;
 import cbs.nova.dsl.runner.DefaultHelperRunner;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
@@ -105,6 +107,10 @@ public class DslConfig implements SingletonSupport {
 
   public @NonNull Replaceable<HelperInstanceResolver> helperInstanceResolver() {
     return replaceable("helperInstanceResolver");
+  }
+
+  public @NonNull Replaceable<TransactionExecutionRepository> transactionExecutionRepository() {
+    return replaceable(InMemoryTransactionExecutionRepository::new);
   }
 
   public @NonNull ObjectMapper jsonMapper() {
