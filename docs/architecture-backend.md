@@ -4,7 +4,7 @@ This project is a **declarative Java DSL for authoring Temporal workflows and ac
 boilerplate. Business flows are expressed as small, versioned definitions in a dedicated Gradle module; a custom DSL
 compiler turns them into production-ready Temporal classes at build time.
 
-This document focuses on the **backend runtime and starter** shipped through the `T146`–`T201` cycle. It is the
+This document focuses on the **backend runtime and starter** shipped through the `T146`–`T219` cycle. It is the
 authoritative backend architecture companion to [`architecture.md`](architecture.md) and
 [`architecture-ui.md`](architecture-ui.md).
 
@@ -122,6 +122,14 @@ The runtime is deliberately layered so generated code has a single entry point:
 
 See [Runtime details](dsl/runtime.md) for the full contract, operational modes, and REST endpoints.
 
+## Input conversion (`T205`)
+
+`starter.converter.MapInputConverter` converts ad-hoc map/JSON inputs into typed process and helper
+arguments. `T205` moved it from the `dsl` module into `starter` and rewrote it to convert records through
+cached Avaje Jsonb adapters (`adapterCache` in a `ConcurrentHashMap`), falling back to a Jackson
+`ObjectMapper` for non-`@Json` targets. The converter handles primitives, enums, arrays, collections,
+records, and generic types without reflection on the hot path.
+
 ## Preview, Explain, and Run pipelines (`DevDslRuntime`, `T187`)
 
 The `cbs-nova-starter` module provides a Spring-backed implementation of the `DslRuntime` interface:
@@ -144,7 +152,7 @@ Capture is implemented by interceptors in the starter:
 
 | Kind            | Interceptor class                                                                                                    | What it records                              |
 |-----------------|----------------------------------------------------------------------------------------------------------------------|----------------------------------------------|
-| **JDBC / DB**   | `capture.DataSourceProxyBeanPostProcessor` → `ConnectionInvocationHandler` → `PreparedStatementInvocationHandler`        | `executeQuery`/`executeUpdate`/`execute`/`executeBatch` calls, SQL target, first SQL token as operation |
+| **JDBC / DB**   | `capture.DataSourceProxyBeanPostProcessor` → `RecordingDataSource` → `RecordingConnection` → `RecordingStatement` / `RecordingPreparedStatement` / `RecordingCallableStatement` | `executeQuery`/`executeUpdate`/`execute`/`executeBatch` calls, SQL target, first SQL token as operation |
 | **HTTP / Feign** | `capture.ExternalCallFeignInterceptor`                                                                               | Feign request method + URL                   |
 | **Temporal Activity** | `preview.TemporalActivityCallCaptureInterceptor` (wraps `TransactionInvoker`)                                            | Each transaction invocation as `activity`    |
 | **Messaging (Kafka)** | `preview.MessagingCallCaptureProducerFactoryBeanPostProcessor` → `MessagingCallCaptureProducerFactory` → `MessagingCallCaptureProducer` | Kafka `Producer.send` calls as `mq`          |
@@ -297,6 +305,35 @@ encryption is disabled, `NoOpFieldEncryptor` passes strings through unchanged. E
 `persistence.DslRunMapper` maps between the domain `DslRun` record and `DslRunEntity`. The repository owns the encryption
 calls around the mapper so that the mapper stays a pure shape converter.
 
+### Transaction execution history (`T210`/`T211`)
+
+Each successful transaction execution is persisted separately through `history.TransactionExecutionRepository`
+(`dsl-api`) so that run diagnostics can show the exact transaction lineage. The starter provides two implementations:
+
+- `repository.InMemoryTransactionExecutionRepository` — lock-free in-memory store using `ConcurrentHashMap` and
+  `CopyOnWriteArrayList`; used when no JDBC datasource is configured.
+- `persistence.JdbcTransactionExecutionRepository` — JDBC/Flyway implementation backed by the `dsl_run_transactions`
+  table (migration `V3__create_dsl_run_transactions.sql`).
+
+`DefaultExecutionListener` now delegates to `TransactionExecutionRepository.save(...)`;
+transaction success history is persisted via the repository.
+
+## Runtime concurrency cleanup (`T209`/`T212`/`T214`/`T215`/`T216`/`T219`)
+
+A sweep of runtime state holders replaced `synchronized` blocks and double-checked locking with lock-free or
+concurrent primitives:
+
+- `GlobalManager` — instance management uses an `AtomicReference` with `compareAndSet` instead of double-checked
+  locking (`T214`/`T215`).
+- `InMemoryDslRunRepository` — uses `ConcurrentHashMap` + `ConcurrentLinkedDeque` with a bounded capacity (`T209`).
+- `InMemoryTransactionExecutionRepository` — uses `ConcurrentHashMap` + `CopyOnWriteArrayList` (`T219`).
+- `ExecutionTraceCollector` — uses `ConcurrentLinkedQueue` + `AtomicBoolean` (`T216`).
+- `DryRunLogBuffer` / `DryRunLogBufferRegistry` — per-run buffers and registry use concurrent queues and
+  `ConcurrentHashMap` (`T212`).
+- `ExecutionTreeCollector` — per-run instance (no cross-run shared mutable state); frame stack is local to the run.
+
+This removes the earlier leak-prone `synchronized`/singleton patterns without changing per-run semantics.
+
 ## Observability (`T175`)
 
 ### Sentry
@@ -339,15 +376,21 @@ The healthcheck thread scans known process names for runs that are still `RUNNIN
 message. `NOT_FINISHED_AT` is used as a sentinel `finishedAt` value while a run is in flight, keeping the column
 non-null for serialization safety.
 
-## Temporal service lifecycle (`T169`)
+## Temporal service lifecycle (`T169`/`T213`)
 
 The Temporal client and worker are Spring-managed beans in `TemporalConfiguration` and `DslWorkerConfiguration`:
 
 - `WorkflowServiceStubs` and `WorkflowClient` are `@ConditionalOnMissingBean` beans.
 - `TemporalDslProcessLauncher` and `TemporalTransactionInvoker` are exposed as beans and registered into the DSL config
   at startup.
-- `DslWorkerConfiguration` creates a single `WorkerFactory`, a single `Worker` for the configured task queue, and a
-  `SmartLifecycle` adapter that starts/stops the factory with the Spring context.
+- `TemporalConfiguration` exposes a `WorkerFactory` bean (with `destroyMethod="shutdown"`) and an
+  `ApplicationRunner` (`temporalWorkerRegistrationRunner`) that registers generated workflow implementations per
+  task queue and starts the factory when `dsl.worker.enabled=true`. `T213` moved this registration from lazy
+  double-checked-locking inside `services.TemporalDslService` to eager startup via Spring Boot's `ApplicationRunner`
+  SPI.
+- `DslWorkerConfiguration` still creates the default task-queue `Worker`, registers generated activity implementations
+  via the `GeneratedClassProvider` SPI, and uses a `SmartLifecycle` adapter to start/stop its factory with the Spring
+  context.
 - Generated workflow and activity implementations are discovered via the `GeneratedClassProvider` SPI and registered
   without hardcoded class references.
 
@@ -400,9 +443,18 @@ block), falling back to `0.0.1-SNAPSHOT` when build info is absent.
 
 `POST /api/dsl/reload` is registered as a functional `RouterFunction` by `DslReloadRouterConfiguration` and gated by
 `dsl.reload.enabled` (on by default). `controllers.DslReloadResource` compiles sources from `dsl.source-dir` with the
-system Java compiler, builds a dedicated `URLClassLoader`, and reloads definitions via `DefinitionLoader` and the
-`DslDefinitionProvider` / `HelperResolver` SPIs. Compact-source files implementing `DslCompactSource` are also rescanned
-as a fallback. The global manager is reset before reload to avoid stale definitions.
+system Java compiler, builds a dedicated `URLClassLoader`, and reloads definitions via `DslDefinitionLoader` and the
+`DslDefinitionProvider` / `HelperResolver` SPIs.
+
+`T207` split the former monolithic `DefinitionLoader` into a `DslDefinitionLoader` interface with two
+implementations:
+- `ServiceLoaderDslDefinitionLoader` — non-reflective; loads `DslDefinitionProvider`s from the classpath via
+  `java.util.ServiceLoader`.
+- `CompilingDslDefinitionLoader` — reflective; used by `DslReloadResource` to compile compact DSL sources on the fly
+  and instantiate them through a dedicated `URLClassLoader`.
+
+Compact-source files implementing `DslCompactSource` are also rescanned as a fallback. The global manager is reset
+before reload to avoid stale definitions.
 
 ## DSL introspection (`T175`/`T177`/`T182`)
 
@@ -416,9 +468,10 @@ as a fallback. The global manager is reset before reload to avoid stale definiti
 - `GET /api/dsl/definitions` — aggregate list of every registered definition with name, type, and optional input schema
   (`T182`).
 
-Input schemas are generated by `JsonSchemaGenerator`, an interface with a victools-library-backed instance bean
-(`VictoolsJsonSchemaGenerator`, `T192`) from the entity's input type or parameters record — it replaced a static,
-hand-written schema-building utility.
+Input schemas are generated by `JsonSchemaGenerator`, an interface with a Jackson 3 implementation bean
+(`dsl.jsonschema.JacksonJsonSchemaGenerator`, `T208`). It builds schemas through Jackson's
+`JsonFormatVisitorWrapper` SPI rather than hand-written field inspection, and `T208` removed the third-party
+schema-library dependency entirely. For compact-source parameters, the generator produces a schema from the declared parameter descriptors.
 
 ## Actuator endpoints
 
@@ -489,7 +542,7 @@ then copies only the `:starter` fat jar into a smaller JRE runtime image.
 
 ## Implementation roadmap (T146–T201)
 
-The roadmap below reflects the kanban state as of the `T203` refresh:
+The roadmap below reflects the kanban state as of the `T220` refresh:
 
 | ID   | Status      | Title                                                        | Notes                                                       |
 |:-----|:------------|:-------------------------------------------------------------|:------------------------------------------------------------|
@@ -534,7 +587,7 @@ The roadmap below reflects the kanban state as of the `T203` refresh:
 | T189 | Done | `SourceCompiler` classpath sourcing | Fixed TODO in `dsl-codegen`'s compact-source compiler. |
 | T190 | Done | Typed `@ConfigurationProperties` records | Replaced ad-hoc `@Value`/manual binding across seven starter config sites. |
 | T191 | Done | `CompensationRegistry` interface | Extracted interface + `DefaultCompensationRegistry` (lock-free `ConcurrentLinkedDeque`, was `synchronized`). |
-| T192 | Done | JSON schema generator library + Spring bean | `VictoolsJsonSchemaGenerator` behind the `JsonSchemaGenerator` interface; replaced hand-written static generator. |
+| T192 | Done | JSON schema generator library + Spring bean | Library-backed `JsonSchemaGenerator` bean; replaced hand-written static generator (later superseded by Jackson implementation in T208). |
 | T193 | Done | DSL package cleanup & dead-code removal | TODO cleanup across `dsl`/`dsl-api`/`dsl-codegen`; `MapInputConverter` became an instance bean. |
 | T194 | Done | JSON-native DSL helper | `JsonValue` interface + Jackson impl, `Context.json()`/`.json()` path nav; `JsonExtractHelper` now a deprecated facade. |
 | T195 | Done | DSL exception handler SPI | Replaced static dispatch with an overridable interface + impl. |
@@ -544,6 +597,17 @@ The roadmap below reflects the kanban state as of the `T203` refresh:
 | T199 | Done | Frontend STALE auto-refresh | `useStalePolling` auto-polls (default 5000ms), pauses when tab hidden. |
 | T200 | Done | `DslExecutionsResource` | `GET /api/executions` and `/api/executions/{id}` — Executions page now has a working backend. |
 | T201 | Done | Workbench draft autosave | `useWorkbenchDraft` — debounced `localStorage` autosave, 24h TTL, restore banner. |
+| T202 | Done | Remove dead What-If Config runner panel | UI cleanup after `T198` removed per-request mocking. |
+| T203 | Done | Refresh architecture docs to T201 state | Updated `architecture-backend.md` and `architecture-ui.md` through T201. |
+| T205 | Done | Move MapInputConverter to starter with Avaje Jsonb cache | `starter.converter.MapInputConverter`; cached adapters + Jackson fallback; zero reflection. |
+| T206 | Done | JDBC capture typed decorators | `RecordingDataSource`/`RecordingConnection`/`RecordingStatement`/`RecordingPreparedStatement`/`RecordingCallableStatement` replace JDK proxies. |
+| T207 | Done | DslDefinitionLoader interface split | `ServiceLoaderDslDefinitionLoader` (non-reflective) + `CompilingDslDefinitionLoader` (reflective reload). |
+| T208 | Done | Jackson JSON schema generator | `JacksonJsonSchemaGenerator` via Jackson 3 `JsonFormatVisitorWrapper`; third-party schema-library dependency removed. |
+| T209/T212/T214/T215/T216 | Done | Runtime lock-free cleanup | Replaced synchronized/DCL in `DryRunLogBuffer`, `ExecutionTreeCollector`, `InMemoryDslRunRepository`, `GlobalManager`, `ExecutionTraceCollector`. |
+| T210/T211 | Done | Transaction execution repository | `TransactionExecutionRepository` interface + in-memory and JDBC/Flyway impls; `DefaultExecutionListener` persists via repository. |
+| T213 | Done | Temporal worker eager registration | `ApplicationRunner` in `TemporalConfiguration`; `WorkerFactory` bean with `destroyMethod=shutdown`; removed `TemporalDslService` lazy DCL. |
+| T217/T218 | Done | Executions offset pagination | `GET /api/executions` `offset` parameter; frontend prev/next page controls via `useExecutionsApi`/`useExecutions`. |
+| T219 | Done | Remove synchronized from InMemoryTransactionExecutionRepository | Lock-free `ConcurrentHashMap` + `CopyOnWriteArrayList` implementation. |
 
 T178–T181 and T184–T185 are test-only additions; they increased coverage for the capture handlers, executions panel,
 runner panel, `TemporalTransactionInvoker`, `AesFieldEncryptor`, and `SimpleExpressionEvaluator` respectively, but do
@@ -557,7 +621,13 @@ The T146–T182 cycle added call capture, dry-run observability, preview metrics
 detection, and a cleaner Spring Boot autoconfiguration model. The following T184–T201 cycle replaced the leak-prone
 singleton-collector runtime with a composable `DslPipeStage` pipeline (`T187`), renamed mocks to fakes and moved
 faking to startup-only YAML at the helper boundary (`T198`), deleted the `ScopedValue`-based dry-run context in favor
-of a pipe-stage-owned log buffer (`T197`), replaced the hand-written `JsonSchemaGenerator` with a victools-backed bean
-(`T192`), added a native `JsonValue`/`Context.json()` engine that deprecates `JsonExtractHelper` (`T194`), and wired
-up the Executions page end-to-end (`T200`) with frontend STALE auto-polling (`T199`). Two items remain blocked
+of a pipe-stage-owned log buffer (`T197`), added a native `JsonValue`/`Context.json()` engine that deprecates
+`JsonExtractHelper` (`T194`), and wired up the Executions page end-to-end (`T200`) with frontend STALE auto-polling
+(`T199`). The T202–T219 cycle removed the dead What-If Config runner panel (`T202`), refreshed this doc set to the
+T201 state (`T203`), moved `MapInputConverter` to the starter with cached Avaje Jsonb adapters (`T205`), rewrote
+JDBC capture as typed decorators (`T206`), split the DSL definition loader into reflective/non-reflective
+implementations (`T207`), replaced the T192 library-backed JSON schema generator with a Jackson 3 implementation (`T208`),
+introduced `TransactionExecutionRepository` persistence (`T210`/`T211`), moved Temporal worker registration to a Spring
+Boot `ApplicationRunner` (`T213`), switched runtime collectors to lock-free/atomic idioms (`T209`/`T212`/`T214`/`T215`/
+`T216`/`T219`), and added offset pagination to the Executions page (`T217`/`T218`). Two items remain blocked
 (sandboxing and the preview/explain report-supertype architecture) and are explicitly not documented as implemented.

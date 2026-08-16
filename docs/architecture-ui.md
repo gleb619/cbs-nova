@@ -194,9 +194,15 @@ Both are wired through the BFF so the browser never calls Spring Boot directly.
 
 The Executions page lists past and in-flight DSL runs. Before `T200` it had no working backend — the page was dead.
 
-- **Backend (`T200`)** — `controllers.DslExecutionsResource` exposes `GET /api/executions` (filterable by
-  `processName`/`status`, `limit`-capped list) and `GET /api/executions/{id}` (single-run detail), both reading
-  through the existing `DslRunRepository`. Both are wired through the BFF like every other backend call.
+- **Backend (`T200`/`T217`)** — `controllers.DslExecutionsResource` exposes `GET /api/executions`
+  (filterable by `processName`/`status`, `offset`/`limit` paginated list) and `GET /api/executions/{id}`
+  (single-run detail), both reading through the existing `DslRunRepository`. Both are wired through the BFF like
+  every other backend call.
+- **Pagination (`T217`/`T218`)** — the list endpoint returns `{items, total}`; the page
+  (`frontend/admin-ui-plugin/app/pages/executions/index.vue`) renders prev/next buttons and a page counter.
+  The composable `useExecutions` in `frontend/admin-ui-plugin/app/composables/useExecutions.ts` calculates
+  the `offset` from the current page and `pageSize`, calls `useExecutionsApi.list({ ...filters, offset, limit })`,
+  and updates the list and `total`. `useExecutionsApi` forwards the query to `GET /api/v1/executions`.
 - **STALE status (`T186`)** — the frontend `ExecutionStatus` type and status badge gained a `Stale` state, matching
   the backend `STALE` value set by the async process service's healthcheck (see
   [`architecture-backend.md`](architecture-backend.md) § "STALE status").
