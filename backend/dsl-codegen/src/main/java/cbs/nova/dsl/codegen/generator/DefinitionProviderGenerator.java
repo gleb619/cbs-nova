@@ -18,7 +18,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public final class DefinitionProviderGenerator {
 
-  private final Level logLevel;
   private final CodeWriter codeWriter;
 
   public static final String PROVIDER_CLASS = "GeneratedDslDefinitionProvider";
@@ -30,7 +29,7 @@ public final class DefinitionProviderGenerator {
                   ${packageLine}import cbs.nova.dsl.DslCompactSource;
                   import cbs.nova.dsl.DslDefinitionProvider;
                   import cbs.nova.dsl.DslObject;
-                  import cbs.nova.dsl.DslGenerated;
+                  import cbs.nova.dsl.annotation.DslGenerated;
                   import javax.annotation.processing.Generated;
                   import java.util.ArrayList;
                   import java.util.List;
@@ -73,12 +72,12 @@ public final class DefinitionProviderGenerator {
             "registrations", registrations,
             "annotation", annotation));
     codeWriter.write(sourceFile, source);
-    log.atLevel(logLevel).log(() -> "[DefinitionProviderGenerator] Wrote provider source to %s"
+    log.atLevel(Level.DEBUG).log(() -> "[DefinitionProviderGenerator] Wrote provider source to %s"
             .formatted(sourceFile));
 
     var serviceFile = outputDir.resolve(SERVICE_PATH);
     codeWriter.write(serviceFile, providerFqcn + System.lineSeparator());
-    log.atLevel(logLevel).log(() -> "[DefinitionProviderGenerator] Wrote SPI descriptor to %s"
+    log.atLevel(Level.DEBUG).log(() -> "[DefinitionProviderGenerator] Wrote SPI descriptor to %s"
             .formatted(serviceFile));
 
     return providerFqcn;

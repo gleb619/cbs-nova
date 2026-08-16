@@ -15,15 +15,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-/**
- * Per-run nested call-tree collector.
- *
- * <p>
- * Receives start/end events from runners via {@link ExecutionListener} and assembles an immutable
- * tree of {@link CallNode} entries. One instance corresponds to exactly one run: it is created by
- * the owning pipe stage ({@code ExecutionTreeStage}) at run entry and dropped when the run ends, so
- * there is no runId-keyed map and no shared singleton that could leak state across runs.
- */
 public final class ExecutionTreeCollector implements ExecutionListener {
 
   private static final Logger log = LoggerFactory.getLogger(ExecutionTreeCollector.class);
@@ -55,7 +46,6 @@ public final class ExecutionTreeCollector implements ExecutionListener {
     skipCount = 0;
   }
 
-  /** Tear down the stack. Any in-progress frames are popped defensively. */
   public void finish() {
     synchronized (stack) {
       while (!stack.isEmpty()) {
@@ -122,10 +112,6 @@ public final class ExecutionTreeCollector implements ExecutionListener {
     popFrame(name, output, success);
   }
 
-  /**
-   * Append a captured external call (e.g. JDBC/HTTP) to the currently active frame. Silently
-   * ignored when the stack is empty or the collector has not been started.
-   */
   public void attachExternalCall(@NonNull Map<String, Object> call) {
     if (!active || skipCount > 0) {
       return;

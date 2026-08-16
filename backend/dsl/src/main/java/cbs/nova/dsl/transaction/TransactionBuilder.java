@@ -3,13 +3,13 @@ package cbs.nova.dsl.transaction;
 import cbs.nova.dsl.CompensationContext;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
+import cbs.nova.dsl.ParameterDescriptor;
+import cbs.nova.dsl.Result;
 import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.model.MapOutput;
-import cbs.nova.dsl.ParameterDescriptor;
-import cbs.nova.dsl.registry.ParameterRegistry;
-import cbs.nova.dsl.Result;
 import cbs.nova.dsl.model.RetryPolicy;
 import cbs.nova.dsl.registry.DefaultParameterRegistry;
+import cbs.nova.dsl.registry.ParameterRegistry;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -45,28 +45,18 @@ public final class TransactionBuilder<I, O> {
     this.taskQueue = name + "-queue";
   }
 
-  /**
-   * Selects the typed branch and fixes the input body type.
-   */
   @SuppressWarnings("unchecked")
   public <T> TransactionBuilder<T, O> input(@NonNull Class<T> type) {
     this.inputType = type;
     return (TransactionBuilder<T, O>) this;
   }
 
-  /**
-   * Selects the typed branch and fixes the output/result type.
-   */
   @SuppressWarnings("unchecked")
   public <T> TransactionBuilder<I, T> output(@NonNull Class<T> type) {
     this.outputType = type;
     return (TransactionBuilder<I, T>) this;
   }
 
-  /**
-   * Selects the map/parameter branch. The body is typed as {@link MapInput} and the result is
-   * expected to be a {@link MapOutput}.
-   */
   @SuppressWarnings("unchecked")
   public TransactionBuilder<MapInput, MapOutput> parameters(
           @NonNull Consumer<ParameterRegistry> registrar) {

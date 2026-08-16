@@ -7,9 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-/**
- * Factory for creating {@link JsonValue} instances backed by Jackson {@link JsonNode}.
- */
 public final class JsonValues {
 
   private JsonValues() {
@@ -22,9 +19,6 @@ public final class JsonValues {
     return new JacksonJsonValue(null);
   }
 
-  /**
-   * Wraps a Jackson {@link JsonNode} as a {@link JsonValue}.
-   */
   public static @NonNull JsonValue of(@Nullable JsonNode node) {
     return new JacksonJsonValue(node);
   }

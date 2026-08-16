@@ -13,13 +13,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * In-memory {@link DslRunRepository} implementation retaining the most recent 100 runs.
- *
- * <p>
- * Eviction is insertion-order FIFO: when a new run is saved and the store already holds
- * {@value #CAPACITY} runs, the oldest saved run is removed.
- */
 public final class InMemoryDslRunRepository implements DslRunRepository {
 
   private static final int CAPACITY = 100;

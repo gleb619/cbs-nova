@@ -2,10 +2,10 @@ package cbs.nova.starter.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
-import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.starter.IntegrationTestApplication;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

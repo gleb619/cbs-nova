@@ -3,13 +3,13 @@ package cbs.nova.dsl.codegen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
-import cbs.nova.dsl.annotation.DslGenerated;
-import cbs.nova.dsl.transaction.GeneratedTransactionActivity;
-import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.annotation.DslGenerated;
 import cbs.nova.dsl.codegen.generator.TransactionCodeGenerator;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.config.DescriptorFactory;
+import cbs.nova.dsl.model.MapInput;
+import cbs.nova.dsl.transaction.GeneratedTransactionActivity;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.processing.Generated;

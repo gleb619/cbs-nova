@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.codegen.generator.DefinitionProviderGenerator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.slf4j.event.Level;
 
 import javax.annotation.processing.Generated;
 
@@ -17,7 +16,7 @@ class DefinitionProviderGeneratorTest {
 
   @Test
   void writesProviderSourceAndSpiFile(@TempDir Path outDir) throws Exception {
-    var generator = new DefinitionProviderGenerator(Level.INFO, new CodeWriter());
+    var generator = new DefinitionProviderGenerator(new CodeWriter());
     var fqcn = generator.generate(outDir, List.of("FooDsl", "BarDsl"));
 
     var source = outDir.resolve("GeneratedDslDefinitionProvider.java");
@@ -38,7 +37,7 @@ class DefinitionProviderGeneratorTest {
 
   @Test
   void emptyClassListProducesEmptyRegistrations(@TempDir Path outDir) throws Exception {
-    var generator = new DefinitionProviderGenerator(Level.INFO, new CodeWriter());
+    var generator = new DefinitionProviderGenerator(new CodeWriter());
     var fqcn = generator.generate(outDir, List.of());
 
     var source = outDir.resolve("GeneratedDslDefinitionProvider.java");

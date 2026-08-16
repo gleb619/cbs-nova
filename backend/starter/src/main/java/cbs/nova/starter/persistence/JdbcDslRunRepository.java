@@ -57,11 +57,7 @@ public class JdbcDslRunRepository implements DslRunRepository {
     encryptEntity(entity);
 
     KeyHolder keyHolder = new GeneratedKeyHolder();
-    String sql = "INSERT INTO " + tableName + " "
-            + "(run_id, process_name, status, input_json, output_json, error_message, context_json, "
-            + "started_at, finished_at, execution_mode) "
-            + "VALUES (:runId, :processName, :status, :inputJson, :outputJson, :errorMessage, "
-            + ":contextJson, :startedAt, :finishedAt, :executionMode)";
+    String sql = getInsertStatement();
 
     MapSqlParameterSource params = new MapSqlParameterSource()
             .addValue("runId", entity.getRunId())
@@ -103,10 +99,7 @@ public class JdbcDslRunRepository implements DslRunRepository {
           @Nullable String error,
           @NonNull Instant finishedAt,
           @Nullable String contextJson) {
-    String sql = "UPDATE " + tableName + " "
-            + "SET status = :status, output_json = :outputJson, error_message = :errorMessage, "
-            + "context_json = :contextJson, finished_at = :finishedAt "
-            + "WHERE run_id = :runId";
+    String sql = getUpdateStatement();
 
     MapSqlParameterSource params = new MapSqlParameterSource()
             .addValue("status", status)
@@ -136,4 +129,26 @@ public class JdbcDslRunRepository implements DslRunRepository {
     entity.setContextJson(encryptor.decrypt(entity.getContextJson()));
     return entity;
   }
+
+  private String getInsertStatement() {
+    return """
+            INSERT INTO %s (run_id, process_name, status, input_json, output_json, error_message, context_json, started_at, finished_at, execution_mode)
+            VALUES
+            (:runId, :processName, :status, :inputJson, :outputJson, :errorMessage, :contextJson, :startedAt, :finishedAt, :executionMode)"""
+            .formatted(
+                    tableName);
+  }
+
+  private String getUpdateStatement() {
+    return """
+            UPDATE %s SET
+                status = :status
+              , output_json = :outputJson
+              , error_message = :errorMessage
+              , context_json = :contextJson
+              , finished_at = :finishedAt
+            WHERE run_id = :runId""".formatted(
+            tableName);
+  }
+
 }

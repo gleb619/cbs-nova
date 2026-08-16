@@ -17,8 +17,6 @@ class ContextFactoryTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
 
-  // --- generateRunId -------------------------------------------------------
-
   @Test
   void generateRunIdIsNonBlankAndPrefixedWithRun() {
     String runId = contextFactory.generateRunId();
@@ -52,8 +50,6 @@ class ContextFactoryTest {
     assertThat(seen).hasSize(COLLISION_SAMPLE);
   }
 
-  // --- of(body, mode) ------------------------------------------------------
-
   @Test
   void ofBodyAndModeGeneratesRunIdAndEmptyMetadata() {
     SimpleContext<String> first = contextFactory.of("payload", ExecutionMode.RUN);
@@ -79,8 +75,6 @@ class ContextFactoryTest {
     assertThat(ctx.runId()).isEqualTo(supplied);
     assertThat(ctx.metadata()).isEmpty();
   }
-
-  // --- of(body, metadata, mode, runId) ------------------------------------
 
   @Test
   void ofWithMetadataAndRunIdPreservesBoth() {

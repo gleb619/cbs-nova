@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.GeneratedClassProvider;
-import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.codegen.generator.GeneratedClassProviderGenerator;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
@@ -13,6 +12,7 @@ import cbs.nova.dsl.codegen.util.AstExtractor;
 import cbs.nova.dsl.codegen.util.Json;
 import cbs.nova.dsl.compact.CompactSourcePreprocessor;
 import cbs.nova.dsl.config.DescriptorFactory;
+import cbs.nova.dsl.model.MapInput;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.processing.Generated;
@@ -199,7 +199,7 @@ class GeneratedClassProviderGeneratorTest {
     var body = source.source();
 
     assertThat(body).contains("package cbs.nova.dsl.generated.loandisbursement.v1;");
-    assertThat(body).contains("import cbs.nova.dsl.DslGenerated;");
+    assertThat(body).contains("import cbs.nova.dsl.annotation.DslGenerated;");
     assertThat(body).contains("import cbs.nova.dsl.DslObject;");
     assertThat(body).contains("import cbs.nova.dsl.GeneratedClassDescriptor;");
     assertThat(body).contains("import cbs.nova.dsl.GeneratedClassProvider;");

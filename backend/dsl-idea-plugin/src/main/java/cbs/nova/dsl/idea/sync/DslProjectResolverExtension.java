@@ -1,9 +1,11 @@
 package cbs.nova.dsl.idea.sync;
 
 import cbs.nova.dsl.gradle.tooling.DslProjectModel;
+import cbs.nova.dsl.idea.state.DslProjectStateService;
 import com.intellij.openapi.externalSystem.model.DataNode;
 import com.intellij.openapi.externalSystem.model.project.ModuleData;
 import com.intellij.openapi.externalSystem.model.task.ExternalSystemTaskId;
+import com.intellij.openapi.project.Project;
 import org.gradle.tooling.model.idea.IdeaModule;
 import org.jetbrains.plugins.gradle.service.project.AbstractProjectResolverExtension;
 
@@ -46,6 +48,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@link ConcurrentHashMap#remove} to atomically remove-and-return a task's dirs, avoiding the
  * copy-then-clear race a plain {@code Set} would have. This also keeps
  * {@link DslSourceRootSyncContributor} a plain, directly-unit-testable collaborator as required.
+ *
+ * <p>
+ * The resolver is gated by {@link DslProjectStateService}: in non-DSL projects it skips the extra
+ * model request entirely, so ordinary Gradle projects pay no cost.
  */
 public final class DslProjectResolverExtension extends AbstractProjectResolverExtension {
 
@@ -59,6 +65,14 @@ public final class DslProjectResolverExtension extends AbstractProjectResolverEx
   @Override
   public void populateModuleExtraModels(IdeaModule gradleModule,
           DataNode<ModuleData> ideModule) {
+    Project project = resolverCtx.getExternalSystemTaskId().findProject();
+    if (project == null
+            || project.isDisposed()
+            || !DslProjectStateService.getInstance(project).isActiveDslProject()) {
+      super.populateModuleExtraModels(gradleModule, ideModule);
+      return;
+    }
+
     var model = resolverCtx.getExtraProject(gradleModule, DslProjectModel.class);
     if (model != null) {
       var taskId = resolverCtx.getExternalSystemTaskId();

@@ -2,8 +2,10 @@ package cbs.nova.dsl.codegen;
 
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.GeneratedClassProvider;
+import cbs.nova.dsl.ModelRegistry;
 import cbs.nova.dsl.codegen.SemanticValidator;
 import cbs.nova.dsl.codegen.generator.GeneratedClassProviderGenerator;
+import cbs.nova.dsl.codegen.generator.ModelRegistryGenerator;
 import cbs.nova.dsl.codegen.generator.ProcessCodeGenerator;
 import cbs.nova.dsl.codegen.generator.TransactionCodeGenerator;
 import cbs.nova.dsl.codegen.model.GeneratedSource;
@@ -31,6 +33,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public final class DslCompiler {
 
+  private final ModelRegistryGenerator modelRegistryGenerator;
   private final DslSourceCompiler dslSourceCompiler;
   private final ProcessCodeGenerator processCodeGenerator;
   private final TransactionCodeGenerator transactionCodeGenerator;
@@ -131,9 +134,14 @@ public final class DslCompiler {
       providerFqns.add(provider.fullyQualifiedName());
     }
 
+    var modelRegistrySource = modelRegistryGenerator.generate(srcDir, outputDir, targetPackage);
+    sources.add(modelRegistrySource);
+
     codeWriter.write(sources, outputDir);
     codeWriter.writeServiceFile(GeneratedClassProvider.class.getName(), providerFqns, outputDir);
-    log.atLevel(logLevel).log(() -> "[DslCompiler] Generated %s source(s) to %s"
+    codeWriter.writeServiceFile(ModelRegistry.class.getName(),
+            List.of(modelRegistrySource.fullyQualifiedName()), outputDir);
+    log.atLevel(Level.INFO).log(() -> "[DslCompiler] Generated %s source(s) to %s"
             .formatted(sources.size(), outputDir));
   }
 

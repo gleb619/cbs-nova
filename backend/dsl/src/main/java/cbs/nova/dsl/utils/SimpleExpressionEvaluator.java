@@ -15,19 +15,8 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Lightweight, sandboxed expression evaluator used by {@link cbs.nova.dsl.Context#eval}.
- *
- * <p>
- * Supports mixed-text variable interpolation ({@code {name}}) and arithmetic/string expressions
- * ({@code ${a + b}}). Only basic operators ({@code + - * /}) and parentheses are allowed; no
- * reflection or external calls are performed.
- *
- * <p>
- * JSON-native access is gated behind the explicit {@code .json()} marker:
- * {@code {body.json().items[0].id}} navigates JSON objects and arrays. Field names and integer
- * indices may be chained; wildcards and slicing are not supported.
- */
+//TODO: remove
+@Deprecated(forRemoval = true)
 public final class SimpleExpressionEvaluator implements ExpressionEvaluator {
 
   private static final Pattern PLACEHOLDER = Pattern.compile("(\\$?\\{([^{}]+)\\})");
@@ -197,8 +186,6 @@ public final class SimpleExpressionEvaluator implements ExpressionEvaluator {
         while (i < n && Character.isJavaIdentifierPart(expression.charAt(i))) {
           i++;
         }
-        // JSON-native paths are gated behind the explicit .json() marker so that plain dotted
-        // identifiers (e.g. process.env) continue to be rejected as unexpected characters.
         if (i < n && expression.startsWith(JSON_MARKER, i)) {
           i += JSON_MARKER.length();
           while (i < n && (Character.isJavaIdentifierPart(expression.charAt(i))

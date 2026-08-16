@@ -1,9 +1,9 @@
 package cbs.nova.dsl.config;
 
-import cbs.nova.dsl.model.MapInput;
-import cbs.nova.dsl.model.MapOutput;
 import cbs.nova.dsl.function.FunctionDescriptor;
 import cbs.nova.dsl.function.FunctionDslObject;
+import cbs.nova.dsl.model.MapInput;
+import cbs.nova.dsl.model.MapOutput;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDescriptor;

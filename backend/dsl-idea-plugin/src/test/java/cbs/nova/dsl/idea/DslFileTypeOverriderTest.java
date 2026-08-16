@@ -1,11 +1,19 @@
 package cbs.nova.dsl.idea;
 
+import cbs.nova.dsl.idea.state.DslProjectStateService;
+import com.intellij.openapi.vfs.VfsUtilCore;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 
 import java.nio.file.Path;
 import java.util.Set;
 
 public class DslFileTypeOverriderTest extends BasePlatformTestCase {
+
+  @Override
+  protected void setUp() throws Exception {
+    super.setUp();
+    DslProjectStateService.getInstance(getProject()).setActiveDslProject(true);
+  }
 
   public void testDefaultFallbackMatchesSrcDslAndSrcModels() {
     var overrider = new DslFileTypeOverrider();

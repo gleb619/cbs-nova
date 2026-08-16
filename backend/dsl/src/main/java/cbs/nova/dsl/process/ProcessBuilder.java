@@ -3,13 +3,13 @@ package cbs.nova.dsl.process;
 import cbs.nova.dsl.CompensationContext;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
+import cbs.nova.dsl.ParameterDescriptor;
+import cbs.nova.dsl.Result;
 import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.model.MapOutput;
-import cbs.nova.dsl.ParameterDescriptor;
-import cbs.nova.dsl.registry.ParameterRegistry;
-import cbs.nova.dsl.Result;
-import cbs.nova.dsl.transaction.TransactionExecution;
 import cbs.nova.dsl.registry.DefaultParameterRegistry;
+import cbs.nova.dsl.registry.ParameterRegistry;
+import cbs.nova.dsl.transaction.TransactionExecution;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -43,9 +43,6 @@ public final class ProcessBuilder<I, O> {
     this.taskQueue = name + "-queue";
   }
 
-  /**
-   * Selects the typed branch and fixes the input body type.
-   */
   @SuppressWarnings("unchecked")
   public <T> ProcessBuilder<T, O> input(@NonNull Class<T> type) {
     this.inputType = type;
@@ -61,10 +58,6 @@ public final class ProcessBuilder<I, O> {
     return (ProcessBuilder<I, T>) this;
   }
 
-  /**
-   * Selects the map/parameter branch. The body is typed as {@link MapInput} and the result is
-   * expected to be a {@link MapOutput}.
-   */
   @SuppressWarnings("unchecked")
   public ProcessBuilder<MapInput, MapOutput> parameters(
           @NonNull Consumer<ParameterRegistry> registrar) {

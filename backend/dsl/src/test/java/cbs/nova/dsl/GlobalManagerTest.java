@@ -166,7 +166,6 @@ class GlobalManagerTest {
   void missingTransactionCompensationIsNoOp() {
     var gm = GlobalManager.globalManager();
     gm.compensateTransaction("MissingTx", "run-1", new RuntimeException("boom"));
-    // no exception expected
   }
 
   @Test
@@ -316,7 +315,6 @@ class GlobalManagerTest {
             .build());
 
     gm.compensateTransaction("NoCompSugarTx", "run-1", "input", new RuntimeException("boom"));
-    // no exception expected
   }
 
   @Test

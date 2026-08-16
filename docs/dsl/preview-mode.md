@@ -91,7 +91,7 @@ public record PreviewReport(
 
 - [Runtime Engine](runtime.md) — registry, runner, manager, and mode-agnostic REST surface.
 - [DSL Constructs & Execution Contract](constructs.md) — the `Executable` interface and `preview(...)` method contract.
-- [Dry-run/Preview and Explain Modes](../dry-run-preview-explain.ignore.md) — detailed endpoints, output formats, and
+- [Dry-run/Preview and Explain Modes](../ideas/dry-run-preview-explain.ignore.md) — detailed endpoints, output formats, and
   diagram library integrations.
 - `docs/plans/T146-*` through `T151-*` — implementation tasks for external call capture, call-tree collection, dry-run
   logs, and the integration test.

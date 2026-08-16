@@ -2,13 +2,13 @@ package cbs.nova.starter.helpers;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
-import cbs.nova.dsl.annotation.Helper;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.annotation.Helper;
 import cbs.nova.starter.helpers.model.FormatMessageIn;
 import cbs.nova.starter.helpers.model.FormatMessageOut;
-import java.math.BigDecimal;
 import org.jspecify.annotations.NonNull;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 @Helper(name = "formatMessage")

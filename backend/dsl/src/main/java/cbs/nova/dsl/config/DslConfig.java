@@ -1,19 +1,20 @@
 package cbs.nova.dsl.config;
 
-import cbs.nova.dsl.CompensationRegistry;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.HelperManager;
 import cbs.nova.dsl.JsonSchemaGenerator;
-import cbs.nova.dsl.process.TemporalProcessLauncher;
-import cbs.nova.dsl.transaction.TransactionInvoker;
+import cbs.nova.dsl.ModelRegistry;
+import cbs.nova.dsl.converter.AvajeMapConverter;
 import cbs.nova.dsl.converter.MapInputConverter;
+import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.jsonschema.VictoolsJsonSchemaGenerator;
 import cbs.nova.dsl.model.RetryPolicy;
 import cbs.nova.dsl.process.ProcessManager;
 import cbs.nova.dsl.process.ProcessRunner;
+import cbs.nova.dsl.process.TemporalProcessLauncher;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
+import cbs.nova.dsl.registry.DefaultModelRegistry;
 import cbs.nova.dsl.registry.DefaultProcessRegistry;
 import cbs.nova.dsl.registry.DefaultTransactionRegistry;
 import cbs.nova.dsl.registry.GeneratedClassRegistry;
@@ -21,11 +22,14 @@ import cbs.nova.dsl.runner.DefaultHelperRunner;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
 import cbs.nova.dsl.runner.HelperRunner;
+import cbs.nova.dsl.transaction.CompensationRegistry;
+import cbs.nova.dsl.transaction.TransactionInvoker;
 import cbs.nova.dsl.transaction.TransactionManager;
 import cbs.nova.dsl.transaction.TransactionRunner;
 import cbs.nova.dsl.utils.ExpressionEvaluator;
 import cbs.nova.dsl.utils.SimpleExpressionEvaluator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.avaje.jsonb.Jsonb;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
@@ -56,8 +60,16 @@ public class DslConfig implements SingletonSupport {
     return singleton(ContextFactory::new);
   }
 
+  public @NonNull ModelRegistry modelRegistry() {
+    return singleton(DefaultModelRegistry::new);
+  }
+
+  public @NonNull AvajeMapConverter avajeMapConverter() {
+    return singleton(() -> new AvajeMapConverter(Jsonb.builder().build(), modelRegistry()));
+  }
+
   public @NonNull MapInputConverter mapInputConverter() {
-    return singleton(MapInputConverter::new);
+    return singleton(() -> new MapInputConverter(avajeMapConverter()));
   }
 
   public @NonNull RetryPolicyFactory retryPolicyFactory() {
@@ -100,9 +112,6 @@ public class DslConfig implements SingletonSupport {
     return replaceable("helperInstanceResolver");
   }
 
-  /**
-   * Returns the default {@link ObjectMapper} used by the DSL JSON runtime.
-   */
   public @NonNull ObjectMapper jsonMapper() {
     return singleton(ObjectMapper::new);
   }

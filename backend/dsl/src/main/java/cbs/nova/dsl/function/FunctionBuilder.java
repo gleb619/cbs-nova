@@ -3,12 +3,12 @@ package cbs.nova.dsl.function;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.FunctionContext;
+import cbs.nova.dsl.ParameterDescriptor;
+import cbs.nova.dsl.Result;
 import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.model.MapOutput;
-import cbs.nova.dsl.ParameterDescriptor;
-import cbs.nova.dsl.registry.ParameterRegistry;
-import cbs.nova.dsl.Result;
 import cbs.nova.dsl.registry.DefaultParameterRegistry;
+import cbs.nova.dsl.registry.ParameterRegistry;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -33,9 +33,6 @@ public final class FunctionBuilder<I, O> {
     this.name = name;
   }
 
-  /**
-   * Selects the typed branch and fixes the input body type.
-   */
   @SuppressWarnings("unchecked")
   public <T> FunctionBuilder<T, O> input(@NonNull Class<T> type) {
     this.inputType = type;
@@ -51,10 +48,6 @@ public final class FunctionBuilder<I, O> {
     return (FunctionBuilder<I, T>) this;
   }
 
-  /**
-   * Selects the map/parameter branch. The body is typed as {@link MapInput} and the result is
-   * expected to be a {@link MapOutput}.
-   */
   @SuppressWarnings("unchecked")
   public FunctionBuilder<MapInput, MapOutput> parameters(
           @NonNull Consumer<ParameterRegistry> registrar) {

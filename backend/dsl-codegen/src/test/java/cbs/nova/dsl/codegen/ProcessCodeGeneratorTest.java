@@ -3,16 +3,16 @@ package cbs.nova.dsl.codegen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
-import cbs.nova.dsl.annotation.DslGenerated;
-import cbs.nova.dsl.process.DslTemporalProcess;
-import cbs.nova.dsl.process.DslTemporalProcessRequest;
-import cbs.nova.dsl.model.MapInput;
-import cbs.nova.dsl.process.ProcessCompensation;
-import cbs.nova.dsl.process.ProcessMain;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.annotation.DslGenerated;
 import cbs.nova.dsl.codegen.generator.ProcessCodeGenerator;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.config.DescriptorFactory;
+import cbs.nova.dsl.model.MapInput;
+import cbs.nova.dsl.process.DslTemporalProcess;
+import cbs.nova.dsl.process.DslTemporalProcessRequest;
+import cbs.nova.dsl.process.ProcessCompensation;
+import cbs.nova.dsl.process.ProcessMain;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.processing.Generated;

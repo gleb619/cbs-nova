@@ -14,10 +14,6 @@ class CompactSourcePreprocessorTest {
           }
           """;
 
-  // ---------------------------------------------------------------------
-  // 1. className derivation
-  // ---------------------------------------------------------------------
-
   @Test
   void classNameIsFileNameMinusJavaExtension() {
     var result = CompactSourcePreprocessor.preprocess("OrderSaga.java", VALID_COMPACT_SOURCE);

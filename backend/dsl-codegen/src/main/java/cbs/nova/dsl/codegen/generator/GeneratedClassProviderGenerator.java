@@ -11,13 +11,16 @@ import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.utils.Substitutor;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.event.Level;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RequiredArgsConstructor
 public final class GeneratedClassProviderGenerator {
 
@@ -45,9 +48,13 @@ public final class GeneratedClassProviderGenerator {
     String executeJson = executeAstJsonExtractor.extract(
             preprocessedSources, name, DslType.PROCESS);
 
-    return buildSource(pkg, providerClass, DslObject.DslType.PROCESS, descriptor.name(),
+    var source = buildSource(pkg, providerClass, DslObject.DslType.PROCESS, descriptor.name(),
             version, descriptor.taskQueue(), interfaceName, implName,
             descriptor.inputType(), descriptor.outputType(), executeJson);
+    log.atLevel(Level.DEBUG)
+            .log(() -> "[GeneratedClassProviderGenerator] Generated process provider class %s"
+                    .formatted(providerClass));
+    return source;
   }
 
   public @NonNull GeneratedSource forTransaction(
@@ -71,9 +78,13 @@ public final class GeneratedClassProviderGenerator {
     String executeJson = executeAstJsonExtractor.extract(
             preprocessedSources, name, DslType.TRANSACTION);
 
-    return buildSource(pkg, providerClass, DslObject.DslType.TRANSACTION, descriptor.name(),
+    var source = buildSource(pkg, providerClass, DslObject.DslType.TRANSACTION, descriptor.name(),
             version, descriptor.taskQueue(), interfaceName, implName,
             descriptor.inputType(), descriptor.outputType(), executeJson);
+    log.atLevel(Level.DEBUG)
+            .log(() -> "[GeneratedClassProviderGenerator] Generated transaction provider class %s"
+                    .formatted(providerClass));
+    return source;
   }
 
   private static @NonNull String resolveVersion(
@@ -100,17 +111,17 @@ public final class GeneratedClassProviderGenerator {
     String source = Substitutor.format(// language=java
             """
                     package ${pkg};${importBlock}
-                    import cbs.nova.dsl.DslGenerated;
+                    import cbs.nova.dsl.annotation.DslGenerated;
                     import cbs.nova.dsl.DslObject;
                     import cbs.nova.dsl.GeneratedClassDescriptor;
                     import cbs.nova.dsl.GeneratedClassProvider;
                     import javax.annotation.processing.Generated;
-
+                    
                     ${annotation}
                     public final class ${providerClass} implements GeneratedClassProvider {
-
+                    
                       private static final String JSON_SPEC = "${executeJsonLiteral}";
-
+                    
                       @Override
                       public GeneratedClassDescriptor descriptor() {
                         return new GeneratedClassDescriptor(
@@ -123,19 +134,19 @@ public final class GeneratedClassProviderGenerator {
                                 ${inputLiteral},
                                 ${outputLiteral},
                                 JSON_SPEC
-                                );
+                                )
                       }
-
+                    
                       @Override
                       public String executeJson() {
                         return descriptor().executeJson();
                       }
-
+                    
                       @Override
                       public Object implementationInstance() {
                         return new ${implName}();
                       }
-
+                    
                     }
                     """,
             Map.ofEntries(
@@ -153,6 +164,8 @@ public final class GeneratedClassProviderGenerator {
                     Map.entry("outputLiteral", outputLiteral),
                     Map.entry("executeJsonLiteral", executeJsonLiteral)));
 
+    log.atLevel(Level.DEBUG).log(() -> "[GeneratedClassProviderGenerator] Built source for %s"
+            .formatted(providerClass));
     return new GeneratedSource(pkg, providerClass, source);
   }
 

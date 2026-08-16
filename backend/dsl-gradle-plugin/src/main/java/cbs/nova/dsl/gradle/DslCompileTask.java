@@ -78,7 +78,7 @@ public abstract class DslCompileTask extends JavaExec {
       args.add(dslPackage);
     }
 
-    var logLevel = getLogLevel().getOrElse("TRACE");
+    var logLevel = getLogLevel().getOrElse("DEBUG");
     if (!logLevel.isBlank()) {
       if (version.isBlank()) {
         args.add("");
@@ -92,9 +92,7 @@ public abstract class DslCompileTask extends JavaExec {
 
     setArgs(args);
     var classpath = getClasspath();
-    if (classpath != null) {
-      systemProperty(CompilerConstants.COMPILER_CLASSPATH_PROPERTY, classpath.getAsPath());
-    }
+    systemProperty(CompilerConstants.COMPILER_CLASSPATH_PROPERTY, classpath.getAsPath());
     super.exec();
   }
 

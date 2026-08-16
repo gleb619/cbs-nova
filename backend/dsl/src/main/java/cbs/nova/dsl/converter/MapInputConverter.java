@@ -1,6 +1,7 @@
 package cbs.nova.dsl.converter;
 
 import cbs.nova.dsl.model.MapInput;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -15,9 +16,16 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+@RequiredArgsConstructor
 public class MapInputConverter {
 
-  private final AvajeMapConverter avajeMapConverter = AvajeMapConverter.create();
+  private final AvajeMapConverter avajeMapConverter;
+
+  //TODO: replace with a correspondent bean injection instead
+  @Deprecated(forRemoval = true)
+  public MapInputConverter() {
+    this(AvajeMapConverter.create());
+  }
 
   public @Nullable Object convert(@Nullable Object value, @NonNull Type targetType) {
     if (value == null) {
@@ -117,6 +125,12 @@ public class MapInputConverter {
       throw new IllegalArgumentException(
               "Record " + recordClass.getName() + " requires a Map input, got "
                       + value.getClass().getName());
+    }
+
+    if (avajeMapConverter.supports(recordClass)) {
+      @SuppressWarnings("unchecked")
+      Map<String, Object> typed = (Map<String, Object>) source;
+      return avajeMapConverter.fromMap(typed, recordClass);
     }
 
     RecordComponent[] components = recordClass.getRecordComponents();

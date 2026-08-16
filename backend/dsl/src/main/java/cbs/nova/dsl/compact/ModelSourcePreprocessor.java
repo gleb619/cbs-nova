@@ -12,13 +12,6 @@ import com.github.javaparser.ast.expr.Name;
 import com.github.javaparser.printer.lexicalpreservation.LexicalPreservingPrinter;
 import org.jspecify.annotations.NonNull;
 
-/**
- * Preprocesses model/POJO source files so that they can be compiled into a shared target package
- * alongside DSL sources. If a source already declares a package, that package is preserved; only
- * package-free sources get the configured target package injected. Any class or record that is not
- * already annotated with {@code @Json} gets the Avaje Jsonb annotation added, plus the import if
- * needed.
- */
 public final class ModelSourcePreprocessor {
 
   private static final String JSON_IMPORT = "io.avaje.jsonb.Json";

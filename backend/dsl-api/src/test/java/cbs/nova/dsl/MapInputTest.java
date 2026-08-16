@@ -4,8 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.model.MapInput;
-import java.util.LinkedHashMap;
 import org.junit.jupiter.api.Test;
+
+import java.util.LinkedHashMap;
 
 class MapInputTest {
 

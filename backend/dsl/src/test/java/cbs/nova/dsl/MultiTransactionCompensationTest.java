@@ -6,6 +6,7 @@ import cbs.nova.dsl.process.ProcessRunner;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
+import cbs.nova.dsl.transaction.CompensationRegistry;
 import cbs.nova.dsl.transaction.TransactionRunner;
 import org.junit.jupiter.api.Test;
 

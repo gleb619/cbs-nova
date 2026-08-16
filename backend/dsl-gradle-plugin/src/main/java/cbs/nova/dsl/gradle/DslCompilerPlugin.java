@@ -14,6 +14,7 @@ import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry;
 import javax.inject.Inject;
 
 import java.util.Map;
+import java.util.Objects;
 
 public class DslCompilerPlugin implements Plugin<Project> {
 
@@ -40,20 +41,22 @@ public class DslCompilerPlugin implements Plugin<Project> {
 
     dslCompiler.getDependencies().addLater(
             extension.getDslVersion()
-                    .map(v -> project.getDependencies().create("cbs.nova:dsl-codegen:" + v)));
+                    .map(v -> project.getDependencies()
+                            .create("cbs.nova:dsl-codegen:%s".formatted(v))));
     dslCompiler.getDependencies().addLater(
             extension.getDslVersion()
-                    .map(v -> project.getDependencies().create("cbs.nova:dsl:" + v)));
+                    .map(v -> project.getDependencies().create("cbs.nova:dsl:%s".formatted(v))));
     dslCompiler.getDependencies().addLater(
             extension.getDslVersion()
-                    .map(v -> project.getDependencies().create("cbs.nova:dsl-api:" + v)));
+                    .map(v -> project.getDependencies()
+                            .create("cbs.nova:dsl-api:%s".formatted(v))));
     dslCompiler.getDependencies().addLater(extension
             .getRuntimeModule().zip(extension.getDslVersion(),
                     (runtimeModule, v) -> runtimeModule.isBlank()
                             ? null
                             : project.getDependencies()
-                                    .create("cbs.nova:" + runtimeModule + ":" + v))
-            .filter(java.util.Objects::nonNull));
+                                    .create("cbs.nova:%s:%s".formatted(runtimeModule, v)))
+            .filter(Objects::nonNull));
 
     var compileDsl = project.getTasks().register("compileDsl", DslCompileTask.class, task -> {
       task.setGroup("build");

@@ -12,10 +12,6 @@ import org.jspecify.annotations.Nullable;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Immutable context implementation. The stored body is returned as-is, so {@link MapInput} bodies
- * remain {@link MapInput} for parameter-based DSL definitions.
- */
 @Builder
 @RequiredArgsConstructor
 public final class SimpleContext<T> implements Context<T> {

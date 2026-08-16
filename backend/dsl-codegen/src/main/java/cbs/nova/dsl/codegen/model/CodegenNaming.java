@@ -7,6 +7,10 @@ public final class CodegenNaming {
 
   private static final String BASE_PACKAGE = "cbs.nova.dsl.generated";
 
+  public @NonNull String registryPackage(@Nullable String targetPackage) {
+    return (targetPackage != null && !targetPackage.isBlank()) ? targetPackage : BASE_PACKAGE;
+  }
+
   public String versionedPackage(@NonNull String name, @NonNull String version) {
     return versionedPackage(name, version, null);
   }

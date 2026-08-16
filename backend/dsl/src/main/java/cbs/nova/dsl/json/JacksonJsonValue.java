@@ -4,6 +4,7 @@ import cbs.nova.dsl.JsonValue;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.MissingNode;
+import java.util.ArrayList;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -13,9 +14,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Jackson {@link JsonNode} backed implementation of {@link JsonValue}.
- */
 public final class JacksonJsonValue implements JsonValue {
 
   private final @NonNull JsonNode node;
@@ -114,7 +112,7 @@ public final class JacksonJsonValue implements JsonValue {
       return List.of();
     }
     ArrayNode array = (ArrayNode) node;
-    List<JsonValue> list = new java.util.ArrayList<>(array.size());
+    List<JsonValue> list = new ArrayList<>(array.size());
     for (JsonNode element : array) {
       list.add(new JacksonJsonValue(element));
     }

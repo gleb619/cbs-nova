@@ -1,9 +1,9 @@
 package cbs.nova.dsl.registry;
 
-import cbs.nova.dsl.CompensationRegistry;
-import cbs.nova.dsl.CompensationRichContext;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.transaction.CompensationRegistry;
+import cbs.nova.dsl.transaction.CompensationRichContext;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import org.jspecify.annotations.NonNull;
 
@@ -12,14 +12,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- * Default lock-free implementation of {@link CompensationRegistry}.
- *
- * <p>
- * Compensations are grouped per {@code runId} in a {@link ConcurrentHashMap}. Each run holds its
- * entries in a {@link ConcurrentLinkedDeque} so that registration appends at the tail and
- * compensation walks the deque from tail to head, preserving LIFO order without blocking.
- */
 public final class DefaultCompensationRegistry implements CompensationRegistry {
 
   private final Map<String, ConcurrentLinkedDeque<CompensationEntry>> entries = new ConcurrentHashMap<>();

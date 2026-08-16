@@ -27,13 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Library-backed JSON Schema generator using victools.
- *
- * <p>
- * Configured for Draft 2020-12 with minimal output matching the previous hand-written shape: no
- * titles, descriptions, or {@code $defs}. Jackson annotations are honored when present.
- */
 public class VictoolsJsonSchemaGenerator implements JsonSchemaGenerator {
 
   private static final String DRAFT_URI = "https://json-schema.org/draft/2020-12/schema";
@@ -126,10 +119,6 @@ public class VictoolsJsonSchemaGenerator implements JsonSchemaGenerator {
     return false;
   }
 
-  /**
-   * Preserves declaration order of fields (and, for records, record components) instead of the
-   * default alphabetical sort.
-   */
   private static final class DeclarationOrderSorter implements Comparator<MemberScope<?, ?>> {
 
     @Override
@@ -169,10 +158,6 @@ public class VictoolsJsonSchemaGenerator implements JsonSchemaGenerator {
     }
   }
 
-  /**
-   * Ensures {@link Map} types are described as plain {@code {"type":"object"}} without
-   * additionalProperties, matching the previous generator's behavior.
-   */
   private final class MapAsObjectDefinitionProvider implements CustomDefinitionProviderV2 {
 
     @Override

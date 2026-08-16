@@ -9,6 +9,7 @@ dependencies {
   implementation libs.victools.jsonschema.generator
   implementation libs.victools.jsonschema.module.jackson
   implementation libs.jackson.databind
+  testAnnotationProcessor libs.avaje.jsonb.generator
   annotationProcessor libs.avaje.jsonb.generator
 
   testImplementation platform(libs.junit.bom)

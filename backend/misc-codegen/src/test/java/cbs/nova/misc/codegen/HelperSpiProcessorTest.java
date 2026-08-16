@@ -99,7 +99,7 @@ class HelperSpiProcessorTest {
     var fixtureSource = srcDir.resolve("AbstractHelper.java");
     Files.writeString(fixtureSource, """
             import cbs.nova.dsl.Context;
-            import cbs.nova.dsl.Executable;
+            import cbs.nova.dsl.Executable;q
             import cbs.nova.dsl.annotation.Helper;
             import cbs.nova.dsl.Result;
 

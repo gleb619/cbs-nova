@@ -1,18 +1,20 @@
 package cbs.nova.dsl.codegen.generator;
 
-import cbs.nova.dsl.annotation.DslGenerated;
-import cbs.nova.dsl.process.DslTemporalProcess;
-import cbs.nova.dsl.process.DslTemporalProcessRequest;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.process.ProcessCompensation;
-import cbs.nova.dsl.process.ProcessMain;
+import cbs.nova.dsl.annotation.DslGenerated;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.model.GeneratedSource;
+import cbs.nova.dsl.process.DslTemporalProcess;
+import cbs.nova.dsl.process.DslTemporalProcessRequest;
+import cbs.nova.dsl.process.ProcessCompensation;
 import cbs.nova.dsl.process.ProcessDescriptor;
+import cbs.nova.dsl.process.ProcessMain;
 import cbs.nova.dsl.utils.Substitutor;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.event.Level;
 
 import javax.annotation.processing.Generated;
 
@@ -21,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RequiredArgsConstructor
 public final class ProcessCodeGenerator {
 
@@ -37,13 +40,17 @@ public final class ProcessCodeGenerator {
     String interfaceName = name + "ProcessWorkflow";
     String implName = name + "ProcessDefinition";
 
-    return List.of(
+    var sources = List.of(
             new GeneratedSource(pkg, interfaceName,
                     generateInterface(pkg, interfaceName, descriptor)),
             new GeneratedSource(
                     pkg, implName, generateImpl(pkg, name, interfaceName, implName,
                             versionConstant, descriptor.inputType(),
                             descriptor.transactionRefs())));
+    log.atLevel(Level.DEBUG)
+            .log(() -> "[ProcessCodeGenerator] Generated process %s v%s in package %s"
+                    .formatted(name, versionConstant, pkg));
+    return sources;
   }
 
   private static @NonNull String resolveVersion(
@@ -110,7 +117,7 @@ public final class ProcessCodeGenerator {
 
     String template = // language=java
             """
-                    package $ import cbs.nova.dsl.process.DslTemporalProcessRequest;{pkg};${importBlock}
+                    package ${pkg};${importBlock}
                     ${annotation}
                     public class ${implName} implements ${interfaceName} {
 

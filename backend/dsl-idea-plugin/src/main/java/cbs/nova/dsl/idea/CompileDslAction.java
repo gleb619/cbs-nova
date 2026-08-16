@@ -1,5 +1,6 @@
 package cbs.nova.dsl.idea;
 
+import cbs.nova.dsl.idea.state.DslProjectStateService;
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.configurations.GeneralCommandLine;
 import com.intellij.execution.executors.DefaultRunExecutor;
@@ -24,11 +25,23 @@ import java.util.List;
 public final class CompileDslAction extends AnAction {
 
   @Override
+  public void update(@NotNull AnActionEvent event) {
+    Project project = event.getProject();
+    boolean active = project != null
+            && DslProjectStateService.getInstance(project).isActiveDslProject();
+    event.getPresentation().setVisible(active);
+    event.getPresentation().setEnabled(active);
+  }
+
+  @Override
   public void actionPerformed(@NotNull AnActionEvent event) {
     Project project = event.getProject();
-    if (project == null) {
+    if (project == null
+            || project.isDisposed()
+            || !DslProjectStateService.getInstance(project).isActiveDslProject()) {
       return;
     }
+
     // LangDataKeys.MODULE_CONTEXT/TARGET_MODULE are for module-tree contexts (e.g. Project
     // view); PlatformCoreDataKeys.MODULE (the key LangDataKeys itself resolves via
     // inheritance) is the general "module associated with this action's context" key and is
@@ -37,6 +50,7 @@ public final class CompileDslAction extends AnAction {
     if (module == null) {
       return;
     }
+
     var command = gradleCommand(module.getName());
     var commandLine = new GeneralCommandLine(command).withWorkDirectory(project.getBasePath());
     try {

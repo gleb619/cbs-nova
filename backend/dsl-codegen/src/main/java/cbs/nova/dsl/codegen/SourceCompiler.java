@@ -53,13 +53,13 @@ public final class SourceCompiler {
     var modelSources = collectJavaSources(modelsDir);
 
     if (dslSources.isEmpty() && modelSources.isEmpty()) {
-      log.atLevel(logLevel).log(
+      log.atLevel(Level.DEBUG).log(
               () -> "[SourceCompiler] No .java sources found under %s (expected dsl/ and models/)"
                       .formatted(srcDir));
       return List.of();
     }
     if (dslSources.isEmpty()) {
-      log.atLevel(logLevel)
+      log.atLevel(Level.DEBUG)
               .log(() -> "[SourceCompiler] No DSL sources found under %s".formatted(dslDir));
       return List.of();
     }
@@ -68,7 +68,7 @@ public final class SourceCompiler {
 
     var dslResults = preprocessInVirtualThreads(dslSources, targetPackage, true);
     if (dslResults.isEmpty()) {
-      log.atLevel(logLevel)
+      log.atLevel(Level.DEBUG)
               .log(() -> "[SourceCompiler] No valid compact DSL sources found under %s"
                       .formatted(dslDir));
       return List.of();
@@ -166,7 +166,7 @@ public final class SourceCompiler {
               ? outputDir.resolve(targetPackage.replace('.', '/')).resolve(result.fileName())
               : outputDir.resolve(result.fileName());
       codeWriter.write(outputFile, result.source());
-      log.atLevel(logLevel).log(() -> "[SourceCompiler] Preprocessed %s -> %s"
+      log.atLevel(Level.DEBUG).log(() -> "[SourceCompiler] Preprocessed %s -> %s"
               .formatted(result.fileName(), outputFile));
       written.add(new PreprocessedSource(result.className(), outputFile));
     }
@@ -180,11 +180,11 @@ public final class SourceCompiler {
     var rawSource = Files.readString(sourceFile);
     try {
       var result = CompactSourcePreprocessor.preprocess(fileName, rawSource, targetPackage);
-      log.atLevel(logLevel)
+      log.atLevel(Level.DEBUG)
               .log(() -> "[SourceCompiler] Preprocessed DSL %s".formatted(sourceFile));
       return new PreprocessResult(result.className(), fileName, result.preprocessedSource());
     } catch (IllegalArgumentException e) {
-      log.atLevel(logLevel).log(() -> "[SourceCompiler] %s".formatted(e.getMessage()));
+      log.atLevel(Level.DEBUG).log(() -> "[SourceCompiler] %s".formatted(e.getMessage()));
       return null;
     }
   }
@@ -200,11 +200,11 @@ public final class SourceCompiler {
                 "targetPackage is required to preprocess model " + fileName);
       }
       var result = ModelSourcePreprocessor.preprocess(fileName, rawSource, targetPackage);
-      log.atLevel(logLevel)
+      log.atLevel(Level.DEBUG)
               .log(() -> "[SourceCompiler] Preprocessed model %s".formatted(sourceFile));
       return new PreprocessResult(result.className(), fileName, result.preprocessedSource());
     } catch (IllegalArgumentException e) {
-      log.atLevel(logLevel).log(() -> "[SourceCompiler] %s".formatted(e.getMessage()));
+      log.atLevel(Level.DEBUG).log(() -> "[SourceCompiler] %s".formatted(e.getMessage()));
       return null;
     }
   }
@@ -222,7 +222,7 @@ public final class SourceCompiler {
               .toList());
       var task = compiler.getTask(null, fm, diagnostics, options, null, units);
       if (!task.call()) {
-        diagnostics.getDiagnostics().forEach(d -> log.atLevel(logLevel)
+        diagnostics.getDiagnostics().forEach(d -> log.atLevel(Level.DEBUG)
                 .log(() -> {
                   String fileName = d.getSource().getName();
                   long lineNumber = d.getLineNumber();
@@ -235,7 +235,7 @@ public final class SourceCompiler {
       }
       return true;
     } catch (IOException e) {
-      log.atLevel(logLevel).setCause(e)
+      log.atLevel(Level.DEBUG).setCause(e)
               .log(() -> "[SourceCompiler] Compilation failed: %s".formatted(e.getMessage()));
       return false;
     }
@@ -254,7 +254,7 @@ public final class SourceCompiler {
       var task = compiler.getTask(null, fm, diagnostics, options, null, unit);
       if (!task.call()) {
         diagnostics.getDiagnostics().forEach(
-                d -> log.atLevel(logLevel)
+                d -> log.atLevel(Level.DEBUG)
                         .log(() -> {
                           String fileName = d.getSource().getName();
                           long lineNumber = d.getLineNumber();
@@ -305,7 +305,7 @@ public final class SourceCompiler {
     try {
       url = outputDir.toUri().toURL();
     } catch (IOException e) {
-      log.atLevel(logLevel).setCause(e).log(
+      log.atLevel(Level.DEBUG).setCause(e).log(
               () -> "[SourceCompiler] Failed to build output URL: %s".formatted(e.getMessage()));
       return List.of();
     }
@@ -316,10 +316,10 @@ public final class SourceCompiler {
       for (var provider : providers) {
         return provider.definitions();
       }
-      log.atLevel(logLevel).log(
+      log.atLevel(Level.DEBUG).log(
               () -> "[SourceCompiler] No DslDefinitionProvider discovered in output directory");
     } catch (Exception e) {
-      log.atLevel(logLevel).setCause(e)
+      log.atLevel(Level.DEBUG).setCause(e)
               .log(() -> "[SourceCompiler] Failed to load DSL definitions: %s"
                       .formatted(e.getMessage()));
     }

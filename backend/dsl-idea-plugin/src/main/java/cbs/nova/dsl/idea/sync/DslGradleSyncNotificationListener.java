@@ -1,5 +1,7 @@
 package cbs.nova.dsl.idea.sync;
 
+import cbs.nova.dsl.idea.state.DslProjectStateService;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.externalSystem.model.ProjectSystemId;
 import com.intellij.openapi.externalSystem.model.task.ExternalSystemTaskId;
 import com.intellij.openapi.externalSystem.model.task.ExternalSystemTaskNotificationEvent;
@@ -18,11 +20,15 @@ import org.jetbrains.plugins.gradle.util.GradleConstants;
  * <p>
  * {@link ExternalSystemTaskId#findProject()} resolves the {@code Project} instance the task ran
  * against, letting this listener stay a thin adapter that just forwards to the plain,
- * directly-testable {@link DslSourceRootSyncContributor}.
+ * directly-testable {@link DslSourceRootSyncContributor}. This adapter is gated by
+ * {@link DslProjectStateService} so it does nothing (and emits no logs) for ordinary Java/Gradle
+ * projects.
  */
 public final class DslGradleSyncNotificationListener
         implements
           ExternalSystemTaskNotificationListener {
+
+  private static final Logger LOG = Logger.getInstance(DslGradleSyncNotificationListener.class);
 
   private final DslSourceRootSyncContributor contributor = new DslSourceRootSyncContributor();
 
@@ -53,10 +59,13 @@ public final class DslGradleSyncNotificationListener
       return;
     }
     var project = id.findProject();
-    if (project != null && !project.isDisposed()) {
-      var dirs = DslProjectResolverExtension.drainDiscovered(id);
-      contributor.onSyncFinished(project, dirs);
+    if (project == null
+            || project.isDisposed()
+            || !DslProjectStateService.getInstance(project).isActiveDslProject()) {
+      return;
     }
+    var dirs = DslProjectResolverExtension.drainDiscovered(id);
+    contributor.onSyncFinished(project, dirs);
   }
 
   @Override
@@ -80,8 +89,7 @@ public final class DslGradleSyncNotificationListener
             && GradleConstants.SYSTEM_ID.equals(systemId);
   }
 
-  public void log(String message) {
-    System.out.println("DslGradleSyncNotificationListener.log: " + message);
+  private void log(String message) {
+    LOG.debug("DslGradleSyncNotificationListener: " + message);
   }
-
 }

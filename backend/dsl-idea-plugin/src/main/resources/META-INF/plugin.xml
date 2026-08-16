@@ -9,6 +9,8 @@
   <depends>com.intellij.gradle</depends>
 
   <extensions defaultExtensionNs="com.intellij">
+    <postStartupActivity implementation="cbs.nova.dsl.idea.state.DslCheckStartupActivity"/>
+
     <fileType name="CbsDsl" implementationClass="cbs.nova.dsl.idea.CbsDslFileType"
       fieldName="INSTANCE" language="CbsDsl" extensions=""/>
     <lang.syntaxHighlighterFactory language="CbsDsl" implementationClass="cbs.nova.dsl.idea.CbsDslSyntaxHighlighterFactory"/>
@@ -33,7 +35,7 @@
 
   <actions>
     <action id="cbs.nova.dsl.idea.CompileDslAction" class="cbs.nova.dsl.idea.CompileDslAction"
-      text="Compile DSL Sources" description="Runs ./gradlew :&lt;module&gt;:compileDsl">
+      text="Compile DSL Sources" description="Runs ./gradlew :&amp;lt;module&amp;gt;:compileDsl">
       <add-to-group group-id="ToolsMenu" anchor="last"/>
     </action>
   </actions>

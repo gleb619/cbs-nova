@@ -7,10 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-/**
- * Turns a compact DSL source file (no package/class declaration, one {@code define()} method) into
- * a normal Java class that implements {@link DslCompactSource}.
- */
 public final class CompactSourcePreprocessor {
 
   private static final String COMPACT_SOURCE_INTERFACE = DslCompactSource.class.getName();
@@ -38,13 +34,6 @@ public final class CompactSourcePreprocessor {
     return preprocess(fileName, rawSource, null);
   }
 
-  /**
-   * Validates and preprocesses the given compact source, optionally injecting a target package.
-   *
-   * @param targetPackage
-   *          optional package to inject; if null/blank the compiled class stays in the default
-   *          package
-   */
   public static @NonNull Result preprocess(
           @NonNull String fileName,
           @NonNull String rawSource,

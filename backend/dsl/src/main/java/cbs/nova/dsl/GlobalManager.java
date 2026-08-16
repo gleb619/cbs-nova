@@ -12,6 +12,8 @@ import cbs.nova.dsl.process.ProcessMain;
 import cbs.nova.dsl.process.ProcessManager;
 import cbs.nova.dsl.registry.GeneratedClassRegistry;
 import cbs.nova.dsl.runner.DefaultExecutionListener;
+import cbs.nova.dsl.transaction.CompensationRegistry;
+import cbs.nova.dsl.transaction.CompensationRichContext;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.dsl.transaction.TransactionInvoker;
 import cbs.nova.dsl.transaction.TransactionManager;

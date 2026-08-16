@@ -1,14 +1,16 @@
 package cbs.nova.dsl.codegen.generator;
 
 import cbs.nova.dsl.annotation.DslGenerated;
-import cbs.nova.dsl.transaction.DslTemporalTransactionRequest;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.model.GeneratedSource;
+import cbs.nova.dsl.transaction.DslTemporalTransactionRequest;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.utils.Substitutor;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.event.Level;
 
 import javax.annotation.processing.Generated;
 
@@ -16,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RequiredArgsConstructor
 public final class TransactionCodeGenerator {
 
@@ -33,7 +36,7 @@ public final class TransactionCodeGenerator {
     String implName = name + "TransactionDefinition";
     String inputTypeName = typeName(descriptor.inputType());
 
-    return List.of(
+    var sources = List.of(
             new GeneratedSource(pkg, interfaceName,
                     generateInterface(pkg, name, interfaceName, inputTypeName,
                             importLine(descriptor.inputType()))),
@@ -41,6 +44,10 @@ public final class TransactionCodeGenerator {
                     pkg, implName, generateImpl(pkg, name, interfaceName, implName,
                             versionConstant, descriptor.taskQueue(), inputTypeName,
                             importLine(descriptor.inputType()))));
+    log.atLevel(Level.DEBUG)
+            .log(() -> "[TransactionCodeGenerator] Generated transaction %s v%s in package %s"
+                    .formatted(name, versionConstant, pkg));
+    return sources;
   }
 
   private static @NonNull String resolveVersion(
@@ -59,8 +66,8 @@ public final class TransactionCodeGenerator {
     return Substitutor.format(// language=java
             """
                     package ${pkg};${importBlock}
-                    import cbs.nova.dsl.GeneratedTransactionActivity;
-                    import cbs.nova.dsl.transaction.DslTemporalTransactionRequest;import io.temporal.activity.ActivityInterface;
+                    import cbs.nova.dsl.transaction.GeneratedTransactionActivity;
+                    import io.temporal.activity.ActivityInterface;
                     import io.temporal.activity.ActivityMethod;
 
                     ${annotation}
@@ -98,7 +105,7 @@ public final class TransactionCodeGenerator {
     return Substitutor.format(// language=java
             """
                     package ${pkg};${importBlock}
-                    import cbs.nova.dsl.transaction.DslTemporalTransactionRequest;
+                    import cbs.nova.dsl.GlobalManager;
 
                     ${annotation}
                     public class ${implName} implements ${interfaceName} {

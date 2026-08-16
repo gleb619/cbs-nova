@@ -1,5 +1,6 @@
 package cbs.nova.dsl.idea;
 
+import cbs.nova.dsl.idea.state.DslProjectStateService;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.fileTypes.impl.FileTypeOverrider;
 import com.intellij.openapi.project.ProjectManager;
@@ -17,6 +18,9 @@ public final class DslFileTypeOverrider implements FileTypeOverrider {
     }
     var path = Path.of(file.getPath());
     for (var project : ProjectManager.getInstance().getOpenProjects()) {
+      if (!DslProjectStateService.getInstance(project).isActiveDslProject()) {
+        continue;
+      }
       var synced = DslSyncedDirs.getInstance(project);
       if (!synced.isEmpty() && synced.containsAncestorOf(path)) {
         return CbsDslFileType.INSTANCE;

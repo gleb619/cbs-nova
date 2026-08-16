@@ -5,11 +5,6 @@ import cbs.nova.dsl.transaction.TransactionExecution;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-/**
- * Combines two execution listeners so that both receive every event. Used by the process runner to
- * preserve an externally provided listener (e.g. a call-tree collector) while still routing
- * transaction success events to its internal compensation-history listener.
- */
 final class ChainedExecutionListener implements ExecutionListener {
 
   private final ExecutionListener first;

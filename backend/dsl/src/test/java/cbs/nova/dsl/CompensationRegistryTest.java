@@ -3,6 +3,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
+import cbs.nova.dsl.transaction.CompensationRegistry;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
