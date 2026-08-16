@@ -2,6 +2,8 @@ package cbs.nova.starter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.CompilingDslDefinitionLoader;
+import cbs.nova.dsl.DslDefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.starter.config.DslReloadRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
@@ -26,11 +28,12 @@ import java.util.stream.Stream;
 class DslReloadResourceTest {
 
   private DslReloadResource resource;
+  private final DslDefinitionLoader loader = new CompilingDslDefinitionLoader();
 
   @BeforeEach
   void setUp() {
     GlobalManager.globalManager().resetForTests();
-    resource = new DslReloadResource(new DslProperties(null, null, null, null));
+    resource = new DslReloadResource(new DslProperties(null, null, null, null), loader);
   }
 
   @AfterEach
@@ -39,7 +42,7 @@ class DslReloadResourceTest {
   }
 
   private void setSourceDir(String value) {
-    resource = new DslReloadResource(new DslProperties(value, null, null, null));
+    resource = new DslReloadResource(new DslProperties(value, null, null, null), loader);
   }
 
   private static ServerRequest reloadRequest() {
@@ -130,5 +133,10 @@ class DslReloadResourceTest {
   @Configuration
   @EnableConfigurationProperties(DslProperties.class)
   static class DslPropertiesConfiguration {
+
+    @org.springframework.context.annotation.Bean
+    DslDefinitionLoader dslDefinitionLoader() {
+      return new CompilingDslDefinitionLoader();
+    }
   }
 }

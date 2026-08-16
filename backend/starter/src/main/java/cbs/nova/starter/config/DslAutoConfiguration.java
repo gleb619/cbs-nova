@@ -1,6 +1,7 @@
 package cbs.nova.starter.config;
 
-import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.dsl.CompilingDslDefinitionLoader;
+import cbs.nova.dsl.DslDefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.config.DslConfig;
@@ -40,10 +41,11 @@ public class DslAutoConfiguration {
           TransactionInvoker transactionInvoker,
           TemporalProcessLauncher temporalProcessLauncher,
           JsonSchemaGenerator jsonSchemaGenerator,
-          DslProperties dslProperties) {
+          DslProperties dslProperties,
+          DslDefinitionLoader loader) {
     return _ -> {
       var dir = acquireSourceDir(dslProperties.sourceDir());
-      new DefinitionLoader().load(dir, GlobalManager.globalManager());
+      loader.load(dir, GlobalManager.globalManager());
 
       registerHelperResolvers();
       registerExpressionEvaluator(expressionEvaluator);
@@ -65,6 +67,12 @@ public class DslAutoConfiguration {
   @ConditionalOnMissingBean(DslRunRepository.class)
   public DslRunRepository dslRunRepository() {
     return new InMemoryDslRunRepository();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(DslDefinitionLoader.class)
+  public DslDefinitionLoader dslDefinitionLoader() {
+    return new CompilingDslDefinitionLoader();
   }
 
   @Bean
