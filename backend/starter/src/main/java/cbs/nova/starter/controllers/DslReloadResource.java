@@ -1,7 +1,7 @@
 package cbs.nova.starter.controllers;
 
-import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.DslCompactSource;
+import cbs.nova.dsl.DslDefinitionLoader;
 import cbs.nova.dsl.DslDefinitionProvider;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.GlobalManager;
@@ -49,9 +49,11 @@ public class DslReloadResource {
   private static final String RELOAD_TEMP_PREFIX = "dsl-reload-";
 
   private final DslProperties dslProperties;
+  private final DslDefinitionLoader loader;
 
-  public DslReloadResource(DslProperties dslProperties) {
+  public DslReloadResource(DslProperties dslProperties, DslDefinitionLoader loader) {
     this.dslProperties = dslProperties;
+    this.loader = loader;
   }
 
   /**
@@ -97,7 +99,6 @@ public class DslReloadResource {
     var gm = GlobalManager.globalManager();
 
     // Prefer SPI-based DslDefinitionProvider definitions.
-    var loader = new DefinitionLoader();
     loader.load(classLoader, gm);
 
     // Load helper resolvers via SPI.
