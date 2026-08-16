@@ -1,7 +1,7 @@
-import type { Execution, ExecutionDetail, ExecutionFilters, ExecutionStatus } from '~/types'
-import { computed, onUnmounted, ref, watch } from 'vue'
 import { useExecutionsApi } from '@cbs/admin-ui-plugin/composables/useExecutionsApi'
 import { useStalePolling } from '@cbs/admin-ui-plugin/composables/useStalePolling'
+import { computed, onUnmounted, ref, watch } from 'vue'
+import type { Execution, ExecutionDetail, ExecutionFilters, ExecutionStatus } from '~/types'
 
 export function useExecutions() {
   const executions = ref<Execution[]>([])

@@ -117,10 +117,7 @@ export default defineNuxtModule<ModuleOptions>({
     // -----------------------------------------------------------------------
     // Layouts — register the default shell layout from this plugin
     // -----------------------------------------------------------------------
-    addLayout(
-      { src: resolve('./app/layouts/admin.vue'), filename: 'cbs-admin.vue' },
-      'cbs-admin',
-    )
+    addLayout({ src: resolve('./app/layouts/admin.vue'), filename: 'cbs-admin.vue' }, 'cbs-admin')
 
     // -----------------------------------------------------------------------
     // Pages — extend the host router with the admin UI pages
@@ -178,7 +175,9 @@ export default defineNuxtModule<ModuleOptions>({
       nitroConfig.scanDirs = nitroConfig.scanDirs || []
       // Use pre-built JS server routes when the plugin is installed as a package,
       // otherwise use the workspace TypeScript sources for local development.
-      const serverDir = existsSync(resolve('./dist/server')) ? resolve('./dist/server') : resolve('./server')
+      const serverDir = existsSync(resolve('./dist/server'))
+        ? resolve('./dist/server')
+        : resolve('./server')
       nitroConfig.scanDirs.push(serverDir)
     })
 

@@ -5,7 +5,11 @@ node_modules
 admin-ui-plugin/.nuxt
 admin-ui-plugin/.output
 admin-ui-plugin/.data
+admin-ui-plugin/dist
+admin-ui-plugin/dist.bak
+admin-ui-plugin/node_modules
 components/dist
+components/node_modules
 
 # Environment files
 .env

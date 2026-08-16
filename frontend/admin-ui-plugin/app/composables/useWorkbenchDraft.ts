@@ -1,4 +1,4 @@
-import { computed, onUnmounted, ref, watch, type ComputedRef, type Ref } from 'vue'
+import { type ComputedRef, computed, onUnmounted, type Ref, ref, watch } from 'vue'
 
 export interface WorkbenchDraftPayload {
   body: string

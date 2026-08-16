@@ -1,7 +1,7 @@
-import type { DslConstruct, ValidationError } from '~/types'
-import { computed, readonly } from 'vue'
-import { useState } from 'nuxt/app'
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
+import { useState } from 'nuxt/app'
+import { computed, readonly } from 'vue'
+import type { DslConstruct, ValidationError } from '~/types'
 
 interface WorkbenchState {
   constructs: DslConstruct[]

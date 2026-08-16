@@ -9,4 +9,13 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   compatibilityDate: '2024-04-03',
   pages: true,
+  // Process the @tailwind directives in the plugin's global stylesheet.
+  // The Tailwind config at ./tailwind.config.ts already scans both the
+  // plugin pages and the shared @cbs/components SFCs.
+  postcss: {
+    plugins: {
+      tailwindcss: {},
+      autoprefixer: {},
+    },
+  },
 })

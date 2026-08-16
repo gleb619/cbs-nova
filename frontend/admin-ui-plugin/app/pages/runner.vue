@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'nuxt/app'
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { useRunner } from '@cbs/admin-ui-plugin/composables/useRunner'
 import {
@@ -11,9 +9,10 @@ import {
   RunnerRunConfirmationModal,
   RunnerStatusIndicator,
 } from '@cbs/components'
+import { useRoute, useRouter } from 'nuxt/app'
+import { computed, onMounted, ref, watch } from 'vue'
 
 import type { DefinitionMeta, RunnerMode } from '~/types'
-
 
 const route = useRoute()
 const router = useRouter()

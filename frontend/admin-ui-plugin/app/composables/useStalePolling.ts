@@ -1,6 +1,6 @@
-import type { ExecutionDetail, ExecutionStatus } from '~/types'
-import { onUnmounted, ref, watch } from 'vue'
 import { useExecutionsApi } from '@cbs/admin-ui-plugin/composables/useExecutionsApi'
+import { onUnmounted, ref, watch } from 'vue'
+import type { ExecutionDetail, ExecutionStatus } from '~/types'
 
 function resolveIntervalMs(explicit?: number): number {
   if (typeof explicit === 'number' && explicit > 0) return explicit

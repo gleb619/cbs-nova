@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { useHelperSearch } from '@cbs/components'
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { useDslWorkbench } from '@cbs/admin-ui-plugin/composables/useDslWorkbench'
 import { useWorkbenchDraft } from '@cbs/admin-ui-plugin/composables/useWorkbenchDraft'
+import type { HelperSearchFilters, HelperSearchResult } from '@cbs/components'
 import {
   DslBodyEditor,
   DslConstructExplorer,
@@ -11,10 +10,9 @@ import {
   DslHelperSearchPanel,
   DslMetadataPanel,
   DslProblemsPanel,
+  useHelperSearch,
 } from '@cbs/components'
-
-import type { HelperSearchFilters, HelperSearchResult } from '@cbs/components'
-
+import { computed, onMounted, ref, watch } from 'vue'
 
 const workbench = useDslWorkbench()
 const {
