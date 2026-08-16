@@ -35,7 +35,7 @@ class DataSourceCallAutoConfigurationTest {
 
     postProcessor = new DataSourceProxyBeanPostProcessor(recorder);
     Object processed = postProcessor.postProcessAfterInitialization(realDataSource, "ds");
-    assertThat(processed).isInstanceOf(DataSource.class);
+    assertThat(processed).isInstanceOf(RecordingDataSource.class);
     wrappedDataSource = (DataSource) processed;
   }
 

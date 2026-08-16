@@ -13,21 +13,20 @@ import org.junit.jupiter.api.Test;
 
 import javax.sql.DataSource;
 
-import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.SQLException;
 
 /**
- * Pure-unit tests for {@link DataSourceInvocationHandler}. Verifies typed dispatch for
- * {@link DataSource} / {@link CommonDataSource} / {@link java.sql.Wrapper} methods, proxy identity
- * semantics, and the connection-wrapping contract.
+ * Pure-unit tests for {@link RecordingDataSource}. Verifies typed delegation for {@link DataSource}
+ * / {@link CommonDataSource} / {@link java.sql.Wrapper} methods, decorator identity semantics, and
+ * the connection-wrapping contract.
  */
-class DataSourceInvocationHandlerTest {
+class RecordingDataSourceTest {
 
   private ExternalCallRecorder externalCallRecorder;
   private DataSource dataSource;
   private Connection connection;
-  private DataSource proxy;
+  private RecordingDataSource recordingDataSource;
 
   @BeforeEach
   void setUp() throws SQLException {
@@ -36,18 +35,14 @@ class DataSourceInvocationHandlerTest {
     connection = mock(Connection.class);
     when(dataSource.getConnection()).thenReturn(connection);
 
-    proxy = (DataSource) Proxy.newProxyInstance(
-            getClass().getClassLoader(),
-            new Class<?>[]{DataSource.class},
-            new DataSourceInvocationHandler(dataSource, externalCallRecorder));
+    recordingDataSource = new RecordingDataSource(dataSource, externalCallRecorder);
   }
 
   @Test
   void getConnectionWrapsReturnedConnection() throws SQLException {
-    Connection wrapped = proxy.getConnection();
+    Connection wrapped = recordingDataSource.getConnection();
 
-    assertThat(wrapped).isNotNull();
-    assertThat(Proxy.isProxyClass(wrapped.getClass())).isTrue();
+    assertThat(wrapped).isInstanceOf(RecordingConnection.class);
     verify(dataSource).getConnection();
     verifyNoInteractions(externalCallRecorder);
   }
@@ -56,10 +51,9 @@ class DataSourceInvocationHandlerTest {
   void getConnectionWithCredentialsWrapsReturnedConnection() throws SQLException {
     when(dataSource.getConnection("user", "pass")).thenReturn(connection);
 
-    Connection wrapped = proxy.getConnection("user", "pass");
+    Connection wrapped = recordingDataSource.getConnection("user", "pass");
 
-    assertThat(wrapped).isNotNull();
-    assertThat(Proxy.isProxyClass(wrapped.getClass())).isTrue();
+    assertThat(wrapped).isInstanceOf(RecordingConnection.class);
     verify(dataSource).getConnection("user", "pass");
     verifyNoInteractions(externalCallRecorder);
   }
@@ -68,7 +62,7 @@ class DataSourceInvocationHandlerTest {
   void getConnectionNullIsForwardedAsNull() throws SQLException {
     when(dataSource.getConnection()).thenReturn(null);
 
-    Connection wrapped = proxy.getConnection();
+    Connection wrapped = recordingDataSource.getConnection();
 
     assertThat(wrapped).isNull();
     verify(dataSource).getConnection();
@@ -80,8 +74,8 @@ class DataSourceInvocationHandlerTest {
     when(dataSource.isWrapperFor(DataSource.class)).thenReturn(true);
     when(dataSource.unwrap(DataSource.class)).thenReturn(dataSource);
 
-    boolean wrapper = proxy.isWrapperFor(DataSource.class);
-    DataSource unwrapped = proxy.unwrap(DataSource.class);
+    boolean wrapper = recordingDataSource.isWrapperFor(DataSource.class);
+    DataSource unwrapped = recordingDataSource.unwrap(DataSource.class);
 
     assertThat(wrapper).isTrue();
     assertThat(unwrapped).isSameAs(dataSource);
@@ -95,8 +89,8 @@ class DataSourceInvocationHandlerTest {
   void commonDataSourceMethodsForwardToDelegate() throws SQLException {
     when(dataSource.getLoginTimeout()).thenReturn(30);
 
-    int timeout = proxy.getLoginTimeout();
-    proxy.setLoginTimeout(60);
+    int timeout = recordingDataSource.getLoginTimeout();
+    recordingDataSource.setLoginTimeout(60);
 
     assertThat(timeout).isEqualTo(30);
     verify(dataSource).getLoginTimeout();
@@ -105,16 +99,15 @@ class DataSourceInvocationHandlerTest {
   }
 
   @Test
-  void proxyIdentityMethodsReturnConsistentValues() {
-    DataSource otherProxy = (DataSource) Proxy.newProxyInstance(
-            getClass().getClassLoader(),
-            new Class<?>[]{DataSource.class},
-            new DataSourceInvocationHandler(dataSource, externalCallRecorder));
+  void decoratorIdentityMethodsReturnConsistentValues() {
+    RecordingDataSource otherDecorator = new RecordingDataSource(dataSource,
+            externalCallRecorder);
 
-    assertThat(proxy.equals(proxy)).isTrue();
-    assertThat(proxy.equals(dataSource)).isFalse();
-    assertThat(proxy.equals(otherProxy)).isFalse();
-    assertThat(proxy.hashCode()).isEqualTo(System.identityHashCode(proxy));
-    assertThat(proxy.toString()).contains("DataSourceProxy");
+    assertThat(recordingDataSource.equals(recordingDataSource)).isTrue();
+    assertThat(recordingDataSource.equals(dataSource)).isFalse();
+    assertThat(recordingDataSource.equals(otherDecorator)).isFalse();
+    assertThat(recordingDataSource.hashCode())
+            .isEqualTo(System.identityHashCode(recordingDataSource));
+    assertThat(recordingDataSource.toString()).contains("RecordingDataSource");
   }
 }
