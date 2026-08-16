@@ -18,7 +18,7 @@ public final class InMemoryTransactionExecutionRepository
   private final Map<String, List<TransactionExecution>> executions = new ConcurrentHashMap<>();
 
   @Override
-  public synchronized @NonNull TransactionExecution save(@NonNull TransactionExecution execution) {
+  public @NonNull TransactionExecution save(@NonNull TransactionExecution execution) {
     executions.computeIfAbsent(execution.runId(), _ -> new CopyOnWriteArrayList<>()).add(execution);
     return execution;
   }
@@ -35,7 +35,7 @@ public final class InMemoryTransactionExecutionRepository
   }
 
   @Override
-  public synchronized void deleteByRunId(@NonNull String runId) {
+  public void deleteByRunId(@NonNull String runId) {
     executions.remove(runId);
   }
 }
