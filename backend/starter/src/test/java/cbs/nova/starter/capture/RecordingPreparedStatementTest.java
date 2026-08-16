@@ -15,20 +15,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
 /**
- * Pure-unit tests for {@link PreparedStatementInvocationHandler}. Uses Mockito-mocked delegates and
- * a mocked {@link ExternalCallRecorder} so the handler is exercised without any DB or Spring
- * context. Verifies SQL extraction, op classification, record-before-delegate ordering, and
- * pass-through behaviour for non-recorded methods.
+ * Pure-unit tests for {@link RecordingPreparedStatement} and {@link RecordingStatement}. Uses
+ * Mockito-mocked delegates and a mocked {@link ExternalCallRecorder} so the decorators are
+ * exercised without any DB or Spring context. Verifies SQL extraction, op classification,
+ * record-before-delegate ordering, and pass-through behaviour for non-recorded methods.
  */
-class PreparedStatementInvocationHandlerTest {
+class RecordingPreparedStatementTest {
 
   private static final String TARGET = "jdbc:h2:mem:test";
   private static final String SQL_SELECT = "select id from orders where id = ?";
@@ -42,22 +40,12 @@ class PreparedStatementInvocationHandlerTest {
     delegate = mock(PreparedStatement.class);
   }
 
-  private PreparedStatement newProxy(String sql) {
-    PreparedStatementInvocationHandler handler = new PreparedStatementInvocationHandler(
-            delegate, sql, TARGET, externalCallRecorder);
-    return (PreparedStatement) Proxy.newProxyInstance(
-            getClass().getClassLoader(),
-            new Class<?>[]{PreparedStatement.class, Statement.class},
-            handler);
+  private PreparedStatement newPreparedStatement(String sql) {
+    return new RecordingPreparedStatement(delegate, sql, TARGET, externalCallRecorder);
   }
 
-  private Statement newStatementProxy(String sql) {
-    PreparedStatementInvocationHandler handler = new PreparedStatementInvocationHandler(
-            delegate, sql, TARGET, externalCallRecorder);
-    return (Statement) Proxy.newProxyInstance(
-            getClass().getClassLoader(),
-            new Class<?>[]{Statement.class},
-            handler);
+  private Statement newStatement(String sql) {
+    return new RecordingStatement(delegate, sql, TARGET, externalCallRecorder);
   }
 
   @Test
@@ -65,8 +53,8 @@ class PreparedStatementInvocationHandlerTest {
     ResultSet rs = mock(ResultSet.class);
     when(delegate.executeQuery()).thenReturn(rs);
 
-    PreparedStatement proxy = newProxy(SQL_SELECT);
-    ResultSet actual = proxy.executeQuery();
+    PreparedStatement statement = newPreparedStatement(SQL_SELECT);
+    ResultSet actual = statement.executeQuery();
 
     assertThat(actual).isSameAs(rs);
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT",
@@ -79,8 +67,8 @@ class PreparedStatementInvocationHandlerTest {
   void executeUpdateForwardsAndRecordsWithFactorySql() throws SQLException {
     when(delegate.executeUpdate()).thenReturn(7);
 
-    PreparedStatement proxy = newProxy(SQL_SELECT);
-    int updated = proxy.executeUpdate();
+    PreparedStatement statement = newPreparedStatement(SQL_SELECT);
+    int updated = statement.executeUpdate();
 
     assertThat(updated).isEqualTo(7);
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT",
@@ -93,8 +81,8 @@ class PreparedStatementInvocationHandlerTest {
   void executeForwardsAndRecordsWithFactorySql() throws SQLException {
     when(delegate.execute()).thenReturn(true);
 
-    PreparedStatement proxy = newProxy(SQL_SELECT);
-    boolean executed = proxy.execute();
+    PreparedStatement statement = newPreparedStatement(SQL_SELECT);
+    boolean executed = statement.execute();
 
     assertThat(executed).isTrue();
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT",
@@ -108,8 +96,8 @@ class PreparedStatementInvocationHandlerTest {
     int[] counts = {1, 2};
     when(delegate.executeBatch()).thenReturn(counts);
 
-    PreparedStatement proxy = newProxy(SQL_SELECT);
-    int[] actual = proxy.executeBatch();
+    PreparedStatement statement = newPreparedStatement(SQL_SELECT);
+    int[] actual = statement.executeBatch();
 
     assertThat(actual).isSameAs(counts);
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH",
@@ -122,8 +110,8 @@ class PreparedStatementInvocationHandlerTest {
   void executeLargeUpdateForwardsAndRecordsWithFactorySql() throws SQLException {
     when(delegate.executeLargeUpdate()).thenReturn(42L);
 
-    PreparedStatement proxy = newProxy(SQL_SELECT);
-    long updated = proxy.executeLargeUpdate();
+    PreparedStatement statement = newPreparedStatement(SQL_SELECT);
+    long updated = statement.executeLargeUpdate();
 
     assertThat(updated).isEqualTo(42L);
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT",
@@ -137,8 +125,8 @@ class PreparedStatementInvocationHandlerTest {
     long[] counts = {10L, 20L};
     when(delegate.executeLargeBatch()).thenReturn(counts);
 
-    PreparedStatement proxy = newProxy(SQL_SELECT);
-    long[] actual = proxy.executeLargeBatch();
+    PreparedStatement statement = newPreparedStatement(SQL_SELECT);
+    long[] actual = statement.executeLargeBatch();
 
     assertThat(actual).isSameAs(counts);
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH",
@@ -152,8 +140,8 @@ class PreparedStatementInvocationHandlerTest {
     when(delegate.execute()).thenReturn(false);
     String mixedCaseSql = "  \tInsert Into foo values (?)";
 
-    PreparedStatement proxy = newProxy(mixedCaseSql);
-    proxy.execute();
+    PreparedStatement statement = newPreparedStatement(mixedCaseSql);
+    statement.execute();
 
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
             mixedCaseSql);
@@ -166,8 +154,8 @@ class PreparedStatementInvocationHandlerTest {
     String adHocSql = "delete from orders where id = 1";
     when(delegate.execute(adHocSql)).thenReturn(false);
 
-    PreparedStatement proxy = newProxy(null);
-    boolean executed = proxy.execute(adHocSql);
+    Statement statement = newStatement(null);
+    boolean executed = statement.execute(adHocSql);
 
     assertThat(executed).isFalse();
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "DELETE",
@@ -181,8 +169,8 @@ class PreparedStatementInvocationHandlerTest {
     String argSql = "select 1 from dual";
     when(delegate.executeUpdate(argSql)).thenReturn(3);
 
-    PreparedStatement proxy = newProxy(SQL_SELECT);
-    int updated = proxy.executeUpdate(argSql);
+    PreparedStatement statement = newPreparedStatement(SQL_SELECT);
+    int updated = statement.executeUpdate(argSql);
 
     assertThat(updated).isEqualTo(3);
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT",
@@ -195,8 +183,8 @@ class PreparedStatementInvocationHandlerTest {
   void unknownSqlTokenIsUsedWhenSqlMissing() throws SQLException {
     when(delegate.executeQuery()).thenReturn(mock(ResultSet.class));
 
-    PreparedStatement proxy = newProxy(null);
-    proxy.executeQuery();
+    PreparedStatement statement = newPreparedStatement(null);
+    statement.executeQuery();
 
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UNKNOWN",
             null);
@@ -208,8 +196,8 @@ class PreparedStatementInvocationHandlerTest {
   void emptySqlFallsBackToUnknownOperation() throws SQLException {
     when(delegate.executeQuery()).thenReturn(mock(ResultSet.class));
 
-    PreparedStatement proxy = newProxy("   ");
-    proxy.executeQuery();
+    PreparedStatement statement = newPreparedStatement("   ");
+    statement.executeQuery();
 
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UNKNOWN",
             "   ");
@@ -218,24 +206,10 @@ class PreparedStatementInvocationHandlerTest {
   }
 
   @Test
-  void batchOperationIgnoresStringArguments() throws SQLException {
-    int[] counts = {5};
-    when(delegate.executeBatch()).thenReturn(counts);
-
-    PreparedStatement proxy = newProxy(SQL_SELECT);
-    proxy.executeBatch();
-
-    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH",
-            SQL_SELECT);
-    verify(delegate).executeBatch();
-    verifyNoMoreInteractions(externalCallRecorder, delegate);
-  }
-
-  @Test
   void nonRecordedMethodsForwardAndDoNotTouchRecorder() throws SQLException {
-    PreparedStatement proxy = newProxy(SQL_SELECT);
-    proxy.setString(1, "abc");
-    proxy.close();
+    PreparedStatement statement = newPreparedStatement(SQL_SELECT);
+    statement.setString(1, "abc");
+    statement.close();
 
     verify(delegate).setString(1, "abc");
     verify(delegate).close();
@@ -247,9 +221,9 @@ class PreparedStatementInvocationHandlerTest {
     when(delegate.getResultSet()).thenReturn(mock(ResultSet.class));
     when(delegate.getUpdateCount()).thenReturn(11);
 
-    PreparedStatement proxy = newProxy(SQL_SELECT);
-    ResultSet rs = proxy.getResultSet();
-    int count = proxy.getUpdateCount();
+    PreparedStatement statement = newPreparedStatement(SQL_SELECT);
+    ResultSet rs = statement.getResultSet();
+    int count = statement.getUpdateCount();
 
     assertThat(rs).isNotNull();
     assertThat(count).isEqualTo(11);
@@ -262,13 +236,12 @@ class PreparedStatementInvocationHandlerTest {
   void recordHappensBeforeDelegateInvocation() throws SQLException {
     when(delegate.executeUpdate()).thenReturn(1);
 
-    PreparedStatement proxy = newProxy(SQL_SELECT);
-    proxy.executeUpdate();
+    PreparedStatement statement = newPreparedStatement(SQL_SELECT);
+    statement.executeUpdate();
 
     InOrder ordered = inOrder(externalCallRecorder, delegate);
     ordered.verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET,
-            "SELECT",
-            SQL_SELECT);
+            "SELECT", SQL_SELECT);
     ordered.verify(delegate).executeUpdate();
     verifyNoMoreInteractions(externalCallRecorder, delegate);
   }
@@ -278,8 +251,8 @@ class PreparedStatementInvocationHandlerTest {
     SQLException cause = new SQLException("boom");
     when(delegate.executeUpdate()).thenThrow(cause);
 
-    PreparedStatement proxy = newProxy(SQL_SELECT);
-    assertThatThrownBy(proxy::executeUpdate)
+    PreparedStatement statement = newPreparedStatement(SQL_SELECT);
+    assertThatThrownBy(statement::executeUpdate)
             .isSameAs(cause);
 
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT",
@@ -293,8 +266,8 @@ class PreparedStatementInvocationHandlerTest {
     SQLException cause = new SQLException("batch-fail");
     when(delegate.executeBatch()).thenThrow(cause);
 
-    PreparedStatement proxy = newProxy(SQL_SELECT);
-    assertThatThrownBy(proxy::executeBatch)
+    PreparedStatement statement = newPreparedStatement(SQL_SELECT);
+    assertThatThrownBy(statement::executeBatch)
             .isSameAs(cause);
 
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH",
@@ -304,76 +277,15 @@ class PreparedStatementInvocationHandlerTest {
   }
 
   @Test
-  void recordingInvocationHandlesNullArgsArrayGracefully() throws Throwable {
-    Method executeMethod = PreparedStatement.class.getMethod("execute");
-    when(delegate.execute()).thenReturn(true);
+  void decoratorIdentityMethodsReturnConsistentValues() {
+    PreparedStatement statement = newPreparedStatement(SQL_SELECT);
+    PreparedStatement otherStatement = newPreparedStatement(SQL_SELECT);
 
-    String insertSql = "insert into t values (?)";
-    PreparedStatement proxy = newProxy(insertSql);
-    PreparedStatementInvocationHandler handler = new PreparedStatementInvocationHandler(
-            delegate, insertSql, TARGET, externalCallRecorder);
-
-    Object result = handler.invoke(proxy, executeMethod, null);
-
-    assertThat(result).isEqualTo(Boolean.TRUE);
-    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
-            insertSql);
-    verify(delegate).execute();
-    verifyNoMoreInteractions(externalCallRecorder, delegate);
-  }
-
-  @Test
-  void recordedMethodNamesMatchDocumentedContract() {
-    String[] expected = {
-        "executeQuery", "executeUpdate", "execute",
-        "executeBatch", "executeLargeUpdate", "executeLargeBatch"};
-    assertThat(expected).containsExactly(
-            "executeQuery",
-            "executeUpdate",
-            "execute",
-            "executeBatch",
-            "executeLargeUpdate",
-            "executeLargeBatch");
-    verifyNoInteractions(externalCallRecorder, delegate);
-  }
-
-  @Test
-  void unknownSqlTokenWithArgsSearchesStringArgument() throws SQLException {
-    String adHoc = "  \t update accounts set balance = ?";
-    when(delegate.executeUpdate(adHoc)).thenReturn(1);
-
-    PreparedStatement proxy = newProxy(null);
-    proxy.executeUpdate(adHoc);
-
-    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UPDATE",
-            adHoc);
-    verify(delegate).executeUpdate(adHoc);
-    verifyNoMoreInteractions(externalCallRecorder, delegate);
-  }
-
-  @Test
-  void nullSqlAndNoStringArgsFallsBackToUnknownOperation() throws SQLException {
-    when(delegate.executeUpdate()).thenReturn(1);
-
-    PreparedStatement proxy = newProxy(null);
-    proxy.executeUpdate();
-
-    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UNKNOWN",
-            null);
-    verify(delegate).executeUpdate();
-    verifyNoMoreInteractions(externalCallRecorder, delegate);
-  }
-
-  @Test
-  void proxyIdentityMethodsReturnConsistentValues() {
-    PreparedStatement proxy = newProxy(SQL_SELECT);
-    PreparedStatement otherProxy = newProxy(SQL_SELECT);
-
-    assertThat(proxy.equals(proxy)).isTrue();
-    assertThat(proxy.equals(delegate)).isFalse();
-    assertThat(proxy.equals(otherProxy)).isFalse();
-    assertThat(proxy.hashCode()).isEqualTo(System.identityHashCode(proxy));
-    assertThat(proxy.toString()).contains("StatementProxy");
+    assertThat(statement.equals(statement)).isTrue();
+    assertThat(statement.equals(delegate)).isFalse();
+    assertThat(statement.equals(otherStatement)).isFalse();
+    assertThat(statement.hashCode()).isEqualTo(System.identityHashCode(statement));
+    assertThat(statement.toString()).contains("RecordingPreparedStatement");
   }
 
   @Test
@@ -381,9 +293,9 @@ class PreparedStatementInvocationHandlerTest {
     when(delegate.isWrapperFor(Statement.class)).thenReturn(true);
     when(delegate.unwrap(Statement.class)).thenReturn(delegate);
 
-    PreparedStatement proxy = newProxy(SQL_SELECT);
-    boolean wrapper = proxy.isWrapperFor(Statement.class);
-    Statement unwrapped = proxy.unwrap(Statement.class);
+    PreparedStatement statement = newPreparedStatement(SQL_SELECT);
+    boolean wrapper = statement.isWrapperFor(Statement.class);
+    Statement unwrapped = statement.unwrap(Statement.class);
 
     assertThat(wrapper).isTrue();
     assertThat(unwrapped).isSameAs(delegate);
@@ -396,8 +308,8 @@ class PreparedStatementInvocationHandlerTest {
   void isClosedForwardsWithoutRecording() throws SQLException {
     when(delegate.isClosed()).thenReturn(true);
 
-    PreparedStatement proxy = newProxy(SQL_SELECT);
-    boolean closed = proxy.isClosed();
+    PreparedStatement statement = newPreparedStatement(SQL_SELECT);
+    boolean closed = statement.isClosed();
 
     assertThat(closed).isTrue();
     verify(delegate).isClosed();
@@ -409,8 +321,8 @@ class PreparedStatementInvocationHandlerTest {
     String adHoc = "update orders set status = 'done'";
     when(delegate.executeUpdate(adHoc)).thenReturn(4);
 
-    Statement proxy = newStatementProxy(null);
-    int updated = proxy.executeUpdate(adHoc);
+    Statement statement = newStatement(null);
+    int updated = statement.executeUpdate(adHoc);
 
     assertThat(updated).isEqualTo(4);
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UPDATE",
@@ -425,8 +337,8 @@ class PreparedStatementInvocationHandlerTest {
     String adHoc = "insert into orders (name) values ('x')";
     when(delegate.executeUpdate(adHoc, Statement.RETURN_GENERATED_KEYS)).thenReturn(1);
 
-    Statement proxy = newStatementProxy(null);
-    int updated = proxy.executeUpdate(adHoc, Statement.RETURN_GENERATED_KEYS);
+    Statement statement = newStatement(null);
+    int updated = statement.executeUpdate(adHoc, Statement.RETURN_GENERATED_KEYS);
 
     assertThat(updated).isEqualTo(1);
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
@@ -441,8 +353,8 @@ class PreparedStatementInvocationHandlerTest {
     int[] keys = {1};
     when(delegate.executeUpdate(adHoc, keys)).thenReturn(1);
 
-    Statement proxy = newStatementProxy(null);
-    int updated = proxy.executeUpdate(adHoc, keys);
+    Statement statement = newStatement(null);
+    int updated = statement.executeUpdate(adHoc, keys);
 
     assertThat(updated).isEqualTo(1);
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
@@ -457,8 +369,8 @@ class PreparedStatementInvocationHandlerTest {
     String[] columns = {"id"};
     when(delegate.executeUpdate(adHoc, columns)).thenReturn(1);
 
-    Statement proxy = newStatementProxy(null);
-    int updated = proxy.executeUpdate(adHoc, columns);
+    Statement statement = newStatement(null);
+    int updated = statement.executeUpdate(adHoc, columns);
 
     assertThat(updated).isEqualTo(1);
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
@@ -472,8 +384,8 @@ class PreparedStatementInvocationHandlerTest {
     String adHoc = "select count(*) from orders";
     when(delegate.execute(adHoc)).thenReturn(true);
 
-    Statement proxy = newStatementProxy(null);
-    boolean executed = proxy.execute(adHoc);
+    Statement statement = newStatement(null);
+    boolean executed = statement.execute(adHoc);
 
     assertThat(executed).isTrue();
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT",
@@ -487,8 +399,8 @@ class PreparedStatementInvocationHandlerTest {
     String adHoc = "insert into orders (name) values ('w')";
     when(delegate.execute(adHoc, Statement.RETURN_GENERATED_KEYS)).thenReturn(true);
 
-    Statement proxy = newStatementProxy(null);
-    boolean executed = proxy.execute(adHoc, Statement.RETURN_GENERATED_KEYS);
+    Statement statement = newStatement(null);
+    boolean executed = statement.execute(adHoc, Statement.RETURN_GENERATED_KEYS);
 
     assertThat(executed).isTrue();
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
@@ -503,8 +415,8 @@ class PreparedStatementInvocationHandlerTest {
     int[] keys = {1};
     when(delegate.execute(adHoc, keys)).thenReturn(true);
 
-    Statement proxy = newStatementProxy(null);
-    boolean executed = proxy.execute(adHoc, keys);
+    Statement statement = newStatement(null);
+    boolean executed = statement.execute(adHoc, keys);
 
     assertThat(executed).isTrue();
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
@@ -519,8 +431,8 @@ class PreparedStatementInvocationHandlerTest {
     String[] columns = {"id"};
     when(delegate.execute(adHoc, columns)).thenReturn(true);
 
-    Statement proxy = newStatementProxy(null);
-    boolean executed = proxy.execute(adHoc, columns);
+    Statement statement = newStatement(null);
+    boolean executed = statement.execute(adHoc, columns);
 
     assertThat(executed).isTrue();
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
@@ -534,8 +446,8 @@ class PreparedStatementInvocationHandlerTest {
     String adHoc = "update orders set count = count + 1";
     when(delegate.executeLargeUpdate(adHoc)).thenReturn(8L);
 
-    Statement proxy = newStatementProxy(null);
-    long updated = proxy.executeLargeUpdate(adHoc);
+    Statement statement = newStatement(null);
+    long updated = statement.executeLargeUpdate(adHoc);
 
     assertThat(updated).isEqualTo(8L);
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "UPDATE",
@@ -550,8 +462,8 @@ class PreparedStatementInvocationHandlerTest {
     String adHoc = "insert into orders (name) values ('t')";
     when(delegate.executeLargeUpdate(adHoc, Statement.RETURN_GENERATED_KEYS)).thenReturn(1L);
 
-    Statement proxy = newStatementProxy(null);
-    long updated = proxy.executeLargeUpdate(adHoc, Statement.RETURN_GENERATED_KEYS);
+    Statement statement = newStatement(null);
+    long updated = statement.executeLargeUpdate(adHoc, Statement.RETURN_GENERATED_KEYS);
 
     assertThat(updated).isEqualTo(1L);
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
@@ -567,8 +479,8 @@ class PreparedStatementInvocationHandlerTest {
     int[] keys = {1};
     when(delegate.executeLargeUpdate(adHoc, keys)).thenReturn(1L);
 
-    Statement proxy = newStatementProxy(null);
-    long updated = proxy.executeLargeUpdate(adHoc, keys);
+    Statement statement = newStatement(null);
+    long updated = statement.executeLargeUpdate(adHoc, keys);
 
     assertThat(updated).isEqualTo(1L);
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
@@ -584,8 +496,8 @@ class PreparedStatementInvocationHandlerTest {
     String[] columns = {"id"};
     when(delegate.executeLargeUpdate(adHoc, columns)).thenReturn(1L);
 
-    Statement proxy = newStatementProxy(null);
-    long updated = proxy.executeLargeUpdate(adHoc, columns);
+    Statement statement = newStatement(null);
+    long updated = statement.executeLargeUpdate(adHoc, columns);
 
     assertThat(updated).isEqualTo(1L);
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "INSERT",
@@ -595,12 +507,28 @@ class PreparedStatementInvocationHandlerTest {
   }
 
   @Test
+  void rawStatementExecuteQueryStringRecordsArgumentSql() throws SQLException {
+    String adHoc = "  \t select 1";
+    ResultSet rs = mock(ResultSet.class);
+    when(delegate.executeQuery(adHoc)).thenReturn(rs);
+
+    Statement statement = newStatement(null);
+    ResultSet actual = statement.executeQuery(adHoc);
+
+    assertThat(actual).isSameAs(rs);
+    verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "SELECT",
+            adHoc);
+    verify(delegate).executeQuery(adHoc);
+    verifyNoMoreInteractions(externalCallRecorder, delegate);
+  }
+
+  @Test
   void rawStatementExecuteBatchRecordsBatchOperation() throws SQLException {
     int[] counts = {2, 3};
     when(delegate.executeBatch()).thenReturn(counts);
 
-    Statement proxy = newStatementProxy(null);
-    int[] actual = proxy.executeBatch();
+    Statement statement = newStatement(null);
+    int[] actual = statement.executeBatch();
 
     assertThat(actual).isSameAs(counts);
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH",
@@ -614,8 +542,8 @@ class PreparedStatementInvocationHandlerTest {
     long[] counts = {5L, 6L};
     when(delegate.executeLargeBatch()).thenReturn(counts);
 
-    Statement proxy = newStatementProxy(null);
-    long[] actual = proxy.executeLargeBatch();
+    Statement statement = newStatement(null);
+    long[] actual = statement.executeLargeBatch();
 
     assertThat(actual).isSameAs(counts);
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE, TARGET, "BATCH",
