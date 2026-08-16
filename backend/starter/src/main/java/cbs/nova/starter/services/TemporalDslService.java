@@ -9,53 +9,22 @@ import cbs.nova.dsl.process.DslTemporalProcessRequest;
 import cbs.nova.starter.converter.MapInputConverter;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
-import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
 import lombok.Builder;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
+@RequiredArgsConstructor
 public class TemporalDslService {
 
   private final WorkflowClient workflowClient;
   private final MapInputConverter mapInputConverter;
-  private final Set<String> registeredQueues = ConcurrentHashMap.newKeySet();
-  private volatile WorkerFactory workerFactory;
-  private volatile boolean started;
-
-  public TemporalDslService(WorkflowClient workflowClient,
-          MapInputConverter mapInputConverter) {
-    this.workflowClient = workflowClient;
-    this.mapInputConverter = mapInputConverter;
-  }
-
-  private WorkerFactory workerFactory() {
-    if (workerFactory == null) {
-      synchronized (this) {
-        if (workerFactory == null) {
-          workerFactory = WorkerFactory.newInstance(workflowClient);
-        }
-      }
-    }
-    return workerFactory;
-  }
-
-  private void ensureStarted() {
-    if (!started) {
-      synchronized (this) {
-        if (!started) {
-          workerFactory().start();
-          started = true;
-        }
-      }
-    }
-  }
+  private final WorkerFactory workerFactory;
 
   @Builder
   public record DslExecutionRequest(
@@ -77,8 +46,6 @@ public class TemporalDslService {
     WorkflowOptions effectiveOptions = request.options() != null
             ? request.options()
             : defaultOptions(descriptor);
-
-    ensureWorker(descriptor);
 
     Object preparedInput = prepareInput(request.input(), descriptor.inputType());
     String runId = request.runId() != null ? request.runId() : effectiveOptions.getWorkflowId();
@@ -112,18 +79,7 @@ public class TemporalDslService {
   }
 
   public void close() {
-    WorkerFactory f = workerFactory;
-    if (f != null) {
-      f.shutdown();
-    }
-  }
-
-  private void ensureWorker(GeneratedClassDescriptor descriptor) {
-    if (registeredQueues.add(descriptor.taskQueue())) {
-      ensureStarted();
-      Worker worker = workerFactory().newWorker(descriptor.taskQueue());
-      worker.registerWorkflowImplementationTypes(descriptor.temporalImplementation());
-    }
+    workerFactory.shutdown();
   }
 
   private GeneratedClassDescriptor resolveProcess(String code) {

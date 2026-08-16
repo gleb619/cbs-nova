@@ -1,5 +1,8 @@
 package cbs.nova.starter.config;
 
+import cbs.nova.dsl.DslObject.DslType;
+import cbs.nova.dsl.GeneratedClassDescriptor;
+import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.logging.DryRunLoggingContext;
@@ -26,16 +29,22 @@ import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowClientOptions;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
+import io.temporal.worker.Worker;
+import io.temporal.worker.WorkerFactory;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.task.TaskDecorator;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import tools.jackson.databind.json.JsonMapper;
@@ -43,13 +52,49 @@ import tools.jackson.databind.json.JsonMapper;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.stream.Collectors;
 
 @AutoConfiguration
-@AutoConfigureAfter(DryRunLoggingAutoConfiguration.class)
+@AutoConfigureAfter({DryRunLoggingAutoConfiguration.class, DslAutoConfiguration.class,
+    DslWorkerConfiguration.class})
 @EnableConfigurationProperties({CbsNovaPreviewProperties.class, CbsNovaFakesProperties.class})
 public class TemporalConfiguration {
+
+  @Bean(destroyMethod = "shutdown")
+  @ConditionalOnMissingBean(WorkerFactory.class)
+  WorkerFactory workerFactory(WorkflowClient workflowClient) {
+    return WorkerFactory.newInstance(workflowClient);
+  }
+
+  @Bean
+  @ConditionalOnProperty(name = "dsl.worker.enabled", havingValue = "true")
+  @Order(Ordered.LOWEST_PRECEDENCE)
+  ApplicationRunner temporalWorkerRegistrationRunner(WorkerFactory workerFactory) {
+    return args -> {
+      var processes = GlobalManager.globalManager().generatedProcesses();
+      if (processes.isEmpty()) {
+        return;
+      }
+
+      Map<String, Set<Class<?>>> implementationsByQueue = processes.stream()
+              .filter(descriptor -> descriptor.type() == DslType.PROCESS)
+              .collect(Collectors.groupingBy(
+                      GeneratedClassDescriptor::taskQueue,
+                      Collectors.mapping(
+                              GeneratedClassDescriptor::temporalImplementation,
+                              Collectors.toSet())));
+
+      implementationsByQueue.forEach((taskQueue, implementations) -> {
+        Worker worker = workerFactory.newWorker(taskQueue);
+        worker.registerWorkflowImplementationTypes(implementations.toArray(new Class<?>[0]));
+      });
+
+      workerFactory.start();
+    };
+  }
 
   @Bean
   @ConditionalOnMissingBean
@@ -248,8 +293,9 @@ public class TemporalConfiguration {
 
   @Bean
   TemporalDslService temporalDslService(WorkflowClient workflowClient,
-          MapInputConverter mapInputConverter) {
-    return new TemporalDslService(workflowClient, mapInputConverter);
+          MapInputConverter mapInputConverter,
+          WorkerFactory workerFactory) {
+    return new TemporalDslService(workflowClient, mapInputConverter, workerFactory);
   }
 
 }

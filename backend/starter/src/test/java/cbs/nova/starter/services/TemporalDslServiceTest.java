@@ -18,11 +18,8 @@ import cbs.nova.dsl.process.DslTemporalProcessRequest;
 import cbs.nova.starter.converter.MapInputConverter;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
-import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 
 import java.util.UUID;
 import java.util.function.Function;
@@ -54,32 +51,27 @@ class TemporalDslServiceTest {
     impl.handler = req -> "ok:" + req.runId() + ":" + req.payload();
     WorkflowClient client = mock(WorkflowClient.class);
     WorkerFactory factory = mock(WorkerFactory.class);
-    Worker worker = mock(Worker.class);
 
-    try (MockedStatic<WorkerFactory> staticMock = Mockito.mockStatic(WorkerFactory.class)) {
-      staticMock.when(() -> WorkerFactory.newInstance(client)).thenReturn(factory);
-      when(factory.newWorker(anyString())).thenReturn(worker);
-      when(client.newWorkflowStub(eq(TestProcess.class), any(WorkflowOptions.class)))
-              .thenReturn(impl);
+    when(client.newWorkflowStub(eq(TestProcess.class), any(WorkflowOptions.class)))
+            .thenReturn(impl);
 
-      TemporalDslService service = new TemporalDslService(client,
-              mock(MapInputConverter.class));
-      String result = service.execute(name, "payload", String.class);
+    TemporalDslService service = new TemporalDslService(client,
+            mock(MapInputConverter.class), factory);
+    String result = service.execute(name, "payload", String.class);
 
-      assertThat(result).startsWith("ok:");
-      assertThat(result).contains(name);
-      assertThat(result).endsWith(":payload");
-      verify(factory).start();
-      service.close();
-      verify(factory).shutdown();
-    }
+    assertThat(result).startsWith("ok:");
+    assertThat(result).contains(name);
+    assertThat(result).endsWith(":payload");
+    service.close();
+    verify(factory).shutdown();
   }
 
   @Test
   void executeRejectsUnknownProcessCode() {
     WorkflowClient client = mock(WorkflowClient.class);
+    WorkerFactory factory = mock(WorkerFactory.class);
     TemporalDslService service = new TemporalDslService(client,
-            mock(MapInputConverter.class));
+            mock(MapInputConverter.class), factory);
 
     String missing = unique("missing");
     assertThatThrownBy(() -> service.execute(missing, "anything", String.class))
@@ -103,24 +95,19 @@ class TemporalDslServiceTest {
     };
     WorkflowClient client = mock(WorkflowClient.class);
     WorkerFactory factory = mock(WorkerFactory.class);
-    Worker worker = mock(Worker.class);
 
-    try (MockedStatic<WorkerFactory> staticMock = Mockito.mockStatic(WorkerFactory.class)) {
-      staticMock.when(() -> WorkerFactory.newInstance(client)).thenReturn(factory);
-      when(factory.newWorker(anyString())).thenReturn(worker);
-      when(client.newWorkflowStub(eq(TestProcess.class), any(WorkflowOptions.class)))
-              .thenReturn(impl);
+    when(client.newWorkflowStub(eq(TestProcess.class), any(WorkflowOptions.class)))
+            .thenReturn(impl);
 
-      TemporalDslService service = new TemporalDslService(client,
-              mock(MapInputConverter.class));
-      assertThatThrownBy(() -> service.execute(name, "any", String.class))
-              .isInstanceOf(DslExecutionException.class)
-              .hasMessageContaining("DSL workflow " + name + " failed: inner-detail")
-              .hasCauseInstanceOf(IllegalStateException.class);
+    TemporalDslService service = new TemporalDslService(client,
+            mock(MapInputConverter.class), factory);
+    assertThatThrownBy(() -> service.execute(name, "any", String.class))
+            .isInstanceOf(DslExecutionException.class)
+            .hasMessageContaining("DSL workflow " + name + " failed: inner-detail")
+            .hasCauseInstanceOf(IllegalStateException.class);
 
-      service.close();
-      verify(factory).shutdown();
-    }
+    service.close();
+    verify(factory).shutdown();
   }
 
   @Test
@@ -137,24 +124,19 @@ class TemporalDslServiceTest {
     };
     WorkflowClient client = mock(WorkflowClient.class);
     WorkerFactory factory = mock(WorkerFactory.class);
-    Worker worker = mock(Worker.class);
 
-    try (MockedStatic<WorkerFactory> staticMock = Mockito.mockStatic(WorkerFactory.class)) {
-      staticMock.when(() -> WorkerFactory.newInstance(client)).thenReturn(factory);
-      when(factory.newWorker(anyString())).thenReturn(worker);
-      when(client.newWorkflowStub(eq(TestProcess.class), any(WorkflowOptions.class)))
-              .thenReturn(impl);
+    when(client.newWorkflowStub(eq(TestProcess.class), any(WorkflowOptions.class)))
+            .thenReturn(impl);
 
-      TemporalDslService service = new TemporalDslService(client,
-              mock(MapInputConverter.class));
-      assertThatThrownBy(() -> service.execute(name, "any", String.class))
-              .isInstanceOf(DslExecutionException.class)
-              .hasMessageContaining("DSL workflow " + name + " failed: original")
-              .hasCauseInstanceOf(IllegalArgumentException.class);
+    TemporalDslService service = new TemporalDslService(client,
+            mock(MapInputConverter.class), factory);
+    assertThatThrownBy(() -> service.execute(name, "any", String.class))
+            .isInstanceOf(DslExecutionException.class)
+            .hasMessageContaining("DSL workflow " + name + " failed: original")
+            .hasCauseInstanceOf(IllegalArgumentException.class);
 
-      service.close();
-      verify(factory).shutdown();
-    }
+    service.close();
+    verify(factory).shutdown();
   }
 
   private static String unique(String prefix) {
