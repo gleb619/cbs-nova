@@ -1,0 +1,31 @@
+# Shared Postgres instance for all CBS Nova domains.
+# Provisioned DBs: keycloak, gitea, bugsink, temporal (see ./postgres-initdb.d/).
+# Each consuming app connects with its own DB-specific user; credentials match
+# the historical per-service values so existing env wiring keeps working.
+
+services:
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_secure_password}
+      POSTGRES_DB: postgres
+      # Consumed by the init script for DB-specific user passwords.
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
+      GITEA_DB_PASSWORD: ${GITEA_DB_PASSWORD:-gitea}
+      BUGSINK_DB_PASSWORD: ${BUGSINK_DB_PASSWORD:-change_me_secure_password}
+      TEMPORAL_DB_PASSWORD: ${TEMPORAL_DB_PASSWORD:-temporal}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-initdb.d:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:

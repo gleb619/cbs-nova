@@ -396,9 +396,7 @@ describe('OutputPanel', () => {
     })
     expect(wrapper.findAll('button').map((b) => b.text())).toContain('External Calls')
 
-    const externalCallsButton = wrapper
-      .findAll('button')
-      .find((b) => b.text() === 'External Calls')
+    const externalCallsButton = wrapper.findAll('button').find((b) => b.text() === 'External Calls')
     expect(externalCallsButton).toBeDefined()
     await externalCallsButton?.trigger('click')
 

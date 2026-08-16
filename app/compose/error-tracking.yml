@@ -1,0 +1,18 @@
+# Error tracking / sentry-compatible domain.
+# Uses the shared Postgres instance (see postgres.yml) for storage.
+
+services:
+  bugsink:
+    image: bugsink/bugsink:latest
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SECRET_KEY: ${BUGSINK_SECRET_KEY:-your_super_secret_key_at_least_50_chars_long}
+      CREATE_SUPERUSER: ${BUGSINK_SUPERUSER:-admin:admin}
+      DATABASE_URL: postgresql://bugsinkuser:${BUGSINK_DB_PASSWORD:-change_me_secure_password}@postgres:5432/bugsink
+      BEHIND_HTTPS_PROXY: "false"
+      PORT: 8000

@@ -1,4 +1,4 @@
-import { type ComputedRef, type Ref, computed, unref } from 'vue'
+import { type ComputedRef, computed, type Ref, unref } from 'vue'
 import type { CallNode, PreviewMetricsSnapshot, RunnerOutput } from '../types/runner'
 import { type DiffLine, useDiffLines } from './useDiffLines'
 
@@ -305,16 +305,38 @@ function diffMetrics(
   current: PreviewMetricsSnapshot | undefined,
 ): MetricsDiffRow[] {
   const rows: MetricsDiffRow[] = [
-    diffMetric('executionDurationMs', 'Execution duration (ms)', baseline?.executionDurationMs, current?.executionDurationMs, true),
-    diffMetric('memoryUsedBytes', 'Memory used (bytes)', baseline?.memoryUsedBytes, current?.memoryUsedBytes, true),
+    diffMetric(
+      'executionDurationMs',
+      'Execution duration (ms)',
+      baseline?.executionDurationMs,
+      current?.executionDurationMs,
+      true,
+    ),
+    diffMetric(
+      'memoryUsedBytes',
+      'Memory used (bytes)',
+      baseline?.memoryUsedBytes,
+      current?.memoryUsedBytes,
+      true,
+    ),
   ]
 
-  const baselineCounts = normaliseNumericMap(baseline?.callCounts as Record<string, number> | undefined)
-  const currentCounts = normaliseNumericMap(current?.callCounts as Record<string, number> | undefined)
+  const baselineCounts = normaliseNumericMap(
+    baseline?.callCounts as Record<string, number> | undefined,
+  )
+  const currentCounts = normaliseNumericMap(
+    current?.callCounts as Record<string, number> | undefined,
+  )
   const callKeys = new Set([...Object.keys(baselineCounts), ...Object.keys(currentCounts)])
   for (const kind of callKeys) {
     rows.push(
-      diffMetric(`callCounts.${kind}`, `Calls (${kind})`, baselineCounts[kind], currentCounts[kind], true),
+      diffMetric(
+        `callCounts.${kind}`,
+        `Calls (${kind})`,
+        baselineCounts[kind],
+        currentCounts[kind],
+        true,
+      ),
     )
   }
 

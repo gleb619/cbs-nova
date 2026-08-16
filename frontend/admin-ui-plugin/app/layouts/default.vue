@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { AppShell, AppSidebarToggle } from '@cbs/components'
 import { NuxtLink } from '#components'
 
 const route = useRoute()
@@ -22,25 +23,22 @@ const navItems = computed(() => [
 </script>
 
 <template>
-  <div class="flex h-screen overflow-hidden bg-gray-50">
-    <AppSidebar
-      :items="navItems"
-      :link-component="NuxtLink"
-      active-class="bg-gray-800 text-white"
-      title="CBS Nova"
-      short-title="N"
-    />
-    <AppMobileDrawer
-      :items="navItems"
-      :link-component="NuxtLink"
-      active-class="bg-gray-800 text-white"
-      title="CBS Nova"
-    />
-    <div class="flex flex-col flex-1 overflow-hidden">
-      <AppTopBar />
-      <main class="flex-1 overflow-y-auto p-6">
-        <slot />
-      </main>
-    </div>
-  </div>
+  <AppShell
+    :nav-items="navItems"
+    :link-component="NuxtLink"
+    title="CBS Nova"
+    short-title="N"
+    active-class="bg-primary-500 text-white"
+  >
+    <template #toggle>
+      <AppSidebarToggle />
+    </template>
+    <template #brand>
+      <span class="text-neutral-800 font-semibold">CBS Nova Admin</span>
+    </template>
+    <template #trailing>
+      <span class="text-sm text-neutral-500">User</span>
+    </template>
+    <slot />
+  </AppShell>
 </template>

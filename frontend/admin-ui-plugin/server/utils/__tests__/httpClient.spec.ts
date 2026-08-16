@@ -13,9 +13,7 @@ const installedGetHeader = (_event: unknown, name: string) => headerMap[name.toL
 g.getHeader = installedGetHeader
 
 const makeEvent = (headers: HeaderMap = {}) => {
-  headerMap = Object.fromEntries(
-    Object.entries(headers).map(([k, v]) => [k.toLowerCase(), v]),
-  )
+  headerMap = Object.fromEntries(Object.entries(headers).map(([k, v]) => [k.toLowerCase(), v]))
   return {} as Parameters<typeof proxyToBackend>[0]
 }
 
@@ -27,7 +25,9 @@ const setRuntimeConfig = (overrides: Record<string, unknown> = {}) => {
     public: { appName: 'CBS Nova Admin' },
     ...overrides,
   }
-  vi.mocked(useRuntimeConfig as never).mockReturnValue(merged as ReturnType<typeof useRuntimeConfig>)
+  vi.mocked(useRuntimeConfig as never).mockReturnValue(
+    merged as ReturnType<typeof useRuntimeConfig>,
+  )
   vi.mocked(useBackendConfig as never).mockReturnValue({
     baseUrl: merged.backendBaseUrl as string,
     apiKey: merged.backendApiKey as string,
@@ -131,9 +131,12 @@ describe('proxyToBackend', () => {
 
   it('maps ofetch TimeoutError (cause) to 504 BACKEND_TIMEOUT', async () => {
     const event = makeEvent()
-    const cause = Object.assign(new Error('[TimeoutError]: The operation was aborted due to timeout'), {
-      name: 'TimeoutError',
-    })
+    const cause = Object.assign(
+      new Error('[TimeoutError]: The operation was aborted due to timeout'),
+      {
+        name: 'TimeoutError',
+      },
+    )
     const err = Object.assign(new Error('timeout wrapper'), {
       name: 'FetchError',
       cause,
@@ -165,10 +168,7 @@ describe('proxyToBackend', () => {
 
     await proxyToBackend(event, '/api/foo')
 
-    const [, opts] = vi.mocked($fetch as never).mock.calls[0] as [
-      string,
-      { timeout: number },
-    ]
+    const [, opts] = vi.mocked($fetch as never).mock.calls[0] as [string, { timeout: number }]
     expect(opts.timeout).toBe(2500)
   })
 
@@ -251,5 +251,4 @@ describe('proxyToBackend', () => {
     const [url] = vi.mocked($fetch as never).mock.calls[0] as [string]
     expect(url).toBe('http://localhost:8090/api/foo')
   })
-
 })

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { RunnerOutput } from '../../types/runner'
 import { usePreviewDiff } from '../../composables/usePreviewDiff'
+import type { RunnerOutput } from '../../types/runner'
 
 defineOptions({ name: 'PreviewDiffView' })
 
@@ -115,7 +115,11 @@ const callTimestamp = (ts: unknown): string => {
     </div>
 
     <!-- Output diff tab -->
-    <div v-if="activeTab === 'output'" class="flex flex-col gap-2" data-testid="preview-diff-output-panel">
+    <div
+      v-if="activeTab === 'output'"
+      class="flex flex-col gap-2"
+      data-testid="preview-diff-output-panel"
+    >
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="flex flex-col gap-2">
           <span class="text-xs font-medium text-gray-500">Baseline</span>
@@ -149,15 +153,21 @@ const callTimestamp = (ts: unknown): string => {
     </div>
 
     <!-- AST diff tab -->
-    <div v-else-if="activeTab === 'ast'" class="flex flex-col gap-2" data-testid="preview-diff-ast-panel">
-      <div v-if="!astDiff" class="text-sm text-gray-500">
-        No AST tree available to compare.
-      </div>
+    <div
+      v-else-if="activeTab === 'ast'"
+      class="flex flex-col gap-2"
+      data-testid="preview-diff-ast-panel"
+    >
+      <div v-if="!astDiff" class="text-sm text-gray-500">No AST tree available to compare.</div>
       <ASTDiffNode v-else :node="astDiff" :depth="0" />
     </div>
 
     <!-- External calls diff tab -->
-    <div v-else-if="activeTab === 'calls'" class="flex flex-col gap-2" data-testid="preview-diff-calls-panel">
+    <div
+      v-else-if="activeTab === 'calls'"
+      class="flex flex-col gap-2"
+      data-testid="preview-diff-calls-panel"
+    >
       <div v-if="callDiff.length === 0" class="text-sm text-gray-500">
         No external calls to compare.
       </div>
@@ -185,8 +195,12 @@ const callTimestamp = (ts: unknown): string => {
             </span>
             <span class="text-gray-700 shrink-0">{{ String(row.current.call.target ?? '') }}</span>
             <span class="text-gray-400 shrink-0">—</span>
-            <span class="text-gray-900 break-words">{{ String(row.current.call.operation ?? '') }}</span>
-            <span class="text-gray-500 shrink-0 ml-auto">[{{ callTimestamp(row.current.call.timestamp) }}]</span>
+            <span class="text-gray-900 break-words"
+              >{{ String(row.current.call.operation ?? '') }}</span
+            >
+            <span class="text-gray-500 shrink-0 ml-auto"
+              >[{{ callTimestamp(row.current.call.timestamp) }}]</span
+            >
           </template>
           <template v-else-if="row.baseline">
             <span
@@ -198,11 +212,16 @@ const callTimestamp = (ts: unknown): string => {
             </span>
             <span class="text-gray-700 shrink-0">{{ String(row.baseline.call.target ?? '') }}</span>
             <span class="text-gray-400 shrink-0">—</span>
-            <span class="text-gray-900 break-words">{{ String(row.baseline.call.operation ?? '') }}</span>
-            <span class="text-gray-500 shrink-0 ml-auto">[{{ callTimestamp(row.baseline.call.timestamp) }}]</span>
+            <span class="text-gray-900 break-words"
+              >{{ String(row.baseline.call.operation ?? '') }}</span
+            >
+            <span class="text-gray-500 shrink-0 ml-auto"
+              >[{{ callTimestamp(row.baseline.call.timestamp) }}]</span
+            >
           </template>
           <span class="text-gray-400 shrink-0">·</span>
-          <span class="text-gray-600 shrink-0">{{ row.baseline?.sourceKind ?? row.current?.sourceKind }}:
+          <span class="text-gray-600 shrink-0"
+            >{{ row.baseline?.sourceKind ?? row.current?.sourceKind }}:
             {{ row.baseline?.sourceName ?? row.current?.sourceName }}
           </span>
         </li>
@@ -210,7 +229,11 @@ const callTimestamp = (ts: unknown): string => {
     </div>
 
     <!-- Metrics diff tab -->
-    <div v-else-if="activeTab === 'metrics'" class="flex flex-col gap-2" data-testid="preview-diff-metrics-panel">
+    <div
+      v-else-if="activeTab === 'metrics'"
+      class="flex flex-col gap-2"
+      data-testid="preview-diff-metrics-panel"
+    >
       <MetricsDiffTable :rows="metricsDiff" />
     </div>
   </div>

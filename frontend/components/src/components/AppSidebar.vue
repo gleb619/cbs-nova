@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { useSidebar } from '../composables/useSidebar'
+import type { NavItemProps } from './AppNavItem.vue'
 import AppNavItem from './AppNavItem.vue'
 
-export interface NavItem {
-  to: string
-  label: string
-  icon?: string
+export interface NavItem extends Omit<NavItemProps, 'isActive' | 'activeClass' | 'linkComponent'> {
   isActive?: boolean
 }
 
@@ -21,7 +19,7 @@ const props = withDefaults(
     title: 'CBS Nova',
     shortTitle: 'N',
     linkComponent: 'a',
-    activeClass: 'bg-gray-800 text-white',
+    activeClass: 'bg-primary-500 text-white',
   },
 )
 
@@ -31,11 +29,11 @@ const { collapsed } = useSidebar()
 <template>
   <aside
     :class="[
-      'hidden md:flex flex-col bg-gray-900 text-gray-100 transition-all duration-200 shrink-0',
+      'hidden md:flex flex-col bg-neutral-800 text-neutral-50 transition-all duration-200 shrink-0 border-r border-neutral-700',
       collapsed ? 'w-16' : 'w-60',
     ]"
   >
-    <div class="flex items-center justify-center h-16 border-b border-gray-700 px-4">
+    <div class="flex items-center justify-center h-16 border-b border-neutral-700 px-4">
       <span v-if="!collapsed" class="text-white font-bold text-lg truncate">{{ props.title }}</span>
       <span v-else class="text-white font-bold">{{ props.shortTitle }}</span>
     </div>
@@ -55,12 +53,15 @@ const { collapsed } = useSidebar()
           v-else
           :to="item.to"
           :href="item.to"
-          :class="
-            'flex items-center justify-center w-10 h-10 mx-auto rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-colors'
-          "
+          :class="[
+            'flex items-center justify-center w-10 h-10 mx-auto rounded-lg text-neutral-100 hover:bg-primary-600 hover:text-white transition-colors',
+            item.isActive ? props.activeClass : '',
+          ]"
           :active-class="props.activeClass"
+          :aria-current="item.isActive ? 'page' : undefined"
         >
-          {{ item.icon }}
+          <span v-if="item.icon" class="text-lg" aria-hidden="true">{{ item.icon }}</span>
+          <span v-else class="text-xs">{{ item.label.charAt(0) }}</span>
         </component>
       </template>
     </nav>

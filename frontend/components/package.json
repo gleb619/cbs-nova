@@ -15,7 +15,8 @@
     "./types/dsl": "./src/types/dsl.ts",
     "./types/execution": "./src/types/execution.ts",
     "./types/runner": "./src/types/runner.ts",
-    "./composables": "./src/composables/index.ts"
+    "./composables": "./src/composables/index.ts",
+    "./src/*": "./src/*"
   },
   "scripts": {
     "build": "vite build",

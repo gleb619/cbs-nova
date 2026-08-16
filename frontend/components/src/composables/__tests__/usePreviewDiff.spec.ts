@@ -32,7 +32,10 @@ describe('usePreviewDiff', () => {
     // usePreviewDiff uses JSON.stringify(value, null, 2) for both sides; the
     // shapes of these JSON strings are stable enough to compare against the
     // standalone useDiffLines result.
-    const expected = useDiffLines(JSON.stringify(baseline.result, null, 2), JSON.stringify(current.result, null, 2)).value
+    const expected = useDiffLines(
+      JSON.stringify(baseline.result, null, 2),
+      JSON.stringify(current.result, null, 2),
+    ).value
 
     expect(diffLines.value.map((line) => line.kind)).toEqual(expected.map((line) => line.kind))
     expect(diffLines.value.length).toBe(expected.length)
@@ -40,7 +43,10 @@ describe('usePreviewDiff', () => {
 
   it('marks every diff line as "same" when the result is identical', () => {
     const shared = { hello: 'world' }
-    const { diffLines } = usePreviewDiff(makeOutput({ result: shared }), makeOutput({ result: shared }))
+    const { diffLines } = usePreviewDiff(
+      makeOutput({ result: shared }),
+      makeOutput({ result: shared }),
+    )
 
     expect(diffLines.value.every((line) => line.kind === 'same')).toBe(true)
   })
@@ -103,13 +109,19 @@ describe('usePreviewDiff', () => {
     })
     const current = makeOutput({
       astTree: makeNode({
-        externalCalls: [{ type: 'http', target: 'api.example.com', operation: 'GET', timestamp: 4 }],
+        externalCalls: [
+          { type: 'http', target: 'api.example.com', operation: 'GET', timestamp: 4 },
+        ],
         children: [
           makeNode({
-            externalCalls: [{ type: 'mq', target: 'events-bus', operation: 'publish', timestamp: 5 }],
+            externalCalls: [
+              { type: 'mq', target: 'events-bus', operation: 'publish', timestamp: 5 },
+            ],
           }),
           makeNode({
-            externalCalls: [{ type: 'database', target: 'audit-log', operation: 'insert', timestamp: 6 }],
+            externalCalls: [
+              { type: 'database', target: 'audit-log', operation: 'insert', timestamp: 6 },
+            ],
           }),
         ],
       }),

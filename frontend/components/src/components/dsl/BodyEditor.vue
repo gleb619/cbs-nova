@@ -25,7 +25,7 @@ const internalCode = ref('')
 
 const isControlled = computed(() => props.code !== undefined)
 
-const code = computed<string>({
+const bodyCode = computed<string>({
   get: () => (isControlled.value ? (props.code ?? '') : internalCode.value),
   set: (value: string) => {
     if (isControlled.value) {
@@ -70,7 +70,7 @@ watch(
     </div>
     <div class="flex-1 overflow-auto">
       <StructureTab v-show="tab === 'structure'" :steps="steps" />
-      <CodeTab v-show="tab === 'code'" v-model:code="code" :read-only="!construct" />
+      <CodeTab v-show="tab === 'code'" v-model:code="bodyCode" :read-only="!construct" />
     </div>
   </div>
 </template>

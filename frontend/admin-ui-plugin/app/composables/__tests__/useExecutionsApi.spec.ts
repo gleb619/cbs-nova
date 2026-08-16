@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Execution, ExecutionDetail } from '@cbs/components/types'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useExecutionsApi } from '../useExecutionsApi'
 
 describe('useExecutionsApi', () => {
@@ -35,8 +35,10 @@ describe('useExecutionsApi', () => {
     fetchMock.mockResolvedValueOnce(response)
 
     const api = useExecutionsApi()
-    const result: Execution[] | { items?: Execution[]; total?: number } =
-      await api.list({ status: 'FAILED', limit: 10 })
+    const result: Execution[] | { items?: Execution[]; total?: number } = await api.list({
+      status: 'FAILED',
+      limit: 10,
+    })
 
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/executions', {
       query: { status: 'FAILED', limit: 10 },
@@ -78,7 +80,7 @@ describe('useExecutionsApi', () => {
     })
   })
 
-  it("get(id) calls GET /api/v1/executions/{id}", async () => {
+  it('get(id) calls GET /api/v1/executions/{id}', async () => {
     const response: ExecutionDetail = {
       id: 'abc-123',
       entity: 'ent',

@@ -1,8 +1,10 @@
+export { default as AppMainContent } from './components/AppMainContent.vue'
 export { default as AppMobileDrawer } from './components/AppMobileDrawer.vue'
-
+export { default as AppNavbar } from './components/AppNavbar.vue'
 export { default as AppNavItem } from './components/AppNavItem.vue'
+export { default as AppShell } from './components/AppShell.vue'
 export { default as AppSidebar } from './components/AppSidebar.vue'
-export { default as AppTopBar } from './components/AppTopBar.vue'
+export { default as AppSidebarToggle } from './components/AppSidebarToggle.vue'
 export { default as CbsButton } from './components/CbsButton.vue'
 
 export { default as DashboardRecentExecutions } from './components/dashboard/RecentExecutions.vue'
@@ -41,9 +43,9 @@ export { default as RunnerExternalCallsBadge } from './components/runner/Externa
 export { default as RunnerInputField } from './components/runner/InputField.vue'
 export { default as RunnerInputForm } from './components/runner/InputForm.vue'
 export { default as RunnerMetadataTab } from './components/runner/MetadataTab.vue'
-export { default as RunnerPreviewDiffView } from './components/runner/PreviewDiffView.vue'
 export { default as RunnerModeSwitcher } from './components/runner/ModeSwitcher.vue'
 export { default as RunnerOutputPanel } from './components/runner/OutputPanel.vue'
+export { default as RunnerPreviewDiffView } from './components/runner/PreviewDiffView.vue'
 export { default as RunnerResultTab } from './components/runner/ResultTab.vue'
 export { default as RunnerRunConfirmationModal } from './components/runner/RunConfirmationModal.vue'
 export { default as RunnerStatusIndicator } from './components/runner/StatusIndicator.vue'

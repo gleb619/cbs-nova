@@ -49,5 +49,14 @@ export function useDslApi() {
     return $fetch('/api/v1/dsl/reload', { method: 'POST' })
   }
 
-  return { getDefinitions, searchHelpers, preview, run, explain, saveDraft, validateConstruct, reload }
+  return {
+    getDefinitions,
+    searchHelpers,
+    preview,
+    run,
+    explain,
+    saveDraft,
+    validateConstruct,
+    reload,
+  }
 }

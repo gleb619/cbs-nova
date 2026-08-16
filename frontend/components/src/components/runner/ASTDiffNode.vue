@@ -58,7 +58,11 @@ const childSummary = computed(() => {
 </script>
 
 <template>
-  <div :class="['border-l-2 pl-3', borderClass, indentClass]" data-testid="ast-diff-node" :data-status="node.status">
+  <div
+    :class="['border-l-2 pl-3', borderClass, indentClass]"
+    data-testid="ast-diff-node"
+    :data-status="node.status"
+  >
     <button
       type="button"
       class="w-full flex items-center gap-2 py-1 text-left hover:bg-neutral-50 rounded px-1"
@@ -76,7 +80,9 @@ const childSummary = computed(() => {
         {{ node.kind }}
       </span>
       <span class="text-sm font-medium text-neutral-800">{{ node.name }}</span>
-      <span class="text-xs text-gray-400 ml-auto" v-if="!isOpen && childSummary">{{ childSummary }}</span>
+      <span class="text-xs text-gray-400 ml-auto" v-if="!isOpen && childSummary"
+        >{{ childSummary }}</span
+      >
     </button>
 
     <div v-if="isOpen" class="flex flex-col gap-1 mt-1">

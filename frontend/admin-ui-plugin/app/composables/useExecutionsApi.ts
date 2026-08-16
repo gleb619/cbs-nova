@@ -9,9 +9,7 @@ export function useExecutionsApi() {
         | Execution[]
         | { items?: Execution[]; total?: number }
     }
-    return $fetch('/api/v1/executions') as
-      | Execution[]
-      | { items?: Execution[]; total?: number }
+    return $fetch('/api/v1/executions') as Execution[] | { items?: Execution[]; total?: number }
   }
 
   async function get(id: string): Promise<ExecutionDetail> {

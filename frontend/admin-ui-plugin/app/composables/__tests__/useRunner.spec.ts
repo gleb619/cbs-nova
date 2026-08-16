@@ -190,5 +190,4 @@ describe('useRunner', () => {
     expect(r.status.value).toBe('idle')
     expect(getApiMocks().run).not.toHaveBeenCalled()
   })
-
 })

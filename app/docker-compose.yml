@@ -1,0 +1,12 @@
+# Top-level orchestration manifest.
+# Each included file defines one bounded domain.
+# Services share the default project network because `include` merges into a single Compose project.
+
+include:
+  - path: ./compose/postgres.yml
+  - path: ./compose/auth.yml
+  - path: ./compose/error-tracking.yml
+  - path: ./compose/orchestration.yml
+  - path: ./compose/app.yml
+  - path: ./compose/gitea.yml
+  - path: ./compose/observability.yml

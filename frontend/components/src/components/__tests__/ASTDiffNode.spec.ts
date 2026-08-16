@@ -53,7 +53,12 @@ describe('ASTDiffNode', () => {
     { status: 'added', icon: '+', label: 'added', borderClass: 'border-green-400' },
     { status: 'removed', icon: '−', label: 'removed', borderClass: 'border-red-400' },
     { status: 'modified', icon: '~', label: 'modified', borderClass: 'border-yellow-400' },
-  ])('maps status $status to icon/icon-label and border class', ({ status, icon, label, borderClass }) => {
+  ])('maps status $status to icon/icon-label and border class', ({
+    status,
+    icon,
+    label,
+    borderClass,
+  }) => {
     const wrapper = mountNode(makeNode({ status }))
 
     const statusBadge = wrapper.find('[data-testid="ast-diff-status"]')

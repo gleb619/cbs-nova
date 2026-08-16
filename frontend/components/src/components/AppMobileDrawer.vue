@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { NavItem } from '../AppSidebar.vue'
 import { useSidebar } from '../composables/useSidebar'
 import AppNavItem from './AppNavItem.vue'
+import type { NavItem } from './AppSidebar.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -13,7 +13,7 @@ const props = withDefaults(
   {
     title: 'CBS Nova',
     linkComponent: 'a',
-    activeClass: 'bg-gray-800 text-white',
+    activeClass: 'bg-primary-500 text-white',
   },
 )
 
@@ -25,7 +25,7 @@ const { mobileOpen, closeMobile } = useSidebar()
     <Transition name="fade">
       <div
         v-if="mobileOpen"
-        class="fixed inset-0 z-30 bg-black/50 md:hidden"
+        class="fixed inset-0 z-30 bg-neutral-900/50 md:hidden"
         aria-hidden="true"
         @click="closeMobile"
       />
@@ -33,16 +33,16 @@ const { mobileOpen, closeMobile } = useSidebar()
     <Transition name="slide">
       <aside
         v-if="mobileOpen"
-        class="fixed top-0 left-0 z-40 h-full w-64 bg-gray-900 text-gray-100 flex flex-col md:hidden"
+        class="fixed top-0 left-0 z-40 h-full w-64 bg-neutral-800 text-neutral-50 flex flex-col md:hidden"
         role="dialog"
         aria-modal="true"
         aria-label="Navigation menu"
       >
-        <div class="flex items-center justify-between h-16 border-b border-gray-700 px-4">
+        <div class="flex items-center justify-between h-16 border-b border-neutral-700 px-4">
           <span class="text-white font-bold text-lg">{{ props.title }}</span>
           <button
             type="button"
-            class="text-gray-300 hover:text-white p-1 rounded"
+            class="text-neutral-300 hover:text-white p-1 rounded"
             aria-label="Close navigation menu"
             @click="closeMobile"
           >

@@ -56,9 +56,7 @@ const formatTimestamp = (ts: unknown): string => {
 
 <template>
   <div>
-    <div v-if="list.length === 0" class="text-sm text-gray-500">
-      No external calls captured.
-    </div>
+    <div v-if="list.length === 0" class="text-sm text-gray-500">No external calls captured.</div>
 
     <div v-else class="flex flex-col gap-2">
       <div class="flex items-center justify-between gap-2">
@@ -86,12 +84,10 @@ const formatTimestamp = (ts: unknown): string => {
           </span>
           <span class="text-gray-700 shrink-0">{{ String(item.call.target ?? '') }}</span>
           <span class="text-gray-400 shrink-0">—</span>
-          <span class="text-gray-900 break-words">{{
-            String(item.call.operation ?? '')
-          }}</span>
-          <span class="text-gray-500 shrink-0 ml-auto">[{{
-            formatTimestamp(item.call.timestamp)
-          }}]</span>
+          <span class="text-gray-900 break-words">{{ String(item.call.operation ?? '') }}</span>
+          <span class="text-gray-500 shrink-0 ml-auto"
+            >[{{ formatTimestamp(item.call.timestamp) }}]</span
+          >
           <span class="text-gray-400 shrink-0">·</span>
           <span class="text-gray-600 shrink-0">{{ item.node.kind }}: {{ item.node.name }}</span>
         </li>

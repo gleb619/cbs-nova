@@ -27,8 +27,12 @@ const helperSearch = useHelperSearch({
 })
 
 const draftName = computed(() => selectedConstruct.value?.name ?? '')
-const { body: draftBody, clearDraft, lastSavedAt: draftSavedAt, restoredFromDraft } =
-  useWorkbenchDraft(draftName)
+const {
+  body: draftBody,
+  clearDraft,
+  lastSavedAt: draftSavedAt,
+  restoredFromDraft,
+} = useWorkbenchDraft(draftName)
 
 watch(draftBody, () => {
   if (selectedConstruct.value) markDirty()

@@ -32,34 +32,35 @@ function mountLine(props: Record<string, unknown>) {
 }
 
 describe('DiffLine', () => {
-  it.each(KIND_CASES)(
-    'renders $kind with the correct prefix and colour classes',
-    ({ kind, prefix, classes }) => {
-      const wrapper = mountLine({ kind, text: 'line text' })
+  it.each(KIND_CASES)('renders $kind with the correct prefix and colour classes', ({
+    kind,
+    prefix,
+    classes,
+  }) => {
+    const wrapper = mountLine({ kind, text: 'line text' })
 
-      const root = wrapper.find('[data-testid="preview-diff-line"]')
-      expect(root.exists()).toBe(true)
-      expect(root.attributes('data-kind')).toBe(kind)
+    const root = wrapper.find('[data-testid="preview-diff-line"]')
+    expect(root.exists()).toBe(true)
+    expect(root.attributes('data-kind')).toBe(kind)
 
-      for (const cls of classes) {
-        expect(root.classes()).toContain(cls)
-      }
+    for (const cls of classes) {
+      expect(root.classes()).toContain(cls)
+    }
 
-      // Template order: lhs#, rhs#, gutter, text. Use the 3rd span directly
-      // so we don't depend on whitespace-equality (Vue Test Utils trims text()
-      // — a single space becomes '').
-      const gutter = wrapper.findAll('span')[2]
-      expect(gutter.exists()).toBe(true)
-      if (prefix.trim().length > 0) {
-        expect(gutter.text()).toBe(prefix)
-      } else {
-        // 'same' gutter is whitespace-only — text() collapses it.
-        expect(gutter.text()).toBe('')
-      }
+    // Template order: lhs#, rhs#, gutter, text. Use the 3rd span directly
+    // so we don't depend on whitespace-equality (Vue Test Utils trims text()
+    // — a single space becomes '').
+    const gutter = wrapper.findAll('span')[2]
+    expect(gutter.exists()).toBe(true)
+    if (prefix.trim().length > 0) {
+      expect(gutter.text()).toBe(prefix)
+    } else {
+      // 'same' gutter is whitespace-only — text() collapses it.
+      expect(gutter.text()).toBe('')
+    }
 
-      expect(wrapper.text()).toContain('line text')
-    },
-  )
+    expect(wrapper.text()).toContain('line text')
+  })
 
   it('renders lhs and rhs line numbers when provided', () => {
     const wrapper = mountLine({
@@ -70,9 +71,7 @@ describe('DiffLine', () => {
     })
 
     const spans = wrapper.findAll('span')
-    const numbers = spans
-      .map((s) => s.text())
-      .filter((t) => /^\d+$/.test(t))
+    const numbers = spans.map((s) => s.text()).filter((t) => /^\d+$/.test(t))
     expect(numbers).toEqual(['7', '12'])
   })
 

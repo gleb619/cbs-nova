@@ -36,7 +36,8 @@ const tabs = computed(() => [
 const showExplain = computed(() => props.mode === 'explain')
 const showDiff = computed(() => props.mode === 'explain' && props.output !== null)
 const showPreviewDiff = computed(
-  () => props.mode === 'preview' && props.baselineOutput !== null && props.baselineOutput !== undefined,
+  () =>
+    props.mode === 'preview' && props.baselineOutput !== null && props.baselineOutput !== undefined,
 )
 
 const isEmpty = computed(() => !props.output)
@@ -84,12 +85,13 @@ function onClearBaseline() {
       <MetadataTab v-else-if="activeTab === 'metadata'" :metadata="props.output?.metadata" />
       <ErrorsTab v-else-if="activeTab === 'errors'" :errors="props.output?.errors" />
       <CallTreeTab v-else-if="activeTab === 'callTree'" :tree="props.output?.astTree" />
-      <ExternalCallsTab
-        v-else-if="activeTab === 'externalCalls'"
-        :tree="props.output?.astTree"
-      />
+      <ExternalCallsTab v-else-if="activeTab === 'externalCalls'" :tree="props.output?.astTree" />
       <DryRunLogsTab v-else-if="activeTab === 'dryRunLogs'" :logs="props.output?.dryRunLogs" />
-      <div v-else-if="activeTab === 'diff' && showPreviewDiff" class="flex flex-col gap-3" data-testid="output-panel-diff">
+      <div
+        v-else-if="activeTab === 'diff' && showPreviewDiff"
+        class="flex flex-col gap-3"
+        data-testid="output-panel-diff"
+      >
         <PreviewDiffView :baseline="props.baselineOutput ?? null" :current="props.output" />
         <div class="flex justify-end">
           <button

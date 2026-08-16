@@ -194,10 +194,14 @@ describe('PreviewDiffView', () => {
     })
     const current = makeOutput({
       astTree: makeNode({
-        externalCalls: [{ type: 'http', target: 'api.example.com', operation: 'GET', timestamp: 3 }],
+        externalCalls: [
+          { type: 'http', target: 'api.example.com', operation: 'GET', timestamp: 3 },
+        ],
         children: [
           makeNode({
-            externalCalls: [{ type: 'database', target: 'audit-log', operation: 'insert', timestamp: 4 }],
+            externalCalls: [
+              { type: 'database', target: 'audit-log', operation: 'insert', timestamp: 4 },
+            ],
           }),
         ],
       }),

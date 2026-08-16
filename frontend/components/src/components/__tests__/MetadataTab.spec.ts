@@ -24,13 +24,7 @@ describe('MetadataTab', () => {
     const wrapper = mount(MetadataTab, { props: { execution, metadata: undefined } })
 
     const cells = wrapper.findAll('td').map((td) => td.text())
-    expect(cells).toEqual([
-      'corr-abc',
-      'wf-123',
-      'RUN',
-      'Process',
-      '2',
-    ])
+    expect(cells).toEqual(['corr-abc', 'wf-123', 'RUN', 'Process', '2'])
   })
 
   it('falls back to em-dash for missing correlationId and workflowId', () => {

@@ -100,7 +100,11 @@ function onCancelRun() {
 }
 
 const canCompareWithPrevious = computed(
-  () => mode.value === 'preview' && output.value !== null && status.value !== 'loading' && status.value !== 'running',
+  () =>
+    mode.value === 'preview' &&
+    output.value !== null &&
+    status.value !== 'loading' &&
+    status.value !== 'running',
 )
 
 async function onCompareWithPrevious() {
@@ -204,10 +208,14 @@ onMounted(() => {
       >
         <h2 class="text-sm font-semibold text-gray-700 mb-4">Faking external calls</h2>
         <p class="text-sm text-gray-600">
-          Preview requests no longer accept per-request mocks. To fake an external call's
-          response, configure it ahead of time via <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">cbs.nova.fakes.config.entries</code>
+          Preview requests no longer accept per-request mocks. To fake an external call's response,
+          configure it ahead of time via
+          <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">cbs.nova.fakes.config.entries</code>
           in <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">application.yml</code>
-          (entries shaped <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">{ type: helper, code: &lt;helperName&gt;, response: &lt;payload&gt; }</code>).
+          (entries shaped
+          <code class="text-xs bg-gray-100 px-1 py-0.5 rounded"
+            >{ type: helper, code: &lt;helperName&gt;, response: &lt;payload&gt; }</code
+          >).
         </p>
       </section>
     </div>

@@ -44,27 +44,31 @@ const STATUS_CASES: StatusCase[] = [
 ]
 
 describe('StatusIndicator', () => {
-  it.each(STATUS_CASES)(
-    'renders $status with the correct label, colour classes, and pulse animation',
-    ({ status, label, classes, animate }) => {
-      const wrapper = mount(StatusIndicator, { props: { status } })
+  it.each(
+    STATUS_CASES,
+  )('renders $status with the correct label, colour classes, and pulse animation', ({
+    status,
+    label,
+    classes,
+    animate,
+  }) => {
+    const wrapper = mount(StatusIndicator, { props: { status } })
 
-      const root = wrapper.find('[role="status"]')
-      expect(root.exists()).toBe(true)
-      expect(root.attributes('aria-label')).toBe(`Runner status: ${label}`)
-      expect(root.text()).toContain(label)
+    const root = wrapper.find('[role="status"]')
+    expect(root.exists()).toBe(true)
+    expect(root.attributes('aria-label')).toBe(`Runner status: ${label}`)
+    expect(root.text()).toContain(label)
 
-      for (const cls of classes) {
-        expect(root.classes()).toContain(cls)
-      }
+    for (const cls of classes) {
+      expect(root.classes()).toContain(cls)
+    }
 
-      const dot = root.find('span')
-      expect(dot.exists()).toBe(true)
-      if (animate) {
-        expect(dot.classes()).toContain('animate-pulse')
-      } else {
-        expect(dot.classes()).not.toContain('animate-pulse')
-      }
-    },
-  )
+    const dot = root.find('span')
+    expect(dot.exists()).toBe(true)
+    if (animate) {
+      expect(dot.classes()).toContain('animate-pulse')
+    } else {
+      expect(dot.classes()).not.toContain('animate-pulse')
+    }
+  })
 })

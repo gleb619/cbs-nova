@@ -137,3 +137,10 @@ node_modules
 /.kiro/
 backend/.intellijPlatform/
 *.hprof
+
+# Host app local tarball registry and build artifacts
+/app/ui/local-registry/*.tgz
+/app/ui/.nuxt
+/app/ui/.output
+/app/ui/node_modules
+/app/ui/.env

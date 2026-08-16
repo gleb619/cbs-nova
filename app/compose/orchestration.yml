@@ -1,0 +1,28 @@
+# Temporal workflow orchestration domain.
+# Uses the shared Postgres instance (see postgres.yml) for storage.
+
+services:
+  temporal:
+    image: temporalio/auto-setup:1.29.7
+    ports:
+      - "7233:7233"
+    environment:
+      DB: postgres12
+      DB_PORT: "5432"
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: ${TEMPORAL_DB_PASSWORD:-temporal}
+      POSTGRES_SEEDS: postgres
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development.yaml
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  temporal-ui:
+    image: temporalio/ui:2.52.0
+    ports:
+      - "8233:8080"
+    environment:
+      TEMPORAL_HOST: temporal
+      TEMPORAL_PORT: "7233"
+    depends_on:
+      - temporal

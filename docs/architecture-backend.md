@@ -493,12 +493,12 @@ small set of operational endpoints over HTTP. They are configured in
 ## Building the app image
 
 The `spring-app` image is built from the root of the repository using a
-multi-stage Dockerfile located at `backend/starter/Dockerfile`.
+multi-stage Dockerfile located at `app/Dockerfile`.
 
 Build the image manually and tag it as `cbs-nova:latest`:
 
 ```bash
-docker build -t cbs-nova:latest -f backend/starter/Dockerfile .
+docker build -t cbs-nova:latest -f app/Dockerfile .
 ```
 
 `docker compose build` will produce the same tag because the `spring-app`

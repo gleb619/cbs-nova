@@ -146,7 +146,12 @@ describe('useExecutions', () => {
 
       expect(page.value).toBe(1)
       expect(filters.value).toEqual({ status: 'Failed', entityName: 'foo' })
-      expect(api.list).toHaveBeenCalledWith({ status: 'Failed', entityName: 'foo', offset: 0, limit: 20 })
+      expect(api.list).toHaveBeenCalledWith({
+        status: 'Failed',
+        entityName: 'foo',
+        offset: 0,
+        limit: 20,
+      })
     })
   })
 

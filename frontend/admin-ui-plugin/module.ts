@@ -1,4 +1,4 @@
-import { defineNuxtModule, createResolver, addLayout, extendPages } from '@nuxt/kit'
+import { addLayout, createResolver, defineNuxtModule, extendPages, resolvePath } from '@nuxt/kit'
 
 // ---------------------------------------------------------------------------
 // @cbs/admin-ui-plugin
@@ -71,7 +71,7 @@ export default defineNuxtModule<ModuleOptions>({
     appName: 'CBS Nova Admin',
   },
 
-  setup(options, nuxt) {
+  async setup(options, nuxt) {
     const { resolve } = createResolver(import.meta.url)
 
     // -----------------------------------------------------------------------
@@ -80,13 +80,13 @@ export default defineNuxtModule<ModuleOptions>({
     // them via useRuntimeConfig() without any extra setup in the host.
     // -----------------------------------------------------------------------
     nuxt.options.runtimeConfig.backendBaseUrl =
-      nuxt.options.runtimeConfig.backendBaseUrl || options.backendBaseUrl!
+      nuxt.options.runtimeConfig.backendBaseUrl || options.backendBaseUrl || 'http://localhost:8090'
     nuxt.options.runtimeConfig.backendApiKey =
-      nuxt.options.runtimeConfig.backendApiKey || options.backendApiKey!
+      nuxt.options.runtimeConfig.backendApiKey || options.backendApiKey || ''
     nuxt.options.runtimeConfig.backendTimeoutMs =
       nuxt.options.runtimeConfig.backendTimeoutMs || options.backendTimeoutMs || 10000
     nuxt.options.runtimeConfig.public.appName =
-      nuxt.options.runtimeConfig.public.appName || options.appName!
+      nuxt.options.runtimeConfig.public.appName || options.appName || 'CBS Nova Admin'
 
     // -----------------------------------------------------------------------
     // Global stylesheet (Tailwind base/components/utilities + body tokens)
@@ -96,10 +96,12 @@ export default defineNuxtModule<ModuleOptions>({
     // -----------------------------------------------------------------------
     // Component resolution — plugin-local components and @cbs/components SFCs
     // -----------------------------------------------------------------------
-    nuxt.options.components = nuxt.options.components || []
-    ;(nuxt.options.components as Array<{ path: string; pathPrefix: boolean }>).push(
+    nuxt.options.components = nuxt.options.components || { dirs: [] }
+    nuxt.options.components.dirs = nuxt.options.components.dirs || []
+    const componentsPackageDir = await resolvePath('@cbs/components/src/components')
+    nuxt.options.components.dirs.push(
       { path: resolve('./app/components'), pathPrefix: true },
-      { path: resolve('../components/src/components'), pathPrefix: true },
+      { path: componentsPackageDir, pathPrefix: true },
     )
 
     // -----------------------------------------------------------------------

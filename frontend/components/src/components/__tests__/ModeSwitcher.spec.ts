@@ -50,7 +50,9 @@ describe('ModeSwitcher', () => {
     }
   })
 
-  it.each<RunnerMode>(EXPECTED_MODES)('emits update:modelValue with %s when its button is clicked', async (mode) => {
+  it.each<RunnerMode>(
+    EXPECTED_MODES,
+  )('emits update:modelValue with %s when its button is clicked', async (mode) => {
     const wrapper = mountSwitcher('run')
     const label = EXPECTED_LABELS[EXPECTED_MODES.indexOf(mode)]
     const button = findModeButton(wrapper, label)

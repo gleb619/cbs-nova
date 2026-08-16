@@ -24,7 +24,8 @@ See [`DEVELOPING.md`](DEVELOPING.md) for per-platform install instructions and t
 
 ## Quickstart
 
-`docker compose up` starts the full containerized stack today: Postgres / Keycloak / Bugsink / Temporal / `spring-app` (built from [`backend/starter/Dockerfile`](backend/starter/Dockerfile)), with the backend reachable on host port 8090.
+`docker compose up` starts the full containerized stack today: Postgres / Keycloak / Bugsink / Temporal / 
+`spring-app` (built from [`app/Dockerfile`](app/Dockerfile)), with the backend reachable on host port 8090.
 
 For local development with hot reload, [`Makefile`](Makefile) target `dev` runs [`scripts/dev.sh`](scripts/dev.sh), which starts the backend and frontend in parallel on the host. It assumes the Compose infrastructure is already up. Because the containerized `spring-app` also binds host port 8090, start only the infrastructure services first to avoid the collision, then run `make dev`:
 

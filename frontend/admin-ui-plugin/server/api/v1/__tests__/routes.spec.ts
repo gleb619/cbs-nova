@@ -79,9 +79,12 @@ describe('dsl/definitions.get', () => {
     // docs/plans/T182-fix-definitions-introspection-wiring.md.
     expect(result).toEqual(aggregated)
     expect(result).toHaveLength(4)
-    expect((result as Array<{ type: string }>).map((d) => d.type).sort()).toEqual(
-      ['function', 'helper', 'process', 'transaction'],
-    )
+    expect((result as Array<{ type: string }>).map((d) => d.type).sort()).toEqual([
+      'function',
+      'helper',
+      'process',
+      'transaction',
+    ])
   })
 })
 

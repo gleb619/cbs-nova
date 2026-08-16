@@ -52,7 +52,8 @@ function nextPage() {
       data-testid="execution-pagination"
     >
       <span class="text-sm text-neutral-700">
-        Page {{ page }} of {{ pageCount }} ({{ total }} total)
+        Page {{ page }} of {{ pageCount }} ({{ total }}
+        total)
       </span>
       <div class="flex items-center gap-2">
         <button

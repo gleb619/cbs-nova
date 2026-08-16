@@ -78,10 +78,7 @@ describe('useWorkbenchDraft', () => {
   })
 
   it('restores body on setup from an existing fresh draft and flags restoredFromDraft', () => {
-    window.localStorage.setItem(
-      KEY,
-      JSON.stringify({ body: 'restored body', savedAt: Date.now() }),
-    )
+    window.localStorage.setItem(KEY, JSON.stringify({ body: 'restored body', savedAt: Date.now() }))
 
     const { body, dirty, lastSavedAt, restoredFromDraft } = useWorkbenchDraft('c1')
 
@@ -113,10 +110,7 @@ describe('useWorkbenchDraft', () => {
   })
 
   it('clearDraft removes the localStorage key and resets state', async () => {
-    window.localStorage.setItem(
-      KEY,
-      JSON.stringify({ body: 'restored body', savedAt: Date.now() }),
-    )
+    window.localStorage.setItem(KEY, JSON.stringify({ body: 'restored body', savedAt: Date.now() }))
 
     const { body, dirty, lastSavedAt, restoredFromDraft, clearDraft } = useWorkbenchDraft('c1')
     expect(body.value).toBe('restored body')
@@ -174,8 +168,7 @@ describe('useWorkbenchDraft', () => {
 
     try {
       expect(() => {
-        const { body, dirty, lastSavedAt, restoredFromDraft, clearDraft } =
-          useWorkbenchDraft('c1')
+        const { body, dirty, lastSavedAt, restoredFromDraft, clearDraft } = useWorkbenchDraft('c1')
 
         expect(body.value).toBe('')
         expect(dirty.value).toBe(false)

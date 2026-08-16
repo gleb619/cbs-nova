@@ -14,9 +14,11 @@ describe('useHelperSearch', () => {
   })
 
   it('executes a search and stores results', async () => {
-    const fetch = vi.fn().mockResolvedValue([
-      { name: 'H1', type: 'helper', description: 'd', inputType: 'String', outputType: 'Number' },
-    ])
+    const fetch = vi
+      .fn()
+      .mockResolvedValue([
+        { name: 'H1', type: 'helper', description: 'd', inputType: 'String', outputType: 'Number' },
+      ])
 
     const { filters, execute, results, isLoading } = useHelperSearch({ fetch, debounceMs: 0 })
 

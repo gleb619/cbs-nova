@@ -165,9 +165,7 @@ describe('ExternalCallsTab', () => {
       tree: makeNode({
         name: 'OneCall',
         kind: 'PROCESS',
-        externalCalls: [
-          { type: 'http', target: 'a', operation: 'GET', timestamp: 1 },
-        ],
+        externalCalls: [{ type: 'http', target: 'a', operation: 'GET', timestamp: 1 }],
       }),
     })
 

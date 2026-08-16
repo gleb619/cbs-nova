@@ -108,9 +108,15 @@ function rowTypeClass(resultType: string): string {
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-800">
-          <tr v-for="result in results" :key="`${result.name}-${result.type}`" class="hover:bg-gray-800">
+          <tr
+            v-for="result in results"
+            :key="`${result.name}-${result.type}`"
+            class="hover:bg-gray-800"
+          >
             <td class="px-2 py-2 align-top">
-              <div class="text-gray-100 font-medium truncate" :title="result.name">{{ result.name }}</div>
+              <div class="text-gray-100 font-medium truncate" :title="result.name">
+                {{ result.name }}
+              </div>
               <div class="text-xs text-gray-500 mt-0.5 line-clamp-2" :title="result.description">
                 {{ result.description || '—' }}
               </div>
@@ -124,7 +130,8 @@ function rowTypeClass(resultType: string): string {
               </span>
             </td>
             <td class="px-2 py-2 align-top hidden lg:table-cell text-xs text-gray-400">
-              {{ result.inputType || '—' }} → {{ result.outputType || '—' }}
+              {{ result.inputType || '—' }}
+              → {{ result.outputType || '—' }}
             </td>
           </tr>
         </tbody>

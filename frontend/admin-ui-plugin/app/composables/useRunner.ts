@@ -146,7 +146,9 @@ export function useRunner() {
       ? (node.children.map((c) => asCallNode(c)).filter(Boolean) as RunnerOutput['astTree'][])
       : []
     const externalCalls = Array.isArray(node.externalCalls)
-      ? (node.externalCalls.filter((c) => c && typeof c === 'object') as Array<Record<string, unknown>>)
+      ? (node.externalCalls.filter((c) => c && typeof c === 'object') as Array<
+          Record<string, unknown>
+        >)
       : []
     return {
       name: typeof node.name === 'string' ? node.name : '',
@@ -164,7 +166,12 @@ export function useRunner() {
     return v
       .filter((e) => e && typeof e === 'object')
       .map((e) => {
-        const log = e as { timestamp?: unknown; level?: unknown; logger?: unknown; message?: unknown }
+        const log = e as {
+          timestamp?: unknown
+          level?: unknown
+          logger?: unknown
+          message?: unknown
+        }
         return {
           timestamp: typeof log.timestamp === 'string' ? log.timestamp : '',
           level: typeof log.level === 'string' ? log.level : '',
@@ -183,7 +190,9 @@ export function useRunner() {
           ? m.executionDurationMs
           : null,
       memoryUsedBytes:
-        typeof m.memoryUsedBytes === 'number' && Number.isFinite(m.memoryUsedBytes) ? m.memoryUsedBytes : null,
+        typeof m.memoryUsedBytes === 'number' && Number.isFinite(m.memoryUsedBytes)
+          ? m.memoryUsedBytes
+          : null,
       callCounts: asNumericMap(m.callCounts),
       externalCallCounts: asNumericMap(m.externalCallCounts),
     }
