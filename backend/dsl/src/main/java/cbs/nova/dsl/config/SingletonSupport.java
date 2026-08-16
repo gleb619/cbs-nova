@@ -136,16 +136,9 @@ public interface SingletonSupport {
         return (T) instance;
       }
 
-      synchronized (instances) {
-        instance = instances.get(factory.kind());
-        if (instance != null) {
-          return (T) instance;
-        }
-
-        T created = factory.get();
-        instances.putIfAbsent(factory.kind(), created);
-        return created;
-      }
+      T created = factory.get();
+      instances.putIfAbsent(factory.kind(), created);
+      return (T) instances.get(factory.kind());
     }
   }
 }
