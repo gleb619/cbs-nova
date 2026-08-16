@@ -1,0 +1,31 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: cbs-nova-server
+  datasource:
+    url: jdbc:h2:mem:serverdb
+    driver-class-name: org.h2.Driver
+    username: sa
+  flyway:
+    enabled: false
+
+dsl:
+  worker:
+    enabled: false
+  reload:
+    enabled: false
+
+temporal:
+  connection-target: ${TEMPORAL_ADDRESS:127.0.0.1:7233}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
