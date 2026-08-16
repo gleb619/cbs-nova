@@ -6,6 +6,7 @@ import cbs.nova.starter.models.ErrorResponse;
 import cbs.nova.starter.models.ExecutionDto;
 import cbs.nova.starter.models.ExecutionListResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -49,13 +50,16 @@ public class DslExecutionsResource {
   public ResponseEntity<ExecutionListResponse> list(
           @RequestParam(name = "processName", required = false) String processName,
           @RequestParam(name = "status", required = false) String status,
-          @RequestParam(name = "limit", defaultValue = "50") int limit) {
+          @Parameter(description = "Maximum number of runs to return", schema = @Schema(type = "integer", defaultValue = "50", maximum = "500")) @RequestParam(name = "limit", defaultValue = "50") int limit,
+          @Parameter(description = "Number of matching runs to skip before returning results", schema = @Schema(type = "integer", defaultValue = "0")) @RequestParam(name = "offset", defaultValue = "0") int offset) {
     int pageSize = clampLimit(limit);
+    int skip = clampOffset(offset);
     List<DslRun> filtered = findRuns(processName).stream()
             .filter(run -> status == null || status.equals(run.status()))
             .toList();
     int total = filtered.size();
     List<ExecutionDto> items = filtered.stream()
+            .skip(skip)
             .limit(pageSize)
             .map(ExecutionDto::from)
             .toList();
@@ -86,5 +90,9 @@ public class DslExecutionsResource {
 
   private static int clampLimit(int limit) {
     return Math.max(1, Math.min(limit, MAX_LIMIT));
+  }
+
+  private static int clampOffset(int offset) {
+    return Math.max(0, offset);
   }
 }

@@ -116,6 +116,64 @@ class DslExecutionsResourceTest {
   }
 
   @Test
+  void offsetOnlySkipsRowsBeforeApplyingLimit() throws Exception {
+    repository.save(run("run-1", "LoanDisbursement", "COMPLETED", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", "RUN"));
+    repository.save(run("run-2", "LoanDisbursement", "COMPLETED", "2026-08-13T10:01:00Z",
+            "2026-08-13T10:01:05Z", "RUN"));
+    repository.save(run("run-3", "LoanDisbursement", "COMPLETED", "2026-08-13T10:02:00Z",
+            "2026-08-13T10:02:05Z", "RUN"));
+
+    mockMvc.perform(get("/api/executions").param("offset", "2"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(3))
+            .andExpect(jsonPath("$.items.length()").value(1));
+  }
+
+  @Test
+  void offsetAndLimitCombineToReturnWindow() throws Exception {
+    repository.save(run("run-1", "LoanDisbursement", "COMPLETED", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", "RUN"));
+    repository.save(run("run-2", "LoanDisbursement", "COMPLETED", "2026-08-13T10:01:00Z",
+            "2026-08-13T10:01:05Z", "RUN"));
+    repository.save(run("run-3", "LoanDisbursement", "COMPLETED", "2026-08-13T10:02:00Z",
+            "2026-08-13T10:02:05Z", "RUN"));
+
+    mockMvc.perform(get("/api/executions")
+            .param("offset", "1")
+            .param("limit", "1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(3))
+            .andExpect(jsonPath("$.items.length()").value(1));
+  }
+
+  @Test
+  void offsetBeyondTotalReturnsEmptyItemsWithCorrectTotal() throws Exception {
+    repository.save(run("run-1", "LoanDisbursement", "COMPLETED", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", "RUN"));
+    repository.save(run("run-2", "LoanDisbursement", "COMPLETED", "2026-08-13T10:01:00Z",
+            "2026-08-13T10:01:05Z", "RUN"));
+
+    mockMvc.perform(get("/api/executions").param("offset", "10"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(2))
+            .andExpect(jsonPath("$.items.length()").value(0));
+  }
+
+  @Test
+  void negativeOffsetIsClampedToZero() throws Exception {
+    repository.save(run("run-1", "LoanDisbursement", "COMPLETED", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", "RUN"));
+    repository.save(run("run-2", "LoanDisbursement", "COMPLETED", "2026-08-13T10:01:00Z",
+            "2026-08-13T10:01:05Z", "RUN"));
+
+    mockMvc.perform(get("/api/executions").param("offset", "-5"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(2))
+            .andExpect(jsonPath("$.items.length()").value(2));
+  }
+
+  @Test
   void getByKnownIdReturnsMappedExecutionDto() throws Exception {
     repository.save(run("run-abc", "LoanDisbursement", "STALE", "2026-08-13T10:00:00Z",
             "2026-08-13T10:00:05Z", null));
