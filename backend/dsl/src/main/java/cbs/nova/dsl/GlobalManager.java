@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @RequiredArgsConstructor
 public final class GlobalManager {
 
-  private static volatile GlobalManager INSTANCE;
+  private static final AtomicReference<GlobalManager> INSTANCE = new AtomicReference<>();
 
   private final ProcessManager processManager;
   private final TransactionManager transactionManager;
@@ -41,14 +41,15 @@ public final class GlobalManager {
   private final CompensationRegistry compensationRegistry;
 
   public static @NonNull GlobalManager globalManager() {
-    if (INSTANCE == null) {
-      synchronized (GlobalManager.class) {
-        if (INSTANCE == null) {
-          INSTANCE = DslConfig.dslConfig().globalManager();
-        }
+    var instance = INSTANCE.get();
+    if (instance == null) {
+      var created = DslConfig.dslConfig().globalManager();
+      if (INSTANCE.compareAndSet(null, created)) {
+        return created;
       }
+      return INSTANCE.get();
     }
-    return INSTANCE;
+    return instance;
   }
 
   public void registerProcess(@NonNull ProcessDslObject process) {
@@ -329,7 +330,7 @@ public final class GlobalManager {
   }
 
   public void resetForTests() {
-    INSTANCE = null;
+    INSTANCE.set(null);
     DslConfig.dslConfig().temporalProcessLauncher().replace(null);
     DslConfig.dslConfig().transactionInvoker().replace(null);
   }
