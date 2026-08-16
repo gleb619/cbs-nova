@@ -45,6 +45,39 @@ describe('useExecutionsApi', () => {
     expect(result).toEqual(response)
   })
 
+  it('list({ offset, limit }) serializes paging args as query params', async () => {
+    fetchMock.mockResolvedValueOnce({ items: [], total: 0 })
+
+    const api = useExecutionsApi()
+    await api.list({ offset: 40, limit: 20 })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/executions', {
+      query: { offset: 40, limit: 20 },
+    })
+  })
+
+  it('list({ offset: 0, limit }) still forwards an explicit zero offset', async () => {
+    fetchMock.mockResolvedValueOnce({ items: [], total: 0 })
+
+    const api = useExecutionsApi()
+    await api.list({ offset: 0, limit: 20 })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/executions', {
+      query: { offset: 0, limit: 20 },
+    })
+  })
+
+  it('list(filters, offset, limit) merges filters and paging args in the query', async () => {
+    fetchMock.mockResolvedValueOnce({ items: [], total: 0 })
+
+    const api = useExecutionsApi()
+    await api.list({ status: 'Completed', entityName: 'foo', offset: 20, limit: 10 })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/executions', {
+      query: { status: 'Completed', entityName: 'foo', offset: 20, limit: 10 },
+    })
+  })
+
   it("get(id) calls GET /api/v1/executions/{id}", async () => {
     const response: ExecutionDetail = {
       id: 'abc-123',

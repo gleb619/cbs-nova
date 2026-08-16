@@ -3,7 +3,7 @@ import type { H3Event } from 'h3'
 export async function proxyToBackend<T>(
   event: H3Event,
   path: string,
-  options: { method?: string; body?: unknown } = {},
+  options: { method?: string; body?: unknown; query?: Record<string, unknown> } = {},
 ): Promise<T> {
   const { baseUrl, apiKey, timeoutMs } = useBackendConfig()
   const url = `${baseUrl.replace(/\/$/, '')}${path}`
@@ -26,6 +26,7 @@ export async function proxyToBackend<T>(
       method: options.method ?? 'GET',
       headers,
       body: options.body,
+      query: options.query,
       timeout: timeoutMs,
     })) as T
   } catch (err: unknown) {

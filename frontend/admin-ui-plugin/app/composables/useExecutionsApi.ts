@@ -2,10 +2,10 @@ import type { Execution, ExecutionDetail } from '~/types'
 
 export function useExecutionsApi() {
   async function list(
-    filters?: Record<string, unknown>,
+    params?: Record<string, unknown>,
   ): Promise<Execution[] | { items?: Execution[]; total?: number }> {
-    if (filters) {
-      return $fetch('/api/v1/executions', { query: filters }) as
+    if (params && Object.keys(params).length > 0) {
+      return $fetch('/api/v1/executions', { query: params }) as
         | Execution[]
         | { items?: Execution[]; total?: number }
     }

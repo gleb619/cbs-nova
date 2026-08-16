@@ -27,6 +27,7 @@ export function useExecutions() {
   const filters = ref<ExecutionFilters>({})
   const total = ref<number>(0)
   const page = ref<number>(1)
+  const pageSize = 20
   const loading = ref<boolean>(false)
   const selectedExecution = ref<ExecutionDetail | null>(null)
 
@@ -189,7 +190,8 @@ export function useExecutions() {
   async function loadExecutions() {
     loading.value = true
     try {
-      const result = await api.list({ ...filters.value, page: page.value })
+      const offset = (page.value - 1) * pageSize
+      const result = await api.list({ ...filters.value, offset, limit: pageSize })
       if (Array.isArray(result)) {
         executions.value = result
         total.value = result.length
@@ -268,6 +270,7 @@ export function useExecutions() {
     filters,
     total,
     page,
+    pageSize,
     loading,
     selectedExecution,
     loadExecutions,

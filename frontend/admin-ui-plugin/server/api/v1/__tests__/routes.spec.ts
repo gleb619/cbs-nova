@@ -17,10 +17,12 @@ vi.mock('~/server/utils/httpClient', () => ({
 type RouterParamMap = Record<string, string | undefined>
 let routerParams: RouterParamMap = {}
 let bodyValue: unknown = {}
+let queryValue: Record<string, unknown> = {}
 
 const g = globalThis as Record<string, unknown>
 g.getRouterParam = (_event: unknown, name: string) => routerParams[name]
 g.readBody = async (_event: unknown) => bodyValue
+g.getQuery = (_event: unknown) => queryValue
 
 // Import after the mock + globals are in place.
 const healthHandler = (await import('../health.get')).default
@@ -41,6 +43,7 @@ beforeEach(() => {
   proxyToBackendMock.mockResolvedValue({ ok: true })
   routerParams = {}
   bodyValue = {}
+  queryValue = {}
 })
 
 describe('health.get', () => {
@@ -153,6 +156,46 @@ describe('executions/index.get', () => {
   it('GETs /api/executions with no body and no opts', async () => {
     await executionsIndexHandler(fakeEvent)
     expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/executions')
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+
+  it('forwards offset and limit query params to the backend', async () => {
+    queryValue = { offset: '40', limit: '20' }
+
+    await executionsIndexHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/executions', {
+      query: { offset: '40', limit: '20' },
+    })
+  })
+
+  it('forwards only offset when limit is absent', async () => {
+    queryValue = { offset: '60' }
+
+    await executionsIndexHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/executions', {
+      query: { offset: '60' },
+    })
+  })
+
+  it('forwards only limit when offset is absent', async () => {
+    queryValue = { limit: '100' }
+
+    await executionsIndexHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/executions', {
+      query: { limit: '100' },
+    })
+  })
+
+  it('omits unrelated query params and does not call the backend with an empty query object', async () => {
+    queryValue = { foo: 'bar' }
+
+    await executionsIndexHandler(fakeEvent)
+
     expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/executions')
     expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
   })

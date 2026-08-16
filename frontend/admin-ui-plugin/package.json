@@ -13,6 +13,7 @@
     "generate": "nuxt generate --config nuxt.config.dev.ts",
     "preview": "nuxt preview",
     "test": "vitest run",
+    "lint": "biome lint .",
     "test:watch": "vitest"
   },
   "dependencies": {

@@ -41,7 +41,7 @@ describe('useExecutions', () => {
       const { loadExecutions, executions, total } = useExecutions()
       await loadExecutions()
 
-      expect(api.list).toHaveBeenCalledWith({ page: 1 })
+      expect(api.list).toHaveBeenCalledWith({ offset: 0, limit: 20 })
       expect(executions.value).toEqual(arr)
       expect(total.value).toBe(1)
     })
@@ -68,7 +68,7 @@ describe('useExecutions', () => {
       expect(total.value).toBe(42)
     })
 
-    it('toggles loading on and off and passes current filters and page', async () => {
+    it('toggles loading on and off and passes current filters and page as offset/limit', async () => {
       const api = installApiMock({ list: vi.fn().mockResolvedValueOnce([]) })
 
       const { loadExecutions, filters, page, loading } = useExecutions()
@@ -80,7 +80,7 @@ describe('useExecutions', () => {
       await p
       expect(loading.value).toBe(false)
 
-      expect(api.list).toHaveBeenCalledWith({ status: 'Completed', page: 3 })
+      expect(api.list).toHaveBeenCalledWith({ status: 'Completed', offset: 40, limit: 20 })
     })
 
     it('on error clears executions and resets total to 0', async () => {
@@ -146,12 +146,12 @@ describe('useExecutions', () => {
 
       expect(page.value).toBe(1)
       expect(filters.value).toEqual({ status: 'Failed', entityName: 'foo' })
-      expect(api.list).toHaveBeenCalledWith({ status: 'Failed', entityName: 'foo', page: 1 })
+      expect(api.list).toHaveBeenCalledWith({ status: 'Failed', entityName: 'foo', offset: 0, limit: 20 })
     })
   })
 
   describe('setPage', () => {
-    it('updates page and reloads', async () => {
+    it('updates page and reloads with offset derived from page size', async () => {
       const api = installApiMock({ list: vi.fn().mockResolvedValueOnce([]) })
 
       const { setPage, page } = useExecutions()
@@ -159,7 +159,7 @@ describe('useExecutions', () => {
       await setPage(5)
 
       expect(page.value).toBe(5)
-      expect(api.list).toHaveBeenCalledWith({ page: 5 })
+      expect(api.list).toHaveBeenCalledWith({ offset: 80, limit: 20 })
     })
   })
 
@@ -416,7 +416,7 @@ describe('useExecutions', () => {
       // onUnmounted only fires inside a component instance — call stopAllStalePolling
       // via the public surface instead, since the unmount branch exercises
       // exactly that function (and the existing useExecutions tests do the
-      // same for the legacy startPolling path).
+      // same for the existing startPolling path).
       const list = [
         {
           id: 'stale-5',
