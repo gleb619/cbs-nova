@@ -2,11 +2,11 @@ package cbs.nova.starter.services;
 
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.process.DslTemporalProcess;
 import cbs.nova.dsl.process.DslTemporalProcessRequest;
+import cbs.nova.starter.converter.MapInputConverter;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.worker.Worker;
@@ -24,12 +24,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TemporalDslService {
 
   private final WorkflowClient workflowClient;
+  private final MapInputConverter mapInputConverter;
   private final Set<String> registeredQueues = ConcurrentHashMap.newKeySet();
   private volatile WorkerFactory workerFactory;
   private volatile boolean started;
 
-  public TemporalDslService(WorkflowClient workflowClient) {
+  public TemporalDslService(WorkflowClient workflowClient,
+          MapInputConverter mapInputConverter) {
     this.workflowClient = workflowClient;
+    this.mapInputConverter = mapInputConverter;
   }
 
   private WorkerFactory workerFactory() {
@@ -131,12 +134,12 @@ public class TemporalDslService {
   private Object prepareInput(Object input, Class<?> inputType) {
     if (inputType != null) {
       if (input instanceof MapInput(Map<String, Object> values)) {
-        return DslConfig.dslConfig().mapInputConverter().convert(values, inputType);
+        return mapInputConverter.convert(values, inputType);
       }
       if (input instanceof Map<?, ?> map) {
         @SuppressWarnings("unchecked")
         Map<String, Object> parameters = (Map<String, Object>) map;
-        return DslConfig.dslConfig().mapInputConverter().convert(parameters, inputType);
+        return mapInputConverter.convert(parameters, inputType);
       }
     }
     return input;

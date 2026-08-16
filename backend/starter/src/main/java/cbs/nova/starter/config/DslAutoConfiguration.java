@@ -11,8 +11,10 @@ import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dsl.transaction.TransactionInvoker;
 import cbs.nova.dsl.utils.ExpressionEvaluator;
 import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.converter.MapInputConverter;
 import cbs.nova.starter.expression.MvelExpressionEvaluator;
 import cbs.nova.starter.resolver.SpringBeanHelperInstanceResolver;
+import io.avaje.jsonb.Jsonb;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -21,6 +23,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
+import tools.jackson.databind.ObjectMapper;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -68,6 +71,12 @@ public class DslAutoConfiguration {
   @ConditionalOnMissingBean(ExpressionEvaluator.class)
   public ExpressionEvaluator expressionEvaluator() {
     return new MvelExpressionEvaluator();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(MapInputConverter.class)
+  public MapInputConverter mapInputConverter(ObjectMapper objectMapper) {
+    return new MapInputConverter(Jsonb.builder().build(), objectMapper);
   }
 
   @Bean

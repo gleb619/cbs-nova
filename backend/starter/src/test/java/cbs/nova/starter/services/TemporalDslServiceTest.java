@@ -15,6 +15,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.process.DslTemporalProcess;
 import cbs.nova.dsl.process.DslTemporalProcessRequest;
+import cbs.nova.starter.converter.MapInputConverter;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.worker.Worker;
@@ -61,7 +62,8 @@ class TemporalDslServiceTest {
       when(client.newWorkflowStub(eq(TestProcess.class), any(WorkflowOptions.class)))
               .thenReturn(impl);
 
-      TemporalDslService service = new TemporalDslService(client);
+      TemporalDslService service = new TemporalDslService(client,
+              mock(MapInputConverter.class));
       String result = service.execute(name, "payload", String.class);
 
       assertThat(result).startsWith("ok:");
@@ -76,7 +78,8 @@ class TemporalDslServiceTest {
   @Test
   void executeRejectsUnknownProcessCode() {
     WorkflowClient client = mock(WorkflowClient.class);
-    TemporalDslService service = new TemporalDslService(client);
+    TemporalDslService service = new TemporalDslService(client,
+            mock(MapInputConverter.class));
 
     String missing = unique("missing");
     assertThatThrownBy(() -> service.execute(missing, "anything", String.class))
@@ -108,7 +111,8 @@ class TemporalDslServiceTest {
       when(client.newWorkflowStub(eq(TestProcess.class), any(WorkflowOptions.class)))
               .thenReturn(impl);
 
-      TemporalDslService service = new TemporalDslService(client);
+      TemporalDslService service = new TemporalDslService(client,
+              mock(MapInputConverter.class));
       assertThatThrownBy(() -> service.execute(name, "any", String.class))
               .isInstanceOf(DslExecutionException.class)
               .hasMessageContaining("DSL workflow " + name + " failed: inner-detail")
@@ -141,7 +145,8 @@ class TemporalDslServiceTest {
       when(client.newWorkflowStub(eq(TestProcess.class), any(WorkflowOptions.class)))
               .thenReturn(impl);
 
-      TemporalDslService service = new TemporalDslService(client);
+      TemporalDslService service = new TemporalDslService(client,
+              mock(MapInputConverter.class));
       assertThatThrownBy(() -> service.execute(name, "any", String.class))
               .isInstanceOf(DslExecutionException.class)
               .hasMessageContaining("DSL workflow " + name + " failed: original")

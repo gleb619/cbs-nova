@@ -1,33 +1,31 @@
-package cbs.nova.dsl.converter;
+package cbs.nova.starter.converter;
 
 import cbs.nova.dsl.model.MapInput;
+import io.avaje.jsonb.Json;
+import io.avaje.jsonb.JsonType;
+import io.avaje.jsonb.Jsonb;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import tools.jackson.databind.JavaType;
+import tools.jackson.databind.ObjectMapper;
 
-import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.RecordComponent;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @RequiredArgsConstructor
-public class MapInputConverter {
+public final class MapInputConverter {
 
-  private final AvajeMapConverter avajeMapConverter;
+  private final Jsonb jsonb;
+  private final ObjectMapper objectMapper;
 
-  // TODO: replace with a correspondent bean injection instead
-  @Deprecated(forRemoval = true)
-  public MapInputConverter() {
-    this(AvajeMapConverter.create());
-  }
+  private final Map<Class<?>, JsonType<?>> adapterCache = new ConcurrentHashMap<>();
 
-  public @Nullable Object convert(@Nullable Object value, @NonNull Type targetType) {
+  public @Nullable Object convert(@Nullable Object value,
+          java.lang.reflect.@NonNull Type targetType) {
     if (value == null) {
       return null;
     }
@@ -40,11 +38,7 @@ public class MapInputConverter {
       return convertToClass(value, targetClass);
     }
 
-    if (targetType instanceof ParameterizedType parameterized) {
-      return convertToParameterized(value, parameterized);
-    }
-
-    return value;
+    return convertToGeneric(value, targetType);
   }
 
   private Object toMapInput(Object value) {
@@ -94,21 +88,18 @@ public class MapInputConverter {
       return value;
     }
 
-    throw new IllegalArgumentException(
-            "Cannot convert " + value.getClass().getName() + " to " + target.getName());
+    return convertWithJackson(value, target);
   }
 
-  private Object convertToParameterized(Object value, ParameterizedType parameterized) {
-    Type rawType = parameterized.getRawType();
-    if (!(rawType instanceof Class<?> rawClass)) {
-      return value;
-    }
+  private Object convertToGeneric(Object value, java.lang.reflect.Type targetType) {
+    JavaType javaType = objectMapper.constructType(targetType);
+    Class<?> rawClass = javaType.getRawClass();
 
     if (List.class.isAssignableFrom(rawClass) && value instanceof List<?> list) {
-      Type elementType = parameterized.getActualTypeArguments()[0];
+      JavaType elementType = javaType.getContentType();
       List<Object> result = new ArrayList<>(list.size());
       for (Object element : list) {
-        result.add(convert(element, elementType));
+        result.add(objectMapper.convertValue(element, elementType));
       }
       return result;
     }
@@ -117,41 +108,29 @@ public class MapInputConverter {
       return value;
     }
 
-    return convertToClass(value, rawClass);
+    if (Collection.class.isAssignableFrom(rawClass) && value instanceof Collection) {
+      return value;
+    }
+
+    return objectMapper.convertValue(value, javaType);
   }
 
-  private Object convertRecord(Object value, Class<?> recordClass) {
+  private Object convertRecord(Object value, Class<?> target) {
     if (!(value instanceof Map<?, ?> source)) {
       throw new IllegalArgumentException(
-              "Record " + recordClass.getName() + " requires a Map input, got "
+              "Record " + target.getName() + " requires a Map input, got "
                       + value.getClass().getName());
     }
 
-    if (avajeMapConverter.supports(recordClass)) {
-      @SuppressWarnings("unchecked")
-      Map<String, Object> typed = (Map<String, Object>) source;
-      return avajeMapConverter.fromMap(typed, recordClass);
+    @SuppressWarnings("unchecked")
+    Map<String, Object> typed = (Map<String, Object>) source;
+
+    if (target.isAnnotationPresent(Json.class)) {
+      JsonType<?> adapter = adapterCache.computeIfAbsent(target, jsonb::type);
+      return adapter.fromObject(typed);
     }
 
-    RecordComponent[] components = recordClass.getRecordComponents();
-    Object[] args = new Object[components.length];
-    for (int i = 0; i < components.length; i++) {
-      RecordComponent component = components[i];
-      Object raw = source.get(component.getName());
-      args[i] = convert(raw, component.getGenericType());
-    }
-
-    try {
-      Class<?>[] componentTypes = Arrays.stream(components)
-              .map(RecordComponent::getType)
-              .toArray(Class[]::new);
-      Constructor<?> ctor = recordClass.getDeclaredConstructor(componentTypes);
-      ctor.setAccessible(true);
-      return ctor.newInstance(args);
-    } catch (ReflectiveOperationException e) {
-      throw new IllegalArgumentException(
-              "Failed to instantiate record " + recordClass.getName(), e);
-    }
+    return convertWithJackson(typed, target);
   }
 
   private Object convertArray(Object value, Class<?> componentType) {
@@ -160,12 +139,17 @@ public class MapInputConverter {
               "Array target requires a Collection input, got " + value.getClass().getName());
     }
 
-    Object array = Array.newInstance(componentType, collection.size());
-    int i = 0;
-    for (Object element : collection) {
-      Array.set(array, i++, convert(element, componentType));
+    JavaType arrayType = objectMapper.getTypeFactory().constructArrayType(componentType);
+    return objectMapper.convertValue(collection, arrayType);
+  }
+
+  private Object convertWithJackson(Object value, Class<?> target) {
+    try {
+      return objectMapper.convertValue(value, target);
+    } catch (RuntimeException e) {
+      throw new IllegalArgumentException(
+              "Cannot convert " + value.getClass().getName() + " to " + target.getName(), e);
     }
-    return array;
   }
 
   private Object convertPrimitive(Object value, Class<?> target) {

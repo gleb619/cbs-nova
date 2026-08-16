@@ -5,7 +5,6 @@ import cbs.nova.dsl.HelperManager;
 import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.ModelRegistry;
 import cbs.nova.dsl.converter.AvajeMapConverter;
-import cbs.nova.dsl.converter.MapInputConverter;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.jsonschema.VictoolsJsonSchemaGenerator;
 import cbs.nova.dsl.model.RetryPolicy;
@@ -66,10 +65,6 @@ public class DslConfig implements SingletonSupport {
 
   public @NonNull AvajeMapConverter avajeMapConverter() {
     return singleton(() -> new AvajeMapConverter(Jsonb.builder().build(), modelRegistry()));
-  }
-
-  public @NonNull MapInputConverter mapInputConverter() {
-    return singleton(() -> new MapInputConverter(avajeMapConverter()));
   }
 
   public @NonNull RetryPolicyFactory retryPolicyFactory() {

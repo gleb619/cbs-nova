@@ -1,10 +1,12 @@
-package cbs.nova.dsl.converter;
+package cbs.nova.starter.converter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.model.MapInput;
+import io.avaje.jsonb.Jsonb;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -16,7 +18,8 @@ import java.util.Set;
 
 class MapInputConverterTest {
 
-  private final MapInputConverter converter = new MapInputConverter();
+  private final MapInputConverter converter = new MapInputConverter(Jsonb.builder().build(),
+          JsonMapper.builder().build());
 
   record Address(String city, int zip) {
   }
@@ -226,4 +229,5 @@ class MapInputConverterTest {
       }
     };
   }
+
 }

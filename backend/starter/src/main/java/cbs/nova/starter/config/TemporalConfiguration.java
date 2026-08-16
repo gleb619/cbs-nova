@@ -8,6 +8,7 @@ import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.starter.DevDslRuntime;
 import cbs.nova.starter.cache.PreviewResultCache;
 import cbs.nova.starter.config.properties.DryRunProperties;
+import cbs.nova.starter.converter.MapInputConverter;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
@@ -246,8 +247,9 @@ public class TemporalConfiguration {
   }
 
   @Bean
-  TemporalDslService temporalDslService(WorkflowClient workflowClient) {
-    return new TemporalDslService(workflowClient);
+  TemporalDslService temporalDslService(WorkflowClient workflowClient,
+          MapInputConverter mapInputConverter) {
+    return new TemporalDslService(workflowClient, mapInputConverter);
   }
 
 }
