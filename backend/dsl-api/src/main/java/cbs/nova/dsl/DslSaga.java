@@ -6,28 +6,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-/**
- * DSL counterpart of {@code io.temporal.workflow.Saga}: a LIFO container of compensating actions
- * that can be executed in reverse order on failure. Compensations are captured as {@link Runnable}
- * closures so the DSL can register them right after a forward step succeeds.
- */
 public interface DslSaga {
 
-  /**
-   * Registers a compensation action. Actions are executed last-in-first-out by
-   * {@link #compensate()} unless {@link Options#parallelCompensation()} is enabled.
-   */
   void addCompensation(@NonNull Runnable compensation);
 
-  /**
-   * Executes registered compensations. By default they run sequentially in reverse order. Once
-   * invoked the compensation list is cleared.
-   */
   void compensate();
 
-  /**
-   * Returns {@code true} if at least one compensation has been registered.
-   */
   boolean hasCompensations();
 
   static @NonNull DslSaga create() {

@@ -126,7 +126,6 @@ class DevDslRuntimeMetricsTest {
   void runModeMetricsAreNull() {
     var ctx = contextFactory.of("input", ExecutionMode.RUN);
     var result = runtime.run("Ping", ctx);
-    // run mode returns Result<?>, not PreviewReport, so we just verify success
     assertThat(result.isSuccess()).isTrue();
   }
 }

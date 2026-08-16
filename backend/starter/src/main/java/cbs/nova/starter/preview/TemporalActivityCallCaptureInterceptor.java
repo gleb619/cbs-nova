@@ -9,13 +9,6 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.HashMap;
 
-/**
- * {@link TransactionInvoker} decorator that records each delegated transaction invocation as an
- * external {@value ExternalCallRecorder#TYPE_ACTIVITY} call via {@link ExternalCallRecorder}. This
- * lets preview/explain reports (and any other tracking context) see Temporal Activity-style
- * executions alongside HTTP and database calls. The interceptor only observes; activity-level
- * faking happens at the helper boundary.
- */
 @RequiredArgsConstructor
 public class TemporalActivityCallCaptureInterceptor implements TransactionInvoker {
 

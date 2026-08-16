@@ -1,6 +1,7 @@
 package cbs.nova.starter.capture;
 
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
+import java.sql.SQLException;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -32,12 +33,6 @@ import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.Map;
 
-/**
- * Compile-time typed dispatcher for a proxied {@link Statement}, {@link PreparedStatement} or
- * {@link CallableStatement}. Recorded execution methods capture the call into
- * {@link ExternalCallRecorder} before delegating; all other methods are forwarded via typed calls
- * to the real delegate.
- */
 public final class StatementMethodDispatcher {
 
   private static final String OPERATION_BATCH = "BATCH";
@@ -844,47 +839,47 @@ public final class StatementMethodDispatcher {
       }
       case "setObject" -> {
         if (args.length == 2 && (args[0] instanceof Number || args[0] instanceof Boolean)) {
-          preparedStatement.setObject((int) args[0], (Object) args[1]);
+          preparedStatement.setObject((int) args[0], args[1]);
           yield null;
         } else if (args.length == 2 && args[0] instanceof String) {
-          callableStatement.setObject((String) args[0], (Object) args[1]);
+          callableStatement.setObject((String) args[0], args[1]);
           yield null;
         } else if (args.length == 3 && (args[0] instanceof Number || args[0] instanceof Boolean)
                 && (args[2] instanceof Number || args[2] instanceof Boolean)) {
-          preparedStatement.setObject((int) args[0], (Object) args[1], (int) args[2]);
+          preparedStatement.setObject((int) args[0], args[1], (int) args[2]);
           yield null;
         } else if (args.length == 3 && (args[0] instanceof Number || args[0] instanceof Boolean)
                 && args[2] instanceof SQLType) {
-          preparedStatement.setObject((int) args[0], (Object) args[1], (SQLType) args[2]);
+          preparedStatement.setObject((int) args[0], args[1], (SQLType) args[2]);
           yield null;
         } else if (args.length == 3 && args[0] instanceof String
                 && (args[2] instanceof Number || args[2] instanceof Boolean)) {
-          callableStatement.setObject((String) args[0], (Object) args[1], (int) args[2]);
+          callableStatement.setObject((String) args[0], args[1], (int) args[2]);
           yield null;
         } else if (args.length == 3 && args[0] instanceof String && args[2] instanceof SQLType) {
-          callableStatement.setObject((String) args[0], (Object) args[1], (SQLType) args[2]);
+          callableStatement.setObject((String) args[0], args[1], (SQLType) args[2]);
           yield null;
         } else if (args.length == 4 && (args[0] instanceof Number || args[0] instanceof Boolean)
                 && (args[2] instanceof Number || args[2] instanceof Boolean)
                 && (args[3] instanceof Number || args[3] instanceof Boolean)) {
-          preparedStatement.setObject((int) args[0], (Object) args[1], (int) args[2],
+          preparedStatement.setObject((int) args[0], args[1], (int) args[2],
                   (int) args[3]);
           yield null;
         } else if (args.length == 4 && (args[0] instanceof Number || args[0] instanceof Boolean)
                 && args[2] instanceof SQLType
                 && (args[3] instanceof Number || args[3] instanceof Boolean)) {
-          preparedStatement.setObject((int) args[0], (Object) args[1], (SQLType) args[2],
+          preparedStatement.setObject((int) args[0], args[1], (SQLType) args[2],
                   (int) args[3]);
           yield null;
         } else if (args.length == 4 && args[0] instanceof String
                 && (args[2] instanceof Number || args[2] instanceof Boolean)
                 && (args[3] instanceof Number || args[3] instanceof Boolean)) {
-          callableStatement.setObject((String) args[0], (Object) args[1], (int) args[2],
+          callableStatement.setObject((String) args[0], args[1], (int) args[2],
                   (int) args[3]);
           yield null;
         } else if (args.length == 4 && args[0] instanceof String && args[2] instanceof SQLType
                 && (args[3] instanceof Number || args[3] instanceof Boolean)) {
-          callableStatement.setObject((String) args[0], (Object) args[1], (SQLType) args[2],
+          callableStatement.setObject((String) args[0], args[1], (SQLType) args[2],
                   (int) args[3]);
           yield null;
         }
@@ -1013,7 +1008,7 @@ public final class StatementMethodDispatcher {
     };
   }
 
-  private Object handleExecuteQuery(@Nullable Object[] args) throws java.sql.SQLException {
+  private Object handleExecuteQuery(@Nullable Object[] args) throws SQLException {
     if (args == null || args.length == 0) {
       recordCall(sql);
       return preparedStatement.executeQuery();
@@ -1023,7 +1018,7 @@ public final class StatementMethodDispatcher {
     return statement.executeQuery(argumentSql);
   }
 
-  private Object handleExecuteUpdate(@Nullable Object[] args) throws java.sql.SQLException {
+  private Object handleExecuteUpdate(@Nullable Object[] args) throws SQLException {
     if (args == null || args.length == 0) {
       recordCall(sql);
       return preparedStatement.executeUpdate();
@@ -1042,7 +1037,7 @@ public final class StatementMethodDispatcher {
     throw new UnsupportedOperationException("Unexpected executeUpdate overload");
   }
 
-  private Object handleExecute(@Nullable Object[] args) throws java.sql.SQLException {
+  private Object handleExecute(@Nullable Object[] args) throws SQLException {
     if (args == null || args.length == 0) {
       recordCall(sql);
       return preparedStatement.execute();
@@ -1061,12 +1056,12 @@ public final class StatementMethodDispatcher {
     throw new UnsupportedOperationException("Unexpected execute overload");
   }
 
-  private Object handleExecuteBatch(@Nullable Object[] args) throws java.sql.SQLException {
+  private Object handleExecuteBatch(@Nullable Object[] args) throws SQLException {
     recordBatch();
     return statement.executeBatch();
   }
 
-  private Object handleExecuteLargeUpdate(@Nullable Object[] args) throws java.sql.SQLException {
+  private Object handleExecuteLargeUpdate(@Nullable Object[] args) throws SQLException {
     if (args == null || args.length == 0) {
       recordCall(sql);
       return preparedStatement.executeLargeUpdate();
@@ -1085,7 +1080,7 @@ public final class StatementMethodDispatcher {
     throw new UnsupportedOperationException("Unexpected executeLargeUpdate overload");
   }
 
-  private Object handleExecuteLargeBatch(@Nullable Object[] args) throws java.sql.SQLException {
+  private Object handleExecuteLargeBatch(@Nullable Object[] args) throws SQLException {
     recordBatch();
     return statement.executeLargeBatch();
   }

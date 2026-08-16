@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.DslDescriptor;
+import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.GlobalManager;
@@ -204,9 +206,6 @@ class DslIntrospectionResourceTest {
 
     mockMvc.perform(get("/api/dsl/definitions"))
             .andExpect(status().isOk())
-            // Helpers and functions carry no inputSchema — the field is omitted
-            // from the wire format via @JsonInclude(NON_NULL) to match the FE
-            // DefinitionMeta type ({ name, type, inputSchema? }).
             .andExpect(
                     jsonPath("$[?(@.name=='sampleHelper')].inputSchema").doesNotExist())
             .andExpect(
@@ -217,9 +216,6 @@ class DslIntrospectionResourceTest {
 
   @Test
   void definitionsEndpointReturnsOnlyTheSetupProcessWhenNoSamplesRegistered() throws Exception {
-    // The class-level @BeforeEach registers exactly one process ('LoanDisbursement');
-    // we assert the aggregator sees that single entry with type=process and an
-    // inputSchema object.
     mockMvc.perform(get("/api/dsl/definitions"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(1))
@@ -237,9 +233,9 @@ class DslIntrospectionResourceTest {
             List.of(),
             ctx -> Result.success("ok"),
             null,
-            () -> new cbs.nova.dsl.DslDescriptor(
+            () -> new DslDescriptor(
                     "sampleFunction",
-                    cbs.nova.dsl.DslObject.DslType.FUNCTION,
+                    DslType.FUNCTION,
                     "A greeting function",
                     String.class,
                     String.class,

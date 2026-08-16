@@ -38,7 +38,7 @@ public final class CompileConfig implements SingletonSupport {
     return Holder.INSTANCE.compileConfig(scope, logLevel);
   }
 
-  /* ============= Bean definitions ============= */
+  /* ============= */
 
   public @NonNull CodegenNaming codegenNaming() {
     return singleton(CodegenNaming::new);
@@ -118,7 +118,7 @@ public final class CompileConfig implements SingletonSupport {
                     logLevel));
   }
 
-  /* ============= Holder ============= */
+  /* ============= */
 
   @Getter
   private static final class Holder implements SingletonSupport {

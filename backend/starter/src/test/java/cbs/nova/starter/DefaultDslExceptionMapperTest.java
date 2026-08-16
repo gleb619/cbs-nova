@@ -20,11 +20,6 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 
-/**
- * Byte-for-byte regression coverage for {@link DefaultDslExceptionMapper}, the canonical
- * implementation of the {@link DslExceptionMapper} SPI. Locks in the wire contract for the three
- * exception paths.
- */
 class DefaultDslExceptionMapperTest {
 
   private static final ObjectMapper JSON = new ObjectMapper();

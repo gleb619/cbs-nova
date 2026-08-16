@@ -12,17 +12,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jspecify.annotations.NonNull;
 
-/**
- * Deprecated facade over the native {@link JsonValue} engine. Retained for backward compatibility
- * with existing DSL flows; new code should use context/expression JSON access directly.
- */
 @Deprecated
 @Helper(name = "jsonExtract")
 public class JsonExtractHelper implements Executable<JsonExtractIn, JsonExtractOut> {
 
   private final @NonNull ObjectMapper mapper;
 
-  /** Constructor for injecting a pre-configured {@link ObjectMapper}. */
   public JsonExtractHelper(@NonNull ObjectMapper mapper) {
     this.mapper = mapper;
   }

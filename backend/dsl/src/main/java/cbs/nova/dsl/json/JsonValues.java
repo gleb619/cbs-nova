@@ -12,9 +12,6 @@ public final class JsonValues {
   private JsonValues() {
   }
 
-  /**
-   * Returns a {@link JsonValue} representing a missing JSON value.
-   */
   public static @NonNull JsonValue missing() {
     return new JacksonJsonValue(null);
   }

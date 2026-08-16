@@ -19,9 +19,6 @@ import org.springframework.data.relational.core.mapping.NamingStrategy;
 
 import javax.sql.DataSource;
 
-/**
- * Autoconfiguration for the JDBC-backed {@link DslRunRepository}.
- */
 @AutoConfiguration
 @EnableConfigurationProperties(DslRunPersistenceProperties.class)
 public class DslRunRepositoryConfiguration {

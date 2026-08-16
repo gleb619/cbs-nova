@@ -49,9 +49,6 @@ public final class ProcessBuilder<I, O> {
     return (ProcessBuilder<T, O>) this;
   }
 
-  /**
-   * Selects the typed branch and fixes the output/result type.
-   */
   @SuppressWarnings("unchecked")
   public <T> ProcessBuilder<I, T> output(@NonNull Class<T> type) {
     this.outputType = type;

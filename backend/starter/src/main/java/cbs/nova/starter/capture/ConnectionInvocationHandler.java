@@ -8,11 +8,6 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.sql.Connection;
 
-/**
- * Typed {@link InvocationHandler} for a proxied {@link Connection}. Statement factory methods are
- * routed to {@link ConnectionMethodDispatcher}, which wraps returned statements so their executions
- * can be recorded. All other {@link Connection} methods are forwarded via typed calls.
- */
 public class ConnectionInvocationHandler implements InvocationHandler {
 
   public static final String FALLBACK_TARGET = "jdbc:datasource";

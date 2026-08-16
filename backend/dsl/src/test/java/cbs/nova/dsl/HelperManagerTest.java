@@ -134,7 +134,7 @@ class HelperManagerTest {
   private static final class StubHelperRegistry implements HelperRegistry {
     private final List<Map.Entry<String, Executable<?, ?>>> registeredHelpers = new ArrayList<>();
     private final List<FunctionDslObject> registeredFunctions = new ArrayList<>();
-    private final java.util.LinkedHashMap<String, Executable<?, ?>> helpers = new java.util.LinkedHashMap<>();
+    private final LinkedHashMap<String, Executable<?, ?>> helpers = new LinkedHashMap<>();
     private final List<FunctionDslObject> functions = new ArrayList<>();
     private final List<String> findHelperLookups = new ArrayList<>();
     private final List<String> findFunctionLookups = new ArrayList<>();

@@ -5,14 +5,6 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.process.ProcessContext;
 import org.jspecify.annotations.NonNull;
 
-/**
- * Pluggable transaction execution strategy. When a process context is configured with
- * {@link TransactionRouting#TEMPORAL_ACTIVITY},
- * {@link ProcessContext#runTransaction(String, Object)} will delegate to the registered invoker
- * instead of calling the local transaction runner. This lets generated Temporal workflows route
- * transaction calls to activity stubs while keeping the DSL runtime free of Temporal SDK
- * dependencies.
- */
 public interface TransactionInvoker {
 
   @NonNull

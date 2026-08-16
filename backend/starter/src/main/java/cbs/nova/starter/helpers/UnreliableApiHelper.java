@@ -17,14 +17,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Helper that simulates an unreliable external API for resilience testing.
- *
- * <p>
- * Behavior is controlled by a scenario configuration ({@code failCount} and {@code pattern}).
- * Internally each {@code operationId} is tracked as an {@link AttemptState} record with a
- * timestamp, and a background scheduler removes stale entries to prevent data leaks.
- */
 @Helper(name = "unreliableApi")
 public class UnreliableApiHelper implements Executable<UnreliableApiIn, UnreliableApiOut> {
 

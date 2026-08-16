@@ -9,21 +9,6 @@ import com.intellij.openapi.externalSystem.model.task.ExternalSystemTaskNotifica
 import com.intellij.openapi.externalSystem.model.task.ExternalSystemTaskType;
 import org.jetbrains.plugins.gradle.util.GradleConstants;
 
-/**
- * Registered as a top-level {@code com.intellij.externalSystemTaskNotificationListener} extension
- * (same extension point the bundled Gradle plugin itself uses, e.g. for
- * {@code GradleInstallationManager$BuildLayoutParametersCacheCleanupListener} in
- * {@code com.intellij.gradle}'s own plugin.xml). {@code onSuccess} fires once the whole
- * RESOLVE_PROJECT external-system task -- including data import into the IDE project model --
- * completes for a Gradle sync, which is the "end of sync" hook this plugin needs.
- *
- * <p>
- * {@link ExternalSystemTaskId#findProject()} resolves the {@code Project} instance the task ran
- * against, letting this listener stay a thin adapter that just forwards to the plain,
- * directly-testable {@link DslSourceRootSyncContributor}. This adapter is gated by
- * {@link DslProjectStateService} so it does nothing (and emits no logs) for ordinary Java/Gradle
- * projects.
- */
 public final class DslGradleSyncNotificationListener
         implements
           ExternalSystemTaskNotificationListener {

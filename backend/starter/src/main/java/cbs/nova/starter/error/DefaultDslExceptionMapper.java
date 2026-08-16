@@ -6,22 +6,6 @@ import io.sentry.Sentry;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.context.request.WebRequest;
 
-/**
- * Default {@link DslExceptionMapper} preserving the legacy {@code DslExceptionHandler} contract:
- *
- * <ul>
- * <li>{@link DslException} (and subclasses) -&gt; HTTP 422 with the exception's {@code code},
- * {@code runId} and {@code exceptionId}; Sentry is tagged with the run id.</li>
- * <li>{@link IllegalArgumentException} -&gt; HTTP 400 with code {@code BAD_REQUEST}; no
- * Sentry.</li>
- * <li>Any other {@link Exception} -&gt; HTTP 500 with code {@code INTERNAL_ERROR} and the run id
- * resolved from the {@link WebRequest} (if present); Sentry is tagged with the run id when
- * available.</li>
- * </ul>
- *
- * <p>
- * Sentry interactions are wrapped defensively so an unconfigured SDK never breaks the request path.
- */
 public class DefaultDslExceptionMapper implements DslExceptionMapper {
 
   @Override

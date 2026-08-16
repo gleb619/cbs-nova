@@ -175,14 +175,6 @@ public class TemporalConfiguration {
     return new DevDslRuntime(previewDslPipe, runDslPipe, explainDslPipe);
   }
 
-  /**
-   * Custom Spring-managed executor used for asynchronous DSL process work (DB saves, workflow
-   * supervision, completion bookkeeping). Replaces raw {@code ForkJoinPool.commonPool()} so that we
-   * get a bounded, named thread pool under Spring's lifecycle control. The supplied
-   * {@link TaskDecorator} copies the MDC, Sentry tags and OpenTelemetry context from the submitting
-   * thread into the worker thread for every task, mirroring the manual {@code propagateRunId}
-   * helper used today.
-   */
   @Bean(name = "cbsNovaDslProcessExecutor", destroyMethod = "shutdown")
   @ConditionalOnMissingBean(name = "cbsNovaDslProcessExecutor")
   ThreadPoolTaskExecutor cbsNovaDslProcessExecutor(
@@ -202,11 +194,6 @@ public class TemporalConfiguration {
     return executor;
   }
 
-  /**
-   * Single-thread scheduled executor that powers the run healthcheck. The actual scheduling /
-   * staleness threshold lives inside {@code TemporalDslProcessService}; this bean only owns the
-   * thread so it can be shut down cleanly with the Spring context.
-   */
   @Bean(name = "cbsNovaDslProcessHealthcheckExecutor", destroyMethod = "shutdownNow")
   @ConditionalOnMissingBean(name = "cbsNovaDslProcessHealthcheckExecutor")
   ScheduledExecutorService cbsNovaDslProcessHealthcheckExecutor() {
@@ -217,13 +204,6 @@ public class TemporalConfiguration {
     });
   }
 
-  /**
-   * Spring {@link TaskDecorator} that re-applies the submitting thread's MDC and OpenTelemetry /
-   * Sentry context to the worker thread. Tasks that do not capture context (no MDC, no active OTel
-   * span, no Sentry tags) run through unchanged. Used by {@link #cbsNovaDslProcessExecutor} so that
-   * {@code TemporalDslProcessService}'s async DB-save and workflow-completion tasks keep the
-   * {@code runId} correlation key across boundaries.
-   */
   @Bean
   @ConditionalOnMissingBean
   TaskDecorator cbsNovaDslContextDecorator() {

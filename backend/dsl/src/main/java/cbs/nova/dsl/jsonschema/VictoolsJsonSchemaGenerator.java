@@ -140,10 +140,6 @@ public class VictoolsJsonSchemaGenerator implements JsonSchemaGenerator {
     }
   }
 
-  /**
-   * Ensures integral types are described as {@code "number"}, matching the previous generator's
-   * behavior.
-   */
   private final class NumericTypeDefinitionProvider implements CustomDefinitionProviderV2 {
 
     @Override

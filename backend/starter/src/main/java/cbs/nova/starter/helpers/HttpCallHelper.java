@@ -21,38 +21,11 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Built-in helper for making a single real-HTTP call from a DSL flow.
- *
- * <p>
- * Mirrors the {@code unreliableApi} helper's structure (record in/out, {@code Executable} contract,
- * {@code @Helper} name) but reaches out to a real network endpoint through the JDK
- * {@link HttpClient} instead of an in-process failure simulator. The integration test
- * {@code HttpResilienceDslIntegrationTest} points the helper at a WireMock instance to exercise
- * Temporal retry / compensation against real 5xx and timeout failures.
- *
- * <p>
- * Contract:
- * <ul>
- * <li>2xx, or a status listed in {@link HttpCallIn#validStatuses()}, → {@link Result#success} with
- * the response in {@link HttpCallOut}. Non-2xx → {@link Result#failure} so callers (transactions,
- * processes) can map it to retry / compensation.</li>
- * <li>I/O failure (timeout, connection refused, DNS) → {@link Result#failure} with the underlying
- * exception wrapped.</li>
- * </ul>
- *
- * <p>
- * Faking: this helper never injects {@code ExternalCallRecorder}. To short-circuit it without a
- * real network call, declare a startup fake in {@code application.yml} with {@code type: helper},
- * {@code code: httpCall}; the {@code HelperInterceptor} returns the configured response before the
- * helper runs.
- */
 @Helper(name = "httpCall")
 public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
 
   private final HttpClient client;
 
-  /** Constructor for injecting a pre-configured {@link HttpClient}. */
   public HttpCallHelper(HttpClient client) {
     this.client = client;
   }
@@ -147,10 +120,6 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
     return t.getClass().getSimpleName() + ": " + message;
   }
 
-  /**
-   * Translates the supplied {@link RedirectPolicy} into the JDK {@link HttpClient.Redirect}
-   * constant.
-   */
   public static HttpClient.Redirect toJdkRedirects(RedirectPolicy policy) {
     return switch (policy) {
       case NEVER -> HttpClient.Redirect.NEVER;
@@ -159,7 +128,6 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
     };
   }
 
-  /** Failure marker thrown for non-2xx HTTP responses; carries status + body. */
   public static final class HttpCallFailure extends RuntimeException {
     private final int status;
     private final String body;
@@ -185,7 +153,6 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
     }
   }
 
-  /** Failure marker thrown for transport-layer I/O problems. */
   public static final class HttpCallTransportException extends RuntimeException {
     public HttpCallTransportException(String message, Throwable cause) {
       super(message, cause);

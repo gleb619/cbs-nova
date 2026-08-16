@@ -35,7 +35,6 @@ public final class ExecutionTreeCollector implements ExecutionListener {
     this.maxDepth = maxDepth;
   }
 
-  /** Prepare a fresh stack. Any previously stored root is discarded. */
   public void start() {
     synchronized (stack) {
       stack.clear();
@@ -125,7 +124,6 @@ public final class ExecutionTreeCollector implements ExecutionListener {
     }
   }
 
-  /** Returns the assembled root tree, if any. */
   public @NonNull Optional<CallNode> tree() {
     return Optional.ofNullable(root);
   }

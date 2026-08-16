@@ -1,6 +1,7 @@
 package cbs.nova.starter.capture;
 
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
+import java.io.PrintWriter;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -12,11 +13,6 @@ import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-/**
- * Compile-time typed dispatcher for a proxied {@link DataSource}. Every method declared by
- * {@code DataSource}, {@code CommonDataSource}, {@code Wrapper} and {@code AutoCloseable}/
- * {@code Closeable} is routed to a typed helper that calls the real delegate directly.
- */
 public final class DataSourceMethodDispatcher {
 
   private final DataSource dataSource;
@@ -33,7 +29,7 @@ public final class DataSourceMethodDispatcher {
       case "getConnection" -> handleGetConnection(args);
       case "getLogWriter" -> dataSource.getLogWriter();
       case "setLogWriter" -> {
-        dataSource.setLogWriter((java.io.PrintWriter) require(args, 0));
+        dataSource.setLogWriter((PrintWriter) require(args, 0));
         yield null;
       }
       case "getLoginTimeout" -> dataSource.getLoginTimeout();

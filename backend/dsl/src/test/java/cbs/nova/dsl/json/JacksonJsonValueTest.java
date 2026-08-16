@@ -3,7 +3,9 @@ package cbs.nova.dsl.json;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.JsonValue;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -82,13 +84,13 @@ class JacksonJsonValueTest {
 
   @Test
   void invalidJsonThrows() {
-    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+    Assertions.assertThrows(IllegalArgumentException.class,
             () -> JsonValues.of("not json", mapper));
   }
 
   @Test
   void rawReturnsUnderlyingJsonNode() {
     JsonValue value = parse("{\"a\":1}");
-    assertThat(value.raw()).isInstanceOf(com.fasterxml.jackson.databind.JsonNode.class);
+    assertThat(value.raw()).isInstanceOf(JsonNode.class);
   }
 }

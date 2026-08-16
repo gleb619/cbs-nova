@@ -11,11 +11,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Verifies that {@link DslProjectResolverExtension#drainDiscovered(ExternalSystemTaskId)} is keyed
- * per sync task: dirs accumulated under one {@link ExternalSystemTaskId} are not visible to, or
- * clobbered by, a drain for a different task id, and draining one task leaves the other intact.
- */
 public class DslProjectResolverExtensionDrainTest extends BasePlatformTestCase {
 
   @SuppressWarnings("unchecked")
@@ -37,11 +32,9 @@ public class DslProjectResolverExtensionDrainTest extends BasePlatformTestCase {
     var drainedA = DslProjectResolverExtension.drainDiscovered(taskA);
     assertEquals(Set.of(Path.of("/tmp/projectA/src/dsl")), drainedA);
 
-    // Draining taskA must not have touched taskB's bucket.
     var drainedB = DslProjectResolverExtension.drainDiscovered(taskB);
     assertEquals(Set.of(Path.of("/tmp/projectB/src/dsl")), drainedB);
 
-    // Both are now drained; a repeat drain of either returns nothing (atomic remove).
     assertTrue(DslProjectResolverExtension.drainDiscovered(taskA).isEmpty());
     assertTrue(DslProjectResolverExtension.drainDiscovered(taskB).isEmpty());
   }

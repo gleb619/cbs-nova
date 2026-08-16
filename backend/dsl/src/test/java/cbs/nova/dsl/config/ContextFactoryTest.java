@@ -34,7 +34,6 @@ class ContextFactoryTest {
     String suffix = runId.substring("run-".length());
 
     assertThat(suffix).isNotBlank();
-    // Must not throw — confirms suffix matches UUID textual format.
     UUID parsed = UUID.fromString(suffix);
     assertThat(parsed.toString()).isEqualTo(suffix);
   }
@@ -61,8 +60,6 @@ class ContextFactoryTest {
     assertThat(first.runId()).isNotBlank().startsWith("run-");
     assertThat(second.runId()).isNotBlank().isNotEqualTo(first.runId());
   }
-
-  // --- of(body, mode, runId) ----------------------------------------------
 
   @Test
   void ofWithExplicitRunIdPreservesRunIdAndHasEmptyMetadata() {
@@ -91,8 +88,6 @@ class ContextFactoryTest {
             .containsAllEntriesOf(metadata)
             .hasSize(metadata.size());
   }
-
-  // --- ExecutionMode propagation ------------------------------------------
 
   @Test
   void executionModePropagatesThroughAllOverloads() {

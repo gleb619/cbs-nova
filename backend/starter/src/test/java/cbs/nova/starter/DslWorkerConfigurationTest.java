@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.SmartLifecycle;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -64,14 +65,8 @@ class DslWorkerConfigurationTest {
     }
   }
 
-  /**
-   * Provide a WorkflowClient bean so the {@link TestableDslWorkerConfiguration#dslWorkerFactory}
-   *
-   * @Bean autowire step resolves; the actual client instance is irrelevant because the override
-   *       returns the mocked WorkerFactory.
-   */
   static class MockWorkflowClient {
-    @org.springframework.context.annotation.Bean
+    @Bean
     WorkflowClient workflowClient() {
       return mock(WorkflowClient.class);
     }

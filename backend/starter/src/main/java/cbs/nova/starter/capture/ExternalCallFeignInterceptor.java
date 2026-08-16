@@ -12,11 +12,6 @@ import org.jspecify.annotations.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Feign {@link RequestInterceptor} that records each outgoing HTTP request as an external "http"
- * call via {@link ExternalCallRecorder}. The interceptor only observes; it does not modify or block
- * the request.
- */
 @Slf4j
 @RequiredArgsConstructor
 public class ExternalCallFeignInterceptor implements RequestInterceptor {

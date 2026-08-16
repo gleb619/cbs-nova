@@ -13,11 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
-/**
- * {@link ProducerFactory} decorator that wraps every created Kafka {@link Producer} with
- * {@link MessagingCallCaptureProducer} so message publishing is recorded as an external "messaging"
- * call.
- */
 @RequiredArgsConstructor
 public class MessagingCallCaptureProducerFactory<K, V> implements ProducerFactory<K, V> {
 

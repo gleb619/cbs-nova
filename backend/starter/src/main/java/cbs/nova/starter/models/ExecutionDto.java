@@ -10,29 +10,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Wire DTO for a single DSL execution run.
- *
- * <p>
- * The JSON shape mirrors the frontend {@code Execution}/{@code ExecutionDetail} interfaces byte for
- * byte on field names and enum casing so the BFF can pass the payload through unchanged. Optional
- * fields are omitted from the payload when absent via {@code @JsonInclude(NON_NULL)}, matching the
- * optional {@code ?} properties of the frontend type.
- *
- * <p>
- * {@code entityType} is always {@code "Process"}: {@link DslRun} does not track whether a run is a
- * process, transaction or helper today, so {@code Process} is the best available default (known
- * limitation).
- *
- * <p>
- * {@code input}/{@code output}/{@code errors} are detail-only fields (populated via
- * {@link #fromDetail(DslRun, ObjectMapper)}, used by {@code GET /api/executions/{id}}). The list
- * endpoint (@code GET /api/executions}) uses {@link #from(DslRun)}, which leaves them {@code null}
- * so they're omitted from the response, keeping the list payload lean. {@code trace}, {@code logs}
- * and {@code mermaidDiagram} from the frontend {@code ExecutionDetail} type are intentionally not
- * modeled here: they are not captured anywhere in the backend for {@code RUN}-mode executions today
- * (see T204 plan) and are left out rather than faked.
- */
 public record ExecutionDto(
         String id,
         String entity,
@@ -70,12 +47,6 @@ public record ExecutionDto(
             null);
   }
 
-  /**
-   * Maps a {@link DslRun} for the execution detail endpoint, additionally surfacing
-   * {@code input}/{@code output} (parsed as JSON when the stored string is valid JSON, otherwise
-   * passed through as the raw string) and {@code errors} (a single-element list built from
-   * {@link DslRun#error()}, or an empty list when there is no error).
-   */
   public static ExecutionDto fromDetail(DslRun run, ObjectMapper objectMapper) {
     ExecutionDto base = from(run);
     return new ExecutionDto(
@@ -103,8 +74,6 @@ public record ExecutionDto(
     try {
       return objectMapper.readValue(raw, Object.class);
     } catch (Exception malformedJson) {
-      // Stored value isn't valid JSON (or isn't JSON at all) — fall back to the raw string rather
-      // than failing the request.
       return raw;
     }
   }
@@ -129,7 +98,6 @@ public record ExecutionDto(
         return capitalize(candidate.name());
       }
     }
-    // Unknown statuses (e.g. PENDING/COMPENSATED once emitted) are passed through capitalized.
     return capitalize(status);
   }
 

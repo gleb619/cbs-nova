@@ -23,10 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
 
-/**
- * {@link Producer} decorator that records every {@code send} call as an external "messaging" call
- * via {@link ExternalCallRecorder}, then delegates to the real Kafka producer.
- */
 @RequiredArgsConstructor
 public class MessagingCallCaptureProducer<K, V> implements Producer<K, V> {
 

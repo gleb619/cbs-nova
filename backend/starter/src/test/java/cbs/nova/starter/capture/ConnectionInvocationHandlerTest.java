@@ -23,6 +23,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import org.mockito.Mockito;
 
 /**
  * Pure-unit tests for the JDBC capture handlers. Wraps a Mockito-mocked {@link DataSource} with
@@ -192,7 +193,7 @@ class ConnectionInvocationHandlerTest {
   @Test
   void commitExceptionSurfacesUnchangedAndNoRecordingHappens() throws SQLException {
     SQLException cause = new SQLException("commit-fail");
-    org.mockito.Mockito.doThrow(cause).when(connection).commit();
+    Mockito.doThrow(cause).when(connection).commit();
 
     Connection conn = wrappedConnection();
     assertThatThrownBy(conn::commit)

@@ -6,10 +6,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Immutable wrapper for a parameter-based output map. Returned by DSL processes, transactions, and
- * functions that declare {@code .parameters(...)} instead of typed {@code .input()/.output()}.
- */
 @Json
 public record MapOutput(Map<String, Object> values) {
 
@@ -17,9 +13,6 @@ public record MapOutput(Map<String, Object> values) {
     values = values == null ? Map.of() : Collections.unmodifiableMap(new LinkedHashMap<>(values));
   }
 
-  /**
-   * Creates a {@link MapOutput} from varargs key-value pairs.
-   */
   public static MapOutput of(Object... keyValuePairs) {
     if (keyValuePairs.length % 2 != 0) {
       throw new IllegalArgumentException(
@@ -42,16 +35,10 @@ public record MapOutput(Map<String, Object> values) {
     return new MapOutput(map);
   }
 
-  /**
-   * Creates a {@link MapOutput} from an existing map.
-   */
   public static MapOutput fromMap(Map<String, Object> map) {
     return map == null ? new MapOutput(Map.of()) : new MapOutput(map);
   }
 
-  /**
-   * Returns a mutable copy of the underlying values.
-   */
   public Map<String, Object> asMap() {
     return new LinkedHashMap<>(values);
   }

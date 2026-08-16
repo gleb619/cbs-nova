@@ -17,11 +17,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-/**
- * Tools-menu action that shells out to {@code ./gradlew :<module>:compileDsl} for the selected
- * module. This plugin is a thin IDE layer — all actual DSL compilation is delegated to the existing
- * {@code cbs.nova.dsl} Gradle plugin; this action is its only interactive entry point.
- */
 public final class CompileDslAction extends AnAction {
 
   @Override
@@ -42,10 +37,6 @@ public final class CompileDslAction extends AnAction {
       return;
     }
 
-    // LangDataKeys.MODULE_CONTEXT/TARGET_MODULE are for module-tree contexts (e.g. Project
-    // view); PlatformCoreDataKeys.MODULE (the key LangDataKeys itself resolves via
-    // inheritance) is the general "module associated with this action's context" key and is
-    // what actually populates from a Tools-menu invocation with an editor/file selection.
     Module module = event.getData(PlatformCoreDataKeys.MODULE);
     if (module == null) {
       return;

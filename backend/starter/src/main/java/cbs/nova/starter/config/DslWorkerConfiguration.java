@@ -26,10 +26,6 @@ public class DslWorkerConfiguration {
     return createWorkerFactory(workflowClient);
   }
 
-  /**
-   * Builds the Temporal {@link WorkerFactory}. Exposed as protected so tests can substitute a
-   * mocked factory without needing a real Temporal server.
-   */
   protected WorkerFactory createWorkerFactory(WorkflowClient workflowClient) {
     return WorkerFactory.newInstance(workflowClient);
   }
@@ -46,12 +42,6 @@ public class DslWorkerConfiguration {
     return new WorkerFactoryLifecycle(dslWorkerFactory);
   }
 
-  /**
-   * Registers generated DSL workflows and activities on the worker via the
-   * {@link GeneratedClassProvider} SPI. The DSL compiler emits a provider implementation per
-   * generated entity plus a {@code META-INF/services} entry, so {@link ServiceLoader} discovers
-   * them without classpath scanning or hardcoded class references.
-   */
   private void registerGeneratedImplementations(Worker worker) {
     var classLoader = Thread.currentThread().getContextClassLoader();
     ServiceLoader.load(GeneratedClassProvider.class, classLoader)
@@ -77,22 +67,8 @@ public class DslWorkerConfiguration {
     }
   }
 
-  /**
-   * SmartLifecycle adapter that owns the Temporal WorkerFactory start/stop sequence.
-   *
-   * <p>
-   * {@link SmartLifecycle#start()} is invoked after the Spring context is refreshed, kicking off
-   * pollers. {@link SmartLifecycle#stop(Runnable)} (and {@link #stop()}) shut the factory down and
-   * wait for in-flight workers to terminate before the JVM exits, preventing lost work and
-   * abandoned pollers.
-   */
   static final class WorkerFactoryLifecycle implements SmartLifecycle {
 
-    /**
-     * Bounded wait for workers to terminate after shutdown. Long enough for normal in-flight
-     * workflow/activity tasks to drain on shared CI hardware; short enough that a wedged server
-     * cannot indefinitely block Spring context shutdown.
-     */
     private static final long TERMINATION_AWAIT_SECONDS = 10L;
 
     private final WorkerFactory factory;

@@ -11,11 +11,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- * Startup activity that activates the plugin only for Gradle projects that contain at least one
- * module with both {@code src/dsl} and {@code src/models} source directories. The check uses the
- * project's virtual file tree, scoped to module roots, rather than slow recursive directory loops.
- */
 public final class DslCheckStartupActivity implements ProjectActivity {
 
   private static final String DSL_DIR = "src/dsl";

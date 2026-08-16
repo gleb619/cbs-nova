@@ -9,12 +9,6 @@ import javax.sql.DataSource;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 
-/**
- * Typed {@link InvocationHandler} installed by {@link DataSourceProxyBeanPostProcessor} for every
- * proxied {@link DataSource}. Delegates JDBC interface methods to
- * {@link DataSourceMethodDispatcher} and defines proxy identity / string representation for
- * {@code Object} methods.
- */
 public class DataSourceInvocationHandler implements InvocationHandler {
 
   private final DataSource dataSource;

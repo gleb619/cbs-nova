@@ -18,11 +18,6 @@ import com.intellij.psi.impl.compiled.ClsFileImpl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Reuses IntelliJ's bundled Java lexer for token coloring only. This deliberately does not add any
- * custom lexer/parser/inspection logic — the goal is "not plain black text and no errors" for
- * compact-DSL {@code .java} sources, not full semantic fidelity.
- */
 public final class CbsDslSyntaxHighlighterFactory extends SyntaxHighlighterFactory
         implements
           SyntaxHighlighterProvider {

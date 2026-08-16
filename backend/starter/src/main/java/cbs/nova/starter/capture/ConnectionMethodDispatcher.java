@@ -1,6 +1,11 @@
 package cbs.nova.starter.capture;
 
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
+import java.sql.SQLClientInfoException;
+import java.sql.Savepoint;
+import java.sql.ShardingKey;
+import java.util.Map;
+import java.util.Properties;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -13,12 +18,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.concurrent.Executor;
 
-/**
- * Compile-time typed dispatcher for a proxied {@link Connection}. Statement factory methods wrap
- * the returned {@link Statement}/{@link PreparedStatement}/{@link CallableStatement} with a
- * {@link PreparedStatementInvocationHandler}; every other {@link Connection} method is forwarded
- * directly to the real delegate.
- */
 public final class ConnectionMethodDispatcher {
 
   private final Connection connection;
@@ -84,7 +83,7 @@ public final class ConnectionMethodDispatcher {
       case "isValid" -> connection.isValid((int) require(args, 0));
       case "nativeSQL" -> connection.nativeSQL((String) require(args, 0));
       case "releaseSavepoint" -> {
-        connection.releaseSavepoint((java.sql.Savepoint) require(args, 0));
+        connection.releaseSavepoint((Savepoint) require(args, 0));
         yield null;
       }
       case "rollback" -> handleRollback(args);
@@ -122,7 +121,7 @@ public final class ConnectionMethodDispatcher {
         yield null;
       }
       case "setTypeMap" -> {
-        connection.setTypeMap((java.util.Map<String, Class<?>>) require(args, 0));
+        connection.setTypeMap((Map<String, Class<?>>) require(args, 0));
         yield null;
       }
       default -> throw new UnsupportedOperationException("Unhandled Connection method: " + method);
@@ -204,17 +203,17 @@ public final class ConnectionMethodDispatcher {
     if (args == null || args.length == 0) {
       connection.rollback();
     } else {
-      connection.rollback((java.sql.Savepoint) args[0]);
+      connection.rollback((Savepoint) args[0]);
     }
     return null;
   }
 
   private Object handleSetClientInfo(@Nullable Object[] args)
-          throws java.sql.SQLClientInfoException {
+          throws SQLClientInfoException {
     if (args == null || args.length == 0) {
       throw new IllegalArgumentException("setClientInfo requires arguments");
     }
-    if (args[0] instanceof java.util.Properties props) {
+    if (args[0] instanceof Properties props) {
       connection.setClientInfo(props);
     } else {
       connection.setClientInfo((String) args[0], (String) args[1]);
@@ -234,9 +233,9 @@ public final class ConnectionMethodDispatcher {
       throw new IllegalArgumentException("setShardingKey requires arguments");
     }
     if (args.length == 1) {
-      connection.setShardingKey((java.sql.ShardingKey) args[0]);
+      connection.setShardingKey((ShardingKey) args[0]);
     } else {
-      connection.setShardingKey((java.sql.ShardingKey) args[0], (java.sql.ShardingKey) args[1]);
+      connection.setShardingKey((ShardingKey) args[0], (ShardingKey) args[1]);
     }
     return null;
   }
@@ -246,11 +245,11 @@ public final class ConnectionMethodDispatcher {
       throw new IllegalArgumentException("setShardingKeyIfValid requires arguments");
     }
     if (args.length == 2) {
-      return connection.setShardingKeyIfValid((java.sql.ShardingKey) args[0],
+      return connection.setShardingKeyIfValid((ShardingKey) args[0],
               ((Number) args[1]).intValue());
     }
-    return connection.setShardingKeyIfValid((java.sql.ShardingKey) args[0],
-            (java.sql.ShardingKey) args[1], ((Number) args[2]).intValue());
+    return connection.setShardingKeyIfValid((ShardingKey) args[0],
+            (ShardingKey) args[1], ((Number) args[2]).intValue());
   }
 
   private Object wrapStatement(@NonNull Statement statement, @Nullable String sql) {

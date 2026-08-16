@@ -57,7 +57,6 @@ class DevDslRuntimeErrorHandlingTest {
   @BeforeEach
   void setUp() {
     GlobalManager.globalManager().resetForTests();
-    // Register a process that intentionally references a non-existent helper.
     GlobalManager.globalManager()
             .registerProcess(Dsl.process("CallMissing")
                     .execute(ctx -> ctx.runHelper(MISSING_HELPER, ctx.body()))

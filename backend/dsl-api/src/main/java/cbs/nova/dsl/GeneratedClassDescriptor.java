@@ -4,9 +4,6 @@ import cbs.nova.dsl.DslObject.DslType;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-/**
- * Metadata for one generated Temporal entity (Process -> Workflow or Transaction -> Activity).
- */
 public record GeneratedClassDescriptor(
         @NonNull String name,
         @NonNull DslType type,

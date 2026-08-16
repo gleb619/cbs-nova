@@ -8,10 +8,6 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.context.annotation.Bean;
 
-/**
- * Preview/explain autoconfiguration that wraps the raw {@link TemporalTransactionInvoker} with
- * call-capture interceptors so dry-run reports include activity calls.
- */
 @AutoConfiguration
 @AutoConfigureAfter(TemporalConfiguration.class)
 public class PreviewAutoConfiguration {

@@ -12,16 +12,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Temporal {@link ContextPropagator} that carries the dry-run runId across workflow/activity nodes.
- *
- * <p>
- * On the originating node the runId is read from {@link DryRunLoggingContext#currentRunId()} and
- * serialized into the Temporal header named {@value DryRunLoggingContext#RUN_ID_HEADER}. On the
- * worker node the runId is restored into both the injected {@link DryRunLoggingContext} and SLF4J
- * {@link MDC} so that the local {@link DryRunLogbackAppender} can correlate captured logs with the
- * original dry-run.
- */
 @RequiredArgsConstructor
 public class DryRunLoggingContextPropagator implements ContextPropagator {
 

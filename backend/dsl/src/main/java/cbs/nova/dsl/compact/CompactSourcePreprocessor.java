@@ -27,9 +27,6 @@ public final class CompactSourcePreprocessor {
   public record Result(@NonNull String className, @NonNull String preprocessedSource) {
   }
 
-  /**
-   * Validates and preprocesses the given compact source without a target package.
-   */
   public static @NonNull Result preprocess(@NonNull String fileName, @NonNull String rawSource) {
     return preprocess(fileName, rawSource, null);
   }

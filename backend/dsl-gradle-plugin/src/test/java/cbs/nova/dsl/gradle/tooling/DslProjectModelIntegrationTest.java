@@ -17,13 +17,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
-/**
- * End-to-end test that the {@code cbs.nova.dsl} Gradle plugin actually registers
- * {@link DslModelBuilderService} with Gradle's {@code ToolingModelBuilderRegistry}, so that
- * {@link DslProjectModel} is retrievable through the Tooling API by external clients (e.g. the
- * IntelliJ plugin project-sync). This exercises real plugin discovery/registration, unlike
- * {@link DslModelBuilderServiceTest} which calls the builder directly in isolation.
- */
 class DslProjectModelIntegrationTest {
 
   @TempDir

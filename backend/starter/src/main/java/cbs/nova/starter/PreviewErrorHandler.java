@@ -15,29 +15,16 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
-/**
- * Maps exceptions raised during preview or explain dispatch to a developer-friendly
- * {@link PreviewErrorDetail} carrying an error code, message, recovery suggestion, and
- * JSON-serializable context map.
- */
 @NoArgsConstructor
 public class PreviewErrorHandler {
 
   private static final String UNKNOWN_ENTITY_PREFIX = "No DSL entity registered: ";
   private static final String HELPER_NOT_FOUND_PREFIX = "Helper not found: ";
 
-  /**
-   * Map an exception to a {@link PreviewErrorDetail} using only the throwable as context.
-   */
   public static @NonNull PreviewErrorDetail from(@Nullable Throwable cause) {
     return from(cause, null);
   }
 
-  /**
-   * Map an exception to a {@link PreviewErrorDetail}. When {@code entityName} is non-null it is
-   * always added to the context map under {@code name} so callers can correlate the failure with
-   * the DSL entity that was being dispatched.
-   */
   public static @NonNull PreviewErrorDetail from(@Nullable Throwable cause,
           @Nullable String entityName) {
     if (cause == null) {

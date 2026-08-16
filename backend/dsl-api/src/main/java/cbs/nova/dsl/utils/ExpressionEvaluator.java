@@ -4,13 +4,6 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.Map;
 
-/**
- * Evaluates a mixed-text expression against a variable map.
- *
- * <p>
- * Implementations may support interpolation ({@code {name}}) and/or arithmetic/string expressions
- * ({@code ${a + b}}).
- */
 @FunctionalInterface
 public interface ExpressionEvaluator {
 

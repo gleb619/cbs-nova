@@ -14,20 +14,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Sorts a list of records (maps) by a named field.
- *
- * <p>
- * Ordering rules:
- * <ul>
- * <li>Records are sorted in place using a stable JDK sort.</li>
- * <li>Null/missing field values are sorted to the end (nulls last).</li>
- * <li>The {@code algorithm} parameter selects the comparison strategy: {@code natural} (default),
- * {@code string}, or {@code numeric}.</li>
- * <li>The {@code direction} parameter (or legacy {@code ascending} boolean) selects
- * ascending/descending order.</li>
- * </ul>
- */
 @Helper(name = "sortRecords")
 public class SortRecordsHelper implements Executable<SortRecordsIn, SortRecordsOut> {
 

@@ -12,12 +12,6 @@ import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.RouterFunctions;
 import org.springframework.web.servlet.function.ServerResponse;
 
-/**
- * Registers the DSL reload endpoint as a functional {@link RouterFunction} bean. The route is only
- * wired when {@code dsl.reload.enabled} is true (default), delegating to {@link DslReloadResource}.
- * The {@link RouterOperations} metadata keeps the route visible in the springdoc-generated OpenAPI
- * spec, which does not introspect functional endpoints by default.
- */
 @AutoConfiguration
 @ConditionalOnProperty(prefix = "dsl.reload", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DslReloadRouterConfiguration {

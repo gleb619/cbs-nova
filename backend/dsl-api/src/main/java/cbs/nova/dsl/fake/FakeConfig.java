@@ -21,9 +21,6 @@ public record FakeConfig(@NonNull List<FakeEntry> entries) {
     return new FakeConfig(List.of(entries));
   }
 
-  /**
-   * Builds a code → response map for the given type.
-   */
   public @NonNull Map<String, Object> toCodeMap(@NonNull String type) {
     return entries.stream()
             .filter(e -> e.type().equals(type))
@@ -31,12 +28,9 @@ public record FakeConfig(@NonNull List<FakeEntry> entries) {
             .collect(Collectors.toUnmodifiableMap(
                     FakeEntry::code,
                     FakeEntry::response,
-                    (a, b) -> b)); // later entries override earlier ones
+                    (a, b) -> b));
   }
 
-  /**
-   * Returns the response for a single (type, code) pair, or null if none.
-   */
   public @Nullable Object findResponse(@NonNull String type, @NonNull String code) {
     return toCodeMap(type).get(code);
   }

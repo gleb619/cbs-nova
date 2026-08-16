@@ -13,11 +13,6 @@ import java.lang.reflect.Proxy;
 import java.sql.Wrapper;
 import java.util.Set;
 
-/**
- * BeanPostProcessor that transparently wraps every {@link DataSource} bean with a JDK dynamic
- * proxy. The proxy records every JDBC call (executeQuery / executeUpdate / execute / executeBatch)
- * into the supplied {@link ExternalCallRecorder}.
- */
 public class DataSourceProxyBeanPostProcessor implements BeanPostProcessor {
 
   private static final Set<Class<?>> DATA_SOURCE_INTERFACES = Set.of(

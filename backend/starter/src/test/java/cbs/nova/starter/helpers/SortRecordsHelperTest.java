@@ -7,6 +7,7 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helpers.model.SortRecordsIn;
 import cbs.nova.starter.helpers.model.SortRecordsOut;
+import java.util.HashMap;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -106,13 +107,13 @@ class SortRecordsHelperTest {
 
   @Test
   void sortsWithNullValuesPlacedLast() {
-    Map<String, Object> one = new java.util.HashMap<>();
+    Map<String, Object> one = new HashMap<>();
     one.put("a", 3);
-    Map<String, Object> two = new java.util.HashMap<>();
+    Map<String, Object> two = new HashMap<>();
     two.put("a", null);
-    Map<String, Object> three = new java.util.HashMap<>();
+    Map<String, Object> three = new HashMap<>();
     three.put("a", 1);
-    var records = List.<Map<String, Object>>of(one, two, three);
+    var records = List.of(one, two, three);
     var ctx = contextFactory.of(new SortRecordsIn(records, "a", true),
             ExecutionMode.PREVIEW);
     Result<SortRecordsOut> result = helper.execute(ctx);

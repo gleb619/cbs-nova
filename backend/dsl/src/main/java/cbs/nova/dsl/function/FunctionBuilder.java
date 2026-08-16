@@ -39,9 +39,6 @@ public final class FunctionBuilder<I, O> {
     return (FunctionBuilder<T, O>) this;
   }
 
-  /**
-   * Selects the typed branch and fixes the output/result type.
-   */
   @SuppressWarnings("unchecked")
   public <T> FunctionBuilder<I, T> output(@NonNull Class<T> type) {
     this.outputType = type;

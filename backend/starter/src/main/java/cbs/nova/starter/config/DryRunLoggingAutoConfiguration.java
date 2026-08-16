@@ -14,22 +14,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
-/**
- * Autoconfiguration for dry-run log capture.
- *
- * <p>
- * Provides a thread-local {@link DryRunLoggingContext} implementation and registers the
- * {@link DryRunLogbackAppender} on the Logback root logger under the name {@code DRY_RUN}. The
- * appender is configured from Spring constructor parameters instead of Logback XML.
- */
 @AutoConfiguration
 @EnableConfigurationProperties(DryRunProperties.class)
 public class DryRunLoggingAutoConfiguration {
 
-  /**
-   * Default implementation: thread-local, suitable for Temporal multi-node propagation where a
-   * worker must restore the runId from an RPC header.
-   */
   @Bean
   @ConditionalOnMissingBean(DryRunLoggingContext.class)
   @ConditionalOnProperty(name = "cbs.nova.dryRun.context.type", havingValue = "threadlocal", matchIfMissing = true)

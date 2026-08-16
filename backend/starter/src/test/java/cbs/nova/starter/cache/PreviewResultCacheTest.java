@@ -3,6 +3,7 @@ package cbs.nova.starter.cache;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.CallKind;
+import cbs.nova.dsl.CallNode;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.PreviewReport;
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,7 @@ class PreviewResultCacheTest {
           List.of("trace"),
           List.of(),
           Map.of(),
-          cbs.nova.dsl.CallNode.leaf("Ping", CallKind.PROCESS, null, "pong", true),
+          CallNode.leaf("Ping", CallKind.PROCESS, null, "pong", true),
           List.of(),
           null,
           List.of());

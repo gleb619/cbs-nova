@@ -6,9 +6,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
-/**
- * Configuration properties for preview/explain runtime behavior.
- */
 @ConfigurationProperties(prefix = "cbs.nova.preview")
 @Validated
 public record CbsNovaPreviewProperties(

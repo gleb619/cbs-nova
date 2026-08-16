@@ -13,13 +13,6 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.util.List;
 
-/**
- * Universal math helper backed by {@link BigDecimal}.
- *
- * <p>
- * Supports the operations defined in {@link Operation}: add, subtract, multiply, divide, min, and
- * max. The {@code operation} input field is optional and defaults to {@code ADD}.
- */
 @Helper(name = "sumValues")
 public class SumValuesHelper implements Executable<SumValuesIn, SumValuesOut> {
 

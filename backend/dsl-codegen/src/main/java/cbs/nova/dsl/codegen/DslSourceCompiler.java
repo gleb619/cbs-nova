@@ -11,9 +11,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 
-/**
- * Convenience facade that delegates to {@link SourceCompiler} using the system Java compiler.
- */
 @Slf4j
 @RequiredArgsConstructor
 public final class DslSourceCompiler {

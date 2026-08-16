@@ -2,6 +2,7 @@ package cbs.nova.starter.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.HashMap;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -22,7 +23,7 @@ class DryRunLogEventTest {
 
   @Test
   void mdcIsDefensivelyCopied() {
-    var mutable = new java.util.HashMap<String, String>();
+    var mutable = new HashMap<String, String>();
     mutable.put("k", "v");
     var event = new DryRunLogEvent("INFO", "hello", 1L, mutable, null);
 

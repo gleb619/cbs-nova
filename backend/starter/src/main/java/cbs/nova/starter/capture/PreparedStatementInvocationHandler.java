@@ -7,12 +7,6 @@ import org.jspecify.annotations.Nullable;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 
-/**
- * Typed {@link InvocationHandler} for a proxied {@link java.sql.Statement},
- * {@link java.sql.PreparedStatement} or {@link java.sql.CallableStatement}. Records captured JDBC
- * execution calls into the supplied {@link ExternalCallRecorder} and forwards every other method
- * via typed calls to the real delegate.
- */
 public class PreparedStatementInvocationHandler implements InvocationHandler {
 
   private final Object delegate;

@@ -14,16 +14,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 
-/**
- * Boots the full Spring context to confirm springdoc-openapi endpoints are live at runtime. The DSL
- * worker is disabled so no Temporal worker (and thus no live Temporal service) is required. Uses
- * the JDK {@link HttpClient} because Spring Boot 4 removed {@code TestRestTemplate}.
- *
- * <p>
- * Mirrors the {@code T91} actuator runtime-enablement smoke test. The springdoc dependency must be
- * on the implementation classpath (not just {@code compileOnly}) for these endpoints to resolve at
- * all.
- */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "dsl.worker.enabled=false")
 class OpenApiEndpointsTest {
 
