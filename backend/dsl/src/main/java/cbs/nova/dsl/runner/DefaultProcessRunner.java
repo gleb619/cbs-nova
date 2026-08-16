@@ -32,7 +32,8 @@ public final class DefaultProcessRunner implements ProcessRunner {
 
   @Override
   public @NonNull Result<?> run(@NonNull ProcessDslObject process, @NonNull Context<?> ctx) {
-    var historyListener = new DefaultExecutionListener();
+    var repository = DslConfig.dslConfig().transactionExecutionRepository().get();
+    var historyListener = new DefaultExecutionListener(ctx.runId(), repository);
     var existingListener = ctx.executionListener();
     var listener = existingListener == null
             ? historyListener

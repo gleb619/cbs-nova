@@ -52,7 +52,7 @@ class JdbcTransactionExecutionRepositoryTest {
   }
 
   @Test
-  void findByRunIdReturnsMultipleExecutionsInOrder() {
+  void findByRunIdReturnsMultipleExecutionsMostRecentFirst() {
     TransactionExecution a = execution("run-3", "StepA", Map.of("order", 1));
     TransactionExecution b = execution("run-3", "StepB", Map.of("order", 2));
     TransactionExecution c = execution("run-3", "StepC", null);
@@ -65,7 +65,7 @@ class JdbcTransactionExecutionRepositoryTest {
 
     assertThat(found).hasSize(3);
     assertThat(found).extracting(TransactionExecution::transactionName)
-            .containsExactly("StepA", "StepB", "StepC");
+            .containsExactly("StepC", "StepB", "StepA");
   }
 
   @Test

@@ -61,7 +61,7 @@ public class JdbcTransactionExecutionRepository implements TransactionExecutionR
 
   @Override
   public @NonNull List<TransactionExecution> findByRunId(@NonNull String runId) {
-    return delegate.findByRunId(runId).stream()
+    return delegate.findByRunIdOrderByIdDesc(runId).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
   }

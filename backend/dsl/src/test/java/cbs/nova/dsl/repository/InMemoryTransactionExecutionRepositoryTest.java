@@ -28,7 +28,7 @@ class InMemoryTransactionExecutionRepositoryTest {
   }
 
   @Test
-  void findByRunIdReturnsSavedExecutions() {
+  void findByRunIdReturnsSavedExecutionsMostRecentFirst() {
     var repo = new InMemoryTransactionExecutionRepository();
     var a = execution("run-1", "CreateOrder", Map.of("sku", "A"));
     var b = execution("run-1", "ReserveStock", null);
@@ -37,7 +37,7 @@ class InMemoryTransactionExecutionRepositoryTest {
 
     var found = repo.findByRunId("run-1");
 
-    assertThat(found).containsExactly(a, b);
+    assertThat(found).containsExactly(b, a);
   }
 
   @Test

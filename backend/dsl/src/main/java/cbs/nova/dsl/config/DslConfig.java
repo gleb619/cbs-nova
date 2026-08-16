@@ -78,7 +78,7 @@ public class DslConfig implements SingletonSupport {
   }
 
   public @NonNull Replaceable<ExpressionEvaluator> expressionEvaluator() {
-    return replaceable(SimpleExpressionEvaluator::new);
+    return singleton("expressionEvaluator", () -> Replaceable.of(SimpleExpressionEvaluator::new));
   }
 
   public @NonNull Replaceable<TemporalProcessLauncher> temporalProcessLauncher() {
@@ -110,7 +110,8 @@ public class DslConfig implements SingletonSupport {
   }
 
   public @NonNull Replaceable<TransactionExecutionRepository> transactionExecutionRepository() {
-    return replaceable(InMemoryTransactionExecutionRepository::new);
+    return singleton("transactionExecutionRepository",
+            () -> Replaceable.of(InMemoryTransactionExecutionRepository::new));
   }
 
   public @NonNull ObjectMapper jsonMapper() {

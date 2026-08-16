@@ -297,7 +297,8 @@ public final class GlobalManager {
           @NonNull ProcessMain main,
           @NonNull ProcessCompensation compensation) {
     var saga = DslSaga.create();
-    var listener = new DefaultExecutionListener();
+    var repository = DslConfig.dslConfig().transactionExecutionRepository().get();
+    var listener = new DefaultExecutionListener(runId, repository);
     var ctx = createContext(input, Map.of(), ExecutionMode.RUN, runId)
             .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY)
             .withExecutionListener(listener)

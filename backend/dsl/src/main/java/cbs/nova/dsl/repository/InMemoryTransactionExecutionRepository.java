@@ -5,6 +5,7 @@ import cbs.nova.dsl.transaction.TransactionExecution;
 import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,7 +26,12 @@ public final class InMemoryTransactionExecutionRepository
   @Override
   public @NonNull List<TransactionExecution> findByRunId(@NonNull String runId) {
     List<TransactionExecution> list = executions.get(runId);
-    return list == null ? List.of() : new ArrayList<>(list);
+    if (list == null) {
+      return List.of();
+    }
+    List<TransactionExecution> copy = new ArrayList<>(list);
+    Collections.reverse(copy);
+    return copy;
   }
 
   @Override

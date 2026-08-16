@@ -15,5 +15,5 @@ public interface TransactionExecutionJdbcRepository
         extends
           CrudRepository<TransactionExecutionEntity, Long> {
 
-  List<TransactionExecutionEntity> findByRunId(String runId);
+  List<TransactionExecutionEntity> findByRunIdOrderByIdDesc(String runId);
 }
