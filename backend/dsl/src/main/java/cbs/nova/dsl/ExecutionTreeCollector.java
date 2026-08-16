@@ -21,9 +21,9 @@ public final class ExecutionTreeCollector implements ExecutionListener {
 
   private final int maxDepth;
 
-  private final Deque<Frame> stack = new ArrayDeque<>();
+  private final Deque<Frame> stack;
   private CallNode root;
-  private final Set<String> cycleSet = new HashSet<>();
+  private final Set<String> cycleSet;
   private int skipCount;
   private boolean active;
 
@@ -32,26 +32,31 @@ public final class ExecutionTreeCollector implements ExecutionListener {
   }
 
   public ExecutionTreeCollector(int maxDepth) {
+    this(maxDepth, new ArrayDeque<>(), new HashSet<>());
+  }
+
+  public ExecutionTreeCollector(int maxDepth, Deque<Frame> stack, Set<String> cycleSet) {
     this.maxDepth = maxDepth;
+    this.stack = stack;
+    this.cycleSet = cycleSet;
+    this.root = null;
+    this.skipCount = 0;
+    this.active = false;
   }
 
   public void start() {
-    synchronized (stack) {
-      stack.clear();
-      active = true;
-    }
+    active = true;
     root = null;
-    cycleSet.clear();
     skipCount = 0;
+    stack.clear();
+    cycleSet.clear();
   }
 
   public void finish() {
-    synchronized (stack) {
-      while (!stack.isEmpty()) {
-        stack.pop();
-      }
-      active = false;
+    while (!stack.isEmpty()) {
+      stack.pop();
     }
+    active = false;
   }
 
   @Override
@@ -115,13 +120,11 @@ public final class ExecutionTreeCollector implements ExecutionListener {
     if (!active || skipCount > 0) {
       return;
     }
-    synchronized (stack) {
-      Frame top = stack.peek();
-      if (top == null) {
-        return;
-      }
-      top.externalCalls.add(call);
+    Frame top = stack.peek();
+    if (top == null) {
+      return;
     }
+    top.externalCalls.add(call);
   }
 
   public @NonNull Optional<CallNode> tree() {
@@ -129,82 +132,78 @@ public final class ExecutionTreeCollector implements ExecutionListener {
   }
 
   private void pushFrame(String name, CallKind kind, Object input) {
-    synchronized (stack) {
-      if (!active) {
-        return;
-      }
-      if (skipCount > 0) {
-        skipCount++;
-        return;
-      }
-      if (stack.size() >= maxDepth) {
-        stack.push(new Frame("<truncated>", kind, null, true));
-        skipCount = 1;
-        log.warn("ExecutionTreeCollector: depth limit {} reached at '{}', truncating subtree",
-                maxDepth, name);
-        return;
-      }
-      String cycleKey = name + ":" + kind;
-      if (cycleSet.contains(cycleKey)) {
-        stack.push(new Frame("<truncated>", kind, null, true));
-        skipCount = 1;
-        log.warn("ExecutionTreeCollector: cycle detected at '{}' ({}), truncating",
-                name, kind);
-        return;
-      }
-      stack.push(new Frame(name, kind, input, false));
-      cycleSet.add(cycleKey);
+    if (!active) {
+      return;
     }
+    if (skipCount > 0) {
+      skipCount++;
+      return;
+    }
+    if (stack.size() >= maxDepth) {
+      stack.push(new Frame("<truncated>", kind, null, true));
+      skipCount = 1;
+      log.warn("ExecutionTreeCollector: depth limit {} reached at '{}', truncating subtree",
+              maxDepth, name);
+      return;
+    }
+    String cycleKey = name + ":" + kind;
+    if (cycleSet.contains(cycleKey)) {
+      stack.push(new Frame("<truncated>", kind, null, true));
+      skipCount = 1;
+      log.warn("ExecutionTreeCollector: cycle detected at '{}' ({}), truncating",
+              name, kind);
+      return;
+    }
+    stack.push(new Frame(name, kind, input, false));
+    cycleSet.add(cycleKey);
   }
 
   private void popFrame(String name, Object output, boolean success) {
-    synchronized (stack) {
-      if (!active) {
-        return;
-      }
-      if (skipCount > 0) {
-        skipCount--;
-        if (skipCount == 0) {
-          Frame sentinel = stack.poll();
-          if (sentinel != null && sentinel.sentinel) {
-            CallNode node = new CallNode(
-                    "<truncated>",
-                    sentinel.kind,
-                    null, null, false,
-                    List.of(), List.of());
-            Frame parent = stack.peek();
-            if (parent == null) {
-              root = node;
-            } else {
-              parent.children.add(node);
-            }
+    if (!active) {
+      return;
+    }
+    if (skipCount > 0) {
+      skipCount--;
+      if (skipCount == 0) {
+        Frame sentinel = stack.poll();
+        if (sentinel != null && sentinel.sentinel) {
+          CallNode node = new CallNode(
+                  "<truncated>",
+                  sentinel.kind,
+                  null, null, false,
+                  List.of(), List.of());
+          Frame parent = stack.peek();
+          if (parent == null) {
+            root = node;
+          } else {
+            parent.children.add(node);
           }
         }
-        return;
       }
-      Frame frame = stack.poll();
-      if (frame == null || frame.sentinel) {
-        return;
-      }
-      frame.output = output;
-      frame.success = success;
-      CallNode node = new CallNode(
-              frame.name,
-              frame.kind,
-              frame.input,
-              frame.output,
-              frame.success,
-              List.copyOf(frame.children),
-              List.copyOf(frame.externalCalls));
-      Frame parent = stack.peek();
-      if (parent == null) {
-        root = node;
-      } else {
-        parent.children.add(node);
-      }
-      String cycleKey = frame.name + ":" + frame.kind;
-      cycleSet.remove(cycleKey);
+      return;
     }
+    Frame frame = stack.poll();
+    if (frame == null || frame.sentinel) {
+      return;
+    }
+    frame.output = output;
+    frame.success = success;
+    CallNode node = new CallNode(
+            frame.name,
+            frame.kind,
+            frame.input,
+            frame.output,
+            frame.success,
+            List.copyOf(frame.children),
+            List.copyOf(frame.externalCalls));
+    Frame parent = stack.peek();
+    if (parent == null) {
+      root = node;
+    } else {
+      parent.children.add(node);
+    }
+    String cycleKey = frame.name + ":" + frame.kind;
+    cycleSet.remove(cycleKey);
   }
 
   private static final class Frame {
