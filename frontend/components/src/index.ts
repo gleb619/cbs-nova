@@ -1,3 +1,4 @@
+export { default as AppFooter } from './components/AppFooter.vue'
 export { default as AppMainContent } from './components/AppMainContent.vue'
 export { default as AppMobileDrawer } from './components/AppMobileDrawer.vue'
 export { default as AppNavbar } from './components/AppNavbar.vue'

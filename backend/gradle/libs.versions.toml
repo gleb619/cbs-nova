@@ -29,6 +29,7 @@ spring-boot = "4.0.4"
 spring-dm = "1.1.7"
 spotless = "7.0.2"
 test-logger = "4.0.0"
+gradle-git-properties = "2.5.2"
 
 [libraries]
 # -- Temporal --
@@ -111,3 +112,4 @@ spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
 spring-dm = { id = "io.spring.dependency-management", version.ref = "spring-dm" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 test-logger = { id = "com.adarshr.test-logger", version.ref = "test-logger" }
+git-properties = { id = "com.gorylenko.gradle-git-properties", version.ref = "gradle-git-properties" }

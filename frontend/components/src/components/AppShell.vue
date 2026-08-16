@@ -44,6 +44,7 @@ const props = defineProps<{
       <AppMainContent>
         <slot />
       </AppMainContent>
+      <slot name="footer" />
     </div>
   </div>
 </template>

@@ -32,9 +32,13 @@ class ActuatorEndpointsTest {
   }
 
   @Test
-  void infoEndpointReturns200() throws Exception {
+  void infoEndpointReturns200WithGitAndBuildInfo() throws Exception {
     HttpResponse<String> response = get("/actuator/info");
     assertThat(response.statusCode()).isEqualTo(200);
+    assertThat(response.body()).contains("git");
+    assertThat(response.body()).contains("commit");
+    assertThat(response.body()).contains("build");
+    assertThat(response.body()).contains("artifact");
   }
 
   @Test

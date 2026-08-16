@@ -3,6 +3,7 @@ plugins {
   id 'maven-publish'
   alias(libs.plugins.spring.boot)
   alias(libs.plugins.spring.dm)
+  alias(libs.plugins.git.properties)
 }
 
 bootJar {
@@ -15,6 +16,10 @@ jar {
 
 springBoot {
   buildInfo()
+}
+
+gitProperties {
+  dotGitDirectory = file("${rootDir}/../.git")
 }
 
 dependencies {

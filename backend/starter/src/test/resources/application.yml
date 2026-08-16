@@ -23,6 +23,10 @@ management:
       show-components: always
   info:
     env:
-      enabled: true
+      enabled: false
     java:
+      enabled: true
+    git:
+      enabled: true
+    build:
       enabled: true

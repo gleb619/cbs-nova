@@ -33,6 +33,7 @@ const previewHandler = (await import('../dsl/preview/[name].post')).default
 const explainHandler = (await import('../dsl/explain/[name].post')).default
 const executionsIndexHandler = (await import('../executions/index.get')).default
 const executionsIdHandler = (await import('../executions/[id].get')).default
+const infoHandler = (await import('../info.get')).default
 
 // Minimal H3Event stub. The route handlers only pass this through to
 // proxyToBackend, which is mocked, so a plain object is sufficient.
@@ -224,5 +225,22 @@ describe('executions/[id].get', () => {
     await executionsIdHandler(fakeEvent)
 
     expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/executions/with/slash')
+  })
+})
+
+describe('info.get', () => {
+  it('GETs /actuator/info with no body and returns the backend payload verbatim', async () => {
+    const infoPayload = {
+      git: { branch: 'main' },
+      build: { version: '0.0.1-SNAPSHOT' },
+    }
+    proxyToBackendMock.mockResolvedValueOnce(infoPayload)
+
+    const result = await infoHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/actuator/info')
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+    expect(result).toEqual(infoPayload)
   })
 })
