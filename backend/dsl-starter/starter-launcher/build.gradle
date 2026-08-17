@@ -2,11 +2,13 @@ plugins {
   id 'java'
   alias(libs.plugins.spring.boot)
   alias(libs.plugins.spring.dm)
+  alias(libs.plugins.test.logger)
   //alias(libs.plugins.sentry)
 }
 
 dependencies {
   implementation project(':starter')
+  implementation project(':dsl-examples')
   implementation platform(libs.spring.cloud.dependencies)
 
   implementation libs.bundles.spring.web

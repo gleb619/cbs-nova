@@ -56,6 +56,7 @@ class DslRootAutoConfigurationTest {
             MessagingCallCaptureAutoConfiguration.class,
             PreviewMetricsAutoConfiguration.class,
             DslReloadRouterConfiguration.class,
+            DslIntrospectionRouterConfiguration.class,
             DslErrorHandlingAutoConfiguration.class);
   }
 

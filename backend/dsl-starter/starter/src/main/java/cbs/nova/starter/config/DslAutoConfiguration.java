@@ -1,9 +1,9 @@
 package cbs.nova.starter.config;
 
-import cbs.nova.dsl.CompilingDslDefinitionLoader;
 import cbs.nova.dsl.DslDefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.JsonSchemaGenerator;
+import cbs.nova.dsl.ServiceLoaderDslDefinitionLoader;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.history.DslRunRepository;
@@ -28,8 +28,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import tools.jackson.databind.ObjectMapper;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @AutoConfiguration
@@ -37,23 +37,20 @@ import java.nio.file.Path;
 public class DslAutoConfiguration {
 
   @Bean
-  @ConditionalOnProperty(name = "dsl.source-dir")
   public ApplicationRunner dslApplicationRunner(HelperInstanceResolver helperInstanceResolver,
           ExpressionEvaluator expressionEvaluator,
           TransactionInvoker transactionInvoker,
           TemporalProcessLauncher temporalProcessLauncher,
           JsonSchemaGenerator jsonSchemaGenerator,
-          DslProperties dslProperties,
           DslDefinitionLoader loader) {
     return _ -> {
-      var dir = acquireSourceDir(dslProperties.sourceDir());
-      loader.load(dir, GlobalManager.globalManager());
+      loadDsl(loader);
 
-      registerHelperResolvers();
       registerExpressionEvaluator(expressionEvaluator);
       registerTemporalProcessLauncher(temporalProcessLauncher);
       registerTransactionInvoker(transactionInvoker);
       registerHelperInstanceResolver(helperInstanceResolver);
+      registerHelperResolvers();
       registerJsonSchemaGenerator(jsonSchemaGenerator);
     };
   }
@@ -80,7 +77,7 @@ public class DslAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean(DslDefinitionLoader.class)
   public DslDefinitionLoader dslDefinitionLoader() {
-    return new CompilingDslDefinitionLoader();
+    return new ServiceLoaderDslDefinitionLoader();
   }
 
   @Bean
@@ -99,6 +96,17 @@ public class DslAutoConfiguration {
   @ConditionalOnMissingBean(JsonSchemaGenerator.class)
   public JsonSchemaGenerator jsonSchemaGenerator() {
     return DslConfig.dslConfig().jsonSchemaGenerator().get();
+  }
+
+  private void loadDsl(DslDefinitionLoader loader) {
+    CompletableFuture.supplyAsync(() -> loader.load(GlobalManager.globalManager()))
+            .whenComplete((count, ex) -> {
+              if (Objects.nonNull(ex)) {
+                log.error("DSL_ERROR: ", ex);
+              } else {
+                log.info("Dsl objects has bean registered: {} objects", count);
+              }
+            });
   }
 
   private void registerExpressionEvaluator(ExpressionEvaluator expressionEvaluator) {
@@ -126,21 +134,6 @@ public class DslAutoConfiguration {
 
   private void registerJsonSchemaGenerator(JsonSchemaGenerator jsonSchemaGenerator) {
     DslConfig.dslConfig().jsonSchemaGenerator().replace(jsonSchemaGenerator);
-  }
-
-  private Path acquireSourceDir(String sourceDirProperty) {
-    if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
-      throw new NullPointerException(
-              "dsl.source-dir can't be empty");
-    }
-
-    var dir = Path.of(sourceDirProperty);
-    if (!Files.isDirectory(dir)) {
-      throw new IllegalStateException(
-              "dsl.source-dir does not exist or is not a directory: " + dir);
-    }
-
-    return dir;
   }
 
 }

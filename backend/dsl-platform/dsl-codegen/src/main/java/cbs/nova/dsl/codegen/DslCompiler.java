@@ -2,13 +2,14 @@ package cbs.nova.dsl.codegen;
 
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.GeneratedClassProvider;
-import cbs.nova.dsl.ModelRegistry;
-import cbs.nova.dsl.codegen.SemanticValidator;
 import cbs.nova.dsl.codegen.generator.GeneratedClassProviderGenerator;
 import cbs.nova.dsl.codegen.generator.ModelRegistryGenerator;
 import cbs.nova.dsl.codegen.generator.ProcessCodeGenerator;
 import cbs.nova.dsl.codegen.generator.TransactionCodeGenerator;
+import cbs.nova.dsl.codegen.model.CodegenNaming;
+import cbs.nova.dsl.codegen.model.DslCompilerOptions;
 import cbs.nova.dsl.codegen.model.GeneratedSource;
+import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
 import cbs.nova.dsl.compact.CompactSourcePreprocessor;
 import cbs.nova.dsl.config.DescriptorFactory;
 import cbs.nova.dsl.function.FunctionDescriptor;
@@ -16,6 +17,7 @@ import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.registry.HelperRegistry;
+import cbs.nova.dsl.registry.ModelRegistry;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import lombok.RequiredArgsConstructor;
@@ -42,21 +44,17 @@ public final class DslCompiler {
   private final DescriptorFactory descriptorFactory;
   private final SemanticValidator semanticValidator;
   private final HelperRegistry helperRegistry;
+  private final CodegenNaming codegenNaming;
   private final Level logLevel;
 
   public static void main(String[] args) throws IOException {
-    if (args.length < 2) {
+    if (args.length < 1) {
       log.atLevel(Level.ERROR).log(
-              () -> "Usage: DslCompiler <srcDir> <outputDir> [version] [targetPackage] [logLevel]");
+              () -> "Usage: DslCompiler <serialized java.util.Properties>");
       System.exit(1);
     }
-    var srcDir = Path.of(args[0]);
-    var outputDir = Path.of(args[1]);
-    var version = args.length > 2 ? nullIfBlank(args[2]) : null;
-    var targetPackage = args.length > 3 ? nullIfBlank(args[3]) : null;
-    var logLevelArg = args.length > 4 ? nullIfBlank(args[4]) : null;
-    var logLevel = logLevelArg != null ? Level.valueOf(logLevelArg.toUpperCase()) : Level.INFO;
-    compile(srcDir, outputDir, version, targetPackage, logLevel);
+    var options = DslCompilerOptions.fromProperties(args[0]);
+    compile(options);
   }
 
   public static void compile(Path srcDir, Path outputDir) throws IOException {
@@ -84,20 +82,33 @@ public final class DslCompiler {
           String targetPackage,
           Level logLevel,
           String classpath) throws IOException {
-    CompileConfig.compileConfig(logLevel)
-            .dslCompiler()
-            .compileInternal(srcDir, outputDir, version, targetPackage, classpath);
+    var options = new DslCompilerOptions(
+            srcDir,
+            outputDir,
+            version != null && !version.isBlank() ? version : "v1",
+            targetPackage,
+            logLevel,
+            classpath,
+            true);
+    compile(options);
   }
 
-  private void compileInternal(
-          @NonNull Path srcDir,
-          @NonNull Path outputDir,
-          String version,
-          String targetPackage,
-          String classpath) throws IOException {
-    var options = new SourceCompiler.CompileOptions(version, targetPackage, logLevel, classpath);
-    List<DslObject> objects = dslSourceCompiler.compileAndLoad(srcDir, outputDir, options);
-    List<String> preprocessedSources = preprocessedDslSources(srcDir, targetPackage);
+  public static void compile(@NonNull DslCompilerOptions options) throws IOException {
+    CompileConfig.compileConfig(options.logLevel())
+            .dslCompiler()
+            .compileInternal(options);
+  }
+
+  private void compileInternal(@NonNull DslCompilerOptions options) throws IOException {
+    var sourceOptions = new SourceCompiler.CompileOptions(
+            options.buildVersion(),
+            options.targetPackage(),
+            options.logLevel(),
+            options.classpath(),
+            options.useFileNameSubPackage());
+    List<DslObject> objects = dslSourceCompiler.compileAndLoad(
+            options.srcDir(), options.outputDir(), sourceOptions);
+    List<String> preprocessedSources = preprocessedDslSources(options);
 
     var processes = new ArrayList<ProcessDescriptor>();
     var transactions = new ArrayList<TransactionDescriptor>();
@@ -113,45 +124,53 @@ public final class DslCompiler {
       }
     }
 
-    semanticValidator.validate(processes, transactions, functions,
-            helperRegistry);
+    semanticValidator.validate(processes, transactions, functions, helperRegistry);
 
     var sources = new ArrayList<GeneratedSource>();
     var providerFqns = new ArrayList<String>();
 
     for (var p : processes) {
-      sources.addAll(processCodeGenerator.generate(p, version, targetPackage));
+      sources.addAll(processCodeGenerator.generate(
+              p, options.buildVersion(), options.targetPackage(),
+              options.useFileNameSubPackage()));
       var provider = generatedClassProviderGenerator.forProcess(
-              p, preprocessedSources, version, targetPackage);
+              p, preprocessedSources, options.buildVersion(), options.targetPackage(),
+              options.useFileNameSubPackage());
       sources.add(provider);
       providerFqns.add(provider.fullyQualifiedName());
     }
     for (var t : transactions) {
-      sources.addAll(transactionCodeGenerator.generate(t, version, targetPackage));
+      sources.addAll(transactionCodeGenerator.generate(
+              t, options.buildVersion(), options.targetPackage(),
+              options.useFileNameSubPackage()));
       var provider = generatedClassProviderGenerator.forTransaction(
-              t, preprocessedSources, version, targetPackage);
+              t, preprocessedSources, options.buildVersion(), options.targetPackage(),
+              options.useFileNameSubPackage());
       sources.add(provider);
       providerFqns.add(provider.fullyQualifiedName());
     }
 
-    var modelRegistrySource = modelRegistryGenerator.generate(srcDir, outputDir, targetPackage);
+    var modelRegistrySource = modelRegistryGenerator.generate(
+            options.srcDir(), options.outputDir(), options.targetPackage(),
+            options.useFileNameSubPackage());
     sources.add(modelRegistrySource);
 
-    codeWriter.write(sources, outputDir);
-    codeWriter.writeServiceFile(GeneratedClassProvider.class.getName(), providerFqns, outputDir);
+    codeWriter.write(sources, options.outputDir());
+    codeWriter.writeServiceFile(GeneratedClassProvider.class.getName(), providerFqns,
+            options.outputDir());
     codeWriter.writeServiceFile(ModelRegistry.class.getName(),
-            List.of(modelRegistrySource.fullyQualifiedName()), outputDir);
+            List.of(modelRegistrySource.fullyQualifiedName()), options.outputDir());
     log.atLevel(Level.INFO).log(() -> "[DslCompiler] Generated %s source(s) to %s"
-            .formatted(sources.size(), outputDir));
+            .formatted(sources.size(), options.outputDir()));
   }
 
-  private static @NonNull List<String> preprocessedDslSources(
-          @NonNull Path srcDir,
-          String targetPackage) throws IOException {
-    var dslDir = srcDir.resolve(CompilerConstants.DSL_FOLDER);
+  private @NonNull List<String> preprocessedDslSources(@NonNull DslCompilerOptions options)
+          throws IOException {
+    var dslDir = options.srcDir().resolve(CompilerConstants.DSL_FOLDER);
     if (!Files.isDirectory(dslDir)) {
       return List.of();
     }
+    var resolver = new DslPackageNameResolver(codegenNaming);
     var result = new ArrayList<String>();
     try (var stream = Files.walk(dslDir)) {
       for (Path file : stream.toList()) {
@@ -161,7 +180,12 @@ public final class DslCompiler {
         try {
           var fileName = file.getFileName().toString();
           var rawSource = Files.readString(file);
-          var preprocess = CompactSourcePreprocessor.preprocess(fileName, rawSource, targetPackage);
+          var packageName = resolver.resolve(
+                  options.targetPackage(),
+                  options.buildVersion(),
+                  fileName,
+                  options.useFileNameSubPackage());
+          var preprocess = CompactSourcePreprocessor.preprocess(fileName, rawSource, packageName);
           result.add(preprocess.preprocessedSource());
         } catch (IllegalArgumentException e) {
           log.atLevel(Level.WARN).log(
@@ -171,9 +195,5 @@ public final class DslCompiler {
       }
     }
     return result;
-  }
-
-  private static String nullIfBlank(String value) {
-    return value != null && !value.isBlank() ? value : null;
   }
 }

@@ -2,8 +2,10 @@ package cbs.nova.dsl.codegen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.codegen.model.DslCompilerOptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.event.Level;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -108,17 +110,22 @@ class DslCompilerTest {
 
     DslCompiler.compile(srcDir, outDir, "abc1234", "cbs.nova.dsl.codegen.test");
 
-    assertThat(outDir.resolve("cbs/nova/dsl/codegen/test/TestModels.class")).exists();
-    assertThat(outDir.resolve("cbs/nova/dsl/codegen/test/TestProcess.class")).exists();
+    assertThat(outDir.resolve("cbs/nova/dsl/codegen/test/testprocess/abc1234/TestModels.class"))
+            .exists();
+    assertThat(outDir.resolve("cbs/nova/dsl/codegen/test/testprocess/abc1234/TestProcess.class"))
+            .exists();
     assertThat(outDir.resolve("cbs/nova/dsl/codegen/test/GeneratedDslDefinitionProvider.class"))
             .exists();
 
-    var dir = outDir.resolve("cbs/nova/dsl/codegen/test/versionedprocess/abc1234");
-    assertThat(dir.resolve("VersionedProcessProcessWorkflow.java")).exists();
-    assertThat(dir.resolve("VersionedProcessProcessDefinition.java")).exists();
-    assertThat(Files.readString(dir.resolve("VersionedProcessProcessDefinition.java")))
+    var preprocessedDslDir = outDir.resolve("cbs/nova/dsl/codegen/test/testprocess/abc1234");
+    assertThat(preprocessedDslDir.resolve("TestProcess.java")).exists();
+    var generatedDir = outDir.resolve("cbs/nova/dsl/codegen/test/versionedprocess/abc1234");
+    assertThat(generatedDir.resolve("VersionedProcessProcessWorkflow.java")).exists();
+    assertThat(generatedDir.resolve("VersionedProcessProcessDefinition.java")).exists();
+    assertThat(Files.readString(generatedDir.resolve("VersionedProcessProcessDefinition.java")))
             .contains("VERSION = \"abc1234\"");
-    assertThat(Files.readString(dir.resolve("VersionedProcessGeneratedClassProvider.java")))
+    assertThat(
+            Files.readString(generatedDir.resolve("VersionedProcessGeneratedClassProvider.java")))
             .contains("\"abc1234\"");
   }
 
@@ -149,5 +156,50 @@ class DslCompilerTest {
     var dir = outDir.resolve("cbs/nova/dsl/generated/paramprocess/v1");
     assertThat(dir.resolve("ParamProcessProcessWorkflow.java")).exists();
     assertThat(dir.resolve("ParamProcessProcessDefinition.java")).exists();
+  }
+
+  @Test
+  void placesAllGeneratedSourcesInFlatVersionedPackageWhenSubPackageDisabled() throws Exception {
+    var dslDir = Files.createDirectories(srcDir.resolve(CompilerConstants.DSL_FOLDER));
+    var modelsDir = Files.createDirectories(srcDir.resolve(CompilerConstants.MODELS_FOLDER));
+    Files.writeString(
+            modelsDir.resolve("TestModels.java"),
+            """
+                    public class TestModels {
+                      public record TestIn(String value) {}
+                    }
+                    """);
+    Files.writeString(
+            dslDir.resolve("TestProcess.java"),
+            """
+                    import cbs.nova.dsl.*;
+                    import cbs.nova.dsl.test.TestModels.*;
+                    import java.util.List;
+
+                    void main() {}
+
+                    List<DslObject> define() {
+                      return Dsl.process("FlatProcess")
+                          .input(TestIn.class)
+                          .output(String.class)
+                          .execute(ctx -> Result.success("ok"))
+                          .buildList();
+                    }
+                    """);
+
+    var options = new DslCompilerOptions(
+            srcDir, outDir, "v1", "cbs.nova.dsl.test", Level.INFO, null, false);
+    DslCompiler.compile(options);
+
+    var flatDir = outDir.resolve("cbs/nova/dsl/test/v1");
+    assertThat(flatDir.resolve("TestProcess.java")).exists();
+    assertThat(flatDir.resolve("TestModels.java")).exists();
+    assertThat(flatDir.resolve("FlatProcessProcessWorkflow.java")).exists();
+    assertThat(flatDir.resolve("FlatProcessProcessDefinition.java")).exists();
+    assertThat(flatDir.resolve("FlatProcessGeneratedClassProvider.java")).exists();
+    assertThat(Files.readString(flatDir.resolve("TestProcess.java")))
+            .contains("package cbs.nova.dsl.test.v1;");
+    assertThat(Files.readString(flatDir.resolve("FlatProcessProcessDefinition.java")))
+            .contains("VERSION = \"v1\"");
   }
 }

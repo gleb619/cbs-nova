@@ -8,30 +8,19 @@ import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.function.ServerRequest;
+import org.springframework.web.servlet.function.ServerResponse;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-@RestController
-@RequestMapping("/api/dsl")
-@Tag(name = "DSL Introspection", description = "Inspect registered DSL entities")
+@Component
 @RequiredArgsConstructor
-public class DslIntrospectionResource {
+public class DslIntrospectionHandler {
 
   private final JsonSchemaGenerator jsonSchemaGenerator;
 
@@ -53,62 +42,53 @@ public class DslIntrospectionResource {
     return jsonSchemaGenerator.generateSchema((Class<?>) null);
   }
 
-  @GetMapping("/processes")
-  @Operation(summary = "List all registered DSL process names")
-  public ResponseEntity<NamesResponse> processes() {
-    return ResponseEntity.ok(new NamesResponse(GlobalManager.globalManager().processNames()));
+  public ServerResponse processes(ServerRequest request) {
+    return ServerResponse.ok()
+            .body(new NamesResponse(GlobalManager.globalManager().processNames()));
   }
 
-  @GetMapping("/processes/{name}")
-  @Operation(summary = "Get metadata of a single DSL process")
-  public ResponseEntity<?> processDetail(@PathVariable String name) {
+  public ServerResponse processDetail(ServerRequest request) {
+    String name = request.pathVariable("name");
     return GlobalManager.globalManager()
             .findProcess(name)
-            .<ResponseEntity<?>>map(
-                    p -> ResponseEntity.ok(
-                            new ProcessDetail(
-                                    p.name(),
-                                    p.version(),
-                                    p.taskQueue(),
-                                    typeName(p.inputType()),
-                                    typeName(p.outputType()),
-                                    p.compensationLogic() != null,
-                                    inputSchema(p))))
-            .orElse(ResponseEntity.notFound().build());
+            .<ServerResponse>map(p -> ServerResponse.ok().body(
+                    new ProcessDetail(
+                            p.name(),
+                            p.version(),
+                            p.taskQueue(),
+                            typeName(p.inputType()),
+                            typeName(p.outputType()),
+                            p.compensationLogic() != null,
+                            inputSchema(p))))
+            .orElse(ServerResponse.notFound().build());
   }
 
-  @GetMapping("/transactions")
-  @Operation(summary = "List all registered DSL transaction names")
-  public ResponseEntity<NamesResponse> transactions() {
-    return ResponseEntity.ok(new NamesResponse(GlobalManager.globalManager().transactionNames()));
+  public ServerResponse transactions(ServerRequest request) {
+    return ServerResponse.ok()
+            .body(new NamesResponse(GlobalManager.globalManager().transactionNames()));
   }
 
-  @GetMapping("/transactions/{name}")
-  @Operation(summary = "Get metadata of a single DSL transaction")
-  public ResponseEntity<?> transactionDetail(@PathVariable String name) {
+  public ServerResponse transactionDetail(ServerRequest request) {
+    String name = request.pathVariable("name");
     return GlobalManager.globalManager()
             .findTransaction(name)
-            .<ResponseEntity<?>>map(
-                    t -> ResponseEntity.ok(
-                            new TransactionDetail(
-                                    t.name(),
-                                    t.version(),
-                                    t.taskQueue(),
-                                    typeName(t.inputType()),
-                                    typeName(t.outputType()),
-                                    t.compensationLogic() != null,
-                                    t.startToCloseTimeout().toMillis(),
-                                    inputSchema(t))))
-            .orElse(ResponseEntity.notFound().build());
+            .<ServerResponse>map(t -> ServerResponse.ok().body(
+                    new TransactionDetail(
+                            t.name(),
+                            t.version(),
+                            t.taskQueue(),
+                            typeName(t.inputType()),
+                            typeName(t.outputType()),
+                            t.compensationLogic() != null,
+                            t.startToCloseTimeout().toMillis(),
+                            inputSchema(t))))
+            .orElse(ServerResponse.notFound().build());
   }
 
-  @GetMapping("/helpers/search")
-  @Operation(summary = "Search registered DSL helpers, processes, transactions and functions")
-  @ApiResponse(responseCode = "200", description = "Matching DSL entities", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = HelperSearchResult.class))))
-  public ResponseEntity<List<HelperSearchResult>> searchHelpers(
-          @RequestParam(name = "name", required = false) String name,
-          @RequestParam(name = "type", required = false) String type,
-          @RequestParam(name = "description", required = false) String description) {
+  public ServerResponse searchObjects(ServerRequest request) {
+    String name = request.param("name").orElse(null);
+    String type = request.param("type").orElse(null);
+    String description = request.param("description").orElse(null);
     var gm = GlobalManager.globalManager();
     List<HelperSearchResult> results = new ArrayList<>();
     gm.processNames().forEach(n -> gm.describeProcess(n)
@@ -122,19 +102,14 @@ public class DslIntrospectionResource {
     var filtered = results.stream()
             .filter(r -> matches(r, name, type, description))
             .toList();
-    return ResponseEntity.ok(filtered);
+    return ServerResponse.ok().body(filtered);
   }
 
-  @GetMapping("/helpers")
-  @Operation(summary = "List all registered DSL helper names")
-  public ResponseEntity<NamesResponse> helpers() {
-    return ResponseEntity.ok(new NamesResponse(GlobalManager.globalManager().helperNames()));
+  public ServerResponse helpers(ServerRequest request) {
+    return ServerResponse.ok().body(new NamesResponse(GlobalManager.globalManager().helperNames()));
   }
 
-  @GetMapping("/definitions")
-  @Operation(summary = "List all registered DSL definitions (processes, transactions, helpers, functions)")
-  @ApiResponse(responseCode = "200", description = "Aggregated DSL definitions", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = DefinitionMetaDto.class))))
-  public ResponseEntity<List<DefinitionMetaDto>> definitions() {
+  public ServerResponse definitions(ServerRequest request) {
     var gm = GlobalManager.globalManager();
     List<DefinitionMetaDto> aggregate = new ArrayList<>();
     gm.processNames().forEach(n -> gm.findProcess(n)
@@ -149,7 +124,7 @@ public class DslIntrospectionResource {
       gm.describeFunction(n).ifPresent(d -> aggregate.add(
               new DefinitionMetaDto(d.name(), "function", null)));
     });
-    return ResponseEntity.ok(aggregate);
+    return ServerResponse.ok().body(aggregate);
   }
 
   private static HelperSearchResult toResult(DslDescriptor descriptor) {

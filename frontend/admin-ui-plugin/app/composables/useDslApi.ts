@@ -4,7 +4,7 @@ export function useDslApi() {
     return $fetch('/api/v1/dsl/definitions')
   }
 
-  async function searchHelpers(
+  async function searchObjects(
     filters: { name?: string; type?: string; description?: string } = {},
   ) {
     const query: Record<string, string> = {}
@@ -12,7 +12,7 @@ export function useDslApi() {
     if (filters.type?.trim()) query.type = filters.type.trim()
     if (filters.description?.trim()) query.description = filters.description.trim()
 
-    return $fetch('/api/v1/helpers/search', { query })
+    return $fetch('/api/v1/dsl/objects/search', { query })
   }
 
   async function preview(name: string, body: unknown, metadata?: Record<string, unknown>) {
@@ -52,7 +52,7 @@ export function useDslApi() {
 
   return {
     getDefinitions,
-    searchHelpers,
+    searchObjects,
     preview,
     run,
     explain,

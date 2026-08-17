@@ -46,7 +46,7 @@ public final class CompileConfig implements SingletonSupport {
 
   public @NonNull SourceCompiler sourceCompiler() {
     return singleton(() -> new SourceCompiler(
-            logLevel, definitionProviderGenerator(), codeWriter()));
+            logLevel, definitionProviderGenerator(), codeWriter(), codegenNaming()));
   }
 
   public @NonNull DslSourceCompiler dslSourceCompiler() {
@@ -115,6 +115,7 @@ public final class CompileConfig implements SingletonSupport {
                     descriptorFactory(),
                     semanticValidator(),
                     helperRegistry(),
+                    codegenNaming(),
                     logLevel));
   }
 

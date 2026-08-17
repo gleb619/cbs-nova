@@ -2,7 +2,7 @@ package cbs.nova.dsl.converter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.ModelRegistry;
+import cbs.nova.dsl.registry.ModelRegistry;
 import io.avaje.jsonb.Json;
 import io.avaje.jsonb.Jsonb;
 import org.jspecify.annotations.NonNull;

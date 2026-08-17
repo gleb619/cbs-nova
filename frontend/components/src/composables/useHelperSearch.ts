@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 
-export interface HelperSearchResult {
+export interface ObjectSearchResult {
   name: string
   type: string
   description: string
@@ -15,13 +15,13 @@ export interface HelperSearchFilters {
 }
 
 export interface UseHelperSearchOptions {
-  fetch: (filters: HelperSearchFilters) => Promise<HelperSearchResult[]> | HelperSearchResult[]
+  fetch: (filters: HelperSearchFilters) => Promise<ObjectSearchResult[]> | ObjectSearchResult[]
   debounceMs?: number
 }
 
 export function useHelperSearch(options: UseHelperSearchOptions) {
   const filters = ref<HelperSearchFilters>({ name: '', type: '', description: '' })
-  const results = ref<HelperSearchResult[]>([])
+  const results = ref<ObjectSearchResult[]>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 

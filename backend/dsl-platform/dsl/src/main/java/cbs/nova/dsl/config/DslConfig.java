@@ -3,7 +3,7 @@ package cbs.nova.dsl.config;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.HelperManager;
 import cbs.nova.dsl.JsonSchemaGenerator;
-import cbs.nova.dsl.ModelRegistry;
+import cbs.nova.dsl.registry.ModelRegistry;
 import cbs.nova.dsl.converter.AvajeMapConverter;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.history.TransactionExecutionRepository;

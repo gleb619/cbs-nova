@@ -3,6 +3,7 @@ import org.gradle.api.attributes.java.TargetJvmVersion
 plugins {
   id 'java'
   id 'org.jetbrains.intellij.platform'   // no version — resolved via settings pluginManagement
+  alias(libs.plugins.test.logger)
 }
 
 dependencies {

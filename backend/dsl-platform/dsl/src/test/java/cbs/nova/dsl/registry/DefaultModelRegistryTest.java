@@ -26,7 +26,7 @@ class DefaultModelRegistryTest {
   @Test
   void aggregatesProvidersFromClassLoader() throws Exception {
     var servicesDir = Files.createDirectories(tempDir.resolve("META-INF/services"));
-    Files.writeString(servicesDir.resolve("cbs.nova.dsl.ModelRegistry"),
+    Files.writeString(servicesDir.resolve("cbs.nova.dsl.registry.ModelRegistry"),
             "cbs.nova.dsl.registry.FakeModelRegistry");
 
     try (var classLoader = new URLClassLoader(

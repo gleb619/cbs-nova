@@ -1,11 +1,12 @@
 package cbs.nova.dsl.codegen.generator;
 
-import cbs.nova.dsl.ModelRegistry;
 import cbs.nova.dsl.codegen.CodeWriter;
 import cbs.nova.dsl.codegen.CompilerConstants;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.model.GeneratedSource;
 import cbs.nova.dsl.codegen.util.ModelTypeExtractor;
+import cbs.nova.dsl.codegen.util.SourcePackageResolver;
+import cbs.nova.dsl.registry.ModelRegistry;
 import cbs.nova.dsl.utils.Substitutor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +38,7 @@ public final class ModelRegistryGenerator {
           """
                   package ${pkg};
 
-                  import cbs.nova.dsl.ModelRegistry;
+                  import cbs.nova.dsl.registry.ModelRegistry;
                   import cbs.nova.dsl.annotation.DslGenerated;
                   import java.util.Set;
                   import org.jspecify.annotations.NonNull;
@@ -61,8 +62,26 @@ public final class ModelRegistryGenerator {
           @NonNull Path srcDir,
           @NonNull Path outputDir,
           String targetPackage) throws IOException {
+    return generate(srcDir, outputDir, targetPackage, true);
+  }
+
+  public @NonNull GeneratedSource generate(
+          @NonNull Path srcDir,
+          @NonNull Path outputDir,
+          String targetPackage,
+          boolean useFileNameSubPackage) throws IOException {
+    var dslDir = srcDir.resolve(CompilerConstants.DSL_FOLDER);
     var modelDir = srcDir.resolve(CompilerConstants.MODELS_FOLDER);
-    List<String> typeNames = collectTypeNames(modelDir);
+    var dslSources = collectJavaSources(dslDir);
+    var modelSources = collectJavaSources(modelDir);
+
+    var packageResolver = new SourcePackageResolver(codegenNaming);
+    var dslPackages = packageResolver.resolveDslPackages(
+            dslSources, targetPackage, null, useFileNameSubPackage);
+    var modelPackages = packageResolver.resolveModelPackages(
+            dslSources, modelSources, targetPackage, dslPackages);
+
+    List<String> typeNames = collectTypeNames(modelSources, modelPackages);
 
     String pkg = codegenNaming.registryPackage(targetPackage);
     String fqcn = fqcn(pkg, REGISTRY_CLASS);
@@ -87,20 +106,27 @@ public final class ModelRegistryGenerator {
     return new GeneratedSource(pkg, REGISTRY_CLASS, source);
   }
 
-  private List<String> collectTypeNames(Path modelDir) throws IOException {
-    if (!Files.isDirectory(modelDir)) {
+  private List<Path> collectJavaSources(@NonNull Path dir) throws IOException {
+    if (!Files.exists(dir)) {
       return List.of();
     }
+    try (Stream<Path> stream = Files.walk(dir)) {
+      return stream
+              .filter(p -> p.toString().endsWith(".java"))
+              .toList();
+    }
+  }
+
+  private List<String> collectTypeNames(
+          List<Path> modelSources,
+          Map<String, String> modelPackages) throws IOException {
     var names = new ArrayList<String>();
-    try (Stream<Path> stream = Files.walk(modelDir)) {
-      for (Path file : stream.toList()) {
-        if (!file.toString().endsWith(".java")) {
-          continue;
-        }
-        var fileName = file.getFileName().toString();
-        var rawSource = Files.readString(file);
-        names.addAll(modelTypeExtractor.extract(fileName, rawSource));
-      }
+    for (Path file : modelSources) {
+      var fileName = file.getFileName().toString();
+      var className = fileName.substring(0, fileName.length() - ".java".length());
+      var rawSource = Files.readString(file);
+      var packageName = modelPackages.getOrDefault(className, null);
+      names.addAll(modelTypeExtractor.extract(fileName, rawSource, packageName));
     }
     return names;
   }

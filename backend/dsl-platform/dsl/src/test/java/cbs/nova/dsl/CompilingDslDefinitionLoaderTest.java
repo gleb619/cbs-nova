@@ -37,7 +37,7 @@ class CompilingDslDefinitionLoaderTest {
     Files.writeString(tempDir.resolve("CompiledProcess.java"), source);
 
     var gm = GlobalManager.globalManager();
-    new CompilingDslDefinitionLoader().load(tempDir, gm);
+    new CompilingDslDefinitionLoader(new ServiceLoaderDslDefinitionLoader()).load(tempDir, gm);
 
     assertThat(gm.hasProcess("CompiledProcess")).isTrue();
     var ctx = contextFactory.of("test", ExecutionMode.PREVIEW);
@@ -50,7 +50,7 @@ class CompilingDslDefinitionLoaderTest {
   void loadEmptySourceDirectoryFallsBackToSpiAndDoesNotThrow() {
     var gm = GlobalManager.globalManager();
 
-    assertThatCode(() -> new CompilingDslDefinitionLoader().load(tempDir, gm))
+    assertThatCode(() -> new CompilingDslDefinitionLoader(new ServiceLoaderDslDefinitionLoader()).load(tempDir, gm))
             .doesNotThrowAnyException();
 
     assertThat(gm.hasProcess("SpiLoadedProcess")).isTrue();
@@ -71,7 +71,7 @@ class CompilingDslDefinitionLoaderTest {
 
     var gm = GlobalManager.globalManager();
 
-    assertThatCode(() -> new CompilingDslDefinitionLoader().load(tempDir, gm))
+    assertThatCode(() -> new CompilingDslDefinitionLoader(new ServiceLoaderDslDefinitionLoader()).load(tempDir, gm))
             .doesNotThrowAnyException();
 
     assertThat(gm.hasProcess("BrokenProcess")).isFalse();

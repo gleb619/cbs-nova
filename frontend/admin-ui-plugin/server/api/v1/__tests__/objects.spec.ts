@@ -18,7 +18,7 @@ g.getRouterParam = (_event: unknown, name: string) => routerParams[name]
 g.readBody = async (_event: unknown) => ({})
 g.getQuery = (_event: unknown) => queryValue
 
-const searchHandler = (await import('../helpers/search.get')).default
+const searchHandler = (await import('../dsl/objects/search.get')).default
 
 const fakeEvent = {} as Parameters<typeof proxyToBackendMock>[0]
 
@@ -29,14 +29,14 @@ beforeEach(() => {
   routerParams = {}
 })
 
-describe('helpers/search.get', () => {
-  it('forwards name, type, and description query params to /api/dsl/helpers/search', async () => {
+describe('dsl/objects/search.get', () => {
+  it('forwards name, type, and description query params to /api/dsl/objects/search', async () => {
     queryValue = { name: 'Foo', type: 'helper', description: 'bar baz' }
 
     await searchHandler(fakeEvent)
 
     expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
-    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/helpers/search', {
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/objects/search', {
       query: { name: 'Foo', type: 'helper', description: 'bar baz' },
     })
   })
@@ -46,7 +46,7 @@ describe('helpers/search.get', () => {
 
     await searchHandler(fakeEvent)
 
-    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/helpers/search', {
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/objects/search', {
       query: { description: 'valid' },
     })
   })
@@ -56,7 +56,7 @@ describe('helpers/search.get', () => {
 
     await searchHandler(fakeEvent)
 
-    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/helpers/search', {
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/objects/search', {
       query: {},
     })
   })
@@ -66,7 +66,7 @@ describe('helpers/search.get', () => {
 
     await searchHandler(fakeEvent)
 
-    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/helpers/search', {
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/objects/search', {
       query: { name: 'Helper' },
     })
   })

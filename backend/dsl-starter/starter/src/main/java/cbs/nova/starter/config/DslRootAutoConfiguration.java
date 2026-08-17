@@ -18,6 +18,7 @@ import org.springframework.context.annotation.Import;
     MessagingCallCaptureAutoConfiguration.class,
     PreviewMetricsAutoConfiguration.class,
     DslReloadRouterConfiguration.class,
+    DslIntrospectionRouterConfiguration.class,
     DslErrorHandlingAutoConfiguration.class
 })
 public class DslRootAutoConfiguration {

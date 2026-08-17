@@ -18,24 +18,24 @@ describe('useDslApi', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/definitions')
   })
 
-  it('searchHelpers GETs /api/v1/helpers/search with all filters', async () => {
+  it('searchObjects GETs /api/v1/dsl/objects/search with all filters', async () => {
     fetchMock.mockResolvedValueOnce([])
 
     const api = useDslApi()
-    await api.searchHelpers({ name: 'Foo', type: 'helper', description: 'bar' })
+    await api.searchObjects({ name: 'Foo', type: 'helper', description: 'bar' })
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/helpers/search', {
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/objects/search', {
       query: { name: 'Foo', type: 'helper', description: 'bar' },
     })
   })
 
-  it('searchHelpers omits blank filters from the query', async () => {
+  it('searchObjects omits blank filters from the query', async () => {
     fetchMock.mockResolvedValueOnce([])
 
     const api = useDslApi()
-    await api.searchHelpers({ name: '', type: 'process' })
+    await api.searchObjects({ name: '', type: 'process' })
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/helpers/search', {
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/objects/search', {
       query: { type: 'process' },
     })
   })

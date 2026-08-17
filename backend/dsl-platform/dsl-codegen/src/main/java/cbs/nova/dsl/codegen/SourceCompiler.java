@@ -3,6 +3,8 @@ package cbs.nova.dsl.codegen;
 import cbs.nova.dsl.DslDefinitionProvider;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.codegen.generator.DefinitionProviderGenerator;
+import cbs.nova.dsl.codegen.model.CodegenNaming;
+import cbs.nova.dsl.codegen.util.SourcePackageResolver;
 import cbs.nova.dsl.compact.CompactSourcePreprocessor;
 import cbs.nova.dsl.compact.ModelSourcePreprocessor;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +25,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.ServiceLoader;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -37,6 +41,7 @@ public final class SourceCompiler {
   private final Level logLevel;
   private final DefinitionProviderGenerator definitionProviderGenerator;
   private final CodeWriter codeWriter;
+  private final CodegenNaming codegenNaming;
 
   public @NonNull List<DslObject> compileAndLoad(
           @NonNull Path srcDir,
@@ -64,9 +69,19 @@ public final class SourceCompiler {
       return List.of();
     }
 
-    var targetPackage = (options != null) ? options.targetPackage() : null;
+    var basePackage = (options != null) ? options.targetPackage() : null;
+    var version = (options != null) ? options.buildVersion() : null;
+    var useFileNameSubPackage = (options != null) && options.useFileNameSubPackage();
+    var packageResolver = new SourcePackageResolver(codegenNaming);
 
-    var dslResults = preprocessInVirtualThreads(dslSources, targetPackage, true);
+    var dslPackages = packageResolver.resolveDslPackages(
+            dslSources, basePackage, version, useFileNameSubPackage);
+    var modelPackages = packageResolver.resolveModelPackages(
+            dslSources, modelSources, basePackage, dslPackages);
+    var modelClassNames = packageResolver.modelClassNames(modelSources);
+
+    var dslResults = preprocessDslSources(dslSources, dslPackages, basePackage, modelPackages,
+            modelClassNames, packageResolver);
     if (dslResults.isEmpty()) {
       log.atLevel(Level.DEBUG)
               .log(() -> "[SourceCompiler] No valid compact DSL sources found under %s"
@@ -74,10 +89,11 @@ public final class SourceCompiler {
       return List.of();
     }
 
-    var modelResults = preprocessInVirtualThreads(modelSources, targetPackage, false);
+    var modelResults = preprocessModelSources(modelSources, modelPackages, basePackage,
+            modelClassNames, packageResolver);
 
-    var preprocessedModels = writePreprocessedSources(modelResults, outputDir, targetPackage);
-    var preprocessedDsl = writePreprocessedSources(dslResults, outputDir, targetPackage);
+    var preprocessedDsl = writePreprocessedSources(dslResults, outputDir);
+    var preprocessedModels = writePreprocessedSources(modelResults, outputDir);
 
     var allSources = new ArrayList<Path>();
     for (var s : preprocessedModels) {
@@ -93,42 +109,83 @@ public final class SourceCompiler {
 
     var compiledClassNames = new ArrayList<String>();
     for (var source : preprocessedDsl) {
-      compiledClassNames.add(qualifiedClassName(source.className(), targetPackage));
+      compiledClassNames.add(qualifiedClassName(source.className(), source.targetPackage()));
     }
 
     var providerFqcn = definitionProviderGenerator.generate(
-            outputDir, compiledClassNames, targetPackage);
+            outputDir, compiledClassNames, basePackage);
     var providerSource = outputDir.resolve(
-            parsePackage(targetPackage));
+            parsePackage(basePackage));
     compileProvider(compiler, classpath, providerSource, outputDir);
 
     return loadDefinitions(outputDir, providerFqcn);
   }
 
-  private List<Path> collectJavaSources(@NonNull Path dir) throws IOException {
-    if (!Files.exists(dir)) {
-      return List.of();
+  private List<PreprocessResult> preprocessDslSources(
+          List<Path> dslSources,
+          Map<Path, String> dslPackages,
+          String basePackage,
+          Map<String, String> modelPackages,
+          Set<String> modelClassNames,
+          SourcePackageResolver packageResolver) throws IOException {
+    var tasks = new ArrayList<Callable<PreprocessResult>>();
+    for (var source : dslSources) {
+      tasks.add(() -> {
+        var fileName = source.getFileName().toString();
+        try {
+          var raw = Files.readString(source);
+          var targetPackage = dslPackages.get(source);
+          var rewritten = packageResolver.rewriteModelImports(
+                  raw, basePackage, modelPackages, modelClassNames);
+          var result = CompactSourcePreprocessor.preprocess(fileName, rewritten, targetPackage);
+          return new PreprocessResult(
+                  result.className(), fileName, result.preprocessedSource(), targetPackage);
+        } catch (IllegalArgumentException e) {
+          log.atLevel(Level.DEBUG).log(() -> "[SourceCompiler] %s".formatted(e.getMessage()));
+          return null;
+        }
+      });
     }
-    try (Stream<Path> stream = Files.walk(dir)) {
-      return stream
-              .filter(p -> p.toString().endsWith(".java"))
-              .toList();
-    }
+    return runPreprocessTasks(tasks, "DSL");
   }
 
-  private @NonNull List<PreprocessResult> preprocessInVirtualThreads(
-          @NonNull List<Path> sources,
-          String targetPackage,
-          boolean dsl) throws IOException {
-    if (sources.isEmpty()) {
+  private List<PreprocessResult> preprocessModelSources(
+          List<Path> modelSources,
+          Map<String, String> modelPackages,
+          String basePackage,
+          Set<String> modelClassNames,
+          SourcePackageResolver packageResolver) throws IOException {
+    var tasks = new ArrayList<Callable<PreprocessResult>>();
+    for (var source : modelSources) {
+      tasks.add(() -> {
+        var fileName = source.getFileName().toString();
+        try {
+          var className = className(fileName);
+          var raw = Files.readString(source);
+          var targetPackage = modelPackages.getOrDefault(className, basePackage);
+          var rewritten = packageResolver.rewriteModelImports(
+                  raw, basePackage, modelPackages, modelClassNames);
+          var result = ModelSourcePreprocessor.preprocess(fileName, rewritten, targetPackage);
+          return new PreprocessResult(
+                  result.className(), fileName, result.preprocessedSource(), targetPackage);
+        } catch (IllegalArgumentException e) {
+          log.atLevel(Level.DEBUG).log(() -> "[SourceCompiler] %s".formatted(e.getMessage()));
+          return null;
+        }
+      });
+    }
+    return runPreprocessTasks(tasks, "model");
+  }
+
+  private List<PreprocessResult> runPreprocessTasks(
+          List<Callable<PreprocessResult>> tasks,
+          String label) throws IOException {
+    if (tasks.isEmpty()) {
       return List.of();
     }
     try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
       var futures = new ArrayList<Future<PreprocessResult>>();
-      for (var file : sources) {
-        Callable<PreprocessResult> task = dsl
-                ? () -> preprocessDsl(file, targetPackage)
-                : () -> preprocessModel(file, targetPackage);
+      for (var task : tasks) {
         futures.add(executor.submit(task));
       }
       var results = new ArrayList<PreprocessResult>();
@@ -156,57 +213,36 @@ public final class SourceCompiler {
     }
   }
 
+  private List<Path> collectJavaSources(@NonNull Path dir) throws IOException {
+    if (!Files.exists(dir)) {
+      return List.of();
+    }
+    try (Stream<Path> stream = Files.walk(dir)) {
+      return stream
+              .filter(p -> p.toString().endsWith(".java"))
+              .toList();
+    }
+  }
+
   private @NonNull List<PreprocessedSource> writePreprocessedSources(
           @NonNull List<PreprocessResult> results,
-          @NonNull Path outputDir,
-          String targetPackage) throws IOException {
+          @NonNull Path outputDir) throws IOException {
     var written = new ArrayList<PreprocessedSource>();
     for (var result : results) {
-      var outputFile = (targetPackage != null && !targetPackage.isBlank())
-              ? outputDir.resolve(targetPackage.replace('.', '/')).resolve(result.fileName())
-              : outputDir.resolve(result.fileName());
+      var outputFile = outputFile(outputDir, result.targetPackage(), result.fileName());
       codeWriter.write(outputFile, result.source());
       log.atLevel(Level.DEBUG).log(() -> "[SourceCompiler] Preprocessed %s -> %s"
               .formatted(result.fileName(), outputFile));
-      written.add(new PreprocessedSource(result.className(), outputFile));
+      written.add(new PreprocessedSource(result.className(), outputFile, result.targetPackage()));
     }
     return written;
   }
 
-  private PreprocessResult preprocessDsl(
-          @NonNull Path sourceFile,
-          String targetPackage) throws IOException {
-    var fileName = sourceFile.getFileName().toString();
-    var rawSource = Files.readString(sourceFile);
-    try {
-      var result = CompactSourcePreprocessor.preprocess(fileName, rawSource, targetPackage);
-      log.atLevel(Level.DEBUG)
-              .log(() -> "[SourceCompiler] Preprocessed DSL %s".formatted(sourceFile));
-      return new PreprocessResult(result.className(), fileName, result.preprocessedSource());
-    } catch (IllegalArgumentException e) {
-      log.atLevel(Level.DEBUG).log(() -> "[SourceCompiler] %s".formatted(e.getMessage()));
-      return null;
+  private static Path outputFile(Path outputDir, String targetPackage, String fileName) {
+    if (targetPackage != null && !targetPackage.isBlank()) {
+      return outputDir.resolve(targetPackage.replace('.', '/')).resolve(fileName);
     }
-  }
-
-  private PreprocessResult preprocessModel(
-          @NonNull Path sourceFile,
-          String targetPackage) throws IOException {
-    var fileName = sourceFile.getFileName().toString();
-    var rawSource = Files.readString(sourceFile);
-    try {
-      if (targetPackage == null || targetPackage.isBlank()) {
-        throw new IllegalArgumentException(
-                "targetPackage is required to preprocess model " + fileName);
-      }
-      var result = ModelSourcePreprocessor.preprocess(fileName, rawSource, targetPackage);
-      log.atLevel(Level.DEBUG)
-              .log(() -> "[SourceCompiler] Preprocessed model %s".formatted(sourceFile));
-      return new PreprocessResult(result.className(), fileName, result.preprocessedSource());
-    } catch (IllegalArgumentException e) {
-      log.atLevel(Level.DEBUG).log(() -> "[SourceCompiler] %s".formatted(e.getMessage()));
-      return null;
-    }
+    return outputDir.resolve(fileName);
   }
 
   private boolean compileSources(
@@ -271,7 +307,7 @@ public final class SourceCompiler {
     }
   }
 
-  private @NonNull String qualifiedClassName(
+  private static @NonNull String qualifiedClassName(
           @NonNull String className,
           String targetPackage) {
     return (targetPackage != null && !targetPackage.isBlank())
@@ -279,7 +315,7 @@ public final class SourceCompiler {
             : className;
   }
 
-  private @NonNull String resolveClasspath(CompileOptions options) {
+  private static @NonNull String resolveClasspath(CompileOptions options) {
     if (options != null && options.classpath() != null && !options.classpath().isBlank()) {
       return options.classpath();
     }
@@ -295,6 +331,13 @@ public final class SourceCompiler {
                               CompilerConstants.COMPILER_CLASSPATH_PROPERTY));
     }
     return defaultClasspath;
+  }
+
+  private static @NonNull String className(@NonNull String fileName) {
+    if (!fileName.endsWith(".java")) {
+      throw new IllegalArgumentException("Source file must end with .java: " + fileName);
+    }
+    return fileName.substring(0, fileName.length() - ".java".length());
   }
 
   @Deprecated(forRemoval = true)
@@ -341,14 +384,24 @@ public final class SourceCompiler {
           String buildVersion,
           String targetPackage,
           Level logLevel,
-          String classpath) {
+          String classpath,
+          boolean useFileNameSubPackage) {
+
+    public CompileOptions(
+            String buildVersion,
+            String targetPackage,
+            Level logLevel,
+            String classpath) {
+      this(buildVersion, targetPackage, logLevel, classpath, true);
+    }
   }
 
-  private record PreprocessedSource(@NonNull String className, @NonNull Path sourceFile) {
+  private record PreprocessedSource(@NonNull String className, @NonNull Path sourceFile,
+          String targetPackage) {
   }
 
   private record PreprocessResult(@NonNull String className, @NonNull String fileName,
-          @NonNull String source) {
+          @NonNull String source, String targetPackage) {
   }
 
 }

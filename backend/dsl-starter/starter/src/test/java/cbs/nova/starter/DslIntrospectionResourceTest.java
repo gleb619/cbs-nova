@@ -11,15 +11,15 @@ import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.function.FunctionDslObject;
-import cbs.nova.starter.controllers.DslIntrospectionResource;
+import cbs.nova.starter.config.DslIntrospectionRouterConfiguration;
+import cbs.nova.starter.controllers.DslIntrospectionHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -36,10 +36,10 @@ class DslIntrospectionResourceTest {
             .registerProcess(
                     Dsl.process("LoanDisbursement")
                             .execute(ctx -> Result.success("ok")).build());
-    mockMvc = MockMvcBuilders.standaloneSetup(
-            new DslIntrospectionResource(DslConfig.dslConfig().jsonSchemaGenerator().get()))
-            .setMessageConverters(new JacksonJsonHttpMessageConverter())
-            .build();
+    DslIntrospectionHandler handler = new DslIntrospectionHandler(
+            DslConfig.dslConfig().jsonSchemaGenerator().get());
+    DslIntrospectionRouterConfiguration router = new DslIntrospectionRouterConfiguration();
+    mockMvc = MockMvcBuilders.routerFunctions(router.dslIntrospectionRouter(handler)).build();
   }
 
   @AfterEach
@@ -50,7 +50,7 @@ class DslIntrospectionResourceTest {
   @Test
   void processesEndpointReturnsRegisteredNames() throws Exception {
     mockMvc
-            .perform(get("/api/dsl/processes"))
+            .perform(get("/api/dsl/processes").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.names[0]").value("LoanDisbursement"));
   }
@@ -58,7 +58,7 @@ class DslIntrospectionResourceTest {
   @Test
   void transactionsEndpointReturnsEmptyList() throws Exception {
     mockMvc
-            .perform(get("/api/dsl/transactions"))
+            .perform(get("/api/dsl/transactions").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.names").isArray());
   }
@@ -66,7 +66,7 @@ class DslIntrospectionResourceTest {
   @Test
   void helpersEndpointReturnsEmptyList() throws Exception {
     mockMvc
-            .perform(get("/api/dsl/helpers"))
+            .perform(get("/api/dsl/helpers").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.names").isArray());
   }
@@ -74,7 +74,7 @@ class DslIntrospectionResourceTest {
   @Test
   void processDetailEndpointReturnsDetails() throws Exception {
     mockMvc
-            .perform(get("/api/dsl/processes/LoanDisbursement"))
+            .perform(get("/api/dsl/processes/LoanDisbursement").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("LoanDisbursement"))
             .andExpect(jsonPath("$.version").value("v1"))
@@ -91,7 +91,7 @@ class DslIntrospectionResourceTest {
                             .execute(ctx -> Result.success("ok")).build());
 
     mockMvc
-            .perform(get("/api/dsl/processes/ParamBasedProcess"))
+            .perform(get("/api/dsl/processes/ParamBasedProcess").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.inputSchema.type").value("object"))
             .andExpect(jsonPath("$.inputSchema.properties.amount").exists());
@@ -100,14 +100,14 @@ class DslIntrospectionResourceTest {
   @Test
   void processDetailEndpointReturns404ForUnknown() throws Exception {
     mockMvc
-            .perform(get("/api/dsl/processes/Unknown"))
+            .perform(get("/api/dsl/processes/Unknown").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isNotFound());
   }
 
   @Test
   void transactionDetailEndpointReturns404ForUnknown() throws Exception {
     mockMvc
-            .perform(get("/api/dsl/transactions/Unknown"))
+            .perform(get("/api/dsl/transactions/Unknown").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isNotFound());
   }
 
@@ -115,7 +115,7 @@ class DslIntrospectionResourceTest {
   void helpersSearchReturnsMatchingEntitiesWithoutFilters() throws Exception {
     registerSampleEntities();
 
-    mockMvc.perform(get("/api/dsl/helpers/search"))
+    mockMvc.perform(get("/api/dsl/objects/search").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$").isArray())
             .andExpect(jsonPath("$[?(@.name=='LoanDisbursement' && @.type=='process')]").exists())
@@ -126,10 +126,12 @@ class DslIntrospectionResourceTest {
   }
 
   @Test
-  void helpersSearchFiltersByName() throws Exception {
+  void objectsSearchFiltersByName() throws Exception {
     registerSampleEntities();
 
-    mockMvc.perform(get("/api/dsl/helpers/search").param("name", "sample"))
+    mockMvc.perform(get("/api/dsl/objects/search")
+            .param("name", "sample")
+            .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$").isArray())
             .andExpect(jsonPath("$[?(@.name=='SampleTransaction')]").exists())
@@ -139,10 +141,12 @@ class DslIntrospectionResourceTest {
   }
 
   @Test
-  void helpersSearchFiltersByType() throws Exception {
+  void objectsSearchFiltersByType() throws Exception {
     registerSampleEntities();
 
-    mockMvc.perform(get("/api/dsl/helpers/search").param("type", "helper"))
+    mockMvc.perform(get("/api/dsl/objects/search")
+            .param("type", "helper")
+            .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$").isArray())
             .andExpect(jsonPath("$[?(@.type=='helper')]").exists())
@@ -150,10 +154,12 @@ class DslIntrospectionResourceTest {
   }
 
   @Test
-  void helpersSearchFiltersByDescription() throws Exception {
+  void objectsSearchFiltersByDescription() throws Exception {
     registerSampleEntities();
 
-    mockMvc.perform(get("/api/dsl/helpers/search").param("description", "greeting"))
+    mockMvc.perform(get("/api/dsl/objects/search")
+            .param("description", "greeting")
+            .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$").isArray())
             .andExpect(jsonPath("$[?(@.name=='sampleHelper')]").exists())
@@ -162,12 +168,13 @@ class DslIntrospectionResourceTest {
   }
 
   @Test
-  void helpersSearchCombinesFilters() throws Exception {
+  void objectsSearchCombinesFilters() throws Exception {
     registerSampleEntities();
 
-    mockMvc.perform(get("/api/dsl/helpers/search")
+    mockMvc.perform(get("/api/dsl/objects/search")
             .param("name", "sample")
-            .param("type", "function"))
+            .param("type", "function")
+            .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$").isArray())
             .andExpect(jsonPath("$[?(@.name=='sampleFunction')]").exists())
@@ -178,7 +185,7 @@ class DslIntrospectionResourceTest {
   void definitionsEndpointAggregatesAllEntityKinds() throws Exception {
     registerSampleEntities();
 
-    mockMvc.perform(get("/api/dsl/definitions"))
+    mockMvc.perform(get("/api/dsl/definitions").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$").isArray())
             .andExpect(
@@ -194,7 +201,7 @@ class DslIntrospectionResourceTest {
   void definitionsEndpointExposesInputSchemaForProcess() throws Exception {
     registerSampleEntities();
 
-    mockMvc.perform(get("/api/dsl/definitions"))
+    mockMvc.perform(get("/api/dsl/definitions").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(
                     jsonPath("$[?(@.name=='LoanDisbursement')].inputSchema").exists());
@@ -204,7 +211,7 @@ class DslIntrospectionResourceTest {
   void definitionsEndpointOmitsInputSchemaForHelper() throws Exception {
     registerSampleEntities();
 
-    mockMvc.perform(get("/api/dsl/definitions"))
+    mockMvc.perform(get("/api/dsl/definitions").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(
                     jsonPath("$[?(@.name=='sampleHelper')].inputSchema").doesNotExist())
@@ -216,7 +223,7 @@ class DslIntrospectionResourceTest {
 
   @Test
   void definitionsEndpointReturnsOnlyTheSetupProcessWhenNoSamplesRegistered() throws Exception {
-    mockMvc.perform(get("/api/dsl/definitions"))
+    mockMvc.perform(get("/api/dsl/definitions").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(1))
             .andExpect(

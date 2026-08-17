@@ -2,7 +2,7 @@
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { useDslWorkbench } from '@cbs/admin-ui-plugin/composables/useDslWorkbench'
 import { useWorkbenchDraft } from '@cbs/admin-ui-plugin/composables/useWorkbenchDraft'
-import type { HelperSearchFilters, HelperSearchResult } from '@cbs/components'
+import type { HelperSearchFilters, ObjectSearchResult } from '@cbs/components'
 import {
   DslBodyEditor,
   DslConstructExplorer,
@@ -33,7 +33,7 @@ const helperSearchOpen = ref(true)
 const dslApi = useDslApi()
 const helperSearch = useHelperSearch({
   fetch: async (filters: HelperSearchFilters) =>
-    (await dslApi.searchHelpers(filters)) as HelperSearchResult[],
+    (await dslApi.searchObjects(filters)) as ObjectSearchResult[],
   debounceMs: 250,
 })
 

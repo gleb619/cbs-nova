@@ -1,6 +1,5 @@
 package cbs.nova.dsl.registry;
 
-import cbs.nova.dsl.ModelRegistry;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Set;

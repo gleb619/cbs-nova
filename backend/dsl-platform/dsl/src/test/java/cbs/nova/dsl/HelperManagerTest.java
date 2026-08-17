@@ -6,6 +6,8 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.registry.HelperRegistry;
 import cbs.nova.dsl.runner.HelperRunner;
+import java.util.function.Supplier;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -180,6 +182,11 @@ class HelperManagerTest {
       List<String> names = new ArrayList<>(helpers.keySet());
       functions.forEach(fn -> names.add(fn.name()));
       return names;
+    }
+
+    @Override
+    public void registerHelper(@NonNull String name, @NonNull Supplier<Executable<?, ?>> helperSupplier) {
+      //TODO: implement lazy helper registrations for tests
     }
   }
 

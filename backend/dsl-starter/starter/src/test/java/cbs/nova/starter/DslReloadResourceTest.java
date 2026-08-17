@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.CompilingDslDefinitionLoader;
 import cbs.nova.dsl.DslDefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.ServiceLoaderDslDefinitionLoader;
 import cbs.nova.starter.config.DslReloadRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controllers.DslReloadResource;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.servlet.function.RouterFunction;
@@ -28,7 +30,8 @@ import java.util.stream.Stream;
 class DslReloadResourceTest {
 
   private DslReloadResource resource;
-  private final DslDefinitionLoader loader = new CompilingDslDefinitionLoader();
+  private final DslDefinitionLoader loader = new CompilingDslDefinitionLoader(
+          new ServiceLoaderDslDefinitionLoader());
 
   @BeforeEach
   void setUp() {
@@ -134,9 +137,9 @@ class DslReloadResourceTest {
   @EnableConfigurationProperties(DslProperties.class)
   static class DslPropertiesConfiguration {
 
-    @org.springframework.context.annotation.Bean
+    @Bean
     DslDefinitionLoader dslDefinitionLoader() {
-      return new CompilingDslDefinitionLoader();
+      return new CompilingDslDefinitionLoader(new ServiceLoaderDslDefinitionLoader());
     }
   }
 }

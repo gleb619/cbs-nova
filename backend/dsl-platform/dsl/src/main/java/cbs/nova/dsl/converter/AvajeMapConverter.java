@@ -1,6 +1,6 @@
 package cbs.nova.dsl.converter;
 
-import cbs.nova.dsl.ModelRegistry;
+import cbs.nova.dsl.registry.ModelRegistry;
 import cbs.nova.dsl.registry.DefaultModelRegistry;
 import io.avaje.jsonb.Jsonb;
 import lombok.RequiredArgsConstructor;

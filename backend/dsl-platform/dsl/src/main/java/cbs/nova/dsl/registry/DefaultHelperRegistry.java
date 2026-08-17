@@ -2,6 +2,7 @@ package cbs.nova.dsl.registry;
 
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.function.FunctionDslObject;
+import java.util.function.Supplier;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Collection;
@@ -53,4 +54,10 @@ public final class DefaultHelperRegistry implements HelperRegistry {
     names.addAll(functions.keySet());
     return names;
   }
+
+  @Override
+  public void registerHelper(@NonNull String name, @NonNull Supplier<Executable<?, ?>> helperSupplier) {
+    //TODO: implement lazy helper registrations
+  }
+
 }

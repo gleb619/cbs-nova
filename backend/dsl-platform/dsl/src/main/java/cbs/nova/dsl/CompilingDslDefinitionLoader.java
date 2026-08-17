@@ -4,6 +4,7 @@ import cbs.nova.dsl.compact.CompactSourcePreprocessor;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 
@@ -23,30 +24,35 @@ import java.util.List;
 import java.util.stream.Stream;
 
 @Slf4j
+@RequiredArgsConstructor
+//TODO: @deprecated since T230, use `ServiceLoaderDslDefinitionLoader` instead
+@Deprecated(forRemoval = true)
 public final class CompilingDslDefinitionLoader implements DslDefinitionLoader {
 
-  private final ServiceLoaderDslDefinitionLoader serviceLoader = new ServiceLoaderDslDefinitionLoader();
+  private final ServiceLoaderDslDefinitionLoader delegate;
 
   @Override
-  public void load(@NonNull GlobalManager gm) {
-    serviceLoader.load(gm);
+  public int load(@NonNull GlobalManager gm) {
+    return delegate.load(gm);
   }
 
   @Override
-  public void load(@NonNull Path sourceDir, @NonNull GlobalManager gm) {
+  public int load(@NonNull Path sourceDir, @NonNull GlobalManager gm) {
     if (hasJavaSources(sourceDir)) {
       var objects = loadObjects(sourceDir);
       for (var obj : objects) {
         register(obj, gm);
       }
     } else {
-      serviceLoader.load(gm);
+      return delegate.load(gm);
     }
+
+    return 0;
   }
 
   @Override
-  public void load(@NonNull ClassLoader classLoader, @NonNull GlobalManager gm) {
-    serviceLoader.load(classLoader, gm);
+  public int load(@NonNull ClassLoader classLoader, @NonNull GlobalManager gm) {
+    return delegate.load(classLoader, gm);
   }
 
   private boolean hasJavaSources(@NonNull Path sourceDir) {
@@ -58,6 +64,7 @@ public final class CompilingDslDefinitionLoader implements DslDefinitionLoader {
     }
   }
 
+  @Deprecated(forRemoval = true)
   private @NonNull List<DslObject> loadObjects(@NonNull Path sourceDir) {
     var compiler = ToolProvider.getSystemJavaCompiler();
     if (compiler == null) {
@@ -118,6 +125,7 @@ public final class CompilingDslDefinitionLoader implements DslDefinitionLoader {
     return Collections.unmodifiableList(result);
   }
 
+  @Deprecated(forRemoval = true)
   private @NonNull List<DslObject> loadViaReflection(@NonNull Path outputDir,
           @NonNull List<String> classNames) {
     var parent = Thread.currentThread().getContextClassLoader();

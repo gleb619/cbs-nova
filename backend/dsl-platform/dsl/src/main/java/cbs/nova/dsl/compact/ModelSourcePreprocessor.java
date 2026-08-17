@@ -34,9 +34,7 @@ public final class ModelSourcePreprocessor {
                     fileName + " is not valid Java source"));
     LexicalPreservingPrinter.setup(cu);
 
-    if (cu.getPackageDeclaration().isEmpty()) {
-      cu.setPackageDeclaration(new PackageDeclaration(new Name(targetPackage)));
-    }
+    cu.setPackageDeclaration(new PackageDeclaration(new Name(targetPackage)));
 
     boolean hasJsonAnnotation = addMissingJsonAnnotations(cu);
     if (hasJsonAnnotation && cu.getImports().stream().noneMatch(

@@ -6,31 +6,35 @@ import org.jspecify.annotations.NonNull;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.stream.Stream;
 
 @Slf4j
+//TODO: @deprecated since T230, use `ServiceLoaderDslDefinitionLoader` instead
+@Deprecated(forRemoval = true)
 public final class DefinitionLoader implements DslDefinitionLoader {
 
   private final ServiceLoaderDslDefinitionLoader serviceLoader = new ServiceLoaderDslDefinitionLoader();
-  private final CompilingDslDefinitionLoader compiler = new CompilingDslDefinitionLoader();
+  private final CompilingDslDefinitionLoader compiler = new CompilingDslDefinitionLoader(new ServiceLoaderDslDefinitionLoader());
 
   @Override
-  public void load(@NonNull Path sourceDir, @NonNull GlobalManager gm) {
+  public int load(@NonNull Path sourceDir, @NonNull GlobalManager gm) {
+    int result;
     if (hasJavaSources(sourceDir)) {
-      compiler.load(sourceDir, gm);
+      result = compiler.load(sourceDir, gm);
     } else {
-      serviceLoader.load(gm);
+      result = serviceLoader.load(gm);
     }
+
+    return result;
   }
 
   @Override
-  public void load(@NonNull GlobalManager gm) {
-    serviceLoader.load(gm);
+  public int load(@NonNull GlobalManager gm) {
+    return serviceLoader.load(gm);
   }
 
   @Override
-  public void load(@NonNull ClassLoader classLoader, @NonNull GlobalManager gm) {
-    serviceLoader.load(classLoader, gm);
+  public int load(@NonNull ClassLoader classLoader, @NonNull GlobalManager gm) {
+    return serviceLoader.load(classLoader, gm);
   }
 
   private boolean hasJavaSources(@NonNull Path sourceDir) {

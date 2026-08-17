@@ -67,6 +67,7 @@ public class DslCompilerPlugin implements Plugin<Project> {
       task.getBuildVersion().set(extension.getBuildVersion());
       task.getLogLevel().set(extension.getLogLevel());
       task.getRuntimeModule().convention(extension.getRuntimeModule());
+      task.getUseFileNameSubPackage().convention(extension.getUseFileNameSubPackage());
       task.setClasspath(dslCompiler);
     });
 

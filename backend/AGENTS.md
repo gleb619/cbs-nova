@@ -30,7 +30,7 @@ backend/
 └── dsl-starter/             # Parent build for runtime + examples
     ├── dsl-examples/        # JEP-512 compact DSL source files (no class/package/public)
     ├── starter/             # Spring Boot starter & REST surface (e.g. POST /api/dsl/reload)
-    └── starter-launcher/    # Example Spring Boot host for the starter
+    └── starter-launcher/    # Example Spring Boot host for the starter(e.g. module launches the service on port 8080)
 ```
 
 **Dependency flow**: `dsl-api` (none) <- `dsl` <- `dsl-codegen` / `starter` / `dsl-examples` / `dsl-gradle-plugin`.

@@ -10,4 +10,23 @@ import java.lang.annotation.Target;
 public @interface Helper {
 
   String name();
+
+  ComponentModel componentModel() default ComponentModel.STANDARD;
+
+  CreationStrategy creationStrategy() default CreationStrategy.STANDARD;
+
+  enum ComponentModel {
+
+    STANDARD,
+    LAZY
+
+  }
+
+  enum CreationStrategy {
+
+    STANDARD,
+    FACTORY
+
+  }
+
 }

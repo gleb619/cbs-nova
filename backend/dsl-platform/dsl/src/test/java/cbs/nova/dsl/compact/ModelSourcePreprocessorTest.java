@@ -25,7 +25,7 @@ class ModelSourcePreprocessorTest {
   }
 
   @Test
-  void preservesExistingPackageAndIgnoresTargetPackage() {
+  void overridesExistingPackageWithTargetPackage() {
     var source = """
             package com.example.models;
 
@@ -39,8 +39,8 @@ class ModelSourcePreprocessorTest {
 
     var output = result.preprocessedSource();
     assertThat(output)
-            .startsWith("package com.example.models;")
-            .doesNotContain("package com.example.generated;")
+            .startsWith("package com.example.generated;")
+            .doesNotContain("package com.example.models;")
             .contains("public class OrderModel");
   }
 
@@ -80,7 +80,7 @@ class ModelSourcePreprocessorTest {
             "OrderModel.java", source, "com.example.generated");
 
     var output = result.preprocessedSource();
-    assertThat(output).startsWith("package com.example.models;");
+    assertThat(output).startsWith("package com.example.generated;");
     assertThat(output.indexOf("import java.util.List;"))
             .isLessThan(output.indexOf("public class OrderModel"));
     assertThat(output).contains("import java.util.List;");

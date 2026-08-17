@@ -48,7 +48,7 @@ class ModelRegistryGeneratorTest {
     assertThat(source).contains("TestModels.TestOut.class");
     assertThat(source).doesNotContainPattern("\\.class\\s*,\\s*\\);");
 
-    var serviceFile = outDir.resolve("META-INF/services/cbs.nova.dsl.ModelRegistry");
+    var serviceFile = outDir.resolve("META-INF/services/cbs.nova.dsl.registry.ModelRegistry");
     assertThat(serviceFile).exists();
     assertThat(Files.readString(serviceFile))
             .contains("cbs.nova.dsl.codegen.test.GeneratedModelRegistry");
@@ -69,7 +69,7 @@ class ModelRegistryGeneratorTest {
     assertThat(source).contains("Set.of(");
     assertThat(source).contains("modelTypes()");
 
-    var serviceFile = outDir.resolve("META-INF/services/cbs.nova.dsl.ModelRegistry");
+    var serviceFile = outDir.resolve("META-INF/services/cbs.nova.dsl.registry.ModelRegistry");
     assertThat(serviceFile).exists();
     assertThat(Files.readString(serviceFile).trim()).isEqualTo(
             "cbs.nova.dsl.codegen.empty.GeneratedModelRegistry");

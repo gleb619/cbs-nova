@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { HelperSearchResult } from '../../composables/useHelperSearch'
+import type { ObjectSearchResult } from '../../composables/useHelperSearch'
 
 defineProps<{
-  results: HelperSearchResult[]
+  results: ObjectSearchResult[]
   isLoading?: boolean
   error?: string | null
 }>()
@@ -42,7 +42,7 @@ function rowTypeClass(resultType: string): string {
 <template>
   <div class="flex flex-col h-full bg-gray-900 text-gray-100">
     <div class="p-3 border-b border-gray-800">
-      <h3 class="text-sm font-semibold text-gray-100 mb-2">Helper Search</h3>
+      <h3 class="text-sm font-semibold text-gray-100 mb-2">Object Search</h3>
       <div class="space-y-2">
         <input
           v-model="name"

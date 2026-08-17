@@ -16,8 +16,11 @@ import org.gradle.process.ExecOperations;
 import javax.inject.Inject;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
 
 @CacheableTask
 public abstract class DslCompileTask extends JavaExec {
@@ -45,12 +48,17 @@ public abstract class DslCompileTask extends JavaExec {
   @Optional
   public abstract Property<String> getRuntimeModule();
 
+  @Input
+  @Optional
+  public abstract Property<Boolean> getUseFileNameSubPackage();
+
   @Inject
   public abstract ExecOperations getExecOperations();
 
   public DslCompileTask() {
     getMainClass().set("cbs.nova.dsl.codegen.DslCompiler");
     getLogLevel().convention("INFO");
+    getUseFileNameSubPackage().convention(true);
   }
 
   @Override
@@ -58,42 +66,36 @@ public abstract class DslCompileTask extends JavaExec {
     var output = getOutputDir().get().getAsFile();
     output.mkdirs();
 
-    var args = new ArrayList<String>();
-    args.add(getSourceDir().get().getAsFile().getAbsolutePath());
-    args.add(output.getAbsolutePath());
-
     var version = getBuildVersion().get();
     if (version.isBlank()) {
       version = resolveGitShortSha();
     }
-    if (!version.isBlank()) {
-      args.add(version);
-    }
 
-    var dslPackage = getDslPackage().getOrElse("");
-    if (!dslPackage.isBlank()) {
-      if (version.isBlank()) {
-        args.add("");
-      }
-      args.add(dslPackage);
-    }
+    var properties = new Properties();
+    properties.setProperty("srcDir", getSourceDir().get().getAsFile().getAbsolutePath());
+    properties.setProperty("outputDir", output.getAbsolutePath());
+    properties.setProperty("buildVersion", version);
+    properties.setProperty("targetPackage", getDslPackage().getOrElse(""));
+    properties.setProperty("logLevel", getLogLevel().getOrElse("INFO"));
+    properties.setProperty("classpath", getClasspath().getAsPath());
+    properties.setProperty("useFileNameSubPackage",
+            Boolean.toString(getUseFileNameSubPackage().getOrElse(true)));
+
+    setArgs(List.of(serializeProperties(properties)));
 
     var logLevel = getLogLevel().getOrElse("INFO");
-    if (!logLevel.isBlank()) {
-      if (version.isBlank()) {
-        args.add("");
-      }
-      if (dslPackage.isBlank()) {
-        args.add("");
-      }
-      args.add(logLevel);
-      systemProperty("org.slf4j.simpleLogger.defaultLogLevel", logLevel.toLowerCase());
-    }
-
-    setArgs(args);
-    var classpath = getClasspath();
-    systemProperty(CompilerConstants.COMPILER_CLASSPATH_PROPERTY, classpath.getAsPath());
+    systemProperty("org.slf4j.simpleLogger.defaultLogLevel", logLevel.toLowerCase());
+    systemProperty(CompilerConstants.COMPILER_CLASSPATH_PROPERTY, getClasspath().getAsPath());
     super.exec();
+  }
+
+  private static String serializeProperties(Properties properties) {
+    try (var writer = new StringWriter()) {
+      properties.store(writer, null);
+      return writer.toString();
+    } catch (IOException e) {
+      throw new IllegalStateException("Failed to serialize DSL compiler options", e);
+    }
   }
 
   private String resolveGitShortSha() {

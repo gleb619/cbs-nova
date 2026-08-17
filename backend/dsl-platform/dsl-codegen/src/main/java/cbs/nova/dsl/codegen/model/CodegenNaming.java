@@ -23,10 +23,23 @@ public final class CodegenNaming {
             ? targetPackage
             : BASE_PACKAGE;
     String nameSegment = name.toLowerCase().replaceAll("[^a-z0-9]", "");
+    return basePackage + "." + nameSegment + "." + versionSegment(version);
+  }
+
+  public String versionedBasePackage(
+          @NonNull String version,
+          @Nullable String targetPackage) {
+    String basePackage = (targetPackage != null && !targetPackage.isBlank())
+            ? targetPackage
+            : BASE_PACKAGE;
+    return basePackage + "." + versionSegment(version);
+  }
+
+  private static @NonNull String versionSegment(@NonNull String version) {
     String versionSegment = version.replaceAll("[^a-z0-9]", "");
     if (!versionSegment.isEmpty() && Character.isDigit(versionSegment.charAt(0))) {
       versionSegment = "v" + versionSegment;
     }
-    return basePackage + "." + nameSegment + "." + versionSegment;
+    return versionSegment;
   }
 }

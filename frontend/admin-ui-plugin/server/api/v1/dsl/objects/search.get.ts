@@ -9,5 +9,5 @@ export default defineEventHandler(async (event) => {
   if (description && typeof description === 'string' && description.trim())
     query.description = description.trim()
 
-  return proxyToBackend(event, '/api/dsl/helpers/search', { query })
+  return proxyToBackend(event, '/api/dsl/objects/search', { query })
 })

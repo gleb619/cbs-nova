@@ -90,6 +90,11 @@ public class HelperSpiProcessor extends AbstractProcessor {
         var registrations = entries.stream()
                 .map(entry -> {
                   var simpleName = simpleNameOf(entry.fqn());
+                  //TODO: make check if it have `componentModel=LAZY` then make `() ->` suplier, else plain registration
+                  //return "    registrar.register(\"%s\", () -> instanceResolver.resolve(%s.class));\n"
+                  //TODO: if `creationStrategy=FACTORY` then use a `instanceResolver` instead, use simple constructor creation
+
+
                   return "    registrar.register(\"%s\", instanceResolver.resolve(%s.class));\n"
                           .formatted(entry.name(),
                                   simpleName);

@@ -20,6 +20,8 @@ public abstract class DslCompileExtension {
 
   public abstract Property<String> getRuntimeModule();
 
+  public abstract Property<Boolean> getUseFileNameSubPackage();
+
   public DslCompileExtension(Project project) {
     getSourceDir().convention(project.getLayout().getProjectDirectory().dir("src"));
     getOutputDir().convention(project.getLayout().getBuildDirectory().dir("generated"));
@@ -28,5 +30,6 @@ public abstract class DslCompileExtension {
     getBuildVersion().convention("");
     getLogLevel().convention("INFO");
     getRuntimeModule().convention("starter");
+    getUseFileNameSubPackage().convention(true);
   }
 }

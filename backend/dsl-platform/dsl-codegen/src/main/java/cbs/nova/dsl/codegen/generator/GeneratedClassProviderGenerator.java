@@ -7,10 +7,10 @@ import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.model.GeneratedSource;
 import cbs.nova.dsl.codegen.util.AstExtractor;
+import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.utils.Substitutor;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -21,11 +21,19 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
-@RequiredArgsConstructor
 public final class GeneratedClassProviderGenerator {
 
   private final CodegenNaming codegenNaming;
   private final AstExtractor executeAstJsonExtractor;
+  private final DslPackageNameResolver packageNameResolver;
+
+  public GeneratedClassProviderGenerator(
+          @NonNull CodegenNaming codegenNaming,
+          @NonNull AstExtractor executeAstJsonExtractor) {
+    this.codegenNaming = codegenNaming;
+    this.executeAstJsonExtractor = executeAstJsonExtractor;
+    this.packageNameResolver = new DslPackageNameResolver(codegenNaming);
+  }
 
   public @NonNull GeneratedSource forProcess(
           @NonNull ProcessDescriptor descriptor,
@@ -39,9 +47,18 @@ public final class GeneratedClassProviderGenerator {
           @NonNull List<String> preprocessedSources,
           @Nullable String buildVersion,
           @Nullable String targetPackage) {
+    return forProcess(descriptor, preprocessedSources, buildVersion, targetPackage, true);
+  }
+
+  public @NonNull GeneratedSource forProcess(
+          @NonNull ProcessDescriptor descriptor,
+          @NonNull List<String> preprocessedSources,
+          @Nullable String buildVersion,
+          @Nullable String targetPackage,
+          boolean useFileNameSubPackage) {
     String name = descriptor.name();
     String version = resolveVersion(descriptor.version(), buildVersion);
-    String pkg = codegenNaming.versionedPackage(name, version, targetPackage);
+    String pkg = packageNameResolver.resolve(targetPackage, version, name, useFileNameSubPackage);
     String interfaceName = name + "ProcessWorkflow";
     String implName = name + "ProcessDefinition";
     String providerClass = name + "GeneratedClassProvider";
@@ -69,9 +86,18 @@ public final class GeneratedClassProviderGenerator {
           @NonNull List<String> preprocessedSources,
           @Nullable String buildVersion,
           @Nullable String targetPackage) {
+    return forTransaction(descriptor, preprocessedSources, buildVersion, targetPackage, true);
+  }
+
+  public @NonNull GeneratedSource forTransaction(
+          @NonNull TransactionDescriptor descriptor,
+          @NonNull List<String> preprocessedSources,
+          @Nullable String buildVersion,
+          @Nullable String targetPackage,
+          boolean useFileNameSubPackage) {
     String name = descriptor.name();
     String version = resolveVersion(descriptor.version(), buildVersion);
-    String pkg = codegenNaming.versionedPackage(name, version, targetPackage);
+    String pkg = packageNameResolver.resolve(targetPackage, version, name, useFileNameSubPackage);
     String interfaceName = name + "TransactionActivity";
     String implName = name + "TransactionDefinition";
     String providerClass = name + "GeneratedClassProvider";

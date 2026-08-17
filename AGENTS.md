@@ -16,3 +16,33 @@ cbs-nova is a Temporal DSL Orchestration Engine with a Java backend and a Vue/Nu
 
 - `docs/architecture-backend.md` — backend design and runtime modes.
 - `docs/architecture-ui.md` — frontend/BFF architecture.
+
+## Quick end-to-end check
+
+1. Start Postgres + Temporal (backend needs both):
+   ```bash
+   docker compose -f app/docker-compose.yml up -d postgres
+   ```
+2. Publish DSL platform to Maven Local:
+   ```bash
+   backend/dsl-platform/gradlew -p backend/dsl-platform publishToMavenLocal -x test
+   ```
+3. Start Spring Boot on the port the BFF expects:
+   ```bash
+   SERVER_PORT=8090 backend/dsl-platform/gradlew -p backend/dsl-starter :starter-launcher:bootRun -x test
+   ```
+4. Start Nuxt dev server:
+   ```bash
+   cd frontend && pnpm dev
+   ```
+5. Verify a proxied DSL endpoint:
+   ```bash
+   curl http://localhost:3000/api/v1/dsl/definitions
+   ```
+
+### Caveats
+
+- **Java 25 is required.** Root `./gradlew` is Gradle 8.13 and fails under Java 25. Use `backend/dsl-platform/gradlew` (Gradle 9.4.1) for platform/starter builds.
+- **Port mismatch:** backend defaults to 8080, frontend BFF defaults to `http://localhost:8090`. Use `SERVER_PORT=8090` for backend, or override `BACKEND_BASE_URL` for the frontend.
+- **No generic `/api/v1/dsl/*` catch-all.** BFF routes are explicit Nitro files under `frontend/admin-ui-plugin/server/api/v1/`. Add a matching proxy route when exposing a new backend DSL path.
+- **Root `Makefile` targets can be stale.** Prefer the sub-build `gradlew` commands above; `make backend` uses the root wrapper and may fail with Java 25.
