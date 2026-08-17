@@ -1,0 +1,54 @@
+plugins {
+  id 'idea'
+  alias(libs.plugins.spotless) apply false
+  alias(libs.plugins.test.logger) apply false
+}
+
+// Central version lives in backend/gradle.properties.
+def parentProps = new Properties()
+file('../gradle.properties').withInputStream { parentProps.load(it) }
+
+allprojects {
+  group = 'cbs.nova'
+  version = parentProps.getProperty('version', '0.0.1-SNAPSHOT')
+
+  repositories {
+    mavenLocal()
+    mavenCentral()
+  }
+}
+
+subprojects {
+  apply plugin: 'maven-publish'
+  apply from: "${rootDir}/../gradle/java.gradle"
+  apply from: "${rootDir}/../gradle/test.gradle"
+  apply from: "${rootDir}/../gradle/code-style.gradle"
+
+  plugins.withType(JavaPlugin).configureEach {
+    dependencies {
+      compileOnly libs.lombok
+      annotationProcessor libs.lombok
+
+      testCompileOnly libs.lombok
+      testAnnotationProcessor libs.lombok
+    }
+  }
+
+  afterEvaluate {
+    if (plugins.hasPlugin(JavaPlugin) && !plugins.hasPlugin('java-gradle-plugin')) {
+      publishing {
+        publications {
+          mavenJava(MavenPublication) {
+            from components.java
+          }
+        }
+      }
+    }
+  }
+}
+
+idea {
+  module {
+    name = 'cbs-nova-dsl-platform'
+  }
+}

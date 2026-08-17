@@ -17,15 +17,20 @@ Core constructs: **Process** (Temporal Workflow), **Transaction** (Temporal Acti
 *Helper** (external class via SPI).
 
 ```
+
 backend/
-├── dsl-api/          # Base contracts, registries & context interfaces (zero-dep)
-├── dsl/              # Runtime: Registries, Runners, Managers, Context, Result
-├── dsl-codegen/      # Annotation processor generating Temporal workflows/activities
-├── misc-codegen/     # SPI generator for `@Helper` classes
-├── dsl-examples/     # JEP-512 compact DSL source files (no class/package/public)
-├── dsl-gradle-plugin/# Standalone Gradle plugin that compiles DSL sources
-├── starter/          # Spring Boot starter & REST surface (e.g. POST /api/dsl/reload)
-└── temporal-example/ # Sample Temporal workflows and testing
+├── dsl-platform/            # Parent build for the DSL platform
+│   ├── dsl-api/             # Base contracts, registries & context interfaces (zero-dep)
+│   ├── dsl/                 # Runtime: Registries, Runners, Managers, Context, Result
+│   ├── dsl-codegen/         # Annotation processor generating Temporal workflows/activities
+│   └── misc-codegen/        # SPI generator for `@Helper` classes
+├── dsl-plugins/             # Parent build for tooling plugins
+│   ├── dsl-gradle-plugin/   # Standalone Gradle plugin that compiles DSL sources
+│   └── dsl-idea-plugin/     # IntelliJ IDEA support plugin
+└── dsl-starter/             # Parent build for runtime + examples
+    ├── dsl-examples/        # JEP-512 compact DSL source files (no class/package/public)
+    ├── starter/             # Spring Boot starter & REST surface (e.g. POST /api/dsl/reload)
+    └── starter-launcher/    # Example Spring Boot host for the starter
 ```
 
 **Dependency flow**: `dsl-api` (none) <- `dsl` <- `dsl-codegen` / `starter` / `dsl-examples` / `dsl-gradle-plugin`.
@@ -92,13 +97,26 @@ backend/
 
 ## 3. CLI Commands (Run from `backend/`)
 
+The root `backend/build.gradle` delegates to the three independent sub-builds using Exec tasks.
+Order is handled automatically (platform -> plugins -> starter) when you use the root tasks:
+
 ```bash
-./gradlew build                 # Build project and run code generation
-./gradlew test                  # Run all tests
-./gradlew :dsl:test             # Run specific module tests (e.g. :dsl-codegen, :starter)
-./gradlew :dsl-gradle-plugin:build   # Build and validate the DSL compiler plugin
-./gradlew spotlessCheck         # Check Spotless formatting rules
-./gradlew spotlessApply         # Format code automatically using Spotless
+# Build everything in order (recommended)
+./gradlew build
+
+# Publish everything to Maven Local in order (recommended)
+./gradlew publishToMavenLocal
+```
+
+You can also run each sub-build directly:
+
+```bash
+./gradlew -p dsl-platform build     # Build DSL platform modules
+./gradlew -p dsl-platform test      # Run DSL platform tests
+./gradlew -p dsl-plugins build      # Build DSL Gradle + IDEA plugins
+./gradlew -p dsl-starter build      # Build starter, launcher and DSL examples
+./gradlew -p dsl-platform spotlessCheck
+./gradlew -p dsl-platform spotlessApply
 ```
 
 ---

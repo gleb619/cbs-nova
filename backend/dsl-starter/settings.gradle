@@ -11,36 +11,23 @@ pluginManagement {
       }
     }
   }
-  plugins {
-    id 'org.jetbrains.intellij.platform.settings' version '2.18.1'
-  }
 }
 
-plugins {
-  id 'org.jetbrains.intellij.platform.settings'
-}
+rootProject.name = 'cbs-nova-dsl-starter'
 
-rootProject.name = 'cbs-nova-backend'
-
-include 'dsl-api'
-include 'dsl'
-include 'dsl-codegen'
-include 'misc-codegen'
 include 'dsl-examples'
-include 'dsl-gradle-plugin'
-include 'dsl-idea-plugin'
 include 'starter'
 include 'starter-launcher'
 
 dependencyResolutionManagement {
+  versionCatalogs {
+    create('libs') {
+      from(files('../gradle/libs.versions.toml'))
+    }
+  }
   repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
   repositories {
     mavenLocal()
     mavenCentral()
-    intellijPlatform {
-      defaultRepositories()
-    }
   }
 }
-
-enableFeaturePreview('TYPESAFE_PROJECT_ACCESSORS')

@@ -24,18 +24,23 @@ GRANT ALL PRIVILEGES ON DATABASE gitea TO gitea;
 
 -- bugsink
 CREATE DATABASE bugsink;
-CREATE USER bugsinkuser WITH ENCRYPTED PASSWORD '${BUGSINK_DB_PASSWORD:-change_me_secure_password}';
+CREATE USER bugsinkuser WITH ENCRYPTED PASSWORD '${BUGSINK_DB_PASSWORD:-bugsink}';
 GRANT ALL PRIVILEGES ON DATABASE bugsink TO bugsinkuser;
 
 -- temporal
 CREATE DATABASE temporal;
 CREATE USER temporal WITH ENCRYPTED PASSWORD '${TEMPORAL_DB_PASSWORD:-temporal}';
 GRANT ALL PRIVILEGES ON DATABASE temporal TO temporal;
+
+-- nova
+CREATE DATABASE nova;
+CREATE USER nova WITH ENCRYPTED PASSWORD '${APP_DB_PASSWORD:-nova}';
+GRANT ALL PRIVILEGES ON DATABASE nova TO nova;
 EOSQL
 
 # Grant schema-level rights on the public schema; newer Postgres versions no
 # longer do this automatically for newly created users.
-for db_user in 'keycloak:keycloak' 'gitea:gitea' 'bugsinkuser:bugsink' 'temporal:temporal'; do
+for db_user in 'keycloak:keycloak' 'gitea:gitea' 'bugsinkuser:bugsink' 'temporal:temporal' 'nova:nova'; do
     user="${db_user%%:*}"
     db="${db_user##*:}"
     psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$db" <<EOSQL

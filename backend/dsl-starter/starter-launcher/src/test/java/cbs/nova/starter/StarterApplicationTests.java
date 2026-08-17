@@ -22,7 +22,7 @@ class StarterApplicationTests {
   }
 
   @Test
-  void greeterHelperIsRegistered() {
+  void arithmeticHelperIsRegistered() {
     var helper = GlobalManager.globalManager().findHelper("arithmetic");
     assertThat(helper).isPresent();
   }

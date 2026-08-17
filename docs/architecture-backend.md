@@ -177,7 +177,10 @@ module rather than a fork of the backend.
 Full build → run sequence:
 
 ```bash
-cd backend && ./gradlew publishToMavenLocal
+cd backend
+./gradlew -p dsl-platform publishToMavenLocal
+./gradlew -p dsl-plugins  publishToMavenLocal
+./gradlew -p dsl-starter  publishToMavenLocal -x test
 cd ../app/dsl && ./gradlew publishToMavenLocal
 cd ../app/server && ./gradlew build && ./gradlew bootRun
 ```

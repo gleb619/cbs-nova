@@ -1,0 +1,35 @@
+pluginManagement {
+  repositories {
+    mavenLocal()
+    mavenCentral()
+    gradlePluginPortal()
+  }
+  plugins {
+    id 'org.jetbrains.intellij.platform.settings' version '2.18.1'
+  }
+}
+
+plugins {
+  id 'org.jetbrains.intellij.platform.settings'
+}
+
+rootProject.name = 'cbs-nova-dsl-plugins'
+
+include 'dsl-gradle-plugin'
+include 'dsl-idea-plugin'
+
+dependencyResolutionManagement {
+  versionCatalogs {
+    create('libs') {
+      from(files('../gradle/libs.versions.toml'))
+    }
+  }
+  repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+  repositories {
+    mavenLocal()
+    mavenCentral()
+    intellijPlatform {
+      defaultRepositories()
+    }
+  }
+}

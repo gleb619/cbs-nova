@@ -1,64 +1,75 @@
 plugins {
-//  id 'idea'
-  alias(libs.plugins.spotless) apply false
-  alias(libs.plugins.test.logger) apply false
+  id 'base'
 }
 
-allprojects {
-  group = 'cbs.nova'
-  version = '0.0.1-SNAPSHOT'
+group = 'cbs.nova'
+version = property('version') as String
 
-  repositories {
-    mavenLocal()
-    mavenCentral()
-  }
+// Delegate to the three independent Gradle builds. Ordering matters because groups
+// are connected through Maven Local: platform -> plugins -> starter.
 
-  configurations.all {
-    resolutionStrategy {
-      dependencySubstitution {
-        substitute(module('cbs.nova:dsl-codegen')).using(project(':dsl-codegen'))
-        substitute(module('cbs.nova:dsl')).using(project(':dsl'))
-        substitute(module('cbs.nova:dsl-api')).using(project(':dsl-api'))
-        substitute(module('cbs.nova:starter')).using(project(':starter'))
-        substitute(module('cbs.nova:dsl-gradle-plugin')).using(project(':dsl-gradle-plugin'))
-      }
-    }
-  }
+tasks.register('platformPublishToMavenLocal', Exec) {
+  group = 'build'
+  description = 'Publish DSL platform artifacts (dsl-api, dsl, dsl-codegen, misc-codegen) to Maven Local'
+  workingDir = file('dsl-platform')
+  commandLine = ['../gradlew', "-Pversion=${version}", 'publishToMavenLocal']
+  outputs.upToDateWhen { false }
 }
 
-subprojects {
-  apply plugin: 'maven-publish'
-  apply from: "${rootDir}/gradle/java.gradle"
-  apply from: "${rootDir}/gradle/test.gradle"
-  apply from: "${rootDir}/gradle/code-style.gradle"
-
-  afterEvaluate {
-    if (plugins.hasPlugin(JavaPlugin) && !plugins.hasPlugin('java-gradle-plugin')) {
-      publishing {
-        publications {
-          mavenJava(MavenPublication) {
-            from components.java
-          }
-        }
-      }
-    }
-  }
+tasks.register('pluginsPublishToMavenLocal', Exec) {
+  group = 'build'
+  description = 'Publish DSL plugin artifacts (dsl-gradle-plugin, dsl-idea-plugin) to Maven Local'
+  dependsOn 'platformPublishToMavenLocal'
+  workingDir = file('dsl-plugins')
+  commandLine = ['../gradlew', "-Pversion=${version}", 'publishToMavenLocal']
+  outputs.upToDateWhen { false }
 }
 
-subprojects {
-  plugins.withType(JavaPlugin).configureEach {
-    dependencies {
-      compileOnly libs.lombok
-      annotationProcessor libs.lombok
-
-      testCompileOnly libs.lombok
-      testAnnotationProcessor libs.lombok
-    }
-  }
+tasks.register('starterPublishToMavenLocal', Exec) {
+  group = 'build'
+  description = 'Publish starter + examples artifacts to Maven Local'
+  dependsOn 'pluginsPublishToMavenLocal'
+  workingDir = file('dsl-starter')
+  commandLine = ['../gradlew', "-Pversion=${version}", 'publishToMavenLocal', '-x', 'test']
+  outputs.upToDateWhen { false }
 }
 
-//idea {
-//  module {
-//    name = 'cbs-nova-backend'
-//  }
-//}
+tasks.register('publishToMavenLocal', Exec) {
+  group = 'publishing'
+  description = 'Publish all backend groups to Maven Local in the correct order'
+  dependsOn 'platformPublishToMavenLocal', 'pluginsPublishToMavenLocal', 'starterPublishToMavenLocal'
+  commandLine = ['echo', "All groups published to Maven Local as ${version}"]
+}
+
+// Build
+
+tasks.register('platformBuild', Exec) {
+  group = 'build'
+  description = 'Build the DSL platform group'
+  workingDir = file('dsl-platform')
+  commandLine = ['../gradlew', "-Pversion=${version}", 'build']
+  outputs.upToDateWhen { false }
+}
+
+tasks.register('pluginsBuild', Exec) {
+  group = 'build'
+  description = 'Build the DSL plugins group'
+  dependsOn 'platformPublishToMavenLocal'
+  workingDir = file('dsl-plugins')
+  commandLine = ['../gradlew', "-Pversion=${version}", 'build']
+  outputs.upToDateWhen { false }
+}
+
+tasks.register('starterBuild', Exec) {
+  group = 'build'
+  description = 'Build the starter + examples group (excluding tests)'
+  dependsOn 'pluginsPublishToMavenLocal'
+  workingDir = file('dsl-starter')
+  commandLine = ['../gradlew', "-Pversion=${version}", 'build', '-x', 'test']
+  outputs.upToDateWhen { false }
+}
+
+// The `base` plugin already provides `build`; augment it to depend on the three group builds.
+tasks.named('build') {
+  dependsOn 'platformBuild', 'pluginsBuild', 'starterBuild'
+}

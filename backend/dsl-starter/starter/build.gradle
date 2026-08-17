@@ -4,7 +4,6 @@ plugins {
   alias(libs.plugins.spring.boot)
   alias(libs.plugins.spring.dm)
   alias(libs.plugins.git.properties)
-  //alias(libs.plugins.sentry)
 }
 
 bootJar {
@@ -20,13 +19,13 @@ springBoot {
 }
 
 gitProperties {
-  dotGitDirectory = file("${rootDir}/../.git")
+  dotGitDirectory = file("${rootDir}/../../.git")
 }
 
 dependencies {
-  api project(":dsl-api")
-  api project(':dsl')
-  api project(':misc-codegen')
+  api "cbs.nova:dsl-api:${project.version}"
+  api "cbs.nova:dsl:${project.version}"
+  api "cbs.nova:misc-codegen:${project.version}"
 
   api libs.avaje.jsonb
   annotationProcessor libs.avaje.jsonb.generator
@@ -54,9 +53,9 @@ dependencies {
 
   implementation libs.opentelemetry.api
 
-  annotationProcessor project(':misc-codegen')
+  annotationProcessor "cbs.nova:misc-codegen:${project.version}"
 
-  testAnnotationProcessor project(':dsl-codegen')
+  testAnnotationProcessor "cbs.nova:dsl-codegen:${project.version}"
   testImplementation project(':dsl-examples')
 
   testImplementation libs.springdoc.openapi.starter.webmvc.ui

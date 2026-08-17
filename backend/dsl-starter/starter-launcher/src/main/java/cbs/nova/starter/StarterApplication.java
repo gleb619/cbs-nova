@@ -21,7 +21,8 @@ public class StarterApplication {
     var thread = new Thread(() -> {
       try {
         Thread.sleep(1_000);
-      } catch (InterruptedException ignore) {}
+      } catch (InterruptedException ignore) {
+      }
 
       System.exit(1);
     });

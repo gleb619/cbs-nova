@@ -84,10 +84,14 @@ configured runtime is visible to the task's input fingerprint.
 
 ## Development inside cbs-nova
 
-Because `dsl-examples` applies this plugin, the plugin and its dependencies are resolved through
-the root project's dependency substitution rules. Build as usual:
+Because the plugin, DSL platform and starter/examples now live in separate Gradle builds,
+build order matters: the DSL platform artifacts must be in Maven Local before the plugin can
+compile, and the plugin must be in Maven Local before `dsl-examples` can run the `compileDsl`
+task.
 
 ```bash
-./gradlew :dsl-gradle-plugin:build
-./gradlew :dsl-examples:compileDsl
+cd backend
+./gradlew -p dsl-platform publishToMavenLocal   # dsl-api, dsl, dsl-codegen, misc-codegen
+./gradlew -p dsl-plugins publishToMavenLocal    # dsl-gradle-plugin
+./gradlew -p dsl-starter :dsl-examples:compileDsl
 ```

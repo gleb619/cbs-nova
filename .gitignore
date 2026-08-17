@@ -144,3 +144,8 @@ backend/.intellijPlatform/
 /app/ui/.output
 /app/ui/node_modules
 /app/ui/.env
+
+/gradle/wrapper/gradle-wrapper.jar
+/gradle/wrapper/gradle-wrapper.properties
+/gradlew
+/gradlew.bat

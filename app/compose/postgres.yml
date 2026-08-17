@@ -9,13 +9,14 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_secure_password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: postgres
       # Consumed by the init script for DB-specific user passwords.
       KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
       GITEA_DB_PASSWORD: ${GITEA_DB_PASSWORD:-gitea}
-      BUGSINK_DB_PASSWORD: ${BUGSINK_DB_PASSWORD:-change_me_secure_password}
+      BUGSINK_DB_PASSWORD: ${BUGSINK_DB_PASSWORD:-bugsink}
       TEMPORAL_DB_PASSWORD: ${TEMPORAL_DB_PASSWORD:-temporal}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-nova}
     ports:
       - "5432:5432"
     volumes:

@@ -1,0 +1,40 @@
+plugins {
+  id 'java'
+  alias(libs.plugins.spring.dm)
+  id 'cbs.nova.dsl' version '0.0.1-SNAPSHOT'
+}
+
+dependencyManagement {
+  imports {
+    mavenBom "org.springframework.boot:spring-boot-dependencies:${libs.versions.spring.boot.get()}"
+  }
+}
+
+dependencies {
+  implementation "cbs.nova:dsl-api:${project.version}"
+  implementation "cbs.nova:dsl:${project.version}"
+  compileOnly project(':starter')
+  compileOnly libs.temporal.sdk
+  implementation libs.avaje.jsonb
+  annotationProcessor libs.avaje.jsonb.generator
+
+  dslCompiler libs.avaje.jsonb.generator
+}
+
+dslCompile {
+  dslPackage = 'cbs.nova.dslexamples'
+  buildVersion = 'v1'
+  logLevel = 'INFO'
+}
+
+spotless {
+  java {
+    targetExclude 'src/dsl/**/*.java'
+    targetExclude 'src/models/**/*.java'
+    targetExclude 'build/generated/**/*.java'
+  }
+}
+
+tasks.named('spotlessJava') {
+  dependsOn 'compileDsl'
+}
