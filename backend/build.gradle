@@ -1,5 +1,5 @@
 plugins {
-  id 'idea'
+//  id 'idea'
   alias(libs.plugins.spotless) apply false
   alias(libs.plugins.test.logger) apply false
 }
@@ -57,8 +57,8 @@ subprojects {
   }
 }
 
-idea {
-  module {
-    name = 'cbs-nova-backend'
-  }
-}
+//idea {
+//  module {
+//    name = 'cbs-nova-backend'
+//  }
+//}

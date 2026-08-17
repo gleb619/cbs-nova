@@ -25,11 +25,12 @@ rootProject.name = 'cbs-nova-backend'
 include 'dsl-api'
 include 'dsl'
 include 'dsl-codegen'
+include 'misc-codegen'
 include 'dsl-examples'
 include 'dsl-gradle-plugin'
 include 'dsl-idea-plugin'
-include 'misc-codegen'
 include 'starter'
+include 'starter-launcher'
 
 dependencyResolutionManagement {
   repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)

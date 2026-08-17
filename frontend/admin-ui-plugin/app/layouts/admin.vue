@@ -1,9 +1,9 @@
 <script setup lang="ts">
+import { useAdminInfo } from '@cbs/admin-ui-plugin/composables/useAdminInfo'
 import { AppFooter, AppShell, AppSidebarToggle } from '@cbs/components'
 import { useRoute } from 'nuxt/app'
 import { computed } from 'vue'
 import { NuxtLink } from '#components'
-import { useAdminInfo } from '../composables/useAdminInfo'
 
 const route = useRoute()
 const { data: info } = useAdminInfo()

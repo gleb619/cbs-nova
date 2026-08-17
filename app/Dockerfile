@@ -33,6 +33,10 @@ WORKDIR /app
 
 COPY --from=build /build/starter/build/libs/starter-*.jar /app/app.jar
 
+# curl https://repo1.maven.org/maven2/io/sentry/sentry-opentelemetry-agent/8.53.0/sentry-opentelemetry-agent-8.53.0.jar -o sentry-opentelemetry-agent-8.53.0.jar
+ENV SENTRY_AUTO_INIT=false \
+    JAVA_TOOL_OPTIONS_EXPERIMENT="-javaagent:sentry-opentelemetry-agent-8.53.0.jar"
+
 USER appuser
 
 EXPOSE 8090

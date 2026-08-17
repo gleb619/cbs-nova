@@ -1,0 +1,19 @@
+plugins {
+  id 'java'
+  alias(libs.plugins.spring.boot)
+  alias(libs.plugins.spring.dm)
+  //alias(libs.plugins.sentry)
+}
+
+dependencies {
+  implementation project(':starter')
+  implementation platform(libs.spring.cloud.dependencies)
+
+  implementation libs.bundles.spring.web
+  implementation libs.spring.boot.starter.actuator
+  implementation libs.springdoc.openapi.starter.webmvc.ui
+  implementation libs.openfeign.core
+  //implementation libs.spring.kafka
+
+  testImplementation libs.bundles.spring.test
+}

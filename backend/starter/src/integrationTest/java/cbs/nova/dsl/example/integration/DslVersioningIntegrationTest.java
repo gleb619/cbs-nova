@@ -264,8 +264,8 @@ class DslVersioningIntegrationTest {
       if (helperClass == SortRecordsHelper.class) {
         return new SortRecordsHelper();
       }
-      if (helperClass == SumValuesHelper.class) {
-        return new SumValuesHelper();
+      if (helperClass == ArithmeticHelper.class) {
+        return new ArithmeticHelper();
       }
       if (helperClass == UnreliableApiHelper.class) {
         return new UnreliableApiHelper();

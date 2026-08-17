@@ -12,7 +12,7 @@ testcontainers = "1.21.3"
 slf4j = "2.0.16"
 mockito = "5.23.0"
 awaitility = "4.3.0"
-sentry = "7.0.0"
+sentry = "8.26.0"
 lombok = "1.18.38"
 mapstruct = "1.6.3"
 opentelemetry = "1.48.0"
@@ -26,10 +26,12 @@ h2 = "2.4.240"
 
 # plugins
 spring-boot = "4.0.4"
+spring-cloud = "2025.1.1"
 spring-dm = "1.1.7"
 spotless = "7.0.2"
 test-logger = "4.0.0"
 gradle-git-properties = "2.5.2"
+sentry-plugin = "6.19.0"
 
 [libraries]
 # -- Temporal --
@@ -79,17 +81,15 @@ spring-boot-starter-jdbc = { module = "org.springframework.boot:spring-boot-star
 spring-boot-starter-data-jdbc = { module = "org.springframework.boot:spring-boot-starter-data-jdbc" }
 spring-kafka = { module = "org.springframework.kafka:spring-kafka" }
 spring-jdbc = { module = "org.springframework:spring-jdbc" }
-sentry-spring-boot-jakarta = { module = "io.sentry:sentry-spring-boot-starter-jakarta", version.ref = "sentry" }
+spring-cloud-dependencies = { module = "org.springframework.cloud:spring-cloud-dependencies", version.ref = "spring-cloud" }
 
 springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc-openapi" }
-
-# -- Test databases --
-h2 = { module = "com.h2database:h2", version.ref = "h2" }
 
 # -- Misc --
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 keycloak-admin-client = { module = "org.keycloak:keycloak-admin-client", version.ref = "keycloak-admin-client" }
+mvel2 = { module = "org.mvel:mvel2", version.ref = "mvel" }
 
 # -- MapStruct --
 mapstruct = { module = "org.mapstruct:mapstruct", version.ref = "mapstruct" }
@@ -97,11 +97,13 @@ mapstruct-processor = { module = "org.mapstruct:mapstruct-processor", version.re
 
 # -- OpenTelemetry --
 opentelemetry-api = { module = "io.opentelemetry:opentelemetry-api", version.ref = "opentelemetry" }
-mvel2 = { module = "org.mvel:mvel2", version.ref = "mvel" }
+sentry-spring-boot-jakarta = { module = "io.sentry:sentry-spring-boot-4", version.ref = "sentry" }
+
 
 # -- Databases --
 flyway-core = { module = "org.flywaydb:flyway-core" }
 postgresql = { module = "org.postgresql:postgresql" }
+h2 = { module = "com.h2database:h2", version.ref = "h2" }
 
 [bundles]
 spring-web = ["spring-boot-starter-web", "spring-boot-starter-validation", "spring-boot-starter-actuator"]
@@ -113,3 +115,4 @@ spring-dm = { id = "io.spring.dependency-management", version.ref = "spring-dm" 
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 test-logger = { id = "com.adarshr.test-logger", version.ref = "test-logger" }
 git-properties = { id = "com.gorylenko.gradle-git-properties", version.ref = "gradle-git-properties" }
+sentry = { id = "io.sentry.jvm.gradle", version.ref = "sentry-plugin" }

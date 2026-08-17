@@ -4,6 +4,7 @@ plugins {
   alias(libs.plugins.spring.boot)
   alias(libs.plugins.spring.dm)
   alias(libs.plugins.git.properties)
+  //alias(libs.plugins.sentry)
 }
 
 bootJar {

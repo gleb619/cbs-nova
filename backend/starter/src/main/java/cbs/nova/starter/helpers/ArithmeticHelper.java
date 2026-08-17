@@ -13,8 +13,8 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.util.List;
 
-@Helper(name = "sumValues")
-public class SumValuesHelper implements Executable<SumValuesIn, SumValuesOut> {
+@Helper(name = "arithmetic")
+public class ArithmeticHelper implements Executable<SumValuesIn, SumValuesOut> {
 
   @Override
   public @NonNull Result<SumValuesOut> execute(@NonNull Context<SumValuesIn> ctx) {
@@ -28,19 +28,19 @@ public class SumValuesHelper implements Executable<SumValuesIn, SumValuesOut> {
 
     BigDecimal result = switch (operation) {
       case ADD -> values.stream()
-              .map(SumValuesHelper::toBigDecimal)
+              .map(ArithmeticHelper::toBigDecimal)
               .reduce(BigDecimal.ZERO, BigDecimal::add);
       case SUBTRACT -> subtract(values);
       case MULTIPLY -> values.stream()
-              .map(SumValuesHelper::toBigDecimal)
+              .map(ArithmeticHelper::toBigDecimal)
               .reduce(BigDecimal.ONE, BigDecimal::multiply);
       case DIVIDE -> divide(values);
       case MIN -> values.stream()
-              .map(SumValuesHelper::toBigDecimal)
+              .map(ArithmeticHelper::toBigDecimal)
               .reduce(BigDecimal::min)
               .orElse(BigDecimal.ZERO);
       case MAX -> values.stream()
-              .map(SumValuesHelper::toBigDecimal)
+              .map(ArithmeticHelper::toBigDecimal)
               .reduce(BigDecimal::max)
               .orElse(BigDecimal.ZERO);
     };
@@ -52,7 +52,7 @@ public class SumValuesHelper implements Executable<SumValuesIn, SumValuesOut> {
     BigDecimal first = toBigDecimal(values.get(0));
     return values.stream()
             .skip(1)
-            .map(SumValuesHelper::toBigDecimal)
+            .map(ArithmeticHelper::toBigDecimal)
             .reduce(first, BigDecimal::subtract);
   }
 
@@ -60,7 +60,7 @@ public class SumValuesHelper implements Executable<SumValuesIn, SumValuesOut> {
     BigDecimal first = toBigDecimal(values.get(0));
     return values.stream()
             .skip(1)
-            .map(SumValuesHelper::toBigDecimal)
+            .map(ArithmeticHelper::toBigDecimal)
             .reduce(first, (a, b) -> a.divide(b, MathContext.DECIMAL64));
   }
 

@@ -12,10 +12,10 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.util.List;
 
-class SumValuesHelperTest {
+class ArithmeticHelperTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
-  private final SumValuesHelper helper = new SumValuesHelper();
+  private final ArithmeticHelper helper = new ArithmeticHelper();
 
   @Test
   void addsValues() {

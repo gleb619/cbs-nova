@@ -33,3 +33,4 @@ replay_pid*
 
 # Node
 node_modules/
+/starter-launcher/.gradle/

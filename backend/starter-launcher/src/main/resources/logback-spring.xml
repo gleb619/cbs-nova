@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The DRY_RUN appender is registered programmatically by DryRunLoggingAutoConfiguration so that
+  Spring can inject the DryRunLoggingContext and configure maxEventsPerRun via application
+  properties. Console output is kept here for runtime diagnostics.
+-->
+<configuration>
+  <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+  <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+  <root level="INFO">
+    <appender-ref ref="CONSOLE"/>
+  </root>
+</configuration>

@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { addLayout, createResolver, defineNuxtModule, extendPages, resolvePath } from '@nuxt/kit'
 
 // ---------------------------------------------------------------------------
@@ -117,7 +117,13 @@ export default defineNuxtModule<ModuleOptions>({
     // -----------------------------------------------------------------------
     // Layouts — register the default shell layout from this plugin
     // -----------------------------------------------------------------------
-    addLayout({ src: resolve('./app/layouts/admin.vue'), filename: 'cbs-admin.vue' }, 'cbs-admin')
+    addLayout(
+      {
+        filename: 'cbs-admin.vue',
+        getContents: () => readFileSync(resolve('./app/layouts/admin.vue'), 'utf-8'),
+      },
+      'cbs-admin',
+    )
 
     // -----------------------------------------------------------------------
     // Pages — extend the host router with the admin UI pages
