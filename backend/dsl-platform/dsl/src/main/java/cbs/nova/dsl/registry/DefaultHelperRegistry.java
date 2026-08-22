@@ -2,7 +2,6 @@ package cbs.nova.dsl.registry;
 
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.function.FunctionDslObject;
-import java.util.function.Supplier;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Collection;
@@ -10,6 +9,7 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 public final class DefaultHelperRegistry implements HelperRegistry {
 
@@ -25,7 +25,8 @@ public final class DefaultHelperRegistry implements HelperRegistry {
   }
 
   @Override
-  public void registerHelper(@NonNull String name, @NonNull Supplier<Executable<?, ?>> helperSupplier) {
+  public void registerHelper(@NonNull String name,
+          @NonNull Supplier<Executable<?, ?>> helperSupplier) {
     if (containsName(name)) {
       throw new IllegalArgumentException("Name already registered: " + name);
     }

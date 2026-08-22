@@ -1,8 +1,9 @@
 package cbs.nova.dsl.helper;
 
 import cbs.nova.dsl.Executable;
-import java.util.function.Supplier;
 import org.jspecify.annotations.NonNull;
+
+import java.util.function.Supplier;
 
 @FunctionalInterface
 public interface HelperRegistrar {

@@ -8,12 +8,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 @Slf4j
-//TODO: @deprecated since T230, use `ServiceLoaderDslDefinitionLoader` instead
+// TODO: @deprecated since T230, use `ServiceLoaderDslDefinitionLoader` instead
 @Deprecated(forRemoval = true)
 public final class DefinitionLoader implements DslDefinitionLoader {
 
   private final ServiceLoaderDslDefinitionLoader serviceLoader = new ServiceLoaderDslDefinitionLoader();
-  private final CompilingDslDefinitionLoader compiler = new CompilingDslDefinitionLoader(new ServiceLoaderDslDefinitionLoader());
+  private final CompilingDslDefinitionLoader compiler = new CompilingDslDefinitionLoader(
+          new ServiceLoaderDslDefinitionLoader());
 
   @Override
   public int load(@NonNull Path sourceDir, @NonNull GlobalManager gm) {

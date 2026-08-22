@@ -1,7 +1,7 @@
 package cbs.nova.dsl.converter;
 
-import cbs.nova.dsl.registry.ModelRegistry;
 import cbs.nova.dsl.registry.DefaultModelRegistry;
+import cbs.nova.dsl.registry.ModelRegistry;
 import io.avaje.jsonb.Jsonb;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;

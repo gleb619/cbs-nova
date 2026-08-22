@@ -3,12 +3,12 @@ package cbs.nova.dsl;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
-import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 
 import java.nio.file.Path;
 import java.util.ServiceLoader;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 public final class ServiceLoaderDslDefinitionLoader implements DslDefinitionLoader {

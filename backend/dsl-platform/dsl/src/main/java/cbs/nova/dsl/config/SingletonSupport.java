@@ -68,7 +68,7 @@ public interface SingletonSupport {
   class ReplaceableImpl<T> implements Replaceable<T> {
 
     private final Factory<T> factory;
-    //TODO: replace `volatile` to atomic
+    // TODO: replace `volatile` to atomic
     private volatile T override;
 
     @Override

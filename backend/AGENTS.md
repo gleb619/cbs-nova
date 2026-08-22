@@ -152,10 +152,16 @@ The frontend index (`frontend/.codegraph/`) is a separate database and must not 
 - **Result Casts**: Use `Result.as(Class)` and `Result.asMap()` on `Result`.
 - **Parameter DSL**: Support untyped parameters via `.parameters(...)`, `ParameterRegistry`, and `MapInput.of(k, v)`.
 - **Heartbeat**: Configured via `TransactionBuilder.heartbeatTimeout(Duration)`.
-- **SPI Discovery**: `misc-codegen` generates a `HelperResolver` implementation and a
-  `META-INF/services/cbs.nova.dsl.HelperResolver` descriptor for each `@Helper` class. On startup
-  `DslAutoConfiguration` loads these resolvers via `ServiceLoader` and registers helpers through
-  `GlobalManager`. Runtime reflection scanning of `dsl.helper-scan-packages` is removed.
+- **SPI Discovery / Helper resolution**: `misc-codegen` generates:
+  - `GeneratedHelperResolver` — registers helpers with `GlobalManager`, honoring `componentModel`
+    (STANDARD / LAZY) and `creationStrategy` (STANDARD / FACTORY).
+  - `GeneratedHelperInstanceResolver` — creates instances via `new X()` for `FACTORY` or delegates to
+    `HelperInstanceResolver.resolve(X.class)` for `STANDARD`.
+  Both are loaded via `META-INF/services/` and `java.util.ServiceLoader`.
+  At runtime `DslAutoConfiguration` exposes a `SpringOrGeneratedHelperInstanceResolver` bean with resolution order:
+  Spring bean first, then generated factory, then `IllegalStateException`. There is **no reflection fallback**.
+  `@SpringHelper` forces `componentModel = LAZY` and `creationStrategy = STANDARD`; it is also registered as a
+  singleton Spring bean by `SpringHelperBeanDefinitionRegistrar`.
 - **CodeGraph**: Prioritize `codegraph_*` tools for fast structural/symbol exploration over slow grep.
 
 ---

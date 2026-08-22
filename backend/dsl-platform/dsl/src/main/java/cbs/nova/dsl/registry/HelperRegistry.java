@@ -2,11 +2,11 @@ package cbs.nova.dsl.registry;
 
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.function.FunctionDslObject;
-import java.util.function.Supplier;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Collection;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 public interface HelperRegistry {
 
@@ -25,6 +25,6 @@ public interface HelperRegistry {
   @NonNull
   Collection<String> allNames();
 
-  void registerHelper(@NonNull String name, @NonNull Supplier<Executable<?,?>> helperSupplier);
+  void registerHelper(@NonNull String name, @NonNull Supplier<Executable<?, ?>> helperSupplier);
 
 }

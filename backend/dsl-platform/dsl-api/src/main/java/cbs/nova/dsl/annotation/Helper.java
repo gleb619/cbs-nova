@@ -17,15 +17,13 @@ public @interface Helper {
 
   enum ComponentModel {
 
-    STANDARD,
-    LAZY
+    STANDARD, LAZY
 
   }
 
   enum CreationStrategy {
 
-    STANDARD,
-    FACTORY
+    STANDARD, FACTORY
 
   }
 

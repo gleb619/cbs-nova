@@ -18,7 +18,6 @@ import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.dsl.transaction.TransactionInvoker;
 import cbs.nova.dsl.transaction.TransactionManager;
 import cbs.nova.dsl.transaction.TransactionRouting;
-import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -28,6 +27,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 @RequiredArgsConstructor
 public final class GlobalManager {
@@ -65,7 +65,8 @@ public final class GlobalManager {
     helperManager.register(name, helper);
   }
 
-  public void registerHelper(@NonNull String name, @NonNull Supplier<Executable<?, ?>> helperSupplier) {
+  public void registerHelper(@NonNull String name,
+          @NonNull Supplier<Executable<?, ?>> helperSupplier) {
     helperManager.register(name, helperSupplier);
   }
 

@@ -5,20 +5,21 @@ import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.helper.HelperRegistrar;
 import cbs.nova.dsl.registry.HelperRegistry;
 import cbs.nova.dsl.runner.HelperRunner;
-import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 @RequiredArgsConstructor
 public final class HelperManager implements HelperRegistrar {
 
   private final HelperRegistry registry;
   private final HelperRunner runner;
-  //TODO: it can cause to a memory leak, instead make some interceptor, that log to db, like `DslRun`
+  // TODO: it can cause to a memory leak, instead make some interceptor, that log to db, like
+  // `DslRun`
   @Deprecated(forRemoval = true)
   private final ThreadLocal<HelperInterceptor> threadLocalInterceptor = new ThreadLocal<>();
 

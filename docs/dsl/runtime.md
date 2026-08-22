@@ -144,6 +144,58 @@ implements `DslRuntime`. For example, a development profile injects a `DevDslRun
 directly through `GlobalManager`, while a production profile injects a `ProductionDslRuntime` that starts Temporal
 workers and routes `run(...)` through the generated workflow classes.
 
+## Helper and Spring integration
+
+Helpers declared with `@Helper` or `@SpringHelper` are wired into the runtime through generated SPI resolvers and
+Spring bean registration rather than reflection.
+
+### Annotations
+
+- `@Helper(name = "...")` — generic helper processed by the `misc-codegen` annotation processor.
+- `@SpringHelper(name = "...")` — Spring-aware meta-annotation of `@Helper`. It forces `componentModel = LAZY` and
+  `creationStrategy = STANDARD`, so the helper is registered lazily and the instance is resolved from Spring.
+
+### Code generation (`misc-codegen`)
+
+`backend/dsl-platform/misc-codegen/src/main/java/cbs/nova/misc/codegen/HelperSpiProcessor` emits two generated classes
+per module:
+
+- `GeneratedHelperResolver` — registers helpers with `GlobalManager`, honoring:
+  - `componentModel`: `STANDARD` (eager instance) or `LAZY` (`Supplier`-deferred).
+  - `creationStrategy`: `STANDARD` (resolve through `HelperInstanceResolver`) or `FACTORY` (`new X()` directly).
+- `GeneratedHelperInstanceResolver` — creates instances:
+  - `FACTORY` strategy: `new X()`.
+  - `STANDARD` strategy: delegates to `instanceResolver.resolve(X.class)`.
+
+`@SpringHelper` classes always emit `STANDARD` creation strategy, so their instances resolve through the runtime
+`HelperInstanceResolver` rather than direct `new X()`. Classes without a public no-arg constructor are omitted from
+`GeneratedHelperInstanceResolver` and must be provided by Spring.
+
+### Runtime resolution (`DslAutoConfiguration`)
+
+`DslAutoConfiguration` exposes a `HelperInstanceResolver` bean implemented by
+`SpringOrGeneratedHelperInstanceResolver`. Resolution order is:
+
+1. Spring bean (`SpringBeanHelperInstanceResolver`).
+2. Generated factories loaded via `java.util.ServiceLoader`.
+3. Otherwise throw `IllegalStateException`.
+
+There is **no reflection fallback**: if neither Spring nor the generated factories can provide the helper, resolution
+fails.
+
+### Spring bean registration
+
+`SpringHelperBeanDefinitionRegistrar` scans the Spring auto-configuration base packages for `@SpringHelper` classes
+and registers each one as a singleton Spring bean. The registrar is imported by `SpringHelperAutoConfiguration`, which is
+imported by `DslRootAutoConfiguration`.
+
+### Registry
+
+`HelperRegistry` implementations (for example `DefaultHelperRegistry`) store helper suppliers as
+`Supplier<Executable<?, ?>>` and invoke the supplier on lookup. `HelperManager` implements `HelperRegistrar` and
+forwards `register(...)` calls to the registry, supporting both direct `Executable` and `Supplier<Executable>`
+registrations.
+
 ## Dynamic configuration
 
 Temporal-specific settings (task queues, timeouts, retry policies) are declared in the DSL builders and are usually

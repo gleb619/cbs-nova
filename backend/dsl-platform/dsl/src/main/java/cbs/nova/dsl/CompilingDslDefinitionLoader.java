@@ -25,7 +25,7 @@ import java.util.stream.Stream;
 
 @Slf4j
 @RequiredArgsConstructor
-//TODO: @deprecated since T230, use `ServiceLoaderDslDefinitionLoader` instead
+// TODO: @deprecated since T230, use `ServiceLoaderDslDefinitionLoader` instead
 @Deprecated(forRemoval = true)
 public final class CompilingDslDefinitionLoader implements DslDefinitionLoader {
 

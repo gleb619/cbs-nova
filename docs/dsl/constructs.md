@@ -130,6 +130,17 @@ public class RiskHelper implements Executable<RiskIn, RiskOut> {
 - The `@Helper` name must be unique across **all helpers and functions** (they share the same registry).
 - The DSL compiler validates every `runHelper` call for name, type compatibility, and parameter availability.
 
+**Helper configuration**
+
+`@Helper` supports two optional attributes:
+
+- `componentModel` — `STANDARD` (eager instance) or `LAZY` (`Supplier`-deferred lookup).
+- `creationStrategy` — `STANDARD` (instance resolved through `HelperInstanceResolver`) or `FACTORY` (direct `new X()`).
+
+For Spring-managed helpers, use `@SpringHelper(name = "...")` instead. It is a meta-annotation of `@Helper` that
+forces `componentModel = LAZY` and `creationStrategy = STANDARD`, so the helper becomes a Spring bean and is resolved
+through the runtime `HelperInstanceResolver` rather than direct instantiation. See [Runtime Engine](runtime.md#helper-and-spring-integration) for the full resolution order and generated SPI wiring.
+
 ## Important scoping rules
 
 - **Helper** classes are normal Java code and live outside the DSL module.

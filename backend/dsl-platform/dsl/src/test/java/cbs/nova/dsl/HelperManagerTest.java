@@ -6,7 +6,6 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.registry.HelperRegistry;
 import cbs.nova.dsl.runner.HelperRunner;
-import java.util.function.Supplier;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
@@ -16,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 class HelperManagerTest {
 
@@ -185,8 +185,9 @@ class HelperManagerTest {
     }
 
     @Override
-    public void registerHelper(@NonNull String name, @NonNull Supplier<Executable<?, ?>> helperSupplier) {
-      //TODO: implement lazy helper registrations for tests
+    public void registerHelper(@NonNull String name,
+            @NonNull Supplier<Executable<?, ?>> helperSupplier) {
+      // TODO: implement lazy helper registrations for tests
     }
   }
 

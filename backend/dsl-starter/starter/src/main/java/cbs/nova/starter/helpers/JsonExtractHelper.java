@@ -17,7 +17,7 @@ import org.jspecify.annotations.NonNull;
 @SpringHelper(name = "jsonExtract")
 public class JsonExtractHelper implements Executable<JsonExtractIn, JsonExtractOut> {
 
-  //TODO: replace to jackson3
+  // TODO: replace to jackson3
   @Deprecated(forRemoval = true)
   private final @NonNull ObjectMapper mapper;
 

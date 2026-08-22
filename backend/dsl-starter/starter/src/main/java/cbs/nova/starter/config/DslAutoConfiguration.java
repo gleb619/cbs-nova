@@ -114,7 +114,7 @@ public class DslAutoConfiguration {
   }
 
   @Bean
-  //TODO: remove jackson2 mapper
+  // TODO: remove jackson2 mapper
   @Deprecated(forRemoval = true)
   @ConditionalOnMissingBean(com.fasterxml.jackson.databind.ObjectMapper.class)
   public com.fasterxml.jackson.databind.ObjectMapper cbsNovaJackson2ObjectMapper() {
