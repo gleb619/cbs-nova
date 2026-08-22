@@ -2,9 +2,9 @@ package cbs.nova.starter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.ServiceLoaderDslDefinitionLoader;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dslexamples.batchprocessing.v1.BatchModels.BatchIn;
@@ -22,7 +22,6 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import tools.jackson.databind.ObjectMapper;
 
-import java.nio.file.Path;
 import java.util.List;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = IntegrationTestApplication.class, properties = {
@@ -39,8 +38,7 @@ class DslExamplesEndToEndTest extends BaseContainers {
   @BeforeAll
   static void initKeycloak() {
     GlobalManager.globalManager().resetForTests();
-    new DefinitionLoader().load(Path.of("src/test/resources/dsl-intermediate-examples"),
-            GlobalManager.globalManager());
+    new ServiceLoaderDslDefinitionLoader().load(GlobalManager.globalManager());
     keycloakRealm = new KeycloakRealmInitializer(KEYCLOAK);
     keycloakRealm.initialize();
   }
@@ -54,8 +52,7 @@ class DslExamplesEndToEndTest extends BaseContainers {
   @AfterEach
   void tearDown() {
     GlobalManager.globalManager().resetForTests();
-    new DefinitionLoader().load(Path.of("src/test/resources/dsl-intermediate-examples"),
-            GlobalManager.globalManager());
+    new ServiceLoaderDslDefinitionLoader().load(GlobalManager.globalManager());
   }
 
   @Test

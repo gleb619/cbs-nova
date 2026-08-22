@@ -3,11 +3,11 @@ package cbs.nova.starter;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Context;
-import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.ServiceLoaderDslDefinitionLoader;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
@@ -34,12 +34,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
-import java.io.InputStream;
 import java.net.http.HttpClient;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 
 class IntermediateDslExamplesTest {
@@ -60,18 +56,12 @@ class IntermediateDslExamplesTest {
           dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
           previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig());
   private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
-  @TempDir
-  Path dslSourceDir;
 
   @BeforeEach
-  void loadCompactDsls() throws Exception {
+  void loadCompactDsls() {
     GlobalManager.globalManager().resetForTests();
     DslConfig.dslConfig().helperInstanceResolver().replace(typedHelperResolver());
-    copyCompactDsl("BatchProcessingDsl.java");
-    copyCompactDsl("InvoiceGenerationDsl.java");
-    copyCompactDsl("LongWorkSimulationDsl.java");
-
-    new DefinitionLoader().load(dslSourceDir, GlobalManager.globalManager());
+    new ServiceLoaderDslDefinitionLoader().load(GlobalManager.globalManager());
     GlobalManager.globalManager().registerHelperResolvers();
   }
 
@@ -141,15 +131,6 @@ class IntermediateDslExamplesTest {
     assertThat(report.success()).isTrue();
     BatchOut out = (BatchOut) report.output();
     assertThat(out.total()).isEqualTo(7);
-  }
-
-  private void copyCompactDsl(String name) throws Exception {
-    try (InputStream in = getClass().getResourceAsStream("/dsl-intermediate-examples/" + name)) {
-      if (in == null) {
-        throw new IllegalStateException("Missing test resource: " + name);
-      }
-      Files.copy(in, dslSourceDir.resolve(name));
-    }
   }
 
   private static HelperInstanceResolver typedHelperResolver() {
