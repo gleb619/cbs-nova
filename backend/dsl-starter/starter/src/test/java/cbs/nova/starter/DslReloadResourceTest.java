@@ -8,7 +8,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.ServiceLoaderDslDefinitionLoader;
 import cbs.nova.starter.config.DslReloadRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
-import cbs.nova.starter.controllers.DslReloadResource;
+import cbs.nova.starter.controllers.DslReloadHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,14 +29,14 @@ import java.util.stream.Stream;
 
 class DslReloadResourceTest {
 
-  private DslReloadResource resource;
+  private DslReloadHandler resource;
   private final DslDefinitionLoader loader = new CompilingDslDefinitionLoader(
           new ServiceLoaderDslDefinitionLoader());
 
   @BeforeEach
   void setUp() {
     GlobalManager.globalManager().resetForTests();
-    resource = new DslReloadResource(new DslProperties(null, null, null, null), loader);
+    resource = new DslReloadHandler(new DslProperties(null, null, null, null), loader);
   }
 
   @AfterEach
@@ -45,7 +45,7 @@ class DslReloadResourceTest {
   }
 
   private void setSourceDir(String value) {
-    resource = new DslReloadResource(new DslProperties(value, null, null, null), loader);
+    resource = new DslReloadHandler(new DslProperties(value, null, null, null), loader);
   }
 
   private static ServerRequest reloadRequest() {
@@ -71,7 +71,7 @@ class DslReloadResourceTest {
   void routerFunctionIsRegisteredByDefault() {
     new ApplicationContextRunner()
             .withUserConfiguration(DslPropertiesConfiguration.class,
-                    DslReloadRouterConfiguration.class, DslReloadResource.class)
+                    DslReloadRouterConfiguration.class, DslReloadHandler.class)
             .run(ctx -> assertThat(ctx).hasSingleBean(RouterFunction.class));
   }
 
@@ -79,7 +79,7 @@ class DslReloadResourceTest {
   void routerFunctionSkippedWhenDisabled() {
     new ApplicationContextRunner()
             .withUserConfiguration(DslPropertiesConfiguration.class,
-                    DslReloadRouterConfiguration.class, DslReloadResource.class)
+                    DslReloadRouterConfiguration.class, DslReloadHandler.class)
             .withPropertyValues("dsl.reload.enabled=false")
             .run(ctx -> assertThat(ctx).doesNotHaveBean(RouterFunction.class));
   }

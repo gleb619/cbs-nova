@@ -44,14 +44,14 @@ import java.util.stream.Stream;
 @Component
 @ConditionalOnProperty(prefix = "dsl.reload", name = "enabled", havingValue = "true", matchIfMissing = true)
 @Slf4j
-public class DslReloadResource {
+public class DslReloadHandler {
 
   private static final String RELOAD_TEMP_PREFIX = "dsl-reload-";
 
   private final DslProperties dslProperties;
   private final DslDefinitionLoader loader;
 
-  public DslReloadResource(DslProperties dslProperties, DslDefinitionLoader loader) {
+  public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader) {
     this.dslProperties = dslProperties;
     this.loader = loader;
   }

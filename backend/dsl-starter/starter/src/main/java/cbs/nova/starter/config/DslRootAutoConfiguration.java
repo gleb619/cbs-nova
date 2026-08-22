@@ -17,10 +17,7 @@ import org.springframework.context.annotation.Import;
     PreviewCacheAutoConfiguration.class,
     MessagingCallCaptureAutoConfiguration.class,
     PreviewMetricsAutoConfiguration.class,
-    DslReloadRouterConfiguration.class,
-    DslExecutionsRouterConfiguration.class,
-    DslIntrospectionRouterConfiguration.class,
-    DslRuntimeRouterConfiguration.class,
+    DslRouterConfiguration.class,
     DslErrorHandlingAutoConfiguration.class,
     SpringHelperAutoConfiguration.class
 })
