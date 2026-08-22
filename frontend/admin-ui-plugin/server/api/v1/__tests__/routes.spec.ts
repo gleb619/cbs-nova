@@ -11,18 +11,25 @@ vi.mock('~/server/utils/httpClient', () => ({
   proxyToBackend: proxyToBackendMock,
 }))
 
-// The route files call `getRouterParam` and `readBody` as bare globals (Nitro
-// auto-imports them at runtime). We install mutable per-suite stubs on
-// globalThis so each test can configure what the route sees.
+// The route files import `getRouterParam`/`readBody`/`getQuery` directly from
+// `h3` (Nitro auto-imports the same functions at runtime, but the source
+// files use explicit imports). Mock just those three on the real `h3` module
+// so each test can configure what the route sees; `defineEventHandler` and
+// everything else pass through unmocked.
 type RouterParamMap = Record<string, string | undefined>
 let routerParams: RouterParamMap = {}
 let bodyValue: unknown = {}
 let queryValue: Record<string, unknown> = {}
 
-const g = globalThis as Record<string, unknown>
-g.getRouterParam = (_event: unknown, name: string) => routerParams[name]
-g.readBody = async (_event: unknown) => bodyValue
-g.getQuery = (_event: unknown) => queryValue
+vi.mock('h3', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('h3')>()
+  return {
+    ...actual,
+    getRouterParam: (_event: unknown, name: string) => routerParams[name],
+    readBody: async (_event: unknown) => bodyValue,
+    getQuery: (_event: unknown) => queryValue,
+  }
+})
 
 // Import after the mock + globals are in place.
 const healthHandler = (await import('../health.get')).default

@@ -13,10 +13,15 @@ let queryValue: Record<string, unknown> = {}
 type RouterParamMap = Record<string, string | undefined>
 let routerParams: RouterParamMap = {}
 
-const g = globalThis as Record<string, unknown>
-g.getRouterParam = (_event: unknown, name: string) => routerParams[name]
-g.readBody = async (_event: unknown) => ({})
-g.getQuery = (_event: unknown) => queryValue
+vi.mock('h3', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('h3')>()
+  return {
+    ...actual,
+    getRouterParam: (_event: unknown, name: string) => routerParams[name],
+    readBody: async (_event: unknown) => ({}),
+    getQuery: (_event: unknown) => queryValue,
+  }
+})
 
 const searchHandler = (await import('../dsl/objects/search.get')).default
 
