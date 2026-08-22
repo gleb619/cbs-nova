@@ -34,6 +34,11 @@ const explainHandler = (await import('../dsl/explain/[name].post')).default
 const executionsIndexHandler = (await import('../executions/index.get')).default
 const executionsIdHandler = (await import('../executions/[id].get')).default
 const infoHandler = (await import('../info.get')).default
+const helpersIndexHandler = (await import('../dsl/helpers/index.get')).default
+const processesIndexHandler = (await import('../dsl/processes/index.get')).default
+const processDetailHandler = (await import('../dsl/processes/[name].get')).default
+const transactionsIndexHandler = (await import('../dsl/transactions/index.get')).default
+const transactionDetailHandler = (await import('../dsl/transactions/[name].get')).default
 
 // Minimal H3Event stub. The route handlers only pass this through to
 // proxyToBackend, which is mocked, so a plain object is sufficient.
@@ -242,5 +247,126 @@ describe('info.get', () => {
     expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/actuator/info')
     expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
     expect(result).toEqual(infoPayload)
+  })
+})
+
+describe('dsl/helpers/index.get', () => {
+  it('GETs /api/dsl/helpers with no body and no opts', async () => {
+    await helpersIndexHandler(fakeEvent)
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/helpers')
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+
+  it('returns the backend NamesResponse verbatim', async () => {
+    const payload = { names: ['currentTimestamp', 'formatMessage'] }
+    proxyToBackendMock.mockResolvedValueOnce(payload)
+
+    const result = await helpersIndexHandler(fakeEvent)
+
+    expect(result).toEqual(payload)
+  })
+})
+
+describe('dsl/processes/index.get', () => {
+  it('GETs /api/dsl/processes with no body and no opts', async () => {
+    await processesIndexHandler(fakeEvent)
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/processes')
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+
+  it('returns the backend NamesResponse verbatim', async () => {
+    const payload = { names: ['LoanDisbursement', 'SampleProcess'] }
+    proxyToBackendMock.mockResolvedValueOnce(payload)
+
+    const result = await processesIndexHandler(fakeEvent)
+
+    expect(result).toEqual(payload)
+  })
+})
+
+describe('dsl/processes/[name].get', () => {
+  it('interpolates the :name router param into the backend path with GET (no opts)', async () => {
+    routerParams = { name: 'LoanDisbursement' }
+
+    await processDetailHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/processes/LoanDisbursement',
+    )
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+
+  it('returns the backend ProcessDetail verbatim', async () => {
+    routerParams = { name: 'SampleProcess' }
+    const payload = {
+      name: 'SampleProcess',
+      version: '1.0.0',
+      taskQueue: 'sample',
+      inputType: 'SampleIn',
+      outputType: 'SampleOut',
+      hasCompensation: false,
+      inputSchema: { type: 'object' },
+    }
+    proxyToBackendMock.mockResolvedValueOnce(payload)
+
+    const result = await processDetailHandler(fakeEvent)
+
+    expect(result).toEqual(payload)
+  })
+})
+
+describe('dsl/transactions/index.get', () => {
+  it('GETs /api/dsl/transactions with no body and no opts', async () => {
+    await transactionsIndexHandler(fakeEvent)
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/transactions')
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+
+  it('returns the backend NamesResponse verbatim', async () => {
+    const payload = { names: ['SampleTransaction'] }
+    proxyToBackendMock.mockResolvedValueOnce(payload)
+
+    const result = await transactionsIndexHandler(fakeEvent)
+
+    expect(result).toEqual(payload)
+  })
+})
+
+describe('dsl/transactions/[name].get', () => {
+  it('interpolates the :name router param into the backend path with GET (no opts)', async () => {
+    routerParams = { name: 'SampleTransaction' }
+
+    await transactionDetailHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/transactions/SampleTransaction',
+    )
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+
+  it('returns the backend TransactionDetail verbatim', async () => {
+    routerParams = { name: 'SampleTransaction' }
+    const payload = {
+      name: 'SampleTransaction',
+      version: '1.0.0',
+      taskQueue: 'sample',
+      inputType: 'SampleIn',
+      outputType: 'SampleOut',
+      hasCompensation: false,
+      startToCloseTimeoutMs: 30000,
+      inputSchema: { type: 'object' },
+    }
+    proxyToBackendMock.mockResolvedValueOnce(payload)
+
+    const result = await transactionDetailHandler(fakeEvent)
+
+    expect(result).toEqual(payload)
   })
 })
