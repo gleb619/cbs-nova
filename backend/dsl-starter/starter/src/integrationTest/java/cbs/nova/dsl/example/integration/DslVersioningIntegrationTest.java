@@ -259,7 +259,7 @@ class DslVersioningIntegrationTest {
         return new HttpCallHelper(HttpClient.newHttpClient());
       }
       if (helperClass == JsonExtractHelper.class) {
-        return new JsonExtractHelper(new com.fasterxml.jackson.databind.ObjectMapper());
+        return new JsonExtractHelper(new tools.jackson.databind.ObjectMapper());
       }
       if (helperClass == SortRecordsHelper.class) {
         return new SortRecordsHelper();

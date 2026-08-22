@@ -1,11 +1,11 @@
 package cbs.nova.dsl.json;
 
 import cbs.nova.dsl.JsonValue;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 public final class JsonValues {
 
@@ -49,7 +49,7 @@ public final class JsonValues {
       }
       try {
         return of(mapper.readTree(string));
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         throw new IllegalArgumentException("Invalid JSON: " + e.getMessage(), e);
       }
     }

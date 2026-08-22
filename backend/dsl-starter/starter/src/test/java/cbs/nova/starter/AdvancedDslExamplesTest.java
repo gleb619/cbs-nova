@@ -16,7 +16,7 @@ import cbs.nova.dslexamples.nestedcompensation.v1.NestedCompensationModels.Neste
 import cbs.nova.dslexamples.ordersaga.v1.OrderSagaModels.OrderSagaIn;
 import cbs.nova.dslexamples.ordersaga.v1.OrderSagaModels.OrderSagaOut;
 import cbs.nova.starter.helpers.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

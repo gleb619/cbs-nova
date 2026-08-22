@@ -29,11 +29,11 @@ import cbs.nova.dsl.transaction.TransactionManager;
 import cbs.nova.dsl.transaction.TransactionRunner;
 import cbs.nova.dsl.utils.ExpressionEvaluator;
 import cbs.nova.dsl.utils.SimpleExpressionEvaluator;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.avaje.jsonb.Jsonb;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 

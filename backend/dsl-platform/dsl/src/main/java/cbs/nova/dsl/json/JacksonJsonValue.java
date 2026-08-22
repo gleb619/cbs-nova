@@ -1,11 +1,11 @@
 package cbs.nova.dsl.json;
 
 import cbs.nova.dsl.JsonValue;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.MissingNode;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.MissingNode;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -125,7 +125,7 @@ public final class JacksonJsonValue implements JsonValue {
       return Map.of();
     }
     Map<String, JsonValue> map = new LinkedHashMap<>();
-    node.fields().forEachRemaining(
+    node.properties().forEach(
             entry -> map.put(entry.getKey(), new JacksonJsonValue(entry.getValue())));
     return Collections.unmodifiableMap(map);
   }

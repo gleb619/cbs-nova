@@ -43,7 +43,6 @@ avaje-jsonb = { module = "io.avaje:avaje-jsonb", version.ref = "avaje-jsonb" }
 avaje-jsonb-generator = { module = "io.avaje:avaje-jsonb-generator", version.ref = "avaje-jsonb-generator" }
 orgjson = { module = "org.json:json", version.ref = "orgjson" }
 jackson-databind3 = { module = "tools.jackson.core:jackson-databind", version = "3.1.0" }
-jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version = "2.21.1" }
 
 # -- JavaParser (used by dsl-codegen and dsl preprocessing) --
 javaparser = { module = "com.github.javaparser:javaparser-core", version.ref = "javaparser" }

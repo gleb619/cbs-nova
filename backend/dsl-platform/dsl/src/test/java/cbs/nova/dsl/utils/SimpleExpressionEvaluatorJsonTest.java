@@ -4,9 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.JsonValue;
 import cbs.nova.dsl.json.JsonValues;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.util.List;

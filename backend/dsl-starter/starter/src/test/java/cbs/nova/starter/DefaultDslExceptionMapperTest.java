@@ -9,7 +9,7 @@ import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.error.DefaultDslExceptionMapper;
 import cbs.nova.starter.error.DslExceptionMapper;
 import cbs.nova.starter.models.ErrorResponse;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import io.sentry.Sentry;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;

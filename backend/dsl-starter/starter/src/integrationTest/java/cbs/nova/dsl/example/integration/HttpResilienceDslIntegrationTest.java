@@ -276,7 +276,7 @@ class HttpResilienceDslIntegrationTest {
         return new HttpCallHelper(HttpClient.newHttpClient());
       }
       if (helperClass == JsonExtractHelper.class) {
-        return new JsonExtractHelper(new com.fasterxml.jackson.databind.ObjectMapper());
+        return new JsonExtractHelper(new tools.jackson.databind.ObjectMapper());
       }
       try {
         return (Executable<?, ?>) helperClass.getDeclaredConstructor().newInstance();

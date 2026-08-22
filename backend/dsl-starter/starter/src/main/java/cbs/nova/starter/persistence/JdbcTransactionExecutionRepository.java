@@ -2,8 +2,8 @@ package cbs.nova.starter.persistence;
 
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.transaction.TransactionExecution;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -87,7 +87,7 @@ public class JdbcTransactionExecutionRepository implements TransactionExecutionR
     }
     try {
       return objectMapper.writeValueAsString(input);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new IllegalStateException("Failed to serialize transaction input", e);
     }
   }
@@ -98,7 +98,7 @@ public class JdbcTransactionExecutionRepository implements TransactionExecutionR
     }
     try {
       return objectMapper.readValue(inputJson, Object.class);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new IllegalStateException("Failed to deserialize transaction input", e);
     }
   }

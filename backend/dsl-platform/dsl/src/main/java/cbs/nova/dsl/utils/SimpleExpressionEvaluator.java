@@ -3,9 +3,9 @@ package cbs.nova.dsl.utils;
 import cbs.nova.dsl.JsonValue;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.json.JsonValues;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.NonNull;
+import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.math.MathContext;

@@ -113,14 +113,6 @@ public class DslAutoConfiguration {
     return HttpClient.newHttpClient();
   }
 
-  @Bean
-  // TODO: remove jackson2 mapper
-  @Deprecated(forRemoval = true)
-  @ConditionalOnMissingBean(com.fasterxml.jackson.databind.ObjectMapper.class)
-  public com.fasterxml.jackson.databind.ObjectMapper cbsNovaJackson2ObjectMapper() {
-    return new com.fasterxml.jackson.databind.ObjectMapper();
-  }
-
   private void loadDsl(DslDefinitionLoader loader) {
     CompletableFuture.supplyAsync(() -> loader.load(GlobalManager.globalManager()))
             .whenComplete((count, ex) -> {
