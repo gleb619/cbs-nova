@@ -7,8 +7,8 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helpers.model.JsonExtractIn;
 import cbs.nova.starter.helpers.model.JsonExtractOut;
-import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
 
 class JsonExtractHelperTest {
 

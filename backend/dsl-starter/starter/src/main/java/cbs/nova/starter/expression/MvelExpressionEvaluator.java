@@ -1,9 +1,12 @@
 package cbs.nova.starter.expression;
 
+import cbs.nova.dsl.JsonValue;
 import cbs.nova.dsl.utils.ExpressionEvaluator;
 import org.jspecify.annotations.NonNull;
 import org.mvel2.MVEL;
+import org.mvel2.PropertyAccessException;
 
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -13,11 +16,14 @@ import java.util.regex.Pattern;
  *
  * <p>
  * Supports the same interpolation patterns as {@code SimpleExpressionEvaluator}: plain variable
- * placeholders ({@code {name}}) and MVEL expressions ({@code ${a + b}}).
+ * placeholders ({@code {name}}) and MVEL expressions ({@code ${a + b}}). A missing variable
+ * referenced as a simple top-level identifier ({@code ${missing}}) renders as an empty string,
+ * matching the platform default behavior.
  */
 public final class MvelExpressionEvaluator implements ExpressionEvaluator {
 
   private static final Pattern PLACEHOLDER = Pattern.compile("(\\$?\\{([^{}]+)\\})");
+  private static final Pattern SIMPLE_IDENTIFIER = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
 
   @Override
   public @NonNull Object evaluate(@NonNull String expression,
@@ -52,6 +58,13 @@ public final class MvelExpressionEvaluator implements ExpressionEvaluator {
   }
 
   private String renderValue(Object value) {
+    if (value instanceof JsonValue jsonValue) {
+      String text = jsonValue.asString();
+      return text == null ? "" : text;
+    }
+    if (value instanceof BigDecimal bd) {
+      return bd.stripTrailingZeros().toPlainString();
+    }
     return value == null ? "" : String.valueOf(value);
   }
 
@@ -66,7 +79,19 @@ public final class MvelExpressionEvaluator implements ExpressionEvaluator {
 
   private @NonNull Object evalExpression(@NonNull String expression,
           @NonNull Map<String, Object> variables) {
-    Object result = MVEL.eval(expression, variables);
-    return result == null ? "" : result;
+    try {
+      Object result = MVEL.eval(expression, variables);
+      return result == null ? "" : result;
+    } catch (PropertyAccessException e) {
+      // A simple unresolved variable should render as empty, matching SimpleExpressionEvaluator.
+      if (isSimpleIdentifier(expression)) {
+        return "";
+      }
+      throw e;
+    }
+  }
+
+  private boolean isSimpleIdentifier(@NonNull String expression) {
+    return SIMPLE_IDENTIFIER.matcher(expression).matches();
   }
 }
