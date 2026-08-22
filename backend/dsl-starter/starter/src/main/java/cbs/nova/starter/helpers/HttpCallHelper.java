@@ -3,11 +3,12 @@ package cbs.nova.starter.helpers;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.annotation.Helper;
+import cbs.nova.starter.annotation.SpringHelper;
 import cbs.nova.starter.helpers.model.HttpCallContext;
 import cbs.nova.starter.helpers.model.HttpCallIn;
 import cbs.nova.starter.helpers.model.HttpCallIn.RedirectPolicy;
 import cbs.nova.starter.helpers.model.HttpCallOut;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
 import java.net.URI;
@@ -21,14 +22,11 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-@Helper(name = "httpCall")
+@RequiredArgsConstructor
+@SpringHelper(name = "httpCall")
 public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
 
   private final HttpClient client;
-
-  public HttpCallHelper(HttpClient client) {
-    this.client = client;
-  }
 
   @Override
   public @NonNull Result<HttpCallOut> execute(@NonNull Context<HttpCallIn> ctx) {

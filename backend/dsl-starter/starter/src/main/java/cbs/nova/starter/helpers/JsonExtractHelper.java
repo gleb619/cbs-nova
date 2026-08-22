@@ -6,6 +6,7 @@ import cbs.nova.dsl.JsonValue;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.annotation.Helper;
 import cbs.nova.dsl.json.JsonValues;
+import cbs.nova.starter.annotation.SpringHelper;
 import cbs.nova.starter.helpers.model.JsonExtractIn;
 import cbs.nova.starter.helpers.model.JsonExtractOut;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -13,9 +14,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jspecify.annotations.NonNull;
 
 @Deprecated
-@Helper(name = "jsonExtract")
+@SpringHelper(name = "jsonExtract")
 public class JsonExtractHelper implements Executable<JsonExtractIn, JsonExtractOut> {
 
+  //TODO: replace to jackson3
+  @Deprecated(forRemoval = true)
   private final @NonNull ObjectMapper mapper;
 
   public JsonExtractHelper(@NonNull ObjectMapper mapper) {

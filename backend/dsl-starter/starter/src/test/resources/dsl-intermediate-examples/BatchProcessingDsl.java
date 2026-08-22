@@ -4,9 +4,9 @@ import java.util.List;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.Result;
-import cbs.nova.dslexamples.BatchModels.BatchIn;
-import cbs.nova.dslexamples.BatchModels.BatchItem;
-import cbs.nova.dslexamples.BatchModels.BatchOut;
+import cbs.nova.dslexamples.batchprocessing.v1.BatchModels.BatchIn;
+import cbs.nova.dslexamples.batchprocessing.v1.BatchModels.BatchItem;
+import cbs.nova.dslexamples.batchprocessing.v1.BatchModels.BatchOut;
 
 void main() {
 }

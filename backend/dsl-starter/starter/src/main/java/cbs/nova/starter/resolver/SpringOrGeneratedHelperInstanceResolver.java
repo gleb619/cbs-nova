@@ -2,10 +2,11 @@ package cbs.nova.starter.resolver;
 
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+
+import java.util.List;
 
 @RequiredArgsConstructor
 public final class SpringOrGeneratedHelperInstanceResolver implements HelperInstanceResolver {

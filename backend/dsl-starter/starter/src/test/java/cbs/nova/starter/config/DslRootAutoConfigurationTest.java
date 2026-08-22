@@ -57,7 +57,8 @@ class DslRootAutoConfigurationTest {
             PreviewMetricsAutoConfiguration.class,
             DslReloadRouterConfiguration.class,
             DslIntrospectionRouterConfiguration.class,
-            DslErrorHandlingAutoConfiguration.class);
+            DslErrorHandlingAutoConfiguration.class,
+            SpringHelperAutoConfiguration.class);
   }
 
   @Test

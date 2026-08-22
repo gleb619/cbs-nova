@@ -12,6 +12,7 @@ import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic;
@@ -59,7 +60,7 @@ public class HelperSpiProcessor extends AbstractProcessor {
       var annotationName = annotation.getQualifiedName().toString();
       for (var element : roundEnv.getElementsAnnotatedWith(annotation)) {
         if (element.getKind() != ElementKind.CLASS) {
-          processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,
+          processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,
                   "@Helper on non-class element ignored: " + element, element);
           continue;
         }
@@ -81,7 +82,7 @@ public class HelperSpiProcessor extends AbstractProcessor {
         if (config == null) {
           continue;
         }
-        entries.add(new HelperEntry(fqn, config));
+        entries.add(new HelperEntry(fqn, config, hasNoArgConstructor(typeElement)));
       }
     }
     return false;
@@ -91,8 +92,9 @@ public class HelperSpiProcessor extends AbstractProcessor {
    * Reads the effective helper configuration from the element. For {@code @Helper} we use the
    * annotation directly. For {@code @SpringHelper} we extract the user-supplied {@code name()} from
    * {@code @SpringHelper} and force {@code componentModel=LAZY} and
-   * {@code creationStrategy=FACTORY} (mirroring the {@code @Helper} meta-annotation on
-   * {@code @SpringHelper} itself).
+   * {@code creationStrategy=STANDARD}, so the helper becomes a real Spring bean and is created via
+   * the supplied {@code HelperInstanceResolver} (Spring) rather than via a generated
+   * {@code new X()}.
    */
   private HelperConfig readHelperConfig(TypeElement element, String annotationName) {
     if (SPRING_HELPER_ANNOTATION.equals(annotationName)) {
@@ -102,7 +104,7 @@ public class HelperSpiProcessor extends AbstractProcessor {
                 "@SpringHelper without name() ignored: " + element.getQualifiedName(), element);
         return null;
       }
-      return new HelperConfig(name, ComponentModel.LAZY, CreationStrategy.FACTORY);
+      return new HelperConfig(name, ComponentModel.LAZY, CreationStrategy.STANDARD);
     }
     if (HELPER_ANNOTATION.equals(annotationName)) {
       var helper = element.getAnnotation(Helper.class);
@@ -203,11 +205,12 @@ public class HelperSpiProcessor extends AbstractProcessor {
     try {
       var sourceFile = processingEnv.getFiler().createSourceFile(resolverFqn);
       try (var writer = new PrintWriter(sourceFile.openWriter())) {
-        var imports = entries.stream()
+        var instantiable = entries.stream().filter(HelperEntry::noArgConstructor).toList();
+        var imports = instantiable.stream()
                 .filter(entry -> !packageOf(entry.fqn()).equals(resolverPackage))
                 .map(entry -> "import " + entry.fqn() + ";\n")
                 .collect(Collectors.joining());
-        var mappings = entries.stream()
+        var mappings = instantiable.stream()
                 .map(entry -> "    if (helperClass.equals(%s.class)) return new %s();\n"
                         .formatted(entry.fqn(), simpleNameOf(entry.fqn())))
                 .collect(Collectors.joining());
@@ -311,7 +314,21 @@ public class HelperSpiProcessor extends AbstractProcessor {
 
   }
 
-  private record HelperEntry(String fqn, HelperConfig config) {
+  /**
+   * A helper without a public no-arg constructor (e.g. requires Spring-injected dependencies like
+   * {@code HttpClient} or {@code ObjectMapper}, or is a {@code @SpringHelper} that should be wired
+   * by Spring) cannot be direct-instantiated by generated code; it is excluded from
+   * {@code GeneratedHelperInstanceResolver} and left to the Spring resolver.
+   */
+  private boolean hasNoArgConstructor(TypeElement type) {
+    return type.getEnclosedElements().stream()
+            .filter(e -> e.getKind() == ElementKind.CONSTRUCTOR)
+            .filter(e -> e.getModifiers().contains(Modifier.PUBLIC))
+            .anyMatch(e -> ((ExecutableElement) e).getParameters()
+                    .isEmpty());
+  }
+
+  private record HelperEntry(String fqn, HelperConfig config, boolean noArgConstructor) {
 
   }
 

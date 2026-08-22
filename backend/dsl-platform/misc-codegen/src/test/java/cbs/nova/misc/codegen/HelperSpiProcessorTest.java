@@ -16,6 +16,7 @@ import javax.tools.DiagnosticCollector;
 import javax.tools.JavaFileObject;
 import javax.tools.ToolProvider;
 
+import java.io.File;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
@@ -212,7 +213,7 @@ class HelperSpiProcessorTest {
     var captureDir = tempDir.resolve("out_lazy_loaded");
     Files.createDirectories(captureDir);
     var compileOptions = List.of(
-            "-cp", classpath,
+            "-cp", classpath + File.pathSeparator + outputDir.toAbsolutePath().toString(),
             "-d", captureDir.toString(),
             "-source", "25",
             "-target", "25");
@@ -222,7 +223,8 @@ class HelperSpiProcessorTest {
     assertThat(captureTask.call()).isTrue();
 
     try (var loader = new URLClassLoader(
-            new URL[]{captureDir.toUri().toURL()}, getClass().getClassLoader())) {
+            new URL[]{outputDir.toUri().toURL(), captureDir.toUri().toURL()},
+            getClass().getClassLoader())) {
       var resolvers = ServiceLoader.load(HelperResolver.class, loader);
       var instanceResolvers = ServiceLoader.load(HelperInstanceResolver.class, loader);
 
@@ -289,18 +291,17 @@ class HelperSpiProcessorTest {
             .resolve("springfix/GeneratedHelperInstanceResolver.class");
     assertThat(instanceResolverClass).exists();
 
-    // Inspect the generated source for the SpringHelper registration shape (LAZY+FACTORY).
+    // Inspect the generated source for the SpringHelper registration shape (LAZY+STANDARD).
     var generatedSource = outputDir.resolve("springfix/GeneratedHelperResolver.java");
     assertThat(generatedSource).exists();
     String src = Files.readString(generatedSource);
     assertThat(src)
-            .contains("() -> new SpringGreetHelper()")
+            .contains("() -> instanceResolver.resolve(SpringGreetHelper.class)")
             .contains("registrar.register(\"springGreetHelper\"");
 
     try (var loader = new URLClassLoader(
             new URL[]{outputDir.toUri().toURL()}, getClass().getClassLoader())) {
       var resolvers = ServiceLoader.load(HelperResolver.class, loader);
-      var instanceResolvers = ServiceLoader.load(HelperInstanceResolver.class, loader);
 
       List<String> names = new ArrayList<>();
       List<Supplier<Executable<?, ?>>> suppliers = new ArrayList<>();
@@ -311,19 +312,20 @@ class HelperSpiProcessorTest {
           suppliers.add(helperSupplier);
         }
       };
-      resolvers.forEach(r -> r.registerHelpers(registrar, _ -> {
-        throw new IllegalStateException("FACTORY helper should not call instanceResolver");
+
+      var fixtureClass = Class.forName("springfix.SpringGreetHelper", true, loader);
+      var expected = (Executable<?, ?>) fixtureClass.getDeclaredConstructor().newInstance();
+      List<Class<?>> requestedClasses = new ArrayList<>();
+      resolvers.forEach(r -> r.registerHelpers(registrar, helperClass -> {
+        requestedClasses.add(helperClass);
+        return expected;
       }));
 
       assertThat(names).containsExactly("springGreetHelper");
+      assertThat(suppliers).hasSize(1);
       Executable<?, ?> resolved = suppliers.get(0).get();
-      var fixtureClass = Class.forName("springfix.SpringGreetHelper", true, loader);
-      assertThat(resolved).isInstanceOf(fixtureClass);
-
-      var produced = new ArrayList<Executable<?, ?>>();
-      instanceResolvers.forEach(r -> produced.add(r.resolve(fixtureClass)));
-      assertThat(produced).hasSize(1);
-      assertThat(produced.get(0)).isInstanceOf(fixtureClass);
+      assertThat(requestedClasses).containsExactly(fixtureClass);
+      assertThat(resolved).isSameAs(expected);
     }
   }
 
@@ -338,6 +340,7 @@ class HelperSpiProcessorTest {
       return base;
     }
     Path[] candidates = new Path[]{
+        Path.of("../../dsl-starter/starter/build/classes/java/main"),
         Path.of("../dsl-starter/starter/build/classes/java/main"),
         Path.of("../../../dsl-starter/starter/build/classes/java/main"),
         Path.of("build/classes/java/main")
@@ -351,6 +354,7 @@ class HelperSpiProcessorTest {
       }
     }
     Path[] jarCandidates = new Path[]{
+        Path.of("../../dsl-starter/starter/build/libs/starter-0.0.1-SNAPSHOT-plain.jar"),
         Path.of("../../../dsl-starter/starter/build/libs/starter-0.0.1-SNAPSHOT-plain.jar"),
         Path.of("build/libs/starter-0.0.1-SNAPSHOT-plain.jar")
     };

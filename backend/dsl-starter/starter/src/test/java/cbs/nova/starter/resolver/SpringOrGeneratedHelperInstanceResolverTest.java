@@ -13,9 +13,10 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
-import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+
+import java.util.List;
 
 class SpringOrGeneratedHelperInstanceResolverTest {
 

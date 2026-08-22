@@ -3,10 +3,10 @@ import java.util.List;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.Result;
-import cbs.nova.dslexamples.OrderSagaModels.InventoryReservation;
-import cbs.nova.dslexamples.OrderSagaModels.OrderSagaIn;
-import cbs.nova.dslexamples.OrderSagaModels.OrderSagaOut;
-import cbs.nova.dslexamples.OrderSagaModels.PaymentResult;
+import cbs.nova.dslexamples.ordersaga.v1.OrderSagaModels.InventoryReservation;
+import cbs.nova.dslexamples.ordersaga.v1.OrderSagaModels.OrderSagaIn;
+import cbs.nova.dslexamples.ordersaga.v1.OrderSagaModels.OrderSagaOut;
+import cbs.nova.dslexamples.ordersaga.v1.OrderSagaModels.PaymentResult;
 
 void main() {
 }

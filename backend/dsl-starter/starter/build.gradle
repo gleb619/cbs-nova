@@ -55,8 +55,10 @@ dependencies {
   implementation libs.opentelemetry.api
 
   annotationProcessor "cbs.nova:misc-codegen:${project.version}"
+  integrationTestAnnotationProcessor "cbs.nova:misc-codegen:${project.version}"
 
   testAnnotationProcessor "cbs.nova:dsl-codegen:${project.version}"
+  integrationTestAnnotationProcessor "cbs.nova:dsl-codegen:${project.version}"
   testImplementation project(':dsl-examples')
 
   testImplementation libs.springdoc.openapi.starter.webmvc.ui

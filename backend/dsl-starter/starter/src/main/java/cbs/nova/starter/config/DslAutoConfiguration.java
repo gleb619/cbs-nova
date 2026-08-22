@@ -29,6 +29,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import tools.jackson.databind.ObjectMapper;
 
+import java.net.http.HttpClient;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -48,6 +49,7 @@ public class DslAutoConfiguration {
           JsonSchemaGenerator jsonSchemaGenerator,
           DslDefinitionLoader loader) {
     return _ -> {
+      GlobalManager.globalManager().resetForTests();
       loadDsl(loader);
 
       registerExpressionEvaluator(expressionEvaluator);
@@ -103,6 +105,20 @@ public class DslAutoConfiguration {
   @ConditionalOnMissingBean(JsonSchemaGenerator.class)
   public JsonSchemaGenerator jsonSchemaGenerator() {
     return DslConfig.dslConfig().jsonSchemaGenerator().get();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(HttpClient.class)
+  public HttpClient httpClient() {
+    return HttpClient.newHttpClient();
+  }
+
+  @Bean
+  //TODO: remove jackson2 mapper
+  @Deprecated(forRemoval = true)
+  @ConditionalOnMissingBean(com.fasterxml.jackson.databind.ObjectMapper.class)
+  public com.fasterxml.jackson.databind.ObjectMapper cbsNovaJackson2ObjectMapper() {
+    return new com.fasterxml.jackson.databind.ObjectMapper();
   }
 
   private void loadDsl(DslDefinitionLoader loader) {

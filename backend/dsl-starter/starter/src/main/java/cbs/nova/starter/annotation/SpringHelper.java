@@ -10,9 +10,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-//TODO: Make `SpringHelper` work like `@Helper` and use name, it also must become a spring bean
 @Component
-@Helper(name = "#name", componentModel = ComponentModel.LAZY, creationStrategy = CreationStrategy.FACTORY)
+@Helper(name = "#name", componentModel = ComponentModel.LAZY, creationStrategy = CreationStrategy.STANDARD)
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface SpringHelper {

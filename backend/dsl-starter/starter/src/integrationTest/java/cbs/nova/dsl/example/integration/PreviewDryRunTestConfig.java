@@ -103,7 +103,7 @@ public class PreviewDryRunTestConfig {
     return new PreviewSideEffectsHelper(jdbcTemplate, previewDryRunHttpApi, externalCallRecorder);
   }
 
-  @Helper(name = "previewSideEffectsHelper")
+  @Helper(name = "previewSideEffectsHelper", componentModel = Helper.ComponentModel.LAZY)
   public static final class PreviewSideEffectsHelper
           implements
             Executable<PreviewSideEffectsIn, PreviewSideEffectsOut> {

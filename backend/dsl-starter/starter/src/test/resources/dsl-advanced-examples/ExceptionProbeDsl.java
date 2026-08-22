@@ -3,8 +3,8 @@ import java.util.List;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.Result;
-import cbs.nova.dslexamples.ExceptionProbeModels.ExceptionProbeIn;
-import cbs.nova.dslexamples.ExceptionProbeModels.ExceptionProbeOut;
+import cbs.nova.dslexamples.exceptionprobe.v1.ExceptionProbeModels.ExceptionProbeIn;
+import cbs.nova.dslexamples.exceptionprobe.v1.ExceptionProbeModels.ExceptionProbeOut;
 import cbs.nova.starter.helpers.model.ConditionalFailIn;
 
 void main() {
