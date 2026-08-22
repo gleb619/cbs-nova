@@ -13,6 +13,7 @@ const props = withDefaults(
 const { toggle, openMobile } = useSidebar()
 
 function onClick() {
+  //TODO: make useSidebar reuse a `frontend/components/src/composables/useLocalStorageState.ts`
   if (typeof window !== 'undefined' && window.innerWidth < 768) {
     openMobile()
   } else {

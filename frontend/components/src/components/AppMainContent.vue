@@ -4,7 +4,7 @@ const props = withDefaults(
     pad?: boolean
   }>(),
   {
-    pad: true,
+    pad: false,
   },
 )
 </script>

@@ -22,13 +22,13 @@ class HelperManagerTest {
   private final ContextFactory contextFactory = new ContextFactory();
 
   @Test
-  void registerHelperDelegatesToRegistry() {
+  void registerDelegatesToRegistry() {
     var registry = new StubHelperRegistry();
     var runner = new RecordingHelperRunner();
     var manager = new HelperManager(registry, runner);
     Executable<String, String> helper = ctx -> Result.success("ignored");
 
-    manager.registerHelper("greet", helper);
+    manager.register("greet", helper);
 
     assertThat(registry.registeredHelpers).containsExactly(Map.entry("greet", helper));
   }

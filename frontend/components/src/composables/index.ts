@@ -1,4 +1,5 @@
 export * from './useDiffLines'
 export * from './useHelperSearch'
+export * from './useLocalStorageState'
 export * from './usePreviewDiff'
 export * from './useSidebar'

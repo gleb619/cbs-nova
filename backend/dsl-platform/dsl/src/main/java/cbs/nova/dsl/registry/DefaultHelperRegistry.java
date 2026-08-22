@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class DefaultHelperRegistry implements HelperRegistry {
 
-  private final ConcurrentHashMap<String, Executable<?, ?>> helpers = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, Supplier<Executable<?, ?>>> helperSuppliers = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, FunctionDslObject> functions = new ConcurrentHashMap<>();
 
   @Override
@@ -21,7 +21,15 @@ public final class DefaultHelperRegistry implements HelperRegistry {
     if (containsName(name)) {
       throw new IllegalArgumentException("Name already registered: " + name);
     }
-    helpers.put(name, helper);
+    helperSuppliers.put(name, () -> helper);
+  }
+
+  @Override
+  public void registerHelper(@NonNull String name, @NonNull Supplier<Executable<?, ?>> helperSupplier) {
+    if (containsName(name)) {
+      throw new IllegalArgumentException("Name already registered: " + name);
+    }
+    helperSuppliers.put(name, helperSupplier);
   }
 
   @Override
@@ -34,7 +42,11 @@ public final class DefaultHelperRegistry implements HelperRegistry {
 
   @Override
   public @NonNull Optional<Executable<?, ?>> findHelper(@NonNull String name) {
-    return Optional.ofNullable(helpers.get(name));
+    Supplier<Executable<?, ?>> helperSupplier = helperSuppliers.get(name);
+    if (helperSupplier == null) {
+      return Optional.empty();
+    }
+    return Optional.ofNullable(helperSupplier.get());
   }
 
   @Override
@@ -44,20 +56,15 @@ public final class DefaultHelperRegistry implements HelperRegistry {
 
   @Override
   public boolean containsName(@NonNull String name) {
-    return helpers.containsKey(name) || functions.containsKey(name);
+    return helperSuppliers.containsKey(name) || functions.containsKey(name);
   }
 
   @Override
   public @NonNull Collection<String> allNames() {
     Set<String> names = new HashSet<>();
-    names.addAll(helpers.keySet());
+    names.addAll(helperSuppliers.keySet());
     names.addAll(functions.keySet());
     return names;
-  }
-
-  @Override
-  public void registerHelper(@NonNull String name, @NonNull Supplier<Executable<?, ?>> helperSupplier) {
-    //TODO: implement lazy helper registrations
   }
 
 }

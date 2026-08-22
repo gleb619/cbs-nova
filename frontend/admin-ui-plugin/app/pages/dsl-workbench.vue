@@ -11,8 +11,9 @@ import {
   DslMetadataPanel,
   DslProblemsPanel,
   useHelperSearch,
+  useLocalStorageState,
 } from '@cbs/components'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 
 const workbench = useDslWorkbench()
 const {
@@ -27,8 +28,17 @@ const {
   markDirty,
 } = workbench
 
-const explorerOpen = ref(true)
-const helperSearchOpen = ref(true)
+const STORAGE_PREFIX = 'cbs-nova:dsl-workbench'
+
+const explorerOpen = useLocalStorageState<boolean>(`${STORAGE_PREFIX}:explorer-open`, true)
+const explorerCollapsed = useLocalStorageState<boolean>(
+  `${STORAGE_PREFIX}:explorer-collapsed`,
+  false,
+)
+const helperSearchOpen = useLocalStorageState<boolean>(
+  `${STORAGE_PREFIX}:helper-search-open`,
+  false,
+)
 
 const dslApi = useDslApi()
 const helperSearch = useHelperSearch({
@@ -53,6 +63,14 @@ onMounted(() => {
   loadConstructs()
   void helperSearch.execute()
 })
+
+function toggleExplorer() {
+  explorerOpen.value = !explorerOpen.value
+}
+
+function toggleHelperSearch() {
+  helperSearchOpen.value = !helperSearchOpen.value
+}
 </script>
 
 <template>
@@ -63,7 +81,7 @@ onMounted(() => {
           type="button"
           class="md:hidden p-1.5 rounded hover:bg-gray-100"
           aria-label="Toggle explorer"
-          @click="explorerOpen = !explorerOpen"
+          @click="toggleExplorer"
         >
           ☰
         </button>
@@ -105,12 +123,25 @@ onMounted(() => {
         >
           Publish
         </button>
+        <button
+          type="button"
+          class="px-3 py-1.5 text-sm rounded border border-gray-300 hover:bg-gray-100"
+          :class="helperSearchOpen ? 'bg-blue-50 text-blue-700 border-blue-300' : ''"
+          @click="toggleHelperSearch"
+        >
+          {{ helperSearchOpen ? 'Close Objects' : 'Objects' }}
+        </button>
       </div>
     </header>
 
     <div class="flex flex-1 overflow-hidden">
-      <aside v-show="explorerOpen" class="w-64 shrink-0 border-r border-gray-800">
+      <aside
+        v-show="explorerOpen"
+        :class="explorerCollapsed ? 'w-12' : 'w-64'"
+        class="shrink-0 border-r border-gray-800 overflow-hidden"
+      >
         <DslConstructExplorer
+          v-model:collapsed="explorerCollapsed"
           :constructs="state.constructs"
           :selected-name="state.selectedName"
           :loading="state.isLoading"
@@ -129,18 +160,17 @@ onMounted(() => {
         <DslProblemsPanel :errors="state.validationErrors" />
       </main>
 
-      <aside v-show="helperSearchOpen" class="w-80 shrink-0 border-l border-gray-800">
-        <DslHelperSearchPanel
-          v-model:name="helperSearch.filters.value.name"
-          v-model:type="helperSearch.filters.value.type"
-          v-model:description="helperSearch.filters.value.description"
-          :results="helperSearch.results.value"
-          :is-loading="helperSearch.isLoading.value"
-          :error="helperSearch.error.value"
-          @search="helperSearch.search"
-          @clear="helperSearch.clearFilters"
-        />
-      </aside>
+      <DslHelperSearchPanel
+        v-model:open="helperSearchOpen"
+        v-model:name="helperSearch.filters.value.name"
+        v-model:type="helperSearch.filters.value.type"
+        v-model:description="helperSearch.filters.value.description"
+        :results="helperSearch.results.value"
+        :is-loading="helperSearch.isLoading.value"
+        :error="helperSearch.error.value"
+        @search="helperSearch.search"
+        @clear="helperSearch.clearFilters"
+      />
     </div>
   </div>
 </template>

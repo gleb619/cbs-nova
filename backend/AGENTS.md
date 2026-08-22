@@ -65,6 +65,9 @@ backend/
 - **Nullability**: Annotate with `jspecify` annotations (`libs.jspecify`).
 - **Context**: Context is immutable. Modify state using `ctx.withBody(...)` / `ctx.withMetadata(...)`.
 - **GlobalManager**: Never bypass this facade or registries in generated code.
+- **Reflection**: Do not use `java.lang.reflect`, `Constructor.newInstance()`, or runtime reflection to inspect or invoke
+  code. Prefer typed alternatives such as ServiceLoader, generated registries, type-safe records, or explicit
+  interfaces. Build-time annotation processors and test utilities are exempt.
 - **Do Not Edit Generated Code**: `dsl-codegen` outputs `*ProcessWorkflow`, `*ProcessDefinition`,
   `*TransactionActivity`, `*TransactionDefinition`. Edit the templates/source DSL instead.
 

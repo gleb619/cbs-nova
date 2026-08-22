@@ -105,8 +105,7 @@ public class DslReloadResource {
     var instanceResolver = helperInstanceResolver();
     if (instanceResolver != null) {
       ServiceLoader.load(HelperResolver.class, classLoader)
-              .forEach(resolver -> resolver.registerHelpers(
-                      (name, helper) -> gm.registerHelper(name, helper), instanceResolver));
+              .forEach(resolver -> resolver.registerHelpers(gm::registerHelper, instanceResolver));
     }
 
     // Fallback for compact-source DSL files that implement DslCompactSource directly.

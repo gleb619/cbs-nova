@@ -30,13 +30,9 @@ public final class HelperManager implements HelperRegistrar {
     }
   }
 
-  public void registerHelper(@NonNull String name, @NonNull Executable<?, ?> helper) {
-    registry.registerHelper(name, helper);
-  }
-
   @Override
   public void register(@NonNull String name, @NonNull Executable<?, ?> helper) {
-    registerHelper(name, helper);
+    registry.registerHelper(name, helper);
   }
 
   @Override

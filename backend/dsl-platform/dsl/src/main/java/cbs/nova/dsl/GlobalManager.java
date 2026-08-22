@@ -18,6 +18,7 @@ import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.dsl.transaction.TransactionInvoker;
 import cbs.nova.dsl.transaction.TransactionManager;
 import cbs.nova.dsl.transaction.TransactionRouting;
+import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -61,7 +62,11 @@ public final class GlobalManager {
   }
 
   public void registerHelper(@NonNull String name, @NonNull Executable<?, ?> helper) {
-    helperManager.registerHelper(name, helper);
+    helperManager.register(name, helper);
+  }
+
+  public void registerHelper(@NonNull String name, @NonNull Supplier<Executable<?, ?>> helperSupplier) {
+    helperManager.register(name, helperSupplier);
   }
 
   public void registerHelpers(@NonNull HelperResolver resolver) {

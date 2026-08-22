@@ -17,6 +17,7 @@ import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.converter.MapInputConverter;
 import cbs.nova.starter.expression.MvelExpressionEvaluator;
 import cbs.nova.starter.resolver.SpringBeanHelperInstanceResolver;
+import cbs.nova.starter.resolver.SpringOrGeneratedHelperInstanceResolver;
 import io.avaje.jsonb.Jsonb;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationRunner;
@@ -28,7 +29,10 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -59,7 +63,10 @@ public class DslAutoConfiguration {
   @ConditionalOnMissingBean(HelperInstanceResolver.class)
   public static HelperInstanceResolver helperInstanceResolver(
           ApplicationContext applicationContext) {
-    return new SpringBeanHelperInstanceResolver(applicationContext);
+    List<HelperInstanceResolver> generated = new ArrayList<>();
+    ServiceLoader.load(HelperInstanceResolver.class).forEach(generated::add);
+    return new SpringOrGeneratedHelperInstanceResolver(
+            new SpringBeanHelperInstanceResolver(applicationContext), generated);
   }
 
   @Bean

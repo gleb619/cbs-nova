@@ -1,6 +1,8 @@
 package cbs.nova.misc.codegen;
 
 import cbs.nova.dsl.annotation.Helper;
+import cbs.nova.dsl.annotation.Helper.ComponentModel;
+import cbs.nova.dsl.annotation.Helper.CreationStrategy;
 import cbs.nova.dsl.utils.Substitutor;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -8,6 +10,7 @@ import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
@@ -24,11 +27,17 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-@SupportedAnnotationTypes("cbs.nova.dsl.annotation.Helper")
+@SupportedAnnotationTypes({
+    "cbs.nova.dsl.annotation.Helper",
+    "cbs.nova.starter.annotation.SpringHelper"
+})
 @SupportedSourceVersion(SourceVersion.RELEASE_25)
 public class HelperSpiProcessor extends AbstractProcessor {
 
   private static final String RESOLVER_CLASS = "GeneratedHelperResolver";
+  private static final String INSTANCE_RESOLVER_CLASS = "GeneratedHelperInstanceResolver";
+  private static final String HELPER_ANNOTATION = "cbs.nova.dsl.annotation.Helper";
+  private static final String SPRING_HELPER_ANNOTATION = "cbs.nova.starter.annotation.SpringHelper";
 
   private final List<HelperEntry> entries = new ArrayList<>();
   private final AtomicBoolean wrote = new AtomicBoolean(false);
@@ -37,14 +46,17 @@ public class HelperSpiProcessor extends AbstractProcessor {
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     if (roundEnv.processingOver()) {
       if (!wrote.get() && !entries.isEmpty()) {
-        writeSimpleResolver();
-        writeServiceFile();
+        writeGeneratedHelperResolver();
+        writeGeneratedHelperInstanceResolver();
+        writeResolverServiceFile();
+        writeInstanceResolverServiceFile();
         wrote.set(true);
       }
       return false;
     }
 
     for (var annotation : annotations) {
+      var annotationName = annotation.getQualifiedName().toString();
       for (var element : roundEnv.getElementsAnnotatedWith(annotation)) {
         if (element.getKind() != ElementKind.CLASS) {
           processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,
@@ -57,10 +69,6 @@ public class HelperSpiProcessor extends AbstractProcessor {
                   "@Helper on abstract class ignored: " + typeElement.getQualifiedName(), element);
           continue;
         }
-        var helper = typeElement.getAnnotation(Helper.class);
-        if (helper == null) {
-          continue;
-        }
         var fqn = typeElement.getQualifiedName().toString();
         if (!fqn.contains(".")) {
           processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,
@@ -69,13 +77,62 @@ public class HelperSpiProcessor extends AbstractProcessor {
                   element);
           continue;
         }
-        entries.add(new HelperEntry(fqn, helper.name()));
+        var config = readHelperConfig(typeElement, annotationName);
+        if (config == null) {
+          continue;
+        }
+        entries.add(new HelperEntry(fqn, config));
       }
     }
     return false;
   }
 
-  private void writeSimpleResolver() {
+  /**
+   * Reads the effective helper configuration from the element. For {@code @Helper} we use the
+   * annotation directly. For {@code @SpringHelper} we extract the user-supplied {@code name()} from
+   * {@code @SpringHelper} and force {@code componentModel=LAZY} and
+   * {@code creationStrategy=FACTORY} (mirroring the {@code @Helper} meta-annotation on
+   * {@code @SpringHelper} itself).
+   */
+  private HelperConfig readHelperConfig(TypeElement element, String annotationName) {
+    if (SPRING_HELPER_ANNOTATION.equals(annotationName)) {
+      String name = readAnnotationStringValue(element, SPRING_HELPER_ANNOTATION, "name");
+      if (name == null || name.isBlank()) {
+        processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,
+                "@SpringHelper without name() ignored: " + element.getQualifiedName(), element);
+        return null;
+      }
+      return new HelperConfig(name, ComponentModel.LAZY, CreationStrategy.FACTORY);
+    }
+    if (HELPER_ANNOTATION.equals(annotationName)) {
+      var helper = element.getAnnotation(Helper.class);
+      if (helper == null) {
+        return null;
+      }
+      return new HelperConfig(helper.name(), helper.componentModel(), helper.creationStrategy());
+    }
+    return null;
+  }
+
+  private String readAnnotationStringValue(Element element, String annotationFqn,
+          String attribute) {
+    for (var mirror : element.getAnnotationMirrors()) {
+      if (!mirror.getAnnotationType().toString().equals(annotationFqn)) {
+        continue;
+      }
+      for (var entry : mirror.getElementValues().entrySet()) {
+        if (entry.getKey().getSimpleName().contentEquals(attribute)) {
+          var value = entry.getValue().getValue();
+          if (value instanceof String s) {
+            return s;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  private void writeGeneratedHelperResolver() {
     var resolverPackage = commonPackage(entries);
     var resolverFqn = resolverPackage.isEmpty()
             ? RESOLVER_CLASS
@@ -88,21 +145,11 @@ public class HelperSpiProcessor extends AbstractProcessor {
                 .map(entry -> "import " + entry.fqn() + ";\n")
                 .collect(Collectors.joining());
         var registrations = entries.stream()
-                .map(entry -> {
-                  var simpleName = simpleNameOf(entry.fqn());
-                  //TODO: make check if it have `componentModel=LAZY` then make `() ->` suplier, else plain registration
-                  //return "    registrar.register(\"%s\", () -> instanceResolver.resolve(%s.class));\n"
-                  //TODO: if `creationStrategy=FACTORY` then use a `instanceResolver` instead, use simple constructor creation
-
-
-                  return "    registrar.register(\"%s\", instanceResolver.resolve(%s.class));\n"
-                          .formatted(entry.name(),
-                                  simpleName);
-                })
+                .map(entry -> renderRegistration(entry))
                 .collect(Collectors.joining());
         var packageLine = resolverPackage.isEmpty()
                 ? ""
-                : "package " + resolverPackage + ";\n\n";
+                : "package %s;\n\n".formatted(resolverPackage);
         var template = // language=java
                 """
                         ${packageLine}import cbs.nova.dsl.helper.HelperInstanceResolver;
@@ -129,21 +176,104 @@ public class HelperSpiProcessor extends AbstractProcessor {
     }
   }
 
-  private void writeServiceFile() {
+  private String renderRegistration(HelperEntry entry) {
+    var simpleName = simpleNameOf(entry.fqn());
+    var name = entry.config().name();
+    var lazy = entry.config().componentModel() == ComponentModel.LAZY;
+    var factory = entry.config().creationStrategy() == CreationStrategy.FACTORY;
+    if (factory) {
+      // use the helper's own constructor (FACTORY = no instanceResolver)
+      return lazy
+              ? "    registrar.register(\"%s\", () -> new %s());\n".formatted(name, simpleName)
+              : "    registrar.register(\"%s\", new %s());\n".formatted(name, simpleName);
+    }
+    // STANDARD: defer to the provided instanceResolver
+    return lazy
+            ? "    registrar.register(\"%s\", () -> instanceResolver.resolve(%s.class));\n"
+                    .formatted(name, simpleName)
+            : "    registrar.register(\"%s\", instanceResolver.resolve(%s.class));\n"
+                    .formatted(name, simpleName);
+  }
+
+  private void writeGeneratedHelperInstanceResolver() {
+    var resolverPackage = commonPackage(entries);
+    var resolverFqn = resolverPackage.isEmpty()
+            ? INSTANCE_RESOLVER_CLASS
+            : resolverPackage + "." + INSTANCE_RESOLVER_CLASS;
+    try {
+      var sourceFile = processingEnv.getFiler().createSourceFile(resolverFqn);
+      try (var writer = new PrintWriter(sourceFile.openWriter())) {
+        var imports = entries.stream()
+                .filter(entry -> !packageOf(entry.fqn()).equals(resolverPackage))
+                .map(entry -> "import " + entry.fqn() + ";\n")
+                .collect(Collectors.joining());
+        var mappings = entries.stream()
+                .map(entry -> "    if (helperClass.equals(%s.class)) return new %s();\n"
+                        .formatted(entry.fqn(), simpleNameOf(entry.fqn())))
+                .collect(Collectors.joining());
+        var packageLine = resolverPackage.isEmpty()
+                ? ""
+                : "package %s;\n\n".formatted(resolverPackage);
+        var template = // language=java
+                """
+                        ${packageLine}import cbs.nova.dsl.Executable;
+                        import cbs.nova.dsl.helper.HelperInstanceResolver;
+                        import org.jspecify.annotations.NonNull;
+                                                ${imports}
+
+                        public final class ${resolverClass} implements HelperInstanceResolver {
+                          @Override
+                          public @NonNull Executable<?, ?> resolve(@NonNull Class<?> helperClass) {
+                        ${mappings}    throw new IllegalStateException(
+                              "Helper is not registered by this generated factory: " + helperClass.getName());
+                          }
+                        }
+                        """;
+        writer.print(Substitutor.format(template, Map.of(
+                "packageLine", packageLine,
+                "imports", imports,
+                "resolverClass", INSTANCE_RESOLVER_CLASS,
+                "mappings", mappings)));
+      }
+    } catch (IOException e) {
+      processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
+              "Failed to write GeneratedHelperInstanceResolver: " + e.getMessage());
+    }
+  }
+
+  private void writeResolverServiceFile() {
     var resolverPackage = commonPackage(entries);
     var resolverFqn = resolverPackage.isEmpty()
             ? RESOLVER_CLASS
             : resolverPackage + "." + RESOLVER_CLASS;
+    writeServiceFile(
+            "cbs.nova.dsl.helper.HelperResolver",
+            resolverFqn,
+            "HelperResolver");
+  }
+
+  private void writeInstanceResolverServiceFile() {
+    var resolverPackage = commonPackage(entries);
+    var resolverFqn = resolverPackage.isEmpty()
+            ? INSTANCE_RESOLVER_CLASS
+            : resolverPackage + "." + INSTANCE_RESOLVER_CLASS;
+    writeServiceFile(
+            "cbs.nova.dsl.helper.HelperInstanceResolver",
+            resolverFqn,
+            "HelperInstanceResolver");
+  }
+
+  private void writeServiceFile(String serviceInterface, String resolverFqn, String label) {
     try {
       var resource = processingEnv.getFiler().createResource(
               StandardLocation.CLASS_OUTPUT, "",
-              "META-INF/services/cbs.nova.dsl.helper.HelperResolver");
+              "META-INF/services/" + serviceInterface);
       try (var writer = new PrintWriter(resource.openWriter())) {
         writer.print(String.format("%s%n", resolverFqn));
       }
     } catch (IOException e) {
       processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-              "Failed to write HelperResolver service file: " + e.getMessage());
+              "Failed to write " + label + " service file: " + e.getMessage());
     }
   }
 
@@ -176,7 +306,12 @@ public class HelperSpiProcessor extends AbstractProcessor {
     return String.join(".", Arrays.copyOf(first, common));
   }
 
-  private record HelperEntry(String fqn, String name) {
+  private record HelperConfig(String name, ComponentModel componentModel,
+          CreationStrategy creationStrategy) {
+
+  }
+
+  private record HelperEntry(String fqn, HelperConfig config) {
 
   }
 

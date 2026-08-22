@@ -13,6 +13,9 @@ const emit = defineEmits<{
   select: [name: string]
 }>()
 
+//TODO: make collapsed used a `frontend/components/src/composables/useLocalStorageState.ts`
+const collapsed = defineModel<boolean>('collapsed', { default: false })
+
 const search = ref('')
 
 const grouped = computed(() => {
@@ -30,10 +33,26 @@ const statusClass: Record<string, string> = {
   Invalid: 'bg-red-100 text-red-700',
   Published: 'bg-blue-100 text-blue-700',
 }
+
+function toggle() {
+  collapsed.value = !collapsed.value
+}
 </script>
 
 <template>
-  <div class="flex flex-col h-full bg-gray-900 text-gray-100">
+  <div v-if="!collapsed" class="flex flex-col h-full bg-gray-900 text-gray-100">
+    <div class="flex items-center justify-between p-3 border-b border-gray-800">
+      <h2 class="text-sm font-semibold text-gray-100">Constructs</h2>
+      <button
+        type="button"
+        class="p-1.5 rounded hover:bg-gray-800 text-gray-400 hover:text-gray-100"
+        aria-label="Collapse constructs"
+        @click="toggle"
+      >
+        «
+      </button>
+    </div>
+
     <div class="p-3 border-b border-gray-800">
       <input
         v-model="search"
@@ -77,4 +96,23 @@ const statusClass: Record<string, string> = {
       </div>
     </div>
   </div>
+
+  <div v-else class="flex flex-col items-center h-full w-full bg-gray-900 text-gray-100 py-2">
+    <button
+      type="button"
+      class="p-1.5 rounded hover:bg-gray-800 text-gray-400 hover:text-gray-100"
+      aria-label="Expand constructs"
+      @click="toggle"
+    >
+      »
+    </button>
+    <span class="vertical-text text-xs font-semibold text-gray-400 mt-4">Constructs</span>
+  </div>
 </template>
+
+<style scoped>
+.vertical-text {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+</style>

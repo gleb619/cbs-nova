@@ -1,5 +1,6 @@
 package cbs.nova.dsl.codegen.model;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.event.Level;
 
@@ -8,6 +9,7 @@ import java.io.StringReader;
 import java.nio.file.Path;
 import java.util.Properties;
 
+@Slf4j
 public record DslCompilerOptions(
         @NonNull Path srcDir,
         @NonNull Path outputDir,
@@ -52,6 +54,7 @@ public record DslCompilerOptions(
   private static @NonNull Path requirePath(@NonNull Properties properties, @NonNull String key) {
     var value = properties.getProperty(key);
     if (value == null || value.isBlank()) {
+      log.error("DSL_COMPILER_ERROR: Got next properties={}", properties);
       throw new IllegalArgumentException("Missing required compiler option: " + key);
     }
     return Path.of(value);
