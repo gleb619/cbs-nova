@@ -8,10 +8,10 @@ import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
-import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.starter.config.CbsNovaFakesProperties;
 import cbs.nova.starter.config.CbsNovaPreviewProperties;
-import cbs.nova.starter.controllers.DslRuntimeResource;
+import cbs.nova.starter.config.DslRuntimeRouterConfiguration;
+import cbs.nova.starter.controllers.DslRuntimeHandler;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
@@ -24,7 +24,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -57,10 +56,9 @@ class DslStarterIntegrationTest {
             bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, previewProperties,
             new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig());
     var runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
-    var resource = new DslRuntimeResource(runtime, contextFactory);
-    mockMvc = MockMvcBuilders.standaloneSetup(resource)
-            .setMessageConverters(new JacksonJsonHttpMessageConverter())
-            .build();
+    var handler = new DslRuntimeHandler(runtime, contextFactory);
+    var router = new DslRuntimeRouterConfiguration();
+    mockMvc = MockMvcBuilders.routerFunctions(router.dslRuntimeRouter(handler)).build();
   }
 
   @AfterEach

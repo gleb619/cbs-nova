@@ -20,6 +20,7 @@ import org.springframework.context.annotation.Import;
     DslReloadRouterConfiguration.class,
     DslExecutionsRouterConfiguration.class,
     DslIntrospectionRouterConfiguration.class,
+    DslRuntimeRouterConfiguration.class,
     DslErrorHandlingAutoConfiguration.class,
     SpringHelperAutoConfiguration.class
 })

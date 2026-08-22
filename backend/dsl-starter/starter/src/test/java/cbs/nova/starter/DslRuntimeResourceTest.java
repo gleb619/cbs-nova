@@ -18,11 +18,11 @@ import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslException;
-import cbs.nova.starter.controllers.DslRuntimeResource;
+import cbs.nova.starter.config.DslRuntimeRouterConfiguration;
+import cbs.nova.starter.controllers.DslRuntimeHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -36,10 +36,9 @@ class DslRuntimeResourceTest {
 
   @BeforeEach
   void setUp() {
-    mockMvc = MockMvcBuilders
-            .standaloneSetup(new DslRuntimeResource(dslRuntime, new ContextFactory()))
-            .setMessageConverters(new JacksonJsonHttpMessageConverter())
-            .build();
+    DslRuntimeHandler handler = new DslRuntimeHandler(dslRuntime, new ContextFactory());
+    DslRuntimeRouterConfiguration router = new DslRuntimeRouterConfiguration();
+    mockMvc = MockMvcBuilders.routerFunctions(router.dslRuntimeRouter(handler)).build();
   }
 
   @Test
