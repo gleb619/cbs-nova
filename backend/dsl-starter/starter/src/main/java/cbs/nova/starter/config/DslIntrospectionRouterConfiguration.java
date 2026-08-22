@@ -41,7 +41,7 @@ public class DslIntrospectionRouterConfiguration {
           "DSL Introspection"}, responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = NamesResponse.class))))),
       @RouterOperation(path = "/api/dsl/transactions/{name}", beanClass = DslIntrospectionHandler.class, beanMethod = "transactionDetail", method = RequestMethod.GET, operation = @Operation(operationId = "getTransaction", summary = "Get metadata of a single DSL transaction", tags = {
           "DSL Introspection"}, parameters = @Parameter(name = "name", in = ParameterIn.PATH), responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = TransactionDetail.class))))),
-      @RouterOperation(path = "/api/dsl/helpers/search", beanClass = DslIntrospectionHandler.class, beanMethod = "searchObjects", method = RequestMethod.GET, operation = @Operation(operationId = "searchObjects", summary = "Search registered DSL helpers, processes, transactions and functions", tags = {
+      @RouterOperation(path = "/api/dsl/objects/search", beanClass = DslIntrospectionHandler.class, beanMethod = "searchObjects", method = RequestMethod.GET, operation = @Operation(operationId = "searchObjects", summary = "Search registered DSL helpers, processes, transactions and functions", tags = {
           "DSL Introspection"}, parameters = {
               @Parameter(name = "name", in = ParameterIn.QUERY),
               @Parameter(name = "type", in = ParameterIn.QUERY),
