@@ -169,7 +169,7 @@ The `usePreviewDiff` composable (the backing logic for `PreviewDiffView`) delega
 ## Helper search (`T177`)
 
 `frontend/components/src/composables/useHelperSearch.ts` provides a reusable search helper that wraps the backend
-`/api/dsl/helpers/search` endpoint (or the BFF proxy). It supports:
+`/api/dsl/objects/search` endpoint (or the BFF proxy). It supports:
 
 - debounced keyword search (`name`, `type`, `description`).
 - `execute()` / `search()` / `clearFilters()` operations.
@@ -185,7 +185,7 @@ Two complementary endpoints power the runner's discovery UI:
 
 - `GET /api/dsl/definitions` — flat list of all registered entities with type and optional input schema (used by the
   definition picker).
-- `GET /api/dsl/helpers/search` — filterable search across the same entity set (used by the helper-search panel and
+- `GET /api/dsl/objects/search` — filterable search across the same entity set (used by the helper-search panel and
   any global search bar).
 
 Both are wired through the BFF so the browser never calls Spring Boot directly.
