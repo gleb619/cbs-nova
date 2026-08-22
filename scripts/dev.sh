@@ -48,8 +48,9 @@ printf 'Frontend log: %s\n' "${FRONTEND_LOG}"
 printf 'Press Ctrl+C to stop both.\n\n'
 
 (
-    cd "${ROOT_DIR}/backend"
-    exec ./gradlew :starter:bootRun
+    cd "${ROOT_DIR}"
+    export SERVER_PORT="${SERVER_PORT:-8090}"
+    exec backend/dsl-platform/gradlew -p backend/dsl-starter :starter-launcher:bootRun -x test
 ) >"${BACKEND_LOG}" 2>&1 &
 BACKEND_PID=$!
 

@@ -6,8 +6,8 @@ CBS-Nova: Business Orchestration Engine for core banking operations. Built on Ja
 
 ## Architecture at a glance
 
-- **DSL authoring** — compact source files in [`backend/dsl-examples/`](backend/dsl-examples/) compiled by the Gradle DSL plugin into Temporal classes.
-- **Spring Boot starter** (`backend/starter/`) — runs the Temporal worker, exposes REST and introspection endpoints, handles Keycloak auth.
+- **DSL authoring** — compact source files in [`backend/dsl-starter/dsl-examples/`](backend/dsl-starter/dsl-examples/) compiled by the Gradle DSL plugin into Temporal classes.
+- **Spring Boot starter** (`backend/dsl-starter/starter/`) — runs the Temporal worker, exposes REST and introspection endpoints, handles Keycloak auth.
 - **Temporal cluster** — workflows and activities run on a Temporal cluster fronted by Postgres; the UI is exposed for inspection.
 - **Keycloak** — OIDC issuer for the admin UI and integration tests.
 - **Admin UI** ([`frontend/admin-ui-plugin/`](frontend/admin-ui-plugin/)) — a Nuxt module that mounts the UI into any host Nuxt app, with a Nitro BFF in front of the backend.
@@ -62,7 +62,7 @@ Bugsink Postgres and Temporal Postgres run inside the Compose network only and a
 ## DSL in 60 seconds
 
 - Authoring guide: [`docs/dsl/authoring.md`](docs/dsl/authoring.md)
-- Working examples: [`backend/dsl-examples/`](backend/dsl-examples/)
+- Working examples: [`backend/dsl-starter/dsl-examples/`](backend/dsl-starter/dsl-examples/)
 
 ## Testing
 
