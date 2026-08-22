@@ -6,9 +6,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
+import cbs.nova.starter.config.DslExecutionsRouterConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import tools.jackson.databind.ObjectMapper;
@@ -23,10 +23,9 @@ class DslExecutionsResourceTest {
 
   @BeforeEach
   void setUp() {
-    mockMvc = MockMvcBuilders
-            .standaloneSetup(new DslExecutionsResource(repository, objectMapper))
-            .setMessageConverters(new JacksonJsonHttpMessageConverter())
-            .build();
+    DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper);
+    DslExecutionsRouterConfiguration router = new DslExecutionsRouterConfiguration();
+    mockMvc = MockMvcBuilders.routerFunctions(router.dslExecutionsRouter(handler)).build();
   }
 
   @Test

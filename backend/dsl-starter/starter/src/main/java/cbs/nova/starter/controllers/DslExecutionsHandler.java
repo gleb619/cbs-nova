@@ -13,45 +13,36 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.function.ServerRequest;
+import org.springframework.web.servlet.function.ServerResponse;
 import tools.jackson.databind.ObjectMapper;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
- * Read-only REST surface for DSL execution runs backing the frontend Executions page.
- *
- * <p>
- * The {@link DslRunRepository} interface exposes no dedicated "list all" method, so unfiltered
- * listings are assembled by enumerating {@code knownProcessNames()} and {@code findByProcessName} —
- * the same pattern {@code TemporalDslProcessService} uses for its staleness sweep. Status filtering
- * is applied in the controller against the raw backend enum name (e.g. {@code STALE}), before the
- * run is mapped to the frontend-facing {@link ExecutionDto}.
+ * Functional handler for the DSL execution runs endpoint. Registered as a {@code RouterFunction}
+ * bean by {@link cbs.nova.starter.config.DslExecutionsRouterConfiguration} rather than as a
+ * hardcoded {@code @RestController}, following the same pattern as DSL reload and introspection.
  */
-@RestController
-@RequestMapping("/api/executions")
+@Component
 @Tag(name = "DSL Executions", description = "Inspect DSL execution runs")
 @RequiredArgsConstructor
-public class DslExecutionsResource {
+public class DslExecutionsHandler {
 
   private static final int MAX_LIMIT = 500;
 
   private final DslRunRepository runRepository;
   private final ObjectMapper objectMapper;
 
-  @GetMapping
   @Operation(summary = "List DSL execution runs")
   @ApiResponse(responseCode = "200", description = "Matching execution runs", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionListResponse.class)))
-  public ResponseEntity<ExecutionListResponse> list(
-          @RequestParam(name = "processName", required = false) String processName,
-          @RequestParam(name = "status", required = false) String status,
-          @Parameter(description = "Maximum number of runs to return", schema = @Schema(type = "integer", defaultValue = "50", maximum = "500")) @RequestParam(name = "limit", defaultValue = "50") int limit,
-          @Parameter(description = "Number of matching runs to skip before returning results", schema = @Schema(type = "integer", defaultValue = "0")) @RequestParam(name = "offset", defaultValue = "0") int offset) {
+  public ServerResponse list(ServerRequest request) throws IOException {
+    String processName = request.param("processName").orElse(null);
+    String status = request.param("status").orElse(null);
+    int limit = request.param("limit").map(Integer::parseInt).orElse(50);
+    int offset = request.param("offset").map(Integer::parseInt).orElse(0);
     int pageSize = clampLimit(limit);
     int skip = clampOffset(offset);
     List<DslRun> filtered = findRuns(processName).stream()
@@ -63,20 +54,19 @@ public class DslExecutionsResource {
             .limit(pageSize)
             .map(ExecutionDto::from)
             .toList();
-    return ResponseEntity.ok(new ExecutionListResponse(items, total));
+    return ServerResponse.ok().body(new ExecutionListResponse(items, total));
   }
 
-  @GetMapping("/{id}")
   @Operation(summary = "Get a single DSL execution run by id")
   @ApiResponse(responseCode = "200", description = "The execution run", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionDto.class)))
   @ApiResponse(responseCode = "404", description = "No run with the given id", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
-  public ResponseEntity<?> detail(@PathVariable String id) {
+  public ServerResponse detail(ServerRequest request) throws IOException {
+    String id = request.pathVariable("id");
     return runRepository.findByRunId(id)
-            .<ResponseEntity<?>>map(
-                    run -> ResponseEntity.ok(ExecutionDto.fromDetail(run, objectMapper)))
-            .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse("NOT_FOUND", "Execution run not found: " + id, null,
-                            id, null)));
+            .map(run -> ServerResponse.ok().body(ExecutionDto.fromDetail(run, objectMapper)))
+            .orElse(ServerResponse.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse("NOT_FOUND", "Execution run not found: " + id,
+                            null, id, null)));
   }
 
   private List<DslRun> findRuns(String processName) {

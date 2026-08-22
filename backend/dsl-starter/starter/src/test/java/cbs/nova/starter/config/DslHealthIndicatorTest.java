@@ -18,7 +18,8 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 /**
  * Verifies {@link DslHealthIndicator} without booting a full Spring Boot application.
  *
- * <p>Unlike the other configs in this package, {@link DslHealthIndicator} has no companion
+ * <p>
+ * Unlike the other configs in this package, {@link DslHealthIndicator} has no companion
  * {@code @AutoConfiguration} class — it is registered as a {@code @Component} gated by
  * {@link ConditionalOnClass @ConditionalOnClass(HealthIndicator.class)}. There is therefore no
  * dedicated auto-configuration wiring to test; instead these tests pin both the gating annotation

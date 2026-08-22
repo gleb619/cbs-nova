@@ -16,10 +16,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Verifies the wiring of {@link PreviewMetricsAutoConfiguration} without booting a full Spring
- * Boot application.
+ * Verifies the wiring of {@link PreviewMetricsAutoConfiguration} without booting a full Spring Boot
+ * application.
  *
- * <p>This auto-configuration declares no {@code @Conditional*} annotations at all — it is wired
+ * <p>
+ * This auto-configuration declares no {@code @Conditional*} annotations at all — it is wired
  * unconditionally when its imports file entry is processed. The {@link MeterBinder} it contributes
  * registers two gauges against any {@link MeterRegistry} bean present in the context. Tests
  * therefore confirm that the bean is always present and that binding it to a {@link MeterRegistry}

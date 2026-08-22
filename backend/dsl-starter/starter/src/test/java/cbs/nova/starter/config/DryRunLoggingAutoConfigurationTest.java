@@ -14,19 +14,20 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Verifies the wiring of {@link DryRunLoggingAutoConfiguration} without booting a full Spring
- * Boot application.
+ * Verifies the wiring of {@link DryRunLoggingAutoConfiguration} without booting a full Spring Boot
+ * application.
  *
- * <p>Conditional matrix pinned by these tests:
+ * <p>
+ * Conditional matrix pinned by these tests:
  * <ul>
- *   <li>{@code dryRunLoggingContext} bean: gated by {@code @ConditionalOnMissingBean} AND
- *       {@code @ConditionalOnProperty(name="cbs.nova.dryRun.context.type", havingValue="threadlocal",
+ * <li>{@code dryRunLoggingContext} bean: gated by {@code @ConditionalOnMissingBean} AND
+ * {@code @ConditionalOnProperty(name="cbs.nova.dryRun.context.type", havingValue="threadlocal",
  *       matchIfMissing=true)}.</li>
- *   <li>{@code dryRunLogBufferRegistry} bean: only gated by {@code @ConditionalOnMissingBean}.</li>
- *   <li>{@code dryRunLogbackAppender} bean: only gated by {@code @ConditionalOnMissingBean}; it
- *       depends on the (auto or user-supplied) {@link DryRunLoggingContext} and
- *       {@link DryRunLogBufferRegistry}.</li>
- *   <li>{@code dryRunLogbackAppenderInstaller}: unconditional {@link ApplicationRunner}.</li>
+ * <li>{@code dryRunLogBufferRegistry} bean: only gated by {@code @ConditionalOnMissingBean}.</li>
+ * <li>{@code dryRunLogbackAppender} bean: only gated by {@code @ConditionalOnMissingBean}; it
+ * depends on the (auto or user-supplied) {@link DryRunLoggingContext} and
+ * {@link DryRunLogBufferRegistry}.</li>
+ * <li>{@code dryRunLogbackAppenderInstaller}: unconditional {@link ApplicationRunner}.</li>
  * </ul>
  */
 class DryRunLoggingAutoConfigurationTest {

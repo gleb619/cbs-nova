@@ -11,10 +11,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Verifies the wiring of {@link PreviewCacheAutoConfiguration} without booting a full Spring
- * Boot application.
+ * Verifies the wiring of {@link PreviewCacheAutoConfiguration} without booting a full Spring Boot
+ * application.
  *
- * <p>The auto-configuration declares no {@code @ConditionalOnProperty} toggles: the only conditional
+ * <p>
+ * The auto-configuration declares no {@code @ConditionalOnProperty} toggles: the only conditional
  * on the cache bean is {@code @ConditionalOnMissingBean}. Therefore both beans are wired whenever
  * the configuration is imported and no user bean of type {@link PreviewResultCache} is present.
  * When the user supplies their own {@link PreviewResultCache}, the starter backs off from creating
