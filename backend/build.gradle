@@ -69,6 +69,40 @@ tasks.register('starterBuild', Exec) {
   outputs.upToDateWhen { false }
 }
 
+// Test
+
+tasks.register('platformTest', Exec) {
+  group = 'verification'
+  description = 'Run tests for the DSL platform group'
+  workingDir = file('dsl-platform')
+  commandLine = ['../gradlew', "-Pversion=${version}", 'test']
+  outputs.upToDateWhen { false }
+}
+
+tasks.register('pluginsTest', Exec) {
+  group = 'verification'
+  description = 'Run tests for the DSL plugins group'
+  dependsOn 'platformPublishToMavenLocal'
+  workingDir = file('dsl-plugins')
+  commandLine = ['../gradlew', "-Pversion=${version}", 'test']
+  outputs.upToDateWhen { false }
+}
+
+tasks.register('starterTest', Exec) {
+  group = 'verification'
+  description = 'Run tests for the starter group'
+  dependsOn 'pluginsPublishToMavenLocal'
+  workingDir = file('dsl-starter')
+  commandLine = ['../gradlew', "-Pversion=${version}", ':starter:test']
+  outputs.upToDateWhen { false }
+}
+
+tasks.register('test') {
+  group = 'verification'
+  description = 'Run all backend tests'
+  dependsOn 'platformTest', 'pluginsTest', 'starterTest'
+}
+
 // The `base` plugin already provides `build`; augment it to depend on the three group builds.
 tasks.named('build') {
   dependsOn 'platformBuild', 'pluginsBuild', 'starterBuild'

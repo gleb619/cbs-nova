@@ -18,7 +18,7 @@ jobs:
 
       - name: Build
         working-directory: backend
-        run: ./gradlew :dsl-api:build :dsl:build :dsl-codegen:build :misc-codegen:build :starter:build --no-daemon
+        run: ./gradlew build --no-daemon
 
       - name: Test
         working-directory: backend
@@ -49,6 +49,10 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: pnpm install
+
+      - name: Test frontend
+        working-directory: frontend
+        run: pnpm test
 
       - name: Build frontend
         working-directory: frontend
