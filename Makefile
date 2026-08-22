@@ -49,8 +49,12 @@ down: ## Stop the docker compose stack (keeps volumes)
 	$(COMPOSE) down
 
 .PHONY: backend
-backend: ## Run the Spring Boot starter (cd backend && ./gradlew :starter:bootRun)
-	cd backend && ./gradlew :starter:bootRun
+backend: ## Run the Spring Boot starter (backend/dsl-platform/gradlew -p backend/dsl-starter :starter-launcher:bootRun)
+	SERVER_PORT=$${SERVER_PORT:-8090} backend/dsl-platform/gradlew -p backend/dsl-starter :starter-launcher:bootRun
+
+.PHONY: publish
+publish: ## Publish the DSL platform to Maven Local (backend/dsl-platform/gradlew -p backend/dsl-platform publishToMavenLocal -x test)
+	backend/dsl-platform/gradlew -p backend/dsl-platform publishToMavenLocal -x test
 
 .PHONY: frontend
 frontend: ## Run the Nuxt admin UI dev server (cd frontend && pnpm dev)
