@@ -15,6 +15,7 @@ import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -128,10 +129,12 @@ public class DslDraftHandler {
 
   private DraftRequest parse(ServerRequest request) throws IOException {
     try {
-      return objectMapper.readValue(request.body().byteInputStream(), DraftRequest.class);
+      return objectMapper.readValue(request.body(InputStream.class), DraftRequest.class);
     } catch (JsonProcessingException e) {
       log.warn("[DSL drafts] failed to parse request body: {}", e.getMessage());
       return null;
+    } catch (jakarta.servlet.ServletException e) {
+      throw new IOException("Failed to read request body", e);
     }
   }
 
