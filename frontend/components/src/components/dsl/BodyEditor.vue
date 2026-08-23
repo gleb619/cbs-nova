@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 
+import CodeTab from './CodeTab.vue'
+import StructureTab from './StructureTab.vue'
+
 import type { DslConstruct, StepDef } from '../../types/dsl'
 
 const props = defineProps<{

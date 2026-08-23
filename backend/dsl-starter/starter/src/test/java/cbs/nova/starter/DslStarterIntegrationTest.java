@@ -11,6 +11,7 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.config.CbsNovaFakesProperties;
 import cbs.nova.starter.config.CbsNovaPreviewProperties;
 import cbs.nova.starter.config.DslRuntimeRouterConfiguration;
+import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.controllers.DslRuntimeHandler;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
@@ -19,6 +20,7 @@ import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
 import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
+import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,7 +58,12 @@ class DslStarterIntegrationTest {
             bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, previewProperties,
             new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig());
     var runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
-    var handler = new DslRuntimeHandler(runtime, contextFactory);
+    var loggingProperties = new CbsNovaLoggingProperties(
+            CbsNovaLoggingProperties.Level.INFO,
+            CbsNovaLoggingProperties.Level.INFO,
+            false);
+    var handler = new DslRuntimeHandler(
+            runtime, contextFactory, new LoggingExecutionListener(loggingProperties));
     var router = new DslRuntimeRouterConfiguration();
     mockMvc = MockMvcBuilders.routerFunctions(router.dslRuntimeRouter(handler)).build();
   }

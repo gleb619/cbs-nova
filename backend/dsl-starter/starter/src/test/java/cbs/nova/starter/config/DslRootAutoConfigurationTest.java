@@ -44,6 +44,8 @@ class DslRootAutoConfigurationTest {
     assertThat(importAnnotation).as("root must declare @Import").isNotNull();
     var imported = Set.of(importAnnotation.value());
     assertThat(imported).containsExactlyInAnyOrder(
+            RequestIdFilterConfiguration.class,
+            LoggingAutoConfiguration.class,
             DryRunLoggingAutoConfiguration.class,
             TemporalConfiguration.class,
             DslAutoConfiguration.class,

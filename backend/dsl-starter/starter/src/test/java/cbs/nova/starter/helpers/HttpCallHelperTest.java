@@ -19,6 +19,7 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 
 import java.net.http.HttpClient;
 import java.util.List;
@@ -142,6 +143,26 @@ class HttpCallHelperTest {
             .as("result cause: %s", result.cause())
             .isTrue();
     assertThat(result.value().status()).isEqualTo(204);
+  }
+
+  @Test
+  void mdcRequestIdIsForwardedWhenNoCustomHeaderIsSet() {
+    wireMock.stubFor(get("/mdc")
+            .withHeader("X-Request-Id", equalTo("mdc-req-1"))
+            .willReturn(aResponse()
+                    .withStatus(200)
+                    .withBody("ok")));
+
+    MDC.put("requestId", "mdc-req-1");
+    try {
+      Result<HttpCallOut> result = execute(HttpCallIn.get(baseUrl() + "/mdc"));
+      assertThat(result.isSuccess())
+              .as("result cause: %s", result.cause())
+              .isTrue();
+      assertThat(result.value().status()).isEqualTo(200);
+    } finally {
+      MDC.clear();
+    }
   }
 
   @Test

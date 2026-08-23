@@ -1,10 +1,39 @@
-import type { H3Event } from 'h3'
-import { createError, getHeader } from 'h3'
-import { $fetch } from 'ofetch'
 import { useBackendConfig } from './config'
 
+type LogLevel = 'debug' | 'info' | 'warn' | 'error'
+
+const LOG_LEVEL = (typeof process !== 'undefined' && (process.env.LOG_LEVEL as LogLevel)) || 'debug'
+const LEVEL_RANK: Record<LogLevel, number> = {
+  debug: 0,
+  info: 1,
+  warn: 2,
+  error: 3,
+}
+
+function isLogEnabled(level: LogLevel): boolean {
+  return LEVEL_RANK[level] >= (LEVEL_RANK[LOG_LEVEL] ?? LEVEL_RANK.debug)
+}
+
+function writeLog(level: LogLevel, message: string, data?: Record<string, unknown>): void {
+  if (!isLogEnabled(level)) return
+  const fn = console[level] as (msg: string, ...rest: unknown[]) => void
+  if (data) {
+    fn(message, data)
+    return
+  }
+  fn(message)
+}
+
+function getRequestHeader(
+  event: { node?: { req?: { headers?: Record<string, string | string[] | undefined> } } },
+  name: string,
+): string | undefined {
+  const raw = event.node?.req?.headers?.[name.toLowerCase()]
+  return Array.isArray(raw) ? raw[0] : raw
+}
+
 export async function proxyToBackend<T>(
-  event: H3Event,
+  event: { node?: { req?: { headers?: Record<string, string | string[] | undefined> } } },
   path: string,
   options: { method?: string; body?: unknown; query?: Record<string, unknown> } = {},
 ): Promise<T> {
@@ -17,20 +46,43 @@ export async function proxyToBackend<T>(
 
   // Propagate trace context. Always generate a request id so backend logs can
   // be correlated with BFF logs even when the client didn't send one.
-  // getHeader/createError are auto-imported by Nitro at runtime.
-  const inboundRequestId = getHeader(event, 'x-request-id')
+  const inboundRequestId = getRequestHeader(event, 'x-request-id')
   const requestId = inboundRequestId || globalThis.crypto.randomUUID()
   headers['X-Request-Id'] = requestId
-  const traceparent = getHeader(event, 'traceparent')
+  const traceparent = getRequestHeader(event, 'traceparent')
   if (traceparent) headers.traceparent = traceparent
+
+  const method = options.method ?? 'GET'
+  const startedAt = Date.now()
 
   try {
     return (await $fetch<T>(url, {
-      method: options.method ?? 'GET',
+      method,
       headers,
       body: options.body,
       query: options.query,
       timeout: timeoutMs,
+      onRequest({ request }) {
+        writeLog('debug', `[BFF >] ${method} ${request}`, {
+          requestId,
+          headers: Object.keys(headers),
+        })
+      },
+      onResponse({ response }) {
+        writeLog(
+          'info',
+          `[BFF <] ${method} ${path} ${response.status} ${Date.now() - startedAt}ms`,
+          {
+            requestId,
+          },
+        )
+      },
+      onResponseError({ response, error }) {
+        writeLog('error', `[BFF !] ${method} ${path} ${response?.status ?? 'network'}`, {
+          requestId,
+          error: (error as Error | undefined)?.message,
+        })
+      },
     })) as T
   } catch (err: unknown) {
     // ofetch wraps timeout abort errors in a FetchError whose cause has

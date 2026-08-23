@@ -23,7 +23,6 @@ class StarterApplicationTests {
   }
 
   @Test
-  @Disabled("Temporary skip during refactoring")
   void arithmeticHelperIsRegistered() {
     var helper = GlobalManager.globalManager().findHelper("arithmetic");
     assertThat(helper).isPresent();

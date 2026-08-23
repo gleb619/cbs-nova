@@ -5,6 +5,7 @@ import cbs.nova.dsl.ExplainReport;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.controllers.DslRuntimeHandler;
+import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.models.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -25,8 +26,11 @@ import org.springframework.web.servlet.function.ServerResponse;
 public class DslRuntimeRouterConfiguration {
 
   @Bean
-  DslRuntimeHandler dslRuntimeHandler(DslRuntime dslRuntime, ContextFactory contextFactory) {
-    return new DslRuntimeHandler(dslRuntime, contextFactory);
+  DslRuntimeHandler dslRuntimeHandler(
+          DslRuntime dslRuntime,
+          ContextFactory contextFactory,
+          LoggingExecutionListener loggingExecutionListener) {
+    return new DslRuntimeHandler(dslRuntime, contextFactory, loggingExecutionListener);
   }
 
   @Bean

@@ -73,6 +73,18 @@ backend/
 
 ### Code Style & Language Rules
 
+#### Self-documenting, simple code
+- Do not add explanatory comments. Code must be self-explanatory through clear names, small methods, and a simple structure.
+- Remove outdated, redundant, or obvious comments when modifying a file.
+- Javadoc is allowed only on public API contracts where it conveys information the signature cannot; otherwise avoid it.
+- Refactor confusing code rather than explaining it with a comment.
+- Prefer the simplest implementation that solves the problem. Avoid clever one-liners, deep nesting, and large lambda bodies.
+- Keep methods small and focused on a single responsibility; extract helper methods liberally.
+- Use descriptive, intention-revealing names for variables, methods, and classes.
+- Avoid magic numbers, abbreviations, and duplicated logic.
+- Readable code is the goal; if a teammate cannot understand it at a glance, simplify it.
+
+
 - **Lombok**: Prefer Lombok annotations to reduce boilerplate. Use `@Getter`, `@Setter`, `@Builder`,
   `@EqualsAndHashCode`, etc. where appropriate instead of hand-written implementations.
 - **Constructors**: Never write manual constructors for dependency injection or simple field assignment.
@@ -84,8 +96,7 @@ backend/
 - **Functional style**: Prefer a functional, pipe-oriented style using the Stream API and immutable
   transformations. Favor method chaining (`stream().map(...).filter(...).collect(...)`) over
   imperative loops and mutable accumulators.
-- **Clean code / small methods**: Keep implementation methods short and focused on a single responsibility.
-  Extract helper methods liberally. **Keep source files under 300 lines** whenever practical; split
+- **Source size**: Keep source files under 300 lines whenever practical; split
   large classes into focused collaborators.
 - **Builder over constructor**: Prefer Lombok `@Builder` for constructing objects with multiple fields
   instead of manual constructors or long parameter lists. Use `@RequiredArgsConstructor` only for simple

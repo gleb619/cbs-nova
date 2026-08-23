@@ -4,35 +4,46 @@ import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.error.DslExceptionMapper;
 import cbs.nova.starter.models.ErrorResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-/**
- * Translates exceptions thrown by cbs-nova controllers into {@link ErrorResponse} bodies. All
- * mapping logic is delegated to the injected {@link DslExceptionMapper} so host applications can
- * supply a custom implementation.
- */
+@Slf4j
 @RestControllerAdvice
 @RequiredArgsConstructor
-public class DslExceptionHandler {
+public class DslExceptionHandler extends ResponseEntityExceptionHandler {
 
   private final DslExceptionMapper dslExceptionMapper;
 
+  @Override
+  protected @Nullable ResponseEntity<Object> handleExceptionInternal(Exception ex, @Nullable Object body,
+      HttpHeaders headers, HttpStatusCode statusCode, WebRequest request) {
+    log.error("ERROR_INTERNAL: {}", ex.getMessage());
+    return super.handleExceptionInternal(ex, body, headers, statusCode, request);
+  }
+
   @ExceptionHandler(DslException.class)
   public ResponseEntity<ErrorResponse> handleDslException(DslException ex, WebRequest request) {
+    log.error("DSL_ERROR: {}", ex.getMessage());
     return dslExceptionMapper.handle(ex, request);
   }
 
   @ExceptionHandler(IllegalArgumentException.class)
   public ResponseEntity<ErrorResponse> handleBadRequest(IllegalArgumentException ex,
           WebRequest request) {
+    log.error("IA_ERROR: {}", ex.getMessage());
     return dslExceptionMapper.handle(ex, request);
   }
 
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ErrorResponse> handleGeneral(Exception ex, WebRequest request) {
+    log.error("ERROR: {}", ex.getMessage());
     return dslExceptionMapper.handle(ex, request);
   }
 }

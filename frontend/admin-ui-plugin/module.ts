@@ -136,7 +136,7 @@ export default defineNuxtModule<ModuleOptions>({
           name: 'cbs-admin-dashboard',
           path: `${prefix}/`,
           file: resolve('./app/pages/index.vue'),
-          meta: { layout: 'cbs-admin' },
+          meta: { layout: 'cbs-admin', pad: true },
         },
         {
           name: 'cbs-admin-runner',

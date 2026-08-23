@@ -85,6 +85,20 @@ frontend/
 - Accept routing via props/slots
 - `vue` and `vue-router` as peer/dev dependencies
 
+## Code Style & Readability
+
+### Self-documenting, simple code
+- Do not add explanatory comments. The code itself must be clear enough to read without them.
+- Remove outdated, redundant, or obvious comments when touching a file.
+- JSDoc/TSDoc is allowed on public library APIs only when the signature alone is not enough; otherwise avoid comments.
+- Refactor confusing code instead of explaining it with a comment.
+- Choose the simplest implementation that works. Avoid clever tricks, premature abstraction, and over-engineering.
+- Keep functions, composables, and components small and focused on a single responsibility.
+- Use descriptive, intention-revealing names for variables, functions, classes, and components.
+- Avoid abbreviations, unclear acronyms, and magic values.
+- Delete dead code, unused imports, and duplicated logic.
+- Readable code is the goal; if a new teammate cannot understand it at a glance, simplify it.
+
 ## CLI Commands (run from `frontend/`)
 
 ```bash

@@ -1,6 +1,10 @@
 import { vi } from 'vitest'
 import { computed, onUnmounted, readonly, ref, watch } from 'vue'
 
+if (typeof process !== 'undefined') {
+  process.env.LOG_LEVEL = 'silent'
+}
+
 const g = globalThis as Record<string, unknown>
 
 g.ref = ref
@@ -11,6 +15,7 @@ g.watch = watch
 
 g.useState = (_key: string, init: () => unknown) => ref(init())
 
+// Expose a mocked $fetch on globalThis for tests that stub the outgoing backend calls.
 g.$fetch = vi.fn()
 
 // Stub of h3's defineEventHandler. The real one returns an EventHandler
@@ -19,14 +24,23 @@ g.$fetch = vi.fn()
 // directly and tests can invoke it as a plain function.
 g.defineEventHandler = <T>(handler: T) => handler
 
-// Stub of h3's getHeader. The real one reads from the H3Event's internal
-// node req, but for unit tests we don't need that — the test that needs
-// header propagation overrides globalThis.getHeader directly.
-g.getHeader = (_event: unknown, _name: string) => undefined
+// Stub of h3's createError used by proxyToBackend's catch block. Return a
+// plain Error so assertions can match on .statusCode and .data.
+type CreateErrorOptions = {
+  statusCode?: number
+  statusMessage?: string
+  data?: unknown
+}
+g.createError = (opts: CreateErrorOptions = {}) => {
+  const e = new Error(opts.statusMessage ?? 'Error') as Error & CreateErrorOptions
+  e.statusCode = opts.statusCode
+  e.statusMessage = opts.statusMessage
+  e.data = opts.data
+  return e
+}
 
 // Stub of Nuxt's useRuntimeConfig. Tests that need to assert specific values
-// can override these by re-assigning globalThis.useRuntimeConfig before
-// calling the SUT.
+// can re-assign globalThis.useRuntimeConfig before calling the SUT.
 const defaultRuntimeConfig = {
   backendBaseUrl: 'http://localhost:8090',
   backendApiKey: '',
@@ -43,21 +57,6 @@ g.useBackendConfig = vi.fn(() => ({
   apiKey: defaultRuntimeConfig.backendApiKey,
   timeoutMs: defaultRuntimeConfig.backendTimeoutMs,
 }))
-
-// Stub of h3's createError used by proxyToBackend's catch block. Return a
-// plain Error so assertions can match on .statusCode and .data.
-type CreateErrorOptions = {
-  statusCode?: number
-  statusMessage?: string
-  data?: unknown
-}
-g.createError = (opts: CreateErrorOptions = {}) => {
-  const e = new Error(opts.statusMessage ?? 'Error') as Error & CreateErrorOptions
-  e.statusCode = opts.statusCode
-  e.statusMessage = opts.statusMessage
-  e.data = opts.data
-  return e
-}
 
 let cachedExecutionsApi: { list: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> } | null =
   null

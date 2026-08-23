@@ -74,6 +74,10 @@ temporal:
 # CBS Nova custom runtime settings
 cbs:
   nova:
+    logging:
+      lifecycle: INFO    
+      http: INFO       
+      mdc-enabled: true 
     fakes:
       enabled: true
       config:

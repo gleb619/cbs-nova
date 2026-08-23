@@ -55,6 +55,8 @@ node_modules
 /frontend/.codegraph/
 # (legacy root index removed)
 /.cursor/rules/codegraph.mdc
+.playwright-cli
+/.playwright-cli
 
 /examples/cbs-rules/
 /docs/results/*

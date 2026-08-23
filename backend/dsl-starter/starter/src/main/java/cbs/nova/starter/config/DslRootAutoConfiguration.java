@@ -6,6 +6,8 @@ import org.springframework.context.annotation.Import;
 
 @AutoConfiguration
 @Import({
+    RequestIdFilterConfiguration.class,
+    LoggingAutoConfiguration.class,
     DryRunLoggingAutoConfiguration.class,
     DslRunRepositoryConfiguration.class,
     TemporalConfiguration.class,

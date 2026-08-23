@@ -11,6 +11,10 @@ export default defineConfig({
     // the package root, matching what Nuxt's `~/` resolves to at runtime.
     alias: {
       '~': r('.'),
+      // Use the same ofetch entry that the dev server/Nitro runtime resolves.
+      // This keeps import identity consistent between source and tests so the
+      // global $fetch stub in vitest.setup.ts is observed by httpClient.ts.
+      ofetch: r('./node_modules/ofetch/dist/index.mjs'),
     },
   },
   test: {

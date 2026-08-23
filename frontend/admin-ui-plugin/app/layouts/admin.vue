@@ -53,6 +53,7 @@ const docsBaseUrl = computed(() => {
     title="CBS Nova"
     short-title="N"
     active-class="bg-primary-500 text-white"
+    :pad="route.meta.pad === true"
   >
     <template #toggle>
       <AppSidebarToggle />

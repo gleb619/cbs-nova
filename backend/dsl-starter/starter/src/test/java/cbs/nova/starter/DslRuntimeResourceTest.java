@@ -19,7 +19,9 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.config.DslRuntimeRouterConfiguration;
+import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.controllers.DslRuntimeHandler;
+import cbs.nova.starter.logging.LoggingExecutionListener;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -36,7 +38,13 @@ class DslRuntimeResourceTest {
 
   @BeforeEach
   void setUp() {
-    DslRuntimeHandler handler = new DslRuntimeHandler(dslRuntime, new ContextFactory());
+    var loggingProperties = new CbsNovaLoggingProperties(
+            CbsNovaLoggingProperties.Level.INFO,
+            CbsNovaLoggingProperties.Level.INFO,
+            false);
+    DslRuntimeHandler handler = new DslRuntimeHandler(
+            dslRuntime, new ContextFactory(),
+            new LoggingExecutionListener(loggingProperties));
     DslRuntimeRouterConfiguration router = new DslRuntimeRouterConfiguration();
     mockMvc = MockMvcBuilders.routerFunctions(router.dslRuntimeRouter(handler)).build();
   }

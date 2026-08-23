@@ -6,6 +6,7 @@ import type { NavItem } from './AppSidebar.vue'
 import AppSidebar from './AppSidebar.vue'
 
 const props = defineProps<{
+  pad?: boolean
   navItems: NavItem[]
   title?: string
   shortTitle?: string
@@ -41,7 +42,7 @@ const props = defineProps<{
           <slot name="trailing" />
         </template>
       </AppNavbar>
-      <AppMainContent>
+      <AppMainContent :pad="props.pad">
         <slot />
       </AppMainContent>
       <slot name="footer" />
