@@ -4,7 +4,10 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.temporaryRedirect;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
@@ -188,6 +191,100 @@ class HttpCallHelperTest {
     assertThat(elapsedMs)
             .as("timeout should kick in well before the 2s server delay")
             .isLessThan(1_500);
+  }
+
+  @Test
+  void redirectIsFollowedToCompletionWhenFollowRedirectsIsAlways() {
+    wireMock.stubFor(get("/redirect-always")
+            .willReturn(temporaryRedirect("/target-always")));
+    wireMock.stubFor(get("/target-always")
+            .willReturn(aResponse()
+                    .withStatus(200)
+                    .withBody("arrived")));
+
+    Result<HttpCallOut> result = execute(new HttpCallIn(
+            baseUrl() + "/redirect-always", "GET",
+            null, null, null, HttpCallIn.RedirectPolicy.ALWAYS));
+
+    assertThat(result.isSuccess())
+            .as("result cause: %s", result.cause())
+            .isTrue();
+    assertThat(result.value().status()).isEqualTo(200);
+    assertThat(result.value().bodyOrEmpty()).isEqualTo("arrived");
+    wireMock.verify(1, getRequestedFor(urlEqualTo("/redirect-always")));
+    wireMock.verify(1, getRequestedFor(urlEqualTo("/target-always")));
+  }
+
+  @Test
+  void redirectIsFollowedToCompletionWhenFollowRedirectsIsNormal() {
+    wireMock.stubFor(get("/redirect-normal")
+            .willReturn(temporaryRedirect("/target-normal")));
+    wireMock.stubFor(get("/target-normal")
+            .willReturn(aResponse()
+                    .withStatus(200)
+                    .withBody("arrived-normal")));
+
+    Result<HttpCallOut> result = execute(new HttpCallIn(
+            baseUrl() + "/redirect-normal", "GET",
+            null, null, null, HttpCallIn.RedirectPolicy.NORMAL));
+
+    assertThat(result.isSuccess())
+            .as("result cause: %s", result.cause())
+            .isTrue();
+    assertThat(result.value().status()).isEqualTo(200);
+    assertThat(result.value().bodyOrEmpty()).isEqualTo("arrived-normal");
+    wireMock.verify(1, getRequestedFor(urlEqualTo("/redirect-normal")));
+    wireMock.verify(1, getRequestedFor(urlEqualTo("/target-normal")));
+  }
+
+  @Test
+  void redirectIsNotFollowedWhenFollowRedirectsIsNever() {
+    wireMock.stubFor(get("/redirect-never")
+            .willReturn(temporaryRedirect("/target-never")));
+    wireMock.stubFor(get("/target-never")
+            .willReturn(aResponse()
+                    .withStatus(200)
+                    .withBody("never-arrives")));
+
+    Result<HttpCallOut> result = execute(new HttpCallIn(
+            baseUrl() + "/redirect-never", "GET",
+            null, null, null, HttpCallIn.RedirectPolicy.NEVER));
+
+    assertThat(result.isSuccess())
+            .as("redirect should not be followed when policy is NEVER")
+            .isFalse();
+    assertThat(result.cause())
+            .isInstanceOf(HttpCallFailure.class);
+    HttpCallFailure failure = (HttpCallFailure) result.cause();
+    assertThat(failure.status()).isEqualTo(302);
+    wireMock.verify(1, getRequestedFor(urlEqualTo("/redirect-never")));
+    wireMock.verify(0, getRequestedFor(urlEqualTo("/target-never")));
+  }
+
+  @Test
+  void redirectIsNotFollowedWhenFollowRedirectsIsOmitted() {
+    wireMock.stubFor(get("/redirect-default")
+            .willReturn(temporaryRedirect("/target-default")));
+    wireMock.stubFor(get("/target-default")
+            .willReturn(aResponse()
+                    .withStatus(200)
+                    .withBody("default-never-arrives")));
+
+    // followRedirects left null -> HttpCallIn.effectiveRedirects() defaults to NEVER,
+    // mirroring the JDK default for the injected shared client.
+    Result<HttpCallOut> result = execute(new HttpCallIn(
+            baseUrl() + "/redirect-default", "GET",
+            null, null, null, null));
+
+    assertThat(result.isSuccess())
+            .as("redirect should not be followed when followRedirects is omitted (default NEVER)")
+            .isFalse();
+    assertThat(result.cause())
+            .isInstanceOf(HttpCallFailure.class);
+    HttpCallFailure failure = (HttpCallFailure) result.cause();
+    assertThat(failure.status()).isEqualTo(302);
+    wireMock.verify(1, getRequestedFor(urlEqualTo("/redirect-default")));
+    wireMock.verify(0, getRequestedFor(urlEqualTo("/target-default")));
   }
 
   @Test

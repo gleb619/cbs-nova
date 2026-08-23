@@ -11,7 +11,6 @@ import cbs.nova.starter.helpers.model.HttpCallIn;
 import cbs.nova.starter.helpers.model.HttpCallIn.RedirectPolicy;
 import cbs.nova.starter.helpers.model.HttpCallOut;
 import cbs.nova.starter.web.RequestIdFilter;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.MDC;
@@ -25,16 +24,36 @@ import java.net.http.HttpRequest.Builder;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Slf4j
-@RequiredArgsConstructor
 @SpringHelper(name = "httpCall")
 public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
 
   private final HttpClient client;
   private final CbsNovaLoggingProperties loggingProperties;
+  private final Map<RedirectPolicy, HttpClient> clientsByPolicy;
+
+  public HttpCallHelper(HttpClient client, CbsNovaLoggingProperties loggingProperties) {
+    this.client = client;
+    this.loggingProperties = loggingProperties;
+    // JDK HttpClient is configured once at build time and exposes no public config
+    // getters (connect timeout, executor, SSL context, etc.), so we cannot derive
+    // per-policy variants from the injected client. Instead we pre-build one client
+    // per RedirectPolicy up front (cheap, no per-call construction) and look them
+    // up at execute() time. The injected `client` is reused for NEVER since the JDK
+    // default redirect policy is NEVER — building a second identical client would
+    // just waste resources.
+    Map<RedirectPolicy, HttpClient> map = new EnumMap<>(RedirectPolicy.class);
+    map.put(RedirectPolicy.NEVER, client);
+    map.put(RedirectPolicy.NORMAL,
+            HttpClient.newBuilder().followRedirects(toJdkRedirects(RedirectPolicy.NORMAL)).build());
+    map.put(RedirectPolicy.ALWAYS,
+            HttpClient.newBuilder().followRedirects(toJdkRedirects(RedirectPolicy.ALWAYS)).build());
+    this.clientsByPolicy = Map.copyOf(map);
+  }
 
   @Override
   public @NonNull Result<HttpCallOut> execute(@NonNull Context<HttpCallIn> ctx) {
@@ -51,10 +70,11 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
       return Result.failure(e);
     }
 
+    HttpClient selectedClient = clientsByPolicy.get(call.redirectPolicy());
     long startedAt = System.nanoTime();
     logRequest(request);
     try {
-      HttpResponse<String> response = client.send(request, BodyHandlers.ofString());
+      HttpResponse<String> response = selectedClient.send(request, BodyHandlers.ofString());
       int status = response.statusCode();
       Map<String, String> headers = collectHeaders(response);
       String body = response.body();
