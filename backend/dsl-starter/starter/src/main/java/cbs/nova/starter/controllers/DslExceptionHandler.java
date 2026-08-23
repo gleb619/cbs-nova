@@ -24,26 +24,26 @@ public class DslExceptionHandler extends ResponseEntityExceptionHandler {
   @Override
   protected @Nullable ResponseEntity<Object> handleExceptionInternal(Exception ex, @Nullable Object body,
       HttpHeaders headers, HttpStatusCode statusCode, WebRequest request) {
-    log.error("ERROR_INTERNAL: {}", ex.getMessage());
+    log.error("ERROR_INTERNAL: {}", ex.getMessage(), ex);
     return super.handleExceptionInternal(ex, body, headers, statusCode, request);
   }
 
   @ExceptionHandler(DslException.class)
   public ResponseEntity<ErrorResponse> handleDslException(DslException ex, WebRequest request) {
-    log.error("DSL_ERROR: {}", ex.getMessage());
+    log.error("DSL_ERROR: {}", ex.getMessage(), ex);
     return dslExceptionMapper.handle(ex, request);
   }
 
   @ExceptionHandler(IllegalArgumentException.class)
   public ResponseEntity<ErrorResponse> handleBadRequest(IllegalArgumentException ex,
           WebRequest request) {
-    log.error("IA_ERROR: {}", ex.getMessage());
+    log.error("IA_ERROR: {}", ex.getMessage(), ex);
     return dslExceptionMapper.handle(ex, request);
   }
 
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ErrorResponse> handleGeneral(Exception ex, WebRequest request) {
-    log.error("ERROR: {}", ex.getMessage());
+    log.error("ERROR: {}", ex.getMessage(), ex);
     return dslExceptionMapper.handle(ex, request);
   }
 }

@@ -166,7 +166,7 @@ public class DslReloadHandler {
           register(obj, gm);
         }
       } catch (Exception e) {
-        log.warn("[DSL reload] Could not load compact source {}: {}", className, e.getMessage());
+        log.warn("[DSL reload] Could not load compact source {}: {}", className, e.getMessage(), e);
       }
     }
   }
@@ -185,7 +185,7 @@ public class DslReloadHandler {
         classNames.add(relative);
       });
     } catch (IOException e) {
-      log.warn("[DSL reload] Failed to scan compiled classes: {}", e.getMessage());
+      log.warn("[DSL reload] Failed to scan compiled classes: {}", e.getMessage(), e);
     }
     return classNames;
   }

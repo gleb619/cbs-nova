@@ -131,7 +131,7 @@ public class DslDraftHandler {
     try {
       return objectMapper.readValue(request.body(InputStream.class), DraftRequest.class);
     } catch (JsonProcessingException e) {
-      log.warn("[DSL drafts] failed to parse request body: {}", e.getMessage());
+      log.warn("[DSL drafts] failed to parse request body: {}", e.getMessage(), e);
       return null;
     } catch (jakarta.servlet.ServletException e) {
       throw new IOException("Failed to read request body", e);
