@@ -1,7 +1,22 @@
+import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { $fetch } from 'ofetch'
+
 export function useDslApi() {
+  const log = useClientLogger('dsl')
+
   async function getDefinitions() {
-    return $fetch('/api/v1/dsl/definitions')
+    log.debug('fetching definitions')
+    try {
+      const result = await $fetch('/api/v1/dsl/definitions')
+      const list = Array.isArray(result)
+        ? result
+        : ((result as { constructs?: unknown[] }).constructs ?? [])
+      log.info('definitions loaded', { count: list.length })
+      return result
+    } catch (err) {
+      log.error('failed to load definitions', { error: (err as Error).message })
+      throw err
+    }
   }
 
   async function searchObjects(
@@ -12,10 +27,12 @@ export function useDslApi() {
     if (filters.type?.trim()) query.type = filters.type.trim()
     if (filters.description?.trim()) query.description = filters.description.trim()
 
+    log.debug('searching objects', { filters: query })
     return $fetch('/api/v1/dsl/objects/search', { query })
   }
 
   async function preview(name: string, body: unknown, metadata?: Record<string, unknown>) {
+    log.info('preview request', { name })
     return $fetch(`/api/v1/dsl/preview/${name}`, {
       method: 'POST',
       body: { body, metadata },
@@ -23,6 +40,7 @@ export function useDslApi() {
   }
 
   async function run(name: string, body: unknown, metadata?: Record<string, unknown>) {
+    log.info('run request', { name })
     return $fetch(`/api/v1/dsl/run/${name}`, {
       method: 'POST',
       body: { body, metadata },
@@ -30,6 +48,7 @@ export function useDslApi() {
   }
 
   async function explain(name: string, body: unknown, metadata?: Record<string, unknown>) {
+    log.info('explain request', { name })
     return $fetch(`/api/v1/dsl/explain/${name}`, {
       method: 'POST',
       body: { body, metadata },
@@ -38,15 +57,18 @@ export function useDslApi() {
 
   async function saveDraft(name: string, payload: unknown) {
     // stub — endpoint TBD
+    log.info('draft saved', { name })
     return Promise.resolve({ success: true, name, payload })
   }
 
   async function validateConstruct(name: string) {
     // stub — calls preview to validate
+    log.info('validate request', { name })
     return preview(name, {})
   }
 
   async function reload() {
+    log.info('reload request')
     return $fetch('/api/v1/dsl/reload', { method: 'POST' })
   }
 

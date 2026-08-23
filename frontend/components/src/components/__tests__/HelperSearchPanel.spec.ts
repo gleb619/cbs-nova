@@ -70,22 +70,20 @@ describe('HelperSearchPanel', () => {
     expect(wrapper.text()).toContain('→')
   })
 
-  it('emits update:name and search when the name input changes', async () => {
+  it('emits update:name when the name input changes', async () => {
     wrapper = mountPanel({ results: [], open: true, isLoading: false })
 
     await wrapper.find('input[placeholder="Name"]').setValue('Pay')
 
     expect(wrapper.emitted('update:name')!.at(-1)).toEqual(['Pay'])
-    expect(wrapper.emitted('search')).toBeTruthy()
   })
 
-  it('emits update:type and search when the type select changes', async () => {
+  it('emits update:type when the type select changes', async () => {
     wrapper = mountPanel({ results: [], open: true, isLoading: false })
 
     await wrapper.find('select').setValue('process')
 
     expect(wrapper.emitted('update:type')!.at(-1)).toEqual(['process'])
-    expect(wrapper.emitted('search')).toBeTruthy()
   })
 
   it('emits update:description when the description input changes', async () => {
@@ -101,8 +99,8 @@ describe('HelperSearchPanel', () => {
 
     const searchButton = wrapper.findAll('button').find((b) => b.text() === 'Search')!
     await searchButton.trigger('click')
-
     expect(wrapper.emitted('search')).toBeTruthy()
+
   })
 
   it('disables the Search button while loading', () => {

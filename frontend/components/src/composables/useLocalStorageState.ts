@@ -1,8 +1,14 @@
 import { type Ref, ref, watch } from 'vue'
 
 export interface UseLocalStorageStateOptions<T> {
+  namespace?: string
   read?: (raw: string | null) => T | undefined
   write?: (value: T) => string
+}
+
+function buildStorageKey(key: string, namespace?: string): string {
+  if (!namespace) return key
+  return `${namespace}:${key}`
 }
 
 export function useLocalStorageState<T>(
@@ -10,8 +16,11 @@ export function useLocalStorageState<T>(
   defaultValue: T,
   options: UseLocalStorageStateOptions<T> = {},
 ): Ref<T> {
-  const read =
-    options.read ??
+  const { namespace, read, write } = options
+  const storageKey = buildStorageKey(key, namespace)
+
+  const readValue =
+    read ??
     ((raw: string | null): T | undefined => {
       if (raw === null) return undefined
       try {
@@ -20,21 +29,32 @@ export function useLocalStorageState<T>(
         return undefined
       }
     })
-  const write = options.write ?? ((value: T) => JSON.stringify(value))
 
-  const stored = typeof window !== 'undefined' ? window.localStorage.getItem(key) : null
-  const parsed = read(stored)
+  const writeValue = write ?? ((value: T) => JSON.stringify(value))
+
+  const stored = typeof window !== 'undefined' ? window.localStorage.getItem(storageKey) : null
+  const parsed = readValue(stored)
   const state = ref<T>(parsed === undefined ? defaultValue : parsed) as Ref<T>
 
   watch(
     state,
     (value) => {
       if (typeof window !== 'undefined') {
-        window.localStorage.setItem(key, write(value))
+        window.localStorage.setItem(storageKey, writeValue(value))
       }
     },
     { deep: true },
   )
 
   return state
+}
+
+export function createNamespacedLocalStorageState(namespace: string) {
+  return function useNamespacedLocalStorageState<T>(
+    key: string,
+    defaultValue: T,
+    options: Omit<UseLocalStorageStateOptions<T>, 'namespace'> = {},
+  ): Ref<T> {
+    return useLocalStorageState<T>(key, defaultValue, { ...options, namespace })
+  }
 }

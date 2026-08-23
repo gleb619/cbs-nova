@@ -1,9 +1,11 @@
+import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { useExecutionsApi } from '@cbs/admin-ui-plugin/composables/useExecutionsApi'
 import { useStalePolling } from '@cbs/admin-ui-plugin/composables/useStalePolling'
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { onUnmounted, ref, watch } from 'vue'
 import type { Execution, ExecutionDetail, ExecutionFilters, ExecutionStatus } from '~/types'
 
 export function useExecutions() {
+  const log = useClientLogger('runtime')
   const executions = ref<Execution[]>([])
   const filters = ref<ExecutionFilters>({})
   const total = ref<number>(0)
@@ -100,7 +102,7 @@ export function useExecutions() {
             selectedExecution.value = fresh
           }
         } catch (err) {
-          console.error('[useExecutions] stale polling refresh failed', err)
+          log.error('stale polling refresh failed', { id, error: (err as Error).message })
         }
         stopStalePolling(id)
       }
@@ -181,8 +183,13 @@ export function useExecutions() {
         total.value = result.total ?? executions.value.length
       }
       reconcileStalePolling()
+      log.info('executions loaded', {
+        count: executions.value.length,
+        total: total.value,
+        page: page.value,
+      })
     } catch (err) {
-      console.error('[useExecutions] loadExecutions failed', err)
+      log.error('failed to load executions', { error: (err as Error).message })
       executions.value = []
       total.value = 0
     } finally {
@@ -194,6 +201,7 @@ export function useExecutions() {
     loading.value = true
     try {
       selectedExecution.value = await api.get(id)
+      log.info('execution detail loaded', { id, status: selectedExecution.value?.status })
       // If the detail came back Stale, also drive a stale poller for it
       // so the banner re-renders as soon as the backend transitions the
       // status out.
@@ -201,7 +209,7 @@ export function useExecutions() {
         startStalePolling(id)
       }
     } catch (err) {
-      console.error('[useExecutions] loadDetail failed', err)
+      log.error('failed to load execution detail', { id, error: (err as Error).message })
       selectedExecution.value = null
     } finally {
       loading.value = false
@@ -211,11 +219,13 @@ export function useExecutions() {
   async function applyFilters(f: ExecutionFilters) {
     filters.value = { ...f }
     page.value = 1
+    log.info('filters applied', { filters: filters.value })
     await loadExecutions()
   }
 
   async function setPage(n: number) {
     page.value = n
+    log.info('page changed', { page: n })
     await loadExecutions()
   }
 

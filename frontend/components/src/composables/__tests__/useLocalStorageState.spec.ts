@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
-import { useLocalStorageState } from '../useLocalStorageState'
+import { createNamespacedLocalStorageState, useLocalStorageState } from '../useLocalStorageState'
 
 describe('useLocalStorageState', () => {
   beforeEach(() => {
@@ -87,5 +87,48 @@ describe('useLocalStorageState', () => {
     await nextTick()
 
     expect(state.value).toBe('changed')
+  })
+
+  it('prefixes the storage key with namespace when provided', async () => {
+    const state = useLocalStorageState<boolean>('flag', false, { namespace: 'app:dashboard' })
+
+    state.value = true
+    await nextTick()
+
+    expect(window.localStorage.getItem('app:dashboard:flag')).toBe('true')
+    expect(window.localStorage.getItem('flag')).toBeNull()
+  })
+
+  it('reads a previously stored namespaced value', () => {
+    window.localStorage.setItem('app:dashboard:theme', JSON.stringify('dark'))
+
+    const state = useLocalStorageState<string>('theme', 'light', { namespace: 'app:dashboard' })
+
+    expect(state.value).toBe('dark')
+  })
+})
+
+describe('createNamespacedLocalStorageState', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('creates a scoped composable that reuses the same namespace', async () => {
+    const usePageStorage = createNamespacedLocalStorageState('app:page')
+
+    const sidebarOpen = usePageStorage('sidebar-open', true)
+    const sidebarOpenAlt = usePageStorage('sidebar-open', false)
+
+    expect(sidebarOpen.value).toBe(true)
+
+    sidebarOpen.value = false
+    await nextTick()
+
+    expect(sidebarOpenAlt.value).toBe(false)
+    expect(window.localStorage.getItem('app:page:sidebar-open')).toBe('false')
   })
 })

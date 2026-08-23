@@ -4,21 +4,25 @@ import { useDslWorkbench } from '@cbs/admin-ui-plugin/composables/useDslWorkbenc
 import { useWorkbenchDraft } from '@cbs/admin-ui-plugin/composables/useWorkbenchDraft'
 import type { HelperSearchFilters, ObjectSearchResult } from '@cbs/components'
 import {
+  createNamespacedLocalStorageState,
+  DropdownMenu,
+  type DropdownMenuItem,
   DslBodyEditor,
   DslConstructExplorer,
   DslDraftRestoreBanner,
   DslHelperSearchPanel,
   DslMetadataPanel,
+  DslPlainConstructList,
   DslProblemsPanel,
   useHelperSearch,
-  useLocalStorageState,
 } from '@cbs/components'
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted } from 'vue'
 
 const workbench = useDslWorkbench()
 const {
   state,
   selectedConstruct,
+  loaders,
   loadConstructs,
   selectConstruct,
   saveConstruct,
@@ -28,17 +32,11 @@ const {
   markDirty,
 } = workbench
 
-const STORAGE_PREFIX = 'cbs-nova:dsl-workbench'
+const useWorkbenchStorage = createNamespacedLocalStorageState('cbs-nova:dsl-workbench')
 
-const explorerOpen = useLocalStorageState<boolean>(`${STORAGE_PREFIX}:explorer-open`, true)
-const explorerCollapsed = useLocalStorageState<boolean>(
-  `${STORAGE_PREFIX}:explorer-collapsed`,
-  false,
-)
-const helperSearchOpen = useLocalStorageState<boolean>(
-  `${STORAGE_PREFIX}:helper-search-open`,
-  false,
-)
+const explorerOpen = useWorkbenchStorage<boolean>('explorer-open', true)
+const explorerCollapsed = useWorkbenchStorage<boolean>('explorer-collapsed', false)
+const helperSearchOpen = useWorkbenchStorage<boolean>('helper-search-open', false)
 
 const dslApi = useDslApi()
 const helperSearch = useHelperSearch({
@@ -55,14 +53,10 @@ const {
   restoredFromDraft,
 } = useWorkbenchDraft(draftName)
 
-watch(draftBody, () => {
+function onCodeChange(value: string) {
+  draftBody.value = value
   if (selectedConstruct.value) markDirty()
-})
-
-onMounted(() => {
-  loadConstructs()
-  void helperSearch.execute()
-})
+}
 
 function toggleExplorer() {
   explorerOpen.value = !explorerOpen.value
@@ -71,11 +65,54 @@ function toggleExplorer() {
 function toggleHelperSearch() {
   helperSearchOpen.value = !helperSearchOpen.value
 }
+
+type ActionValue = 'refresh' | 'validate' | 'save' | 'publish'
+
+const actionItems = computed<DropdownMenuItem[]>(() => [
+  { label: 'Refresh', value: 'refresh', disabled: state.isLoading },
+  {
+    label: 'Validate',
+    value: 'validate',
+    disabled: !selectedConstruct.value || state.isSaving,
+  },
+  {
+    label: 'Save Draft',
+    value: 'save',
+    disabled: !selectedConstruct.value || state.isSaving || !state.isDirty,
+  },
+  {
+    label: 'Publish',
+    value: 'publish',
+    disabled: !selectedConstruct.value || state.isSaving,
+    variant: 'primary',
+  },
+])
+
+function runAction(item: DropdownMenuItem) {
+  switch (item.value as ActionValue) {
+    case 'refresh':
+      reloadDefinitions()
+      break
+    case 'validate':
+      validateConstruct()
+      break
+    case 'save':
+      saveConstruct()
+      break
+    case 'publish':
+      publishConstruct()
+      break
+  }
+}
+
+onMounted(() => {
+  loadConstructs()
+})
 </script>
 
 <template>
   <div class="flex flex-col h-full bg-gray-50">
-    <header class="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-200">
+    <header class="flex items-center px-4 py-2 bg-white border-b border-gray-200">
       <div class="flex items-center gap-3">
         <button
           type="button"
@@ -90,48 +127,17 @@ function toggleHelperSearch() {
           / {{ selectedConstruct.name }}
         </span>
       </div>
-      <div class="flex items-center gap-2">
-        <button
-          type="button"
-          class="px-3 py-1.5 text-sm rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50"
-          :disabled="state.isLoading"
-          @click="reloadDefinitions"
-        >
-          Refresh
-        </button>
-        <button
-          type="button"
-          class="px-3 py-1.5 text-sm rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50"
-          :disabled="!selectedConstruct || state.isSaving"
-          @click="validateConstruct"
-        >
-          Validate
-        </button>
-        <button
-          type="button"
-          class="px-3 py-1.5 text-sm rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50"
-          :disabled="!selectedConstruct || state.isSaving || !state.isDirty"
-          @click="saveConstruct"
-        >
-          Save Draft
-        </button>
-        <button
-          type="button"
-          class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-          :disabled="!selectedConstruct || state.isSaving"
-          @click="publishConstruct"
-        >
-          Publish
-        </button>
-        <button
-          type="button"
-          class="px-3 py-1.5 text-sm rounded border border-gray-300 hover:bg-gray-100"
-          :class="helperSearchOpen ? 'bg-blue-50 text-blue-700 border-blue-300' : ''"
-          @click="toggleHelperSearch"
-        >
-          {{ helperSearchOpen ? 'Close Objects' : 'Objects' }}
-        </button>
+      <div class="ml-auto">
+        <DropdownMenu label="Actions" align="right" :items="actionItems" @select="runAction" />
       </div>
+      <button
+        type="button"
+        class="px-3 py-1.5 text-sm rounded border border-gray-300 hover:bg-gray-100"
+        :class="helperSearchOpen ? 'bg-blue-50 text-blue-700 border-blue-300' : ''"
+        @click="toggleHelperSearch"
+      >
+        {{ helperSearchOpen ? 'Close Objects' : 'Objects' }}
+      </button>
     </header>
 
     <div class="flex flex-1 overflow-hidden">
@@ -144,9 +150,17 @@ function toggleHelperSearch() {
           v-model:collapsed="explorerCollapsed"
           :constructs="state.constructs"
           :selected-name="state.selectedName"
-          :loading="state.isLoading"
+          :loading="loaders.constructs"
           @select="selectConstruct"
-        />
+        >
+          <template #default="{ constructs, selectedName, onSelect }">
+            <DslPlainConstructList
+              :constructs="constructs"
+              :selected-name="selectedName"
+              :on-select="onSelect"
+            />
+          </template>
+        </DslConstructExplorer>
       </aside>
 
       <main class="flex-1 flex flex-col overflow-hidden">
@@ -155,7 +169,11 @@ function toggleHelperSearch() {
           <DslDraftRestoreBanner :saved-at="draftSavedAt" @discard="clearDraft" />
         </div>
         <div class="flex-1 overflow-hidden">
-          <DslBodyEditor v-model:code="draftBody" :construct="selectedConstruct" />
+          <DslBodyEditor
+            :code="draftBody"
+            :construct="selectedConstruct"
+            @update:code="onCodeChange"
+          />
         </div>
         <DslProblemsPanel :errors="state.validationErrors" />
       </main>

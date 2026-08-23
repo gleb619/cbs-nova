@@ -1,5 +1,12 @@
 import { existsSync, readFileSync } from 'node:fs'
-import { addLayout, createResolver, defineNuxtModule, extendPages, resolvePath } from '@nuxt/kit'
+import {
+  addLayout,
+  addPlugin,
+  createResolver,
+  defineNuxtModule,
+  extendPages,
+  resolvePath,
+} from '@nuxt/kit'
 
 // ---------------------------------------------------------------------------
 // @cbs/admin-ui-plugin
@@ -105,6 +112,36 @@ export default defineNuxtModule<ModuleOptions>({
       dirs.push({ path: resolve('./app/components'), pathPrefix: true })
       dirs.push({ path: componentsPackageDir, pathPrefix: false })
     })
+
+    // -----------------------------------------------------------------------
+    // Disable Nuxt's built-in hook debugger and SSR log forwarding so we can route
+    // lifecycle timing logs ourselves at trace level.
+    // -----------------------------------------------------------------------
+    nuxt.options.features = nuxt.options.features || {}
+    nuxt.options.features.devLogs = false
+
+    nuxt.hook('vite:extendConfig', (config) => {
+      config.plugins = config.plugins || []
+      config.plugins.push({
+        name: 'cbs-disable-nuxt-hook-debugger',
+        enforce: 'pre',
+        load(id) {
+          if (id?.includes('nuxt/dist/app/plugins/debug-hooks')) {
+            return 'export default () => {}'
+          }
+        },
+      })
+    })
+
+    // -----------------------------------------------------------------------
+    // Client-side navigation logging
+    // -----------------------------------------------------------------------
+    addPlugin({ src: resolve('./app/plugins/logNavigation.client.ts'), mode: 'client' })
+
+    // -----------------------------------------------------------------------
+    // Route Nuxt lifecycle timing logs through useLogger('nuxt').trace
+    // -----------------------------------------------------------------------
+    addPlugin({ src: resolve('./app/plugins/logNuxtLifecycle.client.ts'), mode: 'client' })
 
     // -----------------------------------------------------------------------
     // Pinia

@@ -1,3 +1,4 @@
+import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { ref } from 'vue'
 import type { RunnerMode, RunnerOutput, RunnerStatus } from '~/types'
@@ -11,13 +12,17 @@ const baselineOutput = ref<RunnerOutput | null>(null)
 const showConfirmModal = ref(false)
 
 export function useRunner() {
+  const log = useClientLogger('runtime')
+
   function selectDefinition(name: string | null) {
     selectedDefinition.value = name
     resetOutput()
+    log.info('definition selected', { name })
   }
 
   function setMode(next: RunnerMode) {
     mode.value = next
+    log.info('runner mode changed', { mode: next })
   }
 
   function resetOutput() {
@@ -31,11 +36,13 @@ export function useRunner() {
     if (!name) {
       status.value = 'failed'
       output.value = { errors: [{ message: 'No definition selected', code: 'NO_DEFINITION' }] }
+      log.warn('submit called with no definition')
       return
     }
 
     status.value = mode.value === 'run' ? 'running' : 'loading'
     output.value = null
+    log.info('submit started', { name, mode: mode.value })
 
     const api = useDslApi()
     try {
@@ -51,9 +58,15 @@ export function useRunner() {
 
       output.value = normalizeResponse(response)
       status.value = 'success'
+      log.info('submit finished', { name, mode: mode.value })
     } catch (err: unknown) {
       output.value = errorToOutput(err)
       status.value = 'failed'
+      log.error('submit failed', {
+        name,
+        mode: mode.value,
+        error: (err as Error | undefined)?.message,
+      })
     }
   }
 

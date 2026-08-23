@@ -1,7 +1,8 @@
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
+export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error'
 
 const LOG_LEVEL_KEY = 'cbs-log-level'
 const LEVEL_RANK: Record<LogLevel, number> = {
+  trace: -1,
   debug: 0,
   info: 1,
   warn: 2,
@@ -28,7 +29,10 @@ export function useLogger(scope: string, options: UseLoggerOptions = {}) {
 
   function log(level: LogLevel, message: string, data?: unknown) {
     if (LEVEL_RANK[level] < minRank) return
-    const fn = console[level] as (msg: string, ...rest: unknown[]) => void
+    const fn =
+      level === 'trace'
+        ? console.debug
+        : (console[level] as (msg: string, ...rest: unknown[]) => void)
     const prefix = `[${scope}]`
     if (data === undefined) {
       fn(`${prefix} ${message}`)
@@ -38,6 +42,7 @@ export function useLogger(scope: string, options: UseLoggerOptions = {}) {
   }
 
   return {
+    trace: (message: string, data?: unknown) => log('trace', message, data),
     debug: (message: string, data?: unknown) => log('debug', message, data),
     info: (message: string, data?: unknown) => log('info', message, data),
     warn: (message: string, data?: unknown) => log('warn', message, data),

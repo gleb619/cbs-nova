@@ -83,12 +83,12 @@ function rowTypeClass(resultType: string): string {
               type="text"
               placeholder="Name"
               class="w-full px-2 py-1.5 text-sm rounded bg-gray-800 text-gray-100 placeholder-gray-500 border border-gray-700 focus:outline-none focus:border-gray-500"
-              @input="onSearch"
+             
             >
             <select
               v-model="type"
               class="w-full px-2 py-1.5 text-sm rounded bg-gray-800 text-gray-100 border border-gray-700 focus:outline-none focus:border-gray-500"
-              @change="onSearch"
+             
             >
               <option value="">All types</option>
               <option value="process">Process</option>
@@ -101,7 +101,7 @@ function rowTypeClass(resultType: string): string {
               type="text"
               placeholder="Description"
               class="w-full px-2 py-1.5 text-sm rounded bg-gray-800 text-gray-100 placeholder-gray-500 border border-gray-700 focus:outline-none focus:border-gray-500"
-              @input="onSearch"
+             
             >
             <div class="flex gap-2">
               <button

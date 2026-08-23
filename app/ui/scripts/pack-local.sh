@@ -27,6 +27,12 @@ echo "Packed admin-ui-plugin: $ADMIN_NAME"
 # Update host package.json to point to the freshly packed tarballs.
 sed -i "s|\"@cbs/components\": \"file:./local-registry/cbs-components-.*\"|\"@cbs/components\": \"file:./local-registry/$COMPONENTS_NAME\"|" "$ROOT/app/ui/package.json"
 sed -i "s|\"@cbs/admin-ui-plugin\": \"file:./local-registry/cbs-admin-ui-plugin-.*\"|\"@cbs/admin-ui-plugin\": \"file:./local-registry/$ADMIN_NAME\"|" "$ROOT/app/ui/package.json"
+# Keep pnpm.overrides in sync so transitive @cbs/components resolutions (from the
+# packed cbs-admin-ui-plugin tarball, which has workspace:* rewritten to a
+# concrete version) hit the local tarball instead of the npm registry.
+if grep -q '"@cbs/components": "file:./local-registry/cbs-components-' "$ROOT/app/ui/package.json"; then
+  sed -i "s|\"@cbs/components\": \"file:./local-registry/cbs-components-[^\"]*\"|\"@cbs/components\": \"file:./local-registry/$COMPONENTS_NAME\"|" "$ROOT/app/ui/package.json"
+fi
 
 echo "Local registry updated:"
 echo "  $COMPONENTS_NAME"

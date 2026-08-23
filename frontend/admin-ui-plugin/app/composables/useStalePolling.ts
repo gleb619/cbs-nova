@@ -1,3 +1,4 @@
+import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { useExecutionsApi } from '@cbs/admin-ui-plugin/composables/useExecutionsApi'
 import { onUnmounted, ref, watch } from 'vue'
 import type { ExecutionDetail, ExecutionStatus } from '~/types'
@@ -48,6 +49,7 @@ export function useStalePolling(options: {
   const intervalMs = resolveIntervalMs(options.intervalMs)
 
   const api = useExecutionsApi()
+  const log = useClientLogger('runtime')
   const polling = ref(false)
 
   let interval: ReturnType<typeof setInterval> | null = null
@@ -84,7 +86,7 @@ export function useStalePolling(options: {
       // Network blip — leave the interval alive, surface via console.
       // The host's status ref is unchanged so the consumer keeps
       // seeing Stale until the next successful fetch resolves it.
-      console.error('[useStalePolling] poll failed', err)
+      log.error('stale poll failed', { id: execId, error: (err as Error).message })
       return
     }
 
