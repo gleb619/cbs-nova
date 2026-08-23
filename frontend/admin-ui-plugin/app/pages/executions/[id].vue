@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useExecutions } from '@cbs/admin-ui-plugin/composables/useExecutions'
 import {
+  ErrorBanner,
   ExecutionsCompensationLane,
   ExecutionsExecutionSummary,
   ExecutionsExecutionTrace,
@@ -11,7 +12,7 @@ import { computed, onUnmounted, ref } from 'vue'
 const route = useRoute()
 const id = computed(() => String(route.params.id))
 
-const { selectedExecution, loadDetail, startPolling, stopPolling, isStalePolling } = useExecutions()
+const { selectedExecution, error, loadDetail, startPolling, stopPolling, isStalePolling } = useExecutions()
 
 const activeTab = ref<'diagram' | 'payload' | 'metadata' | 'logs' | 'errors'>('diagram')
 
@@ -40,7 +41,10 @@ onUnmounted(() => {
 
 <template>
   <div class="p-6 space-y-4">
-    <div v-if="!selectedExecution" class="text-sm text-gray-500">Loading…</div>
+    <div v-if="error && !selectedExecution" class="text-sm text-gray-500">
+      <ErrorBanner :message="error" @retry="() => loadDetail(id)" />
+    </div>
+    <div v-else-if="!selectedExecution" class="text-sm text-gray-500">Loading…</div>
     <template v-else>
       <!--
         T199: visible while the run is Stale and the backend is being

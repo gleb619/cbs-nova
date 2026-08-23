@@ -87,13 +87,31 @@ describe('useExecutions', () => {
       const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       installApiMock({ list: vi.fn().mockRejectedValueOnce(new Error('boom')) })
 
-      const { loadExecutions, executions, total, loading } = useExecutions()
+      const { loadExecutions, executions, total, loading, error } = useExecutions()
       await loadExecutions()
 
       expect(executions.value).toEqual([])
       expect(total.value).toBe(0)
       expect(loading.value).toBe(false)
+      expect(error.value).toBe('boom')
       expect(errSpy).toHaveBeenCalled()
+      errSpy.mockRestore()
+    })
+
+    it('clears a stale error when a subsequent load succeeds', async () => {
+      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const list = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('first attempt fails'))
+        .mockResolvedValueOnce([])
+      installApiMock({ list })
+
+      const { loadExecutions, error } = useExecutions()
+      await loadExecutions()
+      expect(error.value).toBe('first attempt fails')
+
+      await loadExecutions()
+      expect(error.value).toBeNull()
       errSpy.mockRestore()
     })
   })
@@ -124,11 +142,12 @@ describe('useExecutions', () => {
       const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       installApiMock({ get: vi.fn().mockRejectedValueOnce(new Error('fail')) })
 
-      const { loadDetail, loading, selectedExecution } = useExecutions()
+      const { loadDetail, loading, selectedExecution, error } = useExecutions()
       await loadDetail('nope')
 
       expect(selectedExecution.value).toBeNull()
       expect(loading.value).toBe(false)
+      expect(error.value).toBe('fail')
       expect(errSpy).toHaveBeenCalled()
       errSpy.mockRestore()
     })

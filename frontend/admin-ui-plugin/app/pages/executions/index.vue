@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useExecutions } from '@cbs/admin-ui-plugin/composables/useExecutions'
-import { ExecutionsExecutionFilters, ExecutionsExecutionList } from '@cbs/components'
+import { ErrorBanner, ExecutionsExecutionFilters, ExecutionsExecutionList } from '@cbs/components'
 import { navigateTo } from 'nuxt/app'
 import { computed } from 'vue'
 
@@ -9,6 +9,7 @@ import type { ExecutionFilters } from '~/types'
 const {
   executions,
   loading,
+  error,
   loadExecutions,
   applyFilters,
   stalePollingIds,
@@ -45,6 +46,7 @@ function nextPage() {
       <h1 class="text-2xl font-bold text-neutral-900">Executions</h1>
     </header>
     <ExecutionsExecutionFilters @filter="onFilter" />
+    <ErrorBanner v-if="error" :message="error" @retry="loadExecutions" />
     <ExecutionsExecutionList
       :executions="executions"
       :loading="loading"

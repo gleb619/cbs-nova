@@ -13,6 +13,7 @@ export function useExecutions() {
   const pageSize = 20
   const loading = ref<boolean>(false)
   const selectedExecution = ref<ExecutionDetail | null>(null)
+  const error = ref<string | null>(null)
 
   /**
    * Set of execution ids that currently have an active stale poll.
@@ -172,6 +173,7 @@ export function useExecutions() {
 
   async function loadExecutions() {
     loading.value = true
+    error.value = null
     try {
       const offset = (page.value - 1) * pageSize
       const result = await api.list({ ...filters.value, offset, limit: pageSize })
@@ -192,6 +194,7 @@ export function useExecutions() {
       log.error('failed to load executions', { error: (err as Error).message })
       executions.value = []
       total.value = 0
+      error.value = (err as Error).message || 'Failed to load'
     } finally {
       loading.value = false
     }
@@ -199,6 +202,7 @@ export function useExecutions() {
 
   async function loadDetail(id: string) {
     loading.value = true
+    error.value = null
     try {
       selectedExecution.value = await api.get(id)
       log.info('execution detail loaded', { id, status: selectedExecution.value?.status })
@@ -211,6 +215,7 @@ export function useExecutions() {
     } catch (err) {
       log.error('failed to load execution detail', { id, error: (err as Error).message })
       selectedExecution.value = null
+      error.value = (err as Error).message || 'Failed to load'
     } finally {
       loading.value = false
     }
@@ -263,6 +268,7 @@ export function useExecutions() {
     page,
     pageSize,
     loading,
+    error,
     selectedExecution,
     loadExecutions,
     loadDetail,
