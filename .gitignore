@@ -57,6 +57,7 @@ node_modules
 /.cursor/rules/codegraph.mdc
 .playwright-cli
 /.playwright-cli
+.worktrees/
 
 /examples/cbs-rules/
 /docs/results/*

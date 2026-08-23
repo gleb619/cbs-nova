@@ -20,8 +20,8 @@ public interface SingletonSupport {
     return getScope().get(hash, factory);
   }
 
-  default <T> Replaceable<T> replaceable(Factory<T> factory) {
-    return singleton(() -> Replaceable.of(factory));
+  default <T> Replaceable<T> replaceable(String key, Factory<T> factory) {
+    return singleton(key, () -> Replaceable.of(factory));
   }
 
   default <T> Replaceable<T> replaceable() {

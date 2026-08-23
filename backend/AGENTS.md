@@ -175,13 +175,13 @@ The frontend index (`frontend/.codegraph/`) is a separate database and must not 
   singleton Spring bean by `SpringHelperBeanDefinitionRegistrar`.
 - **CodeGraph**: Prioritize `codegraph_*` tools for fast structural/symbol exploration over slow grep.
 
-- **Expression evaluator swap**: The platform default is `cbs.nova.dsl.utils.SimpleExpressionEvaluator`
-  (deprecated, sandboxed, BigDecimal arithmetic). The starter's `DslAutoConfiguration` swaps in
-  `cbs.nova.starter.expression.MvelExpressionEvaluator` via `@ConditionalOnMissingBean` and
-  `DslConfig.dslConfig().expressionEvaluator().replace(...)`. When debugging condition behavior
-  (equality, comparisons, boolean logic, `null` checks), verify against the MVEL evaluator in
-  starter-run apps, not the Simple evaluator. A user-defined `ExpressionEvaluator` bean overrides
-  both. See `docs/architecture-backend.md` for the supported subset and documented divergences.
+- **Expression evaluator swap**: The platform default is `cbs.nova.dsl.utils.MvelExpressionEvaluator`
+  (MVEL-backed). `DslConfig.expressionEvaluator()` returns a `Replaceable<ExpressionEvaluator>`, so
+  callers can swap it at startup or in tests. The starter's `DslAutoConfiguration` publishes an
+  `ExpressionEvaluator` bean via `@ConditionalOnMissingBean` and replaces the default with
+  `DslConfig.dslConfig().expressionEvaluator().replace(...)`. A user-defined `ExpressionEvaluator`
+  bean therefore takes precedence. See `docs/architecture-backend.md` for the supported expression
+  subset.
 
 ---
 

@@ -100,23 +100,20 @@ verification is in the top-level [AGENTS.md](../AGENTS.md).
 ## Expression evaluation
 
 DSL runtime code evaluates placeholders and small expressions through the
-`cbs.nova.dsl.utils.ExpressionEvaluator` contract. Two implementations exist:
+`cbs.nova.dsl.utils.ExpressionEvaluator` contract. The default implementation is
+`cbs.nova.dsl.utils.MvelExpressionEvaluator`, backed by MVEL, in both the
+platform-standalone runtime and the Spring Boot starter.
 
-| Runtime | Default evaluator | Notes |
-|---------|-------------------|-------|
-| Platform / standalone (`dsl-platform`) | `SimpleExpressionEvaluator` | Deprecated, sandboxed, BigDecimal arithmetic. |
-| Starter / Spring Boot (`dsl-starter`) | `MvelExpressionEvaluator` | Full MVEL dialect; swaps in at startup. |
+`DslConfig.expressionEvaluator()` returns a `Replaceable<ExpressionEvaluator>` so
+callers can swap the evaluator at startup or in tests. `DslAutoConfiguration`
+publishes an `ExpressionEvaluator` bean backed by `MvelExpressionEvaluator` and
+replaces the platform default during application startup. Because the bean is
+declared with `@ConditionalOnMissingBean`, a user-defined
+`ExpressionEvaluator` bean takes precedence and becomes the runtime evaluator.
 
-`DslAutoConfiguration` publishes an `ExpressionEvaluator` bean backed by
-`MvelExpressionEvaluator` and replaces the platform default in `DslConfig` during
-application startup. Because the bean is declared with `@ConditionalOnMissingBean`,
-a user-defined `ExpressionEvaluator` bean takes precedence and becomes the runtime
- evaluator for the DSL.
+### Supported expressions
 
-### Supported expression subset
-
-Both evaluators share a common subset that can be relied on in portable DSL
-definitions:
+The default evaluator supports:
 
 - `{variable}` and `${variable}` variable interpolation.
 - Mixed text with multiple placeholders (`"sum: ${a + b}, {c}"`).
@@ -124,27 +121,13 @@ definitions:
 - Arithmetic: `+`, `-`, `*`, `/`, parentheses, unary minus.
 - String concatenation when at least one operand is a string (`${'x' + 1}`).
 - Boolean and numeric variables referenced as top-level expressions (`${flag}`).
+- MVEL extras: equality/comparison (`==`, `!=`, `<`, `>`), boolean logic
+  (`&&`, `||`), and `null` checks.
 
-Numeric results may have different Java types (`BigDecimal` from Simple,
-`Integer`/`Double` from MVEL), but the numeric value is equivalent.
+Numeric results are typically `Integer` or `Double`. If you need a custom
+evaluator, provide an `ExpressionEvaluator` bean or call
+`DslConfig.dslConfig().expressionEvaluator().replace(...)` directly.
 
-### Documented divergences
-
-The following are intentionally out of the cross-evaluator contract because the
-Simple evaluator is sandboxed and the MVEL evaluator exposes a full expression
-language:
-
-| Feature | Simple | MVEL |
-|---------|--------|------|
-| Equality/comparison (`==`, `!=`, `<`, `>`) | Not supported | Supported |
-| Boolean logic (`&&`, `||`) | Not supported | Supported |
-| `null` literal / null checks | Treated as a missing identifier | Full `null` support |
-| JsonValue path syntax (`{var.json().path}`) | Supported | Not supported; brace form renders empty, dollar form fails |
-| Decimal math precision | Always `BigDecimal` | Returns `Double`/`Integer` by default |
-
-When a DSL uses features outside the common subset, authors must ensure the runtime
-has the appropriate evaluator (e.g., keep the starter's MVEL default, or supply a
-custom `ExpressionEvaluator` bean).
 
 ## See also
 

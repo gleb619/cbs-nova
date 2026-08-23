@@ -1,7 +1,7 @@
-package cbs.nova.starter.expression;
+package cbs.nova.dsl.utils;
 
 import cbs.nova.dsl.JsonValue;
-import cbs.nova.dsl.utils.ExpressionEvaluator;
+
 import org.jspecify.annotations.NonNull;
 import org.mvel2.MVEL;
 import org.mvel2.PropertyAccessException;
@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
  * {@link ExpressionEvaluator} backed by MVEL.
  *
  * <p>
- * Supports the same interpolation patterns as {@code SimpleExpressionEvaluator}: plain variable
+ * Supports the same interpolation patterns as the previous platform default: plain variable
  * placeholders ({@code {name}}) and MVEL expressions ({@code ${a + b}}). A missing variable
  * referenced as a simple top-level identifier ({@code ${missing}}) renders as an empty string,
  * matching the platform default behavior.
@@ -83,7 +83,7 @@ public final class MvelExpressionEvaluator implements ExpressionEvaluator {
       Object result = MVEL.eval(expression, variables);
       return result == null ? "" : result;
     } catch (PropertyAccessException e) {
-      // A simple unresolved variable should render as empty, matching SimpleExpressionEvaluator.
+      // A simple unresolved variable should render as empty, matching the previous platform default.
       if (isSimpleIdentifier(expression)) {
         return "";
       }

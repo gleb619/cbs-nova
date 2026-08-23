@@ -28,7 +28,7 @@ import cbs.nova.dsl.transaction.TransactionInvoker;
 import cbs.nova.dsl.transaction.TransactionManager;
 import cbs.nova.dsl.transaction.TransactionRunner;
 import cbs.nova.dsl.utils.ExpressionEvaluator;
-import cbs.nova.dsl.utils.SimpleExpressionEvaluator;
+import cbs.nova.dsl.utils.MvelExpressionEvaluator;
 import io.avaje.jsonb.Jsonb;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -78,7 +78,7 @@ public class DslConfig implements SingletonSupport {
   }
 
   public @NonNull Replaceable<ExpressionEvaluator> expressionEvaluator() {
-    return singleton("expressionEvaluator", () -> Replaceable.of(SimpleExpressionEvaluator::new));
+    return replaceable("expressionEvaluator", MvelExpressionEvaluator::new);
   }
 
   public @NonNull Replaceable<TemporalProcessLauncher> temporalProcessLauncher() {
