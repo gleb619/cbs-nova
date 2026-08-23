@@ -55,10 +55,20 @@ export function useDslApi() {
     })
   }
 
-  async function saveDraft(name: string, payload: unknown) {
-    // stub — endpoint TBD
-    log.info('draft saved', { name })
-    return Promise.resolve({ success: true, name, payload })
+  async function saveDraft(
+    name: string,
+    payload: { name: string; type?: string; status?: string; version?: string; taskQueue?: string },
+  ) {
+    log.info('saveDraft request', { name })
+    return $fetch(`/api/v1/dsl/drafts/${name}/save`, { method: 'POST', body: payload })
+  }
+
+  async function publishDraft(
+    name: string,
+    payload: { name: string; type?: string; status?: string; version?: string; taskQueue?: string },
+  ) {
+    log.info('publishDraft request', { name })
+    return $fetch(`/api/v1/dsl/drafts/${name}/publish`, { method: 'POST', body: payload })
   }
 
   async function validateConstruct(name: string) {
@@ -79,6 +89,7 @@ export function useDslApi() {
     run,
     explain,
     saveDraft,
+    publishDraft,
     validateConstruct,
     reload,
   }

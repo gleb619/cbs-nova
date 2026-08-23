@@ -88,12 +88,27 @@ describe('useDslApi', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/reload', { method: 'POST' })
   })
 
-  it('saveDraft resolves with stub payload and does not call $fetch', async () => {
+  it('saveDraft POSTs the draft payload to /api/v1/dsl/drafts/{name}/save', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true })
     const api = useDslApi()
-    const result = await api.saveDraft('draft-1', { hello: 'world' })
+    const result = await api.saveDraft('draft-1', { name: 'draft-1', type: 'process' })
 
-    expect(fetchMock).not.toHaveBeenCalled()
-    expect(result).toEqual({ success: true, name: 'draft-1', payload: { hello: 'world' } })
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/drafts/draft-1/save', {
+      method: 'POST',
+      body: { name: 'draft-1', type: 'process' },
+    })
+    expect(result).toEqual({ ok: true })
+  })
+
+  it('publishDraft POSTs the construct payload to /api/v1/dsl/drafts/{name}/publish', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true })
+    const api = useDslApi()
+    await api.publishDraft('c1', { name: 'c1', type: 'helper', status: 'Published' })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/drafts/c1/publish', {
+      method: 'POST',
+      body: { name: 'c1', type: 'helper', status: 'Published' },
+    })
   })
 
   it('validateConstruct delegates to preview with empty body', async () => {

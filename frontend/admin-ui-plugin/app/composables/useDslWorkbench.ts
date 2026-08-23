@@ -104,8 +104,14 @@ export function useDslWorkbench() {
     }
     state.value.isSaving = true
     try {
-      // stub — backend endpoint TBD
-      await Promise.resolve({ success: true })
+      const selected = selectedConstruct.value
+      await api.saveDraft(state.value.selectedName, {
+        name: state.value.selectedName,
+        type: selected?.type,
+        status: 'Draft',
+        version: selected?.version,
+        taskQueue: selected?.taskQueue,
+      })
       state.value.isDirty = false
       log.info('draft saved', { name: state.value.selectedName })
     } catch (err) {
@@ -126,11 +132,17 @@ export function useDslWorkbench() {
     }
     state.value.isSaving = true
     try {
-      // stub — backend endpoint TBD
-      await Promise.resolve({ success: true })
+      const selected = selectedConstruct.value
+      const result = await api.publishDraft(state.value.selectedName, {
+        name: state.value.selectedName,
+        type: selected?.type,
+        status: 'Published',
+        version: selected?.version,
+        taskQueue: selected?.taskQueue,
+      })
       const c = state.value.constructs.find((x) => x.name === state.value.selectedName)
       if (c) c.status = 'Published'
-      log.info('construct published', { name: state.value.selectedName })
+      log.info('construct published', { name: state.value.selectedName, result })
     } catch (err) {
       log.error('failed to publish construct', {
         name: state.value.selectedName,

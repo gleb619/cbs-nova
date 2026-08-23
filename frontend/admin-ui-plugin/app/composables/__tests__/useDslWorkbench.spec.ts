@@ -8,6 +8,7 @@ type ApiMock = {
   run: ReturnType<typeof vi.fn>
   explain: ReturnType<typeof vi.fn>
   saveDraft: ReturnType<typeof vi.fn>
+  publishDraft: ReturnType<typeof vi.fn>
   validateConstruct: ReturnType<typeof vi.fn>
 }
 
@@ -19,6 +20,8 @@ describe('useDslWorkbench', () => {
     api.getDefinitions.mockReset()
     api.preview.mockReset()
     api.reload.mockReset()
+    api.saveDraft.mockReset()
+    api.publishDraft.mockReset()
   })
 
   afterEach(() => {
@@ -114,12 +117,13 @@ describe('useDslWorkbench', () => {
   })
 
   describe('publishConstruct', () => {
-    it('marks the selected construct status as Published', async () => {
+    it('POSTs to api.publishDraft and marks the selected construct status as Published', async () => {
       const api = getApi()
       api.getDefinitions.mockResolvedValueOnce([
         { name: 'c1', type: 'Process' as const, status: 'Valid' as const },
         { name: 'c2', type: 'Helper' as const, status: 'Draft' as const },
       ])
+      api.publishDraft.mockResolvedValueOnce({ ok: true })
 
       const wb = useDslWorkbench()
       await wb.loadConstructs()
@@ -128,6 +132,10 @@ describe('useDslWorkbench', () => {
 
       await wb.publishConstruct()
 
+      expect(api.publishDraft).toHaveBeenCalledWith('c2', expect.objectContaining({
+        name: 'c2',
+        status: 'Published',
+      }))
       const c1 = wb.state.value.constructs.find((c) => c.name === 'c1')
       const c2 = wb.state.value.constructs.find((c) => c.name === 'c2')
       expect(c1?.status).toBe('Valid')
@@ -138,7 +146,30 @@ describe('useDslWorkbench', () => {
     it('no-op when no construct is selected', async () => {
       const wb = useDslWorkbench()
       await wb.publishConstruct()
-      expect(getApi().getDefinitions).not.toHaveBeenCalled()
+      expect(getApi().publishDraft).not.toHaveBeenCalled()
+      expect(wb.state.value.isSaving).toBe(false)
+    })
+  })
+
+  describe('saveConstruct', () => {
+    it('POSTs the selected construct to api.saveDraft and clears isDirty', async () => {
+      const api = getApi()
+      api.getDefinitions.mockResolvedValueOnce([
+        { name: 'c1', type: 'Process' as const, status: 'Draft' as const, version: '1.0' },
+      ])
+      api.saveDraft.mockResolvedValueOnce({ ok: true })
+
+      const wb = useDslWorkbench()
+      await wb.loadConstructs()
+      wb.markDirty()
+
+      await wb.saveConstruct()
+
+      expect(api.saveDraft).toHaveBeenCalledWith('c1', expect.objectContaining({
+        name: 'c1',
+        status: 'Draft',
+      }))
+      expect(wb.state.value.isDirty).toBe(false)
       expect(wb.state.value.isSaving).toBe(false)
     })
   })
