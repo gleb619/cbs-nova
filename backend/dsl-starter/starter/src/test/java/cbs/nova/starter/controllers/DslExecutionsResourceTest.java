@@ -84,6 +84,70 @@ class DslExecutionsResourceTest {
   }
 
   @Test
+  void statusFilterIsCaseInsensitiveMatchingDisplayCasing() throws Exception {
+    repository.save(run("run-1", "LoanDisbursement", "COMPLETED", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", "RUN"));
+    repository.save(run("run-2", "LoanDisbursement", "STALE", "2026-08-13T10:01:00Z",
+            "2026-08-13T10:01:05Z", "RUN"));
+
+    mockMvc.perform(get("/api/executions").param("status", "Completed"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(1))
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.items[0].id").value("run-1"))
+            .andExpect(jsonPath("$.items[0].status").value("Completed"))
+            .andExpect(jsonPath("$.items[?(@.id=='run-2')]").doesNotExist());
+  }
+
+  @Test
+  void modeFilterMatchesStoredRunModeCaseInsensitively() throws Exception {
+    repository.save(run("run-1", "LoanDisbursement", "COMPLETED", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", "RUN"));
+    repository.save(run("run-2", "LoanDisbursement", "COMPLETED", "2026-08-13T10:01:00Z",
+            "2026-08-13T10:01:05Z", "PREVIEW"));
+
+    mockMvc.perform(get("/api/executions").param("mode", "RUN"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(1))
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.items[0].id").value("run-1"))
+            .andExpect(jsonPath("$.items[0].mode").value("RUN"))
+            .andExpect(jsonPath("$.items[?(@.id=='run-2')]").doesNotExist());
+  }
+
+  @Test
+  void modeFilterDefaultsNullExecutionModeToRun() throws Exception {
+    repository.save(run("run-1", "LoanDisbursement", "COMPLETED", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", null));
+    repository.save(run("run-2", "LoanDisbursement", "COMPLETED", "2026-08-13T10:01:00Z",
+            "2026-08-13T10:01:05Z", "PREVIEW"));
+
+    mockMvc.perform(get("/api/executions").param("mode", "run"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(1))
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.items[0].id").value("run-1"))
+            .andExpect(jsonPath("$.items[0].mode").value("RUN"))
+            .andExpect(jsonPath("$.items[?(@.id=='run-2')]").doesNotExist());
+  }
+
+  @Test
+  void modeFilterExcludesNonMatchingRuns() throws Exception {
+    repository.save(run("run-1", "LoanDisbursement", "COMPLETED", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", "RUN"));
+    repository.save(run("run-2", "LoanDisbursement", "COMPLETED", "2026-08-13T10:01:00Z",
+            "2026-08-13T10:01:05Z", "PREVIEW"));
+
+    mockMvc.perform(get("/api/executions").param("mode", "PREVIEW"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(1))
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.items[0].id").value("run-2"))
+            .andExpect(jsonPath("$.items[0].mode").value("PREVIEW"))
+            .andExpect(jsonPath("$.items[?(@.id=='run-1')]").doesNotExist());
+  }
+
+  @Test
   void combinesProcessNameAndStatusFilters() throws Exception {
     repository.save(run("run-1", "LoanDisbursement", "COMPLETED", "2026-08-13T10:00:00Z",
             "2026-08-13T10:00:05Z", "RUN"));

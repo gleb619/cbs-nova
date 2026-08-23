@@ -215,6 +215,39 @@ describe('executions/index.get', () => {
     expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/executions')
     expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
   })
+
+  it('forwards the status query param to the backend', async () => {
+    queryValue = { status: 'Completed' }
+
+    await executionsIndexHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/executions', {
+      query: { status: 'Completed' },
+    })
+  })
+
+  it('renames the UI entityName filter to the backend processName param', async () => {
+    queryValue = { entityName: 'LoanDisbursement' }
+
+    await executionsIndexHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/executions', {
+      query: { processName: 'LoanDisbursement' },
+    })
+  })
+
+  it('forwards the mode query param to the backend', async () => {
+    queryValue = { mode: 'RUN' }
+
+    await executionsIndexHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/executions', {
+      query: { mode: 'RUN' },
+    })
+  })
 })
 
 describe('executions/[id].get', () => {

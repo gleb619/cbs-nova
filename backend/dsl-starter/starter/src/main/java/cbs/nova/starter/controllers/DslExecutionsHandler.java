@@ -20,6 +20,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Functional handler for the DSL execution runs endpoint. Registered as a {@code RouterFunction}
@@ -41,12 +42,14 @@ public class DslExecutionsHandler {
   public ServerResponse list(ServerRequest request) throws IOException {
     String processName = request.param("processName").orElse(null);
     String status = request.param("status").orElse(null);
+    String mode = request.param("mode").orElse(null);
     int limit = request.param("limit").map(Integer::parseInt).orElse(50);
     int offset = request.param("offset").map(Integer::parseInt).orElse(0);
     int pageSize = clampLimit(limit);
     int skip = clampOffset(offset);
     List<DslRun> filtered = findRuns(processName).stream()
-            .filter(run -> status == null || status.equals(run.status()))
+            .filter(run -> status == null || status.equalsIgnoreCase(run.status()))
+            .filter(run -> mode == null || mode.equalsIgnoreCase(effectiveMode(run)))
             .toList();
     int total = filtered.size();
     List<ExecutionDto> items = filtered.stream()
@@ -84,5 +87,10 @@ public class DslExecutionsHandler {
 
   private static int clampOffset(int offset) {
     return Math.max(0, offset);
+  }
+
+  private static String effectiveMode(DslRun run) {
+    String stored = run.executionMode();
+    return stored == null || stored.isBlank() ? "RUN" : stored.toUpperCase(Locale.ROOT);
   }
 }
