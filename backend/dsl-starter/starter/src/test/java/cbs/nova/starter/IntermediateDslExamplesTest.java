@@ -21,6 +21,8 @@ import cbs.nova.dslexamples.longworksimulation.v1.LongWorkModels.LongWorkIn;
 import cbs.nova.dslexamples.longworksimulation.v1.LongWorkModels.LongWorkOut;
 import cbs.nova.starter.config.CbsNovaFakesProperties;
 import cbs.nova.starter.config.CbsNovaPreviewProperties;
+import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
+import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
@@ -154,7 +156,8 @@ class IntermediateDslExamplesTest {
         return new FormatMessageHelper();
       }
       if (helperClass == HttpCallHelper.class) {
-        return new HttpCallHelper(HttpClient.newHttpClient());
+        return new HttpCallHelper(HttpClient.newHttpClient(),
+                new CbsNovaLoggingProperties(Level.INFO, Level.INFO, true));
       }
       if (helperClass == JsonExtractHelper.class) {
         return new JsonExtractHelper(new ObjectMapper());

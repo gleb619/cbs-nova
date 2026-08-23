@@ -15,6 +15,8 @@ import cbs.nova.dslexamples.exceptionprobe.v1.ExceptionProbeModels.ExceptionProb
 import cbs.nova.dslexamples.nestedcompensation.v1.NestedCompensationModels.NestedCompensationIn;
 import cbs.nova.dslexamples.ordersaga.v1.OrderSagaModels.OrderSagaIn;
 import cbs.nova.dslexamples.ordersaga.v1.OrderSagaModels.OrderSagaOut;
+import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
+import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
 import cbs.nova.starter.helpers.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -105,7 +107,8 @@ class AdvancedDslExamplesTest {
         return new FormatMessageHelper();
       }
       if (helperClass == HttpCallHelper.class) {
-        return new HttpCallHelper(HttpClient.newHttpClient());
+        return new HttpCallHelper(HttpClient.newHttpClient(),
+                new CbsNovaLoggingProperties(Level.INFO, Level.INFO, true));
       }
       if (helperClass == JsonExtractHelper.class) {
         return new JsonExtractHelper(new ObjectMapper());

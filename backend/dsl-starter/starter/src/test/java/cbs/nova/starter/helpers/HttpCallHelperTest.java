@@ -10,6 +10,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
+import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
 import cbs.nova.starter.helpers.HttpCallHelper.HttpCallFailure;
 import cbs.nova.starter.helpers.HttpCallHelper.HttpCallTransportException;
 import cbs.nova.starter.helpers.model.HttpCallIn;
@@ -35,7 +37,8 @@ class HttpCallHelperTest {
   void setUp() {
     wireMock = new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
     wireMock.start();
-    helper = new HttpCallHelper(HttpClient.newHttpClient());
+    helper = new HttpCallHelper(HttpClient.newHttpClient(),
+            new CbsNovaLoggingProperties(Level.INFO, Level.INFO, true));
   }
 
   @AfterEach
