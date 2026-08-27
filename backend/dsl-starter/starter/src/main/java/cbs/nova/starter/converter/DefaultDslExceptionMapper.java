@@ -1,4 +1,4 @@
-package cbs.nova.starter.error;
+package cbs.nova.starter.converter;
 
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.model.ErrorResponse;

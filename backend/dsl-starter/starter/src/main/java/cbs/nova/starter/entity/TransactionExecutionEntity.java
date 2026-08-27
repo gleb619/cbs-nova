@@ -1,4 +1,4 @@
-package cbs.nova.starter.persistence;
+package cbs.nova.starter.entity;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;

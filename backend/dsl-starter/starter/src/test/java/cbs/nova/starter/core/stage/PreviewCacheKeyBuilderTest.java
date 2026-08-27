@@ -7,7 +7,7 @@ import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
-import cbs.nova.starter.cache.PreviewCacheKey;
+import cbs.nova.starter.model.PreviewModels.PreviewCacheKey;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;

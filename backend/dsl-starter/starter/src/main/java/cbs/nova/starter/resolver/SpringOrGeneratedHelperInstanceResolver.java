@@ -28,6 +28,7 @@ public final class SpringOrGeneratedHelperInstanceResolver implements HelperInst
 
   private @NonNull Executable<?, ?> instantiateFromGeneratedFactory(@NonNull Class<?> helperClass,
           IllegalStateException originalSpringException) {
+    //TODO: add Caffeine cache, with some properties config for ttl, cache instance, but not for long
     for (var factory : generatedFactories) {
       try {
         return factory.resolve(helperClass);

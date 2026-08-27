@@ -1,8 +1,8 @@
 package cbs.nova.starter.controller;
 
 import cbs.nova.starter.config.properties.DslProperties;
-import cbs.nova.starter.model.DraftRequest;
-import cbs.nova.starter.model.DraftResponse;
+import cbs.nova.starter.model.VcsModels.DraftRequest;
+import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.model.ErrorResponse;
 import tools.jackson.core.JacksonException;
 import jakarta.servlet.ServletException;

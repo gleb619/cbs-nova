@@ -1,4 +1,4 @@
-package cbs.nova.starter.persistence;
+package cbs.nova.starter.config.properties;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

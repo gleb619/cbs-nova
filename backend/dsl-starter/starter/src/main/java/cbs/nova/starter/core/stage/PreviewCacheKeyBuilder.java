@@ -4,7 +4,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.starter.cache.PreviewCacheKey;
+import cbs.nova.starter.model.PreviewModels.PreviewCacheKey;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.json.JsonMapper;
@@ -23,6 +23,7 @@ final class PreviewCacheKeyBuilder {
     Optional<DslDescriptor> descriptor = gm.describeProcess(name)
             .or(() -> gm.describeTransaction(name))
             .or(() -> gm.describeHelper(name)
+                    //TODO: find usage of `new DslDescriptor` and replace to a lombok's builder
                     .map(helper -> new DslDescriptor(
                             name,
                             DslObject.DslType.FUNCTION,
@@ -33,10 +34,11 @@ final class PreviewCacheKeyBuilder {
                             helper.hasSideEffects(),
                             helper.previewBehavior(),
                             helper.parameters(),
-                            null,
-                            null,
-                            null,
-                            null)));
+                            null,//todo: add default taskqueue
+                            null,//todo: add default version
+                            null,//todo: add default startToCloseTimeout
+                            null//todo: add default heartbeatTimeout
+                    )));
     String dslHash = descriptor.map(this::dslDescriptorHash).orElse("");
     String inputHash = inputHash(ctx.body());
     return new PreviewCacheKey(name, dslHash, inputHash);

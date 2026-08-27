@@ -7,6 +7,7 @@ import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.exception.DslCompensationException;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
 import cbs.nova.dsl.exception.DslValidationException;
+import cbs.nova.starter.core.PreviewErrorHandler;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 

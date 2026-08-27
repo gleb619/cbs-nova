@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class DslProjectResolverExtension extends AbstractProjectResolverExtension {
 
+  //TODO: redo to a Caffeine with some properties config for ttl
   private static final Map<ExternalSystemTaskId, Set<Path>> DISCOVERED = new ConcurrentHashMap<>();
 
   @Override

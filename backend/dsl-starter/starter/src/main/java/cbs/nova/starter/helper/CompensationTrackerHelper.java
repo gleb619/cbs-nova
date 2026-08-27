@@ -21,6 +21,7 @@ public class CompensationTrackerHelper implements Executable<Map<String, Object>
   private static final Duration DEFAULT_TTL = Duration.ofMinutes(5);
   private static final long CLEANUP_INTERVAL_SECONDS = 30;
 
+  //TODO: redo to a Caffeine with some properties config for ttl
   private final ConcurrentHashMap<String, Marker> markers = new ConcurrentHashMap<>();
   private final ScheduledExecutorService cleanupScheduler = Executors
           .newSingleThreadScheduledExecutor(r -> {

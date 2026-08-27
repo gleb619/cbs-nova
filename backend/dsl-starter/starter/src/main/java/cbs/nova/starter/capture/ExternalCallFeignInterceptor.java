@@ -73,6 +73,7 @@ public class ExternalCallFeignInterceptor implements RequestInterceptor {
     return normalizedBase + "/" + normalizedPath;
   }
 
+  //TODO: search and move to `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/core/StarterConstant.java` a string constants
   private @NonNull Map<String, Object> buildPayload(
           @NonNull String method, @NonNull String url, @Nullable byte[] body) {
     var payload = new HashMap<String, Object>();

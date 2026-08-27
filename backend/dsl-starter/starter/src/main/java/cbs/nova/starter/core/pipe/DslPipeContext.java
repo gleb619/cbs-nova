@@ -9,6 +9,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+//TODO: redo to a `record` with lombok's builder
 public final class DslPipeContext {
 
   @Getter
@@ -25,6 +26,7 @@ public final class DslPipeContext {
 
   private Map<String, Object> attributes = new ConcurrentHashMap<>();
 
+  //TODO: remove constructor
   public DslPipeContext(
           @NonNull String name,
           @NonNull Context<?> dslContext,
@@ -36,6 +38,7 @@ public final class DslPipeContext {
     this.runId = runId;
   }
 
+  //TODO: remove constructor
   private DslPipeContext(
           @NonNull String name,
           @NonNull Context<?> dslContext,

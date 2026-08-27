@@ -12,6 +12,7 @@ public final class ExternalCallConverter {
   private ExternalCallConverter() {
   }
 
+  //TODO: search and move to `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/core/StarterConstant.java` a string constants
   public static List<Map<String, Object>> toCallJson(List<ExternalCall> calls) {
     List<Map<String, Object>> callsJson = new ArrayList<>();
     for (ExternalCall call : calls) {

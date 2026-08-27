@@ -6,6 +6,8 @@ import cbs.nova.dsl.CallKind;
 import cbs.nova.dsl.CallNode;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.PreviewReport;
+import cbs.nova.starter.model.PreviewModels;
+import cbs.nova.starter.service.PreviewResultCache;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -33,7 +35,7 @@ class PreviewResultCacheTest {
   @Test
   void missOnFirstCallAndHitOnSecond() {
     var cache = new PreviewResultCache(60_000);
-    var key = new PreviewCacheKey("Ping", "dsl-hash", "input-hash");
+    var key = new PreviewModels.PreviewCacheKey("Ping", "dsl-hash", "input-hash");
 
     assertThat(cache.get(key)).isNull();
     assertThat(cache.misses()).isEqualTo(1);
@@ -49,7 +51,7 @@ class PreviewResultCacheTest {
   @Test
   void missAfterTtlExpires() throws InterruptedException {
     var cache = new PreviewResultCache(10);
-    var key = new PreviewCacheKey("Ping", "dsl-hash", "input-hash");
+    var key = new PreviewModels.PreviewCacheKey("Ping", "dsl-hash", "input-hash");
 
     cache.put(key, report);
     assertThat(cache.get(key)).isEqualTo(report);
@@ -63,9 +65,9 @@ class PreviewResultCacheTest {
   @Test
   void invalidateByDslHashRemovesOnlyMatchingEntries() {
     var cache = new PreviewResultCache(60_000);
-    var keyA = new PreviewCacheKey("A", "hash-1", "input-1");
-    var keyB = new PreviewCacheKey("B", "hash-2", "input-2");
-    var keyC = new PreviewCacheKey("C", "hash-1", "input-3");
+    var keyA = new PreviewModels.PreviewCacheKey("A", "hash-1", "input-1");
+    var keyB = new PreviewModels.PreviewCacheKey("B", "hash-2", "input-2");
+    var keyC = new PreviewModels.PreviewCacheKey("C", "hash-1", "input-3");
 
     cache.put(keyA, report);
     cache.put(keyB, report);
@@ -81,8 +83,8 @@ class PreviewResultCacheTest {
   @Test
   void clearRemovesAllEntries() {
     var cache = new PreviewResultCache(60_000);
-    var keyA = new PreviewCacheKey("A", "hash-1", "input-1");
-    var keyB = new PreviewCacheKey("B", "hash-2", "input-2");
+    var keyA = new PreviewModels.PreviewCacheKey("A", "hash-1", "input-1");
+    var keyB = new PreviewModels.PreviewCacheKey("B", "hash-2", "input-2");
 
     cache.put(keyA, report);
     cache.put(keyB, report);
@@ -95,7 +97,7 @@ class PreviewResultCacheTest {
   @Test
   void concurrentGetPutOperationsAreSafe() throws InterruptedException {
     var cache = new PreviewResultCache(60_000);
-    var key = new PreviewCacheKey("Ping", "dsl-hash", "input-hash");
+    var key = new PreviewModels.PreviewCacheKey("Ping", "dsl-hash", "input-hash");
     var threads = 8;
     var iterations = 100;
     var executor = Executors.newFixedThreadPool(threads);
@@ -136,7 +138,7 @@ class PreviewResultCacheTest {
   @Test
   void statsAreAccurate() {
     var cache = new PreviewResultCache(60_000);
-    var key = new PreviewCacheKey("Ping", "dsl-hash", "input-hash");
+    var key = new PreviewModels.PreviewCacheKey("Ping", "dsl-hash", "input-hash");
 
     cache.get(key);
     cache.get(key);

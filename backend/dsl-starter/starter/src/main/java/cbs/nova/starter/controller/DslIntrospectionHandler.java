@@ -1,8 +1,8 @@
 package cbs.nova.starter.controller;
 
-import cbs.nova.starter.service.introspection.DslIntrospectionService;
-import cbs.nova.starter.service.introspection.model.DefinitionMetaDto;
-import cbs.nova.starter.service.introspection.model.HelperSearchResult;
+import cbs.nova.starter.service.DslIntrospectionService;
+import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
+import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;

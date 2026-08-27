@@ -7,7 +7,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.PreviewMetricsSnapshot;
 import cbs.nova.dsl.Result;
-import cbs.nova.starter.PreviewErrorHandler;
+import cbs.nova.starter.core.PreviewErrorHandler;
 import cbs.nova.starter.converter.ExternalCallConverter;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;

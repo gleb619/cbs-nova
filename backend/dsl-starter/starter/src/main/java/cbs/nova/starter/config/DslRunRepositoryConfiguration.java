@@ -4,15 +4,15 @@ import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.starter.persistence.AesFieldEncryptor;
 import cbs.nova.starter.persistence.DslRunJdbcRepository;
-import cbs.nova.starter.persistence.DslRunMapper;
+import cbs.nova.starter.converter.DslRunMapper;
 import cbs.nova.starter.persistence.DslRunNamingStrategy;
-import cbs.nova.starter.persistence.DslRunPersistenceProperties;
+import cbs.nova.starter.config.properties.DslRunPersistenceProperties;
 import cbs.nova.starter.persistence.FieldEncryptor;
 import cbs.nova.starter.persistence.JdbcDslRunRepository;
 import cbs.nova.starter.persistence.JdbcTransactionExecutionRepository;
 import cbs.nova.starter.persistence.NoOpFieldEncryptor;
 import cbs.nova.starter.persistence.TransactionExecutionJdbcRepository;
-import cbs.nova.starter.persistence.TransactionExecutionMapper;
+import cbs.nova.starter.converter.TransactionExecutionMapper;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -20,6 +20,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.relational.core.mapping.NamingStrategy;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import tools.jackson.databind.ObjectMapper;
 
 import javax.sql.DataSource;
@@ -67,6 +68,7 @@ public class DslRunRepositoryConfiguration {
           TransactionExecutionJdbcRepository jdbcRepository,
           TransactionExecutionMapper mapper,
           ObjectMapper objectMapper) {
-    return new JdbcTransactionExecutionRepository(dataSource, jdbcRepository, mapper, objectMapper);
+    var jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
+    return new JdbcTransactionExecutionRepository(jdbcTemplate, jdbcRepository, mapper, objectMapper);
   }
 }

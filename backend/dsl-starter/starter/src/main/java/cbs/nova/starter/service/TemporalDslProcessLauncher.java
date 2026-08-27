@@ -15,12 +15,14 @@ import io.temporal.client.WorkflowOptions;
 import io.temporal.common.RetryOptions;
 import io.temporal.workflow.Workflow;
 import lombok.Builder;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 
+@RequiredArgsConstructor
 public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
 
   private final WorkflowClient workflowClient;
@@ -28,16 +30,6 @@ public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
   private final Duration executionTimeout;
   private final Duration taskTimeout;
 
-  public TemporalDslProcessLauncher(
-          WorkflowClient workflowClient,
-          ObjectMapper objectMapper,
-          Duration executionTimeout,
-          Duration taskTimeout) {
-    this.workflowClient = workflowClient;
-    this.objectMapper = objectMapper;
-    this.executionTimeout = executionTimeout;
-    this.taskTimeout = taskTimeout;
-  }
 
   @Builder
   public record ProcessLaunchRequest(

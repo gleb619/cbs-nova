@@ -2,7 +2,7 @@ package cbs.nova.starter.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.starter.cache.PreviewResultCache;
+import cbs.nova.starter.service.PreviewResultCache;
 import io.micrometer.core.instrument.binder.MeterBinder;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;

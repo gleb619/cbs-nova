@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 @Service(Service.Level.PROJECT)
 public final class DslProjectStateService {
 
+  //TODO: redo to atomic
   private volatile boolean activeDslProject;
 
   public static @NotNull DslProjectStateService getInstance(@NotNull Project project) {

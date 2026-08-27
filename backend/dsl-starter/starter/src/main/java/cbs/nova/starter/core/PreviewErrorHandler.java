@@ -1,4 +1,4 @@
-package cbs.nova.starter;
+package cbs.nova.starter.core;
 
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.PreviewErrorDetail;
@@ -27,58 +27,53 @@ public class PreviewErrorHandler {
 
   public static @NonNull PreviewErrorDetail from(@Nullable Throwable cause,
           @Nullable String entityName) {
-    if (cause == null) {
-      return build(PreviewErrorCode.UNKNOWN_ERROR, "Preview failed with no cause", Map.of(),
-              entityName);
-    }
-
-    if (cause instanceof NoSuchBeanDefinitionException nsbe) {
-      String beanName = extractBeanName(nsbe.getBeanName());
-      return helperNotFound(messageOf(cause), beanName, entityName != null ? entityName : beanName);
-    }
-
-    if (cause instanceof SQLException sql) {
-      return externalCallFailed("SQL error: " + messageOf(sql), sql, entityName);
-    }
-
-    if (cause instanceof ClassCastException cce) {
-      return inputValidationError(messageOf(cce), cce, entityName);
-    }
-
-    if (cause instanceof TimeoutException) {
-      return timeoutExceeded(messageOf(cause), entityName);
-    }
-
-    if (cause instanceof DslValidationException dve) {
-      return build(PreviewErrorCode.DSL_COMPILATION_ERROR, messageOf(dve),
-              Map.of("runId", dve.runId()), entityName);
-    }
-
-    if (cause instanceof DslCompensationException dce) {
-      return build(PreviewErrorCode.COMPENSATION_ERROR,
-              "Compensation failed: " + messageOf(dce),
-              Map.of("runId", dce.runId()), entityName);
-    }
-
-    if (cause instanceof DslEntityNotFoundException dene) {
-      String msg = messageOf(dene);
-      if (msg != null && msg.startsWith(HELPER_NOT_FOUND_PREFIX)) {
-        return helperNotFound(msg, extractAfterPrefix(msg, HELPER_NOT_FOUND_PREFIX), entityName);
+    switch (cause) {
+      case null -> {
+        return build(PreviewErrorCode.UNKNOWN_ERROR, "Preview failed with no cause", Map.of(),
+            entityName);
       }
-      return build(PreviewErrorCode.UNKNOWN_ERROR, msg, Map.of("runId", dene.runId()), entityName);
-    }
-
-    if (cause instanceof IllegalArgumentException iae) {
-      String msg = messageOf(iae);
-      if (msg != null && msg.startsWith(UNKNOWN_ENTITY_PREFIX)) {
-        return helperNotFound(msg, extractAfterPrefix(msg, UNKNOWN_ENTITY_PREFIX), entityName);
+      case NoSuchBeanDefinitionException nsbe -> {
+        String beanName = extractBeanName(nsbe.getBeanName());
+        return helperNotFound(messageOf(cause), beanName, entityName != null ? entityName : beanName);
       }
-      return build(PreviewErrorCode.INPUT_VALIDATION_ERROR, msg, Map.of(), entityName);
-    }
-
-    if (cause instanceof RuntimeException re) {
-      return build(PreviewErrorCode.UNKNOWN_ERROR, messageOf(re), Map.of("exceptionType",
-              re.getClass().getName()), entityName);
+      case SQLException sql -> {
+        return externalCallFailed("SQL error: " + messageOf(sql), sql, entityName);
+      }
+      case ClassCastException cce -> {
+        return inputValidationError(messageOf(cce), cce, entityName);
+      }
+      case TimeoutException _ -> {
+        return timeoutExceeded(messageOf(cause), entityName);
+      }
+      case DslValidationException dve -> {
+        return build(PreviewErrorCode.DSL_COMPILATION_ERROR, messageOf(dve),
+            Map.of("runId", dve.runId()), entityName);
+      }
+      case DslCompensationException dce -> {
+        return build(PreviewErrorCode.COMPENSATION_ERROR,
+            "Compensation failed: " + messageOf(dce),
+            Map.of("runId", dce.runId()), entityName);
+      }
+      case DslEntityNotFoundException dene -> {
+        String msg = messageOf(dene);
+        if (msg != null && msg.startsWith(HELPER_NOT_FOUND_PREFIX)) {
+          return helperNotFound(msg, extractAfterPrefix(msg, HELPER_NOT_FOUND_PREFIX), entityName);
+        }
+        return build(PreviewErrorCode.UNKNOWN_ERROR, msg, Map.of("runId", dene.runId()), entityName);
+      }
+      case IllegalArgumentException iae -> {
+        String msg = messageOf(iae);
+        if (msg != null && msg.startsWith(UNKNOWN_ENTITY_PREFIX)) {
+          return helperNotFound(msg, extractAfterPrefix(msg, UNKNOWN_ENTITY_PREFIX), entityName);
+        }
+        return build(PreviewErrorCode.INPUT_VALIDATION_ERROR, msg, Map.of(), entityName);
+      }
+      case RuntimeException re -> {
+        return build(PreviewErrorCode.UNKNOWN_ERROR, messageOf(re), Map.of("exceptionType",
+            re.getClass().getName()), entityName);
+      }
+      default -> {
+      }
     }
 
     return build(PreviewErrorCode.UNKNOWN_ERROR, messageOf(cause),

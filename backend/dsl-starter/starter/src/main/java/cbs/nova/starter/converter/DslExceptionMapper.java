@@ -1,4 +1,4 @@
-package cbs.nova.starter.error;
+package cbs.nova.starter.converter;
 
 import cbs.nova.starter.model.ErrorResponse;
 import org.springframework.http.ResponseEntity;

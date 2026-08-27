@@ -19,8 +19,10 @@ import cbs.nova.starter.core.stage.FakingStage;
 import cbs.nova.starter.core.stage.MetricsStage;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
+@RequiredArgsConstructor
 public final class ExplainDslPipe implements DslExecutionPipe<ExplainReport> {
 
   private final ExternalCallRecorder recorder;
@@ -32,36 +34,6 @@ public final class ExplainDslPipe implements DslExecutionPipe<ExplainReport> {
   private final CbsNovaFakesProperties fakesProperties;
   private final RunScopedFakeConfig runScopedFakeConfig;
 
-  public ExplainDslPipe(
-          ExternalCallRecorder recorder,
-          ContextFactory contextFactory,
-          DryRunLoggingContext dryRunLoggingContext,
-          DryRunLogBufferRegistry bufferRegistry,
-          int maxEventsPerRun,
-          CbsNovaPreviewProperties previewProperties,
-          CbsNovaFakesProperties fakesProperties,
-          RunScopedFakeConfig runScopedFakeConfig) {
-    this.recorder = recorder;
-    this.contextFactory = contextFactory;
-    this.dryRunLoggingContext = dryRunLoggingContext;
-    this.bufferRegistry = bufferRegistry;
-    this.maxEventsPerRun = maxEventsPerRun;
-    this.previewProperties = previewProperties;
-    this.fakesProperties = fakesProperties;
-    this.runScopedFakeConfig = runScopedFakeConfig;
-  }
-
-  public ExplainDslPipe(
-          ExternalCallRecorder recorder,
-          ContextFactory contextFactory,
-          DryRunLoggingContext dryRunLoggingContext,
-          CbsNovaPreviewProperties previewProperties,
-          CbsNovaFakesProperties fakesProperties,
-          RunScopedFakeConfig runScopedFakeConfig) {
-    this(recorder, contextFactory, dryRunLoggingContext, new DryRunLogBufferRegistry(),
-            DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, previewProperties,
-            fakesProperties, runScopedFakeConfig);
-  }
 
   @Override
   public @NonNull Result<ExplainReport> execute(@NonNull String name,

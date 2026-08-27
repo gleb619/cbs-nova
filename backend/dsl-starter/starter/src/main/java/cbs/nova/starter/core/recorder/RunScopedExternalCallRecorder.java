@@ -1,6 +1,6 @@
 package cbs.nova.starter.core.recorder;
 
-import cbs.nova.starter.core.event.DslExternalCallEvent;
+import cbs.nova.starter.core.event.DslExecutionEvent.DslExternalCallEvent;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.core.listener.DslExecutionListener;
 import org.jspecify.annotations.NonNull;
@@ -13,9 +13,14 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+//TODO: Thread local due work with temporal is bad ideas, since runner can choose another instance, we need to use db, or redis
+//TODO: potentially, class can lead to a memory leak, we need a fix
+@Deprecated(forRemoval = true)
 public final class RunScopedExternalCallRecorder implements ExternalCallRecorder {
 
+  @Deprecated(forRemoval = true)
   private final ThreadLocal<String> currentRunId = new ThreadLocal<>();
+  @Deprecated(forRemoval = true)
   private final ThreadLocal<List<ExternalCall>> threadLocalCalls = new ThreadLocal<>();
   private final List<DslExecutionListener> listeners = new CopyOnWriteArrayList<>();
   private final Map<String, Integer> globalCounts = new ConcurrentHashMap<>();

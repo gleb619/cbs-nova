@@ -7,14 +7,19 @@ import org.jspecify.annotations.Nullable;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+//TODO: micrometer is better for that, to export to prometheus, remove class, and/or adapt for micrometer
+@Deprecated(forRemoval = true)
 public class PreviewMetricsCollector {
 
   private static final ThreadLocal<PreviewMetricsCollector> INSTANCE = new ThreadLocal<>();
+  //TODO: redo to atomic
   private static volatile PreviewMetricsSnapshot latestSnapshot = null;
 
   private long startTime;
   private long startMemory;
+  //TODO: redo to a Caffeine with some properties config for ttl
   private final Map<CallKind, Integer> callCounts = new ConcurrentHashMap<>();
+  //TODO: redo to a Caffeine with some properties config for ttl
   private final Map<String, Integer> externalCallCounts = new ConcurrentHashMap<>();
 
   public static PreviewMetricsCollector start() {

@@ -1,8 +1,7 @@
 package cbs.nova.starter.config;
 
-import cbs.nova.starter.cache.PreviewResultCache;
+import cbs.nova.starter.service.PreviewResultCache;
 import io.micrometer.core.instrument.Gauge;
-import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.MeterBinder;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;

@@ -13,13 +13,13 @@ import cbs.nova.dsl.transaction.TransactionInvoker;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
 import io.temporal.workflow.Workflow;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Slf4j
 public final class TemporalTransactionInvoker implements TransactionInvoker {
-
-  private static final Logger log = LoggerFactory.getLogger(TemporalTransactionInvoker.class);
 
   @Override
   public @NonNull Result<?> invoke(@NonNull String name, @NonNull Object input,

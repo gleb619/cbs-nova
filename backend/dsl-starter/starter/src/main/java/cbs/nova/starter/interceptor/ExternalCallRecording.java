@@ -10,8 +10,10 @@ import java.util.List;
  * interceptors that capture calls from {@link cbs.nova.starter.core.recorder.ExternalCallRecorder}
  * or any other external-call listener system.
  */
+@Deprecated(forRemoval = true)
 public interface ExternalCallRecording {
 
   @NonNull
+  @Deprecated(forRemoval = true)
   List<ExternalCall> recordedCalls();
 }

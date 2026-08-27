@@ -1,5 +1,7 @@
 package cbs.nova.starter.persistence;
 
+import cbs.nova.starter.config.properties.DslRunPersistenceProperties;
+import cbs.nova.starter.entity.DslRunEntity;
 import org.springframework.data.relational.core.mapping.NamingStrategy;
 
 /**

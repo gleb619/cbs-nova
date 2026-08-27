@@ -4,6 +4,8 @@ import cbs.nova.dsl.logging.DryRunLoggingContext;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
+//TODO: Thread local due work with temporal is bad ideas, since runner can choose another instance, we need to use db, or redis
+@Deprecated(forRemoval = true)
 public final class ThreadLocalDryRunLoggingContext implements DryRunLoggingContext {
 
   private final ThreadLocal<String> runId = new ThreadLocal<>();

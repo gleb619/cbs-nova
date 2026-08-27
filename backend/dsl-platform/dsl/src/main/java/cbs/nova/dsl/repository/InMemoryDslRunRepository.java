@@ -19,6 +19,7 @@ public final class InMemoryDslRunRepository implements DslRunRepository {
 
   private static final int CAPACITY = 100;
 
+  //TODO: redo to a Caffeine with some properties config for ttl
   private final Map<String, DslRun> runs = new ConcurrentHashMap<>();
   private final Deque<String> insertionOrder = new ConcurrentLinkedDeque<>();
 

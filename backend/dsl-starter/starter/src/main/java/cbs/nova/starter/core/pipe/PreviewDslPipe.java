@@ -6,7 +6,7 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.logging.DryRunLoggingContext;
-import cbs.nova.starter.cache.PreviewResultCache;
+import cbs.nova.starter.service.PreviewResultCache;
 import cbs.nova.starter.config.CbsNovaFakesProperties;
 import cbs.nova.starter.config.CbsNovaPreviewProperties;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
@@ -21,8 +21,10 @@ import cbs.nova.starter.core.stage.PreviewCacheStage;
 import cbs.nova.starter.core.stage.PreviewReportStage;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
+@RequiredArgsConstructor
 public final class PreviewDslPipe implements DslExecutionPipe<PreviewReport> {
 
   private final ExternalCallRecorder recorder;
@@ -35,39 +37,6 @@ public final class PreviewDslPipe implements DslExecutionPipe<PreviewReport> {
   private final CbsNovaFakesProperties fakesProperties;
   private final RunScopedFakeConfig runScopedFakeConfig;
 
-  public PreviewDslPipe(
-          ExternalCallRecorder recorder,
-          ContextFactory contextFactory,
-          DryRunLoggingContext dryRunLoggingContext,
-          DryRunLogBufferRegistry bufferRegistry,
-          int maxEventsPerRun,
-          PreviewResultCache cache,
-          CbsNovaPreviewProperties previewProperties,
-          CbsNovaFakesProperties fakesProperties,
-          RunScopedFakeConfig runScopedFakeConfig) {
-    this.recorder = recorder;
-    this.contextFactory = contextFactory;
-    this.dryRunLoggingContext = dryRunLoggingContext;
-    this.bufferRegistry = bufferRegistry;
-    this.maxEventsPerRun = maxEventsPerRun;
-    this.cache = cache;
-    this.previewProperties = previewProperties;
-    this.fakesProperties = fakesProperties;
-    this.runScopedFakeConfig = runScopedFakeConfig;
-  }
-
-  public PreviewDslPipe(
-          ExternalCallRecorder recorder,
-          ContextFactory contextFactory,
-          DryRunLoggingContext dryRunLoggingContext,
-          PreviewResultCache cache,
-          CbsNovaPreviewProperties previewProperties,
-          CbsNovaFakesProperties fakesProperties,
-          RunScopedFakeConfig runScopedFakeConfig) {
-    this(recorder, contextFactory, dryRunLoggingContext, new DryRunLogBufferRegistry(),
-            DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, cache, previewProperties,
-            fakesProperties, runScopedFakeConfig);
-  }
 
   @Override
   public @NonNull Result<PreviewReport> execute(@NonNull String name,

@@ -6,7 +6,7 @@ import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.PreviewMetricsSnapshot;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
-import cbs.nova.starter.PreviewErrorHandler;
+import cbs.nova.starter.core.PreviewErrorHandler;
 import cbs.nova.starter.converter.ExternalCallConverter;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
@@ -23,6 +23,7 @@ public final class PreviewReportStage implements DslPipeStage {
 
   @Override
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
+    //TODO: inner var not used
     Result<?> inner = next.proceed(context);
     Result<?> dslResult = (Result<?>) context.getAttribute("dslResult");
 
@@ -42,6 +43,7 @@ public final class PreviewReportStage implements DslPipeStage {
             ? ExternalCallConverter.toCallCounts(calls)
             : Map.of();
 
+    //TODO: search and move to `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/core/StarterConstant.java` a string constants
     PreviewReport report = new PreviewReport(
             context.getName(),
             ExecutionMode.PREVIEW,

@@ -36,6 +36,7 @@ public final class DryRunLogStage implements DslPipeStage {
     DryRunLogBuffer buffer = new DryRunLogBuffer(maxEventsPerRun, queue);
     String runId = context.getRunId();
     bufferRegistry.register(runId, buffer);
+    //TODO: search and move to `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/core/StarterConstant.java` a string constants
     context.setAttribute("dryRunLogBuffer", buffer);
     dryRunLoggingContext.setRunId(runId);
 
@@ -49,6 +50,7 @@ public final class DryRunLogStage implements DslPipeStage {
     }
   }
 
+  //TODO: search and move to `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/core/StarterConstant.java` a string constants
   private @NonNull List<Map<String, Object>> toDryRunLogMaps(@NonNull List<DryRunLogEvent> events) {
     List<Map<String, Object>> maps = new ArrayList<>();
     for (DryRunLogEvent event : events) {

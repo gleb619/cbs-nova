@@ -2,8 +2,8 @@ package cbs.nova.starter.core.stage;
 
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
-import cbs.nova.starter.cache.PreviewCacheKey;
-import cbs.nova.starter.cache.PreviewResultCache;
+import cbs.nova.starter.model.PreviewModels.PreviewCacheKey;
+import cbs.nova.starter.service.PreviewResultCache;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import lombok.RequiredArgsConstructor;

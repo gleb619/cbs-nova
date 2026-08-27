@@ -1,4 +1,4 @@
-package cbs.nova.starter.persistence;
+package cbs.nova.starter.entity;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;
@@ -7,6 +7,7 @@ import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.Instant;
 
+//TODO: we need limit entity scan, only to one package `cbs.nova.starter.entity`
 @Data
 @Table("dsl_runs")
 public class DslRunEntity {

@@ -12,6 +12,7 @@ import cbs.nova.dsl.history.DslRunStatus;
 import io.opentelemetry.api.baggage.Baggage;
 import io.opentelemetry.api.trace.Span;
 import io.sentry.Sentry;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -36,6 +37,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 @Slf4j
+@RequiredArgsConstructor
 public class TemporalDslProcessService {
 
   static final String EMPTY_OUTPUT_JSON = "{}";
@@ -52,40 +54,16 @@ public class TemporalDslProcessService {
   private final boolean asyncDbSave;
 
   @Nullable
+  //TODO: redo to atomic
   private volatile Clock clock = Clock.systemUTC();
 
   @Nullable
+  //TODO: redo to atomic
+  //TODO: object, unsed, we need a fix
   private volatile ScheduledFuture<?> healthcheckHandle;
 
   private final AtomicBoolean healthcheckStarted = new AtomicBoolean(false);
 
-  public TemporalDslProcessService(
-          @NonNull ContextFactory contextFactory,
-          @NonNull DslRunRepository runRepository,
-          @NonNull ObjectMapper objectMapper,
-          @NonNull ThreadPoolTaskExecutor dslProcessExecutor,
-          @NonNull ScheduledExecutorService healthcheckExecutor,
-          @NonNull Duration healthcheckInterval,
-          @NonNull Duration staleThreshold,
-          boolean asyncDbSave) {
-    this.contextFactory = contextFactory;
-    this.runRepository = runRepository;
-    this.objectMapper = objectMapper;
-    this.dslProcessExecutor = dslProcessExecutor;
-    this.healthcheckExecutor = healthcheckExecutor;
-    this.healthcheckInterval = healthcheckInterval;
-    this.staleThreshold = staleThreshold;
-    this.asyncDbSave = asyncDbSave;
-  }
-
-  public TemporalDslProcessService(
-          ContextFactory contextFactory,
-          DslRunRepository runRepository,
-          ObjectMapper objectMapper) {
-    this(contextFactory, runRepository, objectMapper, sameThreadExecutor(),
-            disabledScheduledExecutor(),
-            Duration.ofSeconds(30), Duration.ofMinutes(5), false);
-  }
 
   void setClock(@NonNull Clock clock) {
     this.clock = clock;
@@ -172,7 +150,7 @@ public class TemporalDslProcessService {
             continue;
           }
           Instant startedAt = run.startedAt();
-          if (startedAt == null || startedAt.isAfter(cutoff)) {
+          if (startedAt.isAfter(cutoff)) {
             continue;
           }
           markStale(run);
@@ -209,9 +187,7 @@ public class TemporalDslProcessService {
 
   private @NonNull Set<String> knownProcessNames() {
     Set<String> names = new HashSet<>(runRepository.knownProcessNames());
-    for (String name : GlobalManager.globalManager().processNames()) {
-      names.add(name);
-    }
+    names.addAll(GlobalManager.globalManager().processNames());
     return names;
   }
 
@@ -251,14 +227,13 @@ public class TemporalDslProcessService {
     String outputJson = result.isSuccess() ? serialize(result.value()) : EMPTY_OUTPUT_JSON;
     String error = result.isSuccess() ? null : messageOf(result.cause());
 
-    Instant finalizeFinishedAt = finishedAt;
     submitDbWrite(() -> {
       runRepository.updateFinished(
               runId,
               status,
               outputJson,
               error,
-              finalizeFinishedAt,
+          finishedAt,
               contextJson);
       return null;
     });
@@ -337,29 +312,4 @@ public class TemporalDslProcessService {
           @NonNull CompletableFuture<Result<?>> result) {
   }
 
-  private static @NonNull ThreadPoolTaskExecutor sameThreadExecutor() {
-    ThreadPoolTaskExecutor exec = new ThreadPoolTaskExecutor() {
-      @Override
-      public void execute(@NonNull Runnable command) {
-        command.run();
-      }
-    };
-    exec.setCorePoolSize(1);
-    exec.setMaxPoolSize(1);
-    exec.setQueueCapacity(0);
-    exec.setThreadNamePrefix("cbs-nova-dsl-sync-");
-    exec.initialize();
-    return exec;
-  }
-
-  private static @NonNull ScheduledExecutorService disabledScheduledExecutor() {
-    ThreadFactory tf = r -> {
-      Thread t = new Thread(r, "cbs-nova-dsl-healthcheck-disabled");
-      t.setDaemon(true);
-      return t;
-    };
-    ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor(tf);
-    exec.shutdownNow();
-    return exec;
-  }
 }

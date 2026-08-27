@@ -3,19 +3,17 @@ package cbs.nova.starter.core.pipe;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+@RequiredArgsConstructor
 public final class DslExecutionPipeline<R> implements DslExecutionPipe<R> {
 
   private final List<DslPipeStage> stages;
-
-  private DslExecutionPipeline(List<DslPipeStage> stages) {
-    this.stages = List.copyOf(stages);
-  }
 
   public static <R> Builder<R> builder() {
     return new Builder<>();
@@ -49,7 +47,7 @@ public final class DslExecutionPipeline<R> implements DslExecutionPipe<R> {
 
   private @NonNull String generateRunId(@NonNull Context<?> ctx) {
     String runId = ctx.runId();
-    return runId != null && !runId.isBlank() ? runId : UUID.randomUUID().toString();
+    return !runId.isBlank() ? runId : UUID.randomUUID().toString();
   }
 
   public static final class Builder<R> {

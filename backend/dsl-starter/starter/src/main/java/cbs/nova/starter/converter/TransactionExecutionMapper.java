@@ -1,6 +1,7 @@
-package cbs.nova.starter.persistence;
+package cbs.nova.starter.converter;
 
 import cbs.nova.dsl.transaction.TransactionExecution;
+import cbs.nova.starter.entity.TransactionExecutionEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;

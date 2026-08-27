@@ -1,13 +1,13 @@
-package cbs.nova.starter.service.introspection.mapper;
+package cbs.nova.starter.converter;
 
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
-import cbs.nova.starter.service.introspection.model.DefinitionMetaDto;
-import cbs.nova.starter.service.introspection.model.HelperSearchResult;
-import cbs.nova.starter.service.introspection.model.ProcessDetail;
-import cbs.nova.starter.service.introspection.model.TransactionDetail;
+import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
+import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
+import cbs.nova.starter.model.DslIntrospectionModels.ProcessDetail;
+import cbs.nova.starter.model.DslIntrospectionModels.TransactionDetail;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

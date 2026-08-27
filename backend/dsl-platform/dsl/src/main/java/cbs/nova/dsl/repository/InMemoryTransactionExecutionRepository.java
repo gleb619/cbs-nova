@@ -15,6 +15,7 @@ public final class InMemoryTransactionExecutionRepository
         implements
           TransactionExecutionRepository {
 
+  //TODO: redo to a Caffeine with some properties config for ttl
   private final Map<String, List<TransactionExecution>> executions = new ConcurrentHashMap<>();
 
   @Override

@@ -1,7 +1,7 @@
 package cbs.nova.starter.controller;
 
 import cbs.nova.dsl.exception.DslException;
-import cbs.nova.starter.error.DslExceptionMapper;
+import cbs.nova.starter.converter.DslExceptionMapper;
 import cbs.nova.starter.model.ErrorResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

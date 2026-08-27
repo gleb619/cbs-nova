@@ -4,6 +4,7 @@ import cbs.nova.dsl.model.MapInput;
 import io.avaje.jsonb.Json;
 import io.avaje.jsonb.JsonType;
 import io.avaje.jsonb.Jsonb;
+import java.lang.reflect.Type;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -22,10 +23,11 @@ public final class MapInputConverter {
   private final Jsonb jsonb;
   private final ObjectMapper objectMapper;
 
+  //TODO: redo to a Caffeine with some properties config for ttl
   private final Map<Class<?>, JsonType<?>> adapterCache = new ConcurrentHashMap<>();
 
   public @Nullable Object convert(@Nullable Object value,
-          java.lang.reflect.@NonNull Type targetType) {
+          @NonNull Type targetType) {
     if (value == null) {
       return null;
     }

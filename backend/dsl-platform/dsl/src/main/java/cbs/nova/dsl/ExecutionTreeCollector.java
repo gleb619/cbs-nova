@@ -1,6 +1,7 @@
 package cbs.nova.dsl;
 
 import cbs.nova.dsl.transaction.TransactionExecution;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -15,9 +16,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+@Slf4j
 public final class ExecutionTreeCollector implements ExecutionListener {
-
-  private static final Logger log = LoggerFactory.getLogger(ExecutionTreeCollector.class);
 
   private final int maxDepth;
 

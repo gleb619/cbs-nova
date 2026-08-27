@@ -1,4 +1,4 @@
-package cbs.nova.starter.service.introspection;
+package cbs.nova.starter.service;
 
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
@@ -7,12 +7,12 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
-import cbs.nova.starter.service.introspection.mapper.DslIntrospectionMapper;
-import cbs.nova.starter.service.introspection.model.DefinitionMetaDto;
-import cbs.nova.starter.service.introspection.model.HelperSearchResult;
-import cbs.nova.starter.service.introspection.model.NamesResponse;
-import cbs.nova.starter.service.introspection.model.ProcessDetail;
-import cbs.nova.starter.service.introspection.model.TransactionDetail;
+import cbs.nova.starter.converter.DslIntrospectionMapper;
+import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
+import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
+import cbs.nova.starter.model.DslIntrospectionModels.NamesResponse;
+import cbs.nova.starter.model.DslIntrospectionModels.ProcessDetail;
+import cbs.nova.starter.model.DslIntrospectionModels.TransactionDetail;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

@@ -1,6 +1,9 @@
-package cbs.nova.starter.cache;
+package cbs.nova.starter.service;
 
 import cbs.nova.dsl.PreviewReport;
+import cbs.nova.starter.model.PreviewModels;
+import cbs.nova.starter.model.PreviewModels.PreviewCacheEntry;
+import cbs.nova.starter.model.PreviewModels.PreviewCacheKey;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -10,7 +13,9 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class PreviewResultCache {
 
+  //TODO: redo to a Caffeine with some properties config for ttl
   private final ConcurrentHashMap<PreviewCacheKey, PreviewCacheEntry> store = new ConcurrentHashMap<>();
+
   private final long ttlMs;
   private final AtomicLong hits = new AtomicLong();
   private final AtomicLong misses = new AtomicLong();
@@ -53,11 +58,11 @@ public class PreviewResultCache {
             "misses", misses.get());
   }
 
-  long hits() {
+  public long hits() {
     return hits.get();
   }
 
-  long misses() {
+  public long misses() {
     return misses.get();
   }
 

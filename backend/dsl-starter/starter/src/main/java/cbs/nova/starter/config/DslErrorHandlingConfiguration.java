@@ -1,7 +1,7 @@
 package cbs.nova.starter.config;
 
-import cbs.nova.starter.error.DefaultDslExceptionMapper;
-import cbs.nova.starter.error.DslExceptionMapper;
+import cbs.nova.starter.converter.DefaultDslExceptionMapper;
+import cbs.nova.starter.converter.DslExceptionMapper;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;

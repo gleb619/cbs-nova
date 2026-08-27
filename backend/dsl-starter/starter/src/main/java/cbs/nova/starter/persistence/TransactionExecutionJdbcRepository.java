@@ -1,5 +1,6 @@
 package cbs.nova.starter.persistence;
 
+import cbs.nova.starter.entity.TransactionExecutionEntity;
 import org.springframework.data.repository.CrudRepository;
 
 import java.util.List;

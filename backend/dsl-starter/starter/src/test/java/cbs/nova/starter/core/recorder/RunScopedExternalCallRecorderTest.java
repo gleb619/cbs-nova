@@ -2,7 +2,7 @@ package cbs.nova.starter.core.recorder;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.starter.core.event.DslExternalCallEvent;
+import cbs.nova.starter.core.event.DslExecutionEvent.DslExternalCallEvent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
