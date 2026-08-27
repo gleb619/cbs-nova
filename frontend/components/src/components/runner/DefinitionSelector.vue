@@ -17,9 +17,10 @@ function onChange(event: Event) {
 </script>
 
 <template>
-  <label class="flex flex-col gap-1 text-sm">
+  <label data-testid="definition-selector" class="flex flex-col gap-1 text-sm">
     <span class="text-gray-700 font-medium">Definition</span>
     <select
+      data-testid="definition-selector-select"
       :value="props.modelValue ?? ''"
       class="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
       @change="onChange"

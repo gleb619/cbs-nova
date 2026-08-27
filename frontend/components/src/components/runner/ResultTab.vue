@@ -16,10 +16,11 @@ const isEmpty = computed(() => props.result === null || props.result === undefin
 </script>
 
 <template>
-  <div>
+  <div data-testid="runner-result-tab">
     <div v-if="isEmpty" class="text-sm text-gray-500">No result yet.</div>
     <pre
       v-else
+      data-testid="runner-result-tab-output"
       class="bg-gray-900 text-gray-100 text-xs rounded-lg p-4 overflow-auto max-h-[60vh] whitespace-pre-wrap break-words"
     >{{ _formatted }}</pre>
   </div>

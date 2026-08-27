@@ -71,7 +71,7 @@ function updateField(name: string, value: unknown) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <div data-testid="input-form" class="flex flex-col gap-4">
     <template v-if="isSchemaEmpty">
       <label class="flex flex-col gap-1 text-sm">
         <span class="text-gray-700 font-medium">Input (JSON)</span>

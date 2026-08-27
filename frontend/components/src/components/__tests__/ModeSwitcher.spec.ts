@@ -15,6 +15,10 @@ function findModeButton(wrapper: ReturnType<typeof mountSwitcher>, label: string
 }
 
 describe('ModeSwitcher', () => {
+it('exposes root data-testid', () => {
+    const wrapper = mountSwitcher('run')
+    expect(wrapper.find('[data-testid="mode-switcher"]').exists()).toBe(true)
+  })
   it('renders three buttons labelled Preview / Run / Explain in a radiogroup', () => {
     const wrapper = mountSwitcher('run')
 

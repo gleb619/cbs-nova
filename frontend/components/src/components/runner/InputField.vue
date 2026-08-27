@@ -50,7 +50,7 @@ function onBlur() {
 </script>
 
 <template>
-  <div class="flex flex-col gap-1">
+  <div data-testid="input-field" class="flex flex-col gap-1">
     <label
       v-if="normalizedType !== 'boolean'"
       :for="inputId"
@@ -63,6 +63,7 @@ function onBlur() {
       v-if="normalizedType === 'string'"
       :id="inputId"
       type="text"
+      :data-testid="`input-field-${props.name}`"
       :value="(props.modelValue as string | undefined) ?? ''"
       class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
       :class="showError ? 'border-red-400' : 'border-gray-300'"
@@ -75,6 +76,7 @@ function onBlur() {
       v-else-if="normalizedType === 'number'"
       :id="inputId"
       type="number"
+      :data-testid="`input-field-${props.name}`"
       :value="(props.modelValue as number | undefined) ?? ''"
       class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
       :class="showError ? 'border-red-400' : 'border-gray-300'"
@@ -92,6 +94,7 @@ function onBlur() {
       <input
         :id="inputId"
         type="checkbox"
+        :data-testid="`input-field-${props.name}`"
         :checked="Boolean(props.modelValue)"
         class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
         @change="onCheckboxInput"
@@ -103,6 +106,7 @@ function onBlur() {
       v-else
       :id="inputId"
       :value="typeof props.modelValue === 'string' ? props.modelValue : JSON.stringify(props.modelValue ?? '', null, 2)"
+      :data-testid="`input-field-${props.name}`"
       rows="4"
       :placeholder="normalizedType === 'array' ? 'JSON array' : 'JSON object'"
       class="px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"

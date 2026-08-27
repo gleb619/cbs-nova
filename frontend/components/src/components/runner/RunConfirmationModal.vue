@@ -69,6 +69,7 @@ function onCancel() {
     <!-- biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click dismisses modal -->
     <div
       v-if="props.show"
+      data-testid="run-confirmation-modal"
       class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
@@ -109,6 +110,7 @@ function onCancel() {
         <footer class="px-6 py-4 border-t border-gray-200 flex justify-end gap-2">
           <button
             type="button"
+            data-testid="run-confirmation-modal-cancel"
             class="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-100"
             @click="onCancel"
           >
@@ -116,6 +118,7 @@ function onCancel() {
           </button>
           <button
             type="button"
+            data-testid="run-confirmation-modal-confirm"
             class="px-4 py-2 rounded-lg text-sm font-medium text-white"
             :class="acknowledged ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-300 cursor-not-allowed'"
             :disabled="!acknowledged"

@@ -3,6 +3,10 @@ import { describe, expect, it } from 'vitest'
 import ResultTab from '../runner/ResultTab.vue'
 
 describe('ResultTab', () => {
+it('exposes root data-testid', () => {
+    const wrapper = mount(ResultTab, { props: { result: undefined } })
+    expect(wrapper.find('[data-testid="runner-result-tab"]').exists()).toBe(true)
+  })
   it('renders a placeholder and does not throw when result is undefined', () => {
     expect(() => mount(ResultTab, { props: { result: undefined } })).not.toThrow()
 

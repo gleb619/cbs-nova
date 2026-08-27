@@ -21,6 +21,10 @@ function mountInputForm(props: Record<string, unknown>) {
 }
 
 describe('InputForm', () => {
+it('exposes root data-testid', () => {
+    const wrapper = mountInputForm({ schema: undefined, modelValue: {} })
+    expect(wrapper.find('[data-testid="input-form"]').exists()).toBe(true)
+  })
   it('renders a typed field per schema property', () => {
     const wrapper = mountInputForm({ schema: schemaFixture, modelValue: {} })
     expect(wrapper.findAllComponents(InputField)).toHaveLength(3)

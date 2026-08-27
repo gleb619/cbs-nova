@@ -17,6 +17,7 @@ function pick(value: RunnerMode) {
 
 <template>
   <div
+    data-testid="mode-switcher"
     class="inline-flex rounded-lg border border-gray-300 overflow-hidden"
     role="radiogroup"
     aria-label="Runner mode"
@@ -27,6 +28,7 @@ function pick(value: RunnerMode) {
       :key="m.value"
       type="button"
       role="radio"
+      :data-testid="`mode-switcher-${m.value}`"
       :aria-checked="props.modelValue === m.value"
       :class="[
         'px-4 py-2 text-sm font-medium transition-colors',

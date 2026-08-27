@@ -50,7 +50,7 @@ function onClearBaseline() {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <div data-testid="output-panel" class="flex flex-col gap-4">
     <div v-if="showExplain">
       <ExplainOutput
         :description="props.output?.description"

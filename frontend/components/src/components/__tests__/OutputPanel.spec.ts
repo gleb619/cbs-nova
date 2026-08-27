@@ -45,6 +45,14 @@ function mountOutputPanel(props: Record<string, unknown>) {
 }
 
 describe('OutputPanel', () => {
+it('exposes root data-testid', () => {
+    const wrapper = mountOutputPanel({
+      output: makeOutput(),
+      mode: 'run',
+      status: 'success',
+    })
+    expect(wrapper.find('[data-testid="output-panel"]').exists()).toBe(true)
+  })
   it('renders ResultTab by default when output is present in run mode', () => {
     const wrapper = mountOutputPanel({
       output: makeOutput(),

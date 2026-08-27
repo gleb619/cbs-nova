@@ -20,11 +20,12 @@ const current = computed(() => styleMap[props.status])
   <span
     :class="['inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium', current.classes]"
     role="status"
+    data-testid="status-indicator"
     :aria-label="`Runner status: ${current.label}`"
   >
     <span
       :class="['inline-block w-2 h-2 rounded-full', current.animate ? 'animate-pulse' : '', current.classes.replace('100', '500').split(' ')[0]]"
     />
-    {{ current.label }}
+    <span data-testid="status-indicator-text">{{ current.label }}</span>
   </span>
 </template>

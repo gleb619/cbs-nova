@@ -3,6 +3,12 @@ import { describe, expect, it } from 'vitest'
 import InputField from '../runner/InputField.vue'
 
 describe('InputField', () => {
+it('exposes root data-testid', () => {
+    const wrapper = mount(InputField, {
+      props: { name: 'username', type: 'string', modelValue: '' },
+    })
+    expect(wrapper.find('[data-testid="input-field"]').exists()).toBe(true)
+  })
   it('renders a label and a text input', () => {
     const wrapper = mount(InputField, {
       props: { name: 'username', type: 'string', modelValue: '' },
