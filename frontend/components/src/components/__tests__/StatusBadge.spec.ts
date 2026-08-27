@@ -14,7 +14,7 @@ describe('StatusBadge', () => {
   ])('renders $status with the correct color classes and text', ({ status, expectedClasses }) => {
     const wrapper = mount(StatusBadge, { props: { status } })
 
-    const badge = wrapper.find('span')
+    const badge = wrapper.find('[data-testid="status-badge"]')
     expect(badge.exists()).toBe(true)
     expect(badge.text()).toBe(status)
 

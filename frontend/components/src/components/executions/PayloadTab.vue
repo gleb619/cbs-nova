@@ -12,16 +12,21 @@ function _format(v: unknown): string {
 </script>
 
 <template>
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+  <div
+    data-testid="executions-payload-tab"
+    class="grid grid-cols-1 lg:grid-cols-2 gap-4"
+  >
     <div class="bg-white border border-gray-200 rounded-lg p-4">
       <h3 class="text-sm font-semibold text-gray-700 mb-2">Initial Input</h3>
       <pre
+        data-testid="executions-payload-input"
         class="text-xs bg-gray-50 border border-gray-200 rounded p-3 overflow-auto max-h-[500px]"
       ><code>{{ _format(input) }}</code></pre>
     </div>
     <div class="bg-white border border-gray-200 rounded-lg p-4">
       <h3 class="text-sm font-semibold text-gray-700 mb-2">Final Output</h3>
       <pre
+        data-testid="executions-payload-output"
         class="text-xs bg-gray-50 border border-gray-200 rounded p-3 overflow-auto max-h-[500px]"
       ><code>{{ _format(output) }}</code></pre>
     </div>

@@ -19,6 +19,7 @@ function formatDuration(ms?: number) {
 
 <template>
   <div
+    :data-testid="`execution-trace-node-${props.step.id}`"
     :style="{ marginLeft: `${props.depth * 1.25}rem` }"
     :class="['flex items-center gap-2 py-1.5 px-2 rounded text-sm',
                 props.step.isCompensation ? 'border border-dashed border-orange-300 bg-orange-50' : 'hover:bg-gray-50']"
@@ -27,6 +28,7 @@ function formatDuration(ms?: number) {
     <span
       :class="['font-mono text-xs px-1.5 py-0.5 rounded',
                    props.step.isCompensation ? 'text-orange-700' : 'text-gray-600 bg-gray-100']"
+      :data-testid="`execution-trace-node-step-type-${props.step.id}`"
     >
       {{ props.step.stepType }}
     </span>
@@ -34,6 +36,10 @@ function formatDuration(ms?: number) {
       >{{ props.step.name }}</span
     >
     <ExecutionsStatusBadge :status="props.step.status" />
-    <span class="ml-auto text-xs text-gray-500">{{ formatDuration(props.step.duration) }}</span>
+    <span
+      class="ml-auto text-xs text-gray-500"
+      :data-testid="`execution-trace-node-duration-${props.step.id}`"
+      >{{ formatDuration(props.step.duration) }}</span
+    >
   </div>
 </template>

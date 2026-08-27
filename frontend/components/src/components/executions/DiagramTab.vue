@@ -3,7 +3,10 @@ defineProps<{ diagram: string | undefined }>()
 </script>
 
 <template>
-  <div class="bg-white border border-gray-200 rounded-lg p-4">
+  <div
+    data-testid="execution-diagram-tab"
+    class="bg-white border border-gray-200 rounded-lg p-4"
+  >
     <div v-if="!diagram" class="text-sm text-gray-500 text-center py-12">
       No diagram available for this execution.
     </div>

@@ -16,7 +16,10 @@ function toggle(i: number) {
 </script>
 
 <template>
-  <div class="space-y-3">
+  <div
+    data-testid="executions-errors-tab"
+    class="space-y-3"
+  >
     <div
       v-if="!props.errors || props.errors.length === 0"
       class="bg-white border border-gray-200 rounded-lg p-12 text-center text-sm text-gray-500"
@@ -26,6 +29,7 @@ function toggle(i: number) {
     <div
       v-for="(err, idx) in props.errors"
       :key="idx"
+      :data-testid="`executions-errors-row-${idx}`"
       class="bg-white border border-red-200 rounded-lg p-4"
     >
       <div class="flex items-start gap-3">

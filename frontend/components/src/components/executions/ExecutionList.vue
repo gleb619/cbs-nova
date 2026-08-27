@@ -44,7 +44,10 @@ function isStalePolling(id: string): boolean {
 </script>
 
 <template>
-  <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+  <div
+    data-testid="execution-list"
+    class="bg-white border border-gray-200 rounded-lg overflow-hidden"
+  >
     <table class="min-w-full text-sm">
       <thead class="bg-gray-50 text-left text-xs uppercase text-gray-600">
         <tr>
@@ -77,6 +80,7 @@ function isStalePolling(id: string): boolean {
           <tr
             v-for="exec in executions"
             :key="exec.id"
+            :data-testid="`execution-list-row-${exec.id}`"
             class="border-t border-gray-100 hover:bg-gray-50 cursor-pointer"
             @click="$emit('select', exec.id)"
           >
