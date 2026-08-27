@@ -36,7 +36,7 @@ function statusClass(status: ExecutionStatus) {
 </script>
 
 <template>
-  <div class="space-y-4">
+  <div class="space-y-4" data-testid="recent-executions">
     <h2 class="text-xl font-semibold text-gray-800">Recent Executions</h2>
     <div v-if="loading" class="text-gray-600">Loading...</div>
     <div v-else-if="!executions.length" class="text-gray-500">No recent executions.</div>
@@ -52,6 +52,7 @@ function statusClass(status: ExecutionStatus) {
         <tr
           v-for="exec in executions"
           :key="exec.id"
+          :data-testid="`recent-executions-row-${exec.id}`"
           class="hover:bg-gray-50 cursor-pointer"
           @click="onSelect(exec.id)"
         >

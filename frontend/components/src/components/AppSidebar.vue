@@ -28,6 +28,7 @@ const { collapsed } = useSidebar()
 
 <template>
   <aside
+    data-testid="app-sidebar"
     :class="[
       'hidden md:flex flex-col bg-neutral-800 text-neutral-50 transition-all duration-200 shrink-0 border-r border-neutral-700',
       collapsed ? 'w-16' : 'w-60',

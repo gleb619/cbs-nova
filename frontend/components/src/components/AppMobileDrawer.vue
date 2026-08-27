@@ -33,6 +33,7 @@ const { mobileOpen, closeMobile } = useSidebar()
     <Transition name="slide">
       <aside
         v-if="mobileOpen"
+        data-testid="app-mobile-drawer"
         class="fixed top-0 left-0 z-40 h-full w-64 bg-neutral-800 text-neutral-50 flex flex-col md:hidden"
         role="dialog"
         aria-modal="true"
@@ -42,6 +43,7 @@ const { mobileOpen, closeMobile } = useSidebar()
           <span class="text-white font-bold text-lg">{{ props.title }}</span>
           <button
             type="button"
+            data-testid="app-mobile-drawer-close"
             class="text-neutral-300 hover:text-white p-1 rounded"
             aria-label="Close navigation menu"
             @click="closeMobile"

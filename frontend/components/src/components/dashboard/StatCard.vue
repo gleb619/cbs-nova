@@ -15,6 +15,7 @@ const props = withDefaults(
 
 <template>
   <div
+    data-testid="stat-card"
     class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex items-center gap-4 hover:shadow-md transition-shadow"
   >
     <span v-if="icon" class="text-3xl">{{ icon }}</span>
@@ -25,6 +26,7 @@ const props = withDefaults(
     <a
       v-if="props.linkComponent === 'a'"
       :href="props.to"
+      data-testid="stat-card-link"
       class="text-sm text-blue-600 hover:text-blue-800 font-medium"
       >View →</a
     >
@@ -32,6 +34,7 @@ const props = withDefaults(
       :is="props.linkComponent"
       v-else
       :to="props.to"
+      data-testid="stat-card-link"
       class="text-sm text-blue-600 hover:text-blue-800 font-medium"
       >View →</component
     >
