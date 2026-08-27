@@ -152,3 +152,11 @@ backend/.intellijPlatform/
 /gradle/wrapper/gradle-wrapper.properties
 /gradlew
 /gradlew.bat
+/workbench-after-fix.yml
+/workbench-collapsed.yml
+/workbench-expanded.yml
+/workbench-expanded2.yml
+/workbench-initial.yml
+/workbench-reload.yml
+/workbench-reload2.yml
+/workbench-reload-clientonly.yml

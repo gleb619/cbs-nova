@@ -33,10 +33,10 @@ class MetricsStageTest {
   @Test
   void runModeSkipsCollectionAndPassesThroughUntouched() {
     DslPipeContext pipeContext = new DslPipeContext(
-        "Ping",
-        contextFactory.of("body", ExecutionMode.RUN, "run-1"),
-        ExecutionMode.RUN,
-        "run-1");
+            "Ping",
+            contextFactory.of("body", ExecutionMode.RUN, "run-1"),
+            ExecutionMode.RUN,
+            "run-1");
     DslPipeStage.Next next = c -> Result.success("downstream");
 
     Result<?> result = new MetricsStage().execute(pipeContext, next);
@@ -49,23 +49,22 @@ class MetricsStageTest {
   @Test
   void previewModeRecordsCallCountsFromAstTree() {
     DslPipeContext pipeContext = new DslPipeContext(
-        "Ping",
-        contextFactory.of("body", ExecutionMode.PREVIEW, "run-1"),
-        ExecutionMode.PREVIEW,
-        "run-1");
+            "Ping",
+            contextFactory.of("body", ExecutionMode.PREVIEW, "run-1"),
+            ExecutionMode.PREVIEW,
+            "run-1");
     CallNode root = CallNode.node("root", CallKind.PROCESS, null, "out", true,
-        List.of(
-            CallNode.leaf("tx1", CallKind.TRANSACTION, null, "ok", true),
-            CallNode.leaf("helper1", CallKind.HELPER, null, "ok", true)
-        ),
-        List.of());
+            List.of(
+                    CallNode.leaf("tx1", CallKind.TRANSACTION, null, "ok", true),
+                    CallNode.leaf("helper1", CallKind.HELPER, null, "ok", true)),
+            List.of());
     pipeContext.setAttribute("astTree", root);
 
     DslPipeStage.Next next = c -> Result.success("downstream");
     new MetricsStage().execute(pipeContext, next);
 
     PreviewMetricsSnapshot snapshot = pipeContext.getAttribute(
-        "metrics", PreviewMetricsSnapshot.class);
+            "metrics", PreviewMetricsSnapshot.class);
     assertThat(snapshot).isNotNull();
     assertThat(snapshot.callCounts()).containsEntry(CallKind.PROCESS, 1);
     assertThat(snapshot.callCounts()).containsEntry(CallKind.TRANSACTION, 1);
@@ -75,48 +74,48 @@ class MetricsStageTest {
   @Test
   void previewModeRecordsExternalCallTypes() {
     DslPipeContext pipeContext = new DslPipeContext(
-        "Ping",
-        contextFactory.of("body", ExecutionMode.PREVIEW, "run-1"),
-        ExecutionMode.PREVIEW,
-        "run-1");
+            "Ping",
+            contextFactory.of("body", ExecutionMode.PREVIEW, "run-1"),
+            ExecutionMode.PREVIEW,
+            "run-1");
     List<ExternalCall> calls = List.of(
-        new ExternalCall(ExternalCallRecorder.TYPE_DATABASE, "jdbc:db", "select", 0L, Map.of()),
-        new ExternalCall(ExternalCallRecorder.TYPE_HTTP, "http://x", "GET", 0L, Map.of()),
-        new ExternalCall(ExternalCallRecorder.TYPE_DATABASE, "jdbc:db", "insert", 0L, Map.of())
-    );
+            new ExternalCall(ExternalCallRecorder.TYPE_DATABASE, "jdbc:db", "select", 0L, Map.of()),
+            new ExternalCall(ExternalCallRecorder.TYPE_HTTP, "http://x", "GET", 0L, Map.of()),
+            new ExternalCall(ExternalCallRecorder.TYPE_DATABASE, "jdbc:db", "insert", 0L,
+                    Map.of()));
     pipeContext.setAttribute("externalCalls", calls);
 
     DslPipeStage.Next next = c -> Result.success("downstream");
     new MetricsStage().execute(pipeContext, next);
 
     PreviewMetricsSnapshot snapshot = pipeContext.getAttribute(
-        "metrics", PreviewMetricsSnapshot.class);
+            "metrics", PreviewMetricsSnapshot.class);
     assertThat(snapshot).isNotNull();
     assertThat(snapshot.externalCallCounts())
-        .containsEntry(ExternalCallRecorder.TYPE_DATABASE, 2)
-        .containsEntry(ExternalCallRecorder.TYPE_HTTP, 1);
+            .containsEntry(ExternalCallRecorder.TYPE_DATABASE, 2)
+            .containsEntry(ExternalCallRecorder.TYPE_HTTP, 1);
   }
 
   @Test
   void metricsAttributeSetEvenWhenProceedThrows() {
     DslPipeContext pipeContext = new DslPipeContext(
-        "Ping",
-        contextFactory.of("body", ExecutionMode.PREVIEW, "run-1"),
-        ExecutionMode.PREVIEW,
-        "run-1");
+            "Ping",
+            contextFactory.of("body", ExecutionMode.PREVIEW, "run-1"),
+            ExecutionMode.PREVIEW,
+            "run-1");
     pipeContext.setAttribute("astTree",
-        CallNode.leaf("root", CallKind.PROCESS, null, "ok", true));
+            CallNode.leaf("root", CallKind.PROCESS, null, "ok", true));
 
     DslPipeStage.Next next = c -> {
       throw new IllegalStateException("downstream boom");
     };
 
     assertThatThrownBy(() -> new MetricsStage().execute(pipeContext, next))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessage("downstream boom");
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("downstream boom");
 
     PreviewMetricsSnapshot snapshot = pipeContext.getAttribute(
-        "metrics", PreviewMetricsSnapshot.class);
+            "metrics", PreviewMetricsSnapshot.class);
     assertThat(snapshot).isNotNull();
     assertThat(snapshot.callCounts()).containsEntry(CallKind.PROCESS, 1);
   }
@@ -124,10 +123,10 @@ class MetricsStageTest {
   @Test
   void missingAstTreeAndExternalCallsAttributesDoNotThrow() {
     DslPipeContext pipeContext = new DslPipeContext(
-        "Ping",
-        contextFactory.of("body", ExecutionMode.PREVIEW, "run-1"),
-        ExecutionMode.PREVIEW,
-        "run-1");
+            "Ping",
+            contextFactory.of("body", ExecutionMode.PREVIEW, "run-1"),
+            ExecutionMode.PREVIEW,
+            "run-1");
 
     DslPipeStage.Next next = c -> Result.success("downstream");
 
@@ -135,7 +134,7 @@ class MetricsStageTest {
 
     assertThat(result.isSuccess()).isTrue();
     PreviewMetricsSnapshot snapshot = pipeContext.getAttribute(
-        "metrics", PreviewMetricsSnapshot.class);
+            "metrics", PreviewMetricsSnapshot.class);
     assertThat(snapshot).isNotNull();
     assertThat(snapshot.callCounts()).isEmpty();
     assertThat(snapshot.externalCallCounts()).isEmpty();
@@ -144,19 +143,19 @@ class MetricsStageTest {
   @Test
   void explainModeAlsoCollectsMetrics() {
     DslPipeContext pipeContext = new DslPipeContext(
-        "Ping",
-        contextFactory.of("body", ExecutionMode.EXPLAIN, "run-1"),
-        ExecutionMode.EXPLAIN,
-        "run-1");
+            "Ping",
+            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-1"),
+            ExecutionMode.EXPLAIN,
+            "run-1");
     pipeContext.setAttribute("astTree",
-        CallNode.leaf("root", CallKind.PROCESS, null, "ok", true));
+            CallNode.leaf("root", CallKind.PROCESS, null, "ok", true));
 
     DslPipeStage.Next next = c -> Result.success("downstream");
 
     new MetricsStage().execute(pipeContext, next);
 
     PreviewMetricsSnapshot snapshot = pipeContext.getAttribute(
-        "metrics", PreviewMetricsSnapshot.class);
+            "metrics", PreviewMetricsSnapshot.class);
     assertThat(snapshot).isNotNull();
     assertThat(snapshot.callCounts()).containsEntry(CallKind.PROCESS, 1);
   }

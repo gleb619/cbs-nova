@@ -13,7 +13,7 @@ import cbs.nova.starter.persistence.JdbcTransactionExecutionRepository;
 import cbs.nova.starter.persistence.NoOpFieldEncryptor;
 import cbs.nova.starter.persistence.TransactionExecutionJdbcRepository;
 import cbs.nova.starter.persistence.TransactionExecutionMapper;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -24,7 +24,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import javax.sql.DataSource;
 
-@AutoConfiguration
+@Configuration
 @EnableConfigurationProperties(DslRunPersistenceProperties.class)
 public class DslRunRepositoryConfiguration {
 

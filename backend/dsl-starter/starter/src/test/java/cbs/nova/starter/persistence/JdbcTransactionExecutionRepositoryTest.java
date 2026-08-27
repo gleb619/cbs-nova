@@ -18,7 +18,6 @@ import java.util.Map;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @TestPropertySource(properties = {
     "dsl.worker.enabled=false",
-    "dsl.reload.enabled=false",
     "spring.flyway.enabled=true"
 })
 class JdbcTransactionExecutionRepositoryTest {
@@ -98,7 +97,7 @@ class JdbcTransactionExecutionRepositoryTest {
             Instant.parse("2026-07-19T00:00:00Z"));
   }
 
-  @SpringBootApplication
+  @SpringBootApplication(scanBasePackages = "cbs.nova.starter")
   static class TestApplication {
     public static void main(String[] args) {
       SpringApplication.run(TestApplication.class, args);

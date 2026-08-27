@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Verifies the wiring of {@link PreviewMetricsAutoConfiguration} without booting a full Spring Boot
+ * Verifies the wiring of {@link PreviewMetricsConfiguration} without booting a full Spring Boot
  * application.
  *
  * <p>
@@ -26,10 +26,10 @@ import org.springframework.context.annotation.Configuration;
  * therefore confirm that the bean is always present and that binding it to a {@link MeterRegistry}
  * registers the expected gauges.
  */
-class PreviewMetricsAutoConfigurationTest {
+class PreviewMetricsConfigurationTest {
 
   private final ApplicationContextRunner runner = new ApplicationContextRunner()
-          .withConfiguration(AutoConfigurations.of(PreviewMetricsAutoConfiguration.class));
+          .withConfiguration(AutoConfigurations.of(PreviewMetricsConfiguration.class));
 
   @BeforeEach
   void resetSharedSnapshot() {

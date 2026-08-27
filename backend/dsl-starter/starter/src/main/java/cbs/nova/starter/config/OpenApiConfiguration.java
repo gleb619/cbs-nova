@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
 import java.util.Optional;
 
 @Configuration
-public class OpenApiConfig {
+public class OpenApiConfiguration {
 
   private static final String DEFAULT_VERSION = "0.0.1-SNAPSHOT";
 

@@ -148,8 +148,8 @@ class PreviewCacheKeyBuilderTest {
     @Override
     public cbs.nova.dsl.ExecutableDescriptor describe() {
       return new cbs.nova.dsl.ExecutableDescriptor(
-          "echo", "Echo helper", Object.class, Object.class,
-          true, "delegates to execute", List.of());
+              "echo", "Echo helper", Object.class, Object.class,
+              true, "delegates to execute", List.of());
     }
   }
 }

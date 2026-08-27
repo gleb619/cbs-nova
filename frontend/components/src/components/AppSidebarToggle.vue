@@ -10,24 +10,16 @@ const props = withDefaults(
   },
 )
 
-const { toggle, openMobile } = useSidebar()
-
-function onClick() {
-  //TODO: make useSidebar reuse a `frontend/components/src/composables/useLocalStorageState.ts`
-  if (typeof window !== 'undefined' && window.innerWidth < 768) {
-    openMobile()
-  } else {
-    toggle()
-  }
-}
+const { toggleResponsive } = useSidebar()
 </script>
 
 <template>
   <button
     type="button"
+    data-testid="app-sidebar-toggle"
     class="p-2 rounded-lg text-neutral-600 hover:text-primary-600 hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-300"
     :aria-label="props.label"
-    @click="onClick"
+    @click="toggleResponsive"
   >
     <svg
       class="w-6 h-6"

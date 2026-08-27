@@ -23,6 +23,15 @@ public class DslGradleSyncNotificationListenerTest extends BasePlatformTestCase 
     return (Map<ExternalSystemTaskId, Set<Path>>) field.get(null);
   }
 
+  @Override
+  protected void setUp() throws Exception {
+    super.setUp();
+    // DslSyncedDirs is a project-level service backed by the SAME in-memory project
+    // instance for the whole test class. Reset it so no run pushes leak into
+    // a later test's isEmpty() assertion regardless of method execution order.
+    DslSyncedDirs.getInstance(getProject()).replace(Set.of());
+  }
+
   public void testOnSuccessIgnoresNonGradleSystemId() throws Exception {
     var taskId = ExternalSystemTaskId.create(
             new ProjectSystemId("NOT_GRADLE"),
@@ -62,7 +71,13 @@ public class DslGradleSyncNotificationListenerTest extends BasePlatformTestCase 
 
   public void testOnSuccessDoesNotPushDirsWhenFindProjectReturnsNull() throws Exception {
     DslProjectStateService.getInstance(getProject()).setActiveDslProject(true);
-    var taskId = gradleResolveTaskId();
+    // Use a task id whose project is NOT resolvable (no matching open project), so
+    // ExternalSystemTaskId.findProject() deterministically returns null. Using the
+    // fixture's real basePath makes findProject() resolve and the listener PUSHES.
+    var taskId = ExternalSystemTaskId.create(
+            GradleConstants.SYSTEM_ID,
+            ExternalSystemTaskType.RESOLVE_PROJECT,
+            "does-not-exist-gradle-project");
     var dslDir = Path.of("/tmp/test-push/src/dsl");
     discoveredMap().computeIfAbsent(taskId, id -> ConcurrentHashMap.newKeySet()).add(dslDir);
 

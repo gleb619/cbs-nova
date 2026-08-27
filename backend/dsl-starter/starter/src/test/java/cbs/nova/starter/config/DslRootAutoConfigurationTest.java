@@ -2,17 +2,12 @@ package cbs.nova.starter.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.starter.preview.MessagingCallCaptureAutoConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.annotation.AnnotationUtils;
-import org.springframework.core.io.ClassPathResource;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -23,43 +18,28 @@ import java.util.Set;
 class DslRootAutoConfigurationTest {
 
   @Test
-  void importsFileListsOnlySingleRoot() throws IOException {
-    var resource = new ClassPathResource(
-            "META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports");
-    try (var in = Objects.requireNonNull(resource.getInputStream())) {
-      var content = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-      var lines = content.lines()
-              .map(String::trim)
-              .filter(line -> !line.isEmpty() && !line.startsWith("#"))
-              .toList();
-      assertThat(lines)
-              .as("AutoConfiguration.imports must list exactly the root autoconfiguration")
-              .containsExactly(DslRootAutoConfiguration.class.getName());
-    }
-  }
-
-  @Test
-  void rootImportsEverySubAutoConfiguration() {
+  void rootImportsEverySubConfiguration() {
     var importAnnotation = DslRootAutoConfiguration.class.getAnnotation(Import.class);
     assertThat(importAnnotation).as("root must declare @Import").isNotNull();
     var imported = Set.of(importAnnotation.value());
     assertThat(imported).containsExactlyInAnyOrder(
             RequestIdFilterConfiguration.class,
-            LoggingAutoConfiguration.class,
-            DryRunLoggingAutoConfiguration.class,
+            LoggingConfiguration.class,
+            DryRunLoggingConfiguration.class,
             TemporalConfiguration.class,
-            DslAutoConfiguration.class,
+            DslConfiguration.class,
             DslWorkerConfiguration.class,
             DslRunRepositoryConfiguration.class,
-            DataSourceCallAutoConfiguration.class,
-            FeignCallAutoConfiguration.class,
-            PreviewAutoConfiguration.class,
-            PreviewCacheAutoConfiguration.class,
-            MessagingCallCaptureAutoConfiguration.class,
-            PreviewMetricsAutoConfiguration.class,
+            DataSourceCallConfiguration.class,
+            FeignCallConfiguration.class,
+            PreviewConfiguration.class,
+            PreviewCacheConfiguration.class,
+            MessagingCallCaptureConfiguration.class,
+            PreviewMetricsConfiguration.class,
             DslRouterConfiguration.class,
-            DslErrorHandlingAutoConfiguration.class,
-            SpringHelperAutoConfiguration.class);
+            DslErrorHandlingConfiguration.class,
+            SpringHelperConfiguration.class,
+            ApiKeyAuthFilterConfiguration.class);
   }
 
   @Test

@@ -1,31 +1,41 @@
 package cbs.nova.starter.config.properties;
 
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.bind.DefaultValue;
 
+@Data
+@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PUBLIC)
 @ConfigurationProperties(prefix = "dsl")
-public record DslProperties(
-        String sourceDir,
-        @DefaultValue("dsl-task-queue") String taskQueue,
-        @DefaultValue Worker worker,
-        @DefaultValue Reload reload,
-        @DefaultValue Auth auth) {
-  public DslProperties {
-    worker = worker == null ? new Worker(false) : worker;
-    reload = reload == null ? new Reload(true) : reload;
-    auth = auth == null ? new Auth(null) : auth;
+public class DslProperties {
+
+  private String sourceDir;
+  private String taskQueue = "dsl-task-queue";
+  private Worker worker = new Worker();
+  private Reload reload = new Reload();
+  private Auth auth = new Auth();
+
+  @Data
+  public static class Worker {
+
+    private boolean enabled;
+
   }
 
-  public record Worker(@DefaultValue("false") boolean enabled) {
+  @Data
+  public static class Reload {
+
+    private boolean enabled;
+
   }
 
-  public record Reload(@DefaultValue("true") boolean enabled) {
-  }
+  @Data
+  public static class Auth {
 
-  public record Auth(String apiKey) {
-  }
+    private String apiKey;
 
-  public DslProperties(String sourceDir, String taskQueue, Worker worker, Reload reload) {
-    this(sourceDir, taskQueue, worker, reload, new Auth(null));
   }
 }

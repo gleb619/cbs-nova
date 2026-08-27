@@ -1,9 +1,9 @@
 package cbs.nova.starter.config;
 
-import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
-@AutoConfiguration
+@Configuration
 @Import(SpringHelperBeanDefinitionRegistrar.class)
-public class SpringHelperAutoConfiguration {
+public class SpringHelperConfiguration {
 }

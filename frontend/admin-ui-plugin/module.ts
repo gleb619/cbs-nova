@@ -144,6 +144,12 @@ export default defineNuxtModule<ModuleOptions>({
     addPlugin({ src: resolve('./app/plugins/logNuxtLifecycle.client.ts'), mode: 'client' })
 
     // -----------------------------------------------------------------------
+    // Sidebar state — provided per Vue app (per SSR request), persisted in
+    // localStorage and mirrored to a cookie so SSR renders the saved layout
+    // -----------------------------------------------------------------------
+    addPlugin({ src: resolve('./app/plugins/sidebarState.ts') })
+
+    // -----------------------------------------------------------------------
     // Pinia
     // -----------------------------------------------------------------------
     if (!nuxt.options.modules?.includes('@pinia/nuxt')) {
@@ -218,7 +224,7 @@ export default defineNuxtModule<ModuleOptions>({
       nitroConfig.scanDirs = nitroConfig.scanDirs || []
       // Use pre-built JS server routes when the plugin is installed as a package,
       // otherwise use the workspace TypeScript sources for local development.
-      const serverDir = existsSync(resolve('./dist/server'))
+      const serverDir = !nuxt.options.dev && existsSync(resolve('./dist/server'))
         ? resolve('./dist/server')
         : resolve('./server')
       nitroConfig.scanDirs.push(serverDir)

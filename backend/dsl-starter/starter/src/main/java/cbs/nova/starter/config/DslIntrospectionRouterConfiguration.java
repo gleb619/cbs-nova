@@ -1,11 +1,12 @@
 package cbs.nova.starter.config;
 
 import cbs.nova.starter.controllers.DslIntrospectionHandler;
-import cbs.nova.starter.controllers.DslIntrospectionHandler.DefinitionMetaDto;
-import cbs.nova.starter.controllers.DslIntrospectionHandler.HelperSearchResult;
-import cbs.nova.starter.controllers.DslIntrospectionHandler.NamesResponse;
-import cbs.nova.starter.controllers.DslIntrospectionHandler.ProcessDetail;
-import cbs.nova.starter.controllers.DslIntrospectionHandler.TransactionDetail;
+import cbs.nova.starter.services.introspection.DslIntrospectionService;
+import cbs.nova.starter.services.introspection.model.DefinitionMetaDto;
+import cbs.nova.starter.services.introspection.model.HelperSearchResult;
+import cbs.nova.starter.services.introspection.model.NamesResponse;
+import cbs.nova.starter.services.introspection.model.ProcessDetail;
+import cbs.nova.starter.services.introspection.model.TransactionDetail;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -15,20 +16,19 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springdoc.core.annotations.RouterOperation;
 import org.springdoc.core.annotations.RouterOperations;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.RouterFunctions;
 import org.springframework.web.servlet.function.ServerResponse;
 
-@AutoConfiguration
+@Configuration
 public class DslIntrospectionRouterConfiguration {
 
   @Bean
-  DslIntrospectionHandler dslIntrospectionHandler(
-          cbs.nova.dsl.JsonSchemaGenerator jsonSchemaGenerator) {
-    return new DslIntrospectionHandler(jsonSchemaGenerator);
+  DslIntrospectionHandler dslIntrospectionHandler(DslIntrospectionService service) {
+    return new DslIntrospectionHandler(service);
   }
 
   @Bean

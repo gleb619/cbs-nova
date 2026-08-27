@@ -3,7 +3,7 @@ package cbs.nova.starter.capture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 
-import cbs.nova.starter.config.FeignCallAutoConfiguration;
+import cbs.nova.starter.config.FeignCallConfiguration;
 import cbs.nova.starter.core.recorder.ExternalCall;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-class FeignCallAutoConfigurationTest {
+class FeignCallConfigurationTest {
 
   private HttpServer httpServer;
   private String baseUrl;
@@ -110,7 +110,7 @@ class FeignCallAutoConfigurationTest {
 
   @Test
   void autoconfigurationBeanProducesInterceptor() {
-    var config = new FeignCallAutoConfiguration();
+    var config = new FeignCallConfiguration();
     var interceptor = config.externalCallFeignInterceptor(recorder);
 
     assertThat(interceptor).isNotNull();

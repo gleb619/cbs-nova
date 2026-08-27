@@ -36,7 +36,7 @@ class DslReloadResourceTest {
   @BeforeEach
   void setUp() {
     GlobalManager.globalManager().resetForTests();
-    resource = new DslReloadHandler(new DslProperties(null, null, null, null), loader);
+    resource = new DslReloadHandler(new DslProperties(null, null, null, null, null), loader);
   }
 
   @AfterEach
@@ -45,7 +45,7 @@ class DslReloadResourceTest {
   }
 
   private void setSourceDir(String value) {
-    resource = new DslReloadHandler(new DslProperties(value, null, null, null), loader);
+    resource = new DslReloadHandler(new DslProperties(value, null, null, null, null), loader);
   }
 
   private static ServerRequest reloadRequest() {

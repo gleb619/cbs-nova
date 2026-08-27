@@ -4,8 +4,9 @@ import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.models.DraftRequest;
 import cbs.nova.starter.models.DraftResponse;
 import cbs.nova.starter.models.ErrorResponse;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import jakarta.servlet.ServletException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
@@ -19,10 +20,12 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import tools.jackson.databind.ObjectMapper;
 
+@Slf4j
 @Component
 @ConditionalOnProperty(prefix = "dsl.drafts", name = "enabled", havingValue = "true", matchIfMissing = true)
-@Slf4j
+@RequiredArgsConstructor
 public class DslDraftHandler {
 
   private static final String DRAFTS_DIR = ".workbench/drafts";
@@ -31,14 +34,6 @@ public class DslDraftHandler {
   private final DslProperties dslProperties;
   private final DslReloadHandler reloadHandler;
   private final ObjectMapper objectMapper;
-
-  public DslDraftHandler(DslProperties dslProperties,
-          DslReloadHandler reloadHandler,
-          ObjectMapper objectMapper) {
-    this.dslProperties = dslProperties;
-    this.reloadHandler = reloadHandler;
-    this.objectMapper = objectMapper;
-  }
 
   public ServerResponse save(ServerRequest request) throws IOException {
     String name = request.pathVariable("name");
@@ -114,15 +109,17 @@ public class DslDraftHandler {
   }
 
   private PathResult ensureConfigured(String name) {
-    var sourceDirProperty = dslProperties.sourceDir();
+    var sourceDirProperty = dslProperties.getSourceDir();
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
       return new PathResult.Err(error(HttpStatus.CONFLICT,
-              new ErrorResponse("NOT_CONFIGURED", "dsl.source-dir is not configured", name, null, null)));
+              new ErrorResponse("NOT_CONFIGURED", "dsl.source-dir is not configured", name, null,
+                      null)));
     }
     Path dir = Path.of(sourceDirProperty);
     if (!Files.isDirectory(dir)) {
       return new PathResult.Err(error(HttpStatus.CONFLICT,
-              new ErrorResponse("NOT_FOUND", "Source directory does not exist: " + dir, name, null, null)));
+              new ErrorResponse("NOT_FOUND", "Source directory does not exist: " + dir, name, null,
+                      null)));
     }
     return new PathResult.Ok(dir);
   }
@@ -130,10 +127,10 @@ public class DslDraftHandler {
   private DraftRequest parse(ServerRequest request) throws IOException {
     try {
       return objectMapper.readValue(request.body(InputStream.class), DraftRequest.class);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       log.warn("[DSL drafts] failed to parse request body: {}", e.getMessage(), e);
       return null;
-    } catch (jakarta.servlet.ServletException e) {
+    } catch (ServletException e) {
       throw new IOException("Failed to read request body", e);
     }
   }

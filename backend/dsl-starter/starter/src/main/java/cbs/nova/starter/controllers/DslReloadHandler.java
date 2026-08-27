@@ -61,7 +61,7 @@ public class DslReloadHandler {
    * the SPI mechanisms {@link DslDefinitionProvider} and {@link HelperResolver}.
    */
   public ServerResponse reload(ServerRequest request) throws IOException {
-    var sourceDirProperty = dslProperties.sourceDir();
+    var sourceDirProperty = dslProperties.getSourceDir();
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
       return error(HttpStatus.CONFLICT, new ErrorResponse(
               "NOT_CONFIGURED", "dsl.source-dir is not configured", null, null, null));

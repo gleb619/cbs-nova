@@ -4,14 +4,14 @@ import cbs.nova.starter.cache.PreviewResultCache;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.MeterBinder;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
-@AutoConfiguration
+@Configuration
 @EnableConfigurationProperties(CbsNovaPreviewProperties.class)
-public class PreviewCacheAutoConfiguration {
+public class PreviewCacheConfiguration {
 
   @Bean
   @ConditionalOnMissingBean

@@ -1,27 +1,31 @@
 package cbs.nova.starter.config;
 
-import cbs.nova.starter.preview.MessagingCallCaptureAutoConfiguration;
+import cbs.nova.starter.config.properties.DslProperties;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Import;
 
 @AutoConfiguration
 @Import({
     RequestIdFilterConfiguration.class,
-    LoggingAutoConfiguration.class,
-    DryRunLoggingAutoConfiguration.class,
+    LoggingConfiguration.class,
+    DryRunLoggingConfiguration.class,
     DslRunRepositoryConfiguration.class,
-    TemporalConfiguration.class,
-    DslAutoConfiguration.class,
+    DslConfiguration.class,
     DslWorkerConfiguration.class,
-    DataSourceCallAutoConfiguration.class,
-    FeignCallAutoConfiguration.class,
-    PreviewAutoConfiguration.class,
-    PreviewCacheAutoConfiguration.class,
-    MessagingCallCaptureAutoConfiguration.class,
-    PreviewMetricsAutoConfiguration.class,
+    TemporalConfiguration.class,
+    DataSourceCallConfiguration.class,
+    FeignCallConfiguration.class,
+    PreviewConfiguration.class,
+    PreviewCacheConfiguration.class,
+    MessagingCallCaptureConfiguration.class,
+    PreviewMetricsConfiguration.class,
     DslRouterConfiguration.class,
-    DslErrorHandlingAutoConfiguration.class,
-    SpringHelperAutoConfiguration.class
+    DslErrorHandlingConfiguration.class,
+    SpringHelperConfiguration.class,
+    ApiKeyAuthFilterConfiguration.class,
+
 })
+@EnableConfigurationProperties(DslProperties.class)
 public class DslRootAutoConfiguration {
 }

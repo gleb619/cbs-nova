@@ -1,29 +1,26 @@
 package cbs.nova.starter.web;
 
 import cbs.nova.starter.models.ErrorResponse;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import tools.jackson.databind.ObjectMapper;
 
+@RequiredArgsConstructor
 public final class ApiKeyAuthFilter extends OncePerRequestFilter {
 
   public static final String API_KEY_HEADER = "X-Api-Key";
 
   private final String configuredApiKey;
   private final ObjectMapper objectMapper;
-
-  public ApiKeyAuthFilter(String configuredApiKey, ObjectMapper objectMapper) {
-    this.configuredApiKey = configuredApiKey;
-    this.objectMapper = objectMapper;
-  }
 
   @Override
   protected void doFilterInternal(

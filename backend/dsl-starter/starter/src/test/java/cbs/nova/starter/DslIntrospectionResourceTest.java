@@ -16,9 +16,12 @@ import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.starter.config.DslIntrospectionRouterConfiguration;
 import cbs.nova.starter.controllers.DslIntrospectionHandler;
+import cbs.nova.starter.services.introspection.DslIntrospectionService;
+import cbs.nova.starter.services.introspection.mapper.DslIntrospectionMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mapstruct.factory.Mappers;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -36,8 +39,10 @@ class DslIntrospectionResourceTest {
             .registerProcess(
                     Dsl.process("LoanDisbursement")
                             .execute(ctx -> Result.success("ok")).build());
-    DslIntrospectionHandler handler = new DslIntrospectionHandler(
-            DslConfig.dslConfig().jsonSchemaGenerator().get());
+    DslIntrospectionMapper mapper = Mappers.getMapper(DslIntrospectionMapper.class);
+    DslIntrospectionService service = new DslIntrospectionService(
+            DslConfig.dslConfig().jsonSchemaGenerator().get(), mapper);
+    DslIntrospectionHandler handler = new DslIntrospectionHandler(service);
     DslIntrospectionRouterConfiguration router = new DslIntrospectionRouterConfiguration();
     mockMvc = MockMvcBuilders.routerFunctions(router.dslIntrospectionRouter(handler)).build();
   }

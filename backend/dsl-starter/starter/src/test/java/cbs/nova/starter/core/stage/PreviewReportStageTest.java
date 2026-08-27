@@ -80,7 +80,7 @@ class PreviewReportStageTest {
   void attributeDefaultsAppliedWhenExecutionTraceAndDryRunLogsMissing() {
     DslPipeContext pipeContext = pipeContext();
     pipeContext.setAttribute("astTree",
-        CallNode.leaf("root", CallKind.PROCESS, null, "ok", true));
+            CallNode.leaf("root", CallKind.PROCESS, null, "ok", true));
     DslPipeStage.Next next = c -> Result.success("downstream");
 
     Result<?> result = new PreviewReportStage().execute(pipeContext, next);
@@ -99,7 +99,7 @@ class PreviewReportStageTest {
     List<String> trace = List.of("step-1", "step-2");
     List<Map<String, Object>> logs = List.of(Map.of("message", "log-1"));
     PreviewMetricsSnapshot metrics = new PreviewMetricsSnapshot(10L, 256L,
-        Map.of(CallKind.PROCESS, 1), Map.of("http", 2));
+            Map.of(CallKind.PROCESS, 1), Map.of("http", 2));
     pipeContext.setAttribute("executionTrace", trace);
     pipeContext.setAttribute("dryRunLogs", logs);
     pipeContext.setAttribute("metrics", metrics);
@@ -132,9 +132,8 @@ class PreviewReportStageTest {
   void externalCallsAndCallCountsPopulatedFromAttribute() {
     DslPipeContext pipeContext = pipeContext();
     List<ExternalCall> calls = List.of(
-        new ExternalCall("database", "jdbc:db", "select", 0L, Map.of()),
-        new ExternalCall("http", "http://x", "GET", 0L, Map.of())
-    );
+            new ExternalCall("database", "jdbc:db", "select", 0L, Map.of()),
+            new ExternalCall("http", "http://x", "GET", 0L, Map.of()));
     pipeContext.setAttribute("externalCalls", calls);
     DslPipeStage.Next next = c -> Result.success("downstream");
 
@@ -143,8 +142,8 @@ class PreviewReportStageTest {
     PreviewReport report = (PreviewReport) result.value();
     assertThat(report.externalCalls()).hasSize(2);
     assertThat(report.callCounts())
-        .containsEntry("database", 1)
-        .containsEntry("http", 1);
+            .containsEntry("database", 1)
+            .containsEntry("http", 1);
   }
 
   @Test

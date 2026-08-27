@@ -7,6 +7,10 @@ export interface DslConstruct {
   status: ConstructStatus
   version?: string
   taskQueue?: string
+  inputType?: string
+  outputType?: string
+  hasCompensation?: boolean
+  description?: string
 }
 
 export interface ValidationError {

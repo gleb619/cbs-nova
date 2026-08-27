@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Verifies the wiring of {@link DryRunLoggingAutoConfiguration} without booting a full Spring Boot
+ * Verifies the wiring of {@link DryRunLoggingConfiguration} without booting a full Spring Boot
  * application.
  *
  * <p>
@@ -30,10 +30,10 @@ import org.springframework.context.annotation.Configuration;
  * <li>{@code dryRunLogbackAppenderInstaller}: unconditional {@link ApplicationRunner}.</li>
  * </ul>
  */
-class DryRunLoggingAutoConfigurationTest {
+class DryRunLoggingConfigurationTest {
 
   private final ApplicationContextRunner runner = new ApplicationContextRunner()
-          .withConfiguration(AutoConfigurations.of(DryRunLoggingAutoConfiguration.class));
+          .withConfiguration(AutoConfigurations.of(DryRunLoggingConfiguration.class));
 
   @Test
   void allBeansAreWiredByDefault() {

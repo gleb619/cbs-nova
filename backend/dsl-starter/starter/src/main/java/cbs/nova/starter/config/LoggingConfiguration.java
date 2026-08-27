@@ -2,14 +2,14 @@ package cbs.nova.starter.config;
 
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.logging.LoggingExecutionListener;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
-@AutoConfiguration
+@Configuration
 @EnableConfigurationProperties(CbsNovaLoggingProperties.class)
-public class LoggingAutoConfiguration {
+public class LoggingConfiguration {
 
   @Bean
   @ConditionalOnMissingBean

@@ -33,20 +33,24 @@ function handleSelect(name: string) {
 </script>
 
 <template>
-  <div v-if="!collapsed" class="flex flex-col h-full bg-gray-900 text-gray-100">
-    <div class="flex items-center justify-between p-3 border-b border-gray-800">
-      <h2 class="text-sm font-semibold text-gray-100">Constructs</h2>
+  <div class="flex flex-col h-full bg-gray-900 text-gray-100">
+    <div
+      class="flex items-center p-3 border-b border-gray-800"
+      :class="collapsed ? 'justify-center' : 'justify-between'"
+    >
+      <h2 v-show="!collapsed" class="text-sm font-semibold text-gray-100">Constructs</h2>
       <button
         type="button"
         class="p-1.5 rounded hover:bg-gray-800 text-gray-400 hover:text-gray-100"
-        aria-label="Collapse constructs"
+        :aria-label="collapsed ? 'Expand constructs' : 'Collapse constructs'"
         @click="toggle"
       >
-        «
+        <span v-show="collapsed">»</span>
+        <span v-show="!collapsed">«</span>
       </button>
     </div>
 
-    <div class="p-3 border-b border-gray-800">
+    <div v-show="!collapsed" class="p-3 border-b border-gray-800" data-testid="explorer-search">
       <input
         v-model="search"
         type="text"
@@ -55,29 +59,23 @@ function handleSelect(name: string) {
       >
     </div>
 
-    <div v-if="loading" class="flex-1 overflow-y-auto p-2">
-      <DslPlainConstructListSkeleton />
-    </div>
-
-    <div v-else class="flex-1 overflow-y-auto p-2">
+    <div v-show="!collapsed" class="flex-1 overflow-y-auto p-2" data-testid="explorer-list">
+      <DslPlainConstructListSkeleton v-if="loading" />
       <slot
+        v-else
         :constructs="filteredConstructs"
         :selected-name="selectedName"
         :on-select="handleSelect"
       />
     </div>
-  </div>
 
-  <div v-else class="flex flex-col items-center h-full w-full bg-gray-900 text-gray-100 py-2">
-    <button
-      type="button"
-      class="p-1.5 rounded hover:bg-gray-800 text-gray-400 hover:text-gray-100"
-      aria-label="Expand constructs"
-      @click="toggle"
+    <div
+      v-show="collapsed"
+      class="flex-1 flex flex-col items-center py-2"
+      data-testid="explorer-rail"
     >
-      »
-    </button>
-    <span class="vertical-text text-xs font-semibold text-gray-400 mt-4">Constructs</span>
+      <span class="vertical-text text-xs font-semibold text-gray-400 mt-4">Constructs</span>
+    </div>
   </div>
 </template>
 

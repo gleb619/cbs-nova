@@ -41,9 +41,8 @@ class ExternalCallRecordingStageTest {
   void externalCallsAttributeSetFromFinishRunReturnValue() {
     ExternalCallRecorder recorder = mock(ExternalCallRecorder.class);
     List<ExternalCall> recorded = List.of(
-        new ExternalCall(ExternalCallRecorder.TYPE_DATABASE, "jdbc:db", "select", 0L, Map.of()),
-        new ExternalCall(ExternalCallRecorder.TYPE_HTTP, "http://x", "GET", 0L, Map.of())
-    );
+            new ExternalCall(ExternalCallRecorder.TYPE_DATABASE, "jdbc:db", "select", 0L, Map.of()),
+            new ExternalCall(ExternalCallRecorder.TYPE_HTTP, "http://x", "GET", 0L, Map.of()));
     when(recorder.finishRun("run-2")).thenReturn(recorded);
 
     DslPipeContext pipeContext = newPipeContext("run-2");
@@ -52,8 +51,8 @@ class ExternalCallRecordingStageTest {
     new ExternalCallRecordingStage(recorder).execute(pipeContext, next);
 
     @SuppressWarnings("unchecked")
-    List<ExternalCall> attributeCalls =
-        (List<ExternalCall>) pipeContext.getAttribute("externalCalls");
+    List<ExternalCall> attributeCalls = (List<ExternalCall>) pipeContext
+            .getAttribute("externalCalls");
     assertThat(attributeCalls).hasSize(2);
     assertThat(attributeCalls.get(0).type()).isEqualTo(ExternalCallRecorder.TYPE_DATABASE);
     assertThat(attributeCalls.get(1).type()).isEqualTo(ExternalCallRecorder.TYPE_HTTP);
@@ -63,8 +62,8 @@ class ExternalCallRecordingStageTest {
   void externalCallsAttributeSetEvenWhenProceedThrows() {
     ExternalCallRecorder recorder = mock(ExternalCallRecorder.class);
     List<ExternalCall> recorded = List.of(
-        new ExternalCall(ExternalCallRecorder.TYPE_DATABASE, "jdbc:db", "select", 0L, Map.of())
-    );
+            new ExternalCall(ExternalCallRecorder.TYPE_DATABASE, "jdbc:db", "select", 0L,
+                    Map.of()));
     when(recorder.finishRun("run-3")).thenReturn(recorded);
 
     DslPipeContext pipeContext = newPipeContext("run-3");
@@ -74,12 +73,12 @@ class ExternalCallRecordingStageTest {
 
     assertThatThrownBy(() -> new ExternalCallRecordingStage(recorder)
             .execute(pipeContext, next))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessage("downstream boom");
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("downstream boom");
 
     @SuppressWarnings("unchecked")
-    List<ExternalCall> attributeCalls =
-        (List<ExternalCall>) pipeContext.getAttribute("externalCalls");
+    List<ExternalCall> attributeCalls = (List<ExternalCall>) pipeContext
+            .getAttribute("externalCalls");
     assertThat(attributeCalls).isNotNull();
     assertThat(attributeCalls).hasSize(1);
   }
@@ -95,8 +94,8 @@ class ExternalCallRecordingStageTest {
     new ExternalCallRecordingStage(recorder).execute(pipeContext, next);
 
     @SuppressWarnings("unchecked")
-    List<ExternalCall> attributeCalls =
-        (List<ExternalCall>) pipeContext.getAttribute("externalCalls");
+    List<ExternalCall> attributeCalls = (List<ExternalCall>) pipeContext
+            .getAttribute("externalCalls");
     assertThat(attributeCalls).isEmpty();
     verify(recorder).startRun("run-4");
     verify(recorder).finishRun("run-4");

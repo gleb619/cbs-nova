@@ -22,7 +22,7 @@ class ExecutionTraceStageTest {
   void proceedReceivesWrappedContextWithFreshExecutionTraceCollector() {
     Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
     DslPipeContext pipeContext = new DslPipeContext(
-        "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
+            "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
     AtomicReference<DslPipeContext> captured = new AtomicReference<>();
     DslPipeStage.Next next = c -> {
@@ -45,7 +45,7 @@ class ExecutionTraceStageTest {
   void executionTraceAttributeIsSetFromCollectorSnapshot() {
     Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
     DslPipeContext pipeContext = new DslPipeContext(
-        "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
+            "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
     DslPipeStage.Next next = c -> {
       ExecutionTraceCollector inside = c.getDslContext().executionTraceCollector();
@@ -66,15 +66,15 @@ class ExecutionTraceStageTest {
   void executionTraceAttributeIsSetEvenWhenProceedThrows() {
     Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
     DslPipeContext pipeContext = new DslPipeContext(
-        "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
+            "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
     DslPipeStage.Next next = c -> {
       throw new IllegalStateException("downstream boom");
     };
 
     assertThatThrownBy(() -> new ExecutionTraceStage().execute(pipeContext, next))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessage("downstream boom");
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("downstream boom");
 
     @SuppressWarnings("unchecked")
     List<String> trace = (List<String>) pipeContext.getAttribute("executionTrace", List.class);
@@ -86,7 +86,7 @@ class ExecutionTraceStageTest {
   void collectorStartEnablesAddAndStopClearsEntries() {
     Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
     DslPipeContext pipeContext = new DslPipeContext(
-        "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
+            "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
     AtomicReference<DslPipeContext> captured = new AtomicReference<>();
     DslPipeStage.Next next = c -> {
@@ -98,8 +98,8 @@ class ExecutionTraceStageTest {
 
     new ExecutionTraceStage().execute(pipeContext, next);
 
-    ExecutionTraceCollector capturedCollector =
-        captured.get().getDslContext().executionTraceCollector();
+    ExecutionTraceCollector capturedCollector = captured.get().getDslContext()
+            .executionTraceCollector();
     assertThat(capturedCollector.snapshot()).isEmpty();
 
     @SuppressWarnings("unchecked")

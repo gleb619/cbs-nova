@@ -16,6 +16,7 @@ import {
   DslProblemsPanel,
   useHelperSearch,
 } from '@cbs/components'
+import { useCookie } from 'nuxt/app'
 import { computed, onMounted } from 'vue'
 
 const workbench = useDslWorkbench()
@@ -35,7 +36,9 @@ const {
 const useWorkbenchStorage = createNamespacedLocalStorageState('cbs-nova:dsl-workbench')
 
 const explorerOpen = useWorkbenchStorage<boolean>('explorer-open', true)
-const explorerCollapsed = useWorkbenchStorage<boolean>('explorer-collapsed', false)
+const explorerCollapsed = useWorkbenchStorage<boolean>('explorer-collapsed', false, {
+  useCookie,
+})
 const helperSearchOpen = useWorkbenchStorage<boolean>('helper-search-open', false)
 
 const dslApi = useDslApi()

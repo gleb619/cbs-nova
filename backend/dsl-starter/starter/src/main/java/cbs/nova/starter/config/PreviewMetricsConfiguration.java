@@ -3,11 +3,11 @@ package cbs.nova.starter.config;
 import cbs.nova.starter.metrics.PreviewMetricsCollector;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.binder.MeterBinder;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Bean;
 
-@AutoConfiguration
-public class PreviewMetricsAutoConfiguration {
+@Configuration
+public class PreviewMetricsConfiguration {
 
   @Bean
   MeterBinder previewMetricsBinder() {

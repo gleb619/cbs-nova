@@ -24,7 +24,7 @@ class ExecutionTreeStageTest {
   void runModePassesThroughOriginalContextUnchanged() {
     Context<?> originalDsl = contextFactory.of("body", ExecutionMode.RUN, "run-1");
     DslPipeContext pipeContext = new DslPipeContext(
-        "Ping", originalDsl, ExecutionMode.RUN, "run-1");
+            "Ping", originalDsl, ExecutionMode.RUN, "run-1");
 
     AtomicReference<DslPipeContext> captured = new AtomicReference<>();
     DslPipeStage.Next next = c -> {
@@ -44,7 +44,7 @@ class ExecutionTreeStageTest {
   void previewModeSetsAstTreeAttributeFromCollectorTree() {
     Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
     DslPipeContext pipeContext = new DslPipeContext(
-        "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
+            "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
     DslPipeStage.Next next = c -> {
       ExecutionListener listener = c.getDslContext().executionListener();
@@ -71,7 +71,7 @@ class ExecutionTreeStageTest {
   void previewModeSetsAstTreeAttributeToNullWhenCollectorTreeEmpty() {
     Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
     DslPipeContext pipeContext = new DslPipeContext(
-        "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
+            "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
     DslPipeStage.Next next = c -> Result.success("downstream");
 
@@ -84,7 +84,7 @@ class ExecutionTreeStageTest {
   void previewModeProceedsWithWrappedContext() {
     Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
     DslPipeContext pipeContext = new DslPipeContext(
-        "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
+            "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
     AtomicReference<DslPipeContext> captured = new AtomicReference<>();
     DslPipeStage.Next next = c -> {
@@ -106,15 +106,15 @@ class ExecutionTreeStageTest {
   void astTreeAttributeIsSetEvenWhenProceedThrows() {
     Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
     DslPipeContext pipeContext = new DslPipeContext(
-        "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
+            "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
     DslPipeStage.Next next = c -> {
       throw new IllegalStateException("downstream boom");
     };
 
     assertThatThrownBy(() -> new ExecutionTreeStage(contextFactory, 32).execute(pipeContext, next))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessage("downstream boom");
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("downstream boom");
 
     assertThat(pipeContext.getAttribute("astTree", CallNode.class)).isNull();
   }
@@ -123,7 +123,7 @@ class ExecutionTreeStageTest {
   void explainModeAlsoBuildsTree() {
     Context<?> originalDsl = contextFactory.of("body", ExecutionMode.EXPLAIN, "run-1");
     DslPipeContext pipeContext = new DslPipeContext(
-        "Ping", originalDsl, ExecutionMode.EXPLAIN, "run-1");
+            "Ping", originalDsl, ExecutionMode.EXPLAIN, "run-1");
 
     DslPipeStage.Next next = c -> Result.success("downstream");
 

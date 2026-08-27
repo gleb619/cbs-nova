@@ -26,7 +26,7 @@ class LogbackPatternContractTest {
         xml = reader.lines().collect(Collectors.joining("\n"));
       }
       assertTrue(xml.contains("%X{rid"),
-          "logback-spring.xml must render the rid MDC key, got:\n" + xml);
+              "logback-spring.xml must render the rid MDC key, got:\n" + xml);
     }
   }
 }

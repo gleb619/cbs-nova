@@ -3,7 +3,6 @@ package cbs.nova.starter.web;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.starter.models.ErrorResponse;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
@@ -13,6 +12,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 import java.io.IOException;
+import tools.jackson.databind.ObjectMapper;
 
 class ApiKeyAuthFilterTest {
 

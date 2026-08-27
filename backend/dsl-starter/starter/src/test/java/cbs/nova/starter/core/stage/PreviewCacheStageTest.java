@@ -57,7 +57,7 @@ class PreviewCacheStageTest {
     assertThat(keyCaptor.getValue().processName()).isEqualTo("Ping");
 
     assertThat(pipeContext.getAttribute("previewCacheKey", PreviewCacheKey.class))
-        .isNotNull();
+            .isNotNull();
     verify(cache, never()).put(any(), any());
   }
 
@@ -97,7 +97,7 @@ class PreviewCacheStageTest {
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("plain");
     assertThat(pipeContext.getAttribute("previewCacheKey", PreviewCacheKey.class))
-        .isNull();
+            .isNull();
   }
 
   @Test
@@ -142,8 +142,8 @@ class PreviewCacheStageTest {
     };
 
     assertThatThrownBy(() -> new PreviewCacheStage(cache).execute(pipeContext, next))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessage("downstream boom");
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("downstream boom");
 
     verify(cache, never()).put(any(), any());
   }
@@ -155,16 +155,16 @@ class PreviewCacheStageTest {
 
   private static PreviewReport previewReport(Object output) {
     return new PreviewReport(
-        "Ping",
-        ExecutionMode.PREVIEW,
-        true,
-        output,
-        List.of(),
-        List.of(),
-        Map.of(),
-        null,
-        List.of(),
-        null,
-        null);
+            "Ping",
+            ExecutionMode.PREVIEW,
+            true,
+            output,
+            List.of(),
+            List.of(),
+            Map.of(),
+            null,
+            List.of(),
+            null,
+            null);
   }
 }

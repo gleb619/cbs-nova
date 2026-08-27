@@ -8,15 +8,15 @@ import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import ch.qos.logback.classic.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
-@AutoConfiguration
+@Configuration
 @EnableConfigurationProperties(DryRunProperties.class)
-public class DryRunLoggingAutoConfiguration {
+public class DryRunLoggingConfiguration {
 
   @Bean
   @ConditionalOnMissingBean(DryRunLoggingContext.class)

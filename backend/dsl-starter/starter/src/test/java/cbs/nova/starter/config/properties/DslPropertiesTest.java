@@ -16,10 +16,10 @@ class DslPropertiesTest {
   void defaultsAreApplied() {
     runner.run(ctx -> {
       DslProperties properties = ctx.getBean(DslProperties.class);
-      assertThat(properties.sourceDir()).isNull();
-      assertThat(properties.taskQueue()).isEqualTo("dsl-task-queue");
-      assertThat(properties.worker().enabled()).isFalse();
-      assertThat(properties.reload().enabled()).isTrue();
+      assertThat(properties.getSourceDir()).isNull();
+      assertThat(properties.getTaskQueue()).isEqualTo("dsl-task-queue");
+      assertThat(properties.getWorker().isEnabled()).isFalse();
+      assertThat(properties.getReload().isEnabled()).isFalse();
     });
   }
 
@@ -33,10 +33,10 @@ class DslPropertiesTest {
                     "dsl.reload.enabled=false")
             .run(ctx -> {
               DslProperties properties = ctx.getBean(DslProperties.class);
-              assertThat(properties.sourceDir()).isEqualTo("/tmp/dsl");
-              assertThat(properties.taskQueue()).isEqualTo("custom-queue");
-              assertThat(properties.worker().enabled()).isTrue();
-              assertThat(properties.reload().enabled()).isFalse();
+              assertThat(properties.getSourceDir()).isEqualTo("/tmp/dsl");
+              assertThat(properties.getTaskQueue()).isEqualTo("custom-queue");
+              assertThat(properties.getWorker().isEnabled()).isTrue();
+              assertThat(properties.getReload().isEnabled()).isFalse();
             });
   }
 
@@ -50,10 +50,10 @@ class DslPropertiesTest {
                     "dsl.reload.enabled=false")
             .run(ctx -> {
               DslProperties properties = ctx.getBean(DslProperties.class);
-              assertThat(properties.sourceDir()).isEqualTo("/tmp/dsl-camel");
-              assertThat(properties.taskQueue()).isEqualTo("kebab-queue");
-              assertThat(properties.worker().enabled()).isTrue();
-              assertThat(properties.reload().enabled()).isFalse();
+              assertThat(properties.getSourceDir()).isEqualTo("/tmp/dsl-camel");
+              assertThat(properties.getTaskQueue()).isEqualTo("kebab-queue");
+              assertThat(properties.getWorker().isEnabled()).isTrue();
+              assertThat(properties.getReload().isEnabled()).isFalse();
             });
   }
 

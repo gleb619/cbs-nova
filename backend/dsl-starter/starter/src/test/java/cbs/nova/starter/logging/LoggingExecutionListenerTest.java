@@ -3,6 +3,7 @@ package cbs.nova.starter.logging;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
+import cbs.nova.starter.web.RequestIdFilter;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
@@ -46,7 +47,8 @@ class LoggingExecutionListenerTest {
     List<ILoggingEvent> events = appender.list;
     assertThat(events).hasSize(1);
     assertThat(events.get(0).getFormattedMessage()).contains("MyProcess");
-    assertThat(events.get(0).getMDCPropertyMap().get("requestId")).isEqualTo("run-1");
+    assertThat(events.get(0).getMDCPropertyMap().get(RequestIdFilter.REQUEST_ID_MDC_KEY))
+            .isEqualTo("run-1");
   }
 
   @Test

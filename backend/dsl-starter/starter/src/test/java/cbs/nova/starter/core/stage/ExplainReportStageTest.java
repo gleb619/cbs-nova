@@ -39,7 +39,8 @@ class ExplainReportStageTest {
 
   @Test
   void alwaysReturnsSuccessRegardlessOfInnerDslResultOutcome() {
-    DslPipeContext pipeContext = pipeContext("unregistered-" + System.nanoTime(), ExecutionMode.PREVIEW);
+    DslPipeContext pipeContext = pipeContext("unregistered-" + System.nanoTime(),
+            ExecutionMode.PREVIEW);
     DslPipeStage.Next next = c -> {
       pipeContext.setAttribute("dslResult", Result.failure(new RuntimeException("boom")));
       return Result.failure(new RuntimeException("downstream"));
@@ -57,23 +58,23 @@ class ExplainReportStageTest {
   void descriptionIsBuiltFromDescriptorTypeWhenFound() {
     String fnName = "MyFn-" + System.nanoTime();
     GlobalManager.globalManager().registerFunction(
-        Dsl.function(fnName)
-            .execute(c -> Result.success("ok"))
-            .describe(() -> new DslDescriptor(
-                fnName,
-                DslObject.DslType.FUNCTION,
-                null,
-                null,
-                null,
-                false,
-                false,
-                "delegates",
-                List.of(),
-                null,
-                null,
-                null,
-                null))
-            .build());
+            Dsl.function(fnName)
+                    .execute(c -> Result.success("ok"))
+                    .describe(() -> new DslDescriptor(
+                            fnName,
+                            DslObject.DslType.FUNCTION,
+                            null,
+                            null,
+                            null,
+                            false,
+                            false,
+                            "delegates",
+                            List.of(),
+                            null,
+                            null,
+                            null,
+                            null))
+                    .build());
 
     DslPipeContext pipeContext = pipeContext(fnName, ExecutionMode.PREVIEW);
     DslPipeStage.Next next = c -> Result.success("downstream");
@@ -118,7 +119,8 @@ class ExplainReportStageTest {
 
   @Test
   void errorsAreEmptyWhenDslResultSucceeded() {
-    DslPipeContext pipeContext = pipeContext("unregistered-" + System.nanoTime(), ExecutionMode.PREVIEW);
+    DslPipeContext pipeContext = pipeContext("unregistered-" + System.nanoTime(),
+            ExecutionMode.PREVIEW);
     DslPipeStage.Next next = c -> {
       pipeContext.setAttribute("dslResult", Result.success("ok"));
       return Result.success("downstream");
@@ -132,7 +134,8 @@ class ExplainReportStageTest {
 
   @Test
   void errorsAreEmptyWhenDslResultAttributeMissing() {
-    DslPipeContext pipeContext = pipeContext("unregistered-" + System.nanoTime(), ExecutionMode.PREVIEW);
+    DslPipeContext pipeContext = pipeContext("unregistered-" + System.nanoTime(),
+            ExecutionMode.PREVIEW);
     DslPipeStage.Next next = c -> Result.success("downstream");
 
     Result<?> result = new ExplainReportStage().execute(pipeContext, next);
@@ -160,7 +163,8 @@ class ExplainReportStageTest {
 
   @Test
   void externalCallsAndCallCountsDefaultToEmptyWhenAttributeMissing() {
-    DslPipeContext pipeContext = pipeContext("unregistered-" + System.nanoTime(), ExecutionMode.PREVIEW);
+    DslPipeContext pipeContext = pipeContext("unregistered-" + System.nanoTime(),
+            ExecutionMode.PREVIEW);
     DslPipeStage.Next next = c -> Result.success("downstream");
 
     Result<?> result = new ExplainReportStage().execute(pipeContext, next);
@@ -172,11 +176,11 @@ class ExplainReportStageTest {
 
   @Test
   void externalCallsAndCallCountsArePopulatedFromAttribute() {
-    DslPipeContext pipeContext = pipeContext("unregistered-" + System.nanoTime(), ExecutionMode.PREVIEW);
+    DslPipeContext pipeContext = pipeContext("unregistered-" + System.nanoTime(),
+            ExecutionMode.PREVIEW);
     List<ExternalCall> calls = List.of(
-        new ExternalCall("database", "jdbc:db", "select", 0L, Map.of()),
-        new ExternalCall("http", "http://x", "GET", 0L, Map.of())
-    );
+            new ExternalCall("database", "jdbc:db", "select", 0L, Map.of()),
+            new ExternalCall("http", "http://x", "GET", 0L, Map.of()));
     pipeContext.setAttribute("externalCalls", calls);
     DslPipeStage.Next next = c -> Result.success("downstream");
 
@@ -185,13 +189,14 @@ class ExplainReportStageTest {
     ExplainReport report = (ExplainReport) result.value();
     assertThat(report.externalCalls()).hasSize(2);
     assertThat(report.callCounts())
-        .containsEntry("database", 1)
-        .containsEntry("http", 1);
+            .containsEntry("database", 1)
+            .containsEntry("http", 1);
   }
 
   @Test
   void attributeDefaultsAppliedWhenExecutionTraceAndDryRunLogsMissing() {
-    DslPipeContext pipeContext = pipeContext("unregistered-" + System.nanoTime(), ExecutionMode.PREVIEW);
+    DslPipeContext pipeContext = pipeContext("unregistered-" + System.nanoTime(),
+            ExecutionMode.PREVIEW);
     DslPipeStage.Next next = c -> Result.success("downstream");
 
     Result<?> result = new ExplainReportStage().execute(pipeContext, next);

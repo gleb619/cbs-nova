@@ -30,6 +30,7 @@ import java.util.Locale;
 @Component
 @Tag(name = "DSL Executions", description = "Inspect DSL execution runs")
 @RequiredArgsConstructor
+// TODO: Add mapstrcut mapper, that map `request.param` to a record
 public class DslExecutionsHandler {
 
   private static final int MAX_LIMIT = 500;

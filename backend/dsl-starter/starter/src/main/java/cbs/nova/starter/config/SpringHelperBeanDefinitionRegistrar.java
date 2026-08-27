@@ -38,6 +38,7 @@ public class SpringHelperBeanDefinitionRegistrar implements ImportBeanDefinition
     }
     var scanner = new ClassPathScanningCandidateComponentProvider(false);
     scanner.addIncludeFilter(new AnnotationTypeFilter(SpringHelper.class));
+
     for (String pkg : packages) {
       var candidates = scanner.findCandidateComponents(pkg);
       for (BeanDefinition candidate : candidates) {

@@ -5,13 +5,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import cbs.nova.starter.config.MessagingCallCaptureConfiguration;
 import cbs.nova.starter.core.recorder.ExternalCall;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
 
-class MessagingCallCaptureAutoConfigurationTest {
+class MessagingCallCaptureConfigurationTest {
 
   private RunScopedExternalCallRecorder recorder;
   private List<ExternalCall> recorded;
@@ -136,8 +136,8 @@ class MessagingCallCaptureAutoConfigurationTest {
 
   @Test
   void autoconfigurationProducesBeanPostProcessor() {
-    var config = new MessagingCallCaptureAutoConfiguration();
-    var bean = MessagingCallCaptureAutoConfiguration
+    var config = new MessagingCallCaptureConfiguration();
+    var bean = MessagingCallCaptureConfiguration
             .messagingCallCaptureProducerFactoryPostProcessor(recorder);
     assertThat(bean).isNotNull()
             .isInstanceOf(MessagingCallCaptureProducerFactoryBeanPostProcessor.class);

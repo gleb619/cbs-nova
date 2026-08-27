@@ -2,7 +2,7 @@ package cbs.nova.starter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.starter.config.DslErrorHandlingAutoConfiguration;
+import cbs.nova.starter.config.DslErrorHandlingConfiguration;
 import cbs.nova.starter.error.DefaultDslExceptionMapper;
 import cbs.nova.starter.error.DslExceptionMapper;
 import cbs.nova.starter.models.ErrorResponse;
@@ -14,10 +14,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.context.request.WebRequest;
 
-class DslExceptionMapperAutoConfigurationTest {
+class DslExceptionMapperConfigurationTest {
 
   private final ApplicationContextRunner runner = new ApplicationContextRunner()
-          .withConfiguration(AutoConfigurations.of(DslErrorHandlingAutoConfiguration.class));
+          .withConfiguration(AutoConfigurations.of(DslErrorHandlingConfiguration.class));
 
   @Test
   void registersDefaultMapperWhenNoCustomBeanExists() {

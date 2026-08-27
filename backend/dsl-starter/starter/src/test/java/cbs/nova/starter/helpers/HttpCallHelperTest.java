@@ -159,7 +159,7 @@ class HttpCallHelperTest {
                     .withStatus(200)
                     .withBody("ok")));
 
-    MDC.put("requestId", "mdc-req-1");
+    MDC.put("rid", "mdc-req-1");
     try {
       Result<HttpCallOut> result = execute(HttpCallIn.get(baseUrl() + "/mdc"));
       assertThat(result.isSuccess())

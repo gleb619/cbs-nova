@@ -22,8 +22,9 @@ public class DslExceptionHandler extends ResponseEntityExceptionHandler {
   private final DslExceptionMapper dslExceptionMapper;
 
   @Override
-  protected @Nullable ResponseEntity<Object> handleExceptionInternal(Exception ex, @Nullable Object body,
-      HttpHeaders headers, HttpStatusCode statusCode, WebRequest request) {
+  protected @Nullable ResponseEntity<Object> handleExceptionInternal(Exception ex,
+          @Nullable Object body,
+          HttpHeaders headers, HttpStatusCode statusCode, WebRequest request) {
     log.error("ERROR_INTERNAL: {}", ex.getMessage(), ex);
     return super.handleExceptionInternal(ex, body, headers, statusCode, request);
   }

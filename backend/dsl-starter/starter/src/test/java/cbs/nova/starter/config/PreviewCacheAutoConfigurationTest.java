@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Verifies the wiring of {@link PreviewCacheAutoConfiguration} without booting a full Spring Boot
+ * Verifies the wiring of {@link PreviewCacheConfiguration} without booting a full Spring Boot
  * application.
  *
  * <p>
@@ -21,10 +21,10 @@ import org.springframework.context.annotation.Configuration;
  * When the user supplies their own {@link PreviewResultCache}, the starter backs off from creating
  * its own but still contributes the {@link MeterBinder} bound to the user-supplied cache instance.
  */
-class PreviewCacheAutoConfigurationTest {
+class PreviewCacheConfigurationTest {
 
   private final ApplicationContextRunner runner = new ApplicationContextRunner()
-          .withConfiguration(AutoConfigurations.of(PreviewCacheAutoConfiguration.class));
+          .withConfiguration(AutoConfigurations.of(PreviewCacheConfiguration.class));
 
   @Test
   void bothBeansAreRegisteredWhenNoUserCacheBeanExists() {

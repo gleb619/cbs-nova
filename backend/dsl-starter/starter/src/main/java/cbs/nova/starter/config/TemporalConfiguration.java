@@ -37,7 +37,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -57,9 +57,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.Collectors;
 
-@AutoConfiguration
-@AutoConfigureAfter({DryRunLoggingAutoConfiguration.class, DslAutoConfiguration.class,
-    DslWorkerConfiguration.class})
+@Configuration
 @EnableConfigurationProperties({CbsNovaPreviewProperties.class, CbsNovaFakesProperties.class})
 public class TemporalConfiguration {
 

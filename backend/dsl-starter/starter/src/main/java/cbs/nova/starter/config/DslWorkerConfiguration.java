@@ -1,24 +1,21 @@
 package cbs.nova.starter.config;
 
-import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GeneratedClassProvider;
 import cbs.nova.starter.config.properties.DslProperties;
 import io.temporal.client.WorkflowClient;
 import io.temporal.worker.TypeAlreadyRegisteredException;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import java.util.ServiceLoader;
+import java.util.concurrent.TimeUnit;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.context.annotation.Bean;
 
-import java.util.ServiceLoader;
-import java.util.concurrent.TimeUnit;
-
-@AutoConfiguration
+@Configuration
 @ConditionalOnProperty(name = "dsl.worker.enabled", havingValue = "true")
-@EnableConfigurationProperties(DslProperties.class)
 public class DslWorkerConfiguration {
 
   @Bean
@@ -32,7 +29,7 @@ public class DslWorkerConfiguration {
 
   @Bean
   Worker dslWorker(WorkerFactory dslWorkerFactory, DslProperties dslProperties) {
-    Worker worker = dslWorkerFactory.newWorker(dslProperties.taskQueue());
+    Worker worker = dslWorkerFactory.newWorker(dslProperties.getTaskQueue());
     registerGeneratedImplementations(worker);
     return worker;
   }

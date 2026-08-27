@@ -12,7 +12,7 @@ withDefaults(
 </script>
 
 <template>
-  <div class="space-y-3">
+  <div class="space-y-3" data-testid="construct-list-skeleton">
     <div v-for="type in GROUPS" :key="type">
       <div class="w-full flex items-center justify-between px-2 py-1">
         <span class="text-xs font-semibold uppercase text-gray-400 tracking-wide">
