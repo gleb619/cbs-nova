@@ -20,6 +20,7 @@ const baseClasses =
 <template>
   <a
     v-if="props.linkComponent === 'a'"
+    data-testid="app-nav-item"
     :href="props.to"
     :class="[baseClasses, props.isActive ? props.activeClass : '']"
     :aria-current="props.isActive ? 'page' : undefined"
@@ -30,6 +31,7 @@ const baseClasses =
   <component
     :is="props.linkComponent"
     v-else
+    data-testid="app-nav-item"
     :to="props.to"
     :class="[baseClasses, props.isActive ? props.activeClass : '']"
     :aria-current="props.isActive ? 'page' : undefined"

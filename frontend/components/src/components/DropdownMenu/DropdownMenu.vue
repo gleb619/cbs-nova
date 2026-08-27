@@ -101,10 +101,11 @@ defineExpose({ close: () => closeDropdown(true) })
 </script>
 
 <template>
-  <div class="relative inline-block">
+  <div class="relative inline-block" data-testid="dropdown-menu">
     <button
       ref="triggerRef"
       type="button"
+      data-testid="dropdown-menu-trigger"
       class="px-3 py-1.5 text-sm rounded border border-gray-300 hover:bg-gray-100 inline-flex items-center gap-1"
       aria-haspopup="true"
       :aria-expanded="isOpen"
@@ -122,6 +123,7 @@ defineExpose({ close: () => closeDropdown(true) })
       :id="menuId"
       ref="menuRef"
       role="menu"
+      data-testid="dropdown-menu-menu"
       class="absolute mt-1 min-w-[12rem] bg-white border border-gray-200 rounded shadow-md py-1 z-10 text-left"
       :class="menuPositionClass"
       tabindex="-1"
@@ -136,6 +138,7 @@ defineExpose({ close: () => closeDropdown(true) })
         :ref="(el) => setItemRef(el as Element | null, index)"
         type="button"
         role="menuitem"
+        :data-testid="`dropdown-menu-item-${item.value}`"
         :disabled="item.disabled"
         class="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 disabled:opacity-50 disabled:hover:bg-transparent focus:bg-gray-100 focus:outline-none"
         :class="item.variant === 'primary' ? 'text-blue-700 hover:bg-blue-50 focus:bg-blue-50' : ''"

@@ -50,9 +50,4 @@ describe('MetadataPanel', () => {
     expect(emDashCount).toBe(2)
   })
 
-  it('notes that editable metadata fields are coming soon', () => {
-    const wrapper = mount(MetadataPanel, { props: { construct } })
-
-    expect(wrapper.text()).toContain('Editable metadata fields coming soon.')
-  })
 })

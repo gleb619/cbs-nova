@@ -16,7 +16,7 @@ const props = defineProps<{
 </script>
 
 <template>
-  <div class="flex h-screen overflow-hidden bg-background">
+  <div data-testid="app-shell" class="flex h-screen overflow-hidden bg-background">
     <AppSidebar
       :items="props.navItems"
       :title="props.title"

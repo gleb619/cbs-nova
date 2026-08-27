@@ -58,6 +58,7 @@ function formatDate(value?: string): string {
 
 <template>
   <footer
+    data-testid="app-footer"
     class="shrink-0 border-t border-neutral-200 bg-neutral-50 px-4 py-2 text-sm text-neutral-600"
   >
     <div class="flex flex-col items-center justify-between gap-2 md:flex-row">

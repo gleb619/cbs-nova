@@ -11,6 +11,7 @@ const props = withDefaults(
 
 <template>
   <header
+    data-testid="app-navbar"
     :class="[
       'z-10 h-16 bg-neutral-50 border-b border-neutral-200 flex items-center px-4 gap-4 shrink-0',
       props.sticky ? 'sticky top-0' : '',
