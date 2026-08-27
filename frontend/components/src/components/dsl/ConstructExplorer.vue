@@ -33,16 +33,18 @@ function handleSelect(name: string) {
 </script>
 
 <template>
-  <div class="flex flex-col h-full bg-gray-900 text-gray-100">
+  <div class="flex flex-col h-full bg-gray-900 text-gray-100" data-testid="construct-explorer">
     <div
       class="flex items-center p-3 border-b border-gray-800"
       :class="collapsed ? 'justify-center' : 'justify-between'"
+      data-testid="construct-explorer-header"
     >
       <h2 v-show="!collapsed" class="text-sm font-semibold text-gray-100">Constructs</h2>
       <button
         type="button"
         class="p-1.5 rounded hover:bg-gray-800 text-gray-400 hover:text-gray-100"
         :aria-label="collapsed ? 'Expand constructs' : 'Collapse constructs'"
+        data-testid="construct-explorer-toggle"
         @click="toggle"
       >
         <span v-show="collapsed">»</span>

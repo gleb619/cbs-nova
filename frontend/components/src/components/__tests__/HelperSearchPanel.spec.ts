@@ -21,6 +21,12 @@ describe('HelperSearchPanel', () => {
     wrapper?.unmount()
   })
 
+  it('exposes root data-testid', () => {
+    wrapper = mountPanel({ results: [], open: true, isLoading: false })
+
+    expect(wrapper.find('[data-testid="helper-search-panel"]').exists()).toBe(true)
+  })
+
   it('renders nothing while the drawer is closed', () => {
     wrapper = mountPanel({ results: [], open: false, isLoading: false })
 

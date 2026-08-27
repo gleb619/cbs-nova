@@ -24,12 +24,13 @@ watch(localCode, (v) => {
 
 <template>
   <!-- TODO: we need to use a better code editor, read `docs/ideas/highlight-code-ideas.ignore.md` for details -->
-  <div class="p-3 h-full">
+  <div class="p-3 h-full" data-testid="code-tab">
     <textarea
       v-model="localCode"
       :readonly="props.readOnly"
       :placeholder="props.readOnly ? 'No code available' : 'Write DSL here...'"
       class="w-full h-64 md:h-full min-h-[300px] p-3 text-xs font-mono rounded border border-gray-700 bg-gray-900 text-gray-100 focus:outline-none focus:border-gray-500 resize-none"
+      data-testid="code-tab-textarea"
       spellcheck="false"
     />
   </div>

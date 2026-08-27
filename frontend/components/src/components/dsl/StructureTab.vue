@@ -12,7 +12,7 @@ const typeIcon: Record<StepDef['type'], string> = {
 </script>
 
 <template>
-  <div class="p-3">
+  <div class="p-3" data-testid="structure-tab">
     <div v-if="steps.length === 0" class="text-sm text-gray-500 italic py-6 text-center">
       No steps defined yet.
     </div>
@@ -21,6 +21,7 @@ const typeIcon: Record<StepDef['type'], string> = {
         v-for="(step, idx) in steps"
         :key="step.id"
         class="flex items-center gap-2 px-2 py-1.5 rounded bg-gray-50 border border-gray-200"
+        :data-testid="`structure-tab-node-${step.id}`"
       >
         <span class="text-gray-400 cursor-grab select-none" title="Drag handle">⋮⋮</span>
         <span class="text-base w-5 text-center" :title="step.type">{{ typeIcon[step.type] }}</span>

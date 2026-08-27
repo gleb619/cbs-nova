@@ -3,6 +3,12 @@ import { describe, expect, it } from 'vitest'
 import CodeTab from '../dsl/CodeTab.vue'
 
 describe('CodeTab', () => {
+  it('exposes root data-testid', () => {
+    const wrapper = mount(CodeTab, { props: { code: '' } })
+
+    expect(wrapper.find('[data-testid="code-tab"]').exists()).toBe(true)
+  })
+
   it('renders a textarea pre-filled with the code prop', () => {
     const wrapper = mount(CodeTab, { props: { code: 'step Greet {}' } })
 

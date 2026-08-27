@@ -24,13 +24,14 @@ const compatible = computed(() => {
 </script>
 
 <template>
-  <div class="bg-white border border-gray-200 rounded shadow-lg w-72 max-h-80 flex flex-col">
+  <div class="bg-white border border-gray-200 rounded shadow-lg w-72 max-h-80 flex flex-col" data-testid="reference-picker">
     <div class="p-2 border-b border-gray-200">
       <input
         v-model="search"
         type="text"
         :placeholder="`Search ${type}...`"
         class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+        data-testid="reference-picker-search-input"
       >
     </div>
     <ul class="flex-1 overflow-y-auto p-1">
@@ -41,6 +42,7 @@ const compatible = computed(() => {
         <button
           type="button"
           class="w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 text-gray-800"
+          :data-testid="`reference-picker-option-${c.name}`"
           @click="emit('pick', c.name)"
         >
           <span class="font-medium">{{ c.name }}</span>

@@ -12,6 +12,12 @@ const construct: DslConstruct = {
 }
 
 describe('MetadataPanel', () => {
+  it('exposes root data-testid', () => {
+    const wrapper = mount(MetadataPanel, { props: { construct } })
+
+    expect(wrapper.find('[data-testid="metadata-panel"]').exists()).toBe(true)
+  })
+
   it('prompts the user to select a construct when construct is null', () => {
     const wrapper = mount(MetadataPanel, { props: { construct: null } })
 

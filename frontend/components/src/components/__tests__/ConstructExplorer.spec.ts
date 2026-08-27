@@ -50,6 +50,12 @@ function mountContainer(props: {
 }
 
 describe('ConstructExplorer', () => {
+  it('exposes root data-testid', () => {
+    const wrapper = mountContainer({ constructs, selectedName: null })
+
+    expect(wrapper.find('[data-testid="construct-explorer"]').exists()).toBe(true)
+  })
+
   it('renders the header and search input in expanded state', () => {
     const wrapper = mountContainer({ constructs, selectedName: null })
 

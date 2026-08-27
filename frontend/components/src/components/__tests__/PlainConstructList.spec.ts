@@ -11,6 +11,12 @@ const constructs: DslConstruct[] = [
 ]
 
 describe('PlainConstructList', () => {
+  it('exposes root data-testid', () => {
+    const wrapper = mount(PlainConstructList, { props: { constructs: [], selectedName: null } })
+
+    expect(wrapper.find('[data-testid="plain-construct-list"]').exists()).toBe(true)
+  })
+
   it('renders all four group headers', () => {
     const wrapper = mount(PlainConstructList, { props: { constructs: [], selectedName: null } })
 

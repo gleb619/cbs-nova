@@ -63,6 +63,7 @@ function rowTypeClass(resultType: string): string {
         role="dialog"
         aria-modal="true"
         aria-label="Object search"
+        data-testid="helper-search-panel"
       >
         <div class="flex items-center justify-between p-3 border-b border-gray-800">
           <h3 class="text-sm font-semibold text-gray-100">Object Search</h3>
@@ -70,6 +71,7 @@ function rowTypeClass(resultType: string): string {
             type="button"
             class="p-1.5 rounded hover:bg-gray-800 text-gray-400 hover:text-gray-100"
             aria-label="Close object search"
+            data-testid="helper-search-close-button"
             @click="closeDrawer"
           >
             ✕
@@ -83,11 +85,13 @@ function rowTypeClass(resultType: string): string {
               type="text"
               placeholder="Name"
               class="w-full px-2 py-1.5 text-sm rounded bg-gray-800 text-gray-100 placeholder-gray-500 border border-gray-700 focus:outline-none focus:border-gray-500"
+              data-testid="helper-search-name-input"
              
             >
             <select
               v-model="type"
               class="w-full px-2 py-1.5 text-sm rounded bg-gray-800 text-gray-100 border border-gray-700 focus:outline-none focus:border-gray-500"
+              data-testid="helper-search-type-select"
              
             >
               <option value="">All types</option>
@@ -101,6 +105,7 @@ function rowTypeClass(resultType: string): string {
               type="text"
               placeholder="Description"
               class="w-full px-2 py-1.5 text-sm rounded bg-gray-800 text-gray-100 placeholder-gray-500 border border-gray-700 focus:outline-none focus:border-gray-500"
+              data-testid="helper-search-description-input"
              
             >
             <div class="flex gap-2">
@@ -108,6 +113,7 @@ function rowTypeClass(resultType: string): string {
                 type="button"
                 class="flex-1 px-3 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
                 :disabled="isLoading"
+                data-testid="helper-search-search-button"
                 @click="onSearch"
               >
                 Search
@@ -115,6 +121,7 @@ function rowTypeClass(resultType: string): string {
               <button
                 type="button"
                 class="px-3 py-1.5 text-sm rounded border border-gray-600 text-gray-300 hover:bg-gray-800"
+                data-testid="helper-search-clear-button"
                 @click="onClear"
               >
                 Clear
@@ -149,6 +156,7 @@ function rowTypeClass(resultType: string): string {
                 v-for="result in results"
                 :key="`${result.name}-${result.type}`"
                 class="hover:bg-gray-800"
+                :data-testid="`helper-search-result-row-${result.name}`"
               >
                 <td class="px-2 py-2 align-top">
                   <div class="text-gray-100 font-medium truncate" :title="result.name">

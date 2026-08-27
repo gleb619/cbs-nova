@@ -4,6 +4,12 @@ import type { ValidationError } from '../../types/dsl'
 import ProblemsPanel from '../dsl/ProblemsPanel.vue'
 
 describe('ProblemsPanel', () => {
+  it('exposes root data-testid', () => {
+    const wrapper = mount(ProblemsPanel, { props: { errors: [] } })
+
+    expect(wrapper.find('[data-testid="problems-panel"]').exists()).toBe(true)
+  })
+
   it('renders the empty state when no errors are supplied', () => {
     const wrapper = mount(ProblemsPanel, { props: { errors: [] } })
 

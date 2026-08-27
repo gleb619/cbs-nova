@@ -4,6 +4,12 @@ import type { StepDef } from '../../types/dsl'
 import StructureTab from '../dsl/StructureTab.vue'
 
 describe('StructureTab', () => {
+  it('exposes root data-testid', () => {
+    const wrapper = mount(StructureTab, { props: { steps: [] } })
+
+    expect(wrapper.find('[data-testid="structure-tab"]').exists()).toBe(true)
+  })
+
   it('renders the empty state when no steps are supplied', () => {
     const wrapper = mount(StructureTab, { props: { steps: [] } })
 
