@@ -57,4 +57,9 @@ describe('ExternalCallsBadge', () => {
     // null falls through the `??` short-circuit to '', then String('') === ''.
     expect(wrapper.find('span').text()).toBe('[42] true —')
   })
+
+  it('stamps data-testid on the root element', () => {
+    const wrapper = mount(ExternalCallsBadge, { props: { calls: [] } })
+    expect(wrapper.find('[data-testid="external-calls-badge"]').exists()).toBe(true)
+  })
 })

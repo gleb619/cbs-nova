@@ -34,10 +34,15 @@ const externalCount = computed(() => props.node.externalCalls.length)
 </script>
 
 <template>
-  <div class="border-l-2 pl-3" :class="[kindBorderClasses[node.kind], indentClass]">
+  <div
+    class="border-l-2 pl-3"
+    :class="[kindBorderClasses[node.kind], indentClass]"
+    data-testid="call-tree-node"
+  >
     <button
       type="button"
       class="w-full flex items-center gap-2 py-1 text-left hover:bg-neutral-100 rounded px-1"
+      data-testid="call-tree-node-toggle"
       @click="isOpen = !isOpen"
     >
       <span

@@ -54,7 +54,7 @@ function lineClass(kind: DiffLineKind): string {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-4" data-testid="explain-diff-view">
     <div class="flex items-center justify-between">
       <h3 class="text-sm font-semibold text-gray-700">Run vs Explain</h3>
       <button

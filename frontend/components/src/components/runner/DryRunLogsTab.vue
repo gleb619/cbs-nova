@@ -35,31 +35,39 @@ const copyAll = async () => {
 </script>
 
 <template>
-  <div>
+  <div data-testid="dry-run-logs-tab">
     <div v-if="list.length === 0" class="text-sm text-gray-500">
       No logs captured during dry run.
     </div>
 
     <div v-else class="flex flex-col gap-2">
       <div class="flex items-center justify-between gap-2">
-        <span class="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-700">
+        <span
+          class="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-700"
+          data-testid="dry-run-logs-count"
+        >
           {{ list.length }}
           log{{ list.length === 1 ? '' : 's' }}
         </span>
         <button
           type="button"
           class="text-xs font-medium text-blue-600 hover:text-blue-700 px-2 py-1 rounded border border-blue-200 hover:bg-blue-50 transition-colors"
+          data-testid="dry-run-logs-copy-all"
           @click="copyAll"
         >
           Copy all
         </button>
       </div>
 
-      <ul class="max-h-[60vh] overflow-auto space-y-1 border border-gray-200 rounded-lg p-2">
+      <ul
+        class="max-h-[60vh] overflow-auto space-y-1 border border-gray-200 rounded-lg p-2"
+        data-testid="dry-run-logs-list"
+      >
         <li
           v-for="(log, idx) in list"
           :key="idx"
           class="font-mono text-xs flex items-start gap-2 py-1"
+          data-testid="dry-run-logs-row"
         >
           <span class="text-gray-500 shrink-0">[{{ log.timestamp }}]</span>
           <span

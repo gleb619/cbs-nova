@@ -88,4 +88,13 @@ describe('ExplainDiffView', () => {
 
     expect(wrapper.find('[data-testid="explain-pane"]').text()).toBe('')
   })
+
+  it('stamps data-testid on the root element', () => {
+    const wrapper = mountExplainDiffView({
+      explainOutput: { a: 1 },
+      runOutput: { a: 2 },
+    })
+
+    expect(wrapper.find('[data-testid="explain-diff-view"]').exists()).toBe(true)
+  })
 })
