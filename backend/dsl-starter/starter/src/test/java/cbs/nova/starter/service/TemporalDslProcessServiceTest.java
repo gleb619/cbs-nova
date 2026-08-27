@@ -8,12 +8,15 @@ import cbs.nova.dsl.SimpleContext;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
 import cbs.nova.dsl.history.DslRun;
+import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dsl.transaction.TransactionRouting;
 import io.opentelemetry.api.baggage.Baggage;
 import io.opentelemetry.api.baggage.BaggageBuilder;
 import io.sentry.Sentry;
+import java.util.concurrent.ThreadFactory;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -51,8 +54,23 @@ class TemporalDslProcessServiceTest {
   }
 
   private static TemporalDslProcessService newService(ContextFactory contextFactory) {
-    return new TemporalDslProcessService(
+    return createService(
             contextFactory, new InMemoryDslRunRepository(), new ObjectMapper());
+  }
+
+  public static TemporalDslProcessService createService(
+      ContextFactory contextFactory,
+      DslRunRepository runRepository,
+      ObjectMapper objectMapper) {
+    return new TemporalDslProcessService(
+        contextFactory,
+        runRepository,
+        objectMapper,
+        sameThreadExecutor(),
+        disabledScheduledExecutor(),
+        Duration.ofSeconds(30),
+        Duration.ofMinutes(5),
+        false);
   }
 
   @Test
@@ -106,7 +124,7 @@ class TemporalDslProcessServiceTest {
   @Test
   void startProcessReachesGlobalManagerWithCorrectProcessName() {
     String missing = "missing-" + UUID.randomUUID();
-    TemporalDslProcessService service = new TemporalDslProcessService(new ContextFactory(),
+    TemporalDslProcessService service = createService(new ContextFactory(),
             new InMemoryDslRunRepository(), new ObjectMapper());
 
     Result<?> result = service.startProcess(missing, Map.of("k", "v"), Map.of("meta", "data"))
@@ -152,7 +170,7 @@ class TemporalDslProcessServiceTest {
       Mockito.when(built.makeCurrent()).thenReturn(() -> {
       });
 
-      TemporalDslProcessService service = new TemporalDslProcessService(
+      TemporalDslProcessService service = createService(
               contextFactory, new InMemoryDslRunRepository(), new ObjectMapper());
       service.startProcess(unique(), "payload", Map.of());
 
@@ -250,4 +268,31 @@ class TemporalDslProcessServiceTest {
   private static String unique() {
     return "proc-" + UUID.randomUUID();
   }
+
+  private static @NonNull ThreadPoolTaskExecutor sameThreadExecutor() {
+    ThreadPoolTaskExecutor exec = new ThreadPoolTaskExecutor() {
+      @Override
+      public void execute(@NonNull Runnable command) {
+        command.run();
+      }
+    };
+    exec.setCorePoolSize(1);
+    exec.setMaxPoolSize(1);
+    exec.setQueueCapacity(0);
+    exec.setThreadNamePrefix("cbs-nova-dsl-sync-");
+    exec.initialize();
+    return exec;
+  }
+
+  private static @NonNull ScheduledExecutorService disabledScheduledExecutor() {
+    ThreadFactory tf = r -> {
+      Thread t = new Thread(r, "cbs-nova-dsl-healthcheck-disabled");
+      t.setDaemon(true);
+      return t;
+    };
+    ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor(tf);
+    exec.shutdownNow();
+    return exec;
+  }
+
 }

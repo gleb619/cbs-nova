@@ -16,6 +16,7 @@ import org.jspecify.annotations.NonNull;
 public final class ExecutionTraceStage implements DslPipeStage {
 
   @Override
+  //TODO: search and move to `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/core/StarterConstant.java` a string constants
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
     ExecutionTraceCollector collector = new ExecutionTraceCollector();
     Context<?> ctx = context.getDslContext().withExecutionTraceCollector(collector);

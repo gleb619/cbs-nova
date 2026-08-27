@@ -18,6 +18,7 @@ public final class ExecutionTreeStage implements DslPipeStage {
   private final int maxDepth;
 
   @Override
+  //TODO: search and move to `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/core/StarterConstant.java` a string constants
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
     if (context.getMode() == ExecutionMode.RUN) {
       return next.proceed(context);
