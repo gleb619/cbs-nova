@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.CallKind;
 import cbs.nova.dsl.CallNode;
-import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.PreviewMetricsSnapshot;
 import cbs.nova.dsl.Result;
@@ -14,7 +13,7 @@ import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import cbs.nova.starter.core.recorder.ExternalCall;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
-import cbs.nova.starter.metrics.PreviewMetricsCollector;
+import cbs.nova.starter.metric.PreviewMetricsCollector;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;

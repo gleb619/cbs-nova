@@ -1,6 +1,6 @@
 package cbs.nova.starter.config;
 
-import cbs.nova.starter.metrics.PreviewMetricsCollector;
+import cbs.nova.starter.metric.PreviewMetricsCollector;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.binder.MeterBinder;
 import org.springframework.context.annotation.Configuration;

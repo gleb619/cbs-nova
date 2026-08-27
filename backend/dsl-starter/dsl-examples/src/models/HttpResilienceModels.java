@@ -1,5 +1,5 @@
 
-import cbs.nova.starter.helpers.model.HttpCallIn;
+import cbs.nova.starter.helper.model.HttpCallIn;
 
 public class HttpResilienceModels {
 

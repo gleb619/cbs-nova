@@ -6,7 +6,7 @@ import cbs.nova.dsl.Result;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import cbs.nova.starter.core.recorder.ExternalCall;
-import cbs.nova.starter.metrics.PreviewMetricsCollector;
+import cbs.nova.starter.metric.PreviewMetricsCollector;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 

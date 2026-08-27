@@ -1,12 +1,12 @@
 package cbs.nova.starter.config;
 
-import cbs.nova.starter.controllers.DslIntrospectionHandler;
-import cbs.nova.starter.services.introspection.DslIntrospectionService;
-import cbs.nova.starter.services.introspection.model.DefinitionMetaDto;
-import cbs.nova.starter.services.introspection.model.HelperSearchResult;
-import cbs.nova.starter.services.introspection.model.NamesResponse;
-import cbs.nova.starter.services.introspection.model.ProcessDetail;
-import cbs.nova.starter.services.introspection.model.TransactionDetail;
+import cbs.nova.starter.controller.DslIntrospectionHandler;
+import cbs.nova.starter.service.introspection.DslIntrospectionService;
+import cbs.nova.starter.service.introspection.model.DefinitionMetaDto;
+import cbs.nova.starter.service.introspection.model.HelperSearchResult;
+import cbs.nova.starter.service.introspection.model.NamesResponse;
+import cbs.nova.starter.service.introspection.model.ProcessDetail;
+import cbs.nova.starter.service.introspection.model.TransactionDetail;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;

@@ -1,0 +1,6 @@
+package cbs.nova.starter.helper.model;
+
+/** Very basic failure patterns supported by the unreliable API helper. */
+public enum UnreliableApiFailurePattern {
+  CONSECUTIVE, RANDOM
+}

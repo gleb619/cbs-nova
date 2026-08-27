@@ -25,6 +25,5 @@ defineProps<{ construct: DslConstruct | null }>()
       <dt class="text-gray-500">Task Queue</dt>
       <dd class="text-gray-900 truncate">{{ construct.taskQueue ?? '—' }}</dd>
     </dl>
-    <p class="mt-3 text-xs text-gray-400 italic">Editable metadata fields coming soon.</p>
   </div>
 </template>

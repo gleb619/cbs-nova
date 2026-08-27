@@ -1,10 +1,10 @@
 package cbs.nova.starter.config;
 
 import cbs.nova.dsl.history.DslRunRepository;
-import cbs.nova.starter.controllers.DslExecutionsHandler;
-import cbs.nova.starter.models.ErrorResponse;
-import cbs.nova.starter.models.ExecutionDto;
-import cbs.nova.starter.models.ExecutionListResponse;
+import cbs.nova.starter.controller.DslExecutionsHandler;
+import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.starter.model.ExecutionDto;
+import cbs.nova.starter.model.ExecutionListResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;

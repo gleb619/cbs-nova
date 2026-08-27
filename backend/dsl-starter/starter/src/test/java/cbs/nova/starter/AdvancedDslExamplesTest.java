@@ -17,7 +17,7 @@ import cbs.nova.dslexamples.ordersaga.v1.OrderSagaModels.OrderSagaIn;
 import cbs.nova.dslexamples.ordersaga.v1.OrderSagaModels.OrderSagaOut;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
-import cbs.nova.starter.helpers.*;
+import cbs.nova.starter.helper.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

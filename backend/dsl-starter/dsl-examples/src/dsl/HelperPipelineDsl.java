@@ -1,11 +1,11 @@
 import cbs.nova.dsl.JsonValue;
 import cbs.nova.dslexamples.HelperPipelineModels.*;
-import cbs.nova.starter.helpers.model.FilterRecordsIn;
-import cbs.nova.starter.helpers.model.FilterRecordsOut;
-import cbs.nova.starter.helpers.model.FormatMessageIn;
-import cbs.nova.starter.helpers.model.FormatMessageOut;
-import cbs.nova.starter.helpers.model.SumValuesIn;
-import cbs.nova.starter.helpers.model.SumValuesOut;
+import cbs.nova.starter.helper.model.FilterRecordsIn;
+import cbs.nova.starter.helper.model.FilterRecordsOut;
+import cbs.nova.starter.helper.model.FormatMessageIn;
+import cbs.nova.starter.helper.model.FormatMessageOut;
+import cbs.nova.starter.helper.model.SumValuesIn;
+import cbs.nova.starter.helper.model.SumValuesOut;
 
 
 List<DslObject> define() {

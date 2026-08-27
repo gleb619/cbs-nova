@@ -10,7 +10,7 @@ import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dslexamples.batchprocessing.v1.BatchModels.BatchIn;
 import cbs.nova.dslexamples.batchprocessing.v1.BatchModels.BatchItem;
 import cbs.nova.dslexamples.batchprocessing.v1.BatchModels.BatchOut;
-import cbs.nova.starter.services.TemporalDslProcessService;
+import cbs.nova.starter.service.TemporalDslProcessService;
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;

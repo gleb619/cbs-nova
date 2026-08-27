@@ -1,7 +1,7 @@
 package cbs.nova.starter.error;
 
 import cbs.nova.dsl.exception.DslException;
-import cbs.nova.starter.models.ErrorResponse;
+import cbs.nova.starter.model.ErrorResponse;
 import io.sentry.Sentry;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.context.request.WebRequest;

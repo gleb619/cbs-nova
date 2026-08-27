@@ -8,7 +8,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.ServiceLoaderDslDefinitionLoader;
 import cbs.nova.starter.config.DslReloadRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
-import cbs.nova.starter.controllers.DslReloadHandler;
+import cbs.nova.starter.controller.DslReloadHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

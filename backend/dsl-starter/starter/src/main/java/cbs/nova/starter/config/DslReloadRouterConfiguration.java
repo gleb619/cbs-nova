@@ -1,7 +1,7 @@
 package cbs.nova.starter.config;
 
-import cbs.nova.starter.controllers.DslReloadHandler;
-import cbs.nova.starter.models.ErrorResponse;
+import cbs.nova.starter.controller.DslReloadHandler;
+import cbs.nova.starter.model.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;

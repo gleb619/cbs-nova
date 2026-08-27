@@ -133,11 +133,11 @@ public record MyHelperOut(String result) {}
 Place the helper in `helpers/`:
 
 ```java
-package cbs.nova.starter.helpers;
+package cbs.nova.starter.helper;
 
 import cbs.nova.dsl.*;
-import cbs.nova.starter.helpers.model.MyHelperIn;
-import cbs.nova.starter.helpers.model.MyHelperOut;
+import cbs.nova.starter.helper.model.MyHelperIn;
+import cbs.nova.starter.helper.model.MyHelperOut;
 
 @Helper(name = "myHelper")
 public class MyHelperHelper implements Executable<MyHelperIn, MyHelperOut> {

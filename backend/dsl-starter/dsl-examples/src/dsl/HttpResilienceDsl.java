@@ -1,5 +1,5 @@
 import cbs.nova.dslexamples.HttpResilienceModels.*;
-import cbs.nova.starter.helpers.model.HttpCallIn;
+import cbs.nova.starter.helper.model.HttpCallIn;
 import java.util.List;
 import java.util.Map;
 

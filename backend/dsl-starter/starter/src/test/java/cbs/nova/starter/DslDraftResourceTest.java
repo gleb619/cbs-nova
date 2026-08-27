@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.starter.config.DslDraftRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
-import cbs.nova.starter.controllers.DslDraftHandler;
-import cbs.nova.starter.controllers.DslReloadHandler;
+import cbs.nova.starter.controller.DslDraftHandler;
+import cbs.nova.starter.controller.DslReloadHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

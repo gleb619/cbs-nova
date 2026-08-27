@@ -1,4 +1,4 @@
-import cbs.nova.starter.helpers.model.UnreliableApiIn;
+import cbs.nova.starter.helper.model.UnreliableApiIn;
 import java.util.List;
 
 public class UnreliableApiModels {

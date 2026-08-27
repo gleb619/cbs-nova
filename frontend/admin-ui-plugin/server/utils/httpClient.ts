@@ -44,8 +44,6 @@ export async function proxyToBackend<T>(
   }
   if (apiKey) headers['X-Api-Key'] = apiKey
 
-  // Propagate trace context. Always generate a request id so backend logs can
-  // be correlated with BFF logs even when the client didn't send one.
   const inboundRequestId = getRequestHeader(event, 'x-request-id')
   const requestId = inboundRequestId || globalThis.crypto.randomUUID()
   headers['X-Request-Id'] = requestId
@@ -62,8 +60,9 @@ export async function proxyToBackend<T>(
       body: options.body,
       query: options.query,
       timeout: timeoutMs,
+      retry: false,
       onRequest({ request }) {
-        writeLog('debug', `[BFF >] ${method} ${request}`, {
+        writeLog('info', `[BFF >] ${method} ${request}`, {
           requestId,
           headers: Object.keys(headers),
         })
@@ -71,23 +70,28 @@ export async function proxyToBackend<T>(
       onResponse({ response }) {
         writeLog(
           'info',
-          `[BFF <] ${method} ${path} ${response.status} ${Date.now() - startedAt}ms`,
+          `[BFF <] ${method} ${url} ${response.status} ${Date.now() - startedAt}ms`,
           {
             requestId,
           },
         )
       },
       onResponseError({ response, error }) {
-        writeLog('error', `[BFF !] ${method} ${path} ${response?.status ?? 'network'}`, {
+        writeLog('error', `[BFF !] ${method} ${url} ${response?.status ?? 'network'}`, {
           requestId,
+          backendUrl: baseUrl,
           error: (error as Error | undefined)?.message,
         })
       },
     })) as T
   } catch (err: unknown) {
-    // ofetch wraps timeout abort errors in a FetchError whose cause has
-    // name === 'TimeoutError'. Map to a 504 with a stable code so the
-    // frontend can distinguish timeouts from upstream 5xxs.
+    const message = (err as Error | undefined)?.message ?? String(err)
+    writeLog('error', `[BFF !] ${method} ${url} failed`, {
+      requestId,
+      backendUrl: baseUrl,
+      error: message,
+    })
+
     const fetchError = err as {
       name?: string
       cause?: { name?: string }
@@ -98,7 +102,12 @@ export async function proxyToBackend<T>(
       throw createError({
         statusCode: 504,
         statusMessage: 'Backend request timed out',
-        data: { code: 'BACKEND_TIMEOUT', message: 'Backend request timed out' },
+        data: {
+          code: 'BACKEND_TIMEOUT',
+          message: 'Backend request timed out',
+          backendUrl: baseUrl,
+          originalError: message,
+        },
       })
     }
     const status = fetchError.response?.status ?? 500
@@ -110,7 +119,13 @@ export async function proxyToBackend<T>(
     throw createError({
       statusCode: status,
       statusMessage: data.message ?? 'Backend error',
-      data: { message: data.message, code: data.code, details: data.details },
+      data: {
+        message: data.message,
+        code: data.code,
+        details: data.details,
+        backendUrl: baseUrl,
+        originalError: message,
+      },
     })
   }
 }

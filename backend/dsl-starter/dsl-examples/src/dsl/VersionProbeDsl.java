@@ -1,7 +1,7 @@
 import cbs.nova.dslexamples.VersionProbeModels.VersionProbeIn;
 import cbs.nova.dslexamples.VersionProbeModels.VersionProbeOut;
-import cbs.nova.starter.helpers.model.FileLatchIn;
-import cbs.nova.starter.helpers.model.FileLatchOut;
+import cbs.nova.starter.helper.model.FileLatchIn;
+import cbs.nova.starter.helper.model.FileLatchOut;
 
 
 List<DslObject> define() {

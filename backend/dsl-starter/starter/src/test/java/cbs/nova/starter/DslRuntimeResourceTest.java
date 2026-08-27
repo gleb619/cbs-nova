@@ -20,7 +20,7 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.config.DslRuntimeRouterConfiguration;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
-import cbs.nova.starter.controllers.DslRuntimeHandler;
+import cbs.nova.starter.controller.DslRuntimeHandler;
 import cbs.nova.starter.logging.LoggingExecutionListener;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

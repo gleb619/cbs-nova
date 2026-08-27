@@ -2,7 +2,7 @@ package cbs.nova.starter.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.starter.metrics.PreviewMetricsCollector;
+import cbs.nova.starter.metric.PreviewMetricsCollector;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.MeterBinder;

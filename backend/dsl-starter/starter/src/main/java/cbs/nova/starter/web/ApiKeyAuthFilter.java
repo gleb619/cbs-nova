@@ -1,6 +1,6 @@
 package cbs.nova.starter.web;
 
-import cbs.nova.starter.models.ErrorResponse;
+import cbs.nova.starter.model.ErrorResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

@@ -12,7 +12,7 @@ import cbs.nova.starter.config.CbsNovaFakesProperties;
 import cbs.nova.starter.config.CbsNovaPreviewProperties;
 import cbs.nova.starter.config.DslRuntimeRouterConfiguration;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
-import cbs.nova.starter.controllers.DslRuntimeHandler;
+import cbs.nova.starter.controller.DslRuntimeHandler;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;

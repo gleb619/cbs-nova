@@ -6,10 +6,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import cbs.nova.dsl.DslErrorCode;
 import cbs.nova.dsl.exception.DslException;
-import cbs.nova.starter.controllers.DslExceptionHandler;
+import cbs.nova.starter.controller.DslExceptionHandler;
 import cbs.nova.starter.error.DefaultDslExceptionMapper;
 import cbs.nova.starter.error.DslExceptionMapper;
-import cbs.nova.starter.models.ErrorResponse;
+import cbs.nova.starter.model.ErrorResponse;
 import io.sentry.Sentry;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
