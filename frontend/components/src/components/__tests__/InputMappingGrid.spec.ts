@@ -3,6 +3,12 @@ import { describe, expect, it } from 'vitest'
 import InputMappingGrid from '../dsl/InputMappingGrid.vue'
 
 describe('InputMappingGrid', () => {
+  it('exposes root data-testid', () => {
+    const wrapper = mount(InputMappingGrid, { props: { mappings: {} } })
+
+    expect(wrapper.find('[data-testid="input-mapping-grid"]').exists()).toBe(true)
+  })
+
   it('renders the Field and Mapped Value headers', () => {
     const wrapper = mount(InputMappingGrid, { props: { mappings: {} } })
 

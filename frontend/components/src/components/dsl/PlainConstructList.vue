@@ -55,12 +55,13 @@ function handleClick(name: string) {
 </script>
 
 <template>
-  <div class="space-y-3">
+  <div class="space-y-3" data-testid="plain-construct-list">
     <div v-for="group in grouped" :key="group.type">
       <button
         type="button"
         class="w-full flex items-center justify-between px-2 py-1 text-xs font-semibold uppercase text-gray-400 tracking-wide hover:text-gray-200"
         :aria-expanded="!isCollapsed(group.type)"
+        :data-testid="`plain-construct-list-group-${group.type}`"
         @click="toggleGroup(group.type)"
       >
         <span>{{ group.type }} ({{ group.items.length }})</span>
@@ -74,6 +75,7 @@ function handleClick(name: string) {
             type="button"
             class="w-full text-left px-2 py-1.5 rounded text-sm flex items-center justify-between gap-2 hover:bg-gray-800 transition-colors"
             :class="selectedName === item.name ? 'bg-gray-800 text-white' : 'text-gray-300'"
+            :data-testid="`plain-construct-list-item-${item.name}`"
             @click="handleClick(item.name)"
           >
             <span class="truncate">{{ item.name }}</span>

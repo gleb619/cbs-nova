@@ -11,6 +11,14 @@ const constructs: DslConstruct[] = [
 ]
 
 describe('ReferencePicker', () => {
+  it('exposes root data-testid', () => {
+    const wrapper = mount(ReferencePicker, {
+      props: { type: 'Process', constructs },
+    })
+
+    expect(wrapper.find('[data-testid="reference-picker"]').exists()).toBe(true)
+  })
+
   it('renders constructs compatible with the requested type', () => {
     const wrapper = mount(ReferencePicker, {
       props: { type: 'Process', constructs },

@@ -5,7 +5,7 @@ defineProps<{ errors: ValidationError[] }>()
 </script>
 
 <template>
-  <div class="border-t border-gray-200 bg-white">
+  <div class="border-t border-gray-200 bg-white" data-testid="problems-panel">
     <div class="px-4 py-2 text-xs font-semibold uppercase text-gray-500 border-b border-gray-200">
       Problems ({{ errors.length }})
     </div>
@@ -13,7 +13,12 @@ defineProps<{ errors: ValidationError[] }>()
       No problems detected.
     </div>
     <ul v-else class="divide-y divide-gray-100 max-h-40 overflow-y-auto">
-      <li v-for="(err, idx) in errors" :key="idx" class="px-4 py-2 text-sm flex items-start gap-2">
+      <li
+        v-for="(err, idx) in errors"
+        :key="idx"
+        class="px-4 py-2 text-sm flex items-start gap-2"
+        :data-testid="`problems-panel-row-${idx}`"
+      >
         <span
           class="inline-block w-2 h-2 rounded-full mt-1.5 shrink-0"
           :class="err.severity === 'error' ? 'bg-red-500' : 'bg-yellow-500'"

@@ -3,6 +3,12 @@ import { describe, expect, it } from 'vitest'
 import DraftRestoreBanner from '../dsl/DraftRestoreBanner.vue'
 
 describe('DraftRestoreBanner', () => {
+  it('exposes root data-testid', () => {
+    const wrapper = mount(DraftRestoreBanner, { props: { savedAt: null } })
+
+    expect(wrapper.find('[data-testid="draft-restore-banner"]').exists()).toBe(true)
+  })
+
   it('renders the recovery notice', () => {
     const wrapper = mount(DraftRestoreBanner, { props: { savedAt: null } })
 

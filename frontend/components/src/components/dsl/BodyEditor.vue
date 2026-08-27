@@ -113,12 +113,13 @@ watch(
 </script>
 
 <template>
-  <div class="flex flex-col h-full bg-white">
-    <div class="flex items-center border-b border-gray-200 px-2">
+  <div class="flex flex-col h-full bg-white" data-testid="body-editor">
+    <div class="flex items-center border-b border-gray-200 px-2" data-testid="body-editor-tabs">
       <button
         type="button"
         class="px-3 py-2 text-sm font-medium border-b-2 transition-colors"
         :class="tab === 'structure' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+        data-testid="body-editor-tab-structure"
         @click="tab = 'structure'"
       >
         Structure
@@ -127,6 +128,7 @@ watch(
         type="button"
         class="px-3 py-2 text-sm font-medium border-b-2 transition-colors"
         :class="tab === 'code' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+        data-testid="body-editor-tab-code"
         @click="tab = 'code'"
       >
         Code
@@ -136,6 +138,7 @@ watch(
         type="button"
         class="px-3 py-2 text-sm font-medium border-b-2 transition-colors"
         :class="tab === 'preview' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+        data-testid="body-editor-tab-preview"
         @click="tab = 'preview'"
       >
         Preview
@@ -145,12 +148,13 @@ watch(
         type="button"
         class="px-3 py-2 text-sm font-medium border-b-2 transition-colors"
         :class="tab === 'explain' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+        data-testid="body-editor-tab-explain"
         @click="tab = 'explain'"
       >
         Explain
       </button>
     </div>
-    <div class="flex-1 overflow-auto">
+    <div class="flex-1 overflow-auto" data-testid="body-editor-content">
       <StructureTab v-show="tab === 'structure'" :steps="steps" />
       <CodeTab v-show="tab === 'code'" v-model:code="bodyCode" :read-only="!construct" />
       <PreviewTab

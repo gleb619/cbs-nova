@@ -24,6 +24,7 @@ function onDiscard() {
   <div
     role="status"
     class="flex items-center justify-between gap-3 px-3 py-2 text-sm rounded border border-blue-200 bg-blue-50 text-blue-800"
+    data-testid="draft-restore-banner"
   >
     <div class="flex items-center gap-2">
       <span aria-hidden="true">↺</span>
@@ -35,6 +36,7 @@ function onDiscard() {
     <button
       type="button"
       class="px-2 py-1 text-xs font-medium rounded border border-blue-300 text-blue-700 hover:bg-blue-100 transition-colors"
+      data-testid="draft-restore-banner-discard-button"
       @click="onDiscard"
     >
       Discard

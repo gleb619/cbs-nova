@@ -22,6 +22,12 @@ function mountBodyEditor(props: Record<string, unknown>) {
 }
 
 describe('BodyEditor', () => {
+  it('exposes root data-testid', () => {
+    const wrapper = mountBodyEditor({ construct })
+
+    expect(wrapper.find('[data-testid="body-editor"]').exists()).toBe(true)
+  })
+
   it('renders the Structure and Code tab buttons with Structure active by default', () => {
     const wrapper = mountBodyEditor({ construct })
 
