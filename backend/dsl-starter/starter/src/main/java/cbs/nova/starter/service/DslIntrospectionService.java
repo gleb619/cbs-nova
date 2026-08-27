@@ -3,15 +3,18 @@ package cbs.nova.starter.service;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.ExecutableDescriptor;
+import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
+import cbs.nova.starter.model.DslIntrospectionModels.ConstructBodyDto;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.NamesResponse;
 import cbs.nova.starter.model.DslIntrospectionModels.ProcessDetail;
+import cbs.nova.starter.model.DslIntrospectionModels.StepDto;
 import cbs.nova.starter.model.DslIntrospectionModels.TransactionDetail;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -66,6 +69,28 @@ public class DslIntrospectionService {
 
   public NamesResponse helpers() {
     return new NamesResponse(GlobalManager.globalManager().helperNames());
+  }
+
+  public Optional<ConstructBodyDto> constructBody(String name) {
+    var gm = GlobalManager.globalManager();
+    var processOpt = gm.findProcess(name);
+    if (processOpt.isPresent()) {
+      var p = processOpt.get();
+      var code = gm.findGeneratedProcess(name).map(GeneratedClassDescriptor::executeJson).orElse(null);
+      var steps = p.transactionRefs() != null
+              ? p.transactionRefs().stream()
+                      .map(ref -> new StepDto(ref, "transaction", ref, null))
+                      .toList()
+              : List.<StepDto>of();
+      return Optional.of(new ConstructBodyDto(p.name(), "process", code, steps));
+    }
+    var txOpt = gm.findTransaction(name);
+    if (txOpt.isPresent()) {
+      var t = txOpt.get();
+      var code = gm.findGeneratedTransaction(name).map(GeneratedClassDescriptor::executeJson).orElse(null);
+      return Optional.of(new ConstructBodyDto(t.name(), "transaction", code, List.of()));
+    }
+    return Optional.empty();
   }
 
   public List<DefinitionMetaDto> definitions() {

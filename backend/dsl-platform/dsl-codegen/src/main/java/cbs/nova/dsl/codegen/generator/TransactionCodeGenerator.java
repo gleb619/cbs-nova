@@ -7,6 +7,7 @@ import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
 import cbs.nova.dsl.transaction.DslTemporalTransactionRequest;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.utils.Substitutor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -19,15 +20,11 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
+@RequiredArgsConstructor
 public final class TransactionCodeGenerator {
 
-  private final CodegenNaming codegenNaming;
   private final DslPackageNameResolver packageNameResolver;
 
-  public TransactionCodeGenerator(@NonNull CodegenNaming codegenNaming) {
-    this.codegenNaming = codegenNaming;
-    this.packageNameResolver = new DslPackageNameResolver(codegenNaming);
-  }
 
   public @NonNull List<GeneratedSource> generate(
           @NonNull TransactionDescriptor descriptor,
@@ -115,6 +112,8 @@ public final class TransactionCodeGenerator {
             "import %s;".formatted(DslGenerated.class.getCanonicalName()),
             "import %s;".formatted(Generated.class.getCanonicalName()));
     String annotation = GeneratorMetadata.annotation(TransactionCodeGenerator.class);
+
+    //TODO: add new method that allow to transfer whole object, like in `ProcessCodeGenerator`
     return Substitutor.format(// language=java
             """
                     package ${pkg};${importBlock}

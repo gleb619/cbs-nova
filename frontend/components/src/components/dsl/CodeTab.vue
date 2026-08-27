@@ -23,6 +23,7 @@ watch(localCode, (v) => {
 </script>
 
 <template>
+  <!-- TODO: we need to use a better code editor, read `docs/ideas/highlight-code-ideas.ignore.md` for details -->
   <div class="p-3 h-full">
     <textarea
       v-model="localCode"

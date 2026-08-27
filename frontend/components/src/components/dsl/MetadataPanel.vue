@@ -5,6 +5,8 @@ defineProps<{ construct: DslConstruct | null }>()
 </script>
 
 <template>
+  <!-- TODO, use `frontend/components/src/composables/useLocalStorageState.ts` and add collapsible button -->
+  <!-- TODO, refactor ux/ui, and add other fields from `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/model/DslIntrospectionModels.DefinitionMetaDto` -->
   <div class="p-4 border-b border-gray-200 bg-white">
     <div v-if="!construct" class="text-sm text-gray-500 italic">
       Select a construct to view metadata.

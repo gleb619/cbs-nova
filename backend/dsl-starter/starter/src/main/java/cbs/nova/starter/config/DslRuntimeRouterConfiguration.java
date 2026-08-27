@@ -1,12 +1,10 @@
 package cbs.nova.starter.config;
 
-import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExplainReport;
 import cbs.nova.dsl.PreviewReport;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.controller.DslRuntimeHandler;
-import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.starter.service.DslRuntimeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -15,8 +13,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springdoc.core.annotations.RouterOperation;
 import org.springdoc.core.annotations.RouterOperations;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.RouterFunctions;
@@ -26,11 +24,8 @@ import org.springframework.web.servlet.function.ServerResponse;
 public class DslRuntimeRouterConfiguration {
 
   @Bean
-  DslRuntimeHandler dslRuntimeHandler(
-          DslRuntime dslRuntime,
-          ContextFactory contextFactory,
-          LoggingExecutionListener loggingExecutionListener) {
-    return new DslRuntimeHandler(dslRuntime, contextFactory, loggingExecutionListener);
+  DslRuntimeHandler dslRuntimeHandler(DslRuntimeService service) {
+    return new DslRuntimeHandler(service);
   }
 
   @Bean

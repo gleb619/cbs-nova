@@ -79,6 +79,11 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/dsl/transactions/{name}',
     bffPath: '/api/v1/dsl/transactions/{name}',
   },
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/constructs/{name}',
+    bffPath: '/api/v1/dsl/constructs/{name}',
+  },
   // DslRuntimeRouterConfiguration
   {
     method: 'POST',
@@ -94,6 +99,16 @@ const expectedProxies: readonly ExpectedProxy[] = [
     method: 'POST',
     backendPath: '/api/dsl/explain/{name}',
     bffPath: '/api/v1/dsl/explain/{name}',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/drafts/{name}/save',
+    bffPath: '/api/v1/dsl/drafts/{name}/save',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/drafts/{name}/publish',
+    bffPath: '/api/v1/dsl/drafts/{name}/publish',
   },
   // DslReloadRouterConfiguration
   {
@@ -143,8 +158,12 @@ function discoverRoutes(dir: string): DiscoveredRoute[] {
       return bracket?.groups.name ? `{${bracket.groups.name}}` : s
     })
     if (fileSegments[fileSegments.length - 1] === 'index') fileSegments.pop()
-    // Combine the directory layout with the filename segments.
-    const parentRel = relative(apiDir, dir).split(sep).filter((s) => s.length > 0)
+    // Combine the directory layout with the filename segments, converting
+    // bracketed parent directory names (e.g. "[name]") into "{name}".
+    const parentRel = relative(apiDir, dir).split(sep).filter((s) => s.length > 0).map((s) => {
+      const bracket = /^\[(?<name>.+)\]$/.exec(s)
+      return bracket?.groups.name ? `{${bracket.groups.name}}` : s
+    })
     const allSegments = [...parentRel, ...fileSegments]
     const bffPath = '/api/v1/' + allSegments.join('/')
     out.push({ method, bffPath, relFile: relative(apiDir, full) })

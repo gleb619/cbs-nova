@@ -17,7 +17,6 @@ public @interface DslGenerated {
 
   String user();
 
-  // TODO: add here two new fields: `dslBuildInfo`, `dslGitInfo`, so we can know with what version
-  // of cbs codegen class was created
+  // TODO: add here two new fields: `dslBuildInfo`, `dslGitInfo`, so we can know with what version of cbs codegen class was created
 
 }

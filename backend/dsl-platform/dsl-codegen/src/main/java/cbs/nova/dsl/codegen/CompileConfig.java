@@ -8,6 +8,7 @@ import cbs.nova.dsl.codegen.generator.ProcessCodeGenerator;
 import cbs.nova.dsl.codegen.generator.TransactionCodeGenerator;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.util.AstExtractor;
+import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
 import cbs.nova.dsl.codegen.util.Json;
 import cbs.nova.dsl.codegen.util.ModelTypeExtractor;
 import cbs.nova.dsl.config.DescriptorFactory;
@@ -54,11 +55,17 @@ public final class CompileConfig implements SingletonSupport {
   }
 
   public @NonNull ProcessCodeGenerator processCodeGenerator() {
-    return singleton(() -> new ProcessCodeGenerator(codegenNaming()));
+    return singleton(() -> {
+      var codegenNaming = codegenNaming();
+      return new ProcessCodeGenerator(codegenNaming, new DslPackageNameResolver(codegenNaming));
+    });
   }
 
   public @NonNull TransactionCodeGenerator transactionCodeGenerator() {
-    return singleton(() -> new TransactionCodeGenerator(codegenNaming()));
+    return singleton(() -> {
+      var codegenNaming = codegenNaming();
+      return new TransactionCodeGenerator(codegenNaming, new DslPackageNameResolver(codegenNaming));
+    });
   }
 
   public @NonNull Json json() {

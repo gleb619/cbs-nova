@@ -17,6 +17,8 @@ final class GeneratorMetadata {
     String user = System.getProperty("user.name", "unknown");
     String comments = "cbs-nova DSL codegen; java.version=%s, user.name=%s"
             .formatted(javaVersion, user);
+
+    //TODO: we also need to add version of dsl platform itself, for later debug
     return """
             @DslGenerated(
                 generator = "%s",

@@ -49,4 +49,18 @@ public final class DslIntrospectionModels {
           String inputType,
           String outputType) {
   }
+
+  public record StepDto(
+          String id,
+          String type,
+          String name,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String inputMapping) {
+  }
+
+  public record ConstructBodyDto(
+          String name,
+          String type,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String code,
+          List<StepDto> steps) {
+  }
 }

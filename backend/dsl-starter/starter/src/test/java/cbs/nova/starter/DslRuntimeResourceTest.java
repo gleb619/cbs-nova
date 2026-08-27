@@ -21,15 +21,17 @@ import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.config.DslRuntimeRouterConfiguration;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.controller.DslRuntimeHandler;
+import cbs.nova.starter.converter.DslRuntimeMapper;
 import cbs.nova.starter.logging.LoggingExecutionListener;
+import cbs.nova.starter.service.DslRuntimeService;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mapstruct.factory.Mappers;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
-import java.util.List;
-import java.util.Map;
 
 class DslRuntimeResourceTest {
 
@@ -42,9 +44,13 @@ class DslRuntimeResourceTest {
             CbsNovaLoggingProperties.Level.INFO,
             CbsNovaLoggingProperties.Level.INFO,
             false);
-    DslRuntimeHandler handler = new DslRuntimeHandler(
-            dslRuntime, new ContextFactory(),
-            new LoggingExecutionListener(loggingProperties));
+    DslRuntimeMapper mapper = Mappers.getMapper(DslRuntimeMapper.class);
+    DslRuntimeService service = new DslRuntimeService(
+            dslRuntime,
+            new ContextFactory(),
+            new LoggingExecutionListener(loggingProperties),
+            mapper);
+    DslRuntimeHandler handler = new DslRuntimeHandler(service);
     DslRuntimeRouterConfiguration router = new DslRuntimeRouterConfiguration();
     mockMvc = MockMvcBuilders.routerFunctions(router.dslRuntimeRouter(handler)).build();
   }

@@ -41,11 +41,14 @@ const explainHandler = (await import('../dsl/explain/[name].post')).default
 const executionsIndexHandler = (await import('../executions/index.get')).default
 const executionsIdHandler = (await import('../executions/[id].get')).default
 const infoHandler = (await import('../info.get')).default
+const saveDraftHandler = (await import('../dsl/drafts/[name]/save.post')).default
+const publishDraftHandler = (await import('../dsl/drafts/[name]/publish.post')).default
 const helpersIndexHandler = (await import('../dsl/helpers/index.get')).default
 const processesIndexHandler = (await import('../dsl/processes/index.get')).default
 const processDetailHandler = (await import('../dsl/processes/[name].get')).default
 const transactionsIndexHandler = (await import('../dsl/transactions/index.get')).default
 const transactionDetailHandler = (await import('../dsl/transactions/[name].get')).default
+const constructBodyHandler = (await import('../dsl/constructs/[name].get')).default
 
 // Minimal H3Event stub. The route handlers only pass this through to
 // proxyToBackend, which is mocked, so a plain object is sufficient.
@@ -273,6 +276,36 @@ describe('executions/[id].get', () => {
   })
 })
 
+
+describe('dsl/drafts/[name]/save.post', () => {
+  it('interpolates the :name router param and forwards readBody() as body', async () => {
+    routerParams = { name: 'DraftOne' }
+    bodyValue = { name: 'DraftOne', type: 'Process', version: 'v2' }
+
+    await saveDraftHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/drafts/DraftOne/save', {
+      method: 'POST',
+      body: { name: 'DraftOne', type: 'Process', version: 'v2' },
+    })
+  })
+})
+
+describe('dsl/drafts/[name]/publish.post', () => {
+  it('interpolates the :name router param and forwards readBody() as body', async () => {
+    routerParams = { name: 'DraftOne' }
+    bodyValue = { name: 'DraftOne', type: 'Process', version: 'v2' }
+
+    await publishDraftHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/drafts/DraftOne/publish', {
+      method: 'POST',
+      body: { name: 'DraftOne', type: 'Process', version: 'v2' },
+    })
+  })
+})
 describe('info.get', () => {
   it('GETs /actuator/info with no body and returns the backend payload verbatim', async () => {
     const infoPayload = {
@@ -359,6 +392,36 @@ describe('dsl/processes/[name].get', () => {
   })
 })
 
+
+describe('dsl/constructs/[name].get', () => {
+  it('interpolates the :name router param into the backend path with GET (no opts)', async () => {
+    routerParams = { name: 'LoanDisbursement' }
+
+    await constructBodyHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/constructs/LoanDisbursement',
+    )
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+
+  it('returns the backend ConstructBodyDto verbatim', async () => {
+    routerParams = { name: 'SampleProcess' }
+    const payload = {
+      name: 'SampleProcess',
+      type: 'process',
+      code: '{"steps":[]}',
+      steps: [{ id: 'tx1', type: 'transaction', name: 'tx1' }],
+    }
+    proxyToBackendMock.mockResolvedValueOnce(payload)
+
+    const result = await constructBodyHandler(fakeEvent)
+
+    expect(result).toEqual(payload)
+  })
+})
 describe('dsl/transactions/index.get', () => {
   it('GETs /api/dsl/transactions with no body and no opts', async () => {
     await transactionsIndexHandler(fakeEvent)

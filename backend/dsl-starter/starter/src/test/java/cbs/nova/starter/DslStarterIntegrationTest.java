@@ -13,6 +13,7 @@ import cbs.nova.starter.config.CbsNovaPreviewProperties;
 import cbs.nova.starter.config.DslRuntimeRouterConfiguration;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.controller.DslRuntimeHandler;
+import cbs.nova.starter.converter.DslRuntimeMapper;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
@@ -22,9 +23,11 @@ import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
+import cbs.nova.starter.service.DslRuntimeService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mapstruct.factory.Mappers;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -62,8 +65,12 @@ class DslStarterIntegrationTest {
             CbsNovaLoggingProperties.Level.INFO,
             CbsNovaLoggingProperties.Level.INFO,
             false);
-    var handler = new DslRuntimeHandler(
-            runtime, contextFactory, new LoggingExecutionListener(loggingProperties));
+    var service = new DslRuntimeService(
+            runtime,
+            contextFactory,
+            new LoggingExecutionListener(loggingProperties),
+            Mappers.getMapper(DslRuntimeMapper.class));
+    var handler = new DslRuntimeHandler(service);
     var router = new DslRuntimeRouterConfiguration();
     mockMvc = MockMvcBuilders.routerFunctions(router.dslRuntimeRouter(handler)).build();
   }

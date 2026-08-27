@@ -5,6 +5,7 @@ import cbs.nova.starter.service.DslIntrospectionService;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.NamesResponse;
+import cbs.nova.starter.model.DslIntrospectionModels.ConstructBodyDto;
 import cbs.nova.starter.model.DslIntrospectionModels.ProcessDetail;
 import cbs.nova.starter.model.DslIntrospectionModels.TransactionDetail;
 import io.swagger.v3.oas.annotations.Operation;
@@ -49,6 +50,8 @@ public class DslIntrospectionRouterConfiguration {
           }, responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = HelperSearchResult.class)))))),
       @RouterOperation(path = "/api/dsl/helpers", beanClass = DslIntrospectionHandler.class, beanMethod = "helpers", method = RequestMethod.GET, operation = @Operation(operationId = "listHelpers", summary = "List all registered DSL helper names", tags = {
           "DSL Introspection"}, responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = NamesResponse.class))))),
+      @RouterOperation(path = "/api/dsl/constructs/{name}", beanClass = DslIntrospectionHandler.class, beanMethod = "constructBody", method = RequestMethod.GET, operation = @Operation(operationId = "getConstructBody", summary = "Get structure and generated code body for a DSL construct", tags = {
+          "DSL Introspection"}, parameters = @Parameter(name = "name", in = ParameterIn.PATH), responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ConstructBodyDto.class))))),
       @RouterOperation(path = "/api/dsl/definitions", beanClass = DslIntrospectionHandler.class, beanMethod = "definitions", method = RequestMethod.GET, operation = @Operation(operationId = "listDefinitions", summary = "List all registered DSL definitions", tags = {
           "DSL Introspection"}, responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = DefinitionMetaDto.class))))))
   })
@@ -60,6 +63,7 @@ public class DslIntrospectionRouterConfiguration {
             .GET("/api/dsl/transactions/{name}", handler::transactionDetail)
             .GET("/api/dsl/objects/search", handler::searchObjects)
             .GET("/api/dsl/helpers", handler::helpers)
+            .GET("/api/dsl/constructs/{name}", handler::constructBody)
             .GET("/api/dsl/definitions", handler::definitions)
             .build();
   }

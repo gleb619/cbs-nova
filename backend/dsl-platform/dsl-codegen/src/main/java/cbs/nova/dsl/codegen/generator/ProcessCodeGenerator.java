@@ -11,6 +11,7 @@ import cbs.nova.dsl.process.ProcessCompensation;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.process.ProcessMain;
 import cbs.nova.dsl.utils.Substitutor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -24,15 +25,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
+@RequiredArgsConstructor
 public final class ProcessCodeGenerator {
 
-  private final CodegenNaming codegenNaming;
   private final DslPackageNameResolver packageNameResolver;
 
-  public ProcessCodeGenerator(@NonNull CodegenNaming codegenNaming) {
-    this.codegenNaming = codegenNaming;
-    this.packageNameResolver = new DslPackageNameResolver(codegenNaming);
-  }
 
   public @NonNull List<GeneratedSource> generate(
           @NonNull ProcessDescriptor descriptor,
@@ -127,6 +124,8 @@ public final class ProcessCodeGenerator {
     String importBlock = "\n" + String.join("\n", imports) + "\n";
     String annotation = GeneratorMetadata.annotation(ProcessCodeGenerator.class);
 
+    //TODO: add new method that allow to transfer whole object(e.g. without usage of registry, e.g. use
+    // dsl directly). Like `var process = new GeneratedDslDefinitionProvider().byName("${processName}").ifPresentOrElse(...)`
     String template = // language=java
             """
                     package ${pkg};${importBlock}
@@ -143,6 +142,8 @@ public final class ProcessCodeGenerator {
                       @Override
                       public Object execute(DslTemporalProcessRequest<${inputTypeName}> request) {
                         ${inputTypeName} input = request.payload();
+                        //TODO: place here new code `var process = ...`
+                    
                         return GlobalManager.globalManager().runProcessWithCompensation(
                                 request.runId(),
                                 input,

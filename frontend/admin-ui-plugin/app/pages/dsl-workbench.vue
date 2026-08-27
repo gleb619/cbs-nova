@@ -18,6 +18,7 @@ import {
 } from '@cbs/components'
 import { useCookie } from 'nuxt/app'
 import { computed, onMounted } from 'vue'
+import type { RunnerOutput } from '~/types'
 
 const workbench = useDslWorkbench()
 const {
@@ -59,6 +60,22 @@ const {
 function onCodeChange(value: string) {
   draftBody.value = value
   if (selectedConstruct.value) markDirty()
+}
+
+async function runPreview(
+  name: string,
+  body: unknown,
+  metadata?: Record<string, unknown>,
+): Promise<RunnerOutput> {
+  return (await dslApi.preview(name, body, metadata)) as RunnerOutput
+}
+
+async function runExplain(
+  name: string,
+  body: unknown,
+  metadata?: Record<string, unknown>,
+): Promise<RunnerOutput> {
+  return (await dslApi.explain(name, body, metadata)) as RunnerOutput
 }
 
 function toggleExplorer() {
@@ -175,6 +192,8 @@ onMounted(() => {
           <DslBodyEditor
             :code="draftBody"
             :construct="selectedConstruct"
+            :preview="runPreview"
+            :explain="runExplain"
             @update:code="onCodeChange"
           />
         </div>

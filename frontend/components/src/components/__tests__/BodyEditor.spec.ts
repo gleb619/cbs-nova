@@ -1,5 +1,5 @@
-import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
+import { describe, expect, it, vi } from 'vitest'
 import type { DslConstruct } from '../../types/dsl'
 import BodyEditor from '../dsl/BodyEditor.vue'
 import CodeTab from '../dsl/CodeTab.vue'
@@ -79,5 +79,50 @@ describe('BodyEditor', () => {
 
     expect(wrapper.emitted('update:code')).toBeTruthy()
     expect(wrapper.emitted('update:code')!.at(-1)).toEqual(['edited body'])
+  })
+
+  it('renders Preview and Explain tab buttons when callbacks are provided', () => {
+    const wrapper = mountBodyEditor({
+      construct,
+      preview: vi.fn(),
+      explain: vi.fn(),
+    })
+
+    const buttons = wrapper.findAll('button').map((b) => b.text())
+    expect(buttons).toContain('Preview')
+    expect(buttons).toContain('Explain')
+  })
+
+  it('calls the preview callback and displays the result', async () => {
+    const preview = vi.fn().mockResolvedValue({ result: { ok: true } })
+    const wrapper = mountBodyEditor({ construct, preview })
+
+    const previewButton = wrapper.findAll('button').find((b) => b.text() === 'Preview')!
+    await previewButton.trigger('click')
+
+    const runButton = wrapper.findAll('button').find((b) => b.text() === 'Run preview')!
+    await runButton.trigger('click')
+    await flushPromises()
+
+    expect(preview).toHaveBeenCalledWith('CreateOrder', {}, { startedFrom: 'workbench' })
+    expect(wrapper.text()).toContain('"ok": true')
+  })
+
+  it('calls the explain callback and displays the description', async () => {
+    const explain = vi.fn().mockResolvedValue({
+      description: 'Test flow',
+      result: { ok: true },
+    })
+    const wrapper = mountBodyEditor({ construct, explain })
+
+    const explainButton = wrapper.findAll('button').find((b) => b.text() === 'Explain')!
+    await explainButton.trigger('click')
+
+    const runButton = wrapper.findAll('button').find((b) => b.text() === 'Run explain')!
+    await runButton.trigger('click')
+    await flushPromises()
+
+    expect(explain).toHaveBeenCalledWith('CreateOrder', {}, { startedFrom: 'workbench' })
+    expect(wrapper.text()).toContain('Test flow')
   })
 })

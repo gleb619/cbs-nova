@@ -1,6 +1,7 @@
 package cbs.nova.starter.controller;
 
 import cbs.nova.starter.service.DslIntrospectionService;
+import cbs.nova.starter.model.DslIntrospectionModels.ConstructBodyDto;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +48,13 @@ public class DslIntrospectionHandler {
 
   public ServerResponse helpers(ServerRequest request) {
     return ServerResponse.ok().body(service.helpers());
+  }
+
+  public ServerResponse constructBody(ServerRequest request) {
+    String name = request.pathVariable("name");
+    return service.constructBody(name)
+            .map(b -> ServerResponse.ok().body(b))
+            .orElse(ServerResponse.notFound().build());
   }
 
   public ServerResponse definitions(ServerRequest request) {
