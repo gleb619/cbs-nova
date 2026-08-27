@@ -3,6 +3,12 @@ import { describe, expect, it } from 'vitest'
 import ExecutionFilters from '../executions/ExecutionFilters.vue'
 
 describe('ExecutionFilters', () => {
+  it('renders the filters root with the expected data-testid', () => {
+    const wrapper = mount(ExecutionFilters)
+
+    expect(wrapper.find('[data-testid="execution-filters"]').exists()).toBe(true)
+  })
+
   it('emits an empty filter payload by default when Apply is clicked', async () => {
     const wrapper = mount(ExecutionFilters)
 

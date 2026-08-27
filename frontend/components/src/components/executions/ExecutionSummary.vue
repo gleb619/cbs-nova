@@ -16,7 +16,10 @@ function formatDuration(ms?: number) {
 </script>
 
 <template>
-  <div class="bg-white border border-gray-200 rounded-lg p-4">
+  <div
+    data-testid="execution-summary"
+    class="bg-white border border-gray-200 rounded-lg p-4"
+  >
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
         <h1 class="text-xl font-semibold text-gray-900">
@@ -32,11 +35,11 @@ function formatDuration(ms?: number) {
       <ExecutionsStatusBadge :status="props.execution.status" />
     </div>
     <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-      <div>
+      <div data-testid="execution-summary-correlation">
         <span class="text-gray-500">Correlation ID: </span>
         <span class="font-mono">{{ props.execution.correlationId ?? '—' }}</span>
       </div>
-      <div>
+      <div data-testid="execution-summary-workflow">
         <span class="text-gray-500">Workflow ID: </span>
         <span class="font-mono">{{ props.execution.workflowId ?? '—' }}</span>
       </div>

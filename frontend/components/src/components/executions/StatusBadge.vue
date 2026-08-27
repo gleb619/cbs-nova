@@ -17,6 +17,7 @@ const styles: Record<ExecutionStatus, string> = {
 
 <template>
   <span
+    data-testid="status-badge"
     :class="['inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium', styles[props.status]]"
   >
     {{ props.status }}

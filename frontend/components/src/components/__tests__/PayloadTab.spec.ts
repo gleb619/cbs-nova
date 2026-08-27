@@ -3,6 +3,12 @@ import { describe, expect, it } from 'vitest'
 import PayloadTab from '../executions/PayloadTab.vue'
 
 describe('PayloadTab', () => {
+  it('renders the payload tab root with the expected data-testid', () => {
+    const wrapper = mount(PayloadTab, { props: { input: undefined, output: undefined } })
+
+    expect(wrapper.find('[data-testid="executions-payload-tab"]').exists()).toBe(true)
+  })
+
   it('renders formatted input and output JSON', () => {
     const input = { name: 'Alice', age: 30 }
     const output = { result: 'ok' }

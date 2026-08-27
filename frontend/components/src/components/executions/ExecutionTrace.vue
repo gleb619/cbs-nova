@@ -30,21 +30,30 @@ const tree = computed<TreeNode[]>(() => {
 </script>
 
 <template>
-  <div class="bg-white border border-gray-200 rounded-lg p-3">
+  <div
+    data-testid="execution-trace"
+    class="bg-white border border-gray-200 rounded-lg p-3"
+  >
     <h2 class="text-sm font-semibold text-gray-700 mb-2">Trace</h2>
-    <div v-if="tree.length === 0" class="text-sm text-gray-500 px-2 py-6 text-center">
+    <div
+      v-if="tree.length === 0"
+      data-testid="execution-trace-empty"
+      class="text-sm text-gray-500 px-2 py-6 text-center"
+    >
       No trace steps recorded.
     </div>
     <template v-else>
-      <template v-for="node in tree" :key="node.step.id">
-        <ExecutionsTraceNode :step="node.step" :depth="0" />
-        <ExecutionsTraceNode
-          v-for="child in flatten(node)"
-          :key="child.step.id"
-          :step="child.step"
-          :depth="child.depth"
-        />
-      </template>
+      <div data-testid="execution-trace-tree">
+        <template v-for="node in tree" :key="node.step.id">
+          <ExecutionsTraceNode :step="node.step" :depth="0" />
+          <ExecutionsTraceNode
+            v-for="child in flatten(node)"
+            :key="child.step.id"
+            :step="child.step"
+            :depth="child.depth"
+          />
+        </template>
+      </div>
     </template>
   </div>
 </template>

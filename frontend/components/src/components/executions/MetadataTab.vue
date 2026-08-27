@@ -33,12 +33,20 @@ const rows = computed<Row[]>(() => {
 </script>
 
 <template>
-  <div class="bg-white border border-gray-200 rounded-lg p-4">
+  <div
+    data-testid="executions-metadata-tab"
+    class="bg-white border border-gray-200 rounded-lg p-4"
+  >
     <table class="min-w-full text-sm">
       <tbody>
         <tr v-for="row in rows" :key="row.key" class="border-t border-gray-100 first:border-t-0">
           <th class="text-left text-xs uppercase text-gray-500 py-2 pr-4 w-48">{{ row.key }}</th>
-          <td class="py-2 font-mono text-xs text-gray-800 break-all">{{ row.value }}</td>
+          <td
+            :data-testid="`executions-metadata-field-${row.key}`"
+            class="py-2 font-mono text-xs text-gray-800 break-all"
+          >
+            {{ row.value }}
+          </td>
         </tr>
         <tr v-if="rows.length === 0">
           <td colspan="2" class="py-4 text-center text-sm text-gray-500">No metadata available.</td>
