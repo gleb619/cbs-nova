@@ -57,12 +57,15 @@ const formatTimestamp = (ts: unknown): string => {
 </script>
 
 <template>
-  <div>
+  <div data-testid="external-calls-tab">
     <div v-if="list.length === 0" class="text-sm text-gray-500">No external calls captured.</div>
 
     <div v-else class="flex flex-col gap-2">
       <div class="flex items-center justify-between gap-2">
-        <span class="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-700">
+        <span
+          class="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-700"
+          data-testid="external-calls-count"
+        >
           {{ list.length }}
           external call{{ list.length === 1 ? '' : 's' }}
         </span>
@@ -76,6 +79,7 @@ const formatTimestamp = (ts: unknown): string => {
           v-for="(item, idx) in list"
           :key="idx"
           class="font-mono text-xs flex items-start gap-2 py-1"
+          data-testid="external-calls-row"
         >
           <span
             class="px-1.5 py-0.5 rounded font-semibold shrink-0"

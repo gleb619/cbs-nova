@@ -135,4 +135,29 @@ describe('DryRunLogsTab', () => {
 
     expect(wrapper.text()).toContain('2 logs')
   })
+
+  it('stamps data-testid on the root, list, rows, count, and copy-all button', () => {
+    const wrapper = mountDryRunLogsTab({
+      logs: [
+        {
+          timestamp: '2026-07-19T10:00:00Z',
+          level: 'INFO',
+          logger: 'com.cbs.Preview',
+          message: 'First',
+        },
+        {
+          timestamp: '2026-07-19T10:00:01Z',
+          level: 'WARN',
+          logger: 'com.cbs.Preview',
+          message: 'Second',
+        },
+      ],
+    })
+
+    expect(wrapper.find('[data-testid="dry-run-logs-tab"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="dry-run-logs-list"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid="dry-run-logs-row"]')).toHaveLength(2)
+    expect(wrapper.find('[data-testid="dry-run-logs-count"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="dry-run-logs-copy-all"]').exists()).toBe(true)
+  })
 })

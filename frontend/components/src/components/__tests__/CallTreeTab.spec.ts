@@ -91,4 +91,18 @@ describe('CallTreeTab', () => {
     const node = wrapper.findComponent(CallTreeNode)
     expect(node.classes()).toContain('border-blue-500')
   })
+
+  it('stamps data-testid on the root, tree container, node, and toggle', () => {
+    const tree = makeNode({
+      name: 'Root',
+      kind: 'PROCESS',
+      children: [makeNode({ name: 'Child', kind: 'FUNCTION' })],
+    })
+    const wrapper = mountCallTreeTab({ tree })
+
+    expect(wrapper.find('[data-testid="call-tree-tab"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="call-tree"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="call-tree-node"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="call-tree-node-toggle"]').exists()).toBe(true)
+  })
 })

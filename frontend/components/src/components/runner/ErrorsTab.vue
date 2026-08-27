@@ -12,13 +12,14 @@ const list = computed(() => props.errors ?? [])
 </script>
 
 <template>
-  <div>
+  <div data-testid="runner-errors-tab">
     <div v-if="list.length === 0" class="text-sm text-gray-500">No errors.</div>
     <ul v-else class="space-y-2">
       <li
         v-for="(err, idx) in list"
         :key="idx"
         class="border border-red-200 bg-red-50 rounded-lg p-3"
+        data-testid="runner-errors-row"
       >
         <div class="flex items-center gap-2 mb-1">
           <span

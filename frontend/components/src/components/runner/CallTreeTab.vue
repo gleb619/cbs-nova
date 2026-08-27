@@ -7,8 +7,10 @@ const props = defineProps<{
 </script>
 
 <template>
-  <div>
+  <div data-testid="call-tree-tab">
     <div v-if="!props.tree" class="text-sm text-gray-500">No call tree available.</div>
-    <CallTreeNode v-else :node="props.tree" :depth="0" />
+    <div v-else data-testid="call-tree">
+      <CallTreeNode :node="props.tree" :depth="0" />
+    </div>
   </div>
 </template>

@@ -172,4 +172,22 @@ describe('ExternalCallsTab', () => {
     expect(wrapper.text()).toContain('1 external call')
     expect(wrapper.text()).not.toContain('1 external calls')
   })
+
+  it('stamps data-testid on the root, count, list, and rows', () => {
+    const wrapper = mountExternalCallsTab({
+      tree: makeNode({
+        name: 'TwoCalls',
+        kind: 'PROCESS',
+        externalCalls: [
+          { type: 'http', target: 'a', operation: 'GET', timestamp: 1 },
+          { type: 'database', target: 'b', operation: 'insert', timestamp: 2 },
+        ],
+      }),
+    })
+
+    expect(wrapper.find('[data-testid="external-calls-tab"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="external-calls-count"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="external-calls-list"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid="external-calls-row"]')).toHaveLength(2)
+  })
 })

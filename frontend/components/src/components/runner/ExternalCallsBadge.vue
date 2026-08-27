@@ -12,7 +12,7 @@ function label(call: Record<string, unknown>): string {
 </script>
 
 <template>
-  <div class="flex flex-wrap gap-1.5">
+  <div class="flex flex-wrap gap-1.5" data-testid="external-calls-badge">
     <span
       v-for="(call, idx) in props.calls"
       :key="idx"
