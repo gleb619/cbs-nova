@@ -5,6 +5,7 @@ import cbs.nova.starter.controller.DslExecutionsHandler;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ExecutionDto;
 import cbs.nova.starter.model.ExecutionListResponse;
+import cbs.nova.starter.service.DslRunCancellationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -26,8 +27,9 @@ public class DslExecutionsRouterConfiguration {
 
   @Bean
   DslExecutionsHandler dslExecutionsHandler(DslRunRepository runRepository,
-          ObjectMapper objectMapper) {
-    return new DslExecutionsHandler(runRepository, objectMapper);
+          ObjectMapper objectMapper,
+          DslRunCancellationService dslRunCancellationService) {
+    return new DslExecutionsHandler(runRepository, objectMapper, dslRunCancellationService);
   }
 
   @Bean
@@ -43,12 +45,19 @@ public class DslExecutionsRouterConfiguration {
           "DSL Executions"}, parameters = @Parameter(name = "id", in = ParameterIn.PATH), responses = {
               @ApiResponse(responseCode = "200", description = "The execution run", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionDto.class))),
               @ApiResponse(responseCode = "404", description = "No run with the given id", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
+      @RouterOperation(path = "/api/executions/{id}/cancel", beanClass = DslExecutionsHandler.class, beanMethod = "cancel", method = RequestMethod.POST, operation = @Operation(operationId = "cancelExecution", summary = "Cancel a running DSL execution run", tags = {
+          "DSL Executions"}, parameters = @Parameter(name = "id", in = ParameterIn.PATH), responses = {
+              @ApiResponse(responseCode = "200", description = "The cancelled execution run", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionDto.class))),
+              @ApiResponse(responseCode = "404", description = "No run with the given id", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "409", description = "The run is not in a cancellable state", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           }))
   })
   public RouterFunction<ServerResponse> dslExecutionsRouter(DslExecutionsHandler handler) {
     return RouterFunctions.route()
             .GET("/api/executions", handler::list)
             .GET("/api/executions/{id}", handler::detail)
+            .POST("/api/executions/{id}/cancel", handler::cancel)
             .build();
   }
 }

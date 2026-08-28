@@ -22,6 +22,7 @@ import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLoggingContextPropagator;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;
+import cbs.nova.starter.service.DslRunCancellationService;
 import cbs.nova.starter.service.TemporalDslProcessLauncher;
 import cbs.nova.starter.service.TemporalDslProcessService;
 import cbs.nova.starter.service.TemporalDslService;
@@ -300,6 +301,13 @@ public class TemporalConfiguration {
           MapInputConverter mapInputConverter,
           WorkerFactory workerFactory) {
     return new TemporalDslService(workflowClient, mapInputConverter, workerFactory);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  DslRunCancellationService dslRunCancellationService(WorkflowClient workflowClient,
+          DslRunRepository runRepository) {
+    return new DslRunCancellationService(workflowClient, runRepository);
   }
 
 }

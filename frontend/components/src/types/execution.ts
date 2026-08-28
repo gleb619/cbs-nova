@@ -5,6 +5,7 @@ export type ExecutionStatus =
   | 'Failed'
   | 'Compensated'
   | 'Stale'
+  | 'Cancelled'
 export type ExecutionMode = 'PREVIEW' | 'RUN' | 'EXPLAIN'
 export type StepType = 'Process' | 'Transaction' | 'Function' | 'Helper'
 

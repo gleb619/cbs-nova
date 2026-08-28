@@ -132,6 +132,11 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/executions/{id}',
     bffPath: '/api/v1/executions/{id}',
   },
+  {
+    method: 'POST',
+    backendPath: '/api/executions/{id}/cancel',
+    bffPath: '/api/v1/executions/{id}/cancel',
+  },
 ]
 
 // Nitro route filename: "<segments>.<method>.ts". Examples:

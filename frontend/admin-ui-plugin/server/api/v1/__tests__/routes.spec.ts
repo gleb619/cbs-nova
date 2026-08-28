@@ -40,6 +40,7 @@ const previewHandler = (await import('../dsl/preview/[name].post')).default
 const explainHandler = (await import('../dsl/explain/[name].post')).default
 const executionsIndexHandler = (await import('../executions/index.get')).default
 const executionsIdHandler = (await import('../executions/[id].get')).default
+const executionsCancelHandler = (await import('../executions/[id]/cancel.post')).default
 const infoHandler = (await import('../info.get')).default
 const saveDraftHandler = (await import('../dsl/drafts/[name]/save.post')).default
 const publishDraftHandler = (await import('../dsl/drafts/[name]/publish.post')).default
@@ -274,6 +275,21 @@ describe('executions/[id].get', () => {
     await executionsIdHandler(fakeEvent)
 
     expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/executions/with/slash')
+  })
+})
+
+describe('executions/[id]/cancel.post', () => {
+  it('POSTs to the backend cancel path with the :id router param and no body', async () => {
+    routerParams = { id: 'exec-abc-123' }
+
+    await executionsCancelHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/executions/exec-abc-123/cancel',
+      { method: 'POST' },
+    )
   })
 })
 

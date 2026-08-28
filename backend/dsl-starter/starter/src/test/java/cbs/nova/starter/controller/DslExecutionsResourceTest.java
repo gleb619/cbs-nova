@@ -1,12 +1,21 @@
 package cbs.nova.starter.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.starter.config.DslExecutionsRouterConfiguration;
+import cbs.nova.starter.service.DslRunCancellationService;
+import io.temporal.client.WorkflowClient;
+import io.temporal.client.WorkflowStub;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
@@ -19,11 +28,15 @@ class DslExecutionsResourceTest {
 
   private final InMemoryDslRunRepository repository = new InMemoryDslRunRepository();
   private final ObjectMapper objectMapper = new ObjectMapper();
+  private final WorkflowClient workflowClient = mock(WorkflowClient.class);
   private MockMvc mockMvc;
 
   @BeforeEach
   void setUp() {
-    DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper);
+    DslRunCancellationService cancellationService = new DslRunCancellationService(workflowClient,
+            repository);
+    DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper,
+            cancellationService);
     DslExecutionsRouterConfiguration router = new DslExecutionsRouterConfiguration();
     mockMvc = MockMvcBuilders.routerFunctions(router.dslExecutionsRouter(handler)).build();
   }
@@ -338,6 +351,85 @@ class DslExecutionsResourceTest {
             .andExpect(jsonPath("$.items[0].input").doesNotExist())
             .andExpect(jsonPath("$.items[0].output").doesNotExist())
             .andExpect(jsonPath("$.items[0].errors").doesNotExist());
+  }
+
+  @Test
+  void cancelUnknownRunReturns404WithErrorResponse() throws Exception {
+    mockMvc.perform(post("/api/executions/missing/cancel"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+            .andExpect(jsonPath("$.message").value("Execution run not found: missing"))
+            .andExpect(jsonPath("$.runId").value("missing"));
+
+    verifyNoInteractions(workflowClient);
+  }
+
+  @Test
+  void cancelNonRunningRunReturns409AndLeavesStatusUntouched() throws Exception {
+    repository.save(run("run-done", "LoanDisbursement", "COMPLETED", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", "RUN"));
+
+    mockMvc.perform(post("/api/executions/run-done/cancel"))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value("CONFLICT"))
+            .andExpect(jsonPath("$.message")
+                    .value("Execution run is not cancellable: run-done (status COMPLETED)"))
+            .andExpect(jsonPath("$.runId").value("run-done"));
+
+    verifyNoInteractions(workflowClient);
+    assertThat(repository.findByRunId("run-done").orElseThrow().status()).isEqualTo("COMPLETED");
+  }
+
+  @Test
+  void cancelStaleRunReturns409BecauseSweepAlreadyEndedIt() throws Exception {
+    repository.save(run("run-stale", "LoanDisbursement", "STALE", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", "RUN"));
+
+    mockMvc.perform(post("/api/executions/run-stale/cancel"))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.message")
+                    .value("Execution run is not cancellable: run-stale (status STALE)"));
+
+    verifyNoInteractions(workflowClient);
+  }
+
+  @Test
+  void cancelRunningRunCancelsWorkflowAndRecordsCancelledStatus() throws Exception {
+    WorkflowStub stub = mock(WorkflowStub.class);
+    when(workflowClient.newUntypedWorkflowStub("run-live")).thenReturn(stub);
+    repository.save(run("run-live", "LoanDisbursement", "RUNNING", "2026-08-13T10:00:00Z",
+            null, "RUN"));
+
+    mockMvc.perform(post("/api/executions/run-live/cancel"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value("run-live"))
+            .andExpect(jsonPath("$.status").value("Cancelled"))
+            .andExpect(jsonPath("$.errors.length()").value(1))
+            .andExpect(jsonPath("$.errors[0].message").value("Cancelled by user"));
+
+    verify(stub).cancel();
+    assertThat(repository.findByRunId("run-live").orElseThrow().status()).isEqualTo("CANCELLED");
+  }
+
+  @Test
+  void cancelledRunIsVisibleInListAndDetailWithNewStatus() throws Exception {
+    WorkflowStub stub = mock(WorkflowStub.class);
+    when(workflowClient.newUntypedWorkflowStub("run-live")).thenReturn(stub);
+    repository.save(run("run-live", "LoanDisbursement", "RUNNING", "2026-08-13T10:00:00Z",
+            null, "RUN"));
+
+    mockMvc.perform(post("/api/executions/run-live/cancel")).andExpect(status().isOk());
+
+    mockMvc.perform(get("/api/executions").param("status", "Cancelled"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(1))
+            .andExpect(jsonPath("$.items[0].id").value("run-live"))
+            .andExpect(jsonPath("$.items[0].status").value("Cancelled"));
+
+    mockMvc.perform(get("/api/executions/run-live"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("Cancelled"))
+            .andExpect(jsonPath("$.completedAt").exists());
   }
 
   private DslRun run(String id, String processName, String status, String startedAt,

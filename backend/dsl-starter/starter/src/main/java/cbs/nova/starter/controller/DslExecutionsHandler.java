@@ -5,6 +5,7 @@ import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ExecutionDto;
 import cbs.nova.starter.model.ExecutionListResponse;
+import cbs.nova.starter.service.DslRunCancellationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -36,6 +37,7 @@ public class DslExecutionsHandler {
 
   private final DslRunRepository runRepository;
   private final ObjectMapper objectMapper;
+  private final DslRunCancellationService cancellationService;
 
   @Operation(summary = "List DSL execution runs")
   @ApiResponse(responseCode = "200", description = "Matching execution runs", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionListResponse.class)))
@@ -70,6 +72,54 @@ public class DslExecutionsHandler {
             .orElse(ServerResponse.status(HttpStatus.NOT_FOUND)
                     .body(new ErrorResponse("NOT_FOUND", "Execution run not found: " + id,
                             null, id, null)));
+  }
+
+  /**
+   * Cancel a RUNNING execution run.
+   *
+   * <p>
+   * Sibling of {@link #list} / {@link #detail}: cancellation is an operation on an execution run,
+   * so it lives on the same handler and the same {@code /api/executions/{id}} path family.
+   *
+   * <p>
+   * A distinct {@code CANCELLED} status is used rather than reusing {@code STALE}: STALE means "we
+   * lost track of this run", which is a diagnostic signal, whereas CANCELLED is a deliberate
+   * operator action. Conflating them would make the healthcheck sweep's output unreadable and would
+   * hide accidental cancellations.
+   *
+   * <p>
+   * The 409 case is not a separate pre-check: {@link DslRunCancellationService} performs the
+   * terminal write through the guarded compare-and-set update, so a run that reaches COMPLETED or
+   * FAILED between our read and our write yields zero affected rows and is reported here as a
+   * conflict instead of being clobbered to CANCELLED.
+   */
+  @Operation(summary = "Cancel a running DSL execution run")
+  @ApiResponse(responseCode = "200", description = "The cancelled execution run", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionDto.class)))
+  @ApiResponse(responseCode = "404", description = "No run with the given id", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+  @ApiResponse(responseCode = "409", description = "The run is not in a cancellable state", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+  public ServerResponse cancel(ServerRequest request) {
+    String id = request.pathVariable("id");
+    DslRunCancellationService.CancelResult result = cancellationService.cancel(id);
+    return switch (result.outcome()) {
+      case NOT_FOUND -> ServerResponse.status(HttpStatus.NOT_FOUND)
+              .body(new ErrorResponse("NOT_FOUND", "Execution run not found: " + id,
+                      null, id, null));
+      case NOT_CANCELLABLE -> ServerResponse.status(HttpStatus.CONFLICT)
+              .body(new ErrorResponse("CONFLICT",
+                      "Execution run is not cancellable: " + id + " (status "
+                              + result.currentStatus() + ")",
+                      null, id, null));
+      case CANCELLED -> ServerResponse.ok()
+              .body(ExecutionDto.fromDetail(requireRun(result, id), objectMapper));
+    };
+  }
+
+  private static DslRun requireRun(DslRunCancellationService.CancelResult result, String id) {
+    DslRun run = result.run();
+    if (run == null) {
+      throw new IllegalStateException("Cancelled run missing from repository: " + id);
+    }
+    return run;
   }
 
   private List<DslRun> findRuns(String processName) {
