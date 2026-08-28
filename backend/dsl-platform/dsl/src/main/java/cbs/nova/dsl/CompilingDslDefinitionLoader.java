@@ -32,26 +32,25 @@ public final class CompilingDslDefinitionLoader implements DslDefinitionLoader {
   private final ServiceLoaderDslDefinitionLoader delegate;
 
   @Override
-  public int load(@NonNull GlobalManager gm) {
+  public LoadResult load(@NonNull GlobalManager gm) {
     return delegate.load(gm);
   }
 
   @Override
-  public int load(@NonNull Path sourceDir, @NonNull GlobalManager gm) {
+  public LoadResult load(@NonNull Path sourceDir, @NonNull GlobalManager gm) {
     if (hasJavaSources(sourceDir)) {
+      var builder = LoadResult.builder();
       var objects = loadObjects(sourceDir);
       for (var obj : objects) {
-        register(obj, gm);
+        register(obj, gm, builder);
       }
-    } else {
-      return delegate.load(gm);
+      return builder.build();
     }
-
-    return 0;
+    return delegate.load(gm);
   }
 
   @Override
-  public int load(@NonNull ClassLoader classLoader, @NonNull GlobalManager gm) {
+  public LoadResult load(@NonNull ClassLoader classLoader, @NonNull GlobalManager gm) {
     return delegate.load(classLoader, gm);
   }
 
@@ -155,11 +154,21 @@ public final class CompilingDslDefinitionLoader implements DslDefinitionLoader {
     }
   }
 
-  private void register(@NonNull DslObject obj, @NonNull GlobalManager gm) {
+  private void register(@NonNull DslObject obj, @NonNull GlobalManager gm,
+          LoadResult.@NonNull Builder result) {
     switch (obj.type()) {
-      case PROCESS -> gm.registerProcess((ProcessDslObject) obj);
-      case TRANSACTION -> gm.registerTransaction((TransactionDslObject) obj);
-      case FUNCTION -> gm.registerFunction((FunctionDslObject) obj);
+      case PROCESS -> {
+        gm.registerProcess((ProcessDslObject) obj);
+        result.add(DslObject.DslType.PROCESS, obj.name());
+      }
+      case TRANSACTION -> {
+        gm.registerTransaction((TransactionDslObject) obj);
+        result.add(DslObject.DslType.TRANSACTION, obj.name());
+      }
+      case FUNCTION -> {
+        gm.registerFunction((FunctionDslObject) obj);
+        result.add(DslObject.DslType.FUNCTION, obj.name());
+      }
     }
   }
 }

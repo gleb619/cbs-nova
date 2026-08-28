@@ -120,11 +120,14 @@ public class DslConfiguration {
 
   private void loadDsl(DslDefinitionLoader loader) {
     CompletableFuture.supplyAsync(() -> loader.load(GlobalManager.globalManager()))
-            .whenComplete((count, ex) -> {
+            .whenComplete((result, ex) -> {
               if (Objects.nonNull(ex)) {
                 log.error("DSL_ERROR: ", ex);
-              } else {
-                log.info("Dsl objects has bean registered: {} objects", count);
+              } else if (result != null) {
+                log.info("Dsl objects registered: {} objects (processes={}, transactions={},"
+                                + " functions={})",
+                        result.total(), result.processCount(), result.transactionCount(),
+                        result.functionCount());
               }
             });
   }

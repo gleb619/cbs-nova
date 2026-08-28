@@ -1,5 +1,6 @@
 package cbs.nova.starter.controller;
 
+import cbs.nova.dsl.LoadResult;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.DraftResponse;
@@ -51,7 +52,7 @@ public class DslDraftHandler {
     log.info("[DSL drafts] saved {} to {}", name, file);
     return ServerResponse.ok()
             .contentType(MediaType.APPLICATION_JSON)
-            .body(new DraftResponse(name, "Draft", file.toString(), false));
+            .body(new DraftResponse(name, "Draft", file.toString(), false, LoadResult.empty()));
   }
 
   public ServerResponse publish(ServerRequest request) throws IOException {
@@ -68,15 +69,24 @@ public class DslDraftHandler {
     var payload = withStatus(body, "Published");
     Path file = writePayload(dir.path().resolve(PUBLISHED_DIR), payload);
     log.info("[DSL drafts] published {} to {}", name, file);
-    ServerResponse reload = reloadHandler.reload(request);
-    boolean reloaded = reload.statusCode().is2xxSuccessful();
-    if (!reloaded) {
-      log.warn("[DSL drafts] publish of {} succeeded but reload returned {}",
-              name, reload.statusCode().value());
+
+    // Reload the DSL registry and surface the drilldown of what got loaded. A reload failure
+    // (e.g. compile error) must not fail the publish itself — the draft is already persisted.
+    boolean reloaded = false;
+    LoadResult loadResult = LoadResult.empty();
+    try {
+      loadResult = reloadHandler.reloadDefinitions();
+      reloaded = true;
+      log.info("[DSL drafts] publish of {} reloaded {} definitions: processes={}, transactions={},"
+                      + " functions={}",
+              name, loadResult.total(), loadResult.processCount(), loadResult.transactionCount(),
+              loadResult.functionCount());
+    } catch (Exception e) {
+      log.warn("[DSL drafts] publish of {} succeeded but reload failed: {}", name, e.getMessage());
     }
     return ServerResponse.ok()
             .contentType(MediaType.APPLICATION_JSON)
-            .body(new DraftResponse(name, "Published", file.toString(), reloaded));
+            .body(new DraftResponse(name, "Published", file.toString(), reloaded, loadResult));
   }
 
   private sealed interface PathResult {

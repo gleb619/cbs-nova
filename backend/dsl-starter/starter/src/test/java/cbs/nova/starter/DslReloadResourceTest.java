@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.CompilingDslDefinitionLoader;
 import cbs.nova.dsl.DslDefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.LoadResult;
 import cbs.nova.dsl.ServiceLoaderDslDefinitionLoader;
 import cbs.nova.starter.config.DslReloadRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
@@ -16,7 +17,9 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
@@ -99,11 +102,73 @@ class DslReloadResourceTest {
     try {
       setSourceDir(sourceDir.toString());
       ServerResponse response = resource.reload(reloadRequest());
-      assertThat(response.statusCode().value()).isEqualTo(204);
+      assertThat(response.statusCode().value()).isEqualTo(200);
       assertThat(GlobalManager.globalManager().hasProcess("ReloadTestProcess")).isTrue();
     } finally {
       deleteRecursively(sourceDir);
     }
+  }
+
+  /**
+   * The reload response body must carry the {@link LoadResult} drilldown: source dir, totals and
+   * the per-type counts/names, so operators see WHAT a reload loaded.
+   */
+  @Test
+  void reloadResponseBodyIncludesLoadResultDrilldown() throws Exception {
+    Path sourceDir = createTemporaryDslSourceDir();
+    try {
+      setSourceDir(sourceDir.toString());
+      ServerResponse response = resource.reload(reloadRequest());
+      assertThat(response.statusCode().value()).isEqualTo(200);
+
+      var node = new tools.jackson.databind.ObjectMapper().readTree(renderBody(response));
+
+      assertThat(node.path("sourceDir").asString()).isEqualTo(sourceDir.toString());
+      // Drilldown schema: per-type name arrays under "load". The starter test classpath carries
+      // its own SPI providers, so the counts are > 1 — what matters is the reloaded source
+      // dir's process shows up and the per-type arrays exist.
+      assertThat(node.path("load").path("processes").isArray()).isTrue();
+      assertThat(node.path("load").path("transactions").isArray()).isTrue();
+      assertThat(node.path("load").path("functions").isArray()).isTrue();
+      assertThat(toStrings(node.path("load").path("processes")))
+              .contains("ReloadTestProcess");
+    } finally {
+      deleteRecursively(sourceDir);
+    }
+  }
+
+  /** The programmatic reload path (draft publish) must hand back the same drilldown. */
+  @Test
+  void reloadDefinitionsReturnsLoadResultDrilldown() throws Exception {
+    Path sourceDir = createTemporaryDslSourceDir("PublishTestProcess");
+    try {
+      setSourceDir(sourceDir.toString());
+      LoadResult load = resource.reloadDefinitions();
+      assertThat(load.processes()).contains("PublishTestProcess");
+      assertThat(load.processCount()).isEqualTo(load.processes().size());
+      assertThat(load.transactionCount()).isEqualTo(load.transactions().size());
+      assertThat(load.functionCount()).isEqualTo(load.functions().size());
+      assertThat(load.total())
+              .isEqualTo(load.processCount() + load.transactionCount() + load.functionCount());
+      assertThat(load.total()).isPositive();
+    } finally {
+      deleteRecursively(sourceDir);
+    }
+  }
+
+  private static List<String> toStrings(tools.jackson.databind.JsonNode array) {
+    var names = new java.util.ArrayList<String>();
+    array.forEach(n -> names.add(n.asString()));
+    return names;
+  }
+
+  private static String renderBody(ServerResponse response) throws Exception {
+    var servletResponse = new MockHttpServletResponse();
+    response.writeTo(
+            new MockHttpServletRequest("POST", "/api/dsl/reload"),
+            servletResponse,
+            () -> List.of(new JacksonJsonHttpMessageConverter()));
+    return servletResponse.getContentAsString();
   }
 
   /**
@@ -118,7 +183,7 @@ class DslReloadResourceTest {
     try {
       setSourceDir(goodDir.toString());
       ServerResponse ok = resource.reload(reloadRequest());
-      assertThat(ok.statusCode().value()).isEqualTo(204);
+      assertThat(ok.statusCode().value()).isEqualTo(200);
       assertThat(GlobalManager.globalManager().hasProcess("ReloadTestProcess"))
               .as("initial reload must register the process")
               .isTrue();
@@ -155,7 +220,7 @@ class DslReloadResourceTest {
     try {
       setSourceDir(goodDir.toString());
       ServerResponse ok = resource.reload(reloadRequest());
-      assertThat(ok.statusCode().value()).isEqualTo(204);
+      assertThat(ok.statusCode().value()).isEqualTo(200);
       // No leftover dsl-reload- temp directories created during this test.
       assertNoLeakedReloadTempDirs(before);
     } finally {
@@ -246,8 +311,8 @@ class DslReloadResourceTest {
         // Now both reloads can finish. Drain them.
         ServerResponse a = futureA.get(10, TimeUnit.SECONDS);
         ServerResponse b = futureB.get(10, TimeUnit.SECONDS);
-        assertThat(a.statusCode().value()).isEqualTo(204);
-        assertThat(b.statusCode().value()).isEqualTo(204);
+        assertThat(a.statusCode().value()).isEqualTo(200);
+        assertThat(b.statusCode().value()).isEqualTo(200);
 
         // Final state: the source dir's process must be registered (no torn mix).
         assertThat(GlobalManager.globalManager().hasProcess("ConcurrentProcess"))
@@ -387,17 +452,17 @@ class DslReloadResourceTest {
     }
 
     @Override
-    public int load(GlobalManager gm) {
+    public LoadResult load(GlobalManager gm) {
       return load(Thread.currentThread().getContextClassLoader(), gm);
     }
 
     @Override
-    public int load(Path sourceDir, GlobalManager gm) {
+    public LoadResult load(Path sourceDir, GlobalManager gm) {
       throw new UnsupportedOperationException("not used by reload");
     }
 
     @Override
-    public int load(ClassLoader classLoader, GlobalManager gm) {
+    public LoadResult load(ClassLoader classLoader, GlobalManager gm) {
       int myCall = COUNTER.incrementAndGet();
       arrived(myCall).countDown();
       try {

@@ -1,5 +1,7 @@
 package cbs.nova.starter.model;
 
+import cbs.nova.dsl.LoadResult;
+
 public final class VcsModels {
 
   public record DraftRequest(
@@ -15,7 +17,8 @@ public final class VcsModels {
           String name,
           String status,
           String location,
-          boolean reloaded) {
+          boolean reloaded,
+          LoadResult loadResult) {
 
   }
 }

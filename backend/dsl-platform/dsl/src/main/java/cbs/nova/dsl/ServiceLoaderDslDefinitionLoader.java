@@ -14,41 +14,50 @@ import java.util.concurrent.atomic.AtomicInteger;
 public final class ServiceLoaderDslDefinitionLoader implements DslDefinitionLoader {
 
   @Override
-  public int load(@NonNull GlobalManager gm) {
+  public LoadResult load(@NonNull GlobalManager gm) {
     return load(Thread.currentThread().getContextClassLoader(), gm);
   }
 
   @Override
-  public int load(@NonNull Path sourceDir, @NonNull GlobalManager gm) {
+  public LoadResult load(@NonNull Path sourceDir, @NonNull GlobalManager gm) {
     throw new UnsupportedOperationException(
             "ServiceLoaderDslDefinitionLoader does not support loading from source directories");
   }
 
   @Override
-  public int load(@NonNull ClassLoader classLoader, @NonNull GlobalManager gm) {
+  public LoadResult load(@NonNull ClassLoader classLoader, @NonNull GlobalManager gm) {
     var providers = ServiceLoader.load(DslDefinitionProvider.class, classLoader);
     var iterator = providers.iterator();
+    var result = LoadResult.builder();
     if (!iterator.hasNext()) {
       log.warn(
               "[ServiceLoaderDslDefinitionLoader] No DslDefinitionProvider on classpath — registry stays empty");
-      return 0;
+      return result.build();
     }
-    AtomicInteger counter = new AtomicInteger();
     iterator.forEachRemaining(provider -> {
       for (var obj : provider.definitions()) {
-        counter.getAndIncrement();
-        register(obj, gm);
+        register(obj, gm, result);
       }
     });
 
-    return counter.get();
+    return result.build();
   }
 
-  private void register(@NonNull DslObject obj, @NonNull GlobalManager gm) {
+  private void register(@NonNull DslObject obj, @NonNull GlobalManager gm,
+          LoadResult.@NonNull Builder result) {
     switch (obj.type()) {
-      case PROCESS -> gm.registerProcess((ProcessDslObject) obj);
-      case TRANSACTION -> gm.registerTransaction((TransactionDslObject) obj);
-      case FUNCTION -> gm.registerFunction((FunctionDslObject) obj);
+      case PROCESS -> {
+        gm.registerProcess((ProcessDslObject) obj);
+        result.add(DslObject.DslType.PROCESS, obj.name());
+      }
+      case TRANSACTION -> {
+        gm.registerTransaction((TransactionDslObject) obj);
+        result.add(DslObject.DslType.TRANSACTION, obj.name());
+      }
+      case FUNCTION -> {
+        gm.registerFunction((FunctionDslObject) obj);
+        result.add(DslObject.DslType.FUNCTION, obj.name());
+      }
     }
   }
 }

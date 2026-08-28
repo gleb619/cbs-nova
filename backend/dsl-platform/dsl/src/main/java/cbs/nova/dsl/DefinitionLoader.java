@@ -17,24 +17,20 @@ public final class DefinitionLoader implements DslDefinitionLoader {
           new ServiceLoaderDslDefinitionLoader());
 
   @Override
-  public int load(@NonNull Path sourceDir, @NonNull GlobalManager gm) {
-    int result;
+  public LoadResult load(@NonNull Path sourceDir, @NonNull GlobalManager gm) {
     if (hasJavaSources(sourceDir)) {
-      result = compiler.load(sourceDir, gm);
-    } else {
-      result = serviceLoader.load(gm);
+      return compiler.load(sourceDir, gm);
     }
-
-    return result;
-  }
-
-  @Override
-  public int load(@NonNull GlobalManager gm) {
     return serviceLoader.load(gm);
   }
 
   @Override
-  public int load(@NonNull ClassLoader classLoader, @NonNull GlobalManager gm) {
+  public LoadResult load(@NonNull GlobalManager gm) {
+    return serviceLoader.load(gm);
+  }
+
+  @Override
+  public LoadResult load(@NonNull ClassLoader classLoader, @NonNull GlobalManager gm) {
     return serviceLoader.load(classLoader, gm);
   }
 

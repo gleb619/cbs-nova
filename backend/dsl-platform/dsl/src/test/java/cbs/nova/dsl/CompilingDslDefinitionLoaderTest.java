@@ -37,8 +37,12 @@ class CompilingDslDefinitionLoaderTest {
     Files.writeString(tempDir.resolve("CompiledProcess.java"), source);
 
     var gm = GlobalManager.globalManager();
-    new CompilingDslDefinitionLoader(new ServiceLoaderDslDefinitionLoader()).load(tempDir, gm);
+    var load = new CompilingDslDefinitionLoader(new ServiceLoaderDslDefinitionLoader())
+            .load(tempDir, gm);
 
+    assertThat(load.total()).isEqualTo(1);
+    assertThat(load.processCount()).isEqualTo(1);
+    assertThat(load.processes()).containsExactly("CompiledProcess");
     assertThat(gm.hasProcess("CompiledProcess")).isTrue();
     var ctx = contextFactory.of("test", ExecutionMode.PREVIEW);
     var result = gm.runProcess("CompiledProcess", ctx);

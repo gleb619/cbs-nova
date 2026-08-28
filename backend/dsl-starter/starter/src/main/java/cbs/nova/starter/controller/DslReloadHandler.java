@@ -4,6 +4,7 @@ import cbs.nova.dsl.DslCompactSource;
 import cbs.nova.dsl.DslDefinitionLoader;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.LoadResult;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
@@ -12,9 +13,11 @@ import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.starter.model.ReloadResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
@@ -74,6 +77,8 @@ public class DslReloadHandler {
   /**
    * Reloads DSL definitions from the configured source directory using a dedicated classloader and
    * the SPI mechanisms {@link cbs.nova.dsl.DslDefinitionProvider} and {@link HelperResolver}.
+   * Responds 200 with a {@link ReloadResponse} carrying the {@link LoadResult} drilldown of what
+   * was loaded.
    */
   public ServerResponse reload(ServerRequest request) throws IOException {
     var sourceDirProperty = dslProperties.getSourceDir();
@@ -89,8 +94,10 @@ public class DslReloadHandler {
 
     reloadLock.lock();
     try {
-      doReload(dir);
-      return ServerResponse.noContent().build();
+      var load = doReload(dir);
+      return ServerResponse.ok()
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(new ReloadResponse(dir.toString(), load));
     } catch (Exception e) {
       log.error("[DSL reload] Failed to reload DSL definitions from {}", dir, e);
       return error(HttpStatus.INTERNAL_SERVER_ERROR,
@@ -100,7 +107,32 @@ public class DslReloadHandler {
     }
   }
 
-  private void doReload(Path sourceDir) throws IOException {
+  /**
+   * Programmatic reload used by callers that are already inside a request flow and want the
+   * {@link LoadResult} drilldown directly rather than a {@link ServerResponse} (workbench draft
+   * publish). Shares the same {@link ReentrantLock} serialization and failure semantics as
+   * {@link #reload(ServerRequest)}: throws on compile/staging failure, leaving the live registry
+   * untouched.
+   */
+  public LoadResult reloadDefinitions() throws IOException {
+    var sourceDirProperty = dslProperties.getSourceDir();
+    if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
+      throw new IllegalStateException("dsl.source-dir is not configured");
+    }
+    var dir = Path.of(sourceDirProperty);
+    if (!Files.isDirectory(dir)) {
+      throw new IllegalStateException("Source directory does not exist: " + dir);
+    }
+
+    reloadLock.lock();
+    try {
+      return doReload(dir);
+    } finally {
+      reloadLock.unlock();
+    }
+  }
+
+  private LoadResult doReload(Path sourceDir) throws IOException {
     var parent = Thread.currentThread().getContextClassLoader();
     Path outputDir = null;
     URLClassLoader reloadClassLoader = null;
@@ -113,10 +145,11 @@ public class DslReloadHandler {
       // Build the new DSL set into a throwaway candidate GlobalManager. The live
       // singleton is not touched until the staging has fully succeeded.
       var candidate = DslConfig.dslConfig().globalManager();
-      loadDefinitions(reloadClassLoader, sourceDir, outputDir, candidate);
+      var load = loadDefinitions(reloadClassLoader, sourceDir, outputDir, candidate);
 
       // Atomic swap — only after every registration above has succeeded.
       GlobalManager.globalManager().replaceGlobalManager(candidate);
+      return load;
     } finally {
       Thread.currentThread().setContextClassLoader(parent);
       if (reloadClassLoader != null) {
@@ -130,10 +163,12 @@ public class DslReloadHandler {
     }
   }
 
-  private void loadDefinitions(ClassLoader classLoader, Path sourceDir, Path outputDir,
+  private LoadResult loadDefinitions(ClassLoader classLoader, Path sourceDir, Path outputDir,
           GlobalManager target) {
+    var result = LoadResult.builder();
+
     // Prefer SPI-based DslDefinitionProvider definitions.
-    loader.load(classLoader, target);
+    result.merge(loader.load(classLoader, target));
 
     // Load helper resolvers via SPI.
     var instanceResolver = helperInstanceResolver();
@@ -143,7 +178,14 @@ public class DslReloadHandler {
     }
 
     // Fallback for compact-source DSL files that implement DslCompactSource directly.
-    loadCompactSources(classLoader, sourceDir, outputDir, target);
+    loadCompactSources(classLoader, sourceDir, outputDir, target, result);
+
+    var load = result.build();
+    log.info("[DSL reload] Loaded {} DSL definitions from {}: processes={}, transactions={},"
+                    + " functions={}",
+            load.total(), sourceDir, load.processCount(), load.transactionCount(),
+            load.functionCount());
+    return load;
   }
 
   private HelperInstanceResolver helperInstanceResolver() {
@@ -187,7 +229,7 @@ public class DslReloadHandler {
   }
 
   private void loadCompactSources(ClassLoader classLoader, Path sourceDir, Path outputDir,
-          GlobalManager target) {
+          GlobalManager target, LoadResult.Builder result) {
     List<String> classNames = collectClassNames(outputDir);
     for (String className : classNames) {
       try {
@@ -197,7 +239,7 @@ public class DslReloadHandler {
         }
         var instance = (DslCompactSource) clazz.getDeclaredConstructor().newInstance();
         for (DslObject obj : instance.define()) {
-          register(obj, target);
+          register(obj, target, result);
         }
       } catch (Exception e) {
         log.warn("[DSL reload] Could not load compact source {}: {}", className, e.getMessage(), e);
@@ -224,11 +266,20 @@ public class DslReloadHandler {
     return classNames;
   }
 
-  private void register(DslObject obj, GlobalManager target) {
+  private void register(DslObject obj, GlobalManager target, LoadResult.Builder result) {
     switch (obj.type()) {
-      case PROCESS -> target.registerProcess((ProcessDslObject) obj);
-      case TRANSACTION -> target.registerTransaction((TransactionDslObject) obj);
-      case FUNCTION -> target.registerFunction((FunctionDslObject) obj);
+      case PROCESS -> {
+        target.registerProcess((ProcessDslObject) obj);
+        result.add(DslObject.DslType.PROCESS, obj.name());
+      }
+      case TRANSACTION -> {
+        target.registerTransaction((TransactionDslObject) obj);
+        result.add(DslObject.DslType.TRANSACTION, obj.name());
+      }
+      case FUNCTION -> {
+        target.registerFunction((FunctionDslObject) obj);
+        result.add(DslObject.DslType.FUNCTION, obj.name());
+      }
     }
   }
 

@@ -33,13 +33,29 @@ class ServiceLoaderDslDefinitionLoaderTest {
   }
 
   @Test
+  void loadReturnsDrilldownWithCountsAndNamesPerType() {
+    var gm = GlobalManager.globalManager();
+
+    var load = new ServiceLoaderDslDefinitionLoader().load(gm);
+
+    assertThat(load.total()).isEqualTo(1);
+    assertThat(load.processCount()).isEqualTo(1);
+    assertThat(load.transactionCount()).isZero();
+    assertThat(load.functionCount()).isZero();
+    assertThat(load.processes()).containsExactly("SpiLoadedProcess");
+    assertThat(load.transactions()).isEmpty();
+    assertThat(load.functions()).isEmpty();
+  }
+
+  @Test
   void loadDiscoversProvidersFromExplicitClassLoader() throws Exception {
     var gm = GlobalManager.globalManager();
     var parent = Thread.currentThread().getContextClassLoader();
     var classLoader = new URLClassLoader(new URL[0], parent);
 
-    assertThatCode(() -> new ServiceLoaderDslDefinitionLoader().load(classLoader, gm))
-            .doesNotThrowAnyException();
+    var load = new ServiceLoaderDslDefinitionLoader().load(classLoader, gm);
+    assertThat(load.total()).isEqualTo(1);
+    assertThat(load.processes()).containsExactly("SpiLoadedProcess");
 
     assertThat(gm.hasProcess("SpiLoadedProcess")).isTrue();
     var ctx = contextFactory.of("test", ExecutionMode.PREVIEW);
