@@ -9,13 +9,13 @@ public final class PreviewModels {
           @NonNull PreviewReport report,
           long timestamp,
           long ttlMs) {
-  
+
   }
 
   public record PreviewCacheKey(
           @NonNull String processName,
           @NonNull String dslDescriptorHash,
           @NonNull String inputHash) {
-  
+
   }
 }

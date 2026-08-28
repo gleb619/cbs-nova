@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class DryRunLogBufferRegistry {
 
-  //TODO: redo to a Caffeine with some properties config for ttl
+  // TODO: redo to a Caffeine with some properties config for ttl
   private final ConcurrentHashMap<String, DryRunLogBuffer> buffers = new ConcurrentHashMap<>();
 
   public void register(@NonNull String runId, @NonNull DryRunLogBuffer buffer) {

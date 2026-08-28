@@ -20,6 +20,7 @@ import cbs.nova.dsl.registry.HelperRegistry;
 import cbs.nova.dsl.registry.ModelRegistry;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.transaction.TransactionDslObject;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
@@ -28,6 +29,8 @@ import org.slf4j.event.Level;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,7 +48,9 @@ public final class DslCompiler {
   private final SemanticValidator semanticValidator;
   private final HelperRegistry helperRegistry;
   private final CodegenNaming codegenNaming;
-  private final Level logLevel;
+
+  private record StepTiming(String phase, Duration duration) {
+  }
 
   public static void main(String[] args) throws IOException {
     if (args.length < 1) {
@@ -100,16 +105,24 @@ public final class DslCompiler {
   }
 
   private void compileInternal(@NonNull DslCompilerOptions options) throws IOException {
+    var timings = new ArrayList<StepTiming>();
     var sourceOptions = new SourceCompiler.CompileOptions(
             options.buildVersion(),
             options.targetPackage(),
             options.logLevel(),
             options.classpath(),
             options.useFileNameSubPackage());
+
+    var loadStart = Instant.now();
     List<DslObject> objects = dslSourceCompiler.compileAndLoad(
             options.srcDir(), options.outputDir(), sourceOptions);
-    List<String> preprocessedSources = preprocessedDslSources(options);
+    timings.add(timing("load", loadStart));
 
+    var preprocessStart = Instant.now();
+    List<String> preprocessedSources = preprocessedDslSources(options);
+    timings.add(timing("preprocess", preprocessStart));
+
+    var describeStart = Instant.now();
     var processes = new ArrayList<ProcessDescriptor>();
     var transactions = new ArrayList<TransactionDescriptor>();
     var functions = new ArrayList<FunctionDescriptor>();
@@ -119,13 +132,16 @@ public final class DslCompiler {
         case PROCESS -> processes.add(descriptorFactory.fromProcess((ProcessDslObject) obj));
         case TRANSACTION ->
           transactions.add(descriptorFactory.fromTransaction((TransactionDslObject) obj));
-        case FUNCTION ->
-          functions.add(descriptorFactory.fromFunction((FunctionDslObject) obj));
+        case FUNCTION -> functions.add(descriptorFactory.fromFunction((FunctionDslObject) obj));
       }
     }
+    timings.add(timing("describe", describeStart));
 
+    var validationStart = Instant.now();
     semanticValidator.validate(processes, transactions, functions, helperRegistry);
+    timings.add(timing("validate", validationStart));
 
+    var generationStart = Instant.now();
     var sources = new ArrayList<GeneratedSource>();
     var providerFqns = new ArrayList<String>();
 
@@ -154,14 +170,39 @@ public final class DslCompiler {
             options.srcDir(), options.outputDir(), options.targetPackage(),
             options.useFileNameSubPackage());
     sources.add(modelRegistrySource);
+    timings.add(timing("generate", generationStart));
 
+    var writeStart = Instant.now();
     codeWriter.write(sources, options.outputDir());
     codeWriter.writeServiceFile(GeneratedClassProvider.class.getName(), providerFqns,
             options.outputDir());
     codeWriter.writeServiceFile(ModelRegistry.class.getName(),
             List.of(modelRegistrySource.fullyQualifiedName()), options.outputDir());
-    log.atLevel(Level.INFO).log(() -> "[DslCompiler] Generated %s source(s) to %s"
-            .formatted(sources.size(), options.outputDir()));
+    timings.add(timing("write", writeStart));
+
+    logSummary(timings, sources.size(), options.outputDir());
+  }
+
+  private static StepTiming timing(String phase, Instant start) {
+    return new StepTiming(phase, Duration.between(start, Instant.now()));
+  }
+
+  private static void logSummary(List<StepTiming> timings, int sourceCount, Path outputDir) {
+    var total = timings.stream()
+            .map(StepTiming::duration)
+            .reduce(Duration.ZERO, Duration::plus);
+    log.atLevel(Level.INFO).log(() -> "[DslCompiler] Generated %s source(s) to %s in %s"
+            .formatted(sourceCount, outputDir, humanReadable(total)));
+    String report = timings.stream()
+        .map(t -> "  %s - %s".formatted(t.phase(), humanReadable(t.duration())))
+        .collect(Collectors.joining("\n"));
+    log.atLevel(Level.DEBUG).log(() -> "[DslCompiler] Generation report: \n%s"
+        .formatted(report));
+  }
+
+  private static String humanReadable(Duration duration) {
+    var millis = duration.toMillis();
+    return millis < 1000 ? millis + " ms" : "%.2f s".formatted(millis / 1000.0);
   }
 
   private @NonNull List<String> preprocessedDslSources(@NonNull DslCompilerOptions options)

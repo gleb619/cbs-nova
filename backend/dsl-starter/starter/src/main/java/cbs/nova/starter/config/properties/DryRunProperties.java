@@ -8,7 +8,7 @@ import org.springframework.validation.annotation.Validated;
 
 @ConfigurationProperties(prefix = "cbs.nova.dry-run")
 @Validated
-//TODO: redo to a class with lombok's annotations
+// TODO: redo to a class with lombok's annotations
 public record DryRunProperties(
         @DefaultValue Context context,
         @Valid @DefaultValue Log log) {

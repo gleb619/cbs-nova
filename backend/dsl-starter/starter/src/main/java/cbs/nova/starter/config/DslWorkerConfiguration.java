@@ -69,7 +69,7 @@ public class DslWorkerConfiguration {
     private static final long TERMINATION_AWAIT_SECONDS = 10L;
 
     private final WorkerFactory factory;
-    //TODO: redo to atomic
+    // TODO: redo to atomic
     private volatile boolean running;
 
     WorkerFactoryLifecycle(WorkerFactory factory) {

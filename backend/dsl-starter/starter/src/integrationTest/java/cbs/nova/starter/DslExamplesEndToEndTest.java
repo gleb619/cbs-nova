@@ -6,12 +6,19 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.ServiceLoaderDslDefinitionLoader;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dslexamples.batchprocessing.v1.BatchModels.BatchIn;
 import cbs.nova.dslexamples.batchprocessing.v1.BatchModels.BatchItem;
 import cbs.nova.dslexamples.batchprocessing.v1.BatchModels.BatchOut;
 import cbs.nova.starter.service.TemporalDslProcessService;
+import cbs.nova.util.ServiceUtil;
 import io.restassured.RestAssured;
+import java.time.Duration;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
@@ -59,8 +67,7 @@ class DslExamplesEndToEndTest extends BaseContainers {
   void generatedDslWorkflowExecutesThroughTemporal() {
     var input = new BatchIn(List.of(new BatchItem("a", 1), new BatchItem("b", 2)));
 
-    var service = new TemporalDslProcessService(new ContextFactory(),
-            new InMemoryDslRunRepository(), new ObjectMapper());
+    var service = ServiceUtil.newService(new ContextFactory());
     Result<?> result = service.runProcess("BatchProcessing", input).result().join();
 
     assertThat(result.isSuccess()).as("result cause: %s", result.cause()).isTrue();
@@ -102,4 +109,5 @@ class DslExamplesEndToEndTest extends BaseContainers {
             .extract()
             .path("access_token");
   }
+
 }

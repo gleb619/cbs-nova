@@ -59,18 +59,18 @@ class TemporalDslProcessServiceTest {
   }
 
   public static TemporalDslProcessService createService(
-      ContextFactory contextFactory,
-      DslRunRepository runRepository,
-      ObjectMapper objectMapper) {
+          ContextFactory contextFactory,
+          DslRunRepository runRepository,
+          ObjectMapper objectMapper) {
     return new TemporalDslProcessService(
-        contextFactory,
-        runRepository,
-        objectMapper,
-        sameThreadExecutor(),
-        disabledScheduledExecutor(),
-        Duration.ofSeconds(30),
-        Duration.ofMinutes(5),
-        false);
+            contextFactory,
+            runRepository,
+            objectMapper,
+            sameThreadExecutor(),
+            disabledScheduledExecutor(),
+            Duration.ofSeconds(30),
+            Duration.ofMinutes(5),
+            false);
   }
 
   @Test

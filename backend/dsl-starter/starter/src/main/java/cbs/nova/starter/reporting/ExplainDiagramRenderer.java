@@ -18,7 +18,8 @@ import java.util.Map;
  * metadata; this layer converts that tree into mermaid, PlantUML and BPMN representations on demand
  * so the runtime does not need to know about diagram formats.
  */
-//TODO: we need to use class, redo it to service, add some handler's endpoint at `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/controller/DslIntrospectionHandler.java`
+// TODO: we need to use class, redo it to service, add some handler's endpoint at
+// `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/controller/DslIntrospectionHandler.java`
 @Deprecated(forRemoval = true)
 public final class ExplainDiagramRenderer {
 

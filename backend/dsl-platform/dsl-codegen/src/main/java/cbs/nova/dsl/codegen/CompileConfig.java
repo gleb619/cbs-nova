@@ -57,14 +57,14 @@ public final class CompileConfig implements SingletonSupport {
   public @NonNull ProcessCodeGenerator processCodeGenerator() {
     return singleton(() -> {
       var codegenNaming = codegenNaming();
-      return new ProcessCodeGenerator(codegenNaming, new DslPackageNameResolver(codegenNaming));
+      return new ProcessCodeGenerator(new DslPackageNameResolver(codegenNaming));
     });
   }
 
   public @NonNull TransactionCodeGenerator transactionCodeGenerator() {
     return singleton(() -> {
       var codegenNaming = codegenNaming();
-      return new TransactionCodeGenerator(codegenNaming, new DslPackageNameResolver(codegenNaming));
+      return new TransactionCodeGenerator(new DslPackageNameResolver(codegenNaming));
     });
   }
 
@@ -122,8 +122,7 @@ public final class CompileConfig implements SingletonSupport {
                     descriptorFactory(),
                     semanticValidator(),
                     helperRegistry(),
-                    codegenNaming(),
-                    logLevel));
+                    codegenNaming()));
   }
 
   /* ============= */

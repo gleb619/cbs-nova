@@ -23,7 +23,7 @@ public final class MapInputConverter {
   private final Jsonb jsonb;
   private final ObjectMapper objectMapper;
 
-  //TODO: redo to a Caffeine with some properties config for ttl
+  // TODO: redo to a Caffeine with some properties config for ttl
   private final Map<Class<?>, JsonType<?>> adapterCache = new ConcurrentHashMap<>();
 
   public @Nullable Object convert(@Nullable Object value,

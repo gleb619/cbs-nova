@@ -30,7 +30,9 @@ public final class MetricsStage implements DslPipeStage {
     }
   }
 
-  //TODO: search and move to `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/core/StarterConstant.java` a string constants
+  // TODO: search and move to
+  // `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/core/StarterConstant.java` a string
+  // constants
   private void countCallKinds(@NonNull DslPipeContext context,
           @NonNull PreviewMetricsCollector collector) {
     CallNode tree = context.getAttribute("astTree", CallNode.class);

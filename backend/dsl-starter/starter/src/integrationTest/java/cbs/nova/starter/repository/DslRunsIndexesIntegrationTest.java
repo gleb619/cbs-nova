@@ -52,13 +52,13 @@ class DslRunsIndexesIntegrationTest {
   @BeforeAll
   static void applyMigrations() throws SQLException {
     ResourceDatabasePopulator populator = new ResourceDatabasePopulator(
-        new ClassPathResource("db/migration/V1__create_dsl_runs.sql"),
-        new ClassPathResource("db/migration/V2__add_context_json.sql"),
-        new ClassPathResource("db/migration/V3__create_dsl_run_transactions.sql"),
-        new ClassPathResource("db/migration/V4__dsl_runs_indexes.sql"));
+            new ClassPathResource("db/migration/V1__create_dsl_runs.sql"),
+            new ClassPathResource("db/migration/V2__add_context_json.sql"),
+            new ClassPathResource("db/migration/V3__create_dsl_run_transactions.sql"),
+            new ClassPathResource("db/migration/V4__dsl_runs_indexes.sql"));
     populator.setContinueOnError(false);
     try (Connection connection = DriverManager.getConnection(
-        postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())) {
+            postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())) {
       populator.populate(connection);
     }
   }
@@ -72,10 +72,10 @@ class DslRunsIndexesIntegrationTest {
   void flywayAppliedV4Indexes() throws SQLException {
     Set<String> indexNames = readIndexNames();
     assertThat(indexNames)
-        .contains(
-            "idx_dsl_runs_status_started_at",
-            "idx_dsl_runs_process_started_at",
-            "idx_dsl_runs_execution_mode");
+            .contains(
+                    "idx_dsl_runs_status_started_at",
+                    "idx_dsl_runs_process_started_at",
+                    "idx_dsl_runs_execution_mode");
   }
 
   @Test
@@ -87,8 +87,8 @@ class DslRunsIndexesIntegrationTest {
     insert("shipping", "RUNNING", "RUN", base.plusSeconds(180));
 
     List<String> runningOrders = jdbc().queryForList(
-        "SELECT run_id FROM dsl_runs WHERE status = ? AND process_name = ? ORDER BY started_at DESC",
-        String.class, "RUNNING", "orders");
+            "SELECT run_id FROM dsl_runs WHERE status = ? AND process_name = ? ORDER BY started_at DESC",
+            String.class, "RUNNING", "orders");
 
     assertThat(runningOrders).hasSize(2);
   }
@@ -98,13 +98,13 @@ class DslRunsIndexesIntegrationTest {
     Instant base = Instant.parse("2026-01-02T00:00:00Z");
     for (int i = 0; i < 4; i++) {
       insert("billing", i % 2 == 0 ? "COMPLETED" : "FAILED",
-          "RUN", base.plusSeconds(i * 30L));
+              "RUN", base.plusSeconds(i * 30L));
     }
     insert("shipping", "RUNNING", "RUN", base.plusSeconds(500));
 
     List<String> billingRunIds = jdbc().queryForList(
-        "SELECT run_id FROM dsl_runs WHERE process_name = ? ORDER BY started_at DESC",
-        String.class, "billing");
+            "SELECT run_id FROM dsl_runs WHERE process_name = ? ORDER BY started_at DESC",
+            String.class, "billing");
 
     assertThat(billingRunIds).hasSize(4);
   }
@@ -118,8 +118,8 @@ class DslRunsIndexesIntegrationTest {
     insert("shipping", "RUNNING", "PREVIEW", base.plusSeconds(90));
 
     List<String> previewRunIds = jdbc().queryForList(
-        "SELECT run_id FROM dsl_runs WHERE execution_mode = ? ORDER BY started_at DESC",
-        String.class, "PREVIEW");
+            "SELECT run_id FROM dsl_runs WHERE execution_mode = ? ORDER BY started_at DESC",
+            String.class, "PREVIEW");
 
     assertThat(previewRunIds).hasSize(3);
   }
@@ -128,10 +128,10 @@ class DslRunsIndexesIntegrationTest {
   void migrationV4IsIdempotent() throws SQLException {
     long indexCountBefore = readIndexNames().size();
     ResourceDatabasePopulator populator = new ResourceDatabasePopulator(
-        new ClassPathResource("db/migration/V4__dsl_runs_indexes.sql"));
+            new ClassPathResource("db/migration/V4__dsl_runs_indexes.sql"));
     populator.setContinueOnError(false);
     try (Connection connection = DriverManager.getConnection(
-        postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())) {
+            postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())) {
       populator.populate(connection);
     }
     long indexCountAfter = readIndexNames().size();
@@ -140,14 +140,14 @@ class DslRunsIndexesIntegrationTest {
 
   private void insert(String processName, String status, String mode, Instant startedAt) {
     jdbc().update(
-        "INSERT INTO dsl_runs (run_id, process_name, status, input_json, started_at, execution_mode) "
-            + "VALUES (?, ?, ?, ?, ?, ?)",
-        "run-" + java.util.UUID.randomUUID(),
-        processName,
-        status,
-        "{}",
-        Timestamp.from(startedAt),
-        mode);
+            "INSERT INTO dsl_runs (run_id, process_name, status, input_json, started_at, execution_mode) "
+                    + "VALUES (?, ?, ?, ?, ?, ?)",
+            "run-" + java.util.UUID.randomUUID(),
+            processName,
+            status,
+            "{}",
+            Timestamp.from(startedAt),
+            mode);
   }
 
   private JdbcTemplate jdbc() {

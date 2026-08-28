@@ -22,7 +22,7 @@ public class FileLatchHelper implements Executable<FileLatchIn, FileLatchOut> {
   private static final Path LATCH_DIR = Path
           .of(System.getProperty("java.io.tmpdir"), "cbs-nova-versioning-latch");
 
-  //TODO: redo to a Caffeine with some properties config for ttl
+  // TODO: redo to a Caffeine with some properties config for ttl
   private static final ConcurrentHashMap<Path, Object> MONITORS = new ConcurrentHashMap<>();
   private static final AtomicReference<Thread> WATCHER = new AtomicReference<>();
   private static final long WATCHER_POLL_MILLIS = 50;

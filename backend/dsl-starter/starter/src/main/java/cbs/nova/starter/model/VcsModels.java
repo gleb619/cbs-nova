@@ -8,7 +8,7 @@ public final class VcsModels {
           String status,
           String version,
           String taskQueue) {
-  
+
   }
 
   public record DraftResponse(
@@ -16,6 +16,6 @@ public final class VcsModels {
           String status,
           String location,
           boolean reloaded) {
-  
+
   }
 }

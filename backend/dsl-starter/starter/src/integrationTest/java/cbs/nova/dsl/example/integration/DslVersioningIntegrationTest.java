@@ -1,8 +1,8 @@
 package cbs.nova.dsl.example.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
+import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.GeneratedClassDescriptor;
@@ -12,19 +12,24 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.process.DslTemporalProcessRequest;
-import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dslexamples.versionprobe.v1.VersionProbeModels.VersionProbeIn;
 import cbs.nova.dslexamples.versionprobe.v1.VersionProbeModels.VersionProbeOut;
 import cbs.nova.dslexamples.versionprobe.v1.VersionProbeProcessWorkflow;
+import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
+import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
 import cbs.nova.starter.helper.*;
+import cbs.nova.starter.helper.model.FileLatchIn;
+import cbs.nova.starter.helper.model.FileLatchOut;
 import cbs.nova.starter.service.TemporalDslProcessLauncher;
-import cbs.nova.starter.service.TemporalDslProcessService;
 import cbs.nova.starter.service.TemporalTransactionInvoker;
+import cbs.nova.util.ServiceUtil;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
+import io.temporal.workflow.Workflow;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -43,13 +48,14 @@ import java.net.http.HttpClient;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Verifies that a running workflow keeps using the DSL version it started with after a newer DSL
- * version is loaded, while a workflow started after the reload uses the new version. A file-based
- * latch helper keeps the first execution open while the registry is updated; after the latch file
- * is released the workflow still finishes with the v1 logic.
+ * version is loaded, while a workflow started after the reload uses the new version. A slow
+ * fileLatch helper keeps the first execution open while the registry is updated; the workflow still
+ * finishes with the v1 logic.
  */
 @Testcontainers
 class DslVersioningIntegrationTest {
@@ -57,6 +63,7 @@ class DslVersioningIntegrationTest {
   private static final String TASK_QUEUE = "VersionProbe-queue";
   private static final Path LATCH_DIR = Path
           .of(System.getProperty("java.io.tmpdir"), "cbs-nova-versioning-latch");
+  private static final CountDownLatch LATCH_ENTERED = new CountDownLatch(1);
   private static final DockerImageName TEMPORAL_IMAGE = DockerImageName
           .parse("temporalio/auto-setup:1.25.2");
   private static final DockerImageName POSTGRES_IMAGE = DockerImageName.parse("postgres:15");
@@ -158,15 +165,12 @@ class DslVersioningIntegrationTest {
 
   @Test
   void inFlightWorkflowKeepsUsingOriginalDslVersionAfterReload() throws Exception {
-    var service = new TemporalDslProcessService(new ContextFactory(),
-            new InMemoryDslRunRepository(), new ObjectMapper());
+    var service = ServiceUtil.newService(new ContextFactory());
 
     var firstRun = service.startProcess("VersionProbe", new VersionProbeIn("first"));
-
-    Path lock = LATCH_DIR.resolve("lock-" + firstRun.runId());
-    await().atMost(Duration.ofSeconds(10))
-            .pollInterval(Duration.ofMillis(50))
-            .until(() -> Files.exists(lock));
+    assertThat(LATCH_ENTERED.await(10, TimeUnit.SECONDS))
+            .as("fileLatch helper should be entered")
+            .isTrue();
 
     Path v2Dir = Path.of("src/integrationTest/resources/dsl-versioning-v2");
     new DefinitionLoader().load(v2Dir, GlobalManager.globalManager());
@@ -175,9 +179,6 @@ class DslVersioningIntegrationTest {
             .as("latest registered DSL version should be v2 after reload")
             .isEqualTo("v2");
 
-    Path release = LATCH_DIR.resolve("release-" + firstRun.runId());
-    Files.writeString(release, "go");
-
     Result<?> firstResult = firstRun.result().get(30, TimeUnit.SECONDS);
     assertThat(firstResult.isSuccess()).as("result cause: %s", firstResult.cause()).isTrue();
     VersionProbeOut firstOut = firstResult.as(VersionProbeOut.class);
@@ -185,8 +186,6 @@ class DslVersioningIntegrationTest {
     assertThat(firstOut).isNotNull();
     assertThat(firstOut.result()).isEqualTo("v1:first");
 
-    // First workflow finished with v1. Switch the worker to the v2 implementation and start a
-    // second workflow; it must use the freshly loaded v2 DSL and produce a different result.
     workerFactory.shutdown();
     workerFactory = WorkerFactory.newInstance(workflowClient);
     Worker worker = workerFactory.newWorker(TASK_QUEUE);
@@ -247,7 +246,14 @@ class DslVersioningIntegrationTest {
         return new CurrentTimestampHelper();
       }
       if (helperClass == FileLatchHelper.class) {
-        return new FileLatchHelper();
+        return new FileLatchHelper() {
+          @Override
+          public @NonNull Result<FileLatchOut> execute(@NonNull Context<FileLatchIn> ctx) {
+            LATCH_ENTERED.countDown();
+            Workflow.sleep(Duration.ofSeconds(10));
+            return Result.success(new FileLatchOut(ctx.body().payload()));
+          }
+        };
       }
       if (helperClass == FilterRecordsHelper.class) {
         return new FilterRecordsHelper();
@@ -256,10 +262,12 @@ class DslVersioningIntegrationTest {
         return new FormatMessageHelper();
       }
       if (helperClass == HttpCallHelper.class) {
-        return new HttpCallHelper(HttpClient.newHttpClient());
+        return new HttpCallHelper(HttpClient.newHttpClient(),
+                new CbsNovaLoggingProperties(Level.INFO, Level.INFO,
+                        true));
       }
       if (helperClass == JsonExtractHelper.class) {
-        return new JsonExtractHelper(new tools.jackson.databind.ObjectMapper());
+        return new JsonExtractHelper(new ObjectMapper());
       }
       if (helperClass == SortRecordsHelper.class) {
         return new SortRecordsHelper();

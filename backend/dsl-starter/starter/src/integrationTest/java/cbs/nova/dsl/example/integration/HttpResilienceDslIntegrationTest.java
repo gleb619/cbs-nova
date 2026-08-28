@@ -15,6 +15,8 @@ import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dslexamples.httpresilience.v1.HttpResilienceModels.HttpResilienceProcessIn;
 import cbs.nova.dslexamples.httpresilience.v1.HttpResilienceModels.HttpResilienceProcessOut;
+import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
+import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
 import cbs.nova.starter.helper.CompensationTrackerHelper;
 import cbs.nova.starter.helper.HttpCallHelper;
 import cbs.nova.starter.helper.JsonExtractHelper;
@@ -22,6 +24,7 @@ import cbs.nova.starter.helper.model.HttpCallIn;
 import cbs.nova.starter.service.TemporalDslProcessLauncher;
 import cbs.nova.starter.service.TemporalDslProcessService;
 import cbs.nova.starter.service.TemporalTransactionInvoker;
+import cbs.nova.util.ServiceUtil;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import io.temporal.client.WorkflowClient;
@@ -190,8 +193,7 @@ class HttpResilienceDslIntegrationTest {
             .whenScenarioStateIs("failed-twice")
             .willReturn(aResponse().withStatus(200).withBody("ok")));
 
-    var service = new TemporalDslProcessService(new ContextFactory(),
-            new InMemoryDslRunRepository(), new ObjectMapper());
+    var service = ServiceUtil.newService(new ContextFactory());
     String runId = "http-resilience-success-" + System.currentTimeMillis();
     var input = new HttpResilienceProcessIn(runId,
             HttpCallIn.get(baseUrl() + "/probe"));
@@ -217,8 +219,7 @@ class HttpResilienceDslIntegrationTest {
             HttpCallIn.get(baseUrl() + "/probe"));
     String markerId = "HttpResilienceCompensated-" + input.scenario();
 
-    Result<?> result = new TemporalDslProcessService(new ContextFactory(),
-            new InMemoryDslRunRepository(), new ObjectMapper())
+    Result<?> result = ServiceUtil.newService(new ContextFactory())
             .runProcess("HttpResilienceCompensated", input).result().join();
 
     assertThat(result.isSuccess()).isFalse();
@@ -236,8 +237,7 @@ class HttpResilienceDslIntegrationTest {
     var input = new HttpResilienceProcessIn(runId,
             HttpCallIn.get(baseUrl() + "/probe"));
 
-    Result<?> result = new TemporalDslProcessService(new ContextFactory(),
-            new InMemoryDslRunRepository(), new ObjectMapper())
+    Result<?> result = ServiceUtil.newService(new ContextFactory())
             .runProcess("HttpResilienceUncaught", input).result().join();
 
     assertThat(result.isSuccess()).isFalse();
@@ -256,8 +256,7 @@ class HttpResilienceDslIntegrationTest {
     var input = new HttpResilienceProcessIn(runId,
             new HttpCallIn(baseUrl() + "/slow", "GET", null, null, 200L, null));
 
-    Result<?> result = new TemporalDslProcessService(new ContextFactory(),
-            new InMemoryDslRunRepository(), new ObjectMapper())
+    Result<?> result = ServiceUtil.newService(new ContextFactory())
             .runProcess("HttpResilienceUncaught", input).result().join();
 
     assertThat(result.isSuccess()).isFalse();
@@ -273,10 +272,12 @@ class HttpResilienceDslIntegrationTest {
   private static HelperInstanceResolver typedHelperResolver() {
     return helperClass -> {
       if (helperClass == HttpCallHelper.class) {
-        return new HttpCallHelper(HttpClient.newHttpClient());
+        return new HttpCallHelper(HttpClient.newHttpClient(),
+                new CbsNovaLoggingProperties(Level.INFO, Level.INFO,
+                        true));
       }
       if (helperClass == JsonExtractHelper.class) {
-        return new JsonExtractHelper(new tools.jackson.databind.ObjectMapper());
+        return new JsonExtractHelper(new ObjectMapper());
       }
       try {
         return (Executable<?, ?>) helperClass.getDeclaredConstructor().newInstance();

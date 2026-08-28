@@ -13,7 +13,7 @@ import java.util.Optional;
  * No {@code @Repository} annotation is used: Spring Data JDBC creates the implementation bean
  * automatically during repository scanning.
  */
-//TODO: we need to limit package scan for repositories, only to `cbs.nova.starter.persistence`
+// TODO: we need to limit package scan for repositories, only to `cbs.nova.starter.persistence`
 public interface DslRunJdbcRepository extends CrudRepository<DslRunEntity, Long> {
 
   Optional<DslRunEntity> findByRunId(String runId);

@@ -34,7 +34,6 @@ public final class ExplainDslPipe implements DslExecutionPipe<ExplainReport> {
   private final CbsNovaFakesProperties fakesProperties;
   private final RunScopedFakeConfig runScopedFakeConfig;
 
-
   @Override
   public @NonNull Result<ExplainReport> execute(@NonNull String name,
           @NonNull Context<?> ctx) {

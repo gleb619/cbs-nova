@@ -76,7 +76,8 @@ public class DslIntrospectionService {
     var processOpt = gm.findProcess(name);
     if (processOpt.isPresent()) {
       var p = processOpt.get();
-      var code = gm.findGeneratedProcess(name).map(GeneratedClassDescriptor::executeJson).orElse(null);
+      var code = gm.findGeneratedProcess(name).map(GeneratedClassDescriptor::executeJson)
+              .orElse(null);
       var steps = p.transactionRefs() != null
               ? p.transactionRefs().stream()
                       .map(ref -> new StepDto(ref, "transaction", ref, null))
@@ -87,7 +88,8 @@ public class DslIntrospectionService {
     var txOpt = gm.findTransaction(name);
     if (txOpt.isPresent()) {
       var t = txOpt.get();
-      var code = gm.findGeneratedTransaction(name).map(GeneratedClassDescriptor::executeJson).orElse(null);
+      var code = gm.findGeneratedTransaction(name).map(GeneratedClassDescriptor::executeJson)
+              .orElse(null);
       return Optional.of(new ConstructBodyDto(t.name(), "transaction", code, List.of()));
     }
     return Optional.empty();

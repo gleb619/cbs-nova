@@ -69,6 +69,7 @@ public class DslRunRepositoryConfiguration {
           TransactionExecutionMapper mapper,
           ObjectMapper objectMapper) {
     var jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
-    return new JdbcTransactionExecutionRepository(jdbcTemplate, jdbcRepository, mapper, objectMapper);
+    return new JdbcTransactionExecutionRepository(jdbcTemplate, jdbcRepository, mapper,
+            objectMapper);
   }
 }

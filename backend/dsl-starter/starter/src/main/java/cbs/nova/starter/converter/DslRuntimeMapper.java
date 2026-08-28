@@ -12,9 +12,9 @@ import java.util.UUID;
 
 /**
  * Centralises {@link ErrorResponse} construction for the runtime endpoints. Each
- * {@code fromXxx(...)} default method captures one input shape (DSL exception, generic
- * throwable, preview report failure) so the service can pick the right one without the
- * UUID / message / code resolution logic leaking into business code.
+ * {@code fromXxx(...)} default method captures one input shape (DSL exception, generic throwable,
+ * preview report failure) so the service can pick the right one without the UUID / message / code
+ * resolution logic leaking into business code.
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface DslRuntimeMapper {

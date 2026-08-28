@@ -37,7 +37,6 @@ public final class PreviewDslPipe implements DslExecutionPipe<PreviewReport> {
   private final CbsNovaFakesProperties fakesProperties;
   private final RunScopedFakeConfig runScopedFakeConfig;
 
-
   @Override
   public @NonNull Result<PreviewReport> execute(@NonNull String name,
           @NonNull Context<?> ctx) {

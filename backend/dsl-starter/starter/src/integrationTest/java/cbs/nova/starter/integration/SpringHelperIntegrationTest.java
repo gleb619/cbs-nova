@@ -6,14 +6,14 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.starter.StarterApplication;
+import cbs.nova.starter.StarterITApplication;
 import cbs.nova.starter.annotation.SpringHelper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 
-@SpringBootTest(classes = StarterApplication.class, properties = {
+@SpringBootTest(classes = StarterITApplication.class, properties = {
     "spring.datasource.url=jdbc:h2:mem:springhelper-testdb",
     "spring.datasource.driver-class-name=org.h2.Driver",
     "spring.datasource.username=sa",

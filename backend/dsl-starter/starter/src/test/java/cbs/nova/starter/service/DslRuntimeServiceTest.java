@@ -67,7 +67,8 @@ class DslRuntimeServiceTest {
   @Test
   void previewReturnsErrorForFailedReport() {
     PreviewReport report = previewReport("Ping", false,
-            List.of(new PreviewErrorDetail(PreviewErrorCode.UNKNOWN_ERROR, "boom", "fix", Map.of())));
+            List.of(new PreviewErrorDetail(PreviewErrorCode.UNKNOWN_ERROR, "boom", "fix",
+                    Map.of())));
     doReturn(Result.success(report)).when(dslRuntime).preview(eq("Ping"), any());
 
     RuntimeOutcome outcome = service.preview("Ping", new DslRequest("hello", null), "req-1");
@@ -124,7 +125,8 @@ class DslRuntimeServiceTest {
 
     service.run("P", new DslRequest("input", null), null);
 
-    ArgumentCaptor<cbs.nova.dsl.Context<?>> captor = ArgumentCaptor.forClass(cbs.nova.dsl.Context.class);
+    ArgumentCaptor<cbs.nova.dsl.Context<?>> captor = ArgumentCaptor
+            .forClass(cbs.nova.dsl.Context.class);
     verify(dslRuntime).run(eq("P"), captor.capture());
     assertThat(captor.getValue().runId()).startsWith("run-");
   }
@@ -132,7 +134,8 @@ class DslRuntimeServiceTest {
   @Test
   void explainDelegatesToRuntime() {
     ExplainReport report = new ExplainReport(
-            "P", "desc", List.of(), List.of(), Map.of(), null, null, null, List.of(), null, List.of());
+            "P", "desc", List.of(), List.of(), Map.of(), null, null, null, List.of(), null,
+            List.of());
     doReturn(report).when(dslRuntime).explain(eq("P"), any());
 
     ExplainReport result = service.explain("P", new DslRequest("in", null), "req-4");
@@ -150,7 +153,8 @@ class DslRuntimeServiceTest {
     assertThat(MDC.get(RequestIdFilter.REQUEST_ID_MDC_KEY)).isNull();
   }
 
-  private static PreviewReport previewReport(String name, boolean success, List<PreviewErrorDetail> errors) {
+  private static PreviewReport previewReport(String name, boolean success,
+          List<PreviewErrorDetail> errors) {
     return new PreviewReport(
             name,
             ExecutionMode.PREVIEW,

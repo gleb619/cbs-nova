@@ -111,7 +111,9 @@ public class MessagingCallCaptureProducer<K, V> implements Producer<K, V> {
     delegate.close(timeout);
   }
 
-  //TODO: search and move to `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/core/StarterConstant.java` a string constants
+  // TODO: search and move to
+  // `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/core/StarterConstant.java` a string
+  // constants
   private void recordCall(ProducerRecord<K, V> record) {
     if (record == null) {
       externalCallRecorder.record(TYPE_MESSAGING, "unknown", "send", null);

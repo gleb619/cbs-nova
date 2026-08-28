@@ -2,8 +2,10 @@ package cbs.nova.dsl.example.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.DslObject;
+import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.GeneratedClassProvider;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
@@ -11,18 +13,31 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
+import cbs.nova.dslexamples.unreliableapi.v1.UnreliableApiModels.UnreliableApiInDsl;
 import cbs.nova.dslexamples.unreliableapi.v1.UnreliableApiModels.UnreliableProcessIn;
 import cbs.nova.dslexamples.unreliableapi.v1.UnreliableApiModels.UnreliableProcessOut;
+import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
+import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
 import cbs.nova.starter.helper.*;
 import cbs.nova.starter.helper.model.UnreliableApiIn;
 import cbs.nova.starter.service.TemporalDslProcessLauncher;
 import cbs.nova.starter.service.TemporalDslProcessService;
 import cbs.nova.starter.service.TemporalTransactionInvoker;
+import cbs.nova.util.ServiceUtil;
 import io.temporal.client.WorkflowClient;
+import io.temporal.client.WorkflowClientOptions;
+import io.temporal.common.converter.ByteArrayPayloadConverter;
+import io.temporal.common.converter.DataConverter;
+import io.temporal.common.converter.DefaultDataConverter;
+import io.temporal.common.converter.JacksonJsonPayloadConverter;
+import io.temporal.common.converter.NullPayloadConverter;
+import io.temporal.common.converter.ProtobufJsonPayloadConverter;
+import io.temporal.common.converter.ProtobufPayloadConverter;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -103,7 +118,18 @@ class UnreliableApiDslIntegrationTest {
                     .setTarget(
                             TEMPORAL.getHost() + ":" + TEMPORAL.getMappedPort(7233))
                     .build());
-    workflowClient = WorkflowClient.newInstance(serviceStubs);
+    var temporalObjectMapper = JacksonJsonPayloadConverter.newDefaultObjectMapper()
+            .configure(
+                    com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
+                    false);
+    DataConverter dataConverter = new DefaultDataConverter(
+            new NullPayloadConverter(),
+            new ByteArrayPayloadConverter(),
+            new ProtobufJsonPayloadConverter(),
+            new ProtobufPayloadConverter(),
+            new JacksonJsonPayloadConverter(temporalObjectMapper));
+    workflowClient = WorkflowClient.newInstance(serviceStubs,
+            WorkflowClientOptions.newBuilder().setDataConverter(dataConverter).build());
 
     var launcher = new TemporalDslProcessLauncher(workflowClient, new ObjectMapper(),
             Duration.ofSeconds(30), Duration.ofSeconds(5));
@@ -150,8 +176,7 @@ class UnreliableApiDslIntegrationTest {
 
   @Test
   void resilientTransactionSucceedsAfterTemporalRetries() {
-    var service = new TemporalDslProcessService(new ContextFactory(),
-            new InMemoryDslRunRepository(), new ObjectMapper());
+    var service = ServiceUtil.newService(new ContextFactory());
     String runId = "unreliable-success-" + System.currentTimeMillis();
     var apiCall = new UnreliableApiIn(runId, 3, false, null);
     var input = new UnreliableProcessIn("success", apiCall);
@@ -174,8 +199,7 @@ class UnreliableApiDslIntegrationTest {
     var input = new UnreliableProcessIn("compensated", apiCall);
     String markerId = "UnreliableApiCompensated-" + input.scenario();
 
-    Result<?> result = new TemporalDslProcessService(new ContextFactory(),
-            new InMemoryDslRunRepository(), new ObjectMapper())
+    Result<?> result = ServiceUtil.newService(new ContextFactory())
             .runProcess("UnreliableApiCompensated", input).result().join();
 
     assertThat(result.isSuccess()).isFalse();
@@ -190,8 +214,7 @@ class UnreliableApiDslIntegrationTest {
     var apiCall = new UnreliableApiIn(runId, 5, false, null);
     var input = new UnreliableProcessIn("uncaught", apiCall);
 
-    Result<?> result = new TemporalDslProcessService(new ContextFactory(),
-            new InMemoryDslRunRepository(), new ObjectMapper())
+    Result<?> result = ServiceUtil.newService(new ContextFactory())
             .runProcess("UnreliableApiUncaught", input).result().join();
 
     assertThat(result.isSuccess()).isFalse();
@@ -226,10 +249,12 @@ class UnreliableApiDslIntegrationTest {
         return new FormatMessageHelper();
       }
       if (helperClass == HttpCallHelper.class) {
-        return new HttpCallHelper(HttpClient.newHttpClient());
+        return new HttpCallHelper(HttpClient.newHttpClient(),
+                new CbsNovaLoggingProperties(Level.INFO, Level.INFO,
+                        true));
       }
       if (helperClass == JsonExtractHelper.class) {
-        return new JsonExtractHelper(new tools.jackson.databind.ObjectMapper());
+        return new JsonExtractHelper(new ObjectMapper());
       }
       if (helperClass == SortRecordsHelper.class) {
         return new SortRecordsHelper();
@@ -238,9 +263,35 @@ class UnreliableApiDslIntegrationTest {
         return new ArithmeticHelper();
       }
       if (helperClass == UnreliableApiHelper.class) {
-        return new UnreliableApiHelper();
+        return new SharedUnreliableApiHelper();
       }
       throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
     };
+  }
+
+  /**
+   * Adapter that keeps one shared {@link UnreliableApiHelper} across Temporal retries and converts
+   * the DSL transaction body ({@link UnreliableApiInDsl}) to the helper's expected
+   * {@link UnreliableApiIn} type.
+   */
+  private static final class SharedUnreliableApiHelper implements Executable<Object, Object> {
+
+    private final UnreliableApiHelper delegate = new UnreliableApiHelper();
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public @NonNull Result<Object> execute(@NonNull Context<Object> ctx) {
+      Object body = ctx.body();
+      UnreliableApiIn in;
+      if (body instanceof UnreliableApiInDsl dsl) {
+        in = new UnreliableApiIn(dsl.operationId(), dsl.failCount(), dsl.jitter(), dsl.reason());
+      } else {
+        in = (UnreliableApiIn) body;
+      }
+      Context<UnreliableApiIn> adapted = new ContextFactory().of(
+              in, ctx.metadata(), ctx.mode(), ctx.runId(),
+              ctx.transactionRouting(), ctx.executionListener(), ctx.saga());
+      return (Result<Object>) (Result<?>) delegate.execute(adapted);
+    }
   }
 }

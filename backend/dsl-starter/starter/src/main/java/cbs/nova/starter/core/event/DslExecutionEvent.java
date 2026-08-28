@@ -7,7 +7,7 @@ import org.jspecify.annotations.Nullable;
 
 public sealed interface DslExecutionEvent
         permits DslExecutionEvent.DslRunStartedEvent, DslExecutionEvent.DslRunCompletedEvent,
-    DslExecutionEvent.DslExternalCallEvent {
+        DslExecutionEvent.DslExternalCallEvent {
 
   record DslExternalCallEvent(
           @NonNull String runId,

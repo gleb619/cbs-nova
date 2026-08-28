@@ -16,7 +16,9 @@ public class TemporalActivityCallCaptureInterceptor implements TransactionInvoke
   private final @NonNull ExternalCallRecorder externalCallRecorder;
 
   @Override
-  //TODO: search and move to `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/core/StarterConstant.java` a string constants
+  // TODO: search and move to
+  // `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/core/StarterConstant.java` a string
+  // constants
   public @NonNull Result<?> invoke(@NonNull String name, @NonNull Object input,
           @NonNull Context<?> ctx) {
     var payload = new HashMap<String, Object>();

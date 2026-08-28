@@ -25,7 +25,6 @@ public final class TransactionCodeGenerator {
 
   private final DslPackageNameResolver packageNameResolver;
 
-
   public @NonNull List<GeneratedSource> generate(
           @NonNull TransactionDescriptor descriptor,
           @Nullable String buildVersion,
@@ -113,7 +112,7 @@ public final class TransactionCodeGenerator {
             "import %s;".formatted(Generated.class.getCanonicalName()));
     String annotation = GeneratorMetadata.annotation(TransactionCodeGenerator.class);
 
-    //TODO: add new method that allow to transfer whole object, like in `ProcessCodeGenerator`
+    // TODO: add new method that allow to transfer whole object, like in `ProcessCodeGenerator`
     return Substitutor.format(// language=java
             """
                     package ${pkg};${importBlock}

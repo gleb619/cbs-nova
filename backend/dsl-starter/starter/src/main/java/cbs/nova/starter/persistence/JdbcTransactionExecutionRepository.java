@@ -32,7 +32,6 @@ public class JdbcTransactionExecutionRepository implements TransactionExecutionR
   private final TransactionExecutionMapper mapper;
   private final ObjectMapper objectMapper;
 
-
   @Override
   public @NonNull TransactionExecution save(@NonNull TransactionExecution execution) {
     TransactionExecutionEntity entity = mapper.toEntity(execution);
@@ -96,9 +95,12 @@ public class JdbcTransactionExecutionRepository implements TransactionExecutionR
     }
   }
 
-  //TODO: it's better to remove native insert. ANd just work with a entity, so since we can work only with
+  // TODO: it's better to remove native insert. ANd just work with a entity, so since we can work
+  // only with
   // repository, we can handle enc work here
-  // we can reuse `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/persistence/DslRunNamingStrategy.java` to customize table name
+  // we can reuse
+  // `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/persistence/DslRunNamingStrategy.java`
+  // to customize table name
   private String getInsertStatement() {
     return """
             INSERT INTO %s (run_id, transaction_name, input_json, executed_at)

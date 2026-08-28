@@ -75,7 +75,8 @@ class DslRuntimeMapperTest {
             null,
             List.of(),
             null,
-            List.of(new PreviewErrorDetail(PreviewErrorCode.UNKNOWN_ERROR, "boom", "fix", Map.of())));
+            List.of(new PreviewErrorDetail(PreviewErrorCode.UNKNOWN_ERROR, "boom", "fix",
+                    Map.of())));
 
     ErrorResponseContext ctx = mapper.fromPreviewReport("Ping", "run-3", report);
     ErrorResponse response = mapper.toErrorResponse(ctx);

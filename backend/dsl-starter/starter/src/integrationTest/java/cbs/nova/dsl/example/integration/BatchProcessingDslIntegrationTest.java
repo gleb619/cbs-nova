@@ -14,6 +14,7 @@ import cbs.nova.dslexamples.batchprocessing.v1.BatchModels.BatchOut;
 import cbs.nova.starter.service.TemporalDslProcessLauncher;
 import cbs.nova.starter.service.TemporalDslProcessService;
 import cbs.nova.starter.service.TemporalTransactionInvoker;
+import cbs.nova.util.ServiceUtil;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
@@ -126,8 +127,7 @@ class BatchProcessingDslIntegrationTest {
 
   @Test
   void runsBatchProcessingDslThroughServiceApi() {
-    var service = new TemporalDslProcessService(new ContextFactory(),
-            new InMemoryDslRunRepository(), new ObjectMapper());
+    var service = ServiceUtil.newService(new ContextFactory());
 
     var input = new BatchIn(
             List.of(

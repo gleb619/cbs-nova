@@ -30,7 +30,6 @@ public final class ProcessCodeGenerator {
 
   private final DslPackageNameResolver packageNameResolver;
 
-
   public @NonNull List<GeneratedSource> generate(
           @NonNull ProcessDescriptor descriptor,
           @Nullable String buildVersion,
@@ -124,8 +123,10 @@ public final class ProcessCodeGenerator {
     String importBlock = "\n" + String.join("\n", imports) + "\n";
     String annotation = GeneratorMetadata.annotation(ProcessCodeGenerator.class);
 
-    //TODO: add new method that allow to transfer whole object(e.g. without usage of registry, e.g. use
-    // dsl directly). Like `var process = new GeneratedDslDefinitionProvider().byName("${processName}").ifPresentOrElse(...)`
+    // TODO: add new method that allow to transfer whole object(e.g. without usage of registry, e.g.
+    // use
+    // dsl directly). Like `var process = new
+    // GeneratedDslDefinitionProvider().byName("${processName}").ifPresentOrElse(...)`
     String template = // language=java
             """
                     package ${pkg};${importBlock}
@@ -143,7 +144,7 @@ public final class ProcessCodeGenerator {
                       public Object execute(DslTemporalProcessRequest<${inputTypeName}> request) {
                         ${inputTypeName} input = request.payload();
                         //TODO: place here new code `var process = ...`
-                    
+
                         return GlobalManager.globalManager().runProcessWithCompensation(
                                 request.runId(),
                                 input,

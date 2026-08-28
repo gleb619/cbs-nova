@@ -1,5 +1,5 @@
 import cbs.nova.dsl.*;
-import cbs.nova.dslexamples.VersionProbeModels.*;
+import cbs.nova.dslexamples.versionprobe.v1.VersionProbeModels.*;
 import java.util.List;
 
 List<DslObject> define() {

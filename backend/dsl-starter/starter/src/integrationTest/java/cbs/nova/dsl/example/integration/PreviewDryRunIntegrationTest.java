@@ -13,7 +13,7 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.example.integration.PreviewDryRunTestConfig.PreviewSideEffectsHelper;
 import cbs.nova.dsl.example.integration.PreviewDryRunTestConfig.PreviewSideEffectsIn;
 import cbs.nova.dsl.example.integration.PreviewDryRunTestConfig.PreviewSideEffectsOut;
-import cbs.nova.starter.StarterApplication;
+import cbs.nova.starter.StarterITApplication;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -23,7 +23,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -34,7 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * output contract with a mocked value, captures a database and an HTTP external call, builds a
  * call-tree AST, and records dry-run logs.
  */
-@SpringBootTest(classes = StarterApplication.class, properties = {
+@SpringBootTest(classes = StarterITApplication.class, properties = {
     "spring.datasource.url=jdbc:h2:mem:testdb",
     "spring.datasource.driver-class-name=org.h2.Driver",
     "spring.datasource.username=sa",

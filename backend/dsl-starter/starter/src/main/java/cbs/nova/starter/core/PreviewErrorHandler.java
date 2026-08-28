@@ -30,11 +30,12 @@ public class PreviewErrorHandler {
     switch (cause) {
       case null -> {
         return build(PreviewErrorCode.UNKNOWN_ERROR, "Preview failed with no cause", Map.of(),
-            entityName);
+                entityName);
       }
       case NoSuchBeanDefinitionException nsbe -> {
         String beanName = extractBeanName(nsbe.getBeanName());
-        return helperNotFound(messageOf(cause), beanName, entityName != null ? entityName : beanName);
+        return helperNotFound(messageOf(cause), beanName,
+                entityName != null ? entityName : beanName);
       }
       case SQLException sql -> {
         return externalCallFailed("SQL error: " + messageOf(sql), sql, entityName);
@@ -47,19 +48,20 @@ public class PreviewErrorHandler {
       }
       case DslValidationException dve -> {
         return build(PreviewErrorCode.DSL_COMPILATION_ERROR, messageOf(dve),
-            Map.of("runId", dve.runId()), entityName);
+                Map.of("runId", dve.runId()), entityName);
       }
       case DslCompensationException dce -> {
         return build(PreviewErrorCode.COMPENSATION_ERROR,
-            "Compensation failed: " + messageOf(dce),
-            Map.of("runId", dce.runId()), entityName);
+                "Compensation failed: " + messageOf(dce),
+                Map.of("runId", dce.runId()), entityName);
       }
       case DslEntityNotFoundException dene -> {
         String msg = messageOf(dene);
         if (msg != null && msg.startsWith(HELPER_NOT_FOUND_PREFIX)) {
           return helperNotFound(msg, extractAfterPrefix(msg, HELPER_NOT_FOUND_PREFIX), entityName);
         }
-        return build(PreviewErrorCode.UNKNOWN_ERROR, msg, Map.of("runId", dene.runId()), entityName);
+        return build(PreviewErrorCode.UNKNOWN_ERROR, msg, Map.of("runId", dene.runId()),
+                entityName);
       }
       case IllegalArgumentException iae -> {
         String msg = messageOf(iae);
@@ -70,7 +72,7 @@ public class PreviewErrorHandler {
       }
       case RuntimeException re -> {
         return build(PreviewErrorCode.UNKNOWN_ERROR, messageOf(re), Map.of("exceptionType",
-            re.getClass().getName()), entityName);
+                re.getClass().getName()), entityName);
       }
       default -> {
       }

@@ -2,71 +2,96 @@ package cbs.nova.starter;
 
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.ContainerLaunchException;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import java.time.Duration;
+import java.util.function.Supplier;
 
 @Testcontainers
 public abstract class BaseContainers {
 
-  private static String temporalDbSeeds() {
-    var env = System.getenv("TEMPORAL_DB_SEEDS");
-    if (env != null && !env.isBlank()) {
-      return env;
-    }
-    try {
-      var proc = new ProcessBuilder("docker", "network", "inspect", "bridge", "--format",
-              "{{(index .IPAM.Config 0).Gateway}}").redirectErrorStream(true).start();
-      var bytes = proc.getInputStream().readAllBytes();
-      proc.waitFor();
-      var gw = new String(bytes).trim();
-      if (!gw.isEmpty()) {
-        return gw;
+  private static final Duration STARTUP_TIMEOUT = Duration.ofMinutes(5);
+  private static final int START_ATTEMPTS = 3;
+
+  /**
+   * Single-binary Temporal container backed by an embedded SQLite store. We override the auto-setup
+   * entrypoint (which forces external DB schema provisioning) with {@code server start-dev} and
+   * {@code SKIP_SCHEMA_SETUP=true}, which lets Temporal boot an in-container SQLite file with no
+   * MySQL/Postgres dependency.
+   */
+  private static GenericContainer<?> newTemporalContainer() {
+    return new GenericContainer<>(
+            DockerImageName.parse("temporalio/auto-setup:1.25.2"))
+            .withExposedPorts(7233)
+            .withEnv("DB", System.getenv().getOrDefault("TEMPORAL_DB", "sqlite"))
+            .withEnv("SKIP_SCHEMA_SETUP", "true")
+            .withEnv("BIND_ON_IP", "0.0.0.0")
+            .withCommand(
+                    "server",
+                    "start-dev",
+                    "--ip", "0.0.0.0",
+                    "--namespace", "default",
+                    "--db-filename", "/var/temporal/temporal.db")
+            .waitingFor(Wait.forLogMessage(".*Temporal server is now running.*", 1)
+                    .withStartupTimeout(STARTUP_TIMEOUT));
+  }
+
+  private static GenericContainer<?> newKeycloakContainer() {
+    return new GenericContainer<>(
+            DockerImageName.parse("quay.io/keycloak/keycloak:22.0.0"))
+            .withExposedPorts(8080)
+            .withEnv("KEYCLOAK_ADMIN", "admin")
+            .withEnv("KEYCLOAK_ADMIN_PASSWORD", "admin")
+            .withEnv("KC_HOSTNAME", "localhost")
+            .withEnv("KC_HOSTNAME_STRICT", "false")
+            .withEnv("KC_HOSTNAME_STRICT_HTTPS", "false")
+            .withCommand("start-dev")
+            .waitingFor(Wait.forHttp("/realms/master").forPort(8080)
+                    .withStartupTimeout(STARTUP_TIMEOUT));
+  }
+
+  /**
+   * Start a container with retry on port-allocation races across parallel JVM forks. Each attempt
+   * builds a fresh container so testcontainers re-rolls a random host port.
+   */
+  private static <T extends GenericContainer<?>> T startWithRetry(String name,
+          Supplier<T> factory) {
+    ContainerLaunchException last = null;
+    for (int i = 1; i <= START_ATTEMPTS; i++) {
+      T container = factory.get();
+      try {
+        container.start();
+        return container;
+      } catch (ContainerLaunchException e) {
+        last = e;
+        try {
+          container.stop();
+        } catch (Exception ignored) {
+        }
       }
-    } catch (Exception ignored) {
     }
-    return "host.docker.internal";
+    throw new IllegalStateException("Failed to start " + name
+            + " after " + START_ATTEMPTS + " attempts", last);
   }
 
-  protected static final GenericContainer<?> TEMPORAL = new GenericContainer<>(
-          DockerImageName.parse("temporalio/auto-setup:1.25.2"))
-          .withExposedPorts(7233)
-          .withEnv("DB", System.getenv().getOrDefault("TEMPORAL_DB", "mysql8"))
-          .withEnv("MYSQL_SEEDS", temporalDbSeeds())
-          .withEnv("MYSQL_USER", System.getenv().getOrDefault("TEMPORAL_DB_USER", "root"))
-          .withEnv("MYSQL_PWD", System.getenv().getOrDefault("TEMPORAL_DB_PWD", "root"))
-          .withEnv("DB_PORT", System.getenv().getOrDefault("TEMPORAL_DB_PORT", "3306"))
-          .withEnv("BIND_ON_IP", "0.0.0.0")
-          .withEnv("TEMPORAL_BROADCAST_ADDRESS", "127.0.0.1")
-          .waitingFor(Wait.forListeningPort().withStartupTimeout(Duration.ofMinutes(3)));
+  protected static final GenericContainer<?> TEMPORAL = startWithRetry("temporal",
+          BaseContainers::newTemporalContainer);
 
-  protected static final GenericContainer<?> KEYCLOAK = new GenericContainer<>(
-          DockerImageName.parse("quay.io/keycloak/keycloak:22.0.0"))
-          .withExposedPorts(8080)
-          .withEnv("KEYCLOAK_ADMIN", "admin")
-          .withEnv("KEYCLOAK_ADMIN_PASSWORD", "admin")
-          .withEnv("KC_HOSTNAME", "localhost")
-          .withEnv("KC_HOSTNAME_STRICT", "false")
-          .withEnv("KC_HOSTNAME_STRICT_HTTPS", "false")
-          .withCommand("start-dev")
-          .waitingFor(Wait.forHttp("/realms/master").forPort(8080));
-
-  static {
-    TEMPORAL.start();
-    KEYCLOAK.start();
-  }
+  protected static final GenericContainer<?> KEYCLOAK = startWithRetry("keycloak",
+          BaseContainers::newKeycloakContainer);
 
   @DynamicPropertySource
   static void registerProperties(DynamicPropertyRegistry registry) {
-    registry.add(
-            "temporal.target",
-            () -> TEMPORAL.getHost() + ":" + TEMPORAL.getMappedPort(7233));
-    registry.add(
-            "spring.security.oauth2.resourceserver.jwt.issuer-uri",
-            () -> "http://" + KEYCLOAK.getHost() + ":" + KEYCLOAK.getMappedPort(8080)
-                    + "/realms/cbs-nova");
+    registry.add("temporal.target",
+            () -> "%s:%d".formatted(TEMPORAL.getHost(), TEMPORAL.getMappedPort(7233)));
+    registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri",
+            () -> "http://%s:%d/realms/cbs-nova".formatted(KEYCLOAK.getHost(),
+                    KEYCLOAK.getMappedPort(8080)));
+    registry.add("testcontainers.temporal.mapped-port",
+            () -> Integer.toString(TEMPORAL.getMappedPort(7233)));
   }
 }

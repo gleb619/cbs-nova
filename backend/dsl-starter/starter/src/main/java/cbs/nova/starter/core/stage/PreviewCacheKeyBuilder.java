@@ -23,7 +23,7 @@ final class PreviewCacheKeyBuilder {
     Optional<DslDescriptor> descriptor = gm.describeProcess(name)
             .or(() -> gm.describeTransaction(name))
             .or(() -> gm.describeHelper(name)
-                    //TODO: find usage of `new DslDescriptor` and replace to a lombok's builder
+                    // TODO: find usage of `new DslDescriptor` and replace to a lombok's builder
                     .map(helper -> new DslDescriptor(
                             name,
                             DslObject.DslType.FUNCTION,
@@ -34,10 +34,10 @@ final class PreviewCacheKeyBuilder {
                             helper.hasSideEffects(),
                             helper.previewBehavior(),
                             helper.parameters(),
-                            null,//todo: add default taskqueue
-                            null,//todo: add default version
-                            null,//todo: add default startToCloseTimeout
-                            null//todo: add default heartbeatTimeout
+                            null, // todo: add default taskqueue
+                            null, // todo: add default version
+                            null, // todo: add default startToCloseTimeout
+                            null// todo: add default heartbeatTimeout
                     )));
     String dslHash = descriptor.map(this::dslDescriptorHash).orElse("");
     String inputHash = inputHash(ctx.body());

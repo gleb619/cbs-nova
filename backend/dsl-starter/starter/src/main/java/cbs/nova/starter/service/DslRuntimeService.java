@@ -23,12 +23,13 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 /**
- * Owns the orchestration that previously lived in {@code DslRuntimeHandler}: context
- * construction, MDC propagation, execution invocation, and outcome/error mapping.
+ * Owns the orchestration that previously lived in {@code DslRuntimeHandler}: context construction,
+ * MDC propagation, execution invocation, and outcome/error mapping.
  *
- * <p>The service is HTTP-agnostic — it never touches Spring's web types. Handlers stay
- * thin: extract path/body/header, delegate here, translate the {@link RuntimeOutcome}
- * back into a {@code ServerResponse}.
+ * <p>
+ * The service is HTTP-agnostic — it never touches Spring's web types. Handlers stay thin: extract
+ * path/body/header, delegate here, translate the {@link RuntimeOutcome} back into a
+ * {@code ServerResponse}.
  */
 @Service
 @RequiredArgsConstructor

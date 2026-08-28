@@ -54,16 +54,15 @@ public class TemporalDslProcessService {
   private final boolean asyncDbSave;
 
   @Nullable
-  //TODO: redo to atomic
+  // TODO: redo to atomic
   private volatile Clock clock = Clock.systemUTC();
 
   @Nullable
-  //TODO: redo to atomic
-  //TODO: object, unsed, we need a fix
+  // TODO: redo to atomic
+  // TODO: object, unsed, we need a fix
   private volatile ScheduledFuture<?> healthcheckHandle;
 
   private final AtomicBoolean healthcheckStarted = new AtomicBoolean(false);
-
 
   void setClock(@NonNull Clock clock) {
     this.clock = clock;
@@ -233,7 +232,7 @@ public class TemporalDslProcessService {
               status,
               outputJson,
               error,
-          finishedAt,
+              finishedAt,
               contextJson);
       return null;
     });

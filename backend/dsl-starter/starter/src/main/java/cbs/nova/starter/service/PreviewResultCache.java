@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class PreviewResultCache {
 
-  //TODO: redo to a Caffeine with some properties config for ttl
+  // TODO: redo to a Caffeine with some properties config for ttl
   private final ConcurrentHashMap<PreviewCacheKey, PreviewCacheEntry> store = new ConcurrentHashMap<>();
 
   private final long ttlMs;

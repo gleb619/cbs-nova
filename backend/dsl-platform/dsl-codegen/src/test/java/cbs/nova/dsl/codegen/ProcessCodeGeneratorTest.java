@@ -1,5 +1,6 @@
 package cbs.nova.dsl.codegen;
 
+import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
@@ -22,7 +23,8 @@ import java.util.Map;
 
 class ProcessCodeGeneratorTest {
 
-  private final ProcessCodeGenerator generator = new ProcessCodeGenerator(new CodegenNaming());
+  private final ProcessCodeGenerator generator = new ProcessCodeGenerator(
+          new DslPackageNameResolver(new CodegenNaming()));
 
   private static DescriptorFactory descriptor() {
     return new DescriptorFactory();

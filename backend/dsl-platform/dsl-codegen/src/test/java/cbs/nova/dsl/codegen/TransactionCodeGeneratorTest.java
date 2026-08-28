@@ -1,5 +1,6 @@
 package cbs.nova.dsl.codegen;
 
+import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
@@ -19,7 +20,7 @@ import java.util.Map;
 class TransactionCodeGeneratorTest {
 
   private final TransactionCodeGenerator generator = new TransactionCodeGenerator(
-          new CodegenNaming());
+          new DslPackageNameResolver(new CodegenNaming()));
 
   @Test
   void generatesTwoSources() {

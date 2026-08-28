@@ -16,7 +16,9 @@ public final class ExternalCallRecordingStage implements DslPipeStage {
   private final ExternalCallRecorder recorder;
 
   @Override
-  //TODO: search and move to `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/core/StarterConstant.java` a string constants
+  // TODO: search and move to
+  // `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/core/StarterConstant.java` a string
+  // constants
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
     recorder.startRun(context.getRunId());
     try {

@@ -26,7 +26,7 @@ public final class DslPipeContext {
 
   private Map<String, Object> attributes = new ConcurrentHashMap<>();
 
-  //TODO: remove constructor
+  // TODO: remove constructor
   public DslPipeContext(
           @NonNull String name,
           @NonNull Context<?> dslContext,
@@ -38,7 +38,7 @@ public final class DslPipeContext {
     this.runId = runId;
   }
 
-  //TODO: remove constructor
+  // TODO: remove constructor
   private DslPipeContext(
           @NonNull String name,
           @NonNull Context<?> dslContext,

@@ -133,9 +133,12 @@ public class JdbcDslRunRepository implements DslRunRepository {
     return entity;
   }
 
-  //TODO: it's better to remove native insert. ANd just work with a entity, so since we can work only with
+  // TODO: it's better to remove native insert. ANd just work with a entity, so since we can work
+  // only with
   // repository, we can handle enc work here
-  // we can reuse `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/persistence/DslRunNamingStrategy.java` to customize table name
+  // we can reuse
+  // `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/persistence/DslRunNamingStrategy.java`
+  // to customize table name
   private String getInsertStatement() {
     return """
             INSERT INTO %s (run_id, process_name, status, input_json, output_json, error_message, context_json, started_at, finished_at, execution_mode)
@@ -145,7 +148,8 @@ public class JdbcDslRunRepository implements DslRunRepository {
                     tableName);
   }
 
-  //TODO: it's better to remove native update. ANd just work with a entity, so since we can work only with
+  // TODO: it's better to remove native update. ANd just work with a entity, so since we can work
+  // only with
   // repository, we can handle enc work here
   private String getUpdateStatement() {
     return """

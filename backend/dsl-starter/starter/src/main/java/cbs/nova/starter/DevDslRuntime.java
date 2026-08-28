@@ -31,7 +31,7 @@ public final class DevDslRuntime implements DslRuntime {
   @Override
   public @NonNull ExplainReport explain(@NonNull String name, @NonNull Context<?> ctx) {
     Result<ExplainReport> result = explainPipe.execute(name, ctx);
-    //TODO: add check for null, add default value case
+    // TODO: add check for null, add default value case
     return result.value();
   }
 }

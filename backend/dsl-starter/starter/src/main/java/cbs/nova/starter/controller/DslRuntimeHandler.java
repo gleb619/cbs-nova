@@ -14,9 +14,9 @@ import org.springframework.web.servlet.function.ServerResponse;
 import java.io.IOException;
 
 /**
- * Thin HTTP shell around {@link DslRuntimeService}. Each method only extracts
- * path/body/header inputs, delegates the work, and maps the resulting
- * {@link RuntimeOutcome} to a {@link ServerResponse}.
+ * Thin HTTP shell around {@link DslRuntimeService}. Each method only extracts path/body/header
+ * inputs, delegates the work, and maps the resulting {@link RuntimeOutcome} to a
+ * {@link ServerResponse}.
  */
 @RequiredArgsConstructor
 public class DslRuntimeHandler {
