@@ -72,7 +72,13 @@ public class DslConfiguration {
 
   @Bean
   @ConditionalOnMissingBean(DslRunRepository.class)
-  public DslRunRepository dslRunRepository() {
+  public DslRunRepository dslRunRepository(
+          TransactionExecutionRepository transactionExecutionRepository) {
+    // Cascade eviction only onto the in-memory sibling: a persistent repository must not lose
+    // rows just because the in-memory run history rolled over its capacity bound.
+    if (transactionExecutionRepository instanceof InMemoryTransactionExecutionRepository inMemory) {
+      return new InMemoryDslRunRepository(inMemory::deleteByRunId);
+    }
     return new InMemoryDslRunRepository();
   }
 

@@ -7,6 +7,8 @@ import cbs.nova.dsl.history.DslRunStatus;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 class InMemoryDslRunRepositoryTest {
 
@@ -215,5 +217,16 @@ class InMemoryDslRunRepositoryTest {
     assertThat(repo.knownProcessNames())
             .doesNotContain("OrderProcess")
             .contains("InvoiceProcess");
+  }
+
+  @Test
+  void evictionHookReceivesEvictedRunId() {
+    List<String> evicted = new ArrayList<>();
+    var repo = new InMemoryDslRunRepository(evicted::add);
+    for (int i = 1; i <= 101; i++) {
+      repo.save(run("run-" + i, "OrderProcess", DslRunStatus.RUNNING.name()));
+    }
+
+    assertThat(evicted).containsExactly("run-1");
   }
 }
