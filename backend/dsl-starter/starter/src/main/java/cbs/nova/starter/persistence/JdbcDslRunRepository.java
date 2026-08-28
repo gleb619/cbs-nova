@@ -2,6 +2,7 @@ package cbs.nova.starter.persistence;
 
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
+import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.starter.config.properties.DslRunPersistenceProperties;
 import cbs.nova.starter.converter.DslRunMapper;
 import cbs.nova.starter.entity.DslRunEntity;
@@ -104,13 +105,7 @@ public class JdbcDslRunRepository implements DslRunRepository {
           @Nullable String contextJson) {
     String sql = getUpdateStatement();
 
-    MapSqlParameterSource params = new MapSqlParameterSource()
-            .addValue("status", status)
-            .addValue("outputJson", encryptor.encrypt(output))
-            .addValue("errorMessage", encryptor.encrypt(error))
-            .addValue("contextJson", encryptor.encrypt(contextJson))
-            .addValue("finishedAt", Timestamp.from(finishedAt))
-            .addValue("runId", runId);
+    MapSqlParameterSource params = finishParams(runId, status, output, error, contextJson, finishedAt);
 
     int updated = jdbcTemplate.update(sql, params);
     if (updated == 0) {
@@ -118,6 +113,38 @@ public class JdbcDslRunRepository implements DslRunRepository {
     }
     return findByRunId(runId)
             .orElseThrow(() -> new IllegalStateException("Run not found: " + runId));
+  }
+
+  @Override
+  public int updateFinishedIfRunning(
+          @NonNull String runId,
+          @NonNull String status,
+          @Nullable String output,
+          @Nullable String error,
+          @NonNull Instant finishedAt,
+          @Nullable String contextJson) {
+    String sql = getGuardedUpdateStatement();
+
+    MapSqlParameterSource params = finishParams(runId, status, output, error, contextJson, finishedAt)
+            .addValue("expectedStatus", DslRunStatus.RUNNING.name());
+
+    return jdbcTemplate.update(sql, params);
+  }
+
+  private MapSqlParameterSource finishParams(
+          @NonNull String runId,
+          @NonNull String status,
+          @Nullable String output,
+          @Nullable String error,
+          @Nullable String contextJson,
+          @NonNull Instant finishedAt) {
+    return new MapSqlParameterSource()
+            .addValue("status", status)
+            .addValue("outputJson", encryptor.encrypt(output))
+            .addValue("errorMessage", encryptor.encrypt(error))
+            .addValue("contextJson", encryptor.encrypt(contextJson))
+            .addValue("finishedAt", Timestamp.from(finishedAt))
+            .addValue("runId", runId);
   }
 
   private void encryptEntity(DslRunEntity entity) {
@@ -160,6 +187,19 @@ public class JdbcDslRunRepository implements DslRunRepository {
               , context_json = :contextJson
               , finished_at = :finishedAt
             WHERE run_id = :runId""".formatted(
+            tableName);
+  }
+
+  private String getGuardedUpdateStatement() {
+    return """
+            UPDATE %s SET
+                status = :status
+              , output_json = :outputJson
+              , error_message = :errorMessage
+              , context_json = :contextJson
+              , finished_at = :finishedAt
+            WHERE run_id = :runId
+              AND status = :expectedStatus""".formatted(
             tableName);
   }
 

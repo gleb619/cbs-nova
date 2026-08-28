@@ -150,6 +150,61 @@ class InMemoryDslRunRepositoryTest {
   }
 
   @Test
+  void updateFinishedIfRunningIsNoOpWhenRunAlreadyTerminal() {
+    var repo = new InMemoryDslRunRepository();
+    repo.save(run("run-1", "OrderProcess", DslRunStatus.COMPLETED.name()));
+
+    int affected = repo.updateFinishedIfRunning(
+            "run-1",
+            DslRunStatus.STALE.name(),
+            null,
+            null,
+            Instant.now(),
+            null);
+
+    assertThat(affected).isZero();
+    assertThat(repo.findByRunId("run-1"))
+            .get()
+            .extracting(DslRun::status)
+            .isEqualTo(DslRunStatus.COMPLETED.name());
+  }
+
+  @Test
+  void updateFinishedIfRunningTransitionsRunningRun() {
+    var repo = new InMemoryDslRunRepository();
+    repo.save(run("run-1", "OrderProcess", DslRunStatus.RUNNING.name()));
+
+    int affected = repo.updateFinishedIfRunning(
+            "run-1",
+            DslRunStatus.STALE.name(),
+            null,
+            null,
+            Instant.now(),
+            null);
+
+    assertThat(affected).isEqualTo(1);
+    assertThat(repo.findByRunId("run-1"))
+            .get()
+            .extracting(DslRun::status)
+            .isEqualTo(DslRunStatus.STALE.name());
+  }
+
+  @Test
+  void updateFinishedIfRunningIsNoOpWhenRunMissing() {
+    var repo = new InMemoryDslRunRepository();
+
+    int affected = repo.updateFinishedIfRunning(
+            "missing",
+            DslRunStatus.STALE.name(),
+            null,
+            null,
+            Instant.now(),
+            null);
+
+    assertThat(affected).isZero();
+  }
+
+  @Test
   void evictedRunsAreRemovedFromKnownProcessNames() {
     var repo = new InMemoryDslRunRepository();
     repo.save(run("old-a", "OrderProcess", DslRunStatus.RUNNING.name()));

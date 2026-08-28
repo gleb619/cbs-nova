@@ -31,4 +31,20 @@ public interface DslRunRepository {
           @Nullable String error,
           @NonNull Instant finishedAt,
           @Nullable String contextJson);
+
+  /**
+   * Compute-and-set finish update that only applies while the run is still {@code RUNNING}.
+   *
+   * <p>Used by the healthcheck staleness sweep so a stale-marking write cannot overwrite a
+   * concurrent terminal transition (COMPLETED/FAILED) performed by the completion path. Returns the
+   * number of affected rows: {@code 1} when the run was still RUNNING and was updated, {@code 0}
+   * when the run was missing or had already left the RUNNING state (a benign race, not an error).
+   */
+  int updateFinishedIfRunning(
+          @NonNull String runId,
+          @NonNull String status,
+          @Nullable String output,
+          @Nullable String error,
+          @NonNull Instant finishedAt,
+          @Nullable String contextJson);
 }

@@ -189,7 +189,7 @@ public class TemporalDslProcessService {
     try {
       Instant finishedAt = now();
       submitDbWrite(() -> {
-        runRepository.updateFinished(
+        int affected = runRepository.updateFinishedIfRunning(
                 runId,
                 DslRunStatus.STALE.name(),
                 EMPTY_OUTPUT_JSON,
@@ -197,6 +197,10 @@ public class TemporalDslProcessService {
                         + " without producing a final status",
                 finishedAt,
                 null);
+        if (affected == 0) {
+          log.info("Sweep skipped staleness mark for run {}: it is no longer RUNNING "
+                  + "(concurrent terminal transition)", runId);
+        }
         return null;
       });
     } finally {

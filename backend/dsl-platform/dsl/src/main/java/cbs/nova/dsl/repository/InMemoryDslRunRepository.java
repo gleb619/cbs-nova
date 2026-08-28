@@ -2,6 +2,7 @@ package cbs.nova.dsl.repository;
 
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
+import cbs.nova.dsl.history.DslRunStatus;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -13,6 +14,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public final class InMemoryDslRunRepository implements DslRunRepository {
@@ -69,7 +71,38 @@ public final class InMemoryDslRunRepository implements DslRunRepository {
     if (existing == null) {
       throw new IllegalStateException("Run not found: " + runId);
     }
-    DslRun updated = DslRun.builder()
+    DslRun updated = finished(existing, status, output, error, finishedAt, contextJson);
+    runs.put(runId, updated);
+    return updated;
+  }
+
+  @Override
+  public int updateFinishedIfRunning(
+          @NonNull String runId,
+          @NonNull String status,
+          @Nullable String output,
+          @Nullable String error,
+          @NonNull Instant finishedAt,
+          @Nullable String contextJson) {
+    AtomicInteger affected = new AtomicInteger();
+    runs.computeIfPresent(runId, (id, existing) -> {
+      if (!DslRunStatus.RUNNING.name().equals(existing.status())) {
+        return existing;
+      }
+      affected.incrementAndGet();
+      return finished(existing, status, output, error, finishedAt, contextJson);
+    });
+    return affected.get();
+  }
+
+  private static @NonNull DslRun finished(
+          @NonNull DslRun existing,
+          @NonNull String status,
+          @Nullable String output,
+          @Nullable String error,
+          @NonNull Instant finishedAt,
+          @Nullable String contextJson) {
+    return DslRun.builder()
             .runId(existing.runId())
             .processName(existing.processName())
             .status(status)
@@ -81,7 +114,5 @@ public final class InMemoryDslRunRepository implements DslRunRepository {
             .finishedAt(finishedAt)
             .executionMode(existing.executionMode())
             .build();
-    runs.put(runId, updated);
-    return updated;
   }
 }
