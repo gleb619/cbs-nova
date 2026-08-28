@@ -15,6 +15,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public final class InMemoryDslRunRepository implements DslRunRepository {
@@ -24,6 +25,22 @@ public final class InMemoryDslRunRepository implements DslRunRepository {
   // TODO: redo to a Caffeine with some properties config for ttl
   private final Map<String, DslRun> runs = new ConcurrentHashMap<>();
   private final Deque<String> insertionOrder = new ConcurrentLinkedDeque<>();
+  private final Consumer<String> onRunEvicted;
+
+  public InMemoryDslRunRepository() {
+    this(runId -> {
+    });
+  }
+
+  /**
+   * @param onRunEvicted Invoked with the evicted run id whenever a run is dropped past
+   * {@link #CAPACITY}. Lets callers cascade cleanup onto related data (e.g. a
+   * {@code TransactionExecutionRepository#deleteByRunId}).
+   */
+  public InMemoryDslRunRepository(Consumer<String> onRunEvicted) {
+    this.onRunEvicted = onRunEvicted == null ? runId -> {
+    } : onRunEvicted;
+  }
 
   @Override
   public @NonNull DslRun save(@NonNull DslRun run) {
@@ -34,6 +51,7 @@ public final class InMemoryDslRunRepository implements DslRunRepository {
         String oldest = insertionOrder.pollFirst();
         if (oldest != null) {
           runs.remove(oldest);
+          onRunEvicted.accept(oldest);
         }
       }
     }
