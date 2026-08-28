@@ -1,5 +1,6 @@
 package cbs.nova.starter.converter;
 
+import cbs.nova.starter.core.StarterConstant;
 import cbs.nova.starter.core.recorder.ExternalCall;
 
 import java.util.ArrayList;
@@ -12,18 +13,15 @@ public final class ExternalCallConverter {
   private ExternalCallConverter() {
   }
 
-  // TODO: search and move to
-  // `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/core/StarterConstant.java` a string
-  // constants
   public static List<Map<String, Object>> toCallJson(List<ExternalCall> calls) {
     List<Map<String, Object>> callsJson = new ArrayList<>();
     for (ExternalCall call : calls) {
       Map<String, Object> callMap = new HashMap<>();
-      callMap.put("type", call.type());
-      callMap.put("target", call.target());
-      callMap.put("operation", call.operation());
-      callMap.put("timestamp", call.timestamp());
-      callMap.put("metadata", call.metadata());
+      callMap.put(StarterConstant.PAYLOAD_TYPE, call.type());
+      callMap.put(StarterConstant.PAYLOAD_TARGET, call.target());
+      callMap.put(StarterConstant.PAYLOAD_OPERATION, call.operation());
+      callMap.put(StarterConstant.PAYLOAD_TIMESTAMP, call.timestamp());
+      callMap.put(StarterConstant.PAYLOAD_METADATA, call.metadata());
       callsJson.add(callMap);
     }
     return List.copyOf(callsJson);

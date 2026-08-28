@@ -1,5 +1,6 @@
 package cbs.nova.starter.preview;
 
+import cbs.nova.starter.core.StarterConstant;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.consumer.ConsumerGroupMetadata;
@@ -111,9 +112,6 @@ public class MessagingCallCaptureProducer<K, V> implements Producer<K, V> {
     delegate.close(timeout);
   }
 
-  // TODO: search and move to
-  // `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/core/StarterConstant.java` a string
-  // constants
   private void recordCall(ProducerRecord<K, V> record) {
     if (record == null) {
       externalCallRecorder.record(TYPE_MESSAGING, "unknown", "send", null);
@@ -121,12 +119,13 @@ public class MessagingCallCaptureProducer<K, V> implements Producer<K, V> {
     }
 
     Map<String, Object> payload = new HashMap<>();
-    payload.put("topic", record.topic());
-    payload.put("key", record.key());
-    payload.put("value", record.value());
-    payload.put("partition", record.partition());
-    payload.put("timestamp", record.timestamp());
-    payload.put("headers", record.headers() != null ? record.headers().toArray().length : 0);
+    payload.put(StarterConstant.PAYLOAD_TOPIC, record.topic());
+    payload.put(StarterConstant.PAYLOAD_KEY, record.key());
+    payload.put(StarterConstant.PAYLOAD_VALUE, record.value());
+    payload.put(StarterConstant.PAYLOAD_PARTITION, record.partition());
+    payload.put(StarterConstant.PAYLOAD_TIMESTAMP, record.timestamp());
+    payload.put(StarterConstant.PAYLOAD_HEADERS,
+            record.headers() != null ? record.headers().toArray().length : 0);
 
     externalCallRecorder.record(TYPE_MESSAGING, record.topic(), "send", payload);
   }

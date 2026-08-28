@@ -1,6 +1,7 @@
 package cbs.nova.starter.core.stage;
 
 import cbs.nova.dsl.Result;
+import cbs.nova.starter.core.StarterConstant;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import cbs.nova.starter.core.recorder.ExternalCall;
@@ -16,16 +17,13 @@ public final class ExternalCallRecordingStage implements DslPipeStage {
   private final ExternalCallRecorder recorder;
 
   @Override
-  // TODO: search and move to
-  // `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/core/StarterConstant.java` a string
-  // constants
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
     recorder.startRun(context.getRunId());
     try {
       return next.proceed(context);
     } finally {
       List<ExternalCall> calls = recorder.finishRun(context.getRunId());
-      context.setAttribute("externalCalls", calls);
+      context.setAttribute(StarterConstant.EXTERNAL_CALLS_ATTRIBUTE, calls);
     }
   }
 }

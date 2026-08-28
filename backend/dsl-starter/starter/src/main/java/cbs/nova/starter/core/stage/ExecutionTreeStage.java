@@ -6,6 +6,7 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExecutionTreeCollector;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.starter.core.StarterConstant;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import lombok.RequiredArgsConstructor;
@@ -18,9 +19,6 @@ public final class ExecutionTreeStage implements DslPipeStage {
   private final int maxDepth;
 
   @Override
-  // TODO: search and move to
-  // `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/core/StarterConstant.java` a string
-  // constants
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
     if (context.getMode() == ExecutionMode.RUN) {
       return next.proceed(context);
@@ -41,7 +39,7 @@ public final class ExecutionTreeStage implements DslPipeStage {
       return next.proceed(wrappedContext);
     } finally {
       collector.finish();
-      context.setAttribute("astTree", collector.tree().orElse(null));
+      context.setAttribute(StarterConstant.AST_TREE_ATTRIBUTE, collector.tree().orElse(null));
     }
   }
 }
