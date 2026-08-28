@@ -354,7 +354,7 @@ class DslReloadResourceTest {
   }
 
   private Path createTemporaryDslSourceDir(String processName) throws IOException {
-    Path sourceDir = Files.createTempDirectory("dsl-reload-test-");
+    Path sourceDir = Files.createTempDirectory("reload-test-source-");
     Path services = sourceDir.resolve("META-INF/services");
     Files.createDirectories(services);
     Files.writeString(services.resolve("cbs.nova.dsl.DslDefinitionProvider"),
@@ -378,7 +378,7 @@ class DslReloadResourceTest {
   }
 
   private Path createTemporaryBrokenDslSourceDir() throws IOException {
-    Path sourceDir = Files.createTempDirectory("dsl-reload-test-broken-");
+    Path sourceDir = Files.createTempDirectory("reload-test-source-broken-");
     // A .java file that is syntactically invalid — must trip javac and throw.
     Files.writeString(sourceDir.resolve("Broken.java"),
             "this is not valid Java at all; { class Broken { ???");
