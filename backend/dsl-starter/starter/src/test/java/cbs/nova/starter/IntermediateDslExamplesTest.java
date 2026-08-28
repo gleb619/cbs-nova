@@ -35,6 +35,7 @@ import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import tools.jackson.databind.ObjectMapper;
 
 import java.net.http.HttpClient;
@@ -51,12 +52,13 @@ class IntermediateDslExamplesTest {
   private final PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
           dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
           null, previewProperties, new CbsNovaFakesProperties(false, null),
-          new RunScopedFakeConfig());
+          new RunScopedFakeConfig(), new SimpleMeterRegistry());
   private final RunDslPipe runPipe = new RunDslPipe(contextFactory, recorder,
           new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig());
   private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
           dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
-          previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig());
+          previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),
+          new SimpleMeterRegistry());
   private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
 
   @BeforeEach

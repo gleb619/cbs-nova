@@ -21,6 +21,7 @@ import cbs.nova.starter.core.stage.PreviewCacheStage;
 import cbs.nova.starter.core.stage.PreviewReportStage;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
@@ -36,6 +37,7 @@ public final class PreviewDslPipe implements DslExecutionPipe<PreviewReport> {
   private final CbsNovaPreviewProperties previewProperties;
   private final CbsNovaFakesProperties fakesProperties;
   private final RunScopedFakeConfig runScopedFakeConfig;
+  private final MeterRegistry meterRegistry;
 
   @Override
   public @NonNull Result<PreviewReport> execute(@NonNull String name,
@@ -44,7 +46,7 @@ public final class PreviewDslPipe implements DslExecutionPipe<PreviewReport> {
     return DslExecutionPipeline.<PreviewReport>builder()
             .stage(new PreviewCacheStage(cache))
             .stage(new PreviewReportStage())
-            .stage(new MetricsStage())
+            .stage(new MetricsStage(meterRegistry))
             .stage(new ExecutionTreeStage(contextFactory,
                     previewProperties.callTree().maxDepth()))
             .stage(new DryRunLogStage(dryRunLoggingContext, bufferRegistry, maxEventsPerRun))

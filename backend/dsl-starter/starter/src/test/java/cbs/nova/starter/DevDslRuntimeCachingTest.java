@@ -25,6 +25,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,12 +61,13 @@ class DevDslRuntimeCachingTest {
     PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
             dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
             cache, previewProperties, new CbsNovaFakesProperties(false, null),
-            new RunScopedFakeConfig());
+            new RunScopedFakeConfig(), new SimpleMeterRegistry());
     RunDslPipe runPipe = new RunDslPipe(contextFactory, recorder,
             new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig());
     ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
             dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
-            previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig());
+            previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),
+            new SimpleMeterRegistry());
     runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
 
     Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);

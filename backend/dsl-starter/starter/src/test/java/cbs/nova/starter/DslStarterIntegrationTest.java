@@ -24,6 +24,7 @@ import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import cbs.nova.starter.service.DslRuntimeService;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,12 +55,14 @@ class DslStarterIntegrationTest {
     var previewProperties = new CbsNovaPreviewProperties(null, null);
     var previewPipe = new PreviewDslPipe(recorder, contextFactory, dryRunLoggingContext,
             bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, null,
-            previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig());
+            previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),
+            new SimpleMeterRegistry());
     var runPipe = new RunDslPipe(contextFactory, recorder, new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig());
     var explainPipe = new ExplainDslPipe(recorder, contextFactory, dryRunLoggingContext,
             bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, previewProperties,
-            new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig());
+            new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),
+            new SimpleMeterRegistry());
     var runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
     var loggingProperties = new CbsNovaLoggingProperties(
             CbsNovaLoggingProperties.Level.INFO,

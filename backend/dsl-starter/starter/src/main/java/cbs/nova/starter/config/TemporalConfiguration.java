@@ -31,6 +31,7 @@ import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -176,10 +177,11 @@ public class TemporalConfiguration {
           PreviewResultCache previewResultCache,
           CbsNovaPreviewProperties previewProperties,
           CbsNovaFakesProperties fakesProperties,
-          RunScopedFakeConfig runScopedFakeConfig) {
+          RunScopedFakeConfig runScopedFakeConfig,
+          MeterRegistry meterRegistry) {
     return new PreviewDslPipe(externalCallRecorder, contextFactory, dryRunLoggingContext,
             bufferRegistry, dryRunProperties.log().maxEventsPerRun(), previewResultCache,
-            previewProperties, fakesProperties, runScopedFakeConfig);
+            previewProperties, fakesProperties, runScopedFakeConfig, meterRegistry);
   }
 
   @Bean
@@ -203,10 +205,11 @@ public class TemporalConfiguration {
           DryRunProperties dryRunProperties,
           CbsNovaPreviewProperties previewProperties,
           CbsNovaFakesProperties fakesProperties,
-          RunScopedFakeConfig runScopedFakeConfig) {
+          RunScopedFakeConfig runScopedFakeConfig,
+          MeterRegistry meterRegistry) {
     return new ExplainDslPipe(externalCallRecorder, contextFactory, dryRunLoggingContext,
             bufferRegistry, dryRunProperties.log().maxEventsPerRun(), previewProperties,
-            fakesProperties, runScopedFakeConfig);
+            fakesProperties, runScopedFakeConfig, meterRegistry);
   }
 
   @Bean

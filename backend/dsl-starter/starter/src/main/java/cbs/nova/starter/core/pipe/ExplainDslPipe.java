@@ -19,6 +19,7 @@ import cbs.nova.starter.core.stage.FakingStage;
 import cbs.nova.starter.core.stage.MetricsStage;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
@@ -33,6 +34,7 @@ public final class ExplainDslPipe implements DslExecutionPipe<ExplainReport> {
   private final CbsNovaPreviewProperties previewProperties;
   private final CbsNovaFakesProperties fakesProperties;
   private final RunScopedFakeConfig runScopedFakeConfig;
+  private final MeterRegistry meterRegistry;
 
   @Override
   public @NonNull Result<ExplainReport> execute(@NonNull String name,
@@ -40,7 +42,7 @@ public final class ExplainDslPipe implements DslExecutionPipe<ExplainReport> {
     HelperInterceptor fakeInterceptor = new FakeHelperInterceptor(runScopedFakeConfig, recorder);
     return DslExecutionPipeline.<ExplainReport>builder()
             .stage(new ExplainReportStage())
-            .stage(new MetricsStage())
+            .stage(new MetricsStage(meterRegistry))
             .stage(new ExecutionTreeStage(contextFactory,
                     previewProperties.callTree().maxDepth()))
             .stage(new DryRunLogStage(dryRunLoggingContext, bufferRegistry, maxEventsPerRun))
