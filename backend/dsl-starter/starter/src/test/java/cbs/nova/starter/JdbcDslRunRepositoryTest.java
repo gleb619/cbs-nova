@@ -110,6 +110,45 @@ class JdbcDslRunRepositoryTest {
             .hasMessageContaining("Run not found: missing");
   }
 
+  @Test
+  void updateFinishedIfRunningIsNoOpWhenRunAlreadyTerminal() {
+    Instant finishedAt = Instant.parse("2025-01-01T01:00:00Z");
+    repository.save(run("run-stale-skip", DslRunStatus.COMPLETED, "{\"output\":true}", null));
+
+    int affected = repository.updateFinishedIfRunning(
+            "run-stale-skip",
+            DslRunStatus.STALE.name(),
+            "{}",
+            "stale overwrite",
+            finishedAt,
+            null);
+
+    assertThat(affected).isZero();
+    DslRun persisted = repository.findByRunId("run-stale-skip").orElseThrow();
+    assertThat(persisted.status()).isEqualTo(DslRunStatus.COMPLETED.name());
+    assertThat(persisted.output()).isEqualTo("{\"output\":true}");
+    assertThat(persisted.error()).isNull();
+  }
+
+  @Test
+  void updateFinishedIfRunningTransitionsRunningRun() {
+    Instant finishedAt = Instant.parse("2025-01-01T01:00:00Z");
+    repository.save(run("run-stale-yes", DslRunStatus.RUNNING, null, null));
+
+    int affected = repository.updateFinishedIfRunning(
+            "run-stale-yes",
+            DslRunStatus.STALE.name(),
+            "{}",
+            "stale",
+            finishedAt,
+            null);
+
+    assertThat(affected).isEqualTo(1);
+    DslRun persisted = repository.findByRunId("run-stale-yes").orElseThrow();
+    assertThat(persisted.status()).isEqualTo(DslRunStatus.STALE.name());
+    assertThat(persisted.output()).isEqualTo("{}");
+  }
+
   private static DslRun run(String runId, DslRunStatus status, String output, String error) {
     return run(runId, status, output, error, "process-1");
   }

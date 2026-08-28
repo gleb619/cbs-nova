@@ -227,6 +227,50 @@ class TemporalDslProcessServiceTest {
   }
 
   @Test
+  void staleSweepDoesNotOverwriteAlreadyTerminalRun() throws Exception {
+    ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    try {
+      ThreadPoolTaskExecutor exec = synchronousExecutor();
+      InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+      longAgoClock fixedClock = new longAgoClock();
+
+      ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
+      TemporalDslProcessService service = new TemporalDslProcessService(
+              contextFactory, repo, new ObjectMapper(),
+              exec, scheduler, Duration.ofMillis(1), Duration.ofMillis(100), false);
+      service.setClock(fixedClock);
+
+      // A run that already completed long ago — the sweep must not flip it to STALE.
+      repo.save(DslRun.builder()
+              .runId("run-done-1")
+              .processName("ghost-process")
+              .status(DslRunStatus.COMPLETED.name())
+              .input("{}")
+              .output("{\"done\":true}")
+              .error(null)
+              .startedAt(fixedClock.instant().minus(Duration.ofMinutes(10)))
+              .finishedAt(fixedClock.instant().minus(Duration.ofMinutes(9)))
+              .executionMode("RUN")
+              .build());
+
+      service.ensureHealthcheckForTest();
+
+      // Let the scheduled sweep run several times; the terminal row must remain untouched.
+      long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+      while (System.nanoTime() < deadline) {
+        Thread.sleep(20);
+      }
+
+      assertThat(repo.findByRunId("run-done-1")).isPresent();
+      DslRun persisted = repo.findByRunId("run-done-1").orElseThrow();
+      assertThat(persisted.status()).isEqualTo(DslRunStatus.COMPLETED.name());
+      assertThat(persisted.output()).isEqualTo("{\"done\":true}");
+    } finally {
+      scheduler.shutdownNow();
+    }
+  }
+
+  @Test
   void shutdownHealthcheckIsIdempotentAndCancelsRunningSchedule() throws Exception {
     ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     ThreadPoolTaskExecutor exec = synchronousExecutor();
