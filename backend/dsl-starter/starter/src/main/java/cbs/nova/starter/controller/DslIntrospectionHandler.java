@@ -1,9 +1,11 @@
 package cbs.nova.starter.controller;
 
+import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import cbs.nova.starter.service.DslIntrospectionService;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructBodyDto;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
+import cbs.nova.starter.model.DslIntrospectionModels.ProcessDiagramDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
@@ -15,6 +17,7 @@ import java.util.List;
 public class DslIntrospectionHandler {
 
   private final DslIntrospectionService service;
+  private final ExplainDiagramRenderer diagramRenderer;
 
   public ServerResponse processes(ServerRequest request) {
     return ServerResponse.ok().body(service.processes());
@@ -25,6 +28,16 @@ public class DslIntrospectionHandler {
     return service.processDetail(name)
             .map(p -> ServerResponse.ok().body(p))
             .orElse(ServerResponse.notFound().build());
+  }
+
+  public ServerResponse processDiagram(ServerRequest request) {
+    String name = request.pathVariable("name");
+    String format = request.param("format").orElse("mermaid");
+    String diagram = diagramRenderer.renderByName(name, format);
+    if (diagram == null) {
+      return ServerResponse.notFound().build();
+    }
+    return ServerResponse.ok().body(new ProcessDiagramDto(name, format, diagram));
   }
 
   public ServerResponse transactions(ServerRequest request) {

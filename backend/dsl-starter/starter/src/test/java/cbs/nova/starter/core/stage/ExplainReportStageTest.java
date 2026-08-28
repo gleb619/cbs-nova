@@ -17,6 +17,7 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import cbs.nova.starter.core.recorder.ExternalCall;
+import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
@@ -46,7 +47,8 @@ class ExplainReportStageTest {
       return Result.failure(new RuntimeException("downstream"));
     };
 
-    Result<?> result = new ExplainReportStage().execute(pipeContext, next);
+    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+            next);
 
     assertThat(result.isSuccess()).isTrue();
     ExplainReport report = (ExplainReport) result.value();
@@ -79,7 +81,8 @@ class ExplainReportStageTest {
     DslPipeContext pipeContext = pipeContext(fnName, ExecutionMode.PREVIEW);
     DslPipeStage.Next next = c -> Result.success("downstream");
 
-    Result<?> result = new ExplainReportStage().execute(pipeContext, next);
+    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+            next);
 
     ExplainReport report = (ExplainReport) result.value();
     assertThat(report.description()).isEqualTo("Function: " + fnName);
@@ -95,7 +98,8 @@ class ExplainReportStageTest {
     DslPipeContext pipeContext = pipeContext(helperName, ExecutionMode.PREVIEW);
     DslPipeStage.Next next = c -> Result.success("downstream");
 
-    Result<?> result = new ExplainReportStage().execute(pipeContext, next);
+    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+            next);
 
     ExplainReport report = (ExplainReport) result.value();
     assertThat(report.description()).isEqualTo("Helper: " + helperName);
@@ -109,7 +113,8 @@ class ExplainReportStageTest {
     DslPipeContext pipeContext = pipeContext(orphan, ExecutionMode.PREVIEW);
     DslPipeStage.Next next = c -> Result.success("downstream");
 
-    Result<?> result = new ExplainReportStage().execute(pipeContext, next);
+    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+            next);
 
     ExplainReport report = (ExplainReport) result.value();
     assertThat(report.description()).isEqualTo("Entity: " + orphan);
@@ -126,7 +131,8 @@ class ExplainReportStageTest {
       return Result.success("downstream");
     };
 
-    Result<?> result = new ExplainReportStage().execute(pipeContext, next);
+    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+            next);
 
     ExplainReport report = (ExplainReport) result.value();
     assertThat(report.errors()).isEmpty();
@@ -138,7 +144,8 @@ class ExplainReportStageTest {
             ExecutionMode.PREVIEW);
     DslPipeStage.Next next = c -> Result.success("downstream");
 
-    Result<?> result = new ExplainReportStage().execute(pipeContext, next);
+    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+            next);
 
     ExplainReport report = (ExplainReport) result.value();
     assertThat(report.errors()).isEmpty();
@@ -152,7 +159,8 @@ class ExplainReportStageTest {
       return Result.success("downstream");
     };
 
-    Result<?> result = new ExplainReportStage().execute(pipeContext, next);
+    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+            next);
 
     ExplainReport report = (ExplainReport) result.value();
     assertThat(report.errors()).hasSize(1);
@@ -167,7 +175,8 @@ class ExplainReportStageTest {
             ExecutionMode.PREVIEW);
     DslPipeStage.Next next = c -> Result.success("downstream");
 
-    Result<?> result = new ExplainReportStage().execute(pipeContext, next);
+    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+            next);
 
     ExplainReport report = (ExplainReport) result.value();
     assertThat(report.externalCalls()).isEmpty();
@@ -184,7 +193,8 @@ class ExplainReportStageTest {
     pipeContext.setAttribute("externalCalls", calls);
     DslPipeStage.Next next = c -> Result.success("downstream");
 
-    Result<?> result = new ExplainReportStage().execute(pipeContext, next);
+    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+            next);
 
     ExplainReport report = (ExplainReport) result.value();
     assertThat(report.externalCalls()).hasSize(2);
@@ -199,7 +209,8 @@ class ExplainReportStageTest {
             ExecutionMode.PREVIEW);
     DslPipeStage.Next next = c -> Result.success("downstream");
 
-    Result<?> result = new ExplainReportStage().execute(pipeContext, next);
+    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+            next);
 
     ExplainReport report = (ExplainReport) result.value();
     assertThat(report.executionTrace()).isEmpty();

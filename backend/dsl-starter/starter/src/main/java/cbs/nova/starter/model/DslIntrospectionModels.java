@@ -63,4 +63,10 @@ public final class DslIntrospectionModels {
           @JsonInclude(JsonInclude.Include.NON_NULL) String code,
           List<StepDto> steps) {
   }
+
+  public record ProcessDiagramDto(
+          String name,
+          String format,
+          String diagram) {
+  }
 }

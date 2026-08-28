@@ -21,6 +21,7 @@ import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
+import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -53,7 +54,7 @@ class DevDslRuntimeErrorHandlingTest {
   private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
           dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
           previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),
-          new SimpleMeterRegistry());
+          new SimpleMeterRegistry(), new ExplainDiagramRenderer());
   private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
 
   @BeforeEach

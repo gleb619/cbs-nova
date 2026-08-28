@@ -135,7 +135,7 @@ class DslRuntimeServiceTest {
   void explainDelegatesToRuntime() {
     ExplainReport report = new ExplainReport(
             "P", "desc", List.of(), List.of(), Map.of(), null, null, null, List.of(), null,
-            List.of());
+            List.of(), null);
     doReturn(report).when(dslRuntime).explain(eq("P"), any());
 
     ExplainReport result = service.explain("P", new DslRequest("in", null), "req-4");

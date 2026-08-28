@@ -1,27 +1,26 @@
 package cbs.nova.starter.reporting;
 
 import cbs.nova.dsl.DslDescriptor;
-import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.generator.BpmnDiagramGenerator;
 import cbs.nova.dsl.generator.DiagramGenerator;
 import cbs.nova.dsl.generator.MermaidDiagramGenerator;
 import cbs.nova.dsl.generator.PlantUmlDiagramGenerator;
+import cbs.nova.dsl.generator.BpmnDiagramGenerator;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
 
 /**
  * Renders diagram strings from an {@link ExplainReport}. The report carries an AST/tree and
- * metadata; this layer converts that tree into mermaid, PlantUML and BPMN representations on demand
- * so the runtime does not need to know about diagram formats.
+ * metadata; this service converts that tree into mermaid, PlantUML and BPMN representations on
+ * demand so the runtime does not need to know about diagram formats.
  */
-// TODO: we need to use class, redo it to service, add some handler's endpoint at
-// `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/controller/DslIntrospectionHandler.java`
-@Deprecated(forRemoval = true)
-public final class ExplainDiagramRenderer {
+@Service
+public class ExplainDiagramRenderer {
 
   private final DiagramGenerator mermaid = new MermaidDiagramGenerator();
   private final DiagramGenerator plantUml = new PlantUmlDiagramGenerator();
@@ -37,6 +36,35 @@ public final class ExplainDiagramRenderer {
 
   public @NonNull String bpmnXml(@NonNull ExplainReport report) {
     return render(report, bpmn);
+  }
+
+  /**
+   * Renders a diagram for a known process/transaction/helper by name without requiring a
+   * precomputed {@link ExplainReport}. The {@code format} is one of {@code mermaid},
+   * {@code plantuml}, or {@code bpmn} (case-insensitive); any other value defaults to mermaid.
+   * Returns {@code null} when no matching process/transaction is registered.
+   */
+  public @Nullable String renderByName(@NonNull String name,
+          @NonNull String format) {
+    GlobalManager gm = GlobalManager.globalManager();
+    var process = gm.findProcess(name);
+    if (process.isPresent()) {
+      return pickGenerator(format).forProcess(process.get(), List.of(), Map.of());
+    }
+    var tx = gm.findTransaction(name);
+    if (tx.isPresent()) {
+      return pickGenerator(format).forTransaction(tx.get(), List.of(), Map.of());
+    }
+    return null;
+  }
+
+  private @NonNull DiagramGenerator pickGenerator(@NonNull String format) {
+    String normalized = format.trim().toLowerCase(java.util.Locale.ROOT);
+    return switch (normalized) {
+      case "plantuml" -> plantUml;
+      case "bpmn" -> bpmn;
+      default -> mermaid;
+    };
   }
 
   private @NonNull String render(@NonNull ExplainReport report,

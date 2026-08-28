@@ -82,6 +82,11 @@ export function useDslApi() {
     return $fetch('/api/v1/dsl/reload', { method: 'POST' })
   }
 
+  async function getProcessDiagram(name: string, format: 'mermaid' | 'plantuml' | 'bpmn' = 'mermaid') {
+    log.info('process diagram request', { name, format })
+    return $fetch(`/api/v1/dsl/processes/${name}/diagram`, { query: { format } })
+  }
+
   return {
     getDefinitions,
     searchObjects,
@@ -92,5 +97,6 @@ export function useDslApi() {
     publishDraft,
     validateConstruct,
     reload,
+    getProcessDiagram,
   }
 }

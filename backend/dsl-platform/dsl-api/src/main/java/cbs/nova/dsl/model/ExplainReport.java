@@ -17,7 +17,8 @@ public record ExplainReport(
         @Nullable CallNode astTree,
         @NonNull List<Map<String, Object>> dryRunLogs,
         @Nullable PreviewMetricsSnapshot metrics,
-        @Nullable List<PreviewErrorDetail> errors) {
+        @Nullable List<PreviewErrorDetail> errors,
+        @Nullable String mermaidDiagram) {
 
   public ExplainReport {
     dryRunLogs = dryRunLogs == null ? List.of() : List.copyOf(dryRunLogs);

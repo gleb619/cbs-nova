@@ -16,6 +16,7 @@ import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.starter.config.DslIntrospectionRouterConfiguration;
 import cbs.nova.starter.controller.DslIntrospectionHandler;
+import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import cbs.nova.starter.service.DslIntrospectionService;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
 import org.junit.jupiter.api.AfterEach;
@@ -42,7 +43,8 @@ class DslIntrospectionResourceTest {
     DslIntrospectionMapper mapper = Mappers.getMapper(DslIntrospectionMapper.class);
     DslIntrospectionService service = new DslIntrospectionService(
             DslConfig.dslConfig().jsonSchemaGenerator().get(), mapper);
-    DslIntrospectionHandler handler = new DslIntrospectionHandler(service);
+    DslIntrospectionHandler handler = new DslIntrospectionHandler(service,
+            new ExplainDiagramRenderer());
     DslIntrospectionRouterConfiguration router = new DslIntrospectionRouterConfiguration();
     mockMvc = MockMvcBuilders.routerFunctions(router.dslIntrospectionRouter(handler)).build();
   }
@@ -106,6 +108,36 @@ class DslIntrospectionResourceTest {
   void processDetailEndpointReturns404ForUnknown() throws Exception {
     mockMvc
             .perform(get("/api/dsl/processes/Unknown").accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void processDiagramEndpointReturnsMermaidForKnownProcess() throws Exception {
+    mockMvc
+            .perform(get("/api/dsl/processes/LoanDisbursement/diagram")
+                    .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("LoanDisbursement"))
+            .andExpect(jsonPath("$.format").value("mermaid"))
+            .andExpect(jsonPath("$.diagram").isNotEmpty());
+  }
+
+  @Test
+  void processDiagramEndpointHonoursFormatQueryParam() throws Exception {
+    mockMvc
+            .perform(get("/api/dsl/processes/LoanDisbursement/diagram")
+                    .param("format", "bpmn")
+                    .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.format").value("bpmn"))
+            .andExpect(jsonPath("$.diagram").isNotEmpty());
+  }
+
+  @Test
+  void processDiagramEndpointReturns404ForUnknown() throws Exception {
+    mockMvc
+            .perform(get("/api/dsl/processes/Unknown/diagram")
+                    .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isNotFound());
   }
 

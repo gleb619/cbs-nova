@@ -32,6 +32,7 @@ import cbs.nova.starter.helper.*;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
+import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,7 +59,7 @@ class IntermediateDslExamplesTest {
   private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
           dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
           previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),
-          new SimpleMeterRegistry());
+          new SimpleMeterRegistry(), new ExplainDiagramRenderer());
   private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
 
   @BeforeEach
