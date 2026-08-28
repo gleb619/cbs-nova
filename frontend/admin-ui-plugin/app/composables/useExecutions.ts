@@ -1,7 +1,7 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { useExecutionsApi } from '@cbs/admin-ui-plugin/composables/useExecutionsApi'
 import { useStalePolling } from '@cbs/admin-ui-plugin/composables/useStalePolling'
-import { onUnmounted, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import type { Execution, ExecutionDetail, ExecutionFilters, ExecutionStatus } from '~/types'
 
 export function useExecutions() {
@@ -168,11 +168,93 @@ export function useExecutions() {
   }
 
   // -------------------------------------------------------------------
+  // List polling (T269) — refresh the executions list while any visible
+  // (filtered) row is in-flight. Reuses the same `stalePollMs` runtime
+  // config key as the per-row stale poller above; mirrors the visibility
+  // pause/resume behaviour; and reuses the existing `loading` guard so a
+  // background tick never clobbers a user-initiated load.
+  // -------------------------------------------------------------------
+
+  /**
+   * Statuses that mean "still in flight — keep refreshing the list".
+   * `Stale` is deliberately excluded: rows in that state already have a
+   * dedicated stale poller driving their transition out of Stale.
+   */
+  const IN_FLIGHT_STATUSES: ReadonlyArray<ExecutionStatus> = ['Pending', 'Running']
+
+  const inFlightRowCount = computed(() =>
+    executions.value.filter((e) => IN_FLIGHT_STATUSES.includes(e.status)).length,
+  )
+
+  let listPollInterval: ReturnType<typeof setInterval> | null = null
+  let listPollVisibilityHandler: (() => void) | null = null
+
+  function clearListPollInterval(): void {
+    if (listPollInterval != null) {
+      clearInterval(listPollInterval)
+      listPollInterval = null
+    }
+  }
+
+  function detachListPollVisibilityListener(): void {
+    if (listPollVisibilityHandler && typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', listPollVisibilityHandler)
+    }
+    listPollVisibilityHandler = null
+  }
+
+  async function tickListPoll(): Promise<void> {
+    if (typeof document !== 'undefined' && document.hidden) return
+    // Reuse the existing `loading` guard so a background tick never
+    // races a user-initiated load (page change, filter apply, retry).
+    if (loading.value) return
+    await loadExecutions({ silent: true })
+  }
+
+  function startListPolling(intervalMs: number = stalePollMs): void {
+    if (listPollInterval != null) return
+    if (typeof document === 'undefined') return
+
+    listPollInterval = setInterval(() => {
+      void tickListPoll()
+    }, intervalMs)
+
+    listPollVisibilityHandler = () => {
+      if (!listPollInterval) return
+      if (document.hidden) return
+      // Resumed: fire one immediate tick so the user sees fresh data
+      // the moment they come back to the tab.
+      void tickListPoll()
+    }
+    document.addEventListener('visibilitychange', listPollVisibilityHandler)
+  }
+
+  function stopListPolling(): void {
+    clearListPollInterval()
+    detachListPollVisibilityListener()
+  }
+
+  // Drive start/stop from the in-flight row count: the interval only
+  // runs while at least one visible row is in-flight; it tears itself
+  // down as soon as the last in-flight row reaches a terminal state,
+  // and restarts on the next load that brings an in-flight row back
+  // into view (filter change, fresh fetch).
+  watch(
+    inFlightRowCount,
+    (count) => {
+      if (count > 0) startListPolling()
+      else stopListPolling()
+    },
+    { immediate: true },
+  )
+
+  // -------------------------------------------------------------------
   // Public loaders
   // -------------------------------------------------------------------
 
-  async function loadExecutions() {
-    loading.value = true
+  async function loadExecutions(options: { silent?: boolean } = {}) {
+    const silent = options.silent === true
+    if (!silent) loading.value = true
     error.value = null
     try {
       const offset = (page.value - 1) * pageSize
@@ -196,7 +278,7 @@ export function useExecutions() {
       total.value = 0
       error.value = (err as Error).message || 'Failed to load'
     } finally {
-      loading.value = false
+      if (!silent) loading.value = false
     }
   }
 
@@ -259,6 +341,7 @@ export function useExecutions() {
   onUnmounted(() => {
     stopPolling()
     stopAllStalePolling()
+    stopListPolling()
   })
 
   return {
@@ -281,5 +364,9 @@ export function useExecutions() {
     isStalePolling,
     startStalePolling,
     stopStalePolling,
+    // list polling public surface (T269)
+    inFlightRowCount,
+    startListPolling,
+    stopListPolling,
   }
 }

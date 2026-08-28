@@ -17,9 +17,11 @@ const {
   page,
   pageSize,
   setPage,
+  startListPolling,
 } = useExecutions()
 
 await loadExecutions()
+startListPolling()
 
 const pageCount = computed(() => Math.ceil(total.value / pageSize))
 
