@@ -19,7 +19,24 @@ services:
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "${MANAGEMENT_ENDPOINTS:-health,info,prometheus}"
       OTEL_SERVICE_NAME: "${OTEL_SERVICE_NAME:-cbs-nova}"
       OTEL_RESOURCE_ATTRIBUTES: "${OTEL_RESOURCE_ATTRIBUTES:-deployment.environment=local}"
+    healthcheck:
+      # The runtime image (eclipse-temurin:25-jre-jammy) does not ship
+      # curl or wget, and we want to keep the Dockerfile minimal. Bash is
+      # available, so we open a TCP connection to the actuator port (8090)
+      # via /dev/tcp. Spring Boot only binds the listener once the embedded
+      # server is fully up, so this is a meaningful readiness gate without
+      # the cost of installing an HTTP client. start_period is tuned to
+      # allow for JVM warm-up, Temporal worker registration and any
+      # first-boot migrations.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8090 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
-      - bugsink
-      - keycloak
-      - temporal
+      temporal:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      bugsink:
+        condition: service_healthy

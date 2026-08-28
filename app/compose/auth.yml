@@ -18,6 +18,21 @@ services:
       KEYCLOAK_ADMIN_PASSWORD: admin
     ports:
       - "8080:8080"
+    healthcheck:
+      # The Keycloak image does not ship curl/wget/nc, but bash + /dev/tcp
+      # is available. We probe TCP on the main HTTP port (8080) rather than
+      # the management port (9000), because 9000 is not exposed to the
+      # spring-app container and we don't want to widen the Keycloak surface
+      # area just for a healthcheck. This proves the HTTP listener is up;
+      # full readiness (DB-backed realm import) is best-effort within the
+      # retries window below.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      # Keycloak 22 with Postgres backend does realm import + DB schema
+      # setup on first boot; subsequent boots are faster but still slow.
+      start_period: 120s
     depends_on:
       postgres:
         condition: service_healthy

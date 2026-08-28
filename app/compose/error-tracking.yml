@@ -16,3 +16,17 @@ services:
       DATABASE_URL: postgresql://bugsinkuser:${BUGSINK_DB_PASSWORD:-change_me_secure_password}@postgres:5432/bugsink
       BEHIND_HTTPS_PROXY: "false"
       PORT: 8000
+    healthcheck:
+      # Bugsink serves the dashboard on plain HTTP at port 8000. The image
+      # ships bash but no curl/wget/nc, so we craft a minimal HTTP HEAD
+      # request via bash + /dev/tcp and grep for a 2xx/3xx response. This
+      # proves the Django app has finished booting and is serving requests.
+      test:
+        - "CMD"
+        - "bash"
+        - "-c"
+        - "{ printf 'HEAD / HTTP/1.0\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; grep -E '^HTTP/1\\.[01] (2|3)' <&3; } 3<>/dev/tcp/127.0.0.1/8000"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
