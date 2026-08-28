@@ -42,6 +42,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.Ordered;
@@ -69,8 +70,9 @@ public class TemporalConfiguration {
   }
 
   @Bean
-  @ConditionalOnProperty(name = "dsl.worker.enabled", havingValue = "true")
   @Order(Ordered.LOWEST_PRECEDENCE)
+  @ConditionalOnProperty(name = "dsl.worker.enabled", havingValue = "true")
+  @ConditionalOnMissingBean(name = "dslWorkerFactory")
   ApplicationRunner temporalWorkerRegistrationRunner(WorkerFactory workerFactory) {
     return args -> {
       var processes = GlobalManager.globalManager().generatedProcesses();

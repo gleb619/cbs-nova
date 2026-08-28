@@ -17,27 +17,20 @@ public abstract class BaseContainers {
   private static final Duration STARTUP_TIMEOUT = Duration.ofMinutes(5);
   private static final int START_ATTEMPTS = 3;
 
-  /**
-   * Single-binary Temporal container backed by an embedded SQLite store. We override the auto-setup
-   * entrypoint (which forces external DB schema provisioning) with {@code server start-dev} and
-   * {@code SKIP_SCHEMA_SETUP=true}, which lets Temporal boot an in-container SQLite file with no
-   * MySQL/Postgres dependency.
-   */
   private static GenericContainer<?> newTemporalContainer() {
     return new GenericContainer<>(
             DockerImageName.parse("temporalio/auto-setup:1.25.2"))
             .withExposedPorts(7233)
-            .withEnv("DB", System.getenv().getOrDefault("TEMPORAL_DB", "sqlite"))
-            .withEnv("SKIP_SCHEMA_SETUP", "true")
+            .withEnv("DB", "sqlite")
             .withEnv("BIND_ON_IP", "0.0.0.0")
+            .withCreateContainerCmdModifier(cmd -> cmd.withEntrypoint("temporal"))
             .withCommand(
                     "server",
                     "start-dev",
                     "--ip", "0.0.0.0",
                     "--namespace", "default",
-                    "--db-filename", "/var/temporal/temporal.db")
-            .waitingFor(Wait.forLogMessage(".*Temporal server is now running.*", 1)
-                    .withStartupTimeout(STARTUP_TIMEOUT));
+                    "--db-filename", "/tmp/temporal.db")
+            .waitingFor(Wait.forListeningPort().withStartupTimeout(STARTUP_TIMEOUT));
   }
 
   private static GenericContainer<?> newKeycloakContainer() {
