@@ -1,23 +1,35 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useExecutions } from '../useExecutions'
 
+vi.mock('../useExecutionsApi', () => {
+  const list = vi.fn()
+  const get = vi.fn()
+  const api = { list, get }
+  return { useExecutionsApi: () => api }
+})
+
+import * as executionsApiModule from '../useExecutionsApi'
+
 type ApiMock = {
   list: ReturnType<typeof vi.fn>
   get: ReturnType<typeof vi.fn>
 }
 
 const installApiMock = (overrides: Partial<ApiMock> = {}): ApiMock => {
-  const api: ApiMock = {
-    list: overrides.list ?? vi.fn(),
-    get: overrides.get ?? vi.fn(),
-  }
-  vi.mocked(useExecutionsApi as never).mockReturnValue(api)
+  const api = (executionsApiModule as unknown as { useExecutionsApi: () => ApiMock })
+    .useExecutionsApi()
+  if (overrides.list) api.list = overrides.list
+  if (overrides.get) api.get = overrides.get
   return api
 }
 
 describe('useExecutions', () => {
   beforeEach(() => {
-    vi.mocked(useExecutionsApi as never).mockReset()
+    const api = (
+      executionsApiModule as unknown as { useExecutionsApi: () => ApiMock }
+    ).useExecutionsApi()
+    api.list.mockReset()
+    api.get.mockReset()
   })
 
   afterEach(() => {
@@ -462,6 +474,186 @@ describe('useExecutions', () => {
 
       stopStalePolling('stale-5')
       expect(stalePollingIds.value.size).toBe(0)
+    })
+  })
+
+  describe('list polling (T269)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+      vi.mocked(useRuntimeConfig as never).mockReturnValue({
+        public: { stalePollMs: 1000 },
+      } as ReturnType<typeof useRuntimeConfig>)
+    })
+
+    const flushAll = async () => {
+      for (let i = 0; i < 10; i++) await Promise.resolve()
+    }
+
+    const runningRow = {
+      id: 'run-1',
+      entity: 'ent',
+      entityType: 'Process' as const,
+      mode: 'RUN' as const,
+      status: 'Running' as const,
+      startedAt: '2025-01-01',
+    }
+    const completedRow = {
+      id: 'done-1',
+      entity: 'ent',
+      entityType: 'Process' as const,
+      mode: 'RUN' as const,
+      status: 'Completed' as const,
+      startedAt: '2025-01-01',
+    }
+
+    it('starts polling when a visible row is in-flight and stops when none remain', async () => {
+      const list = vi
+        .fn()
+        .mockResolvedValueOnce([runningRow, completedRow]) // initial load
+        .mockResolvedValueOnce([completedRow, completedRow]) // first tick: all terminal → stop
+      installApiMock({ list, get: vi.fn() })
+
+      const { loadExecutions, inFlightRowCount } = useExecutions()
+      expect(inFlightRowCount.value).toBe(0)
+
+      await loadExecutions()
+      await flushAll()
+      expect(list).toHaveBeenCalledTimes(1)
+      expect(inFlightRowCount.value).toBe(1)
+      // list poll interval registered (no Stale rows so no stale pollers)
+      expect(vi.getTimerCount()).toBe(1)
+
+      // first tick — Running row still present → silent refresh
+      await vi.advanceTimersByTimeAsync(1000)
+      await flushAll()
+      expect(list).toHaveBeenCalledTimes(2)
+      // after the refresh the visible list is all terminal → polling stopped
+      expect(vi.getTimerCount()).toBe(0)
+
+      // no further ticks once polling is stopped
+      await vi.advanceTimersByTimeAsync(5000)
+      await flushAll()
+      expect(list).toHaveBeenCalledTimes(2)
+    })
+
+    it('skips ticks while document.hidden is true and resumes on visible', async () => {
+      // Note: this test does NOT dispatch `visibilitychange` to verify the
+      // resume behavior, because prior tests in this file leak
+      // `visibilitychange` listeners onto the shared document (the
+      // per-execution useStalePolling composable and earlier list-poll
+      // instances both register listeners, and `onUnmounted` never fires
+      // outside a component context, so they survive across tests). The
+      // shared `useExecutionsApi` mock means those leaked listeners end
+      // up calling the same `api.list` spy this test asserts on. Instead
+      // we verify the same property — that `document.hidden` actually
+      // gates the tick — by setting the property and advancing the
+      // interval. The interval itself checks `document.hidden` on every
+      // tick (mirroring the useStalePolling pattern), so this is a
+      // direct test of the pause/resume contract.
+      const list = vi.fn().mockResolvedValue([runningRow])
+      installApiMock({ list, get: vi.fn() })
+
+      const { loadExecutions } = useExecutions()
+      await loadExecutions()
+      await flushAll()
+      expect(list).toHaveBeenCalledTimes(1)
+      expect(vi.getTimerCount()).toBe(1)
+
+      // first visible tick — silent refresh fires
+      await vi.advanceTimersByTimeAsync(1000)
+      await flushAll()
+      expect(list).toHaveBeenCalledTimes(2)
+
+      // hide the tab
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => true })
+
+      // several ticks while hidden — must NOT call api.list
+      await vi.advanceTimersByTimeAsync(5000)
+      await flushAll()
+      expect(list).toHaveBeenCalledTimes(2)
+
+      // show the tab again — the next interval tick must fire and call api.list
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => false })
+      await vi.advanceTimersByTimeAsync(1000)
+      await flushAll()
+      expect(list).toHaveBeenCalledTimes(3)
+
+      // regular ticks continue
+      await vi.advanceTimersByTimeAsync(1000)
+      await flushAll()
+      expect(list).toHaveBeenCalledTimes(4)
+
+      // restore
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => false })
+    })
+
+    it('preserves active filters and pagination across a background refresh', async () => {
+      const list = vi.fn().mockResolvedValue([runningRow])
+      installApiMock({ list, get: vi.fn() })
+
+      const { applyFilters, filters, page, setPage } = useExecutions()
+
+      await applyFilters({ status: 'Running', entityName: 'foo' })
+      await setPage(2)
+      await flushAll()
+      const baselineCalls = list.mock.calls.length
+      // last call so far: filter + page 2 + limit 20
+      expect(list.mock.calls[baselineCalls - 1][0]).toEqual({
+        status: 'Running',
+        entityName: 'foo',
+        offset: 20,
+        limit: 20,
+      })
+
+      // background tick fires a silent refresh — no user input in between
+      await vi.advanceTimersByTimeAsync(1000)
+      await flushAll()
+      expect(list).toHaveBeenCalledTimes(baselineCalls + 1)
+
+      // the silent refresh re-sent the same filters and pagination
+      expect(list.mock.calls[list.mock.calls.length - 1][0]).toEqual({
+        status: 'Running',
+        entityName: 'foo',
+        offset: 20,
+        limit: 20,
+      })
+      expect(filters.value).toEqual({ status: 'Running', entityName: 'foo' })
+      expect(page.value).toBe(2)
+    })
+
+    it('skips a background tick while a user-driven load is in flight', async () => {
+      let resolveSecond: ((v: unknown) => void) | null = null
+      let listCalls = 0
+      const list = vi.fn().mockImplementation(() => {
+        listCalls++
+        if (listCalls === 1) return Promise.resolve([runningRow])
+        return new Promise<unknown>((res) => {
+          resolveSecond = res
+        })
+      })
+      installApiMock({ list, get: vi.fn() })
+
+      const { loadExecutions, loading } = useExecutions()
+
+      await loadExecutions()
+      await flushAll()
+      expect(list).toHaveBeenCalledTimes(1)
+      expect(vi.getTimerCount()).toBe(1)
+
+      // user-driven load (e.g. from applyFilters / setPage / retry)
+      const userLoad = loadExecutions()
+      expect(loading.value).toBe(true)
+      expect(list).toHaveBeenCalledTimes(2)
+
+      // background tick fires while the user-driven load is still pending
+      await vi.advanceTimersByTimeAsync(1000)
+      await flushAll()
+      expect(list).toHaveBeenCalledTimes(2)
+
+      resolveSecond?.([runningRow])
+      await userLoad
+      expect(list).toHaveBeenCalledTimes(2)
+      expect(loading.value).toBe(false)
     })
   })
 })
