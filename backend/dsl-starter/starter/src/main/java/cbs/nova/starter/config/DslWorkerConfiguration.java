@@ -8,6 +8,7 @@ import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
 import java.util.ServiceLoader;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -69,8 +70,7 @@ public class DslWorkerConfiguration {
     private static final long TERMINATION_AWAIT_SECONDS = 10L;
 
     private final WorkerFactory factory;
-    // TODO: redo to atomic
-    private volatile boolean running;
+    private final AtomicBoolean running = new AtomicBoolean();
 
     WorkerFactoryLifecycle(WorkerFactory factory) {
       this.factory = factory;
@@ -79,19 +79,19 @@ public class DslWorkerConfiguration {
     @Override
     public void start() {
       factory.start();
-      running = true;
+      running.set(true);
     }
 
     @Override
     public void stop() {
       factory.shutdown();
       factory.awaitTermination(TERMINATION_AWAIT_SECONDS, TimeUnit.SECONDS);
-      running = false;
+      running.set(false);
     }
 
     @Override
     public boolean isRunning() {
-      return running;
+      return running.get();
     }
 
     @Override

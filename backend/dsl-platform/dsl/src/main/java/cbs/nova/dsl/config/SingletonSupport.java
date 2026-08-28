@@ -6,6 +6,7 @@ import java.lang.StackWalker;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 public interface SingletonSupport {
@@ -68,17 +69,17 @@ public interface SingletonSupport {
   class ReplaceableImpl<T> implements Replaceable<T> {
 
     private final Factory<T> factory;
-    // TODO: replace `volatile` to atomic
-    private volatile T override;
+    private final AtomicReference<T> override = new AtomicReference<>();
 
     @Override
     public T get() {
-      return override != null ? override : factory.get();
+      T replaced = override.get();
+      return replaced != null ? replaced : factory.get();
     }
 
     @Override
     public void replace(T value) {
-      this.override = value;
+      override.set(value);
     }
   }
 

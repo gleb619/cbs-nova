@@ -226,6 +226,88 @@ class TemporalDslProcessServiceTest {
     }
   }
 
+  @Test
+  void shutdownHealthcheckIsIdempotentAndCancelsRunningSchedule() throws Exception {
+    ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    ThreadPoolTaskExecutor exec = synchronousExecutor();
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    try {
+      ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
+      TemporalDslProcessService service = new TemporalDslProcessService(
+              contextFactory, repo, new ObjectMapper(),
+              exec, scheduler, Duration.ofMillis(1), Duration.ofMillis(100), false);
+
+      service.ensureHealthcheckForTest();
+
+      service.shutdownHealthcheck();
+      service.shutdownHealthcheck();
+
+      long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+      while (System.nanoTime() < deadline) {
+        Thread.sleep(20);
+      }
+      assertThat(repo.findByRunId("never-inserted")).isEmpty();
+    } finally {
+      scheduler.shutdownNow();
+    }
+  }
+
+  @Test
+  void clockOverrideIsPublishedAcrossConcurrentReaders() throws Exception {
+    Clock[] clocks = new Clock[]{
+        Clock.fixed(Instant.parse("2030-01-01T00:00:00Z"), ZoneOffset.UTC),
+        Clock.fixed(Instant.parse("2031-01-01T00:00:00Z"), ZoneOffset.UTC)
+    };
+
+    int writers = 4;
+    int readers = Runtime.getRuntime().availableProcessors() * 2;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(readers);
+    java.util.concurrent.atomic.AtomicInteger runIdSeq = new java.util.concurrent.atomic.AtomicInteger();
+    java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors
+            .newFixedThreadPool(readers + writers);
+    ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
+    Mockito.when(contextFactory.generateRunId())
+            .thenAnswer(inv -> "run-" + runIdSeq.incrementAndGet());
+    Mockito.when(contextFactory.of(
+            Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+            .thenReturn(new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
+                    "ignored", TransactionRouting.LOCAL, null, null, null));
+    TemporalDslProcessService service = new TemporalDslProcessService(
+            contextFactory,
+            new InMemoryDslRunRepository(),
+            new ObjectMapper(),
+            sameThreadExecutor(),
+            disabledScheduledExecutor(),
+            Duration.ofSeconds(30),
+            Duration.ofMinutes(5),
+            false);
+    try {
+      for (int w = 0; w < writers; w++) {
+        final Clock next = clocks[w % clocks.length];
+        pool.submit(() -> {
+          for (int k = 0; k < 200; k++) {
+            service.setClock(next);
+          }
+        });
+      }
+      for (int r = 0; r < readers; r++) {
+        pool.submit(() -> {
+          try {
+            for (int k = 0; k < 200; k++) {
+              service.startProcess(unique(), "payload");
+            }
+          } catch (Exception ignored) {
+          } finally {
+            done.countDown();
+          }
+        });
+      }
+      done.await();
+    } finally {
+      pool.shutdownNow();
+    }
+  }
+
   private static ThreadPoolTaskExecutor synchronousExecutor() {
     ThreadPoolTaskExecutor exec = new ThreadPoolTaskExecutor() {
       @Override

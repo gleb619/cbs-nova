@@ -13,8 +13,8 @@ public interface DslCompactSource {
 
   default Optional<DslObject> byName(String name) {
     return define().stream()
-        .filter(dslObject -> dslObject.name().equalsIgnoreCase(name))
-        .findFirst();
+            .filter(dslObject -> dslObject.name().equalsIgnoreCase(name))
+            .findFirst();
   }
 
 }

@@ -12,8 +12,8 @@ public interface DslDefinitionProvider {
 
   default Optional<DslObject> byName(String name) {
     return definitions().stream()
-        .filter(dslObject -> dslObject.name().equalsIgnoreCase(name))
-        .findFirst();
+            .filter(dslObject -> dslObject.name().equalsIgnoreCase(name))
+            .findFirst();
   }
 
 }

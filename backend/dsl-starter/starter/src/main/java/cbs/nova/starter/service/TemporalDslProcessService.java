@@ -27,13 +27,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 @Slf4j
@@ -53,23 +57,20 @@ public class TemporalDslProcessService {
   private final Duration staleThreshold;
   private final boolean asyncDbSave;
 
-  @Nullable
-  // TODO: redo to atomic
-  private volatile Clock clock = Clock.systemUTC();
+  private static final Duration SHUTDOWN_JOIN = Duration.ofSeconds(5);
 
-  @Nullable
-  // TODO: redo to atomic
-  // TODO: object, unsed, we need a fix
-  private volatile ScheduledFuture<?> healthcheckHandle;
+  private final AtomicReference<Clock> clock = new AtomicReference<>(Clock.systemUTC());
+
+  private final AtomicReference<ScheduledFuture<?>> healthcheckHandle = new AtomicReference<>();
 
   private final AtomicBoolean healthcheckStarted = new AtomicBoolean(false);
 
   void setClock(@NonNull Clock clock) {
-    this.clock = clock;
+    this.clock.set(clock);
   }
 
   private @NonNull Instant now() {
-    Clock c = clock;
+    Clock c = clock.get();
     return c != null ? c.instant() : Instant.now();
   }
 
@@ -133,10 +134,32 @@ public class TemporalDslProcessService {
     }
     long intervalMs = Math.max(1L, healthcheckInterval.toMillis());
     try {
-      healthcheckHandle = healthcheckExecutor.scheduleWithFixedDelay(
+      ScheduledFuture<?> fresh = healthcheckExecutor.scheduleWithFixedDelay(
               this::healthcheckSweep, intervalMs, intervalMs, TimeUnit.MILLISECONDS);
+      ScheduledFuture<?> previous = healthcheckHandle.getAndSet(fresh);
+      if (previous != null) {
+        previous.cancel(false);
+      }
     } catch (Exception ex) {
       healthcheckStarted.set(false);
+      healthcheckHandle.set(null);
+    }
+  }
+
+  public void shutdownHealthcheck() {
+    healthcheckStarted.set(false);
+    ScheduledFuture<?> current = healthcheckHandle.getAndSet(null);
+    if (current == null) {
+      return;
+    }
+    current.cancel(false);
+    try {
+      current.get(SHUTDOWN_JOIN.toMillis(), TimeUnit.MILLISECONDS);
+    } catch (TimeoutException expected) {
+    } catch (CancellationException expected) {
+    } catch (InterruptedException ex) {
+      Thread.currentThread().interrupt();
+    } catch (ExecutionException ignored) {
     }
   }
 

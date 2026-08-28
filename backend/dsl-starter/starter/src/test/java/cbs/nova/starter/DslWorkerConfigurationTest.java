@@ -65,6 +65,47 @@ class DslWorkerConfigurationTest {
     }
   }
 
+  @Test
+  void workerFactoryLifecycleRunningFlagIsVisibleAcrossManyObservers() throws Exception {
+    WorkerFactory mockFactory = mock(WorkerFactory.class);
+    lenient().when(mockFactory.newWorker(anyString())).thenReturn(mock(Worker.class));
+
+    TestableDslWorkerConfiguration.OVERRIDE_FACTORY = mockFactory;
+    try {
+      new ApplicationContextRunner()
+              .withUserConfiguration(DslPropertiesConfiguration.class,
+                      TestableDslWorkerConfiguration.class, MockWorkflowClient.class)
+              .withPropertyValues("dsl.worker.enabled=true")
+              .run(ctx -> {
+                SmartLifecycle lifecycle = ctx.getBean(SmartLifecycle.class);
+                int readers = Runtime.getRuntime().availableProcessors() * 2;
+                java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(
+                        readers);
+                java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors
+                        .newFixedThreadPool(readers);
+                try {
+                  for (int i = 0; i < readers; i++) {
+                    pool.submit(() -> {
+                      try {
+                        for (int j = 0; j < 1_000; j++) {
+                          lifecycle.isRunning();
+                        }
+                      } finally {
+                        done.countDown();
+                      }
+                    });
+                  }
+                  done.await();
+                } finally {
+                  pool.shutdownNow();
+                }
+                assertThat(lifecycle.isRunning()).isTrue();
+              });
+    } finally {
+      TestableDslWorkerConfiguration.OVERRIDE_FACTORY = null;
+    }
+  }
+
   static class MockWorkflowClient {
     @Bean
     WorkflowClient workflowClient() {

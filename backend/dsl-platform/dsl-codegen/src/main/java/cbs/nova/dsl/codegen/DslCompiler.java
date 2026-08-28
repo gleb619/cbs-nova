@@ -194,10 +194,10 @@ public final class DslCompiler {
     log.atLevel(Level.INFO).log(() -> "[DslCompiler] Generated %s source(s) to %s in %s"
             .formatted(sourceCount, outputDir, humanReadable(total)));
     String report = timings.stream()
-        .map(t -> "  %s - %s".formatted(t.phase(), humanReadable(t.duration())))
-        .collect(Collectors.joining("\n"));
+            .map(t -> "  %s - %s".formatted(t.phase(), humanReadable(t.duration())))
+            .collect(Collectors.joining("\n"));
     log.atLevel(Level.DEBUG).log(() -> "[DslCompiler] Generation report: \n%s"
-        .formatted(report));
+            .formatted(report));
   }
 
   private static String humanReadable(Duration duration) {

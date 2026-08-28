@@ -2,13 +2,13 @@ package cbs.nova.dsl.idea.state;
 
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.Project;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.jetbrains.annotations.NotNull;
 
 @Service(Service.Level.PROJECT)
 public final class DslProjectStateService {
 
-  //TODO: redo to atomic
-  private volatile boolean activeDslProject;
+  private final AtomicBoolean activeDslProject = new AtomicBoolean();
 
   public static @NotNull DslProjectStateService getInstance(@NotNull Project project) {
     var service = project.getService(DslProjectStateService.class);
@@ -20,10 +20,10 @@ public final class DslProjectStateService {
   }
 
   public boolean isActiveDslProject() {
-    return activeDslProject;
+    return activeDslProject.get();
   }
 
   public void setActiveDslProject(boolean activeDslProject) {
-    this.activeDslProject = activeDslProject;
+    this.activeDslProject.set(activeDslProject);
   }
 }

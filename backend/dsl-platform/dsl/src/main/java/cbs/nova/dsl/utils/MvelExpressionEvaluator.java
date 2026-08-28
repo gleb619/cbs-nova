@@ -83,7 +83,8 @@ public final class MvelExpressionEvaluator implements ExpressionEvaluator {
       Object result = MVEL.eval(expression, variables);
       return result == null ? "" : result;
     } catch (PropertyAccessException e) {
-      // A simple unresolved variable should render as empty, matching the previous platform default.
+      // A simple unresolved variable should render as empty, matching the previous platform
+      // default.
       if (isSimpleIdentifier(expression)) {
         return "";
       }

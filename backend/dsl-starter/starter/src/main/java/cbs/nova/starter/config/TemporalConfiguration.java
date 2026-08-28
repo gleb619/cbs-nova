@@ -272,7 +272,7 @@ public class TemporalConfiguration {
     };
   }
 
-  @Bean
+  @Bean(destroyMethod = "shutdownHealthcheck")
   TemporalDslProcessService temporalDslProcessService(
           ContextFactory contextFactory,
           DslRunRepository runRepository,
