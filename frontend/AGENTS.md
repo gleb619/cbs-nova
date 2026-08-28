@@ -117,6 +117,46 @@ pnpm --filter @cbs/admin-ui-plugin dev
 pnpm --filter components build
 ```
 
+## End-to-End Tests (Playwright)
+
+Smoke specs live in `frontend/e2e/`. They boot the Nuxt dev server (which
+embeds the Nitro BFF) and exercise the highest-value user paths through a real
+browser, asserting on the `data-testid` attributes installed across T257-T261.
+
+```bash
+pnpm test:e2e          # headless run — chromium by default
+pnpm test:e2e:ui       # interactive Playwright UI mode
+```
+
+### Backend-optional
+
+By default `pnpm test:e2e` does **not** require the Spring backend: the BFF is
+pointed at a dead port (`127.0.0.1:1`) and the suite verifies the UI still
+mounts correctly — filter chrome, construct explorer shell, branded error
+banner — when the backend is unreachable. Specs that need real backend data
+(runner happy-path preview) call `test.skip(!process.env.E2E_BACKEND, …)` and
+self-skip in offline mode.
+
+To run with a real backend:
+
+```bash
+E2E_BACKEND=1 E2E_BACKEND_URL=http://localhost:8090 pnpm test:e2e
+```
+
+`E2E_BACKEND_URL` is propagated to the Nitro BFF as `BACKEND_BASE_URL`. CI
+should set both.
+
+### Configuration
+
+- `frontend/playwright.config.ts` — projects, webServer, reporter.
+- `frontend/e2e/fixtures.ts` — shared fixtures + `backendRequired` skip helper.
+- Specs use `getByTestId(...)` exclusively; never CSS class selectors.
+
+### Browser binaries
+
+Chromium is installed on demand via `pnpm exec playwright install chromium`.
+Run it once after `pnpm install` if the sandbox blocks the auto-download.
+
 ## Agent Workflows
 
 - **Add page**: Create Vue file in `admin-ui-plugin/app/pages/`, register the route in `module.ts` via `extendPages`. Import from `@cbs/components`.

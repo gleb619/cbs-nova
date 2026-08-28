@@ -1,2 +1,2 @@
-export { default, default as DropdownMenu } from './dropdownMenu.vue'
-export type { DropdownMenuItem } from './dropdownMenu.vue'
+export { default, default as DropdownMenu } from './DropdownMenu.vue'
+export type { DropdownMenuItem } from './DropdownMenu.vue'

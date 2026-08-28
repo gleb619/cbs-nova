@@ -21,3 +21,8 @@ components/node_modules
 # IDE
 .vscode/settings.json
 .idea/
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/

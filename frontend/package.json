@@ -9,17 +9,21 @@
     "build": "pnpm --filter @cbs/admin-ui-plugin build",
     "build:components": "pnpm --filter components build",
     "test": "pnpm --filter @cbs/admin-ui-plugin test",
+    "test:components": "pnpm --filter components test",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "check": "biome check .",
     "check:fix": "biome check --write .",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
     "format": "biome format --write .",
     "format:check": "biome format .",
-    "ci": "biome ci .",
-    "test:components": "pnpm --filter components test"
+    "ci": "biome ci ."
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.3",
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^26.4.0",
     "typescript": "^5.4.0"
   }
 }
