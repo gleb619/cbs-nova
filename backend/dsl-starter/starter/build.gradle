@@ -53,6 +53,7 @@ dependencies {
   api libs.sentry.spring.boot.jakarta
 
   implementation libs.opentelemetry.api
+  implementation libs.caffeine
 
   annotationProcessor "cbs.nova:misc-codegen:${project.version}"
   integrationTestAnnotationProcessor "cbs.nova:misc-codegen:${project.version}"

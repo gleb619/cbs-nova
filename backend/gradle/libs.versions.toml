@@ -23,6 +23,7 @@ springdoc-openapi = "3.0.2"
 avaje-jsonb = "3.4"
 avaje-jsonb-generator = "3.4"
 h2 = "2.4.240"
+caffeine = "3.1.8"
 
 # plugins
 spring-boot = "4.0.4"
@@ -103,6 +104,9 @@ sentry-spring-boot-jakarta = { module = "io.sentry:sentry-spring-boot-4", versio
 flyway-core = { module = "org.flywaydb:flyway-core" }
 postgresql = { module = "org.postgresql:postgresql" }
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
+
+# -- Caffeine --
+caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
 
 [bundles]
 spring-web = ["spring-boot-starter-web", "spring-boot-starter-validation", "spring-boot-starter-actuator"]

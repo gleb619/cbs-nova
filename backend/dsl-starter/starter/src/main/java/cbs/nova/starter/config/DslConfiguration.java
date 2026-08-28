@@ -59,11 +59,15 @@ public class DslConfiguration {
   @Bean
   @ConditionalOnMissingBean(HelperInstanceResolver.class)
   public static HelperInstanceResolver helperInstanceResolver(
-          ApplicationContext applicationContext) {
+          ApplicationContext applicationContext, CbsNovaCacheProperties cacheProperties) {
     List<HelperInstanceResolver> generated = new ArrayList<>();
     ServiceLoader.load(HelperInstanceResolver.class).forEach(generated::add);
+    var spec = cacheProperties.specFor(CbsNovaCacheProperties.Names.HELPER_INSTANCE_RESOLUTION);
     return new SpringOrGeneratedHelperInstanceResolver(
-            new SpringBeanHelperInstanceResolver(applicationContext), generated);
+            new SpringBeanHelperInstanceResolver(applicationContext),
+            generated,
+            spec.ttl(),
+            spec.maxSize());
   }
 
   @Bean

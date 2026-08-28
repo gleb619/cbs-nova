@@ -109,6 +109,45 @@ class SpringOrGeneratedHelperInstanceResolverTest {
     verify(generated, never()).resolve(ValidHelper.class);
   }
 
+  @Test
+  void repeatedResolvesHitTheCaffeineCacheAndDoNotReconsultFactories() {
+    HelperInstanceResolver springResolver = mock(HelperInstanceResolver.class);
+    HelperInstanceResolver generated = mock(HelperInstanceResolver.class);
+    var resolver = new SpringOrGeneratedHelperInstanceResolver(springResolver, List.of(generated));
+
+    doReturn(new ValidHelper()).when(springResolver).resolve(ValidHelper.class);
+
+    Executable<?, ?> first = resolver.resolve(ValidHelper.class);
+    Executable<?, ?> second = resolver.resolve(ValidHelper.class);
+
+    assertThat(second).isSameAs(first);
+    verify(springResolver, times(1)).resolve(ValidHelper.class);
+    verify(generated, never()).resolve(ValidHelper.class);
+  }
+
+  @Test
+  void resolutionFailureIsNotCachedSoLaterCallsRetry() {
+    HelperInstanceResolver springResolver = mock(HelperInstanceResolver.class);
+    HelperInstanceResolver generated = mock(HelperInstanceResolver.class);
+    var resolver = new SpringOrGeneratedHelperInstanceResolver(springResolver, List.of(generated));
+
+    NoSuchBeanDefinitionException nsb = new NoSuchBeanDefinitionException("no such bean");
+    IllegalStateException wrapped = new IllegalStateException("wrapped", nsb);
+    when(springResolver.resolve(UnknownHelper.class)).thenThrow(wrapped);
+    when(generated.resolve(UnknownHelper.class))
+            .thenThrow(new IllegalStateException("not this factory"));
+
+    assertThatThrownBy(() -> resolver.resolve(UnknownHelper.class))
+            .isInstanceOf(IllegalStateException.class);
+
+    // Subsequent attempts must consult the underlying resolvers again (no failure caching).
+    assertThatThrownBy(() -> resolver.resolve(UnknownHelper.class))
+            .isInstanceOf(IllegalStateException.class);
+
+    verify(springResolver, times(2)).resolve(UnknownHelper.class);
+    verify(generated, times(2)).resolve(UnknownHelper.class);
+  }
+
   static class ValidHelper implements Executable<Object, Object> {
     @Override
     public Result<Object> execute(Context<Object> ctx) {

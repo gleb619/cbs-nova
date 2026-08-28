@@ -1,6 +1,8 @@
 package cbs.nova.starter.converter;
 
 import cbs.nova.dsl.model.MapInput;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.avaje.jsonb.Json;
 import io.avaje.jsonb.JsonType;
 import io.avaje.jsonb.Jsonb;
@@ -15,7 +17,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @RequiredArgsConstructor
 public final class MapInputConverter {
@@ -23,8 +24,11 @@ public final class MapInputConverter {
   private final Jsonb jsonb;
   private final ObjectMapper objectMapper;
 
-  // TODO: redo to a Caffeine with some properties config for ttl
-  private final Map<Class<?>, JsonType<?>> adapterCache = new ConcurrentHashMap<>();
+  // Bounded size keeps memory under control; entries are interned by Class<?> identity so
+  // eviction pressure is negligible in practice. Adapters are immutable and cheap to recompute.
+  private final Cache<Class<?>, JsonType<?>> adapterCache = Caffeine.newBuilder()
+          .maximumSize(1_024L)
+          .build();
 
   public @Nullable Object convert(@Nullable Object value,
           @NonNull Type targetType) {
@@ -128,7 +132,7 @@ public final class MapInputConverter {
     Map<String, Object> typed = (Map<String, Object>) source;
 
     if (target.isAnnotationPresent(Json.class)) {
-      JsonType<?> adapter = adapterCache.computeIfAbsent(target, jsonb::type);
+      JsonType<?> adapter = adapterCache.get(target, jsonb::type);
       return adapter.fromObject(typed);
     }
 

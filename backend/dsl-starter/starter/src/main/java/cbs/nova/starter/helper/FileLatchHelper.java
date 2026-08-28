@@ -6,15 +6,14 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.annotation.Helper;
 import cbs.nova.starter.helper.model.FileLatchIn;
 import cbs.nova.starter.helper.model.FileLatchOut;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.temporal.workflow.Workflow;
-import org.jspecify.annotations.NonNull;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
+import org.jspecify.annotations.NonNull;
 
 @Helper(name = "fileLatch")
 public class FileLatchHelper implements Executable<FileLatchIn, FileLatchOut> {
@@ -22,10 +21,17 @@ public class FileLatchHelper implements Executable<FileLatchIn, FileLatchOut> {
   private static final Path LATCH_DIR = Path
           .of(System.getProperty("java.io.tmpdir"), "cbs-nova-versioning-latch");
 
-  // TODO: redo to a Caffeine with some properties config for ttl
-  private static final ConcurrentHashMap<Path, Object> MONITORS = new ConcurrentHashMap<>();
+  // Tunable via system properties because the helper exposes a static API; per-cache
+  // configuration through CbsNovaCacheProperties is reserved for Spring-managed instances.
+  private static final long WATCHER_POLL_MILLIS = 50L;
+  private static final Duration MONITORS_TTL = Duration.ofMinutes(10);
+  private static final long MONITORS_MAX_SIZE = 10_000L;
+
+  private static final Cache<Path, Object> MONITORS = Caffeine.newBuilder()
+          .expireAfterAccess(MONITORS_TTL)
+          .maximumSize(MONITORS_MAX_SIZE)
+          .build();
   private static final AtomicReference<Thread> WATCHER = new AtomicReference<>();
-  private static final long WATCHER_POLL_MILLIS = 50;
 
   @Override
   public @NonNull Result<FileLatchOut> execute(@NonNull Context<FileLatchIn> ctx) {
@@ -59,7 +65,7 @@ public class FileLatchHelper implements Executable<FileLatchIn, FileLatchOut> {
   }
 
   private static void waitForRelease(Path release) throws InterruptedException {
-    Object monitor = MONITORS.computeIfAbsent(release, p -> new Object());
+    Object monitor = MONITORS.get(release, k -> new Object());
     ensureWatcher();
     synchronized (monitor) {
       if (!Files.exists(release)) {
@@ -82,9 +88,10 @@ public class FileLatchHelper implements Executable<FileLatchIn, FileLatchOut> {
 
   private static void watchReleases() {
     while (!Thread.currentThread().isInterrupted()) {
-      for (Path release : new ArrayList<>(MONITORS.keySet())) {
+      for (Path release : MONITORS.asMap().keySet()) {
         if (Files.exists(release)) {
-          Object monitor = MONITORS.remove(release);
+          Object monitor = MONITORS.getIfPresent(release);
+          MONITORS.invalidate(release);
           if (monitor != null) {
             synchronized (monitor) {
               monitor.notifyAll();
