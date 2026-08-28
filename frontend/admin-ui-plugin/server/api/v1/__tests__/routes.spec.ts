@@ -49,6 +49,7 @@ const processDetailHandler = (await import('../dsl/processes/[name].get')).defau
 const transactionsIndexHandler = (await import('../dsl/transactions/index.get')).default
 const transactionDetailHandler = (await import('../dsl/transactions/[name].get')).default
 const constructBodyHandler = (await import('../dsl/constructs/[name].get')).default
+const processDiagramHandler = (await import('../dsl/processes/[name]/diagram.get')).default
 
 // Minimal H3Event stub. The route handlers only pass this through to
 // proxyToBackend, which is mocked, so a plain object is sufficient.
@@ -469,6 +470,51 @@ describe('dsl/transactions/[name].get', () => {
     proxyToBackendMock.mockResolvedValueOnce(payload)
 
     const result = await transactionDetailHandler(fakeEvent)
+
+    expect(result).toEqual(payload)
+  })
+})
+
+describe('dsl/processes/[name]/diagram.get', () => {
+  it('forwards the diagram request without a format query param by default', async () => {
+    routerParams = { name: 'LoanDisbursement' }
+    queryValue = {}
+
+    await processDiagramHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/processes/LoanDisbursement/diagram',
+    )
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+
+  it('forwards the format query param when provided', async () => {
+    routerParams = { name: 'LoanDisbursement' }
+    queryValue = { format: 'plantuml' }
+
+    await processDiagramHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/processes/LoanDisbursement/diagram',
+      { query: { format: 'plantuml' } },
+    )
+  })
+
+  it('returns the backend ProcessDiagramDto verbatim', async () => {
+    routerParams = { name: 'LoanDisbursement' }
+    queryValue = { format: 'mermaid' }
+    const payload = {
+      name: 'LoanDisbursement',
+      format: 'mermaid',
+      diagram: 'graph TD\n  Start([Start]) --> Execute[LoanDisbursement]',
+    }
+    proxyToBackendMock.mockResolvedValueOnce(payload)
+
+    const result = await processDiagramHandler(fakeEvent)
 
     expect(result).toEqual(payload)
   })

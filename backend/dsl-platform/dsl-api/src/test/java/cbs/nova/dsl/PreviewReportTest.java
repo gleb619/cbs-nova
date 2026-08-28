@@ -148,7 +148,8 @@ class PreviewReportTest {
             null,
             List.of(),
             null,
-            List.of());
+            List.of(),
+            null);
 
     var preview = new PreviewReport(
             "n",

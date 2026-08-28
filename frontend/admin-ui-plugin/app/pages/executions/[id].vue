@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { useExecutions } from '@cbs/admin-ui-plugin/composables/useExecutions'
 import {
   ErrorBanner,
@@ -33,6 +34,35 @@ const showStaleBanner = computed(
 const traceSteps = computed(() => selectedExecution.value?.trace ?? [])
 const compensationSteps = computed(() => traceSteps.value.filter((s) => s.isCompensation))
 const regularSteps = computed(() => traceSteps.value.filter((s) => !s.isCompensation))
+
+// T266: completed runs don't carry a diagram field — fetch one for the
+// underlying process definition by name and bind it to the Diagram tab.
+const diagram = ref<string | undefined>(selectedExecution.value?.mermaidDiagram)
+const diagramError = ref<string | null>(null)
+const diagramLoading = ref(false)
+
+async function loadDiagram() {
+  const processName = selectedExecution.value?.entity
+  if (!processName) {
+    diagram.value = undefined
+    return
+  }
+  diagramLoading.value = true
+  diagramError.value = null
+  try {
+    const response = await useDslApi().getProcessDiagram(processName, 'mermaid')
+    diagram.value = response?.diagram
+  } catch (err) {
+    diagramError.value = (err as Error)?.message ?? 'Failed to load diagram'
+    diagram.value = undefined
+  } finally {
+    diagramLoading.value = false
+  }
+}
+
+if (selectedExecution.value?.entity) {
+  await loadDiagram()
+}
 
 onUnmounted(() => {
   stopPolling()
@@ -87,7 +117,7 @@ onUnmounted(() => {
         <div class="p-4">
           <ExecutionsDiagramTab
             v-if="activeTab === 'diagram'"
-            :diagram="selectedExecution.mermaidDiagram"
+            :diagram="diagram"
           />
           <ExecutionsPayloadTab
             v-else-if="activeTab === 'payload'"

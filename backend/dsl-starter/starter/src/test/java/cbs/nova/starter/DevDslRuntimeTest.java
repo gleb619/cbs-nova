@@ -53,7 +53,7 @@ class DevDslRuntimeTest {
   private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
           dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
           previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),
-          new SimpleMeterRegistry());
+          new SimpleMeterRegistry(), new ExplainDiagramRenderer());
   private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
 
   @BeforeEach
@@ -119,6 +119,7 @@ class DevDslRuntimeTest {
     assertThat(report.name()).isEqualTo("Ping");
     assertThat(report.description()).isEqualTo("Process: Ping");
     assertThat(renderer.mermaidDiagram(report)).isNotBlank();
+    assertThat(report.mermaidDiagram()).isNotBlank();
     assertThat(report.executionTrace()).isNotNull();
     assertThat(report.astTree()).isNotNull();
     assertThat(report.astTree().name()).isEqualTo("Ping");

@@ -1,12 +1,14 @@
 package cbs.nova.starter.config;
 
 import cbs.nova.starter.controller.DslIntrospectionHandler;
+import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import cbs.nova.starter.service.DslIntrospectionService;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.NamesResponse;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructBodyDto;
 import cbs.nova.starter.model.DslIntrospectionModels.ProcessDetail;
+import cbs.nova.starter.model.DslIntrospectionModels.ProcessDiagramDto;
 import cbs.nova.starter.model.DslIntrospectionModels.TransactionDetail;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -28,8 +30,9 @@ import org.springframework.web.servlet.function.ServerResponse;
 public class DslIntrospectionRouterConfiguration {
 
   @Bean
-  DslIntrospectionHandler dslIntrospectionHandler(DslIntrospectionService service) {
-    return new DslIntrospectionHandler(service);
+  DslIntrospectionHandler dslIntrospectionHandler(DslIntrospectionService service,
+          ExplainDiagramRenderer diagramRenderer) {
+    return new DslIntrospectionHandler(service, diagramRenderer);
   }
 
   @Bean
@@ -38,6 +41,14 @@ public class DslIntrospectionRouterConfiguration {
           "DSL Introspection"}, responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = NamesResponse.class))))),
       @RouterOperation(path = "/api/dsl/processes/{name}", beanClass = DslIntrospectionHandler.class, beanMethod = "processDetail", method = RequestMethod.GET, operation = @Operation(operationId = "getProcess", summary = "Get metadata of a single DSL process", tags = {
           "DSL Introspection"}, parameters = @Parameter(name = "name", in = ParameterIn.PATH), responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ProcessDetail.class))))),
+      @RouterOperation(path = "/api/dsl/processes/{name}/diagram", beanClass = DslIntrospectionHandler.class, beanMethod = "processDiagram", method = RequestMethod.GET, operation = @Operation(operationId = "getProcessDiagram", summary = "Render a static diagram (mermaid, plantuml, bpmn) for a DSL process by name", tags = {
+          "DSL Introspection"}, parameters = {
+              @Parameter(name = "name", in = ParameterIn.PATH),
+              @Parameter(name = "format", in = ParameterIn.QUERY, description = "Diagram format: mermaid (default), plantuml, bpmn")
+          }, responses = {
+              @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ProcessDiagramDto.class))),
+              @ApiResponse(responseCode = "404", description = "No process or transaction registered under that name")
+          })),
       @RouterOperation(path = "/api/dsl/transactions", beanClass = DslIntrospectionHandler.class, beanMethod = "transactions", method = RequestMethod.GET, operation = @Operation(operationId = "listTransactions", summary = "List all registered DSL transaction names", tags = {
           "DSL Introspection"}, responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = NamesResponse.class))))),
       @RouterOperation(path = "/api/dsl/transactions/{name}", beanClass = DslIntrospectionHandler.class, beanMethod = "transactionDetail", method = RequestMethod.GET, operation = @Operation(operationId = "getTransaction", summary = "Get metadata of a single DSL transaction", tags = {
@@ -59,6 +70,7 @@ public class DslIntrospectionRouterConfiguration {
     return RouterFunctions.route()
             .GET("/api/dsl/processes", handler::processes)
             .GET("/api/dsl/processes/{name}", handler::processDetail)
+            .GET("/api/dsl/processes/{name}/diagram", handler::processDiagram)
             .GET("/api/dsl/transactions", handler::transactions)
             .GET("/api/dsl/transactions/{name}", handler::transactionDetail)
             .GET("/api/dsl/objects/search", handler::searchObjects)

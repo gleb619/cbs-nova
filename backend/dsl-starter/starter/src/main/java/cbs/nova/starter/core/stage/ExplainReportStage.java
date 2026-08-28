@@ -12,15 +12,20 @@ import cbs.nova.starter.converter.ExternalCallConverter;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import cbs.nova.starter.core.recorder.ExternalCall;
-import lombok.RequiredArgsConstructor;
+import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-@RequiredArgsConstructor
 public final class ExplainReportStage implements DslPipeStage {
+
+  private final ExplainDiagramRenderer diagramRenderer;
+
+  public ExplainReportStage(ExplainDiagramRenderer diagramRenderer) {
+    this.diagramRenderer = diagramRenderer;
+  }
 
   @Override
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
@@ -48,7 +53,7 @@ public final class ExplainReportStage implements DslPipeStage {
             ? ExternalCallConverter.toCallCounts(calls)
             : Map.of();
 
-    ExplainReport report = new ExplainReport(
+    ExplainReport baseReport = new ExplainReport(
             context.getName(),
             description,
             attribute(context, "executionTrace", List.class, List.of()),
@@ -59,7 +64,24 @@ public final class ExplainReportStage implements DslPipeStage {
             context.getAttribute("astTree", CallNode.class),
             attribute(context, "dryRunLogs", List.class, List.of()),
             context.getAttribute("metrics", PreviewMetricsSnapshot.class),
-            errors);
+            errors,
+            null);
+
+    String mermaidDiagram = diagramRenderer.mermaidDiagram(baseReport);
+
+    ExplainReport report = new ExplainReport(
+            baseReport.name(),
+            baseReport.description(),
+            baseReport.executionTrace(),
+            baseReport.externalCalls(),
+            baseReport.callCounts(),
+            baseReport.executableDescriptor(),
+            baseReport.dslDescriptor(),
+            baseReport.astTree(),
+            baseReport.dryRunLogs(),
+            baseReport.metrics(),
+            baseReport.errors(),
+            mermaidDiagram);
 
     return Result.success(report);
   }

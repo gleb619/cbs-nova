@@ -31,7 +31,8 @@ class ExplainReportTest {
             ast,
             List.of(),
             null,
-            List.of());
+            List.of(),
+            null);
 
     assertThat(report.name()).isEqualTo("echo");
     assertThat(report.description()).isEqualTo("Echoes input");
@@ -50,7 +51,7 @@ class ExplainReportTest {
     var report = new ExplainReport(
             "n", "d",
             List.of(), List.of(), Map.of(),
-            null, null, null, List.of(), null, List.of());
+            null, null, null, List.of(), null, List.of(), null);
 
     assertThat(report.executableDescriptor()).isNull();
     assertThat(report.dslDescriptor()).isNull();
@@ -65,21 +66,21 @@ class ExplainReportTest {
     var calls = List.<Map<String, Object>>of();
     var counts = Map.of("a", 1);
     var left = new ExplainReport(
-            "n", "d", trace, calls, counts, null, null, null, List.of(), null, List.of());
+            "n", "d", trace, calls, counts, null, null, null, List.of(), null, List.of(), null);
     var right = new ExplainReport(
             "n", "d", List.of("step-1"), List.of(), Map.of("a", 1), null, null, null,
-            List.of(), null, List.of());
+            List.of(), null, List.of(), null);
 
     assertThat(left).isEqualTo(right).hasSameHashCodeAs(right);
 
     var differentDescription = new ExplainReport(
-            "n", "other", trace, calls, counts, null, null, null, List.of(), null, List.of());
+            "n", "other", trace, calls, counts, null, null, null, List.of(), null, List.of(), null);
     assertThat(left).isNotEqualTo(differentDescription);
 
     var executable = new ExecutableDescriptor(
             "e", null, null, null, false, null, List.of());
     var differentExecutable = new ExplainReport(
-            "n", "d", trace, calls, counts, executable, null, null, List.of(), null, List.of());
+            "n", "d", trace, calls, counts, executable, null, null, List.of(), null, List.of(), null);
     assertThat(left).isNotEqualTo(differentExecutable);
   }
 
@@ -87,7 +88,7 @@ class ExplainReportTest {
   void toStringContainsComponentNames() {
     var report = new ExplainReport(
             "n", "d", List.of(), List.of(), Map.of(), null, null, null, List.of(), null,
-            List.of());
+            List.of(), null);
 
     String text = report.toString();
     assertThat(text)

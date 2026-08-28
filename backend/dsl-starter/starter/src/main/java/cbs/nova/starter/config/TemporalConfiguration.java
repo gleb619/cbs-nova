@@ -21,6 +21,7 @@ import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLoggingContextPropagator;
+import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import cbs.nova.starter.service.TemporalDslProcessLauncher;
 import cbs.nova.starter.service.TemporalDslProcessService;
 import cbs.nova.starter.service.TemporalDslService;
@@ -206,10 +207,11 @@ public class TemporalConfiguration {
           CbsNovaPreviewProperties previewProperties,
           CbsNovaFakesProperties fakesProperties,
           RunScopedFakeConfig runScopedFakeConfig,
-          MeterRegistry meterRegistry) {
+          MeterRegistry meterRegistry,
+          ExplainDiagramRenderer diagramRenderer) {
     return new ExplainDslPipe(externalCallRecorder, contextFactory, dryRunLoggingContext,
             bufferRegistry, dryRunProperties.log().maxEventsPerRun(), previewProperties,
-            fakesProperties, runScopedFakeConfig, meterRegistry);
+            fakesProperties, runScopedFakeConfig, meterRegistry, diagramRenderer);
   }
 
   @Bean

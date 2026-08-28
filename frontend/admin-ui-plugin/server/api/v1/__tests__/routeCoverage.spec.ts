@@ -71,6 +71,11 @@ const expectedProxies: readonly ExpectedProxy[] = [
   },
   {
     method: 'GET',
+    backendPath: '/api/dsl/processes/{name}/diagram',
+    bffPath: '/api/v1/dsl/processes/{name}/diagram',
+  },
+  {
+    method: 'GET',
     backendPath: '/api/dsl/transactions',
     bffPath: '/api/v1/dsl/transactions',
   },
