@@ -340,4 +340,16 @@ public final class GlobalManager {
     DslConfig.dslConfig().temporalProcessLauncher().replace(null);
     DslConfig.dslConfig().transactionInvoker().replace(null);
   }
+
+  /**
+   * Atomically swaps the singleton GlobalManager with a freshly-built candidate.
+   * <p>
+   * Production code uses this to install a newly-reloaded DSL set without ever exposing
+   * an empty registry: build the candidate against a throwaway GlobalManager first,
+   * and only call this on the success path. Unlike {@link #resetForTests()} this never
+   * sets the singleton to {@code null}.
+   */
+  public void replaceGlobalManager(@NonNull GlobalManager replacement) {
+    INSTANCE.set(replacement);
+  }
 }
