@@ -43,6 +43,7 @@ dependencies {
   compileOnly libs.openfeign.core
   compileOnly libs.spring.kafka
   implementation libs.spring.boot.starter.data.jdbc
+  implementation libs.spring.boot.starter.oauth2.resource.server
   implementation libs.jackson.databind3
   implementation libs.mvel2
 
@@ -66,6 +67,7 @@ dependencies {
   testImplementation libs.spring.boot.starter.actuator
   testImplementation libs.bundles.spring.web
   testImplementation libs.bundles.spring.test
+  testImplementation libs.spring.security.test
   testImplementation libs.temporal.testing
   testImplementation libs.openfeign.core
   testImplementation libs.testcontainers.core

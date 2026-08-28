@@ -1,1 +1,2 @@
 cbs.nova.starter.config.DslRootAutoConfiguration
+cbs.nova.starter.config.SecurityConfiguration

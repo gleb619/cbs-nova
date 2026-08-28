@@ -72,6 +72,32 @@ To see traces in Jaeger and logs in Grafana/Loki, ensure the backend has:
 
 and expose `/actuator/prometheus` via `MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE`.
 
+## OIDC / JWT resource-server guard (opt-in)
+
+The Spring Boot starter (`backend/dsl-starter`) ships with an opt-in OIDC
+resource-server guard. It is **OFF by default** — every DSL endpoint stays
+anonymous, matching the pre-T275 behaviour.
+
+To enable against the local Keycloak:
+
+```yaml
+cbs.security.oidc.enabled: true
+spring.security.oauth2.resourceserver.jwt.issuer-uri: http://keycloak:8080/realms/cbs-nova
+```
+
+When enabled, `/api/dsl/**` and `/api/executions/**` require a Bearer JWT
+issued by the configured Keycloak realm. Actuator health, springdoc/Swagger
+and any path listed in `cbs.security.oidc.permit-all-paths` stay anonymous.
+401 (not 500) with `WWW-Authenticate: Bearer ...` is returned for missing or
+invalid tokens.
+
+The `cbs-nova` realm and client are **TBD** in this compose stack. To enable
+end-to-end, create the realm in the Keycloak admin console
+(http://localhost:8080, admin / admin) and configure a confidential client
+that the BFF / curl can use to mint a token. See
+`backend/dsl-starter/starter/src/main/java/cbs/nova/starter/config/SecurityConfiguration.java`
+for the exact path patterns.
+
 ## Environment variables
 
 | Variable | Default | Used by |

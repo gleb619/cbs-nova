@@ -7,7 +7,7 @@ CBS-Nova: Business Orchestration Engine for core banking operations. Built on Ja
 ## Architecture at a glance
 
 - **DSL authoring** — compact source files in [`backend/dsl-starter/dsl-examples/`](backend/dsl-starter/dsl-examples/) compiled by the Gradle DSL plugin into Temporal classes.
-- **Spring Boot starter** (`backend/dsl-starter/starter/`) — runs the Temporal worker, exposes REST and introspection endpoints, handles Keycloak auth.
+- **Spring Boot starter** (`backend/dsl-starter/starter/`) — runs the Temporal worker, exposes REST and introspection endpoints, handles Keycloak auth. The starter is opt-in OIDC-aware: the default (local/DX) configuration is fully anonymous; secured deployments flip `cbs.security.oidc.enabled=true` to require a JWT on `/api/dsl/**` and `/api/executions/**`. See [`app/compose/README.md`](app/compose/README.md#oidc--jwt-resource-server-guard-opt-in) for details.
 - **Temporal cluster** — workflows and activities run on a Temporal cluster fronted by Postgres; the UI is exposed for inspection.
 - **Keycloak** — OIDC issuer for the admin UI and integration tests.
 - **Admin UI** ([`frontend/admin-ui-plugin/`](frontend/admin-ui-plugin/)) — a Nuxt module that mounts the UI into any host Nuxt app, with a Nitro BFF in front of the backend.
