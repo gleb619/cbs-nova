@@ -7,6 +7,7 @@ import cbs.nova.dsl.PreviewMetricsSnapshot;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.starter.core.PreviewErrorHandler;
+import cbs.nova.starter.core.StarterConstant;
 import cbs.nova.starter.converter.ExternalCallConverter;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
@@ -23,9 +24,8 @@ public final class PreviewReportStage implements DslPipeStage {
 
   @Override
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
-    // TODO: inner var not used
-    Result<?> inner = next.proceed(context);
-    Result<?> dslResult = (Result<?>) context.getAttribute("dslResult");
+    next.proceed(context);
+    Result<?> dslResult = (Result<?>) context.getAttribute(StarterConstant.DSL_RESULT_ATTRIBUTE);
 
     boolean success = dslResult != null && dslResult.isSuccess();
     Object output = success ? dslResult.value() : null;
@@ -35,7 +35,8 @@ public final class PreviewReportStage implements DslPipeStage {
     }
 
     @SuppressWarnings("unchecked")
-    List<ExternalCall> calls = (List<ExternalCall>) context.getAttribute("externalCalls");
+    List<ExternalCall> calls = (List<ExternalCall>) context.getAttribute(
+            StarterConstant.EXTERNAL_CALLS_ATTRIBUTE);
     List<Map<String, Object>> externalCalls = calls != null
             ? ExternalCallConverter.toCallJson(calls)
             : List.of();
@@ -43,20 +44,17 @@ public final class PreviewReportStage implements DslPipeStage {
             ? ExternalCallConverter.toCallCounts(calls)
             : Map.of();
 
-    // TODO: search and move to
-    // `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/core/StarterConstant.java` a
-    // string constants
     PreviewReport report = new PreviewReport(
             context.getName(),
             ExecutionMode.PREVIEW,
             success,
             output,
-            attribute(context, "executionTrace", List.class, List.of()),
+            attribute(context, StarterConstant.EXECUTION_TRACE_ATTRIBUTE, List.class, List.of()),
             externalCalls,
             callCounts,
-            context.getAttribute("astTree", CallNode.class),
-            attribute(context, "dryRunLogs", List.class, List.of()),
-            context.getAttribute("metrics", PreviewMetricsSnapshot.class),
+            context.getAttribute(StarterConstant.AST_TREE_ATTRIBUTE, CallNode.class),
+            attribute(context, StarterConstant.DRY_RUN_LOGS_ATTRIBUTE, List.class, List.of()),
+            context.getAttribute(StarterConstant.METRICS_ATTRIBUTE, PreviewMetricsSnapshot.class),
             errors);
 
     return Result.success(report);

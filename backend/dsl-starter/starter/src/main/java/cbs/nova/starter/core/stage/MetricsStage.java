@@ -3,6 +3,7 @@ package cbs.nova.starter.core.stage;
 import cbs.nova.dsl.CallNode;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
+import cbs.nova.starter.core.StarterConstant;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import cbs.nova.starter.core.recorder.ExternalCall;
@@ -26,16 +27,13 @@ public final class MetricsStage implements DslPipeStage {
     } finally {
       countCallKinds(context, collector);
       countExternalCalls(context, collector);
-      context.setAttribute("metrics", collector.stop());
+      context.setAttribute(StarterConstant.METRICS_ATTRIBUTE, collector.stop());
     }
   }
 
-  // TODO: search and move to
-  // `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/core/StarterConstant.java` a string
-  // constants
   private void countCallKinds(@NonNull DslPipeContext context,
           @NonNull PreviewMetricsCollector collector) {
-    CallNode tree = context.getAttribute("astTree", CallNode.class);
+    CallNode tree = context.getAttribute(StarterConstant.AST_TREE_ATTRIBUTE, CallNode.class);
     if (tree != null) {
       countNode(tree, collector);
     }
@@ -51,7 +49,8 @@ public final class MetricsStage implements DslPipeStage {
   @SuppressWarnings("unchecked")
   private void countExternalCalls(@NonNull DslPipeContext context,
           @NonNull PreviewMetricsCollector collector) {
-    List<ExternalCall> calls = (List<ExternalCall>) context.getAttribute("externalCalls");
+    List<ExternalCall> calls = (List<ExternalCall>) context.getAttribute(
+            StarterConstant.EXTERNAL_CALLS_ATTRIBUTE);
     if (calls != null) {
       for (ExternalCall call : calls) {
         collector.recordExternalCall(call.type());
