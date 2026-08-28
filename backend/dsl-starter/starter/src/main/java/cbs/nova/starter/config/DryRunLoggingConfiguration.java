@@ -15,7 +15,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 
 @Configuration
-@EnableConfigurationProperties(DryRunProperties.class)
+@EnableConfigurationProperties({DryRunProperties.class, CbsNovaCacheProperties.class})
 public class DryRunLoggingConfiguration {
 
   @Bean
@@ -27,8 +27,9 @@ public class DryRunLoggingConfiguration {
 
   @Bean
   @ConditionalOnMissingBean(DryRunLogBufferRegistry.class)
-  public DryRunLogBufferRegistry dryRunLogBufferRegistry() {
-    return new DryRunLogBufferRegistry();
+  public DryRunLogBufferRegistry dryRunLogBufferRegistry(CbsNovaCacheProperties cacheProperties) {
+    var spec = cacheProperties.specFor(CbsNovaCacheProperties.Names.DRY_RUN_LOG_BUFFERS);
+    return new DryRunLogBufferRegistry(spec.ttl(), spec.maxSize());
   }
 
   @Bean

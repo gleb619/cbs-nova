@@ -26,6 +26,6 @@ import org.springframework.context.annotation.Import;
     ApiKeyAuthFilterConfiguration.class,
 
 })
-@EnableConfigurationProperties(DslProperties.class)
+@EnableConfigurationProperties({DslProperties.class, CbsNovaCacheProperties.class})
 public class DslRootAutoConfiguration {
 }

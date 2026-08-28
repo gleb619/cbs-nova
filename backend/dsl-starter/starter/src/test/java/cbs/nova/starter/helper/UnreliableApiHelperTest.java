@@ -54,13 +54,13 @@ class UnreliableApiHelperTest {
     assertThat(helper.attempts()).containsKey(id);
 
     Thread.sleep(150);
-    helper.evictExpired();
+    helper.cleanUp();
 
     assertThat(helper.attempts()).doesNotContainKey(id);
   }
 
   @Test
-  void resetClearsStateAndStopsScheduler() {
+  void resetClearsState() {
     UnreliableApiHelper helper = new UnreliableApiHelper();
     run(helper, "reset", 0, false);
     helper.reset();

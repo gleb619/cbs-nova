@@ -9,13 +9,15 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 
 @Configuration
-@EnableConfigurationProperties(CbsNovaPreviewProperties.class)
+@EnableConfigurationProperties({CbsNovaPreviewProperties.class, CbsNovaCacheProperties.class})
 public class PreviewCacheConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
-  PreviewResultCache previewResultCache(CbsNovaPreviewProperties properties) {
-    return new PreviewResultCache(properties.cache().ttlMs());
+  PreviewResultCache previewResultCache(
+          CbsNovaPreviewProperties properties, CbsNovaCacheProperties cacheProperties) {
+    var spec = cacheProperties.specFor(CbsNovaCacheProperties.Names.PREVIEW_RESULT);
+    return new PreviewResultCache(properties.cache().ttlMs(), spec.maxSize());
   }
 
   @Bean
