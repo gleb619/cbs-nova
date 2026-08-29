@@ -99,6 +99,9 @@ mapstruct-processor = { module = "org.mapstruct:mapstruct-processor", version.re
 
 # -- OpenTelemetry --
 opentelemetry-api = { module = "io.opentelemetry:opentelemetry-api", version.ref = "opentelemetry" }
+opentelemetry-sdk = { module = "io.opentelemetry:opentelemetry-sdk", version.ref = "opentelemetry" }
+opentelemetry-exporter-otlp = { module = "io.opentelemetry:opentelemetry-exporter-otlp", version.ref = "opentelemetry" }
+opentelemetry-sdk-testing = { module = "io.opentelemetry:opentelemetry-sdk-testing", version.ref = "opentelemetry" }
 sentry-spring-boot-jakarta = { module = "io.sentry:sentry-spring-boot-4", version.ref = "sentry" }
 
 

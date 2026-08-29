@@ -20,7 +20,21 @@ springBoot {
 }
 
 gitProperties {
-  dotGitDirectory = file("${rootDir}/../../.git")
+  def gitDir = file("${rootDir}/../../.git")
+  if (gitDir.isFile()) {
+    def matcher = gitDir.text =~ /gitdir:\s*(.+)/
+    if (matcher) {
+      def worktreeDir = file(matcher.group(1).trim())
+      // Worktrees reference a directory under .git/worktrees; jgit needs the real repository root.
+      def parent = worktreeDir.parentFile
+      if (parent != null && parent.name == 'worktrees') {
+        gitDir = parent.parentFile
+      } else {
+        gitDir = worktreeDir
+      }
+    }
+  }
+  dotGitDirectory = gitDir
 }
 
 dependencies {
@@ -54,6 +68,8 @@ dependencies {
   api libs.sentry.spring.boot.jakarta
 
   implementation libs.opentelemetry.api
+  implementation libs.opentelemetry.sdk
+  implementation libs.opentelemetry.exporter.otlp
   implementation libs.caffeine
 
   annotationProcessor "cbs.nova:misc-codegen:${project.version}"
@@ -80,6 +96,7 @@ dependencies {
   testImplementation libs.spring.jdbc
   testImplementation libs.wiremock
   testImplementation libs.spring.kafka
+  testImplementation libs.opentelemetry.sdk.testing
 }
 
 processIntegrationTestResources {
