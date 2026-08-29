@@ -78,7 +78,7 @@ public class DslDraftHandler {
       loadResult = reloadHandler.reloadDefinitions();
       reloaded = true;
       log.info("[DSL drafts] publish of {} reloaded {} definitions: processes={}, transactions={},"
-                      + " functions={}",
+              + " functions={}",
               name, loadResult.total(), loadResult.processCount(), loadResult.transactionCount(),
               loadResult.functionCount());
     } catch (Exception e) {

@@ -50,6 +50,7 @@ public class CompensationTrackerHelper implements Executable<Map<String, Object>
   }
 
   public Map<String, Marker> markers() {
+    markers.cleanUp();
     return Collections.unmodifiableMap(new HashMap<>(markers.asMap()));
   }
 

@@ -42,6 +42,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -166,6 +167,7 @@ public class TemporalConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
+  @ConditionalOnMissingClass("cbs.nova.starter.persistence.JdbcDslRunRepository")
   DslRunRepository dslRunRepository() {
     return new InMemoryDslRunRepository();
   }

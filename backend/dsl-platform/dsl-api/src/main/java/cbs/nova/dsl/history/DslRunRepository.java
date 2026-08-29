@@ -47,4 +47,25 @@ public interface DslRunRepository {
           @Nullable String error,
           @NonNull Instant finishedAt,
           @Nullable String contextJson);
+
+  /**
+   * Deletes finished runs whose {@code finished_at} is strictly before {@code cutoff}.
+   *
+   * <p>Rows still in the {@code RUNNING} state never match this predicate — a run is only eligible
+   * once it has reached a terminal status (COMPLETED/FAILED/STALE/CANCELLED) with a set
+   * {@code finished_at}, which makes the delete naturally safe against a row mid-transition out of
+   * {@code RUNNING}. Deletion is executed in bounded batches of {@code batchSize} so a first purge
+   * of a huge table does not hold row locks for a long stretch; this call loops until a single pass
+   * deletes fewer than {@code batchSize} rows.
+   *
+   * <p>The default implementation is a no-op so in-memory/alternative stores are not forced to
+   * implement retention; store-backed repositories override it.
+   *
+   * @param cutoff eligibility threshold; only rows with {@code finished_at < cutoff} are purged
+   * @param batchSize max rows removed per batch pass (must be positive)
+   * @return the total number of rows deleted
+   */
+  default int purgeFinishedBefore(@NonNull Instant cutoff, int batchSize) {
+    return 0;
+  }
 }

@@ -26,13 +26,12 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.time.Instant;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.List;
 
 @Testcontainers
 @SpringBootTest(classes = IntegrationTestApplication.class, properties = {
     "dsl.worker.enabled=false"})
-class DslRunRepositoryIntegrationTest {
+class DslRunRetentionIntegrationTest {
 
   @Container
   static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15");
@@ -71,61 +70,42 @@ class DslRunRepositoryIntegrationTest {
   }
 
   @Test
-  void savesRunAndFindsItByRunId() {
-    String runId = "run-" + UUID.randomUUID();
-    DslRun run = DslRun.builder()
-            .runId(runId)
-            .processName("SampleProcess")
-            .status(DslRunStatus.RUNNING.name())
-            .input("{\"foo\":\"bar\"}")
-            .output(null)
-            .error(null)
-            .startedAt(Instant.now())
-            .finishedAt(null)
-            .executionMode(ExecutionMode.RUN.name())
-            .build();
+  void purgeRemovesOldTerminalRunsAndKeepsRunningAndYoungRuns() {
+    Instant now = Instant.parse("2026-06-15T12:00:00Z");
+    Instant old = now.minusSeconds(7_200);
+    Instant young = now.minusSeconds(1_800);
+    Instant started = now.minusSeconds(300);
 
-    repository.save(run);
+    repository.save(run("run-running", DslRunStatus.RUNNING, started, null));
+    repository.save(run("run-young", DslRunStatus.COMPLETED, started, young));
+    for (DslRunStatus status : List.of(DslRunStatus.COMPLETED, DslRunStatus.FAILED,
+            DslRunStatus.STALE, DslRunStatus.CANCELLED)) {
+      repository.save(run("run-" + status.name(), status, started, old));
+    }
 
-    Optional<DslRun> found = repository.findByRunId(runId);
-    assertThat(found).isPresent();
-    assertThat(found.get().processName()).isEqualTo("SampleProcess");
-    assertThat(found.get().status()).isEqualTo(DslRunStatus.RUNNING.name());
+    int deleted = repository.purgeFinishedBefore(now.minusSeconds(3_600), 2);
+
+    assertThat(deleted).isEqualTo(4);
+    assertThat(repository.findByRunId("run-running")).isPresent();
+    assertThat(repository.findByRunId("run-young")).isPresent();
+    for (DslRunStatus status : List.of(DslRunStatus.COMPLETED, DslRunStatus.FAILED,
+            DslRunStatus.STALE, DslRunStatus.CANCELLED)) {
+      assertThat(repository.findByRunId("run-" + status.name())).isEmpty();
+    }
   }
 
-  @Test
-  void updatesExistingRunOnSave() {
-    String runId = "run-" + UUID.randomUUID();
-    DslRun started = DslRun.builder()
+  private static DslRun run(String runId, DslRunStatus status, Instant startedAt,
+          Instant finishedAt) {
+    return DslRun.builder()
             .runId(runId)
-            .processName("BatchProcessing")
-            .status(DslRunStatus.RUNNING.name())
-            .input("{\"items\":[]}")
+            .processName("retention-test")
+            .status(status.name())
+            .input("{}")
             .output(null)
             .error(null)
-            .startedAt(Instant.now())
-            .finishedAt(null)
+            .startedAt(startedAt)
+            .finishedAt(finishedAt)
             .executionMode(ExecutionMode.RUN.name())
             .build();
-    repository.save(started);
-
-    DslRun finished = DslRun.builder()
-            .runId(runId)
-            .processName("BatchProcessing")
-            .status(DslRunStatus.COMPLETED.name())
-            .input(started.input())
-            .output("{\"total\":6}")
-            .error(null)
-            .startedAt(started.startedAt())
-            .finishedAt(Instant.now())
-            .executionMode(ExecutionMode.RUN.name())
-            .build();
-    repository.save(finished);
-
-    Optional<DslRun> found = repository.findByRunId(runId);
-    assertThat(found).isPresent();
-    assertThat(found.get().status()).isEqualTo(DslRunStatus.COMPLETED.name());
-    assertThat(found.get().output()).isEqualTo("{\"total\":6}");
-    assertThat(repository.findByProcessName("BatchProcessing")).hasSize(1);
   }
 }

@@ -35,15 +35,16 @@ import java.time.Duration;
 import java.util.Map;
 
 /**
- * Verifies the OIDC resource-server guard behaviour and, critically, the
- * default-off guarantee: with {@code cbs.security.oidc.enabled} unset (or false)
- * the {@link SecurityConfiguration#oidcSecurityFilterChain} bean is absent from
- * the context and every endpoint remains anonymous.
+ * Verifies the OIDC resource-server guard behaviour and, critically, the default-off guarantee:
+ * with {@code cbs.security.oidc.enabled} unset (or false) the
+ * {@link SecurityConfiguration#oidcSecurityFilterChain} bean is absent from the context and every
+ * endpoint remains anonymous.
  *
- * <p>The default-off guarantee is the single most important constraint of this
- * task: an existing test (e.g. {@code JdbcDslRunRepositoryTest},
- * {@code OpenApiEndpointsTest}, {@code ActuatorEndpointsTest}) must run
- * unmodified, and that test must observe no security-filter behaviour.
+ * <p>
+ * The default-off guarantee is the single most important constraint of this task: an existing test
+ * (e.g. {@code JdbcDslRunRepositoryTest}, {@code OpenApiEndpointsTest},
+ * {@code ActuatorEndpointsTest}) must run unmodified, and that test must observe no security-filter
+ * behaviour.
  */
 class SecurityConfigurationTest {
 
@@ -52,12 +53,9 @@ class SecurityConfigurationTest {
           .build();
 
   @Nested
-  @SpringBootTest(
-          webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-          classes = SecurityConfigurationTest.TestApplication.class,
-          properties = {
-              "dsl.worker.enabled=false"
-          })
+  @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = SecurityConfigurationTest.TestApplication.class, properties = {
+      "dsl.worker.enabled=false"
+  })
   class DefaultOffGuarantee {
 
     @Autowired
@@ -113,13 +111,10 @@ class SecurityConfigurationTest {
   }
 
   @Nested
-  @SpringBootTest(
-          webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-          classes = SecurityConfigurationTest.GuardEnabledTestApp.class,
-          properties = {
-              "cbs.security.oidc.enabled=true",
-              "dsl.worker.enabled=false"
-          })
+  @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = SecurityConfigurationTest.GuardEnabledTestApp.class, properties = {
+      "cbs.security.oidc.enabled=true",
+      "dsl.worker.enabled=false"
+  })
   class GuardEnabled {
 
     @Autowired
@@ -200,10 +195,9 @@ class SecurityConfigurationTest {
   }
 
   /**
-   * Application config for the default-off (OIDC disabled) test slice. Identical
-   * pattern to the other integration tests in this module: a bare
-   * {@code @SpringBootApplication} that lets the starter's auto-configurations
-   * wire everything.
+   * Application config for the default-off (OIDC disabled) test slice. Identical pattern to the
+   * other integration tests in this module: a bare {@code @SpringBootApplication} that lets the
+   * starter's auto-configurations wire everything.
    */
   @SpringBootApplication(scanBasePackages = "cbs.nova.starter")
   static class TestApplication {
@@ -213,12 +207,11 @@ class SecurityConfigurationTest {
   }
 
   /**
-   * Application config for the OIDC-enabled test slice. We provide a mock
-   * {@link JwtDecoder} bean so the OIDC chain has something to wire without
-   * the resource-server auto-config trying to reach a (non-existent) Keycloak
-   * at startup. Anonymous requests are still rejected with 401 by Spring
-   * Security's BearerTokenAuthenticationFilter before the decoder is ever
-   * called, which is exactly the behaviour we want to assert.
+   * Application config for the OIDC-enabled test slice. We provide a mock {@link JwtDecoder} bean
+   * so the OIDC chain has something to wire without the resource-server auto-config trying to reach
+   * a (non-existent) Keycloak at startup. Anonymous requests are still rejected with 401 by Spring
+   * Security's BearerTokenAuthenticationFilter before the decoder is ever called, which is exactly
+   * the behaviour we want to assert.
    */
   @SpringBootApplication(scanBasePackages = "cbs.nova.starter")
   @Import(SecurityConfigurationTest.MockJwtDecoderConfig.class)

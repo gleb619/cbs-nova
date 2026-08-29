@@ -28,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import tools.jackson.databind.ObjectMapper;
@@ -72,6 +73,7 @@ public class DslConfiguration {
 
   @Bean
   @ConditionalOnMissingBean(DslRunRepository.class)
+  @ConditionalOnMissingClass("cbs.nova.starter.persistence.JdbcDslRunRepository")
   public DslRunRepository dslRunRepository(
           TransactionExecutionRepository transactionExecutionRepository) {
     // Cascade eviction only onto the in-memory sibling: a persistent repository must not lose
@@ -84,6 +86,7 @@ public class DslConfiguration {
 
   @Bean
   @ConditionalOnMissingBean(TransactionExecutionRepository.class)
+  @ConditionalOnMissingClass("cbs.nova.starter.persistence.JdbcTransactionExecutionRepository")
   public TransactionExecutionRepository transactionExecutionRepository() {
     return new InMemoryTransactionExecutionRepository();
   }
@@ -125,7 +128,7 @@ public class DslConfiguration {
                 log.error("DSL_ERROR: ", ex);
               } else if (result != null) {
                 log.info("Dsl objects registered: {} objects (processes={}, transactions={},"
-                                + " functions={})",
+                        + " functions={})",
                         result.total(), result.processCount(), result.transactionCount(),
                         result.functionCount());
               }

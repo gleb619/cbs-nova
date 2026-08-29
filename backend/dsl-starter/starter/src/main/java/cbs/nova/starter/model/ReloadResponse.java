@@ -11,7 +11,7 @@ public record ReloadResponse(
         @NonNull String sourceDir,
         @NonNull LoadResult load) {
 
-    public int total() {
-        return load.total();
-    }
+  public int total() {
+    return load.total();
+  }
 }

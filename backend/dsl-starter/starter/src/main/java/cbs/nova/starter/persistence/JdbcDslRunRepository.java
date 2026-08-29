@@ -60,23 +60,14 @@ public class JdbcDslRunRepository implements DslRunRepository {
     DslRunEntity entity = mapper.toEntity(run);
     encryptEntity(entity);
 
+    if (delegate.findByRunId(entity.getRunId()).isPresent()) {
+      jdbcTemplate.update(getUpsertStatement(), insertParams(entity));
+      return findByRunId(entity.getRunId())
+              .orElseThrow(() -> new IllegalStateException("Run not found: " + entity.getRunId()));
+    }
+
     KeyHolder keyHolder = new GeneratedKeyHolder();
-    String sql = getInsertStatement();
-
-    MapSqlParameterSource params = new MapSqlParameterSource()
-            .addValue("runId", entity.getRunId())
-            .addValue("processName", entity.getProcessName())
-            .addValue("status", entity.getStatus())
-            .addValue("inputJson", entity.getInputJson())
-            .addValue("outputJson", entity.getOutputJson())
-            .addValue("errorMessage", entity.getErrorMessage())
-            .addValue("contextJson", entity.getContextJson())
-            .addValue("startedAt", Timestamp.from(entity.getStartedAt()))
-            .addValue("finishedAt",
-                    entity.getFinishedAt() != null ? Timestamp.from(entity.getFinishedAt()) : null)
-            .addValue("executionMode", entity.getExecutionMode());
-
-    jdbcTemplate.update(sql, params, keyHolder, new String[]{"id"});
+    jdbcTemplate.update(getInsertStatement(), insertParams(entity), keyHolder, new String[]{"id"});
     if (keyHolder.getKey() != null) {
       entity.setId(keyHolder.getKey().longValue());
     }
@@ -105,7 +96,8 @@ public class JdbcDslRunRepository implements DslRunRepository {
           @Nullable String contextJson) {
     String sql = getUpdateStatement();
 
-    MapSqlParameterSource params = finishParams(runId, status, output, error, contextJson, finishedAt);
+    MapSqlParameterSource params = finishParams(runId, status, output, error, contextJson,
+            finishedAt);
 
     int updated = jdbcTemplate.update(sql, params);
     if (updated == 0) {
@@ -125,10 +117,57 @@ public class JdbcDslRunRepository implements DslRunRepository {
           @Nullable String contextJson) {
     String sql = getGuardedUpdateStatement();
 
-    MapSqlParameterSource params = finishParams(runId, status, output, error, contextJson, finishedAt)
+    MapSqlParameterSource params = finishParams(runId, status, output, error, contextJson,
+            finishedAt)
             .addValue("expectedStatus", DslRunStatus.RUNNING.name());
 
     return jdbcTemplate.update(sql, params);
+  }
+
+  /**
+   * Deletes finished runs older than {@code cutoff} in bounded batches.
+   *
+   * <p>
+   * Each pass removes at most {@code batchSize} rows by deleting only those {@code run_id}s
+   * selected by a {@code LIMIT} subquery, so the row lock held per statement stays small even when
+   * the very first purge of a large table must churn through millions of rows. The
+   * {@code status <> 'RUNNING'} guard means the delete can never race a row that is mid-transition
+   * out of {@code RUNNING} (such rows have no {@code finished_at} and are excluded anyway). Loops
+   * until a single pass deletes fewer than {@code batchSize} rows.
+   */
+  @Override
+  public int purgeFinishedBefore(@NonNull Instant cutoff, int batchSize) {
+    if (batchSize <= 0) {
+      throw new IllegalArgumentException("batchSize must be positive, was " + batchSize);
+    }
+    MapSqlParameterSource params = new MapSqlParameterSource()
+            .addValue("cutoff", Timestamp.from(cutoff))
+            .addValue("runningStatus", DslRunStatus.RUNNING.name())
+            .addValue("batchSize", batchSize);
+
+    int total = 0;
+    int deleted;
+    do {
+      deleted = jdbcTemplate.update(getPurgeStatement(), params);
+      total += deleted;
+    } while (deleted == batchSize);
+
+    return total;
+  }
+
+  private MapSqlParameterSource insertParams(DslRunEntity entity) {
+    return new MapSqlParameterSource()
+            .addValue("runId", entity.getRunId())
+            .addValue("processName", entity.getProcessName())
+            .addValue("status", entity.getStatus())
+            .addValue("inputJson", entity.getInputJson())
+            .addValue("outputJson", entity.getOutputJson())
+            .addValue("errorMessage", entity.getErrorMessage())
+            .addValue("contextJson", entity.getContextJson())
+            .addValue("startedAt", Timestamp.from(entity.getStartedAt()))
+            .addValue("finishedAt",
+                    entity.getFinishedAt() != null ? Timestamp.from(entity.getFinishedAt()) : null)
+            .addValue("executionMode", entity.getExecutionMode());
   }
 
   private MapSqlParameterSource finishParams(
@@ -171,8 +210,22 @@ public class JdbcDslRunRepository implements DslRunRepository {
             INSERT INTO %s (run_id, process_name, status, input_json, output_json, error_message, context_json, started_at, finished_at, execution_mode)
             VALUES
             (:runId, :processName, :status, :inputJson, :outputJson, :errorMessage, :contextJson, :startedAt, :finishedAt, :executionMode)"""
-            .formatted(
-                    tableName);
+            .formatted(tableName);
+  }
+
+  private String getUpsertStatement() {
+    return """
+            UPDATE %s SET
+                process_name = :processName
+              , status = :status
+              , input_json = :inputJson
+              , output_json = :outputJson
+              , error_message = :errorMessage
+              , context_json = :contextJson
+              , started_at = :startedAt
+              , finished_at = :finishedAt
+              , execution_mode = :executionMode
+            WHERE run_id = :runId""".formatted(tableName);
   }
 
   // TODO: it's better to remove native update. ANd just work with a entity, so since we can work
@@ -201,6 +254,17 @@ public class JdbcDslRunRepository implements DslRunRepository {
             WHERE run_id = :runId
               AND status = :expectedStatus""".formatted(
             tableName);
+  }
+
+  private String getPurgeStatement() {
+    return """
+            DELETE FROM %1$s
+            WHERE run_id IN (
+                SELECT run_id FROM %1$s
+                WHERE finished_at < :cutoff
+                  AND status <> :runningStatus
+                LIMIT :batchSize
+            )""".formatted(tableName);
   }
 
 }

@@ -113,6 +113,30 @@ public final class InMemoryDslRunRepository implements DslRunRepository {
     return affected.get();
   }
 
+  @Override
+  public int purgeFinishedBefore(@NonNull Instant cutoff, int batchSize) {
+    if (batchSize <= 0) {
+      throw new IllegalArgumentException("batchSize must be positive, was " + batchSize);
+    }
+    int[] purged = {0};
+    AtomicInteger batch = new AtomicInteger();
+    runs.values().removeIf(run -> {
+      if (DslRunStatus.RUNNING.name().equals(run.status())) {
+        return false;
+      }
+      Instant finishedAt = run.finishedAt();
+      if (finishedAt == null || !finishedAt.isBefore(cutoff)) {
+        return false;
+      }
+      if (batch.incrementAndGet() > batchSize) {
+        return false;
+      }
+      purged[0]++;
+      return true;
+    });
+    return purged[0];
+  }
+
   private static @NonNull DslRun finished(
           @NonNull DslRun existing,
           @NonNull String status,

@@ -25,6 +25,10 @@ cbs:
             response:
               value: "fake-value"
 
+spring:
+  flyway:
+    enabled: true
+
 springdoc:
   api-docs:
     path: /v3/api-docs

@@ -70,7 +70,8 @@ class MetricsStageTest {
     assertThat(snapshot.callCounts()).containsEntry(CallKind.HELPER, 1);
 
     Counter process = registry.get(MetricsStage.CALL_COUNTER).tag("kind", "PROCESS").counter();
-    Counter transaction = registry.get(MetricsStage.CALL_COUNTER).tag("kind", "TRANSACTION").counter();
+    Counter transaction = registry.get(MetricsStage.CALL_COUNTER).tag("kind", "TRANSACTION")
+            .counter();
     Counter helper = registry.get(MetricsStage.CALL_COUNTER).tag("kind", "HELPER").counter();
     assertThat(process.count()).isEqualTo(1.0);
     assertThat(transaction.count()).isEqualTo(1.0);
@@ -81,7 +82,8 @@ class MetricsStageTest {
             .tag("process", "Ping")
             .timer();
     assertThat(timer.count()).isEqualTo(1L);
-    assertThat(timer.totalTime(java.util.concurrent.TimeUnit.MILLISECONDS)).isGreaterThanOrEqualTo(0.0);
+    assertThat(timer.totalTime(java.util.concurrent.TimeUnit.MILLISECONDS))
+            .isGreaterThanOrEqualTo(0.0);
   }
 
   @Test

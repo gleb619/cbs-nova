@@ -29,7 +29,6 @@ class DslRootAutoConfigurationTest {
             TemporalConfiguration.class,
             DslConfiguration.class,
             DslWorkerConfiguration.class,
-            DslRunRepositoryConfiguration.class,
             DataSourceCallConfiguration.class,
             FeignCallConfiguration.class,
             PreviewConfiguration.class,
@@ -39,7 +38,8 @@ class DslRootAutoConfigurationTest {
             DslRouterConfiguration.class,
             DslErrorHandlingConfiguration.class,
             SpringHelperConfiguration.class,
-            ApiKeyAuthFilterConfiguration.class);
+            ApiKeyAuthFilterConfiguration.class,
+            DslRunRetentionConfiguration.class);
   }
 
   @Test

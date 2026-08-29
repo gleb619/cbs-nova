@@ -172,9 +172,8 @@ class DslReloadResourceTest {
   }
 
   /**
-   * Failure-safety regression: a compile error during reload must NOT wipe the live registry.
-   * The runtime must keep serving definitions that were registered by a previous successful
-   * reload.
+   * Failure-safety regression: a compile error during reload must NOT wipe the live registry. The
+   * runtime must keep serving definitions that were registered by a previous successful reload.
    */
   @Test
   void failedReloadLeavesExistingRegistryIntact() throws Exception {
@@ -210,8 +209,8 @@ class DslReloadResourceTest {
   }
 
   /**
-   * The temp working directory created for compilation must be removed on the success path too
-   * (it used to be leaked on every reload).
+   * The temp working directory created for compilation must be removed on the success path too (it
+   * used to be leaked on every reload).
    */
   @Test
   void successfulReloadDeletesTempDir() throws Exception {
@@ -248,10 +247,10 @@ class DslReloadResourceTest {
 
   /**
    * Two overlapping reload calls must serialize, not interleave. We arrange for one reload to be
-   * in-flight (a gated thread has already entered the loader) and then a second caller starts.
-   * The second caller must NOT enter the loader while the first is still in flight — the lock
-   * must serialize them. Both must end up with a real response, and the final registry must be
-   * the same source dir's contents (no torn state from interleaved partial registrations).
+   * in-flight (a gated thread has already entered the loader) and then a second caller starts. The
+   * second caller must NOT enter the loader while the first is still in flight — the lock must
+   * serialize them. Both must end up with a real response, and the final registry must be the same
+   * source dir's contents (no torn state from interleaved partial registrations).
    */
   @Test
   void concurrentReloadsSerialize() throws Exception {
@@ -299,8 +298,9 @@ class DslReloadResourceTest {
           } catch (Exception e) {
             detail = "b future threw: " + e;
           }
-          throw new AssertionError("second reload should reach its loader after first releases the lock, "
-                  + "elapsed=" + elapsed + "ms, " + detail);
+          throw new AssertionError(
+                  "second reload should reach its loader after first releases the lock, "
+                          + "elapsed=" + elapsed + "ms, " + detail);
         }
         assertThat(PerCallGatedLoader.callCount())
                 .as("only one loader runs at a time, ever")
@@ -335,7 +335,7 @@ class DslReloadResourceTest {
     AtomicReference<Path> leaked = new AtomicReference<>();
     try (Stream<Path> stream = Files.list(tmp)) {
       stream.filter(p -> p.getFileName() != null
-                      && p.getFileName().toString().startsWith("dsl-reload-"))
+              && p.getFileName().toString().startsWith("dsl-reload-"))
               // Only consider temp dirs created during this test. Other test methods or
               // previous test runs may have left their own behind — that's not what this
               // assertion is for. We only care that *this* reload cleaned up.
@@ -413,17 +413,16 @@ class DslReloadResourceTest {
 
   /**
    * Test-only loader that delegates to a real {@link DslDefinitionLoader} but blocks inside
-   * {@code load()} until a per-call release latch is counted down. The test uses this to
-   * observe when each call enters the loader and to assert the handler's lock keeps the
-   * second caller out of the loader while the first is in flight.
+   * {@code load()} until a per-call release latch is counted down. The test uses this to observe
+   * when each call enters the loader and to assert the handler's lock keeps the second caller out
+   * of the loader while the first is in flight.
    * <p>
-   * State is held in static fields so the test can interact with it from the main thread
-   * without needing to pass references around. {@link #reset()} must be called between tests.
+   * State is held in static fields so the test can interact with it from the main thread without
+   * needing to pass references around. {@link #reset()} must be called between tests.
    */
   static final class PerCallGatedLoader implements DslDefinitionLoader {
 
-    private static final java.util.concurrent.atomic.AtomicInteger COUNTER =
-            new java.util.concurrent.atomic.AtomicInteger();
+    private static final java.util.concurrent.atomic.AtomicInteger COUNTER = new java.util.concurrent.atomic.AtomicInteger();
     private static final Map<Integer, CountDownLatch> ARRIVED = new ConcurrentHashMap<>();
     private static final Map<Integer, CountDownLatch> RELEASE = new ConcurrentHashMap<>();
 

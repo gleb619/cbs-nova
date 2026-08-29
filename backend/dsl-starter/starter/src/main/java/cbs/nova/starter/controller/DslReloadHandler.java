@@ -45,17 +45,15 @@ import java.util.stream.Stream;
  * {@code dsl.reload.enabled}, on by default) rather than as a hardcoded {@code @RestController}, so
  * host applications can opt out of exposing it.
  *
- * <h2>Failure semantics</h2>
- * Reload is failure-safe: the live {@link GlobalManager} singleton is only replaced once the
- * newly-compiled DSL set has been built and staged against a throwaway candidate. If compilation
- * or staging throws, the previously-loaded registry keeps serving requests — the runtime is
- * never bricked.
+ * <h2>Failure semantics</h2> Reload is failure-safe: the live {@link GlobalManager} singleton is
+ * only replaced once the newly-compiled DSL set has been built and staged against a throwaway
+ * candidate. If compilation or staging throws, the previously-loaded registry keeps serving
+ * requests — the runtime is never bricked.
  *
- * <h2>Concurrency</h2>
- * A {@link ReentrantLock} serializes overlapping reload calls. Policy: the second (and any
- * further) concurrent caller <em>waits</em> for the first to complete and then runs against the
- * (possibly already-updated) registry. We deliberately do not return 409 here, so callers in
- * pipelines (workbench publish, CI) get a deterministic outcome rather than a transient
+ * <h2>Concurrency</h2> A {@link ReentrantLock} serializes overlapping reload calls. Policy: the
+ * second (and any further) concurrent caller <em>waits</em> for the first to complete and then runs
+ * against the (possibly already-updated) registry. We deliberately do not return 409 here, so
+ * callers in pipelines (workbench publish, CI) get a deterministic outcome rather than a transient
  * rejection that they have to retry.
  */
 @Component
@@ -174,7 +172,8 @@ public class DslReloadHandler {
     var instanceResolver = helperInstanceResolver();
     if (instanceResolver != null) {
       ServiceLoader.load(HelperResolver.class, classLoader)
-              .forEach(resolver -> resolver.registerHelpers(target::registerHelper, instanceResolver));
+              .forEach(resolver -> resolver.registerHelpers(target::registerHelper,
+                      instanceResolver));
     }
 
     // Fallback for compact-source DSL files that implement DslCompactSource directly.
@@ -182,7 +181,7 @@ public class DslReloadHandler {
 
     var load = result.build();
     log.info("[DSL reload] Loaded {} DSL definitions from {}: processes={}, transactions={},"
-                    + " functions={}",
+            + " functions={}",
             load.total(), sourceDir, load.processCount(), load.transactionCount(),
             load.functionCount());
     return load;
