@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue'
+
+import { useModalDialog } from '../../composables/useModalDialog'
+
 const props = defineProps<{
   show: boolean
   executionId?: string
@@ -9,6 +13,20 @@ const emit = defineEmits<{
   confirm: []
   cancel: []
 }>()
+
+const dialogRef = ref<HTMLElement | null>(null)
+const { open: openDialog, close: closeDialog } = useModalDialog(dialogRef, {
+  onClose: onCancel,
+})
+
+watch(
+  () => props.show,
+  (open) => {
+    if (open) openDialog()
+    else closeDialog()
+  },
+  { immediate: true },
+)
 
 function onConfirm() {
   if (props.busy) return
@@ -26,11 +44,13 @@ function onCancel() {
     <!-- biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click dismisses modal -->
     <div
       v-if="props.show"
+      ref="dialogRef"
       data-testid="cancel-confirmation-modal"
       class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="cancel-confirm-title"
+      tabindex="-1"
       @click.self="onCancel"
     >
       <div class="bg-white rounded-xl shadow-xl max-w-md w-full flex flex-col">

@@ -19,6 +19,9 @@ const styles: Record<ExecutionStatus, string> = {
 <template>
   <span
     data-testid="status-badge"
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
     :class="['inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium', styles[props.status]]"
   >
     {{ props.status }}
@@ -33,7 +36,8 @@ const styles: Record<ExecutionStatus, string> = {
     <span
       v-if="props.polling && props.status === 'Stale'"
       class="ml-1 inline-block w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"
-      aria-hidden="true"
+      role="img"
+      aria-label="Refreshing stale status"
       data-testid="stale-poll-indicator"
       >↻</span
     >

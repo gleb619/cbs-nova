@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 
+import { useModalDialog } from '../../composables/useModalDialog'
+
 const props = defineProps<{
   show: boolean
   payload: unknown
@@ -14,18 +16,27 @@ const emit = defineEmits<{
 const acknowledged = ref(false)
 const skipPreference = ref(false)
 
+const dialogRef = ref<HTMLElement | null>(null)
+const { open: openDialog, close: closeDialog } = useModalDialog(dialogRef, {
+  onClose: onCancel,
+})
+
 watch(
   () => props.show,
   (open) => {
     if (open) {
       acknowledged.value = false
       skipPreference.value = readSkipPreference()
+      openDialog()
+    } else {
+      closeDialog()
     }
   },
+  { immediate: true },
 )
 
 function readSkipPreference(): boolean {
-  if (!import.meta.client) return false
+  if (typeof window === 'undefined') return false
   try {
     return window.sessionStorage.getItem('skip-run-confirm') === '1'
   } catch {
@@ -34,7 +45,7 @@ function readSkipPreference(): boolean {
 }
 
 function writeSkipPreference(value: boolean) {
-  if (!import.meta.client) return
+  if (typeof window === 'undefined') return
   try {
     if (value) window.sessionStorage.setItem('skip-run-confirm', '1')
     else window.sessionStorage.removeItem('skip-run-confirm')
@@ -69,11 +80,13 @@ function onCancel() {
     <!-- biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click dismisses modal -->
     <div
       v-if="props.show"
+      ref="dialogRef"
       data-testid="run-confirmation-modal"
       class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="run-confirm-title"
+      tabindex="-1"
       @click.self="onCancel"
     >
       <div class="bg-white rounded-xl shadow-xl max-w-lg w-full flex flex-col max-h-[90vh]">

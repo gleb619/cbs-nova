@@ -23,6 +23,19 @@ describe('ExecutionList', () => {
     expect(wrapper.find('[data-testid="execution-list"]').exists()).toBe(true)
   })
 
+  it('renders a caption and column scope attributes on the table', () => {
+    const wrapper = mount(ExecutionList, {
+      props: { executions: [], loading: false },
+    })
+
+    const headers = wrapper.findAll('th')
+    expect(wrapper.find('caption').exists()).toBe(true)
+    expect(wrapper.find('caption').classes()).toContain('sr-only')
+    for (const th of headers) {
+      expect(th.attributes('scope')).toBe('col')
+    }
+  })
+
   it('renders a cancel button on Running rows only', () => {
     const wrapper = mount(ExecutionList, {
       props: {

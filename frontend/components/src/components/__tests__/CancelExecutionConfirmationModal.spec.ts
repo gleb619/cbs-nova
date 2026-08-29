@@ -1,6 +1,9 @@
 import { mount } from '@vue/test-utils'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { nextTick } from 'vue'
 import CancelExecutionConfirmationModal from '../executions/CancelExecutionConfirmationModal.vue'
+
+const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 // The modal teleports its content into <body>. Stubbing the Teleport render
 // keeps it inside the wrapper so we can drive interactions via the test-utils
@@ -9,10 +12,15 @@ const mountModal = (props: Record<string, unknown>) =>
   mount(CancelExecutionConfirmationModal, {
     props,
     global: { stubs: { teleport: true } },
+    attachTo: document.body,
   })
 
 describe('CancelExecutionConfirmationModal', () => {
   let wrapper: ReturnType<typeof mountModal> | null = null
+
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
 
   afterEach(() => {
     wrapper?.unmount()
@@ -87,5 +95,67 @@ describe('CancelExecutionConfirmationModal', () => {
 
     expect(wrapper.emitted('confirm')).toBeFalsy()
     expect(wrapper.emitted('cancel')).toBeFalsy()
+  })
+
+  it('moves focus into the dialog when opened', async () => {
+    const trigger = document.createElement('button')
+    document.body.appendChild(trigger)
+    trigger.focus()
+
+    wrapper = mountModal({ show: true })
+    await nextTick()
+    await flushPromises()
+
+    const cancelButton = wrapper.find('[data-testid="cancel-confirmation-modal-cancel"]').element
+    expect(document.activeElement).toBe(cancelButton)
+  })
+
+  it('emits cancel when Escape is pressed', async () => {
+    wrapper = mountModal({ show: true })
+    await nextTick()
+    await flushPromises()
+
+    document.activeElement?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+    )
+    await nextTick()
+
+    expect(wrapper.emitted('cancel')).toBeTruthy()
+  })
+
+  it('returns focus to the trigger element when closed', async () => {
+    const trigger = document.createElement('button')
+    document.body.appendChild(trigger)
+    trigger.focus()
+
+    wrapper = mountModal({ show: true })
+    await nextTick()
+    await flushPromises()
+    expect(document.activeElement).not.toBe(trigger)
+
+    await wrapper.setProps({ show: false })
+    await nextTick()
+    await flushPromises()
+
+    expect(document.activeElement).toBe(trigger)
+  })
+
+  it('cycles focus within the dialog with Tab', async () => {
+    wrapper = mountModal({ show: true })
+    await nextTick()
+    await flushPromises()
+
+    const cancelButton = wrapper.find('[data-testid="cancel-confirmation-modal-cancel"]')
+      .element as HTMLElement
+    const confirmButton = wrapper.find('[data-testid="cancel-confirmation-modal-confirm"]')
+      .element as HTMLElement
+
+    confirmButton.focus()
+    document.activeElement?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }),
+    )
+    await nextTick()
+
+    expect(document.activeElement).toBe(cancelButton)
   })
 })

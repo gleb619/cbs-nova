@@ -66,4 +66,17 @@ describe('MetadataTab', () => {
     expect(values).toContain(JSON.stringify({ maxAttempts: 3 }))
     expect(values).toContain('exponential')
   })
+
+  it('renders a caption and row scope attributes on the metadata table', () => {
+    const wrapper = mount(MetadataTab, {
+      props: { execution: makeExecution(), metadata: undefined },
+    })
+
+    expect(wrapper.find('caption').exists()).toBe(true)
+    expect(wrapper.find('caption').classes()).toContain('sr-only')
+
+    for (const th of wrapper.findAll('th')) {
+      expect(th.attributes('scope')).toBe('row')
+    }
+  })
 })

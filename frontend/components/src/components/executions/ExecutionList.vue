@@ -65,17 +65,20 @@ function isCancelling(id: string): boolean {
     class="bg-white border border-gray-200 rounded-lg overflow-hidden"
   >
     <table class="min-w-full text-sm">
+      <caption class="sr-only">
+        Executions
+      </caption>
       <thead class="bg-gray-50 text-left text-xs uppercase text-gray-600">
         <tr>
-          <th class="px-3 py-2">ID</th>
-          <th class="px-3 py-2">Entity</th>
-          <th class="px-3 py-2">Mode</th>
-          <th class="px-3 py-2">Status</th>
-          <th class="px-3 py-2">Started</th>
-          <th class="px-3 py-2">Duration</th>
-          <th class="px-3 py-2">Retries</th>
-          <th class="px-3 py-2">Triggered by</th>
-          <th class="px-3 py-2 text-right">Actions</th>
+          <th scope="col" class="px-3 py-2">ID</th>
+          <th scope="col" class="px-3 py-2">Entity</th>
+          <th scope="col" class="px-3 py-2">Mode</th>
+          <th scope="col" class="px-3 py-2">Status</th>
+          <th scope="col" class="px-3 py-2">Started</th>
+          <th scope="col" class="px-3 py-2">Duration</th>
+          <th scope="col" class="px-3 py-2">Retries</th>
+          <th scope="col" class="px-3 py-2">Triggered by</th>
+          <th scope="col" class="px-3 py-2 text-right">Actions</th>
         </tr>
       </thead>
       <tbody>
