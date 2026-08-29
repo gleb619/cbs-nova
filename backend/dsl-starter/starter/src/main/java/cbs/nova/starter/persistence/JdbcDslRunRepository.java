@@ -18,7 +18,9 @@ import javax.sql.DataSource;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -27,7 +29,7 @@ import java.util.stream.Collectors;
  * encryption, MapStruct entity mapping, and a targeted update method for finishing a run.
  */
 @RequiredArgsConstructor
-public class JdbcDslRunRepository implements DslRunRepository {
+public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsRepository {
 
   private final NamedParameterJdbcTemplate jdbcTemplate;
   private final DslRunJdbcRepository delegate;
@@ -155,6 +157,51 @@ public class JdbcDslRunRepository implements DslRunRepository {
     return total;
   }
 
+  /**
+   * SQL-aggregate statistics over the stored runs (see {@link DslRunStats}).
+   *
+   * <p>
+   * Three statements, each fully aggregated by the database — no run rows cross the wire. Retention
+   * purges are implicitly honoured: whatever rows remain after a purge are exactly what these
+   * aggregates describe.
+   */
+  @Override
+  public @NonNull DslRunStats stats(@NonNull Instant windowStart, int topProcessesLimit) {
+    if (topProcessesLimit <= 0) {
+      throw new IllegalArgumentException(
+              "topProcessesLimit must be positive, was " + topProcessesLimit);
+    }
+
+    MapSqlParameterSource windowParams = new MapSqlParameterSource()
+            .addValue("windowStart", Timestamp.from(windowStart))
+            .addValue("failedStatus", DslRunStatus.FAILED.name());
+
+    Map<String, Long> statusCounts = new LinkedHashMap<>();
+    jdbcTemplate.query(getStatusCountsStatement(), windowParams, rs -> {
+      statusCounts.put(rs.getString(1), rs.getLong(2));
+    });
+
+    long totalRuns = statusCounts.values().stream().mapToLong(Long::longValue).sum();
+
+    long[] window = new long[2];
+    jdbcTemplate.query(getWindowStatement(), windowParams, rs -> {
+      window[0] = rs.getLong(1);
+      window[1] = rs.getLong(2);
+    });
+    long windowRuns = window[0];
+    long windowFailedRuns = window[1];
+
+    MapSqlParameterSource topParams = new MapSqlParameterSource()
+            .addValue("topProcessesLimit", topProcessesLimit);
+    List<DslRunStats.ProcessRunCount> topProcesses = jdbcTemplate
+            .query(getTopProcessesStatement(), topParams,
+                    (rs, i) -> new DslRunStats.ProcessRunCount(rs.getString(1), rs.getLong(2)));
+
+    double failureRate = windowRuns == 0 ? 0.0 : (double) windowFailedRuns / windowRuns;
+    return new DslRunStats(totalRuns, statusCounts, windowRuns, windowFailedRuns, failureRate,
+            topProcesses);
+  }
+
   private MapSqlParameterSource insertParams(DslRunEntity entity) {
     return new MapSqlParameterSource()
             .addValue("runId", entity.getRunId())
@@ -254,6 +301,25 @@ public class JdbcDslRunRepository implements DslRunRepository {
             WHERE run_id = :runId
               AND status = :expectedStatus""".formatted(
             tableName);
+  }
+
+  private String getStatusCountsStatement() {
+    return "SELECT status, COUNT(*) FROM %s GROUP BY status ORDER BY status".formatted(tableName);
+  }
+
+  private String getWindowStatement() {
+    return """
+            SELECT COUNT(*), COUNT(*) FILTER (WHERE status = :failedStatus)
+            FROM %s WHERE started_at >= :windowStart""".formatted(tableName);
+  }
+
+  private String getTopProcessesStatement() {
+    return """
+            SELECT process_name, COUNT(*)
+            FROM %s
+            GROUP BY process_name
+            ORDER BY COUNT(*) DESC, process_name ASC
+            LIMIT :topProcessesLimit""".formatted(tableName);
   }
 
   private String getPurgeStatement() {

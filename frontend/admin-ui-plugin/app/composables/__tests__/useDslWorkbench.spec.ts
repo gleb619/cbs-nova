@@ -1,6 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useDslWorkbench } from '../useDslWorkbench'
 
+// The composable under test imports the real useDslApi module, so the module
+// itself must be mocked (the globalThis.useDslApi stub from vitest.setup.ts is
+// never consulted by an explicit import).
+const { dslApi, useDslApiMock } = vi.hoisted(() => {
+  const api = {
+    getDefinitions: vi.fn(),
+    preview: vi.fn(),
+    reload: vi.fn(),
+    run: vi.fn(),
+    explain: vi.fn(),
+    saveDraft: vi.fn(),
+    publishDraft: vi.fn(),
+    validateConstruct: vi.fn(),
+  }
+  return { dslApi: api, useDslApiMock: vi.fn(() => api) }
+})
+
+vi.mock('@cbs/admin-ui-plugin/composables/useDslApi', () => ({
+  useDslApi: useDslApiMock,
+}))
+
 type ApiMock = {
   getDefinitions: ReturnType<typeof vi.fn>
   preview: ReturnType<typeof vi.fn>
@@ -12,7 +33,7 @@ type ApiMock = {
   validateConstruct: ReturnType<typeof vi.fn>
 }
 
-const getApi = (): ApiMock => vi.mocked(useDslApi as never)()
+const getApi = (): ApiMock => dslApi
 
 describe('useDslWorkbench', () => {
   beforeEach(() => {

@@ -1,4 +1,5 @@
 export * from './buildInfo'
+export * from './dashboard'
 export * from './dsl'
 export * from './execution'
 export * from './runner'

@@ -2,6 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import { useStalePolling } from '../useStalePolling'
 
+// The composable under test imports the real useExecutionsApi module, so the
+// module itself must be mocked (the globalThis.useExecutionsApi stub from
+// vitest.setup.ts is never consulted by an explicit import).
+const { useExecutionsApiMock } = vi.hoisted(() => ({ useExecutionsApiMock: vi.fn() }))
+
+vi.mock('@cbs/admin-ui-plugin/composables/useExecutionsApi', () => ({
+  useExecutionsApi: useExecutionsApiMock,
+}))
+
 type ApiMock = {
   list: ReturnType<typeof vi.fn>
   get: ReturnType<typeof vi.fn>
@@ -12,7 +21,7 @@ const installApiMock = (overrides: Partial<ApiMock> = {}): ApiMock => {
     list: overrides.list ?? vi.fn(),
     get: overrides.get ?? vi.fn(),
   }
-  vi.mocked(useExecutionsApi as never).mockReturnValue(api)
+  vi.mocked(useExecutionsApiMock).mockReturnValue(api)
   return api
 }
 

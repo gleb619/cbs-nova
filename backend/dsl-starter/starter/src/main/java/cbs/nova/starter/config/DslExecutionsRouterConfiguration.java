@@ -5,6 +5,8 @@ import cbs.nova.starter.controller.DslExecutionsHandler;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ExecutionDto;
 import cbs.nova.starter.model.ExecutionListResponse;
+import cbs.nova.starter.model.ExecutionStatsResponse;
+import cbs.nova.starter.persistence.DslRunStatsRepository;
 import cbs.nova.starter.service.DslRunCancellationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -29,7 +31,11 @@ public class DslExecutionsRouterConfiguration {
   DslExecutionsHandler dslExecutionsHandler(DslRunRepository runRepository,
           ObjectMapper objectMapper,
           DslRunCancellationService dslRunCancellationService) {
-    return new DslExecutionsHandler(runRepository, objectMapper, dslRunCancellationService);
+    DslRunStatsRepository statsRepository = runRepository instanceof DslRunStatsRepository stats
+            ? stats
+            : null;
+    return new DslExecutionsHandler(runRepository, objectMapper, dslRunCancellationService,
+            statsRepository);
   }
 
   @Bean
@@ -41,6 +47,11 @@ public class DslExecutionsRouterConfiguration {
               @Parameter(name = "limit", in = ParameterIn.QUERY, description = "Maximum number of runs to return"),
               @Parameter(name = "offset", in = ParameterIn.QUERY, description = "Number of matching runs to skip before returning results")
           }, responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionListResponse.class))))),
+      // Routed before "/api/executions/{id}" below so the literal "stats" segment wins over {id}.
+      @RouterOperation(path = "/api/executions/stats", beanClass = DslExecutionsHandler.class, beanMethod = "stats", method = RequestMethod.GET, operation = @Operation(operationId = "getExecutionStats", summary = "Aggregate DSL execution run statistics", tags = {
+          "DSL Executions"}, parameters = {
+              @Parameter(name = "topProcesses", in = ParameterIn.QUERY, description = "Maximum number of processes in the top-by-run-count list")
+          }, responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionStatsResponse.class))))),
       @RouterOperation(path = "/api/executions/{id}", beanClass = DslExecutionsHandler.class, beanMethod = "detail", method = RequestMethod.GET, operation = @Operation(operationId = "getExecution", summary = "Get a single DSL execution run by id", tags = {
           "DSL Executions"}, parameters = @Parameter(name = "id", in = ParameterIn.PATH), responses = {
               @ApiResponse(responseCode = "200", description = "The execution run", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionDto.class))),
@@ -56,6 +67,9 @@ public class DslExecutionsRouterConfiguration {
   public RouterFunction<ServerResponse> dslExecutionsRouter(DslExecutionsHandler handler) {
     return RouterFunctions.route()
             .GET("/api/executions", handler::list)
+            // Literal route must precede "/api/executions/{id}" or "stats" would be captured as an
+            // id.
+            .GET("/api/executions/stats", handler::stats)
             .GET("/api/executions/{id}", handler::detail)
             .POST("/api/executions/{id}/cancel", handler::cancel)
             .build();

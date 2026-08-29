@@ -1,8 +1,8 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import { nextTick } from 'vue'
-import DropdownMenu from '../dropdownMenu.vue'
-import type { DropdownMenuItem } from '../dropdownMenu.vue'
+import DropdownMenu from '../DropdownMenu.vue'
+import type { DropdownMenuItem } from '../DropdownMenu.vue'
 
 const items: DropdownMenuItem[] = [
   { label: 'Refresh', value: 'refresh' },
