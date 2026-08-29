@@ -98,51 +98,143 @@ This structure keeps generated `*Definition` classes free of direct registry/run
     paths.
 - The output is returned as a structured `ExplainReport` containing description, diagram, and execution trace.
 
-## Mode-agnostic REST surface
+## DSL REST surface
 
-Mode selection is exposed through three agnostic REST endpoints, one for each operational mode. Each endpoint accepts an entity name and a `Context<IN>` payload and delegates to an injected `DslRuntime` bean.
+The starter exposes the DSL surface as Spring `RouterFunction` handlers, not as a JAX-RS resource.
+Each route is registered by a dedicated `@Configuration` in
+`backend/dsl-starter/starter/src/main/java/cbs/nova/starter/config/*RouterConfiguration.java`
+and handled by the matching functional handler in `.../controller/`.
+`@RouterOperation` annotations live next to the route definitions, so the live spec is available at
+`/v3/api-docs` and rendered by the springdoc UI at `/swagger-ui/index.html`.
+
+The mode-agnostic runtime contract inside the backend is the `cbs.nova.dsl.DslRuntime` interface:
 
 ```java
 public interface DslRuntime {
-    <IN, OUT> Context<OUT> preview(String name, Context<IN> ctx);
-    <IN, OUT> Context<OUT> run(String name, Context<IN> ctx);
-    <IN> Context<ExplainReport> explain(String name, Context<IN> ctx);
+    @NonNull Result<PreviewReport> preview(@NonNull String name, @NonNull Context<?> ctx);
+    @NonNull Result<?> run(@NonNull String name, @NonNull Context<?> ctx);
+    @NonNull ExplainReport explain(@NonNull String name, @NonNull Context<?> ctx);
 }
 ```
 
-```java
-@Path("/api/dsl")
-@RequiredArgsConstructor
-public class DslRuntimeResource {
+The HTTP handlers translate the JSON request body into a `Context` via `DslRequest` and delegate to
+a `DslRuntime` bean (through `DslRuntimeService`). The concrete `DslRuntime` implementation decides
+whether `run(...)` starts a Temporal workflow or executes directly; `preview(...)` and `explain(...)`
+always run locally.
 
-    private final DslRuntime dslRuntime;
+### Route table
 
-    @POST
-    @Path("/preview/{name}")
-    public Context<?> preview(@PathParam("name") String name, Input input) {
-        return dslRuntime.preview(name, Context.of(input));
-    }
+All paths are relative to the application root. The reload and draft routers are gated by
+`dsl.reload.enabled` and `dsl.drafts.enabled` respectively (both default `true`).
 
-    @POST
-    @Path("/explain/{name}")
-    public Context<ExplainReport> explain(@PathParam("name") String name, Input input) {
-        return dslRuntime.explain(name, Context.of(input));
-    }
+| Method | Path | Purpose | Request / Response |
+|--------|------|---------|--------------------|
+| POST | `/api/dsl/preview/{name}` | Dry-run a DSL process | `DslRequest` body → `PreviewReport` |
+| POST | `/api/dsl/run/{name}` | Execute a DSL process with full side effects | `DslRequest` body → result object, or `422 ErrorResponse` |
+| POST | `/api/dsl/explain/{name}` | Static-analysis report for a DSL process | `DslRequest` body → `ExplainReport` |
+| GET | `/api/dsl/processes` | List registered process names | `NamesResponse` |
+| GET | `/api/dsl/processes/{name}` | Metadata for a single process | `ProcessDetail` |
+| GET | `/api/dsl/processes/{name}/diagram` | Render a diagram; optional query `format=mermaid|plantuml|bpmn` | `ProcessDiagramDto` |
+| GET | `/api/dsl/transactions` | List registered transaction names | `NamesResponse` |
+| GET | `/api/dsl/transactions/{name}` | Metadata for a single transaction | `TransactionDetail` |
+| GET | `/api/dsl/objects/search` | Search helpers, processes, transactions, and functions | query params `name`, `type`, `description` → `HelperSearchResult[]` |
+| GET | `/api/dsl/helpers` | List registered helper names | `NamesResponse` |
+| GET | `/api/dsl/constructs/{name}` | Structure and generated code body of a construct | `ConstructBodyDto` |
+| GET | `/api/dsl/definitions` | Flat list of all registered DSL entities | `DefinitionMetaDto[]` |
+| GET | `/api/executions` | List execution runs | query params `processName`, `status`, `mode`, `limit`, `offset` → `ExecutionListResponse` |
+| GET | `/api/executions/stats` | Aggregate execution statistics | query param `topProcesses` → `ExecutionStatsResponse` |
+| GET | `/api/executions/{id}` | Single execution run | `ExecutionDto` |
+| POST | `/api/executions/{id}/cancel` | Cancel a running execution run | `ExecutionDto` |
+| POST | `/api/dsl/reload` | Reload DSL definitions from `dsl.source-dir` | `ReloadResponse` |
+| POST | `/api/dsl/drafts/{name}/save` | Persist a Workbench draft | `DraftRequest` body → `DraftResponse` |
+| POST | `/api/dsl/drafts/{name}/publish` | Persist as published and reload DSL | `DraftRequest` body → `DraftResponse` |
+| DELETE | `/api/dsl/drafts/{name}` | Delete a Workbench draft | `DraftResponse` |
 
-    @POST
-    @Path("/run/{name}")
-    public Context<?> run(@PathParam("name") String name, Input input) {
-        return dslRuntime.run(name, Context.of(input));
-    }
-    
-    record Input(String correlationId, Map<String, Object> params){}
+The runtime request record is `cbs.nova.starter.model.DslRequest`:
+
+```json
+{
+  "body": <any>,
+  "metadata": { "<key>": <value>, ... }
 }
 ```
 
-The controller never decides whether it is running in development or production; that choice is made by the bean that
-implements `DslRuntime`. For example, a development profile injects a `DevDslRuntime` that executes `DslObject`s
-directly through `GlobalManager`, while a production profile injects a `ProductionDslRuntime` that starts Temporal
-workers and routes `run(...)` through the generated workflow classes.
+The draft request record is `cbs.nova.starter.model.VcsModels.DraftRequest`:
+
+```json
+{
+  "name": "LoanDisbursementProcess",
+  "type": "process",
+  "status": "Draft",
+  "version": "1.0.0",
+  "taskQueue": "loan-processing"
+}
+```
+
+### curl examples
+
+```bash
+# Run a process
+curl -s -X POST http://localhost:8090/api/dsl/run/LoanDisbursementProcess \
+  -H "Content-Type: application/json" \
+  -H "X-Request-Id: demo-run-1" \
+  -d '{"body":{"customerId":"C123","amount":5000},"metadata":{"source":"ci"}}'
+
+# Preview a process
+curl -s -X POST http://localhost:8090/api/dsl/preview/LoanDisbursementProcess \
+  -H "Content-Type: application/json" \
+  -d '{"body":{"customerId":"C123","amount":5000}}'
+
+# Explain a process
+curl -s -X POST http://localhost:8090/api/dsl/explain/LoanDisbursementProcess \
+  -H "Content-Type: application/json" \
+  -d '{"body":{"customerId":"C123","amount":5000}}'
+
+# Cancel an execution run
+RUN_ID="<run-id>"
+curl -s -X POST "http://localhost:8090/api/executions/${RUN_ID}/cancel"
+
+# Reload DSL definitions from dsl.source-dir
+curl -s -X POST http://localhost:8090/api/dsl/reload
+
+# Save a Workbench draft
+curl -s -X POST http://localhost:8090/api/dsl/drafts/LoanDisbursementProcess/save \
+  -H "Content-Type: application/json" \
+  -d '{"name":"LoanDisbursementProcess","type":"process","status":"Draft","version":"1.0.0","taskQueue":"loan-processing"}'
+
+# Publish a Workbench draft
+curl -s -X POST http://localhost:8090/api/dsl/drafts/LoanDisbursementProcess/publish \
+  -H "Content-Type: application/json" \
+  -d '{"name":"LoanDisbursementProcess","type":"process","status":"Published","version":"1.0.0","taskQueue":"loan-processing"}'
+
+# Delete a draft
+curl -s -X DELETE http://localhost:8090/api/dsl/drafts/LoanDisbursementProcess
+```
+
+### Auth and ops notes
+
+- **API key filter** — `cbs.nova.starter.web.ApiKeyAuthFilter` is registered for `/api/*` but only
+  enforces authentication when `dsl.auth.api-key` is a non-blank string. When configured, every
+  request must carry the exact value in the `X-Api-Key` header; otherwise the filter returns
+  `401 UNAUTHORIZED` with a JSON `ErrorResponse`.
+- **OIDC / JWT** — Setting `cbs.security.oidc.enabled=true` (default `false`) switches from the
+  default permissive filter chain to a JWT resource-server. By default the protected path patterns
+  are `/api/dsl/**` and `/api/executions/**`; every request under those paths must carry a valid
+  `Authorization: Bearer <jwt>`. `permitAllPaths` defaults to `/actuator/health/**`. Configure
+  `spring.security.oauth2.resourceserver.jwt.issuer-uri` (or `jwk-set-uri`) for the JWT decoder.
+- **Rate limiting** — Setting `cbs.security.ratelimit.enabled=true` (default `false`) enables an
+  in-memory token-bucket rate limiter keyed by client IP. Defaults: capacity `20`, refill
+  `5.0` tokens per second. Only mutating routes are limited: `POST /api/dsl/run/**`,
+  `POST /api/dsl/preview/**`, `POST /api/dsl/explain/**`, `POST /api/dsl/reload`,
+  `POST /api/dsl/drafts/*/save`, `POST /api/dsl/drafts/*/publish`, `DELETE /api/dsl/drafts/*`,
+  and `POST /api/executions/*/cancel`. All `GET` routes and actuator paths are exempt. A rejected
+  request receives `429 Too Many Requests` with a `Retry-After` header.
+- **Request ID** — The runtime handlers read the optional `X-Request-Id` header and use it as the
+  execution run id; `RequestIdFilter` echoes the value back in the response. If the header is
+  omitted, a generated UUID is used.
+- **Payload size** — Incoming `POST /api/dsl/run/**` and `POST /api/dsl/preview/**` bodies are
+  validated against `cbs.runs.max-input-bytes` (default 1 MiB). Oversized payloads are rejected with
+  `413 Payload Too Large` before any workflow is submitted.
 
 ## Helper and Spring integration
 

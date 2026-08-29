@@ -50,24 +50,32 @@ primarily for **coding agents and automated review tools** that need to:
 ```java
 public record PreviewReport(
     String name,
+    ExecutionMode mode,
+    boolean success,
     Object output,
     List<String> executionTrace,
     List<Map<String, Object>> externalCalls,
-    Map<String, Long> callCounts,
+    Map<String, Integer> callCounts,
     CallNode astTree,
-    List<Map<String, Object>> dryRunLogs
+    List<Map<String, Object>> dryRunLogs,
+    PreviewMetricsSnapshot metrics,
+    List<PreviewErrorDetail> errors
 ) {}
 ```
 
 | Field | Purpose |
 |-------|---------|
 | `name` | The DSL entity that was previewed. |
+| `mode` | The execution mode (`PREVIEW`, `RUN`, `EXPLAIN`, etc.). |
+| `success` | Whether the preview completed without a runtime failure. |
 | `output` | The final payload returned by the flow. It has the same type/contract as run mode, but may contain mock values. |
 | `executionTrace` | Flat, human-readable list of steps in order (e.g., `started: LoanProcess`, `called helper: riskAssessment`). |
 | `externalCalls` | List of captured external interactions such as JDBC, HTTP, MQ, and Feign calls. |
 | `callCounts` | Aggregated counts by call type (e.g., `database=2`, `http=1`). |
 | `astTree` | Nested call-tree AST showing the hierarchy of process → helper/transaction/function calls. |
 | `dryRunLogs` | Log events captured during the preview, useful for debugging and explanation. |
+| `metrics` | Optional performance/diagnostics snapshot captured during the run. |
+| `errors` | Optional list of non-fatal preview errors or diagnostics. |
 
 ## When to use Preview
 

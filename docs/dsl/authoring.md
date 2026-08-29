@@ -389,23 +389,34 @@ public class RiskHelper implements Executable<RiskIn, RiskOut> {
 
 ### Runtime invocation
 
-The runtime is invoked through the `DslRuntime` bean, which is the same interface regardless of environment:
+The runtime is invoked through the `DslRuntime` bean. The interface shape is the same regardless of
+environment, but the concrete implementation is selected by application wiring (for example, a
+production profile routes `run(...)` through generated Temporal workflow classes, while a local
+profile executes the DSL objects directly):
 
 ```java
-// Preview
-Context<LoanOut> result = dslRuntime.preview("LoanDisbursementProcess",
-    Context.of(new LoanIn("C123", new BigDecimal("5000"))));
+import cbs.nova.dsl.DslRuntime;
+import cbs.nova.dsl.Result;
+import cbs.nova.dsl.ExplainReport;
+import cbs.nova.dsl.PreviewReport;
+import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.dsl.ExecutionMode;
 
-// Explain
-Context<ExplainReport> reportCtx = dslRuntime.explain("LoanDisbursementProcess",
-    Context.of(new LoanIn("C123", new BigDecimal("5000"))));
-ExplainReport report = reportCtx.body();
-System.out.println(report.getDescription());
-System.out.println(report.getMermaidDiagram());
+LoanIn input = new LoanIn("C123", new BigDecimal("5000"));
 
-// Production run
-Context<LoanOut> workflowResult = dslRuntime.run("LoanDisbursementProcess",
-    Context.of(new LoanIn("C123", new BigDecimal("5000"))));
+// Preview — returns Result<PreviewReport>
+Result<PreviewReport> previewResult = dslRuntime.preview("LoanDisbursementProcess",
+    DslConfig.dslConfig().contextFactory().of(input, ExecutionMode.PREVIEW));
+
+// Explain — returns ExplainReport directly
+ExplainReport report = dslRuntime.explain("LoanDisbursementProcess",
+    DslConfig.dslConfig().contextFactory().of(input, ExecutionMode.EXPLAIN));
+System.out.println(report.description());
+System.out.println(report.mermaidDiagram());
+
+// Production run — returns Result<?>
+Result<?> runResult = dslRuntime.run("LoanDisbursementProcess",
+    DslConfig.dslConfig().contextFactory().of(input, ExecutionMode.RUN));
 ```
 
 The concrete `dslRuntime` bean is selected by application wiring. A development profile executes `DslObject`s directly;
