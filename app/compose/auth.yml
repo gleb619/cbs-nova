@@ -5,18 +5,19 @@
 # The Spring Boot starter can opt in to JWT-based auth via:
 #     cbs.security.oidc.enabled=true
 #     spring.security.oauth2.resourceserver.jwt.issuer-uri=http://keycloak:8080/realms/cbs-nova
-# When OIDC is enabled (default: OFF, fully anonymous), `/api/dsl/**` and
-# `/api/executions/**` require a Bearer JWT; actuator health and OpenAPI stay
-# permitAll. The Keycloak realm and client are NOT yet bootstrapped here —
-# `realm/client TBD`. To enable end-to-end, create a `cbs-nova` realm in this
-# Keycloak instance and a confidential client that the BFF / curl can use to
-# obtain a Bearer token. See backend/dsl-starter/starter/src/main/java/cbs/nova/
-# starter/config/SecurityConfiguration.java for the protected path list.
+# When OIDC is enabled (default: OFF, fully anonymous), /api/dsl/** and
+# /api/executions/** require a Bearer JWT; actuator health and OpenAPI stay
+# permitAll.
+#
+# This file bootstraps a ready-to-use cbs-nova realm on first boot. The realm
+# JSON is mounted into /opt/keycloak/data/import and Keycloak imports it when
+# the database is empty. Because Keycloak persists the realm in Postgres, later
+# container restarts do NOT re-import or overwrite manual admin-console changes.
 
 services:
   keycloak:
     image: quay.io/keycloak/keycloak:22.0.0
-    command: start-dev
+    command: start-dev --import-realm
     environment:
       KC_DB: postgres
       KC_DB_URL_HOST: postgres
@@ -50,6 +51,7 @@ services:
         condition: service_healthy
     volumes:
       - keycloak-data:/opt/keycloak/data
+      - ./keycloak/cbs-nova-realm.json:/opt/keycloak/data/import/cbs-nova-realm.json:ro
 
 volumes:
   keycloak-data:

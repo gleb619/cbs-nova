@@ -1,0 +1,127 @@
+{
+  "id": "33aef6b9-2606-4fb9-a184-c587e5ddb238",
+  "realm": "cbs-nova",
+  "displayName": "CBS Nova",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": false,
+  "duplicateEmailsAllowed": false,
+  "rememberMe": false,
+  "verifyEmail": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": false,
+  "defaultRole": {
+    "id": "f3a102d0-4b50-4df9-a3b7-785bb7fb3310",
+    "name": "default-roles-cbs-nova"
+  },
+  "roles": {
+    "realm": [
+      {
+        "id": "a531bd57-e876-4e50-8bf2-d5ef1b1eca55",
+        "name": "cbs-nova-user",
+        "description": "General CBS Nova user role (enforcement is out of scope; role exists for future use)",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "cbs-nova"
+      },
+      {
+        "id": "f3a102d0-4b50-4df9-a3b7-785bb7fb3310",
+        "name": "default-roles-cbs-nova",
+        "description": "Default roles assigned to every user in the cbs-nova realm",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "cbs-nova-user"
+          ]
+        },
+        "clientRole": false,
+        "containerId": "cbs-nova"
+      }
+    ]
+  },
+  "users": [
+    {
+      "id": "0189eda9-906b-44d9-8b63-998dbc315671",
+      "username": "devuser",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "devuser@example.com",
+      "firstName": "Dev",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "devpassword",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-cbs-nova",
+        "cbs-nova-user"
+      ]
+    },
+    {
+      "id": "a7a52bc0-3d5d-476f-8097-9c14d7d897fa",
+      "username": "service-account-cbs-nova-bff",
+      "enabled": true,
+      "emailVerified": false,
+      "serviceAccountClientId": "cbs-nova-bff",
+      "realmRoles": [
+        "default-roles-cbs-nova",
+        "cbs-nova-user"
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "id": "4ac75e55-840e-4ff2-9d2a-531c3ec3a2df",
+      "clientId": "cbs-nova-bff",
+      "name": "CBS Nova BFF / curl client",
+      "description": "Confidential client used by the Nuxt BFF and manual curl tests against the CBS Nova DSL API",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "change_me_in_production",
+      "redirectUris": [
+        "*"
+      ],
+      "webOrigins": [
+        "*"
+      ],
+      "notBefore": 0,
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "frontchannelLogout": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "access.token.lifespan": "300",
+        "client.session.idle.timeout": "1800",
+        "client.session.max.lifespan": "36000",
+        "oauth2.device.authorization.grant.enabled": "false",
+        "oidc.ciba.grant.enabled": "false"
+      },
+      "fullScopeAllowed": true,
+      "protocolMappers": [
+        {
+          "id": "d7b3c3e1-4a44-4c4b-9a27-9e8a6c3b6d91",
+          "name": "audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "cbs-nova-bff",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "keycloakVersion": "22.0.0"
+}

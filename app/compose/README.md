@@ -78,7 +78,7 @@ The Spring Boot starter (`backend/dsl-starter`) ships with an opt-in OIDC
 resource-server guard. It is **OFF by default** — every DSL endpoint stays
 anonymous, matching the pre-T275 behaviour.
 
-To enable against the local Keycloak:
+To enable against the local Keycloak, override the spring-app environment:
 
 ```yaml
 cbs.security.oidc.enabled: true
@@ -91,10 +91,60 @@ and any path listed in `cbs.security.oidc.permit-all-paths` stay anonymous.
 401 (not 500) with `WWW-Authenticate: Bearer ...` is returned for missing or
 invalid tokens.
 
-The `cbs-nova` realm and client are **TBD** in this compose stack. To enable
-end-to-end, create the realm in the Keycloak admin console
-(http://localhost:8080, admin / admin) and configure a confidential client
-that the BFF / curl can use to mint a token. See
+The compose stack now bootstraps a ready-to-use realm automatically on first
+start. `app/compose/keycloak/cbs-nova-realm.json` is imported by Keycloak via
+`--import-realm`; because the realm is persisted in Postgres, later restarts do
+not re-import it. The imported realm contains:
+
+- Realm `cbs-nova`.
+- Confidential client `cbs-nova-bff` with secret `change_me_in_production`.
+- Dev user `devuser` / `devpassword`.
+- Realm role `cbs-nova-user` (not enforced by the backend yet; exists for
+  future role-based checks).
+
+### Token acquisition examples
+
+Client-credentials grant (service-account token):
+
+```bash
+curl -s -X POST http://localhost:8080/realms/cbs-nova/protocol/openid-connect/token \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'grant_type=client_credentials' \
+  -d 'client_id=cbs-nova-bff' \
+  -d 'client_secret=change_me_in_production'
+```
+
+Password grant (dev user token):
+
+```bash
+curl -s -X POST http://localhost:8080/realms/cbs-nova/protocol/openid-connect/token \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'grant_type=password' \
+  -d 'client_id=cbs-nova-bff' \
+  -d 'client_secret=change_me_in_production' \
+  -d 'username=devuser' \
+  -d 'password=devpassword'
+```
+
+Either response contains `access_token`. Use it to call a guarded endpoint:
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/realms/cbs-nova/protocol/openid-connect/token \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'grant_type=client_credentials' \
+  -d 'client_id=cbs-nova-bff' \
+  -d 'client_secret=change_me_in_production' | jq -r '.access_token')
+
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8090/api/dsl/definitions
+```
+
+Anonymous health checks remain reachable:
+
+```bash
+curl -s http://localhost:8090/actuator/health
+```
+
+See
 `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/config/SecurityConfiguration.java`
 for the exact path patterns.
 
