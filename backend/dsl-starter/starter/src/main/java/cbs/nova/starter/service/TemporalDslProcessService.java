@@ -9,6 +9,9 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
+import cbs.nova.starter.service.DslRunCancellationService.Outcome;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.baggage.Baggage;
 import io.opentelemetry.api.trace.Span;
@@ -16,7 +19,6 @@ import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
 import io.sentry.Sentry;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -54,6 +56,22 @@ public class TemporalDslProcessService {
 
   static final Instant NOT_FINISHED_AT = Instant.EPOCH;
 
+  public static final String RUN_DURATION_TIMER = "dsl.run.duration";
+
+  public static final String RUN_COUNT_COUNTER = "dsl.run.count";
+
+  public static final String CANCEL_COUNTER = "dsl.run.cancel";
+
+  public static final String SWEEP_STALE_COUNTER = "dsl.run.sweep.stale";
+
+  public static final String SWEEP_INSPECTED_COUNTER = "dsl.run.sweep.inspected";
+
+  static final String UNKNOWN_PROCESS = "unknown";
+
+  static final String PROCESS_NAME_TAG = "processName";
+
+  static final String STATUS_TAG = "status";
+
   private final ContextFactory contextFactory;
   private final DslRunRepository runRepository;
   private final ObjectMapper objectMapper;
@@ -63,20 +81,22 @@ public class TemporalDslProcessService {
   private final Duration staleThreshold;
   private final boolean asyncDbSave;
   private final long maxOutputBytes;
+  private final MeterRegistry meterRegistry;
 
   public TemporalDslProcessService(ContextFactory contextFactory, DslRunRepository runRepository,
           ObjectMapper objectMapper,
           ThreadPoolTaskExecutor dslProcessExecutor, ScheduledExecutorService healthcheckExecutor,
-          Duration healthcheckInterval, Duration staleThreshold, boolean asyncDbSave) {
+          Duration healthcheckInterval, Duration staleThreshold, boolean asyncDbSave,
+          MeterRegistry meterRegistry) {
     this(contextFactory, runRepository, objectMapper, dslProcessExecutor, healthcheckExecutor,
-            healthcheckInterval, staleThreshold, asyncDbSave, Long.MAX_VALUE);
+            healthcheckInterval, staleThreshold, asyncDbSave, Long.MAX_VALUE, meterRegistry);
   }
 
   public TemporalDslProcessService(ContextFactory contextFactory, DslRunRepository runRepository,
           ObjectMapper objectMapper,
           ThreadPoolTaskExecutor dslProcessExecutor, ScheduledExecutorService healthcheckExecutor,
           Duration healthcheckInterval, Duration staleThreshold, boolean asyncDbSave,
-          long maxOutputBytes) {
+          long maxOutputBytes, MeterRegistry meterRegistry) {
     this.contextFactory = contextFactory;
     this.runRepository = runRepository;
     this.objectMapper = objectMapper;
@@ -86,6 +106,7 @@ public class TemporalDslProcessService {
     this.staleThreshold = staleThreshold;
     this.asyncDbSave = asyncDbSave;
     this.maxOutputBytes = maxOutputBytes;
+    this.meterRegistry = meterRegistry;
   }
 
   private static final Duration SHUTDOWN_JOIN = Duration.ofSeconds(5);
@@ -215,6 +236,8 @@ public class TemporalDslProcessService {
     try {
       for (String processName : knownProcessNames()) {
         for (DslRun run : runRepository.findByProcessName(processName)) {
+          meterRegistry.counter(SWEEP_INSPECTED_COUNTER,
+                  PROCESS_NAME_TAG, safeProcessName(run.processName())).increment();
           if (!DslRunStatus.RUNNING.name().equals(run.status())) {
             continue;
           }
@@ -251,6 +274,10 @@ public class TemporalDslProcessService {
         return null;
       });
 
+      meterRegistry.counter(SWEEP_STALE_COUNTER,
+              PROCESS_NAME_TAG, safeProcessName(run.processName())).increment();
+      recordRunComplete(run.processName(), DslRunStatus.STALE.name(), run.startedAt(), finishedAt);
+
       Span span = activeSpans.remove(runId);
       if (span != null) {
         span.setAttribute("status", DslRunStatus.STALE.name());
@@ -269,6 +296,49 @@ public class TemporalDslProcessService {
     Set<String> names = new HashSet<>(runRepository.knownProcessNames());
     names.addAll(GlobalManager.globalManager().processNames());
     return names;
+  }
+
+  private @NonNull String safeProcessName(@Nullable String processName) {
+    if (processName == null || processName.isBlank()) {
+      return UNKNOWN_PROCESS;
+    }
+    return GlobalManager.globalManager().processNames().contains(processName)
+            ? processName
+            : UNKNOWN_PROCESS;
+  }
+
+  private void recordRunComplete(@Nullable String processName, @NonNull String status,
+          @NonNull Instant startedAt, @NonNull Instant finishedAt) {
+    String safe = safeProcessName(processName);
+    Duration duration = Duration.between(startedAt, finishedAt);
+    if (duration.isNegative()) {
+      duration = Duration.ZERO;
+    }
+    Timer.builder(RUN_DURATION_TIMER)
+            .description("Duration of a production DSL run")
+            .tag(PROCESS_NAME_TAG, safe)
+            .tag(STATUS_TAG, status)
+            .register(meterRegistry)
+            .record(duration);
+    meterRegistry.counter(RUN_COUNT_COUNTER,
+            PROCESS_NAME_TAG, safe,
+            STATUS_TAG, status).increment();
+  }
+
+  public void recordCancel(@Nullable String processName, @Nullable Instant startedAt,
+          @NonNull Outcome outcome, @NonNull Instant finishedAt) {
+    String safe = safeProcessName(processName);
+    String status = switch (outcome) {
+      case CANCELLED -> "cancelled";
+      case NOT_FOUND -> "notfound";
+      case NOT_CANCELLABLE -> "rejected";
+    };
+    meterRegistry.counter(CANCEL_COUNTER,
+            STATUS_TAG, status,
+            PROCESS_NAME_TAG, safe).increment();
+    if (outcome == Outcome.CANCELLED && startedAt != null) {
+      recordRunComplete(processName, DslRunStatus.CANCELLED.name(), startedAt, finishedAt);
+    }
   }
 
   private @NonNull Result<?> executeAndRecord(
@@ -341,6 +411,8 @@ public class TemporalDslProcessService {
                 contextJson);
         return null;
       });
+
+      recordRunComplete(processName, status, startedAt, finishedAt);
 
       return result;
     } finally {

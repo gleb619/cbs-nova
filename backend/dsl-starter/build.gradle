@@ -4,6 +4,9 @@ plugins {
   alias(libs.plugins.test.logger) apply false
 }
 
+// Pin the catalog Lombok version across all Spring Boot-managed configurations.
+ext['lombok.version'] = libs.versions.lombok.get()
+
 // Central version lives in backend/gradle.properties.
 def parentProps = new Properties()
 file('../gradle.properties').withInputStream { parentProps.load(it) }
