@@ -4,6 +4,7 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.starter.service.TemporalDslProcessService;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -31,7 +32,8 @@ public class ServiceUtil {
             disabledScheduledExecutor(),
             Duration.ofSeconds(30),
             Duration.ofMinutes(5),
-            false);
+            false,
+            new SimpleMeterRegistry());
   }
 
   private static @NonNull ThreadPoolTaskExecutor sameThreadExecutor() {

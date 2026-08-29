@@ -42,20 +42,30 @@ public class DslRunCancellationService {
   private final WorkflowClient workflowClient;
   private final DslRunRepository runRepository;
   private final Clock clock;
+  private final TemporalDslProcessService metricsRecorder;
 
   public DslRunCancellationService(
           @NonNull WorkflowClient workflowClient,
           @NonNull DslRunRepository runRepository) {
-    this(workflowClient, runRepository, Clock.systemUTC());
+    this(workflowClient, runRepository, Clock.systemUTC(), null);
   }
 
   public DslRunCancellationService(
           @NonNull WorkflowClient workflowClient,
           @NonNull DslRunRepository runRepository,
           @NonNull Clock clock) {
+    this(workflowClient, runRepository, clock, null);
+  }
+
+  public DslRunCancellationService(
+          @NonNull WorkflowClient workflowClient,
+          @NonNull DslRunRepository runRepository,
+          @NonNull Clock clock,
+          @Nullable TemporalDslProcessService metricsRecorder) {
     this.workflowClient = workflowClient;
     this.runRepository = runRepository;
     this.clock = clock;
+    this.metricsRecorder = metricsRecorder;
   }
 
   public enum Outcome {
@@ -71,11 +81,15 @@ public class DslRunCancellationService {
   public @NonNull CancelResult cancel(@NonNull String runId) {
     Optional<DslRun> existing = runRepository.findByRunId(runId);
     if (existing.isEmpty()) {
+      Instant finishedAt = clock.instant();
+      recordCancel(null, null, Outcome.NOT_FOUND, finishedAt);
       return new CancelResult(Outcome.NOT_FOUND, null, null);
     }
 
     DslRun run = existing.get();
     if (!DslRunStatus.RUNNING.name().equals(run.status())) {
+      Instant finishedAt = clock.instant();
+      recordCancel(run.processName(), run.startedAt(), Outcome.NOT_CANCELLABLE, finishedAt);
       return new CancelResult(Outcome.NOT_CANCELLABLE, run, run.status());
     }
 
@@ -94,11 +108,21 @@ public class DslRunCancellationService {
     if (affected == 0) {
       log.info("Cancel skipped terminal write for run {}: it is no longer RUNNING "
               + "(concurrent terminal transition, now {})", runId, latest.status());
+      recordCancel(run.processName(), run.startedAt(), Outcome.NOT_CANCELLABLE, finishedAt);
       return new CancelResult(Outcome.NOT_CANCELLABLE, latest, latest.status());
     }
 
     log.info("Run {} cancelled by user request", runId);
+    recordCancel(run.processName(), run.startedAt(), Outcome.CANCELLED, finishedAt);
     return new CancelResult(Outcome.CANCELLED, latest, latest.status());
+  }
+
+  private void recordCancel(@Nullable String processName, @Nullable Instant startedAt,
+          @NonNull Outcome outcome, @NonNull Instant finishedAt) {
+    if (metricsRecorder == null) {
+      return;
+    }
+    metricsRecorder.recordCancel(processName, startedAt, outcome, finishedAt);
   }
 
   /**

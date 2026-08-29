@@ -6,6 +6,7 @@ import cbs.nova.dsl.SimpleContext;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.SpanContext;
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
@@ -64,7 +65,8 @@ class TemporalDslProcessServiceTracingTest {
             disabledScheduledExecutor(),
             Duration.ofSeconds(30),
             Duration.ofMinutes(5),
-            false);
+            false,
+            new SimpleMeterRegistry());
     service.setOpenTelemetry(openTelemetry);
 
     service.startProcess(processName, Map.of(), Map.of()).result().join();
@@ -107,7 +109,8 @@ class TemporalDslProcessServiceTracingTest {
             disabledScheduledExecutor(),
             Duration.ofSeconds(30),
             Duration.ofMinutes(5),
-            false);
+            false,
+            new SimpleMeterRegistry());
     // Default OpenTelemetry is no-op and must remain so.
     assertThat(service.getOpenTelemetry()).isSameAs(OpenTelemetry.noop());
 

@@ -56,6 +56,7 @@ import org.springframework.core.task.TaskDecorator;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -299,12 +300,14 @@ public class TemporalConfiguration {
           @Value("${cbs.nova.process.healthcheck.stale-threshold:PT5M}") Duration staleThreshold,
           @Value("${cbs.nova.process.async-db-save:true}") boolean asyncDbSave,
           DslRunsProperties dslRunsProperties,
-          OpenTelemetry openTelemetry) {
+          OpenTelemetry openTelemetry,
+          MeterRegistry meterRegistry) {
     TemporalDslProcessService service = new TemporalDslProcessService(contextFactory, runRepository,
             JsonMapper.builder().build(),
             dslProcessExecutor, healthcheckExecutor,
             healthcheckInterval, staleThreshold, asyncDbSave,
-            dslRunsProperties.getMaxOutputBytes());
+            dslRunsProperties.getMaxOutputBytes(),
+            meterRegistry);
     service.setOpenTelemetry(openTelemetry);
     return service;
   }
@@ -319,8 +322,10 @@ public class TemporalConfiguration {
   @Bean
   @ConditionalOnMissingBean
   DslRunCancellationService dslRunCancellationService(WorkflowClient workflowClient,
-          DslRunRepository runRepository) {
-    return new DslRunCancellationService(workflowClient, runRepository);
+          DslRunRepository runRepository,
+          TemporalDslProcessService temporalDslProcessService) {
+    return new DslRunCancellationService(workflowClient, runRepository,
+            Clock.systemUTC(), temporalDslProcessService);
   }
 
 }
