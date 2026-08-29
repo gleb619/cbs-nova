@@ -4,7 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.starter.core.recorder.ExternalCall;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
-import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
+import cbs.nova.starter.core.recorder.RunIdKeyedExternalCallRecorder;
+import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,15 +18,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 class DataSourceCallConfigurationTest {
+  private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
 
-  private RunScopedExternalCallRecorder recorder;
+  private RunIdKeyedExternalCallRecorder recorder;
   private DataSourceProxyBeanPostProcessor postProcessor;
   private JdbcDataSource realDataSource;
   private DataSource wrappedDataSource;
 
   @BeforeEach
   void setUp() {
-    recorder = new RunScopedExternalCallRecorder(null);
+    recorder = new RunIdKeyedExternalCallRecorder(dryRunLoggingContext, null);
     recorder.resetGlobalCounts();
 
     realDataSource = new JdbcDataSource();

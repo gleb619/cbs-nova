@@ -8,7 +8,8 @@ import static org.mockito.Mockito.when;
 import cbs.nova.starter.config.MessagingCallCaptureConfiguration;
 import cbs.nova.starter.core.recorder.ExternalCall;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
-import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
+import cbs.nova.starter.core.recorder.RunIdKeyedExternalCallRecorder;
+import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -23,13 +24,14 @@ import java.util.Map;
 import java.util.concurrent.Future;
 
 class MessagingCallCaptureConfigurationTest {
+  private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
 
-  private RunScopedExternalCallRecorder recorder;
+  private RunIdKeyedExternalCallRecorder recorder;
   private List<ExternalCall> recorded;
 
   @BeforeEach
   void setUp() {
-    recorder = new RunScopedExternalCallRecorder(null);
+    recorder = new RunIdKeyedExternalCallRecorder(dryRunLoggingContext, null);
     recorder.resetGlobalCounts();
     recorded = new ArrayList<>();
   }

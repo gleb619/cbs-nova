@@ -27,7 +27,8 @@ import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
 import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
-import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
+import cbs.nova.starter.core.recorder.RunIdKeyedExternalCallRecorder;
+import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import cbs.nova.starter.helper.*;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
@@ -43,10 +44,11 @@ import java.net.http.HttpClient;
 import java.util.List;
 
 class IntermediateDslExamplesTest {
+  private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
 
   private final ContextFactory contextFactory = new ContextFactory();
-  private final RunScopedExternalCallRecorder recorder = new RunScopedExternalCallRecorder(null);
-  private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
+  private final RunIdKeyedExternalCallRecorder recorder = new RunIdKeyedExternalCallRecorder(
+          dryRunLoggingContext, null);
   private final DryRunLogBufferRegistry bufferRegistry = new DryRunLogBufferRegistry();
   private final CbsNovaPreviewProperties previewProperties = new CbsNovaPreviewProperties(null,
           null);

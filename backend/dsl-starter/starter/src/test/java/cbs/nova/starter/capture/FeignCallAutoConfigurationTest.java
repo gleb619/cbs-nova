@@ -6,7 +6,8 @@ import static org.assertj.core.api.Assertions.entry;
 import cbs.nova.starter.config.FeignCallConfiguration;
 import cbs.nova.starter.core.recorder.ExternalCall;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
-import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
+import cbs.nova.starter.core.recorder.RunIdKeyedExternalCallRecorder;
+import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -25,10 +26,11 @@ import java.util.List;
 import java.util.Map;
 
 class FeignCallConfigurationTest {
+  private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
 
   private HttpServer httpServer;
   private String baseUrl;
-  private RunScopedExternalCallRecorder recorder;
+  private RunIdKeyedExternalCallRecorder recorder;
   private List<ExternalCall> recorded;
 
   interface StubClient {
@@ -57,7 +59,7 @@ class FeignCallConfigurationTest {
     httpServer.start();
     baseUrl = "http://127.0.0.1:" + httpServer.getAddress().getPort();
 
-    recorder = new RunScopedExternalCallRecorder(null);
+    recorder = new RunIdKeyedExternalCallRecorder(dryRunLoggingContext, null);
     recorder.resetGlobalCounts();
     recorded = new ArrayList<>();
   }

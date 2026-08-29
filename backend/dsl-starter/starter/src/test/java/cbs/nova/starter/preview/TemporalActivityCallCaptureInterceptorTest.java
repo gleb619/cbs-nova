@@ -9,7 +9,8 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.transaction.TransactionInvoker;
 import cbs.nova.starter.core.recorder.ExternalCall;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
-import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
+import cbs.nova.starter.core.recorder.RunIdKeyedExternalCallRecorder;
+import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,17 +20,18 @@ import java.util.List;
 import java.util.Map;
 
 class TemporalActivityCallCaptureInterceptorTest {
+  private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
 
   private final ContextFactory contextFactory = new ContextFactory();
 
-  private RunScopedExternalCallRecorder recorder;
+  private RunIdKeyedExternalCallRecorder recorder;
   private List<ExternalCall> recorded;
   private TransactionInvoker delegate;
   private TemporalActivityCallCaptureInterceptor interceptor;
 
   @BeforeEach
   void setUp() {
-    recorder = new RunScopedExternalCallRecorder(null);
+    recorder = new RunIdKeyedExternalCallRecorder(dryRunLoggingContext, null);
     recorder.resetGlobalCounts();
     recorded = new ArrayList<>();
     delegate = (name, input, ctx) -> Result.success("ok");

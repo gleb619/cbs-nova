@@ -17,7 +17,7 @@ import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
 import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
-import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
+import cbs.nova.starter.core.recorder.RunIdKeyedExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
@@ -36,10 +36,11 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 class DevDslRuntimeCachingTest {
-
-  private final RunScopedExternalCallRecorder recorder = new RunScopedExternalCallRecorder(null);
-  private final ContextFactory contextFactory = new ContextFactory();
   private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
+
+  private final RunIdKeyedExternalCallRecorder recorder = new RunIdKeyedExternalCallRecorder(
+          dryRunLoggingContext, null);
+  private final ContextFactory contextFactory = new ContextFactory();
   private final DryRunLogBufferRegistry bufferRegistry = new DryRunLogBufferRegistry();
   private final DryRunLogbackAppender appender = new DryRunLogbackAppender(dryRunLoggingContext,
           bufferRegistry);

@@ -19,7 +19,7 @@ import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
 import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
-import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
+import cbs.nova.starter.core.recorder.RunIdKeyedExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLoggingContextPropagator;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;
@@ -156,8 +156,9 @@ public class TemporalConfiguration {
   @Bean
   @ConditionalOnMissingBean
   ExternalCallRecorder externalCallRecorder(
+          DryRunLoggingContext dryRunLoggingContext,
           @Autowired(required = false) @Nullable DslExecutionEventBus eventBus) {
-    return new RunScopedExternalCallRecorder(eventBus);
+    return new RunIdKeyedExternalCallRecorder(dryRunLoggingContext, eventBus);
   }
 
   @Bean

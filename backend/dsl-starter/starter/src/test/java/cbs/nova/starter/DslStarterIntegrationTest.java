@@ -20,11 +20,11 @@ import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
 import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
-import cbs.nova.starter.core.recorder.RunScopedExternalCallRecorder;
+import cbs.nova.starter.core.recorder.RunIdKeyedExternalCallRecorder;
+import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.LoggingExecutionListener;
-import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import cbs.nova.starter.service.DslRuntimeService;
 import tools.jackson.databind.ObjectMapper;
@@ -52,9 +52,9 @@ class DslStarterIntegrationTest {
                             .execute(ctx -> Result.success("disbursed"))
                             .build());
 
-    var recorder = new RunScopedExternalCallRecorder(null);
-    var contextFactory = new ContextFactory();
     var dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
+    var recorder = new RunIdKeyedExternalCallRecorder(dryRunLoggingContext, null);
+    var contextFactory = new ContextFactory();
     var bufferRegistry = new DryRunLogBufferRegistry();
     var previewProperties = new CbsNovaPreviewProperties(null, null);
     var previewPipe = new PreviewDslPipe(recorder, contextFactory, dryRunLoggingContext,
