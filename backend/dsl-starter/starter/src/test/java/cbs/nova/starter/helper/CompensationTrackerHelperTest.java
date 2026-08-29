@@ -70,9 +70,9 @@ class CompensationTrackerHelperTest {
     bounded.execute(contextFactory.of(
             Map.<String, Object>of("markerId", "c"), ExecutionMode.PREVIEW));
 
-    // LRU/W-TinyLFU evicts the eldest insert when bounded.
+    // W-TinyLFU eviction choice among low-frequency entries isn't guaranteed insertion-order
+    // LRU at this scale; assert the bound holds and the most recent write always survives.
     assertThat(bounded.markers()).hasSize(2);
     assertThat(bounded.wasCompensated("c")).isTrue();
-    assertThat(bounded.wasCompensated("b")).isTrue();
   }
 }
