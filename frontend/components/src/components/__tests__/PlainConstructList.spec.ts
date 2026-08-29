@@ -97,4 +97,37 @@ describe('PlainConstructList', () => {
     expect(badges.some((b) => b.classes().includes('bg-blue-100'))).toBe(true)
     expect(badges.some((b) => b.classes().includes('bg-gray-200'))).toBe(true)
   })
+
+  it('renders a delete button for Draft items when deletable is true', () => {
+    const wrapper = mount(PlainConstructList, {
+      props: { constructs, selectedName: null, deletable: true },
+    })
+
+    expect(
+      wrapper.find('[data-testid="plain-construct-list-item-delete-SendEmail"]').exists(),
+    ).toBe(true)
+    expect(
+      wrapper.find('[data-testid="plain-construct-list-item-delete-CreateOrder"]').exists(),
+    ).toBe(false)
+  })
+
+  it('does not render delete buttons when deletable is false', () => {
+    const wrapper = mount(PlainConstructList, { props: { constructs, selectedName: null } })
+
+    expect(
+      wrapper.find('[data-testid="plain-construct-list-item-delete-SendEmail"]').exists(),
+    ).toBe(false)
+  })
+
+  it('emits delete with the construct name when the delete button is clicked', async () => {
+    const wrapper = mount(PlainConstructList, {
+      props: { constructs, selectedName: null, deletable: true },
+    })
+
+    await wrapper.find('[data-testid="plain-construct-list-item-delete-SendEmail"]').trigger('click')
+
+    expect(wrapper.emitted('select')).toBeFalsy()
+    expect(wrapper.emitted('delete')).toBeTruthy()
+    expect(wrapper.emitted('delete')![0]).toEqual(['SendEmail'])
+  })
 })

@@ -15,6 +15,7 @@ export { type DropdownMenuItem, default as DropdownMenu } from './components/dro
 export { default as DslBodyEditor } from './components/dsl/BodyEditor.vue'
 export { default as DslCodeTab } from './components/dsl/CodeTab.vue'
 export { default as DslConstructExplorer } from './components/dsl/ConstructExplorer.vue'
+export { default as DslDeleteDraftConfirmationModal } from './components/dsl/DeleteDraftConfirmationModal.vue'
 export { default as DslDraftRestoreBanner } from './components/dsl/DraftRestoreBanner.vue'
 export { default as DslHelperSearchPanel } from './components/dsl/HelperSearchPanel.vue'
 export { default as DslInputMappingGrid } from './components/dsl/InputMappingGrid.vue'

@@ -154,6 +154,18 @@ export function useDslWorkbench() {
     }
   }
 
+  async function deleteConstruct(name: string) {
+    log.info('deleting construct', { name })
+    await api.deleteDraft(name)
+    await loadConstructs()
+    if (state.value.selectedName === name) {
+      state.value.selectedName = state.value.constructs.length
+        ? state.value.constructs[0].name
+        : null
+    }
+    log.info('construct deleted', { name })
+  }
+
   function markDirty() {
     state.value.isDirty = true
   }
@@ -174,6 +186,7 @@ export function useDslWorkbench() {
     saveConstruct,
     validateConstruct,
     publishConstruct,
+    deleteConstruct,
     markDirty,
     reloadDefinitions,
   }

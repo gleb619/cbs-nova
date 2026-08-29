@@ -13,6 +13,7 @@ const { dslApi, useDslApiMock } = vi.hoisted(() => {
     explain: vi.fn(),
     saveDraft: vi.fn(),
     publishDraft: vi.fn(),
+    deleteDraft: vi.fn(),
     validateConstruct: vi.fn(),
   }
   return { dslApi: api, useDslApiMock: vi.fn(() => api) }
@@ -30,6 +31,7 @@ type ApiMock = {
   explain: ReturnType<typeof vi.fn>
   saveDraft: ReturnType<typeof vi.fn>
   publishDraft: ReturnType<typeof vi.fn>
+  deleteDraft: ReturnType<typeof vi.fn>
   validateConstruct: ReturnType<typeof vi.fn>
 }
 
@@ -43,6 +45,7 @@ describe('useDslWorkbench', () => {
     api.reload.mockReset()
     api.saveDraft.mockReset()
     api.publishDraft.mockReset()
+    api.deleteDraft.mockReset()
   })
 
   afterEach(() => {
@@ -192,6 +195,52 @@ describe('useDslWorkbench', () => {
       }))
       expect(wb.state.value.isDirty).toBe(false)
       expect(wb.state.value.isSaving).toBe(false)
+    })
+  })
+
+  describe('deleteConstruct', () => {
+    it('DELETEs via api.deleteDraft and reloads the construct list', async () => {
+      const api = getApi()
+      api.getDefinitions.mockResolvedValueOnce([
+        { name: 'c1', type: 'Process' as const, status: 'Draft' as const },
+        { name: 'c2', type: 'Helper' as const, status: 'Draft' as const },
+      ])
+      api.deleteDraft.mockResolvedValueOnce({ ok: true })
+
+      const wb = useDslWorkbench()
+      await wb.loadConstructs()
+      wb.selectConstruct('c1')
+      api.getDefinitions.mockResolvedValueOnce([
+        { name: 'c2', type: 'Helper' as const, status: 'Draft' as const },
+      ])
+
+      await wb.deleteConstruct('c1')
+
+      expect(api.deleteDraft).toHaveBeenCalledWith('c1')
+      expect(api.getDefinitions).toHaveBeenCalledTimes(2)
+      expect(wb.state.value.constructs).toEqual([
+        { name: 'c2', type: 'Helper', status: 'Draft' },
+      ])
+    })
+
+    it('clears the selected name when the deleted construct was selected', async () => {
+      const api = getApi()
+      api.getDefinitions.mockResolvedValueOnce([
+        { name: 'c1', type: 'Process' as const, status: 'Draft' as const },
+        { name: 'c2', type: 'Helper' as const, status: 'Draft' as const },
+      ])
+      api.deleteDraft.mockResolvedValueOnce({ ok: true })
+
+      const wb = useDslWorkbench()
+      await wb.loadConstructs()
+      wb.selectConstruct('c1')
+      api.getDefinitions.mockResolvedValueOnce([
+        { name: 'c2', type: 'Helper' as const, status: 'Draft' as const },
+      ])
+
+      await wb.deleteConstruct('c1')
+
+      expect(wb.state.value.selectedName).toBe('c2')
     })
   })
 

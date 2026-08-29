@@ -9,15 +9,17 @@ import {
   type DropdownMenuItem,
   DslBodyEditor,
   DslConstructExplorer,
+  DslDeleteDraftConfirmationModal,
   DslDraftRestoreBanner,
   DslHelperSearchPanel,
   DslMetadataPanel,
   DslPlainConstructList,
   DslProblemsPanel,
+  ErrorBanner,
   useHelperSearch,
 } from '@cbs/components'
 import { useCookie } from 'nuxt/app'
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import type { RunnerOutput } from '~/types'
 
 const workbench = useDslWorkbench()
@@ -30,6 +32,7 @@ const {
   saveConstruct,
   validateConstruct,
   publishConstruct,
+  deleteConstruct,
   reloadDefinitions,
   markDirty,
 } = workbench
@@ -84,6 +87,35 @@ function toggleExplorer() {
 
 function toggleHelperSearch() {
   helperSearchOpen.value = !helperSearchOpen.value
+}
+
+const pendingDeleteName = ref<string | null>(null)
+const isDeleting = ref(false)
+const deleteError = ref<string | null>(null)
+const showDeleteModal = computed(() => !!pendingDeleteName.value)
+
+function requestDelete(name: string) {
+  pendingDeleteName.value = name
+  deleteError.value = null
+}
+
+async function confirmDelete() {
+  if (!pendingDeleteName.value || isDeleting.value) return
+  isDeleting.value = true
+  deleteError.value = null
+  try {
+    await deleteConstruct(pendingDeleteName.value)
+    pendingDeleteName.value = null
+  } catch (err) {
+    deleteError.value = (err as Error).message
+  } finally {
+    isDeleting.value = false
+  }
+}
+
+function cancelDelete() {
+  if (isDeleting.value) return
+  pendingDeleteName.value = null
 }
 
 type ActionValue = 'refresh' | 'validate' | 'save' | 'publish'
@@ -178,6 +210,8 @@ onMounted(() => {
               :constructs="constructs"
               :selected-name="selectedName"
               :on-select="onSelect"
+              deletable
+              @delete="requestDelete"
             />
           </template>
         </DslConstructExplorer>
@@ -187,6 +221,9 @@ onMounted(() => {
         <DslMetadataPanel :construct="selectedConstruct" />
         <div v-if="restoredFromDraft" class="px-3 pt-2">
           <DslDraftRestoreBanner :saved-at="draftSavedAt" @discard="clearDraft" />
+        </div>
+        <div v-if="deleteError" class="px-3 pt-2" data-testid="dsl-workbench-delete-error">
+          <ErrorBanner :message="deleteError" @retry="confirmDelete" />
         </div>
         <div class="flex-1 overflow-hidden">
           <DslBodyEditor
@@ -212,5 +249,13 @@ onMounted(() => {
         @clear="helperSearch.clearFilters"
       />
     </div>
+
+    <DslDeleteDraftConfirmationModal
+      :show="showDeleteModal"
+      :draft-name="pendingDeleteName ?? ''"
+      :busy="isDeleting"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
   </div>
 </template>

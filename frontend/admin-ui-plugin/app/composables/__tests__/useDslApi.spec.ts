@@ -111,6 +111,17 @@ describe('useDslApi', () => {
     })
   })
 
+  it('deleteDraft DELETEs to /api/v1/dsl/drafts/{name}/delete', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true })
+    const api = useDslApi()
+    const result = await api.deleteDraft('draft-1')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/drafts/draft-1/delete', {
+      method: 'DELETE',
+    })
+    expect(result).toEqual({ ok: true })
+  })
+
   it('validateConstruct delegates to preview with empty body', async () => {
     fetchMock.mockResolvedValueOnce({})
     const api = useDslApi()

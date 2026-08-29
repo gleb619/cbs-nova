@@ -45,6 +45,7 @@ const executionsCancelHandler = (await import('../executions/[id]/cancel.post'))
 const infoHandler = (await import('../info.get')).default
 const saveDraftHandler = (await import('../dsl/drafts/[name]/save.post')).default
 const publishDraftHandler = (await import('../dsl/drafts/[name]/publish.post')).default
+const deleteDraftHandler = (await import('../dsl/drafts/[name]/delete.delete')).default
 const helpersIndexHandler = (await import('../dsl/helpers/index.get')).default
 const processesIndexHandler = (await import('../dsl/processes/index.get')).default
 const processDetailHandler = (await import('../dsl/processes/[name].get')).default
@@ -333,6 +334,20 @@ describe('dsl/drafts/[name]/publish.post', () => {
     })
   })
 })
+
+describe('dsl/drafts/[name]/delete.delete', () => {
+  it('interpolates the :name router param and DELETEs to the backend delete path', async () => {
+    routerParams = { name: 'DraftOne' }
+
+    await deleteDraftHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/drafts/DraftOne', {
+      method: 'DELETE',
+    })
+  })
+})
+
 describe('info.get', () => {
   it('GETs /actuator/info with no body and returns the backend payload verbatim', async () => {
     const infoPayload = {

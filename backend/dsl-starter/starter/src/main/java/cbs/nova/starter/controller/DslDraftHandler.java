@@ -89,6 +89,25 @@ public class DslDraftHandler {
             .body(new DraftResponse(name, "Published", file.toString(), reloaded, loadResult));
   }
 
+  public ServerResponse delete(ServerRequest request) throws IOException {
+    String name = request.pathVariable("name");
+    var dir = ensureConfigured(name);
+    if (dir.isError()) {
+      return dir.response();
+    }
+    Path draftsDir = dir.path().resolve(DRAFTS_DIR);
+    Path draftFile = draftsDir.resolve(safeFileName(name) + ".json");
+    if (!Files.exists(draftFile)) {
+      return error(HttpStatus.NOT_FOUND,
+              new ErrorResponse("NOT_FOUND", "Draft not found: " + name, name, null, null));
+    }
+    Files.delete(draftFile);
+    log.info("[DSL drafts] deleted {} from {}", name, draftFile);
+    return ServerResponse.ok()
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(new DraftResponse(name, "Deleted", null, false, LoadResult.empty()));
+  }
+
   private sealed interface PathResult {
 
     Path path();

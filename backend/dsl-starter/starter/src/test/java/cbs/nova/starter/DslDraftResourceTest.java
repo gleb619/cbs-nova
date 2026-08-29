@@ -64,6 +64,12 @@ class DslDraftResourceTest {
     return ServerRequest.create(req, CONVERTERS);
   }
 
+  private static ServerRequest deleteRequest(String name, String path) {
+    var req = new MockHttpServletRequest("DELETE", path);
+    req.setAttribute(RouterFunctions.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of("name", name));
+    return ServerRequest.create(req, CONVERTERS);
+  }
+
   @Test
   void savePersistsDraftJson() throws Exception {
     ServerResponse response = handler.save(postRequest("/api/dsl/drafts/foo/save"));
@@ -83,6 +89,64 @@ class DslDraftResourceTest {
     assertThat(published).exists();
     String body = Files.readString(published);
     assertThat(body).contains("\"status\" : \"Published\"");
+  }
+
+  @Test
+  void deleteRemovesDraftJson() throws Exception {
+    handler.save(postRequest("/api/dsl/drafts/foo/save"));
+    Path draft = sourceDir.resolve(".workbench/drafts/foo.json");
+    assertThat(draft).exists();
+
+    ServerResponse response = handler.delete(deleteRequest("foo", "/api/dsl/drafts/foo"));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    assertThat(draft).doesNotExist();
+  }
+
+  @Test
+  void deleteReturns404WhenDraftUnknown() throws Exception {
+    ServerResponse response = handler.delete(deleteRequest("foo", "/api/dsl/drafts/foo"));
+
+    assertThat(response.statusCode().value()).isEqualTo(404);
+  }
+
+  @Test
+  void deleteReturns409WhenSourceDirBlank() throws Exception {
+    handler = new DslDraftHandler(
+            new DslProperties("", null, null, null, null),
+            new DslReloadHandler(new DslProperties("", null, null, null, null), null),
+            mapper);
+    ServerResponse response = handler.delete(deleteRequest("foo", "/api/dsl/drafts/foo"));
+    assertThat(response.statusCode().value()).isEqualTo(409);
+  }
+
+  @Test
+  void deleteLeavesPublishedJsonUntouched() throws Exception {
+    handler.save(postRequest("/api/dsl/drafts/foo/save"));
+    handler.publish(postRequest("/api/dsl/drafts/foo/publish"));
+    Path draft = sourceDir.resolve(".workbench/drafts/foo.json");
+    Path published = sourceDir.resolve(".workbench/published/foo.json");
+    assertThat(draft).exists();
+    assertThat(published).exists();
+
+    ServerResponse response = handler.delete(deleteRequest("foo", "/api/dsl/drafts/foo"));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    assertThat(draft).doesNotExist();
+    assertThat(published).exists();
+  }
+
+  @Test
+  void deleteRejectsPathTraversal() throws Exception {
+    Path outside = sourceDir.resolveSibling("escapee.json");
+    Files.writeString(outside, "{}", java.nio.charset.StandardCharsets.UTF_8);
+
+    ServerResponse response = handler
+            .delete(deleteRequest("../escapee", "/api/dsl/drafts/../escapee"));
+
+    assertThat(response.statusCode().value()).isEqualTo(404);
+    assertThat(outside).exists();
+    Files.deleteIfExists(outside);
   }
 
   @Test
