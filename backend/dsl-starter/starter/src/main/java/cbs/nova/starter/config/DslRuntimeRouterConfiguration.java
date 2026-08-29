@@ -2,9 +2,11 @@ package cbs.nova.starter.config;
 
 import cbs.nova.dsl.ExplainReport;
 import cbs.nova.dsl.PreviewReport;
+import cbs.nova.starter.config.properties.DslRunsProperties;
 import cbs.nova.starter.controller.DslRuntimeHandler;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.service.DslRuntimeService;
+import cbs.nova.starter.web.DslPayloadSizeValidator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -19,13 +21,23 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.RouterFunctions;
 import org.springframework.web.servlet.function.ServerResponse;
+import tools.jackson.databind.ObjectMapper;
 
 @Configuration
 public class DslRuntimeRouterConfiguration {
 
   @Bean
-  DslRuntimeHandler dslRuntimeHandler(DslRuntimeService service) {
-    return new DslRuntimeHandler(service);
+  DslPayloadSizeValidator dslPayloadSizeValidator(
+          ObjectMapper objectMapper,
+          DslRunsProperties properties) {
+    return new DslPayloadSizeValidator(objectMapper, properties);
+  }
+
+  @Bean
+  DslRuntimeHandler dslRuntimeHandler(
+          DslRuntimeService service,
+          DslPayloadSizeValidator payloadSizeValidator) {
+    return new DslRuntimeHandler(service, payloadSizeValidator);
   }
 
   @Bean

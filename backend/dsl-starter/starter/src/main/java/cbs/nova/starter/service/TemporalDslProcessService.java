@@ -24,6 +24,8 @@ import org.slf4j.MDC;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import tools.jackson.databind.ObjectMapper;
 
+import java.nio.charset.StandardCharsets;
+
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -46,7 +48,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 @Slf4j
-@RequiredArgsConstructor
 public class TemporalDslProcessService {
 
   static final String EMPTY_OUTPUT_JSON = "{}";
@@ -61,6 +62,31 @@ public class TemporalDslProcessService {
   private final Duration healthcheckInterval;
   private final Duration staleThreshold;
   private final boolean asyncDbSave;
+  private final long maxOutputBytes;
+
+  public TemporalDslProcessService(ContextFactory contextFactory, DslRunRepository runRepository,
+          ObjectMapper objectMapper,
+          ThreadPoolTaskExecutor dslProcessExecutor, ScheduledExecutorService healthcheckExecutor,
+          Duration healthcheckInterval, Duration staleThreshold, boolean asyncDbSave) {
+    this(contextFactory, runRepository, objectMapper, dslProcessExecutor, healthcheckExecutor,
+            healthcheckInterval, staleThreshold, asyncDbSave, Long.MAX_VALUE);
+  }
+
+  public TemporalDslProcessService(ContextFactory contextFactory, DslRunRepository runRepository,
+          ObjectMapper objectMapper,
+          ThreadPoolTaskExecutor dslProcessExecutor, ScheduledExecutorService healthcheckExecutor,
+          Duration healthcheckInterval, Duration staleThreshold, boolean asyncDbSave,
+          long maxOutputBytes) {
+    this.contextFactory = contextFactory;
+    this.runRepository = runRepository;
+    this.objectMapper = objectMapper;
+    this.dslProcessExecutor = dslProcessExecutor;
+    this.healthcheckExecutor = healthcheckExecutor;
+    this.healthcheckInterval = healthcheckInterval;
+    this.staleThreshold = staleThreshold;
+    this.asyncDbSave = asyncDbSave;
+    this.maxOutputBytes = maxOutputBytes;
+  }
 
   private static final Duration SHUTDOWN_JOIN = Duration.ofSeconds(5);
 
@@ -289,17 +315,28 @@ public class TemporalDslProcessService {
       String outputJson = result.isSuccess() ? serialize(result.value()) : EMPTY_OUTPUT_JSON;
       String error = result.isSuccess() ? null : messageOf(result.cause());
 
+      if (result.isSuccess()) {
+        OutputTruncation truncation = truncateIfNeeded(outputJson);
+        if (truncation != null) {
+          outputJson = truncation.outputJson();
+          error = truncation.errorMessage();
+        }
+      }
+
+      String finalOutputJson = outputJson;
+      String finalError = error;
+
       span.setAttribute("status", status);
       if (!result.isSuccess()) {
-        span.setStatus(StatusCode.ERROR, error);
+        span.setStatus(StatusCode.ERROR, finalError);
       }
 
       submitDbWrite(() -> {
         runRepository.updateFinished(
                 runId,
                 status,
-                outputJson,
-                error,
+                finalOutputJson,
+                finalError,
                 finishedAt,
                 contextJson);
         return null;
@@ -366,6 +403,28 @@ public class TemporalDslProcessService {
     }
 
     return objectMapper.writeValueAsString(value);
+  }
+
+  private record OutputTruncation(String outputJson, String errorMessage) {
+  }
+
+  private @Nullable OutputTruncation truncateIfNeeded(@Nullable String outputJson) {
+    long limit = effectiveOutputLimit();
+    if (outputJson == null || limit == Long.MAX_VALUE) {
+      return null;
+    }
+    long originalBytes = outputJson.getBytes(StandardCharsets.UTF_8).length;
+    if (originalBytes <= limit) {
+      return null;
+    }
+    String truncated = "{\"truncated\":true,\"originalBytes\":" + originalBytes + "}";
+    String message = "Output was truncated: original size " + originalBytes
+            + " bytes exceeded max output size " + limit + " bytes";
+    return new OutputTruncation(truncated, message);
+  }
+
+  private long effectiveOutputLimit() {
+    return maxOutputBytes <= 0 ? Long.MAX_VALUE : maxOutputBytes;
   }
 
   private @Nullable String serializeTrace(@NonNull List<String> trace) {

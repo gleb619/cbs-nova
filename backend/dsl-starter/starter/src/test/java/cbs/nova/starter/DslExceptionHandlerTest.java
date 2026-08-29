@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import cbs.nova.dsl.DslErrorCode;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.controller.DslExceptionHandler;
+import cbs.nova.starter.exception.DslPayloadTooLargeException;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.converter.DslExceptionMapper;
 import cbs.nova.starter.model.ErrorResponse;
@@ -139,6 +140,25 @@ class DslExceptionHandlerTest {
             .andExpect(jsonPath("$.exceptionId").value("custom-ex"));
   }
 
+  @Test
+  void payloadTooLargeExceptionMapsTo413WithPayloadTooLargeCode() throws Exception {
+    MockMvc mvc = MockMvcBuilders
+            .standaloneSetup(new ThrowingController())
+            .setControllerAdvice(new DslExceptionHandler(new DefaultDslExceptionMapper()))
+            .setMessageConverters(new JacksonJsonHttpMessageConverter())
+            .build();
+
+    mvc
+            .perform(get("/throw/payload-too-large"))
+            .andExpect(status().isPayloadTooLarge())
+            .andExpect(jsonPath("$.code").value("PAYLOAD_TOO_LARGE"))
+            .andExpect(jsonPath("$.message").value(
+                    "Request body for 'BigProcess' exceeds maximum input size (limit 1024 bytes, actual 2048 bytes)"))
+            .andExpect(jsonPath("$.entityName").value("BigProcess"))
+            .andExpect(jsonPath("$.runId").doesNotExist())
+            .andExpect(jsonPath("$.exceptionId").doesNotExist());
+  }
+
   @RestController
   static class ThrowingController {
 
@@ -155,6 +175,11 @@ class DslExceptionHandlerTest {
     @GetMapping("/throw/dsl")
     String throwDsl() {
       throw new DslException("run-abc", DslErrorCode.EXECUTION_FAILED, "dsl failed");
+    }
+
+    @GetMapping("/throw/payload-too-large")
+    String throwPayloadTooLarge() {
+      throw new DslPayloadTooLargeException(1024L, 2048L, "BigProcess");
     }
   }
 }

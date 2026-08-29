@@ -4,6 +4,7 @@ import cbs.nova.dsl.ExplainReport;
 import cbs.nova.starter.model.DslRequest;
 import cbs.nova.starter.model.RuntimeOutcome;
 import cbs.nova.starter.service.DslRuntimeService;
+import cbs.nova.starter.web.DslPayloadSizeValidator;
 import cbs.nova.starter.web.RequestIdFilter;
 import jakarta.servlet.ServletException;
 import lombok.RequiredArgsConstructor;
@@ -22,19 +23,20 @@ import java.io.IOException;
 public class DslRuntimeHandler {
 
   private final DslRuntimeService service;
+  private final DslPayloadSizeValidator payloadSizeValidator;
 
   public ServerResponse preview(ServerRequest request) throws ServletException, IOException {
-    return respond(service.preview(
-            request.pathVariable("name"),
-            request.body(DslRequest.class),
-            requestId(request)));
+    String name = request.pathVariable("name");
+    DslRequest dslRequest = request.body(DslRequest.class);
+    payloadSizeValidator.validateInput(request, dslRequest, name);
+    return respond(service.preview(name, dslRequest, requestId(request)));
   }
 
   public ServerResponse run(ServerRequest request) throws ServletException, IOException {
-    return respond(service.run(
-            request.pathVariable("name"),
-            request.body(DslRequest.class),
-            requestId(request)));
+    String name = request.pathVariable("name");
+    DslRequest dslRequest = request.body(DslRequest.class);
+    payloadSizeValidator.validateInput(request, dslRequest, name);
+    return respond(service.run(name, dslRequest, requestId(request)));
   }
 
   public ServerResponse explain(ServerRequest request) throws ServletException, IOException {
