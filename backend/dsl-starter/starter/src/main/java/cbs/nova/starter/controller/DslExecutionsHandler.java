@@ -2,6 +2,7 @@ package cbs.nova.starter.controller;
 
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
+import cbs.nova.dsl.history.DslRunSearchResult;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ExecutionDto;
@@ -28,7 +29,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -55,24 +55,18 @@ public class DslExecutionsHandler {
   @Operation(summary = "List DSL execution runs")
   @ApiResponse(responseCode = "200", description = "Matching execution runs", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionListResponse.class)))
   public ServerResponse list(ServerRequest request) throws IOException {
-    String processName = request.param("processName").orElse(null);
+    String processName = request.param("processName").filter(s -> !s.isBlank()).orElse(null);
     String status = request.param("status").orElse(null);
     String mode = request.param("mode").orElse(null);
     int limit = request.param("limit").map(Integer::parseInt).orElse(50);
     int offset = request.param("offset").map(Integer::parseInt).orElse(0);
     int pageSize = clampLimit(limit);
     int skip = clampOffset(offset);
-    List<DslRun> filtered = findRuns(processName).stream()
-            .filter(run -> status == null || status.equalsIgnoreCase(run.status()))
-            .filter(run -> mode == null || mode.equalsIgnoreCase(effectiveMode(run)))
-            .toList();
-    int total = filtered.size();
-    List<ExecutionDto> items = filtered.stream()
-            .skip(skip)
-            .limit(pageSize)
+    DslRunSearchResult result = runRepository.search(processName, status, mode, skip, pageSize);
+    List<ExecutionDto> items = result.items().stream()
             .map(ExecutionDto::from)
             .toList();
-    return ServerResponse.ok().body(new ExecutionListResponse(items, total));
+    return ServerResponse.ok().body(new ExecutionListResponse(items, result.total()));
   }
 
   /**
@@ -213,10 +207,5 @@ public class DslExecutionsHandler {
     double failureRate = windowRuns == 0 ? 0.0 : (double) windowFailedRuns / windowRuns;
     return new DslRunStats(allRuns.size(), statusCounts, windowRuns, windowFailedRuns, failureRate,
             topProcessesList);
-  }
-
-  private static String effectiveMode(DslRun run) {
-    String stored = run.executionMode();
-    return stored == null || stored.isBlank() ? "RUN" : stored.toUpperCase(Locale.ROOT);
   }
 }

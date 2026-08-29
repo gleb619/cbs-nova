@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
+import cbs.nova.dsl.history.DslRunSearchResult;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.starter.IntegrationTestApplication;
 import org.junit.jupiter.api.BeforeAll;
@@ -128,4 +129,133 @@ class DslRunRepositoryIntegrationTest {
     assertThat(found.get().output()).isEqualTo("{\"total\":6}");
     assertThat(repository.findByProcessName("BatchProcessing")).hasSize(1);
   }
+
+  @Test
+  void searchWithoutFiltersReturnsAllRunsOrderedByStartedAtDesc() {
+    Instant t1 = Instant.parse("2026-08-13T10:00:00Z");
+    Instant t2 = Instant.parse("2026-08-13T10:01:00Z");
+    Instant t3 = Instant.parse("2026-08-13T10:02:00Z");
+    repository.save(run("run-1", "LoanDisbursement", DslRunStatus.COMPLETED.name(), t1,
+            ExecutionMode.RUN.name()));
+    repository.save(run("run-2", "CreditScoring", DslRunStatus.FAILED.name(), t2,
+            ExecutionMode.RUN.name()));
+    repository.save(run("run-3", "LoanDisbursement", DslRunStatus.RUNNING.name(), t3,
+            ExecutionMode.PREVIEW.name()));
+
+    DslRunSearchResult result = repository.search(null, null, null, 0, 10);
+
+    assertThat(result.total()).isEqualTo(3);
+    assertThat(result.items()).extracting(DslRun::runId).containsExactly("run-3", "run-2", "run-1");
+  }
+
+  @Test
+  void searchFiltersByProcessName() {
+    Instant t = Instant.parse("2026-08-13T10:00:00Z");
+    repository.save(run("run-1", "LoanDisbursement", DslRunStatus.COMPLETED.name(), t,
+            ExecutionMode.RUN.name()));
+    repository.save(run("run-2", "CreditScoring", DslRunStatus.COMPLETED.name(), t,
+            ExecutionMode.RUN.name()));
+
+    DslRunSearchResult result = repository.search("CreditScoring", null, null, 0, 10);
+
+    assertThat(result.total()).isEqualTo(1);
+    assertThat(result.items().get(0).runId()).isEqualTo("run-2");
+  }
+
+  @Test
+  void searchFiltersByStatusCaseInsensitively() {
+    Instant t = Instant.parse("2026-08-13T10:00:00Z");
+    repository.save(run("run-1", "LoanDisbursement", DslRunStatus.COMPLETED.name(), t,
+            ExecutionMode.RUN.name()));
+    repository.save(run("run-2", "LoanDisbursement", DslRunStatus.RUNNING.name(), t,
+            ExecutionMode.RUN.name()));
+
+    DslRunSearchResult result = repository.search(null, "completed", null, 0, 10);
+
+    assertThat(result.total()).isEqualTo(1);
+    assertThat(result.items().get(0).runId()).isEqualTo("run-1");
+  }
+
+  @Test
+  void searchFiltersByModeAndDefaultsNullModeToRun() {
+    Instant t = Instant.parse("2026-08-13T10:00:00Z");
+    repository.save(run("run-1", "LoanDisbursement", DslRunStatus.COMPLETED.name(), t, null));
+    repository.save(run("run-2", "LoanDisbursement", DslRunStatus.COMPLETED.name(), t,
+            ExecutionMode.PREVIEW.name()));
+
+    DslRunSearchResult result = repository.search(null, null, "run", 0, 10);
+
+    assertThat(result.total()).isEqualTo(1);
+    assertThat(result.items().get(0).runId()).isEqualTo("run-1");
+  }
+
+  @Test
+  void searchCombinesFilters() {
+    Instant t = Instant.parse("2026-08-13T10:00:00Z");
+    repository.save(run("run-1", "LoanDisbursement", DslRunStatus.COMPLETED.name(), t,
+            ExecutionMode.RUN.name()));
+    repository.save(run("run-2", "LoanDisbursement", DslRunStatus.COMPLETED.name(), t,
+            ExecutionMode.PREVIEW.name()));
+    repository.save(run("run-3", "CreditScoring", DslRunStatus.COMPLETED.name(), t,
+            ExecutionMode.RUN.name()));
+
+    DslRunSearchResult result = repository.search("LoanDisbursement", "COMPLETED", "RUN", 0, 10);
+
+    assertThat(result.total()).isEqualTo(1);
+    assertThat(result.items().get(0).runId()).isEqualTo("run-1");
+  }
+
+  @Test
+  void searchLimitCapsItemsButNotTotal() {
+    Instant t = Instant.parse("2026-08-13T10:00:00Z");
+    for (int i = 1; i <= 5; i++) {
+      repository.save(run("run-" + i, "LoanDisbursement", DslRunStatus.COMPLETED.name(), t,
+              ExecutionMode.RUN.name()));
+    }
+
+    DslRunSearchResult result = repository.search("LoanDisbursement", null, null, 0, 2);
+
+    assertThat(result.total()).isEqualTo(5);
+    assertThat(result.items()).hasSize(2);
+  }
+
+  @Test
+  void searchOffsetAndLimitReturnCorrectPage() {
+    Instant base = Instant.parse("2026-08-13T10:00:00Z");
+    for (int i = 1; i <= 5; i++) {
+      repository.save(run("run-" + i, "LoanDisbursement", DslRunStatus.COMPLETED.name(),
+              base.plusSeconds(i), ExecutionMode.RUN.name()));
+    }
+
+    DslRunSearchResult result = repository.search("LoanDisbursement", null, null, 2, 2);
+
+    assertThat(result.total()).isEqualTo(5);
+    assertThat(result.items()).extracting(DslRun::runId).containsExactly("run-3", "run-2");
+  }
+
+  @Test
+  void searchOffsetBeyondTotalReturnsEmptyItemsWithTotal() {
+    Instant t = Instant.parse("2026-08-13T10:00:00Z");
+    repository.save(run("run-1", "LoanDisbursement", DslRunStatus.COMPLETED.name(), t,
+            ExecutionMode.RUN.name()));
+
+    DslRunSearchResult result = repository.search(null, null, null, 10, 10);
+
+    assertThat(result.total()).isEqualTo(1);
+    assertThat(result.items()).isEmpty();
+  }
+
+  private DslRun run(String runId, String processName, String status, Instant startedAt,
+          String mode) {
+    return DslRun.builder()
+            .runId(runId)
+            .processName(processName)
+            .status(status)
+            .startedAt(startedAt)
+            .finishedAt(
+                    DslRunStatus.RUNNING.name().equals(status) ? null : startedAt.plusSeconds(5))
+            .executionMode(mode)
+            .build();
+  }
+
 }

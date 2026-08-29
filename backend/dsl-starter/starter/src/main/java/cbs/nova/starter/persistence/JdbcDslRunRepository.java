@@ -2,6 +2,7 @@ package cbs.nova.starter.persistence;
 
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
+import cbs.nova.dsl.history.DslRunSearchResult;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.starter.config.properties.DslRunPersistenceProperties;
 import cbs.nova.starter.converter.DslRunMapper;
@@ -16,8 +17,11 @@ import org.springframework.jdbc.support.KeyHolder;
 
 import javax.sql.DataSource;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -86,6 +90,45 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
     return delegate.findByProcessName(processName).stream()
             .map(e -> mapper.toDomain(decryptEntity(e)))
             .collect(Collectors.toList());
+  }
+
+  @Override
+  public @NonNull DslRunSearchResult search(
+          @Nullable String processName,
+          @Nullable String status,
+          @Nullable String mode,
+          int offset,
+          int limit) {
+    if (offset < 0) {
+      throw new IllegalArgumentException("offset must be non-negative, was " + offset);
+    }
+    if (limit <= 0) {
+      throw new IllegalArgumentException("limit must be positive, was " + limit);
+    }
+
+    List<String> predicates = new ArrayList<>();
+    MapSqlParameterSource params = new MapSqlParameterSource();
+    if (processName != null) {
+      predicates.add("process_name = :processName");
+      params.addValue("processName", processName);
+    }
+    if (status != null) {
+      predicates.add("LOWER(status) = LOWER(:status)");
+      params.addValue("status", status);
+    }
+    if (mode != null) {
+      predicates.add("LOWER(COALESCE(NULLIF(execution_mode, ''), 'RUN')) = LOWER(:mode)");
+      params.addValue("mode", mode);
+    }
+    String where = predicates.isEmpty() ? "" : "WHERE " + String.join(" AND ", predicates);
+
+    int total = jdbcTemplate.queryForObject(getSearchCountStatement(where), params, Integer.class);
+    params.addValue("limit", limit).addValue("offset", offset);
+    List<DslRun> items = jdbcTemplate.query(
+            getSearchStatement(where),
+            params,
+            (rs, rowNum) -> mapper.toDomain(decryptEntity(mapEntity(rs))));
+    return new DslRunSearchResult(items, total);
   }
 
   @Override
@@ -243,6 +286,33 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
     entity.setInputJson(encryptor.decrypt(entity.getInputJson()));
     entity.setOutputJson(encryptor.decrypt(entity.getOutputJson()));
     entity.setContextJson(encryptor.decrypt(entity.getContextJson()));
+    return entity;
+  }
+
+  private String getSearchCountStatement(String where) {
+    return "SELECT COUNT(*) FROM %s %s".formatted(tableName, where);
+  }
+
+  private String getSearchStatement(String where) {
+    return "SELECT * FROM %s %s ORDER BY started_at DESC LIMIT :limit OFFSET :offset"
+            .formatted(tableName, where);
+  }
+
+  private DslRunEntity mapEntity(ResultSet rs) throws SQLException {
+    DslRunEntity entity = new DslRunEntity();
+    entity.setId(rs.getLong("id"));
+    entity.setRunId(rs.getString("run_id"));
+    entity.setProcessName(rs.getString("process_name"));
+    entity.setStatus(rs.getString("status"));
+    entity.setInputJson(rs.getString("input_json"));
+    entity.setOutputJson(rs.getString("output_json"));
+    entity.setErrorMessage(rs.getString("error_message"));
+    entity.setContextJson(rs.getString("context_json"));
+    Timestamp startedAt = rs.getTimestamp("started_at");
+    entity.setStartedAt(startedAt != null ? startedAt.toInstant() : null);
+    Timestamp finishedAt = rs.getTimestamp("finished_at");
+    entity.setFinishedAt(finishedAt != null ? finishedAt.toInstant() : null);
+    entity.setExecutionMode(rs.getString("execution_mode"));
     return entity;
   }
 

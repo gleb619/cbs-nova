@@ -19,6 +19,34 @@ public interface DslRunRepository {
   @NonNull
   List<DslRun> findByProcessName(@NonNull String processName);
 
+  /**
+   * Search execution runs with optional filters and server-side pagination.
+   *
+   * <p>
+   * All filters are optional and applied case-insensitively where noted. Results are ordered by
+   * {@code started_at} descending. The returned {@link DslRunSearchResult} contains both the page
+   * items and the total number of rows matching the filters.
+   *
+   * @param processName
+   *          exact process name to match; {@code null} means all processes
+   * @param status
+   *          status value compared case-insensitively; {@code null} means any status
+   * @param mode
+   *          execution mode compared case-insensitively, treating {@code null}/blank stored modes
+   *          as {@code RUN}; {@code null} means any mode
+   * @param offset
+   *          number of matching rows to skip (must be non-negative)
+   * @param limit
+   *          maximum number of rows to return (must be positive)
+   */
+  @NonNull
+  DslRunSearchResult search(
+          @Nullable String processName,
+          @Nullable String status,
+          @Nullable String mode,
+          int offset,
+          int limit);
+
   default @NonNull Set<String> knownProcessNames() {
     return Set.of();
   }

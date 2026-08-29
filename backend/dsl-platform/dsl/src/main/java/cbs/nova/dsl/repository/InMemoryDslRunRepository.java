@@ -2,13 +2,16 @@ package cbs.nova.dsl.repository;
 
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
+import cbs.nova.dsl.history.DslRunSearchResult;
 import cbs.nova.dsl.history.DslRunStatus;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -69,6 +72,28 @@ public final class InMemoryDslRunRepository implements DslRunRepository {
     return runs.values().stream()
             .filter(r -> processName.equals(r.processName()))
             .collect(Collectors.toList());
+  }
+
+  @Override
+  public @NonNull DslRunSearchResult search(
+          @Nullable String processName,
+          @Nullable String status,
+          @Nullable String mode,
+          int offset,
+          int limit) {
+    List<DslRun> matching = runs.values().stream()
+            .filter(run -> processName == null || processName.equals(run.processName()))
+            .filter(run -> status == null || status.equalsIgnoreCase(run.status()))
+            .filter(run -> mode == null || mode.equalsIgnoreCase(effectiveMode(run)))
+            .sorted(Comparator.comparing(DslRun::startedAt).reversed()
+                    .thenComparing(DslRun::runId))
+            .toList();
+    int total = matching.size();
+    List<DslRun> page = matching.stream()
+            .skip(offset)
+            .limit(limit)
+            .collect(Collectors.toList());
+    return new DslRunSearchResult(page, total);
   }
 
   @Override
@@ -157,5 +182,10 @@ public final class InMemoryDslRunRepository implements DslRunRepository {
             .finishedAt(finishedAt)
             .executionMode(existing.executionMode())
             .build();
+  }
+
+  private static String effectiveMode(DslRun run) {
+    String stored = run.executionMode();
+    return stored == null || stored.isBlank() ? "RUN" : stored.toUpperCase(Locale.ROOT);
   }
 }

@@ -3,6 +3,7 @@ package cbs.nova.dsl.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.history.DslRun;
+import cbs.nova.dsl.history.DslRunSearchResult;
 import cbs.nova.dsl.history.DslRunStatus;
 import org.junit.jupiter.api.Test;
 
@@ -229,4 +230,111 @@ class InMemoryDslRunRepositoryTest {
 
     assertThat(evicted).containsExactly("run-1");
   }
+
+  private static DslRun run(String runId, String processName, String status, Instant startedAt,
+          String mode) {
+    return DslRun.builder()
+            .runId(runId)
+            .processName(processName)
+            .status(status)
+            .startedAt(startedAt)
+            .executionMode(mode)
+            .build();
+  }
+
+  @Test
+  void searchWithNoFiltersReturnsAllRunsOrderedByStartedAtDesc() {
+    var repo = new InMemoryDslRunRepository();
+    Instant t1 = Instant.parse("2026-08-13T10:00:00Z");
+    Instant t2 = Instant.parse("2026-08-13T10:01:00Z");
+    repo.save(run("run-1", "OrderProcess", DslRunStatus.COMPLETED.name(), t1, "RUN"));
+    repo.save(run("run-2", "OrderProcess", DslRunStatus.RUNNING.name(), t2, "RUN"));
+
+    DslRunSearchResult result = repo.search(null, null, null, 0, 10);
+
+    assertThat(result.total()).isEqualTo(2);
+    assertThat(result.items()).extracting(DslRun::runId).containsExactly("run-2", "run-1");
+  }
+
+  @Test
+  void searchFiltersByProcessNameCaseSensitively() {
+    var repo = new InMemoryDslRunRepository();
+    Instant t = Instant.parse("2026-08-13T10:00:00Z");
+    repo.save(run("run-1", "OrderProcess", DslRunStatus.COMPLETED.name(), t, "RUN"));
+    repo.save(run("run-2", "InvoiceProcess", DslRunStatus.COMPLETED.name(), t, "RUN"));
+
+    DslRunSearchResult result = repo.search("OrderProcess", null, null, 0, 10);
+
+    assertThat(result.total()).isEqualTo(1);
+    assertThat(result.items()).extracting(DslRun::runId).containsExactly("run-1");
+  }
+
+  @Test
+  void searchFiltersByStatusCaseInsensitively() {
+    var repo = new InMemoryDslRunRepository();
+    Instant t = Instant.parse("2026-08-13T10:00:00Z");
+    repo.save(run("run-1", "OrderProcess", DslRunStatus.COMPLETED.name(), t, "RUN"));
+    repo.save(run("run-2", "OrderProcess", DslRunStatus.RUNNING.name(), t, "RUN"));
+
+    DslRunSearchResult result = repo.search(null, "completed", null, 0, 10);
+
+    assertThat(result.total()).isEqualTo(1);
+    assertThat(result.items().get(0).runId()).isEqualTo("run-1");
+  }
+
+  @Test
+  void searchFiltersByModeCaseInsensitivelyAndDefaultsNullToRun() {
+    var repo = new InMemoryDslRunRepository();
+    Instant t = Instant.parse("2026-08-13T10:00:00Z");
+    repo.save(run("run-1", "OrderProcess", DslRunStatus.COMPLETED.name(), t, null));
+    repo.save(run("run-2", "OrderProcess", DslRunStatus.COMPLETED.name(), t, "PREVIEW"));
+
+    DslRunSearchResult result = repo.search(null, null, "run", 0, 10);
+
+    assertThat(result.total()).isEqualTo(1);
+    assertThat(result.items().get(0).runId()).isEqualTo("run-1");
+  }
+
+  @Test
+  void searchCombinesFiltersAndReportsTotalIndependentOfLimit() {
+    var repo = new InMemoryDslRunRepository();
+    Instant t = Instant.parse("2026-08-13T10:00:00Z");
+    repo.save(run("run-1", "OrderProcess", DslRunStatus.COMPLETED.name(), t, "RUN"));
+    repo.save(run("run-2", "OrderProcess", DslRunStatus.COMPLETED.name(), t, "RUN"));
+    repo.save(run("run-3", "OrderProcess", DslRunStatus.FAILED.name(), t, "RUN"));
+
+    DslRunSearchResult result = repo.search("OrderProcess", "COMPLETED", null, 0, 1);
+
+    assertThat(result.total()).isEqualTo(2);
+    assertThat(result.items()).hasSize(1);
+  }
+
+  @Test
+  void searchAppliesOffsetAndLimit() {
+    var repo = new InMemoryDslRunRepository();
+    Instant t1 = Instant.parse("2026-08-13T10:00:00Z");
+    Instant t2 = Instant.parse("2026-08-13T10:01:00Z");
+    Instant t3 = Instant.parse("2026-08-13T10:02:00Z");
+    repo.save(run("run-1", "OrderProcess", DslRunStatus.COMPLETED.name(), t1, "RUN"));
+    repo.save(run("run-2", "OrderProcess", DslRunStatus.COMPLETED.name(), t2, "RUN"));
+    repo.save(run("run-3", "OrderProcess", DslRunStatus.COMPLETED.name(), t3, "RUN"));
+
+    DslRunSearchResult result = repo.search(null, null, null, 1, 1);
+
+    assertThat(result.total()).isEqualTo(3);
+    assertThat(result.items()).extracting(DslRun::runId).containsExactly("run-2");
+  }
+
+  @Test
+  void searchOffsetBeyondTotalReturnsEmptyItemsWithTotal() {
+    var repo = new InMemoryDslRunRepository();
+    Instant t = Instant.parse("2026-08-13T10:00:00Z");
+    repo.save(run("run-1", "OrderProcess", DslRunStatus.COMPLETED.name(), t, "RUN"));
+
+    DslRunSearchResult result = repo.search(null, null, null, 10, 10);
+
+    assertThat(result.total()).isEqualTo(1);
+    assertThat(result.items()).isEmpty();
+  }
+
 }
