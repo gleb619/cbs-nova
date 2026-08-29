@@ -99,4 +99,26 @@ describe('useExecutionsApi', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(result).toEqual(response)
   })
+
+  it('cancel(id) POSTs to /api/v1/executions/{id}/cancel and returns the fresh row', async () => {
+    const response: ExecutionDetail = {
+      id: 'abc-123',
+      entity: 'ent',
+      entityType: 'Process',
+      mode: 'RUN',
+      status: 'Cancelled',
+      startedAt: '2025-01-01',
+      trace: [],
+    }
+    fetchMock.mockResolvedValueOnce(response)
+
+    const api = useExecutionsApi()
+    const result: ExecutionDetail = await api.cancel('abc-123')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/executions/abc-123/cancel', {
+      method: 'POST',
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(result).toEqual(response)
+  })
 })

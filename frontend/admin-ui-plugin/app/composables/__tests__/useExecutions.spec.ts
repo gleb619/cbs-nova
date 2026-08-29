@@ -4,7 +4,8 @@ import { useExecutions } from '../useExecutions'
 vi.mock('../useExecutionsApi', () => {
   const list = vi.fn()
   const get = vi.fn()
-  const api = { list, get }
+  const cancel = vi.fn()
+  const api = { list, get, cancel }
   return { useExecutionsApi: () => api }
 })
 
@@ -13,13 +14,16 @@ import * as executionsApiModule from '../useExecutionsApi'
 type ApiMock = {
   list: ReturnType<typeof vi.fn>
   get: ReturnType<typeof vi.fn>
+  cancel: ReturnType<typeof vi.fn>
 }
 
 const installApiMock = (overrides: Partial<ApiMock> = {}): ApiMock => {
-  const api = (executionsApiModule as unknown as { useExecutionsApi: () => ApiMock })
-    .useExecutionsApi()
+  const api = (
+    executionsApiModule as unknown as { useExecutionsApi: () => ApiMock }
+  ).useExecutionsApi()
   if (overrides.list) api.list = overrides.list
   if (overrides.get) api.get = overrides.get
+  if (overrides.cancel) api.cancel = overrides.cancel
   return api
 }
 
@@ -30,6 +34,7 @@ describe('useExecutions', () => {
     ).useExecutionsApi()
     api.list.mockReset()
     api.get.mockReset()
+    api.cancel.mockReset()
   })
 
   afterEach(() => {
@@ -196,6 +201,104 @@ describe('useExecutions', () => {
 
       expect(page.value).toBe(5)
       expect(api.list).toHaveBeenCalledWith({ offset: 80, limit: 20 })
+    })
+  })
+
+  describe('cancelExecution (T281)', () => {
+    const runningRow = {
+      id: 'run-1',
+      entity: 'ent',
+      entityType: 'Process' as const,
+      mode: 'RUN' as const,
+      status: 'Running' as const,
+      startedAt: '2025-01-01',
+    }
+    const cancelledRow = { ...runningRow, status: 'Cancelled' as const }
+
+    it('calls api.cancel with the id and returns the fresh detail', async () => {
+      const api = installApiMock({
+        list: vi.fn().mockResolvedValueOnce([runningRow]),
+        cancel: vi.fn().mockResolvedValueOnce(cancelledRow),
+      })
+
+      const { loadExecutions, cancelExecution } = useExecutions()
+      await loadExecutions()
+      const result = await cancelExecution('run-1')
+
+      expect(api.cancel).toHaveBeenCalledWith('run-1')
+      expect(api.cancel).toHaveBeenCalledTimes(1)
+      expect(result).toEqual(cancelledRow)
+    })
+
+    it('refreshes the matching row in the list and updates selectedExecution when it matches', async () => {
+      installApiMock({
+        list: vi.fn().mockResolvedValueOnce([runningRow]),
+        get: vi.fn().mockResolvedValueOnce(runningRow),
+        cancel: vi.fn().mockResolvedValueOnce(cancelledRow),
+      })
+
+      const { loadExecutions, loadDetail, cancelExecution, executions, selectedExecution } =
+        useExecutions()
+      await loadExecutions()
+      await loadDetail('run-1')
+      expect(selectedExecution.value?.status).toBe('Running')
+
+      await cancelExecution('run-1')
+
+      const updated = executions.value.find((e) => e.id === 'run-1')
+      expect(updated?.status).toBe('Cancelled')
+      expect(selectedExecution.value?.status).toBe('Cancelled')
+    })
+
+    it('tracks in-flight cancel via cancellingIds and isCancelling', async () => {
+      let resolveCancel!: (v: unknown) => void
+      installApiMock({
+        list: vi.fn().mockResolvedValueOnce([runningRow]),
+        cancel: vi.fn().mockImplementation(
+          () =>
+            new Promise<unknown>((res) => {
+              resolveCancel = res
+            }),
+        ),
+      })
+
+      const { loadExecutions, cancelExecution, cancellingIds, isCancelling } = useExecutions()
+      await loadExecutions()
+
+      const p = cancelExecution('run-1')
+      // synchronously after kick-off, the id is in the set
+      expect(isCancelling('run-1')).toBe(true)
+      expect(Array.from(cancellingIds.value)).toEqual(['run-1'])
+
+      resolveCancel(cancelledRow)
+      await p
+
+      expect(isCancelling('run-1')).toBe(false)
+      expect(cancellingIds.value.size).toBe(0)
+    })
+
+    it('on failure surfaces the error and exposes it on the shared error ref', async () => {
+      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      installApiMock({
+        list: vi.fn().mockResolvedValueOnce([runningRow]),
+        cancel: vi.fn().mockRejectedValueOnce(new Error('backend boom')),
+      })
+
+      const { loadExecutions, cancelExecution, isCancelling, error } = useExecutions()
+      await loadExecutions()
+
+      await expect(cancelExecution('run-1')).rejects.toThrow('backend boom')
+      expect(error.value).toBe('backend boom')
+      expect(isCancelling('run-1')).toBe(false)
+      errSpy.mockRestore()
+    })
+
+    it('rejects when called with an empty id', async () => {
+      const api = installApiMock({ cancel: vi.fn() })
+
+      const { cancelExecution } = useExecutions()
+      await expect(cancelExecution('')).rejects.toThrow()
+      expect(api.cancel).not.toHaveBeenCalled()
     })
   })
 

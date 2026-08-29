@@ -22,5 +22,10 @@ export function useExecutionsApi() {
     return $fetch(`/api/v1/executions/${id}`) as ExecutionDetail
   }
 
-  return { list, get }
+  async function cancel(id: string): Promise<ExecutionDetail> {
+    log.info('cancelling execution', { id })
+    return $fetch(`/api/v1/executions/${id}/cancel`, { method: 'POST' }) as ExecutionDetail
+  }
+
+  return { list, get, cancel }
 }

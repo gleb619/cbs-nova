@@ -52,6 +52,8 @@ export function useExecutions() {
   const api = useExecutionsApi()
   const stalePollMs = resolveStalePollMs()
 
+  const cancellingIds = ref<Set<string>>(new Set())
+
   // -------------------------------------------------------------------
   // Stale polling helpers
   // -------------------------------------------------------------------
@@ -182,8 +184,8 @@ export function useExecutions() {
    */
   const IN_FLIGHT_STATUSES: ReadonlyArray<ExecutionStatus> = ['Pending', 'Running']
 
-  const inFlightRowCount = computed(() =>
-    executions.value.filter((e) => IN_FLIGHT_STATUSES.includes(e.status)).length,
+  const inFlightRowCount = computed(
+    () => executions.value.filter((e) => IN_FLIGHT_STATUSES.includes(e.status)).length,
   )
 
   let listPollInterval: ReturnType<typeof setInterval> | null = null
@@ -317,6 +319,50 @@ export function useExecutions() {
   }
 
   // -------------------------------------------------------------------
+  // Cancel — T281. Calls the BFF cancel route, then refreshes the
+  // affected row (and `selectedExecution` when it matches) so the UI
+  // transitions to Cancelled without depending on a separate polling
+  // window. Surfaced errors flow through the shared `error` ref so
+  // pages can render the existing ErrorBanner pattern.
+  // -------------------------------------------------------------------
+
+  function isCancelling(id: string): boolean {
+    return cancellingIds.value.has(id)
+  }
+
+  /**
+   * Cancel a running execution by id. Returns the fresh detail row
+   * on success so callers can update local state without an extra
+   * round-trip. Throws on failure — the error message is also
+   * mirrored into the shared `error` ref so pages can surface it.
+   */
+  async function cancelExecution(id: string): Promise<ExecutionDetail> {
+    if (!id) throw new Error('cancelExecution: id is required')
+    const next = new Set(cancellingIds.value)
+    next.add(id)
+    cancellingIds.value = next
+    try {
+      const fresh = await api.cancel(id)
+      updateRowInList(fresh)
+      if (selectedExecution.value && selectedExecution.value.id === id) {
+        selectedExecution.value = fresh
+      }
+      stopPolling()
+      log.info('execution cancelled', { id, status: fresh.status })
+      return fresh
+    } catch (err) {
+      const message = (err as Error).message || 'Failed to cancel execution'
+      error.value = message
+      log.error('failed to cancel execution', { id, error: message })
+      throw err
+    } finally {
+      const after = new Set(cancellingIds.value)
+      after.delete(id)
+      cancellingIds.value = after
+    }
+  }
+
+  // -------------------------------------------------------------------
   // Legacy Running polling — kept for explicit opt-in (e.g. from the
   // detail page when navigating to a known-Running execution).
   // -------------------------------------------------------------------
@@ -359,6 +405,10 @@ export function useExecutions() {
     setPage,
     startPolling,
     stopPolling,
+    // cancel action surface (T281)
+    cancellingIds,
+    isCancelling,
+    cancelExecution,
     // stale polling public surface
     stalePollingIds,
     isStalePolling,

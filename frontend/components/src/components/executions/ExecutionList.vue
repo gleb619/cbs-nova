@@ -12,12 +12,21 @@ const props = withDefaults(
      * auto-refresh is in flight.
      */
     stalePollingIds?: string[] | Set<string>
+    /**
+     * T281: ids of rows with an in-flight cancel request. The list dims
+     * the cancel button on those rows while the BFF round-trip is pending.
+     */
+    cancellingIds?: string[] | Set<string>
   }>(),
-  { stalePollingIds: () => [] as string[] },
+  {
+    stalePollingIds: () => [] as string[],
+    cancellingIds: () => [] as string[],
+  },
 )
 
 defineEmits<{
   select: [id: string]
+  cancel: [id: string]
 }>()
 
 function truncate(id: string, len = 8) {
@@ -41,6 +50,13 @@ function isStalePolling(id: string): boolean {
   if (Array.isArray(ids)) return ids.includes(id)
   return ids.has(id)
 }
+
+function isCancelling(id: string): boolean {
+  const ids = props.cancellingIds
+  if (!ids) return false
+  if (Array.isArray(ids)) return ids.includes(id)
+  return ids.has(id)
+}
 </script>
 
 <template>
@@ -59,19 +75,20 @@ function isStalePolling(id: string): boolean {
           <th class="px-3 py-2">Duration</th>
           <th class="px-3 py-2">Retries</th>
           <th class="px-3 py-2">Triggered by</th>
+          <th class="px-3 py-2 text-right">Actions</th>
         </tr>
       </thead>
       <tbody>
         <template v-if="loading">
           <tr v-for="i in 5" :key="i" class="border-t border-gray-100">
-            <td v-for="j in 8" :key="j" class="px-3 py-2">
+            <td v-for="j in 9" :key="j" class="px-3 py-2">
               <div class="h-3 bg-gray-200 rounded animate-pulse" />
             </td>
           </tr>
         </template>
         <template v-else-if="executions.length === 0">
           <tr>
-            <td colspan="8" class="px-3 py-12 text-center text-gray-500">
+            <td colspan="9" class="px-3 py-12 text-center text-gray-500">
               No executions match current filters.
             </td>
           </tr>
@@ -96,6 +113,23 @@ function isStalePolling(id: string): boolean {
             <td class="px-3 py-2 text-xs">{{ formatDuration(exec.duration) }}</td>
             <td class="px-3 py-2 text-xs">{{ exec.retries ?? 0 }}</td>
             <td class="px-3 py-2 text-xs">{{ exec.triggeredBy ?? '—' }}</td>
+            <td class="px-3 py-2 text-right">
+              <button
+                v-if="exec.status === 'Running'"
+                type="button"
+                :data-testid="`execution-list-row-cancel-${exec.id}`"
+                class="px-2 py-1 text-xs font-medium rounded border transition-colors"
+                :class="
+                  isCancelling(exec.id)
+                    ? 'border-red-200 bg-red-50 text-red-400 cursor-not-allowed'
+                    : 'border-red-300 bg-white text-red-700 hover:bg-red-50'
+                "
+                :disabled="isCancelling(exec.id)"
+                @click.stop="$emit('cancel', exec.id)"
+              >
+                {{ isCancelling(exec.id) ? 'Cancelling…' : 'Cancel' }}
+              </button>
+            </td>
           </tr>
         </template>
       </tbody>

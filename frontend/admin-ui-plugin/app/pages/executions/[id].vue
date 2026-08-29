@@ -3,6 +3,7 @@ import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { useExecutions } from '@cbs/admin-ui-plugin/composables/useExecutions'
 import {
   ErrorBanner,
+  ExecutionsCancelConfirmationModal,
   ExecutionsCompensationLane,
   ExecutionsExecutionSummary,
   ExecutionsExecutionTrace,
@@ -13,7 +14,16 @@ import { computed, onUnmounted, ref } from 'vue'
 const route = useRoute()
 const id = computed(() => String(route.params.id))
 
-const { selectedExecution, error, loadDetail, startPolling, stopPolling, isStalePolling } = useExecutions()
+const {
+  selectedExecution,
+  error,
+  loadDetail,
+  startPolling,
+  stopPolling,
+  isStalePolling,
+  isCancelling,
+  cancelExecution,
+} = useExecutions()
 
 const activeTab = ref<'diagram' | 'payload' | 'metadata' | 'logs' | 'errors'>('diagram')
 
@@ -30,6 +40,36 @@ if (selectedExecution.value?.status === 'Running') {
 const showStaleBanner = computed(
   () => selectedExecution.value?.status === 'Stale' && isStalePolling(selectedExecution.value.id),
 )
+
+const isRunning = computed(() => selectedExecution.value?.status === 'Running')
+const showCancelButton = computed(() => isRunning.value)
+const cancelling = computed(() =>
+  selectedExecution.value ? isCancelling(selectedExecution.value.id) : false,
+)
+const cancelError = ref<string | null>(null)
+const showCancelModal = ref<boolean>(false)
+
+function openCancelModal() {
+  cancelError.value = null
+  showCancelModal.value = true
+}
+
+function dismissCancelModal() {
+  if (cancelling.value) return
+  showCancelModal.value = false
+}
+
+async function confirmCancel() {
+  const executionId = selectedExecution.value?.id
+  if (!executionId) return
+  try {
+    await cancelExecution(executionId)
+    showCancelModal.value = false
+    cancelError.value = null
+  } catch (err) {
+    cancelError.value = (err as Error)?.message ?? 'Failed to cancel execution'
+  }
+}
 
 const traceSteps = computed(() => selectedExecution.value?.trace ?? [])
 const compensationSteps = computed(() => traceSteps.value.filter((s) => s.isCompensation))
@@ -96,7 +136,32 @@ onUnmounted(() => {
         <span>Stale — refreshing…</span>
       </div>
 
-      <ExecutionsExecutionSummary :execution="selectedExecution" />
+      <ErrorBanner
+        v-if="cancelError"
+        :message="cancelError"
+        :retry-label="'Dismiss'"
+        @retry="cancelError = null"
+      />
+
+      <ExecutionsExecutionSummary :execution="selectedExecution">
+        <template #actions>
+          <button
+            v-if="showCancelButton"
+            type="button"
+            data-testid="cancel-execution-button"
+            class="px-3 py-1.5 text-xs font-medium rounded border transition-colors"
+            :class="
+              cancelling
+                ? 'border-red-200 bg-red-50 text-red-400 cursor-not-allowed'
+                : 'border-red-300 bg-white text-red-700 hover:bg-red-50'
+            "
+            :disabled="cancelling"
+            @click="openCancelModal"
+          >
+            {{ cancelling ? 'Cancelling…' : 'Cancel execution' }}
+          </button>
+        </template>
+      </ExecutionsExecutionSummary>
 
       <ExecutionsExecutionTrace v-if="regularSteps.length > 0" :steps="regularSteps" />
       <ExecutionsCompensationLane :steps="compensationSteps" />
@@ -115,10 +180,7 @@ onUnmounted(() => {
           </button>
         </div>
         <div class="p-4">
-          <ExecutionsDiagramTab
-            v-if="activeTab === 'diagram'"
-            :diagram="diagram"
-          />
+          <ExecutionsDiagramTab v-if="activeTab === 'diagram'" :diagram="diagram" />
           <ExecutionsPayloadTab
             v-else-if="activeTab === 'payload'"
             :input="selectedExecution.input"
@@ -136,6 +198,14 @@ onUnmounted(() => {
           />
         </div>
       </div>
+
+      <ExecutionsCancelConfirmationModal
+        :show="showCancelModal"
+        :execution-id="selectedExecution?.id"
+        :busy="cancelling"
+        @confirm="confirmCancel"
+        @cancel="dismissCancelModal"
+      />
     </template>
   </div>
 </template>

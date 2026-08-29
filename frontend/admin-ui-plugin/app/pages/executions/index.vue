@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { useExecutions } from '@cbs/admin-ui-plugin/composables/useExecutions'
-import { ErrorBanner, ExecutionsExecutionFilters, ExecutionsExecutionList } from '@cbs/components'
+import {
+  ErrorBanner,
+  ExecutionsCancelConfirmationModal,
+  ExecutionsExecutionFilters,
+  ExecutionsExecutionList,
+} from '@cbs/components'
 import { navigateTo } from 'nuxt/app'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 import type { ExecutionFilters } from '~/types'
 
@@ -13,6 +18,9 @@ const {
   loadExecutions,
   applyFilters,
   stalePollingIds,
+  cancellingIds,
+  isCancelling,
+  cancelExecution,
   total,
   page,
   pageSize,
@@ -25,12 +33,45 @@ startListPolling()
 
 const pageCount = computed(() => Math.ceil(total.value / pageSize))
 
+const cancelTargetId = ref<string | null>(null)
+const cancelError = ref<string | null>(null)
+const showCancelModal = computed(() => cancelTargetId.value !== null)
+const cancellingTarget = computed(() =>
+  cancelTargetId.value ? isCancelling(cancelTargetId.value) : false,
+)
+
 function onFilter(f: ExecutionFilters) {
   applyFilters(f)
 }
 
 function onSelect(id: string) {
   navigateTo(`/executions/${id}`)
+}
+
+function onCancel(id: string) {
+  cancelError.value = null
+  cancelTargetId.value = id
+}
+
+function onCancelModalDismiss() {
+  if (cancellingTarget.value) return
+  cancelTargetId.value = null
+}
+
+async function onCancelConfirm() {
+  const id = cancelTargetId.value
+  if (!id) return
+  try {
+    await cancelExecution(id)
+    cancelTargetId.value = null
+    cancelError.value = null
+  } catch (err) {
+    cancelError.value = (err as Error)?.message ?? 'Failed to cancel execution'
+  }
+}
+
+function onDismissCancelError() {
+  cancelError.value = null
 }
 
 function prevPage() {
@@ -49,11 +90,19 @@ function nextPage() {
     </header>
     <ExecutionsExecutionFilters @filter="onFilter" />
     <ErrorBanner v-if="error" :message="error" @retry="loadExecutions" />
+    <ErrorBanner
+      v-if="cancelError"
+      :message="cancelError"
+      :retry-label="'Dismiss'"
+      @retry="onDismissCancelError"
+    />
     <ExecutionsExecutionList
       :executions="executions"
       :loading="loading"
       :stale-polling-ids="stalePollingIds"
+      :cancelling-ids="cancellingIds"
       @select="onSelect"
+      @cancel="onCancel"
     />
     <div
       v-if="total > 0"
@@ -93,5 +142,13 @@ function nextPage() {
         </button>
       </div>
     </div>
+
+    <ExecutionsCancelConfirmationModal
+      :show="showCancelModal"
+      :execution-id="cancelTargetId ?? undefined"
+      :busy="cancellingTarget"
+      @confirm="onCancelConfirm"
+      @cancel="onCancelModalDismiss"
+    />
   </div>
 </template>
