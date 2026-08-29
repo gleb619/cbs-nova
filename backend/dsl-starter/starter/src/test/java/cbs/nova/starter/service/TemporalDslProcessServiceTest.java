@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.SimpleContext;
+import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
 import cbs.nova.dsl.history.DslRun;
@@ -62,6 +64,14 @@ class TemporalDslProcessServiceTest {
           ContextFactory contextFactory,
           DslRunRepository runRepository,
           ObjectMapper objectMapper) {
+    return createService(contextFactory, runRepository, objectMapper, Long.MAX_VALUE);
+  }
+
+  public static TemporalDslProcessService createService(
+          ContextFactory contextFactory,
+          DslRunRepository runRepository,
+          ObjectMapper objectMapper,
+          long maxOutputBytes) {
     return new TemporalDslProcessService(
             contextFactory,
             runRepository,
@@ -70,7 +80,8 @@ class TemporalDslProcessServiceTest {
             disabledScheduledExecutor(),
             Duration.ofSeconds(30),
             Duration.ofMinutes(5),
-            false);
+            false,
+            maxOutputBytes);
   }
 
   @Test
@@ -421,4 +432,88 @@ class TemporalDslProcessServiceTest {
     return exec;
   }
 
+  @Test
+  void outputTruncationHappensAtExactByteOverLimit() {
+    GlobalManager.globalManager().resetForTests();
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("Echo").input(String.class).output(String.class)
+                    .execute(ctx -> Result.success("a".repeat(100)))
+                    .build());
+
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    // Serialized output is the JSON string "aaa..." -> 100 chars + 2 quotes = 102 bytes.
+    TemporalDslProcessService service = createService(
+            new ContextFactory(), repo, new ObjectMapper(), 101L);
+
+    Result<?> result = service.runProcess("Echo", "irrelevant").result().join();
+
+    assertThat(result.isSuccess()).isTrue();
+    DslRun run = repo.findByProcessName("Echo").get(0);
+    assertThat(run.status()).isEqualTo(DslRunStatus.COMPLETED.name());
+    assertThat(run.output()).isEqualTo("{\"truncated\":true,\"originalBytes\":102}");
+    assertThat(run.error()).contains("truncated").contains("102 bytes");
+  }
+
+  @Test
+  void outputWithinLimitIsPersistedUntruncated() {
+    GlobalManager.globalManager().resetForTests();
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("Echo").input(String.class).output(String.class)
+                    .execute(ctx -> Result.success("a".repeat(100)))
+                    .build());
+
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    TemporalDslProcessService service = createService(
+            new ContextFactory(), repo, new ObjectMapper(), 102L);
+
+    Result<?> result = service.runProcess("Echo", "irrelevant").result().join();
+
+    assertThat(result.isSuccess()).isTrue();
+    DslRun run = repo.findByProcessName("Echo").get(0);
+    assertThat(run.status()).isEqualTo(DslRunStatus.COMPLETED.name());
+    assertThat(run.output()).isEqualTo("\"" + "a".repeat(100) + "\"");
+    assertThat(run.error()).isNull();
+  }
+
+  @Test
+  void outputCapDisabledWithZero() {
+    GlobalManager.globalManager().resetForTests();
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("Echo").input(String.class).output(String.class)
+                    .execute(ctx -> Result.success("a".repeat(1000)))
+                    .build());
+
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    TemporalDslProcessService service = createService(
+            new ContextFactory(), repo, new ObjectMapper(), 0L);
+
+    Result<?> result = service.runProcess("Echo", "irrelevant").result().join();
+
+    assertThat(result.isSuccess()).isTrue();
+    DslRun run = repo.findByProcessName("Echo").get(0);
+    assertThat(run.status()).isEqualTo(DslRunStatus.COMPLETED.name());
+    assertThat(run.output()).isEqualTo("\"" + "a".repeat(1000) + "\"");
+    assertThat(run.error()).isNull();
+  }
+
+  @Test
+  void outputCapDisabledWithHugeValue() {
+    GlobalManager.globalManager().resetForTests();
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("Echo").input(String.class).output(String.class)
+                    .execute(ctx -> Result.success("a".repeat(1000)))
+                    .build());
+
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    TemporalDslProcessService service = createService(
+            new ContextFactory(), repo, new ObjectMapper(), Long.MAX_VALUE);
+
+    Result<?> result = service.runProcess("Echo", "irrelevant").result().join();
+
+    assertThat(result.isSuccess()).isTrue();
+    DslRun run = repo.findByProcessName("Echo").get(0);
+    assertThat(run.status()).isEqualTo(DslRunStatus.COMPLETED.name());
+    assertThat(run.output()).isEqualTo("\"" + "a".repeat(1000) + "\"");
+    assertThat(run.error()).isNull();
+  }
 }

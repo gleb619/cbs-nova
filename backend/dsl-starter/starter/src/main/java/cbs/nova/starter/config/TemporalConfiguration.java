@@ -11,6 +11,7 @@ import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.starter.DevDslRuntime;
 import cbs.nova.starter.service.PreviewResultCache;
 import cbs.nova.starter.config.properties.DryRunProperties;
+import cbs.nova.starter.config.properties.DslRunsProperties;
 import cbs.nova.starter.converter.MapInputConverter;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
@@ -64,7 +65,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.Collectors;
 
 @Configuration
-@EnableConfigurationProperties({CbsNovaPreviewProperties.class, CbsNovaFakesProperties.class})
+@EnableConfigurationProperties({CbsNovaPreviewProperties.class, CbsNovaFakesProperties.class,
+    DslRunsProperties.class})
 public class TemporalConfiguration {
 
   @Bean(destroyMethod = "shutdown")
@@ -296,11 +298,13 @@ public class TemporalConfiguration {
           @Value("${cbs.nova.process.healthcheck.interval:PT30S}") Duration healthcheckInterval,
           @Value("${cbs.nova.process.healthcheck.stale-threshold:PT5M}") Duration staleThreshold,
           @Value("${cbs.nova.process.async-db-save:true}") boolean asyncDbSave,
+          DslRunsProperties dslRunsProperties,
           OpenTelemetry openTelemetry) {
     TemporalDslProcessService service = new TemporalDslProcessService(contextFactory, runRepository,
             JsonMapper.builder().build(),
             dslProcessExecutor, healthcheckExecutor,
-            healthcheckInterval, staleThreshold, asyncDbSave);
+            healthcheckInterval, staleThreshold, asyncDbSave,
+            dslRunsProperties.getMaxOutputBytes());
     service.setOpenTelemetry(openTelemetry);
     return service;
   }

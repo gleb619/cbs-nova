@@ -11,6 +11,8 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.config.CbsNovaFakesProperties;
 import cbs.nova.starter.config.CbsNovaPreviewProperties;
 import cbs.nova.starter.config.DslRuntimeRouterConfiguration;
+import cbs.nova.starter.config.properties.DslRunsProperties;
+import cbs.nova.starter.web.DslPayloadSizeValidator;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.controller.DslRuntimeHandler;
 import cbs.nova.starter.converter.DslRuntimeMapper;
@@ -25,6 +27,7 @@ import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import cbs.nova.starter.service.DslRuntimeService;
+import tools.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -74,7 +77,8 @@ class DslStarterIntegrationTest {
             contextFactory,
             new LoggingExecutionListener(loggingProperties),
             Mappers.getMapper(DslRuntimeMapper.class));
-    var handler = new DslRuntimeHandler(service);
+    var validator = new DslPayloadSizeValidator(new ObjectMapper(), new DslRunsProperties());
+    var handler = new DslRuntimeHandler(service, validator);
     var router = new DslRuntimeRouterConfiguration();
     mockMvc = MockMvcBuilders.routerFunctions(router.dslRuntimeRouter(handler)).build();
   }

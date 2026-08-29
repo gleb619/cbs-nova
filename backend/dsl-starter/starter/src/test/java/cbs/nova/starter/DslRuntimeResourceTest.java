@@ -19,6 +19,8 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.config.DslRuntimeRouterConfiguration;
+import cbs.nova.starter.config.properties.DslRunsProperties;
+import cbs.nova.starter.web.DslPayloadSizeValidator;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.controller.DslRuntimeHandler;
 import cbs.nova.starter.converter.DslRuntimeMapper;
@@ -26,6 +28,7 @@ import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.service.DslRuntimeService;
 import java.util.List;
 import java.util.Map;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
@@ -50,7 +53,9 @@ class DslRuntimeResourceTest {
             new ContextFactory(),
             new LoggingExecutionListener(loggingProperties),
             mapper);
-    DslRuntimeHandler handler = new DslRuntimeHandler(service);
+    DslPayloadSizeValidator validator = new DslPayloadSizeValidator(
+            new ObjectMapper(), new DslRunsProperties());
+    DslRuntimeHandler handler = new DslRuntimeHandler(service, validator);
     DslRuntimeRouterConfiguration router = new DslRuntimeRouterConfiguration();
     mockMvc = MockMvcBuilders.routerFunctions(router.dslRuntimeRouter(handler)).build();
   }
