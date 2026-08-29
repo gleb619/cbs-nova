@@ -49,6 +49,8 @@ export async function proxyToBackend<T>(
   headers['X-Request-Id'] = requestId
   const traceparent = getRequestHeader(event, 'traceparent')
   if (traceparent) headers.traceparent = traceparent
+  const authorization = getRequestHeader(event, 'authorization')
+  if (authorization) headers.Authorization = authorization
 
   const method = options.method ?? 'GET'
   const startedAt = Date.now()

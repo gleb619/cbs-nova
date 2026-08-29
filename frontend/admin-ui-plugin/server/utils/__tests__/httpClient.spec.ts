@@ -223,6 +223,47 @@ describe('proxyToBackend', () => {
     expect(opts.headers.traceparent).toBeUndefined()
   })
 
+  it('forwards inbound Authorization header verbatim', async () => {
+    const event = makeEvent({ authorization: 'Bearer abc.def.ghi' })
+    ;($fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({})
+
+    await proxyToBackend(event, '/api/foo')
+
+    const [, opts] = ($fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      { headers: Record<string, string> },
+    ]
+    expect(opts.headers.Authorization).toBe('Bearer abc.def.ghi')
+  })
+
+  it('omits Authorization header when inbound is absent', async () => {
+    const event = makeEvent()
+    ;($fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({})
+
+    await proxyToBackend(event, '/api/foo')
+
+    const [, opts] = ($fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      { headers: Record<string, string> },
+    ]
+    expect(opts.headers.Authorization).toBeUndefined()
+  })
+
+  it('forwards Authorization alongside X-Api-Key when both are present', async () => {
+    setRuntimeConfig({ backendApiKey: 'secret-key' })
+    const event = makeEvent({ authorization: 'Bearer abc.def.ghi' })
+    ;($fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({})
+
+    await proxyToBackend(event, '/api/foo')
+
+    const [, opts] = ($fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      { headers: Record<string, string> },
+    ]
+    expect(opts.headers.Authorization).toBe('Bearer abc.def.ghi')
+    expect(opts.headers['X-Api-Key']).toBe('secret-key')
+  })
+
   it('forwards POST method and body', async () => {
     const event = makeEvent()
     ;($fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({})
