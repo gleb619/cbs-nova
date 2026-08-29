@@ -1,6 +1,10 @@
 package cbs.nova.starter.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.number.IsCloseTo.closeTo;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -13,6 +17,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.starter.config.DslExecutionsRouterConfiguration;
+import cbs.nova.starter.persistence.DslRunStats;
+import cbs.nova.starter.persistence.DslRunStatsRepository;
 import cbs.nova.starter.service.DslRunCancellationService;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowStub;
@@ -22,7 +28,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 
 class DslExecutionsResourceTest {
 
@@ -36,7 +45,7 @@ class DslExecutionsResourceTest {
     DslRunCancellationService cancellationService = new DslRunCancellationService(workflowClient,
             repository);
     DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper,
-            cancellationService);
+            cancellationService, null);
     DslExecutionsRouterConfiguration router = new DslExecutionsRouterConfiguration();
     mockMvc = MockMvcBuilders.routerFunctions(router.dslExecutionsRouter(handler)).build();
   }
@@ -430,6 +439,111 @@ class DslExecutionsResourceTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value("Cancelled"))
             .andExpect(jsonPath("$.completedAt").exists());
+  }
+
+  @Test
+  void statsOnEmptyRepositoryReturnsZeroedShape() throws Exception {
+    mockMvc.perform(get("/api/executions/stats"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalRuns").value(0))
+            .andExpect(jsonPath("$.statusCounts").isEmpty())
+            .andExpect(jsonPath("$.windowRuns").value(0))
+            .andExpect(jsonPath("$.windowFailedRuns").value(0))
+            .andExpect(jsonPath("$.windowFailureRate").value(0.0))
+            .andExpect(jsonPath("$.windowHours").value(24))
+            .andExpect(jsonPath("$.topProcesses").isArray())
+            .andExpect(jsonPath("$.topProcesses.length()").value(0));
+  }
+
+  @Test
+  void statsAggregatesAllRunsWhenRepositoryCannotAggregateServerSide() throws Exception {
+    Instant now = Instant.now();
+    repository.save(run("run-now-1", "LoanDisbursement", "COMPLETED",
+            now.minus(Duration.ofHours(1)).toString(), now.toString(), "RUN"));
+    repository.save(run("run-now-2", "LoanDisbursement", "FAILED",
+            now.minus(Duration.ofHours(2)).toString(),
+            now.minus(Duration.ofHours(2)).plusSeconds(5).toString(), "RUN"));
+    repository.save(run("run-now-3", "CreditScoring", "RUNNING", now.toString(), null, "RUN"));
+    // Started 30h ago: counted in totals but outside the trailing 24h window.
+    repository.save(run("run-old-1", "CreditScoring", "COMPLETED",
+            now.minus(Duration.ofHours(30)).toString(),
+            now.minus(Duration.ofHours(29)).toString(), "RUN"));
+
+    mockMvc.perform(get("/api/executions/stats"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalRuns").value(4))
+            .andExpect(jsonPath("$.statusCounts.Completed").value(2))
+            .andExpect(jsonPath("$.statusCounts.Failed").value(1))
+            .andExpect(jsonPath("$.statusCounts.Running").value(1))
+            .andExpect(jsonPath("$.windowRuns").value(3))
+            .andExpect(jsonPath("$.windowFailedRuns").value(1))
+            .andExpect(jsonPath("$.windowFailureRate").value(closeTo(1.0 / 3.0, 1e-9)))
+            .andExpect(jsonPath("$.topProcesses.length()").value(2))
+            .andExpect(jsonPath("$.topProcesses[0].processName").value("CreditScoring"))
+            .andExpect(jsonPath("$.topProcesses[0].runCount").value(2))
+            .andExpect(jsonPath("$.topProcesses[1].processName").value("LoanDisbursement"))
+            .andExpect(jsonPath("$.topProcesses[1].runCount").value(2));
+  }
+
+  @Test
+  void statsPrefersServerSideAggregatesWhenRepositorySupportsThem() throws Exception {
+    DslRunStatsRepository statsRepository = mock(DslRunStatsRepository.class);
+    when(statsRepository.stats(any(Instant.class), eq(5))).thenReturn(new DslRunStats(
+            42,
+            Map.of("RUNNING", 7L, "FAILED", 3L),
+            10,
+            2,
+            0.2,
+            List.of(new DslRunStats.ProcessRunCount("LoanDisbursement", 20))));
+    DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper,
+            new DslRunCancellationService(workflowClient, repository), statsRepository);
+    mockMvc = MockMvcBuilders
+            .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler))
+            .build();
+
+    mockMvc.perform(get("/api/executions/stats"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalRuns").value(42))
+            .andExpect(jsonPath("$.statusCounts.Running").value(7))
+            .andExpect(jsonPath("$.statusCounts.Failed").value(3))
+            .andExpect(jsonPath("$.windowRuns").value(10))
+            .andExpect(jsonPath("$.windowFailedRuns").value(2))
+            .andExpect(jsonPath("$.windowFailureRate").value(0.2))
+            .andExpect(jsonPath("$.topProcesses[0].processName").value("LoanDisbursement"))
+            .andExpect(jsonPath("$.topProcesses[0].runCount").value(20));
+
+    verify(statsRepository).stats(any(Instant.class), eq(5));
+  }
+
+  @Test
+  void statsClampsTopProcessesParameter() throws Exception {
+    DslRunStatsRepository statsRepository = mock(DslRunStatsRepository.class);
+    when(statsRepository.stats(any(Instant.class), anyInt())).thenReturn(new DslRunStats(
+            0, Map.of(), 0, 0, 0.0, List.of()));
+    DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper,
+            new DslRunCancellationService(workflowClient, repository), statsRepository);
+    mockMvc = MockMvcBuilders
+            .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler))
+            .build();
+
+    mockMvc.perform(get("/api/executions/stats").param("topProcesses", "99"))
+            .andExpect(status().isOk());
+    verify(statsRepository).stats(any(Instant.class), eq(20));
+
+    mockMvc.perform(get("/api/executions/stats").param("topProcesses", "0"))
+            .andExpect(status().isOk());
+    verify(statsRepository).stats(any(Instant.class), eq(1));
+  }
+
+  @Test
+  void statsLiteralRouteIsNotCapturedAsDetailId() throws Exception {
+    repository.save(run("stats", "LoanDisbursement", "COMPLETED", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", "RUN"));
+
+    mockMvc.perform(get("/api/executions/stats"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalRuns").exists())
+            .andExpect(jsonPath("$.id").doesNotExist());
   }
 
   private DslRun run(String id, String processName, String status, String startedAt,

@@ -11,10 +11,13 @@ export default defineConfig({
     // the package root, matching what Nuxt's `~/` resolves to at runtime.
     alias: {
       '~': r('.'),
-      // Use the same ofetch entry that the dev server/Nitro runtime resolves.
-      // This keeps import identity consistent between source and tests so the
-      // global $fetch stub in vitest.setup.ts is observed by httpClient.ts.
-      ofetch: r('./node_modules/ofetch/dist/index.mjs'),
+      // Route 'ofetch' imports to the test shim so the global $fetch stub in
+      // vitest.setup.ts is observed by composables that import it explicitly
+      // (ofetch >= 1.5 exports its own $fetch and ignores globalThis.$fetch).
+      ofetch: r('./vitest.ofetch-stub.ts'),
+      // 'nuxt/app' only resolves inside a prepared .nuxt build; stub it so
+      // unit-tested composables can import useState and friends.
+      'nuxt/app': r('./vitest.nuxt-app-stub.ts'),
     },
   },
   test: {

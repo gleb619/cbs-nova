@@ -2,9 +2,13 @@ package cbs.nova.starter.controller;
 
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
+import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ExecutionDto;
 import cbs.nova.starter.model.ExecutionListResponse;
+import cbs.nova.starter.model.ExecutionStatsResponse;
+import cbs.nova.starter.persistence.DslRunStats;
+import cbs.nova.starter.persistence.DslRunStatsRepository;
 import cbs.nova.starter.service.DslRunCancellationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -12,6 +16,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.function.ServerRequest;
@@ -19,8 +24,12 @@ import org.springframework.web.servlet.function.ServerResponse;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * Functional handler for the DSL execution runs endpoint. Registered as a {@code RouterFunction}
@@ -34,10 +43,14 @@ import java.util.Locale;
 public class DslExecutionsHandler {
 
   private static final int MAX_LIMIT = 500;
+  private static final int STATS_WINDOW_HOURS = 24;
+  private static final int DEFAULT_TOP_PROCESSES = 5;
+  private static final int MAX_TOP_PROCESSES = 20;
 
   private final DslRunRepository runRepository;
   private final ObjectMapper objectMapper;
   private final DslRunCancellationService cancellationService;
+  private final @Nullable DslRunStatsRepository statsRepository;
 
   @Operation(summary = "List DSL execution runs")
   @ApiResponse(responseCode = "200", description = "Matching execution runs", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionListResponse.class)))
@@ -60,6 +73,33 @@ public class DslExecutionsHandler {
             .map(ExecutionDto::from)
             .toList();
     return ServerResponse.ok().body(new ExecutionListResponse(items, total));
+  }
+
+  /**
+   * Aggregate statistics for the dashboard.
+   *
+   * <p>
+   * Unlike {@link #list}, counts are never paginated or clamped by {@code MAX_LIMIT}: when the
+   * repository can aggregate server-side ({@link DslRunStatsRepository}, the JDBC store) the
+   * numbers come from SQL {@code COUNT}/{@code GROUP BY}; otherwise the handler scans the
+   * repository's full (unpaginated) contents, which stays exact for in-memory stores. Either way
+   * the dashboard cannot miscount the way the old client-side approach did over clamped list pages.
+   *
+   * <p>
+   * All counters describe whatever rows currently exist — retention purges (T276) simply shrink
+   * them, so the dashboard stays correct as old rows disappear.
+   */
+  @Operation(summary = "Aggregate DSL execution run statistics")
+  @ApiResponse(responseCode = "200", description = "Aggregate run statistics", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionStatsResponse.class)))
+  public ServerResponse stats(ServerRequest request) {
+    int topProcesses = clampTopProcesses(
+            request.param("topProcesses").map(Integer::parseInt).orElse(DEFAULT_TOP_PROCESSES));
+    Instant windowStart = Instant.now().minus(Duration.ofHours(STATS_WINDOW_HOURS));
+
+    DslRunStats stats = statsRepository != null
+            ? statsRepository.stats(windowStart, topProcesses)
+            : scanStats(windowStart, topProcesses);
+    return ServerResponse.ok().body(ExecutionStatsResponse.from(stats, STATS_WINDOW_HOURS));
   }
 
   @Operation(summary = "Get a single DSL execution run by id")
@@ -137,6 +177,42 @@ public class DslExecutionsHandler {
 
   private static int clampOffset(int offset) {
     return Math.max(0, offset);
+  }
+
+  private static int clampTopProcesses(int topProcesses) {
+    return Math.max(1, Math.min(topProcesses, MAX_TOP_PROCESSES));
+  }
+
+  /**
+   * Fallback aggregation over the repository's full contents, used when the store cannot aggregate
+   * server-side. Scans every run (unlike {@link #list}, no {@code MAX_LIMIT} clamp), so the counts
+   * are exact for in-memory repositories.
+   */
+  private DslRunStats scanStats(Instant windowStart, int topProcessesLimit) {
+    List<DslRun> allRuns = findRuns(null);
+    Map<String, Long> statusCounts = new LinkedHashMap<>();
+    Map<String, Long> processCounts = new LinkedHashMap<>();
+    long windowRuns = 0;
+    long windowFailedRuns = 0;
+    for (DslRun run : allRuns) {
+      statusCounts.merge(run.status(), 1L, Long::sum);
+      processCounts.merge(run.processName(), 1L, Long::sum);
+      if (!run.startedAt().isBefore(windowStart)) {
+        windowRuns++;
+        if (DslRunStatus.FAILED.name().equals(run.status())) {
+          windowFailedRuns++;
+        }
+      }
+    }
+    List<DslRunStats.ProcessRunCount> topProcessesList = processCounts.entrySet().stream()
+            .sorted(Map.Entry.<String, Long>comparingByValue().reversed()
+                    .thenComparing(Map.Entry.comparingByKey()))
+            .limit(topProcessesLimit)
+            .map(e -> new DslRunStats.ProcessRunCount(e.getKey(), e.getValue()))
+            .toList();
+    double failureRate = windowRuns == 0 ? 0.0 : (double) windowFailedRuns / windowRuns;
+    return new DslRunStats(allRuns.size(), statusCounts, windowRuns, windowFailedRuns, failureRate,
+            topProcessesList);
   }
 
   private static String effectiveMode(DslRun run) {

@@ -39,6 +39,7 @@ const runHandler = (await import('../dsl/run/[name].post')).default
 const previewHandler = (await import('../dsl/preview/[name].post')).default
 const explainHandler = (await import('../dsl/explain/[name].post')).default
 const executionsIndexHandler = (await import('../executions/index.get')).default
+const executionsStatsHandler = (await import('../executions/stats.get')).default
 const executionsIdHandler = (await import('../executions/[id].get')).default
 const executionsCancelHandler = (await import('../executions/[id]/cancel.post')).default
 const infoHandler = (await import('../info.get')).default
@@ -170,6 +171,15 @@ describe('dsl/explain/[name].post', () => {
       method: 'POST',
       body: { body: { a: 1 }, metadata: undefined },
     })
+  })
+})
+
+describe('executions/stats.get', () => {
+  it('GETs /api/executions/stats with no body and no opts', async () => {
+    await executionsStatsHandler(fakeEvent)
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/executions/stats')
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
   })
 })
 
