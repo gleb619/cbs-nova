@@ -19,15 +19,14 @@ public final class InMemoryTransactionExecutionRepository
           TransactionExecutionRepository {
 
   /**
-   * Maximum number of distinct runs retained. Mirrors the sibling
-   * {@link InMemoryDslRunRepository} insertion-order eviction pattern so the in-memory history
-   * cannot grow without bound.
+   * Maximum number of distinct runs retained. Mirrors the sibling {@link InMemoryDslRunRepository}
+   * insertion-order eviction pattern so the in-memory history cannot grow without bound.
    */
   private static final int CAPACITY = 100;
 
   /**
-   * Maximum number of executions retained per run; when exceeded the oldest entries are dropped
-   * so a single run cannot grow its history without bound either.
+   * Maximum number of executions retained per run; when exceeded the oldest entries are dropped so
+   * a single run cannot grow its history without bound either.
    */
   private static final int MAX_EXECUTIONS_PER_RUN = 100;
 

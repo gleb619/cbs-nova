@@ -80,7 +80,8 @@ class ExplainReportTest {
     var executable = new ExecutableDescriptor(
             "e", null, null, null, false, null, List.of());
     var differentExecutable = new ExplainReport(
-            "n", "d", trace, calls, counts, executable, null, null, List.of(), null, List.of(), null);
+            "n", "d", trace, calls, counts, executable, null, null, List.of(), null, List.of(),
+            null);
     assertThat(left).isNotEqualTo(differentExecutable);
   }
 

@@ -33,9 +33,10 @@ public final class InMemoryDslRunRepository implements DslRunRepository {
   }
 
   /**
-   * @param onRunEvicted Invoked with the evicted run id whenever a run is dropped past
-   * {@link #CAPACITY}. Lets callers cascade cleanup onto related data (e.g. a
-   * {@code TransactionExecutionRepository#deleteByRunId}).
+   * @param onRunEvicted
+   *          Invoked with the evicted run id whenever a run is dropped past {@link #CAPACITY}. Lets
+   *          callers cascade cleanup onto related data (e.g. a
+   *          {@code TransactionExecutionRepository#deleteByRunId}).
    */
   public InMemoryDslRunRepository(Consumer<String> onRunEvicted) {
     this.onRunEvicted = onRunEvicted == null ? runId -> {
