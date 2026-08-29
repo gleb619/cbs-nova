@@ -27,6 +27,7 @@ import org.springframework.context.annotation.Import;
     DslErrorHandlingConfiguration.class,
     SpringHelperConfiguration.class,
     ApiKeyAuthFilterConfiguration.class,
+    RateLimitFilterConfiguration.class,
 
 })
 @EnableConfigurationProperties({DslProperties.class, CbsNovaCacheProperties.class})

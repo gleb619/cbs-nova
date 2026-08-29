@@ -39,6 +39,7 @@ class DslRootAutoConfigurationTest {
             DslErrorHandlingConfiguration.class,
             SpringHelperConfiguration.class,
             ApiKeyAuthFilterConfiguration.class,
+            RateLimitFilterConfiguration.class,
             DslRunRetentionConfiguration.class);
   }
 
