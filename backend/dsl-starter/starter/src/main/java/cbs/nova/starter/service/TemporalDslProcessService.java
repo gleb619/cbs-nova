@@ -9,8 +9,12 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
+import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.baggage.Baggage;
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Scope;
 import io.sentry.Sentry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -65,8 +70,24 @@ public class TemporalDslProcessService {
 
   private final AtomicBoolean healthcheckStarted = new AtomicBoolean(false);
 
+  private OpenTelemetry openTelemetry = OpenTelemetry.noop();
+
+  private final Map<String, Span> activeSpans = new ConcurrentHashMap<>();
+
   void setClock(@NonNull Clock clock) {
     this.clock.set(clock);
+  }
+
+  /**
+   * Sets the OpenTelemetry instance used for DSL run tracing. Defaults to a no-op implementation;
+   * when left unset, tracing is completely disabled.
+   */
+  public void setOpenTelemetry(OpenTelemetry openTelemetry) {
+    this.openTelemetry = openTelemetry != null ? openTelemetry : OpenTelemetry.noop();
+  }
+
+  OpenTelemetry getOpenTelemetry() {
+    return openTelemetry;
   }
 
   private @NonNull Instant now() {
@@ -203,6 +224,13 @@ public class TemporalDslProcessService {
         }
         return null;
       });
+
+      Span span = activeSpans.remove(runId);
+      if (span != null) {
+        span.setAttribute("status", DslRunStatus.STALE.name());
+        span.setStatus(StatusCode.ERROR, "Run marked stale by healthcheck");
+        span.end();
+      }
     } finally {
       try {
         scope.close();
@@ -232,39 +260,62 @@ public class TemporalDslProcessService {
           @NonNull Map<String, Object> metadata,
           @NonNull String runId,
           @NonNull Instant startedAt) {
-    ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
-    Context<?> ctx = contextFactory.of(body, metadata, ExecutionMode.RUN, runId)
-            .withExecutionTraceCollector(traceCollector);
-    traceCollector.start();
-    Result<?> result;
-    try {
-      result = GlobalManager.globalManager().runProcess(processName, ctx);
-    } catch (Exception ex) {
-      result = Result.failure(ex);
+    Tracer tracer = openTelemetry.getTracer("cbs.nova.dsl");
+    Span span = tracer.spanBuilder("dsl.run." + processName)
+            .setAttribute("runId", runId)
+            .setAttribute("processName", processName)
+            .setAttribute("executionMode", ExecutionMode.RUN.name())
+            .startSpan();
+    activeSpans.put(runId, span);
+    try (Scope ignored = span.makeCurrent()) {
+      ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
+      Context<?> ctx = contextFactory.of(body, metadata, ExecutionMode.RUN, runId)
+              .withExecutionTraceCollector(traceCollector);
+      traceCollector.start();
+      Result<?> result;
+      try {
+        result = GlobalManager.globalManager().runProcess(processName, ctx);
+      } catch (Exception ex) {
+        result = Result.failure(ex);
+      } finally {
+        traceCollector.stop();
+      }
+
+      Instant finishedAt = now();
+      String contextJson = serializeTrace(traceCollector.snapshot());
+      String status = result.isSuccess()
+              ? DslRunStatus.COMPLETED.name()
+              : DslRunStatus.FAILED.name();
+      String outputJson = result.isSuccess() ? serialize(result.value()) : EMPTY_OUTPUT_JSON;
+      String error = result.isSuccess() ? null : messageOf(result.cause());
+
+      span.setAttribute("status", status);
+      if (!result.isSuccess()) {
+        span.setStatus(StatusCode.ERROR, error);
+      }
+
+      submitDbWrite(() -> {
+        runRepository.updateFinished(
+                runId,
+                status,
+                outputJson,
+                error,
+                finishedAt,
+                contextJson);
+        return null;
+      });
+
+      return result;
     } finally {
-      traceCollector.stop();
+      endSpan(runId);
     }
+  }
 
-    Instant finishedAt = now();
-    String contextJson = serializeTrace(traceCollector.snapshot());
-    String status = result.isSuccess()
-            ? DslRunStatus.COMPLETED.name()
-            : DslRunStatus.FAILED.name();
-    String outputJson = result.isSuccess() ? serialize(result.value()) : EMPTY_OUTPUT_JSON;
-    String error = result.isSuccess() ? null : messageOf(result.cause());
-
-    submitDbWrite(() -> {
-      runRepository.updateFinished(
-              runId,
-              status,
-              outputJson,
-              error,
-              finishedAt,
-              contextJson);
-      return null;
-    });
-
-    return result;
+  private void endSpan(@NonNull String runId) {
+    Span span = activeSpans.remove(runId);
+    if (span != null) {
+      span.end();
+    }
   }
 
   private void submitDbWrite(@NonNull Supplier<Void> write) {

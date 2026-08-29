@@ -13,6 +13,7 @@ services:
       SENTRY_DSN: "${BUGSINK_DSN:-}"
       KEYCLOAK_URL: "${KEYCLOAK_URL:-}"
       # Observability wiring (Spring Boot 3.x / Micrometer OTLP)
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318/v1/traces}"
       MANAGEMENT_OTLP_TRACING_ENDPOINT: "${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-http://otel-collector:4318/v1/traces}"
       MANAGEMENT_OTLP_LOGS_ENDPOINT: "${OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:-http://otel-collector:4318/v1/logs}"
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "${TRACING_SAMPLING:-1.0}"

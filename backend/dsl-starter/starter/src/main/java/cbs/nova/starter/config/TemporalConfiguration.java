@@ -27,6 +27,8 @@ import cbs.nova.starter.service.TemporalDslProcessLauncher;
 import cbs.nova.starter.service.TemporalDslProcessService;
 import cbs.nova.starter.service.TemporalDslService;
 import cbs.nova.starter.service.TemporalTransactionInvoker;
+import cbs.nova.starter.tracing.OpenTelemetryContextPropagator;
+import io.opentelemetry.api.OpenTelemetry;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowClientOptions;
 import io.temporal.serviceclient.WorkflowServiceStubs;
@@ -110,9 +112,11 @@ public class TemporalConfiguration {
   @Bean
   @ConditionalOnMissingBean
   WorkflowClient workflowClient(WorkflowServiceStubs workflowServiceStubs,
-          DryRunLoggingContextPropagator dryRunLoggingContextPropagator) {
+          DryRunLoggingContextPropagator dryRunLoggingContextPropagator,
+          OpenTelemetryContextPropagator openTelemetryContextPropagator) {
     WorkflowClientOptions options = WorkflowClientOptions.newBuilder()
-            .setContextPropagators(List.of(dryRunLoggingContextPropagator))
+            .setContextPropagators(List.of(
+                    dryRunLoggingContextPropagator, openTelemetryContextPropagator))
             .build();
     return WorkflowClient.newInstance(workflowServiceStubs, options);
   }
@@ -291,11 +295,14 @@ public class TemporalConfiguration {
           @Qualifier("cbsNovaDslProcessHealthcheckExecutor") ScheduledExecutorService healthcheckExecutor,
           @Value("${cbs.nova.process.healthcheck.interval:PT30S}") Duration healthcheckInterval,
           @Value("${cbs.nova.process.healthcheck.stale-threshold:PT5M}") Duration staleThreshold,
-          @Value("${cbs.nova.process.async-db-save:true}") boolean asyncDbSave) {
-    return new TemporalDslProcessService(contextFactory, runRepository,
+          @Value("${cbs.nova.process.async-db-save:true}") boolean asyncDbSave,
+          OpenTelemetry openTelemetry) {
+    TemporalDslProcessService service = new TemporalDslProcessService(contextFactory, runRepository,
             JsonMapper.builder().build(),
             dslProcessExecutor, healthcheckExecutor,
             healthcheckInterval, staleThreshold, asyncDbSave);
+    service.setOpenTelemetry(openTelemetry);
+    return service;
   }
 
   @Bean

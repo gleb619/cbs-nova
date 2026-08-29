@@ -83,4 +83,8 @@ frontend/       Nuxt admin UI plugin + shared Vue components (pnpm workspace)
 docs/           Architecture, DSL authoring guide, kanban
 ```
 
+## Tracing
+
+The Spring Boot starter emits OpenTelemetry traces for every DSL run when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (for example, `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/traces`). The default compose stack already wires this to the local collector and Jaeger; start the stack, run a DSL process, and open http://localhost:16686 to browse traces such as `dsl.run.<processName>`. When the OTLP endpoint is unset, tracing is a no-op and produces no exports or error logs.
+
 For service ports, troubleshooting, and the full make-target list, see [`DEVELOPING.md`](DEVELOPING.md).
