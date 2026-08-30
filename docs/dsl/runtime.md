@@ -367,3 +367,44 @@ cbs:
 
 When the application is started without a `WorkflowServiceStubs` bean (preview / explain hosts, or any runtime that omits
 the Temporal starter), the `temporal` detail is omitted entirely and the indicator behaves exactly as before.
+
+## Graceful shutdown
+
+The starter ships with `server.shutdown: graceful` (T306). On `SIGTERM` — a `docker compose
+restart|stop`, a `kubectl` rollout, a plain `Ctrl-C` — the embedded server stops accepting new
+connections immediately and lets in-flight `POST /api/dsl/run|preview|explain` requests finish
+instead of resetting them mid-execution. Before this, a restart during a `POST /run` reset the
+caller's connection while the workflow may already have started (the run row exists), so a client
+retry produced a duplicate run.
+
+Knobs:
+
+| Setting | Default | Purpose |
+|---------|---------|---------|
+| `server.shutdown` | `graceful` | Drain in-flight requests on shutdown. Set to `immediate` to opt out. |
+| `spring.lifecycle.timeout-per-shutdown-phase` | `30s` | Upper bound per shutdown phase, including the web-server drain. Requests still running after this are cut. |
+| `stop_grace_period` (compose, `app/compose/app.yml`) | `45s` | How long Docker waits after `SIGTERM` before `SIGKILL`. Must exceed the shutdown-phase timeout plus the worker-drain window. |
+
+Interaction with long-running requests: a run or preview that outlives
+`timeout-per-shutdown-phase` is still terminated at shutdown — graceful shutdown bounds the wait,
+it does not wait forever. Keep the preview execution timeout on
+(`cbs.nova.preview.execution.timeout-ms`, default 20s — T298); a preview with the timeout disabled
+(`0`) can hold shutdown open for the full 30s window.
+
+Worker vs HTTP ordering: the Temporal `WorkerFactory` lifecycle runs at
+`SmartLifecycle` phase `Integer.MAX_VALUE` (`DslWorkerConfiguration.WorkerFactoryLifecycle`), so
+workers stop before the web server's graceful-shutdown phase. The two drains do not block each
+other; the sync `POST /run` path submits to the `cbsNovaDslProcessExecutor` (which drains via its
+own `WaitForTasksToCompleteOnShutdown`), not to the worker directly, so an in-flight run completes
+its dispatch even after the worker factory has stopped.
+
+Manual verification:
+
+```bash
+docker compose -f app/compose/app.yml up -d spring-app
+# start a slow run in the background (a process that sleeps ~20s)
+curl -s -X POST http://localhost:8090/api/dsl/run/SlowProcess -d '{"body":{}}' &
+sleep 2
+docker compose -f app/compose/app.yml restart spring-app
+wait   # the curl returns a normal response, not "connection reset by peer"
+```

@@ -1,3 +1,19 @@
+server:
+  # Drain in-flight run/preview/explain requests on SIGTERM instead of
+  # resetting connections mid-execution (T306). New connections are refused
+  # as soon as shutdown starts; active requests get up to
+  # spring.lifecycle.timeout-per-shutdown-phase to finish.
+  shutdown: graceful
+
+spring:
+  lifecycle:
+    # Upper bound on each shutdown phase, including the graceful web-server
+    # drain. Runs still in flight after this are cut. Keep it below the
+    # compose stop_grace_period (see app/compose/app.yml). A preview with no
+    # execution timeout (cbs.nova.preview.execution.timeout-ms=0, T298) can
+    # hold shutdown open for the full window — leave the preview timeout on.
+    timeout-per-shutdown-phase: 30s
+
 management:
   info:
     git:

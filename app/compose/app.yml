@@ -7,6 +7,11 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8090:8090"
+    # Give the app time to drain in-flight requests on `docker compose
+    # restart|stop` before Docker escalates to SIGKILL (default is 10s).
+    # Must exceed spring.lifecycle.timeout-per-shutdown-phase (30s) plus the
+    # worker-drain window; see docs/dsl/runtime.md#graceful-shutdown.
+    stop_grace_period: 45s
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       TEMPORAL_ADDRESS: temporal:7233
