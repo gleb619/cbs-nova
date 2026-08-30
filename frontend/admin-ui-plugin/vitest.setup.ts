@@ -1,5 +1,6 @@
 import { vi } from 'vitest'
 import { computed, onUnmounted, readonly, ref, watch } from 'vue'
+import { __resetRouterStub } from './vitest.vue-router-stub'
 
 if (typeof process !== 'undefined') {
   process.env.LOG_LEVEL = 'silent'
@@ -97,4 +98,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(g.useExecutionsApi as never).mockImplementation(defaultExecutionsApi)
   vi.mocked(g.useDslApi as never).mockImplementation(defaultDslApi)
+  // Reset the vue-router stub's captured guards so handlers from one spec do
+  // not leak into the next.
+  __resetRouterStub()
 })
