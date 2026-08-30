@@ -29,6 +29,10 @@ services:
       # the cost of installing an HTTP client. start_period is tuned to
       # allow for JVM warm-up, Temporal worker registration and any
       # first-boot migrations.
+      # NB: this is a TCP-only probe; it stays UP even when Temporal is
+      # unreachable. Set cbs.health.temporal.fail-status=down on the app
+      # to make /actuator/health (and therefore this gate) report DOWN when
+      # Temporal is down. See docs/dsl/runtime.md#temporal-health-gating.
       test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8090 || exit 1"]
       interval: 10s
       timeout: 5s

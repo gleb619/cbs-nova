@@ -299,3 +299,36 @@ properties, environment variables, a configuration server, or any other source.
 
 Because the manager owns the resolver contracts, the same DSL can be deployed to different environments (dev, staging,
 prod) with different queue names, timeouts, etc., without changing the DSL source.
+
+## Temporal health gating
+
+The starter's `DslHealthIndicator` (exposed at `/actuator/health` as the `dsl` component) reports the live reachability
+of the Temporal cluster alongside the registry counts. When a `WorkflowServiceStubs` bean is present (i.e. the runtime is
+configured for `run` mode), the indicator calls a gRPC `Health.Check` against the configured Temporal target with a
+short timeout and records the result under a `temporal` detail:
+
+- `reachable` — whether `HealthCheckResponse` came back as `SERVING` inside the timeout.
+- `target` — the `temporal.connection-target` value the probe used.
+- `configuredTaskQueues` — distinct, sorted task queues registered with `GlobalManager` for `Process`-typed generated
+  classes.
+- `error` — short failure description; present only when `reachable` is `false`.
+
+The behaviour of `/actuator/health` when Temporal is unreachable is controlled by `cbs.health.temporal.fail-status`:
+
+| Value  | Effect when Temporal is unreachable                                                                 |
+|--------|----------------------------------------------------------------------------------------------------|
+| `none` | `DslHealthIndicator` returns `UP` with the `temporal` detail flagging `reachable=false`. Default.  |
+| `down` | `DslHealthIndicator` returns `DOWN` with the same `temporal` detail. Compose `service_healthy` and Kubernetes readiness probes now gate on the real Temporal state. |
+
+The probe timeout is `cbs.health.temporal.timeout` (default `PT2S`). Example YAML:
+
+```yaml
+cbs:
+  health:
+    temporal:
+      fail-status: down
+      timeout: PT3S
+```
+
+When the application is started without a `WorkflowServiceStubs` bean (preview / explain hosts, or any runtime that omits
+the Temporal starter), the `temporal` detail is omitted entirely and the indicator behaves exactly as before.
