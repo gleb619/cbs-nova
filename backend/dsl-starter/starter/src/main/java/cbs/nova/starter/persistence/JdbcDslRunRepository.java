@@ -26,12 +26,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-/**
- * JDBC-backed {@link DslRunRepository} with configurable table name/schema, application-level field
- * encryption, MapStruct entity mapping, and a targeted update method for finishing a run.
- */
 @RequiredArgsConstructor
 public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsRepository {
 
@@ -169,45 +166,38 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
     return jdbcTemplate.update(sql, params);
   }
 
-  /**
-   * Deletes finished runs older than {@code cutoff} in bounded batches.
-   *
-   * <p>
-   * Each pass removes at most {@code batchSize} rows by deleting only those {@code run_id}s
-   * selected by a {@code LIMIT} subquery, so the row lock held per statement stays small even when
-   * the very first purge of a large table must churn through millions of rows. The
-   * {@code status <> 'RUNNING'} guard means the delete can never race a row that is mid-transition
-   * out of {@code RUNNING} (such rows have no {@code finished_at} and are excluded anyway). Loops
-   * until a single pass deletes fewer than {@code batchSize} rows.
-   */
   @Override
-  public int purgeFinishedBefore(@NonNull Instant cutoff, int batchSize) {
+  public int purgeFinishedBefore(
+          @NonNull Instant cutoff,
+          int batchSize,
+          @NonNull Consumer<List<String>> onBatchBeforeParentDelete) {
     if (batchSize <= 0) {
       throw new IllegalArgumentException("batchSize must be positive, was " + batchSize);
     }
+    String selectSql = "SELECT run_id FROM %s WHERE finished_at < :cutoff AND status <> :runningStatus LIMIT :batchSize"
+            .formatted(tableName);
+    String deleteSql = "DELETE FROM %s WHERE run_id IN (:ids)".formatted(tableName);
     MapSqlParameterSource params = new MapSqlParameterSource()
             .addValue("cutoff", Timestamp.from(cutoff))
             .addValue("runningStatus", DslRunStatus.RUNNING.name())
             .addValue("batchSize", batchSize);
 
     int total = 0;
-    int deleted;
-    do {
-      deleted = jdbcTemplate.update(getPurgeStatement(), params);
+    while (true) {
+      List<String> ids = jdbcTemplate.queryForList(selectSql, params, String.class);
+      if (ids.isEmpty()) {
+        break;
+      }
+      onBatchBeforeParentDelete.accept(ids);
+      int deleted = jdbcTemplate.update(deleteSql, new MapSqlParameterSource("ids", ids));
       total += deleted;
-    } while (deleted == batchSize);
-
+      if (ids.size() < batchSize) {
+        break;
+      }
+    }
     return total;
   }
 
-  /**
-   * SQL-aggregate statistics over the stored runs (see {@link DslRunStats}).
-   *
-   * <p>
-   * Three statements, each fully aggregated by the database — no run rows cross the wire. Retention
-   * purges are implicitly honoured: whatever rows remain after a purge are exactly what these
-   * aggregates describe.
-   */
   @Override
   public @NonNull DslRunStats stats(@NonNull Instant windowStart, int topProcessesLimit) {
     if (topProcessesLimit <= 0) {
@@ -318,12 +308,6 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
     return entity;
   }
 
-  // TODO: it's better to remove native insert. ANd just work with a entity, so since we can work
-  // only with
-  // repository, we can handle enc work here
-  // we can reuse
-  // `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/persistence/DslRunNamingStrategy.java`
-  // to customize table name
   private String getInsertStatement() {
     return """
             INSERT INTO %s (run_id, process_name, status, input_json, output_json, error_message, context_json, started_at, finished_at, execution_mode, triggered_by)
@@ -348,9 +332,6 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
             WHERE run_id = :runId""".formatted(tableName);
   }
 
-  // TODO: it's better to remove native update. ANd just work with a entity, so since we can work
-  // only with
-  // repository, we can handle enc work here
   private String getUpdateStatement() {
     return """
             UPDATE %s SET
@@ -393,17 +374,6 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
             GROUP BY process_name
             ORDER BY COUNT(*) DESC, process_name ASC
             LIMIT :topProcessesLimit""".formatted(tableName);
-  }
-
-  private String getPurgeStatement() {
-    return """
-            DELETE FROM %1$s
-            WHERE run_id IN (
-                SELECT run_id FROM %1$s
-                WHERE finished_at < :cutoff
-                  AND status <> :runningStatus
-                LIMIT :batchSize
-            )""".formatted(tableName);
   }
 
 }

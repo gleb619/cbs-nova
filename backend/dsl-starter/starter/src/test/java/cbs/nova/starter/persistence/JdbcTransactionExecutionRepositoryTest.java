@@ -91,6 +91,31 @@ class JdbcTransactionExecutionRepositoryTest {
     assertThat(repository.findByRunId("missing")).isEmpty();
   }
 
+  @Test
+  void deleteByRunIdsRemovesOnlyMatchingRunIds() {
+    repository.save(execution("run-6", "CreateOrder", Map.of("sku", "A")));
+    repository.save(execution("run-6", "ReserveStock", null));
+    repository.save(execution("run-7", "CreateOrder", Map.of("sku", "B")));
+    repository.save(execution("run-8", "CreateOrder", Map.of("sku", "C")));
+
+    int deleted = repository.deleteByRunIds(List.of("run-6", "run-8"));
+
+    assertThat(deleted).isEqualTo(3);
+    assertThat(repository.findByRunId("run-6")).isEmpty();
+    assertThat(repository.findByRunId("run-7")).hasSize(1);
+    assertThat(repository.findByRunId("run-8")).isEmpty();
+  }
+
+  @Test
+  void deleteByRunIdsIsNoOpForEmptyCollection() {
+    repository.save(execution("run-9", "CreateOrder", null));
+
+    int deleted = repository.deleteByRunIds(List.of());
+
+    assertThat(deleted).isZero();
+    assertThat(repository.findByRunId("run-9")).hasSize(1);
+  }
+
   private static TransactionExecution execution(String runId, String transactionName,
           Object input) {
     return new TransactionExecution(runId, transactionName, input,

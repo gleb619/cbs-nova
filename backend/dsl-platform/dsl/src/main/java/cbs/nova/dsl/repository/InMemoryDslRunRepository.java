@@ -25,7 +25,6 @@ public final class InMemoryDslRunRepository implements DslRunRepository {
 
   private static final int CAPACITY = 100;
 
-  // TODO: redo to a Caffeine with some properties config for ttl
   private final Map<String, DslRun> runs = new ConcurrentHashMap<>();
   private final Deque<String> insertionOrder = new ConcurrentLinkedDeque<>();
   private final Consumer<String> onRunEvicted;
@@ -35,12 +34,6 @@ public final class InMemoryDslRunRepository implements DslRunRepository {
     });
   }
 
-  /**
-   * @param onRunEvicted
-   *          Invoked with the evicted run id whenever a run is dropped past {@link #CAPACITY}. Lets
-   *          callers cascade cleanup onto related data (e.g. a
-   *          {@code TransactionExecutionRepository#deleteByRunId}).
-   */
   public InMemoryDslRunRepository(Consumer<String> onRunEvicted) {
     this.onRunEvicted = onRunEvicted == null ? runId -> {
     } : onRunEvicted;
@@ -140,27 +133,34 @@ public final class InMemoryDslRunRepository implements DslRunRepository {
   }
 
   @Override
-  public int purgeFinishedBefore(@NonNull Instant cutoff, int batchSize) {
+  public int purgeFinishedBefore(
+          @NonNull Instant cutoff,
+          int batchSize,
+          @NonNull Consumer<List<String>> onBatchBeforeParentDelete) {
     if (batchSize <= 0) {
       throw new IllegalArgumentException("batchSize must be positive, was " + batchSize);
     }
-    int[] purged = {0};
-    AtomicInteger batch = new AtomicInteger();
-    runs.values().removeIf(run -> {
-      if (DslRunStatus.RUNNING.name().equals(run.status())) {
-        return false;
+    List<String> ids = runs.values().stream()
+            .filter(run -> !DslRunStatus.RUNNING.name().equals(run.status()))
+            .filter(run -> {
+              Instant finishedAt = run.finishedAt();
+              return finishedAt != null && finishedAt.isBefore(cutoff);
+            })
+            .map(DslRun::runId)
+            .limit(batchSize)
+            .toList();
+    if (ids.isEmpty()) {
+      return 0;
+    }
+    onBatchBeforeParentDelete.accept(ids);
+    int deleted = 0;
+    for (String id : ids) {
+      if (runs.remove(id) != null) {
+        deleted++;
       }
-      Instant finishedAt = run.finishedAt();
-      if (finishedAt == null || !finishedAt.isBefore(cutoff)) {
-        return false;
-      }
-      if (batch.incrementAndGet() > batchSize) {
-        return false;
-      }
-      purged[0]++;
-      return true;
-    });
-    return purged[0];
+    }
+    insertionOrder.removeAll(ids);
+    return deleted;
   }
 
   private static @NonNull DslRun finished(

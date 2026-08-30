@@ -15,13 +15,10 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 import java.sql.Timestamp;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * JDBC-backed {@link TransactionExecutionRepository} that persists successful transaction
- * executions and deserializes the {@code input} JSON field using Jackson.
- */
 @RequiredArgsConstructor
 public class JdbcTransactionExecutionRepository implements TransactionExecutionRepository {
 
@@ -64,6 +61,15 @@ public class JdbcTransactionExecutionRepository implements TransactionExecutionR
     jdbcTemplate.update(sql, new MapSqlParameterSource("runId", runId));
   }
 
+  @Override
+  public int deleteByRunIds(@NonNull Collection<String> runIds) {
+    if (runIds.isEmpty()) {
+      return 0;
+    }
+    String sql = "DELETE FROM " + TABLE_NAME + " WHERE run_id IN (:runIds)";
+    return jdbcTemplate.update(sql, new MapSqlParameterSource("runIds", runIds));
+  }
+
   private TransactionExecution toDomain(TransactionExecutionEntity entity) {
     Object input = deserializeInput(entity.getInputJson());
     return new TransactionExecution(
@@ -95,12 +101,6 @@ public class JdbcTransactionExecutionRepository implements TransactionExecutionR
     }
   }
 
-  // TODO: it's better to remove native insert. ANd just work with a entity, so since we can work
-  // only with
-  // repository, we can handle enc work here
-  // we can reuse
-  // `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/persistence/DslRunNamingStrategy.java`
-  // to customize table name
   private String getInsertStatement() {
     return """
             INSERT INTO %s (run_id, transaction_name, input_json, executed_at)

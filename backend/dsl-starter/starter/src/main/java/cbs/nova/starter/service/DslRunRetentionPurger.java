@@ -1,38 +1,27 @@
 package cbs.nova.starter.service;
 
 import cbs.nova.dsl.history.DslRunRepository;
+import cbs.nova.dsl.history.TransactionExecutionRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * Scheduled purge of finished {@code dsl_runs} rows past a retention threshold.
- *
- * <p>
- * Mirrors the established healthcheck-sweep scheduling pattern (see
- * {@link TemporalDslProcessService}): a single dedicated {@link ScheduledExecutorService} runs the
- * purge on a fixed delay, guarded by compare-and-set startup so it is started at most once. The job
- * only ever deletes terminal rows ({@code status <> 'RUNNING'}) whose {@code finished_at} has
- * fallen before the cutoff, so it can never race a row that is mid-transition out of RUNNING.
- *
- * <p>
- * When {@code cbs.runs.retention} is {@code 0} or negative the purge is disabled: {@link #start()}
- * becomes a no-op, no job is scheduled, and nothing is registered.
- */
 @Slf4j
 public class DslRunRetentionPurger {
 
-  /** Micrometer counter, incremented by the number of rows deleted per purge pass. */
   public static final String PURGED_COUNTER = "dsl.runs.purged";
+  public static final String TRANSACTIONS_PURGED_COUNTER = "dsl.run.transactions.purged";
 
   private static final Duration SHUTDOWN_JOIN = Duration.ofSeconds(5);
 
@@ -42,6 +31,7 @@ public class DslRunRetentionPurger {
   private final Duration purgeInterval;
   private final int purgeBatchSize;
   private final ScheduledExecutorService schedulingExecutor;
+  private final TransactionExecutionRepository transactionExecutionRepository;
   private final Clock clock;
 
   private final AtomicReference<ScheduledFuture<?>> handle = new AtomicReference<>();
@@ -65,6 +55,31 @@ public class DslRunRetentionPurger {
           @NonNull Duration purgeInterval,
           int purgeBatchSize,
           @NonNull ScheduledExecutorService schedulingExecutor,
+          @Nullable TransactionExecutionRepository transactionExecutionRepository) {
+    this(runRepository, meterRegistry, retention, purgeInterval, purgeBatchSize,
+            schedulingExecutor, transactionExecutionRepository, Clock.systemUTC());
+  }
+
+  public DslRunRetentionPurger(
+          @NonNull DslRunRepository runRepository,
+          @NonNull MeterRegistry meterRegistry,
+          @NonNull Duration retention,
+          @NonNull Duration purgeInterval,
+          int purgeBatchSize,
+          @NonNull ScheduledExecutorService schedulingExecutor,
+          @NonNull Clock clock) {
+    this(runRepository, meterRegistry, retention, purgeInterval, purgeBatchSize,
+            schedulingExecutor, null, clock);
+  }
+
+  public DslRunRetentionPurger(
+          @NonNull DslRunRepository runRepository,
+          @NonNull MeterRegistry meterRegistry,
+          @NonNull Duration retention,
+          @NonNull Duration purgeInterval,
+          int purgeBatchSize,
+          @NonNull ScheduledExecutorService schedulingExecutor,
+          @Nullable TransactionExecutionRepository transactionExecutionRepository,
           @NonNull Clock clock) {
     this.runRepository = runRepository;
     this.meterRegistry = meterRegistry;
@@ -72,13 +87,10 @@ public class DslRunRetentionPurger {
     this.purgeInterval = purgeInterval;
     this.purgeBatchSize = purgeBatchSize;
     this.schedulingExecutor = schedulingExecutor;
+    this.transactionExecutionRepository = transactionExecutionRepository;
     this.clock = clock;
   }
 
-  /**
-   * Schedules the recurring purge unless retention is disabled. Safe to call multiple times: the
-   * job is scheduled at most once via a compare-and-set guard.
-   */
   public void start() {
     if (retention.isZero() || retention.isNegative()) {
       log.info("dsl_runs retention purge disabled (cbs.runs.retention={}); no job scheduled",
@@ -105,7 +117,6 @@ public class DslRunRetentionPurger {
     }
   }
 
-  /** Cancels the scheduled purge if one is running. */
   public void shutdown() {
     started.set(false);
     ScheduledFuture<?> current = handle.getAndSet(null);
@@ -123,19 +134,23 @@ public class DslRunRetentionPurger {
     }
   }
 
-  /**
-   * Runs a single purge pass against the current cutoff {@code now - retention}. Returns the number
-   * of rows deleted, or {@code 0} when retention is disabled.
-   */
-  int purge() {
+  public int purge() {
     if (retention.isZero() || retention.isNegative()) {
       return 0;
     }
     Instant cutoff = clock.instant().minus(retention);
-    int deleted = runRepository.purgeFinishedBefore(cutoff, purgeBatchSize);
+    int[] childDeleted = {0};
+    int deleted = runRepository.purgeFinishedBefore(cutoff, purgeBatchSize, ids -> {
+      if (transactionExecutionRepository != null && !ids.isEmpty()) {
+        childDeleted[0] += transactionExecutionRepository.deleteByRunIds(ids);
+      }
+    });
     if (deleted > 0) {
       meterRegistry.counter(PURGED_COUNTER).increment(deleted);
       log.info("Purged {} finished dsl_runs rows older than cutoff {}", deleted, cutoff);
+    }
+    if (childDeleted[0] > 0) {
+      meterRegistry.counter(TRANSACTIONS_PURGED_COUNTER).increment(childDeleted[0]);
     }
     return deleted;
   }
