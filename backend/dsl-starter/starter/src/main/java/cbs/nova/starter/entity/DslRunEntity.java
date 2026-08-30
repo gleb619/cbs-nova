@@ -44,4 +44,7 @@ public class DslRunEntity {
 
   @Column("execution_mode")
   private String executionMode;
+
+  @Column("triggered_by")
+  private String triggeredBy;
 }

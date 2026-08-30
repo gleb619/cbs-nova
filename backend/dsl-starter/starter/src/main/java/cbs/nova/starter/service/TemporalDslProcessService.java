@@ -82,21 +82,24 @@ public class TemporalDslProcessService {
   private final boolean asyncDbSave;
   private final long maxOutputBytes;
   private final MeterRegistry meterRegistry;
+  private final RunIdentityResolver runIdentityResolver;
 
   public TemporalDslProcessService(ContextFactory contextFactory, DslRunRepository runRepository,
           ObjectMapper objectMapper,
           ThreadPoolTaskExecutor dslProcessExecutor, ScheduledExecutorService healthcheckExecutor,
           Duration healthcheckInterval, Duration staleThreshold, boolean asyncDbSave,
-          MeterRegistry meterRegistry) {
+          MeterRegistry meterRegistry, RunIdentityResolver runIdentityResolver) {
     this(contextFactory, runRepository, objectMapper, dslProcessExecutor, healthcheckExecutor,
-            healthcheckInterval, staleThreshold, asyncDbSave, Long.MAX_VALUE, meterRegistry);
+            healthcheckInterval, staleThreshold, asyncDbSave, Long.MAX_VALUE, meterRegistry,
+            runIdentityResolver);
   }
 
   public TemporalDslProcessService(ContextFactory contextFactory, DslRunRepository runRepository,
           ObjectMapper objectMapper,
           ThreadPoolTaskExecutor dslProcessExecutor, ScheduledExecutorService healthcheckExecutor,
           Duration healthcheckInterval, Duration staleThreshold, boolean asyncDbSave,
-          long maxOutputBytes, MeterRegistry meterRegistry) {
+          long maxOutputBytes, MeterRegistry meterRegistry,
+          RunIdentityResolver runIdentityResolver) {
     this.contextFactory = contextFactory;
     this.runRepository = runRepository;
     this.objectMapper = objectMapper;
@@ -107,6 +110,7 @@ public class TemporalDslProcessService {
     this.asyncDbSave = asyncDbSave;
     this.maxOutputBytes = maxOutputBytes;
     this.meterRegistry = meterRegistry;
+    this.runIdentityResolver = runIdentityResolver;
   }
 
   private static final Duration SHUTDOWN_JOIN = Duration.ofSeconds(5);
@@ -160,6 +164,7 @@ public class TemporalDslProcessService {
     try {
       String inputJson = serialize(body);
       Instant startedAt = now();
+      String triggeredBy = runIdentityResolver.resolve();
 
       DslRun running = DslRun.builder()
               .runId(runId)
@@ -171,6 +176,7 @@ public class TemporalDslProcessService {
               .startedAt(startedAt)
               .finishedAt(NOT_FINISHED_AT)
               .executionMode(ExecutionMode.RUN.name())
+              .triggeredBy(triggeredBy)
               .build();
 
       submitDbWrite(() -> {

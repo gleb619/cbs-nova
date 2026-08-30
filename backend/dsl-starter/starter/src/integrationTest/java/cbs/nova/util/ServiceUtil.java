@@ -3,6 +3,7 @@ package cbs.nova.util;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
+import cbs.nova.starter.service.RunIdentityResolver;
 import cbs.nova.starter.service.TemporalDslProcessService;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
@@ -33,7 +34,8 @@ public class ServiceUtil {
             Duration.ofSeconds(30),
             Duration.ofMinutes(5),
             false,
-            new SimpleMeterRegistry());
+            new SimpleMeterRegistry(),
+            new RunIdentityResolver());
   }
 
   private static @NonNull ThreadPoolTaskExecutor sameThreadExecutor() {
@@ -61,5 +63,4 @@ public class ServiceUtil {
     exec.shutdownNow();
     return exec;
   }
-
 }

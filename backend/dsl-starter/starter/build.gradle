@@ -63,6 +63,7 @@ dependencies {
 
   implementation libs.flyway.core
   runtimeOnly libs.postgresql
+  testImplementation libs.postgresql
 
   api libs.temporal.sdk
   api libs.sentry.spring.boot.jakarta

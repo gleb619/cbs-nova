@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
+import cbs.nova.dsl.history.DslRunSearchResult;
 import cbs.nova.dsl.history.DslRunStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -149,6 +150,68 @@ class JdbcDslRunRepositoryTest {
     assertThat(persisted.output()).isEqualTo("{}");
   }
 
+  @Test
+  void saveAndFindByRunIdRoundTripsTriggeredBy() {
+    DslRun run = DslRun.builder()
+            .runId("run-triggered")
+            .processName("process-1")
+            .status(DslRunStatus.RUNNING.name())
+            .input("{\"input\":true}")
+            .output(null)
+            .error(null)
+            .startedAt(Instant.now())
+            .finishedAt(null)
+            .executionMode(ExecutionMode.RUN.name())
+            .triggeredBy("alice@example.com")
+            .build();
+
+    repository.save(run);
+    DslRun persisted = repository.findByRunId("run-triggered").orElseThrow();
+
+    assertThat(persisted.triggeredBy()).isEqualTo("alice@example.com");
+  }
+
+  @Test
+  void saveWithoutTriggeredByReadsBackNull() {
+    DslRun run = DslRun.builder()
+            .runId("run-no-trigger")
+            .processName("process-1")
+            .status(DslRunStatus.RUNNING.name())
+            .input("{\"input\":true}")
+            .output(null)
+            .error(null)
+            .startedAt(Instant.now())
+            .finishedAt(null)
+            .executionMode(ExecutionMode.RUN.name())
+            .build();
+
+    repository.save(run);
+    DslRun persisted = repository.findByRunId("run-no-trigger").orElseThrow();
+
+    assertThat(persisted.triggeredBy()).isNull();
+  }
+
+  @Test
+  void searchResultsCarryTriggeredBy() {
+    DslRun run = DslRun.builder()
+            .runId("run-search")
+            .processName("triggered-search-process")
+            .status(DslRunStatus.COMPLETED.name())
+            .input("{\"input\":true}")
+            .output("{\"output\":true}")
+            .error(null)
+            .startedAt(Instant.now())
+            .finishedAt(Instant.now())
+            .executionMode(ExecutionMode.RUN.name())
+            .triggeredBy("bob")
+            .build();
+    repository.save(run);
+
+    DslRunSearchResult result = repository.search("triggered-search-process", null, null, 0, 10);
+
+    assertThat(result.items()).hasSize(1);
+    assertThat(result.items().get(0).triggeredBy()).isEqualTo("bob");
+  }
   private static DslRun run(String runId, DslRunStatus status, String output, String error) {
     return run(runId, status, output, error, "process-1");
   }
