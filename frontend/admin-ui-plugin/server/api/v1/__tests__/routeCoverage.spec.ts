@@ -120,6 +120,16 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/dsl/drafts/{name}',
     bffPath: '/api/v1/dsl/drafts/{name}/delete',
   },
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/drafts',
+    bffPath: '/api/v1/dsl/drafts',
+  },
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/drafts/{name}',
+    bffPath: '/api/v1/dsl/drafts/{name}',
+  },
   // DslReloadRouterConfiguration
   {
     method: 'POST',

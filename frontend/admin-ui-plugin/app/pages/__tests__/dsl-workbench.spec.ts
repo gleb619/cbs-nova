@@ -49,6 +49,8 @@ const { dslApi, useDslApiMock, useDslWorkbenchMock } = vi.hoisted(() => {
     deleteDraft: vi.fn(),
     searchObjects: vi.fn(),
     validateConstruct: vi.fn(),
+    listDrafts: vi.fn(),
+    readDraft: vi.fn(),
   }
   // `useDslWorkbenchMock` reads the harness lazily from globalThis so the
   // vi.hoisted callback can capture this mock even though the reactive
@@ -231,6 +233,8 @@ describe('dsl-workbench.vue unsaved-changes guard', () => {
     useDslWorkbenchMock.mockClear()
     dslApi.searchObjects.mockReset()
     dslApi.searchObjects.mockResolvedValue([])
+    dslApi.listDrafts.mockReset()
+    dslApi.listDrafts.mockResolvedValue([])
 
     addSpy = vi.spyOn(window, 'addEventListener')
     removeSpy = vi.spyOn(window, 'removeEventListener')
@@ -348,5 +352,71 @@ describe('dsl-workbench.vue unsaved-changes guard', () => {
     expect(allowed).toBe(true)
 
     wrapper.unmount()
+  })
+})
+
+describe('dsl-workbench.vue draft picker', () => {
+  beforeEach(() => {
+    harness.state.constructs = []
+    harness.state.selectedName = null
+    harness.state.validationErrors = []
+    harness.state.isDirty = false
+    harness.state.isSaving = false
+    harness.state.isLoading = false
+    harness.selectedConstruct.value = null
+    harness.loaders.constructs.value = false
+    useDslWorkbenchMock.mockClear()
+    dslApi.searchObjects.mockReset()
+    dslApi.searchObjects.mockResolvedValue([])
+    dslApi.listDrafts.mockReset()
+    dslApi.listDrafts.mockResolvedValue([])
+  })
+
+  it('renders the draft names returned by listDrafts', async () => {
+    dslApi.listDrafts.mockResolvedValueOnce([
+      { name: 'alpha', type: 'Process', status: 'Draft', updatedAt: 1 },
+      { name: 'beta', type: 'Helper', status: 'Draft', updatedAt: 2 },
+    ])
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const picker = wrapper.find('[data-testid="dsl-draft-picker"]')
+    expect(picker.exists()).toBe(true)
+
+    const items = wrapper.findAll('[data-testid="dsl-draft-picker-item"]')
+    expect(items).toHaveLength(2)
+    expect(items[0].text()).toContain('alpha')
+    expect(items[1].text()).toContain('beta')
+    expect(dslApi.listDrafts).toHaveBeenCalled()
+  })
+
+  it('clicking a draft item triggers selectConstruct', async () => {
+    dslApi.listDrafts.mockResolvedValueOnce([
+      { name: 'alpha', type: 'Process', status: 'Draft', updatedAt: 1 },
+    ])
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const item = wrapper.find('[data-testid="dsl-draft-picker-item"]')
+    expect(item.exists()).toBe(true)
+
+    await item.trigger('click')
+    await nextTick()
+
+    expect(harness.selectConstruct).toHaveBeenCalledWith('alpha')
+  })
+
+  it('shows the empty-state hint when no drafts exist', async () => {
+    dslApi.listDrafts.mockResolvedValueOnce([])
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const picker = wrapper.find('[data-testid="dsl-draft-picker"]')
+    expect(picker.exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid="dsl-draft-picker-item"]')).toHaveLength(0)
+    expect(picker.text()).toContain('No saved drafts yet.')
   })
 })

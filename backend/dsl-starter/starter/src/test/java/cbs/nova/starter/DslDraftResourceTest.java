@@ -6,6 +6,8 @@ import cbs.nova.starter.config.DslDraftRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
 import cbs.nova.starter.controller.DslReloadHandler;
+import cbs.nova.starter.model.VcsModels.DraftRequest;
+import cbs.nova.starter.model.VcsModels.DraftSummary;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,17 +58,31 @@ class DslDraftResourceTest {
           .of(new InputStreamHttpMessageConverter());
 
   private static ServerRequest postRequest(String path) {
+    return postRequest(path, "foo");
+  }
+
+  private static ServerRequest postRequest(String path, String name) {
     var req = new MockHttpServletRequest("POST", path);
-    req.setAttribute(RouterFunctions.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of("name", "foo"));
+    req.setAttribute(RouterFunctions.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of("name", name));
     req.setContentType("application/json");
-    req.setContent("{\"name\":\"foo\",\"type\":\"process\",\"status\":\"Draft\",\"version\":\"1\"}"
-            .getBytes());
+    req.setContent(
+            ("{\"name\":\"" + name
+                    + "\",\"type\":\"process\",\"status\":\"Draft\",\"version\":\"1\"}")
+                    .getBytes());
     return ServerRequest.create(req, CONVERTERS);
   }
 
   private static ServerRequest deleteRequest(String name, String path) {
     var req = new MockHttpServletRequest("DELETE", path);
     req.setAttribute(RouterFunctions.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of("name", name));
+    return ServerRequest.create(req, CONVERTERS);
+  }
+
+  private static ServerRequest getRequest(String path, Map<String, String> pathVariables) {
+    var req = new MockHttpServletRequest("GET", path);
+    if (pathVariables != null && !pathVariables.isEmpty()) {
+      req.setAttribute(RouterFunctions.URI_TEMPLATE_VARIABLES_ATTRIBUTE, pathVariables);
+    }
     return ServerRequest.create(req, CONVERTERS);
   }
 
@@ -176,6 +192,108 @@ class DslDraftResourceTest {
             .withUserConfiguration(DslDraftTestConfig.class,
                     DslDraftRouterConfiguration.class, DslDraftHandler.class)
             .run(ctx -> assertThat(ctx).hasSingleBean(RouterFunction.class));
+  }
+
+  @Test
+  void listReturnsEmptyWhenDraftsDirMissing() throws Exception {
+    ServerResponse response = handler.list(getRequest("/api/dsl/drafts", null));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    Object body = ((org.springframework.web.servlet.function.EntityResponse<?>) response).entity();
+    assertThat(body).isInstanceOf(java.util.List.class);
+    assertThat((java.util.List<?>) body).isEmpty();
+  }
+
+  @Test
+  void listReturnsEmptyWhenSourceDirBlank() throws Exception {
+    handler = new DslDraftHandler(
+            new DslProperties("", null, null, null, null),
+            new DslReloadHandler(new DslProperties("", null, null, null, null), null),
+            mapper);
+
+    ServerResponse response = handler.list(getRequest("/api/dsl/drafts", null));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    Object body = ((org.springframework.web.servlet.function.EntityResponse<?>) response).entity();
+    assertThat(body).isInstanceOf(java.util.List.class);
+    assertThat((java.util.List<?>) body).isEmpty();
+  }
+
+  @Test
+  void listReturnsSummariesForSavedDrafts() throws Exception {
+    handler.save(postRequest("/api/dsl/drafts/foo/save"));
+    handler.save(postRequest("/api/dsl/drafts/bar/save", "bar"));
+    handler.publish(postRequest("/api/dsl/drafts/bar/publish", "bar"));
+
+    ServerResponse response = handler.list(getRequest("/api/dsl/drafts", null));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    Object body = ((org.springframework.web.servlet.function.EntityResponse<?>) response).entity();
+    assertThat(body).isInstanceOf(java.util.List.class);
+    @SuppressWarnings("unchecked")
+    List<DraftSummary> summaries = (List<DraftSummary>) body;
+    assertThat(summaries).hasSize(2);
+    assertThat(summaries)
+            .extracting(DraftSummary::name)
+            .containsExactlyInAnyOrder("foo", "bar");
+    assertThat(summaries)
+            .allSatisfy(s -> {
+              assertThat(s.name()).isNotBlank();
+              assertThat(s.updatedAt()).isGreaterThan(0L);
+              assertThat(s.status()).isNotBlank();
+            });
+  }
+
+  @Test
+  void listSkipsUnparseableDraftFiles() throws Exception {
+    handler.save(postRequest("/api/dsl/drafts/foo/save"));
+    Path drafts = sourceDir.resolve(".workbench/drafts");
+    Files.writeString(drafts.resolve("garbage.json"), "not-json",
+            java.nio.charset.StandardCharsets.UTF_8);
+
+    ServerResponse response = handler.list(getRequest("/api/dsl/drafts", null));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    @SuppressWarnings("unchecked")
+    List<DraftSummary> summaries = (List<DraftSummary>) ((org.springframework.web.servlet.function.EntityResponse<?>) response)
+            .entity();
+    assertThat(summaries).hasSize(1);
+    assertThat(summaries.get(0).name()).isEqualTo("foo");
+  }
+
+  @Test
+  void readReturnsDraftPayload() throws Exception {
+    handler.save(postRequest("/api/dsl/drafts/foo/save"));
+
+    ServerResponse response = handler
+            .read(getRequest("/api/dsl/drafts/foo", Map.of("name", "foo")));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    DraftRequest body = (DraftRequest) ((org.springframework.web.servlet.function.EntityResponse<?>) response)
+            .entity();
+    assertThat(body.name()).isEqualTo("foo");
+    assertThat(body.status()).isEqualTo("Draft");
+  }
+
+  @Test
+  void readReturns404WhenUnknown() throws Exception {
+    ServerResponse response = handler
+            .read(getRequest("/api/dsl/drafts/missing", Map.of("name", "missing")));
+
+    assertThat(response.statusCode().value()).isEqualTo(404);
+  }
+
+  @Test
+  void readRejectsPathTraversal() throws Exception {
+    Path outside = sourceDir.resolveSibling("escapee.json");
+    Files.writeString(outside, "{\"name\":\"escapee\"}", java.nio.charset.StandardCharsets.UTF_8);
+
+    ServerResponse response = handler.read(getRequest("/api/dsl/drafts/..%2Fescapee",
+            Map.of("name", "../escapee")));
+
+    assertThat(response.statusCode().value()).isEqualTo(404);
+    assertThat(outside).exists();
+    Files.deleteIfExists(outside);
   }
 
   @Test

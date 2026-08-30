@@ -76,6 +76,16 @@ export function useDslApi() {
     return $fetch(`/api/v1/dsl/drafts/${name}/delete`, { method: 'DELETE' })
   }
 
+  async function listDrafts() {
+    log.info('listDrafts request')
+    return $fetch('/api/v1/dsl/drafts')
+  }
+
+  async function readDraft(name: string) {
+    log.info('readDraft request', { name })
+    return $fetch(`/api/v1/dsl/drafts/${name}`)
+  }
+
   async function validateConstruct(name: string) {
     // stub — calls preview to validate
     log.info('validate request', { name })
@@ -101,6 +111,8 @@ export function useDslApi() {
     saveDraft,
     publishDraft,
     deleteDraft,
+    listDrafts,
+    readDraft,
     validateConstruct,
     reload,
     getProcessDiagram,

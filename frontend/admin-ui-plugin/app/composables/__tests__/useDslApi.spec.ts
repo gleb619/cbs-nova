@@ -122,6 +122,24 @@ describe('useDslApi', () => {
     expect(result).toEqual({ ok: true })
   })
 
+  it('listDrafts GETs /api/v1/dsl/drafts', async () => {
+    fetchMock.mockResolvedValueOnce([{ name: 'draft-1', type: 'process' }])
+    const api = useDslApi()
+    const result = await api.listDrafts()
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/drafts')
+    expect(result).toEqual([{ name: 'draft-1', type: 'process' }])
+  })
+
+  it('readDraft GETs /api/v1/dsl/drafts/{name}', async () => {
+    fetchMock.mockResolvedValueOnce({ name: 'draft-1', type: 'helper' })
+    const api = useDslApi()
+    const result = await api.readDraft('draft-1')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/drafts/draft-1')
+    expect(result).toEqual({ name: 'draft-1', type: 'helper' })
+  })
+
   it('validateConstruct delegates to preview with empty body', async () => {
     fetchMock.mockResolvedValueOnce({})
     const api = useDslApi()

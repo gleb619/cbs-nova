@@ -2,6 +2,7 @@
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { useDslWorkbench } from '@cbs/admin-ui-plugin/composables/useDslWorkbench'
 import { useWorkbenchDraft } from '@cbs/admin-ui-plugin/composables/useWorkbenchDraft'
+import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import type { HelperSearchFilters, ObjectSearchResult } from '@cbs/components'
 import {
   createNamespacedLocalStorageState,
@@ -47,6 +48,31 @@ const explorerCollapsed = useWorkbenchStorage<boolean>('explorer-collapsed', fal
 const helperSearchOpen = useWorkbenchStorage<boolean>('helper-search-open', false)
 
 const dslApi = useDslApi()
+const log = useClientLogger('dsl-workbench')
+
+interface DraftSummary {
+  name: string
+  type?: string
+  status?: string
+  version?: string
+  updatedAt: number
+}
+
+const drafts = ref<DraftSummary[]>([])
+const draftsLoading = ref(false)
+
+async function refreshDrafts() {
+  draftsLoading.value = true
+  try {
+    const result = (await dslApi.listDrafts()) as DraftSummary[]
+    drafts.value = Array.isArray(result) ? result : []
+  } catch (err) {
+    log.error('failed to load drafts', { error: (err as Error).message })
+    drafts.value = []
+  } finally {
+    draftsLoading.value = false
+  }
+}
 const helperSearch = useHelperSearch({
   fetch: async (filters: HelperSearchFilters) =>
     (await dslApi.searchObjects(filters)) as ObjectSearchResult[],
@@ -107,6 +133,7 @@ async function confirmDelete() {
   try {
     await deleteConstruct(pendingDeleteName.value)
     pendingDeleteName.value = null
+    await refreshDrafts()
   } catch (err) {
     deleteError.value = (err as Error).message
   } finally {
@@ -165,21 +192,23 @@ function runAction(item: DropdownMenuItem) {
   switch (item.value as ActionValue) {
     case 'refresh':
       reloadDefinitions()
+      refreshDrafts()
       break
     case 'validate':
       validateConstruct()
       break
     case 'save':
-      saveConstruct()
+      saveConstruct().then(() => refreshDrafts())
       break
     case 'publish':
-      publishConstruct()
+      publishConstruct().then(() => refreshDrafts())
       break
   }
 }
 
 onMounted(() => {
   loadConstructs()
+  refreshDrafts()
   window.addEventListener('beforeunload', handleBeforeUnload)
 })
 
@@ -234,6 +263,38 @@ onBeforeUnmount(() => {
         :class="explorerCollapsed ? 'w-12' : 'w-64'"
         class="shrink-0 border-r border-gray-800 overflow-hidden"
       >
+        <section
+          v-if="!explorerCollapsed"
+          data-testid="dsl-draft-picker"
+          class="border-b border-gray-800 bg-gray-900 text-gray-100"
+        >
+          <header class="flex items-center justify-between px-3 py-2 text-xs uppercase tracking-wide text-gray-400">
+            <span>Saved Drafts</span>
+            <span class="text-gray-500">{{ drafts.length }}</span>
+          </header>
+          <ul v-if="drafts.length" class="max-h-48 overflow-y-auto">
+            <li
+              v-for="draft in drafts"
+              :key="draft.name"
+              data-testid="dsl-draft-picker-item"
+              class="cursor-pointer px-3 py-1.5 text-sm hover:bg-gray-700"
+              :class="state.selectedName === draft.name ? 'bg-gray-700' : ''"
+              @click="safeSelectConstruct(draft.name)"
+              @keydown.enter="safeSelectConstruct(draft.name)"
+            >
+              <div class="font-medium">{{ draft.name }}</div>
+              <div class="text-xs text-gray-400">
+                {{ draft.type ?? '—' }} · {{ draft.status ?? 'Draft' }}
+              </div>
+            </li>
+          </ul>
+          <p v-else-if="draftsLoading" class="px-3 py-2 text-xs text-gray-400">
+            Loading drafts…
+          </p>
+          <p v-else class="px-3 py-2 text-xs text-gray-500">
+            No saved drafts yet.
+          </p>
+        </section>
         <DslConstructExplorer
           v-model:collapsed="explorerCollapsed"
           :constructs="state.constructs"
