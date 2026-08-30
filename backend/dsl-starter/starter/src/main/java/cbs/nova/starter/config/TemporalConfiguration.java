@@ -9,7 +9,7 @@ import cbs.nova.dsl.logging.DryRunLoggingContext;
 import cbs.nova.dsl.process.TemporalProcessLauncher;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.starter.DevDslRuntime;
-import cbs.nova.starter.service.PreviewResultCache;
+import cbs.nova.starter.config.properties.CbsHealthProperties;
 import cbs.nova.starter.config.properties.DryRunProperties;
 import cbs.nova.starter.config.properties.DslRunsProperties;
 import cbs.nova.starter.converter.MapInputConverter;
@@ -24,9 +24,11 @@ import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLoggingContextPropagator;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import cbs.nova.starter.service.DslRunCancellationService;
+import cbs.nova.starter.service.PreviewResultCache;
 import cbs.nova.starter.service.TemporalDslProcessLauncher;
 import cbs.nova.starter.service.TemporalDslProcessService;
 import cbs.nova.starter.service.TemporalDslService;
+import cbs.nova.starter.service.TemporalHealthProbe;
 import cbs.nova.starter.service.TemporalTransactionInvoker;
 import cbs.nova.starter.tracing.OpenTelemetryContextPropagator;
 import io.opentelemetry.api.OpenTelemetry;
@@ -122,6 +124,14 @@ public class TemporalConfiguration {
                     dryRunLoggingContextPropagator, openTelemetryContextPropagator))
             .build();
     return WorkflowClient.newInstance(workflowServiceStubs, options);
+  }
+
+  @Bean
+  @ConditionalOnBean(WorkflowServiceStubs.class)
+  TemporalHealthProbe temporalHealthProbe(WorkflowServiceStubs workflowServiceStubs,
+          CbsHealthProperties cbsHealthProperties) {
+    return new TemporalHealthProbe(workflowServiceStubs,
+            cbsHealthProperties.temporal().timeout());
   }
 
   @Bean

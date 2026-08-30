@@ -1,5 +1,6 @@
 package cbs.nova.starter.config;
 
+import cbs.nova.starter.config.properties.CbsHealthProperties;
 import cbs.nova.starter.config.properties.DslProperties;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -30,6 +31,7 @@ import org.springframework.context.annotation.Import;
     RateLimitFilterConfiguration.class,
 
 })
-@EnableConfigurationProperties({DslProperties.class, CbsNovaCacheProperties.class})
+@EnableConfigurationProperties({DslProperties.class, CbsNovaCacheProperties.class,
+    CbsHealthProperties.class})
 public class DslRootAutoConfiguration {
 }
