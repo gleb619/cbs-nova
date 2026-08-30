@@ -172,6 +172,43 @@ class CompensationRegistryTest {
     assertThat(registry.hasCompensation("run-2")).isFalse();
   }
 
+  @Test
+  void compensateIsNoOpAfterEntryAlreadyFired() {
+    var order = new ArrayList<String>();
+    var ctx = contextFactory.of("body", ExecutionMode.RUN, "run-1");
+    registry.register("Tx", "run-1", ctx, tx("Tx", marker("Tx", order)));
+
+    registry.compensate("Tx", "run-1", new RuntimeException("boom"), contextFactory);
+    registry.compensate("Tx", "run-1", new RuntimeException("boom-2"), contextFactory);
+
+    assertThat(order).containsExactly("Tx");
+  }
+
+  @Test
+  void compensateIsNoOpAfterCompensateAllWipedRunId() {
+    var order = new ArrayList<String>();
+    var ctx = contextFactory.of("body", ExecutionMode.RUN, "run-1");
+    registry.register("Tx", "run-1", ctx, tx("Tx", marker("Tx", order)));
+
+    registry.compensateAll("run-1", new RuntimeException("boom"), contextFactory);
+    registry.compensate("Tx", "run-1", new RuntimeException("boom-2"), contextFactory);
+
+    assertThat(order).containsExactly("Tx");
+  }
+
+  @Test
+  void compensateAllAfterSingleCompensateFiresOnlyRemainingEntries() {
+    var order = new ArrayList<String>();
+    var ctx = contextFactory.of("body", ExecutionMode.RUN, "run-1");
+    registry.register("T1", "run-1", ctx, tx("T1", marker("T1", order)));
+    registry.register("T2", "run-1", ctx, tx("T2", marker("T2", order)));
+
+    registry.compensate("T1", "run-1", new RuntimeException("boom"), contextFactory);
+    registry.compensateAll("run-1", new RuntimeException("all-boom"), contextFactory);
+
+    assertThat(order).containsExactly("T1", "T2");
+  }
+
   private TransactionDslObject tx(String name,
           Function<CompensationContext<?>, Result<?>> compensationLogic) {
     return new TransactionDslObject(
