@@ -23,8 +23,13 @@ describe('MetadataTab', () => {
     const execution = makeExecution()
     const wrapper = mount(MetadataTab, { props: { execution, metadata: undefined } })
 
+    // The Workflow ID cell also renders the T302 copy button next to the id;
+    // assert the cell text starts with the id so the assertion stays stable
+    // even when extra sibling controls are added inside the same <td>.
     const cells = wrapper.findAll('td').map((td) => td.text())
-    expect(cells).toEqual(['corr-abc', 'wf-123', 'RUN', 'Process', '2'])
+    expect(cells[0]).toBe('corr-abc')
+    expect(cells[1].startsWith('wf-123')).toBe(true)
+    expect(cells.slice(2)).toEqual(['RUN', 'Process', '2'])
   })
 
   it('falls back to em-dash for missing correlationId and workflowId', () => {
@@ -32,7 +37,9 @@ describe('MetadataTab', () => {
     const wrapper = mount(MetadataTab, { props: { execution, metadata: undefined } })
 
     const cells = wrapper.findAll('td').map((td) => td.text())
-    expect(cells).toEqual(['—', '—', 'RUN', 'Process', '2'])
+    expect(cells[0]).toBe('—')
+    expect(cells[1]).toBe('—')
+    expect(cells.slice(2)).toEqual(['RUN', 'Process', '2'])
   })
 
   it('defaults retries to 0 when undefined', () => {
@@ -78,5 +85,67 @@ describe('MetadataTab', () => {
     for (const th of wrapper.findAll('th')) {
       expect(th.attributes('scope')).toBe('row')
     }
+  })
+
+  // T302: Temporal Web UI deep-link behaviour on the Workflow ID row.
+  describe('workflowLink prop', () => {
+    const link = 'http://localhost:8233/namespaces/default/workflows/wf-123'
+
+    it('renders the deep-link anchor when workflowLink is provided', () => {
+      const wrapper = mount(MetadataTab, {
+        props: { execution: makeExecution(), metadata: undefined, workflowLink: link },
+      })
+
+      const anchor = wrapper.find('[data-testid="temporal-workflow-link"]')
+      expect(anchor.exists()).toBe(true)
+      expect(anchor.attributes('href')).toBe(link)
+      expect(anchor.attributes('target')).toBe('_blank')
+      expect(anchor.attributes('rel')).toBe('noopener noreferrer')
+    })
+
+    it('omits the deep-link anchor when workflowLink is null', () => {
+      const wrapper = mount(MetadataTab, {
+        props: { execution: makeExecution(), metadata: undefined, workflowLink: null },
+      })
+
+      expect(wrapper.find('[data-testid="temporal-workflow-link"]').exists()).toBe(false)
+      // workflowId text is still rendered
+      expect(wrapper.text()).toContain('wf-123')
+    })
+
+    it('omits the deep-link anchor when execution has no workflowId, but still shows the copy button placeholder behaviour', () => {
+      const wrapper = mount(MetadataTab, {
+        props: {
+          execution: makeExecution({ workflowId: undefined }),
+          metadata: undefined,
+          workflowLink: link,
+        },
+      })
+
+      expect(wrapper.find('[data-testid="temporal-workflow-link"]').exists()).toBe(false)
+      expect(wrapper.text()).toContain('—')
+    })
+
+    it('still renders the workflowId row when workflowLink is null', () => {
+      const wrapper = mount(MetadataTab, {
+        props: { execution: makeExecution(), metadata: undefined, workflowLink: null },
+      })
+
+      expect(
+        wrapper
+          .find('[data-testid="executions-metadata-field-Workflow ID"]')
+          .exists(),
+      ).toBe(true)
+    })
+
+    it('renders a copy-to-clipboard button next to the workflowId', () => {
+      const wrapper = mount(MetadataTab, {
+        props: { execution: makeExecution(), metadata: undefined, workflowLink: link },
+      })
+
+      const copyBtn = wrapper.find('[data-testid="workflow-id-copy"]')
+      expect(copyBtn.exists()).toBe(true)
+      expect(copyBtn.text()).toBe('Copy')
+    })
   })
 })

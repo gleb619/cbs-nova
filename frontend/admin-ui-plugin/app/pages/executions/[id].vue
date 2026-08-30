@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { useExecutions } from '@cbs/admin-ui-plugin/composables/useExecutions'
+import { useTemporalLink } from '@cbs/admin-ui-plugin/composables/useTemporalLink'
 import {
   ErrorBanner,
   ExecutionsCancelConfirmationModal,
@@ -102,6 +103,12 @@ async function confirmCancel() {
 const traceSteps = computed(() => selectedExecution.value?.trace ?? [])
 const compensationSteps = computed(() => traceSteps.value.filter((s) => s.isCompensation))
 const regularSteps = computed(() => traceSteps.value.filter((s) => !s.isCompensation))
+
+// T302 — deep-link to the Temporal Web UI for this run's workflow (opt-in).
+const temporal = useTemporalLink()
+const workflowLink = computed(() =>
+  temporal.workflowUrl(selectedExecution.value?.workflowId ?? ''),
+)
 
 // T266: completed runs don't carry a diagram field — fetch one for the
 // underlying process definition by name and bind it to the Diagram tab.
@@ -252,6 +259,7 @@ onUnmounted(() => {
             v-else-if="activeTab === 'metadata'"
             :metadata="selectedExecution.metadata"
             :execution="selectedExecution"
+            :workflow-link="workflowLink"
           />
           <ExecutionsLogsTab v-else-if="activeTab === 'logs'" :logs="selectedExecution.logs" />
           <ExecutionsErrorsTab

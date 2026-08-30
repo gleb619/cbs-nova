@@ -28,7 +28,8 @@ import {
 //   - All admin pages under the configured `routePrefix` (default: '/')
 //   - Nitro server routes under /api/v1/** that proxy to the Spring Boot backend
 //   - The global Tailwind CSS stylesheet
-//   - Runtime config keys: backendBaseUrl, backendApiKey, backendTimeoutMs, public.appName
+//   - Runtime config keys: backendBaseUrl, backendApiKey, backendTimeoutMs,
+//     public.appName, public.temporalUiBaseUrl, public.temporalNamespace
 // ---------------------------------------------------------------------------
 
 export interface ModuleOptions {
@@ -62,6 +63,20 @@ export interface ModuleOptions {
    * Defaults to 'CBS Nova Admin'.
    */
   appName?: string
+
+  /**
+   * Base URL of the Temporal Web UI (e.g. http://localhost:8233).
+   * When set, the executions detail view renders a "View in Temporal" deep-link
+   * to the matching workflow. Blank = feature disabled.
+   * Defaults to TEMPORAL_UI_BASE_URL env var, then ''.
+   */
+  temporalUiBaseUrl?: string
+
+  /**
+   * Temporal namespace used to build workflow deep-links.
+   * Defaults to TEMPORAL_NAMESPACE env var, then 'default'.
+   */
+  temporalNamespace?: string
 }
 
 export default defineNuxtModule<ModuleOptions>({
@@ -77,6 +92,8 @@ export default defineNuxtModule<ModuleOptions>({
     backendApiKey: process.env.BACKEND_API_KEY ?? '',
     backendTimeoutMs: Number(process.env.BACKEND_TIMEOUT_MS ?? 10000),
     appName: 'CBS Nova Admin',
+    temporalUiBaseUrl: process.env.TEMPORAL_UI_BASE_URL ?? '',
+    temporalNamespace: process.env.TEMPORAL_NAMESPACE ?? 'default',
   },
 
   async setup(options, nuxt) {
@@ -95,6 +112,10 @@ export default defineNuxtModule<ModuleOptions>({
       nuxt.options.runtimeConfig.backendTimeoutMs || options.backendTimeoutMs || 10000
     nuxt.options.runtimeConfig.public.appName =
       nuxt.options.runtimeConfig.public.appName || options.appName || 'CBS Nova Admin'
+    nuxt.options.runtimeConfig.public.temporalUiBaseUrl =
+      nuxt.options.runtimeConfig.public.temporalUiBaseUrl || options.temporalUiBaseUrl || ''
+    nuxt.options.runtimeConfig.public.temporalNamespace =
+      nuxt.options.runtimeConfig.public.temporalNamespace || options.temporalNamespace || 'default'
 
     // -----------------------------------------------------------------------
     // Global stylesheet (Tailwind base/components/utilities + body tokens)
