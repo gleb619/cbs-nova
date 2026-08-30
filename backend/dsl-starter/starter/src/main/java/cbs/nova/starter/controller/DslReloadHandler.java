@@ -12,6 +12,7 @@ import cbs.nova.dsl.helper.HelperResolver;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.model.CompileDiagnostic;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ReloadResponse;
 import cbs.nova.starter.service.PreviewResultCache;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
 
+import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
@@ -38,6 +40,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.ServiceLoader;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
@@ -65,6 +68,7 @@ import java.util.stream.Stream;
 public class DslReloadHandler {
 
   private static final String RELOAD_TEMP_PREFIX = "dsl-reload-";
+  private static final int DIAGNOSTIC_CAP = 20;
 
   private final DslProperties dslProperties;
   private final DslDefinitionLoader loader;
@@ -118,6 +122,10 @@ public class DslReloadHandler {
               .body(new ReloadResponse(dir.toString(), load));
     } catch (Exception e) {
       log.error("[DSL reload] Failed to reload DSL definitions from {}", dir, e);
+      if (e instanceof DslCompilationException dce) {
+        return error(HttpStatus.INTERNAL_SERVER_ERROR, new ErrorResponse(
+                "RELOAD_FAILED", dce.getMessage(), null, null, null, dce.diagnostics()));
+      }
       return error(HttpStatus.INTERNAL_SERVER_ERROR,
               new ErrorResponse("RELOAD_FAILED", e.getMessage(), null, null, null));
     } finally {
@@ -220,8 +228,9 @@ public class DslReloadHandler {
     loadCompactSources(classLoader, sourceDir, outputDir, target, result);
 
     var load = result.build();
-    log.info("[DSL reload] Loaded {} DSL definitions from {}: processes={}, transactions={},"
-            + " functions={}",
+    log.info(
+            "[DSL reload] Loaded {} DSL definitions from {}: processes={}, transactions={},"
+                    + " functions={}",
             load.total(), sourceDir, load.processCount(), load.transactionCount(),
             load.functionCount());
     return load;
@@ -251,6 +260,8 @@ public class DslReloadHandler {
       throw new IllegalStateException("No system Java compiler available (JDK required)");
     }
     var classpath = System.getProperty("java.class.path");
+    var collected = new ArrayList<CompileDiagnostic>();
+    Path firstFailedFile = null;
     try (StandardJavaFileManager fm = compiler.getStandardFileManager(null, null, null)) {
       var options = List.of("-classpath", classpath, "-d", outputDir.toString());
       for (var file : javaFiles) {
@@ -258,13 +269,39 @@ public class DslReloadHandler {
         var unit = fm.getJavaFileObjectsFromFiles(List.of(file.toFile()));
         var task = compiler.getTask(null, fm, diagnostics, options, null, unit);
         if (!task.call()) {
-          diagnostics.getDiagnostics().forEach(d -> log.error(
-                  "[DSL reload] {}: {}", file.getFileName(), d.getMessage(null)));
-          throw new IllegalStateException("Failed to compile DSL source: " + file.getFileName());
+          if (firstFailedFile == null) {
+            firstFailedFile = file;
+          }
+          for (var d : diagnostics.getDiagnostics()) {
+            if (collected.size() >= DIAGNOSTIC_CAP) {
+              break;
+            }
+            collected.add(toCompileDiagnostic(d, file));
+          }
         }
       }
     }
+    if (!collected.isEmpty()) {
+      throw new DslCompilationException(
+              "Failed to compile DSL source: " + firstFailedFile.getFileName(), collected);
+    }
     return outputDir;
+  }
+
+  private static CompileDiagnostic toCompileDiagnostic(Diagnostic<? extends JavaFileObject> d,
+          Path file) {
+    var source = d.getSource();
+    var sourceName = source != null ? source.getName() : file.getFileName().toString();
+    var line = d.getLineNumber() == Diagnostic.NOPOS ? null : Long.valueOf(d.getLineNumber());
+    var column = d.getColumnNumber() == Diagnostic.NOPOS
+            ? null
+            : Long.valueOf(d.getColumnNumber());
+    var severity = switch (d.getKind()) {
+      case WARNING, MANDATORY_WARNING -> "warning";
+      default -> "error";
+    };
+    return new CompileDiagnostic(sourceName, line, column,
+            d.getMessage(Locale.getDefault()), severity);
   }
 
   private void loadCompactSources(ClassLoader classLoader, Path sourceDir, Path outputDir,
@@ -344,4 +381,5 @@ public class DslReloadHandler {
   private static ServerResponse error(HttpStatus status, ErrorResponse body) throws IOException {
     return ServerResponse.status(status).body(body);
   }
+
 }

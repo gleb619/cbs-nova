@@ -86,6 +86,18 @@ public class DslDraftHandler {
               loadResult.functionCount());
     } catch (Exception e) {
       log.warn("[DSL drafts] publish of {} succeeded but reload failed: {}", name, e.getMessage());
+      var compilation = findDslCompilationException(e);
+      if (compilation != null) {
+        return ServerResponse.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new DraftResponse(name, "Published", file.toString(), false,
+                        LoadResult.empty(),
+                        compilation.getMessage(), compilation.diagnostics()));
+      }
+      return ServerResponse.ok()
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(new DraftResponse(name, "Published", file.toString(), false, LoadResult.empty(),
+                      e.getMessage(), null));
     }
     return ServerResponse.ok()
             .contentType(MediaType.APPLICATION_JSON)
@@ -225,6 +237,17 @@ public class DslDraftHandler {
     }
   }
 
+  private static DslCompilationException findDslCompilationException(Throwable throwable) {
+    Throwable current = throwable;
+    while (current != null) {
+      if (current instanceof DslCompilationException dce) {
+        return dce;
+      }
+      current = current.getCause();
+    }
+    return null;
+  }
+
   private DraftRequest withStatus(DraftRequest body, String status) {
     return new DraftRequest(
             body.name(),
@@ -253,4 +276,5 @@ public class DslDraftHandler {
   private static ServerResponse error(HttpStatus status, ErrorResponse body) {
     return ServerResponse.status(status).body(body);
   }
+
 }
