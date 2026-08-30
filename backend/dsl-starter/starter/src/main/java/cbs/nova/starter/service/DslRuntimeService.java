@@ -4,11 +4,14 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExplainReport;
+import cbs.nova.dsl.PreviewErrorCode;
+import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.converter.DslRuntimeMapper;
+import cbs.nova.starter.core.pipe.PreviewTimeoutException;
 import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.model.DslRequest;
 import cbs.nova.starter.model.ErrorResponse;
@@ -44,6 +47,10 @@ public class DslRuntimeService {
     String runId = resolveRunId(requestId);
     Context<?> ctx = toContext(request, ExecutionMode.PREVIEW, runId);
     Result<PreviewReport> result = executeWithMdc(runId, () -> dslRuntime.preview(name, ctx));
+    if (!result.isSuccess() && result.cause() instanceof PreviewTimeoutException cause) {
+      return RuntimeOutcome.error(mapper.toErrorResponse(
+              mapper.fromPreviewTimeoutException(name, runId, cause)));
+    }
     PreviewReport report = result.value();
     boolean success = report != null && report.success();
     if (success) {
@@ -63,15 +70,27 @@ public class DslRuntimeService {
     return RuntimeOutcome.error(toErrorResponse(name, runId, result.cause()));
   }
 
-  public ExplainReport explain(String name, DslRequest request, @Nullable String requestId) {
+  public RuntimeOutcome explain(String name, DslRequest request, @Nullable String requestId) {
     String runId = resolveRunId(requestId);
     Context<?> ctx = toContext(request, ExecutionMode.EXPLAIN, runId);
-    return executeWithMdc(runId, () -> dslRuntime.explain(name, ctx));
+    ExplainReport report = executeWithMdc(runId, () -> dslRuntime.explain(name, ctx));
+    PreviewErrorDetail timeoutError = report.errors().stream()
+            .filter(e -> e.code() == PreviewErrorCode.PREVIEW_TIMEOUT)
+            .findFirst()
+            .orElse(null);
+    if (timeoutError != null) {
+      return RuntimeOutcome.error(mapper.toErrorResponse(
+              mapper.fromPreviewTimeoutException(name, runId, timeoutError.message())));
+    }
+    return RuntimeOutcome.ok(report);
   }
 
   private ErrorResponse toErrorResponse(String entityName, String runId, Throwable cause) {
     if (cause instanceof DslException d) {
       return mapper.toErrorResponse(mapper.fromDslException(d, entityName));
+    }
+    if (cause instanceof PreviewTimeoutException timeout) {
+      return mapper.toErrorResponse(mapper.fromPreviewTimeoutException(entityName, runId, timeout));
     }
     return mapper.toErrorResponse(mapper.fromThrowable(entityName, runId, cause));
   }

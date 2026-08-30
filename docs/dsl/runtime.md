@@ -98,6 +98,28 @@ This structure keeps generated `*Definition` classes free of direct registry/run
     paths.
 - The output is returned as a structured `ExplainReport` containing description, diagram, and execution trace.
 
+
+### Preview/Explain execution timeout
+
+Preview and explain execution time is bounded so a looping or hanging DSL construct cannot pin the
+Tomcat request thread forever. The bound is configured via
+`cbs.nova.preview.execution.timeout-ms` (default `20000`, `0` disables the executor path and runs
+inline) and `cbs.nova.preview.execution.pool-size` (default `4`).
+
+When enabled, the final `DispatchStage` submits the actual dispatch call to a fixed daemon pool
+(`cbsNovaPreviewDispatchExecutor`) and waits up to the configured timeout. If the call does not
+complete in time, the future is cancelled with interrupt, the `cbs.nova.preview.timeout.count`
+Micrometer counter is incremented, and the pipeline continues with a `PreviewErrorCode.PREVIEW_TIMEOUT`
+error. HTTP handlers translate that code into `504 GATEWAY_TIMEOUT` with error code
+`PREVIEW_TIMEOUT`.
+
+**Honest cancellation limitation:** interrupt stops interruptible waits (for example
+`Thread.sleep`), but a pure CPU-spin loop keeps its worker thread until it exits. The JVM provides no
+safe thread kill, so the pool is bounded and named (`cbs-preview-dispatch-*`) for diagnosability.
+
+**MDC / log correlation:** dispatch workers do not inherit per-request MDC or other request-thread
+context. Logs produced inside the dispatched DSL will not carry the execution run id unless context
+is propagated explicitly (for example via a Spring `TaskDecorator`).
 ## DSL REST surface
 
 The starter exposes the DSL surface as Spring `RouterFunction` handlers, not as a JAX-RS resource.

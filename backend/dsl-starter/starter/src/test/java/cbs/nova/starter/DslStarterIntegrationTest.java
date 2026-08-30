@@ -61,17 +61,17 @@ class DslStarterIntegrationTest {
     var recorder = new RunIdKeyedExternalCallRecorder(dryRunLoggingContext, null);
     var contextFactory = new ContextFactory();
     var bufferRegistry = new DryRunLogBufferRegistry();
-    var previewProperties = new CbsNovaPreviewProperties(null, null);
+    var previewProperties = new CbsNovaPreviewProperties(null, null, null);
     var previewPipe = new PreviewDslPipe(recorder, contextFactory, dryRunLoggingContext,
             bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, null,
             previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),
-            new SimpleMeterRegistry());
+            new SimpleMeterRegistry(), null);
     var runPipe = new RunDslPipe(contextFactory, recorder, new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig());
     var explainPipe = new ExplainDslPipe(recorder, contextFactory, dryRunLoggingContext,
             bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, previewProperties,
             new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),
-            new SimpleMeterRegistry(), new ExplainDiagramRenderer());
+            new SimpleMeterRegistry(), new ExplainDiagramRenderer(), null);
     var runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
     var loggingProperties = new CbsNovaLoggingProperties(
             CbsNovaLoggingProperties.Level.INFO,

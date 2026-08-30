@@ -31,7 +31,7 @@ public final class PreviewCacheStage implements DslPipeStage {
     }
     log.debug("Preview cache miss for {}", context.getName());
     Result<?> result = next.proceed(context);
-    if (result.isSuccess() && result.value() instanceof PreviewReport report) {
+    if (result.isSuccess() && result.value() instanceof PreviewReport report && report.success()) {
       cache.put(key, report);
     }
     return result;

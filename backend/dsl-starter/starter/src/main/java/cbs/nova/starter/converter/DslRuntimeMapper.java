@@ -3,6 +3,7 @@ package cbs.nova.starter.converter;
 import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.exception.DslException;
+import cbs.nova.starter.core.pipe.PreviewTimeoutException;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ErrorResponseContext;
 import org.mapstruct.Mapper;
@@ -38,6 +39,16 @@ public interface DslRuntimeMapper {
     return new ErrorResponseContext("EXECUTION_FAILED", message, entityName, runId, exceptionId);
   }
 
+  default ErrorResponseContext fromPreviewTimeoutException(String entityName, String runId,
+          PreviewTimeoutException cause) {
+    return fromPreviewTimeoutException(entityName, runId, cause.getMessage());
+  }
+
+  default ErrorResponseContext fromPreviewTimeoutException(String entityName, String runId,
+          String message) {
+    String exceptionId = runId + ":ex:" + UUID.randomUUID();
+    return new ErrorResponseContext("PREVIEW_TIMEOUT", message, entityName, runId, exceptionId);
+  }
   default ErrorResponseContext fromPreviewReport(String entityName, String runId,
           PreviewReport report) {
     PreviewErrorDetail firstError = report != null && !report.errors().isEmpty()

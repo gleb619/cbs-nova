@@ -59,17 +59,17 @@ class DevDslRuntimeCachingTest {
                     .build());
 
     cache = new PreviewResultCache(60_000);
-    CbsNovaPreviewProperties previewProperties = new CbsNovaPreviewProperties(null, null);
+    CbsNovaPreviewProperties previewProperties = new CbsNovaPreviewProperties(null, null, null);
     PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
             dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
             cache, previewProperties, new CbsNovaFakesProperties(false, null),
-            new RunScopedFakeConfig(), new SimpleMeterRegistry());
+            new RunScopedFakeConfig(), new SimpleMeterRegistry(), null);
     RunDslPipe runPipe = new RunDslPipe(contextFactory, recorder,
             new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig());
     ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
             dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
             previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),
-            new SimpleMeterRegistry(), new ExplainDiagramRenderer());
+            new SimpleMeterRegistry(), new ExplainDiagramRenderer(), null);
     runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
 
     Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
