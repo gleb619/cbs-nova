@@ -14,7 +14,10 @@ import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ReloadResponse;
+import cbs.nova.starter.service.PreviewResultCache;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -65,11 +68,28 @@ public class DslReloadHandler {
 
   private final DslProperties dslProperties;
   private final DslDefinitionLoader loader;
+  private final ObjectProvider<PreviewResultCache> previewCacheProvider;
   private final ReentrantLock reloadLock = new ReentrantLock();
 
-  public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader) {
+  /**
+   * Spring-injected constructor. The {@link PreviewResultCache} bean is resolved through an
+   * {@link ObjectProvider} so the reload path stays usable when the cache is absent (e.g. in tests
+   * that don't wire the starter preview cache, or when a host disables preview caching).
+   */
+  @Autowired
+  public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader,
+          ObjectProvider<PreviewResultCache> previewCacheProvider) {
     this.dslProperties = dslProperties;
     this.loader = loader;
+    this.previewCacheProvider = previewCacheProvider;
+  }
+
+  /**
+   * Backwards-compatible constructor for tests and direct instantiation: builds a handler with no
+   * preview cache flush wired in. Delegates to the Spring constructor with a {@code null} provider.
+   */
+  public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader) {
+    this(dslProperties, loader, null);
   }
 
   /**
@@ -147,6 +167,9 @@ public class DslReloadHandler {
 
       // Atomic swap — only after every registration above has succeeded.
       GlobalManager.globalManager().replaceGlobalManager(candidate);
+      // Preview results cached against the previous registry are now stale; flush after the swap
+      // so a failed compile/staging leaves the cache (and the live registry) untouched.
+      flushPreviewCache();
       return load;
     } finally {
       Thread.currentThread().setContextClassLoader(parent);
@@ -159,6 +182,23 @@ public class DslReloadHandler {
       }
       deleteRecursively(outputDir);
     }
+  }
+
+  /**
+   * Drops every cached preview result, so the next preview call recomputes against the freshly
+   * swapped registry instead of returning a stale hit. No-op when the cache bean is absent (handler
+   * built without a provider) or when the provider yields no bean (cache disabled).
+   */
+  private void flushPreviewCache() {
+    if (previewCacheProvider == null) {
+      return;
+    }
+    var cache = previewCacheProvider.getIfAvailable();
+    if (cache == null) {
+      return;
+    }
+    cache.clear();
+    log.info("[DSL reload] preview cache flushed after registry swap");
   }
 
   private LoadResult loadDefinitions(ClassLoader classLoader, Path sourceDir, Path outputDir,
