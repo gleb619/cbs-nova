@@ -41,10 +41,21 @@ public class DslDraftRouterConfiguration {
               @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
               @ApiResponse(responseCode = "404", description = "Draft not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
               @ApiResponse(responseCode = "409", description = "Source directory not configured or not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
+      @RouterOperation(path = "/api/dsl/drafts", beanClass = DslDraftHandler.class, beanMethod = "list", method = RequestMethod.GET, operation = @Operation(operationId = "listDrafts", summary = "List Workbench draft summaries from .workbench/drafts", tags = {
+          "DSL Admin"}, responses = {
+              @ApiResponse(responseCode = "200", description = "List of draft summaries")
+          })),
+      @RouterOperation(path = "/api/dsl/drafts/{name}", beanClass = DslDraftHandler.class, beanMethod = "read", method = RequestMethod.GET, operation = @Operation(operationId = "readDraft", summary = "Read a single Workbench draft payload", tags = {
+          "DSL Admin"}, responses = {
+              @ApiResponse(responseCode = "200", description = "Draft payload returned"),
+              @ApiResponse(responseCode = "404", description = "Draft not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           }))
   })
   RouterFunction<ServerResponse> dslDraftRouter(DslDraftHandler draftHandler) {
     return RouterFunctions.route()
+            .GET("/api/dsl/drafts", draftHandler::list)
+            .GET("/api/dsl/drafts/{name}", draftHandler::read)
             .POST("/api/dsl/drafts/{name}/save", draftHandler::save)
             .POST("/api/dsl/drafts/{name}/publish", draftHandler::publish)
             .DELETE("/api/dsl/drafts/{name}", draftHandler::delete)

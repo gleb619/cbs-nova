@@ -4,6 +4,7 @@ import cbs.nova.dsl.LoadResult;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.DraftResponse;
+import cbs.nova.starter.model.VcsModels.DraftSummary;
 import cbs.nova.starter.model.ErrorResponse;
 import tools.jackson.core.JacksonException;
 import jakarta.servlet.ServletException;
@@ -21,6 +22,8 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
@@ -108,6 +111,64 @@ public class DslDraftHandler {
             .body(new DraftResponse(name, "Deleted", null, false, LoadResult.empty()));
   }
 
+  public ServerResponse list(ServerRequest request) {
+    var dir = ensureConfigured(null);
+    if (dir.isError()) {
+      // Unconfigured source-dir: an empty list is a valid answer (matches the
+      // frontend expectation that "no drafts configured" is not an error).
+      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(List.of());
+    }
+    Path drafts = draftsDir(dir.path());
+    if (!Files.isDirectory(drafts)) {
+      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(List.of());
+    }
+    List<DraftSummary> summaries = new ArrayList<>();
+    try (var stream = Files.list(drafts)) {
+      var files = stream
+              .filter(Files::isRegularFile)
+              .filter(p -> p.getFileName().toString().endsWith(".json"))
+              .sorted((a, b) -> a.getFileName().toString().compareTo(b.getFileName().toString()))
+              .toList();
+      for (Path file : files) {
+        try {
+          DraftRequest draft = objectMapper.readValue(file.toFile(), DraftRequest.class);
+          long updatedAt = Files.getLastModifiedTime(file).toMillis();
+          summaries.add(new DraftSummary(
+                  draft.name(),
+                  draft.type(),
+                  draft.status(),
+                  draft.version(),
+                  updatedAt));
+        } catch (Exception e) {
+          log.warn("[DSL drafts] skipping unparseable draft file {}: {}", file,
+                  e.getMessage());
+        }
+      }
+    } catch (IOException e) {
+      log.warn("[DSL drafts] failed to list drafts in {}: {}", drafts, e.getMessage());
+      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(List.of());
+    }
+    log.info("[DSL drafts] listed {} drafts from {}", summaries.size(), drafts);
+    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(summaries);
+  }
+
+  public ServerResponse read(ServerRequest request) throws IOException {
+    String name = request.pathVariable("name");
+    var dir = ensureConfigured(name);
+    if (dir.isError()) {
+      return dir.response();
+    }
+    Path drafts = draftsDir(dir.path());
+    Path draftFile = drafts.resolve(safeFileName(name) + ".json").normalize();
+    if (!draftFile.startsWith(drafts) || !Files.exists(draftFile)) {
+      return error(HttpStatus.NOT_FOUND,
+              new ErrorResponse("NOT_FOUND", "Draft not found: " + name, name, null, null));
+    }
+    DraftRequest payload = objectMapper.readValue(draftFile.toFile(), DraftRequest.class);
+    log.info("[DSL drafts] read {} from {}", name, draftFile);
+    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(payload);
+  }
+
   private sealed interface PathResult {
 
     Path path();
@@ -179,6 +240,10 @@ public class DslDraftHandler {
     String json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(payload);
     Files.writeString(file, json, StandardCharsets.UTF_8);
     return file;
+  }
+
+  private static Path draftsDir(Path source) {
+    return source.resolve(DRAFTS_DIR);
   }
 
   private static String safeFileName(String name) {

@@ -21,4 +21,13 @@ public final class VcsModels {
           LoadResult loadResult) {
 
   }
+
+  public record DraftSummary(
+          String name,
+          String type,
+          String status,
+          String version,
+          long updatedAt) {
+
+  }
 }
