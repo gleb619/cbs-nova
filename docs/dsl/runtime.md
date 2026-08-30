@@ -3,6 +3,10 @@
 This page describes the runtime abstractions (registry, runner, manager), the three operational modes, the
 environment-agnostic `DslRuntime` interface, and dynamic configuration resolution.
 
+> **See also:** [Configuration Reference](configuration.md) — the consolidated reference for every starter
+> `@ConfigurationProperties` key (`cbs.nova.*`, `cbs.security.*`, `cbs.health.*`, `cbs.runs.*`, `dsl.*`, and the
+> Temporal / server env vars), with defaults taken from the code.
+
 ## Registry abstraction
 
 All DSL entities are looked up by name through a uniform registry contract:
