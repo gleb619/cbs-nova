@@ -19,7 +19,8 @@ import {
   useHelperSearch,
 } from '@cbs/components'
 import { useCookie } from 'nuxt/app'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
 import type { RunnerOutput } from '~/types'
 
 const workbench = useDslWorkbench()
@@ -118,6 +119,26 @@ function cancelDelete() {
   pendingDeleteName.value = null
 }
 
+function safeSelectConstruct(name: string) {
+  if (state.isDirty && !window.confirm('Discard unsaved changes to this construct?')) {
+    return
+  }
+  selectConstruct(name)
+}
+
+function handleBeforeUnload(event: BeforeUnloadEvent) {
+  if (!state.isDirty) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+
+onBeforeRouteLeave(() => {
+  if (state.isDirty && !window.confirm('You have unsaved changes. Leave anyway?')) {
+    return false
+  }
+  return true
+})
+
 type ActionValue = 'refresh' | 'validate' | 'save' | 'publish'
 
 const actionItems = computed<DropdownMenuItem[]>(() => [
@@ -159,6 +180,11 @@ function runAction(item: DropdownMenuItem) {
 
 onMounted(() => {
   loadConstructs()
+  window.addEventListener('beforeunload', handleBeforeUnload)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 </script>
 
@@ -179,7 +205,17 @@ onMounted(() => {
           / {{ selectedConstruct.name }}
         </span>
       </div>
-      <div class="ml-auto">
+      <div class="ml-auto flex items-center gap-3">
+        <span
+          v-if="state.isDirty"
+          class="inline-flex items-center gap-1.5 text-xs text-amber-700"
+          data-testid="workbench-dirty-indicator"
+          role="status"
+          aria-label="You have unsaved changes"
+        >
+          <span aria-hidden="true" class="inline-block h-2 w-2 rounded-full bg-amber-500"></span>
+          <span>unsaved changes</span>
+        </span>
         <DropdownMenu label="Actions" align="right" :items="actionItems" @select="runAction" />
       </div>
       <button
@@ -203,7 +239,7 @@ onMounted(() => {
           :constructs="state.constructs"
           :selected-name="state.selectedName"
           :loading="loaders.constructs"
-          @select="selectConstruct"
+          @select="safeSelectConstruct"
         >
           <template #default="{ constructs, selectedName, onSelect }">
             <DslPlainConstructList

@@ -18,6 +18,10 @@ export default defineConfig({
       // 'nuxt/app' only resolves inside a prepared .nuxt build; stub it so
       // unit-tested composables can import useState and friends.
       'nuxt/app': r('./vitest.nuxt-app-stub.ts'),
+      // vue-router is a transitive dep of nuxt and is not hoisted by pnpm's
+      // strict layout. Alias to a stub that captures the navigation-guard
+      // handlers the page registers so specs can invoke them directly.
+      'vue-router': r('./vitest.vue-router-stub.ts'),
     },
   },
   test: {
