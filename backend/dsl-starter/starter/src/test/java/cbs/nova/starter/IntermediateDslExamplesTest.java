@@ -51,17 +51,17 @@ class IntermediateDslExamplesTest {
           dryRunLoggingContext, null);
   private final DryRunLogBufferRegistry bufferRegistry = new DryRunLogBufferRegistry();
   private final CbsNovaPreviewProperties previewProperties = new CbsNovaPreviewProperties(null,
-          null);
+          null, null);
   private final PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
           dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
           null, previewProperties, new CbsNovaFakesProperties(false, null),
-          new RunScopedFakeConfig(), new SimpleMeterRegistry());
+          new RunScopedFakeConfig(), new SimpleMeterRegistry(), null);
   private final RunDslPipe runPipe = new RunDslPipe(contextFactory, recorder,
           new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig());
   private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
           dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
           previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),
-          new SimpleMeterRegistry(), new ExplainDiagramRenderer());
+          new SimpleMeterRegistry(), new ExplainDiagramRenderer(), null);
   private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
 
   @BeforeEach

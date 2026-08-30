@@ -18,12 +18,14 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
+import cbs.nova.starter.core.pipe.PreviewTimeoutException;
 import cbs.nova.starter.converter.DslRuntimeMapper;
 import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.model.DslRequest;
 import cbs.nova.starter.model.RuntimeOutcome;
 import cbs.nova.starter.web.RequestIdFilter;
 import java.util.List;
+import java.time.Duration;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -138,10 +140,53 @@ class DslRuntimeServiceTest {
             List.of(), null);
     doReturn(report).when(dslRuntime).explain(eq("P"), any());
 
-    ExplainReport result = service.explain("P", new DslRequest("in", null), "req-4");
+    RuntimeOutcome result = service.explain("P", new DslRequest("in", null), "req-4");
 
-    assertThat(result).isSameAs(report);
+    assertThat(result.success()).isTrue();
+    assertThat(result.value()).isSameAs(report);
+    assertThat(result.error()).isNull();
     assertThat(MDC.get(RequestIdFilter.REQUEST_ID_MDC_KEY)).isNull();
+  }
+
+  @Test
+  void explainReturnsTimeoutErrorForPreviewTimeoutError() {
+    ExplainReport report = new ExplainReport(
+            "Slow",
+            "desc",
+            List.of(),
+            List.of(),
+            Map.of(),
+            null,
+            null,
+            null,
+            List.of(),
+            null,
+            List.of(new PreviewErrorDetail(PreviewErrorCode.PREVIEW_TIMEOUT,
+                    "timed out", "increase timeout", Map.of())),
+            null);
+    doReturn(report).when(dslRuntime).explain(eq("Slow"), any());
+
+    RuntimeOutcome result = service.explain("Slow", new DslRequest("in", null), "req-5");
+
+    assertThat(result.success()).isFalse();
+    assertThat(result.error().code()).isEqualTo("PREVIEW_TIMEOUT");
+    assertThat(result.error().entityName()).isEqualTo("Slow");
+    assertThat(result.error().runId()).isEqualTo("req-5");
+    assertThat(result.error().exceptionId()).startsWith("req-5:ex:");
+  }
+
+  @Test
+  void previewReturnsTimeoutErrorWhenResultFailsWithPreviewTimeoutException() {
+    PreviewTimeoutException timeout = new PreviewTimeoutException("Slow", Duration.ofMillis(100));
+    doReturn(Result.failure(timeout)).when(dslRuntime).preview(eq("Slow"), any());
+
+    RuntimeOutcome result = service.preview("Slow", new DslRequest("in", null), "req-6");
+
+    assertThat(result.success()).isFalse();
+    assertThat(result.error().code()).isEqualTo("PREVIEW_TIMEOUT");
+    assertThat(result.error().entityName()).isEqualTo("Slow");
+    assertThat(result.error().runId()).isEqualTo("req-6");
+    assertThat(result.error().message()).contains("100 ms");
   }
 
   @Test

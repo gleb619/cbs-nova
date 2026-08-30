@@ -65,6 +65,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Configuration
@@ -202,10 +205,12 @@ public class TemporalConfiguration {
           CbsNovaPreviewProperties previewProperties,
           CbsNovaFakesProperties fakesProperties,
           RunScopedFakeConfig runScopedFakeConfig,
-          MeterRegistry meterRegistry) {
+          MeterRegistry meterRegistry,
+          @Qualifier("cbsNovaPreviewDispatchExecutor") ExecutorService dispatchExecutor) {
     return new PreviewDslPipe(externalCallRecorder, contextFactory, dryRunLoggingContext,
             bufferRegistry, dryRunProperties.log().maxEventsPerRun(), previewResultCache,
-            previewProperties, fakesProperties, runScopedFakeConfig, meterRegistry);
+            previewProperties, fakesProperties, runScopedFakeConfig, meterRegistry,
+            dispatchExecutor);
   }
 
   @Bean
@@ -231,10 +236,12 @@ public class TemporalConfiguration {
           CbsNovaFakesProperties fakesProperties,
           RunScopedFakeConfig runScopedFakeConfig,
           MeterRegistry meterRegistry,
-          ExplainDiagramRenderer diagramRenderer) {
+          ExplainDiagramRenderer diagramRenderer,
+          @Qualifier("cbsNovaPreviewDispatchExecutor") ExecutorService dispatchExecutor) {
     return new ExplainDslPipe(externalCallRecorder, contextFactory, dryRunLoggingContext,
             bufferRegistry, dryRunProperties.log().maxEventsPerRun(), previewProperties,
-            fakesProperties, runScopedFakeConfig, meterRegistry, diagramRenderer);
+            fakesProperties, runScopedFakeConfig, meterRegistry, diagramRenderer,
+            dispatchExecutor);
   }
 
   @Bean
@@ -244,6 +251,19 @@ public class TemporalConfiguration {
           RunDslPipe runDslPipe,
           ExplainDslPipe explainDslPipe) {
     return new DevDslRuntime(previewDslPipe, runDslPipe, explainDslPipe);
+  }
+
+  @Bean(name = "cbsNovaPreviewDispatchExecutor", destroyMethod = "shutdownNow")
+  @ConditionalOnMissingBean(name = "cbsNovaPreviewDispatchExecutor")
+  ExecutorService cbsNovaPreviewDispatchExecutor(CbsNovaPreviewProperties previewProperties) {
+    int poolSize = previewProperties.execution().poolSize();
+    AtomicInteger counter = new AtomicInteger(1);
+    ThreadFactory threadFactory = r -> {
+      Thread thread = new Thread(r, "cbs-preview-dispatch-" + counter.getAndIncrement());
+      thread.setDaemon(true);
+      return thread;
+    };
+    return Executors.newFixedThreadPool(poolSize, threadFactory);
   }
 
   @Bean(name = "cbsNovaDslProcessExecutor", destroyMethod = "shutdown")

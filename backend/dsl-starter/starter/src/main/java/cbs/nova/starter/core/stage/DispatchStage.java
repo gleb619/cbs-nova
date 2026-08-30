@@ -10,15 +10,54 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
+import cbs.nova.starter.core.pipe.PreviewTimeoutException;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
+import java.time.Duration;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+/**
+ * Executes the DSL entity for the current pipe run.
+ *
+ * <p>
+ * When a non-zero timeout and executor are configured, only the actual dispatch call runs on a
+ * dedicated worker thread. The helper interceptor is still registered and cleared on the request
+ * thread around the whole block.
+ *
+ * <p>
+ * Cancellation is cooperative: {@code Future.cancel(true)} sends an interrupt, which ends
+ * interruptible waits (e.g. {@code Thread.sleep}), but a pure CPU spin loop keeps its worker thread
+ * until it exits. The JVM provides no safe thread kill, so the pool is bounded and named for
+ * diagnosability.
+ *
+ * <p>
+ * Dispatch workers do not inherit per-request MDC / log correlation from the request thread; if
+ * logs produced inside the dispatched DSL are required to carry the run id, propagate the MDC
+ * explicitly (e.g. via a {@code TaskDecorator}).
+ */
 @RequiredArgsConstructor
 public final class DispatchStage implements DslPipeStage {
 
   private final ContextFactory contextFactory;
   private final HelperInterceptor helperInterceptor;
+  private final Duration timeout;
+  private final ExecutorService executor;
+  private final MeterRegistry meterRegistry;
+
+  /**
+   * No-timeout constructor for callers that want inline execution.
+   */
+  public DispatchStage(@NonNull ContextFactory contextFactory,
+          @NonNull HelperInterceptor helperInterceptor) {
+    this(contextFactory, helperInterceptor, null, null, null);
+  }
 
   @Override
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
@@ -26,7 +65,7 @@ public final class DispatchStage implements DslPipeStage {
     GlobalManager gm = GlobalManager.globalManager();
     gm.registerHelperInterceptor(helperInterceptor);
     try {
-      Result<?> result = dispatch(context.getName(), modeCtx, gm);
+      Result<?> result = dispatchWithOptionalTimeout(context.getName(), modeCtx, gm);
       context.setAttribute("dslResult", result);
       return next.proceed(context);
     } finally {
@@ -60,6 +99,30 @@ public final class DispatchStage implements DslPipeStage {
   private @NonNull Context<?> withExistingCollector(@NonNull Context<?> ctx,
           @Nullable ExecutionTraceCollector collector) {
     return collector != null ? ctx.withExecutionTraceCollector(collector) : ctx;
+  }
+
+  private @NonNull Result<?> dispatchWithOptionalTimeout(@NonNull String name,
+          @NonNull Context<?> ctx, @NonNull GlobalManager gm) {
+    if (executor == null || timeout == null || timeout.isNegative() || timeout.isZero()) {
+      return dispatch(name, ctx, gm);
+    }
+
+    Future<Result<?>> future = executor.submit(() -> dispatch(name, ctx, gm));
+    try {
+      return future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+    } catch (TimeoutException e) {
+      future.cancel(true);
+      if (meterRegistry != null) {
+        meterRegistry.counter("cbs.nova.preview.timeout.count").increment();
+      }
+      return Result.failure(new PreviewTimeoutException(name, timeout));
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Result.failure(e);
+    } catch (ExecutionException e) {
+      Throwable cause = e.getCause() != null ? e.getCause() : e;
+      return Result.failure(cause);
+    }
   }
 
   private @NonNull Result<?> dispatch(@NonNull String name, @NonNull Context<?> ctx,

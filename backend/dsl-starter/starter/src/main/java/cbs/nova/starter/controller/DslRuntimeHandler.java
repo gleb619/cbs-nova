@@ -53,7 +53,8 @@ public class DslRuntimeHandler {
     if (!errors.isEmpty()) {
       return validationResponse(errors);
     }
-    return ServerResponse.ok().body(service.explain(name, dslRequest, requestId(request)));
+    return validationOrExecute(name, dslRequest,
+            () -> respond(service.explain(name, dslRequest, requestId(request))));
   }
 
   private ServerResponse validationOrExecute(String name, DslRequest request,
@@ -66,9 +67,13 @@ public class DslRuntimeHandler {
   }
 
   private ServerResponse respond(RuntimeOutcome outcome) {
-    return outcome.success()
-            ? ServerResponse.ok().body(outcome.value())
-            : ServerResponse.status(HttpStatus.UNPROCESSABLE_ENTITY).body(outcome.error());
+    if (outcome.success()) {
+      return ServerResponse.ok().body(outcome.value());
+    }
+    HttpStatus status = "PREVIEW_TIMEOUT".equals(outcome.error().code())
+            ? HttpStatus.GATEWAY_TIMEOUT
+            : HttpStatus.UNPROCESSABLE_ENTITY;
+    return ServerResponse.status(status).body(outcome.error());
   }
 
   private ServerResponse validationResponse(List<ValidationError> errors) {

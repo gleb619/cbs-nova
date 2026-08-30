@@ -18,6 +18,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.PreviewReport;
+import cbs.nova.starter.core.pipe.PreviewTimeoutException;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
@@ -33,6 +34,7 @@ import cbs.nova.starter.service.DslRuntimeService;
 import cbs.nova.starter.service.InputValidator;
 import cbs.nova.starter.web.DslPayloadSizeValidator;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import tools.jackson.databind.ObjectMapper;
@@ -198,6 +200,53 @@ class DslRuntimeResourceTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("P"))
             .andExpect(jsonPath("$.description").value("desc"));
+  }
+
+  @Test
+  void previewReturns504ForPreviewTimeout() throws Exception {
+    doReturn(Result.failure(new PreviewTimeoutException("Slow", Duration.ofMillis(100))))
+            .when(dslRuntime).preview(eq("Slow"), any());
+
+    mockMvc
+            .perform(
+                    post("/api/dsl/preview/Slow")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"body\": \"in\"}"))
+            .andExpect(status().isGatewayTimeout())
+            .andExpect(jsonPath("$.code").value("PREVIEW_TIMEOUT"))
+            .andExpect(jsonPath("$.entityName").value("Slow"))
+            .andExpect(jsonPath("$.runId").exists())
+            .andExpect(jsonPath("$.exceptionId").exists());
+  }
+
+  @Test
+  void explainReturns504ForPreviewTimeout() throws Exception {
+    ExplainReport report = new ExplainReport(
+            "Slow",
+            "desc",
+            List.of(),
+            List.of(),
+            Map.of(),
+            null,
+            null,
+            null,
+            List.of(),
+            null,
+            List.of(new PreviewErrorDetail(PreviewErrorCode.PREVIEW_TIMEOUT,
+                    "timed out", "increase timeout", Map.of())),
+            null);
+    doReturn(report).when(dslRuntime).explain(eq("Slow"), any());
+
+    mockMvc
+            .perform(
+                    post("/api/dsl/explain/Slow")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"body\": \"in\"}"))
+            .andExpect(status().isGatewayTimeout())
+            .andExpect(jsonPath("$.code").value("PREVIEW_TIMEOUT"))
+            .andExpect(jsonPath("$.entityName").value("Slow"))
+            .andExpect(jsonPath("$.runId").exists())
+            .andExpect(jsonPath("$.exceptionId").exists());
   }
 
   @Test

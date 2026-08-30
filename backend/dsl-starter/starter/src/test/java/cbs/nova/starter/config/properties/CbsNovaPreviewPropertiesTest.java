@@ -45,7 +45,7 @@ class CbsNovaPreviewPropertiesTest {
   @Test
   void negativeTtlIsRejectedByValidator() {
     var properties = new CbsNovaPreviewProperties(null,
-            new CbsNovaPreviewProperties.Cache(true, -1));
+            new CbsNovaPreviewProperties.Cache(true, -1), null);
     var violations = validator.validate(properties);
     assertThat(violations).isNotEmpty();
   }

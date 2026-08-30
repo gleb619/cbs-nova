@@ -4,6 +4,7 @@ import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.exception.DslCompensationException;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
+import cbs.nova.starter.core.pipe.PreviewTimeoutException;
 import cbs.nova.dsl.exception.DslValidationException;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.NonNull;
@@ -42,6 +43,10 @@ public class PreviewErrorHandler {
       }
       case ClassCastException cce -> {
         return inputValidationError(messageOf(cce), cce, entityName);
+      }
+      case PreviewTimeoutException _ -> {
+        return build(PreviewErrorCode.PREVIEW_TIMEOUT,
+                "Preview/explain execution exceeded the configured timeout", Map.of(), entityName);
       }
       case TimeoutException _ -> {
         return timeoutExceeded(messageOf(cause), entityName);
@@ -157,6 +162,8 @@ public class PreviewErrorHandler {
         "Verify the input matches the expected schema; check the type and required fields.";
       case COMPENSATION_ERROR ->
         "Review compensation logic for the failing transaction; ensure it is idempotent.";
+      case PREVIEW_TIMEOUT ->
+        "Increase the preview timeout or simplify the DSL to reduce execution time.";
       case TIMEOUT_EXCEEDED ->
         "Increase the preview timeout or simplify the DSL to reduce execution time.";
       case UNKNOWN_ERROR ->

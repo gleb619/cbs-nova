@@ -24,6 +24,9 @@ import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
+import java.time.Duration;
+import java.util.concurrent.ExecutorService;
+
 @RequiredArgsConstructor
 public final class ExplainDslPipe implements DslExecutionPipe<ExplainReport> {
 
@@ -37,6 +40,7 @@ public final class ExplainDslPipe implements DslExecutionPipe<ExplainReport> {
   private final RunScopedFakeConfig runScopedFakeConfig;
   private final MeterRegistry meterRegistry;
   private final ExplainDiagramRenderer diagramRenderer;
+  private final ExecutorService executor;
 
   @Override
   public @NonNull Result<ExplainReport> execute(@NonNull String name,
@@ -51,7 +55,9 @@ public final class ExplainDslPipe implements DslExecutionPipe<ExplainReport> {
             .stage(new ExecutionTraceStage())
             .stage(new FakingStage(fakesProperties, runScopedFakeConfig))
             .stage(new ExternalCallRecordingStage(recorder))
-            .stage(new DispatchStage(contextFactory, fakeInterceptor))
+            .stage(new DispatchStage(contextFactory, fakeInterceptor,
+                    Duration.ofMillis(previewProperties.execution().timeoutMs()), executor,
+                    meterRegistry))
             .build()
             .execute(name, ctx);
   }
