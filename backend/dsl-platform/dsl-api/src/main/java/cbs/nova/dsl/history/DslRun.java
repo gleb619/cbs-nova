@@ -17,5 +17,6 @@ public record DslRun(
         @Nullable String contextJson,
         @NonNull Instant startedAt,
         @Nullable Instant finishedAt,
-        @Nullable String executionMode) {
+        @Nullable String executionMode,
+        @Nullable String triggeredBy) {
 }

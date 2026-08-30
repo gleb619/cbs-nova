@@ -29,17 +29,22 @@ describe('MetadataTab', () => {
     const cells = wrapper.findAll('td').map((td) => td.text())
     expect(cells[0]).toBe('corr-abc')
     expect(cells[1].startsWith('wf-123')).toBe(true)
-    expect(cells.slice(2)).toEqual(['RUN', 'Process', '2'])
+    expect(cells.slice(2)).toEqual(['—', 'RUN', 'Process', '2'])
   })
 
-  it('falls back to em-dash for missing correlationId and workflowId', () => {
-    const execution = makeExecution({ correlationId: undefined, workflowId: undefined })
+  it('falls back to em-dash for missing correlationId, workflowId and triggeredBy', () => {
+    const execution = makeExecution({
+      correlationId: undefined,
+      workflowId: undefined,
+      triggeredBy: undefined,
+    })
     const wrapper = mount(MetadataTab, { props: { execution, metadata: undefined } })
 
     const cells = wrapper.findAll('td').map((td) => td.text())
     expect(cells[0]).toBe('—')
     expect(cells[1]).toBe('—')
-    expect(cells.slice(2)).toEqual(['RUN', 'Process', '2'])
+    expect(cells[2]).toBe('—')
+    expect(cells.slice(3)).toEqual(['RUN', 'Process', '2'])
   })
 
   it('defaults retries to 0 when undefined', () => {
@@ -48,6 +53,24 @@ describe('MetadataTab', () => {
 
     const cells = wrapper.findAll('td').map((td) => td.text())
     expect(cells.at(-1)).toBe('0')
+  })
+
+  // T304: run attribution surfaced in the metadata tab.
+  it('renders the triggeredBy value when present', () => {
+    const execution = makeExecution({ triggeredBy: 'alice@example.com' })
+    const wrapper = mount(MetadataTab, { props: { execution, metadata: undefined } })
+
+    const row = wrapper.find('[data-testid="metadata-triggered-by"]')
+    expect(row.exists()).toBe(true)
+    expect(row.text()).toBe('alice@example.com')
+  })
+
+  it('uses the dedicated test id for the Triggered by row', () => {
+    const execution = makeExecution({ triggeredBy: 'system' })
+    const wrapper = mount(MetadataTab, { props: { execution, metadata: undefined } })
+
+    expect(wrapper.find('[data-testid="metadata-triggered-by"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="executions-metadata-field-Triggered by"]').exists()).toBe(false)
   })
 
   it('flattens allowed metadata keys as additional rows', () => {

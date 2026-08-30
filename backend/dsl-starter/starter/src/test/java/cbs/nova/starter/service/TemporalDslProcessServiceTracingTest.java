@@ -66,7 +66,7 @@ class TemporalDslProcessServiceTracingTest {
             Duration.ofSeconds(30),
             Duration.ofMinutes(5),
             false,
-            new SimpleMeterRegistry());
+            new SimpleMeterRegistry(), nullResolver());
     service.setOpenTelemetry(openTelemetry);
 
     service.startProcess(processName, Map.of(), Map.of()).result().join();
@@ -110,7 +110,7 @@ class TemporalDslProcessServiceTracingTest {
             Duration.ofSeconds(30),
             Duration.ofMinutes(5),
             false,
-            new SimpleMeterRegistry());
+            new SimpleMeterRegistry(), nullResolver());
     // Default OpenTelemetry is no-op and must remain so.
     assertThat(service.getOpenTelemetry()).isSameAs(OpenTelemetry.noop());
 
@@ -143,5 +143,14 @@ class TemporalDslProcessServiceTracingTest {
     });
     exec.shutdownNow();
     return exec;
+  }
+
+  private static RunIdentityResolver nullResolver() {
+    return new RunIdentityResolver() {
+      @Override
+      public String resolve() {
+        return null;
+      }
+    };
   }
 }

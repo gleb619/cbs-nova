@@ -181,6 +181,7 @@ public final class InMemoryDslRunRepository implements DslRunRepository {
             .startedAt(existing.startedAt())
             .finishedAt(finishedAt)
             .executionMode(existing.executionMode())
+            .triggeredBy(existing.triggeredBy())
             .build();
   }
 

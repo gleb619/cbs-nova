@@ -74,7 +74,7 @@ class TemporalDslProcessServiceTest {
           ObjectMapper objectMapper,
           long maxOutputBytes) {
     return createService(contextFactory, runRepository, objectMapper, maxOutputBytes,
-            new SimpleMeterRegistry());
+            new SimpleMeterRegistry(), nullResolver());
   }
 
   public static TemporalDslProcessService createService(
@@ -83,6 +83,17 @@ class TemporalDslProcessServiceTest {
           ObjectMapper objectMapper,
           long maxOutputBytes,
           SimpleMeterRegistry meterRegistry) {
+    return createService(contextFactory, runRepository, objectMapper, maxOutputBytes,
+            meterRegistry, nullResolver());
+  }
+
+  public static TemporalDslProcessService createService(
+          ContextFactory contextFactory,
+          DslRunRepository runRepository,
+          ObjectMapper objectMapper,
+          long maxOutputBytes,
+          SimpleMeterRegistry meterRegistry,
+          RunIdentityResolver runIdentityResolver) {
     return new TemporalDslProcessService(
             contextFactory,
             runRepository,
@@ -93,7 +104,45 @@ class TemporalDslProcessServiceTest {
             Duration.ofMinutes(5),
             false,
             maxOutputBytes,
-            meterRegistry);
+            meterRegistry,
+            runIdentityResolver);
+  }
+
+  private static RunIdentityResolver nullResolver() {
+    return new RunIdentityResolver() {
+      @Override
+      public String resolve() {
+        return null;
+      }
+    };
+  }
+
+  private static RunIdentityResolver fixedResolver(String identity) {
+    return new RunIdentityResolver() {
+      @Override
+      public String resolve() {
+        return identity;
+      }
+    };
+  }
+
+  @Test
+  void startProcessPersistsTriggeredByFromResolver() {
+    GlobalManager.globalManager().resetForTests();
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("Ok").execute(ctx -> Result.success("ok")).build());
+
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    TemporalDslProcessService service = createService(
+            new ContextFactory(), repo, new ObjectMapper(),
+            Long.MAX_VALUE, new SimpleMeterRegistry(), fixedResolver("alice"));
+
+    Result<?> result = service.runProcess("Ok", "in").result().join();
+
+    assertThat(result.isSuccess()).isTrue();
+    DslRun run = repo.findByProcessName("Ok").get(0);
+    assertThat(run.status()).isEqualTo(DslRunStatus.COMPLETED.name());
+    assertThat(run.triggeredBy()).isEqualTo("alice");
   }
 
   @Test
@@ -216,7 +265,7 @@ class TemporalDslProcessServiceTest {
       TemporalDslProcessService service = new TemporalDslProcessService(
               contextFactory, repo, new ObjectMapper(),
               exec, scheduler, Duration.ofMillis(1), Duration.ofMillis(100), false,
-              Long.MAX_VALUE, meterRegistry);
+              Long.MAX_VALUE, meterRegistry, nullResolver());
       service.setClock(fixedClock);
 
       // Persist a running run whose startedAt is far older than the 100ms staleness threshold.
@@ -281,7 +330,7 @@ class TemporalDslProcessServiceTest {
       TemporalDslProcessService service = new TemporalDslProcessService(
               contextFactory, repo, new ObjectMapper(),
               exec, scheduler, Duration.ofMillis(1), Duration.ofMillis(100), false,
-              Long.MAX_VALUE, new SimpleMeterRegistry());
+              Long.MAX_VALUE, new SimpleMeterRegistry(), nullResolver());
       service.setClock(fixedClock);
 
       // A run that already completed long ago — the sweep must not flip it to STALE.
@@ -324,7 +373,7 @@ class TemporalDslProcessServiceTest {
       TemporalDslProcessService service = new TemporalDslProcessService(
               contextFactory, repo, new ObjectMapper(),
               exec, scheduler, Duration.ofMillis(1), Duration.ofMillis(100), false,
-              Long.MAX_VALUE, new SimpleMeterRegistry());
+              Long.MAX_VALUE, new SimpleMeterRegistry(), nullResolver());
 
       service.ensureHealthcheckForTest();
 
@@ -370,7 +419,7 @@ class TemporalDslProcessServiceTest {
             Duration.ofSeconds(30),
             Duration.ofMinutes(5),
             false,
-            new SimpleMeterRegistry());
+            new SimpleMeterRegistry(), nullResolver());
     try {
       for (int w = 0; w < writers; w++) {
         final Clock next = clocks[w % clocks.length];
@@ -561,7 +610,7 @@ class TemporalDslProcessServiceTest {
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     TemporalDslProcessService service = createService(
             new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
-            Long.MAX_VALUE, meterRegistry);
+            Long.MAX_VALUE, meterRegistry, nullResolver());
 
     Result<?> result = service.runProcess("Ok", "in").result().join();
 
@@ -583,7 +632,7 @@ class TemporalDslProcessServiceTest {
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     TemporalDslProcessService service = createService(
             new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
-            Long.MAX_VALUE, meterRegistry);
+            Long.MAX_VALUE, meterRegistry, nullResolver());
 
     Result<?> result = service.runProcess("NotThere", "in").result().join();
 
@@ -673,7 +722,7 @@ class TemporalDslProcessServiceTest {
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     TemporalDslProcessService service = createService(
             new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
-            Long.MAX_VALUE, meterRegistry);
+            Long.MAX_VALUE, meterRegistry, nullResolver());
 
     Instant started = Instant.parse("2026-01-01T00:00:00Z");
     Instant finished = started.plusSeconds(5);

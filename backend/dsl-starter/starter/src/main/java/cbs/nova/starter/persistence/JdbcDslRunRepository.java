@@ -257,7 +257,8 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
             .addValue("startedAt", Timestamp.from(entity.getStartedAt()))
             .addValue("finishedAt",
                     entity.getFinishedAt() != null ? Timestamp.from(entity.getFinishedAt()) : null)
-            .addValue("executionMode", entity.getExecutionMode());
+            .addValue("executionMode", entity.getExecutionMode())
+            .addValue("triggeredBy", entity.getTriggeredBy());
   }
 
   private MapSqlParameterSource finishParams(
@@ -313,6 +314,7 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
     Timestamp finishedAt = rs.getTimestamp("finished_at");
     entity.setFinishedAt(finishedAt != null ? finishedAt.toInstant() : null);
     entity.setExecutionMode(rs.getString("execution_mode"));
+    entity.setTriggeredBy(rs.getString("triggered_by"));
     return entity;
   }
 
@@ -324,9 +326,9 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
   // to customize table name
   private String getInsertStatement() {
     return """
-            INSERT INTO %s (run_id, process_name, status, input_json, output_json, error_message, context_json, started_at, finished_at, execution_mode)
+            INSERT INTO %s (run_id, process_name, status, input_json, output_json, error_message, context_json, started_at, finished_at, execution_mode, triggered_by)
             VALUES
-            (:runId, :processName, :status, :inputJson, :outputJson, :errorMessage, :contextJson, :startedAt, :finishedAt, :executionMode)"""
+            (:runId, :processName, :status, :inputJson, :outputJson, :errorMessage, :contextJson, :startedAt, :finishedAt, :executionMode, :triggeredBy)"""
             .formatted(tableName);
   }
 
@@ -342,6 +344,7 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
               , started_at = :startedAt
               , finished_at = :finishedAt
               , execution_mode = :executionMode
+              , triggered_by = :triggeredBy
             WHERE run_id = :runId""".formatted(tableName);
   }
 

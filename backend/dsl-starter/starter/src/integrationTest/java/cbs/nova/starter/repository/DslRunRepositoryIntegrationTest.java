@@ -58,7 +58,8 @@ class DslRunRepositoryIntegrationTest {
             new ClassPathResource("db/migration/V1__create_dsl_runs.sql"),
             new ClassPathResource("db/migration/V2__add_context_json.sql"),
             new ClassPathResource("db/migration/V3__create_dsl_run_transactions.sql"),
-            new ClassPathResource("db/migration/V4__dsl_runs_indexes.sql"));
+            new ClassPathResource("db/migration/V4__dsl_runs_indexes.sql"),
+            new ClassPathResource("db/migration/V5__dsl_runs_triggered_by.sql"));
     populator.setContinueOnError(false);
     try (Connection connection = DriverManager.getConnection(
             postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())) {

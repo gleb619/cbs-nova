@@ -20,12 +20,14 @@ const props = withDefaults(
 interface Row {
   key: string
   value: string
+  testId?: string
 }
 
 const rows = computed<Row[]>(() => {
   const out: Row[] = [
     { key: 'Correlation ID', value: props.execution.correlationId ?? '—' },
     { key: 'Workflow ID', value: props.execution.workflowId ?? '—' },
+    { key: 'Triggered by', value: props.execution.triggeredBy ?? '—', testId: 'metadata-triggered-by' },
     { key: 'Mode', value: props.execution.mode },
     { key: 'Entity Type', value: props.execution.entityType },
     { key: 'Retries', value: String(props.execution.retries ?? 0) },
@@ -65,6 +67,10 @@ async function copyWorkflowId() {
 function isWorkflowRow(row: Row): boolean {
   return row.key === 'Workflow ID'
 }
+
+function rowTestId(row: Row): string {
+  return row.testId ?? `executions-metadata-field-${row.key}`
+}
 </script>
 
 <template>
@@ -79,7 +85,7 @@ function isWorkflowRow(row: Row): boolean {
             {{ row.key }}
           </th>
           <td
-            :data-testid="`executions-metadata-field-${row.key}`"
+            :data-testid="rowTestId(row)"
             class="py-2 font-mono text-xs text-gray-800 break-all"
           >
             <span>{{ row.value }}</span>

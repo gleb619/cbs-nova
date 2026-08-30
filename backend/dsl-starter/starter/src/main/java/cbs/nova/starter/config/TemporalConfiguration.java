@@ -27,6 +27,7 @@ import cbs.nova.starter.service.DslRunCancellationService;
 import cbs.nova.starter.service.PreviewResultCache;
 import cbs.nova.starter.service.TemporalDslProcessLauncher;
 import cbs.nova.starter.service.TemporalDslProcessService;
+import cbs.nova.starter.service.RunIdentityResolver;
 import cbs.nova.starter.service.TemporalDslService;
 import cbs.nova.starter.service.TemporalHealthProbe;
 import cbs.nova.starter.service.TemporalTransactionInvoker;
@@ -332,13 +333,15 @@ public class TemporalConfiguration {
           @Value("${cbs.nova.process.async-db-save:true}") boolean asyncDbSave,
           DslRunsProperties dslRunsProperties,
           OpenTelemetry openTelemetry,
-          MeterRegistry meterRegistry) {
+          MeterRegistry meterRegistry,
+          RunIdentityResolver runIdentityResolver) {
     TemporalDslProcessService service = new TemporalDslProcessService(contextFactory, runRepository,
             JsonMapper.builder().build(),
             dslProcessExecutor, healthcheckExecutor,
             healthcheckInterval, staleThreshold, asyncDbSave,
             dslRunsProperties.getMaxOutputBytes(),
-            meterRegistry);
+            meterRegistry,
+            runIdentityResolver);
     service.setOpenTelemetry(openTelemetry);
     return service;
   }
