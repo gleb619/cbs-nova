@@ -35,6 +35,12 @@ public class PreviewResultCache {
     cache.put(key, report);
   }
 
+  /**
+   * Drops every cached preview whose key carries the given DSL descriptor hash. Retained for future
+   * per-construct invalidation (e.g. workbench publish of a single process). Reload of the whole
+   * registry currently uses {@link #clear()} instead, since every cached entry is suspect after a
+   * global swap.
+   */
   public void invalidateByDslHash(@NonNull String dslDescriptorHash) {
     cache.asMap().keySet().removeIf(k -> k.dslDescriptorHash().equals(dslDescriptorHash));
   }

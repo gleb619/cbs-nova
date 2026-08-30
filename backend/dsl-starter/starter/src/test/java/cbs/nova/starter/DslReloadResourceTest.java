@@ -2,17 +2,24 @@ package cbs.nova.starter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.CallKind;
+import cbs.nova.dsl.CallNode;
 import cbs.nova.dsl.CompilingDslDefinitionLoader;
 import cbs.nova.dsl.DslDefinitionLoader;
+import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.LoadResult;
+import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.ServiceLoaderDslDefinitionLoader;
 import cbs.nova.starter.config.DslReloadRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslReloadHandler;
+import cbs.nova.starter.model.PreviewModels;
+import cbs.nova.starter.service.PreviewResultCache;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
@@ -243,6 +250,121 @@ class DslReloadResourceTest {
     } finally {
       deleteRecursively(badDir);
     }
+  }
+
+  /**
+   * After a successful registry swap the preview cache must be flushed end-to-end, so the next
+   * preview call cannot return a stale result computed against the previous registry.
+   */
+  @Test
+  void successfulReloadFlushesPreviewCache() throws Exception {
+    Path sourceDir = createTemporaryDslSourceDir();
+    try {
+      var cache = new PreviewResultCache(60_000);
+      var key = new PreviewModels.PreviewCacheKey("FlushKey", "old-hash", "input-hash");
+      cache.put(key, sampleReport());
+
+      var handler = new DslReloadHandler(
+              new DslProperties(sourceDir.toString(), null, null, null, null),
+              loader,
+              constantProvider(cache));
+
+      ServerResponse response = handler.reload(reloadRequest());
+      assertThat(response.statusCode().value()).isEqualTo(200);
+      assertThat(cache.get(key))
+              .as("preview cache entry must be flushed after successful reload")
+              .isNull();
+    } finally {
+      deleteRecursively(sourceDir);
+    }
+  }
+
+  /**
+   * A failed reload (compile error) must NOT clear the cache: the previous registry is still live,
+   * so cached previews computed against it are still valid.
+   */
+  @Test
+  void failedReloadLeavesPreviewCacheIntact() throws Exception {
+    Path badDir = createTemporaryBrokenDslSourceDir();
+    try {
+      var cache = new PreviewResultCache(60_000);
+      var key = new PreviewModels.PreviewCacheKey("StaleKey", "old-hash", "input-hash");
+      var report = sampleReport();
+      cache.put(key, report);
+
+      var handler = new DslReloadHandler(
+              new DslProperties(badDir.toString(), null, null, null, null),
+              loader,
+              constantProvider(cache));
+
+      ServerResponse response = handler.reload(reloadRequest());
+      assertThat(response.statusCode().value()).isEqualTo(500);
+      assertThat(cache.get(key))
+              .as("preview cache must survive a failed reload — registry is still live")
+              .isEqualTo(report);
+    } finally {
+      deleteRecursively(badDir);
+    }
+  }
+
+  /**
+   * The handler must be tolerant of a missing preview cache (e.g. tests that don't wire the bean,
+   * or hosts that disable preview caching via configuration). A null provider must not NPE.
+   */
+  @Test
+  void reloadSucceedsWhenPreviewCacheProviderIsNull() throws Exception {
+    Path sourceDir = createTemporaryDslSourceDir();
+    try {
+      var handler = new DslReloadHandler(
+              new DslProperties(sourceDir.toString(), null, null, null, null),
+              loader,
+              null);
+
+      ServerResponse response = handler.reload(reloadRequest());
+      assertThat(response.statusCode().value()).isEqualTo(200);
+      assertThat(GlobalManager.globalManager().hasProcess("ReloadTestProcess")).isTrue();
+    } finally {
+      deleteRecursively(sourceDir);
+    }
+  }
+
+  private static PreviewReport sampleReport() {
+    return new PreviewReport(
+            "Ping",
+            ExecutionMode.PREVIEW,
+            true,
+            "pong",
+            List.of("trace"),
+            List.of(),
+            Map.of(),
+            CallNode.leaf("Ping", CallKind.PROCESS, null, "pong", true),
+            List.of(),
+            null,
+            List.of());
+  }
+
+  /**
+   * Minimal {@link ObjectProvider} stub for tests: returns the supplied bean from
+   * {@link ObjectProvider#getIfAvailable()}, {@code null} otherwise. Avoids pulling in Mockito for
+   * three call sites.
+   */
+  private static <T> ObjectProvider<T> constantProvider(T bean) {
+    return new ObjectProvider<>() {
+      @Override
+      public T getIfAvailable() {
+        return bean;
+      }
+
+      @Override
+      public T getIfUnique() {
+        return bean;
+      }
+
+      @Override
+      public T getObject() {
+        throw new UnsupportedOperationException("not used by reload");
+      }
+    };
   }
 
   /**
