@@ -10,7 +10,8 @@ import {
   RunnerStatusIndicator,
 } from '@cbs/components'
 import { useRoute, useRouter } from 'nuxt/app'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { consumeRunAgain } from '../utils/runAgainHandoff'
 
 import type { DefinitionMeta, RunnerMode } from '~/types'
 
@@ -73,6 +74,21 @@ function syncFromQuery() {
   if (modeParam === 'preview' || modeParam === 'run' || modeParam === 'explain') {
     setMode(modeParam)
   }
+
+  // T293 — consume the run-again handoff (if any) left behind by the
+  // execution detail page once a definition is selected. It must run inside
+  // nextTick so it executes after the `watch(selectedDefinition, ...)` reset
+  // (which blanks formData when the selection changes); consuming any earlier
+  // would have the pre-filled input immediately wiped. Consuming is one-shot
+  // and a pure no-op when there is no stash, so the normal flow is untouched.
+  nextTick(() => {
+    const name = selectedDefinition.value
+    if (name === null) return
+    const stashed = consumeRunAgain(name)
+    if (stashed !== null && typeof stashed === 'object' && !Array.isArray(stashed)) {
+      formData.value = stashed as Record<string, unknown>
+    }
+  })
 }
 
 watch(
