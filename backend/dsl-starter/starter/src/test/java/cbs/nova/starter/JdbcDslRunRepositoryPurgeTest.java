@@ -17,6 +17,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
@@ -35,6 +36,7 @@ class JdbcDslRunRepositoryPurgeTest {
   @BeforeEach
   void cleanTable() {
     jdbcTemplate.execute("TRUNCATE TABLE dsl_runs");
+    jdbcTemplate.execute("TRUNCATE TABLE dsl_run_transactions");
   }
 
   @Test
@@ -114,6 +116,31 @@ class JdbcDslRunRepositoryPurgeTest {
     assertThatThrownBy(() -> repository.purgeFinishedBefore(Instant.now(), -1))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("batchSize must be positive");
+  }
+
+  @Test
+  void purgeFinishedBeforeNotifiesConsumerBeforeParentDelete() {
+    Instant now = Instant.now();
+    for (int i = 0; i < 3; i++) {
+      repository.save(run("run-batch-" + i, DslRunStatus.COMPLETED, now.minusSeconds(600),
+              now.minusSeconds(3_600)));
+    }
+
+    List<List<String>> captured = new ArrayList<>();
+    int deleted = repository.purgeFinishedBefore(now, 2, ids -> {
+      captured.add(new ArrayList<>(ids));
+      for (String runId : ids) {
+        assertThat(repository.findByRunId(runId)).isPresent();
+      }
+    });
+
+    assertThat(deleted).isEqualTo(3);
+    assertThat(captured).hasSize(2);
+    assertThat(captured.get(0)).hasSize(2);
+    assertThat(captured.get(1)).hasSize(1);
+    for (String runId : List.of("run-batch-0", "run-batch-1", "run-batch-2")) {
+      assertThat(repository.findByRunId(runId)).isEmpty();
+    }
   }
 
   private static DslRun run(String runId, DslRunStatus status, Instant startedAt,

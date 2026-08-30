@@ -89,6 +89,33 @@ class InMemoryTransactionExecutionRepositoryTest {
   }
 
   @Test
+  void deleteByRunIdsRemovesOnlyMatchingRunIds() {
+    var repo = new InMemoryTransactionExecutionRepository();
+    repo.save(execution("run-1", "CreateOrder", null));
+    repo.save(execution("run-1", "ReserveStock", null));
+    repo.save(execution("run-2", "CreateOrder", null));
+    repo.save(execution("run-3", "CreateOrder", null));
+
+    int deleted = repo.deleteByRunIds(List.of("run-1", "run-3"));
+
+    assertThat(deleted).isEqualTo(3);
+    assertThat(repo.findByRunId("run-1")).isEmpty();
+    assertThat(repo.findByRunId("run-2")).hasSize(1);
+    assertThat(repo.findByRunId("run-3")).isEmpty();
+  }
+
+  @Test
+  void deleteByRunIdsIsNoOpForEmptyCollection() {
+    var repo = new InMemoryTransactionExecutionRepository();
+    repo.save(execution("run-1", "CreateOrder", null));
+
+    int deleted = repo.deleteByRunIds(List.of());
+
+    assertThat(deleted).isZero();
+    assertThat(repo.findByRunId("run-1")).hasSize(1);
+  }
+
+  @Test
   void findByRunIdReturnsIsolatedCopy() {
     var repo = new InMemoryTransactionExecutionRepository();
     var execution = execution("run-1", "CreateOrder", null);
@@ -173,8 +200,6 @@ class InMemoryTransactionExecutionRepositoryTest {
     assertThat(pool.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
     assertThat(saved.get()).isEqualTo(threads * savesPerThread);
 
-    // Every run is either fully tracked or fully evicted (never partially present), and the
-    // number of tracked runs never exceeds CAPACITY once the churn settles.
     int tracked = 0;
     for (int t = 0; t < threads; t++) {
       for (int i = 0; i < savesPerThread; i++) {

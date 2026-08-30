@@ -201,6 +201,13 @@ Follows the project's opt-in pattern: the purge is **disabled by default** until
 | `cbs.runs.purge-interval` | `Duration` | `PT1H` | How often the scheduled purge runs. |
 | `cbs.runs.purge-batch-size` | `int` | `500` | Max rows removed per batched delete pass (keeps each schema/row lock small). |
 
+The purge deletes each run's `dsl_run_transactions` child rows in the same batch window as its `dsl_runs` parent row (T305). Rows orphaned before that change (parent purged, children left behind) are not swept automatically — a full-table anti-join would take the row locks the batched purge is designed to avoid. Clean them up once, manually, in off-peak batches:
+
+```sql
+DELETE FROM dsl_run_transactions t
+WHERE NOT EXISTS (SELECT 1 FROM dsl_runs r WHERE r.run_id = t.run_id);
+```
+
 ### `cbs.runs` — payload size caps (`DslRunsProperties`)
 
 Defensive caps applied before persistence / workflow submission.

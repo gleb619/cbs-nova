@@ -3,6 +3,7 @@ package cbs.nova.dsl.history;
 import cbs.nova.dsl.transaction.TransactionExecution;
 import org.jspecify.annotations.NonNull;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface TransactionExecutionRepository {
@@ -14,4 +15,9 @@ public interface TransactionExecutionRepository {
   List<TransactionExecution> findByRunId(@NonNull String runId);
 
   void deleteByRunId(@NonNull String runId);
+
+  default int deleteByRunIds(@NonNull Collection<String> runIds) {
+    runIds.forEach(this::deleteByRunId);
+    return runIds.size();
+  }
 }
