@@ -8,8 +8,10 @@ import {
   ExecutionsExecutionSummary,
   ExecutionsExecutionTrace,
 } from '@cbs/components'
-import { useRoute } from 'nuxt/app'
+import { navigateTo, useRoute } from 'nuxt/app'
 import { computed, onUnmounted, ref } from 'vue'
+import { stashRunAgain } from '../../utils/runAgainHandoff'
+import type { ExecutionMode } from '~/types'
 
 const route = useRoute()
 const id = computed(() => String(route.params.id))
@@ -103,6 +105,31 @@ async function loadDiagram() {
 if (selectedExecution.value?.entity) {
   await loadDiagram()
 }
+// T293 — map the execution's stored mode enum to the runner's mode strings.
+// RunnerMode is 'preview' | 'run' | 'explain'; ExecutionMode is
+// 'PREVIEW' | 'RUN' | 'EXPLAIN'. Unknown values fall back to the default.
+function toRunnerMode(m: ExecutionMode): 'preview' | 'run' | 'explain' {
+  switch (m) {
+    case 'PREVIEW':
+      return 'preview'
+    case 'EXPLAIN':
+      return 'explain'
+    case 'RUN':
+      return 'run'
+    default:
+      return 'run'
+  }
+}
+
+function runAgain() {
+  const execution = selectedExecution.value
+  if (!execution) return
+  stashRunAgain(execution.entity, execution.input)
+  navigateTo({
+    path: '/runner',
+    query: { name: execution.entity, mode: toRunnerMode(execution.mode) },
+  })
+}
 
 onUnmounted(() => {
   stopPolling()
@@ -145,6 +172,15 @@ onUnmounted(() => {
 
       <ExecutionsExecutionSummary :execution="selectedExecution">
         <template #actions>
+          <button
+            v-if="selectedExecution?.entity"
+            type="button"
+            data-testid="run-again-button"
+            class="px-3 py-1.5 text-xs font-medium rounded border transition-colors border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+            @click="runAgain"
+          >
+            Run again
+          </button>
           <button
             v-if="showCancelButton"
             type="button"
