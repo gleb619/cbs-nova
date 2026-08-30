@@ -138,6 +138,7 @@ evaluator, provide an `ExpressionEvaluator` bean or call
 - [Preview Mode (dry-run)](dsl/preview-mode.md)
 - [Working with DSL Examples](dsl/examples.md)
 - [IDEA Plugin for DSL Editing](dsl/idea-plugin.md)
+- [Starter Configuration Reference](dsl/configuration.md) — every `@ConfigurationProperties` key and its default.
 
 ## Primary goals
 
