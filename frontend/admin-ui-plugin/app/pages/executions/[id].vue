@@ -9,7 +9,7 @@ import {
   ExecutionsExecutionTrace,
 } from '@cbs/components'
 import { navigateTo, useRoute } from 'nuxt/app'
-import { computed, onUnmounted, ref } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { stashRunAgain } from '../../utils/runAgainHandoff'
 import type { ExecutionMode } from '~/types'
 
@@ -28,6 +28,32 @@ const {
 } = useExecutions()
 
 const activeTab = ref<'diagram' | 'payload' | 'metadata' | 'logs' | 'errors'>('diagram')
+
+// T296 — the backend has no log source for production runs today, so the
+// Logs tab only appears when the detail payload actually carries one.
+// We still keep the tab in the activeTab type so an existing selection
+// survives a refresh; below we fall back to 'diagram' if logs disappear.
+const hasLogs = computed(
+  () => (selectedExecution.value?.logs?.length ?? 0) > 0,
+)
+const availableTabs = computed(() => {
+  const tabs: Array<'diagram' | 'payload' | 'metadata' | 'logs' | 'errors'> = [
+    'diagram',
+    'payload',
+    'metadata',
+  ]
+  if (hasLogs.value) tabs.push('logs')
+  tabs.push('errors')
+  return tabs
+})
+
+// If activeTab is no longer available (e.g. logs disappeared after refresh),
+// fall back to the diagram so the panel never goes blank.
+watch(availableTabs, (tabs) => {
+  if (!tabs.includes(activeTab.value)) {
+    activeTab.value = 'diagram'
+  }
+})
 
 await loadDetail(id.value)
 if (selectedExecution.value?.status === 'Running') {
@@ -205,7 +231,7 @@ onUnmounted(() => {
       <div class="bg-white border border-gray-200 rounded-lg">
         <div class="border-b border-gray-200 flex overflow-x-auto">
           <button
-            v-for="tab in (['diagram','payload','metadata','logs','errors'] as const)"
+            v-for="tab in availableTabs"
             :key="tab"
             type="button"
             :class="['px-4 py-2 text-sm font-medium border-b-2',

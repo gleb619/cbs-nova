@@ -600,6 +600,70 @@ class TemporalDslProcessServiceTest {
             .isEqualTo(1L);
   }
 
+  // T296 — regression for the snapshot-after-stop ordering bug: the captured
+  // trace used to be empty because ExecutionTraceCollector.stop() clears
+  // its entries, so context_json was always null in the persisted row.
+  @Test
+  void runProcessThatInvokesHelperPersistsNonNullContextJsonWithTraceEntries() {
+    GlobalManager.globalManager().resetForTests();
+    GlobalManager.globalManager().registerHelper("echo", ctx -> Result.success(ctx.body()));
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("UseEcho")
+                    .execute(ctx -> ctx.runHelper("echo", ctx.body()))
+                    .build());
+
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    TemporalDslProcessService service = createService(
+            new ContextFactory(), repo, new ObjectMapper());
+
+    Result<?> result = service.runProcess("UseEcho", "payload").result().join();
+
+    assertThat(result.isSuccess()).isTrue();
+    DslRun run = repo.findByProcessName("UseEcho").get(0);
+    assertThat(run.status()).isEqualTo(DslRunStatus.COMPLETED.name());
+    assertThat(run.contextJson()).isNotNull();
+    assertThat(run.contextJson()).contains("called helper: echo");
+  }
+
+  @Test
+  void runProcessThatInvokesTransactionPersistsTraceEntryForExecutedTransaction() {
+    GlobalManager.globalManager().resetForTests();
+    GlobalManager.globalManager().registerTransaction(
+            Dsl.transaction("EchoTx").execute(ctx -> Result.success("tx-out")).build());
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("UseTx")
+                    .execute(ctx -> ctx.runTransaction("EchoTx", ctx.body()))
+                    .build());
+
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    TemporalDslProcessService service = createService(
+            new ContextFactory(), repo, new ObjectMapper());
+
+    Result<?> result = service.runProcess("UseTx", "payload").result().join();
+
+    assertThat(result.isSuccess()).isTrue();
+    DslRun run = repo.findByProcessName("UseTx").get(0);
+    assertThat(run.contextJson()).isNotNull();
+    assertThat(run.contextJson()).contains("executed transaction: EchoTx");
+  }
+
+  @Test
+  void runProcessWithoutTraceEntriesPersistsNullContextJson() {
+    GlobalManager.globalManager().resetForTests();
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("Quiet").execute(ctx -> Result.success("ok")).build());
+
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    TemporalDslProcessService service = createService(
+            new ContextFactory(), repo, new ObjectMapper());
+
+    service.runProcess("Quiet", "payload").result().join();
+
+    DslRun run = repo.findByProcessName("Quiet").get(0);
+    assertThat(run.status()).isEqualTo(DslRunStatus.COMPLETED.name());
+    assertThat(run.contextJson()).isNull();
+  }
+
   @Test
   void recordCancelCountsCancelOutcomesAndRunCounterForCancelled() {
     GlobalManager.globalManager().resetForTests();
