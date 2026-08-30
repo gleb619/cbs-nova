@@ -12,7 +12,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.jspecify.annotations.Nullable;
-import org.springframework.stereotype.Component;
 
 /**
  * Lightweight reachability probe for the Temporal {@code WorkflowServiceStubs} used by the starter.
@@ -22,7 +21,6 @@ import org.springframework.stereotype.Component;
  * short timeout. Returns a {@link TemporalHealth} value object describing the outcome; never throws
  * out of {@link #probe()}.
  */
-@Component
 public class TemporalHealthProbe {
 
   private final WorkflowServiceStubs stubs;
