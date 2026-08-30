@@ -326,6 +326,15 @@ properties, environment variables, a configuration server, or any other source.
 Because the manager owns the resolver contracts, the same DSL can be deployed to different environments (dev, staging,
 prod) with different queue names, timeouts, etc., without changing the DSL source.
 
+## Temporal UI deep-links
+
+The admin UI's executions detail view can render a "View in Temporal" anchor on the Workflow ID row that opens the
+matching Temporal Web UI page. The feature is opt-in via the `adminUiPlugin.temporalUiBaseUrl` module option (env
+`TEMPORAL_UI_BASE_URL`, blank by default). When set, the link points at
+`${baseUrl}/namespaces/${adminUiPlugin.temporalNamespace}/workflows/${workflowId}` — the v2 Temporal UI route shape
+served at `:8233` by the local compose stack. Set `adminUiPlugin.temporalNamespace` (env `TEMPORAL_NAMESPACE`, default
+`'default'`) when running against a non-default namespace.
+
 ## Temporal health gating
 
 The starter's `DslHealthIndicator` (exposed at `/actuator/health` as the `dsl` component) reports the live reachability

@@ -16,3 +16,13 @@ export const useRouter = () => ({ push: () => Promise.resolve(), replace: () => 
 export const useCookie = () => ({ value: undefined as unknown })
 export const clearError = () => {}
 export const defineNuxtPlugin = (fn: unknown) => fn
+export const useRuntimeConfig = () => ({
+  backendBaseUrl: 'http://localhost:8090',
+  backendApiKey: '',
+  backendTimeoutMs: 10000,
+  public: {
+    appName: 'CBS Nova Admin',
+    temporalUiBaseUrl: '',
+    temporalNamespace: 'default',
+  },
+})

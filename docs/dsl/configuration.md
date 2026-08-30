@@ -240,6 +240,8 @@ from the starter source and the shipped `application.yml` files:
 | `temporal.execution-timeout` | `Duration` | `30s` | Workflow execution timeout set on launched runs. |
 | `temporal.task-timeout` | `Duration` | `5s` | Workflow task timeout set on launched runs. |
 | `server.port` (env `SERVER_PORT`) | `int` | `8080` | HTTP listener port (`starter-launcher` YAML: `${SERVER_PORT:8080}`). The `app/server` profile and the compose stack override this to `8090`. |
+| `adminUiPlugin.temporalUiBaseUrl` (env `TEMPORAL_UI_BASE_URL`) | `String` | `''` (blank) | Base URL of the Temporal Web UI (e.g. `http://localhost:8233`). When set, the executions detail view renders a "View in Temporal" deep-link next to the Workflow ID. Blank disables the feature. |
+| `adminUiPlugin.temporalNamespace` (env `TEMPORAL_NAMESPACE`) | `String` | `'default'` | Temporal namespace used when building the workflow deep-link. |
 
 **Compose env overrides** (`app/compose/*.yml`) — the relevant keys the stack feeds the Spring app are
 (`grep` cross-reference):

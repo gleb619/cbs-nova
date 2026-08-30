@@ -161,6 +161,7 @@ for the exact path patterns.
 | `BUGSINK_DSN` | empty | Spring app Sentry integration |
 | `KEYCLOAK_URL` | empty | Spring app |
 | `SPRING_PROFILES_ACTIVE` | `prod` | Spring app |
+| `TEMPORAL_UI_BASE_URL` | empty (feature disabled) | Nuxt admin UI — when set (e.g. `http://localhost:8233`), the executions detail view renders a "View in Temporal" deep-link on the Workflow ID row. Set `TEMPORAL_NAMESPACE` to override the default `'default'` namespace. |
 | `GRAFANA_ADMIN_USER` | `admin` | Grafana |
 | `GRAFANA_ADMIN_PASSWORD` | `admin` | Grafana |
 | `OTEL_SERVICE_NAME` | `cbs-nova` | OpenTelemetry resource attribute |
