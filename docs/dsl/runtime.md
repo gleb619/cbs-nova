@@ -176,17 +176,45 @@ All paths are relative to the application root. The reload and draft routers are
 | POST | `/api/dsl/drafts/{name}/publish` | Persist as published and reload DSL | `DraftRequest` body → `DraftResponse` |
 | DELETE | `/api/dsl/drafts/{name}` | Delete a Workbench draft | `DraftResponse` |
 
+The runtime request record is `cbs.nova.starter.model.DslRequest`:
+
+```json
+{
+  "body": <any>,
+  "metadata": { "<key>": <value>, ... }
+}
+```
+
+The draft request record is `cbs.nova.starter.model.VcsModels.DraftRequest`:
+
+```json
+{
+  "name": "LoanDisbursementProcess",
+  "type": "process",
+  "status": "Draft",
+  "version": "1.0.0",
+  "taskQueue": "loan-processing"
+}
+```
+
 ### curl examples
 
 ```bash
 # Run a process
-curl -s -X POST http://localhost:8090/api/dsl/run/LoanDisbursementProcess   -H "Content-Type: application/json"   -H "X-Request-Id: demo-run-1"   -d '{"body":{"customerId":"C123","amount":5000},"metadata":{"source":"ci"}}'
+curl -s -X POST http://localhost:8090/api/dsl/run/LoanDisbursementProcess \
+  -H "Content-Type: application/json" \
+  -H "X-Request-Id: demo-run-1" \
+  -d '{"body":{"customerId":"C123","amount":5000},"metadata":{"source":"ci"}}'
 
 # Preview a process
-curl -s -X POST http://localhost:8090/api/dsl/preview/LoanDisbursementProcess   -H "Content-Type: application/json"   -d '{"body":{"customerId":"C123","amount":5000}}'
+curl -s -X POST http://localhost:8090/api/dsl/preview/LoanDisbursementProcess \
+  -H "Content-Type: application/json" \
+  -d '{"body":{"customerId":"C123","amount":5000}}'
 
 # Explain a process
-curl -s -X POST http://localhost:8090/api/dsl/explain/LoanDisbursementProcess   -H "Content-Type: application/json"   -d '{"body":{"customerId":"C123","amount":5000}}'
+curl -s -X POST http://localhost:8090/api/dsl/explain/LoanDisbursementProcess \
+  -H "Content-Type: application/json" \
+  -d '{"body":{"customerId":"C123","amount":5000}}'
 
 # Cancel an execution run
 RUN_ID="<run-id>"
@@ -196,10 +224,14 @@ curl -s -X POST "http://localhost:8090/api/executions/${RUN_ID}/cancel"
 curl -s -X POST http://localhost:8090/api/dsl/reload
 
 # Save a Workbench draft
-curl -s -X POST http://localhost:8090/api/dsl/drafts/LoanDisbursementProcess/save   -H "Content-Type: application/json"   -d '{"name":"LoanDisbursementProcess","type":"process","status":"Draft","version":"1.0.0","taskQueue":"loan-processing"}'
+curl -s -X POST http://localhost:8090/api/dsl/drafts/LoanDisbursementProcess/save \
+  -H "Content-Type: application/json" \
+  -d '{"name":"LoanDisbursementProcess","type":"process","status":"Draft","version":"1.0.0","taskQueue":"loan-processing"}'
 
 # Publish a Workbench draft
-curl -s -X POST http://localhost:8090/api/dsl/drafts/LoanDisbursementProcess/publish   -H "Content-Type: application/json"   -d '{"name":"LoanDisbursementProcess","type":"process","status":"Published","version":"1.0.0","taskQueue":"loan-processing"}'
+curl -s -X POST http://localhost:8090/api/dsl/drafts/LoanDisbursementProcess/publish \
+  -H "Content-Type: application/json" \
+  -d '{"name":"LoanDisbursementProcess","type":"process","status":"Published","version":"1.0.0","taskQueue":"loan-processing"}'
 
 # Delete a draft
 curl -s -X DELETE http://localhost:8090/api/dsl/drafts/LoanDisbursementProcess
@@ -229,21 +261,6 @@ curl -s -X DELETE http://localhost:8090/api/dsl/drafts/LoanDisbursementProcess
 - **Payload size** — Incoming `POST /api/dsl/run/**` and `POST /api/dsl/preview/**` bodies are
   validated against `cbs.runs.max-input-bytes` (default 1 MiB). Oversized payloads are rejected with
   `413 Payload Too Large` before any workflow is submitted.
-
-## Run retention and orphaned transactions
-
-The scheduled `dsl_runs` retention purge removes terminal rows whose `finished_at` has passed the
-configured cutoff. The purge also deletes the matching `dsl_run_transactions` child rows as part of
-the same batch, so finishing a run never leaves orphaned transaction history behind.
-
-No automatic one-time cleanup of pre-existing orphans is performed: a full-table anti-join would scan
-and lock the history table, which is exactly the hazard the batched purge avoids. To clean up
-orphaned rows that pre-date this cascade behaviour, run the following SQL manually in small batches:
-
-```sql
-DELETE FROM dsl_run_transactions t
-WHERE NOT EXISTS (SELECT 1 FROM dsl_runs r WHERE r.run_id = t.run_id);
-```
 
 ## Helper and Spring integration
 
