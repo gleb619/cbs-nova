@@ -349,6 +349,103 @@ class DslExecutionsResourceTest {
             .andExpect(jsonPath("$.errors.length()").value(0));
   }
 
+  // -------------------------------------------------------------------------
+  // T296 — trace surfaced in the detail response.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void detailMapsTraceStepsFromContextJsonInOrder() throws Exception {
+    String contextJson = objectMapper.writeValueAsString(Map.of("trace", List.of(
+            "called helper: lookup",
+            "executed transaction: apply",
+            "called transaction: settle",
+            "compensation log: rolled back settle",
+            "process finished")));
+    repository.save(runWithContext("run-trace", "LoanDisbursement", "FAILED",
+            "2026-08-13T10:00:00Z", "2026-08-13T10:00:05Z", "RUN", contextJson));
+
+    mockMvc.perform(get("/api/executions/run-trace"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.trace.length()").value(5))
+            .andExpect(jsonPath("$.trace[0].id").value("0"))
+            .andExpect(jsonPath("$.trace[0].stepType").value("Helper"))
+            .andExpect(jsonPath("$.trace[0].name").value("lookup"))
+            .andExpect(jsonPath("$.trace[0].isCompensation").value(false))
+            .andExpect(jsonPath("$.trace[1].stepType").value("Transaction"))
+            .andExpect(jsonPath("$.trace[1].name").value("apply"))
+            .andExpect(jsonPath("$.trace[2].stepType").value("Transaction"))
+            .andExpect(jsonPath("$.trace[2].name").value("settle"))
+            .andExpect(jsonPath("$.trace[3].stepType").value("Process"))
+            .andExpect(jsonPath("$.trace[3].name").value("rolled back settle"))
+            .andExpect(jsonPath("$.trace[3].isCompensation").value(true))
+            .andExpect(jsonPath("$.trace[4].isCompensation").value(true));
+  }
+
+  @Test
+  void detailOmitsTraceFieldWhenContextJsonIsAbsent() throws Exception {
+    repository.save(run("run-no-context", "LoanDisbursement", "COMPLETED",
+            "2026-08-13T10:00:00Z", "2026-08-13T10:00:05Z", "RUN"));
+
+    mockMvc.perform(get("/api/executions/run-no-context"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.trace").doesNotExist());
+  }
+
+  @Test
+  void detailOmitsTraceFieldWhenContextJsonIsMalformed() throws Exception {
+    repository.save(runWithContext("run-bad-context", "LoanDisbursement", "FAILED",
+            "2026-08-13T10:00:00Z", "2026-08-13T10:00:05Z", "RUN",
+            "this is not json at all"));
+
+    mockMvc.perform(get("/api/executions/run-bad-context"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.trace").doesNotExist());
+  }
+
+  @Test
+  void detailOmitsTraceFieldWhenTraceArrayIsEmpty() throws Exception {
+    String contextJson = objectMapper.writeValueAsString(Map.of("trace", List.of()));
+    repository.save(runWithContext("run-empty-trace", "LoanDisbursement", "COMPLETED",
+            "2026-08-13T10:00:00Z", "2026-08-13T10:00:05Z", "RUN", contextJson));
+
+    mockMvc.perform(get("/api/executions/run-empty-trace"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.trace").doesNotExist());
+  }
+
+  @Test
+  void detailCapsTraceAtFiveHundredAndAppendsTruncationMarker() throws Exception {
+    List<String> entries = new java.util.ArrayList<>(501);
+    for (int i = 0; i < 501; i++) {
+      entries.add("called helper: h" + i);
+    }
+    String contextJson = objectMapper.writeValueAsString(Map.of("trace", entries));
+    repository.save(runWithContext("run-big-trace", "LoanDisbursement", "COMPLETED",
+            "2026-08-13T10:00:00Z", "2026-08-13T10:00:05Z", "RUN", contextJson));
+
+    mockMvc.perform(get("/api/executions/run-big-trace"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.trace.length()").value(501))
+            .andExpect(jsonPath("$.trace[0].id").value("0"))
+            .andExpect(jsonPath("$.trace[499].id").value("499"))
+            .andExpect(jsonPath("$.trace[500].id").value("500"))
+            .andExpect(jsonPath("$.trace[500].stepType").value("Process"))
+            .andExpect(jsonPath("$.trace[500].name").value("\u2026 trace truncated (501 entries)"))
+            .andExpect(jsonPath("$.trace[500].isCompensation").value(false));
+  }
+
+  @Test
+  void listEndpointDoesNotIncludeTraceField() throws Exception {
+    String contextJson = objectMapper.writeValueAsString(Map.of("trace",
+            List.of("called helper: h0")));
+    repository.save(runWithContext("run-list-trace", "LoanDisbursement", "COMPLETED",
+            "2026-08-13T10:00:00Z", "2026-08-13T10:00:05Z", "RUN", contextJson));
+
+    mockMvc.perform(get("/api/executions"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items[0].trace").doesNotExist());
+  }
+
   @Test
   void listEndpointOmitsInputOutputAndErrorsFields() throws Exception {
     repository.save(run("run-1", "LoanDisbursement", "FAILED", "2026-08-13T10:00:00Z",
@@ -563,6 +660,19 @@ class DslExecutionsResourceTest {
             .input(input)
             .output(output)
             .error(error)
+            .build();
+  }
+
+  private DslRun runWithContext(String id, String processName, String status, String startedAt,
+          String finishedAt, String mode, String contextJson) {
+    return DslRun.builder()
+            .runId(id)
+            .processName(processName)
+            .status(status)
+            .startedAt(Instant.parse(startedAt))
+            .finishedAt(finishedAt != null ? Instant.parse(finishedAt) : null)
+            .executionMode(mode)
+            .contextJson(contextJson)
             .build();
   }
 }

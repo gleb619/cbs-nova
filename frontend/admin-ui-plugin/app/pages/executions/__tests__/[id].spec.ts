@@ -221,4 +221,78 @@ describe('executions/[id].vue run-again button', () => {
 
     wrapper.unmount()
   })
+
+  // T296 — backend now persists trace in context_json and ExecutionDto.fromDetail
+  // surfaces it as a `trace` array. The page renders ExecutionsExecutionTrace
+  // whenever `regularSteps.length > 0`.
+  it('renders ExecutionsExecutionTrace when the detail payload carries trace steps', async () => {
+    harness.selectedExecution.value = detail({
+      trace: [
+        { id: '0', stepType: 'Helper', name: 'lookup', isCompensation: false },
+        { id: '1', stepType: 'Transaction', name: 'apply', isCompensation: false },
+      ],
+    })
+
+    const wrapper = mountPage()
+    await flush()
+
+    expect(wrapper.find('[data-testid="ExecutionTrace"]').exists()).toBe(true)
+    // CompensationLane is always rendered (with an empty steps array when
+    // nothing compensated). The ExecutionTrace stub being present is the
+    // signal that the page picked up the trace payload.
+    expect(wrapper.find('[data-testid="CompensationLane"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  it('renders CompensationLane with compensation steps when present', async () => {
+    harness.selectedExecution.value = detail({
+      trace: [
+        { id: '0', stepType: 'Helper', name: 'lookup', isCompensation: false },
+        { id: '1', stepType: 'Process', name: 'rolled back', isCompensation: true },
+      ],
+    })
+
+    const wrapper = mountPage()
+    await flush()
+
+    expect(wrapper.find('[data-testid="ExecutionTrace"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="CompensationLane"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  // T296 — the backend has no log source for production runs, so the Logs
+  // tab is only rendered when the detail payload carries `logs`.
+  it('hides the Logs tab when the detail payload has no logs', async () => {
+    harness.selectedExecution.value = detail()
+
+    const wrapper = mountPage()
+    await flush()
+
+    // The tab buttons are bare <button> elements with capitalized text.
+    const buttons = wrapper.findAll('button')
+    const labels = buttons.map((b) => b.text().trim())
+    expect(labels).not.toContain('Logs')
+    expect(labels).toContain('Diagram')
+    expect(labels).toContain('I/O Payload')
+    expect(labels).toContain('Errors')
+
+    wrapper.unmount()
+  })
+
+  it('shows the Logs tab when the detail payload carries logs', async () => {
+    harness.selectedExecution.value = detail({
+      logs: [{ timestamp: '2026-01-01T00:00:00Z', severity: 'info', message: 'hi' }],
+    })
+
+    const wrapper = mountPage()
+    await flush()
+
+    const buttons = wrapper.findAll('button')
+    const labels = buttons.map((b) => b.text().trim())
+    expect(labels).toContain('Logs')
+
+    wrapper.unmount()
+  })
 })

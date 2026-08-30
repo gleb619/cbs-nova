@@ -373,12 +373,16 @@ public class TemporalDslProcessService {
         result = GlobalManager.globalManager().runProcess(processName, ctx);
       } catch (Exception ex) {
         result = Result.failure(ex);
-      } finally {
-        traceCollector.stop();
       }
+      // T296: snapshot BEFORE stop() — ExecutionTraceCollector.stop() clears its
+      // entries, so reading after stop() always yielded an empty list and
+      // context_json was persisted as null. Keep stop() afterwards to free the
+      // queue as soon as the snapshot is captured.
+      List<String> traceSnapshot = List.copyOf(traceCollector.snapshot());
+      traceCollector.stop();
 
       Instant finishedAt = now();
-      String contextJson = serializeTrace(traceCollector.snapshot());
+      String contextJson = serializeTrace(traceSnapshot);
       String status = result.isSuccess()
               ? DslRunStatus.COMPLETED.name()
               : DslRunStatus.FAILED.name();
