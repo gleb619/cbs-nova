@@ -1,6 +1,9 @@
 package cbs.nova.starter.model;
 
 import cbs.nova.dsl.LoadResult;
+import com.fasterxml.jackson.annotation.JsonInclude;
+
+import java.util.List;
 
 public final class VcsModels {
 
@@ -18,7 +21,14 @@ public final class VcsModels {
           String status,
           String location,
           boolean reloaded,
-          LoadResult loadResult) {
+          LoadResult loadResult,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String reloadError,
+          @JsonInclude(JsonInclude.Include.NON_NULL) List<CompileDiagnostic> diagnostics) {
+
+    public DraftResponse(String name, String status, String location, boolean reloaded,
+            LoadResult loadResult) {
+      this(name, status, location, reloaded, loadResult, null, null);
+    }
 
   }
 
@@ -30,4 +40,5 @@ public final class VcsModels {
           long updatedAt) {
 
   }
+
 }

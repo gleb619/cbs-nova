@@ -7,6 +7,7 @@ import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
 import cbs.nova.starter.controller.DslReloadHandler;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
+import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.model.VcsModels.DraftSummary;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -362,5 +363,25 @@ class DslDraftResourceTest {
     ObjectMapper objectMapper() {
       return new ObjectMapper();
     }
+  }
+
+  @Test
+  void publishSurfacesCompileDiagnosticsWhenReloadFails() throws Exception {
+    Files.writeString(sourceDir.resolve("Broken.java"),
+            "this is not valid Java at all; { class Broken { ???");
+
+    ServerResponse response = handler.publish(postRequest("/api/dsl/drafts/foo/publish"));
+    assertThat(response.statusCode().value()).isEqualTo(200);
+
+    Object entity = ((org.springframework.web.servlet.function.EntityResponse<?>) response)
+            .entity();
+    assertThat(entity).isInstanceOf(DraftResponse.class);
+    DraftResponse draft = (DraftResponse) entity;
+    assertThat(draft.reloaded()).isFalse();
+    assertThat(draft.reloadError()).isNotBlank();
+    assertThat(draft.diagnostics()).isNotEmpty();
+    assertThat(draft.diagnostics().get(0).file()).contains("Broken.java");
+    assertThat(draft.diagnostics().get(0).message()).isNotBlank();
+    assertThat(draft.diagnostics().get(0).severity()).isEqualTo("error");
   }
 }

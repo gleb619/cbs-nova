@@ -3,7 +3,7 @@ import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { createNamespacedLoaderState } from '@cbs/components'
 import { useState } from 'nuxt/app'
 import { computed, readonly } from 'vue'
-import type { ConstructStatus, ConstructType, DslConstruct, ValidationError } from '~/types'
+import type { CompileDiagnostic, ConstructStatus, ConstructType, DslConstruct, ValidationError } from '~/types'
 
 interface WorkbenchState {
   constructs: DslConstruct[]
@@ -32,6 +32,19 @@ function normalizeConstruct(raw: Partial<DslConstruct> & { name: string }): DslC
     version: raw.version,
     taskQueue: raw.taskQueue,
   }
+}
+
+function basename(path: string): string {
+  const index = path.lastIndexOf('/')
+  return index >= 0 ? path.slice(index + 1) : path
+}
+
+function compileDiagnosticsToValidationErrors(diags: CompileDiagnostic[]): ValidationError[] {
+  return diags.map((d) => ({
+    field: d.line != null ? `${basename(d.file)}:${d.line}` : basename(d.file),
+    message: d.message,
+    severity: d.severity === 'warning' ? 'warning' : 'error',
+  }))
 }
 
 export function useDslWorkbench() {
@@ -140,9 +153,19 @@ export function useDslWorkbench() {
         version: selected?.version,
         taskQueue: selected?.taskQueue,
       })
-      const c = state.value.constructs.find((x) => x.name === state.value.selectedName)
-      if (c) c.status = 'Published'
-      log.info('construct published', { name: state.value.selectedName, result })
+      const diags = (result as { diagnostics?: CompileDiagnostic[]; reloadError?: string }).diagnostics
+      if (diags?.length) {
+        state.value.validationErrors = compileDiagnosticsToValidationErrors(diags)
+        const reloadError = (result as { reloadError?: string }).reloadError
+        if (reloadError) {
+          log.warn('publish reload failed', { name: state.value.selectedName, reloadError })
+        }
+      } else {
+        state.value.validationErrors = []
+        const c = state.value.constructs.find((x) => x.name === state.value.selectedName)
+        if (c) c.status = 'Published'
+        log.info('construct published', { name: state.value.selectedName, result })
+      }
     } catch (err) {
       log.error('failed to publish construct', {
         name: state.value.selectedName,
@@ -172,9 +195,17 @@ export function useDslWorkbench() {
 
   async function reloadDefinitions() {
     log.info('reload definitions started')
-    await api.reload()
-    await loadConstructs()
-    log.info('reload definitions finished')
+    try {
+      await api.reload()
+      await loadConstructs()
+      log.info('reload definitions finished')
+    } catch (err) {
+      const diagnostics = (err as { data?: { diagnostics?: CompileDiagnostic[] } }).data?.diagnostics
+      if (diagnostics) {
+        state.value.validationErrors = compileDiagnosticsToValidationErrors(diagnostics)
+      }
+      throw err
+    }
   }
 
   return {

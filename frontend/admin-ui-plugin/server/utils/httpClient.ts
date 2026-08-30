@@ -98,7 +98,7 @@ export async function proxyToBackend<T>(
       name?: string
       cause?: { name?: string }
       response?: { status?: number }
-      data?: { message?: string; code?: string; details?: unknown }
+      data?: { message?: string; code?: string; details?: unknown; diagnostics?: unknown }
     }
     if (fetchError.name === 'TimeoutError' || fetchError.cause?.name === 'TimeoutError') {
       throw createError({
@@ -125,6 +125,7 @@ export async function proxyToBackend<T>(
         message: data.message,
         code: data.code,
         details: data.details,
+        diagnostics: data.diagnostics ?? null,
         backendUrl: baseUrl,
         originalError: message,
       },

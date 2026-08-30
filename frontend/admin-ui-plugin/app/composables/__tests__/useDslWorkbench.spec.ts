@@ -265,4 +265,74 @@ describe('useDslWorkbench', () => {
       ])
     })
   })
+
+  describe('publishConstruct with compile diagnostics', () => {
+    it('populates validationErrors and does not mark Published when diagnostics are present', async () => {
+      const api = getApi()
+      api.getDefinitions.mockResolvedValueOnce([
+        { name: 'c2', type: 'Helper' as const, status: 'Draft' as const },
+      ])
+      api.publishDraft.mockResolvedValueOnce({
+        diagnostics: [
+          { file: '/tmp/Bad.java', line: 5, column: 10, message: 'type mismatch', severity: 'error' },
+        ],
+        reloadError: 'Failed to compile DSL source: Bad.java',
+      })
+
+      const wb = useDslWorkbench()
+      await wb.loadConstructs()
+      wb.selectConstruct('c2')
+      await wb.publishConstruct()
+
+      expect(api.publishDraft).toHaveBeenCalledWith('c2', expect.objectContaining({
+        name: 'c2',
+        status: 'Published',
+      }))
+      const c2 = wb.state.value.constructs.find((c) => c.name === 'c2')
+      expect(c2?.status).toBe('Draft')
+      expect(wb.state.value.validationErrors).toEqual([
+        { field: 'Bad.java:5', message: 'type mismatch', severity: 'error' as const },
+      ])
+    })
+
+    it('clears validationErrors on a clean publish', async () => {
+      const api = getApi()
+      api.getDefinitions.mockResolvedValueOnce([
+        { name: 'c2', type: 'Helper' as const, status: 'Draft' as const },
+      ])
+      api.publishDraft.mockResolvedValueOnce({ ok: true })
+
+      const wb = useDslWorkbench()
+      await wb.loadConstructs()
+      wb.selectConstruct('c2')
+      wb.state.value.validationErrors = [{ field: 'old', message: 'old', severity: 'error' as const }]
+
+      await wb.publishConstruct()
+
+      const c2 = wb.state.value.constructs.find((c) => c.name === 'c2')
+      expect(c2?.status).toBe('Published')
+      expect(wb.state.value.validationErrors).toEqual([])
+    })
+  })
+
+  describe('reloadDefinitions with compile diagnostics', () => {
+    it('populates validationErrors when the backend returns diagnostics', async () => {
+      const api = getApi()
+      const reloadError = {
+        data: {
+          diagnostics: [
+            { file: '/tmp/Broken.java', line: 2, message: 'missing semicolon', severity: 'error' },
+          ],
+        },
+      }
+      api.reload.mockRejectedValueOnce(reloadError)
+
+      const wb = useDslWorkbench()
+      await expect(wb.reloadDefinitions()).rejects.toEqual(reloadError)
+
+      expect(wb.state.value.validationErrors).toEqual([
+        { field: 'Broken.java:2', message: 'missing semicolon', severity: 'error' as const },
+      ])
+    })
+  })
 })

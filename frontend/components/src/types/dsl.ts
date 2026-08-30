@@ -25,3 +25,12 @@ export interface StepDef {
   name: string
   inputMapping?: string
 }
+
+
+export interface CompileDiagnostic {
+  file: string
+  line?: number | null
+  column?: number | null
+  message: string
+  severity: string
+}
