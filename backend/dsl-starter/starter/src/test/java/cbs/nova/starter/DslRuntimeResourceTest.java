@@ -8,27 +8,35 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslErrorCode;
 import cbs.nova.dsl.DslRuntime;
+import cbs.nova.dsl.exception.DslException;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExplainReport;
+import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
-import cbs.nova.dsl.exception.DslException;
+import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
+import cbs.nova.starter.config.CbsNovaCacheProperties;
 import cbs.nova.starter.config.DslRuntimeRouterConfiguration;
-import cbs.nova.starter.config.properties.DslRunsProperties;
-import cbs.nova.starter.web.DslPayloadSizeValidator;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
+import cbs.nova.starter.config.properties.DslRunsProperties;
+import cbs.nova.starter.config.properties.InputValidationProperties;
 import cbs.nova.starter.controller.DslRuntimeHandler;
 import cbs.nova.starter.converter.DslRuntimeMapper;
 import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.service.DslRuntimeService;
+import cbs.nova.starter.service.InputValidator;
+import cbs.nova.starter.web.DslPayloadSizeValidator;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import java.util.List;
 import java.util.Map;
 import tools.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
@@ -43,6 +51,8 @@ class DslRuntimeResourceTest {
 
   @BeforeEach
   void setUp() {
+    GlobalManager.globalManager().resetForTests();
+
     var loggingProperties = new CbsNovaLoggingProperties(
             CbsNovaLoggingProperties.Level.INFO,
             CbsNovaLoggingProperties.Level.INFO,
@@ -55,9 +65,18 @@ class DslRuntimeResourceTest {
             mapper);
     DslPayloadSizeValidator validator = new DslPayloadSizeValidator(
             new ObjectMapper(), new DslRunsProperties());
-    DslRuntimeHandler handler = new DslRuntimeHandler(service, validator);
+    InputValidator inputValidator = new InputValidator(
+            new JacksonJsonSchemaGenerator(),
+            new InputValidationProperties(true),
+            Caffeine.newBuilder().build());
+    DslRuntimeHandler handler = new DslRuntimeHandler(service, validator, inputValidator);
     DslRuntimeRouterConfiguration router = new DslRuntimeRouterConfiguration();
     mockMvc = MockMvcBuilders.routerFunctions(router.dslRuntimeRouter(handler)).build();
+  }
+
+  @AfterEach
+  void tearDown() {
+    GlobalManager.globalManager().resetForTests();
   }
 
   @Test
@@ -204,5 +223,71 @@ class DslRuntimeResourceTest {
                             .content("{\"body\": \"hello\", \"metadata\": {}}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("Ping"));
+  }
+
+  @Test
+  void invalidRegisteredProcessBodyReturns422WithFieldPointer() throws Exception {
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("ValidatedProcess")
+                    .input(SampleInput.class)
+                    .output(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+
+    doReturn(Result.success(new PreviewReport(
+            "ValidatedProcess", ExecutionMode.PREVIEW, true, "ok",
+            List.of(), List.of(), Map.of(), null, List.of(), null, List.of())))
+            .when(dslRuntime).preview(eq("ValidatedProcess"), any());
+
+    mockMvc
+            .perform(
+                    post("/api/dsl/preview/ValidatedProcess")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"body\": {\"name\": 123}}"))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.errors[0].field").value("$.name"))
+            .andExpect(jsonPath("$.errors[0].message").value("expected type string"))
+            .andExpect(jsonPath("$.errors[0].severity").value("error"));
+  }
+
+  @Test
+  void runRejectsInvalidBodyWith422AndFieldPointer() throws Exception {
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("ValidatedRun")
+                    .input(SampleInput.class)
+                    .output(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+
+    mockMvc
+            .perform(
+                    post("/api/dsl/run/ValidatedRun")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"body\": {\"name\": 123}}"))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.errors[0].field").value("$.name"))
+            .andExpect(jsonPath("$.errors[0].message").value("expected type string"));
+  }
+
+  @Test
+  void explainRejectsInvalidBodyWith422AndFieldPointer() throws Exception {
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("ValidatedExplain")
+                    .input(SampleInput.class)
+                    .output(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+
+    mockMvc
+            .perform(
+                    post("/api/dsl/explain/ValidatedExplain")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"body\": {\"name\": 123}}"))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.errors[0].field").value("$.name"))
+            .andExpect(jsonPath("$.errors[0].message").value("expected type string"));
+  }
+
+  public record SampleInput(String name) {
   }
 }

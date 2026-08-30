@@ -27,6 +27,9 @@ import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import cbs.nova.starter.service.DslRuntimeService;
+import cbs.nova.starter.service.InputValidator;
+import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
+import cbs.nova.starter.config.properties.InputValidationProperties;
 import tools.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
@@ -36,6 +39,8 @@ import org.mapstruct.factory.Mappers;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 class DslStarterIntegrationTest {
 
@@ -78,7 +83,11 @@ class DslStarterIntegrationTest {
             new LoggingExecutionListener(loggingProperties),
             Mappers.getMapper(DslRuntimeMapper.class));
     var validator = new DslPayloadSizeValidator(new ObjectMapper(), new DslRunsProperties());
-    var handler = new DslRuntimeHandler(service, validator);
+    var inputValidator = new InputValidator(
+            new JacksonJsonSchemaGenerator(),
+            new InputValidationProperties(true),
+            Caffeine.newBuilder().build());
+    var handler = new DslRuntimeHandler(service, validator, inputValidator);
     var router = new DslRuntimeRouterConfiguration();
     mockMvc = MockMvcBuilders.routerFunctions(router.dslRuntimeRouter(handler)).build();
   }

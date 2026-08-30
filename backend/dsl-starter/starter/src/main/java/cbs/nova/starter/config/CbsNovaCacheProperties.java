@@ -47,6 +47,7 @@ public record CbsNovaCacheProperties(
     public static final String RUN_SCOPED_FAKE_CONFIGS = "runScopedFakeConfigs";
     public static final String MAP_INPUT_ADAPTERS = "mapInputAdapters";
     public static final String HELPER_INSTANCE_RESOLUTION = "helperInstanceResolution";
+    public static final String INPUT_SCHEMA = "inputSchema";
 
     private Names() {
     }
