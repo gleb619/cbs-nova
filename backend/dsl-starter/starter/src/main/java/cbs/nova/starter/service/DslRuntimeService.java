@@ -61,14 +61,19 @@ public class DslRuntimeService {
   }
 
   public RuntimeOutcome run(String name, DslRequest request, @Nullable String requestId) {
-    return run(name, request, requestId, null);
+    return run(name, request, requestId, null, null);
   }
 
   public RuntimeOutcome run(String name, DslRequest request, @Nullable String requestId,
           @Nullable String forcedRunId) {
+    return run(name, request, requestId, forcedRunId, null);
+  }
+
+  public RuntimeOutcome run(String name, DslRequest request, @Nullable String requestId,
+          @Nullable String forcedRunId, @Nullable String correlationId) {
     String runId = forcedRunId != null ? forcedRunId : resolveRunId(requestId);
     String mdcRunId = requestId != null && !requestId.isBlank() ? requestId : runId;
-    Context<?> ctx = toContext(request, ExecutionMode.RUN, runId);
+    Context<?> ctx = toContext(request, ExecutionMode.RUN, runId, correlationId);
     Result<?> result = executeWithMdc(mdcRunId, () -> dslRuntime.run(name, ctx));
     if (result.isSuccess()) {
       return RuntimeOutcome.ok(result.value());
@@ -109,7 +114,17 @@ public class DslRuntimeService {
   }
 
   private Context<?> toContext(DslRequest request, ExecutionMode mode, String runId) {
-    Map<String, Object> metadata = request.metadata() != null ? request.metadata() : Map.of();
+    return toContext(request, mode, runId, null);
+  }
+
+  private Context<?> toContext(DslRequest request, ExecutionMode mode, String runId,
+          @Nullable String correlationId) {
+    Map<String, Object> metadata = request.metadata() != null
+            ? new java.util.HashMap<>(request.metadata())
+            : new java.util.HashMap<>();
+    if (correlationId != null && !correlationId.isBlank()) {
+      metadata.put(CorrelationId.CORRELATION_ID_METADATA_KEY, correlationId);
+    }
     Context<?> ctx = contextFactory.of(request.body(), metadata, mode, runId);
     return ctx.withExecutionListener(loggingListener);
   }

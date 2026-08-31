@@ -45,7 +45,7 @@ describe('ExecutionFilters', () => {
     await wrapper.find('#filter-entity').setValue('Order')
     await wrapper.find('#filter-from').setValue('2026-07-01')
     await wrapper.find('#filter-to').setValue('2026-07-30')
-    await wrapper.find('#filter-correlation').setValue('corr-123')
+    await wrapper.find('[data-testid="filter-correlation-id"]').setValue('corr-123')
 
     await wrapper.find('button').trigger('click')
 

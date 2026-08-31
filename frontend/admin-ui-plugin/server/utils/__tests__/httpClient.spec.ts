@@ -315,4 +315,30 @@ describe('proxyToBackend', () => {
     ]
     expect(opts.headers['Idempotency-Key']).toBeUndefined()
   })
+
+  it('forwards inbound X-Correlation-Id header verbatim', async () => {
+    const event = makeEvent({ 'x-correlation-id': 'corr-abc' })
+    ;($fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({})
+
+    await proxyToBackend(event, '/api/foo')
+
+    const [, opts] = ($fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      { headers: Record<string, string> },
+    ]
+    expect(opts.headers['X-Correlation-Id']).toBe('corr-abc')
+  })
+
+  it('omits X-Correlation-Id header when inbound is absent', async () => {
+    const event = makeEvent()
+    ;($fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({})
+
+    await proxyToBackend(event, '/api/foo')
+
+    const [, opts] = ($fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      { headers: Record<string, string> },
+    ]
+    expect(opts.headers['X-Correlation-Id']).toBeUndefined()
+  })
 })

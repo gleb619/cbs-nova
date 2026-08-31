@@ -45,6 +45,7 @@ public interface DslRunRepository {
           @Nullable String processName,
           @Nullable String status,
           @Nullable String mode,
+          @Nullable String correlationId,
           int offset,
           int limit);
 
@@ -66,8 +67,8 @@ public interface DslRunRepository {
    *
    * <p>
    * Used by the healthcheck staleness sweep so a stale-marking write cannot overwrite a concurrent
-   * terminal transition (COMPLETED/FAILED). Returns the number of affected rows: {@code 1} when
-   * the run was still RUNNING and was updated, {@code 0} when the run was missing or had already left
+   * terminal transition (COMPLETED/FAILED). Returns the number of affected rows: {@code 1} when the
+   * run was still RUNNING and was updated, {@code 0} when the run was missing or had already left
    * the RUNNING state (a benign race, not an error).
    */
   int updateFinishedIfRunning(
@@ -100,7 +101,8 @@ public interface DslRunRepository {
    * @return the total number of rows deleted
    */
   default int purgeFinishedBefore(@NonNull Instant cutoff, int batchSize) {
-    return purgeFinishedBefore(cutoff, batchSize, ids -> {});
+    return purgeFinishedBefore(cutoff, batchSize, ids -> {
+    });
   }
 
   default int purgeFinishedBefore(

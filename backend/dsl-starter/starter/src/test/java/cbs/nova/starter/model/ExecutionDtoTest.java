@@ -71,4 +71,64 @@ class ExecutionDtoTest {
 
     assertThat(dto.triggeredBy()).isNull();
   }
+
+  @Test
+  void fromPopulatesCorrelationId() {
+    DslRun run = DslRun.builder()
+            .runId("run-1")
+            .processName("Loan")
+            .status(DslRunStatus.COMPLETED.name())
+            .input("{\"a\":1}")
+            .output("{\"b\":2}")
+            .error(null)
+            .startedAt(Instant.parse("2026-01-01T00:00:00Z"))
+            .finishedAt(Instant.parse("2026-01-01T00:00:05Z"))
+            .executionMode(ExecutionMode.RUN.name())
+            .correlationId("corr-123")
+            .build();
+
+    ExecutionDto dto = ExecutionDto.from(run);
+
+    assertThat(dto.correlationId()).isEqualTo("corr-123");
+  }
+
+  @Test
+  void fromDetailCarriesCorrelationId() {
+    DslRun run = DslRun.builder()
+            .runId("run-2")
+            .processName("Loan")
+            .status(DslRunStatus.COMPLETED.name())
+            .input("{\"a\":1}")
+            .output("{\"b\":2}")
+            .error(null)
+            .startedAt(Instant.parse("2026-01-01T00:00:00Z"))
+            .finishedAt(Instant.parse("2026-01-01T00:00:05Z"))
+            .executionMode(ExecutionMode.RUN.name())
+            .correlationId("corr-456")
+            .build();
+
+    ExecutionDto dto = ExecutionDto.fromDetail(run, new ObjectMapper());
+
+    assertThat(dto.correlationId()).isEqualTo("corr-456");
+  }
+
+  @Test
+  void fromOmitsCorrelationIdWhenNull() {
+    DslRun run = DslRun.builder()
+            .runId("run-3")
+            .processName("Loan")
+            .status(DslRunStatus.RUNNING.name())
+            .input(null)
+            .output(null)
+            .error(null)
+            .startedAt(Instant.parse("2026-01-01T00:00:00Z"))
+            .finishedAt(null)
+            .executionMode(ExecutionMode.RUN.name())
+            .correlationId(null)
+            .build();
+
+    ExecutionDto dto = ExecutionDto.from(run);
+
+    assertThat(dto.correlationId()).isNull();
+  }
 }

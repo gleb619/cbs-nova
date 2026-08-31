@@ -14,6 +14,7 @@ public interface DslRunMapper {
   @Mapping(target = "errorMessage", source = "error")
   @Mapping(target = "contextJson", source = "contextJson")
   @Mapping(target = "triggeredBy", source = "triggeredBy")
+  @Mapping(target = "correlationId", source = "correlationId")
   DslRunEntity toEntity(DslRun run);
 
   @Mapping(target = "input", source = "inputJson")
@@ -21,5 +22,6 @@ public interface DslRunMapper {
   @Mapping(target = "error", source = "errorMessage")
   @Mapping(target = "contextJson", source = "contextJson")
   @Mapping(target = "triggeredBy", source = "triggeredBy")
+  @Mapping(target = "correlationId", source = "correlationId")
   DslRun toDomain(DslRunEntity entity);
 }

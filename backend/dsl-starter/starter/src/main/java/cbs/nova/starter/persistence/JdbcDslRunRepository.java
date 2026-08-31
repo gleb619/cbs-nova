@@ -94,6 +94,7 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
           @Nullable String processName,
           @Nullable String status,
           @Nullable String mode,
+          @Nullable String correlationId,
           int offset,
           int limit) {
     if (offset < 0) {
@@ -117,6 +118,8 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
       predicates.add("LOWER(COALESCE(NULLIF(execution_mode, ''), 'RUN')) = LOWER(:mode)");
       params.addValue("mode", mode);
     }
+    predicates.add("(:correlationId IS NULL OR correlation_id = :correlationId)");
+    params.addValue("correlationId", correlationId);
     String where = predicates.isEmpty() ? "" : "WHERE " + String.join(" AND ", predicates);
 
     int total = jdbcTemplate.queryForObject(getSearchCountStatement(where), params, Integer.class);
@@ -248,7 +251,8 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
             .addValue("finishedAt",
                     entity.getFinishedAt() != null ? Timestamp.from(entity.getFinishedAt()) : null)
             .addValue("executionMode", entity.getExecutionMode())
-            .addValue("triggeredBy", entity.getTriggeredBy());
+            .addValue("triggeredBy", entity.getTriggeredBy())
+            .addValue("correlationId", entity.getCorrelationId());
   }
 
   private MapSqlParameterSource finishParams(
@@ -305,14 +309,15 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
     entity.setFinishedAt(finishedAt != null ? finishedAt.toInstant() : null);
     entity.setExecutionMode(rs.getString("execution_mode"));
     entity.setTriggeredBy(rs.getString("triggered_by"));
+    entity.setCorrelationId(rs.getString("correlation_id"));
     return entity;
   }
 
   private String getInsertStatement() {
     return """
-            INSERT INTO %s (run_id, process_name, status, input_json, output_json, error_message, context_json, started_at, finished_at, execution_mode, triggered_by)
+            INSERT INTO %s (run_id, process_name, status, input_json, output_json, error_message, context_json, started_at, finished_at, execution_mode, triggered_by, correlation_id)
             VALUES
-            (:runId, :processName, :status, :inputJson, :outputJson, :errorMessage, :contextJson, :startedAt, :finishedAt, :executionMode, :triggeredBy)"""
+            (:runId, :processName, :status, :inputJson, :outputJson, :errorMessage, :contextJson, :startedAt, :finishedAt, :executionMode, :triggeredBy, :correlationId)"""
             .formatted(tableName);
   }
 
@@ -329,6 +334,7 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
               , finished_at = :finishedAt
               , execution_mode = :executionMode
               , triggered_by = :triggeredBy
+              , correlation_id = :correlationId
             WHERE run_id = :runId""".formatted(tableName);
   }
 

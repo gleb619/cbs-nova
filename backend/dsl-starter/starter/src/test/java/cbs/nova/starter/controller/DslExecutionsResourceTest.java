@@ -188,6 +188,45 @@ class DslExecutionsResourceTest {
   }
 
   @Test
+  void filtersByCorrelationId() throws Exception {
+    repository.save(runWithCorrelationId("run-1", "LoanDisbursement", "COMPLETED",
+            "2026-08-13T10:00:00Z", "2026-08-13T10:00:05Z", "RUN", "corr-abc"));
+    repository.save(runWithCorrelationId("run-2", "LoanDisbursement", "COMPLETED",
+            "2026-08-13T10:01:00Z", "2026-08-13T10:01:05Z", "RUN", "corr-xyz"));
+    repository.save(run("run-3", "LoanDisbursement", "COMPLETED", "2026-08-13T10:02:00Z",
+            "2026-08-13T10:02:05Z", "RUN"));
+
+    mockMvc.perform(get("/api/executions").param("correlationId", "corr-abc"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(1))
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.items[0].id").value("run-1"))
+            .andExpect(jsonPath("$.items[0].correlationId").value("corr-abc"))
+            .andExpect(jsonPath("$.items[?(@.id=='run-2')]").doesNotExist())
+            .andExpect(jsonPath("$.items[?(@.id=='run-3')]").doesNotExist());
+  }
+
+  @Test
+  void detailIncludesCorrelationIdWhenPresent() throws Exception {
+    repository.save(runWithCorrelationId("run-corr", "LoanDisbursement", "COMPLETED",
+            "2026-08-13T10:00:00Z", "2026-08-13T10:00:05Z", "RUN", "corr-present"));
+
+    mockMvc.perform(get("/api/executions/run-corr"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.correlationId").value("corr-present"));
+  }
+
+  @Test
+  void detailOmitsCorrelationIdWhenAbsent() throws Exception {
+    repository.save(run("run-no-corr", "LoanDisbursement", "COMPLETED", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", "RUN"));
+
+    mockMvc.perform(get("/api/executions/run-no-corr"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.correlationId").doesNotExist());
+  }
+
+  @Test
   void limitCapsItemsButNotTotal() throws Exception {
     repository.save(run("run-1", "LoanDisbursement", "COMPLETED", "2026-08-13T10:00:00Z",
             "2026-08-13T10:00:05Z", "RUN"));
@@ -650,6 +689,12 @@ class DslExecutionsResourceTest {
 
   private DslRun run(String id, String processName, String status, String startedAt,
           String finishedAt, String mode, String input, String output, String error) {
+    return run(id, processName, status, startedAt, finishedAt, mode, input, output, error, null);
+  }
+
+  private DslRun run(String id, String processName, String status, String startedAt,
+          String finishedAt, String mode, String input, String output, String error,
+          String correlationId) {
     return DslRun.builder()
             .runId(id)
             .processName(processName)
@@ -660,7 +705,14 @@ class DslExecutionsResourceTest {
             .input(input)
             .output(output)
             .error(error)
+            .correlationId(correlationId)
             .build();
+  }
+
+  private DslRun runWithCorrelationId(String id, String processName, String status,
+          String startedAt, String finishedAt, String mode, String correlationId) {
+    return run(id, processName, status, startedAt, finishedAt, mode, null, null, null,
+            correlationId);
   }
 
   private DslRun runWithContext(String id, String processName, String status, String startedAt,

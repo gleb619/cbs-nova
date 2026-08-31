@@ -192,6 +192,70 @@ class JdbcDslRunRepositoryTest {
   }
 
   @Test
+  void saveAndFindByRunIdRoundTripsCorrelationId() {
+    DslRun run = DslRun.builder()
+            .runId("run-corr")
+            .processName("process-1")
+            .status(DslRunStatus.RUNNING.name())
+            .input("{\"input\":true}")
+            .output(null)
+            .error(null)
+            .startedAt(Instant.now())
+            .finishedAt(null)
+            .executionMode(ExecutionMode.RUN.name())
+            .correlationId("corr-abc")
+            .build();
+
+    repository.save(run);
+    DslRun persisted = repository.findByRunId("run-corr").orElseThrow();
+
+    assertThat(persisted.correlationId()).isEqualTo("corr-abc");
+  }
+
+  @Test
+  void saveWithoutCorrelationIdReadsBackNull() {
+    DslRun run = DslRun.builder()
+            .runId("run-no-corr")
+            .processName("process-1")
+            .status(DslRunStatus.RUNNING.name())
+            .input("{\"input\":true}")
+            .output(null)
+            .error(null)
+            .startedAt(Instant.now())
+            .finishedAt(null)
+            .executionMode(ExecutionMode.RUN.name())
+            .build();
+
+    repository.save(run);
+    DslRun persisted = repository.findByRunId("run-no-corr").orElseThrow();
+
+    assertThat(persisted.correlationId()).isNull();
+  }
+
+  @Test
+  void searchFiltersByCorrelationId() {
+    repository.save(run("run-c1", DslRunStatus.COMPLETED, null, null, "proc-c", "match-1"));
+    repository.save(run("run-c2", DslRunStatus.COMPLETED, null, null, "proc-c", "other"));
+    repository.save(run("run-c3", DslRunStatus.COMPLETED, null, null, "proc-c", null));
+
+    DslRunSearchResult result = repository.search("proc-c", null, null, "match-1", 0, 10);
+
+    assertThat(result.items()).hasSize(1);
+    assertThat(result.items().get(0).runId()).isEqualTo("run-c1");
+    assertThat(result.total()).isEqualTo(1);
+  }
+
+  @Test
+  void searchWithoutCorrelationIdReturnsAll() {
+    repository.save(run("run-c4", DslRunStatus.COMPLETED, null, null, "proc-d", "one"));
+    repository.save(run("run-c5", DslRunStatus.COMPLETED, null, null, "proc-d", "two"));
+
+    DslRunSearchResult result = repository.search("proc-d", null, null, null, 0, 10);
+
+    assertThat(result.items()).hasSize(2);
+  }
+
+  @Test
   void searchResultsCarryTriggeredBy() {
     DslRun run = DslRun.builder()
             .runId("run-search")
@@ -207,13 +271,14 @@ class JdbcDslRunRepositoryTest {
             .build();
     repository.save(run);
 
-    DslRunSearchResult result = repository.search("triggered-search-process", null, null, 0, 10);
+    DslRunSearchResult result = repository.search("triggered-search-process", null, null, null, 0,
+            10);
 
     assertThat(result.items()).hasSize(1);
     assertThat(result.items().get(0).triggeredBy()).isEqualTo("bob");
   }
   private static DslRun run(String runId, DslRunStatus status, String output, String error) {
-    return run(runId, status, output, error, "process-1");
+    return run(runId, status, output, error, "process-1", null);
   }
 
   private static DslRun run(
@@ -222,6 +287,16 @@ class JdbcDslRunRepositoryTest {
           String output,
           String error,
           String processName) {
+    return run(runId, status, output, error, processName, null);
+  }
+
+  private static DslRun run(
+          String runId,
+          DslRunStatus status,
+          String output,
+          String error,
+          String processName,
+          String correlationId) {
     return DslRun.builder()
             .runId(runId)
             .processName(processName)
@@ -232,6 +307,7 @@ class JdbcDslRunRepositoryTest {
             .startedAt(Instant.now())
             .finishedAt(null)
             .executionMode(ExecutionMode.RUN.name())
+            .correlationId(correlationId)
             .build();
   }
 

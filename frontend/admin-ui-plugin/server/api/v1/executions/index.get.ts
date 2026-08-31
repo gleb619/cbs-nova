@@ -8,6 +8,7 @@ export default defineEventHandler(async (event) => {
   if (query.status !== undefined) params.status = String(query.status)
   if (query.mode !== undefined) params.mode = String(query.mode)
   if (query.entityName !== undefined) params.processName = String(query.entityName)
+  if (query.correlationId !== undefined) params.correlationId = String(query.correlationId)
 
   if (Object.keys(params).length === 0) {
     return proxyToBackend(event, '/api/executions')

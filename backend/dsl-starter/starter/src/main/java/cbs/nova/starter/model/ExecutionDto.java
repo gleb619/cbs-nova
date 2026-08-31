@@ -58,7 +58,7 @@ public record ExecutionDto(
             finishedAt != null ? Duration.between(run.startedAt(), finishedAt).toMillis() : null,
             null,
             run.triggeredBy(),
-            null,
+            run.correlationId(),
             null,
             null,
             null,

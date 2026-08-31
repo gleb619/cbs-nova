@@ -150,6 +150,16 @@ public class TemporalDslProcessService {
     return startProcess(processName, input, Map.of());
   }
 
+  public @NonNull ProcessRun runProcess(
+          @NonNull String processName,
+          @Nullable Object input,
+          @Nullable String correlationId) {
+    Map<String, Object> metadata = correlationId != null && !correlationId.isBlank()
+            ? Map.of(CorrelationId.CORRELATION_ID_METADATA_KEY, correlationId)
+            : Map.of();
+    return startProcess(processName, input, metadata);
+  }
+
   public @NonNull ProcessRun startProcess(@NonNull String processName, @Nullable Object input) {
     return startProcess(processName, input, Map.of());
   }
@@ -158,6 +168,15 @@ public class TemporalDslProcessService {
           @NonNull String processName,
           @Nullable Object input,
           @NonNull Map<String, Object> metadata) {
+    return startProcess(processName, input, metadata,
+            CorrelationId.fromMetadata(metadata.get(CorrelationId.CORRELATION_ID_METADATA_KEY)));
+  }
+
+  public @NonNull ProcessRun startProcess(
+          @NonNull String processName,
+          @Nullable Object input,
+          @NonNull Map<String, Object> metadata,
+          @Nullable String correlationId) {
     Object body = input != null ? input : Map.of();
     String runId = contextFactory.generateRunId();
     var runIdScope = propagateRunId(runId);
@@ -177,6 +196,7 @@ public class TemporalDslProcessService {
               .finishedAt(NOT_FINISHED_AT)
               .executionMode(ExecutionMode.RUN.name())
               .triggeredBy(triggeredBy)
+              .correlationId(correlationId)
               .build();
 
       submitDbWrite(() -> {

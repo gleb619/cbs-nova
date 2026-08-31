@@ -72,12 +72,14 @@ public final class InMemoryDslRunRepository implements DslRunRepository {
           @Nullable String processName,
           @Nullable String status,
           @Nullable String mode,
+          @Nullable String correlationId,
           int offset,
           int limit) {
     List<DslRun> matching = runs.values().stream()
             .filter(run -> processName == null || processName.equals(run.processName()))
             .filter(run -> status == null || status.equalsIgnoreCase(run.status()))
             .filter(run -> mode == null || mode.equalsIgnoreCase(effectiveMode(run)))
+            .filter(run -> correlationId == null || correlationId.equals(run.correlationId()))
             .sorted(Comparator.comparing(DslRun::startedAt).reversed()
                     .thenComparing(DslRun::runId))
             .toList();
@@ -182,6 +184,7 @@ public final class InMemoryDslRunRepository implements DslRunRepository {
             .finishedAt(finishedAt)
             .executionMode(existing.executionMode())
             .triggeredBy(existing.triggeredBy())
+            .correlationId(existing.correlationId())
             .build();
   }
 
