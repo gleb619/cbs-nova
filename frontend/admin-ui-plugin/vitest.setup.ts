@@ -12,12 +12,15 @@ g.ref = ref
 g.computed = computed
 g.readonly = readonly
 g.onUnmounted = onUnmounted
+g.onMounted = (_fn: () => undefined | (() => unknown)) => undefined
 g.watch = watch
 
 g.useState = (_key: string, init: () => unknown) => ref(init())
 
 // Expose a mocked $fetch on globalThis for tests that stub the outgoing backend calls.
-g.$fetch = vi.fn()
+const mockedFetch = vi.fn()
+mockedFetch.raw = vi.fn()
+g.$fetch = mockedFetch
 
 // Stub of h3's defineEventHandler. The real one returns an EventHandler
 // wrapper object; for unit tests we treat it as identity so route files
@@ -46,18 +49,42 @@ const defaultRuntimeConfig = {
   backendBaseUrl: 'http://localhost:8090',
   backendApiKey: '',
   backendTimeoutMs: 10000,
-  public: { appName: 'CBS Nova Admin' },
+  authIssuer: '',
+  authClientId: 'cbs-nova-bff',
+  authClientSecret: '',
+  authCallbackUrl: 'http://localhost:3000/api/v1/auth/callback',
+  authPostLogoutRedirect: '/',
+  public: { appName: 'CBS Nova Admin', authEnabled: false },
 }
 g.useRuntimeConfig = vi.fn(() => defaultRuntimeConfig)
 
-// Stub of the plugin's own useBackendConfig. The real one is exported from
-// server/utils/config.ts and auto-imported by Nitro; in unit tests we expose
-// the same shape as a bare global so httpClient.ts can call it.
+// Stub of the plugin's own useBackendConfig/useAuthConfig. The real ones are
+// exported from server/utils/config.ts and auto-imported by Nitro; in unit
+// tests we expose the same shapes as bare globals so server utils can call
+// them.
 g.useBackendConfig = vi.fn(() => ({
   baseUrl: defaultRuntimeConfig.backendBaseUrl,
   apiKey: defaultRuntimeConfig.backendApiKey,
   timeoutMs: defaultRuntimeConfig.backendTimeoutMs,
 }))
+
+g.useAuthConfig = vi.fn(() => ({
+  issuer: defaultRuntimeConfig.authIssuer,
+  clientId: defaultRuntimeConfig.authClientId,
+  clientSecret: defaultRuntimeConfig.authClientSecret,
+  callbackUrl: defaultRuntimeConfig.authCallbackUrl,
+  postLogoutRedirect: defaultRuntimeConfig.authPostLogoutRedirect,
+  enabled: Boolean(defaultRuntimeConfig.authIssuer),
+}))
+
+// Layout header uses useAdminInfo; stub it with empty data so layout specs mount.
+g.useAdminInfo = vi.fn(() => ({ data: ref({}) }))
+
+// Client-side navigation / data stubs for composable specs.
+let currentRoutePath = '/'
+g.useRoute = vi.fn(() => ({ path: currentRoutePath }))
+g.navigateTo = vi.fn((to: string, _opts?: unknown) => to)
+g.useFetch = vi.fn((_url: string) => ({ data: ref({}) }))
 
 let cachedExecutionsApi: { list: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> } | null =
   null
@@ -98,6 +125,23 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(g.useExecutionsApi as never).mockImplementation(defaultExecutionsApi)
   vi.mocked(g.useDslApi as never).mockImplementation(defaultDslApi)
+  vi.mocked(g.useRuntimeConfig as never).mockImplementation(() => defaultRuntimeConfig)
+  vi.mocked(g.useBackendConfig as never).mockImplementation(() => ({
+    baseUrl: defaultRuntimeConfig.backendBaseUrl,
+    apiKey: defaultRuntimeConfig.backendApiKey,
+    timeoutMs: defaultRuntimeConfig.backendTimeoutMs,
+  }))
+  vi.mocked(g.useAuthConfig as never).mockImplementation(() => ({
+    issuer: defaultRuntimeConfig.authIssuer,
+    clientId: defaultRuntimeConfig.authClientId,
+    clientSecret: defaultRuntimeConfig.authClientSecret,
+    callbackUrl: defaultRuntimeConfig.authCallbackUrl,
+    postLogoutRedirect: defaultRuntimeConfig.authPostLogoutRedirect,
+    enabled: Boolean(defaultRuntimeConfig.authIssuer),
+  }))
+  vi.mocked(g.useAdminInfo as never).mockImplementation(() => ({ data: ref({}) }))
+  vi.mocked(g.useFetch as never).mockImplementation(() => ({ data: ref({}) }))
+  currentRoutePath = '/'
   // Reset the vue-router stub's captured guards so handlers from one spec do
   // not leak into the next.
   __resetRouterStub()

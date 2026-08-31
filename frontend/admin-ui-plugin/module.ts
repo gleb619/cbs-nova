@@ -29,7 +29,10 @@ import {
 //   - Nitro server routes under /api/v1/** that proxy to the Spring Boot backend
 //   - The global Tailwind CSS stylesheet
 //   - Runtime config keys: backendBaseUrl, backendApiKey, backendTimeoutMs,
-//     public.appName, public.temporalUiBaseUrl, public.temporalNamespace
+//     authIssuer, authClientId, authClientSecret, authCallbackUrl,
+//     authPostLogoutRedirect,
+//     public.appName, public.temporalUiBaseUrl, public.temporalNamespace,
+//     public.authEnabled
 // ---------------------------------------------------------------------------
 
 export interface ModuleOptions {
@@ -57,6 +60,38 @@ export interface ModuleOptions {
    * Surfaced as a 504 BACKEND_TIMEOUT when exceeded. Defaults to 10000.
    */
   backendTimeoutMs?: number
+
+  /**
+   * OIDC issuer URL (server-side only). When unset the BFF auth routes are
+   * fully disabled and behaviour is identical to the pre-auth implementation.
+   * Defaults to AUTH_ISSUER env var.
+   */
+  authIssuer?: string
+
+  /**
+   * OIDC client id for the BFF. Defaults to AUTH_CLIENT_ID env var,
+   * then 'cbs-nova-bff'.
+   */
+  authClientId?: string
+
+  /**
+   * OIDC client secret for the confidential BFF client (server-side only).
+   * Defaults to AUTH_CLIENT_SECRET env var.
+   */
+  authClientSecret?: string
+
+  /**
+   * Absolute URL the OIDC provider redirects back to after login.
+   * Defaults to AUTH_CALLBACK_URL env var, then
+   * 'http://localhost:3000/api/v1/auth/callback'.
+   */
+  authCallbackUrl?: string
+
+  /**
+   * Client-side path to redirect to after logout.
+   * Defaults to AUTH_POST_LOGOUT_REDIRECT env var, then '/'.
+   */
+  authPostLogoutRedirect?: string
 
   /**
    * Display name shown in the admin UI title bar.
@@ -91,6 +126,12 @@ export default defineNuxtModule<ModuleOptions>({
     backendBaseUrl: process.env.BACKEND_BASE_URL ?? 'http://localhost:8090',
     backendApiKey: process.env.BACKEND_API_KEY ?? '',
     backendTimeoutMs: Number(process.env.BACKEND_TIMEOUT_MS ?? 10000),
+    authIssuer: process.env.AUTH_ISSUER ?? '',
+    authClientId: process.env.AUTH_CLIENT_ID ?? 'cbs-nova-bff',
+    authClientSecret: process.env.AUTH_CLIENT_SECRET ?? '',
+    authCallbackUrl:
+      process.env.AUTH_CALLBACK_URL ?? 'http://localhost:3000/api/v1/auth/callback',
+    authPostLogoutRedirect: process.env.AUTH_POST_LOGOUT_REDIRECT ?? '/',
     appName: 'CBS Nova Admin',
     temporalUiBaseUrl: process.env.TEMPORAL_UI_BASE_URL ?? '',
     temporalNamespace: process.env.TEMPORAL_NAMESPACE ?? 'default',
@@ -110,6 +151,23 @@ export default defineNuxtModule<ModuleOptions>({
       nuxt.options.runtimeConfig.backendApiKey || options.backendApiKey || ''
     nuxt.options.runtimeConfig.backendTimeoutMs =
       nuxt.options.runtimeConfig.backendTimeoutMs || options.backendTimeoutMs || 10000
+
+    const authIssuer = nuxt.options.runtimeConfig.authIssuer || options.authIssuer || ''
+    nuxt.options.runtimeConfig.authIssuer = authIssuer
+    nuxt.options.runtimeConfig.authClientId =
+      nuxt.options.runtimeConfig.authClientId || options.authClientId || 'cbs-nova-bff'
+    nuxt.options.runtimeConfig.authClientSecret =
+      nuxt.options.runtimeConfig.authClientSecret || options.authClientSecret || ''
+    nuxt.options.runtimeConfig.authCallbackUrl =
+      nuxt.options.runtimeConfig.authCallbackUrl ||
+      options.authCallbackUrl ||
+      'http://localhost:3000/api/v1/auth/callback'
+    nuxt.options.runtimeConfig.authPostLogoutRedirect =
+      nuxt.options.runtimeConfig.authPostLogoutRedirect || options.authPostLogoutRedirect || '/'
+    // Public flag so the app can render a Sign-in affordance only when OIDC is configured.
+    nuxt.options.runtimeConfig.public.authEnabled =
+      nuxt.options.runtimeConfig.public.authEnabled || Boolean(authIssuer)
+
     nuxt.options.runtimeConfig.public.appName =
       nuxt.options.runtimeConfig.public.appName || options.appName || 'CBS Nova Admin'
     nuxt.options.runtimeConfig.public.temporalUiBaseUrl =
