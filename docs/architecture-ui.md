@@ -102,6 +102,22 @@ color theme so that other projects can embed them without depending on the full 
 - Nuxt server routes request or refresh a JWT and forward authenticated calls to Spring Boot.
 - The JWT is kept on the server side; the browser only holds its own session cookie.
 
+### BFF security posture
+
+The BFF is the only piece of the admin UI that talks to Spring Boot. Its security behaviour is governed by `frontend/admin-ui-plugin/server/utils/httpClient.ts` and `frontend/admin-ui-plugin/server/utils/oidcSession.ts`.
+
+- **Header pass-through allowlist** — `proxyToBackend` forwards a small set of inbound headers to the backend: `Authorization`, `X-Api-Key`, `X-Request-Id`, `traceparent`, `Idempotency-Key`, and `X-Correlation-Id`. `X-Request-Id` is generated if absent. A static `X-Api-Key` is also sent when `backendApiKey` is configured.
+- **No generic catch-all** — BFF routes are explicit Nitro files under `frontend/admin-ui-plugin/server/api/v1/`; the convention is recorded in [`../CLAUDE.md`](../CLAUDE.md). Each new backend path needs a matching proxy route.
+- **Opt-in OIDC login flow** — When `AUTH_ISSUER` is unset, `/api/v1/auth/login`, `/api/v1/auth/callback`, and `/api/v1/auth/logout` return 404; `/api/v1/auth/session` returns `{ authenticated: false, enabled: false }`. When an issuer is configured, the module exposes four GET routes:
+  - `/api/v1/auth/login` — builds PKCE + state, sets the short-lived `cbs_oidc_txn` httpOnly cookie, and redirects to the issuer.
+  - `/api/v1/auth/callback` — validates state, exchanges the code, writes `cbs_at` + `cbs_rt` httpOnly cookies, and redirects back.
+  - `/api/v1/auth/logout` — clears cookies and calls the issuer end-session endpoint.
+  - `/api/v1/auth/session` — returns the OIDC userinfo session, refreshing once on 401/403.
+
+  Session cookies are httpOnly, `SameSite=Lax`, and `Secure` only when the callback URL is HTTPS. The BFF attaches the session access token as `Authorization: Bearer <cbs_at>` unless the inbound request already provided an `Authorization` header (inbound wins). On a backend 401/403, the BFF attempts one token refresh using `cbs_rt` and retries the original request.
+
+See [`architecture-backend.md`](architecture-backend.md#security) for the backend security layer (API key, rate limiting, OIDC resource-server) that the BFF proxies into.
+
 ## Runner panel components (`T153`, `T154`, `T159`, `T161`, `T162`, `T166`)
 
 The primary interactive surface for running, previewing, and explaining DSL definitions lives in
