@@ -2,11 +2,17 @@ package cbs.nova.starter.controller;
 
 import cbs.nova.dsl.LoadResult;
 import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.model.VcsModels.DefinitionBundle;
+import cbs.nova.starter.model.VcsModels.DefinitionBundleEntry;
 import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.model.VcsModels.DraftSummary;
+import cbs.nova.starter.model.VcsModels.ImportBundleResult;
+import cbs.nova.starter.model.VcsModels.ImportEntryResult;
+import cbs.nova.starter.model.CompileDiagnostic;
 import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.starter.service.DslDefinitionBundleService;
 import cbs.nova.starter.service.DslDefinitionHistoryService;
 import tools.jackson.core.JacksonException;
 import jakarta.servlet.ServletException;
@@ -36,11 +42,13 @@ public class DslDraftHandler {
 
   private static final String DRAFTS_DIR = ".workbench/drafts";
   private static final String PUBLISHED_DIR = ".workbench/published";
+  private static final int BUNDLE_MAX_DEFINITIONS = 200;
 
   private final DslProperties dslProperties;
   private final DslReloadHandler reloadHandler;
   private final DslDefinitionHistoryService historyService;
   private final ObjectMapper objectMapper;
+  private final DslDefinitionBundleService bundleService;
 
   public ServerResponse save(ServerRequest request) throws IOException {
     String name = request.pathVariable("name");
@@ -183,6 +191,100 @@ public class DslDraftHandler {
     DraftRequest payload = objectMapper.readValue(draftFile.toFile(), DraftRequest.class);
     log.info("[DSL drafts] read {} from {}", name, draftFile);
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(payload);
+  }
+
+  public ServerResponse exportBundle(ServerRequest request) {
+    var dir = ensureConfigured(null);
+    if (dir.isError()) {
+      return dir.response();
+    }
+    boolean includeDrafts = request.param("include").map("drafts"::equals).orElse(false);
+    DefinitionBundle bundle = bundleService.export(dir.path(), includeDrafts);
+    log.info("[DSL bundle] exported {} definitions (includeDrafts={})",
+            bundle.definitions().size(), includeDrafts);
+    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(bundle);
+  }
+
+  public ServerResponse importBundle(ServerRequest request) throws IOException {
+    var dir = ensureConfigured(null);
+    if (dir.isError()) {
+      return dir.response();
+    }
+    boolean dryRun = request.param("dryRun").map(Boolean::parseBoolean).orElse(false);
+
+    DefinitionBundle bundle;
+    try {
+      String body = request.body(String.class);
+      bundle = objectMapper.readValue(body, DefinitionBundle.class);
+    } catch (JacksonException e) {
+      log.warn("[DSL bundle] failed to parse bundle body: {}", e.getMessage());
+      return error(HttpStatus.BAD_REQUEST,
+              new ErrorResponse("INVALID_REQUEST", "malformed bundle JSON", null, null, null));
+    } catch (jakarta.servlet.ServletException e) {
+      throw new IOException("Failed to read bundle body", e);
+    }
+
+    try {
+      bundleService.validateForImport(bundle);
+    } catch (IllegalArgumentException e) {
+      log.warn("[DSL bundle] import validation failed: {}", e.getMessage());
+      return error(HttpStatus.BAD_REQUEST,
+              new ErrorResponse("BAD_REQUEST", e.getMessage(), null, null, null));
+    }
+
+    if (bundle.definitions().size() > BUNDLE_MAX_DEFINITIONS) {
+      return error(HttpStatus.BAD_REQUEST,
+              new ErrorResponse("INVALID_REQUEST", "bundle too large (max " + BUNDLE_MAX_DEFINITIONS
+                      + " definitions)", null, null, null));
+    }
+
+    if (dryRun) {
+      List<ImportEntryResult> results = bundle.definitions().stream()
+              .map(e -> new ImportEntryResult(e.definition().name(), "skipped", "dry run"))
+              .toList();
+      ImportBundleResult result = new ImportBundleResult(true, false, bundle.definitions().size(),
+              0,
+              results, null, null);
+      log.info("[DSL bundle] dry-run import of {} definitions", bundle.definitions().size());
+      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(result);
+    }
+
+    List<ImportEntryResult> results = new ArrayList<>();
+    for (DefinitionBundleEntry entry : bundle.definitions()) {
+      DraftRequest payload = withStatus(entry.definition(), "Published");
+      String name = payload.name();
+      historyService.snapshotBeforePublish(dir.path(), name);
+      Path file = writePayload(dir.path().resolve(PUBLISHED_DIR), payload);
+      results.add(new ImportEntryResult(name, "published", null));
+      log.info("[DSL bundle] imported published marker {} to {}", name, file);
+    }
+
+    boolean reloaded = false;
+    String reloadError = null;
+    List<CompileDiagnostic> diagnostics = null;
+    try {
+      LoadResult loadResult = reloadHandler.reloadDefinitions();
+      reloaded = true;
+      log.info("[DSL bundle] import reloaded {} definitions: processes={}, transactions={},"
+              + " functions={}",
+              loadResult.total(), loadResult.processCount(), loadResult.transactionCount(),
+              loadResult.functionCount());
+    } catch (Exception e) {
+      log.warn("[DSL bundle] import wrote published markers but reload failed: {}", e.getMessage());
+      var compilation = findDslCompilationException(e);
+      if (compilation != null) {
+        reloadError = compilation.getMessage();
+        diagnostics = compilation.diagnostics();
+      } else {
+        reloadError = e.getMessage();
+      }
+    }
+
+    long publishedCount = results.stream().filter(r -> "published".equals(r.outcome())).count();
+    long failedCount = results.size() - publishedCount;
+    ImportBundleResult result = new ImportBundleResult(false, reloaded, (int) publishedCount,
+            (int) failedCount, results, reloadError, diagnostics);
+    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(result);
   }
 
   private ServerResponse finishPublish(String name, Path file) throws IOException {

@@ -49,6 +49,17 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/dsl/definitions',
     bffPath: '/api/v1/dsl/definitions',
   },
+  // DslDefinitionBundleRouterConfiguration
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/definitions/export',
+    bffPath: '/api/v1/dsl/definitions/export',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/definitions/import',
+    bffPath: '/api/v1/dsl/definitions/import',
+  },
   {
     method: 'GET',
     backendPath: '/api/dsl/objects/search',

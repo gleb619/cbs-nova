@@ -59,6 +59,8 @@ const processDiagramHandler = (await import('../dsl/processes/[name]/diagram.get
 const schedulesIndexHandler = (await import('../dsl/schedules/index.get')).default
 const schedulesCreateHandler = (await import('../dsl/schedules/index.post')).default
 const schedulesDeleteHandler = (await import('../dsl/schedules/[definition].delete')).default
+const exportDefinitionsHandler = (await import('../dsl/definitions/export.get')).default
+const importDefinitionsHandler = (await import('../dsl/definitions/import.post')).default
 
 // Minimal H3Event stub. The route handlers only pass this through to
 // proxyToBackend, which is mocked, so a plain object is sufficient.
@@ -657,6 +659,77 @@ describe('dsl/schedules/[definition].delete', () => {
     expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
     expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/schedules/A', {
       method: 'DELETE',
+    })
+  })
+})
+
+describe('dsl/definitions/export.get', () => {
+  it('GETs /api/dsl/definitions/export forwarding the include query param', async () => {
+    queryValue = { include: 'drafts' }
+
+    await exportDefinitionsHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/definitions/export', {
+      query: { include: 'drafts' },
+    })
+  })
+
+  it('forwards an empty query object when no params are present', async () => {
+    queryValue = {}
+
+    await exportDefinitionsHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/definitions/export', {
+      query: {},
+    })
+  })
+
+  it('returns the backend bundle verbatim', async () => {
+    const payload = {
+      formatVersion: 1,
+      engineVersion: '1.0.0',
+      exportedAt: '2026-01-01T00:00:00Z',
+      definitions: [{ definition: { name: 'A' }, source: 'published' }],
+    }
+    proxyToBackendMock.mockResolvedValueOnce(payload)
+
+    const result = await exportDefinitionsHandler(fakeEvent)
+
+    expect(result).toEqual(payload)
+  })
+})
+
+describe('dsl/definitions/import.post', () => {
+  it('POSTs the bundle body and forwards the dryRun query param', async () => {
+    queryValue = { dryRun: 'true' }
+    bodyValue = {
+      formatVersion: 1,
+      definitions: [{ definition: { name: 'A' }, source: 'published' }],
+    }
+
+    await importDefinitionsHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/definitions/import', {
+      method: 'POST',
+      body: bodyValue,
+      query: { dryRun: 'true' },
+    })
+  })
+
+  it('POSTs the bundle body without query params when dryRun is absent', async () => {
+    queryValue = {}
+    bodyValue = { formatVersion: 1, definitions: [] }
+
+    await importDefinitionsHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/definitions/import', {
+      method: 'POST',
+      body: bodyValue,
+      query: {},
     })
   })
 })

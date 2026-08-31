@@ -253,6 +253,56 @@ snapshots per definition is controlled by `dsl.drafts.history-limit`
 | GET | `/api/dsl/drafts/{name}/history` | List publish history entries, newest first |
 | POST | `/api/dsl/drafts/{name}/history/{timestamp}/restore` | Restore a snapshot as the current published marker and reload DSL |
 
+
+### Definition export / import
+
+Two bulk routes move published definition **metadata markers** between environments.
+They do **not** carry DSL source code; the corresponding `.java` files must be deployed
+separately.
+
+| Method | Path | Purpose | Query params |
+|--------|------|---------|--------------|
+| GET | `/api/dsl/definitions/export` | Export published markers as a bundle | `?include=drafts` to also include drafts |
+| POST | `/api/dsl/definitions/import` | Import a bundle, snapshot history and reload DSL | `?dryRun=true` to validate without writing |
+
+The bundle shape is `cbs.nova.starter.model.VcsModels.DefinitionBundle`:
+
+```json
+{
+  "formatVersion": 1,
+  "engineVersion": "0.0.1-SNAPSHOT",
+  "exportedAt": "2026-08-31T12:00:00Z",
+  "definitions": [
+    {
+      "definition": {
+        "name": "LoanDisbursementProcess",
+        "type": "process",
+        "status": "Published",
+        "version": "1.0.0",
+        "taskQueue": "loan-processing"
+      },
+      "source": "published"
+    }
+  ]
+}
+```
+
+- `formatVersion` is currently `1`; any other value is rejected with `400 Bad Request`.
+- `source` is always `"published"` or `"draft"`. When `?include=drafts` is used and a name
+  exists in both directories, the published marker wins.
+- Import writes each entry to `.workbench/published/{name}.json` with `status: Published`,
+  calls `snapshotBeforePublish` for each name, and then runs **one** DSL reload.
+- `?dryRun=true` returns the count and per-entry `outcome: "skipped"` without writing files
+  or attempting a reload.
+- A failed reload still returns `200` with the files written; the response contains
+  `reloaded: false`, `reloadError`, and any compile `diagnostics`. A failed reload means the
+  source `.java` for one or more imported definitions is missing or broken in this environment.
+- Bundles larger than 200 definitions return `400 bundle too large`.
+
+The BFF exposes the same routes under `/api/v1/dsl/definitions/export` and
+`/api/v1/dsl/definitions/import`.
+
+
 ### Auth and ops notes
 
 - **API key filter** — `cbs.nova.starter.web.ApiKeyAuthFilter` is registered for `/api/*` but only
