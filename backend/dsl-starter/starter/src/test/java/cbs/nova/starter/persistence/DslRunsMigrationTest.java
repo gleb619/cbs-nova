@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
@@ -19,6 +21,9 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @Testcontainers
@@ -44,7 +49,8 @@ class DslRunsMigrationTest {
             new ClassPathResource("db/migration/V3__create_dsl_run_transactions.sql"),
             new ClassPathResource("db/migration/V4__dsl_runs_indexes.sql"),
             new ClassPathResource("db/migration/V5__dsl_runs_triggered_by.sql"),
-            new ClassPathResource("db/migration/V6__dsl_runs_correlation_id.sql"));
+            new ClassPathResource("db/migration/V6__dsl_runs_correlation_id.sql"),
+            substitutedV7Resource());
     populator.setContinueOnError(false);
 
     SimpleDriverDataSource dataSource = new SimpleDriverDataSource();
@@ -175,5 +181,100 @@ class DslRunsMigrationTest {
         assertThat(found).isTrue();
       }
     }
+  }
+
+  @Test
+  void finishedAtPartialIndexExistsAndIsUsedByPurgeQuery() {
+    String indexDef = jdbcTemplate.queryForObject(
+            """
+                    SELECT indexdef FROM pg_indexes
+                    WHERE tablename = 'dsl_runs' AND indexname = 'idx_dsl_runs_finished_at'""",
+            String.class);
+
+    assertThat(indexDef)
+            .isNotNull()
+            .contains("finished_at")
+            .containsIgnoringCase("WHERE")
+            .containsIgnoringCase("finished_at IS NOT NULL");
+
+    seedFinishedAtIndexTestData();
+
+    jdbcTemplate.execute("ANALYZE dsl_runs");
+
+    Timestamp cutoff = Timestamp.from(Instant.parse("2020-02-15T00:00:00Z"));
+    List<String> explainLines = jdbcTemplate.queryForList(
+            """
+                    EXPLAIN SELECT run_id FROM dsl_runs
+                    WHERE finished_at < ? AND status <> 'RUNNING' LIMIT 500""",
+            String.class,
+            cutoff);
+
+    String plan = String.join("\n", explainLines);
+
+    // The partial index should be preferred when the predicate is selective.
+    // If the test table is small enough that Postgres chooses a seq scan,
+    // the metadata assertion above still proves the index exists; in that
+    // case only assertion (1) is verified and the plan is logged.
+    if (!plan.contains("idx_dsl_runs_finished_at")) {
+      System.out.println("Postgres chose a plan without idx_dsl_runs_finished_at:\n" + plan);
+    }
+    assertThat(plan).contains("idx_dsl_runs_finished_at");
+  }
+
+  private void seedFinishedAtIndexTestData() {
+    Instant base = Instant.parse("2020-01-01T00:00:00Z");
+    long sixYearsInSeconds = 6L * 365 * 24 * 60 * 60;
+
+    String sql = """
+            INSERT INTO dsl_runs (run_id, process_name, status, input_json, output_json,
+                error_message, context_json, started_at, finished_at, execution_mode, triggered_by, correlation_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""";
+
+    List<Object[]> terminalBatch = new ArrayList<>();
+    for (int i = 0; i < 1950; i++) {
+      Instant startedAt = base.plusSeconds((long) (Math.random() * sixYearsInSeconds));
+      Instant finishedAt = startedAt.plusSeconds((long) (Math.random() * 300));
+      terminalBatch.add(new Object[]{
+          "run-" + UUID.randomUUID(),
+          "PurgeIndexProbe",
+          i % 3 == 0 ? "COMPLETED" : "FAILED",
+          "{}",
+          null,
+          null,
+          null,
+          Timestamp.from(startedAt),
+          Timestamp.from(finishedAt),
+          "RUN",
+          "test@example.com",
+          "corr-" + i});
+    }
+    jdbcTemplate.batchUpdate(sql, terminalBatch);
+
+    List<Object[]> runningBatch = new ArrayList<>();
+    for (int i = 0; i < 50; i++) {
+      Instant startedAt = base.plusSeconds((long) (Math.random() * sixYearsInSeconds));
+      runningBatch.add(new Object[]{
+          "run-" + UUID.randomUUID(),
+          "PurgeIndexProbe",
+          "RUNNING",
+          "{}",
+          null,
+          null,
+          null,
+          Timestamp.from(startedAt),
+          null,
+          "RUN",
+          "test@example.com",
+          "running-corr-" + i});
+    }
+    jdbcTemplate.batchUpdate(sql, runningBatch);
+  }
+
+  private static Resource substitutedV7Resource() throws Exception {
+    ClassPathResource original = new ClassPathResource(
+            "db/migration/V7__dsl_runs_finished_at_index.sql");
+    String sql = new String(original.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
+            .replace("${partial_where}", "WHERE finished_at IS NOT NULL");
+    return new ByteArrayResource(sql.getBytes(StandardCharsets.UTF_8));
   }
 }
