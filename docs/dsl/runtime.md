@@ -560,3 +560,54 @@ lifecycle callbacks wins and the reconciliation write is ignored. Any other Temp
 (skip, log a warning, and retry on the next scan) does **not** mark the run `STALE` — the existing
 healthcheck STALE sweep remains the fallback when Temporal cannot answer. This also means the
 feature only activates when a `WorkflowClient` bean is available (Temporal runtime mode).
+
+### Temporal schedules
+
+The runtime can expose Temporal Schedule CRUD for **published** DSL process definitions. The
+schedule starts the definition's workflow directly via `ScheduleActionStartWorkflow`, so it does not
+need a live API caller to fire.
+
+**Endpoints (backend Spring Boot functional router):**
+
+- `GET /api/dsl/schedules` — list schedules created by this service (ids prefixed with `sched-`).
+- `POST /api/dsl/schedules` — create a schedule.
+- `DELETE /api/dsl/schedules/{definition}` — delete the schedule for a definition (idempotent).
+
+The BFF exposes the same surface under `/api/v1/dsl/schedules`.
+
+**Create request body:**
+
+```json
+{
+  "definition": "LoanDisbursement",
+  "cron": "0 9 * * *",
+  "timezone": "UTC",
+  "input": { "amount": 100 },
+  "note": "Daily morning run"
+}
+```
+
+- `definition` is required and must be a published generated process.
+- `cron` is required.
+- `timezone` defaults to `UTC` and is validated with `ZoneId.of`.
+- `input` defaults to an empty object.
+
+**Schedule configuration:**
+
+- Schedule id: `sched-<definition>`.
+- Per-fire workflow id is assigned by Temporal (form `<scheduleId>-<scheduled-time>`) because we do
+  not pin a fixed workflow id.
+- Overlap policy: `SKIP`.
+- Catchup window: 1 minute.
+
+**Availability:**
+
+The schedule routes and beans only load when a Temporal `ScheduleClient` bean is present. If
+Temporal is not configured the endpoints are not registered and requests to them receive a 404 at
+the router level.
+
+**Deferred follow-up:**
+
+Runs launched by a schedule currently execute the workflow directly and are visible in the Temporal
+UI, but do **not** yet appear in `/api/executions` (`dsl_runs` history integration). History
+attribution with `triggeredBy=schedule` is a planned follow-up.

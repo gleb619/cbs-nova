@@ -47,3 +47,21 @@ export interface CompileDiagnostic {
   message: string
   severity: string
 }
+
+export interface ScheduleSummary {
+  scheduleId: string
+  definition: string
+  cron: string
+  timezone: string
+  note?: string | null
+  nextRunAt?: string | null
+  paused: boolean
+}
+
+export interface CreateSchedulePayload {
+  definition: string
+  cron: string
+  timezone?: string
+  input?: unknown
+  note?: string
+}
