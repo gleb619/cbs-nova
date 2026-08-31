@@ -163,4 +163,17 @@ describe('useDslApi', () => {
       body: { body: { x: 1 }, metadata: undefined },
     })
   })
+
+  it('run forwards optional headers', async () => {
+    fetchMock.mockResolvedValueOnce({})
+    const api = useDslApi()
+
+    await api.run('myDef', { a: 1 }, { tag: 'x' }, { 'Idempotency-Key': 'idem-1' })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/run/myDef', {
+      method: 'POST',
+      body: { body: { a: 1 }, metadata: { tag: 'x' } },
+      headers: { 'Idempotency-Key': 'idem-1' },
+    })
+  })
 })

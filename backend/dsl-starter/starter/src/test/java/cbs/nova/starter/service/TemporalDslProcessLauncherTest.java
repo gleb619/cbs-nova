@@ -19,7 +19,9 @@ import cbs.nova.dsl.process.DslTemporalProcess;
 import cbs.nova.dsl.process.DslTemporalProcessFailure;
 import cbs.nova.dsl.process.DslTemporalProcessRequest;
 import cbs.nova.dsl.transaction.TransactionRouting;
+import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.client.WorkflowClient;
+import io.temporal.client.WorkflowExecutionAlreadyStarted;
 import io.temporal.client.WorkflowOptions;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -235,5 +237,65 @@ class TemporalDslProcessLauncherTest {
   }
 
   record ConvertibleRecord(int a, String b) {
+  }
+
+  @Test
+  void launchReturnsIdempotentReplayWhenWorkflowAlreadyStarted() {
+    String name = unique("tl-replay-direct");
+    registerDescriptor(name);
+    SimpleContext<String> ctx = new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
+            "rid-launch-replay", TransactionRouting.LOCAL, null, null, null);
+    LauncherTestProcessImpl impl = new LauncherTestProcessImpl();
+    WorkflowExecution execution = WorkflowExecution.newBuilder()
+            .setWorkflowId("rid-launch-replay")
+            .setRunId("run-1")
+            .build();
+    impl.handler = req -> {
+      throw new WorkflowExecutionAlreadyStarted(execution, "WorkflowType", null);
+    };
+
+    WorkflowClient client = mock(WorkflowClient.class);
+    when(client.newWorkflowStub(
+            eq(LauncherTestProcess.class), any(WorkflowOptions.class)))
+            .thenReturn(impl);
+
+    TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(client,
+            new ObjectMapper(), Duration.ofSeconds(30), Duration.ofSeconds(5));
+    Result<?> result = launcher.launch(name, "tq", null, null, ctx);
+
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause()).isInstanceOf(IdempotentReplayException.class);
+    assertThat(((IdempotentReplayException) result.cause()).runId()).isEqualTo("rid-launch-replay");
+  }
+
+  @Test
+  void launchReturnsIdempotentReplayWhenCauseIsWorkflowAlreadyStarted() {
+    String name = unique("tl-replay-cause");
+    registerDescriptor(name);
+    SimpleContext<String> ctx = new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
+            "rid-launch-replay-cause", TransactionRouting.LOCAL, null, null, null);
+    LauncherTestProcessImpl impl = new LauncherTestProcessImpl();
+    WorkflowExecution execution = WorkflowExecution.newBuilder()
+            .setWorkflowId("rid-launch-replay-cause")
+            .setRunId("run-1")
+            .build();
+    impl.handler = req -> {
+      throw new RuntimeException("outer",
+              new WorkflowExecutionAlreadyStarted(execution, "WorkflowType", null));
+    };
+
+    WorkflowClient client = mock(WorkflowClient.class);
+    when(client.newWorkflowStub(
+            eq(LauncherTestProcess.class), any(WorkflowOptions.class)))
+            .thenReturn(impl);
+
+    TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(client,
+            new ObjectMapper(), Duration.ofSeconds(30), Duration.ofSeconds(5));
+    Result<?> result = launcher.launch(name, "tq", null, null, ctx);
+
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause()).isInstanceOf(IdempotentReplayException.class);
+    assertThat(((IdempotentReplayException) result.cause()).runId())
+            .isEqualTo("rid-launch-replay-cause");
   }
 }

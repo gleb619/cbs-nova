@@ -2,10 +2,12 @@ package cbs.nova.starter.controller;
 
 import cbs.nova.dsl.ExplainReport;
 import cbs.nova.starter.model.DslRequest;
+import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.RuntimeOutcome;
 import cbs.nova.starter.model.ValidationError;
 import cbs.nova.starter.model.ValidationErrorsResponse;
 import cbs.nova.starter.service.DslRuntimeService;
+import cbs.nova.starter.service.IdempotencyKeys;
 import cbs.nova.starter.service.InputValidator;
 import cbs.nova.starter.web.DslPayloadSizeValidator;
 import cbs.nova.starter.web.RequestIdFilter;
@@ -26,6 +28,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DslRuntimeHandler {
 
+  public static final String IDEMPOTENCY_KEY_HEADER = "Idempotency-Key";
+
   private final DslRuntimeService service;
   private final DslPayloadSizeValidator payloadSizeValidator;
   private final InputValidator inputValidator;
@@ -42,6 +46,18 @@ public class DslRuntimeHandler {
     String name = request.pathVariable("name");
     DslRequest dslRequest = request.body(DslRequest.class);
     payloadSizeValidator.validateInput(request, dslRequest, name);
+    String key = request.headers().firstHeader(IDEMPOTENCY_KEY_HEADER);
+    if (key != null) {
+      String trimmed = key.trim();
+      if (!IdempotencyKeys.isValid(trimmed)) {
+        return ServerResponse.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse("INVALID_IDEMPOTENCY_KEY",
+                        "Invalid Idempotency-Key header", name, null, null));
+      }
+      String runId = IdempotencyKeys.deriveRunId(name, trimmed);
+      return validationOrExecute(name, dslRequest,
+              () -> respond(service.run(name, dslRequest, requestId(request), runId)));
+    }
     return validationOrExecute(name, dslRequest,
             () -> respond(service.run(name, dslRequest, requestId(request))));
   }
@@ -68,7 +84,11 @@ public class DslRuntimeHandler {
 
   private ServerResponse respond(RuntimeOutcome outcome) {
     if (outcome.success()) {
-      return ServerResponse.ok().body(outcome.value());
+      ServerResponse.BodyBuilder builder = ServerResponse.ok();
+      if (outcome.replayed()) {
+        builder.header("Idempotency-Replayed", "true");
+      }
+      return builder.body(outcome.value());
     }
     HttpStatus status = "PREVIEW_TIMEOUT".equals(outcome.error().code())
             ? HttpStatus.GATEWAY_TIMEOUT

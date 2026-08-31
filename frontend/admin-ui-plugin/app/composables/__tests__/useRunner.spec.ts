@@ -13,6 +13,8 @@ vi.mock('../useDslApi', () => {
 import * as apiModule from '../useDslApi'
 import { useRunner } from '../useRunner'
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 type ApiMock = {
   preview: ReturnType<typeof vi.fn>
   run: ReturnType<typeof vi.fn>
@@ -103,7 +105,7 @@ describe('useRunner', () => {
     expect(statusOrder[statusOrder.length - 1]).toBe('success')
   })
 
-  it('run path: status goes running -> success', async () => {
+  it('run path: status goes running -> success with idempotency key header', async () => {
     const r = useRunner()
     r.selectDefinition('runDef')
     r.setMode('run')
@@ -114,9 +116,31 @@ describe('useRunner', () => {
     const after = r.status.value
 
     expect(before).toBe('idle')
-    expect(getApiMocks().run).toHaveBeenCalledWith('runDef', r.formData.value)
+    expect(getApiMocks().run).toHaveBeenCalledWith(
+      'runDef',
+      r.formData.value,
+      undefined,
+      { 'Idempotency-Key': expect.stringMatching(UUID_REGEX) },
+    )
     expect(r.output.value).toMatchObject({ result: 'r2', workflowId: 'wf-2' })
     expect(after).toBe('success')
+  })
+
+  it('each run submission uses a different idempotency key', async () => {
+    const r = useRunner()
+    r.selectDefinition('runDef')
+    r.setMode('run')
+    getApiMocks().run.mockResolvedValue({ result: 'ok' })
+
+    await r.submit()
+    await r.submit()
+
+    expect(getApiMocks().run).toHaveBeenCalledTimes(2)
+    const key1 = (getApiMocks().run.mock.calls[0][3] as Record<string, string>)['Idempotency-Key']
+    const key2 = (getApiMocks().run.mock.calls[1][3] as Record<string, string>)['Idempotency-Key']
+    expect(key1).toMatch(UUID_REGEX)
+    expect(key2).toMatch(UUID_REGEX)
+    expect(key1).not.toBe(key2)
   })
 
   it('explain path calls api.explain', async () => {

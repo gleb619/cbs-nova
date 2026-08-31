@@ -2,10 +2,13 @@ package cbs.nova.starter;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cbs.nova.dsl.Dsl;
@@ -31,6 +34,8 @@ import cbs.nova.starter.controller.DslRuntimeHandler;
 import cbs.nova.starter.converter.DslRuntimeMapper;
 import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.service.DslRuntimeService;
+import cbs.nova.starter.service.IdempotencyKeys;
+import cbs.nova.starter.service.IdempotentReplayException;
 import cbs.nova.starter.service.InputValidator;
 import cbs.nova.starter.web.DslPayloadSizeValidator;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -41,6 +46,7 @@ import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mapstruct.factory.Mappers;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -338,5 +344,55 @@ class DslRuntimeResourceTest {
   }
 
   public record SampleInput(String name) {
+  }
+
+  @Test
+  void runRejectsInvalidIdempotencyKeyWith400() throws Exception {
+    mockMvc
+            .perform(
+                    post("/api/dsl/run/P")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .header("Idempotency-Key", "bad key!")
+                            .content("{\"body\": \"input\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("INVALID_IDEMPOTENCY_KEY"))
+            .andExpect(jsonPath("$.message").value("Invalid Idempotency-Key header"));
+  }
+
+  @Test
+  void runAcceptsValidIdempotencyKeyAndUsesDerivedRunId() throws Exception {
+    doReturn(Result.success("output")).when(dslRuntime).run(eq("P"), any());
+
+    mockMvc
+            .perform(
+                    post("/api/dsl/run/P")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .header("Idempotency-Key", "valid-key_1.0")
+                            .content("{\"body\": \"input\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$").value("output"));
+
+    ArgumentCaptor<cbs.nova.dsl.Context<?>> captor = ArgumentCaptor
+            .forClass(cbs.nova.dsl.Context.class);
+    verify(dslRuntime).run(eq("P"), captor.capture());
+    assertThat(captor.getValue().runId())
+            .isEqualTo(IdempotencyKeys.deriveRunId("P", "valid-key_1.0"));
+  }
+
+  @Test
+  void runReturnsReplayedResponseForIdempotentReplay() throws Exception {
+    doReturn(Result.failure(new IdempotentReplayException("idem-abc")))
+            .when(dslRuntime).run(eq("P"), any());
+
+    mockMvc
+            .perform(
+                    post("/api/dsl/run/P")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .header("Idempotency-Key", "key-1")
+                            .content("{\"body\": \"input\"}"))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Idempotency-Replayed", "true"))
+            .andExpect(jsonPath("$.runId").value("idem-abc"))
+            .andExpect(jsonPath("$.status").value("REPLAYED"));
   }
 }

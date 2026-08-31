@@ -51,6 +51,8 @@ export async function proxyToBackend<T>(
   if (traceparent) headers.traceparent = traceparent
   const authorization = getRequestHeader(event, 'authorization')
   if (authorization) headers.Authorization = authorization
+  const idempotencyKey = getRequestHeader(event, 'idempotency-key')
+  if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey
 
   const method = options.method ?? 'GET'
   const startedAt = Date.now()

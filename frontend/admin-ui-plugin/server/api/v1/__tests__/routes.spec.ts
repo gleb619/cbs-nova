@@ -143,6 +143,21 @@ describe('dsl/run/[name].post', () => {
       body: null,
     })
   })
+
+  it('passes the inbound event through so Idempotency-Key can be forwarded', async () => {
+    const event = {
+      node: { req: { headers: { 'idempotency-key': 'idem-123' } } },
+    } as Parameters<typeof proxyToBackendMock>[0]
+    routerParams = { name: 'myFlow' }
+    bodyValue = { input: { x: 1 } }
+
+    await runHandler(event)
+
+    expect(proxyToBackendMock).toHaveBeenCalledWith(event, '/api/dsl/run/myFlow', {
+      method: 'POST',
+      body: { input: { x: 1 } },
+    })
+  })
 })
 
 describe('dsl/preview/[name].post', () => {

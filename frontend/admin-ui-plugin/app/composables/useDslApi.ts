@@ -39,11 +39,17 @@ export function useDslApi() {
     })
   }
 
-  async function run(name: string, body: unknown, metadata?: Record<string, unknown>) {
+  async function run(
+    name: string,
+    body: unknown,
+    metadata?: Record<string, unknown>,
+    headers?: Record<string, string>,
+  ) {
     log.info('run request', { name })
     return $fetch(`/api/v1/dsl/run/${name}`, {
       method: 'POST',
       body: { body, metadata },
+      ...(headers ? { headers } : {}),
     })
   }
 

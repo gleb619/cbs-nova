@@ -51,7 +51,10 @@ export function useRunner() {
       if (mode.value === 'preview') {
         response = await api.preview(name, payload)
       } else if (mode.value === 'run') {
-        response = await api.run(name, payload)
+        const idempotencyKey = globalThis.crypto.randomUUID()
+        response = await api.run(name, payload, undefined, {
+          'Idempotency-Key': idempotencyKey,
+        })
       } else {
         response = await api.explain(name, payload)
       }
