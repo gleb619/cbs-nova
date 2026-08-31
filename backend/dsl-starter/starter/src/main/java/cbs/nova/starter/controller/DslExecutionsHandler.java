@@ -67,8 +67,8 @@ public class DslExecutionsHandler {
             .map(String::trim)
             .filter(s -> !s.isBlank())
             .orElse(null);
-    int limit = request.param("limit").map(Integer::parseInt).orElse(50);
-    int offset = request.param("offset").map(Integer::parseInt).orElse(0);
+    int limit = intParam(request, "limit", 50);
+    int offset = intParam(request, "offset", 0);
     int pageSize = clampLimit(limit);
     int skip = clampOffset(offset);
     DslRunSearchResult result = runRepository.search(processName, status, mode, correlationId, skip,
@@ -97,7 +97,7 @@ public class DslExecutionsHandler {
   @ApiResponse(responseCode = "200", description = "Aggregate run statistics", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionStatsResponse.class)))
   public ServerResponse stats(ServerRequest request) {
     int topProcesses = clampTopProcesses(
-            request.param("topProcesses").map(Integer::parseInt).orElse(DEFAULT_TOP_PROCESSES));
+            intParam(request, "topProcesses", DEFAULT_TOP_PROCESSES));
     Instant windowStart = Instant.now().minus(Duration.ofHours(STATS_WINDOW_HOURS));
 
     DslRunStats stats = statsRepository != null
@@ -217,6 +217,20 @@ public class DslExecutionsHandler {
 
   private static int clampTopProcesses(int topProcesses) {
     return Math.max(1, Math.min(topProcesses, MAX_TOP_PROCESSES));
+  }
+
+  private static int intParam(ServerRequest request, String name, int defaultValue) {
+    var raw = request.param(name).filter(s -> !s.isBlank()).orElse(null);
+    if (raw == null) {
+      return defaultValue;
+    }
+    try {
+      return Integer.parseInt(raw.trim());
+    } catch (NumberFormatException e) {
+      throw new IllegalArgumentException(
+              "Invalid value for query parameter '" + name + "': '" + raw
+                      + "' (expected an integer)");
+    }
   }
 
   /**
