@@ -153,6 +153,11 @@ const expectedProxies: readonly ExpectedProxy[] = [
     bffPath: '/api/v1/executions/{id}',
   },
   {
+    method: 'GET',
+    backendPath: '/api/executions/{id}/transactions',
+    bffPath: '/api/v1/executions/{id}/transactions',
+  },
+  {
     method: 'POST',
     backendPath: '/api/executions/{id}/cancel',
     bffPath: '/api/v1/executions/{id}/cancel',
@@ -190,10 +195,13 @@ function discoverRoutes(dir: string): DiscoveredRoute[] {
     if (fileSegments[fileSegments.length - 1] === 'index') fileSegments.pop()
     // Combine the directory layout with the filename segments, converting
     // bracketed parent directory names (e.g. "[name]") into "{name}".
-    const parentRel = relative(apiDir, dir).split(sep).filter((s) => s.length > 0).map((s) => {
-      const bracket = /^\[(?<name>.+)\]$/.exec(s)
-      return bracket?.groups.name ? `{${bracket.groups.name}}` : s
-    })
+    const parentRel = relative(apiDir, dir)
+      .split(sep)
+      .filter((s) => s.length > 0)
+      .map((s) => {
+        const bracket = /^\[(?<name>.+)\]$/.exec(s)
+        return bracket?.groups.name ? `{${bracket.groups.name}}` : s
+      })
     const allSegments = [...parentRel, ...fileSegments]
     const bffPath = `/api/v1/${allSegments.join('/')}`
     out.push({ method, bffPath, relFile: relative(apiDir, full) })
@@ -214,13 +222,10 @@ describe('BFF proxy route coverage', () => {
   it('every backend /api/dsl/* + /api/executions* path has a matching BFF proxy route file', () => {
     const discovered = discoverRoutes(apiDir)
     const discoveredKeys = new Set(discovered.map((r) => `${r.method} ${r.bffPath}`))
-    const missing = expectedProxies.filter(
-      (e) => !discoveredKeys.has(`${e.method} ${e.bffPath}`),
-    )
+    const missing = expectedProxies.filter((e) => !discoveredKeys.has(`${e.method} ${e.bffPath}`))
     if (missing.length > 0) {
       const lines = missing.map(
-        (m) =>
-          `  - ${m.method.padEnd(4)} ${m.backendPath.padEnd(34)} → ${m.bffPath}`,
+        (m) => `  - ${m.method.padEnd(4)} ${m.backendPath.padEnd(34)} → ${m.bffPath}`,
       )
       const discoveredSummary = discovered
         .map((r) => `${r.method} ${r.bffPath} (${r.relFile})`)

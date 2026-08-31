@@ -1,16 +1,19 @@
 package cbs.nova.starter.config;
 
 import cbs.nova.dsl.history.DslRunRepository;
+import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.starter.controller.DslExecutionsHandler;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ExecutionDto;
 import cbs.nova.starter.model.ExecutionListResponse;
 import cbs.nova.starter.model.ExecutionStatsResponse;
+import cbs.nova.starter.model.TransactionExecutionDto;
 import cbs.nova.starter.persistence.DslRunStatsRepository;
 import cbs.nova.starter.service.DslRunCancellationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -30,12 +33,13 @@ public class DslExecutionsRouterConfiguration {
   @Bean
   DslExecutionsHandler dslExecutionsHandler(DslRunRepository runRepository,
           ObjectMapper objectMapper,
-          DslRunCancellationService dslRunCancellationService) {
+          DslRunCancellationService dslRunCancellationService,
+          TransactionExecutionRepository transactionExecutionRepository) {
     DslRunStatsRepository statsRepository = runRepository instanceof DslRunStatsRepository stats
             ? stats
             : null;
     return new DslExecutionsHandler(runRepository, objectMapper, dslRunCancellationService,
-            statsRepository);
+            statsRepository, transactionExecutionRepository);
   }
 
   @Bean
@@ -57,6 +61,11 @@ public class DslExecutionsRouterConfiguration {
               @ApiResponse(responseCode = "200", description = "The execution run", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionDto.class))),
               @ApiResponse(responseCode = "404", description = "No run with the given id", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
+      @RouterOperation(path = "/api/executions/{id}/transactions", beanClass = DslExecutionsHandler.class, beanMethod = "transactions", method = RequestMethod.GET, operation = @Operation(operationId = "getExecutionTransactions", summary = "List transaction executions for a run", tags = {
+          "DSL Executions"}, parameters = @Parameter(name = "id", in = ParameterIn.PATH), responses = {
+              @ApiResponse(responseCode = "200", description = "Transaction executions for the run, most recent first", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = TransactionExecutionDto.class)))),
+              @ApiResponse(responseCode = "404", description = "No run with the given id", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
       @RouterOperation(path = "/api/executions/{id}/cancel", beanClass = DslExecutionsHandler.class, beanMethod = "cancel", method = RequestMethod.POST, operation = @Operation(operationId = "cancelExecution", summary = "Cancel a running DSL execution run", tags = {
           "DSL Executions"}, parameters = @Parameter(name = "id", in = ParameterIn.PATH), responses = {
               @ApiResponse(responseCode = "200", description = "The cancelled execution run", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionDto.class))),
@@ -71,6 +80,7 @@ public class DslExecutionsRouterConfiguration {
             // id.
             .GET("/api/executions/stats", handler::stats)
             .GET("/api/executions/{id}", handler::detail)
+            .GET("/api/executions/{id}/transactions", handler::transactions)
             .POST("/api/executions/{id}/cancel", handler::cancel)
             .build();
   }

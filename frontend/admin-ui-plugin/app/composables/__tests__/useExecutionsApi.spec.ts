@@ -1,4 +1,4 @@
-import type { Execution, ExecutionDetail } from '@cbs/components/types'
+import type { Execution, ExecutionDetail, TransactionExecutionDto } from '@cbs/components/types'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useExecutionsApi } from '../useExecutionsApi'
 
@@ -118,6 +118,24 @@ describe('useExecutionsApi', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/executions/abc-123/cancel', {
       method: 'POST',
     })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(result).toEqual(response)
+  })
+
+  it('getTransactions(id) GETs /api/v1/executions/{id}/transactions', async () => {
+    const response: TransactionExecutionDto[] = [
+      {
+        transactionName: 'apply',
+        input: { amount: 100 },
+        executedAt: '2026-01-01T00:00:00Z',
+      },
+    ]
+    fetchMock.mockResolvedValueOnce(response)
+
+    const api = useExecutionsApi()
+    const result: TransactionExecutionDto[] = await api.getTransactions('abc-123')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/executions/abc-123/transactions')
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(result).toEqual(response)
   })

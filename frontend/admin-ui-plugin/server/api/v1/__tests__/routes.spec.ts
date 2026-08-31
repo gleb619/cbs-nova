@@ -41,6 +41,7 @@ const explainHandler = (await import('../dsl/explain/[name].post')).default
 const executionsIndexHandler = (await import('../executions/index.get')).default
 const executionsStatsHandler = (await import('../executions/stats.get')).default
 const executionsIdHandler = (await import('../executions/[id].get')).default
+const executionsTransactionsHandler = (await import('../executions/[id]/transactions.get')).default
 const executionsCancelHandler = (await import('../executions/[id]/cancel.post')).default
 const infoHandler = (await import('../info.get')).default
 const saveDraftHandler = (await import('../dsl/drafts/[name]/save.post')).default
@@ -304,6 +305,21 @@ describe('executions/[id].get', () => {
   })
 })
 
+describe('executions/[id]/transactions.get', () => {
+  it('interpolates the :id router param into the backend transactions path with GET (no opts)', async () => {
+    routerParams = { id: 'exec-abc-123' }
+
+    await executionsTransactionsHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/executions/exec-abc-123/transactions',
+    )
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+})
+
 describe('executions/[id]/cancel.post', () => {
   it('POSTs to the backend cancel path with the :id router param and no body', async () => {
     routerParams = { id: 'exec-abc-123' }
@@ -318,7 +334,6 @@ describe('executions/[id]/cancel.post', () => {
     )
   })
 })
-
 
 describe('dsl/drafts/[name]/save.post', () => {
   it('interpolates the :name router param and forwards readBody() as body', async () => {
@@ -448,7 +463,6 @@ describe('dsl/processes/[name].get', () => {
     expect(result).toEqual(payload)
   })
 })
-
 
 describe('dsl/constructs/[name].get', () => {
   it('interpolates the :name router param into the backend path with GET (no opts)', async () => {

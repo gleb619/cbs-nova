@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { useExecutions } from '@cbs/admin-ui-plugin/composables/useExecutions'
+import { useExecutionsApi } from '@cbs/admin-ui-plugin/composables/useExecutionsApi'
 import { useTemporalLink } from '@cbs/admin-ui-plugin/composables/useTemporalLink'
 import {
   ErrorBanner,
@@ -11,8 +12,8 @@ import {
 } from '@cbs/components'
 import { navigateTo, useRoute } from 'nuxt/app'
 import { computed, onUnmounted, ref, watch } from 'vue'
+import type { ExecutionMode, TransactionExecutionDto } from '~/types'
 import { stashRunAgain } from '../../utils/runAgainHandoff'
-import type { ExecutionMode } from '~/types'
 
 const route = useRoute()
 const id = computed(() => String(route.params.id))
@@ -28,20 +29,21 @@ const {
   cancelExecution,
 } = useExecutions()
 
-const activeTab = ref<'diagram' | 'payload' | 'metadata' | 'logs' | 'errors'>('diagram')
+const activeTab = ref<'diagram' | 'payload' | 'metadata' | 'logs' | 'errors' | 'transactions'>(
+  'diagram',
+)
 
 // T296 — the backend has no log source for production runs today, so the
 // Logs tab only appears when the detail payload actually carries one.
 // We still keep the tab in the activeTab type so an existing selection
 // survives a refresh; below we fall back to 'diagram' if logs disappear.
-const hasLogs = computed(
-  () => (selectedExecution.value?.logs?.length ?? 0) > 0,
-)
+const hasLogs = computed(() => (selectedExecution.value?.logs?.length ?? 0) > 0)
 const availableTabs = computed(() => {
-  const tabs: Array<'diagram' | 'payload' | 'metadata' | 'logs' | 'errors'> = [
+  const tabs: Array<'diagram' | 'payload' | 'metadata' | 'logs' | 'errors' | 'transactions'> = [
     'diagram',
     'payload',
     'metadata',
+    'transactions',
   ]
   if (hasLogs.value) tabs.push('logs')
   tabs.push('errors')
@@ -106,9 +108,7 @@ const regularSteps = computed(() => traceSteps.value.filter((s) => !s.isCompensa
 
 // T302 — deep-link to the Temporal Web UI for this run's workflow (opt-in).
 const temporal = useTemporalLink()
-const workflowLink = computed(() =>
-  temporal.workflowUrl(selectedExecution.value?.workflowId ?? ''),
-)
+const workflowLink = computed(() => temporal.workflowUrl(selectedExecution.value?.workflowId ?? ''))
 
 // T266: completed runs don't carry a diagram field — fetch one for the
 // underlying process definition by name and bind it to the Diagram tab.
@@ -134,6 +134,31 @@ async function loadDiagram() {
     diagramLoading.value = false
   }
 }
+
+const transactions = ref<TransactionExecutionDto[]>([])
+const transactionsLoading = ref(false)
+const transactionsError = ref<string | null>(null)
+const transactionsLoaded = ref(false)
+
+async function loadTransactions() {
+  if (transactionsLoaded.value) return
+  transactionsLoading.value = true
+  transactionsError.value = null
+  try {
+    transactions.value = await useExecutionsApi().getTransactions(id.value)
+    transactionsLoaded.value = true
+  } catch (err) {
+    transactionsError.value = (err as Error)?.message ?? 'Failed to load transactions'
+  } finally {
+    transactionsLoading.value = false
+  }
+}
+
+watch(activeTab, (tab) => {
+  if (tab === 'transactions') {
+    loadTransactions()
+  }
+})
 
 if (selectedExecution.value?.entity) {
   await loadDiagram()
@@ -245,7 +270,7 @@ onUnmounted(() => {
                            activeTab === tab ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-600 hover:text-gray-900']"
             @click="activeTab = tab"
           >
-            {{ tab === 'diagram' ? 'Diagram' : tab === 'payload' ? 'I/O Payload' : tab[0].toUpperCase() + tab.slice(1) }}
+            {{ tab === 'diagram' ? 'Diagram' : tab === 'payload' ? 'I/O Payload' : tab === 'transactions' ? 'Transactions' : tab[0].toUpperCase() + tab.slice(1) }}
           </button>
         </div>
         <div class="p-4">
@@ -260,6 +285,12 @@ onUnmounted(() => {
             :metadata="selectedExecution.metadata"
             :execution="selectedExecution"
             :workflow-link="workflowLink"
+          />
+          <ExecutionsTransactionsTab
+            v-else-if="activeTab === 'transactions'"
+            :transactions="transactions"
+            :loading="transactionsLoading"
+            :error="transactionsError"
           />
           <ExecutionsLogsTab v-else-if="activeTab === 'logs'" :logs="selectedExecution.logs" />
           <ExecutionsErrorsTab
