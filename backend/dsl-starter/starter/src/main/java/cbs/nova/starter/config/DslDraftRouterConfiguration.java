@@ -35,6 +35,18 @@ public class DslDraftRouterConfiguration {
               @ApiResponse(responseCode = "409", description = "Source directory not configured or not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
               @ApiResponse(responseCode = "500", description = "Reload failed", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
+      @RouterOperation(path = "/api/dsl/drafts/{name}/history", beanClass = DslDraftHandler.class, beanMethod = "history", method = RequestMethod.GET, operation = @Operation(operationId = "listPublishHistory", summary = "List published metadata snapshots for a construct", tags = {
+          "DSL Admin"}, responses = {
+              @ApiResponse(responseCode = "200", description = "List of history entries"),
+              @ApiResponse(responseCode = "409", description = "Source directory not configured or not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
+      @RouterOperation(path = "/api/dsl/drafts/{name}/history/{timestamp}/restore", beanClass = DslDraftHandler.class, beanMethod = "restore", method = RequestMethod.POST, operation = @Operation(operationId = "restorePublishHistory", summary = "Restore a published metadata snapshot and reload DSL", tags = {
+          "DSL Admin"}, responses = {
+              @ApiResponse(responseCode = "200", description = "Snapshot restored"),
+              @ApiResponse(responseCode = "404", description = "History entry not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "409", description = "Source directory not configured or not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "500", description = "Reload failed", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
       @RouterOperation(path = "/api/dsl/drafts/{name}", beanClass = DslDraftHandler.class, beanMethod = "delete", method = RequestMethod.DELETE, operation = @Operation(operationId = "deleteDraft", summary = "Delete a Workbench draft construct", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "Draft deleted"),
@@ -58,6 +70,8 @@ public class DslDraftRouterConfiguration {
             .GET("/api/dsl/drafts/{name}", draftHandler::read)
             .POST("/api/dsl/drafts/{name}/save", draftHandler::save)
             .POST("/api/dsl/drafts/{name}/publish", draftHandler::publish)
+            .GET("/api/dsl/drafts/{name}/history", draftHandler::history)
+            .POST("/api/dsl/drafts/{name}/history/{timestamp}/restore", draftHandler::restore)
             .DELETE("/api/dsl/drafts/{name}", draftHandler::delete)
             .build();
   }

@@ -2,10 +2,12 @@ package cbs.nova.starter.controller;
 
 import cbs.nova.dsl.LoadResult;
 import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.model.VcsModels.DraftSummary;
 import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.starter.service.DslDefinitionHistoryService;
 import tools.jackson.core.JacksonException;
 import jakarta.servlet.ServletException;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +39,7 @@ public class DslDraftHandler {
 
   private final DslProperties dslProperties;
   private final DslReloadHandler reloadHandler;
+  private final DslDefinitionHistoryService historyService;
   private final ObjectMapper objectMapper;
 
   public ServerResponse save(ServerRequest request) throws IOException {
@@ -70,38 +73,41 @@ public class DslDraftHandler {
       return dir.response();
     }
     var payload = withStatus(body, "Published");
+    historyService.snapshotBeforePublish(dir.path(), name);
     Path file = writePayload(dir.path().resolve(PUBLISHED_DIR), payload);
     log.info("[DSL drafts] published {} to {}", name, file);
+    return finishPublish(name, file);
+  }
 
-    // Reload the DSL registry and surface the drilldown of what got loaded. A reload failure
-    // (e.g. compile error) must not fail the publish itself — the draft is already persisted.
-    boolean reloaded = false;
-    LoadResult loadResult = LoadResult.empty();
-    try {
-      loadResult = reloadHandler.reloadDefinitions();
-      reloaded = true;
-      log.info("[DSL drafts] publish of {} reloaded {} definitions: processes={}, transactions={},"
-              + " functions={}",
-              name, loadResult.total(), loadResult.processCount(), loadResult.transactionCount(),
-              loadResult.functionCount());
-    } catch (Exception e) {
-      log.warn("[DSL drafts] publish of {} succeeded but reload failed: {}", name, e.getMessage());
-      var compilation = findDslCompilationException(e);
-      if (compilation != null) {
-        return ServerResponse.ok()
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(new DraftResponse(name, "Published", file.toString(), false,
-                        LoadResult.empty(),
-                        compilation.getMessage(), compilation.diagnostics()));
-      }
-      return ServerResponse.ok()
-              .contentType(MediaType.APPLICATION_JSON)
-              .body(new DraftResponse(name, "Published", file.toString(), false, LoadResult.empty(),
-                      e.getMessage(), null));
+  public ServerResponse history(ServerRequest request) {
+    String name = request.pathVariable("name");
+    var dir = ensureConfigured(name);
+    if (dir.isError()) {
+      return dir.response();
     }
-    return ServerResponse.ok()
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(new DraftResponse(name, "Published", file.toString(), reloaded, loadResult));
+    List<DefinitionHistoryEntry> entries = historyService.list(dir.path(), name);
+    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(entries);
+  }
+
+  public ServerResponse restore(ServerRequest request) throws IOException {
+    String name = request.pathVariable("name");
+    String timestamp = request.pathVariable("timestamp");
+    var dir = ensureConfigured(name);
+    if (dir.isError()) {
+      return dir.response();
+    }
+    var entry = historyService.readEntry(dir.path(), name, timestamp);
+    if (entry.isEmpty()) {
+      return error(HttpStatus.NOT_FOUND,
+              new ErrorResponse("NOT_FOUND",
+                      "No publish history entry " + timestamp + " for " + name,
+                      name, null, null));
+    }
+    historyService.snapshotBeforePublish(dir.path(), name);
+    var payload = withStatus(entry.get(), "Published");
+    Path file = writePayload(dir.path().resolve(PUBLISHED_DIR), payload);
+    log.info("[DSL drafts] restored {} to published {} from history {}", name, file, timestamp);
+    return finishPublish(name, file);
   }
 
   public ServerResponse delete(ServerRequest request) throws IOException {
@@ -111,8 +117,8 @@ public class DslDraftHandler {
       return dir.response();
     }
     Path draftsDir = dir.path().resolve(DRAFTS_DIR);
-    Path draftFile = draftsDir.resolve(safeFileName(name) + ".json");
-    if (!Files.exists(draftFile)) {
+    Path draftFile = draftsDir.resolve(safeFileName(name) + ".json").normalize();
+    if (!draftFile.startsWith(draftsDir) || !Files.exists(draftFile)) {
       return error(HttpStatus.NOT_FOUND,
               new ErrorResponse("NOT_FOUND", "Draft not found: " + name, name, null, null));
     }
@@ -126,8 +132,6 @@ public class DslDraftHandler {
   public ServerResponse list(ServerRequest request) {
     var dir = ensureConfigured(null);
     if (dir.isError()) {
-      // Unconfigured source-dir: an empty list is a valid answer (matches the
-      // frontend expectation that "no drafts configured" is not an error).
       return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(List.of());
     }
     Path drafts = draftsDir(dir.path());
@@ -179,6 +183,36 @@ public class DslDraftHandler {
     DraftRequest payload = objectMapper.readValue(draftFile.toFile(), DraftRequest.class);
     log.info("[DSL drafts] read {} from {}", name, draftFile);
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(payload);
+  }
+
+  private ServerResponse finishPublish(String name, Path file) throws IOException {
+    boolean reloaded = false;
+    LoadResult loadResult = LoadResult.empty();
+    try {
+      loadResult = reloadHandler.reloadDefinitions();
+      reloaded = true;
+      log.info("[DSL drafts] publish of {} reloaded {} definitions: processes={}, transactions={},"
+              + " functions={}",
+              name, loadResult.total(), loadResult.processCount(), loadResult.transactionCount(),
+              loadResult.functionCount());
+    } catch (Exception e) {
+      log.warn("[DSL drafts] publish of {} succeeded but reload failed: {}", name, e.getMessage());
+      var compilation = findDslCompilationException(e);
+      if (compilation != null) {
+        return ServerResponse.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new DraftResponse(name, "Published", file.toString(), false,
+                        LoadResult.empty(),
+                        compilation.getMessage(), compilation.diagnostics()));
+      }
+      return ServerResponse.ok()
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(new DraftResponse(name, "Published", file.toString(), false, LoadResult.empty(),
+                      e.getMessage(), null));
+    }
+    return ServerResponse.ok()
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(new DraftResponse(name, "Published", file.toString(), reloaded, loadResult));
   }
 
   private sealed interface PathResult {

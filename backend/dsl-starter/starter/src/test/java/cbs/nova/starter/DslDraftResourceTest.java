@@ -6,9 +6,11 @@ import cbs.nova.starter.config.DslDraftRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
 import cbs.nova.starter.controller.DslReloadHandler;
+import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.model.VcsModels.DraftSummary;
+import cbs.nova.starter.service.DslDefinitionHistoryService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -38,14 +41,17 @@ import tools.jackson.databind.ObjectMapper;
 class DslDraftResourceTest {
 
   private DslDraftHandler handler;
+  private DslProperties props;
   private Path sourceDir;
   private final ObjectMapper mapper = new ObjectMapper();
 
   @BeforeEach
   void setUp() throws IOException {
     sourceDir = Files.createTempDirectory("dsl-draft-test-");
-    DslProperties props = new DslProperties(sourceDir.toString(), null, null, null, null);
-    handler = new DslDraftHandler(props, new DslReloadHandler(props, null), mapper);
+    props = new DslProperties();
+    props.setSourceDir(sourceDir.toString());
+    handler = new DslDraftHandler(props, new DslReloadHandler(props, null),
+            new DslDefinitionHistoryService(props, mapper), mapper);
   }
 
   @AfterEach
@@ -63,12 +69,17 @@ class DslDraftResourceTest {
   }
 
   private static ServerRequest postRequest(String path, String name) {
+    return postRequest(path, name, "1");
+  }
+
+  private static ServerRequest postRequest(String path, String name, String version) {
     var req = new MockHttpServletRequest("POST", path);
     req.setAttribute(RouterFunctions.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of("name", name));
     req.setContentType("application/json");
     req.setContent(
             ("{\"name\":\"" + name
-                    + "\",\"type\":\"process\",\"status\":\"Draft\",\"version\":\"1\"}")
+                    + "\",\"type\":\"process\",\"status\":\"Draft\",\"version\":\"" + version
+                    + "\"}")
                     .getBytes());
     return ServerRequest.create(req, CONVERTERS);
   }
@@ -129,9 +140,12 @@ class DslDraftResourceTest {
 
   @Test
   void deleteReturns409WhenSourceDirBlank() throws Exception {
+    DslProperties blank = new DslProperties();
+    blank.setSourceDir("");
     handler = new DslDraftHandler(
-            new DslProperties("", null, null, null, null),
-            new DslReloadHandler(new DslProperties("", null, null, null, null), null),
+            blank,
+            new DslReloadHandler(blank, null),
+            new DslDefinitionHistoryService(blank, mapper),
             mapper);
     ServerResponse response = handler.delete(deleteRequest("foo", "/api/dsl/drafts/foo"));
     assertThat(response.statusCode().value()).isEqualTo(409);
@@ -179,9 +193,12 @@ class DslDraftResourceTest {
 
   @Test
   void saveReturns409WhenSourceDirBlank() throws Exception {
+    DslProperties blank = new DslProperties();
+    blank.setSourceDir("");
     handler = new DslDraftHandler(
-            new DslProperties("", null, null, null, null),
-            new DslReloadHandler(new DslProperties("", null, null, null, null), null),
+            blank,
+            new DslReloadHandler(blank, null),
+            new DslDefinitionHistoryService(blank, mapper),
             mapper);
     ServerResponse response = handler.save(postRequest("/api/dsl/drafts/foo/save"));
     assertThat(response.statusCode().value()).isEqualTo(409);
@@ -207,9 +224,12 @@ class DslDraftResourceTest {
 
   @Test
   void listReturnsEmptyWhenSourceDirBlank() throws Exception {
+    DslProperties blank = new DslProperties();
+    blank.setSourceDir("");
     handler = new DslDraftHandler(
-            new DslProperties("", null, null, null, null),
-            new DslReloadHandler(new DslProperties("", null, null, null, null), null),
+            blank,
+            new DslReloadHandler(blank, null),
+            new DslDefinitionHistoryService(blank, mapper),
             mapper);
 
     ServerResponse response = handler.list(getRequest("/api/dsl/drafts", null));
@@ -306,6 +326,218 @@ class DslDraftResourceTest {
             .run(ctx -> assertThat(ctx).doesNotHaveBean(RouterFunction.class));
   }
 
+  @Test
+  void publishSurfacesCompileDiagnosticsWhenReloadFails() throws Exception {
+    Files.writeString(sourceDir.resolve("Broken.java"),
+            "this is not valid Java at all; { class Broken { ???");
+
+    ServerResponse response = handler.publish(postRequest("/api/dsl/drafts/foo/publish"));
+    assertThat(response.statusCode().value()).isEqualTo(200);
+
+    Object entity = ((org.springframework.web.servlet.function.EntityResponse<?>) response)
+            .entity();
+    assertThat(entity).isInstanceOf(DraftResponse.class);
+    DraftResponse draft = (DraftResponse) entity;
+    assertThat(draft.reloaded()).isFalse();
+    assertThat(draft.reloadError()).isNotBlank();
+    assertThat(draft.diagnostics()).isNotEmpty();
+    assertThat(draft.diagnostics().get(0).file()).contains("Broken.java");
+    assertThat(draft.diagnostics().get(0).message()).isNotBlank();
+    assertThat(draft.diagnostics().get(0).severity()).isEqualTo("error");
+  }
+
+  @Test
+  void publishSnapshotsPreviousPublishedPayload() throws Exception {
+    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "A"));
+    Thread.sleep(2);
+    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "B"));
+
+    Path historyDir = sourceDir.resolve(".workbench/history/X");
+    assertThat(historyDir).isDirectory();
+    List<Path> files;
+    try (Stream<Path> s = Files.list(historyDir)) {
+      files = s.filter(Files::isRegularFile).toList();
+    }
+    assertThat(files).hasSize(1);
+    DraftRequest snapshot = mapper.readValue(files.get(0).toFile(), DraftRequest.class);
+    assertThat(snapshot.name()).isEqualTo("X");
+    assertThat(snapshot.status()).isEqualTo("Published");
+    assertThat(snapshot.version()).isEqualTo("A");
+  }
+
+  @Test
+  void firstPublishCreatesNoHistoryEntry() throws Exception {
+    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "1"));
+
+    Path historyDir = sourceDir.resolve(".workbench/history/X");
+    assertThat(historyDir).doesNotExist();
+  }
+
+  @Test
+  void historyLimitPrunesOldSnapshots() throws Exception {
+    props.getDrafts().setHistoryLimit(2);
+    for (int i = 1; i <= 4; i++) {
+      handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", String.valueOf(i)));
+      Thread.sleep(2);
+    }
+
+    Path historyDir = sourceDir.resolve(".workbench/history/X");
+    assertThat(historyDir).isDirectory();
+    List<String> timestamps;
+    try (Stream<Path> s = Files.list(historyDir)) {
+      timestamps = s.filter(Files::isRegularFile)
+              .map(p -> p.getFileName().toString())
+              .sorted(Comparator.reverseOrder())
+              .toList();
+    }
+    assertThat(timestamps).hasSize(2);
+    for (String timestamp : timestamps) {
+      assertThat(timestamp).endsWith(".json");
+    }
+  }
+
+  @Test
+  void historyReturnsNewestFirstEntries() throws Exception {
+    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "1"));
+    Thread.sleep(2);
+    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "2"));
+
+    ServerResponse response = handler.history(getRequest("/api/dsl/drafts/X/history",
+            Map.of("name", "X")));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    @SuppressWarnings("unchecked")
+    List<DefinitionHistoryEntry> entries = (List<DefinitionHistoryEntry>) ((org.springframework.web.servlet.function.EntityResponse<?>) response)
+            .entity();
+    assertThat(entries).hasSize(1);
+    DefinitionHistoryEntry entry = entries.get(0);
+    assertThat(entry.timestamp()).isNotBlank();
+    assertThat(entry.timestampMillis()).isGreaterThan(0L);
+    assertThat(entry.sizeBytes()).isGreaterThan(0L);
+    assertThat(entry.lastModifiedMillis()).isGreaterThan(0L);
+  }
+
+  @Test
+  void restoreRollsBackPublishedMetadata() throws Exception {
+    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "A"));
+    Thread.sleep(2);
+    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "B"));
+
+    List<DefinitionHistoryEntry> entries = historyEntries("X");
+    assertThat(entries).hasSize(1);
+    String timestamp = entries.get(0).timestamp();
+
+    Thread.sleep(2);
+    ServerResponse response = handler.restore(getRequest(
+            "/api/dsl/drafts/X/history/" + timestamp + "/restore",
+            Map.of("name", "X", "timestamp", timestamp)));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    Path published = sourceDir.resolve(".workbench/published/X.json");
+    DraftRequest current = mapper.readValue(published.toFile(), DraftRequest.class);
+    assertThat(current.version()).isEqualTo("A");
+    assertThat(current.status()).isEqualTo("Published");
+
+    List<DefinitionHistoryEntry> after = historyEntries("X");
+    assertThat(after).hasSize(2);
+  }
+
+  @Test
+  void restoreUnknownTimestampReturns404() throws Exception {
+    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "A"));
+
+    ServerResponse response = handler.restore(getRequest(
+            "/api/dsl/drafts/X/history/9999999999999/restore",
+            Map.of("name", "X", "timestamp", "9999999999999")));
+
+    assertThat(response.statusCode().value()).isEqualTo(404);
+    Path published = sourceDir.resolve(".workbench/published/X.json");
+    DraftRequest current = mapper.readValue(published.toFile(), DraftRequest.class);
+    assertThat(current.version()).isEqualTo("A");
+  }
+
+  @Test
+  void restoreNonNumericTimestampReturns404() throws Exception {
+    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "A"));
+
+    ServerResponse response = handler.restore(getRequest(
+            "/api/dsl/drafts/X/history/evil/restore",
+            Map.of("name", "X", "timestamp", "evil")));
+
+    assertThat(response.statusCode().value()).isEqualTo(404);
+    Path published = sourceDir.resolve(".workbench/published/X.json");
+    DraftRequest current = mapper.readValue(published.toFile(), DraftRequest.class);
+    assertThat(current.version()).isEqualTo("A");
+  }
+
+  @Test
+  void historySanitizesTraversalName() throws Exception {
+    ServerResponse response = handler.history(getRequest("/api/dsl/drafts/../../etc/history",
+            Map.of("name", "../../etc")));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    @SuppressWarnings("unchecked")
+    List<DefinitionHistoryEntry> entries = (List<DefinitionHistoryEntry>) ((org.springframework.web.servlet.function.EntityResponse<?>) response)
+            .entity();
+    assertThat(entries).isEmpty();
+    Path escaped = sourceDir.resolve(".workbench/history/").toAbsolutePath().getParent().getParent()
+            .resolve("etc");
+    assertThat(escaped).doesNotExist();
+  }
+
+  @Test
+  void restoreSanitizesTraversalName() throws Exception {
+    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "A"));
+
+    ServerResponse response = handler.restore(getRequest(
+            "/api/dsl/drafts/../../etc/history/123/restore",
+            Map.of("name", "../../etc", "timestamp", "123")));
+
+    assertThat(response.statusCode().value()).isEqualTo(404);
+  }
+
+  @Test
+  void historyReturns409WhenSourceDirBlank() throws Exception {
+    DslProperties blank = new DslProperties();
+    blank.setSourceDir("");
+    handler = new DslDraftHandler(
+            blank,
+            new DslReloadHandler(blank, null),
+            new DslDefinitionHistoryService(blank, mapper),
+            mapper);
+
+    ServerResponse response = handler.history(getRequest("/api/dsl/drafts/X/history",
+            Map.of("name", "X")));
+
+    assertThat(response.statusCode().value()).isEqualTo(409);
+  }
+
+  @Test
+  void restoreReturns409WhenSourceDirBlank() throws Exception {
+    DslProperties blank = new DslProperties();
+    blank.setSourceDir("");
+    handler = new DslDraftHandler(
+            blank,
+            new DslReloadHandler(blank, null),
+            new DslDefinitionHistoryService(blank, mapper),
+            mapper);
+
+    ServerResponse response = handler.restore(getRequest(
+            "/api/dsl/drafts/X/history/123/restore",
+            Map.of("name", "X", "timestamp", "123")));
+
+    assertThat(response.statusCode().value()).isEqualTo(409);
+  }
+
+  private List<DefinitionHistoryEntry> historyEntries(String name) throws Exception {
+    ServerResponse response = handler.history(getRequest("/api/dsl/drafts/" + name + "/history",
+            Map.of("name", name)));
+    @SuppressWarnings("unchecked")
+    List<DefinitionHistoryEntry> entries = (List<DefinitionHistoryEntry>) ((org.springframework.web.servlet.function.EntityResponse<?>) response)
+            .entity();
+    return entries;
+  }
+
   private void deleteRecursively(Path path) throws IOException {
     try (Stream<Path> stream = Files.walk(path)) {
       stream.sorted((a, b) -> -a.compareTo(b)).forEach(p -> {
@@ -360,28 +592,15 @@ class DslDraftResourceTest {
     }
 
     @Bean
+    DslDefinitionHistoryService dslDefinitionHistoryService(DslProperties props,
+            ObjectMapper mapper) {
+      return new DslDefinitionHistoryService(props, mapper);
+    }
+
+    @Bean
     ObjectMapper objectMapper() {
       return new ObjectMapper();
     }
   }
 
-  @Test
-  void publishSurfacesCompileDiagnosticsWhenReloadFails() throws Exception {
-    Files.writeString(sourceDir.resolve("Broken.java"),
-            "this is not valid Java at all; { class Broken { ???");
-
-    ServerResponse response = handler.publish(postRequest("/api/dsl/drafts/foo/publish"));
-    assertThat(response.statusCode().value()).isEqualTo(200);
-
-    Object entity = ((org.springframework.web.servlet.function.EntityResponse<?>) response)
-            .entity();
-    assertThat(entity).isInstanceOf(DraftResponse.class);
-    DraftResponse draft = (DraftResponse) entity;
-    assertThat(draft.reloaded()).isFalse();
-    assertThat(draft.reloadError()).isNotBlank();
-    assertThat(draft.diagnostics()).isNotEmpty();
-    assertThat(draft.diagnostics().get(0).file()).contains("Broken.java");
-    assertThat(draft.diagnostics().get(0).message()).isNotBlank();
-    assertThat(draft.diagnostics().get(0).severity()).isEqualTo("error");
-  }
 }

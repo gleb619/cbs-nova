@@ -237,6 +237,22 @@ curl -s -X POST http://localhost:8090/api/dsl/drafts/LoanDisbursementProcess/pub
 curl -s -X DELETE http://localhost:8090/api/dsl/drafts/LoanDisbursementProcess
 ```
 
+
+### Publish history u0026 restore
+
+Every successful `POST /api/dsl/drafts/{name}/publish` snapshots the previous
+`.workbench/published/{name}.json` metadata marker into
+`.workbench/history/{name}/{timestamp}.json` before overwriting it. Snapshots are
+**metadata only** (the published `DraftRequest` record: name, type, status,
+version, taskQueue); DSL source code is not captured. The number of retained
+snapshots per definition is controlled by `dsl.drafts.history-limit`
+(default `20`; `u003c= 0` keeps unlimited history).
+
+| Method | Route | Behaviour |
+|--------|-------|-----------|
+| GET | `/api/dsl/drafts/{name}/history` | List publish history entries, newest first |
+| POST | `/api/dsl/drafts/{name}/history/{timestamp}/restore` | Restore a snapshot as the current published marker and reload DSL |
+
 ### Auth and ops notes
 
 - **API key filter** — `cbs.nova.starter.web.ApiKeyAuthFilter` is registered for `/api/*` but only

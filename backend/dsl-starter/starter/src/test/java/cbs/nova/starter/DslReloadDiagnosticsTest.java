@@ -33,7 +33,7 @@ class DslReloadDiagnosticsTest {
   @BeforeEach
   void setUp() {
     GlobalManager.globalManager().resetForTests();
-    resource = new DslReloadHandler(new DslProperties(null, null, null, null, null), loader);
+    resource = new DslReloadHandler(new DslProperties(), loader);
   }
 
   @AfterEach
@@ -42,7 +42,7 @@ class DslReloadDiagnosticsTest {
   }
 
   private void setSourceDir(String value) {
-    resource = new DslReloadHandler(new DslProperties(value, null, null, null, null), loader);
+    resource = new DslReloadHandler(dslProperties(value), loader);
   }
 
   private static ServerRequest reloadRequest() {
@@ -166,6 +166,12 @@ class DslReloadDiagnosticsTest {
         }
       });
     }
+  }
+
+  private static DslProperties dslProperties(String sourceDir) {
+    DslProperties props = new DslProperties();
+    props.setSourceDir(sourceDir);
+    return props;
   }
 
 }

@@ -97,6 +97,16 @@ export function useDslApi() {
     return $fetch(`/api/v1/dsl/drafts/${name}`)
   }
 
+  async function listPublishHistory(name: string) {
+    log.info('listPublishHistory request', { name })
+    return $fetch(`/api/v1/dsl/drafts/${name}/history`)
+  }
+
+  async function restorePublishHistory(name: string, timestamp: string) {
+    log.info('restorePublishHistory request', { name, timestamp })
+    return $fetch(`/api/v1/dsl/drafts/${name}/history/${timestamp}/restore`, { method: 'POST' })
+  }
+
   async function validateConstruct(name: string) {
     // stub — calls preview to validate
     log.info('validate request', { name })
@@ -125,6 +135,8 @@ export function useDslApi() {
     deleteDraft,
     listDrafts,
     readDraft,
+    listPublishHistory,
+    restorePublishHistory,
     validateConstruct,
     reload,
     getProcessDiagram,
