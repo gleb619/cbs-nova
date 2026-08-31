@@ -3,7 +3,7 @@ import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { useDslWorkbench } from '@cbs/admin-ui-plugin/composables/useDslWorkbench'
 import { useWorkbenchDraft } from '@cbs/admin-ui-plugin/composables/useWorkbenchDraft'
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
-import type { HelperSearchFilters, ObjectSearchResult } from '@cbs/components'
+import type { HelperCatalogEntry, HelpersResponse, HelperSearchFilters, ObjectSearchResult } from '@cbs/components'
 import {
   createNamespacedLocalStorageState,
   DropdownMenu,
@@ -12,6 +12,7 @@ import {
   DslConstructExplorer,
   DslDeleteDraftConfirmationModal,
   DslDraftRestoreBanner,
+  DslHelperCatalog,
   DslHelperSearchPanel,
   DslMetadataPanel,
   DslPlainConstructList,
@@ -78,6 +79,32 @@ const helperSearch = useHelperSearch({
     (await dslApi.searchObjects(filters)) as ObjectSearchResult[],
   debounceMs: 250,
 })
+
+const activeTab = ref<'editor' | 'helpers'>('editor')
+const helpersCatalog = ref<HelperCatalogEntry[]>([])
+const helpersLoading = ref(false)
+const helpersError = ref<string | null>(null)
+
+async function loadHelpers() {
+  helpersLoading.value = true
+  helpersError.value = null
+  try {
+    const result = (await dslApi.listHelpers()) as HelpersResponse
+    helpersCatalog.value = result.helpers ?? []
+  } catch (err) {
+    helpersError.value = (err as Error).message
+    helpersCatalog.value = []
+  } finally {
+    helpersLoading.value = false
+  }
+}
+
+function setTab(tab: 'editor' | 'helpers') {
+  activeTab.value = tab
+  if (tab === 'helpers') {
+    void loadHelpers()
+  }
+}
 
 const draftName = computed(() => selectedConstruct.value?.name ?? '')
 const {
@@ -316,6 +343,26 @@ onBeforeUnmount(() => {
 
       <main class="flex-1 flex flex-col overflow-hidden">
         <DslMetadataPanel :construct="selectedConstruct" />
+        <div class="bg-white border-b border-gray-200 px-4 flex gap-4 text-sm">
+          <button
+            type="button"
+            class="py-2 border-b-2 transition-colors"
+            :class="activeTab === 'editor' ? 'border-blue-600 text-blue-700 font-medium' : 'border-transparent text-gray-600 hover:text-gray-900'"
+            data-testid="dsl-workbench-tab-editor"
+            @click="setTab('editor')"
+          >
+            Editor
+          </button>
+          <button
+            type="button"
+            class="py-2 border-b-2 transition-colors"
+            :class="activeTab === 'helpers' ? 'border-blue-600 text-blue-700 font-medium' : 'border-transparent text-gray-600 hover:text-gray-900'"
+            data-testid="dsl-workbench-tab-helpers"
+            @click="setTab('helpers')"
+          >
+            Helpers
+          </button>
+        </div>
         <div v-if="restoredFromDraft" class="px-3 pt-2">
           <DslDraftRestoreBanner :saved-at="draftSavedAt" @discard="clearDraft" />
         </div>
@@ -324,14 +371,21 @@ onBeforeUnmount(() => {
         </div>
         <div class="flex-1 overflow-hidden">
           <DslBodyEditor
+            v-if="activeTab === 'editor'"
             :code="draftBody"
             :construct="selectedConstruct"
             :preview="runPreview"
             :explain="runExplain"
             @update:code="onCodeChange"
           />
+          <DslHelperCatalog
+            v-else
+            :helpers="helpersCatalog"
+            :loading="helpersLoading"
+            :error="helpersError"
+          />
         </div>
-        <DslProblemsPanel :errors="state.validationErrors" />
+        <DslProblemsPanel v-if="activeTab === 'editor'" :errors="state.validationErrors" />
       </main>
 
       <DslHelperSearchPanel

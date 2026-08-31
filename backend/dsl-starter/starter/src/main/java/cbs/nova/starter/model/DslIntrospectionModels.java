@@ -21,6 +21,19 @@ public final class DslIntrospectionModels {
   public record NamesResponse(List<String> names) {
   }
 
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public record HelperCatalogEntry(
+          String name,
+          String description,
+          String inputType,
+          String outputType,
+          boolean hasSideEffects,
+          String previewBehavior) {
+  }
+
+  public record HelpersResponse(List<String> names, List<HelperCatalogEntry> helpers) {
+  }
+
   public record ProcessDetail(
           String name,
           String version,

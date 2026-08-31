@@ -82,6 +82,11 @@ export function useDslApi() {
     return $fetch(`/api/v1/dsl/drafts/${name}/delete`, { method: 'DELETE' })
   }
 
+  async function listHelpers() {
+    log.info('listHelpers request')
+    return $fetch('/api/v1/dsl/helpers')
+  }
+
   async function listDrafts() {
     log.info('listDrafts request')
     return $fetch('/api/v1/dsl/drafts')
@@ -110,6 +115,7 @@ export function useDslApi() {
 
   return {
     getDefinitions,
+    listHelpers,
     searchObjects,
     preview,
     run,

@@ -18,6 +18,16 @@ describe('useDslApi', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/definitions')
   })
 
+  it('listHelpers GETs /api/v1/dsl/helpers', async () => {
+    fetchMock.mockResolvedValueOnce({ names: [], helpers: [] })
+
+    const api = useDslApi()
+    const result = await api.listHelpers()
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/helpers')
+    expect(result).toEqual({ names: [], helpers: [] })
+  })
+
   it('searchObjects GETs /api/v1/dsl/objects/search with all filters', async () => {
     fetchMock.mockResolvedValueOnce([])
 

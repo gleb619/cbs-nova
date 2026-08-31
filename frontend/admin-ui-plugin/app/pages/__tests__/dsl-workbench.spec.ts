@@ -50,6 +50,7 @@ const { dslApi, useDslApiMock, useDslWorkbenchMock } = vi.hoisted(() => {
     searchObjects: vi.fn(),
     validateConstruct: vi.fn(),
     listDrafts: vi.fn(),
+    listHelpers: vi.fn(),
     readDraft: vi.fn(),
   }
   // `useDslWorkbenchMock` reads the harness lazily from globalThis so the
@@ -196,6 +197,7 @@ const componentStubs = {
   DslConstructExplorer: makeStub('ConstructExplorer'),
   DslDeleteDraftConfirmationModal: makeStub('DeleteDraftConfirmationModal'),
   DslDraftRestoreBanner: makeStub('DraftRestoreBanner'),
+  DslHelperCatalog: makeStub('HelperCatalog'),
   DslHelperSearchPanel: makeStub('HelperSearchPanel'),
   DslMetadataPanel: makeStub('MetadataPanel'),
   DslPlainConstructList: makeStub('PlainConstructList'),
@@ -235,6 +237,8 @@ describe('dsl-workbench.vue unsaved-changes guard', () => {
     dslApi.searchObjects.mockResolvedValue([])
     dslApi.listDrafts.mockReset()
     dslApi.listDrafts.mockResolvedValue([])
+    dslApi.listHelpers.mockReset()
+    dslApi.listHelpers.mockResolvedValue({ names: [], helpers: [] })
 
     addSpy = vi.spyOn(window, 'addEventListener')
     removeSpy = vi.spyOn(window, 'removeEventListener')
@@ -370,6 +374,8 @@ describe('dsl-workbench.vue draft picker', () => {
     dslApi.searchObjects.mockResolvedValue([])
     dslApi.listDrafts.mockReset()
     dslApi.listDrafts.mockResolvedValue([])
+    dslApi.listHelpers.mockReset()
+    dslApi.listHelpers.mockResolvedValue({ names: [], helpers: [] })
   })
 
   it('renders the draft names returned by listDrafts', async () => {

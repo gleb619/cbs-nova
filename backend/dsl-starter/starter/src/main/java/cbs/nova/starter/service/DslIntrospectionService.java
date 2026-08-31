@@ -12,6 +12,8 @@ import cbs.nova.starter.converter.DslIntrospectionMapper;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructBodyDto;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
+import cbs.nova.starter.model.DslIntrospectionModels.HelperCatalogEntry;
+import cbs.nova.starter.model.DslIntrospectionModels.HelpersResponse;
 import cbs.nova.starter.model.DslIntrospectionModels.NamesResponse;
 import cbs.nova.starter.model.DslIntrospectionModels.ProcessDetail;
 import cbs.nova.starter.model.DslIntrospectionModels.StepDto;
@@ -67,8 +69,26 @@ public class DslIntrospectionService {
             .toList();
   }
 
-  public NamesResponse helpers() {
-    return new NamesResponse(GlobalManager.globalManager().helperNames());
+  public HelpersResponse helpers() {
+    var gm = GlobalManager.globalManager();
+    var names = gm.helperNames();
+    var helpers = names.stream()
+            .map(n -> toHelperCatalogEntry(n, gm.describeHelper(n)))
+            .toList();
+    return new HelpersResponse(names, helpers);
+  }
+
+  private HelperCatalogEntry toHelperCatalogEntry(String name,
+          Optional<ExecutableDescriptor> descriptorOpt) {
+    return descriptorOpt
+            .map(d -> new HelperCatalogEntry(
+                    name,
+                    d.description(),
+                    mapper.typeName(d.inputType()),
+                    mapper.typeName(d.outputType()),
+                    d.hasSideEffects(),
+                    d.previewBehavior()))
+            .orElse(new HelperCatalogEntry(name, null, null, null, false, null));
   }
 
   public Optional<ConstructBodyDto> constructBody(String name) {
