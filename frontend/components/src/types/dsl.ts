@@ -26,6 +26,19 @@ export interface StepDef {
   inputMapping?: string
 }
 
+export interface HelperCatalogEntry {
+  name: string
+  description?: string
+  inputType?: string
+  outputType?: string
+  hasSideEffects: boolean
+  previewBehavior?: string
+}
+
+export interface HelpersResponse {
+  names: string[]
+  helpers: HelperCatalogEntry[]
+}
 
 export interface CompileDiagnostic {
   file: string

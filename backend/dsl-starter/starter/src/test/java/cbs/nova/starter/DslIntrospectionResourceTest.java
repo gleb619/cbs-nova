@@ -75,7 +75,27 @@ class DslIntrospectionResourceTest {
     mockMvc
             .perform(get("/api/dsl/helpers").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.names").isArray());
+            .andExpect(jsonPath("$.names").isArray())
+            .andExpect(jsonPath("$.helpers").isArray());
+  }
+
+  @Test
+  void helpersEndpointReturnsCatalogForRegisteredHelpers() throws Exception {
+    registerSampleEntities();
+
+    mockMvc
+            .perform(get("/api/dsl/helpers").accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.names").isArray())
+            .andExpect(jsonPath("$.names").value(org.hamcrest.Matchers.hasItem("sampleHelper")))
+            .andExpect(jsonPath("$.helpers").isArray())
+            .andExpect(jsonPath("$.helpers[?(@.name=='sampleHelper')].description")
+                    .value("A greeting helper"))
+            .andExpect(jsonPath("$.helpers[?(@.name=='sampleHelper')].inputType").value("String"))
+            .andExpect(jsonPath("$.helpers[?(@.name=='sampleHelper')].outputType").value("String"))
+            .andExpect(jsonPath("$.helpers[?(@.name=='sampleHelper')].hasSideEffects").value(false))
+            .andExpect(jsonPath("$.helpers[?(@.name=='sampleHelper')].previewBehavior")
+                    .doesNotExist());
   }
 
   @Test

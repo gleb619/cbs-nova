@@ -23,11 +23,11 @@ describe('MetadataTab', () => {
     const execution = makeExecution()
     const wrapper = mount(MetadataTab, { props: { execution, metadata: undefined } })
 
-    // The Workflow ID cell also renders the T302 copy button next to the id;
+    // The Correlation ID and Workflow ID cells also render T302 copy buttons;
     // assert the cell text starts with the id so the assertion stays stable
     // even when extra sibling controls are added inside the same <td>.
     const cells = wrapper.findAll('td').map((td) => td.text())
-    expect(cells[0]).toBe('corr-abc')
+    expect(cells[0].startsWith('corr-abc')).toBe(true)
     expect(cells[1].startsWith('wf-123')).toBe(true)
     expect(cells.slice(2)).toEqual(['—', 'RUN', 'Process', '2'])
   })
