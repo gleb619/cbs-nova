@@ -25,6 +25,7 @@ import org.springframework.context.annotation.Import;
     PreviewMetricsConfiguration.class,
     DslRouterConfiguration.class,
     DslRunRetentionConfiguration.class,
+    DslRunReconciliationConfiguration.class,
     DslErrorHandlingConfiguration.class,
     SpringHelperConfiguration.class,
     ApiKeyAuthFilterConfiguration.class,
