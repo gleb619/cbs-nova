@@ -87,6 +87,22 @@ export function useDslApi() {
     return $fetch('/api/v1/dsl/helpers')
   }
 
+  async function exportDefinitions(includeDrafts?: boolean) {
+    log.info('exportDefinitions request', { includeDrafts })
+    const query = includeDrafts ? { include: 'drafts' } : {}
+    return $fetch('/api/v1/dsl/definitions/export', { query })
+  }
+
+  async function importDefinitions(bundle: unknown, dryRun?: boolean) {
+    log.info('importDefinitions request', { dryRun })
+    const query = dryRun ? { dryRun: 'true' } : {}
+    return $fetch('/api/v1/dsl/definitions/import', {
+      method: 'POST',
+      body: bundle,
+      query,
+    })
+  }
+
   async function listDrafts() {
     log.info('listDrafts request')
     return $fetch('/api/v1/dsl/drafts')
@@ -141,6 +157,8 @@ export function useDslApi() {
   return {
     getDefinitions,
     listHelpers,
+    exportDefinitions,
+    importDefinitions,
     searchObjects,
     preview,
     run,

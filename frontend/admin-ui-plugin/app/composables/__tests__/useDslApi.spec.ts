@@ -206,4 +206,52 @@ describe('useDslApi', () => {
       headers: { 'Idempotency-Key': 'idem-1' },
     })
   })
+
+  it('exportDefinitions GETs /api/v1/dsl/definitions/export without query by default', async () => {
+    fetchMock.mockResolvedValueOnce({ formatVersion: 1, definitions: [] })
+    const api = useDslApi()
+
+    await api.exportDefinitions()
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/definitions/export', { query: {} })
+  })
+
+  it('exportDefinitions forwards include=drafts when requested', async () => {
+    fetchMock.mockResolvedValueOnce({ formatVersion: 1, definitions: [] })
+    const api = useDslApi()
+
+    await api.exportDefinitions(true)
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/definitions/export', {
+      query: { include: 'drafts' },
+    })
+  })
+
+  it('importDefinitions POSTs the bundle without dryRun by default', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true })
+    const api = useDslApi()
+    const bundle = { formatVersion: 1, definitions: [{ definition: { name: 'A' } }] }
+
+    await api.importDefinitions(bundle)
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/definitions/import', {
+      method: 'POST',
+      body: bundle,
+      query: {},
+    })
+  })
+
+  it('importDefinitions forwards dryRun=true when requested', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true })
+    const api = useDslApi()
+    const bundle = { formatVersion: 1, definitions: [] }
+
+    await api.importDefinitions(bundle, true)
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/definitions/import', {
+      method: 'POST',
+      body: bundle,
+      query: { dryRun: 'true' },
+    })
+  })
 })

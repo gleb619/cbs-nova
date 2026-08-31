@@ -11,6 +11,7 @@ import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.model.VcsModels.DraftSummary;
 import cbs.nova.starter.service.DslDefinitionHistoryService;
+import cbs.nova.starter.service.DslDefinitionBundleService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
+import java.util.Optional;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.HttpOutputMessage;
 import org.springframework.http.MediaType;
@@ -51,7 +53,8 @@ class DslDraftResourceTest {
     props = new DslProperties();
     props.setSourceDir(sourceDir.toString());
     handler = new DslDraftHandler(props, new DslReloadHandler(props, null),
-            new DslDefinitionHistoryService(props, mapper), mapper);
+            new DslDefinitionHistoryService(props, mapper), mapper,
+            new DslDefinitionBundleService(mapper, Optional.empty()));
   }
 
   @AfterEach
@@ -146,7 +149,8 @@ class DslDraftResourceTest {
             blank,
             new DslReloadHandler(blank, null),
             new DslDefinitionHistoryService(blank, mapper),
-            mapper);
+            mapper,
+            new DslDefinitionBundleService(mapper, Optional.empty()));
     ServerResponse response = handler.delete(deleteRequest("foo", "/api/dsl/drafts/foo"));
     assertThat(response.statusCode().value()).isEqualTo(409);
   }
@@ -199,7 +203,8 @@ class DslDraftResourceTest {
             blank,
             new DslReloadHandler(blank, null),
             new DslDefinitionHistoryService(blank, mapper),
-            mapper);
+            mapper,
+            new DslDefinitionBundleService(mapper, Optional.empty()));
     ServerResponse response = handler.save(postRequest("/api/dsl/drafts/foo/save"));
     assertThat(response.statusCode().value()).isEqualTo(409);
   }
@@ -230,7 +235,8 @@ class DslDraftResourceTest {
             blank,
             new DslReloadHandler(blank, null),
             new DslDefinitionHistoryService(blank, mapper),
-            mapper);
+            mapper,
+            new DslDefinitionBundleService(mapper, Optional.empty()));
 
     ServerResponse response = handler.list(getRequest("/api/dsl/drafts", null));
 
@@ -504,7 +510,8 @@ class DslDraftResourceTest {
             blank,
             new DslReloadHandler(blank, null),
             new DslDefinitionHistoryService(blank, mapper),
-            mapper);
+            mapper,
+            new DslDefinitionBundleService(mapper, Optional.empty()));
 
     ServerResponse response = handler.history(getRequest("/api/dsl/drafts/X/history",
             Map.of("name", "X")));
@@ -520,7 +527,8 @@ class DslDraftResourceTest {
             blank,
             new DslReloadHandler(blank, null),
             new DslDefinitionHistoryService(blank, mapper),
-            mapper);
+            mapper,
+            new DslDefinitionBundleService(mapper, Optional.empty()));
 
     ServerResponse response = handler.restore(getRequest(
             "/api/dsl/drafts/X/history/123/restore",
@@ -595,6 +603,11 @@ class DslDraftResourceTest {
     DslDefinitionHistoryService dslDefinitionHistoryService(DslProperties props,
             ObjectMapper mapper) {
       return new DslDefinitionHistoryService(props, mapper);
+    }
+
+    @Bean
+    DslDefinitionBundleService dslDefinitionBundleService(ObjectMapper mapper) {
+      return new DslDefinitionBundleService(mapper, java.util.Optional.empty());
     }
 
     @Bean

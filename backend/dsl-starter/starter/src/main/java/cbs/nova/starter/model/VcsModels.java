@@ -49,4 +49,36 @@ public final class VcsModels {
 
   }
 
+  public record DefinitionBundleEntry(
+          DraftRequest definition,
+          String source) {
+
+  }
+
+  public record DefinitionBundle(
+          int formatVersion,
+          String engineVersion,
+          String exportedAt,
+          List<DefinitionBundleEntry> definitions) {
+
+  }
+
+  public record ImportEntryResult(
+          String name,
+          String outcome,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String message) {
+
+  }
+
+  public record ImportBundleResult(
+          boolean dryRun,
+          boolean reloaded,
+          int published,
+          int failed,
+          List<ImportEntryResult> results,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String reloadError,
+          @JsonInclude(JsonInclude.Include.NON_NULL) List<CompileDiagnostic> diagnostics) {
+
+  }
+
 }
