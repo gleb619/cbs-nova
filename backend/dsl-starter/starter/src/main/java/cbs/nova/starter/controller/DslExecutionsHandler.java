@@ -58,11 +58,16 @@ public class DslExecutionsHandler {
     String processName = request.param("processName").filter(s -> !s.isBlank()).orElse(null);
     String status = request.param("status").orElse(null);
     String mode = request.param("mode").orElse(null);
+    String correlationId = request.param("correlationId")
+            .map(String::trim)
+            .filter(s -> !s.isBlank())
+            .orElse(null);
     int limit = request.param("limit").map(Integer::parseInt).orElse(50);
     int offset = request.param("offset").map(Integer::parseInt).orElse(0);
     int pageSize = clampLimit(limit);
     int skip = clampOffset(offset);
-    DslRunSearchResult result = runRepository.search(processName, status, mode, skip, pageSize);
+    DslRunSearchResult result = runRepository.search(processName, status, mode, correlationId, skip,
+            pageSize);
     List<ExecutionDto> items = result.items().stream()
             .map(ExecutionDto::from)
             .toList();

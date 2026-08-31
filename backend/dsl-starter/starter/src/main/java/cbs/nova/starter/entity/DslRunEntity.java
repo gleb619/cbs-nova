@@ -47,4 +47,7 @@ public class DslRunEntity {
 
   @Column("triggered_by")
   private String triggeredBy;
+
+  @Column("correlation_id")
+  private String correlationId;
 }

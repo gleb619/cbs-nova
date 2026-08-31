@@ -42,21 +42,25 @@ const rows = computed<Row[]>(() => {
   return out
 })
 
-// T302: clipboard feedback ("Copied!" flash) for the workflow-id copy button.
-const copied = ref(false)
+// T302: clipboard feedback ("Copied!" flash) for copy buttons.
+const copiedWorkflow = ref(false)
+const copiedCorrelation = ref(false)
 let copyResetHandle: ReturnType<typeof setTimeout> | null = null
 
-async function copyWorkflowId() {
-  const id = props.execution.workflowId
-  if (!id) return
+async function copyValue(value: string, target: 'workflow' | 'correlation') {
   const clipboard = (globalThis as { navigator?: { clipboard?: { writeText: (s: string) => Promise<void> } } }).navigator?.clipboard
-  if (!clipboard) return
+  if (!clipboard || !value) return
   try {
-    await clipboard.writeText(id)
-    copied.value = true
+    await clipboard.writeText(value)
+    if (target === 'workflow') {
+      copiedWorkflow.value = true
+    } else {
+      copiedCorrelation.value = true
+    }
     if (copyResetHandle) clearTimeout(copyResetHandle)
     copyResetHandle = setTimeout(() => {
-      copied.value = false
+      copiedWorkflow.value = false
+      copiedCorrelation.value = false
       copyResetHandle = null
     }, 1500)
   } catch {
@@ -66,6 +70,10 @@ async function copyWorkflowId() {
 
 function isWorkflowRow(row: Row): boolean {
   return row.key === 'Workflow ID'
+}
+
+function isCorrelationRow(row: Row): boolean {
+  return row.key === 'Correlation ID'
 }
 
 function rowTestId(row: Row): string {
@@ -104,10 +112,21 @@ function rowTestId(row: Row): string {
                 type="button"
                 data-testid="workflow-id-copy"
                 class="ml-2 inline-flex items-center text-xs text-gray-500 hover:text-gray-800 border border-gray-200 rounded px-1.5 py-0.5"
-                :aria-label="copied ? 'Workflow ID copied' : 'Copy workflow ID'"
-                @click="copyWorkflowId"
+                :aria-label="copiedWorkflow ? 'Workflow ID copied' : 'Copy workflow ID'"
+                @click="copyValue(props.execution.workflowId!, 'workflow')"
               >
-                {{ copied ? 'Copied!' : 'Copy' }}
+                {{ copiedWorkflow ? 'Copied!' : 'Copy' }}
+              </button>
+            </template>
+            <template v-if="isCorrelationRow(row) && props.execution.correlationId">
+              <button
+                type="button"
+                data-testid="correlation-id-copy"
+                class="ml-2 inline-flex items-center text-xs text-gray-500 hover:text-gray-800 border border-gray-200 rounded px-1.5 py-0.5"
+                :aria-label="copiedCorrelation ? 'Correlation ID copied' : 'Copy correlation ID'"
+                @click="copyValue(props.execution.correlationId, 'correlation')"
+              >
+                {{ copiedCorrelation ? 'Copied!' : 'Copy' }}
               </button>
             </template>
           </td>

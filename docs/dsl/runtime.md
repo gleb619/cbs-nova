@@ -424,3 +424,15 @@ the existing run instead of launching a new one.
   `{ "runId": "<run-id>", "status": "REPLAYED" }`.
 - **Dedup window:** no persistent key store is used; deduplication lasts as long as the Temporal
   namespace retains the workflow execution (workflow retention).
+
+## Correlation id
+
+`POST /api/dsl/run/{name}` accepts an optional `X-Correlation-Id` header. When present, the value
+is persisted on the `dsl_runs` row and surfaced on the execution list and detail responses. The
+ executions list can be filtered by the stored value via `GET /api/executions?correlationId=...`.
+
+- **Header name:** `X-Correlation-Id`
+- **Validation:** after `trim()`, the value must be 1–200 characters and match
+  `[A-Za-z0-9_.:/-]+`. A rejected value returns `400 Bad Request` with code `INVALID_CORRELATION_ID`.
+- **Caller-supplied only:** the server never generates a correlation id. When the header is
+  absent the stored value is `null` and existing behavior is unchanged.

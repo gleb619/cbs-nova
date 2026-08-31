@@ -754,4 +754,40 @@ class TemporalDslProcessServiceTest {
             TemporalDslProcessService.STATUS_TAG, DslRunStatus.CANCELLED.name(),
             TemporalDslProcessService.PROCESS_NAME_TAG, "Loan").count()).isEqualTo(1L);
   }
+
+  @Test
+  void runProcessPersistsCorrelationId() {
+    GlobalManager.globalManager().resetForTests();
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("Ok").execute(ctx -> Result.success("ok")).build());
+
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    TemporalDslProcessService service = createService(
+            new ContextFactory(), repo, new ObjectMapper(),
+            Long.MAX_VALUE, new SimpleMeterRegistry(), nullResolver());
+
+    Result<?> result = service.runProcess("Ok", "in", "corr-abc").result().join();
+
+    assertThat(result.isSuccess()).isTrue();
+    DslRun run = repo.findByProcessName("Ok").get(0);
+    assertThat(run.correlationId()).isEqualTo("corr-abc");
+  }
+
+  @Test
+  void runProcessOmitsCorrelationIdWhenNotProvided() {
+    GlobalManager.globalManager().resetForTests();
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("Ok").execute(ctx -> Result.success("ok")).build());
+
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    TemporalDslProcessService service = createService(
+            new ContextFactory(), repo, new ObjectMapper(),
+            Long.MAX_VALUE, new SimpleMeterRegistry(), nullResolver());
+
+    Result<?> result = service.runProcess("Ok", "in").result().join();
+
+    assertThat(result.isSuccess()).isTrue();
+    DslRun run = repo.findByProcessName("Ok").get(0);
+    assertThat(run.correlationId()).isNull();
+  }
 }

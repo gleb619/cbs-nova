@@ -23,6 +23,7 @@ import cbs.nova.starter.converter.DslRuntimeMapper;
 import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.model.DslRequest;
 import cbs.nova.starter.model.RuntimeOutcome;
+import cbs.nova.starter.service.CorrelationId;
 import cbs.nova.starter.service.IdempotentReplayException;
 import cbs.nova.starter.web.RequestIdFilter;
 import java.util.List;
@@ -227,6 +228,32 @@ class DslRuntimeServiceTest {
             .forClass(cbs.nova.dsl.Context.class);
     verify(dslRuntime).run(eq("P"), captor.capture());
     assertThat(captor.getValue().runId()).isEqualTo("idem-abc");
+  }
+
+  @Test
+  void runStoresCorrelationIdInContextMetadata() {
+    doReturn(Result.success("output")).when(dslRuntime).run(eq("P"), any());
+
+    service.run("P", new DslRequest("input", null), "req-corr", null, "corr-123");
+
+    ArgumentCaptor<cbs.nova.dsl.Context<?>> captor = ArgumentCaptor
+            .forClass(cbs.nova.dsl.Context.class);
+    verify(dslRuntime).run(eq("P"), captor.capture());
+    assertThat(captor.getValue().metadata())
+            .containsEntry(CorrelationId.CORRELATION_ID_METADATA_KEY, "corr-123");
+  }
+
+  @Test
+  void runOmitsNullCorrelationIdFromMetadata() {
+    doReturn(Result.success("output")).when(dslRuntime).run(eq("P"), any());
+
+    service.run("P", new DslRequest("input", null), "req-corr", null, null);
+
+    ArgumentCaptor<cbs.nova.dsl.Context<?>> captor = ArgumentCaptor
+            .forClass(cbs.nova.dsl.Context.class);
+    verify(dslRuntime).run(eq("P"), captor.capture());
+    assertThat(captor.getValue().metadata())
+            .doesNotContainKey(CorrelationId.CORRELATION_ID_METADATA_KEY);
   }
 
   @Test

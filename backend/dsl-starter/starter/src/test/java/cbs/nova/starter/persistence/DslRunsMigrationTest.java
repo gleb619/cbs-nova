@@ -43,7 +43,8 @@ class DslRunsMigrationTest {
             new ClassPathResource("db/migration/V2__add_context_json.sql"),
             new ClassPathResource("db/migration/V3__create_dsl_run_transactions.sql"),
             new ClassPathResource("db/migration/V4__dsl_runs_indexes.sql"),
-            new ClassPathResource("db/migration/V5__dsl_runs_triggered_by.sql"));
+            new ClassPathResource("db/migration/V5__dsl_runs_triggered_by.sql"),
+            new ClassPathResource("db/migration/V6__dsl_runs_correlation_id.sql"));
     populator.setContinueOnError(false);
 
     SimpleDriverDataSource dataSource = new SimpleDriverDataSource();
@@ -105,5 +106,74 @@ class DslRunsMigrationTest {
             "SELECT triggered_by FROM dsl_runs WHERE run_id = ?", String.class, runId);
 
     assertThat(triggeredBy).isNull();
+  }
+
+  @Test
+  void migrationAddsNullableCorrelationIdColumn() throws Exception {
+    try (Connection connection = jdbcTemplate.getDataSource().getConnection()) {
+      DatabaseMetaData metaData = connection.getMetaData();
+      try (ResultSet columns = metaData.getColumns(null, null, "dsl_runs", "correlation_id")) {
+        assertThat(columns.next()).isTrue();
+        assertThat(columns.getString("TYPE_NAME")).isEqualToIgnoringCase("varchar");
+        assertThat(columns.getInt("NULLABLE")).isEqualTo(DatabaseMetaData.columnNullable);
+      }
+    }
+  }
+
+  @Test
+  void insertedRunRoundTripsCorrelationId() {
+    String runId = "run-" + UUID.randomUUID();
+    Instant startedAt = Instant.parse("2026-01-01T00:00:00Z");
+
+    jdbcTemplate.update(
+            """
+                    INSERT INTO dsl_runs (run_id, process_name, status, input_json, output_json,
+                        error_message, context_json, started_at, finished_at, execution_mode, triggered_by, correlation_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            runId, "Loan", "RUNNING", "{}", null, null, null, Timestamp.from(startedAt), null,
+            "RUN",
+            "alice@example.com",
+            "corr-123");
+
+    String correlationId = jdbcTemplate.queryForObject(
+            "SELECT correlation_id FROM dsl_runs WHERE run_id = ?", String.class, runId);
+
+    assertThat(correlationId).isEqualTo("corr-123");
+  }
+
+  @Test
+  void oldStyleInsertWithoutCorrelationIdReadsBackNull() {
+    String runId = "run-" + UUID.randomUUID();
+    Instant startedAt = Instant.parse("2026-01-01T00:00:00Z");
+
+    jdbcTemplate.update("""
+            INSERT INTO dsl_runs (run_id, process_name, status, input_json, output_json,
+                error_message, context_json, started_at, finished_at, execution_mode, triggered_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            runId, "Loan", "RUNNING", "{}", null, null, null, Timestamp.from(startedAt), null,
+            "RUN",
+            "alice@example.com");
+
+    String correlationId = jdbcTemplate.queryForObject(
+            "SELECT correlation_id FROM dsl_runs WHERE run_id = ?", String.class, runId);
+
+    assertThat(correlationId).isNull();
+  }
+
+  @Test
+  void correlationIdIndexExists() throws Exception {
+    try (Connection connection = jdbcTemplate.getDataSource().getConnection()) {
+      DatabaseMetaData metaData = connection.getMetaData();
+      try (ResultSet indexes = metaData.getIndexInfo(null, null, "dsl_runs", false, false)) {
+        boolean found = false;
+        while (indexes.next()) {
+          if ("idx_dsl_runs_correlation_id".equals(indexes.getString("INDEX_NAME"))) {
+            found = true;
+            break;
+          }
+        }
+        assertThat(found).isTrue();
+      }
+    }
   }
 }

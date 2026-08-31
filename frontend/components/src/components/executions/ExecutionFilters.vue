@@ -115,6 +115,7 @@ function reset() {
           v-model="local.correlationId"
           type="text"
           placeholder="corr-id"
+          data-testid="filter-correlation-id"
           class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
         >
       </div>

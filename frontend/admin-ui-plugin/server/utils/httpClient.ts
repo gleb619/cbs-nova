@@ -54,6 +54,9 @@ export async function proxyToBackend<T>(
   const idempotencyKey = getRequestHeader(event, 'idempotency-key')
   if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey
 
+  const correlationId = getRequestHeader(event, 'x-correlation-id')
+  if (correlationId) headers['X-Correlation-Id'] = correlationId
+
   const method = options.method ?? 'GET'
   const startedAt = Date.now()
 

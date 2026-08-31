@@ -7,6 +7,7 @@ import cbs.nova.starter.model.RuntimeOutcome;
 import cbs.nova.starter.model.ValidationError;
 import cbs.nova.starter.model.ValidationErrorsResponse;
 import cbs.nova.starter.service.DslRuntimeService;
+import cbs.nova.starter.service.CorrelationId;
 import cbs.nova.starter.service.IdempotencyKeys;
 import cbs.nova.starter.service.InputValidator;
 import cbs.nova.starter.web.DslPayloadSizeValidator;
@@ -29,6 +30,7 @@ import java.util.List;
 public class DslRuntimeHandler {
 
   public static final String IDEMPOTENCY_KEY_HEADER = "Idempotency-Key";
+  public static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
 
   private final DslRuntimeService service;
   private final DslPayloadSizeValidator payloadSizeValidator;
@@ -46,6 +48,15 @@ public class DslRuntimeHandler {
     String name = request.pathVariable("name");
     DslRequest dslRequest = request.body(DslRequest.class);
     payloadSizeValidator.validateInput(request, dslRequest, name);
+    String correlationId;
+    try {
+      correlationId = CorrelationId.validated(
+              request.headers().firstHeader(CORRELATION_ID_HEADER));
+    } catch (IllegalArgumentException e) {
+      return ServerResponse.status(HttpStatus.BAD_REQUEST)
+              .body(new ErrorResponse("INVALID_CORRELATION_ID",
+                      "Invalid X-Correlation-Id header", name, null, null));
+    }
     String key = request.headers().firstHeader(IDEMPOTENCY_KEY_HEADER);
     if (key != null) {
       String trimmed = key.trim();
@@ -56,10 +67,11 @@ public class DslRuntimeHandler {
       }
       String runId = IdempotencyKeys.deriveRunId(name, trimmed);
       return validationOrExecute(name, dslRequest,
-              () -> respond(service.run(name, dslRequest, requestId(request), runId)));
+              () -> respond(
+                      service.run(name, dslRequest, requestId(request), runId, correlationId)));
     }
     return validationOrExecute(name, dslRequest,
-            () -> respond(service.run(name, dslRequest, requestId(request))));
+            () -> respond(service.run(name, dslRequest, requestId(request), null, correlationId)));
   }
 
   public ServerResponse explain(ServerRequest request) throws ServletException, IOException {

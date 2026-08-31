@@ -189,6 +189,20 @@ describe('useExecutions', () => {
         limit: 20,
       })
     })
+
+    it('forwards correlationId as a query param', async () => {
+      const api = installApiMock({ list: vi.fn().mockResolvedValueOnce([]) })
+
+      const { applyFilters, filters } = useExecutions()
+      await applyFilters({ correlationId: 'corr-123' })
+
+      expect(filters.value).toEqual({ correlationId: 'corr-123' })
+      expect(api.list).toHaveBeenCalledWith({
+        correlationId: 'corr-123',
+        offset: 0,
+        limit: 20,
+      })
+    })
   })
 
   describe('setPage', () => {
