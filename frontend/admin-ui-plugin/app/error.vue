@@ -1,3 +1,7 @@
+<script lang="ts">
+export default { name: "CbsErrorPage" }
+</script>
+
 <script setup lang="ts">
 import { clearError } from 'nuxt/app'
 import { computed } from 'vue'

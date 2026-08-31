@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useAdminInfo } from '@cbs/admin-ui-plugin/composables/useAdminInfo'
+import { useAuth } from '@cbs/admin-ui-plugin/composables/useAuth'
 import { AppFooter, AppShell, AppSidebarToggle } from '@cbs/components'
 import { useRoute } from 'nuxt/app'
 import { computed } from 'vue'
@@ -7,6 +7,7 @@ import { NuxtLink } from '#components'
 
 const route = useRoute()
 const { data: info } = useAdminInfo()
+const { enabled: authEnabled, authenticated, user, login, logout } = useAuth()
 
 const navItems = computed(() => [
   { to: '/', label: 'Dashboard', icon: '🏠', isActive: route.path === '/' },
@@ -44,6 +45,8 @@ const docsBaseUrl = computed(() => {
 
   return undefined
 })
+
+const displayName = computed(() => user.value?.preferred_username ?? user.value?.name ?? user.value?.email ?? 'User')
 </script>
 
 <template>
@@ -62,7 +65,28 @@ const docsBaseUrl = computed(() => {
       <span class="text-neutral-800 font-semibold">CBS Nova Admin</span>
     </template>
     <template #trailing>
-      <span class="text-sm text-neutral-500">User</span>
+      <div v-if="authEnabled" class="flex items-center gap-3">
+        <button
+          v-if="!authenticated"
+          type="button"
+          data-testid="auth-signin"
+          class="text-sm text-primary-600 hover:text-primary-700"
+          @click="login()"
+        >
+          Sign in
+        </button>
+        <template v-else>
+          <span data-testid="auth-user" class="text-sm text-neutral-700">{{ displayName }}</span>
+          <button
+            type="button"
+            data-testid="auth-signout"
+            class="text-sm text-primary-600 hover:text-primary-700"
+            @click="logout()"
+          >
+            Sign out
+          </button>
+        </template>
+      </div>
     </template>
     <template #footer>
       <AppFooter

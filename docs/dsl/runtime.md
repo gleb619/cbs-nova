@@ -260,6 +260,77 @@ curl -s -X DELETE http://localhost:8090/api/dsl/drafts/LoanDisbursementProcess
   omitted, a generated UUID is used.
 - **Payload size** — Incoming `POST /api/dsl/run/**` and `POST /api/dsl/preview/**` bodies are
   validated against `cbs.runs.max-input-bytes` (default 1 MiB). Oversized payloads are rejected with
+- **BFF OIDC login flow (T309)** — When the admin UI is served with an OIDC issuer configured,
+  the BFF can drive a standard authorization-code + PKCE login against that provider, keeping
+  tokens in httpOnly cookies and forwarding `Authorization: Bearer <access>` to the Spring
+  backend. The flow is **fully inert** when no issuer is configured; default DX and tests are
+  unchanged.
+
+  Environment variables consumed by the Nuxt module / BFF:
+
+  | Variable | Default | Purpose |
+  |----------|---------|---------|
+  | `AUTH_ISSUER` | *(unset)* | OIDC issuer URL, e.g. `http://localhost:8080/realms/cbs-nova`. When blank, OIDC is disabled. |
+  | `AUTH_CLIENT_ID` | `cbs-nova-bff` | Client id registered at the issuer. |
+  | `AUTH_CLIENT_SECRET` | *(unset)* | Confidential client secret (server-side only). |
+  | `AUTH_CALLBACK_URL` | `http://localhost:3000/api/v1/auth/callback` | Absolute redirect URI registered at the issuer. |
+  | `AUTH_POST_LOGOUT_REDIRECT` | `/` | Client-side path to return to after logout. |
+
+  Public runtime flag: `useRuntimeConfig().public.authEnabled` is `true` exactly when
+  `AUTH_ISSUER` is non-empty, so the UI only renders the Sign-in affordance when configured.
+
+  BFF routes:
+
+  | Method | Route | Behaviour |
+  |--------|-------|-----------|
+  | GET | `/api/v1/auth/login` | Builds PKCE + state, sets `cbs_oidc_txn`, redirects to the issuer authorization endpoint. Optional `?redirect=<same-origin-path>` is stored for post-login return. Returns `404` when OIDC is not configured. |
+  | GET | `/api/v1/auth/callback` | Validates state against `cbs_oidc_txn`, exchanges the code, writes `cbs_at` + `cbs_rt`, clears the txn cookie, and redirects to the stored same-origin path (defaults to `/`). Returns `403` for state mismatch. |
+  | GET | `/api/v1/auth/logout` | Best-effort OIDC end-session call with the refresh token, clears `cbs_at` + `cbs_rt`, redirects to `AUTH_POST_LOGOUT_REDIRECT`. Returns `404` when OIDC is not configured. |
+  | GET | `/api/v1/auth/session` | Returns `{ authenticated: false, enabled: false }` when OIDC is disabled. Otherwise reads `cbs_at`, calls userinfo, refreshes once on `401/403`, and returns `{ authenticated: true, user }` or `401`. |
+
+  Cookie names and flags:
+
+  | Cookie | Purpose | Flags |
+  |--------|---------|-------|
+  | `cbs_oidc_txn` | Short-lived (600s) transaction state for the in-flight authorization request. | `httpOnly`, `SameSite=Lax`, `Secure` only when callback URL is HTTPS, path `/`. |
+  | `cbs_at` | Access token forwarded as `Authorization: Bearer <cbs_at>`. | `httpOnly`, `SameSite=Lax`, `Secure` only when callback URL is HTTPS, path `/`, `maxAge` from token `expires_in`. |
+  | `cbs_rt` | Refresh token used to silently rotate `cbs_at` on backend `401/403`. | `httpOnly`, `SameSite=Lax`, `Secure` only when callback URL is HTTPS, path `/`, `maxAge` ~30 days. |
+
+  Header precedence: an **inbound** `Authorization` header always wins over the BFF session token.
+  This lets service-to-service callers and explicit bearer tokens override the cookie-based session
+  while still allowing the BFF session to fill the gap for browser traffic.
+
+  Refresh behaviour: when `proxyToBackend` receives a backend `401` or `403`, OIDC is enabled, and a
+  `cbs_rt` cookie exists, the BFF performs **one** token refresh and retries the original request
+  with the new access token. If refresh fails the session is cleared and the original backend
+  error is surfaced. Only one retry is attempted per proxied call.
+
+  End-to-end recipe with the compose Keycloak:
+
+  ```bash
+  # 1. Start Postgres + Keycloak (the realm is imported on first boot).
+  docker compose -f app/compose/auth.yml up -d
+
+  # 2. Start the Spring backend with OIDC enabled.
+  export SERVER_PORT=8090
+  export AUTH_ISSUER=http://localhost:8080/realms/cbs-nova
+  backend/dsl-platform/gradlew -p backend/dsl-platform publishToMavenLocal -x test
+  SERVER_PORT=8090 backend/dsl-platform/gradlew -p backend/dsl-starter :starter-launcher:bootRun -x test \
+    -Dcbs.security.oidc.enabled=true \
+    -Dspring.security.oauth2.resourceserver.jwt.issuer-uri=http://localhost:8080/realms/cbs-nova
+
+  # 3. Start the Nuxt dev server.
+  cd frontend
+  pnpm install
+  pnpm dev
+
+  # 4. Open http://localhost:3000, click Sign in, and log in with the realm dev user:
+  #    username: devuser
+  #    password: devpassword
+  # 5. Run a preview or any DSL operation; the BFF attaches the Bearer token automatically.
+  # 6. Click Sign out to clear the BFF session.
+  ```
+
   `413 Payload Too Large` before any workflow is submitted.
 
 ## Helper and Spring integration

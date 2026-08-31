@@ -195,7 +195,7 @@ function discoverRoutes(dir: string): DiscoveredRoute[] {
       return bracket?.groups.name ? `{${bracket.groups.name}}` : s
     })
     const allSegments = [...parentRel, ...fileSegments]
-    const bffPath = '/api/v1/' + allSegments.join('/')
+    const bffPath = `/api/v1/${allSegments.join('/')}`
     out.push({ method, bffPath, relFile: relative(apiDir, full) })
   }
   return out

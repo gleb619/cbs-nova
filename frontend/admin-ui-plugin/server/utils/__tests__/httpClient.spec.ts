@@ -1,12 +1,33 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxyToBackend } from '../httpClient'
+import { __resetOidcDiscoveryCache } from '../oidcSession'
 
 type HeaderMap = Record<string, string | undefined>
 let headerMap: HeaderMap = {}
+const responseHeaders: Record<string, string | string[] | undefined> = {}
 
-const makeEvent = (headers: HeaderMap = {}) => {
+const makeEvent = (headers: HeaderMap = {}, cookie?: string) => {
   headerMap = Object.fromEntries(Object.entries(headers).map(([k, v]) => [k.toLowerCase(), v]))
-  return { node: { req: { headers: headerMap } } } as Parameters<typeof proxyToBackend>[0]
+  if (cookie) headerMap.cookie = cookie
+  return {
+    node: {
+      req: { headers: headerMap },
+      res: {
+        getHeader: (name: string) => responseHeaders[name.toLowerCase()],
+        setHeader: (name: string, value: string | string[]) => {
+          responseHeaders[name.toLowerCase()] = value
+        },
+        appendHeader: (name: string, value: string) => {
+          const key = name.toLowerCase()
+          const current = responseHeaders[key]
+          responseHeaders[key] = current ? [...(Array.isArray(current) ? current : [current]), value] : value
+        },
+        removeHeader: (name: string) => {
+          delete responseHeaders[name.toLowerCase()]
+        },
+      },
+    },
+  } as Parameters<typeof proxyToBackend>[0]
 }
 
 const setRuntimeConfig = (overrides: Record<string, unknown> = {}) => {
@@ -14,7 +35,12 @@ const setRuntimeConfig = (overrides: Record<string, unknown> = {}) => {
     backendBaseUrl: 'http://localhost:8090',
     backendApiKey: '',
     backendTimeoutMs: 10000,
-    public: { appName: 'CBS Nova Admin' },
+    authIssuer: '',
+    authClientId: 'cbs-nova-bff',
+    authClientSecret: '',
+    authCallbackUrl: 'http://localhost:3000/api/v1/auth/callback',
+    authPostLogoutRedirect: '/',
+    public: { appName: 'CBS Nova Admin', authEnabled: false },
     ...overrides,
   }
   vi.mocked(useRuntimeConfig as never).mockReturnValue(
@@ -25,12 +51,25 @@ const setRuntimeConfig = (overrides: Record<string, unknown> = {}) => {
     apiKey: merged.backendApiKey as string,
     timeoutMs: merged.backendTimeoutMs as number,
   })
+  vi.mocked(useAuthConfig as never).mockReturnValue({
+    issuer: merged.authIssuer as string,
+    clientId: merged.authClientId as string,
+    clientSecret: merged.authClientSecret as string,
+    callbackUrl: merged.authCallbackUrl as string,
+    postLogoutRedirect: merged.authPostLogoutRedirect as string,
+    enabled: Boolean(merged.authIssuer),
+  })
 }
 
 describe('proxyToBackend', () => {
   beforeEach(() => {
     setRuntimeConfig()
+    __resetOidcDiscoveryCache()
+    for (const k of Object.keys(responseHeaders)) {
+      delete responseHeaders[k]
+    }
     ;($fetch as unknown as ReturnType<typeof vi.fn>).mockClear()
+    ;($fetch.raw as unknown as ReturnType<typeof vi.fn> | undefined)?.mockClear()
   })
 
   it('returns body and sets Content-Type on success', async () => {
@@ -236,7 +275,7 @@ describe('proxyToBackend', () => {
     expect(opts.headers.Authorization).toBe('Bearer abc.def.ghi')
   })
 
-  it('omits Authorization header when inbound is absent', async () => {
+  it('omits Authorization header when inbound is absent and auth is disabled', async () => {
     const event = makeEvent()
     ;($fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({})
 
@@ -340,5 +379,89 @@ describe('proxyToBackend', () => {
       { headers: Record<string, string> },
     ]
     expect(opts.headers['X-Correlation-Id']).toBeUndefined()
+  })
+
+  it('attaches Bearer token from session when auth is enabled and no inbound Authorization', async () => {
+    setRuntimeConfig({ authIssuer: 'http://keycloak:8080/realms/cbs-nova' })
+    const event = makeEvent({}, 'cbs_at=access-token-xyz')
+    ;($fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({})
+
+    await proxyToBackend(event, '/api/foo')
+
+    const [, opts] = ($fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      { headers: Record<string, string> },
+    ]
+    expect(opts.headers.Authorization).toBe('Bearer access-token-xyz')
+  })
+
+  it('inbound Authorization wins over session token', async () => {
+    setRuntimeConfig({ authIssuer: 'http://keycloak:8080/realms/cbs-nova' })
+    const event = makeEvent({ authorization: 'Bearer inbound-token' }, 'cbs_at=session-token')
+    ;($fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({})
+
+    await proxyToBackend(event, '/api/foo')
+
+    const [, opts] = ($fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      { headers: Record<string, string> },
+    ]
+    expect(opts.headers.Authorization).toBe('Bearer inbound-token')
+  })
+
+  it('refresh-on-401 retries once when refresh token exists and refresh succeeds', async () => {
+    setRuntimeConfig({ authIssuer: 'http://keycloak:8080/realms/cbs-nova' })
+    const event = makeEvent({}, 'cbs_at=old-access; cbs_rt=refresh-123')
+    const err = Object.assign(new Error('unauthorized'), {
+      name: 'FetchError',
+      response: { status: 401 },
+    })
+    ;($fetch as unknown as ReturnType<typeof vi.fn>)
+      .mockRejectedValueOnce(err)
+      .mockResolvedValueOnce({
+        authorization_endpoint: 'http://keycloak:8080/realms/cbs-nova/protocol/openid-connect/auth',
+        token_endpoint: 'http://keycloak:8080/realms/cbs-nova/protocol/openid-connect/token',
+      })
+      .mockResolvedValueOnce({ ok: true })
+    ;($fetch.raw as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      _data: {
+        access_token: 'new-access',
+        refresh_token: 'new-refresh',
+        expires_in: 3600,
+      },
+    })
+
+    const result = await proxyToBackend<{ ok: boolean }>(event, '/api/foo')
+
+    expect(result).toEqual({ ok: true })
+    // $fetch called: original backend, OIDC discovery, retry backend
+    expect($fetch).toHaveBeenCalledTimes(3)
+    const [, retryOpts] = ($fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[2] as [
+      string,
+      { headers: Record<string, string> },
+    ]
+    expect(retryOpts.headers.Authorization).toBe('Bearer new-access')
+  })
+
+  it('refresh-on-401 clears session and surfaces original error when refresh fails', async () => {
+    setRuntimeConfig({ authIssuer: 'http://keycloak:8080/realms/cbs-nova' })
+    const event = makeEvent({}, 'cbs_at=old-access; cbs_rt=refresh-123')
+    const backendErr = Object.assign(new Error('unauthorized'), {
+      name: 'FetchError',
+      response: { status: 401 },
+    })
+    ;($fetch as unknown as ReturnType<typeof vi.fn>)
+      .mockRejectedValueOnce(backendErr)
+      .mockResolvedValueOnce({
+        authorization_endpoint: 'http://keycloak:8080/realms/cbs-nova/protocol/openid-connect/auth',
+        token_endpoint: 'http://keycloak:8080/realms/cbs-nova/protocol/openid-connect/token',
+      })
+    ;($fetch.raw as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('refresh failed'))
+
+    await expect(proxyToBackend(event, '/api/foo')).rejects.toMatchObject({
+      statusCode: 401,
+    })
+    // $fetch called: original backend + OIDC discovery
+    expect($fetch).toHaveBeenCalledTimes(2)
   })
 })

@@ -11,7 +11,7 @@ import { ref } from 'vue'
 
 export const useState = (_key: string, init: () => unknown) => ref(init())
 export const navigateTo = () => Promise.resolve()
-export const useRoute = () => ({ params: {}, query: {} })
+export const useRoute = () => ({ path: '/', params: {}, query: {}, meta: {} })
 export const useRouter = () => ({ push: () => Promise.resolve(), replace: () => Promise.resolve() })
 export const useCookie = () => ({ value: undefined as unknown })
 export const clearError = () => {}
