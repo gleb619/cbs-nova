@@ -150,6 +150,26 @@ describe('useDslApi', () => {
     expect(result).toEqual({ name: 'draft-1', type: 'helper' })
   })
 
+  it('listPublishHistory GETs /api/v1/dsl/drafts/{name}/history', async () => {
+    fetchMock.mockResolvedValueOnce([{ timestamp: '123', timestampMillis: 123 }])
+    const api = useDslApi()
+    const result = await api.listPublishHistory('draft-1')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/drafts/draft-1/history')
+    expect(result).toEqual([{ timestamp: '123', timestampMillis: 123 }])
+  })
+
+  it('restorePublishHistory POSTs to /api/v1/dsl/drafts/{name}/history/{timestamp}/restore', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true })
+    const api = useDslApi()
+    const result = await api.restorePublishHistory('draft-1', '123')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/drafts/draft-1/history/123/restore', {
+      method: 'POST',
+    })
+    expect(result).toEqual({ ok: true })
+  })
+
   it('validateConstruct delegates to preview with empty body', async () => {
     fetchMock.mockResolvedValueOnce({})
     const api = useDslApi()

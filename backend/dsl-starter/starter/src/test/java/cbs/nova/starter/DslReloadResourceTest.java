@@ -55,7 +55,7 @@ class DslReloadResourceTest {
   @BeforeEach
   void setUp() {
     GlobalManager.globalManager().resetForTests();
-    resource = new DslReloadHandler(new DslProperties(null, null, null, null, null), loader);
+    resource = new DslReloadHandler(new DslProperties(), loader);
   }
 
   @AfterEach
@@ -64,7 +64,7 @@ class DslReloadResourceTest {
   }
 
   private void setSourceDir(String value) {
-    resource = new DslReloadHandler(new DslProperties(value, null, null, null, null), loader);
+    resource = new DslReloadHandler(dslProperties(value), loader);
   }
 
   private static ServerRequest reloadRequest() {
@@ -265,7 +265,7 @@ class DslReloadResourceTest {
       cache.put(key, sampleReport());
 
       var handler = new DslReloadHandler(
-              new DslProperties(sourceDir.toString(), null, null, null, null),
+              dslProperties(sourceDir.toString()),
               loader,
               constantProvider(cache));
 
@@ -293,7 +293,7 @@ class DslReloadResourceTest {
       cache.put(key, report);
 
       var handler = new DslReloadHandler(
-              new DslProperties(badDir.toString(), null, null, null, null),
+              dslProperties(badDir.toString()),
               loader,
               constantProvider(cache));
 
@@ -316,7 +316,7 @@ class DslReloadResourceTest {
     Path sourceDir = createTemporaryDslSourceDir();
     try {
       var handler = new DslReloadHandler(
-              new DslProperties(sourceDir.toString(), null, null, null, null),
+              dslProperties(sourceDir.toString()),
               loader,
               null);
 
@@ -385,7 +385,7 @@ class DslReloadResourceTest {
       DslDefinitionLoader gated = new PerCallGatedLoader(loader);
 
       var sharedHandler = new DslReloadHandler(
-              new DslProperties(sourceDir.toString(), null, null, null, null),
+              dslProperties(sourceDir.toString()),
               gated);
 
       ExecutorService pool = Executors.newFixedThreadPool(2);
@@ -596,4 +596,11 @@ class DslReloadResourceTest {
       return delegate.load(classLoader, gm);
     }
   }
+
+  private static DslProperties dslProperties(String sourceDir) {
+    DslProperties props = new DslProperties();
+    props.setSourceDir(sourceDir);
+    return props;
+  }
+
 }

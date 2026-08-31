@@ -41,4 +41,12 @@ public final class VcsModels {
 
   }
 
+  public record DefinitionHistoryEntry(
+          String timestamp,
+          long timestampMillis,
+          long sizeBytes,
+          long lastModifiedMillis) {
+
+  }
+
 }

@@ -47,6 +47,8 @@ const infoHandler = (await import('../info.get')).default
 const saveDraftHandler = (await import('../dsl/drafts/[name]/save.post')).default
 const publishDraftHandler = (await import('../dsl/drafts/[name]/publish.post')).default
 const deleteDraftHandler = (await import('../dsl/drafts/[name]/delete.delete')).default
+const listHistoryHandler = (await import('../dsl/drafts/[name]/history/index.get')).default
+const restoreHistoryHandler = (await import('../dsl/drafts/[name]/history/[timestamp]/restore.post')).default
 const helpersIndexHandler = (await import('../dsl/helpers/index.get')).default
 const processesIndexHandler = (await import('../dsl/processes/index.get')).default
 const processDetailHandler = (await import('../dsl/processes/[name].get')).default
@@ -362,6 +364,36 @@ describe('dsl/drafts/[name]/publish.post', () => {
       method: 'POST',
       body: { name: 'DraftOne', type: 'Process', version: 'v2' },
     })
+  })
+})
+
+describe('dsl/drafts/[name]/history/index.get', () => {
+  it('interpolates the :name router param and GETs the backend history path', async () => {
+    routerParams = { name: 'DraftOne' }
+
+    await listHistoryHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/drafts/DraftOne/history',
+    )
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+})
+
+describe('dsl/drafts/[name]/history/[timestamp]/restore.post', () => {
+  it('interpolates :name and :timestamp and POSTs to the backend restore path', async () => {
+    routerParams = { name: 'DraftOne', timestamp: '123456789' }
+
+    await restoreHistoryHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/drafts/DraftOne/history/123456789/restore',
+      { method: 'POST' },
+    )
   })
 })
 
