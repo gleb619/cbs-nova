@@ -56,6 +56,9 @@ const transactionsIndexHandler = (await import('../dsl/transactions/index.get'))
 const transactionDetailHandler = (await import('../dsl/transactions/[name].get')).default
 const constructBodyHandler = (await import('../dsl/constructs/[name].get')).default
 const processDiagramHandler = (await import('../dsl/processes/[name]/diagram.get')).default
+const schedulesIndexHandler = (await import('../dsl/schedules/index.get')).default
+const schedulesCreateHandler = (await import('../dsl/schedules/index.post')).default
+const schedulesDeleteHandler = (await import('../dsl/schedules/[definition].delete')).default
 
 // Minimal H3Event stub. The route handlers only pass this through to
 // proxyToBackend, which is mocked, so a plain object is sufficient.
@@ -619,5 +622,41 @@ describe('dsl/processes/[name]/diagram.get', () => {
     const result = await processDiagramHandler(fakeEvent)
 
     expect(result).toEqual(payload)
+  })
+})
+
+describe('dsl/schedules/index.get', () => {
+  it('GETs /api/dsl/schedules with no body', async () => {
+    await schedulesIndexHandler(fakeEvent)
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/schedules')
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+})
+
+describe('dsl/schedules/index.post', () => {
+  it('POSTs readBody() to /api/dsl/schedules', async () => {
+    bodyValue = { definition: 'A', cron: '0 9 * * *', timezone: 'UTC' }
+
+    await schedulesCreateHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/schedules', {
+      method: 'POST',
+      body: { definition: 'A', cron: '0 9 * * *', timezone: 'UTC' },
+    })
+  })
+})
+
+describe('dsl/schedules/[definition].delete', () => {
+  it('interpolates the :definition router param and DELETEs to /api/dsl/schedules/{definition}', async () => {
+    routerParams = { definition: 'A' }
+
+    await schedulesDeleteHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/schedules/A', {
+      method: 'DELETE',
+    })
   })
 })

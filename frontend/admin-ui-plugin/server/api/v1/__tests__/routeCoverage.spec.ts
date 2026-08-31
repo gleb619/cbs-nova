@@ -140,6 +140,23 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/dsl/drafts/{name}',
     bffPath: '/api/v1/dsl/drafts/{name}',
   },
+  // DslScheduleRouterConfiguration
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/schedules',
+    bffPath: '/api/v1/dsl/schedules',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/schedules',
+    bffPath: '/api/v1/dsl/schedules',
+  },
+  {
+    method: 'DELETE',
+    backendPath: '/api/dsl/schedules/{definition}',
+    bffPath: '/api/v1/dsl/schedules/{definition}',
+  },
+
   // DslReloadRouterConfiguration
   {
     method: 'POST',

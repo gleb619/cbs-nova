@@ -118,6 +118,21 @@ export function useDslApi() {
     return $fetch('/api/v1/dsl/reload', { method: 'POST' })
   }
 
+  async function listSchedules() {
+    log.info('listSchedules request')
+    return $fetch('/api/v1/dsl/schedules')
+  }
+
+  async function createSchedule(payload: Record<string, unknown>) {
+    log.info('createSchedule request', { definition: payload.definition })
+    return $fetch('/api/v1/dsl/schedules', { method: 'POST', body: payload })
+  }
+
+  async function deleteSchedule(definition: string) {
+    log.info('deleteSchedule request', { definition })
+    return $fetch(`/api/v1/dsl/schedules/${definition}`, { method: 'DELETE' })
+  }
+
   async function getProcessDiagram(name: string, format: 'mermaid' | 'plantuml' | 'bpmn' = 'mermaid') {
     log.info('process diagram request', { name, format })
     return $fetch(`/api/v1/dsl/processes/${name}/diagram`, { query: { format } })
@@ -139,6 +154,9 @@ export function useDslApi() {
     restorePublishHistory,
     validateConstruct,
     reload,
+    listSchedules,
+    createSchedule,
+    deleteSchedule,
     getProcessDiagram,
   }
 }

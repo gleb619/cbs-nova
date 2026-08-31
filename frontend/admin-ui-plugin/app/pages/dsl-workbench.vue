@@ -3,7 +3,7 @@ import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { useDslWorkbench } from '@cbs/admin-ui-plugin/composables/useDslWorkbench'
 import { useWorkbenchDraft } from '@cbs/admin-ui-plugin/composables/useWorkbenchDraft'
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
-import type { HelperCatalogEntry, HelpersResponse, HelperSearchFilters, ObjectSearchResult } from '@cbs/components'
+import type { HelperCatalogEntry, HelpersResponse, HelperSearchFilters, ObjectSearchResult, ScheduleSummary } from '@cbs/components'
 import {
   createNamespacedLocalStorageState,
   DropdownMenu,
@@ -17,6 +17,7 @@ import {
   DslMetadataPanel,
   DslPlainConstructList,
   DslProblemsPanel,
+  DslScheduleList,
   ErrorBanner,
   useHelperSearch,
 } from '@cbs/components'
@@ -80,10 +81,13 @@ const helperSearch = useHelperSearch({
   debounceMs: 250,
 })
 
-const activeTab = ref<'editor' | 'helpers'>('editor')
+const activeTab = ref<'editor' | 'helpers' | 'schedules'>('editor')
 const helpersCatalog = ref<HelperCatalogEntry[]>([])
 const helpersLoading = ref(false)
 const helpersError = ref<string | null>(null)
+const schedules = ref<ScheduleSummary[]>([])
+const schedulesLoading = ref(false)
+const schedulesError = ref<string | null>(null)
 
 async function loadHelpers() {
   helpersLoading.value = true
@@ -99,10 +103,26 @@ async function loadHelpers() {
   }
 }
 
-function setTab(tab: 'editor' | 'helpers') {
+async function loadSchedules() {
+  schedulesLoading.value = true
+  schedulesError.value = null
+  try {
+    const result = (await dslApi.listSchedules()) as ScheduleSummary[]
+    schedules.value = Array.isArray(result) ? result : []
+  } catch (err) {
+    schedulesError.value = (err as Error).message
+    schedules.value = []
+  } finally {
+    schedulesLoading.value = false
+  }
+}
+
+function setTab(tab: 'editor' | 'helpers' | 'schedules') {
   activeTab.value = tab
   if (tab === 'helpers') {
     void loadHelpers()
+  } else if (tab === 'schedules') {
+    void loadSchedules()
   }
 }
 
@@ -362,6 +382,15 @@ onBeforeUnmount(() => {
           >
             Helpers
           </button>
+          <button
+            type="button"
+            class="py-2 border-b-2 transition-colors"
+            :class="activeTab === 'schedules' ? 'border-blue-600 text-blue-700 font-medium' : 'border-transparent text-gray-600 hover:text-gray-900'"
+            data-testid="dsl-workbench-tab-schedules"
+            @click="setTab('schedules')"
+          >
+            Schedules
+          </button>
         </div>
         <div v-if="restoredFromDraft" class="px-3 pt-2">
           <DslDraftRestoreBanner :saved-at="draftSavedAt" @discard="clearDraft" />
@@ -379,10 +408,18 @@ onBeforeUnmount(() => {
             @update:code="onCodeChange"
           />
           <DslHelperCatalog
-            v-else
+            v-else-if="activeTab === 'helpers'"
             :helpers="helpersCatalog"
             :loading="helpersLoading"
             :error="helpersError"
+          />
+          <DslScheduleList
+            v-else-if="activeTab === 'schedules'"
+            :schedules="schedules"
+            :loading="schedulesLoading"
+            :error="schedulesError"
+            @create="(payload) => { dslApi.createSchedule(payload).then(() => loadSchedules()) }"
+            @delete="(definition) => { dslApi.deleteSchedule(definition).then(() => loadSchedules()) }"
           />
         </div>
         <DslProblemsPanel v-if="activeTab === 'editor'" :errors="state.validationErrors" />

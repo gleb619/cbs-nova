@@ -51,6 +51,9 @@ const { dslApi, useDslApiMock, useDslWorkbenchMock } = vi.hoisted(() => {
     validateConstruct: vi.fn(),
     listDrafts: vi.fn(),
     listHelpers: vi.fn(),
+    listSchedules: vi.fn(),
+    createSchedule: vi.fn(),
+    deleteSchedule: vi.fn(),
     readDraft: vi.fn(),
   }
   // `useDslWorkbenchMock` reads the harness lazily from globalThis so the
@@ -149,6 +152,7 @@ const makeStub = (testId: string) =>
   defineComponent({
     name: testId,
     props: [
+      'schedules',
       'constructs',
       'selectedName',
       'loading',
@@ -170,6 +174,8 @@ const makeStub = (testId: string) =>
       'errors',
     ],
     emits: [
+      'create',
+      'delete',
       'select',
       'delete',
       'update:code',
@@ -202,6 +208,7 @@ const componentStubs = {
   DslMetadataPanel: makeStub('MetadataPanel'),
   DslPlainConstructList: makeStub('PlainConstructList'),
   DslProblemsPanel: makeStub('ProblemsPanel'),
+  DslScheduleList: makeStub('DslScheduleList'),
   ErrorBanner: makeStub('ErrorBanner'),
 }
 
@@ -239,6 +246,12 @@ describe('dsl-workbench.vue unsaved-changes guard', () => {
     dslApi.listDrafts.mockResolvedValue([])
     dslApi.listHelpers.mockReset()
     dslApi.listHelpers.mockResolvedValue({ names: [], helpers: [] })
+    dslApi.listSchedules.mockReset()
+    dslApi.listSchedules.mockResolvedValue([])
+    dslApi.createSchedule.mockReset()
+    dslApi.createSchedule.mockResolvedValue({})
+    dslApi.deleteSchedule.mockReset()
+    dslApi.deleteSchedule.mockResolvedValue({})
 
     addSpy = vi.spyOn(window, 'addEventListener')
     removeSpy = vi.spyOn(window, 'removeEventListener')
@@ -376,6 +389,12 @@ describe('dsl-workbench.vue draft picker', () => {
     dslApi.listDrafts.mockResolvedValue([])
     dslApi.listHelpers.mockReset()
     dslApi.listHelpers.mockResolvedValue({ names: [], helpers: [] })
+    dslApi.listSchedules.mockReset()
+    dslApi.listSchedules.mockResolvedValue([])
+    dslApi.createSchedule.mockReset()
+    dslApi.createSchedule.mockResolvedValue({})
+    dslApi.deleteSchedule.mockReset()
+    dslApi.deleteSchedule.mockResolvedValue({})
   })
 
   it('renders the draft names returned by listDrafts', async () => {

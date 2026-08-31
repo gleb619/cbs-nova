@@ -2,7 +2,9 @@ package cbs.nova.starter.controller;
 
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.converter.DslExceptionMapper;
+import cbs.nova.starter.exception.DefinitionNotFoundException;
 import cbs.nova.starter.exception.DslPayloadTooLargeException;
+import cbs.nova.starter.exception.ScheduleConflictException;
 import cbs.nova.starter.model.ErrorResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +46,22 @@ public class DslExceptionHandler extends ResponseEntityExceptionHandler {
   public ResponseEntity<ErrorResponse> handleDslException(DslException ex, WebRequest request) {
     log.error("DSL_ERROR: {}", ex.getMessage(), ex);
     return dslExceptionMapper.handle(ex, request);
+  }
+
+  @ExceptionHandler(DefinitionNotFoundException.class)
+  public ResponseEntity<ErrorResponse> handleDefinitionNotFound(DefinitionNotFoundException ex,
+          WebRequest request) {
+    log.error("NOT_FOUND: {}", ex.getMessage(), ex);
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(new ErrorResponse("NOT_FOUND", ex.getMessage(), ex.getEntityName(), null, null));
+  }
+
+  @ExceptionHandler(ScheduleConflictException.class)
+  public ResponseEntity<ErrorResponse> handleScheduleConflict(ScheduleConflictException ex,
+          WebRequest request) {
+    log.error("CONFLICT: {}", ex.getMessage(), ex);
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(new ErrorResponse("CONFLICT", ex.getMessage(), null, null, null));
   }
 
   @ExceptionHandler(IllegalArgumentException.class)
