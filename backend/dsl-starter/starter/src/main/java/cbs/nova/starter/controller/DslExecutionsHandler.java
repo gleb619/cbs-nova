@@ -4,14 +4,18 @@ import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunSearchResult;
 import cbs.nova.dsl.history.DslRunStatus;
+import cbs.nova.dsl.history.TransactionExecutionRepository;
+import cbs.nova.dsl.transaction.TransactionExecution;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ExecutionDto;
 import cbs.nova.starter.model.ExecutionListResponse;
 import cbs.nova.starter.model.ExecutionStatsResponse;
+import cbs.nova.starter.model.TransactionExecutionDto;
 import cbs.nova.starter.persistence.DslRunStats;
 import cbs.nova.starter.persistence.DslRunStatsRepository;
 import cbs.nova.starter.service.DslRunCancellationService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -51,6 +55,7 @@ public class DslExecutionsHandler {
   private final ObjectMapper objectMapper;
   private final DslRunCancellationService cancellationService;
   private final @Nullable DslRunStatsRepository statsRepository;
+  private final TransactionExecutionRepository transactionExecutionRepository;
 
   @Operation(summary = "List DSL execution runs")
   @ApiResponse(responseCode = "200", description = "Matching execution runs", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionListResponse.class)))
@@ -111,6 +116,38 @@ public class DslExecutionsHandler {
             .orElse(ServerResponse.status(HttpStatus.NOT_FOUND)
                     .body(new ErrorResponse("NOT_FOUND", "Execution run not found: " + id,
                             null, id, null)));
+  }
+
+  /**
+   * Returns the transaction executions recorded for a run.
+   *
+   * <p>
+   * The response is a bare JSON array (not a wrapper object) to keep the sub-resource lightweight.
+   * Rows are returned in repository order, which is newest-first for both the JDBC and in-memory
+   * stores.
+   */
+  @Operation(summary = "List transaction executions for a run")
+  @ApiResponse(responseCode = "200", description = "Transaction executions for the run, most recent first", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = TransactionExecutionDto.class))))
+  @ApiResponse(responseCode = "404", description = "No run with the given id", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+  public ServerResponse transactions(ServerRequest request) {
+    String id = request.pathVariable("id");
+    if (runRepository.findByRunId(id).isEmpty()) {
+      return ServerResponse.status(HttpStatus.NOT_FOUND)
+              .body(new ErrorResponse("NOT_FOUND", "Execution run not found: " + id,
+                      null, id, null));
+    }
+    List<TransactionExecutionDto> transactions = transactionExecutionRepository.findByRunId(id)
+            .stream()
+            .map(this::toDto)
+            .toList();
+    return ServerResponse.ok().body(transactions);
+  }
+
+  private TransactionExecutionDto toDto(TransactionExecution execution) {
+    return new TransactionExecutionDto(
+            execution.transactionName(),
+            execution.input(),
+            execution.executedAt().toString());
   }
 
   /**

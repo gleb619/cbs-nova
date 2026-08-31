@@ -41,6 +41,7 @@ export { default as ExecutionsMetadataTab } from './components/executions/Metada
 export { default as ExecutionsPayloadTab } from './components/executions/PayloadTab.vue'
 export { default as ExecutionsStatusBadge } from './components/executions/StatusBadge.vue'
 export { default as ExecutionsTraceNode } from './components/executions/TraceNode.vue'
+export { default as ExecutionsTransactionsTab } from './components/executions/TransactionsTab.vue'
 export { default as RunnerCallTreeNode } from './components/runner/CallTreeNode.vue'
 export { default as RunnerCallTreeTab } from './components/runner/CallTreeTab.vue'
 export { default as RunnerDefinitionSelector } from './components/runner/DefinitionSelector.vue'

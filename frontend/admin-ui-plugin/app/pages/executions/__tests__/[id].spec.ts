@@ -1,8 +1,8 @@
-import { mount, flushPromises } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent, h, nextTick, Suspense, type Ref } from 'vue'
-import ExecutionDetailPage from '../[id].vue'
+import { defineComponent, h, nextTick, type Ref, Suspense } from 'vue'
 import type { ExecutionDetail } from '~/types'
+import ExecutionDetailPage from '../[id].vue'
 
 const STASH_KEY = 'cbs.nova.run-again'
 
@@ -10,22 +10,29 @@ const STASH_KEY = 'cbs.nova.run-again'
 // Mocks for the composables the page consumes.
 // ---------------------------------------------------------------------------
 
-const { useExecutionsMock, useDslApiMock, navigateTo, dslApi } = vi.hoisted(() => {
-  const navigateToSpy = vi.fn()
-  const api = { getProcessDiagram: vi.fn() }
-  const useExecutionsMockFn = vi.fn(() => {
-    const harness = (globalThis as unknown as { __execDetailHarness?: unknown }).__execDetailHarness
-    if (!harness) throw new Error('execution detail harness not installed yet')
-    return harness
-  })
-  const useDslApiMockFn = vi.fn(() => api)
-  return {
-    useExecutionsMock: useExecutionsMockFn,
-    useDslApiMock: useDslApiMockFn,
-    navigateTo: navigateToSpy,
-    dslApi: api,
-  }
-})
+const { useExecutionsMock, useDslApiMock, useExecutionsApiMock, navigateTo, dslApi } = vi.hoisted(
+  () => {
+    const navigateToSpy = vi.fn()
+    const api = { getProcessDiagram: vi.fn() }
+    const useExecutionsMockFn = vi.fn(() => {
+      const harness = (globalThis as unknown as { __execDetailHarness?: unknown })
+        .__execDetailHarness
+      if (!harness) throw new Error('execution detail harness not installed yet')
+      return harness
+    })
+    const useDslApiMockFn = vi.fn(() => api)
+    const useExecutionsApiMockFn = vi.fn(() => ({
+      getTransactions: vi.fn().mockResolvedValue([]),
+    }))
+    return {
+      useExecutionsMock: useExecutionsMockFn,
+      useDslApiMock: useDslApiMockFn,
+      useExecutionsApiMock: useExecutionsApiMockFn,
+      navigateTo: navigateToSpy,
+      dslApi: api,
+    }
+  },
+)
 
 interface ExecDetailHarness {
   selectedExecution: Ref<ExecutionDetail | null>
@@ -52,7 +59,8 @@ const harness: ExecDetailHarness = (() => {
   }
 })()
 
-;(globalThis as unknown as { __execDetailHarness?: ExecDetailHarness }).__execDetailHarness = harness
+;(globalThis as unknown as { __execDetailHarness?: ExecDetailHarness }).__execDetailHarness =
+  harness
 
 vi.mock('@cbs/admin-ui-plugin/composables/useDslApi', () => ({
   useDslApi: useDslApiMock,
@@ -60,6 +68,10 @@ vi.mock('@cbs/admin-ui-plugin/composables/useDslApi', () => ({
 
 vi.mock('@cbs/admin-ui-plugin/composables/useExecutions', () => ({
   useExecutions: useExecutionsMock,
+}))
+
+vi.mock('@cbs/admin-ui-plugin/composables/useExecutionsApi', () => ({
+  useExecutionsApi: useExecutionsApiMock,
 }))
 
 vi.mock('nuxt/app', () => ({
@@ -89,11 +101,7 @@ const summaryStub = defineComponent({
   props: ['execution'],
   setup(_props, { slots }) {
     return () =>
-      h(
-        'div',
-        { 'data-testid': 'ExecutionSummary' },
-        slots.actions ? slots.actions() : [],
-      )
+      h('div', { 'data-testid': 'ExecutionSummary' }, slots.actions ? slots.actions() : [])
   },
 })
 
@@ -109,6 +117,7 @@ const componentStubs = {
   ExecutionsPayloadTab: makeStub('ExecutionsPayloadTab'),
   ExecutionsMetadataTab: makeStub('ExecutionsMetadataTab'),
   ExecutionsLogsTab: makeStub('ExecutionsLogsTab'),
+  ExecutionsTransactionsTab: makeStub('ExecutionsTransactionsTab'),
   ExecutionsErrorsTab: makeStub('ExecutionsErrorsTab'),
 }
 
@@ -297,5 +306,36 @@ describe('executions/[id].vue run-again button', () => {
     expect(labels).toContain('Logs')
 
     wrapper.unmount()
+  })
+
+  describe('executions/[id].vue transactions tab', () => {
+    beforeEach(() => {
+      harness.selectedExecution.value = null
+      harness.error.value = null
+      harness.loadDetail.mockClear()
+      dslApi.getProcessDiagram.mockReset()
+      dslApi.getProcessDiagram.mockResolvedValue({ diagram: 'graph TD' })
+    })
+
+    it('renders the Transactions tab and the TransactionsTab component', async () => {
+      harness.selectedExecution.value = detail()
+
+      const wrapper = mountPage()
+      await flush()
+
+      const buttons = wrapper.findAll('button')
+      const labels = buttons.map((b) => b.text().trim())
+      expect(labels).toContain('Transactions')
+
+      const txButton = buttons.find((b) => b.text().trim() === 'Transactions')
+      if (txButton) {
+        await txButton.trigger('click')
+      }
+      await flush()
+
+      expect(wrapper.find('[data-testid="ExecutionsTransactionsTab"]').exists()).toBe(true)
+
+      wrapper.unmount()
+    })
   })
 })

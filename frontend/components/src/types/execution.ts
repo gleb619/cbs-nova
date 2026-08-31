@@ -49,6 +49,12 @@ export interface ExecutionDetail extends Execution {
   mermaidDiagram?: string
 }
 
+export interface TransactionExecutionDto {
+  transactionName: string
+  input?: unknown
+  executedAt: string
+}
+
 export interface ExecutionFilters {
   status?: ExecutionStatus
   mode?: ExecutionMode

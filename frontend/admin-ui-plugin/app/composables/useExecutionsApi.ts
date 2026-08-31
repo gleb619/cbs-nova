@@ -1,6 +1,6 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { $fetch } from 'ofetch'
-import type { Execution, ExecutionDetail } from '~/types'
+import type { Execution, ExecutionDetail, TransactionExecutionDto } from '~/types'
 
 export function useExecutionsApi() {
   const log = useClientLogger('runtime')
@@ -27,5 +27,10 @@ export function useExecutionsApi() {
     return $fetch(`/api/v1/executions/${id}/cancel`, { method: 'POST' }) as ExecutionDetail
   }
 
-  return { list, get, cancel }
+  async function getTransactions(id: string): Promise<TransactionExecutionDto[]> {
+    log.debug('fetching execution transactions', { id })
+    return $fetch(`/api/v1/executions/${id}/transactions`) as TransactionExecutionDto[]
+  }
+
+  return { list, get, cancel, getTransactions }
 }

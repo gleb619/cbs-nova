@@ -15,7 +15,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cbs.nova.dsl.history.DslRun;
+import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
+import cbs.nova.dsl.repository.InMemoryTransactionExecutionRepository;
+import cbs.nova.dsl.transaction.TransactionExecution;
 import cbs.nova.starter.config.DslExecutionsRouterConfiguration;
 import cbs.nova.starter.persistence.DslRunStats;
 import cbs.nova.starter.persistence.DslRunStatsRepository;
@@ -36,6 +39,7 @@ import java.util.Map;
 class DslExecutionsResourceTest {
 
   private final InMemoryDslRunRepository repository = new InMemoryDslRunRepository();
+  private final TransactionExecutionRepository transactionExecutionRepository = new InMemoryTransactionExecutionRepository();
   private final ObjectMapper objectMapper = new ObjectMapper();
   private final WorkflowClient workflowClient = mock(WorkflowClient.class);
   private MockMvc mockMvc;
@@ -45,7 +49,7 @@ class DslExecutionsResourceTest {
     DslRunCancellationService cancellationService = new DslRunCancellationService(workflowClient,
             repository);
     DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper,
-            cancellationService, null);
+            cancellationService, null, transactionExecutionRepository);
     DslExecutionsRouterConfiguration router = new DslExecutionsRouterConfiguration();
     mockMvc = MockMvcBuilders.routerFunctions(router.dslExecutionsRouter(handler)).build();
   }
@@ -469,7 +473,7 @@ class DslExecutionsResourceTest {
             .andExpect(jsonPath("$.trace[499].id").value("499"))
             .andExpect(jsonPath("$.trace[500].id").value("500"))
             .andExpect(jsonPath("$.trace[500].stepType").value("Process"))
-            .andExpect(jsonPath("$.trace[500].name").value("\u2026 trace truncated (501 entries)"))
+            .andExpect(jsonPath("$.trace[500].name").value("… trace truncated (501 entries)"))
             .andExpect(jsonPath("$.trace[500].isCompensation").value(false));
   }
 
@@ -632,7 +636,8 @@ class DslExecutionsResourceTest {
             0.2,
             List.of(new DslRunStats.ProcessRunCount("LoanDisbursement", 20))));
     DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper,
-            new DslRunCancellationService(workflowClient, repository), statsRepository);
+            new DslRunCancellationService(workflowClient, repository), statsRepository,
+            transactionExecutionRepository);
     mockMvc = MockMvcBuilders
             .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler))
             .build();
@@ -657,7 +662,8 @@ class DslExecutionsResourceTest {
     when(statsRepository.stats(any(Instant.class), anyInt())).thenReturn(new DslRunStats(
             0, Map.of(), 0, 0, 0.0, List.of()));
     DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper,
-            new DslRunCancellationService(workflowClient, repository), statsRepository);
+            new DslRunCancellationService(workflowClient, repository), statsRepository,
+            transactionExecutionRepository);
     mockMvc = MockMvcBuilders
             .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler))
             .build();
@@ -680,6 +686,62 @@ class DslExecutionsResourceTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.totalRuns").exists())
             .andExpect(jsonPath("$.id").doesNotExist());
+  }
+
+  // -------------------------------------------------------------------------
+  // T312 — transaction executions surfaced for a run.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void transactionsForUnknownRunReturns404WithErrorResponse() throws Exception {
+    mockMvc.perform(get("/api/executions/missing/transactions"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+            .andExpect(jsonPath("$.message").value("Execution run not found: missing"))
+            .andExpect(jsonPath("$.runId").value("missing"));
+  }
+
+  @Test
+  void transactionsForKnownRunWithNoRowsReturnsEmptyArray() throws Exception {
+    repository.save(run("run-empty-tx", "LoanDisbursement", "COMPLETED",
+            "2026-08-13T10:00:00Z", "2026-08-13T10:00:05Z", "RUN"));
+
+    mockMvc.perform(get("/api/executions/run-empty-tx/transactions"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$").isArray())
+            .andExpect(jsonPath("$.length()").value(0));
+  }
+
+  @Test
+  void transactionsForKnownRunReturnsRowsNewestFirstWithFields() throws Exception {
+    repository.save(run("run-tx", "LoanDisbursement", "COMPLETED",
+            "2026-08-13T10:00:00Z", "2026-08-13T10:00:05Z", "RUN"));
+    transactionExecutionRepository.save(tx("run-tx", "first", Map.of("amount", 100),
+            "2026-08-13T10:00:01Z"));
+    transactionExecutionRepository.save(tx("run-tx", "second", Map.of("amount", 200),
+            "2026-08-13T10:00:02Z"));
+
+    mockMvc.perform(get("/api/executions/run-tx/transactions"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$").isArray())
+            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$[0].transactionName").value("second"))
+            .andExpect(jsonPath("$[0].input.amount").value(200))
+            .andExpect(jsonPath("$[0].executedAt").value("2026-08-13T10:00:02Z"))
+            .andExpect(jsonPath("$[1].transactionName").value("first"))
+            .andExpect(jsonPath("$[1].input.amount").value(100))
+            .andExpect(jsonPath("$[1].executedAt").value("2026-08-13T10:00:01Z"));
+  }
+
+  @Test
+  void transactionsLiteralRouteIsNotCapturedAsDetailId() throws Exception {
+    repository.save(run("transactions", "LoanDisbursement", "COMPLETED",
+            "2026-08-13T10:00:00Z", "2026-08-13T10:00:05Z", "RUN"));
+
+    mockMvc.perform(get("/api/executions/transactions/transactions"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$").isArray())
+            .andExpect(jsonPath("$.length()").value(0));
   }
 
   private DslRun run(String id, String processName, String status, String startedAt,
@@ -726,5 +788,9 @@ class DslExecutionsResourceTest {
             .executionMode(mode)
             .contextJson(contextJson)
             .build();
+  }
+
+  private TransactionExecution tx(String runId, String name, Object input, String executedAt) {
+    return new TransactionExecution(runId, name, input, Instant.parse(executedAt));
   }
 }
