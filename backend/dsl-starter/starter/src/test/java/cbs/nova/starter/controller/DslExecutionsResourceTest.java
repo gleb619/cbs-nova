@@ -20,9 +20,14 @@ import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dsl.repository.InMemoryTransactionExecutionRepository;
 import cbs.nova.dsl.transaction.TransactionExecution;
 import cbs.nova.starter.config.DslExecutionsRouterConfiguration;
+import cbs.nova.starter.controller.DslExceptionHandler;
+import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.persistence.DslRunStats;
 import cbs.nova.starter.persistence.DslRunStatsRepository;
 import cbs.nova.starter.service.DslRunCancellationService;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowStub;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,7 +56,20 @@ class DslExecutionsResourceTest {
     DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper,
             cancellationService, null, transactionExecutionRepository);
     DslExecutionsRouterConfiguration router = new DslExecutionsRouterConfiguration();
-    mockMvc = MockMvcBuilders.routerFunctions(router.dslExecutionsRouter(handler)).build();
+    AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();
+    adviceContext.registerBean(DslExceptionHandler.class,
+            () -> new DslExceptionHandler(new DefaultDslExceptionMapper()));
+    adviceContext.refresh();
+
+    ExceptionHandlerExceptionResolver exceptionResolver = new ExceptionHandlerExceptionResolver();
+    exceptionResolver.setApplicationContext(adviceContext);
+    exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
+    exceptionResolver.afterPropertiesSet();
+
+    mockMvc = MockMvcBuilders.routerFunctions(router.dslExecutionsRouter(handler))
+            .setMessageConverters(new JacksonJsonHttpMessageConverter())
+            .setHandlerExceptionResolvers(exceptionResolver)
+            .build();
   }
 
   @Test
@@ -742,6 +760,59 @@ class DslExecutionsResourceTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$").isArray())
             .andExpect(jsonPath("$.length()").value(0));
+  }
+
+  @Test
+  void invalidLimitReturns400NamingTheParameterAndValue() throws Exception {
+    mockMvc.perform(get("/api/executions").param("limit", "abc"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+            .andExpect(jsonPath("$.message")
+                    .value("Invalid value for query parameter 'limit': 'abc' (expected an integer)"));
+  }
+
+  @Test
+  void invalidOffsetReturns400NamingTheParameterAndValue() throws Exception {
+    mockMvc.perform(get("/api/executions").param("offset", "xyz"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+            .andExpect(jsonPath("$.message")
+                    .value("Invalid value for query parameter 'offset': 'xyz' (expected an integer)"));
+  }
+
+  @Test
+  void invalidTopProcessesReturns400NamingTheParameterAndValue() throws Exception {
+    mockMvc.perform(get("/api/executions/stats").param("topProcesses", "NaN"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+            .andExpect(jsonPath("$.message")
+                    .value("Invalid value for query parameter 'topProcesses': 'NaN' (expected an integer)"));
+  }
+
+  @Test
+  void limitAboveMaxIsClampedAndReturns200() throws Exception {
+    repository.save(run("run-1", "LoanDisbursement", "COMPLETED", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", "RUN"));
+    repository.save(run("run-2", "LoanDisbursement", "COMPLETED", "2026-08-13T10:01:00Z",
+            "2026-08-13T10:01:05Z", "RUN"));
+
+    mockMvc.perform(get("/api/executions").param("limit", "9999"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(2))
+            .andExpect(jsonPath("$.items.length()").value(2));
+  }
+
+  @Test
+  void blankNumericParamsFallBackToDefaults() throws Exception {
+    repository.save(run("run-1", "LoanDisbursement", "COMPLETED", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", "RUN"));
+
+    mockMvc.perform(get("/api/executions")
+            .param("limit", "   ")
+            .param("offset", "	"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(1))
+            .andExpect(jsonPath("$.items.length()").value(1));
   }
 
   private DslRun run(String id, String processName, String status, String startedAt,
