@@ -289,4 +289,30 @@ describe('proxyToBackend', () => {
     const [url] = ($fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [string]
     expect(url).toBe('http://localhost:8090/api/foo')
   })
+
+  it('forwards inbound Idempotency-Key header verbatim', async () => {
+    const event = makeEvent({ 'idempotency-key': 'idem-abc' })
+    ;($fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({})
+
+    await proxyToBackend(event, '/api/foo')
+
+    const [, opts] = ($fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      { headers: Record<string, string> },
+    ]
+    expect(opts.headers['Idempotency-Key']).toBe('idem-abc')
+  })
+
+  it('omits Idempotency-Key header when inbound is absent', async () => {
+    const event = makeEvent()
+    ;($fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({})
+
+    await proxyToBackend(event, '/api/foo')
+
+    const [, opts] = ($fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      { headers: Record<string, string> },
+    ]
+    expect(opts.headers['Idempotency-Key']).toBeUndefined()
+  })
 })

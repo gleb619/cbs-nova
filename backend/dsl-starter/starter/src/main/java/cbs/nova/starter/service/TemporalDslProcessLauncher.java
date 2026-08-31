@@ -11,6 +11,7 @@ import cbs.nova.dsl.process.DslTemporalProcessFailure;
 import cbs.nova.dsl.process.DslTemporalProcessRequest;
 import cbs.nova.dsl.process.TemporalProcessLauncher;
 import io.temporal.client.WorkflowClient;
+import io.temporal.client.WorkflowExecutionAlreadyStarted;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.common.RetryOptions;
 import io.temporal.workflow.Workflow;
@@ -98,6 +99,10 @@ public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
       return Result.success(result);
     } catch (Exception e) {
       Throwable cause = e.getCause() != null ? e.getCause() : e;
+      if (e instanceof WorkflowExecutionAlreadyStarted
+              || cause instanceof WorkflowExecutionAlreadyStarted) {
+        return Result.failure(new IdempotentReplayException(request.ctx().runId()));
+      }
       return Result.failure(new DslExecutionException(request.ctx().runId(),
               "Process %s failed: %s".formatted(request.processName(), cause.getMessage()), cause));
     }

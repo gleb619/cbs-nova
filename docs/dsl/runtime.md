@@ -408,3 +408,19 @@ sleep 2
 docker compose -f app/compose/app.yml restart spring-app
 wait   # the curl returns a normal response, not "connection reset by peer"
 ```
+
+## Run idempotency
+
+`POST /api/dsl/run/{name}` accepts an optional `Idempotency-Key` header. When present, the same
+process name + key pair always maps to the same Temporal workflow, so duplicate submissions return
+the existing run instead of launching a new one.
+
+- **Header name:** `Idempotency-Key`
+- **Validation:** after `trim()`, the value must be non-blank, 1–200 characters, and match
+  `[A-Za-z0-9_.:-]+`. A rejected key returns `400 Bad Request` with code `INVALID_IDEMPOTENCY_KEY`.
+- **Derivation:** the run id (and Temporal `workflowId`) is:
+  `"idem-" + sha256Hex(name + ":" + key)` truncated to the first 32 hex characters.
+- **Replay response:** `200 OK` with response header `Idempotency-Replayed: true` and body
+  `{ "runId": "<run-id>", "status": "REPLAYED" }`.
+- **Dedup window:** no persistent key store is used; deduplication lasts as long as the Temporal
+  namespace retains the workflow execution (workflow retention).

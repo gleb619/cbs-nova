@@ -23,6 +23,7 @@ import cbs.nova.starter.converter.DslRuntimeMapper;
 import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.model.DslRequest;
 import cbs.nova.starter.model.RuntimeOutcome;
+import cbs.nova.starter.service.IdempotentReplayException;
 import cbs.nova.starter.web.RequestIdFilter;
 import java.util.List;
 import java.time.Duration;
@@ -212,5 +213,46 @@ class DslRuntimeServiceTest {
             List.of(),
             null,
             errors);
+  }
+
+  @Test
+  void runUsesForcedRunIdWhenProvided() {
+    doReturn(Result.success("output")).when(dslRuntime).run(eq("P"), any());
+
+    RuntimeOutcome outcome = service.run("P", new DslRequest("input", null), "req-7", "idem-abc");
+
+    assertThat(outcome.success()).isTrue();
+    assertThat(outcome.replayed()).isFalse();
+    ArgumentCaptor<cbs.nova.dsl.Context<?>> captor = ArgumentCaptor
+            .forClass(cbs.nova.dsl.Context.class);
+    verify(dslRuntime).run(eq("P"), captor.capture());
+    assertThat(captor.getValue().runId()).isEqualTo("idem-abc");
+  }
+
+  @Test
+  void runReturnsReplayedOutcomeWhenLauncherReportsAlreadyStarted() {
+    doReturn(Result.failure(new IdempotentReplayException("idem-abc")))
+            .when(dslRuntime).run(eq("P"), any());
+
+    RuntimeOutcome outcome = service.run("P", new DslRequest("input", null), "req-8", "idem-abc");
+
+    assertThat(outcome.success()).isTrue();
+    assertThat(outcome.replayed()).isTrue();
+    assertThat(outcome.value()).isEqualTo(Map.of("runId", "idem-abc", "status", "REPLAYED"));
+    assertThat(outcome.error()).isNull();
+  }
+
+  @Test
+  void runWithoutForcedRunIdKeepsExistingPath() {
+    doReturn(Result.success("output")).when(dslRuntime).run(eq("P"), any());
+
+    RuntimeOutcome outcome = service.run("P", new DslRequest("input", null), "req-9");
+
+    assertThat(outcome.success()).isTrue();
+    assertThat(outcome.replayed()).isFalse();
+    ArgumentCaptor<cbs.nova.dsl.Context<?>> captor = ArgumentCaptor
+            .forClass(cbs.nova.dsl.Context.class);
+    verify(dslRuntime).run(eq("P"), captor.capture());
+    assertThat(captor.getValue().runId()).isEqualTo("req-9");
   }
 }

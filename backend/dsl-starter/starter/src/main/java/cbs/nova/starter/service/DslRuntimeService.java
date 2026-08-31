@@ -61,11 +61,20 @@ public class DslRuntimeService {
   }
 
   public RuntimeOutcome run(String name, DslRequest request, @Nullable String requestId) {
-    String runId = resolveRunId(requestId);
+    return run(name, request, requestId, null);
+  }
+
+  public RuntimeOutcome run(String name, DslRequest request, @Nullable String requestId,
+          @Nullable String forcedRunId) {
+    String runId = forcedRunId != null ? forcedRunId : resolveRunId(requestId);
+    String mdcRunId = requestId != null && !requestId.isBlank() ? requestId : runId;
     Context<?> ctx = toContext(request, ExecutionMode.RUN, runId);
-    Result<?> result = executeWithMdc(runId, () -> dslRuntime.run(name, ctx));
+    Result<?> result = executeWithMdc(mdcRunId, () -> dslRuntime.run(name, ctx));
     if (result.isSuccess()) {
       return RuntimeOutcome.ok(result.value());
+    }
+    if (result.cause() instanceof IdempotentReplayException replay) {
+      return RuntimeOutcome.okReplayed(Map.of("runId", replay.runId(), "status", "REPLAYED"));
     }
     return RuntimeOutcome.error(toErrorResponse(name, runId, result.cause()));
   }
@@ -105,10 +114,10 @@ public class DslRuntimeService {
     return ctx.withExecutionListener(loggingListener);
   }
 
-  private <R> R executeWithMdc(String runId, Supplier<R> action) {
-    boolean put = runId != null && !runId.isBlank();
+  private <R> R executeWithMdc(String correlationId, Supplier<R> action) {
+    boolean put = correlationId != null && !correlationId.isBlank();
     if (put) {
-      MDC.put(RequestIdFilter.REQUEST_ID_MDC_KEY, runId);
+      MDC.put(RequestIdFilter.REQUEST_ID_MDC_KEY, correlationId);
     }
     try {
       return action.get();
