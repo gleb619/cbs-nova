@@ -507,3 +507,40 @@ is persisted on the `dsl_runs` row and surfaced on the execution list and detail
   `[A-Za-z0-9_.:/-]+`. A rejected value returns `400 Bad Request` with code `INVALID_CORRELATION_ID`.
 - **Caller-supplied only:** the server never generates a correlation id. When the header is
   absent the stored value is `null` and existing behavior is unchanged.
+
+## Run lifecycle
+
+### Stuck-run reconciliation
+
+An optional scheduled job can reconcile `dsl_runs` rows that are stuck in `RUNNING` against their
+Temporal workflow execution. It is disabled by default; enable it with:
+
+```yaml
+cbs:
+  runs:
+    reconciliation:
+      enabled: true
+```
+
+When enabled, the job scans `RUNNING` rows whose `started_at` is older than the configured grace
+period (`cbs.runs.reconciliation.grace-period`, default `15m`) every
+`cbs.runs.reconciliation.scan-interval` (default `5m`), up to `cbs.runs.reconciliation.batch-size`
+rows per pass (default `200`). For each candidate row it calls Temporal's describe API using the
+run id as the workflow id and maps the real workflow status to the matching terminal
+`dsl_run.status`:
+
+| Temporal status | `dsl_run.status` | Notes |
+|-----------------|------------------|-------|
+| `COMPLETED` | `COMPLETED` | |
+| `FAILED` | `FAILED` | |
+| `TIMED_OUT` | `FAILED` | recorded error notes the timeout |
+| `CANCELED` | `CANCELLED` | |
+| `TERMINATED` | `CANCELLED` | recorded error notes the termination |
+| `RUNNING` / `CONTINUED_AS_NEW` / `UNSPECIFIED` | — | left in `RUNNING` |
+| workflow not found | `STALE` | the row is genuinely gone from Temporal |
+
+The write uses `updateFinishedIfRunning`, so a concurrent terminal transition from the normal
+lifecycle callbacks wins and the reconciliation write is ignored. Any other Temporal exception
+(skip, log a warning, and retry on the next scan) does **not** mark the run `STALE` — the existing
+healthcheck STALE sweep remains the fallback when Temporal cannot answer. This also means the
+feature only activates when a `WorkflowClient` bean is available (Temporal runtime mode).
