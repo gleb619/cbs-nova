@@ -1,5 +1,6 @@
 package cbs.nova.starter;
 
+import static java.nio.charset.StandardCharsets.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.starter.config.DslDraftRouterConfiguration;
@@ -20,6 +21,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.servlet.function.EntityResponse;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.RouterFunctions;
 import org.springframework.web.servlet.function.ServerRequest;
@@ -174,7 +176,7 @@ class DslDraftResourceTest {
   @Test
   void deleteRejectsPathTraversal() throws Exception {
     Path outside = sourceDir.resolveSibling("escapee.json");
-    Files.writeString(outside, "{}", java.nio.charset.StandardCharsets.UTF_8);
+    Files.writeString(outside, "{}", UTF_8);
 
     ServerResponse response = handler
             .delete(deleteRequest("../escapee", "/api/dsl/drafts/../escapee"));
@@ -222,9 +224,9 @@ class DslDraftResourceTest {
     ServerResponse response = handler.list(getRequest("/api/dsl/drafts", null));
 
     assertThat(response.statusCode().value()).isEqualTo(200);
-    Object body = ((org.springframework.web.servlet.function.EntityResponse<?>) response).entity();
-    assertThat(body).isInstanceOf(java.util.List.class);
-    assertThat((java.util.List<?>) body).isEmpty();
+    Object body = ((EntityResponse<?>) response).entity();
+    assertThat(body).isInstanceOf(List.class);
+    assertThat((List<?>) body).isEmpty();
   }
 
   @Test
@@ -241,9 +243,9 @@ class DslDraftResourceTest {
     ServerResponse response = handler.list(getRequest("/api/dsl/drafts", null));
 
     assertThat(response.statusCode().value()).isEqualTo(200);
-    Object body = ((org.springframework.web.servlet.function.EntityResponse<?>) response).entity();
-    assertThat(body).isInstanceOf(java.util.List.class);
-    assertThat((java.util.List<?>) body).isEmpty();
+    Object body = ((EntityResponse<?>) response).entity();
+    assertThat(body).isInstanceOf(List.class);
+    assertThat((List<?>) body).isEmpty();
   }
 
   @Test
@@ -255,8 +257,8 @@ class DslDraftResourceTest {
     ServerResponse response = handler.list(getRequest("/api/dsl/drafts", null));
 
     assertThat(response.statusCode().value()).isEqualTo(200);
-    Object body = ((org.springframework.web.servlet.function.EntityResponse<?>) response).entity();
-    assertThat(body).isInstanceOf(java.util.List.class);
+    Object body = ((EntityResponse<?>) response).entity();
+    assertThat(body).isInstanceOf(List.class);
     @SuppressWarnings("unchecked")
     List<DraftSummary> summaries = (List<DraftSummary>) body;
     assertThat(summaries).hasSize(2);
@@ -276,13 +278,13 @@ class DslDraftResourceTest {
     handler.save(postRequest("/api/dsl/drafts/foo/save"));
     Path drafts = sourceDir.resolve(".workbench/drafts");
     Files.writeString(drafts.resolve("garbage.json"), "not-json",
-            java.nio.charset.StandardCharsets.UTF_8);
+            UTF_8);
 
     ServerResponse response = handler.list(getRequest("/api/dsl/drafts", null));
 
     assertThat(response.statusCode().value()).isEqualTo(200);
     @SuppressWarnings("unchecked")
-    List<DraftSummary> summaries = (List<DraftSummary>) ((org.springframework.web.servlet.function.EntityResponse<?>) response)
+    List<DraftSummary> summaries = (List<DraftSummary>) ((EntityResponse<?>) response)
             .entity();
     assertThat(summaries).hasSize(1);
     assertThat(summaries.get(0).name()).isEqualTo("foo");
@@ -296,7 +298,7 @@ class DslDraftResourceTest {
             .read(getRequest("/api/dsl/drafts/foo", Map.of("name", "foo")));
 
     assertThat(response.statusCode().value()).isEqualTo(200);
-    DraftRequest body = (DraftRequest) ((org.springframework.web.servlet.function.EntityResponse<?>) response)
+    DraftRequest body = (DraftRequest) ((EntityResponse<?>) response)
             .entity();
     assertThat(body.name()).isEqualTo("foo");
     assertThat(body.status()).isEqualTo("Draft");
@@ -313,7 +315,7 @@ class DslDraftResourceTest {
   @Test
   void readRejectsPathTraversal() throws Exception {
     Path outside = sourceDir.resolveSibling("escapee.json");
-    Files.writeString(outside, "{\"name\":\"escapee\"}", java.nio.charset.StandardCharsets.UTF_8);
+    Files.writeString(outside, "{\"name\":\"escapee\"}", UTF_8);
 
     ServerResponse response = handler.read(getRequest("/api/dsl/drafts/..%2Fescapee",
             Map.of("name", "../escapee")));
@@ -340,7 +342,7 @@ class DslDraftResourceTest {
     ServerResponse response = handler.publish(postRequest("/api/dsl/drafts/foo/publish"));
     assertThat(response.statusCode().value()).isEqualTo(200);
 
-    Object entity = ((org.springframework.web.servlet.function.EntityResponse<?>) response)
+    Object entity = ((EntityResponse<?>) response)
             .entity();
     assertThat(entity).isInstanceOf(DraftResponse.class);
     DraftResponse draft = (DraftResponse) entity;
@@ -413,7 +415,7 @@ class DslDraftResourceTest {
 
     assertThat(response.statusCode().value()).isEqualTo(200);
     @SuppressWarnings("unchecked")
-    List<DefinitionHistoryEntry> entries = (List<DefinitionHistoryEntry>) ((org.springframework.web.servlet.function.EntityResponse<?>) response)
+    List<DefinitionHistoryEntry> entries = (List<DefinitionHistoryEntry>) ((EntityResponse<?>) response)
             .entity();
     assertThat(entries).hasSize(1);
     DefinitionHistoryEntry entry = entries.get(0);
@@ -483,7 +485,7 @@ class DslDraftResourceTest {
 
     assertThat(response.statusCode().value()).isEqualTo(200);
     @SuppressWarnings("unchecked")
-    List<DefinitionHistoryEntry> entries = (List<DefinitionHistoryEntry>) ((org.springframework.web.servlet.function.EntityResponse<?>) response)
+    List<DefinitionHistoryEntry> entries = (List<DefinitionHistoryEntry>) ((EntityResponse<?>) response)
             .entity();
     assertThat(entries).isEmpty();
     Path escaped = sourceDir.resolve(".workbench/history/").toAbsolutePath().getParent().getParent()
@@ -541,7 +543,7 @@ class DslDraftResourceTest {
     ServerResponse response = handler.history(getRequest("/api/dsl/drafts/" + name + "/history",
             Map.of("name", name)));
     @SuppressWarnings("unchecked")
-    List<DefinitionHistoryEntry> entries = (List<DefinitionHistoryEntry>) ((org.springframework.web.servlet.function.EntityResponse<?>) response)
+    List<DefinitionHistoryEntry> entries = (List<DefinitionHistoryEntry>) ((EntityResponse<?>) response)
             .entity();
     return entries;
   }
@@ -607,7 +609,7 @@ class DslDraftResourceTest {
 
     @Bean
     DslDefinitionBundleService dslDefinitionBundleService(ObjectMapper mapper) {
-      return new DslDefinitionBundleService(mapper, java.util.Optional.empty());
+      return new DslDefinitionBundleService(mapper, Optional.empty());
     }
 
     @Bean

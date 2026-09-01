@@ -97,7 +97,7 @@ public final class MapInputConverter {
     return convertWithJackson(value, target);
   }
 
-  private Object convertToGeneric(Object value, java.lang.reflect.Type targetType) {
+  private Object convertToGeneric(Object value, Type targetType) {
     JavaType javaType = objectMapper.constructType(targetType);
     Class<?> rawClass = javaType.getRawClass();
 

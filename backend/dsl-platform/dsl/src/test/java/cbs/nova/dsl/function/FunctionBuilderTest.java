@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.Result;
 import java.util.List;
@@ -124,7 +125,7 @@ class FunctionBuilderTest {
 
   @Test
   void describeUsesCustomDescriptorSupplierWhenProvided() {
-    var custom = new cbs.nova.dsl.DslDescriptor(
+    var custom = new DslDescriptor(
             "CustomDescFn", DslType.FUNCTION, "custom-desc",
             String.class, Integer.class, false, false,
             "custom-preview",

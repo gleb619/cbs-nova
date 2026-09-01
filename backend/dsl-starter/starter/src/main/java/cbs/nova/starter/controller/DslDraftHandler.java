@@ -220,7 +220,7 @@ public class DslDraftHandler {
       log.warn("[DSL bundle] failed to parse bundle body: {}", e.getMessage());
       return error(HttpStatus.BAD_REQUEST,
               new ErrorResponse("INVALID_REQUEST", "malformed bundle JSON", null, null, null));
-    } catch (jakarta.servlet.ServletException e) {
+    } catch (ServletException e) {
       throw new IOException("Failed to read bundle body", e);
     }
 

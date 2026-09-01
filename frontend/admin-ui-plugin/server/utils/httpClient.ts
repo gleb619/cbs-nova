@@ -1,7 +1,7 @@
 import type { H3Event } from 'h3'
 import { useBackendConfig } from './config'
 import { useAuthConfig } from './config'
-import { attachAuth, clearSession, readSession, refreshTokens, writeSession } from './oidcSession'
+import { attachAuth, clearOidcSession, readSession, refreshTokens, writeSession } from './oidcSession'
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
@@ -114,7 +114,7 @@ export async function proxyToBackend<T>(
         writeSession(event, refreshed, authConfig.callbackUrl)
         return await doFetch({ Authorization: `Bearer ${refreshed.access_token}` })
       } catch {
-        clearSession(event, authConfig.callbackUrl)
+        clearOidcSession(event, authConfig.callbackUrl)
         // Fall through to surface the original backend error.
       }
     }

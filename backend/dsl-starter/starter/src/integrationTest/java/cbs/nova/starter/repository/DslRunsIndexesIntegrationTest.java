@@ -10,9 +10,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -144,7 +146,7 @@ class DslRunsIndexesIntegrationTest {
     jdbc().update(
             "INSERT INTO dsl_runs (run_id, process_name, status, input_json, started_at, execution_mode) "
                     + "VALUES (?, ?, ?, ?, ?, ?)",
-            "run-" + java.util.UUID.randomUUID(),
+            "run-" + UUID.randomUUID(),
             processName,
             status,
             "{}",
@@ -160,7 +162,7 @@ class DslRunsIndexesIntegrationTest {
     try (Connection connection = dataSource.getConnection()) {
       DatabaseMetaData meta = connection.getMetaData();
       try (ResultSet rs = meta.getIndexInfo(null, null, TABLE, false, false)) {
-        Set<String> names = new java.util.HashSet<>();
+        Set<String> names = new HashSet<>();
         while (rs.next()) {
           String name = rs.getString("INDEX_NAME");
           if (name != null) {

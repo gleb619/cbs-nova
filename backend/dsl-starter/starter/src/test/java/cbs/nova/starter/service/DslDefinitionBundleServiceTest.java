@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import cbs.nova.starter.model.VcsModels.DefinitionBundle;
 import cbs.nova.starter.model.VcsModels.DefinitionBundleEntry;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import tools.jackson.databind.ObjectMapper;
@@ -81,7 +82,7 @@ class DslDefinitionBundleServiceTest {
   void validateForImportAcceptsValidBundle() {
     DefinitionBundle bundle = new DefinitionBundle(
             DslDefinitionBundleService.BUNDLE_FORMAT_VERSION, "1.0", "now",
-            java.util.List.of(new DefinitionBundleEntry(
+            List.of(new DefinitionBundleEntry(
                     new DraftRequest("A", "process", "Published", "v1", "q"), "published")));
 
     service.validateForImport(bundle);
@@ -97,7 +98,7 @@ class DslDefinitionBundleServiceTest {
   @Test
   void validateForImportRejectsZeroFormatVersion() {
     DefinitionBundle bundle = new DefinitionBundle(0, "1.0", "now",
-            java.util.List.of(new DefinitionBundleEntry(
+            List.of(new DefinitionBundleEntry(
                     new DraftRequest("A", "process", "Published", "v1", "q"), "published")));
     assertThatThrownBy(() -> service.validateForImport(bundle))
             .isInstanceOf(IllegalArgumentException.class)
@@ -107,7 +108,7 @@ class DslDefinitionBundleServiceTest {
   @Test
   void validateForImportRejectsUnsupportedFormatVersion() {
     DefinitionBundle bundle = new DefinitionBundle(99, "1.0", "now",
-            java.util.List.of(new DefinitionBundleEntry(
+            List.of(new DefinitionBundleEntry(
                     new DraftRequest("A", "process", "Published", "v1", "q"), "published")));
     assertThatThrownBy(() -> service.validateForImport(bundle))
             .isInstanceOf(IllegalArgumentException.class)
@@ -117,7 +118,7 @@ class DslDefinitionBundleServiceTest {
   @Test
   void validateForImportRejectsEmptyDefinitions() {
     DefinitionBundle bundle = new DefinitionBundle(
-            DslDefinitionBundleService.BUNDLE_FORMAT_VERSION, "1.0", "now", java.util.List.of());
+            DslDefinitionBundleService.BUNDLE_FORMAT_VERSION, "1.0", "now", List.of());
     assertThatThrownBy(() -> service.validateForImport(bundle))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("no definitions");
@@ -127,7 +128,7 @@ class DslDefinitionBundleServiceTest {
   void validateForImportRejectsBlankName() {
     DefinitionBundle bundle = new DefinitionBundle(
             DslDefinitionBundleService.BUNDLE_FORMAT_VERSION, "1.0", "now",
-            java.util.List.of(new DefinitionBundleEntry(
+            List.of(new DefinitionBundleEntry(
                     new DraftRequest("", "process", "Published", "v1", "q"), "published")));
     assertThatThrownBy(() -> service.validateForImport(bundle))
             .isInstanceOf(IllegalArgumentException.class)

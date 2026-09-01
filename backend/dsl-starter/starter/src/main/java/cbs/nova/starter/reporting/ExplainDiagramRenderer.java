@@ -7,6 +7,7 @@ import cbs.nova.dsl.generator.DiagramGenerator;
 import cbs.nova.dsl.generator.MermaidDiagramGenerator;
 import cbs.nova.dsl.generator.PlantUmlDiagramGenerator;
 import cbs.nova.dsl.generator.BpmnDiagramGenerator;
+import java.util.Locale;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
@@ -59,7 +60,7 @@ public class ExplainDiagramRenderer {
   }
 
   private @NonNull DiagramGenerator pickGenerator(@NonNull String format) {
-    String normalized = format.trim().toLowerCase(java.util.Locale.ROOT);
+    String normalized = format.trim().toLowerCase(Locale.ROOT);
     return switch (normalized) {
       case "plantuml" -> plantUml;
       case "bpmn" -> bpmn;

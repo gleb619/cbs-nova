@@ -7,6 +7,8 @@ import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.starter.IntegrationTestApplication;
 import cbs.nova.starter.persistence.DslRunStats;
 import cbs.nova.starter.persistence.DslRunStatsRepository;
+import java.util.Map;
+import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -89,14 +91,14 @@ class DslRunStatsIntegrationTest {
 
     assertThat(stats.totalRuns()).isEqualTo(6);
     assertThat(stats.statusCounts()).containsOnly(
-            java.util.Map.entry("COMPLETED", 2L),
-            java.util.Map.entry("FAILED", 2L),
-            java.util.Map.entry("RUNNING", 1L),
-            java.util.Map.entry("STALE", 1L));
+            Map.entry("COMPLETED", 2L),
+            Map.entry("FAILED", 2L),
+            Map.entry("RUNNING", 1L),
+            Map.entry("STALE", 1L));
     assertThat(stats.windowRuns()).isEqualTo(4);
     assertThat(stats.windowFailedRuns()).isEqualTo(1);
     assertThat(stats.windowFailureRate()).isCloseTo(0.25,
-            org.assertj.core.data.Offset.offset(1e-9));
+            Offset.offset(1e-9));
     assertThat(stats.topProcesses())
             .extracting(DslRunStats.ProcessRunCount::processName)
             .containsExactly("CreditScoring", "LoanDisbursement", "Payments");
@@ -122,12 +124,12 @@ class DslRunStatsIntegrationTest {
     // Aggregates shrink to the surviving rows; no assumption that history still exists.
     assertThat(stats.totalRuns()).isEqualTo(2);
     assertThat(stats.statusCounts()).containsOnly(
-            java.util.Map.entry("FAILED", 1L),
-            java.util.Map.entry("RUNNING", 1L));
+            Map.entry("FAILED", 1L),
+            Map.entry("RUNNING", 1L));
     assertThat(stats.windowRuns()).isEqualTo(1);
     assertThat(stats.windowFailedRuns()).isEqualTo(1);
     assertThat(stats.windowFailureRate()).isCloseTo(1.0,
-            org.assertj.core.data.Offset.offset(1e-9));
+            Offset.offset(1e-9));
     assertThat(stats.topProcesses()).hasSize(2);
   }
 

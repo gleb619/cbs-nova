@@ -3,6 +3,7 @@ package cbs.nova.starter.model;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunStatus;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
@@ -141,7 +142,7 @@ public record ExecutionDto(
    * {@code "compensation log:"} entry. The trace is flat (no nesting, no per-entry phase tag) so
    * this is a heuristic — documented on {@link TraceStepDto}.
    */
-  static List<TraceStepDto> toTraceSteps(@org.jspecify.annotations.Nullable String contextJson,
+  static List<TraceStepDto> toTraceSteps(@Nullable String contextJson,
           ObjectMapper objectMapper) {
     if (contextJson == null || contextJson.isBlank()) {
       return null;

@@ -2,12 +2,14 @@ package cbs.nova.dsl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.process.ProcessRunner;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
 import cbs.nova.dsl.transaction.TransactionExecution;
 import java.util.ArrayList;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -43,13 +45,13 @@ class DefaultProcessRunnerHappyPathTest {
     var listener = new ExecutionListener() {
       @Override
       public void onProcessStart(@NonNull String runId, @NonNull String name,
-              @org.jspecify.annotations.Nullable Object input) {
+              @Nullable Object input) {
         events.add("start:" + name + ":" + input);
       }
 
       @Override
       public void onProcessEnd(@NonNull String runId, @NonNull String name,
-              @org.jspecify.annotations.Nullable Object output, boolean success) {
+              @Nullable Object output, boolean success) {
         events.add("end:" + name + ":" + output + ":" + success);
       }
 
@@ -83,13 +85,13 @@ class DefaultProcessRunnerHappyPathTest {
     var listener = new ExecutionListener() {
       @Override
       public void onProcessStart(@NonNull String runId, @NonNull String name,
-              @org.jspecify.annotations.Nullable Object input) {
+              @Nullable Object input) {
         events.add("start:" + name);
       }
 
       @Override
       public void onProcessEnd(@NonNull String runId, @NonNull String name,
-              @org.jspecify.annotations.Nullable Object output, boolean success) {
+              @Nullable Object output, boolean success) {
         events.add("end:" + name + ":" + output + ":" + success);
       }
 
@@ -135,7 +137,7 @@ class DefaultProcessRunnerHappyPathTest {
 
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause())
-            .isInstanceOf(cbs.nova.dsl.exception.DslExecutionException.class);
+            .isInstanceOf(DslExecutionException.class);
     assertThat(result.cause().getMessage()).contains("boom-arg");
     assertThat(result.cause().getCause()).isInstanceOf(IllegalArgumentException.class);
   }
@@ -181,13 +183,13 @@ class DefaultProcessRunnerHappyPathTest {
     var listener = new ExecutionListener() {
       @Override
       public void onProcessStart(@NonNull String runId, @NonNull String name,
-              @org.jspecify.annotations.Nullable Object input) {
+              @Nullable Object input) {
         events.add("start");
       }
 
       @Override
       public void onProcessEnd(@NonNull String runId, @NonNull String name,
-              @org.jspecify.annotations.Nullable Object output, boolean success) {
+              @Nullable Object output, boolean success) {
         events.add("end");
       }
 

@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
+import cbs.nova.dsl.ExecutableDescriptor;
+import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
@@ -31,7 +33,7 @@ class PreviewCacheKeyBuilderTest {
 
   @Test
   void sameNameAndBodyProduceEqualKeys() {
-    Context<?> ctx = contextFactory.of("payload", cbs.nova.dsl.ExecutionMode.PREVIEW, "run-1");
+    Context<?> ctx = contextFactory.of("payload", ExecutionMode.PREVIEW, "run-1");
     String name = "unregistered-name-" + System.nanoTime();
 
     PreviewCacheKey first = builder.build(name, ctx);
@@ -46,8 +48,8 @@ class PreviewCacheKeyBuilderTest {
   @Test
   void differentBodiesProduceDifferentInputHashes() {
     String name = "unregistered-name-" + System.nanoTime();
-    Context<?> ctxA = contextFactory.of("alpha", cbs.nova.dsl.ExecutionMode.PREVIEW, "run-a");
-    Context<?> ctxB = contextFactory.of("beta", cbs.nova.dsl.ExecutionMode.PREVIEW, "run-b");
+    Context<?> ctxA = contextFactory.of("alpha", ExecutionMode.PREVIEW, "run-a");
+    Context<?> ctxB = contextFactory.of("beta", ExecutionMode.PREVIEW, "run-b");
 
     PreviewCacheKey keyA = builder.build(name, ctxA);
     PreviewCacheKey keyB = builder.build(name, ctxB);
@@ -59,7 +61,7 @@ class PreviewCacheKeyBuilderTest {
   @Test
   void nameFlowsThroughUnchanged() {
     String name = "DistinctProcessName-" + System.nanoTime();
-    Context<?> ctx = contextFactory.of("payload", cbs.nova.dsl.ExecutionMode.PREVIEW, "run-1");
+    Context<?> ctx = contextFactory.of("payload", ExecutionMode.PREVIEW, "run-1");
 
     PreviewCacheKey key = builder.build(name, ctx);
 
@@ -69,8 +71,8 @@ class PreviewCacheKeyBuilderTest {
   @Test
   void nullBodyStillHashesDeterministically() {
     String name = "unregistered-name-" + System.nanoTime();
-    Context<Object> nullCtxA = contextFactory.of(null, cbs.nova.dsl.ExecutionMode.PREVIEW, "run-a");
-    Context<Object> nullCtxB = contextFactory.of(null, cbs.nova.dsl.ExecutionMode.PREVIEW, "run-b");
+    Context<Object> nullCtxA = contextFactory.of(null, ExecutionMode.PREVIEW, "run-a");
+    Context<Object> nullCtxB = contextFactory.of(null, ExecutionMode.PREVIEW, "run-b");
 
     PreviewCacheKey first = builder.build(name, nullCtxA);
     PreviewCacheKey second = builder.build(name, nullCtxB);
@@ -84,8 +86,8 @@ class PreviewCacheKeyBuilderTest {
     String name = "unregistered-name-" + System.nanoTime();
     Map<String, Object> bodyA = Map.of("k", "v", "n", 42);
     Map<String, Object> bodyB = Map.of("k", "v", "n", 42);
-    Context<?> ctxA = contextFactory.of(bodyA, cbs.nova.dsl.ExecutionMode.PREVIEW, "run-a");
-    Context<?> ctxB = contextFactory.of(bodyB, cbs.nova.dsl.ExecutionMode.PREVIEW, "run-b");
+    Context<?> ctxA = contextFactory.of(bodyA, ExecutionMode.PREVIEW, "run-a");
+    Context<?> ctxB = contextFactory.of(bodyB, ExecutionMode.PREVIEW, "run-b");
 
     assertThat(bodyA).isNotSameAs(bodyB);
 
@@ -98,7 +100,7 @@ class PreviewCacheKeyBuilderTest {
 
   @Test
   void differentNamesProduceDifferentKeysForSameBody() {
-    Context<?> ctx = contextFactory.of("shared", cbs.nova.dsl.ExecutionMode.PREVIEW, "run-1");
+    Context<?> ctx = contextFactory.of("shared", ExecutionMode.PREVIEW, "run-1");
     String nameA = "name-a-" + System.nanoTime();
     String nameB = "name-b-" + System.nanoTime();
 
@@ -115,7 +117,7 @@ class PreviewCacheKeyBuilderTest {
     String helperName = "echo-helper-" + System.nanoTime();
     GlobalManager.globalManager().registerHelper(helperName, new EchoHelper());
 
-    Context<?> ctx = contextFactory.of("payload", cbs.nova.dsl.ExecutionMode.PREVIEW, "run-1");
+    Context<?> ctx = contextFactory.of("payload", ExecutionMode.PREVIEW, "run-1");
     PreviewCacheKey registered = builder.build(helperName, ctx);
 
     String orphanName = "orphan-" + System.nanoTime();
@@ -129,7 +131,7 @@ class PreviewCacheKeyBuilderTest {
   @Test
   void inputHashIsSha256HexLowercase64Chars() {
     String name = "unregistered-name-" + System.nanoTime();
-    Context<?> ctx = contextFactory.of("payload", cbs.nova.dsl.ExecutionMode.PREVIEW, "run-1");
+    Context<?> ctx = contextFactory.of("payload", ExecutionMode.PREVIEW, "run-1");
 
     PreviewCacheKey key = builder.build(name, ctx);
 
@@ -146,8 +148,8 @@ class PreviewCacheKeyBuilderTest {
     }
 
     @Override
-    public cbs.nova.dsl.ExecutableDescriptor describe() {
-      return new cbs.nova.dsl.ExecutableDescriptor(
+    public ExecutableDescriptor describe() {
+      return new ExecutableDescriptor(
               "echo", "Echo helper", Object.class, Object.class,
               true, "delegates to execute", List.of());
     }

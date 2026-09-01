@@ -16,6 +16,8 @@ import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslReloadHandler;
 import cbs.nova.starter.model.PreviewModels;
 import cbs.nova.starter.service.PreviewResultCache;
+import java.util.ArrayList;
+import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,6 +47,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 class DslReloadResourceTest {
 
@@ -128,7 +132,7 @@ class DslReloadResourceTest {
       ServerResponse response = resource.reload(reloadRequest());
       assertThat(response.statusCode().value()).isEqualTo(200);
 
-      var node = new tools.jackson.databind.ObjectMapper().readTree(renderBody(response));
+      var node = new ObjectMapper().readTree(renderBody(response));
 
       assertThat(node.path("sourceDir").asString()).isEqualTo(sourceDir.toString());
       // Drilldown schema: per-type name arrays under "load". The starter test classpath carries
@@ -163,8 +167,8 @@ class DslReloadResourceTest {
     }
   }
 
-  private static List<String> toStrings(tools.jackson.databind.JsonNode array) {
-    var names = new java.util.ArrayList<String>();
+  private static List<String> toStrings(JsonNode array) {
+    var names = new ArrayList<String>();
     array.forEach(n -> names.add(n.asString()));
     return names;
   }
@@ -415,7 +419,7 @@ class DslReloadResourceTest {
           try {
             ServerResponse bStatus = futureB.get(1, TimeUnit.SECONDS);
             detail = "b.status=" + bStatus.statusCode().value();
-          } catch (java.util.concurrent.TimeoutException e) {
+          } catch (TimeoutException e) {
             detail = "b future timed out: " + e;
           } catch (Exception e) {
             detail = "b future threw: " + e;
@@ -544,7 +548,7 @@ class DslReloadResourceTest {
    */
   static final class PerCallGatedLoader implements DslDefinitionLoader {
 
-    private static final java.util.concurrent.atomic.AtomicInteger COUNTER = new java.util.concurrent.atomic.AtomicInteger();
+    private static final AtomicInteger COUNTER = new AtomicInteger();
     private static final Map<Integer, CountDownLatch> ARRIVED = new ConcurrentHashMap<>();
     private static final Map<Integer, CountDownLatch> RELEASE = new ConcurrentHashMap<>();
 

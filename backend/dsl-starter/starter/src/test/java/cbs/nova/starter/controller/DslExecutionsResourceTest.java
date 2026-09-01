@@ -28,7 +28,10 @@ import cbs.nova.starter.controller.DslExceptionHandler;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.persistence.DslRunStats;
 import cbs.nova.starter.persistence.DslRunStatsRepository;
+import cbs.nova.starter.persistence.RunTimeseriesBucket;
 import cbs.nova.starter.service.DslRunCancellationService;
+import java.util.ArrayList;
+import org.hamcrest.Matchers;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -486,7 +489,7 @@ class DslExecutionsResourceTest {
 
   @Test
   void detailCapsTraceAtFiveHundredAndAppendsTruncationMarker() throws Exception {
-    List<String> entries = new java.util.ArrayList<>(501);
+    List<String> entries = new ArrayList<>(501);
     for (int i = 0; i < 501; i++) {
       entries.add("called helper: h" + i);
     }
@@ -744,9 +747,9 @@ class DslExecutionsResourceTest {
               Instant start = invocation.getArgument(0);
               Duration bucket = invocation.getArgument(2);
               return List.of(
-                      new cbs.nova.starter.persistence.RunTimeseriesBucket(start, "COMPLETED", 4L),
-                      new cbs.nova.starter.persistence.RunTimeseriesBucket(start, "FAILED", 1L),
-                      new cbs.nova.starter.persistence.RunTimeseriesBucket(start.plus(bucket),
+                      new RunTimeseriesBucket(start, "COMPLETED", 4L),
+                      new RunTimeseriesBucket(start, "FAILED", 1L),
+                      new RunTimeseriesBucket(start.plus(bucket),
                               "COMPLETED", 2L));
             });
     DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper,
@@ -1037,7 +1040,7 @@ class DslExecutionsResourceTest {
             .andExpect(status().isOk())
             .andExpect(content().contentType("text/csv; charset=utf-8"))
             .andExpect(header().string("Content-Disposition",
-                    org.hamcrest.Matchers.startsWith("attachment; filename=\"executions-")))
+                    Matchers.startsWith("attachment; filename=\"executions-")))
             .andReturn()
             .getResponse()
             .getContentAsString();
@@ -1080,7 +1083,7 @@ class DslExecutionsResourceTest {
             .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler))
             .build();
 
-    int cap = cbs.nova.starter.controller.DslExecutionsHandler.CSV_EXPORT_MAX_ROWS;
+    int cap = DslExecutionsHandler.CSV_EXPORT_MAX_ROWS;
     Instant startedAt = Instant.parse("2026-08-13T10:00:00Z");
     List<DslRun> runs = IntStream.rangeClosed(1, cap + 1)
             .mapToObj(i -> DslRun.builder()

@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import {
+  addImportsDir,
   addLayout,
   addPlugin,
   createResolver,
@@ -290,9 +291,7 @@ export default defineNuxtModule<ModuleOptions>({
     // -----------------------------------------------------------------------
     // Composables auto-import — expose plugin composables to the host app
     // -----------------------------------------------------------------------
-    nuxt.options.imports = nuxt.options.imports || {}
-    nuxt.options.imports.dirs = nuxt.options.imports.dirs || []
-    nuxt.options.imports.dirs.push(resolve('./app/composables'))
+    addImportsDir(resolve('./app/composables'))
 
     // -----------------------------------------------------------------------
     // Nitro server routes (BFF) — proxy layer to the Spring Boot API

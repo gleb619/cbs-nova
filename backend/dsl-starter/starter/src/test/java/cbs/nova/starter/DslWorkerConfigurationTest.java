@@ -12,6 +12,9 @@ import cbs.nova.starter.config.properties.DslProperties;
 import io.temporal.client.WorkflowClient;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -79,9 +82,9 @@ class DslWorkerConfigurationTest {
               .run(ctx -> {
                 SmartLifecycle lifecycle = ctx.getBean(SmartLifecycle.class);
                 int readers = Runtime.getRuntime().availableProcessors() * 2;
-                java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(
+                CountDownLatch done = new CountDownLatch(
                         readers);
-                java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors
+                ExecutorService pool = Executors
                         .newFixedThreadPool(readers);
                 try {
                   for (int i = 0; i < readers; i++) {

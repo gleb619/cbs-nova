@@ -2,6 +2,7 @@ package cbs.nova.starter.service;
 
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
+import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.ParameterDescriptor;
@@ -62,7 +63,7 @@ public class InputValidator {
             .or(() -> gm.describeHelper(name).map(this::toDescriptor));
   }
 
-  private DslDescriptor toDescriptor(cbs.nova.dsl.ExecutableDescriptor helper) {
+  private DslDescriptor toDescriptor(ExecutableDescriptor helper) {
     return new DslDescriptor(
             helper.name() != null ? helper.name() : "",
             DslObject.DslType.FUNCTION,

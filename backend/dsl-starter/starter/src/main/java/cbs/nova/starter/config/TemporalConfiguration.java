@@ -336,7 +336,7 @@ public class TemporalConfiguration {
           OpenTelemetry openTelemetry,
           MeterRegistry meterRegistry,
           RunIdentityResolver runIdentityResolver,
-          @org.springframework.beans.factory.annotation.Autowired(required = false) WebhookDispatcher webhookDispatcher) {
+          @Autowired(required = false) WebhookDispatcher webhookDispatcher) {
     TemporalDslProcessService service = new TemporalDslProcessService(contextFactory, runRepository,
             JsonMapper.builder().build(),
             dslProcessExecutor, healthcheckExecutor,

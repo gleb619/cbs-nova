@@ -7,6 +7,7 @@ import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.starter.config.properties.DslRunPersistenceProperties;
 import cbs.nova.starter.converter.DslRunMapper;
 import cbs.nova.starter.entity.DslRunEntity;
+import java.util.Comparator;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -39,12 +40,14 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
   private final FieldEncryptor encryptor;
   private final String tableName;
 
+  //TODO: remove constructor, use lombok's one
   public JdbcDslRunRepository(DataSource dataSource, DslRunJdbcRepository delegate,
           DslRunMapper mapper, FieldEncryptor encryptor,
           DslRunPersistenceProperties properties) {
     this(new NamedParameterJdbcTemplate(dataSource), delegate, mapper, encryptor, properties);
   }
 
+  //TODO: remove constructor, use lombok's one
   public JdbcDslRunRepository(NamedParameterJdbcTemplate jdbcTemplate,
           DslRunJdbcRepository delegate, DslRunMapper mapper, FieldEncryptor encryptor,
           DslRunPersistenceProperties properties) {
@@ -121,7 +124,7 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
     }
     predicates.add("(:correlationId IS NULL OR correlation_id = :correlationId)");
     params.addValue("correlationId", correlationId);
-    String where = predicates.isEmpty() ? "" : "WHERE " + String.join(" AND ", predicates);
+    String where = "WHERE " + String.join(" AND ", predicates);
 
     int total = jdbcTemplate.queryForObject(getSearchCountStatement(where), params, Integer.class);
     params.addValue("limit", limit).addValue("offset", offset);
@@ -277,21 +280,21 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
           List<RunTimeseriesBucket> minuteRows,
           Instant windowStart,
           long bucketSeconds) {
-    java.util.Map<Long, java.util.Map<String, Long>> byIndex = new java.util.LinkedHashMap<>();
+    Map<Long, Map<String, Long>> byIndex = new LinkedHashMap<>();
     for (RunTimeseriesBucket row : minuteRows) {
       long secondsFromStart = Duration.between(windowStart, row.bucketStart()).getSeconds();
       long bucketIndex = secondsFromStart / bucketSeconds;
-      byIndex.computeIfAbsent(bucketIndex, k -> new java.util.LinkedHashMap<>())
+      byIndex.computeIfAbsent(bucketIndex, k -> new LinkedHashMap<>())
               .merge(row.status(), row.count(), Long::sum);
     }
-    List<RunTimeseriesBucket> out = new java.util.ArrayList<>();
+    List<RunTimeseriesBucket> out = new ArrayList<>();
     for (var entry : byIndex.entrySet()) {
       Instant bucketStart = windowStart.plusSeconds(entry.getKey() * bucketSeconds);
       for (var statusEntry : entry.getValue().entrySet()) {
         out.add(new RunTimeseriesBucket(bucketStart, statusEntry.getKey(), statusEntry.getValue()));
       }
     }
-    out.sort(java.util.Comparator.comparing(RunTimeseriesBucket::bucketStart)
+    out.sort(Comparator.comparing(RunTimeseriesBucket::bucketStart)
             .thenComparing(RunTimeseriesBucket::status));
     return out;
   }

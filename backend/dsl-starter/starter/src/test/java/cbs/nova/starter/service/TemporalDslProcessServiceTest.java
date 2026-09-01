@@ -18,7 +18,10 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.opentelemetry.api.baggage.Baggage;
 import io.opentelemetry.api.baggage.BaggageBuilder;
 import io.sentry.Sentry;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -399,9 +402,9 @@ class TemporalDslProcessServiceTest {
 
     int writers = 4;
     int readers = Runtime.getRuntime().availableProcessors() * 2;
-    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(readers);
-    java.util.concurrent.atomic.AtomicInteger runIdSeq = new java.util.concurrent.atomic.AtomicInteger();
-    java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors
+    CountDownLatch done = new CountDownLatch(readers);
+    AtomicInteger runIdSeq = new AtomicInteger();
+    ExecutorService pool = Executors
             .newFixedThreadPool(readers + writers);
     ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
     Mockito.when(contextFactory.generateRunId())

@@ -4,6 +4,7 @@ import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.starter.persistence.DslRunStats;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -22,7 +23,7 @@ public record ExecutionStatsResponse(
         long windowFailedRuns,
         double windowFailureRate,
         long windowHours,
-        java.util.List<ProcessRunCount> topProcesses) {
+        List<ProcessRunCount> topProcesses) {
 
   public record ProcessRunCount(String processName, long runCount) {
   }

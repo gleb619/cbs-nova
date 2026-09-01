@@ -32,6 +32,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
+import org.mockito.ArgumentMatchers;
 
 class DslRunReconciliationServiceTest {
 
@@ -226,10 +227,10 @@ class DslRunReconciliationServiceTest {
     service.start();
     service.start();
     verify(executor, times(1)).scheduleWithFixedDelay(
-            org.mockito.ArgumentMatchers.any(Runnable.class),
-            org.mockito.ArgumentMatchers.anyLong(),
-            org.mockito.ArgumentMatchers.anyLong(),
-            org.mockito.ArgumentMatchers.any());
+            ArgumentMatchers.any(Runnable.class),
+            ArgumentMatchers.anyLong(),
+            ArgumentMatchers.anyLong(),
+            ArgumentMatchers.any());
   }
 
   private void assertReconciledTo(

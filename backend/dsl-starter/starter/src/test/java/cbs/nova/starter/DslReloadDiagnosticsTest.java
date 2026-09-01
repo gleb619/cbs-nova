@@ -22,13 +22,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
+import tools.jackson.databind.ObjectMapper;
 
 class DslReloadDiagnosticsTest {
 
   private DslReloadHandler resource;
   private final DslDefinitionLoader loader = new CompilingDslDefinitionLoader(
           new ServiceLoaderDslDefinitionLoader());
-  private final tools.jackson.databind.ObjectMapper mapper = new tools.jackson.databind.ObjectMapper();
+  private final ObjectMapper mapper = new ObjectMapper();
 
   @BeforeEach
   void setUp() {

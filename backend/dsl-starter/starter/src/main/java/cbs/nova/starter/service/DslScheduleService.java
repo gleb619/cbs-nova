@@ -18,6 +18,7 @@ import io.temporal.client.schedules.ScheduleClient;
 import io.temporal.client.schedules.ScheduleDescription;
 import io.temporal.client.schedules.ScheduleHandle;
 import io.temporal.client.schedules.ScheduleInfo;
+import io.temporal.client.schedules.ScheduleListDescription;
 import io.temporal.client.schedules.ScheduleOptions;
 import io.temporal.client.schedules.SchedulePolicy;
 import io.temporal.client.schedules.ScheduleSpec;
@@ -142,10 +143,10 @@ public class DslScheduleService {
    * describes it to obtain the cron spec, timezone, note, paused flag and next scheduled fire time.
    */
   public List<ScheduleSummary> list() {
-    try (Stream<io.temporal.client.schedules.ScheduleListDescription> stream = scheduleClient
+    try (Stream<ScheduleListDescription> stream = scheduleClient
             .listSchedules()) {
       return stream
-              .map(io.temporal.client.schedules.ScheduleListDescription::getScheduleId)
+              .map(ScheduleListDescription::getScheduleId)
               .filter(id -> id.startsWith(SCHEDULE_PREFIX))
               .map(this::describe)
               .toList();

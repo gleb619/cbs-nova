@@ -23,9 +23,11 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.Comparator;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
@@ -105,7 +107,7 @@ public class DslExecutionsHandler {
     String filename = "executions-" + CSV_FILENAME_FORMATTER.format(LocalDateTime.now()) + ".csv";
     ServerResponse.BodyBuilder response = ServerResponse.ok()
             .contentType(
-                    org.springframework.http.MediaType.parseMediaType("text/csv; charset=utf-8"))
+                    MediaType.parseMediaType("text/csv; charset=utf-8"))
             .header("Content-Disposition", "attachment; filename=\"" + filename + "\"");
     if (truncated) {
       response = response.header("X-Export-Truncated", "true");
@@ -394,7 +396,7 @@ public class DslExecutionsHandler {
         out.add(new RunTimeseriesBucket(bucketStart, statusEntry.getKey(), bucketEntry.getValue()));
       }
     }
-    out.sort(java.util.Comparator.comparing(RunTimeseriesBucket::bucketStart)
+    out.sort(Comparator.comparing(RunTimeseriesBucket::bucketStart)
             .thenComparing(RunTimeseriesBucket::status));
     return out;
   }

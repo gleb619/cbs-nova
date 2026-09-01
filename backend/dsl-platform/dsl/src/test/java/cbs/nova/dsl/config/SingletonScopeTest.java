@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.config.SingletonSupport.Factory;
 import cbs.nova.dsl.config.SingletonSupport.Kind;
 import cbs.nova.dsl.config.SingletonSupport.SingletonScope;
+import java.util.Collections;
+import java.util.HashSet;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -93,7 +95,7 @@ class SingletonScopeTest {
         return value;
       };
       List<Future<String>> futures = executor.invokeAll(
-              java.util.Collections.nCopies(threads, task));
+              Collections.nCopies(threads, task));
 
       String winner = null;
       for (Future<String> future : futures) {
@@ -106,6 +108,6 @@ class SingletonScopeTest {
     }
 
     assertThat(observed).isNotEmpty();
-    assertThat(new java.util.HashSet<>(observed)).hasSize(1);
+    assertThat(new HashSet<>(observed)).hasSize(1);
   }
 }

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.postgresql.Driver;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
@@ -54,7 +55,7 @@ class DslRunsMigrationTest {
     populator.setContinueOnError(false);
 
     SimpleDriverDataSource dataSource = new SimpleDriverDataSource();
-    dataSource.setDriverClass(org.postgresql.Driver.class);
+    dataSource.setDriverClass(Driver.class);
     dataSource.setUrl(postgres.getJdbcUrl());
     dataSource.setUsername(postgres.getUsername());
     dataSource.setPassword(postgres.getPassword());

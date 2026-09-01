@@ -17,6 +17,7 @@ import cbs.nova.starter.model.DslRequest;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.RuntimeOutcome;
 import cbs.nova.starter.web.RequestIdFilter;
+import java.util.HashMap;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
@@ -120,8 +121,8 @@ public class DslRuntimeService {
   private Context<?> toContext(DslRequest request, ExecutionMode mode, String runId,
           @Nullable String correlationId) {
     Map<String, Object> metadata = request.metadata() != null
-            ? new java.util.HashMap<>(request.metadata())
-            : new java.util.HashMap<>();
+            ? new HashMap<>(request.metadata())
+            : new HashMap<>();
     if (correlationId != null && !correlationId.isBlank()) {
       metadata.put(CorrelationId.CORRELATION_ID_METADATA_KEY, correlationId);
     }

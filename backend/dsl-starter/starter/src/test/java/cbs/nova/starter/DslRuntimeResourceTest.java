@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslErrorCode;
 import cbs.nova.dsl.DslRuntime;
@@ -373,8 +374,8 @@ class DslRuntimeResourceTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$").value("output"));
 
-    ArgumentCaptor<cbs.nova.dsl.Context<?>> captor = ArgumentCaptor
-            .forClass(cbs.nova.dsl.Context.class);
+    ArgumentCaptor<Context<?>> captor = ArgumentCaptor
+            .forClass(Context.class);
     verify(dslRuntime).run(eq("P"), captor.capture());
     assertThat(captor.getValue().runId())
             .isEqualTo(IdempotencyKeys.deriveRunId("P", "valid-key_1.0"));

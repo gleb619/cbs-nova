@@ -5,10 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.CompensationContext;
 import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.transaction.TransactionExecution;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 class ProcessBuilderTest {
@@ -104,7 +106,7 @@ class ProcessBuilderTest {
 
   @Test
   void biConsumerCompensationOverloadIsRetained() {
-    var captured = new java.util.concurrent.atomic.AtomicReference<List<TransactionExecution>>();
+    var captured = new AtomicReference<List<TransactionExecution>>();
     var process = Dsl.process("BiCompProc")
             .execute(ctx -> Result.success(null))
             .compensation((CompensationContext<Object> ctx, List<TransactionExecution> history) -> {
@@ -197,7 +199,7 @@ class ProcessBuilderTest {
 
   @Test
   void describeUsesCustomDescriptorSupplierWhenProvided() {
-    var custom = new cbs.nova.dsl.DslDescriptor(
+    var custom = new DslDescriptor(
             "CustomProc", DslType.PROCESS, "custom-desc",
             String.class, String.class, true, false,
             "custom-preview",

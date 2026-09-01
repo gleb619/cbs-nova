@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 class ChainedExecutionListenerTest {
@@ -30,49 +31,49 @@ class ChainedExecutionListenerTest {
 
     @Override
     public void onProcessStart(@NonNull String runId, @NonNull String name,
-            @org.jspecify.annotations.Nullable Object input) {
+            @Nullable Object input) {
       events.add("onProcessStart:" + name);
     }
 
     @Override
     public void onProcessEnd(@NonNull String runId, @NonNull String name,
-            @org.jspecify.annotations.Nullable Object output, boolean success) {
+            @Nullable Object output, boolean success) {
       events.add("onProcessEnd:" + name + ":" + success);
     }
 
     @Override
     public void onTransactionStart(@NonNull String runId, @NonNull String name,
-            @org.jspecify.annotations.Nullable Object input) {
+            @Nullable Object input) {
       events.add("onTransactionStart:" + name);
     }
 
     @Override
     public void onTransactionEnd(@NonNull String runId, @NonNull String name,
-            @org.jspecify.annotations.Nullable Object output, boolean success) {
+            @Nullable Object output, boolean success) {
       events.add("onTransactionEnd:" + name + ":" + success);
     }
 
     @Override
     public void onHelperStart(@NonNull String runId, @NonNull String name,
-            @org.jspecify.annotations.Nullable Object input) {
+            @Nullable Object input) {
       events.add("onHelperStart:" + name);
     }
 
     @Override
     public void onHelperEnd(@NonNull String runId, @NonNull String name,
-            @org.jspecify.annotations.Nullable Object output, boolean success) {
+            @Nullable Object output, boolean success) {
       events.add("onHelperEnd:" + name + ":" + success);
     }
 
     @Override
     public void onFunctionStart(@NonNull String runId, @NonNull String name,
-            @org.jspecify.annotations.Nullable Object input) {
+            @Nullable Object input) {
       events.add("onFunctionStart:" + name);
     }
 
     @Override
     public void onFunctionEnd(@NonNull String runId, @NonNull String name,
-            @org.jspecify.annotations.Nullable Object output, boolean success) {
+            @Nullable Object output, boolean success) {
       events.add("onFunctionEnd:" + name + ":" + success);
     }
   }
@@ -93,7 +94,7 @@ class ChainedExecutionListenerTest {
 
     @Override
     public void onProcessStart(@NonNull String runId, @NonNull String name,
-            @org.jspecify.annotations.Nullable Object input) {
+            @Nullable Object input) {
       if ("onProcessStart".equals(throwingHook)) {
         throw toThrow;
       }
@@ -102,7 +103,7 @@ class ChainedExecutionListenerTest {
 
     @Override
     public void onTransactionEnd(@NonNull String runId, @NonNull String name,
-            @org.jspecify.annotations.Nullable Object output, boolean success) {
+            @Nullable Object output, boolean success) {
       if ("onTransactionEnd".equals(throwingHook)) {
         throw toThrow;
       }

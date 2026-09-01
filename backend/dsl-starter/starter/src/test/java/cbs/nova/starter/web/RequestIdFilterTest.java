@@ -10,6 +10,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 import org.slf4j.MDC;
 
 import java.io.IOException;
@@ -33,7 +35,7 @@ class RequestIdFilterTest {
     filter.doFilterInternal(request, response, chain);
 
     assertThat(MDC.get("requestId")).isNull();
-    org.mockito.Mockito.verify(response).setHeader("X-Request-Id", "req-abc");
+    Mockito.verify(response).setHeader("X-Request-Id", "req-abc");
   }
 
   @Test
@@ -45,9 +47,9 @@ class RequestIdFilterTest {
 
     filter.doFilterInternal(request, response, chain);
 
-    org.mockito.Mockito.verify(response)
-            .setHeader(org.mockito.ArgumentMatchers.eq("X-Request-Id"),
-                    org.mockito.ArgumentMatchers.argThat(
+    Mockito.verify(response)
+            .setHeader(ArgumentMatchers.eq("X-Request-Id"),
+                    ArgumentMatchers.argThat(
                             (String id) -> id != null && !id.isBlank()));
   }
 }

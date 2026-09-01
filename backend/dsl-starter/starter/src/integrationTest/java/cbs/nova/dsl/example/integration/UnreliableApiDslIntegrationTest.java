@@ -24,6 +24,7 @@ import cbs.nova.starter.service.TemporalDslProcessLauncher;
 import cbs.nova.starter.service.TemporalDslProcessService;
 import cbs.nova.starter.service.TemporalTransactionInvoker;
 import cbs.nova.util.ServiceUtil;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowClientOptions;
 import io.temporal.common.converter.ByteArrayPayloadConverter;
@@ -120,7 +121,7 @@ class UnreliableApiDslIntegrationTest {
                     .build());
     var temporalObjectMapper = JacksonJsonPayloadConverter.newDefaultObjectMapper()
             .configure(
-                    com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
+                    DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
                     false);
     DataConverter dataConverter = new DefaultDataConverter(
             new NullPayloadConverter(),

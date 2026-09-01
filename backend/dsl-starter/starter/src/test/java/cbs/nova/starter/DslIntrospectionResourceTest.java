@@ -19,6 +19,7 @@ import cbs.nova.starter.controller.DslIntrospectionHandler;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import cbs.nova.starter.service.DslIntrospectionService;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -87,7 +88,7 @@ class DslIntrospectionResourceTest {
             .perform(get("/api/dsl/helpers").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.names").isArray())
-            .andExpect(jsonPath("$.names").value(org.hamcrest.Matchers.hasItem("sampleHelper")))
+            .andExpect(jsonPath("$.names").value(Matchers.hasItem("sampleHelper")))
             .andExpect(jsonPath("$.helpers").isArray())
             .andExpect(jsonPath("$.helpers[?(@.name=='sampleHelper')].description")
                     .value("A greeting helper"))

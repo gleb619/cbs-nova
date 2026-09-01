@@ -8,6 +8,7 @@ import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.ProcessDetail;
 import cbs.nova.starter.model.DslIntrospectionModels.TransactionDetail;
+import java.util.Map;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -31,7 +32,7 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
   @Mapping(target = "hasCompensation", expression = "java(source.compensationLogic() != null)")
   @Mapping(target = "inputSchema", source = "inputSchema")
-  ProcessDetail toProcessDetail(ProcessDslObject source, java.util.Map<String, Object> inputSchema);
+  ProcessDetail toProcessDetail(ProcessDslObject source, Map<String, Object> inputSchema);
 
   @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
   @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
@@ -46,7 +47,7 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "startToCloseTimeoutMs", expression = "java(source.startToCloseTimeout().toMillis())")
   @Mapping(target = "inputSchema", source = "inputSchema")
   TransactionDetail toTransactionDetail(TransactionDslObject source,
-          java.util.Map<String, Object> inputSchema);
+          Map<String, Object> inputSchema);
 
   @Mapping(target = "type", expression = "java(source.type().name().toLowerCase(java.util.Locale.ROOT))")
   @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
@@ -78,7 +79,7 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "description", expression = "java(source.describe().description())")
   @Mapping(target = "inputSchema", source = "inputSchema")
   DefinitionMetaDto toProcessDefinitionMeta(ProcessDslObject source,
-          java.util.Map<String, Object> inputSchema);
+          Map<String, Object> inputSchema);
 
   @Mapping(target = "type", constant = "transaction")
   @Mapping(target = "version", source = "source.version")
@@ -99,7 +100,7 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "description", expression = "java(source.describe().description())")
   @Mapping(target = "inputSchema", source = "inputSchema")
   DefinitionMetaDto toTransactionDefinitionMeta(TransactionDslObject source,
-          java.util.Map<String, Object> inputSchema);
+          Map<String, Object> inputSchema);
 
   @Mapping(target = "type", constant = "function")
   @Mapping(target = "name", source = "source.name")
@@ -122,7 +123,7 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "description", source = "source.description")
   @Mapping(target = "inputSchema", source = "inputSchema")
   DefinitionMetaDto toFunctionDefinitionMeta(DslDescriptor source,
-          java.util.Map<String, Object> inputSchema);
+          Map<String, Object> inputSchema);
 
   @Mapping(target = "type", constant = "helper")
   @Mapping(target = "name", source = "name")
@@ -145,5 +146,5 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "description", ignore = true)
   @Mapping(target = "inputSchema", source = "inputSchema")
   DefinitionMetaDto toHelperDefinitionMeta(String name, ExecutableDescriptor descriptor,
-          java.util.Map<String, Object> inputSchema);
+          Map<String, Object> inputSchema);
 }

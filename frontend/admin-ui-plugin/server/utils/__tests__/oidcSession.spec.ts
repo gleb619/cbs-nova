@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   AT_COOKIE,
   clearOidcTxn,
-  clearSession,
+  clearOidcSession,
   createPkcePair,
   discoverOidc,
   exchangeCode,
@@ -191,7 +191,7 @@ describe('oidcSession', () => {
     it('clears session cookies', () => {
       const event = makeEvent()
       writeSession(event, { access_token: 'at', refresh_token: 'rt' }, callbackUrl)
-      clearSession(event, callbackUrl)
+      clearOidcSession(event, callbackUrl)
       const atCookie = firstSetCookie(event, AT_COOKIE)
       const rtCookie = firstSetCookie(event, RT_COOKIE)
       expect(atCookie).toMatch(new RegExp(`${AT_COOKIE}=;.*Max-Age=0`))

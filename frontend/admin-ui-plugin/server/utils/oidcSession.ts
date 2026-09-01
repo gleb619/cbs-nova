@@ -170,7 +170,7 @@ export function writeSession(event: H3Event, tokenResponse: TokenResponse, callb
   }
 }
 
-export function clearSession(event: H3Event, callbackUrl: string) {
+export function clearOidcSession(event: H3Event, callbackUrl: string) {
   const defaults = cookieDefaults(callbackUrl)
   deleteCookie(event, AT_COOKIE, defaults)
   deleteCookie(event, RT_COOKIE, defaults)

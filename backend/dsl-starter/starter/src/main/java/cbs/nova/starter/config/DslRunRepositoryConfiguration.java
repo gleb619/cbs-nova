@@ -14,12 +14,14 @@ import cbs.nova.starter.persistence.JdbcTransactionExecutionRepository;
 import cbs.nova.starter.persistence.NoOpFieldEncryptor;
 import cbs.nova.starter.persistence.TransactionExecutionJdbcRepository;
 import org.flywaydb.core.Flyway;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.jdbc.repository.config.EnableJdbcRepositories;
 import org.springframework.data.relational.core.mapping.NamingStrategy;
@@ -47,7 +49,7 @@ import javax.sql.DataSource;
  * repository bean backs off in favour of the JDBC implementation.
  */
 @AutoConfiguration
-@AutoConfigureAfter(org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration.class)
+@AutoConfigureAfter(DataSourceAutoConfiguration.class)
 @EnableConfigurationProperties(DslRunPersistenceProperties.class)
 @EnableJdbcRepositories(basePackages = "cbs.nova.starter.persistence")
 public class DslRunRepositoryConfiguration {
@@ -96,7 +98,7 @@ public class DslRunRepositoryConfiguration {
   @Bean
   @ConditionalOnProperty(name = "spring.flyway.enabled", havingValue = "true")
   @ConditionalOnBean(Flyway.class)
-  public org.springframework.boot.ApplicationRunner flywayInitializer(Flyway flyway) {
+  public ApplicationRunner flywayInitializer(Flyway flyway) {
     return args -> flyway.migrate();
   }
 

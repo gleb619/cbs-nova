@@ -4,8 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject.DslType;
+import cbs.nova.dsl.Result;
 import java.time.Duration;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class TransactionBuilderTest {
@@ -22,7 +25,7 @@ class TransactionBuilderTest {
   @Test
   void parametersCombinedWithInputThrows() {
     var builder = Dsl.transaction("ConflictIn")
-            .execute(ctx -> cbs.nova.dsl.Result.success(null))
+            .execute(ctx -> Result.success(null))
             .input(String.class)
             .parameters(reg -> reg.string("k"));
     assertThatThrownBy(builder::build)
@@ -35,7 +38,7 @@ class TransactionBuilderTest {
   @Test
   void parametersCombinedWithOutputThrows() {
     var builder = Dsl.transaction("ConflictOut")
-            .execute(ctx -> cbs.nova.dsl.Result.success(null))
+            .execute(ctx -> Result.success(null))
             .output(String.class)
             .parameters(reg -> reg.string("k"));
     assertThatThrownBy(builder::build)
@@ -48,7 +51,7 @@ class TransactionBuilderTest {
   @Test
   void defaultTaskQueueIsNamePlusQueueSuffix() {
     var tx = Dsl.transaction("PayTx")
-            .execute(ctx -> cbs.nova.dsl.Result.success(null))
+            .execute(ctx -> Result.success(null))
             .build();
     assertThat(tx.taskQueue()).isEqualTo("PayTx-queue");
   }
@@ -56,7 +59,7 @@ class TransactionBuilderTest {
   @Test
   void defaultVersionIsV1() {
     var tx = Dsl.transaction("PayTx")
-            .execute(ctx -> cbs.nova.dsl.Result.success(null))
+            .execute(ctx -> Result.success(null))
             .build();
     assertThat(tx.version()).isEqualTo("v1");
   }
@@ -64,7 +67,7 @@ class TransactionBuilderTest {
   @Test
   void defaultStartToCloseTimeoutIsThirtySeconds() {
     var tx = Dsl.transaction("PayTx")
-            .execute(ctx -> cbs.nova.dsl.Result.success(null))
+            .execute(ctx -> Result.success(null))
             .build();
     assertThat(tx.startToCloseTimeout()).isEqualTo(Duration.ofSeconds(30));
   }
@@ -75,7 +78,7 @@ class TransactionBuilderTest {
             .taskQueue("custom-queue")
             .version("v7")
             .startToCloseTimeout(Duration.ofMinutes(2))
-            .execute(ctx -> cbs.nova.dsl.Result.success(null))
+            .execute(ctx -> Result.success(null))
             .build();
     assertThat(tx.taskQueue()).isEqualTo("custom-queue");
     assertThat(tx.version()).isEqualTo("v7");
@@ -85,7 +88,7 @@ class TransactionBuilderTest {
   @Test
   void buildListReturnsSingleElement() {
     var list = Dsl.transaction("PayTx")
-            .execute(ctx -> cbs.nova.dsl.Result.success(null))
+            .execute(ctx -> Result.success(null))
             .buildList();
     assertThat(list).hasSize(1);
     assertThat(list.get(0).name()).isEqualTo("PayTx");
@@ -94,7 +97,7 @@ class TransactionBuilderTest {
   @Test
   void builtObjectReportsTransactionType() {
     var tx = Dsl.transaction("PayTx")
-            .execute(ctx -> cbs.nova.dsl.Result.success(null))
+            .execute(ctx -> Result.success(null))
             .build();
     assertThat(tx.type()).isEqualTo(DslType.TRANSACTION);
   }
@@ -102,7 +105,7 @@ class TransactionBuilderTest {
   @Test
   void effectivePreviewFallsBackToExecuteWhenPreviewNotSet() {
     var tx = Dsl.transaction("PayTx")
-            .execute(ctx -> cbs.nova.dsl.Result.success("exec"))
+            .execute(ctx -> Result.success("exec"))
             .build();
     assertThat(tx.effectivePreview()).isSameAs(tx.executeLogic());
   }
@@ -110,8 +113,8 @@ class TransactionBuilderTest {
   @Test
   void effectivePreviewReturnsPreviewWhenSet() {
     var tx = Dsl.transaction("PayTx")
-            .execute(ctx -> cbs.nova.dsl.Result.success("exec"))
-            .preview(ctx -> cbs.nova.dsl.Result.success("preview"))
+            .execute(ctx -> Result.success("exec"))
+            .preview(ctx -> Result.success("preview"))
             .build();
     assertThat(tx.effectivePreview()).isSameAs(tx.previewLogic());
     assertThat(tx.effectivePreview()).isNotSameAs(tx.executeLogic());
@@ -119,13 +122,13 @@ class TransactionBuilderTest {
 
   @Test
   void describeUsesCustomDescriptorSupplierWhenProvided() {
-    var custom = new cbs.nova.dsl.DslDescriptor(
+    var custom = new DslDescriptor(
             "PayTx", DslType.TRANSACTION, "custom-desc",
             String.class, String.class, false, false,
             "custom-preview",
-            java.util.List.of(), "custom-queue", "v9", Duration.ofSeconds(1), null);
+            List.of(), "custom-queue", "v9", Duration.ofSeconds(1), null);
     var tx = Dsl.transaction("PayTx")
-            .execute(ctx -> cbs.nova.dsl.Result.success(null))
+            .execute(ctx -> Result.success(null))
             .describe(() -> custom)
             .build();
     assertThat(tx.describe()).isSameAs(custom);
@@ -135,8 +138,8 @@ class TransactionBuilderTest {
   void describeBuildsDefaultDescriptorWhenSupplierAbsent() {
     var tx = Dsl.transaction("PayTx")
             .input(String.class)
-            .execute(ctx -> cbs.nova.dsl.Result.success(null))
-            .compensation(ctx -> cbs.nova.dsl.Result.success(null))
+            .execute(ctx -> Result.success(null))
+            .compensation(ctx -> Result.success(null))
             .build();
     var desc = tx.describe();
     assertThat(desc.name()).isEqualTo("PayTx");
@@ -150,7 +153,7 @@ class TransactionBuilderTest {
   @Test
   void describeReportsNoCompensationWhenAbsent() {
     var tx = Dsl.transaction("PayTx")
-            .execute(ctx -> cbs.nova.dsl.Result.success(null))
+            .execute(ctx -> Result.success(null))
             .build();
     assertThat(tx.describe().hasCompensation()).isFalse();
   }

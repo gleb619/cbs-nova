@@ -3,6 +3,7 @@ package cbs.nova.starter.reporting;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.ExplainReport;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.DslObject.DslType;
@@ -44,7 +45,7 @@ class ExplainDiagramRendererTest {
             Map.of(),
             new ExecutableDescriptor(processName, null, String.class, String.class, false, null,
                     List.of()),
-            new cbs.nova.dsl.DslDescriptor(processName, DslType.PROCESS, null, String.class,
+            new DslDescriptor(processName, DslType.PROCESS, null, String.class,
                     String.class, false, false, null, List.of(), null, null, null, null),
             null,
             List.of(),

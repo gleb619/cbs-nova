@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
+import java.util.Map;
+import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,10 +69,10 @@ class JdbcDslRunStatsTest {
 
     assertThat(stats.totalRuns()).isEqualTo(5);
     assertThat(stats.statusCounts()).containsOnly(
-            java.util.Map.entry("COMPLETED", 2L),
-            java.util.Map.entry("FAILED", 1L),
-            java.util.Map.entry("RUNNING", 1L),
-            java.util.Map.entry("STALE", 1L));
+            Map.entry("COMPLETED", 2L),
+            Map.entry("FAILED", 1L),
+            Map.entry("RUNNING", 1L),
+            Map.entry("STALE", 1L));
   }
 
   @Test
@@ -88,7 +90,7 @@ class JdbcDslRunStatsTest {
     assertThat(stats.totalRuns()).isEqualTo(5);
     assertThat(stats.windowRuns()).isEqualTo(4);
     assertThat(stats.windowFailedRuns()).isEqualTo(2);
-    assertThat(stats.windowFailureRate()).isCloseTo(0.5, org.assertj.core.data.Offset.offset(1e-9));
+    assertThat(stats.windowFailureRate()).isCloseTo(0.5, Offset.offset(1e-9));
   }
 
   @Test

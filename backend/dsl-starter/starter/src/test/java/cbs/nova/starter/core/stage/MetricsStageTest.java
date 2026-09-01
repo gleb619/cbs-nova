@@ -19,6 +19,7 @@ import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 class MetricsStageTest {
@@ -82,7 +83,7 @@ class MetricsStageTest {
             .tag("process", "Ping")
             .timer();
     assertThat(timer.count()).isEqualTo(1L);
-    assertThat(timer.totalTime(java.util.concurrent.TimeUnit.MILLISECONDS))
+    assertThat(timer.totalTime(TimeUnit.MILLISECONDS))
             .isGreaterThanOrEqualTo(0.0);
   }
 

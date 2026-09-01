@@ -7,6 +7,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslErrorCode;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutionMode;
@@ -129,8 +130,8 @@ class DslRuntimeServiceTest {
 
     service.run("P", new DslRequest("input", null), null);
 
-    ArgumentCaptor<cbs.nova.dsl.Context<?>> captor = ArgumentCaptor
-            .forClass(cbs.nova.dsl.Context.class);
+    ArgumentCaptor<Context<?>> captor = ArgumentCaptor
+            .forClass(Context.class);
     verify(dslRuntime).run(eq("P"), captor.capture());
     assertThat(captor.getValue().runId()).startsWith("run-");
   }
@@ -224,8 +225,8 @@ class DslRuntimeServiceTest {
 
     assertThat(outcome.success()).isTrue();
     assertThat(outcome.replayed()).isFalse();
-    ArgumentCaptor<cbs.nova.dsl.Context<?>> captor = ArgumentCaptor
-            .forClass(cbs.nova.dsl.Context.class);
+    ArgumentCaptor<Context<?>> captor = ArgumentCaptor
+            .forClass(Context.class);
     verify(dslRuntime).run(eq("P"), captor.capture());
     assertThat(captor.getValue().runId()).isEqualTo("idem-abc");
   }
@@ -236,8 +237,8 @@ class DslRuntimeServiceTest {
 
     service.run("P", new DslRequest("input", null), "req-corr", null, "corr-123");
 
-    ArgumentCaptor<cbs.nova.dsl.Context<?>> captor = ArgumentCaptor
-            .forClass(cbs.nova.dsl.Context.class);
+    ArgumentCaptor<Context<?>> captor = ArgumentCaptor
+            .forClass(Context.class);
     verify(dslRuntime).run(eq("P"), captor.capture());
     assertThat(captor.getValue().metadata())
             .containsEntry(CorrelationId.CORRELATION_ID_METADATA_KEY, "corr-123");
@@ -249,8 +250,8 @@ class DslRuntimeServiceTest {
 
     service.run("P", new DslRequest("input", null), "req-corr", null, null);
 
-    ArgumentCaptor<cbs.nova.dsl.Context<?>> captor = ArgumentCaptor
-            .forClass(cbs.nova.dsl.Context.class);
+    ArgumentCaptor<Context<?>> captor = ArgumentCaptor
+            .forClass(Context.class);
     verify(dslRuntime).run(eq("P"), captor.capture());
     assertThat(captor.getValue().metadata())
             .doesNotContainKey(CorrelationId.CORRELATION_ID_METADATA_KEY);
@@ -277,8 +278,8 @@ class DslRuntimeServiceTest {
 
     assertThat(outcome.success()).isTrue();
     assertThat(outcome.replayed()).isFalse();
-    ArgumentCaptor<cbs.nova.dsl.Context<?>> captor = ArgumentCaptor
-            .forClass(cbs.nova.dsl.Context.class);
+    ArgumentCaptor<Context<?>> captor = ArgumentCaptor
+            .forClass(Context.class);
     verify(dslRuntime).run(eq("P"), captor.capture());
     assertThat(captor.getValue().runId()).isEqualTo("req-9");
   }

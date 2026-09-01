@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import java.util.Map;
 import org.springdoc.core.annotations.RouterOperation;
 import org.springdoc.core.annotations.RouterOperations;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -44,7 +45,7 @@ public class DslScheduleRouterConfiguration {
           })),
       @RouterOperation(path = "/api/dsl/schedules/{definition}", beanClass = DslScheduleHandler.class, beanMethod = "delete", method = RequestMethod.DELETE, operation = @Operation(operationId = "deleteSchedule", summary = "Delete the Temporal schedule for a DSL definition", tags = {
           "DSL Schedules"}, responses = {
-              @ApiResponse(responseCode = "200", description = "Schedule deleted", content = @Content(mediaType = "application/json", schema = @Schema(implementation = java.util.Map.class))),
+              @ApiResponse(responseCode = "200", description = "Schedule deleted", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Map.class))),
               @ApiResponse(responseCode = "400", description = "Invalid definition name", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           }))
   })

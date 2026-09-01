@@ -1,6 +1,6 @@
 import { createError, defineEventHandler, sendRedirect } from 'h3'
 import { useAuthConfig } from '~/server/utils/config'
-import { clearSession, discoverOidc, readSession } from '~/server/utils/oidcSession'
+import { clearOidcSession, discoverOidc, readSession } from '~/server/utils/oidcSession'
 
 export default defineEventHandler(async (event) => {
   const config = useAuthConfig()
@@ -26,6 +26,6 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  clearSession(event, config.callbackUrl)
+  clearOidcSession(event, config.callbackUrl)
   return sendRedirect(event, config.postLogoutRedirect, 302)
 })

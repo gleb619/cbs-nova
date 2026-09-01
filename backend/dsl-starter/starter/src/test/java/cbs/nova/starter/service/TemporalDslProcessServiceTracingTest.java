@@ -2,13 +2,18 @@ package cbs.nova.starter.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.SimpleContext;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
+import cbs.nova.dsl.transaction.TransactionRouting;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanContext;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
 import io.opentelemetry.context.propagation.ContextPropagators;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
@@ -54,8 +59,8 @@ class TemporalDslProcessServiceTracingTest {
     Mockito.when(contextFactory.of(
             Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
             .thenReturn(new SimpleContext<>(
-                    Map.of(), Map.of(), cbs.nova.dsl.ExecutionMode.RUN,
-                    runId, cbs.nova.dsl.transaction.TransactionRouting.LOCAL, null, null, null));
+                    Map.of(), Map.of(), ExecutionMode.RUN,
+                    runId, TransactionRouting.LOCAL, null, null, null));
 
     TemporalDslProcessService service = new TemporalDslProcessService(
             contextFactory,
@@ -75,19 +80,19 @@ class TemporalDslProcessServiceTracingTest {
     SpanData span = exporter.getFinishedSpanItems().get(0);
     assertThat(span.getName()).isEqualTo("dsl.run." + processName);
     assertThat(
-            span.getAttributes().get(io.opentelemetry.api.common.AttributeKey.stringKey("runId")))
+            span.getAttributes().get(AttributeKey.stringKey("runId")))
             .isEqualTo(runId);
     assertThat(span.getAttributes()
-            .get(io.opentelemetry.api.common.AttributeKey.stringKey("processName")))
+            .get(AttributeKey.stringKey("processName")))
             .isEqualTo(processName);
     assertThat(span.getAttributes()
-            .get(io.opentelemetry.api.common.AttributeKey.stringKey("executionMode")))
-            .isEqualTo(cbs.nova.dsl.ExecutionMode.RUN.name());
+            .get(AttributeKey.stringKey("executionMode")))
+            .isEqualTo(ExecutionMode.RUN.name());
     assertThat(
-            span.getAttributes().get(io.opentelemetry.api.common.AttributeKey.stringKey("status")))
+            span.getAttributes().get(AttributeKey.stringKey("status")))
             .isEqualTo(DslRunStatus.FAILED.name());
     assertThat(span.getStatus().getStatusCode())
-            .isEqualTo(io.opentelemetry.api.trace.StatusCode.ERROR);
+            .isEqualTo(StatusCode.ERROR);
   }
 
   @Test
@@ -97,8 +102,8 @@ class TemporalDslProcessServiceTracingTest {
     Mockito.when(contextFactory.of(
             Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
             .thenReturn(new SimpleContext<>(
-                    Map.of(), Map.of(), cbs.nova.dsl.ExecutionMode.RUN,
-                    "run-trace-2", cbs.nova.dsl.transaction.TransactionRouting.LOCAL, null, null,
+                    Map.of(), Map.of(), ExecutionMode.RUN,
+                    "run-trace-2", TransactionRouting.LOCAL, null, null,
                     null));
 
     TemporalDslProcessService service = new TemporalDslProcessService(
@@ -116,7 +121,7 @@ class TemporalDslProcessServiceTracingTest {
 
     service.startProcess("missing-process", Map.of(), Map.of()).result().join();
 
-    SpanContext spanContext = io.opentelemetry.api.trace.Span.current().getSpanContext();
+    SpanContext spanContext = Span.current().getSpanContext();
     assertThat(spanContext.isValid()).isFalse();
   }
 

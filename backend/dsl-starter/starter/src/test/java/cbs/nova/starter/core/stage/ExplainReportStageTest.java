@@ -7,6 +7,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
+import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
@@ -224,7 +225,7 @@ class ExplainReportStageTest {
     return new DslPipeContext(name, ctx, mode, "run-1");
   }
 
-  private static final class EchoHelper implements cbs.nova.dsl.Executable<Object, Object> {
+  private static final class EchoHelper implements Executable<Object, Object> {
 
     @Override
     public Result<Object> execute(Context<Object> ctx) {
