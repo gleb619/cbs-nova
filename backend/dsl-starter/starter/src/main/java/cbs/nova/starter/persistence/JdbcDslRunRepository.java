@@ -20,6 +20,7 @@ import javax.sql.DataSource;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -238,6 +239,63 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
             topProcesses);
   }
 
+  @Override
+  public @NonNull List<RunTimeseriesBucket> timeseries(@NonNull Instant windowStart,
+          @NonNull Instant windowEnd, @NonNull Duration bucketSize) {
+    if (!windowEnd.isAfter(windowStart)) {
+      throw new IllegalArgumentException(
+              "windowEnd must be after windowStart, was windowStart=" + windowStart
+                      + " windowEnd=" + windowEnd);
+    }
+    if (bucketSize.isZero() || bucketSize.isNegative()) {
+      throw new IllegalArgumentException(
+              "bucketSize must be positive, was " + bucketSize);
+    }
+    long bucketSeconds = bucketSize.getSeconds();
+    long windowSeconds = Duration.between(windowStart, windowEnd).getSeconds();
+    if (windowSeconds % bucketSeconds != 0) {
+      throw new IllegalArgumentException(
+              "windowSeconds (" + windowSeconds + ") must be divisible by bucketSeconds ("
+                      + bucketSeconds + ") so bucket boundaries are stable");
+    }
+
+    MapSqlParameterSource params = new MapSqlParameterSource()
+            .addValue("windowStart", Timestamp.from(windowStart))
+            .addValue("windowEnd", Timestamp.from(windowEnd));
+
+    List<RunTimeseriesBucket> minuteRows = jdbcTemplate.query(
+            getTimeseriesStatement(), params,
+            (rs, rowNum) -> new RunTimeseriesBucket(
+                    rs.getTimestamp(1).toInstant(),
+                    rs.getString(2),
+                    rs.getLong(3)));
+
+    return foldMinuteBuckets(minuteRows, windowStart, bucketSeconds);
+  }
+
+  private static List<RunTimeseriesBucket> foldMinuteBuckets(
+          List<RunTimeseriesBucket> minuteRows,
+          Instant windowStart,
+          long bucketSeconds) {
+    java.util.Map<Long, java.util.Map<String, Long>> byIndex = new java.util.LinkedHashMap<>();
+    for (RunTimeseriesBucket row : minuteRows) {
+      long secondsFromStart = Duration.between(windowStart, row.bucketStart()).getSeconds();
+      long bucketIndex = secondsFromStart / bucketSeconds;
+      byIndex.computeIfAbsent(bucketIndex, k -> new java.util.LinkedHashMap<>())
+              .merge(row.status(), row.count(), Long::sum);
+    }
+    List<RunTimeseriesBucket> out = new java.util.ArrayList<>();
+    for (var entry : byIndex.entrySet()) {
+      Instant bucketStart = windowStart.plusSeconds(entry.getKey() * bucketSeconds);
+      for (var statusEntry : entry.getValue().entrySet()) {
+        out.add(new RunTimeseriesBucket(bucketStart, statusEntry.getKey(), statusEntry.getValue()));
+      }
+    }
+    out.sort(java.util.Comparator.comparing(RunTimeseriesBucket::bucketStart)
+            .thenComparing(RunTimeseriesBucket::status));
+    return out;
+  }
+
   private MapSqlParameterSource insertParams(DslRunEntity entity) {
     return new MapSqlParameterSource()
             .addValue("runId", entity.getRunId())
@@ -371,6 +429,18 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
     return """
             SELECT COUNT(*), COUNT(*) FILTER (WHERE status = :failedStatus)
             FROM %s WHERE started_at >= :windowStart""".formatted(tableName);
+  }
+
+  private String getTimeseriesStatement() {
+    return """
+            SELECT date_trunc('minute', started_at) AS bucket_minute
+                 , status
+                 , COUNT(*) AS run_count
+            FROM %s
+            WHERE started_at >= :windowStart
+              AND started_at <  :windowEnd
+            GROUP BY bucket_minute, status
+            ORDER BY bucket_minute ASC, status ASC""".formatted(tableName);
   }
 
   private String getTopProcessesStatement() {

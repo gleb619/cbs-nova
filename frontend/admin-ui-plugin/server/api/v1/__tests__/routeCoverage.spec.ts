@@ -187,6 +187,11 @@ const expectedProxies: readonly ExpectedProxy[] = [
   },
   {
     method: 'GET',
+    backendPath: '/api/executions/stats/timeseries',
+    bffPath: '/api/v1/executions/stats/timeseries',
+  },
+  {
+    method: 'GET',
     backendPath: '/api/executions/{id}',
     bffPath: '/api/v1/executions/{id}',
   },

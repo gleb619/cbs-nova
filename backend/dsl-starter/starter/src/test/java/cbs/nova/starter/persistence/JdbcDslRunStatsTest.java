@@ -17,6 +17,7 @@ import org.springframework.test.context.TestPropertySource;
 import javax.sql.DataSource;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 
 /**
  * Verifies the SQL aggregate statements behind {@code GET /api/executions/stats} against a real
@@ -125,6 +126,137 @@ class JdbcDslRunStatsTest {
     DslRunStatsRepository statsRepo = statsRepo();
     assertThatThrownBy(() -> statsRepo.stats(Instant.now(), 0))
             .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  // -------------------------------------------------------------------------
+  // T320 — run time-series stats. The SQL aggregates runs into per-minute
+  // buckets on `started_at` and the handler folds minutes into the
+  // requested bucket width; these tests pin that behavior at the JDBC layer.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void timeseriesOnEmptyTableReturnsEmptyList() {
+    Instant now = Instant.now();
+    List<RunTimeseriesBucket> rows = statsRepo().timeseries(
+            now.minus(Duration.ofHours(2)),
+            now,
+            Duration.ofMinutes(60));
+
+    assertThat(rows).isEmpty();
+  }
+
+  @Test
+  void timeseriesBucketsMinuteRowsIntoTheRequestedWidth() {
+    Instant base = Instant.parse("2026-08-13T10:00:00Z");
+    saveRunAt("a-1", "Alpha", "COMPLETED", base);
+    saveRunAt("a-2", "Alpha", "FAILED", base.plus(Duration.ofMinutes(20)));
+    saveRunAt("a-3", "Alpha", "COMPLETED", base.plus(Duration.ofMinutes(45)));
+    // The next-hour bucket has its own COMPLETED + FAILED split.
+    saveRunAt("b-1", "Beta", "COMPLETED", base.plus(Duration.ofHours(1)));
+    saveRunAt("b-2", "Beta", "FAILED", base.plus(Duration.ofHours(1).plus(Duration.ofMinutes(30))));
+
+    Instant windowStart = base;
+    Instant windowEnd = base.plus(Duration.ofHours(2));
+    List<RunTimeseriesBucket> rows = statsRepo().timeseries(
+            windowStart, windowEnd, Duration.ofMinutes(60));
+
+    assertThat(rows).extracting(RunTimeseriesBucket::bucketStart)
+            .containsExactly(windowStart, windowStart, windowStart.plus(Duration.ofHours(1)),
+                    windowStart.plus(Duration.ofHours(1)));
+    assertThat(rows).extracting(RunTimeseriesBucket::status)
+            .containsExactly("COMPLETED", "FAILED", "COMPLETED", "FAILED");
+    assertThat(rows).extracting(RunTimeseriesBucket::count)
+            .containsExactly(2L, 1L, 1L, 1L);
+  }
+
+  @Test
+  void timeseriesSkipsRowsOutsideTheWindowButStillCountsThemInAggregate() {
+    Instant base = Instant.parse("2026-08-13T10:00:00Z");
+    saveRunAt("inside-1", "Alpha", "COMPLETED", base);
+    saveRunAt("inside-2", "Alpha", "FAILED", base.plus(Duration.ofMinutes(10)));
+    // One minute before the window starts.
+    saveRunAt("before", "Alpha", "COMPLETED", base.minus(Duration.ofMinutes(1)));
+    // Exactly on the exclusive end bound — excluded.
+    saveRunAt("at-end", "Alpha", "COMPLETED", base.plus(Duration.ofHours(2)));
+
+    List<RunTimeseriesBucket> rows = statsRepo().timeseries(
+            base, base.plus(Duration.ofHours(2)), Duration.ofMinutes(60));
+
+    assertThat(rows).hasSize(2);
+    assertThat(rows).extracting(RunTimeseriesBucket::bucketStart)
+            .containsOnly(base);
+    assertThat(rows).extracting(RunTimeseriesBucket::count)
+            .containsExactlyInAnyOrder(1L, 1L);
+  }
+
+  @Test
+  void timeseriesOnDifferentBucketWidthsPreservesPerStatusCounts() {
+    Instant base = Instant.parse("2026-08-13T10:00:00Z");
+    saveRunAt("m1", "Alpha", "COMPLETED", base.plus(Duration.ofMinutes(5)));
+    saveRunAt("m2", "Alpha", "FAILED", base.plus(Duration.ofMinutes(25)));
+    saveRunAt("m3", "Alpha", "COMPLETED", base.plus(Duration.ofMinutes(55)));
+
+    // The JDBC layer emits one row per (bucket, status) that has runs; the
+    // 10:30 bucket has no rows here, so it must NOT appear in the JDBC
+    // response. The handler's response factory is what zero-fills missing
+    // buckets so the dashboard x-axis stays uniform — see
+    // ExecutionTimeseriesResponseTest.
+    List<RunTimeseriesBucket> rows15 = statsRepo().timeseries(
+            base, base.plus(Duration.ofHours(1)), Duration.ofMinutes(15));
+    assertThat(rows15).extracting(RunTimeseriesBucket::bucketStart).containsExactly(
+            base, base.plus(Duration.ofMinutes(15)),
+            base.plus(Duration.ofMinutes(45)));
+    assertThat(rows15).extracting(RunTimeseriesBucket::status)
+            .containsExactly("COMPLETED", "FAILED", "COMPLETED");
+    assertThat(rows15).extracting(RunTimeseriesBucket::count)
+            .containsExactly(1L, 1L, 1L);
+  }
+
+  @Test
+  void timeseriesRejectsZeroOrNegativeWindow() {
+    DslRunStatsRepository repo = statsRepo();
+    Instant now = Instant.now();
+    assertThatThrownBy(() -> repo.timeseries(now, now, Duration.ofMinutes(60)))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("windowEnd");
+    assertThatThrownBy(
+            () -> repo.timeseries(now.minus(Duration.ofHours(2)), now.minus(Duration.ofHours(3)),
+                    Duration.ofMinutes(60)))
+            .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void timeseriesRejectsNonPositiveBucketSize() {
+    DslRunStatsRepository repo = statsRepo();
+    Instant now = Instant.now();
+    assertThatThrownBy(() -> repo.timeseries(
+            now.minus(Duration.ofHours(2)), now, Duration.ZERO))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("bucketSize");
+    assertThatThrownBy(() -> repo.timeseries(
+            now.minus(Duration.ofHours(2)), now, Duration.ofMinutes(-1)))
+            .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void timeseriesRejectsWindowThatDoesNotDivideIntoBuckets() {
+    DslRunStatsRepository repo = statsRepo();
+    Instant now = Instant.now();
+    assertThatThrownBy(() -> repo.timeseries(
+            now.minus(Duration.ofMinutes(125)), now, Duration.ofMinutes(60)))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("divisible");
+  }
+
+  private void saveRunAt(String runId, String processName, String status, Instant startedAt) {
+    repository.save(DslRun.builder()
+            .runId(runId)
+            .processName(processName)
+            .status(status)
+            .startedAt(startedAt)
+            .finishedAt("RUNNING".equals(status) ? null : startedAt.plusSeconds(5))
+            .executionMode("RUN")
+            .build());
   }
 
   private DslRunStatsRepository statsRepo() {

@@ -40,6 +40,7 @@ const previewHandler = (await import('../dsl/preview/[name].post')).default
 const explainHandler = (await import('../dsl/explain/[name].post')).default
 const executionsIndexHandler = (await import('../executions/index.get')).default
 const executionsStatsHandler = (await import('../executions/stats.get')).default
+const executionsTimeseriesHandler = (await import('../executions/stats/timeseries.get')).default
 const executionsIdHandler = (await import('../executions/[id].get')).default
 const executionsTransactionsHandler = (await import('../executions/[id]/transactions.get')).default
 const executionsCancelHandler = (await import('../executions/[id]/cancel.post')).default
@@ -203,6 +204,21 @@ describe('executions/stats.get', () => {
     await executionsStatsHandler(fakeEvent)
     expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
     expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/executions/stats')
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+})
+
+describe('executions/stats/timeseries.get', () => {
+  it('GETs /api/executions/stats/timeseries with no body and no opts', async () => {
+    queryValue = { windowHours: '24', bucketMinutes: '60' }
+
+    await executionsTimeseriesHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/executions/stats/timeseries',
+    )
     expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
   })
 })
