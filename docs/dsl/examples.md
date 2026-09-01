@@ -133,3 +133,17 @@ monotonic counter keep every generated value strictly ordered:
 UuidV7Out key = ctx.runHelper("uuidV7", new UuidV7In("payments/v1"))
         .as(UuidV7Out.class);
 ```
+
+## Encoding values with `base64`
+
+The `base64` helper encodes and decodes strings using standard or URL-safe Base64.
+Set `mode` to `"encode"` or `"decode"` and optionally set `urlSafe` to `true` to use
+the URL-safe alphabet (`-_` instead of `+/`). Padding is retained for both encoders.
+
+Encode a JWT header URL-safe, as you would when building a manually signed JWT:
+
+```java
+Base64Out header = ctx.runHelper("base64",
+        new Base64In("{\"alg\":\"HS256\",\"typ\":\"JWT\"}", "encode", true))
+        .as(Base64Out.class);
+```
