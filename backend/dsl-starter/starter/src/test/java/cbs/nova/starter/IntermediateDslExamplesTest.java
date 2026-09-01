@@ -176,6 +176,10 @@ class IntermediateDslExamplesTest {
       if (helperClass == UnreliableApiHelper.class) {
         return new UnreliableApiHelper();
       }
+      if (helperClass == UuidV7Helper.class) {
+        return new UuidV7Helper();
+      }
+
       throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
     };
   }

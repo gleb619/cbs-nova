@@ -102,3 +102,34 @@ would fail with a `ClassCastException`.
   between executions.
 
 The Workbench 'New definition' dialog ships starter templates (plain process, saga, http pipeline, retry policy).
+
+## Generating idempotency keys with `uuidV7`
+
+The `uuidV7` helper produces an RFC 9562 version-7 UUID: a timestamp-prefixed,
+lexicographically-sortable 128-bit value. Use it to build stable idempotency keys
+for HTTP calls or correlation IDs for cross-system tracing.
+
+```java
+UuidV7Out key = ctx.runHelper("uuidV7", new UuidV7In(null)).as(UuidV7Out.class);
+
+HttpCallOut response = ctx.runHelper("httpCall",
+        new HttpCallIn(
+                "https://api.example.com/payments",
+                "POST",
+                Map.of(
+                        "Idempotency-Key", key.uuid(),
+                        "Content-Type", "application/json"),
+                jsonBody,
+                null,
+                null))
+        .as(HttpCallOut.class);
+```
+
+The optional `namespace` argument makes the random tail deterministic per
+namespace (derived from `SHA-256(namespace)`) while the timestamp and embedded
+monotonic counter keep every generated value strictly ordered:
+
+```java
+UuidV7Out key = ctx.runHelper("uuidV7", new UuidV7In("payments/v1"))
+        .as(UuidV7Out.class);
+```
