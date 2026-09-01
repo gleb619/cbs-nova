@@ -3,6 +3,9 @@ import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { useDslWorkbench } from '@cbs/admin-ui-plugin/composables/useDslWorkbench'
 import { useWorkbenchDraft } from '@cbs/admin-ui-plugin/composables/useWorkbenchDraft'
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
+import { useDraftDirty } from '@cbs/admin-ui-plugin/composables/useDraftDirty'
+import { useDraftSave } from '@cbs/admin-ui-plugin/composables/useDraftSave'
+import { useEventListener } from '@vueuse/core'
 import DslTemplateGallery from '../components/DslTemplateGallery.vue'
 import type { DslTemplate } from '../utils/dslTemplates'
 import type { HelperCatalogEntry, HelpersResponse, HelperSearchFilters, ObjectSearchResult, ScheduleSummary } from '@cbs/components'
@@ -36,13 +39,15 @@ const {
   loadConstructs,
   selectConstruct,
   createConstruct,
-  saveConstruct,
   validateConstruct,
   publishConstruct,
   deleteConstruct,
   reloadDefinitions,
   markDirty,
 } = workbench
+
+const draftDirty = useDraftDirty()
+const draftSave = useDraftSave()
 
 const useWorkbenchStorage = createNamespacedLocalStorageState('cbs-nova:dsl-workbench')
 
@@ -266,7 +271,7 @@ async function confirmCreate() {
 type ActionValue = 'refresh' | 'validate' | 'save' | 'publish'
 
 const actionItems = computed<DropdownMenuItem[]>(() => [
-  
+
   { label: 'Refresh', value: 'refresh', disabled: state.isLoading },
   {
     label: 'Validate',
@@ -296,13 +301,69 @@ function runAction(item: DropdownMenuItem) {
       validateConstruct()
       break
     case 'save':
-      saveConstruct().then(() => refreshDrafts())
+      draftSave.save().then(() => refreshDrafts())
       break
     case 'publish':
       publishConstruct().then(() => refreshDrafts())
       break
   }
 }
+
+const isAnyModalOpen = computed(() => showDeleteModal.value || showNewPanel.value)
+
+function handleSaveShortcut(event: KeyboardEvent) {
+  if ((event.key !== 's' && event.key !== 'S') || (!event.metaKey && !event.ctrlKey)) {
+    return
+  }
+  // Let Monaco / other focused editors consume the shortcut first.
+  if (event.defaultPrevented) return
+  // Only intercept when there are unsaved server-side changes and no modal is open.
+  if (!draftDirty.isDirty.value || isAnyModalOpen.value) return
+  event.preventDefault()
+  void draftSave.save()
+}
+
+useEventListener(window, 'keydown', handleSaveShortcut)
+
+function formatSavedTime(date: Date | null): string {
+  if (!date) return ''
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
+  if (seconds < 10) return 'just now'
+  if (seconds < 60) return `${seconds}s ago`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  return `${Math.floor(minutes / 60)}h ago`
+}
+
+const saveStatusClasses = computed(() => {
+  switch (draftSave.status.value) {
+    case 'dirty':
+      return 'bg-amber-50 text-amber-700 border border-amber-200'
+    case 'saving':
+      return 'bg-blue-50 text-blue-700 border border-blue-200'
+    case 'saved':
+      return 'bg-green-50 text-green-700 border border-green-200'
+    case 'error':
+      return 'bg-red-50 text-red-700 border border-red-200'
+    default:
+      return 'text-gray-500'
+  }
+})
+
+const saveStatusText = computed(() => {
+  switch (draftSave.status.value) {
+    case 'dirty':
+      return 'Unsaved changes'
+    case 'saving':
+      return 'Saving…'
+    case 'saved':
+      return `Saved ${formatSavedTime(draftSave.lastSavedAt.value)}`
+    case 'error':
+      return 'Save failed — Retry'
+    default:
+      return draftSave.lastSavedAt.value ? 'Saved' : ''
+  }
+})
 
 onMounted(() => {
   loadConstructs()
@@ -350,6 +411,29 @@ onBeforeUnmount(() => {
         >
           <span aria-hidden="true" class="inline-block h-2 w-2 rounded-full bg-amber-500"></span>
           <span>unsaved changes</span>
+        </span>
+        <span
+          v-if="saveStatusText"
+          class="inline-flex items-center gap-1.5 text-xs rounded-full px-2.5 py-1"
+          :class="saveStatusClasses"
+          data-testid="draft-save-status"
+          role="status"
+        >
+          <span
+            v-if="draftSave.status.value === 'saving'"
+            class="inline-block h-3 w-3 rounded-full border-2 border-current border-t-transparent animate-spin"
+            aria-hidden="true"
+          ></span>
+          <span>{{ saveStatusText }}</span>
+          <button
+            v-if="draftSave.status.value === 'error'"
+            type="button"
+            class="ml-1 underline hover:no-underline"
+            data-testid="draft-save-retry"
+            @click="draftSave.save()"
+          >
+            Retry
+          </button>
         </span>
         <DropdownMenu label="Actions" align="right" :items="actionItems" @select="runAction" />
       </div>
