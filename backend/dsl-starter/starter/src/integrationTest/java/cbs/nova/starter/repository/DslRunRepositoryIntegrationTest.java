@@ -36,7 +36,7 @@ import java.util.UUID;
 class DslRunRepositoryIntegrationTest {
 
   @Container
-  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15");
+  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16");
 
   @DynamicPropertySource
   static void datasourceProperties(DynamicPropertyRegistry registry) {
@@ -55,11 +55,7 @@ class DslRunRepositoryIntegrationTest {
   @BeforeAll
   static void applyMigrations() throws SQLException {
     ResourceDatabasePopulator populator = new ResourceDatabasePopulator(
-            new ClassPathResource("db/migration/V1__create_dsl_runs.sql"),
-            new ClassPathResource("db/migration/V2__add_context_json.sql"),
-            new ClassPathResource("db/migration/V3__create_dsl_run_transactions.sql"),
-            new ClassPathResource("db/migration/V4__dsl_runs_indexes.sql"),
-            new ClassPathResource("db/migration/V5__dsl_runs_triggered_by.sql"));
+            new ClassPathResource("db/migration/postgres/V1__init.sql"));
     populator.setContinueOnError(false);
     try (Connection connection = DriverManager.getConnection(
             postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())) {
@@ -143,7 +139,7 @@ class DslRunRepositoryIntegrationTest {
     repository.save(run("run-3", "LoanDisbursement", DslRunStatus.RUNNING.name(), t3,
             ExecutionMode.PREVIEW.name()));
 
-    DslRunSearchResult result = repository.search(null, null, null, 0, 10);
+    DslRunSearchResult result = repository.search(null, null, null, null, 0, 10);
 
     assertThat(result.total()).isEqualTo(3);
     assertThat(result.items()).extracting(DslRun::runId).containsExactly("run-3", "run-2", "run-1");
@@ -157,7 +153,7 @@ class DslRunRepositoryIntegrationTest {
     repository.save(run("run-2", "CreditScoring", DslRunStatus.COMPLETED.name(), t,
             ExecutionMode.RUN.name()));
 
-    DslRunSearchResult result = repository.search("CreditScoring", null, null, 0, 10);
+    DslRunSearchResult result = repository.search("CreditScoring", null, null, null, 0, 10);
 
     assertThat(result.total()).isEqualTo(1);
     assertThat(result.items().get(0).runId()).isEqualTo("run-2");
@@ -171,7 +167,7 @@ class DslRunRepositoryIntegrationTest {
     repository.save(run("run-2", "LoanDisbursement", DslRunStatus.RUNNING.name(), t,
             ExecutionMode.RUN.name()));
 
-    DslRunSearchResult result = repository.search(null, "completed", null, 0, 10);
+    DslRunSearchResult result = repository.search(null, "completed", null, null, 0, 10);
 
     assertThat(result.total()).isEqualTo(1);
     assertThat(result.items().get(0).runId()).isEqualTo("run-1");
@@ -184,7 +180,7 @@ class DslRunRepositoryIntegrationTest {
     repository.save(run("run-2", "LoanDisbursement", DslRunStatus.COMPLETED.name(), t,
             ExecutionMode.PREVIEW.name()));
 
-    DslRunSearchResult result = repository.search(null, null, "run", 0, 10);
+    DslRunSearchResult result = repository.search(null, null, "run", null, 0, 10);
 
     assertThat(result.total()).isEqualTo(1);
     assertThat(result.items().get(0).runId()).isEqualTo("run-1");
@@ -200,7 +196,7 @@ class DslRunRepositoryIntegrationTest {
     repository.save(run("run-3", "CreditScoring", DslRunStatus.COMPLETED.name(), t,
             ExecutionMode.RUN.name()));
 
-    DslRunSearchResult result = repository.search("LoanDisbursement", "COMPLETED", "RUN", 0, 10);
+    DslRunSearchResult result = repository.search("LoanDisbursement", "COMPLETED", "RUN", "CORID", 0, 10);
 
     assertThat(result.total()).isEqualTo(1);
     assertThat(result.items().get(0).runId()).isEqualTo("run-1");
@@ -214,7 +210,7 @@ class DslRunRepositoryIntegrationTest {
               ExecutionMode.RUN.name()));
     }
 
-    DslRunSearchResult result = repository.search("LoanDisbursement", null, null, 0, 2);
+    DslRunSearchResult result = repository.search("LoanDisbursement", null, null, null, 0, 2);
 
     assertThat(result.total()).isEqualTo(5);
     assertThat(result.items()).hasSize(2);
@@ -228,7 +224,7 @@ class DslRunRepositoryIntegrationTest {
               base.plusSeconds(i), ExecutionMode.RUN.name()));
     }
 
-    DslRunSearchResult result = repository.search("LoanDisbursement", null, null, 2, 2);
+    DslRunSearchResult result = repository.search("LoanDisbursement", null, null, null, 2, 2);
 
     assertThat(result.total()).isEqualTo(5);
     assertThat(result.items()).extracting(DslRun::runId).containsExactly("run-3", "run-2");
@@ -240,7 +236,7 @@ class DslRunRepositoryIntegrationTest {
     repository.save(run("run-1", "LoanDisbursement", DslRunStatus.COMPLETED.name(), t,
             ExecutionMode.RUN.name()));
 
-    DslRunSearchResult result = repository.search(null, null, null, 10, 10);
+    DslRunSearchResult result = repository.search(null, null, null, null, 10, 10);
 
     assertThat(result.total()).isEqualTo(1);
     assertThat(result.items()).isEmpty();

@@ -40,14 +40,14 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
   private final FieldEncryptor encryptor;
   private final String tableName;
 
-  //TODO: remove constructor, use lombok's one
+  // TODO: remove constructor, use lombok's one
   public JdbcDslRunRepository(DataSource dataSource, DslRunJdbcRepository delegate,
           DslRunMapper mapper, FieldEncryptor encryptor,
           DslRunPersistenceProperties properties) {
     this(new NamedParameterJdbcTemplate(dataSource), delegate, mapper, encryptor, properties);
   }
 
-  //TODO: remove constructor, use lombok's one
+  // TODO: remove constructor, use lombok's one
   public JdbcDslRunRepository(NamedParameterJdbcTemplate jdbcTemplate,
           DslRunJdbcRepository delegate, DslRunMapper mapper, FieldEncryptor encryptor,
           DslRunPersistenceProperties properties) {

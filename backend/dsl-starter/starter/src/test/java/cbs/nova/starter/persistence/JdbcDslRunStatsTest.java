@@ -15,6 +15,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.jdbc.Sql;
 
 import javax.sql.DataSource;
 import java.time.Duration;
@@ -28,9 +29,9 @@ import java.util.List;
  * lives in {@code DslRunStatsIntegrationTest}.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@Sql(scripts = {"classpath:db/migration/h2/V1__init.sql", "classpath:sql/truncate-dsl-tables.sql"})
 @TestPropertySource(properties = {
-    "dsl.worker.enabled=false",
-    "spring.flyway.enabled=true"
+    "dsl.worker.enabled=false"
 })
 class JdbcDslRunStatsTest {
 

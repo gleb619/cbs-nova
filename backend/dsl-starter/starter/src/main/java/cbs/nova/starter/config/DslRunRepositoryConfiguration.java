@@ -30,7 +30,6 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Map;
 
 import javax.sql.DataSource;
 
@@ -71,35 +70,6 @@ public class DslRunRepositoryConfiguration {
   @ConditionalOnBean(DataSource.class)
   public NamingStrategy dslRunNamingStrategy(DslRunPersistenceProperties properties) {
     return new DslRunNamingStrategy(properties);
-  }
-
-  @Bean
-  @ConditionalOnProperty(name = "spring.flyway.enabled", havingValue = "true")
-  @ConditionalOnBean(DataSource.class)
-  @ConditionalOnMissingBean(Flyway.class)
-  public Flyway flyway(DataSource dataSource) {
-    String partialWhere = resolvePartialWherePredicate(dataSource);
-    return Flyway.configure()
-            .dataSource(dataSource)
-            .locations("classpath:db/migration")
-            .placeholders(Map.of("partial_where", partialWhere))
-            .load();
-  }
-
-  private static String resolvePartialWherePredicate(DataSource dataSource) {
-    try (Connection connection = dataSource.getConnection()) {
-      String databaseName = connection.getMetaData().getDatabaseProductName().toLowerCase();
-      return databaseName.contains("postgresql") ? "WHERE finished_at IS NOT NULL" : "";
-    } catch (SQLException e) {
-      throw new IllegalStateException("Failed to detect database type for Flyway placeholder", e);
-    }
-  }
-
-  @Bean
-  @ConditionalOnProperty(name = "spring.flyway.enabled", havingValue = "true")
-  @ConditionalOnBean(Flyway.class)
-  public ApplicationRunner flywayInitializer(Flyway flyway) {
-    return args -> flyway.migrate();
   }
 
   @Bean

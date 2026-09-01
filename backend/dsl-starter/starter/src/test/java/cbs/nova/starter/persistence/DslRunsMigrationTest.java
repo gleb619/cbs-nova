@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.postgresql.Driver;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -24,14 +23,13 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @Testcontainers
 class DslRunsMigrationTest {
 
   @Container
-  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15");
+  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16");
 
   @DynamicPropertySource
   static void datasourceProperties(DynamicPropertyRegistry registry) {
@@ -45,13 +43,7 @@ class DslRunsMigrationTest {
   @BeforeAll
   static void applyMigrations() throws Exception {
     ResourceDatabasePopulator populator = new ResourceDatabasePopulator(
-            new ClassPathResource("db/migration/V1__create_dsl_runs.sql"),
-            new ClassPathResource("db/migration/V2__add_context_json.sql"),
-            new ClassPathResource("db/migration/V3__create_dsl_run_transactions.sql"),
-            new ClassPathResource("db/migration/V4__dsl_runs_indexes.sql"),
-            new ClassPathResource("db/migration/V5__dsl_runs_triggered_by.sql"),
-            new ClassPathResource("db/migration/V6__dsl_runs_correlation_id.sql"),
-            substitutedV7Resource());
+            new ClassPathResource("db/migration/postgres/V1__init.sql"));
     populator.setContinueOnError(false);
 
     SimpleDriverDataSource dataSource = new SimpleDriverDataSource();
@@ -271,11 +263,4 @@ class DslRunsMigrationTest {
     jdbcTemplate.batchUpdate(sql, runningBatch);
   }
 
-  private static Resource substitutedV7Resource() throws Exception {
-    ClassPathResource original = new ClassPathResource(
-            "db/migration/V7__dsl_runs_finished_at_index.sql");
-    String sql = new String(original.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
-            .replace("${partial_where}", "WHERE finished_at IS NOT NULL");
-    return new ByteArrayResource(sql.getBytes(StandardCharsets.UTF_8));
-  }
 }
