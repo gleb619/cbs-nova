@@ -661,3 +661,104 @@ the router level.
 Runs launched by a schedule currently execute the workflow directly and are visible in the Temporal
 UI, but do **not** yet appear in `/api/executions` (`dsl_runs` history integration). History
 attribution with `triggeredBy=schedule` is a planned follow-up.
+
+## Run-completion webhooks
+
+Opt-in webhooks fire when a DSL run reaches a terminal `COMPLETED` or `FAILED` state. When no
+subscriptions are configured the feature is completely disabled and adds no work to the run path.
+
+### Configuration
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `cbs.nova.dsl.webhooks.enabled` | `false` | Master toggle. When `false` the dispatcher returns immediately on every run completion. |
+| `cbs.nova.dsl.webhooks.subscriptions` | `[]` | List of subscriptions. Each subscription has `definition-pattern` (glob/exact match on the process name, `*` matches all), `url`, optional `secret`, and optional `statuses`. |
+| `cbs.nova.dsl.webhooks.max-retries` | `3` | Maximum delivery attempts per subscription for a single run event. |
+| `cbs.nova.dsl.webhooks.timeout` | `PT5S` | Connect + request timeout passed to the JDK `HttpClient`. |
+| `cbs.nova.dsl.webhooks.retry-backoff` | `PT2S` | Base backoff between retries; actual sleep is `retry-backoff * attempt`. |
+| `cbs.nova.dsl.webhooks.allow-plain-http` | `false` | When `false` only `https` URLs are accepted; `http` URLs are logged and recorded as rejected. |
+
+Example `application.yml`:
+
+```yaml
+cbs:
+  nova:
+    dsl:
+      webhooks:
+        enabled: true
+        max-retries: 3
+        timeout: PT5S
+        retry-backoff: PT2S
+        subscriptions:
+          - definition-pattern: "orders-*"
+            url: "https://partner.example.com/webhooks/nova"
+            secret: "${WEBHOOK_SECRET}"
+            statuses:
+              - FAILED
+          - definition-pattern: "*"
+            url: "https://audit.example.com/webhooks/nova"
+            secret: "${AUDIT_WEBHOOK_SECRET}"
+```
+
+### Payload schema
+
+The body is a JSON object with no input/output payloads (those may contain secrets):
+
+```json
+{
+  "event": "run.completed",
+  "runId": "<run-id>",
+  "definition": "<process-name>",
+  "status": "COMPLETED",
+  "startedAt": "2024-01-01T00:00:00Z",
+  "finishedAt": "2024-01-01T00:00:01Z",
+  "error": null
+}
+```
+
+`status` is either `COMPLETED` or `FAILED`; `error` is the run error message, or `null` on success.
+
+### Request headers
+
+Every webhook request includes:
+
+- `Content-Type: application/json`
+- `X-Cbs-Event: run.completed`
+- `X-Cbs-Timestamp: <epoch-seconds>`
+- `X-Cbs-Signature: sha256=<hex>` when the subscription has a `secret`
+
+The signature is `HMAC-SHA256(secret, requestBody)` using UTF-8 for both key and body, formatted as
+lowercase hex.
+
+### Signature verification recipe
+
+```python
+import hmac, hashlib
+expected = "sha256=" + hmac.new(secret.encode("utf-8"), body.encode("utf-8"),
+                                  hashlib.sha256).hexdigest()
+if not hmac.compare_digest(expected, request.headers["X-Cbs-Signature"]):
+    raise Unauthorized()
+```
+
+### Retry semantics
+
+Delivery happens on a separate, bounded executor and does not block the DSL run completion path.
+The dispatcher retries on:
+
+- `IOException` / timeout
+- HTTP `5xx`
+- HTTP `429 Too Many Requests`
+
+It does **not** retry on other `4xx` responses (e.g., `400` or `404`). The maximum number of attempts
+is `max-retries`, with `retry-backoff * attempt` sleep between attempts on the delivery thread only.
+
+### Diagnostics
+
+The last outcome per subscription is kept in memory and exposed at:
+
+```
+GET /api/webhooks/deliveries
+```
+
+Response is a JSON array with one entry per subscription (`url`, `definitionPattern`, `lastStatus`,
+`lastAttempts`, `lastError`, `lastDeliveredAt`).

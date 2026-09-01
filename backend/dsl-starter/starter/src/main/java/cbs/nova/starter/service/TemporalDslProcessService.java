@@ -10,6 +10,7 @@ import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.starter.service.DslRunCancellationService.Outcome;
+import cbs.nova.starter.webhook.WebhookDispatcher;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.opentelemetry.api.OpenTelemetry;
@@ -84,6 +85,8 @@ public class TemporalDslProcessService {
   private final MeterRegistry meterRegistry;
   private final RunIdentityResolver runIdentityResolver;
 
+  private final @Nullable WebhookDispatcher webhookDispatcher;
+
   public TemporalDslProcessService(ContextFactory contextFactory, DslRunRepository runRepository,
           ObjectMapper objectMapper,
           ThreadPoolTaskExecutor dslProcessExecutor, ScheduledExecutorService healthcheckExecutor,
@@ -91,7 +94,7 @@ public class TemporalDslProcessService {
           MeterRegistry meterRegistry, RunIdentityResolver runIdentityResolver) {
     this(contextFactory, runRepository, objectMapper, dslProcessExecutor, healthcheckExecutor,
             healthcheckInterval, staleThreshold, asyncDbSave, Long.MAX_VALUE, meterRegistry,
-            runIdentityResolver);
+            runIdentityResolver, null);
   }
 
   public TemporalDslProcessService(ContextFactory contextFactory, DslRunRepository runRepository,
@@ -100,6 +103,18 @@ public class TemporalDslProcessService {
           Duration healthcheckInterval, Duration staleThreshold, boolean asyncDbSave,
           long maxOutputBytes, MeterRegistry meterRegistry,
           RunIdentityResolver runIdentityResolver) {
+    this(contextFactory, runRepository, objectMapper, dslProcessExecutor, healthcheckExecutor,
+            healthcheckInterval, staleThreshold, asyncDbSave, maxOutputBytes, meterRegistry,
+            runIdentityResolver, null);
+  }
+
+  public TemporalDslProcessService(ContextFactory contextFactory, DslRunRepository runRepository,
+          ObjectMapper objectMapper,
+          ThreadPoolTaskExecutor dslProcessExecutor, ScheduledExecutorService healthcheckExecutor,
+          Duration healthcheckInterval, Duration staleThreshold, boolean asyncDbSave,
+          long maxOutputBytes, MeterRegistry meterRegistry,
+          RunIdentityResolver runIdentityResolver,
+          @Nullable WebhookDispatcher webhookDispatcher) {
     this.contextFactory = contextFactory;
     this.runRepository = runRepository;
     this.objectMapper = objectMapper;
@@ -111,6 +126,7 @@ public class TemporalDslProcessService {
     this.maxOutputBytes = maxOutputBytes;
     this.meterRegistry = meterRegistry;
     this.runIdentityResolver = runIdentityResolver;
+    this.webhookDispatcher = webhookDispatcher;
   }
 
   private static final Duration SHUTDOWN_JOIN = Duration.ofSeconds(5);
@@ -443,6 +459,11 @@ public class TemporalDslProcessService {
       });
 
       recordRunComplete(processName, status, startedAt, finishedAt);
+
+      if (webhookDispatcher != null) {
+        webhookDispatcher.onRunComplete(runId, processName, status, startedAt, finishedAt,
+                finalError);
+      }
 
       return result;
     } finally {

@@ -1,6 +1,7 @@
 package cbs.nova.starter.config;
 
 import cbs.nova.starter.config.properties.CbsHealthProperties;
+import cbs.nova.starter.webhook.WebhookConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -24,6 +25,7 @@ import org.springframework.context.annotation.Import;
     MessagingCallCaptureConfiguration.class,
     PreviewMetricsConfiguration.class,
     DslRouterConfiguration.class,
+    WebhookConfiguration.class,
     DslRunRetentionConfiguration.class,
     DslRunReconciliationConfiguration.class,
     DslErrorHandlingConfiguration.class,
