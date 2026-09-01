@@ -335,4 +335,17 @@ describe('useDslWorkbench', () => {
       ])
     })
   })
+
+  describe('markClean', () => {
+    it('clears isDirty without calling the backend', () => {
+      const wb = useDslWorkbench()
+      wb.markDirty()
+      expect(wb.state.value.isDirty).toBe(true)
+
+      wb.markClean()
+
+      expect(wb.state.value.isDirty).toBe(false)
+      expect(dslApi.saveDraft).not.toHaveBeenCalled()
+    })
+  })
 })

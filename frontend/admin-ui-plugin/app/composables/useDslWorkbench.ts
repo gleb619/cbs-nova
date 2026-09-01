@@ -212,6 +212,11 @@ export function useDslWorkbench() {
     state.value.isDirty = true
   }
 
+  function markClean() {
+    state.value.isDirty = false
+    log.info('draft marked clean', { name: state.value.selectedName })
+  }
+
   async function reloadDefinitions() {
     log.info('reload definitions started')
     try {
@@ -239,6 +244,7 @@ export function useDslWorkbench() {
     publishConstruct,
     deleteConstruct,
     markDirty,
+    markClean,
     reloadDefinitions,
   }
 }

@@ -5,6 +5,23 @@ import DslWorkbench from '../dsl-workbench.vue'
 import { __getBeforeRouteLeaveGuard } from '../../../vitest.vue-router-stub'
 import { DSL_TEMPLATES } from '../../utils/dslTemplates'
 
+// Track every mounted page so we can tear down global window listeners
+// (e.g. the Ctrl+S handler from @vueuse/core useEventListener) between tests.
+const mountedWrappers: ReturnType<typeof mountPage>[] = []
+
+afterEach(() => {
+  // Unmount in reverse order to avoid stale listeners interfering with later tests.
+  while (mountedWrappers.length) {
+    const wrapper = mountedWrappers.pop()
+    try {
+      wrapper.unmount()
+    } catch {
+      /* already unmounted */
+    }
+  }
+  document.body.innerHTML = ''
+})
+
 // ---------------------------------------------------------------------------
 // Mocks for composables imported by the page
 // ---------------------------------------------------------------------------
@@ -37,6 +54,7 @@ interface WorkbenchApiShape {
   deleteConstruct: ReturnType<typeof vi.fn>
   reloadDefinitions: ReturnType<typeof vi.fn>
   markDirty: ReturnType<typeof vi.fn>
+  markClean: ReturnType<typeof vi.fn>
 }
 
 const { dslApi, useDslApiMock, useDslWorkbenchMock } = vi.hoisted(() => {
@@ -76,7 +94,23 @@ const { dslApi, useDslApiMock, useDslWorkbenchMock } = vi.hoisted(() => {
 
 const harness: WorkbenchApiShape = (() => {
   const vue = require('vue') as typeof import('vue')
-  const state = vue.reactive<WorkbenchStateShape>({
+
+  function createRefLikeReactive<T extends object>(target: T): T & { value: T } {
+    const reactiveTarget = vue.reactive(target)
+    return new Proxy(reactiveTarget, {
+      get(t, key) {
+        if (key === 'value') return t
+        return t[key as keyof T]
+      },
+      set(t, key, value) {
+        if (key === 'value') return true
+        t[key as keyof T] = value
+        return true
+      },
+    }) as T & { value: T }
+  }
+
+  const state = createRefLikeReactive<WorkbenchStateShape>({
     constructs: [],
     selectedName: null,
     validationErrors: [],
@@ -128,6 +162,9 @@ const harness: WorkbenchApiShape = (() => {
     reloadDefinitions: vi.fn(async () => undefined),
     markDirty: vi.fn(() => {
       state.isDirty = true
+    }),
+    markClean: vi.fn(() => {
+      state.isDirty = false
     }),
   }
 })()
@@ -199,27 +236,50 @@ const makeStub = (testId: string) =>
     },
   })
 
+const makeConstructExplorerStub = () =>
+  defineComponent({
+    name: 'ConstructExplorer',
+    props: ['constructs', 'selectedName', 'loading', 'collapsed'],
+    emits: ['select', 'update:collapsed'],
+    setup(props, { slots, emit }) {
+      return () =>
+        h(
+          'div',
+          { 'data-testid': 'ConstructExplorer' },
+          slots.default
+            ? slots.default({
+                constructs: props.constructs ?? [],
+                selectedName: props.selectedName ?? null,
+                onSelect: (name: string) => emit('select', name),
+              })
+            : [],
+        )
+    },
+  })
+
 const componentStubs = {
   DropdownMenu: makeStub('DropdownMenu'),
-  DslBodyEditor: makeStub('BodyEditor'),
-  DslConstructExplorer: makeStub('ConstructExplorer'),
-  DslDeleteDraftConfirmationModal: makeStub('DeleteDraftConfirmationModal'),
-  DslDraftRestoreBanner: makeStub('DraftRestoreBanner'),
-  DslHelperCatalog: makeStub('HelperCatalog'),
-  DslHelperSearchPanel: makeStub('HelperSearchPanel'),
-  DslMetadataPanel: makeStub('MetadataPanel'),
-  DslPlainConstructList: makeStub('PlainConstructList'),
-  DslProblemsPanel: makeStub('ProblemsPanel'),
-  DslScheduleList: makeStub('DslScheduleList'),
+  BodyEditor: makeStub('BodyEditor'),
+  ConstructExplorer: makeConstructExplorerStub(),
+  DeleteDraftConfirmationModal: makeStub('DeleteDraftConfirmationModal'),
+  DraftRestoreBanner: makeStub('DraftRestoreBanner'),
+  HelperCatalog: makeStub('HelperCatalog'),
+  HelperSearchPanel: makeStub('HelperSearchPanel'),
+  MetadataPanel: makeStub('MetadataPanel'),
+  PlainConstructList: makeStub('PlainConstructList'),
+  ProblemsPanel: makeStub('ProblemsPanel'),
+  ScheduleList: makeStub('ScheduleList'),
   DslTemplateGallery: makeStub('DslTemplateGallery'),
   ErrorBanner: makeStub('ErrorBanner'),
 }
 
 function mountPage() {
-  return mount(DslWorkbench, {
+  const wrapper = mount(DslWorkbench, {
     global: { stubs: componentStubs },
     attachTo: document.body,
   })
+  mountedWrappers.push(wrapper)
+  return wrapper
 }
 
 // ---------------------------------------------------------------------------
@@ -611,5 +671,257 @@ describe('dsl-workbench.vue new definition flow', () => {
 
     expect(wrapper.find('[data-testid="workbench-new-name"]').exists()).toBe(false)
     expect(harness.createConstruct).not.toHaveBeenCalled()
+  })
+})
+
+describe('dsl-workbench.vue save-status pill and Ctrl+S', () => {
+  beforeEach(() => {
+    harness.state.constructs = []
+    harness.state.selectedName = null
+    harness.state.validationErrors = []
+    harness.state.isDirty = false
+    harness.state.isSaving = false
+    harness.state.isLoading = false
+    harness.selectedConstruct.value = null
+    harness.loaders.constructs.value = false
+    harness.createConstruct.mockClear()
+    harness.markDirty.mockClear()
+    harness.saveConstruct.mockClear()
+    useDslWorkbenchMock.mockClear()
+    dslApi.searchObjects.mockReset()
+    dslApi.searchObjects.mockResolvedValue([])
+    dslApi.listDrafts.mockReset()
+    dslApi.listDrafts.mockResolvedValue([])
+    dslApi.listHelpers.mockReset()
+    dslApi.listHelpers.mockResolvedValue({ names: [], helpers: [] })
+    dslApi.listSchedules.mockReset()
+    dslApi.listSchedules.mockResolvedValue([])
+    dslApi.createSchedule.mockReset()
+    dslApi.createSchedule.mockResolvedValue({})
+    dslApi.deleteSchedule.mockReset()
+    dslApi.deleteSchedule.mockResolvedValue({})
+  })
+
+  function findStatus(wrapper: ReturnType<typeof mountPage>) {
+    return wrapper.find('[data-testid="draft-save-status"]')
+  }
+
+  it('shows "Unsaved changes" when the draft is dirty', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(findStatus(wrapper).exists()).toBe(false)
+
+    harness.markDirty()
+    await nextTick()
+
+    const status = findStatus(wrapper)
+    expect(status.exists()).toBe(true)
+    expect(status.text()).toContain('Unsaved changes')
+    expect(status.classes()).toEqual(expect.arrayContaining(['bg-amber-50']))
+  })
+
+  it('shows the saving state while saveConstruct is in flight', async () => {
+    let resolveSave: (() => void) | null = null
+    harness.saveConstruct.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveSave = resolve
+        }),
+    )
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    harness.markDirty()
+    await nextTick()
+
+    // Trigger save through the Actions menu.
+    const dropdown = wrapper.findComponent({ name: 'DropdownMenu' })
+    await dropdown.vm.$emit('select', { value: 'save' })
+    await nextTick()
+
+    const status = findStatus(wrapper)
+    expect(status.exists()).toBe(true)
+    expect(status.text()).toContain('Saving')
+
+    resolveSave?.()
+    await flushPromises()
+
+    expect(status.text()).toContain('Saved')
+    expect(status.text()).toMatch(/Saved (just now|\ds ago)/)
+    expect(status.classes()).toEqual(expect.arrayContaining(['bg-green-50']))
+  })
+
+  it('shows the error state with a retry button when save fails', async () => {
+    harness.saveConstruct.mockRejectedValueOnce(new Error('server error'))
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    harness.markDirty()
+    await nextTick()
+
+    const dropdown = wrapper.findComponent({ name: 'DropdownMenu' })
+    await dropdown.vm.$emit('select', { value: 'save' })
+    await flushPromises()
+
+    const status = findStatus(wrapper)
+    expect(status.exists()).toBe(true)
+    expect(status.text()).toContain('Save failed')
+    expect(status.classes()).toEqual(expect.arrayContaining(['bg-red-50']))
+
+    const retry = status.find('[data-testid="draft-save-retry"]')
+    expect(retry.exists()).toBe(true)
+  })
+
+  it('retry button re-attempts saving', async () => {
+    let resolveRetry: (() => void) | null = null
+    harness.saveConstruct
+      .mockRejectedValueOnce(new Error('server error'))
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveRetry = resolve
+          }),
+      )
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    harness.markDirty()
+    const dropdown = wrapper.findComponent({ name: 'DropdownMenu' })
+    await dropdown.vm.$emit('select', { value: 'save' })
+    await flushPromises()
+
+    const status = findStatus(wrapper)
+    expect(status.text()).toContain('Save failed')
+
+    const retry = status.find('[data-testid="draft-save-retry"]')
+    await retry.trigger('click')
+    await nextTick()
+
+    expect(status.text()).toContain('Saving')
+    expect(harness.saveConstruct).toHaveBeenCalledTimes(2)
+
+    resolveRetry?.()
+    await flushPromises()
+
+    expect(status.text()).toContain('Saved')
+  })
+
+  it('fires save on Ctrl+S when dirty', async () => {
+    const _wrapper = mountPage()
+    await flushPromises()
+
+    harness.markDirty()
+    await nextTick()
+
+    const event = new KeyboardEvent('keydown', {
+      key: 's',
+      ctrlKey: true,
+      bubbles: true,
+    })
+    window.dispatchEvent(event)
+    await flushPromises()
+
+    expect(harness.saveConstruct).toHaveBeenCalled()
+  })
+
+  it('fires save on Cmd+S when dirty', async () => {
+    const _wrapper = mountPage()
+    await flushPromises()
+
+    harness.markDirty()
+    await nextTick()
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'S',
+      metaKey: true,
+      bubbles: true,
+    })
+    window.dispatchEvent(event)
+    await flushPromises()
+
+    expect(harness.saveConstruct).toHaveBeenCalled()
+  })
+
+  it('does not fire save on Ctrl+S when clean', async () => {
+    const _wrapper = mountPage()
+    await flushPromises()
+
+    const event = new KeyboardEvent('keydown', {
+      key: 's',
+      ctrlKey: true,
+      bubbles: true,
+    })
+    window.dispatchEvent(event)
+    await flushPromises()
+
+    expect(harness.saveConstruct).not.toHaveBeenCalled()
+  })
+
+  it('does not fire save on Ctrl+S when the new-definition modal is open', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    await wrapper.find('[data-testid="workbench-new-definition"]').trigger('click')
+    await nextTick()
+
+    harness.markDirty()
+    await nextTick()
+
+    const event = new KeyboardEvent('keydown', {
+      key: 's',
+      ctrlKey: true,
+      bubbles: true,
+    })
+    window.dispatchEvent(event)
+    await flushPromises()
+
+    expect(harness.saveConstruct).not.toHaveBeenCalled()
+  })
+
+  it('does not fire save on Ctrl+S when the delete confirmation modal is open', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    // Open the delete modal by emitting delete from the construct list inside the explorer.
+    const plainList = wrapper.findComponent({ name: 'PlainConstructList' })
+    await plainList.vm.$emit('delete', 'c1')
+    await nextTick()
+
+    harness.markDirty()
+    await nextTick()
+
+    const event = new KeyboardEvent('keydown', {
+      key: 's',
+      ctrlKey: true,
+      bubbles: true,
+    })
+    window.dispatchEvent(event)
+    await flushPromises()
+
+    expect(harness.saveConstruct).not.toHaveBeenCalled()
+  })
+
+  it('does not fire save when the event is already defaultPrevented', async () => {
+    const _wrapper = mountPage()
+    await flushPromises()
+
+    harness.markDirty()
+    await nextTick()
+
+    const event = new KeyboardEvent('keydown', {
+      key: 's',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    event.preventDefault()
+    window.dispatchEvent(event)
+    await flushPromises()
+
+    expect(harness.saveConstruct).not.toHaveBeenCalled()
   })
 })
