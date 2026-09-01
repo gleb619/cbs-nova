@@ -125,6 +125,9 @@ class AdvancedDslExamplesTest {
       if (helperClass == UuidV7Helper.class) {
         return new UuidV7Helper();
       }
+      if (helperClass == Base64Helper.class) {
+        return new Base64Helper();
+      }
 
       throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
     };
