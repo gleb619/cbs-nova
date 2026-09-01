@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick } from 'vue'
 import DslWorkbench from '../dsl-workbench.vue'
 import { __getBeforeRouteLeaveGuard } from '../../../vitest.vue-router-stub'
+import { DSL_TEMPLATES } from '../../utils/dslTemplates'
 
 // ---------------------------------------------------------------------------
 // Mocks for composables imported by the page
@@ -29,6 +30,7 @@ interface WorkbenchApiShape {
   loaders: { constructs: { value: boolean } }
   loadConstructs: ReturnType<typeof vi.fn>
   selectConstruct: ReturnType<typeof vi.fn>
+  createConstruct: ReturnType<typeof vi.fn>
   saveConstruct: ReturnType<typeof vi.fn>
   validateConstruct: ReturnType<typeof vi.fn>
   publishConstruct: ReturnType<typeof vi.fn>
@@ -56,9 +58,6 @@ const { dslApi, useDslApiMock, useDslWorkbenchMock } = vi.hoisted(() => {
     deleteSchedule: vi.fn(),
     readDraft: vi.fn(),
   }
-  // `useDslWorkbenchMock` reads the harness lazily from globalThis so the
-  // vi.hoisted callback can capture this mock even though the reactive
-  // harness is constructed later (after the hoisted block runs).
   const useDslWorkbenchMockFn = vi.fn(() => {
     const harness = (
       globalThis as unknown as { __dslWorkbenchHarness?: WorkbenchApiShape }
@@ -108,6 +107,18 @@ const harness: WorkbenchApiShape = (() => {
       selectedConstructRef.value =
         state.constructs.find((c) => c.name === name) ?? null
     }),
+    createConstruct: vi.fn((name: string, type?: string) => {
+      const newConstruct: ConstructRow = {
+        name,
+        type: type ?? 'Helper',
+        status: 'Draft',
+      }
+      state.constructs = [...state.constructs, newConstruct]
+      state.selectedName = name
+      state.validationErrors = []
+      state.isDirty = false
+      selectedConstructRef.value = newConstruct
+    }),
     saveConstruct: vi.fn(async () => {
       state.isDirty = false
     }),
@@ -124,9 +135,6 @@ const harness: WorkbenchApiShape = (() => {
 ;(globalThis as unknown as { __dslWorkbenchHarness?: WorkbenchApiShape }).__dslWorkbenchHarness =
   harness
 
-// vi.mock factories are hoisted; their closures reference the symbols above
-// which vi.hoisted captured. The factories run when the SUT first imports
-// the mocked modules, at which point all module-level state is defined.
 vi.mock('@cbs/admin-ui-plugin/composables/useDslApi', () => ({
   useDslApi: useDslApiMock,
 }))
@@ -141,13 +149,6 @@ vi.mock('@cbs/admin-ui-plugin/composables/useDslWorkbench', () => ({
 // drive the page's script-level behavior (lifecycle, guards, emit wiring).
 // ---------------------------------------------------------------------------
 
-// Each stub receives the props the page passes and emits any event the page
-// listens for, so the page can mount and react to user input without dragging
-// in the full @cbs/components SFC graph. The Vue warn about `loading` being
-// passed an object instead of a boolean comes from Vue's prop validator on
-// the auto-derived stub props; it does not change behaviour and the tests
-// assert on outcomes (DOM, mounted listeners, mock calls) rather than the
-// warning stream.
 const makeStub = (testId: string) =>
   defineComponent({
     name: testId,
@@ -172,6 +173,7 @@ const makeStub = (testId: string) =>
       'busy',
       'savedAt',
       'errors',
+      'templates',
     ],
     emits: [
       'create',
@@ -209,6 +211,7 @@ const componentStubs = {
   DslPlainConstructList: makeStub('PlainConstructList'),
   DslProblemsPanel: makeStub('ProblemsPanel'),
   DslScheduleList: makeStub('DslScheduleList'),
+  DslTemplateGallery: makeStub('DslTemplateGallery'),
   ErrorBanner: makeStub('ErrorBanner'),
 }
 
@@ -229,8 +232,6 @@ describe('dsl-workbench.vue unsaved-changes guard', () => {
   let confirmSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
-    // Reset the shared workbench state between tests so the markDirty() spy
-    // and the captured selectConstruct calls do not bleed across specs.
     harness.state.constructs = []
     harness.state.selectedName = null
     harness.state.validationErrors = []
@@ -443,5 +444,172 @@ describe('dsl-workbench.vue draft picker', () => {
     expect(picker.exists()).toBe(true)
     expect(wrapper.findAll('[data-testid="dsl-draft-picker-item"]')).toHaveLength(0)
     expect(picker.text()).toContain('No saved drafts yet.')
+  })
+})
+
+describe('dsl-workbench.vue new definition flow', () => {
+  beforeEach(() => {
+    harness.state.constructs = []
+    harness.state.selectedName = null
+    harness.state.validationErrors = []
+    harness.state.isDirty = false
+    harness.state.isSaving = false
+    harness.state.isLoading = false
+    harness.selectedConstruct.value = null
+    harness.loaders.constructs.value = false
+    harness.createConstruct.mockClear()
+    harness.markDirty.mockClear()
+    useDslWorkbenchMock.mockClear()
+    dslApi.searchObjects.mockReset()
+    dslApi.searchObjects.mockResolvedValue([])
+    dslApi.listDrafts.mockReset()
+    dslApi.listDrafts.mockResolvedValue([])
+    dslApi.listHelpers.mockReset()
+    dslApi.listHelpers.mockResolvedValue({ names: [], helpers: [] })
+    dslApi.listSchedules.mockReset()
+    dslApi.listSchedules.mockResolvedValue([])
+    dslApi.createSchedule.mockReset()
+    dslApi.createSchedule.mockResolvedValue({})
+    dslApi.deleteSchedule.mockReset()
+    dslApi.deleteSchedule.mockResolvedValue({})
+  })
+
+  it('opens the new-definition panel when the New button is clicked', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="workbench-new-definition"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="DslTemplateGallery"]').exists()).toBe(false)
+
+    await wrapper.find('[data-testid="workbench-new-definition"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="workbench-new-name"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="DslTemplateGallery"]').exists()).toBe(true)
+  })
+
+  it('picking a template + valid name creates the construct and marks dirty', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    await wrapper.find('[data-testid="workbench-new-definition"]').trigger('click')
+    await nextTick()
+
+    const gallery = wrapper.findComponent({ name: 'DslTemplateGallery' })
+    await gallery.vm.$emit('select', DSL_TEMPLATES[0])
+    await nextTick()
+
+    const input = wrapper.find('[data-testid="workbench-new-name"]')
+    await input.setValue('NewProcess')
+    await nextTick()
+
+    await wrapper.find('[data-testid="workbench-new-create"]').trigger('click')
+    await nextTick()
+
+    expect(harness.createConstruct).toHaveBeenCalledWith('NewProcess', 'Process')
+    expect(harness.markDirty).toHaveBeenCalled()
+    expect(wrapper.find('[data-testid="workbench-dirty-indicator"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="workbench-new-name-error"]').exists()).toBe(false)
+
+    const editor = wrapper.findComponent({ name: 'BodyEditor' })
+    expect(editor.props('code')).toBe(DSL_TEMPLATES[0].body)
+  })
+
+  it('shows an inline error for an invalid name and blocks creation', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    await wrapper.find('[data-testid="workbench-new-definition"]').trigger('click')
+    await nextTick()
+
+    const gallery = wrapper.findComponent({ name: 'DslTemplateGallery' })
+    await gallery.vm.$emit('select', DSL_TEMPLATES[0])
+    await nextTick()
+
+    const input = wrapper.find('[data-testid="workbench-new-name"]')
+    await input.setValue('bad name!')
+    await nextTick()
+
+    const error = wrapper.find('[data-testid="workbench-new-name-error"]')
+    expect(error.exists()).toBe(true)
+    expect(error.text()).toContain('letters, numbers, dots, dashes and underscores')
+
+    const create = wrapper.find('[data-testid="workbench-new-create"]')
+    expect(create.attributes('disabled')).toBeDefined()
+    await create.trigger('click')
+
+    expect(harness.createConstruct).not.toHaveBeenCalled()
+    expect(harness.markDirty).not.toHaveBeenCalled()
+  })
+
+  it('shows a collision error when the name matches an existing construct', async () => {
+    harness.state.constructs = [{ name: 'ExistingOne', type: 'Process', status: 'Draft' }]
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    await wrapper.find('[data-testid="workbench-new-definition"]').trigger('click')
+    await nextTick()
+
+    const gallery = wrapper.findComponent({ name: 'DslTemplateGallery' })
+    await gallery.vm.$emit('select', DSL_TEMPLATES[0])
+    await nextTick()
+
+    const input = wrapper.find('[data-testid="workbench-new-name"]')
+    await input.setValue('ExistingOne')
+    await nextTick()
+
+    const error = wrapper.find('[data-testid="workbench-new-name-error"]')
+    expect(error.exists()).toBe(true)
+    expect(error.text()).toContain('already exists')
+
+    const create = wrapper.find('[data-testid="workbench-new-create"]')
+    expect(create.attributes('disabled')).toBeDefined()
+    await create.trigger('click')
+
+    expect(harness.createConstruct).not.toHaveBeenCalled()
+  })
+
+  it('shows a collision error when the name matches an existing draft', async () => {
+    dslApi.listDrafts.mockResolvedValueOnce([
+      { name: 'DraftOne', type: 'Process', status: 'Draft', updatedAt: 1 },
+    ])
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    await wrapper.find('[data-testid="workbench-new-definition"]').trigger('click')
+    await nextTick()
+
+    const gallery = wrapper.findComponent({ name: 'DslTemplateGallery' })
+    await gallery.vm.$emit('select', DSL_TEMPLATES[0])
+    await nextTick()
+
+    const input = wrapper.find('[data-testid="workbench-new-name"]')
+    await input.setValue('DraftOne')
+    await nextTick()
+
+    const error = wrapper.find('[data-testid="workbench-new-name-error"]')
+    expect(error.exists()).toBe(true)
+    expect(error.text()).toContain('already exists')
+
+    const create = wrapper.find('[data-testid="workbench-new-create"]')
+    expect(create.attributes('disabled')).toBeDefined()
+  })
+
+  it('closes the panel on cancel without creating anything', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    await wrapper.find('[data-testid="workbench-new-definition"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="workbench-new-name"]').exists()).toBe(true)
+
+    await wrapper.find('[data-testid="workbench-new-cancel"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="workbench-new-name"]').exists()).toBe(false)
+    expect(harness.createConstruct).not.toHaveBeenCalled()
   })
 })

@@ -97,6 +97,25 @@ export function useDslWorkbench() {
     log.info('construct selected', { name })
   }
 
+  function createConstruct(name: string, type?: ConstructType) {
+    const normalizedType = type ?? 'Helper'
+    const existing = state.value.constructs.find((c) => c.name === name)
+    if (existing) {
+      selectConstruct(name)
+      return
+    }
+    const newConstruct: DslConstruct = {
+      name,
+      type: normalizedType,
+      status: 'Draft',
+    }
+    state.value.constructs = [...state.value.constructs, newConstruct]
+    state.value.selectedName = name
+    state.value.validationErrors = []
+    state.value.isDirty = false
+    log.info('construct created', { name, type: normalizedType })
+  }
+
   async function validateConstruct() {
     if (!state.value.selectedName) {
       log.warn('validate called with no selection')
@@ -214,6 +233,7 @@ export function useDslWorkbench() {
     loaders: readonly({ constructs: constructsLoading }),
     loadConstructs,
     selectConstruct,
+    createConstruct,
     saveConstruct,
     validateConstruct,
     publishConstruct,

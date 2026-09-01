@@ -100,3 +100,5 @@ would fail with a `ClassCastException`.
   will not be produced for files that fail to compile.
 - The integration test resets `GlobalManager` before each run so tests do not share state
   between executions.
+
+The Workbench 'New definition' dialog ships starter templates (plain process, saga, http pipeline, retry policy).
