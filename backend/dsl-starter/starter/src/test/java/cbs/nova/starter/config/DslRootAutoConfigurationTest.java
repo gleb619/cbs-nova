@@ -1,5 +1,7 @@
 package cbs.nova.starter.config;
 
+import cbs.nova.starter.webhook.WebhookConfiguration;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
@@ -36,6 +38,7 @@ class DslRootAutoConfigurationTest {
             MessagingCallCaptureConfiguration.class,
             PreviewMetricsConfiguration.class,
             DslRouterConfiguration.class,
+            WebhookConfiguration.class,
             DslErrorHandlingConfiguration.class,
             SpringHelperConfiguration.class,
             ApiKeyAuthFilterConfiguration.class,

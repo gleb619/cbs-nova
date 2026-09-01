@@ -29,6 +29,7 @@ import cbs.nova.starter.service.TemporalDslProcessLauncher;
 import cbs.nova.starter.service.TemporalDslProcessService;
 import cbs.nova.starter.service.RunIdentityResolver;
 import cbs.nova.starter.service.TemporalDslService;
+import cbs.nova.starter.webhook.WebhookDispatcher;
 import cbs.nova.starter.service.TemporalHealthProbe;
 import cbs.nova.starter.service.TemporalTransactionInvoker;
 import cbs.nova.starter.tracing.OpenTelemetryContextPropagator;
@@ -334,14 +335,16 @@ public class TemporalConfiguration {
           DslRunsProperties dslRunsProperties,
           OpenTelemetry openTelemetry,
           MeterRegistry meterRegistry,
-          RunIdentityResolver runIdentityResolver) {
+          RunIdentityResolver runIdentityResolver,
+          @org.springframework.beans.factory.annotation.Autowired(required = false) WebhookDispatcher webhookDispatcher) {
     TemporalDslProcessService service = new TemporalDslProcessService(contextFactory, runRepository,
             JsonMapper.builder().build(),
             dslProcessExecutor, healthcheckExecutor,
             healthcheckInterval, staleThreshold, asyncDbSave,
             dslRunsProperties.getMaxOutputBytes(),
             meterRegistry,
-            runIdentityResolver);
+            runIdentityResolver,
+            webhookDispatcher);
     service.setOpenTelemetry(openTelemetry);
     return service;
   }
