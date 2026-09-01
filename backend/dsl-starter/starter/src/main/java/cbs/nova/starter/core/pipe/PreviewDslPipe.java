@@ -59,7 +59,7 @@ public final class PreviewDslPipe implements DslExecutionPipe<PreviewReport> {
             .stage(new ExternalCallRecordingStage(recorder))
             .stage(new DispatchStage(contextFactory, fakeInterceptor,
                     Duration.ofMillis(previewProperties.execution().timeoutMs()), executor,
-                    meterRegistry))
+                    meterRegistry, dryRunLoggingContext))
             .build()
             .execute(name, ctx);
   }

@@ -57,7 +57,7 @@ public final class ExplainDslPipe implements DslExecutionPipe<ExplainReport> {
             .stage(new ExternalCallRecordingStage(recorder))
             .stage(new DispatchStage(contextFactory, fakeInterceptor,
                     Duration.ofMillis(previewProperties.execution().timeoutMs()), executor,
-                    meterRegistry))
+                    meterRegistry, dryRunLoggingContext))
             .build()
             .execute(name, ctx);
   }

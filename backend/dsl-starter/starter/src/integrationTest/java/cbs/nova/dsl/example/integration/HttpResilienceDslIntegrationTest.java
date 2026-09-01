@@ -61,7 +61,7 @@ class HttpResilienceDslIntegrationTest {
   private static final String TASK_QUEUE = "http-resilience-queue";
   private static final DockerImageName TEMPORAL_IMAGE = DockerImageName
           .parse("temporalio/auto-setup:1.25.2");
-  private static final DockerImageName POSTGRES_IMAGE = DockerImageName.parse("postgres:15");
+  private static final DockerImageName POSTGRES_IMAGE = DockerImageName.parse("postgres:16");
 
   private static final Network NETWORK = Network.newNetwork();
 

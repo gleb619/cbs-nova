@@ -149,7 +149,7 @@ class DslRunRepositoryIntegrationTest {
   void searchFiltersByProcessName() {
     Instant t = Instant.parse("2026-08-13T10:00:00Z");
     repository.save(run("run-1", "LoanDisbursement", DslRunStatus.COMPLETED.name(), t,
-            ExecutionMode.RUN.name()));
+            ExecutionMode.RUN.name(), "CORID"));
     repository.save(run("run-2", "CreditScoring", DslRunStatus.COMPLETED.name(), t,
             ExecutionMode.RUN.name()));
 
@@ -163,7 +163,7 @@ class DslRunRepositoryIntegrationTest {
   void searchFiltersByStatusCaseInsensitively() {
     Instant t = Instant.parse("2026-08-13T10:00:00Z");
     repository.save(run("run-1", "LoanDisbursement", DslRunStatus.COMPLETED.name(), t,
-            ExecutionMode.RUN.name()));
+            ExecutionMode.RUN.name(), "CORID"));
     repository.save(run("run-2", "LoanDisbursement", DslRunStatus.RUNNING.name(), t,
             ExecutionMode.RUN.name()));
 
@@ -190,13 +190,14 @@ class DslRunRepositoryIntegrationTest {
   void searchCombinesFilters() {
     Instant t = Instant.parse("2026-08-13T10:00:00Z");
     repository.save(run("run-1", "LoanDisbursement", DslRunStatus.COMPLETED.name(), t,
-            ExecutionMode.RUN.name()));
+            ExecutionMode.RUN.name(), "CORID"));
     repository.save(run("run-2", "LoanDisbursement", DslRunStatus.COMPLETED.name(), t,
             ExecutionMode.PREVIEW.name()));
     repository.save(run("run-3", "CreditScoring", DslRunStatus.COMPLETED.name(), t,
             ExecutionMode.RUN.name()));
 
-    DslRunSearchResult result = repository.search("LoanDisbursement", "COMPLETED", "RUN", "CORID", 0, 10);
+    DslRunSearchResult result = repository.search("LoanDisbursement", "COMPLETED", "RUN", "CORID",
+            0, 10);
 
     assertThat(result.total()).isEqualTo(1);
     assertThat(result.items().get(0).runId()).isEqualTo("run-1");
@@ -234,7 +235,7 @@ class DslRunRepositoryIntegrationTest {
   void searchOffsetBeyondTotalReturnsEmptyItemsWithTotal() {
     Instant t = Instant.parse("2026-08-13T10:00:00Z");
     repository.save(run("run-1", "LoanDisbursement", DslRunStatus.COMPLETED.name(), t,
-            ExecutionMode.RUN.name()));
+            ExecutionMode.RUN.name(), "CORID"));
 
     DslRunSearchResult result = repository.search(null, null, null, null, 10, 10);
 
@@ -244,6 +245,11 @@ class DslRunRepositoryIntegrationTest {
 
   private DslRun run(String runId, String processName, String status, Instant startedAt,
           String mode) {
+    return run(runId, processName, status, startedAt, mode, null);
+  }
+
+  private DslRun run(String runId, String processName, String status, Instant startedAt,
+          String mode, String correlationId) {
     return DslRun.builder()
             .runId(runId)
             .processName(processName)
@@ -252,6 +258,7 @@ class DslRunRepositoryIntegrationTest {
             .finishedAt(
                     DslRunStatus.RUNNING.name().equals(status) ? null : startedAt.plusSeconds(5))
             .executionMode(mode)
+            .correlationId(correlationId)
             .build();
   }
 

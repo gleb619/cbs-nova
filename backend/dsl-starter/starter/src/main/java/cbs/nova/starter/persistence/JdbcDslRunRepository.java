@@ -122,9 +122,11 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
       predicates.add("LOWER(COALESCE(NULLIF(execution_mode, ''), 'RUN')) = LOWER(:mode)");
       params.addValue("mode", mode);
     }
-    predicates.add("(:correlationId IS NULL OR correlation_id = :correlationId)");
-    params.addValue("correlationId", correlationId);
-    String where = "WHERE " + String.join(" AND ", predicates);
+    if (correlationId != null && !correlationId.isBlank()) {
+      predicates.add("correlation_id = :correlationId");
+      params.addValue("correlationId", correlationId);
+    }
+    String where = predicates.isEmpty() ? "" : "WHERE " + String.join(" AND ", predicates);
 
     int total = jdbcTemplate.queryForObject(getSearchCountStatement(where), params, Integer.class);
     params.addValue("limit", limit).addValue("offset", offset);

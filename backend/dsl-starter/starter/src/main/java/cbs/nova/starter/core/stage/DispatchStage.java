@@ -8,11 +8,11 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.helper.HelperInterceptor;
+import cbs.nova.dsl.logging.DryRunLoggingContext;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import cbs.nova.starter.core.pipe.PreviewTimeoutException;
 import io.micrometer.core.instrument.MeterRegistry;
-import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -42,7 +42,6 @@ import java.util.concurrent.TimeoutException;
  * logs produced inside the dispatched DSL are required to carry the run id, propagate the MDC
  * explicitly (e.g. via a {@code TaskDecorator}).
  */
-@RequiredArgsConstructor
 public final class DispatchStage implements DslPipeStage {
 
   private final ContextFactory contextFactory;
@@ -50,13 +49,33 @@ public final class DispatchStage implements DslPipeStage {
   private final Duration timeout;
   private final ExecutorService executor;
   private final MeterRegistry meterRegistry;
+  private final DryRunLoggingContext dryRunLoggingContext;
 
   /**
    * No-timeout constructor for callers that want inline execution.
    */
+  //TODO: remove constructor, use lombok's one
   public DispatchStage(@NonNull ContextFactory contextFactory,
           @NonNull HelperInterceptor helperInterceptor) {
-    this(contextFactory, helperInterceptor, null, null, null);
+    this(contextFactory, helperInterceptor, null, null, null, null);
+  }
+
+  /**
+   * Full constructor including the dry-run logging context for cross-thread propagation.
+   */
+  //TODO: remove constructor, use lombok's one
+  public DispatchStage(@NonNull ContextFactory contextFactory,
+          @NonNull HelperInterceptor helperInterceptor,
+          @Nullable Duration timeout,
+          @Nullable ExecutorService executor,
+          @Nullable MeterRegistry meterRegistry,
+          @Nullable DryRunLoggingContext dryRunLoggingContext) {
+    this.contextFactory = contextFactory;
+    this.helperInterceptor = helperInterceptor;
+    this.timeout = timeout;
+    this.executor = executor;
+    this.meterRegistry = meterRegistry;
+    this.dryRunLoggingContext = dryRunLoggingContext;
   }
 
   @Override
@@ -107,7 +126,19 @@ public final class DispatchStage implements DslPipeStage {
       return dispatch(name, ctx, gm);
     }
 
-    Future<Result<?>> future = executor.submit(() -> dispatch(name, ctx, gm));
+    String runId = dryRunLoggingContext != null ? dryRunLoggingContext.currentRunId() : null;
+    Future<Result<?>> future = executor.submit(() -> {
+      if (runId != null) {
+        dryRunLoggingContext.setRunId(runId);
+      }
+      try {
+        return dispatch(name, ctx, gm);
+      } finally {
+        if (runId != null) {
+          dryRunLoggingContext.clearRunId();
+        }
+      }
+    });
     try {
       return future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
     } catch (TimeoutException e) {

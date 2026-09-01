@@ -66,7 +66,7 @@ class DslVersioningIntegrationTest {
   private static final CountDownLatch LATCH_ENTERED = new CountDownLatch(1);
   private static final DockerImageName TEMPORAL_IMAGE = DockerImageName
           .parse("temporalio/auto-setup:1.25.2");
-  private static final DockerImageName POSTGRES_IMAGE = DockerImageName.parse("postgres:15");
+  private static final DockerImageName POSTGRES_IMAGE = DockerImageName.parse("postgres:16");
 
   private static final Network NETWORK = Network.newNetwork();
 
@@ -277,6 +277,9 @@ class DslVersioningIntegrationTest {
       }
       if (helperClass == UnreliableApiHelper.class) {
         return new UnreliableApiHelper();
+      }
+      if (helperClass == Base64Helper.class) {
+        return new Base64Helper();
       }
       throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
     };
