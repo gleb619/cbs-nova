@@ -191,6 +191,12 @@ class IntermediateDslExamplesTest {
       if (helperClass == RegexHelper.class) {
         return new RegexHelper();
       }
+      if (helperClass == HmacSha256SignHelper.class) {
+        return new HmacSha256SignHelper();
+      }
+      if (helperClass == HmacSha256VerifyHelper.class) {
+        return new HmacSha256VerifyHelper();
+      }
 
       throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
     };

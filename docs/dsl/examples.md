@@ -211,3 +211,45 @@ RegexOut valid = ctx.runHelper("regex",
         new RegexIn("match", "^[A-Z]{3}-\\d{4,8}$", requestId, null, null, null))
         .as(RegexOut.class);
 ```
+
+## Signing and verifying with `hmacSha256Sign` and `hmacSha256Verify`
+
+The `hmacSha256Sign` helper computes an HMAC-SHA256 signature for a message using the provided
+secret. The `hmacSha256Verify` helper recomputes the expected signature and compares it to the
+provided one with a constant-time byte comparison. Both helpers accept `hex` (default), `base64`,
+and `base64url` encodings (case-insensitive).
+
+Sign a webhook body to build an outbound `X-Cbs-Signature` header:
+
+```java
+HmacSha256SignOut signature = ctx.runHelper("hmacSha256Sign",
+        new HmacSha256SignIn(body, secret, "hex"))
+        .as(HmacSha256SignOut.class);
+
+HttpCallOut response = ctx.runHelper("httpCall",
+        new HttpCallIn(
+                "https://api.partner.example.com/events",
+                "POST",
+                Map.of(
+                        "Content-Type", "application/json",
+                        "X-Cbs-Signature", "sha256=" + signature.signature()),
+                body,
+                null,
+                null))
+        .as(HttpCallOut.class);
+```
+
+Verify an inbound partner signature before processing the request:
+
+```java
+String header = requestHeaders.get("X-Partner-Signature");
+String provided = header != null && header.startsWith("sha256=") ? header.substring(7) : null;
+
+HmacSha256VerifyOut verified = ctx.runHelper("hmacSha256Verify",
+        new HmacSha256VerifyIn(body, sharedSecret, provided, "hex"))
+        .as(HmacSha256VerifyOut.class);
+
+if (!verified.valid()) {
+    // reject the request
+}
+```
