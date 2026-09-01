@@ -11,6 +11,29 @@ vi.mock('~/server/utils/httpClient', () => ({
   proxyToBackend: proxyToBackendMock,
 }))
 
+const { $fetchMock, useBackendConfigMock, attachAuthMock } = vi.hoisted(() => ({
+  $fetchMock: Object.assign(vi.fn(), { raw: vi.fn() }),
+  useBackendConfigMock: vi.fn(() => ({
+    baseUrl: 'http://localhost:8090',
+    apiKey: '',
+    timeoutMs: 10000,
+  })),
+  attachAuthMock: vi.fn(),
+}))
+
+vi.mock('ofetch', () => ({
+  $fetch: $fetchMock,
+}))
+
+vi.mock('~/server/utils/config', () => ({
+  useBackendConfig: useBackendConfigMock,
+}))
+
+vi.mock('~/server/utils/oidcSession', () => ({
+  attachAuth: attachAuthMock,
+}))
+
+
 // The route files import `getRouterParam`/`readBody`/`getQuery` directly from
 // `h3` (Nitro auto-imports the same functions at runtime, but the source
 // files use explicit imports). Mock just those three on the real `h3` module
@@ -28,6 +51,18 @@ vi.mock('h3', async (importOriginal) => {
     getRouterParam: (_event: unknown, name: string) => routerParams[name],
     readBody: async (_event: unknown) => bodyValue,
     getQuery: (_event: unknown) => queryValue,
+    getRequestHeader: (event: unknown, name: string) => {
+      const req = (event as { node?: { req?: { headers?: Record<string, string> } } }).node?.req
+      return req?.headers?.[name.toLowerCase()]
+    },
+    setResponseHeader: (event: unknown, name: string, value: string) => {
+      const res = (event as { node?: { res?: { headers?: Record<string, string> } } }).node?.res
+      if (res?.headers) res.headers[name] = value
+    },
+    setResponseStatus: (event: unknown, statusCode: number) => {
+      const res = (event as { node?: { res?: { statusCode?: number } } }).node?.res
+      if (res) res.statusCode = statusCode
+    },
   }
 })
 
@@ -44,6 +79,7 @@ const executionsTimeseriesHandler = (await import('../executions/stats/timeserie
 const executionsIdHandler = (await import('../executions/[id].get')).default
 const executionsTransactionsHandler = (await import('../executions/[id]/transactions.get')).default
 const executionsCancelHandler = (await import('../executions/[id]/cancel.post')).default
+const executionsExportHandler = (await import('../executions/export.get')).default
 const infoHandler = (await import('../info.get')).default
 const saveDraftHandler = (await import('../dsl/drafts/[name]/save.post')).default
 const publishDraftHandler = (await import('../dsl/drafts/[name]/publish.post')).default
@@ -67,9 +103,23 @@ const importDefinitionsHandler = (await import('../dsl/definitions/import.post')
 // proxyToBackend, which is mocked, so a plain object is sufficient.
 const fakeEvent = {} as Parameters<typeof proxyToBackendMock>[0]
 
+// Stub for the raw CSV export route, which reads request headers and writes
+// response headers/status directly.
+const exportFakeEvent = {
+  node: { req: { headers: {} }, res: { statusCode: 200, headers: {} } },
+} as Parameters<typeof $fetchMock>[0]
+
 beforeEach(() => {
   proxyToBackendMock.mockReset()
   proxyToBackendMock.mockResolvedValue({ ok: true })
+  $fetchMock.mockReset()
+  $fetchMock.raw = vi.fn()
+  useBackendConfigMock.mockReturnValue({
+    baseUrl: 'http://localhost:8090',
+    apiKey: '',
+    timeoutMs: 10000,
+  })
+  attachAuthMock.mockReset()
   routerParams = {}
   bodyValue = {}
   queryValue = {}
@@ -747,5 +797,66 @@ describe('dsl/definitions/import.post', () => {
       body: bodyValue,
       query: {},
     })
+  })
+})
+
+describe('executions/export.get', () => {
+  it('fetches the backend CSV endpoint with renamed entityName filter', async () => {
+    queryValue = { status: 'Completed', entityName: 'Loan', mode: 'RUN', correlationId: 'c1' }
+    const rawResponse = {
+      status: 200,
+      headers: {
+        get: (name: string) =>
+          name === 'content-type'
+            ? 'text/csv; charset=utf-8'
+            : name === 'content-disposition'
+              ? 'attachment; filename="executions-20260101-000000.csv"'
+              : null,
+      },
+      _data: 'runId,processName,status\r\nrun-1,Loan,Completed\r\n',
+    }
+    $fetchMock.raw.mockResolvedValueOnce(rawResponse)
+
+    const result = await executionsExportHandler(exportFakeEvent)
+
+    expect($fetchMock.raw).toHaveBeenCalledTimes(1)
+    expect($fetchMock.raw).toHaveBeenCalledWith(
+      'http://localhost:8090/api/executions/export.csv',
+      {
+        method: 'GET',
+        headers: expect.any(Object),
+        query: {
+          status: 'Completed',
+          processName: 'Loan',
+          mode: 'RUN',
+          correlationId: 'c1',
+        },
+        responseType: 'text',
+        timeout: 10000,
+        retry: false,
+      },
+    )
+    expect(exportFakeEvent.node.res.statusCode).toBe(200)
+    expect(exportFakeEvent.node.res.headers['Content-Type']).toBe('text/csv; charset=utf-8')
+    expect(exportFakeEvent.node.res.headers['Content-Disposition']).toBe(
+      'attachment; filename="executions-20260101-000000.csv"',
+    )
+    expect(result).toBe(rawResponse._data)
+  })
+
+  it('forwards only the query params that are present', async () => {
+    queryValue = {}
+    $fetchMock.raw.mockResolvedValueOnce({
+      status: 200,
+      headers: { get: () => null },
+      _data: '',
+    })
+
+    await executionsExportHandler(exportFakeEvent)
+
+    expect($fetchMock.raw).toHaveBeenCalledWith(
+      'http://localhost:8090/api/executions/export.csv',
+      expect.objectContaining({ query: {} }),
+    )
   })
 })

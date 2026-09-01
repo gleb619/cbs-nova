@@ -64,6 +64,15 @@ public class DslExecutionsRouterConfiguration {
               @Parameter(name = "windowHours", in = ParameterIn.QUERY, description = "Trailing window in hours; clamped to [1, 720]"),
               @Parameter(name = "bucketMinutes", in = ParameterIn.QUERY, description = "Bucket width in minutes; clamped to [1, 1440]")
           }, responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionTimeseriesResponse.class))))),
+      // Same literal-before-{id} rule: "export.csv" must precede "/api/executions/{id}" or the
+      // segment would be captured as a run id.
+      @RouterOperation(path = "/api/executions/export.csv", beanClass = DslExecutionsHandler.class, beanMethod = "exportCsv", method = RequestMethod.GET, operation = @Operation(operationId = "exportExecutionsCsv", summary = "Export DSL execution runs as CSV", tags = {
+          "DSL Executions"}, parameters = {
+              @Parameter(name = "processName", in = ParameterIn.QUERY),
+              @Parameter(name = "status", in = ParameterIn.QUERY),
+              @Parameter(name = "mode", in = ParameterIn.QUERY),
+              @Parameter(name = "correlationId", in = ParameterIn.QUERY)
+          }, responses = @ApiResponse(responseCode = "200", description = "CSV export of matching execution runs", content = @Content(mediaType = "text/csv")))),
       @RouterOperation(path = "/api/executions/{id}", beanClass = DslExecutionsHandler.class, beanMethod = "detail", method = RequestMethod.GET, operation = @Operation(operationId = "getExecution", summary = "Get a single DSL execution run by id", tags = {
           "DSL Executions"}, parameters = @Parameter(name = "id", in = ParameterIn.PATH), responses = {
               @ApiResponse(responseCode = "200", description = "The execution run", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionDto.class))),
@@ -88,6 +97,7 @@ public class DslExecutionsRouterConfiguration {
             // captured as an id.
             .GET("/api/executions/stats", handler::stats)
             .GET("/api/executions/stats/timeseries", handler::timeseries)
+            .GET("/api/executions/export.csv", handler::exportCsv)
             .GET("/api/executions/{id}", handler::detail)
             .GET("/api/executions/{id}/transactions", handler::transactions)
             .POST("/api/executions/{id}/cancel", handler::cancel)

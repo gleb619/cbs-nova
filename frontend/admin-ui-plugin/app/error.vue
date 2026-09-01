@@ -3,6 +3,7 @@ export default { name: "CbsErrorPage" }
 </script>
 
 <script setup lang="ts">
+// biome-ignore lint/style/useVueMultiWordComponentNames: Nuxt error layout has a single-word filename
 import { clearError } from 'nuxt/app'
 import { computed } from 'vue'
 
