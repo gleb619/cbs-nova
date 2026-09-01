@@ -7,6 +7,7 @@ import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ExecutionDto;
 import cbs.nova.starter.model.ExecutionListResponse;
 import cbs.nova.starter.model.ExecutionStatsResponse;
+import cbs.nova.starter.model.ExecutionTimeseriesResponse;
 import cbs.nova.starter.model.TransactionExecutionDto;
 import cbs.nova.starter.persistence.DslRunStatsRepository;
 import cbs.nova.starter.service.DslRunCancellationService;
@@ -56,6 +57,13 @@ public class DslExecutionsRouterConfiguration {
           "DSL Executions"}, parameters = {
               @Parameter(name = "topProcesses", in = ParameterIn.QUERY, description = "Maximum number of processes in the top-by-run-count list")
           }, responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionStatsResponse.class))))),
+      // Same literal-before-{id} rule as /stats: "timeseries" must precede "/api/executions/{id}"
+      // or the segment would be captured as a run id.
+      @RouterOperation(path = "/api/executions/stats/timeseries", beanClass = DslExecutionsHandler.class, beanMethod = "timeseries", method = RequestMethod.GET, operation = @Operation(operationId = "getExecutionTimeseries", summary = "Per-bucket run counts grouped by status", tags = {
+          "DSL Executions"}, parameters = {
+              @Parameter(name = "windowHours", in = ParameterIn.QUERY, description = "Trailing window in hours; clamped to [1, 720]"),
+              @Parameter(name = "bucketMinutes", in = ParameterIn.QUERY, description = "Bucket width in minutes; clamped to [1, 1440]")
+          }, responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionTimeseriesResponse.class))))),
       @RouterOperation(path = "/api/executions/{id}", beanClass = DslExecutionsHandler.class, beanMethod = "detail", method = RequestMethod.GET, operation = @Operation(operationId = "getExecution", summary = "Get a single DSL execution run by id", tags = {
           "DSL Executions"}, parameters = @Parameter(name = "id", in = ParameterIn.PATH), responses = {
               @ApiResponse(responseCode = "200", description = "The execution run", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionDto.class))),
@@ -76,9 +84,10 @@ public class DslExecutionsRouterConfiguration {
   public RouterFunction<ServerResponse> dslExecutionsRouter(DslExecutionsHandler handler) {
     return RouterFunctions.route()
             .GET("/api/executions", handler::list)
-            // Literal route must precede "/api/executions/{id}" or "stats" would be captured as an
-            // id.
+            // Literal routes must precede "/api/executions/{id}" or "stats"/"timeseries" would be
+            // captured as an id.
             .GET("/api/executions/stats", handler::stats)
+            .GET("/api/executions/stats/timeseries", handler::timeseries)
             .GET("/api/executions/{id}", handler::detail)
             .GET("/api/executions/{id}/transactions", handler::transactions)
             .POST("/api/executions/{id}/cancel", handler::cancel)

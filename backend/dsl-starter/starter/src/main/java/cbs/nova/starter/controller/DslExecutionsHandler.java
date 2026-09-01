@@ -10,9 +10,11 @@ import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ExecutionDto;
 import cbs.nova.starter.model.ExecutionListResponse;
 import cbs.nova.starter.model.ExecutionStatsResponse;
+import cbs.nova.starter.model.ExecutionTimeseriesResponse;
 import cbs.nova.starter.model.TransactionExecutionDto;
 import cbs.nova.starter.persistence.DslRunStats;
 import cbs.nova.starter.persistence.DslRunStatsRepository;
+import cbs.nova.starter.persistence.RunTimeseriesBucket;
 import cbs.nova.starter.service.DslRunCancellationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -31,6 +33,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +53,12 @@ public class DslExecutionsHandler {
   private static final int STATS_WINDOW_HOURS = 24;
   private static final int DEFAULT_TOP_PROCESSES = 5;
   private static final int MAX_TOP_PROCESSES = 20;
+  private static final int TIMESERIES_DEFAULT_WINDOW_HOURS = 24;
+  private static final int TIMESERIES_DEFAULT_BUCKET_MINUTES = 60;
+  private static final int TIMESERIES_MIN_WINDOW_HOURS = 1;
+  private static final int TIMESERIES_MAX_WINDOW_HOURS = 24 * 30;
+  private static final int TIMESERIES_MIN_BUCKET_MINUTES = 1;
+  private static final int TIMESERIES_MAX_BUCKET_MINUTES = 60 * 24;
 
   private final DslRunRepository runRepository;
   private final ObjectMapper objectMapper;
@@ -104,6 +113,38 @@ public class DslExecutionsHandler {
             ? statsRepository.stats(windowStart, topProcesses)
             : scanStats(windowStart, topProcesses);
     return ServerResponse.ok().body(ExecutionStatsResponse.from(stats, STATS_WINDOW_HOURS));
+  }
+
+  /**
+   * Per-bucket run counts grouped by status for the dashboard trend chart.
+   *
+   * <p>
+   * Like {@link #stats}, the SQL aggregate (when the repo supports it) is preferred; otherwise the
+   * handler falls back to scanning the repository. Either way the response is zero-filled into a
+   * uniform (bucket, status) grid so the frontend x-axis never goes sparse.
+   *
+   * <p>
+   * Params are clamped to safe ranges; non-numeric values yield 400 via the existing
+   * {@link IllegalArgumentException} mapping.
+   */
+  @Operation(summary = "Per-bucket run counts grouped by status")
+  @ApiResponse(responseCode = "200", description = "Per-bucket run counts", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionTimeseriesResponse.class)))
+  public ServerResponse timeseries(ServerRequest request) {
+    int windowHours = clampWindowHours(
+            intParam(request, "windowHours", TIMESERIES_DEFAULT_WINDOW_HOURS));
+    int bucketMinutes = clampBucketMinutes(
+            intParam(request, "bucketMinutes", TIMESERIES_DEFAULT_BUCKET_MINUTES), windowHours);
+
+    Instant windowEnd = Instant.now();
+    Instant windowStart = windowEnd.minus(Duration.ofHours(windowHours));
+    Duration bucketSize = Duration.ofMinutes(bucketMinutes);
+
+    List<RunTimeseriesBucket> rows = statsRepository != null
+            ? statsRepository.timeseries(windowStart, windowEnd, bucketSize)
+            : scanTimeseries(windowStart, windowEnd, bucketSize);
+
+    return ServerResponse.ok().body(
+            ExecutionTimeseriesResponse.from(rows, windowStart, windowEnd, bucketSize));
   }
 
   @Operation(summary = "Get a single DSL execution run by id")
@@ -219,6 +260,27 @@ public class DslExecutionsHandler {
     return Math.max(1, Math.min(topProcesses, MAX_TOP_PROCESSES));
   }
 
+  private static int clampWindowHours(int windowHours) {
+    return Math.max(TIMESERIES_MIN_WINDOW_HOURS,
+            Math.min(windowHours, TIMESERIES_MAX_WINDOW_HOURS));
+  }
+
+  private static int clampBucketMinutes(int bucketMinutes, int windowHours) {
+    int clamped = Math.max(TIMESERIES_MIN_BUCKET_MINUTES,
+            Math.min(bucketMinutes, TIMESERIES_MAX_BUCKET_MINUTES));
+    int maxBucketMinutes = Math.max(TIMESERIES_MIN_BUCKET_MINUTES, windowHours * 60);
+    if (clamped > maxBucketMinutes) {
+      clamped = maxBucketMinutes;
+    }
+    // Ensure the bucket width divides the window evenly so the JDBC aggregate
+    // (and the in-memory fallback) can produce a stable, zero-filled grid.
+    while (clamped > TIMESERIES_MIN_BUCKET_MINUTES
+            && (windowHours * 60) % clamped != 0) {
+      clamped--;
+    }
+    return clamped;
+  }
+
   private static int intParam(ServerRequest request, String name, int defaultValue) {
     var raw = request.param(name).filter(s -> !s.isBlank()).orElse(null);
     if (raw == null) {
@@ -263,5 +325,37 @@ public class DslExecutionsHandler {
     double failureRate = windowRuns == 0 ? 0.0 : (double) windowFailedRuns / windowRuns;
     return new DslRunStats(allRuns.size(), statusCounts, windowRuns, windowFailedRuns, failureRate,
             topProcessesList);
+  }
+
+  /**
+   * Fallback bucketing when the store cannot aggregate server-side. Scans every run (no
+   * {@code MAX_LIMIT} clamp) and folds into the requested bucket width; the store-level query
+   * returns only buckets that have rows, but the handler's response factory zero-fills empties.
+   */
+  private List<RunTimeseriesBucket> scanTimeseries(Instant windowStart, Instant windowEnd,
+          Duration bucketSize) {
+    long bucketSeconds = bucketSize.getSeconds();
+    Map<String, Map<Long, Long>> byStatusByBucket = new LinkedHashMap<>();
+    for (DslRun run : findRuns(null)) {
+      Instant startedAt = run.startedAt();
+      if (startedAt.isBefore(windowStart) || !startedAt.isBefore(windowEnd)) {
+        continue;
+      }
+      long secondsFromStart = Duration.between(windowStart, startedAt).getSeconds();
+      long bucketIndex = secondsFromStart / bucketSeconds;
+      byStatusByBucket
+              .computeIfAbsent(run.status(), k -> new LinkedHashMap<>())
+              .merge(bucketIndex, 1L, Long::sum);
+    }
+    List<RunTimeseriesBucket> out = new ArrayList<>();
+    for (var statusEntry : byStatusByBucket.entrySet()) {
+      for (var bucketEntry : statusEntry.getValue().entrySet()) {
+        Instant bucketStart = windowStart.plusSeconds(bucketEntry.getKey() * bucketSeconds);
+        out.add(new RunTimeseriesBucket(bucketStart, statusEntry.getKey(), bucketEntry.getValue()));
+      }
+    }
+    out.sort(java.util.Comparator.comparing(RunTimeseriesBucket::bucketStart)
+            .thenComparing(RunTimeseriesBucket::status));
+    return out;
   }
 }

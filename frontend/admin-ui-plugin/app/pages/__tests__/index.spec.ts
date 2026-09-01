@@ -2,7 +2,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick, Suspense, type Ref } from 'vue'
 import DashboardPage from '../index.vue'
-import type { DashboardStats, Execution } from '~/types'
+import type { DashboardStats, DashboardTimeseries, Execution } from '~/types'
 
 // ---------------------------------------------------------------------------
 // Harness for `useDashboardStats()` consumed by the dashboard page.
@@ -10,10 +10,14 @@ import type { DashboardStats, Execution } from '~/types'
 
 interface DashboardHarness {
   stats: Ref<DashboardStats | null>
+  timeseries: Ref<DashboardTimeseries | null>
   recentRuns: Ref<Execution[]>
   loading: Ref<boolean>
+  loadingTimeseries: Ref<boolean>
   error: Ref<string | null>
+  timeseriesError: Ref<string | null>
   load: ReturnType<typeof vi.fn>
+  loadTimeseries: ReturnType<typeof vi.fn>
 }
 
 const { useDashboardStatsMock, navigateTo } = vi.hoisted(() => {
@@ -35,10 +39,14 @@ const harness: DashboardHarness = (() => {
   const vue = require('vue') as typeof import('vue')
   return {
     stats: vue.ref<DashboardStats | null>(null),
+    timeseries: vue.ref<DashboardTimeseries | null>(null),
     recentRuns: vue.ref<Execution[]>([]),
     loading: vue.ref(false),
+    loadingTimeseries: vue.ref(false),
     error: vue.ref<string | null>(null),
+    timeseriesError: vue.ref<string | null>(null),
     load: vi.fn(),
+    loadTimeseries: vi.fn(),
   }
 })()
 
@@ -114,8 +122,24 @@ const errorBannerStub = defineComponent({
   },
 })
 
+const runTrendChartStub = defineComponent({
+  name: 'RunTrendChart',
+  props: ['data', 'loading', 'error'],
+  setup(_props, { emit }) {
+    return () =>
+      h('div', { 'data-testid': 'dashboard-run-trend-chart' }, [
+        h(
+          'button',
+          { 'data-testid': 'trend-chart-retry', onClick: () => emit('retry') },
+          'Retry trend',
+        ),
+      ])
+  },
+})
+
 const componentStubs = {
   StatCard: statCardStub,
+  RunTrendChart: runTrendChartStub,
   RecentRunsTable: recentRunsStub,
   ErrorBanner: errorBannerStub,
   NuxtLink: makeStub('NuxtLink'),
@@ -144,10 +168,14 @@ const flush = async () => {
 describe('index.vue dashboard page', () => {
   beforeEach(() => {
     harness.stats.value = null
+    harness.timeseries.value = null
     harness.recentRuns.value = []
     harness.loading.value = false
+    harness.loadingTimeseries.value = false
     harness.error.value = null
+    harness.timeseriesError.value = null
     harness.load.mockClear()
+    harness.loadTimeseries.mockClear()
     navigateTo.mockClear()
   })
 
@@ -256,6 +284,30 @@ describe('index.vue dashboard page', () => {
     expect(wrapper.find('[data-testid="dashboard-stat-Stale"]').text()).toBe('0')
     expect(wrapper.find('[data-testid="dashboard-stat-Failure rate (24h, %)"]').text()).toBe('0')
     expect(wrapper.find('[data-testid="dashboard-top-processes"]').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  it('renders the trend chart with timeseries data and retry calls loadTimeseries', async () => {
+    harness.timeseries.value = {
+      windowStart: '2026-08-13T10:00:00Z',
+      windowEnd: '2026-08-13T13:00:00Z',
+      bucketMinutes: 60,
+      buckets: [
+        { bucketStart: '2026-08-13T10:00:00Z', statusCounts: { Completed: 2 } },
+        { bucketStart: '2026-08-13T11:00:00Z', statusCounts: { Failed: 1 } },
+      ],
+    }
+
+    const wrapper = mountPage()
+    await flush()
+
+    expect(wrapper.find('[data-testid="dashboard-run-trend-chart"]').exists()).toBe(true)
+
+    await wrapper.find('[data-testid="trend-chart-retry"]').trigger('click')
+    await flush()
+
+    expect(harness.loadTimeseries).toHaveBeenCalled()
 
     wrapper.unmount()
   })

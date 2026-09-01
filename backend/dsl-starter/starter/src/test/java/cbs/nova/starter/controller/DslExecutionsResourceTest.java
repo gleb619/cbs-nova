@@ -707,6 +707,155 @@ class DslExecutionsResourceTest {
   }
 
   // -------------------------------------------------------------------------
+  // T320 — per-bucket run counts grouped by status for the dashboard
+  // trend chart. The handler folds store rows into a uniform grid; we
+  // pin the wire shape and the parameter clamping/validation rules.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void timeseriesOnEmptyRepositoryReturnsUniformZeroGrid() throws Exception {
+    mockMvc.perform(get("/api/executions/stats/timeseries"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.windowStart").exists())
+            .andExpect(jsonPath("$.windowEnd").exists())
+            .andExpect(jsonPath("$.bucketMinutes").value(60))
+            .andExpect(jsonPath("$.buckets").isArray())
+            // 24h / 60min = 24 buckets, all empty.
+            .andExpect(jsonPath("$.buckets.length()").value(24))
+            .andExpect(jsonPath("$.buckets[0].statusCounts").isEmpty())
+            .andExpect(jsonPath("$.buckets[23].statusCounts").isEmpty());
+  }
+
+  @Test
+  void timeseriesUsesServerSideAggregatesWhenRepositorySupportsThem() throws Exception {
+    DslRunStatsRepository statsRepository = mock(DslRunStatsRepository.class);
+    when(statsRepository.timeseries(any(Instant.class), any(Instant.class), any(Duration.class)))
+            .thenAnswer(invocation -> {
+              Instant start = invocation.getArgument(0);
+              Duration bucket = invocation.getArgument(2);
+              return List.of(
+                      new cbs.nova.starter.persistence.RunTimeseriesBucket(start, "COMPLETED", 4L),
+                      new cbs.nova.starter.persistence.RunTimeseriesBucket(start, "FAILED", 1L),
+                      new cbs.nova.starter.persistence.RunTimeseriesBucket(start.plus(bucket),
+                              "COMPLETED", 2L));
+            });
+    DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper,
+            new DslRunCancellationService(workflowClient, repository), statsRepository,
+            transactionExecutionRepository);
+    mockMvc = MockMvcBuilders
+            .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler))
+            .build();
+
+    mockMvc.perform(get("/api/executions/stats/timeseries").param("windowHours", "2"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.bucketMinutes").value(60))
+            // 2h / 60min = 2 buckets.
+            .andExpect(jsonPath("$.buckets.length()").value(2))
+            .andExpect(jsonPath("$.buckets[0].statusCounts.Completed").value(4))
+            .andExpect(jsonPath("$.buckets[0].statusCounts.Failed").value(1))
+            .andExpect(jsonPath("$.buckets[1].statusCounts.Completed").value(2))
+            .andExpect(jsonPath("$.buckets[1].statusCounts.Failed").value(0));
+
+    verify(statsRepository).timeseries(any(Instant.class), any(Instant.class), any(Duration.class));
+  }
+
+  @Test
+  void timeseriesBucketsAdjacentMinutesIntoRequestedWidth() throws Exception {
+    Instant now = Instant.now();
+    // Window is now-1h..now with 30-minute buckets: [now-1h,now-30min) and [now-30min,now).
+    repository.save(run("run-1", "Alpha", "COMPLETED",
+            now.minus(Duration.ofMinutes(45)).toString(),
+            now.minus(Duration.ofMinutes(44)).toString(), "RUN"));
+    repository.save(run("run-2", "Alpha", "COMPLETED",
+            now.minus(Duration.ofMinutes(20)).toString(),
+            now.minus(Duration.ofMinutes(19)).toString(), "RUN"));
+    repository.save(run("run-3", "Alpha", "FAILED",
+            now.minus(Duration.ofMinutes(15)).toString(),
+            now.minus(Duration.ofMinutes(14)).toString(), "RUN"));
+
+    // 30-minute buckets; run-2 and run-3 collapse into the same bucket.
+    mockMvc.perform(get("/api/executions/stats/timeseries")
+            .param("windowHours", "1")
+            .param("bucketMinutes", "30"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.bucketMinutes").value(30))
+            .andExpect(jsonPath("$.buckets.length()").value(2))
+            .andExpect(jsonPath("$.buckets[0].statusCounts.Completed").value(1))
+            .andExpect(jsonPath("$.buckets[0].statusCounts.Failed").value(0))
+            .andExpect(jsonPath("$.buckets[1].statusCounts.Completed").value(1))
+            .andExpect(jsonPath("$.buckets[1].statusCounts.Failed").value(1));
+  }
+
+  @Test
+  void timeseriesZeroFillsEmptyBuckets() throws Exception {
+    Instant now = Instant.now();
+    // Window is now-3h..now with 60-minute buckets. Place the single run in
+    // the middle bucket so the first and last buckets exercise zero-fill.
+    repository.save(run("run-1", "Alpha", "COMPLETED",
+            now.minus(Duration.ofMinutes(90)).toString(),
+            now.minus(Duration.ofMinutes(89)).toString(), "RUN"));
+
+    // 60-minute buckets across 3h — only one bucket populated, the other
+    // two must still appear with zero counts so the axis is uniform.
+    mockMvc.perform(get("/api/executions/stats/timeseries")
+            .param("windowHours", "3")
+            .param("bucketMinutes", "60"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.buckets.length()").value(3))
+            .andExpect(jsonPath("$.buckets[0].statusCounts.Completed").value(0))
+            .andExpect(jsonPath("$.buckets[1].statusCounts.Completed").value(1))
+            .andExpect(jsonPath("$.buckets[2].statusCounts.Completed").value(0));
+  }
+
+  @Test
+  void timeseriesClampsWindowHoursAndBucketMinutesToSafeRanges() throws Exception {
+    mockMvc.perform(get("/api/executions/stats/timeseries")
+            .param("windowHours", "9999")
+            .param("bucketMinutes", "999999"))
+            .andExpect(status().isOk())
+            // 720h / 1440min = 30 buckets (the maxes clamp).
+            .andExpect(jsonPath("$.buckets.length()").value(30))
+            .andExpect(jsonPath("$.bucketMinutes").value(1440));
+
+    mockMvc.perform(get("/api/executions/stats/timeseries")
+            .param("windowHours", "0")
+            .param("bucketMinutes", "0"))
+            .andExpect(status().isOk())
+            // 1h / 1min = 60 buckets (the mins clamp).
+            .andExpect(jsonPath("$.buckets.length()").value(60))
+            .andExpect(jsonPath("$.bucketMinutes").value(1));
+  }
+
+  @Test
+  void timeseriesInvalidWindowHoursReturns400NamingTheParameterAndValue() throws Exception {
+    mockMvc.perform(get("/api/executions/stats/timeseries").param("windowHours", "NaN"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+            .andExpect(jsonPath("$.message")
+                    .value("Invalid value for query parameter 'windowHours': 'NaN' (expected an integer)"));
+  }
+
+  @Test
+  void timeseriesInvalidBucketMinutesReturns400NamingTheParameterAndValue() throws Exception {
+    mockMvc.perform(get("/api/executions/stats/timeseries").param("bucketMinutes", "oops"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+            .andExpect(jsonPath("$.message")
+                    .value("Invalid value for query parameter 'bucketMinutes': 'oops' (expected an integer)"));
+  }
+
+  @Test
+  void timeseriesLiteralRouteIsNotCapturedAsDetailId() throws Exception {
+    repository.save(run("stats", "LoanDisbursement", "COMPLETED", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", "RUN"));
+
+    mockMvc.perform(get("/api/executions/stats/timeseries"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.buckets").exists())
+            .andExpect(jsonPath("$.id").doesNotExist());
+  }
+
+  // -------------------------------------------------------------------------
   // T312 — transaction executions surfaced for a run.
   // -------------------------------------------------------------------------
 

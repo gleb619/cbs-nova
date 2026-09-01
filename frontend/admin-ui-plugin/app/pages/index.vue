@@ -10,9 +10,20 @@ import { computed, resolveComponent } from 'vue'
 
 const NuxtLink = resolveComponent('NuxtLink')
 
-const { stats, recentRuns, loading, error, load } = useDashboardStats()
+const {
+  stats,
+  timeseries,
+  recentRuns,
+  loading,
+  loadingTimeseries,
+  error,
+  timeseriesError,
+  load,
+  loadTimeseries,
+} = useDashboardStats()
 
 await load()
+await loadTimeseries()
 
 function statusCount(status: string): number {
   return stats.value?.statusCounts?.[status] ?? 0
@@ -92,6 +103,15 @@ function onSelectRun(id: string) {
         :link-component="NuxtLink"
       />
     </div>
+
+    <section class="space-y-2" data-testid="dashboard-trend-chart">
+      <RunTrendChart
+        :data="timeseries"
+        :loading="loadingTimeseries"
+        :error="timeseriesError"
+        @retry="loadTimeseries"
+      />
+    </section>
 
     <section class="space-y-2">
       <h2 class="text-lg font-semibold text-neutral-900">Recent runs</h2>
