@@ -134,6 +134,9 @@ class AdvancedDslExamplesTest {
       if (helperClass == Base64Helper.class) {
         return new Base64Helper();
       }
+      if (helperClass == RegexHelper.class) {
+        return new RegexHelper();
+      }
 
       throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
     };
