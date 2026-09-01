@@ -13,6 +13,7 @@ import type { ExecutionFilters } from '~/types'
 
 const {
   executions,
+  filters,
   loading,
   error,
   loadExecutions,
@@ -32,6 +33,17 @@ await loadExecutions()
 startListPolling()
 
 const pageCount = computed(() => Math.ceil(total.value / pageSize))
+
+const exportUrl = computed(() => {
+  const params = new URLSearchParams()
+  const f = filters.value as ExecutionFilters
+  if (f.status) params.set('status', f.status)
+  if (f.mode) params.set('mode', f.mode)
+  if (f.entityName) params.set('entityName', f.entityName)
+  if (f.correlationId) params.set('correlationId', f.correlationId)
+  const query = params.toString()
+  return query ? `/api/v1/executions/export?${query}` : '/api/v1/executions/export'
+})
 
 const cancelTargetId = ref<string | null>(null)
 const cancelError = ref<string | null>(null)
@@ -87,6 +99,14 @@ function nextPage() {
   <div class="p-6 space-y-4">
     <header class="flex items-center justify-between">
       <h1 class="text-2xl font-bold text-neutral-900">Executions</h1>
+      <a
+        :href="exportUrl"
+        download
+        data-testid="executions-export-csv"
+        class="px-3 py-1.5 rounded border text-sm font-medium transition-colors border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-100"
+      >
+        Export CSV
+      </a>
     </header>
     <ExecutionsExecutionFilters @filter="onFilter" />
     <ErrorBanner v-if="error" :message="error" @retry="loadExecutions" />

@@ -45,6 +45,7 @@ const harness: ExecutionsHarness = (() => {
   const cancellingIds = vue.ref<Set<string>>(new Set())
   return {
     executions: vue.ref<Execution[]>([]),
+    filters: vue.ref<ExecutionFilters>({}),
     loading: vue.ref(false),
     error: vue.ref<string | null>(null),
     loadExecutions: vi.fn(),
@@ -189,6 +190,7 @@ const flush = async () => {
 describe('executions/index.vue list page', () => {
   beforeEach(() => {
     harness.executions.value = []
+    harness.filters.value = {}
     harness.loading.value = false
     harness.error.value = null
     harness.loadExecutions.mockClear()
@@ -423,4 +425,26 @@ describe('executions/index.vue list page', () => {
 
     wrapper.unmount()
   })
+
+
+  it('renders an Export CSV link that carries the active filters', async () => {
+    harness.filters.value = {
+      status: 'Completed',
+      mode: 'RUN',
+      entityName: 'LoanDisbursement',
+      correlationId: 'corr-123',
+    }
+
+    const wrapper = mountPage()
+    await flush()
+
+    const link = wrapper.find('[data-testid="executions-export-csv"]')
+    expect(link.exists()).toBe(true)
+    expect(link.attributes('href')).toBe(
+      '/api/v1/executions/export?status=Completed&mode=RUN&entityName=LoanDisbursement&correlationId=corr-123',
+    )
+
+    wrapper.unmount()
+  })
+
 })

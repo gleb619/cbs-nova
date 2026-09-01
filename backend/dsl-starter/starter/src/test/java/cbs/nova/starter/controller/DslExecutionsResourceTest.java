@@ -13,8 +13,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 
 import cbs.nova.dsl.history.DslRun;
+import cbs.nova.dsl.history.DslRunSearchResult;
+import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dsl.repository.InMemoryTransactionExecutionRepository;
@@ -26,6 +30,7 @@ import cbs.nova.starter.persistence.DslRunStats;
 import cbs.nova.starter.persistence.DslRunStatsRepository;
 import cbs.nova.starter.service.DslRunCancellationService;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver;
 import io.temporal.client.WorkflowClient;
@@ -37,9 +42,13 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
+import java.nio.charset.StandardCharsets;
+import java.time.temporal.ChronoUnit;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 class DslExecutionsResourceTest {
 
@@ -67,7 +76,8 @@ class DslExecutionsResourceTest {
     exceptionResolver.afterPropertiesSet();
 
     mockMvc = MockMvcBuilders.routerFunctions(router.dslExecutionsRouter(handler))
-            .setMessageConverters(new JacksonJsonHttpMessageConverter())
+            .setMessageConverters(new JacksonJsonHttpMessageConverter(),
+                    new StringHttpMessageConverter(StandardCharsets.UTF_8))
             .setHandlerExceptionResolvers(exceptionResolver)
             .build();
   }
@@ -1012,5 +1022,90 @@ class DslExecutionsResourceTest {
 
   private TransactionExecution tx(String runId, String name, Object input, String executedAt) {
     return new TransactionExecution(runId, name, input, Instant.parse(executedAt));
+  }
+
+  // -------------------------------------------------------------------------
+  // T321 — CSV export of execution runs.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void exportCsvReturnsTextCsvWithDispositionAndHeaderRow() throws Exception {
+    repository.save(run("run-1", "LoanDisbursement", "COMPLETED", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", "RUN"));
+
+    String csv = mockMvc.perform(get("/api/executions/export.csv"))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType("text/csv; charset=utf-8"))
+            .andExpect(header().string("Content-Disposition",
+                    org.hamcrest.Matchers.startsWith("attachment; filename=\"executions-")))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    assertThat(csv).startsWith(
+            "runId,processName,status,mode,triggeredBy,correlationId,startedAt,finishedAt,"
+                    + "duration,error,input,output\r\n");
+    assertThat(csv).contains("run-1,LoanDisbursement,COMPLETED,RUN");
+  }
+
+  @Test
+  void exportCsvAppliesStatusFilter() throws Exception {
+    repository.save(run("run-1", "LoanDisbursement", "COMPLETED", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", "RUN"));
+    repository.save(run("run-2", "LoanDisbursement", "FAILED", "2026-08-13T10:01:00Z",
+            "2026-08-13T10:01:05Z", "RUN"));
+
+    String csv = mockMvc.perform(get("/api/executions/export.csv").param("status", "COMPLETED"))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType("text/csv; charset=utf-8"))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    List<String> lines = List.of(csv.split("\r\n"));
+    assertThat(lines).hasSize(2);
+    assertThat(lines.get(1)).contains("run-1");
+    assertThat(lines.get(1)).contains("COMPLETED");
+    assertThat(csv).doesNotContain("run-2");
+  }
+
+  @Test
+  void exportCsvTruncatesAndSetsHeaderWhenRowCapExceeded() throws Exception {
+    DslRunRepository cappedRepository = mock(DslRunRepository.class);
+    DslRunCancellationService cancellationService = new DslRunCancellationService(workflowClient,
+            cappedRepository);
+    DslExecutionsHandler handler = new DslExecutionsHandler(cappedRepository, objectMapper,
+            cancellationService, null, transactionExecutionRepository);
+    MockMvc cappedMockMvc = MockMvcBuilders
+            .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler))
+            .build();
+
+    int cap = cbs.nova.starter.controller.DslExecutionsHandler.CSV_EXPORT_MAX_ROWS;
+    Instant startedAt = Instant.parse("2026-08-13T10:00:00Z");
+    List<DslRun> runs = IntStream.rangeClosed(1, cap + 1)
+            .mapToObj(i -> DslRun.builder()
+                    .runId("run-" + i)
+                    .processName("Alpha")
+                    .status("COMPLETED")
+                    .startedAt(startedAt)
+                    .finishedAt(startedAt.plusSeconds(i))
+                    .executionMode("RUN")
+                    .build())
+            .collect(Collectors.toList());
+    when(cappedRepository.search(null, null, null, null, 0, cap + 1))
+            .thenReturn(new DslRunSearchResult(runs, runs.size()));
+
+    String csv = cappedMockMvc.perform(get("/api/executions/export.csv"))
+            .andExpect(status().isOk())
+            .andExpect(header().string("X-Export-Truncated", "true"))
+            .andExpect(content().contentType("text/csv; charset=utf-8"))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    List<String> lines = List.of(csv.split("\r\n"));
+    assertThat(lines).hasSize(cap + 1);
+    assertThat(lines.get(cap)).contains("run-" + cap);
+    assertThat(csv).doesNotContain("run-" + (cap + 1));
   }
 }

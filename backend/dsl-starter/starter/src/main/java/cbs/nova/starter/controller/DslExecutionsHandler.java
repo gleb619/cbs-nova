@@ -16,6 +16,7 @@ import cbs.nova.starter.persistence.DslRunStats;
 import cbs.nova.starter.persistence.DslRunStatsRepository;
 import cbs.nova.starter.persistence.RunTimeseriesBucket;
 import cbs.nova.starter.service.DslRunCancellationService;
+import cbs.nova.starter.service.ExecutionCsvWriter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -31,8 +32,11 @@ import org.springframework.web.servlet.function.ServerResponse;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.io.StringWriter;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -50,6 +54,10 @@ import java.util.Map;
 public class DslExecutionsHandler {
 
   private static final int MAX_LIMIT = 500;
+  static final int CSV_EXPORT_MAX_ROWS = 50_000;
+  private static final String CSV_FILENAME_PATTERN = "yyyyMMdd-HHmmss";
+  private static final DateTimeFormatter CSV_FILENAME_FORMATTER = DateTimeFormatter
+          .ofPattern(CSV_FILENAME_PATTERN);
   private static final int STATS_WINDOW_HOURS = 24;
   private static final int DEFAULT_TOP_PROCESSES = 5;
   private static final int MAX_TOP_PROCESSES = 20;
@@ -69,23 +77,40 @@ public class DslExecutionsHandler {
   @Operation(summary = "List DSL execution runs")
   @ApiResponse(responseCode = "200", description = "Matching execution runs", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionListResponse.class)))
   public ServerResponse list(ServerRequest request) throws IOException {
-    String processName = request.param("processName").filter(s -> !s.isBlank()).orElse(null);
-    String status = request.param("status").orElse(null);
-    String mode = request.param("mode").orElse(null);
-    String correlationId = request.param("correlationId")
-            .map(String::trim)
-            .filter(s -> !s.isBlank())
-            .orElse(null);
+    ExecutionFilters filters = readFilters(request);
     int limit = intParam(request, "limit", 50);
     int offset = intParam(request, "offset", 0);
     int pageSize = clampLimit(limit);
     int skip = clampOffset(offset);
-    DslRunSearchResult result = runRepository.search(processName, status, mode, correlationId, skip,
-            pageSize);
+    DslRunSearchResult result = runRepository.search(filters.processName(), filters.status(),
+            filters.mode(), filters.correlationId(), skip, pageSize);
     List<ExecutionDto> items = result.items().stream()
             .map(ExecutionDto::from)
             .toList();
     return ServerResponse.ok().body(new ExecutionListResponse(items, result.total()));
+  }
+
+  @Operation(summary = "Export DSL execution runs as CSV")
+  @ApiResponse(responseCode = "200", description = "CSV export of matching execution runs", content = @Content(mediaType = "text/csv"))
+  public ServerResponse exportCsv(ServerRequest request) throws IOException {
+    ExecutionFilters filters = readFilters(request);
+    DslRunSearchResult result = runRepository.search(filters.processName(), filters.status(),
+            filters.mode(), filters.correlationId(), 0, CSV_EXPORT_MAX_ROWS + 1);
+    boolean truncated = result.items().size() > CSV_EXPORT_MAX_ROWS;
+    List<DslRun> runs = truncated
+            ? result.items().subList(0, CSV_EXPORT_MAX_ROWS)
+            : result.items();
+    StringWriter writer = new StringWriter();
+    new ExecutionCsvWriter().writeCsv(runs, writer);
+    String filename = "executions-" + CSV_FILENAME_FORMATTER.format(LocalDateTime.now()) + ".csv";
+    ServerResponse.BodyBuilder response = ServerResponse.ok()
+            .contentType(
+                    org.springframework.http.MediaType.parseMediaType("text/csv; charset=utf-8"))
+            .header("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+    if (truncated) {
+      response = response.header("X-Export-Truncated", "true");
+    }
+    return response.body(writer.toString());
   }
 
   /**
@@ -246,6 +271,21 @@ public class DslExecutionsHandler {
     return runRepository.knownProcessNames().stream()
             .flatMap(name -> runRepository.findByProcessName(name).stream())
             .toList();
+  }
+
+  private static ExecutionFilters readFilters(ServerRequest request) {
+    String processName = request.param("processName").filter(s -> !s.isBlank()).orElse(null);
+    String status = request.param("status").orElse(null);
+    String mode = request.param("mode").orElse(null);
+    String correlationId = request.param("correlationId")
+            .map(String::trim)
+            .filter(s -> !s.isBlank())
+            .orElse(null);
+    return new ExecutionFilters(processName, status, mode, correlationId);
+  }
+
+  private record ExecutionFilters(String processName, String status, String mode,
+          String correlationId) {
   }
 
   private static int clampLimit(int limit) {

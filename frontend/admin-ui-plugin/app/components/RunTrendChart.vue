@@ -13,9 +13,7 @@ const props = withDefaults(defineProps<Props>(), {
   error: null,
 })
 
-const emit = defineEmits<{
-  (e: 'retry'): void
-}>()
+const emit = defineEmits<(e: 'retry') => void>()
 
 const statusColors: Record<string, string> = {
   Running: '#3b82f6',
