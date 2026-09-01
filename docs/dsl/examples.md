@@ -187,3 +187,27 @@ HttpCallOut response = ctx.runHelper("httpCall",
                 null))
         .as(HttpCallOut.class);
 ```
+
+## Matching and extracting with `regex`
+
+The `regex` helper performs case-insensitive `match`, `extract`, `replace`, and `split`
+operations using Java regular expressions. Patterns are compiled once and cached in a bounded
+LRU cache.
+
+Extract a log level from a line, returning the first capturing group:
+
+```java
+String line = "2026-09-01 ERROR [worker-3] boom";
+RegexOut level = ctx.runHelper("regex",
+        new RegexIn("extract", "\\b(ERROR|WARN|INFO)\\b", line, null, 1, null))
+        .as(RegexOut.class);
+```
+
+Validate that an identifier matches an expected format (matches anywhere in the input using
+`Matcher.find()`, not a whole-string match):
+
+```java
+RegexOut valid = ctx.runHelper("regex",
+        new RegexIn("match", "^[A-Z]{3}-\\d{4,8}$", requestId, null, null, null))
+        .as(RegexOut.class);
+```
