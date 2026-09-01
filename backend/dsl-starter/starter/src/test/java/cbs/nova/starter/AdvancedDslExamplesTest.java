@@ -125,6 +125,12 @@ class AdvancedDslExamplesTest {
       if (helperClass == UuidV7Helper.class) {
         return new UuidV7Helper();
       }
+      if (helperClass == FormatDateHelper.class) {
+        return new FormatDateHelper();
+      }
+      if (helperClass == ParseDateHelper.class) {
+        return new ParseDateHelper();
+      }
       if (helperClass == Base64Helper.class) {
         return new Base64Helper();
       }

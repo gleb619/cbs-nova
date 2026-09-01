@@ -147,3 +147,43 @@ Base64Out header = ctx.runHelper("base64",
         new Base64In("{\"alg\":\"HS256\",\"typ\":\"JWT\"}", "encode", true))
         .as(Base64Out.class);
 ```
+
+## Date formatting with `formatDate` and `parseDate`
+
+The `formatDate` helper converts an ISO-8601 string or epoch-millis value into a formatted date/time
+string. The `parseDate` helper does the reverse: it parses a formatted string back into an ISO-8601
+instant. Both accept preset aliases such as `ISO_INSTANT`, `ISO_OFFSET_DATE_TIME`,
+`ISO_ZONED_DATE_TIME`, and `RFC_1123_DATE_TIME`, or any raw
+`java.time.format.DateTimeFormatter` pattern. An optional `zone` argument defaults to `UTC`.
+
+Round-trip a timestamp through a custom pattern:
+
+```java
+FormatDateOut formatted = ctx.runHelper("formatDate",
+        new FormatDateIn("2026-03-15T12:00:00Z", "yyyy-MM-dd HH:mm:ss", "UTC"))
+        .as(FormatDateOut.class);
+
+ParseDateOut parsed = ctx.runHelper("parseDate",
+        new ParseDateIn(formatted.formatted(), "yyyy-MM-dd HH:mm:ss", "UTC"))
+        .as(ParseDateOut.class);
+```
+
+Use `RFC_1123_DATE_TIME` to build HTTP header values such as `If-Modified-Since`:
+
+```java
+FormatDateOut ifModifiedSince = ctx.runHelper("formatDate",
+        new FormatDateIn(String.valueOf(epochMillis), "RFC_1123_DATE_TIME", "UTC"))
+        .as(FormatDateOut.class);
+
+HttpCallOut response = ctx.runHelper("httpCall",
+        new HttpCallIn(
+                "https://api.example.com/resource",
+                "GET",
+                Map.of(
+                        "If-Modified-Since", ifModifiedSince.formatted(),
+                        "Accept", "application/json"),
+                null,
+                null,
+                null))
+        .as(HttpCallOut.class);
+```
