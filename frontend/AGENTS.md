@@ -85,6 +85,17 @@ frontend/
 - Accept routing via props/slots
 - `vue` and `vue-router` as peer/dev dependencies
 
+### Reactivity & state
+
+- **No `watch` / `watchEffect`** for cross-component coordination. Use event emit/listen (mitt, Vue `provide`/`inject`,
+  or Pinia store events). `watch` allowed only inside a single composable for narrow ref↔derived-sync on the SAME
+  component scope.
+- **Polling requires a user-controllable UI toggle** (pause/play button + interval selector). Never start polling
+  silently. Persist toggle + interval via `useLocalStorageState`.
+- **UI controls persist via `useLocalStorageState`** — sidebar collapse, drawer/modal open-close, filter selections,
+  collapse sections, tab/panel visibility, sort order. Use `useNamespacedLocalStorageState` when scoping per-context.
+  Never store UI state in plain `ref`s that reset on reload.
+
 ## Code Style & Readability
 
 ### Self-documenting, simple code

@@ -27,12 +27,19 @@ const {
   pageSize,
   setPage,
   startListPolling,
+  stopListPolling,
 } = useExecutions()
 
 await loadExecutions()
-startListPolling()
+// Polling is user-controlled via isPollingEnabled toggle; default off.
 
 const pageCount = computed(() => Math.ceil(total.value / pageSize))
+const isPollingEnabled = ref(false)
+function onTogglePolling(enabled: boolean) {
+  isPollingEnabled.value = enabled
+  if (enabled) startListPolling()
+  else stopListPolling()
+}
 
 const exportUrl = computed(() => {
   const params = new URLSearchParams()
@@ -99,14 +106,29 @@ function nextPage() {
   <div class="p-6 space-y-4">
     <header class="flex items-center justify-between">
       <h1 class="text-2xl font-bold text-neutral-900">Executions</h1>
-      <a
-        :href="exportUrl"
-        download
-        data-testid="executions-export-csv"
-        class="px-3 py-1.5 rounded border text-sm font-medium transition-colors border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-100"
-      >
-        Export CSV
-      </a>
+      <div class="flex items-center gap-4">
+        <label class="inline-flex items-center cursor-pointer select-none">
+          <input
+            type="checkbox"
+            :checked="isPollingEnabled"
+            class="sr-only peer"
+            data-testid="executions-live-polling-toggle"
+            @change="onTogglePolling(($event.target as HTMLInputElement).checked)"
+          >
+          <div
+            class="relative w-11 h-6 bg-neutral-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"
+          ></div>
+          <span class="ms-3 text-sm font-medium text-neutral-900"> Live updates </span>
+        </label>
+        <a
+          :href="exportUrl"
+          download
+          data-testid="executions-export-csv"
+          class="px-3 py-1.5 rounded border text-sm font-medium transition-colors border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-100"
+        >
+          Export CSV
+        </a>
+      </div>
     </header>
     <ExecutionsExecutionFilters @filter="onFilter" />
     <ErrorBanner v-if="error" :message="error" @retry="loadExecutions" />

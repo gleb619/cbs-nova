@@ -1,8 +1,8 @@
-import { mount, flushPromises } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent, h, nextTick, Suspense, type Ref } from 'vue'
-import ExecutionsListPage from '../index.vue'
+import { defineComponent, h, nextTick, type Ref, Suspense } from 'vue'
 import type { Execution, ExecutionDetail, ExecutionFilters } from '~/types'
+import ExecutionsListPage from '../index.vue'
 
 // ---------------------------------------------------------------------------
 // Harness for `useExecutions()` consumed by the executions list page.
@@ -23,14 +23,14 @@ interface ExecutionsHarness {
   pageSize: number
   setPage: ReturnType<typeof vi.fn>
   startListPolling: ReturnType<typeof vi.fn>
+  stopListPolling: ReturnType<typeof vi.fn>
 }
 
 const { useExecutionsMock, navigateTo } = vi.hoisted(() => {
   const navigateToSpy = vi.fn()
   const useExecutionsMockFn = vi.fn(() => {
-    const harness = (
-      globalThis as unknown as { __executionsHarness?: ExecutionsHarness }
-    ).__executionsHarness
+    const harness = (globalThis as unknown as { __executionsHarness?: ExecutionsHarness })
+      .__executionsHarness
     if (!harness) throw new Error('executions harness not installed yet')
     return harness
   })
@@ -59,6 +59,7 @@ const harness: ExecutionsHarness = (() => {
     pageSize: 20,
     setPage: vi.fn(),
     startListPolling: vi.fn(),
+    stopListPolling: vi.fn(),
   }
 })()
 
@@ -203,6 +204,7 @@ describe('executions/index.vue list page', () => {
     harness.page.value = 1
     harness.setPage.mockClear()
     harness.startListPolling.mockClear()
+    harness.stopListPolling.mockClear()
     navigateTo.mockClear()
   })
 
@@ -321,11 +323,50 @@ describe('executions/index.vue list page', () => {
     wrapper.unmount()
   })
 
-  it('starts list polling on mount', async () => {
+  it('does not start list polling on mount', async () => {
     const wrapper = mountPage()
     await flush()
 
+    expect(harness.startListPolling).not.toHaveBeenCalled()
+
+    wrapper.unmount()
+  })
+
+  it('starts list polling when live updates toggle is enabled', async () => {
+    const wrapper = mountPage()
+    await flush()
+
+    const toggle = wrapper.find('[data-testid="executions-live-polling-toggle"]')
+      .element as HTMLInputElement
+    toggle.checked = true
+    await toggle.dispatchEvent(new Event('change', { bubbles: true }))
+    await flush()
+    await flush()
+
     expect(harness.startListPolling).toHaveBeenCalled()
+
+    wrapper.unmount()
+  })
+
+  it('stops list polling when live updates toggle is disabled', async () => {
+    const wrapper = mountPage()
+    await flush()
+
+    const toggle = wrapper.find('[data-testid="executions-live-polling-toggle"]')
+      .element as HTMLInputElement
+    toggle.checked = true
+    await toggle.dispatchEvent(new Event('change', { bubbles: true }))
+    await flush()
+    await flush()
+    harness.startListPolling.mockClear()
+    harness.stopListPolling.mockClear()
+
+    toggle.checked = false
+    await toggle.dispatchEvent(new Event('change', { bubbles: true }))
+    await flush()
+    await flush()
+
+    expect(harness.stopListPolling).toHaveBeenCalled()
 
     wrapper.unmount()
   })
@@ -426,7 +467,6 @@ describe('executions/index.vue list page', () => {
     wrapper.unmount()
   })
 
-
   it('renders an Export CSV link that carries the active filters', async () => {
     harness.filters.value = {
       status: 'Completed',
@@ -446,5 +486,4 @@ describe('executions/index.vue list page', () => {
 
     wrapper.unmount()
   })
-
 })

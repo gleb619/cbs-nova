@@ -216,6 +216,7 @@ export function useExecutions() {
   function startListPolling(intervalMs: number = stalePollMs): void {
     if (listPollInterval != null) return
     if (typeof document === 'undefined') return
+    if (inFlightRowCount.value === 0) return
 
     listPollInterval = setInterval(() => {
       void tickListPoll()

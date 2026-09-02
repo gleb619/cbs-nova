@@ -106,7 +106,8 @@ sentry-spring-boot-jakarta = { module = "io.sentry:sentry-spring-boot-4", versio
 
 
 # -- Databases --
-flyway-core = { module = "org.flywaydb:flyway-core" }
+flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql" }
+spring-boot-flyway = { module = "org.springframework.boot:spring-boot-flyway" }
 postgresql = { module = "org.postgresql:postgresql" }
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
 
