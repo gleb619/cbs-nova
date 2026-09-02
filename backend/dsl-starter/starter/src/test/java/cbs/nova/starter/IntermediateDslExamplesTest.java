@@ -197,6 +197,12 @@ class IntermediateDslExamplesTest {
       if (helperClass == HmacSha256VerifyHelper.class) {
         return new HmacSha256VerifyHelper();
       }
+      if (helperClass == UrlEncodeHelper.class) {
+        return new UrlEncodeHelper();
+      }
+      if (helperClass == UrlDecodeHelper.class) {
+        return new UrlDecodeHelper();
+      }
 
       throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
     };

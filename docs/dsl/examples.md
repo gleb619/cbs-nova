@@ -253,3 +253,42 @@ if (!verified.valid()) {
     // reject the request
 }
 ```
+
+## Building OAuth 2.0 PKCE authorize URLs with `urlEncode`
+
+The `urlEncode` helper percent-encodes values for URL query parameters using RFC 3986 semantics
+(space becomes `%20`, literal `+` is preserved). Set `form` to `true` to encode spaces as `+` for
+`application/x-www-form-urlencoded` payloads instead.
+
+Build an OAuth 2.0 PKCE authorize URL by encoding `state`, `code_challenge`, and `redirect_uri`
+before concatenating them into the query string:
+
+```java
+UrlEncodeOut encodedState = ctx.runHelper("urlEncode",
+        new UrlEncodeIn(state, null, false))
+        .as(UrlEncodeOut.class);
+
+UrlEncodeOut encodedChallenge = ctx.runHelper("urlEncode",
+        new UrlEncodeIn(codeChallenge, null, false))
+        .as(UrlEncodeOut.class);
+
+UrlEncodeOut encodedRedirectUri = ctx.runHelper("urlEncode",
+        new UrlEncodeIn(redirectUri, null, false))
+        .as(UrlEncodeOut.class);
+
+String authorizeUrl = "https://auth.example.com/authorize"
+        + "?response_type=code"
+        + "&client_id=" + clientId
+        + "&redirect_uri=" + encodedRedirectUri.result()
+        + "&state=" + encodedState.result()
+        + "&code_challenge=" + encodedChallenge.result()
+        + "&code_challenge_method=S256";
+```
+
+The `urlDecode` helper reverses the operation. Decode a query value before validation or storage:
+
+```java
+UrlDecodeOut decodedState = ctx.runHelper("urlDecode",
+        new UrlDecodeIn(encodedState, null, false))
+        .as(UrlDecodeOut.class);
+```
