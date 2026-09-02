@@ -292,3 +292,35 @@ UrlDecodeOut decodedState = ctx.runHelper("urlDecode",
         new UrlDecodeIn(encodedState, null, false))
         .as(UrlDecodeOut.class);
 ```
+
+## Content hashing with `sha256`
+
+The `sha256` helper computes a plain SHA-256 digest of a string and encodes the result as
+`hex` (default), `base64`, or `base64url`. A null input is rejected; an empty string is valid
+and returns the well-known empty-string hash.
+
+Generate an `ETag` from an HTTP response body and use it for cache-friendly polling with
+`If-None-Match`. Skip re-processing when the server replies `304 Not Modified`:
+
+```java
+String responseBody = firstResponse.body(); // or previous stored body
+Sha256Out etag = ctx.runHelper("sha256",
+        new Sha256In(responseBody, "hex"))
+        .as(Sha256Out.class);
+
+HttpCallOut polled = ctx.runHelper("httpCall",
+        new HttpCallIn(
+                "https://api.example.com/resource",
+                "GET",
+                Map.of(
+                        "If-None-Match", "\"" + etag.result() + "\"",
+                        "Accept", "application/json"),
+                null,
+                null,
+                null))
+        .as(HttpCallOut.class);
+
+if (polled.statusCode() == 304) {
+    // no change since last poll — skip downstream processing
+}
+```
