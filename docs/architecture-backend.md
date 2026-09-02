@@ -129,7 +129,9 @@ See [Runtime Engine — Auth and ops notes](dsl/runtime.md#auth-and-ops-notes) f
 
 Run attribution and correlation are stored on the `dsl_runs` table: migrations `V5__dsl_runs_triggered_by.sql` and `V6__dsl_runs_correlation_id.sql` add `triggered_by` and `correlation_id` columns. See [Runtime Engine — Run idempotency](dsl/runtime.md#run-idempotency) and [Correlation id](dsl/runtime.md#correlation-id) for the header semantics.
 
-See [Starter Configuration Reference](dsl/configuration.md) for the full key tables.
+See [Starter Configuration Reference](dsl/configuration.md) for the full key tables, and
+[Operator Incident Runbook](runbook.md) for first-response playbooks (Temporal disconnect,
+Keycloak outage, purger/reconciliation, BFF 5xx, helper catalog) keyed to these knobs.
 
 ## Build & run
 
