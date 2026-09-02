@@ -54,7 +54,7 @@ public final class DispatchStage implements DslPipeStage {
   /**
    * No-timeout constructor for callers that want inline execution.
    */
-  //TODO: remove constructor, use lombok's one
+  // TODO: remove constructor, use lombok's one
   public DispatchStage(@NonNull ContextFactory contextFactory,
           @NonNull HelperInterceptor helperInterceptor) {
     this(contextFactory, helperInterceptor, null, null, null, null);
@@ -63,7 +63,7 @@ public final class DispatchStage implements DslPipeStage {
   /**
    * Full constructor including the dry-run logging context for cross-thread propagation.
    */
-  //TODO: remove constructor, use lombok's one
+  // TODO: remove constructor, use lombok's one
   public DispatchStage(@NonNull ContextFactory contextFactory,
           @NonNull HelperInterceptor helperInterceptor,
           @Nullable Duration timeout,
