@@ -2,6 +2,7 @@
 
 This document describes the frontend tier of the cbs-nova project. It sits alongside the backend architecture
 documented in [`architecture-backend.md`](architecture-backend.md) and uses the color system defined in [`colors.md`](colors.md).
+The rationale behind the BFF-inside-the-Nuxt-module design is recorded in [`adr/0003-bff-nitro-admin-ui-plugin.md`](adr/0003-bff-nitro-admin-ui-plugin.md).
 
 ## Purpose
 

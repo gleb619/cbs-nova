@@ -5,7 +5,8 @@ boilerplate. Business flows are expressed as small, versioned definitions in a d
 compiler turns them into production-ready Temporal classes at build time.
 
 This document is the high-level backend companion to [architecture.md](architecture.md) and
-[architecture-ui.md](architecture-ui.md). Implementation details live in [docs/dsl/](dsl/).
+[architecture-ui.md](architecture-ui.md). Implementation details live in [docs/dsl/](dsl/). The
+rationale behind foundational calls (Temporal, the helper SPI) is recorded in [docs/adr/](adr/).
 
 ## What the DSL is for
 
