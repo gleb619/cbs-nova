@@ -18,6 +18,7 @@ const navItems = computed(() => [
     isActive: route.path === '/dsl-workbench',
   },
   { to: '/runner', label: 'Runner', icon: '▶️', isActive: route.path === '/runner' },
+  { to: '/schedules', label: 'Schedules', icon: '🕒', isActive: route.path === '/schedules' },
   {
     to: '/executions',
     label: 'Executions',
@@ -46,7 +47,9 @@ const docsBaseUrl = computed(() => {
   return undefined
 })
 
-const displayName = computed(() => user.value?.preferred_username ?? user.value?.name ?? user.value?.email ?? 'User')
+const displayName = computed(
+  () => user.value?.preferred_username ?? user.value?.name ?? user.value?.email ?? 'User',
+)
 </script>
 
 <template>

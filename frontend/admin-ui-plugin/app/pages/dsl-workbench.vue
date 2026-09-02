@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
-import { useDslWorkbench } from '@cbs/admin-ui-plugin/composables/useDslWorkbench'
-import { useWorkbenchDraft } from '@cbs/admin-ui-plugin/composables/useWorkbenchDraft'
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { useDraftDirty } from '@cbs/admin-ui-plugin/composables/useDraftDirty'
 import { useDraftSave } from '@cbs/admin-ui-plugin/composables/useDraftSave'
-import { useEventListener } from '@vueuse/core'
-import DslTemplateGallery from '../components/DslTemplateGallery.vue'
-import type { DslTemplate } from '../utils/dslTemplates'
-import type { HelperCatalogEntry, HelpersResponse, HelperSearchFilters, ObjectSearchResult, ScheduleSummary } from '@cbs/components'
+import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
+import { useDslWorkbench } from '@cbs/admin-ui-plugin/composables/useDslWorkbench'
+import { useWorkbenchDraft } from '@cbs/admin-ui-plugin/composables/useWorkbenchDraft'
+import type {
+  HelperCatalogEntry,
+  HelperSearchFilters,
+  HelpersResponse,
+  ObjectSearchResult,
+} from '@cbs/components'
 import {
+  CbsDrawer,
   createNamespacedLocalStorageState,
   DropdownMenu,
   type DropdownMenuItem,
@@ -22,14 +25,16 @@ import {
   DslMetadataPanel,
   DslPlainConstructList,
   DslProblemsPanel,
-  DslScheduleList,
   ErrorBanner,
   useHelperSearch,
 } from '@cbs/components'
+import { useEventListener } from '@vueuse/core'
 import { useCookie } from 'nuxt/app'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import type { RunnerOutput } from '~/types'
+import DslTemplateGallery from '../components/DslTemplateGallery.vue'
+import type { DslTemplate } from '../utils/dslTemplates'
 
 const workbench = useDslWorkbench()
 const {
@@ -56,6 +61,7 @@ const explorerCollapsed = useWorkbenchStorage<boolean>('explorer-collapsed', fal
   useCookie,
 })
 const helperSearchOpen = useWorkbenchStorage<boolean>('helper-search-open', false)
+const helperCatalogOpen = useWorkbenchStorage<boolean>('helper-catalog-open', false)
 
 const dslApi = useDslApi()
 const log = useClientLogger('dsl-workbench')
@@ -89,13 +95,9 @@ const helperSearch = useHelperSearch({
   debounceMs: 250,
 })
 
-const activeTab = ref<'editor' | 'helpers' | 'schedules'>('editor')
 const helpersCatalog = ref<HelperCatalogEntry[]>([])
 const helpersLoading = ref(false)
 const helpersError = ref<string | null>(null)
-const schedules = ref<ScheduleSummary[]>([])
-const schedulesLoading = ref(false)
-const schedulesError = ref<string | null>(null)
 
 async function loadHelpers() {
   helpersLoading.value = true
@@ -111,26 +113,10 @@ async function loadHelpers() {
   }
 }
 
-async function loadSchedules() {
-  schedulesLoading.value = true
-  schedulesError.value = null
-  try {
-    const result = (await dslApi.listSchedules()) as ScheduleSummary[]
-    schedules.value = Array.isArray(result) ? result : []
-  } catch (err) {
-    schedulesError.value = (err as Error).message
-    schedules.value = []
-  } finally {
-    schedulesLoading.value = false
-  }
-}
-
-function setTab(tab: 'editor' | 'helpers' | 'schedules') {
-  activeTab.value = tab
-  if (tab === 'helpers') {
+function toggleHelperCatalog() {
+  helperCatalogOpen.value = !helperCatalogOpen.value
+  if (helperCatalogOpen.value) {
     void loadHelpers()
-  } else if (tab === 'schedules') {
-    void loadSchedules()
   }
 }
 
@@ -260,7 +246,8 @@ async function confirmCreate() {
   const name = newName.value.trim()
   if (!name || newNameError.value || !selectedTemplate.value) return
   const parsed = JSON.parse(selectedTemplate.value.body) as { type?: string }
-  const type = (parsed.type as 'Process' | 'Transaction' | 'Function' | 'Helper' | undefined) ?? 'Process'
+  const type =
+    (parsed.type as 'Process' | 'Transaction' | 'Function' | 'Helper' | undefined) ?? 'Process'
   createConstruct(name, type)
   await nextTick()
   draftBody.value = selectedTemplate.value.body
@@ -271,7 +258,6 @@ async function confirmCreate() {
 type ActionValue = 'refresh' | 'validate' | 'save' | 'publish'
 
 const actionItems = computed<DropdownMenuItem[]>(() => [
-
   { label: 'Refresh', value: 'refresh', disabled: state.isLoading },
   {
     label: 'Validate',
@@ -445,6 +431,15 @@ onBeforeUnmount(() => {
       >
         {{ helperSearchOpen ? 'Close Objects' : 'Objects' }}
       </button>
+      <button
+        type="button"
+        class="px-3 py-1.5 text-sm rounded border border-gray-300 hover:bg-gray-100"
+        :class="helperCatalogOpen ? 'bg-blue-50 text-blue-700 border-blue-300' : ''"
+        data-testid="workbench-toggle-helpers"
+        @click="toggleHelperCatalog"
+      >
+        {{ helperCatalogOpen ? 'Close Helpers' : 'Helpers' }}
+      </button>
     </header>
 
     <div class="flex flex-1 overflow-hidden">
@@ -458,7 +453,9 @@ onBeforeUnmount(() => {
           data-testid="dsl-draft-picker"
           class="border-b border-gray-800 bg-gray-900 text-gray-100"
         >
-          <header class="flex items-center justify-between px-3 py-2 text-xs uppercase tracking-wide text-gray-400">
+          <header
+            class="flex items-center justify-between px-3 py-2 text-xs uppercase tracking-wide text-gray-400"
+          >
             <span>Saved Drafts</span>
             <span class="text-gray-500">{{ drafts.length }}</span>
           </header>
@@ -474,16 +471,13 @@ onBeforeUnmount(() => {
             >
               <div class="font-medium">{{ draft.name }}</div>
               <div class="text-xs text-gray-400">
-                {{ draft.type ?? '—' }} · {{ draft.status ?? 'Draft' }}
+                {{ draft.type ?? '—' }}
+                · {{ draft.status ?? 'Draft' }}
               </div>
             </li>
           </ul>
-          <p v-else-if="draftsLoading" class="px-3 py-2 text-xs text-gray-400">
-            Loading drafts…
-          </p>
-          <p v-else class="px-3 py-2 text-xs text-gray-500">
-            No saved drafts yet.
-          </p>
+          <p v-else-if="draftsLoading" class="px-3 py-2 text-xs text-gray-400">Loading drafts…</p>
+          <p v-else class="px-3 py-2 text-xs text-gray-500">No saved drafts yet.</p>
         </section>
         <DslConstructExplorer
           v-model:collapsed="explorerCollapsed"
@@ -506,35 +500,6 @@ onBeforeUnmount(() => {
 
       <main class="flex-1 flex flex-col overflow-hidden">
         <DslMetadataPanel :construct="selectedConstruct" />
-        <div class="bg-white border-b border-gray-200 px-4 flex gap-4 text-sm">
-          <button
-            type="button"
-            class="py-2 border-b-2 transition-colors"
-            :class="activeTab === 'editor' ? 'border-blue-600 text-blue-700 font-medium' : 'border-transparent text-gray-600 hover:text-gray-900'"
-            data-testid="dsl-workbench-tab-editor"
-            @click="setTab('editor')"
-          >
-            Editor
-          </button>
-          <button
-            type="button"
-            class="py-2 border-b-2 transition-colors"
-            :class="activeTab === 'helpers' ? 'border-blue-600 text-blue-700 font-medium' : 'border-transparent text-gray-600 hover:text-gray-900'"
-            data-testid="dsl-workbench-tab-helpers"
-            @click="setTab('helpers')"
-          >
-            Helpers
-          </button>
-          <button
-            type="button"
-            class="py-2 border-b-2 transition-colors"
-            :class="activeTab === 'schedules' ? 'border-blue-600 text-blue-700 font-medium' : 'border-transparent text-gray-600 hover:text-gray-900'"
-            data-testid="dsl-workbench-tab-schedules"
-            @click="setTab('schedules')"
-          >
-            Schedules
-          </button>
-        </div>
         <div v-if="restoredFromDraft" class="px-3 pt-2">
           <DslDraftRestoreBanner :saved-at="draftSavedAt" @discard="clearDraft" />
         </div>
@@ -543,30 +508,29 @@ onBeforeUnmount(() => {
         </div>
         <div class="flex-1 overflow-hidden">
           <DslBodyEditor
-            v-if="activeTab === 'editor'"
             :code="draftBody"
             :construct="selectedConstruct"
             :preview="runPreview"
             :explain="runExplain"
             @update:code="onCodeChange"
           />
-          <DslHelperCatalog
-            v-else-if="activeTab === 'helpers'"
-            :helpers="helpersCatalog"
-            :loading="helpersLoading"
-            :error="helpersError"
-          />
-          <DslScheduleList
-            v-else-if="activeTab === 'schedules'"
-            :schedules="schedules"
-            :loading="schedulesLoading"
-            :error="schedulesError"
-            @create="(payload) => { dslApi.createSchedule(payload).then(() => loadSchedules()) }"
-            @delete="(definition) => { dslApi.deleteSchedule(definition).then(() => loadSchedules()) }"
-          />
         </div>
-        <DslProblemsPanel v-if="activeTab === 'editor'" :errors="state.validationErrors" />
+        <DslProblemsPanel :errors="state.validationErrors" />
       </main>
+
+      <CbsDrawer
+        v-model:open="helperCatalogOpen"
+        title="Helpers"
+        test-id="helper-catalog-drawer"
+        close-label="Close helper catalog"
+        width-class="w-96"
+      >
+        <DslHelperCatalog
+          :helpers="helpersCatalog"
+          :loading="helpersLoading"
+          :error="helpersError"
+        />
+      </CbsDrawer>
 
       <DslHelperSearchPanel
         v-model:open="helperSearchOpen"
@@ -589,74 +553,73 @@ onBeforeUnmount(() => {
       @cancel="cancelDelete"
     />
 
-      <!-- biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click dismisses modal -->
-      <div
-        v-if="showNewPanel"
-        class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="workbench-new-title"
-        @click.self="closeNewPanel"
-      >
-        <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full flex flex-col max-h-[90vh]">
-          <header class="px-6 py-4 border-b border-gray-200">
-            <h2 id="workbench-new-title" class="text-lg font-semibold text-gray-900">
-              New definition
-            </h2>
-            <p class="text-sm text-gray-600 mt-1">
-              Choose a starter template and name for the new DSL definition.
+    <!-- biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click dismisses modal -->
+    <div
+      v-if="showNewPanel"
+      class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="workbench-new-title"
+      @click.self="closeNewPanel"
+    >
+      <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full flex flex-col max-h-[90vh]">
+        <header class="px-6 py-4 border-b border-gray-200">
+          <h2 id="workbench-new-title" class="text-lg font-semibold text-gray-900">
+            New definition
+          </h2>
+          <p class="text-sm text-gray-600 mt-1">
+            Choose a starter template and name for the new DSL definition.
+          </p>
+        </header>
+
+        <div class="px-6 py-4 overflow-y-auto">
+          <div class="mb-4">
+            <label for="workbench-new-name" class="block text-sm font-medium text-gray-700 mb-1">
+              Name
+            </label>
+            <input
+              id="workbench-new-name"
+              v-model="newName"
+              type="text"
+              class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Definition name"
+              data-testid="workbench-new-name"
+            >
+            <p
+              v-if="newNameError"
+              class="mt-1 text-xs text-red-600"
+              data-testid="workbench-new-name-error"
+            >
+              {{ newNameError }}
             </p>
-          </header>
-
-          <div class="px-6 py-4 overflow-y-auto">
-            <div class="mb-4">
-              <label for="workbench-new-name" class="block text-sm font-medium text-gray-700 mb-1">
-                Name
-              </label>
-              <input
-                id="workbench-new-name"
-                v-model="newName"
-                type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Definition name"
-                data-testid="workbench-new-name"
-              />
-              <p
-                v-if="newNameError"
-                class="mt-1 text-xs text-red-600"
-                data-testid="workbench-new-name-error"
-              >
-                {{ newNameError }}
-              </p>
-            </div>
-
-            <DslTemplateGallery @select="handleTemplateSelect" />
           </div>
 
-          <footer class="px-6 py-4 border-t border-gray-200 flex justify-end gap-2">
-            <button
-              type="button"
-              class="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-100"
-              data-testid="workbench-new-cancel"
-              @click="closeNewPanel"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              class="px-4 py-2 rounded-lg text-sm font-medium text-white"
-              :class="(!newName.trim() || newNameError || !selectedTemplate)
+          <DslTemplateGallery @select="handleTemplateSelect" />
+        </div>
+
+        <footer class="px-6 py-4 border-t border-gray-200 flex justify-end gap-2">
+          <button
+            type="button"
+            class="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-100"
+            data-testid="workbench-new-cancel"
+            @click="closeNewPanel"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="px-4 py-2 rounded-lg text-sm font-medium text-white"
+            :class="(!newName.trim() || newNameError || !selectedTemplate)
                 ? 'bg-blue-300 cursor-not-allowed'
                 : 'bg-blue-600 hover:bg-blue-700'"
-              :disabled="!newName.trim() || !!newNameError || !selectedTemplate"
-              data-testid="workbench-new-create"
-              @click="confirmCreate"
-            >
-              Create
-            </button>
-          </footer>
-        </div>
+            :disabled="!newName.trim() || !!newNameError || !selectedTemplate"
+            data-testid="workbench-new-create"
+            @click="confirmCreate"
+          >
+            Create
+          </button>
+        </footer>
       </div>
-
+    </div>
   </div>
 </template>

@@ -18,27 +18,24 @@ const filtered = computed(() => {
 </script>
 
 <template>
-  <div
-    data-testid="helper-catalog"
-    class="flex flex-col h-full bg-white rounded border border-gray-200 overflow-hidden"
-  >
-    <div class="px-4 py-3 border-b border-gray-200 flex items-center gap-3">
-      <h2 class="font-semibold text-gray-900">Helper Catalog</h2>
+  <div data-testid="helper-catalog" class="flex flex-col h-full overflow-hidden">
+    <div class="px-4 py-3 border-b border-gray-800 flex items-center gap-3">
+      <h2 class="font-semibold text-gray-100">Helper Catalog</h2>
       <input
         v-model="search"
         data-testid="helper-catalog-search"
         type="text"
         placeholder="Search helpers…"
-        class="flex-1 min-w-0 px-3 py-1.5 text-sm rounded border border-gray-300 focus:outline-none focus:border-blue-500"
+        class="flex-1 min-w-0 px-3 py-1.5 text-sm rounded bg-gray-800 text-gray-100 placeholder-gray-500 border border-gray-700 focus:outline-none focus:border-gray-500"
       >
     </div>
 
     <div class="flex-1 overflow-y-auto p-4">
       <div v-if="loading" class="space-y-3" data-testid="helper-catalog-loading">
-        <div v-for="i in 4" :key="i" class="h-16 bg-gray-100 rounded animate-pulse" />
+        <div v-for="i in 4" :key="i" class="h-16 bg-gray-800 rounded animate-pulse" />
       </div>
 
-      <div v-else-if="error" class="text-sm text-red-600" data-testid="helper-catalog-error">
+      <div v-else-if="error" class="text-sm text-red-400" data-testid="helper-catalog-error">
         {{ error }}
       </div>
 
@@ -63,10 +60,10 @@ const filtered = computed(() => {
           v-for="helper in filtered"
           :key="helper.name"
           data-testid="helper-catalog-item"
-          class="px-3 py-2 rounded border border-gray-100 hover:bg-gray-50"
+          class="px-3 py-2 rounded border border-gray-800 hover:bg-gray-800"
         >
           <div class="flex items-center justify-between gap-2">
-            <span class="font-medium text-gray-900 truncate">{{ helper.name }}</span>
+            <span class="font-medium text-gray-100 truncate">{{ helper.name }}</span>
             <span
               v-if="helper.hasSideEffects"
               data-testid="helper-catalog-sideeffect"
@@ -79,10 +76,10 @@ const filtered = computed(() => {
             {{ helper.inputType || '—' }}
             → {{ helper.outputType || '—' }}
           </div>
-          <div v-if="helper.description" class="text-xs text-gray-600 mt-1">
+          <div v-if="helper.description" class="text-xs text-gray-400 mt-1">
             {{ helper.description }}
           </div>
-          <div v-if="helper.previewBehavior" class="text-xs text-gray-400 mt-1">
+          <div v-if="helper.previewBehavior" class="text-xs text-gray-500 mt-1">
             preview: {{ helper.previewBehavior }}
           </div>
         </li>
