@@ -1,0 +1,36 @@
+{
+  "items": [
+    {
+      "id": "run-001",
+      "entity": "LoanApproval",
+      "entityType": "Process",
+      "mode": "RUN",
+      "status": "Running",
+      "startedAt": "2026-09-01T10:00:00Z"
+    },
+    {
+      "id": "run-002",
+      "entity": "LoanApproval",
+      "entityType": "Process",
+      "mode": "RUN",
+      "status": "Completed",
+      "startedAt": "2026-09-01T09:00:00Z",
+      "completedAt": "2026-09-01T09:01:30Z",
+      "duration": 90000,
+      "triggeredBy": "scheduler",
+      "correlationId": "loan-12345"
+    },
+    {
+      "id": "run-003",
+      "entity": "ValidateAddress",
+      "entityType": "Process",
+      "mode": "DRY_RUN",
+      "status": "Failed",
+      "startedAt": "2026-09-01T08:00:00Z",
+      "completedAt": "2026-09-01T08:00:45Z",
+      "duration": 45000,
+      "correlationId": "addr-999"
+    }
+  ],
+  "total": 3
+}

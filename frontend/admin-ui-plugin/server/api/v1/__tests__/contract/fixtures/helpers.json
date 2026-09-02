@@ -1,0 +1,34 @@
+{
+  "names": [
+    "currentTimestamp",
+    "formatDate",
+    "httpCall",
+    "uuidV7"
+  ],
+  "helpers": [
+    {
+      "name": "currentTimestamp",
+      "description": "Returns the current ISO timestamp",
+      "inputType": "void",
+      "outputType": "string",
+      "hasSideEffects": false,
+      "previewBehavior": "constant"
+    },
+    {
+      "name": "formatDate",
+      "description": "Formats a date string with a pattern",
+      "inputType": "FormatDateIn",
+      "outputType": "FormatDateOut",
+      "hasSideEffects": false,
+      "previewBehavior": "deterministic"
+    },
+    {
+      "name": "httpCall",
+      "description": null,
+      "inputType": null,
+      "outputType": null,
+      "hasSideEffects": true,
+      "previewBehavior": null
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "name": "LoanApproval",
+    "type": "Process",
+    "version": "1.0.0",
+    "taskQueue": "loan-tasks",
+    "inputType": "LoanRequest",
+    "outputType": "LoanDecision",
+    "hasCompensation": true,
+    "description": "End-to-end loan approval process",
+    "inputSchema": {
+      "type": "object",
+      "required": ["clientId", "amount"]
+    },
+    "status": "Published"
+  },
+  {
+    "name": "ValidateAddress",
+    "type": "Transaction",
+    "version": "0.2.1",
+    "taskQueue": "default",
+    "inputType": "AddressInput",
+    "outputType": "AddressOutput",
+    "hasCompensation": false,
+    "description": "Address normalization transaction",
+    "status": "Draft"
+  },
+  {
+    "name": "FormatDate",
+    "type": "Function",
+    "version": "3.4.0",
+    "taskQueue": "helper-tasks",
+    "inputType": "DateIn",
+    "outputType": "DateOut",
+    "hasCompensation": false,
+    "description": "Date formatting helper exposed as a function",
+    "inputSchema": {
+      "type": "object"
+    },
+    "status": "Modified"
+  }
+]
