@@ -1,0 +1,28 @@
+{
+  "totalRuns": 42,
+  "statusCounts": {
+    "Running": 3,
+    "Completed": 32,
+    "Failed": 5,
+    "Stale": 1,
+    "Cancelled": 1
+  },
+  "windowRuns": 12,
+  "windowFailedRuns": 2,
+  "windowFailureRate": 0.1667,
+  "windowHours": 24,
+  "topProcesses": [
+    {
+      "processName": "LoanApproval",
+      "runCount": 18
+    },
+    {
+      "processName": "ValidateAddress",
+      "runCount": 9
+    },
+    {
+      "processName": "FormatDate",
+      "runCount": 4
+    }
+  ]
+}
