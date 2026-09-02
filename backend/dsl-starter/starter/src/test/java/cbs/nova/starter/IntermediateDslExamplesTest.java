@@ -204,6 +204,10 @@ class IntermediateDslExamplesTest {
         return new UrlDecodeHelper();
       }
 
+      if (helperClass == Sha256Helper.class) {
+        return new Sha256Helper();
+      }
+
       throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
     };
   }
