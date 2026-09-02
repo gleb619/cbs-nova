@@ -32,7 +32,7 @@ class ModelRegistryGeneratorTest {
             }
             """);
 
-    var result = generator.generate(srcDir, outDir, "cbs.nova.dsl.codegen.test");
+    var result = generator.generate(srcDir, outDir, "cbs.nova.dsl.codegen.test", true);
 
     assertThat(result.packageName()).isEqualTo("cbs.nova.dsl.codegen.test");
     assertThat(result.className()).isEqualTo("GeneratedModelRegistry");
@@ -58,7 +58,7 @@ class ModelRegistryGeneratorTest {
   void generatesEmptyRegistryWhenNoModels() throws Exception {
     Files.createDirectories(srcDir.resolve(CompilerConstants.MODELS_FOLDER));
 
-    var result = generator.generate(srcDir, outDir, "cbs.nova.dsl.codegen.empty");
+    var result = generator.generate(srcDir, outDir, "cbs.nova.dsl.codegen.empty", true);
 
     assertThat(result.packageName()).isEqualTo("cbs.nova.dsl.codegen.empty");
 

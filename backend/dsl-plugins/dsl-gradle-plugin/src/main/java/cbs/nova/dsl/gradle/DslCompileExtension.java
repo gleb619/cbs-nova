@@ -30,6 +30,6 @@ public abstract class DslCompileExtension {
     getBuildVersion().convention("");
     getLogLevel().convention("INFO");
     getRuntimeModule().convention("starter");
-    getUseFileNameSubPackage().convention(true);
+    getUseFileNameSubPackage().convention(false);
   }
 }

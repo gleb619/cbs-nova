@@ -9,6 +9,7 @@ import cbs.nova.dsl.codegen.generator.GeneratedClassProviderGenerator;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.model.GeneratedSource;
 import cbs.nova.dsl.codegen.util.AstExtractor;
+import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
 import cbs.nova.dsl.codegen.util.Json;
 import cbs.nova.dsl.compact.CompactSourcePreprocessor;
 import cbs.nova.dsl.config.DescriptorFactory;
@@ -22,9 +23,8 @@ import java.util.Map;
 
 class GeneratedClassProviderGeneratorTest {
 
-  private final CodegenNaming naming = new CodegenNaming();
   private final GeneratedClassProviderGenerator generator = new GeneratedClassProviderGenerator(
-          naming, new AstExtractor(new Json()));
+      new AstExtractor(new Json()), new DslPackageNameResolver(new CodegenNaming()));
   private final DescriptorFactory descriptorFactory = new DescriptorFactory();
 
   @Test
@@ -36,7 +36,7 @@ class GeneratedClassProviderGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var source = generator.forProcess(descriptor, null, null);
+    var source = generator.forProcess(descriptor, List.of(), null, null, true);
 
     assertThat(source).isNotNull();
     assertThat(source).isInstanceOf(GeneratedSource.class);
@@ -53,7 +53,7 @@ class GeneratedClassProviderGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var source = generator.forTransaction(descriptor, null, null);
+    var source = generator.forTransaction(descriptor, List.of(), null, null, true);
 
     assertThat(source).isNotNull();
     assertThat(source).isInstanceOf(GeneratedSource.class);
@@ -70,7 +70,7 @@ class GeneratedClassProviderGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var source = generator.forProcess(descriptor, null, null);
+    var source = generator.forProcess(descriptor, List.of(), null, null, true);
 
     assertThat(source.source())
             .contains(
@@ -88,7 +88,7 @@ class GeneratedClassProviderGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var source = generator.forTransaction(descriptor, null, null);
+    var source = generator.forTransaction(descriptor, List.of(), null, null, true);
 
     assertThat(source.source())
             .contains(
@@ -106,7 +106,7 @@ class GeneratedClassProviderGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var source = generator.forProcess(descriptor, null, null);
+    var source = generator.forProcess(descriptor, List.of(), null, null, true);
     var body = source.source();
 
     assertThat(body).contains("public GeneratedClassDescriptor descriptor()");
@@ -127,7 +127,7 @@ class GeneratedClassProviderGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var source = generator.forTransaction(descriptor, null, null);
+    var source = generator.forTransaction(descriptor, List.of(), null, null, true);
     var body = source.source();
 
     assertThat(body).contains("public GeneratedClassDescriptor descriptor()");
@@ -147,12 +147,12 @@ class GeneratedClassProviderGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var source = generator.forProcess(descriptor, null, null);
+    var source = generator.forProcess(descriptor, List.of(), null, null, true);
 
     var expectedClass = "LoanDisbursementGeneratedClassProvider";
     assertThat(source.className()).isEqualTo(expectedClass);
     assertThat(source.source()).contains("class " + expectedClass);
-    assertThat(source.packageName()).isEqualTo(naming.versionedPackage("LoanDisbursement", "v1"));
+    assertThat(source.packageName()).isEqualTo(new CodegenNaming().versionedPackage("LoanDisbursement", "v1", null));
   }
 
   @Test
@@ -164,7 +164,7 @@ class GeneratedClassProviderGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var source = generator.forProcess(descriptor, "9c74a34", null);
+    var source = generator.forProcess(descriptor, List.of(), "9c74a34", null, true);
 
     assertThat(source.packageName())
             .isEqualTo("cbs.nova.dsl.generated.loandisbursement.v9c74a34");
@@ -180,7 +180,7 @@ class GeneratedClassProviderGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var source = generator.forTransaction(descriptor, null, null);
+    var source = generator.forTransaction(descriptor, List.of(), null, null, true);
 
     assertThat(source.packageName()).isEqualTo("cbs.nova.dsl.generated.reserveinventory.v1");
     assertThat(source.source()).contains("\"v1\"");
@@ -195,7 +195,7 @@ class GeneratedClassProviderGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var source = generator.forProcess(descriptor, null, null);
+    var source = generator.forProcess(descriptor, List.of(), null, null, true);
     var body = source.source();
 
     assertThat(body).contains("package cbs.nova.dsl.generated.loandisbursement.v1;");
@@ -215,7 +215,7 @@ class GeneratedClassProviderGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var source = generator.forProcess(descriptor, null, null);
+    var source = generator.forProcess(descriptor, List.of(), null, null, true);
     var body = source.source();
 
     long generatedProviderImports = countOccurrences(body,
@@ -235,7 +235,7 @@ class GeneratedClassProviderGeneratorTest {
                     .execute(ctx -> Result.success(MapInput.fromMap(Map.of())))
                     .build());
 
-    var source = generator.forProcess(descriptor, null, null);
+    var source = generator.forProcess(descriptor, List.of(), null, null, true);
     var body = source.source();
 
     assertThat(body).contains("import " + MapInput.class.getCanonicalName() + ";");
@@ -250,7 +250,7 @@ class GeneratedClassProviderGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var source = generator.forProcess(descriptor, null, null);
+    var source = generator.forProcess(descriptor, List.of(), null, null, true);
     var body = source.source();
 
     assertThat(body).doesNotContain("import java.lang.String;");
@@ -266,7 +266,7 @@ class GeneratedClassProviderGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var source = generator.forProcess(descriptor, null, null);
+    var source = generator.forProcess(descriptor, List.of(), null, null, true);
 
     assertThat(source.source()).contains("@" + Generated.class.getSimpleName());
   }
@@ -296,7 +296,7 @@ class GeneratedClassProviderGeneratorTest {
     var preprocessed = CompactSourcePreprocessor.preprocess("LoanDsl.java", rawSource, null);
 
     var source = generator.forProcess(descriptor, List.of(preprocessed.preprocessedSource()), null,
-            null);
+            null, true);
 
     assertThat(source.source()).contains("executeJson()");
     assertThat(source.source()).contains("LambdaExpr");

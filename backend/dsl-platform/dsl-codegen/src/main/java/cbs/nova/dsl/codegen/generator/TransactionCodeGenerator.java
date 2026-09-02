@@ -25,12 +25,6 @@ public final class TransactionCodeGenerator {
 
   private final DslPackageNameResolver packageNameResolver;
 
-  public @NonNull List<GeneratedSource> generate(
-          @NonNull TransactionDescriptor descriptor,
-          @Nullable String buildVersion,
-          @Nullable String targetPackage) {
-    return generate(descriptor, buildVersion, targetPackage, true);
-  }
 
   public @NonNull List<GeneratedSource> generate(
           @NonNull TransactionDescriptor descriptor,

@@ -58,7 +58,7 @@ public abstract class DslCompileTask extends JavaExec {
   public DslCompileTask() {
     getMainClass().set("cbs.nova.dsl.codegen.DslCompiler");
     getLogLevel().convention("INFO");
-    getUseFileNameSubPackage().convention(true);
+    getUseFileNameSubPackage().convention(false);
   }
 
   @Override
@@ -79,7 +79,7 @@ public abstract class DslCompileTask extends JavaExec {
     properties.setProperty("logLevel", getLogLevel().getOrElse("INFO"));
     properties.setProperty("classpath", getClasspath().getAsPath());
     properties.setProperty("useFileNameSubPackage",
-            Boolean.toString(getUseFileNameSubPackage().getOrElse(true)));
+            Boolean.toString(getUseFileNameSubPackage().getOrElse(false)));
 
     setArgs(List.of(serializeProperties(properties)));
 

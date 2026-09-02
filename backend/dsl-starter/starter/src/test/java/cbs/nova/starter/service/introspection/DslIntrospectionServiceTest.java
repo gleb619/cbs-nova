@@ -6,7 +6,11 @@ import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
+import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
+import cbs.nova.starter.service.DslDefinitionStatusResolver;
+import cbs.nova.starter.service.DslGitStatusResolver;
 import cbs.nova.starter.service.DslIntrospectionService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +26,9 @@ class DslIntrospectionServiceTest {
     GlobalManager.globalManager().resetForTests();
     DslIntrospectionMapper mapper = Mappers.getMapper(DslIntrospectionMapper.class);
     service = new DslIntrospectionService(
-            DslConfig.dslConfig().jsonSchemaGenerator().get(), mapper);
+            DslConfig.dslConfig().jsonSchemaGenerator().get(),
+            mapper,
+            new DslDefinitionStatusResolver(new DslProperties(), new DslGitStatusResolver(new DslProperties())));
   }
 
   @AfterEach
@@ -103,6 +109,7 @@ class DslIntrospectionServiceTest {
               assertThat(d.outputType()).isEqualTo("Integer");
               assertThat(d.hasCompensation()).isFalse();
               assertThat(d.inputSchema()).isNotNull();
+              assertThat(d.status()).isEqualTo(DefinitionStatus.PUBLISHED);
             });
     assertThat(definitions)
             .anySatisfy(d -> {
@@ -114,6 +121,7 @@ class DslIntrospectionServiceTest {
               assertThat(d.outputType()).isEqualTo("String");
               assertThat(d.hasCompensation()).isFalse();
               assertThat(d.inputSchema()).isNotNull();
+              assertThat(d.status()).isEqualTo(DefinitionStatus.PUBLISHED);
             });
   }
 }

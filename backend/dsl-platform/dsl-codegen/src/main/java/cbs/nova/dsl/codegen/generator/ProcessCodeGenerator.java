@@ -30,12 +30,6 @@ public final class ProcessCodeGenerator {
 
   private final DslPackageNameResolver packageNameResolver;
 
-  public @NonNull List<GeneratedSource> generate(
-          @NonNull ProcessDescriptor descriptor,
-          @Nullable String buildVersion,
-          @Nullable String targetPackage) {
-    return generate(descriptor, buildVersion, targetPackage, true);
-  }
 
   public @NonNull List<GeneratedSource> generate(
           @NonNull ProcessDescriptor descriptor,
@@ -61,7 +55,7 @@ public final class ProcessCodeGenerator {
     return sources;
   }
 
-  private static @NonNull String resolveVersion(
+  private @NonNull String resolveVersion(
           @NonNull String descriptorVersion,
           String buildVersion) {
     return (buildVersion != null && !buildVersion.isBlank()) ? buildVersion : descriptorVersion;

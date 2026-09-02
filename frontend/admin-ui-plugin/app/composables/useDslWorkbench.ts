@@ -28,7 +28,7 @@ function normalizeConstruct(raw: Partial<DslConstruct> & { name: string }): DslC
   return {
     name: raw.name,
     type: constructTypeMap[lowerType] ?? (raw.type as ConstructType) ?? 'Helper',
-    status: (raw.status as ConstructStatus) ?? 'Draft',
+    status: (raw.status as ConstructStatus) ?? 'Published',
     version: raw.version,
     taskQueue: raw.taskQueue,
   }
@@ -144,6 +144,9 @@ export function useDslWorkbench() {
         version: selected?.version,
         taskQueue: selected?.taskQueue,
       })
+      if (selected) {
+        selected.status = 'Draft'
+      }
       state.value.isDirty = false
       log.info('draft saved', { name: state.value.selectedName })
     } catch (err) {
@@ -172,19 +175,24 @@ export function useDslWorkbench() {
         version: selected?.version,
         taskQueue: selected?.taskQueue,
       })
-      const diags = (result as { diagnostics?: CompileDiagnostic[]; reloadError?: string }).diagnostics
-      if (diags?.length) {
-        state.value.validationErrors = compileDiagnosticsToValidationErrors(diags)
+      const diags = (result as { diagnostics?: CompileDiagnostic[] }).diagnostics
+      const reloaded = (result as { reloaded?: boolean }).reloaded === true
+
+      if (!reloaded) {
+        if (diags?.length) {
+          state.value.validationErrors = compileDiagnosticsToValidationErrors(diags)
+        }
         const reloadError = (result as { reloadError?: string }).reloadError
         if (reloadError) {
           log.warn('publish reload failed', { name: state.value.selectedName, reloadError })
         }
-      } else {
-        state.value.validationErrors = []
-        const c = state.value.constructs.find((x) => x.name === state.value.selectedName)
-        if (c) c.status = 'Published'
-        log.info('construct published', { name: state.value.selectedName, result })
+        // Draft marker is kept when reload fails, so status stays Draft.
+        return
       }
+
+      state.value.validationErrors = []
+      await loadConstructs()
+      log.info('construct published', { name: state.value.selectedName, result })
     } catch (err) {
       log.error('failed to publish construct', {
         name: state.value.selectedName,

@@ -6,6 +6,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class CompilerConstants {
 
+  public static final String DEFAULT_BUILD_VERSION = "v1";
+  public static final String DEFAULT_LOG_LEVEL = "INFO";
+
   public static final String DSL_FOLDER = "dsl";
   public static final String MODELS_FOLDER = "models";
 

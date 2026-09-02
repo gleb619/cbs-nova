@@ -4,6 +4,7 @@ import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
+import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.ProcessDetail;
@@ -68,6 +69,7 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "hasCompensation", expression = "java(source.compensationLogic() != null)")
   @Mapping(target = "description", expression = "java(source.describe().description())")
   @Mapping(target = "inputSchema", ignore = true)
+  @Mapping(target = "status", ignore = true)
   DefinitionMetaDto toProcessDefinitionMeta(ProcessDslObject source);
 
   @Mapping(target = "type", constant = "process")
@@ -78,8 +80,9 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "hasCompensation", expression = "java(source.compensationLogic() != null)")
   @Mapping(target = "description", expression = "java(source.describe().description())")
   @Mapping(target = "inputSchema", source = "inputSchema")
+  @Mapping(target = "status", source = "status")
   DefinitionMetaDto toProcessDefinitionMeta(ProcessDslObject source,
-          Map<String, Object> inputSchema);
+          Map<String, Object> inputSchema, DefinitionStatus status);
 
   @Mapping(target = "type", constant = "transaction")
   @Mapping(target = "version", source = "source.version")
@@ -89,6 +92,7 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "hasCompensation", expression = "java(source.compensationLogic() != null)")
   @Mapping(target = "description", expression = "java(source.describe().description())")
   @Mapping(target = "inputSchema", ignore = true)
+  @Mapping(target = "status", ignore = true)
   DefinitionMetaDto toTransactionDefinitionMeta(TransactionDslObject source);
 
   @Mapping(target = "type", constant = "transaction")
@@ -99,8 +103,9 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "hasCompensation", expression = "java(source.compensationLogic() != null)")
   @Mapping(target = "description", expression = "java(source.describe().description())")
   @Mapping(target = "inputSchema", source = "inputSchema")
+  @Mapping(target = "status", source = "status")
   DefinitionMetaDto toTransactionDefinitionMeta(TransactionDslObject source,
-          Map<String, Object> inputSchema);
+          Map<String, Object> inputSchema, DefinitionStatus status);
 
   @Mapping(target = "type", constant = "function")
   @Mapping(target = "name", source = "source.name")
@@ -111,6 +116,7 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "hasCompensation", ignore = true)
   @Mapping(target = "description", source = "source.description")
   @Mapping(target = "inputSchema", ignore = true)
+  @Mapping(target = "status", ignore = true)
   DefinitionMetaDto toFunctionDefinitionMeta(DslDescriptor source);
 
   @Mapping(target = "type", constant = "function")
@@ -122,8 +128,9 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "hasCompensation", ignore = true)
   @Mapping(target = "description", source = "source.description")
   @Mapping(target = "inputSchema", source = "inputSchema")
+  @Mapping(target = "status", source = "status")
   DefinitionMetaDto toFunctionDefinitionMeta(DslDescriptor source,
-          Map<String, Object> inputSchema);
+          Map<String, Object> inputSchema, DefinitionStatus status);
 
   @Mapping(target = "type", constant = "helper")
   @Mapping(target = "name", source = "name")
@@ -134,6 +141,7 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "hasCompensation", ignore = true)
   @Mapping(target = "description", ignore = true)
   @Mapping(target = "inputSchema", ignore = true)
+  @Mapping(target = "status", ignore = true)
   DefinitionMetaDto toHelperDefinitionMeta(String name, ExecutableDescriptor descriptor);
 
   @Mapping(target = "type", constant = "helper")
@@ -145,6 +153,7 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "hasCompensation", ignore = true)
   @Mapping(target = "description", ignore = true)
   @Mapping(target = "inputSchema", source = "inputSchema")
+  @Mapping(target = "status", source = "status")
   DefinitionMetaDto toHelperDefinitionMeta(String name, ExecutableDescriptor descriptor,
-          Map<String, Object> inputSchema);
+          Map<String, Object> inputSchema, DefinitionStatus status);
 }

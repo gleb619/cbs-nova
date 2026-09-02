@@ -160,10 +160,10 @@ public class DslReloadHandler {
 
   private LoadResult doReload(Path sourceDir) throws IOException {
     var parent = Thread.currentThread().getContextClassLoader();
-    Path outputDir = null;
+    Path outputDir = Files.createTempDirectory(RELOAD_TEMP_PREFIX);
     URLClassLoader reloadClassLoader = null;
     try {
-      outputDir = compileJavaSources(sourceDir);
+      compileJavaSources(sourceDir, outputDir);
       reloadClassLoader = new URLClassLoader(
               new URL[]{sourceDir.toUri().toURL(), outputDir.toUri().toURL()}, parent);
       Thread.currentThread().setContextClassLoader(reloadClassLoader);
@@ -246,14 +246,13 @@ public class DslReloadHandler {
     }
   }
 
-  private Path compileJavaSources(Path sourceDir) throws IOException {
-    var outputDir = Files.createTempDirectory(RELOAD_TEMP_PREFIX);
+  private void compileJavaSources(Path sourceDir, Path outputDir) throws IOException {
     List<Path> javaFiles;
     try (Stream<Path> stream = Files.walk(sourceDir)) {
       javaFiles = stream.filter(p -> p.toString().endsWith(".java")).toList();
     }
     if (javaFiles.isEmpty()) {
-      return outputDir;
+      return;
     }
     var compiler = ToolProvider.getSystemJavaCompiler();
     if (compiler == null) {
@@ -285,7 +284,6 @@ public class DslReloadHandler {
       throw new DslCompilationException(
               "Failed to compile DSL source: " + firstFailedFile.getFileName(), collected);
     }
-    return outputDir;
   }
 
   private static CompileDiagnostic toCompileDiagnostic(Diagnostic<? extends JavaFileObject> d,
@@ -363,18 +361,21 @@ public class DslReloadHandler {
     if (dir == null) {
       return;
     }
+    List<Path> paths;
     try (Stream<Path> stream = Files.walk(dir)) {
-      stream.sorted((a, b) -> -a.compareTo(b)).forEach(p -> {
-        try {
-          Files.deleteIfExists(p);
-        } catch (NoSuchFileException e) {
-          // already gone — fine
-        } catch (IOException e) {
-          log.warn("[DSL reload] Failed to delete temp path {}: {}", p, e.getMessage());
-        }
-      });
+      paths = stream.sorted((a, b) -> -a.compareTo(b)).toList();
     } catch (IOException e) {
       log.warn("[DSL reload] Failed to walk temp dir {} for cleanup: {}", dir, e.getMessage());
+      return;
+    }
+    for (Path p : paths) {
+      try {
+        Files.deleteIfExists(p);
+      } catch (NoSuchFileException e) {
+        // already gone — fine
+      } catch (IOException e) {
+        log.warn("[DSL reload] Failed to delete temp path {}: {}", p, e.getMessage());
+      }
     }
   }
 

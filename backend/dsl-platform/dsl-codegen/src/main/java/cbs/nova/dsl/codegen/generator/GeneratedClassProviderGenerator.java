@@ -11,6 +11,7 @@ import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.utils.Substitutor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -21,34 +22,12 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
+@RequiredArgsConstructor
 public final class GeneratedClassProviderGenerator {
 
-  private final CodegenNaming codegenNaming;
   private final AstExtractor executeAstJsonExtractor;
   private final DslPackageNameResolver packageNameResolver;
 
-  public GeneratedClassProviderGenerator(
-          @NonNull CodegenNaming codegenNaming,
-          @NonNull AstExtractor executeAstJsonExtractor) {
-    this.codegenNaming = codegenNaming;
-    this.executeAstJsonExtractor = executeAstJsonExtractor;
-    this.packageNameResolver = new DslPackageNameResolver(codegenNaming);
-  }
-
-  public @NonNull GeneratedSource forProcess(
-          @NonNull ProcessDescriptor descriptor,
-          @Nullable String buildVersion,
-          @Nullable String targetPackage) {
-    return forProcess(descriptor, List.of(), buildVersion, targetPackage);
-  }
-
-  public @NonNull GeneratedSource forProcess(
-          @NonNull ProcessDescriptor descriptor,
-          @NonNull List<String> preprocessedSources,
-          @Nullable String buildVersion,
-          @Nullable String targetPackage) {
-    return forProcess(descriptor, preprocessedSources, buildVersion, targetPackage, true);
-  }
 
   public @NonNull GeneratedSource forProcess(
           @NonNull ProcessDescriptor descriptor,
@@ -76,21 +55,6 @@ public final class GeneratedClassProviderGenerator {
 
   public @NonNull GeneratedSource forTransaction(
           @NonNull TransactionDescriptor descriptor,
-          @Nullable String buildVersion,
-          @Nullable String targetPackage) {
-    return forTransaction(descriptor, List.of(), buildVersion, targetPackage);
-  }
-
-  public @NonNull GeneratedSource forTransaction(
-          @NonNull TransactionDescriptor descriptor,
-          @NonNull List<String> preprocessedSources,
-          @Nullable String buildVersion,
-          @Nullable String targetPackage) {
-    return forTransaction(descriptor, preprocessedSources, buildVersion, targetPackage, true);
-  }
-
-  public @NonNull GeneratedSource forTransaction(
-          @NonNull TransactionDescriptor descriptor,
           @NonNull List<String> preprocessedSources,
           @Nullable String buildVersion,
           @Nullable String targetPackage,
@@ -113,7 +77,7 @@ public final class GeneratedClassProviderGenerator {
     return source;
   }
 
-  private static @NonNull String resolveVersion(
+  private @NonNull String resolveVersion(
           @NonNull String descriptorVersion,
           String buildVersion) {
     return (buildVersion != null && !buildVersion.isBlank()) ? buildVersion : descriptorVersion;

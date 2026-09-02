@@ -11,7 +11,7 @@ class CodegenNamingTest {
 
   @Test
   void fallsBackToBasePackageWhenTargetPackageIsNull() {
-    assertThat(naming.versionedPackage("Loan", "1"))
+    assertThat(naming.versionedPackage("Loan", "1", null))
             .isEqualTo("cbs.nova.dsl.generated.loan.v1");
   }
 

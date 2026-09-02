@@ -39,7 +39,7 @@ class ProcessCodeGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var sources = generator.generate(descriptor, null, null);
+    var sources = generator.generate(descriptor, null, null, true);
     assertThat(sources).hasSize(2);
   }
 
@@ -52,7 +52,7 @@ class ProcessCodeGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var iface = generator.generate(descriptor, null, null).get(0);
+    var iface = generator.generate(descriptor, null, null, true).get(0);
     assertThat(iface.className()).isEqualTo("LoanDisbursementProcessWorkflow");
     assertThat(iface.source()).contains("@WorkflowInterface");
     assertThat(iface.source()).contains("@WorkflowMethod");
@@ -77,7 +77,7 @@ class ProcessCodeGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var sources = generator.generate(descriptor, null, null);
+    var sources = generator.generate(descriptor, null, null, true);
     assertThat(sources.get(0).packageName())
             .isEqualTo("cbs.nova.dsl.generated.loandisbursement.v1");
   }
@@ -91,7 +91,7 @@ class ProcessCodeGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var impl = generator.generate(descriptor, null, null).get(1);
+    var impl = generator.generate(descriptor, null, null, true).get(1);
     assertThat(impl.className()).isEqualTo("LoanDisbursementProcessDefinition");
     assertThat(impl.source()).contains("implements LoanDisbursementProcessWorkflow");
     assertThat(impl.source())
@@ -127,7 +127,7 @@ class ProcessCodeGeneratorTest {
                     .compensation(ctx -> Result.success(null))
                     .build());
 
-    var impl = generator.generate(descriptor, null, null).get(1);
+    var impl = generator.generate(descriptor, null, null, true).get(1);
     assertThat(impl.source()).contains("runProcessWithCompensation");
     assertThat(impl.source()).contains(ProcessCompensation.class.getSimpleName());
     assertThat(impl.source()).contains("compensateProcess");
@@ -145,7 +145,7 @@ class ProcessCodeGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var impl = generator.generate(descriptor, null, null).get(1);
+    var impl = generator.generate(descriptor, null, null, true).get(1);
     assertThat(impl.source()).contains("runProcessWithCompensation");
     assertThat(impl.source()).contains(ProcessCompensation.class.getSimpleName());
     assertThat(impl.source()).contains("compensateProcess");
@@ -158,7 +158,7 @@ class ProcessCodeGeneratorTest {
   void interfaceHasGetVersion() {
     var descriptor = descriptor().fromProcess(
             Dsl.process("Foo").execute(ctx -> Result.success("x")).build());
-    var iface = generator.generate(descriptor, null, null).get(0);
+    var iface = generator.generate(descriptor, null, null, true).get(0);
     assertThat(iface.source()).contains("@QueryMethod");
     assertThat(iface.source()).contains("String getVersion()");
   }
@@ -168,7 +168,7 @@ class ProcessCodeGeneratorTest {
     var descriptor = descriptor().fromProcess(
             Dsl.process("Foo").version("v2").execute(ctx -> Result.success("x"))
                     .build());
-    var impl = generator.generate(descriptor, null, null).get(1);
+    var impl = generator.generate(descriptor, null, null, true).get(1);
     assertThat(impl.source()).contains("\"v2\"");
     assertThat(impl.source()).contains("getVersion()");
   }
@@ -177,7 +177,7 @@ class ProcessCodeGeneratorTest {
   void implDoesNotContainLegacyTaskQueueConstant() {
     var descriptor = descriptor().fromProcess(
             Dsl.process("Foo").execute(ctx -> Result.success("x")).build());
-    var impl = generator.generate(descriptor, null, null).get(1);
+    var impl = generator.generate(descriptor, null, null, true).get(1);
     assertThat(impl.source()).doesNotContain("TASK_QUEUE");
     assertThat(impl.source()).doesNotContain("Foo-queue");
   }
@@ -190,7 +190,7 @@ class ProcessCodeGeneratorTest {
                     .execute(ctx -> Result.success(MapInput.fromMap(Map.of())))
                     .build());
 
-    var sources = generator.generate(descriptor, null, null);
+    var sources = generator.generate(descriptor, null, null, true);
     var iface = sources.get(0);
     var impl = sources.get(1);
 
@@ -215,7 +215,7 @@ class ProcessCodeGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var sources = generator.generate(descriptor, "9c74a34", null);
+    var sources = generator.generate(descriptor, "9c74a34", null, true);
     assertThat(sources.get(0).packageName())
             .isEqualTo("cbs.nova.dsl.generated.loandisbursement.v9c74a34");
     assertThat(sources.get(1).source())
@@ -232,7 +232,7 @@ class ProcessCodeGeneratorTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var impl = generator.generate(descriptor, null, null).get(1);
+    var impl = generator.generate(descriptor, null, null, true).get(1);
     assertThat(impl.source()).contains("runProcessWithCompensation");
     assertThat(impl.source()).doesNotContain("registerTransactionCompensation");
     assertThat(impl.source()).doesNotContain("compensateTransaction");

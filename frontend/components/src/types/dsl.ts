@@ -1,5 +1,5 @@
 export type ConstructType = 'Process' | 'Transaction' | 'Function' | 'Helper'
-export type ConstructStatus = 'Draft' | 'Valid' | 'Invalid' | 'Published'
+export type ConstructStatus = 'Draft' | 'Valid' | 'Invalid' | 'Published' | 'Modified'
 
 export interface DslConstruct {
   name: string

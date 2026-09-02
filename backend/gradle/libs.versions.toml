@@ -25,6 +25,8 @@ avaje-jsonb-generator = "3.4"
 h2 = "2.4.240"
 caffeine = "3.1.8"
 
+jgit = "7.1.0.202411261347-r"
+
 # plugins
 spring-boot = "4.0.4"
 spring-cloud = "2025.1.1"
@@ -113,6 +115,7 @@ h2 = { module = "com.h2database:h2", version.ref = "h2" }
 
 # -- Caffeine --
 caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
+jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit" }
 
 [bundles]
 spring-web = ["spring-boot-starter-web", "spring-boot-starter-validation", "spring-boot-starter-actuator"]

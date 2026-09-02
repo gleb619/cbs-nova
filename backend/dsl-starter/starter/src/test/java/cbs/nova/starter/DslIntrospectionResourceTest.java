@@ -15,8 +15,11 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.starter.config.DslIntrospectionRouterConfiguration;
+import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslIntrospectionHandler;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;
+import cbs.nova.starter.service.DslDefinitionStatusResolver;
+import cbs.nova.starter.service.DslGitStatusResolver;
 import cbs.nova.starter.service.DslIntrospectionService;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
 import org.hamcrest.Matchers;
@@ -43,7 +46,12 @@ class DslIntrospectionResourceTest {
                             .execute(ctx -> Result.success("ok")).build());
     DslIntrospectionMapper mapper = Mappers.getMapper(DslIntrospectionMapper.class);
     DslIntrospectionService service = new DslIntrospectionService(
-            DslConfig.dslConfig().jsonSchemaGenerator().get(), mapper);
+            DslConfig.dslConfig().jsonSchemaGenerator().get(),
+            mapper,
+            new DslDefinitionStatusResolver(
+                    new DslProperties(),
+                    new DslGitStatusResolver(
+                            new DslProperties())));
     DslIntrospectionHandler handler = new DslIntrospectionHandler(service,
             new ExplainDiagramRenderer());
     DslIntrospectionRouterConfiguration router = new DslIntrospectionRouterConfiguration();

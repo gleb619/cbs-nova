@@ -73,6 +73,7 @@ dependencies {
   implementation libs.opentelemetry.sdk
   implementation libs.opentelemetry.exporter.otlp
   implementation libs.caffeine
+  implementation libs.jgit
 
   annotationProcessor "cbs.nova:misc-codegen:${project.version}"
   integrationTestAnnotationProcessor "cbs.nova:misc-codegen:${project.version}"

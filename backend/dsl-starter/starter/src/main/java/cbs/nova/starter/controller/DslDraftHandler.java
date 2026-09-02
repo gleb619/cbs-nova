@@ -84,7 +84,7 @@ public class DslDraftHandler {
     historyService.snapshotBeforePublish(dir.path(), name);
     Path file = writePayload(dir.path().resolve(PUBLISHED_DIR), payload);
     log.info("[DSL drafts] published {} to {}", name, file);
-    return finishPublish(name, file);
+    return finishPublish(name, dir.path(), file);
   }
 
   public ServerResponse history(ServerRequest request) {
@@ -115,7 +115,7 @@ public class DslDraftHandler {
     var payload = withStatus(entry.get(), "Published");
     Path file = writePayload(dir.path().resolve(PUBLISHED_DIR), payload);
     log.info("[DSL drafts] restored {} to published {} from history {}", name, file, timestamp);
-    return finishPublish(name, file);
+    return finishPublish(name, dir.path(), file);
   }
 
   public ServerResponse delete(ServerRequest request) throws IOException {
@@ -287,12 +287,13 @@ public class DslDraftHandler {
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(result);
   }
 
-  private ServerResponse finishPublish(String name, Path file) throws IOException {
+  private ServerResponse finishPublish(String name, Path dir, Path file) throws IOException {
     boolean reloaded = false;
     LoadResult loadResult = LoadResult.empty();
     try {
       loadResult = reloadHandler.reloadDefinitions();
       reloaded = true;
+      deleteDraftMarker(dir, name);
       log.info("[DSL drafts] publish of {} reloaded {} definitions: processes={}, transactions={},"
               + " functions={}",
               name, loadResult.total(), loadResult.processCount(), loadResult.transactionCount(),
@@ -403,6 +404,18 @@ public class DslDraftHandler {
 
   private static Path draftsDir(Path source) {
     return source.resolve(DRAFTS_DIR);
+  }
+
+  private void deleteDraftMarker(Path dir, String name) {
+    try {
+      Path draftFile = draftsDir(dir).resolve(safeFileName(name) + ".json").normalize();
+      if (draftFile.startsWith(draftsDir(dir).normalize()) && Files.exists(draftFile)) {
+        Files.delete(draftFile);
+        log.info("[DSL drafts] deleted draft marker {} after publish", draftFile);
+      }
+    } catch (Exception e) {
+      log.warn("[DSL drafts] failed to delete draft marker for {}: {}", name, e.getMessage());
+    }
   }
 
   private static String safeFileName(String name) {

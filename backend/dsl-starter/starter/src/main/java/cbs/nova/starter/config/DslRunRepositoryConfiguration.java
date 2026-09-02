@@ -33,20 +33,6 @@ import java.sql.SQLException;
 
 import javax.sql.DataSource;
 
-/**
- * Wires JDBC-backed run repositories and opt-in Flyway schema migrations.
- *
- * <p>
- * Spring Boot 4 does not provide built-in Flyway auto-configuration, so a conditional
- * {@link Flyway} bean plus a {@link org.flywaydb.core.api.callback.Callback}-style initializer is
- * declared here when {@code spring.flyway.enabled=true}.
- *
- * <p>
- * This is a separate auto-configuration (loaded after {@link DataSourceAutoConfiguration}) so
- * {@link DataSource} and the JDBC repositories it depends on are available when this class is
- * processed. The starter's root auto-configuration is ordered after this one so its fallback
- * repository bean backs off in favour of the JDBC implementation.
- */
 @AutoConfiguration
 @AutoConfigureAfter(DataSourceAutoConfiguration.class)
 @EnableConfigurationProperties(DslRunPersistenceProperties.class)

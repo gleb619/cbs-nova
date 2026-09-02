@@ -1,5 +1,9 @@
 package cbs.nova.dsl.codegen.model;
 
+import static cbs.nova.dsl.codegen.CompilerConstants.DEFAULT_BUILD_VERSION;
+import static cbs.nova.dsl.codegen.CompilerConstants.DEFAULT_LOG_LEVEL;
+
+import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.event.Level;
@@ -10,17 +14,16 @@ import java.nio.file.Path;
 import java.util.Properties;
 
 @Slf4j
+@Builder
 public record DslCompilerOptions(
         @NonNull Path srcDir,
         @NonNull Path outputDir,
         @NonNull String buildVersion,
         String targetPackage,
+        @Deprecated(forRemoval = true)
         @NonNull Level logLevel,
         String classpath,
         boolean useFileNameSubPackage) {
-
-  private static final String DEFAULT_BUILD_VERSION = "v1";
-  private static final String DEFAULT_LOG_LEVEL = "INFO";
 
   public static @NonNull DslCompilerOptions fromProperties(@NonNull String serialized) {
     var properties = new Properties();

@@ -1,5 +1,7 @@
 package cbs.nova.dsl.codegen;
 
+import static cbs.nova.dsl.codegen.CompilerConstants.DEFAULT_BUILD_VERSION;
+
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.GeneratedClassProvider;
 import cbs.nova.dsl.codegen.generator.GeneratedClassProviderGenerator;
@@ -49,8 +51,6 @@ public final class DslCompiler {
   private final HelperRegistry helperRegistry;
   private final CodegenNaming codegenNaming;
 
-  private record StepTiming(String phase, Duration duration) {
-  }
 
   public static void main(String[] args) throws IOException {
     if (args.length < 1) {
@@ -62,44 +62,8 @@ public final class DslCompiler {
     compile(options);
   }
 
-  public static void compile(Path srcDir, Path outputDir) throws IOException {
-    compile(srcDir, outputDir, null, null, Level.INFO);
-  }
-
-  public static void compile(
-          Path srcDir, Path outputDir, String version, String targetPackage) throws IOException {
-    compile(srcDir, outputDir, version, targetPackage, Level.INFO);
-  }
-
-  public static void compile(
-          Path srcDir,
-          Path outputDir,
-          String version,
-          String targetPackage,
-          Level logLevel) throws IOException {
-    compile(srcDir, outputDir, version, targetPackage, logLevel, null);
-  }
-
-  public static void compile(
-          Path srcDir,
-          Path outputDir,
-          String version,
-          String targetPackage,
-          Level logLevel,
-          String classpath) throws IOException {
-    var options = new DslCompilerOptions(
-            srcDir,
-            outputDir,
-            version != null && !version.isBlank() ? version : "v1",
-            targetPackage,
-            logLevel,
-            classpath,
-            true);
-    compile(options);
-  }
-
   public static void compile(@NonNull DslCompilerOptions options) throws IOException {
-    CompileConfig.compileConfig(options.logLevel())
+    CompileConfig.compileConfig()
             .dslCompiler()
             .compileInternal(options);
   }
@@ -236,5 +200,8 @@ public final class DslCompiler {
       }
     }
     return result;
+  }
+
+  private record StepTiming(String phase, Duration duration) {
   }
 }

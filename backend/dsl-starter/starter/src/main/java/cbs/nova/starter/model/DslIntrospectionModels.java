@@ -1,6 +1,7 @@
 package cbs.nova.starter.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.List;
 import java.util.Map;
 
@@ -15,7 +16,8 @@ public final class DslIntrospectionModels {
           String outputType,
           Boolean hasCompensation,
           String description,
-          @JsonInclude(JsonInclude.Include.NON_NULL) Map<String, Object> inputSchema) {
+          @JsonInclude(JsonInclude.Include.NON_NULL) Map<String, Object> inputSchema,
+          DefinitionStatus status) {
   }
 
   public record NamesResponse(List<String> names) {
@@ -81,5 +83,23 @@ public final class DslIntrospectionModels {
           String name,
           String format,
           String diagram) {
+  }
+
+  public enum DefinitionStatus {
+
+    PUBLISHED("Published"),
+    DRAFT("Draft"),
+    MODIFIED("Modified");
+
+    private final String value;
+
+    DefinitionStatus(String value) {
+      this.value = value;
+    }
+
+    @JsonValue
+    public String value() {
+      return value;
+    }
   }
 }

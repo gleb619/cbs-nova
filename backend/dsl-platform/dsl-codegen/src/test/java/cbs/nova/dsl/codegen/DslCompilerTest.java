@@ -1,5 +1,6 @@
 package cbs.nova.dsl.codegen;
 
+import static cbs.nova.dsl.codegen.CompilerConstants.DEFAULT_BUILD_VERSION;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.codegen.model.DslCompilerOptions;
@@ -37,7 +38,15 @@ class DslCompilerTest {
                     }
                     """);
 
-    DslCompiler.compile(srcDir, outDir);
+    var options = DslCompilerOptions.builder()
+        .srcDir(srcDir)
+        .outputDir(outDir)
+        .buildVersion(DEFAULT_BUILD_VERSION)
+        .targetPackage(null)
+        .logLevel(Level.INFO)
+        .classpath(null)
+        .build();
+    DslCompiler.compile(options);
 
     var dir = outDir.resolve("cbs/nova/dsl/generated/loandisbursement/v1");
     assertThat(dir.resolve("LoanDisbursementProcessWorkflow.java")).exists();
@@ -68,7 +77,15 @@ class DslCompilerTest {
                     }
                     """);
 
-    DslCompiler.compile(srcDir, outDir);
+    var options = DslCompilerOptions.builder()
+        .srcDir(srcDir)
+        .outputDir(outDir)
+        .buildVersion(DEFAULT_BUILD_VERSION)
+        .targetPackage(null)
+        .logLevel(Level.INFO)
+        .classpath(null)
+        .build();
+    DslCompiler.compile(options);
 
     var dir = outDir.resolve("cbs/nova/dsl/generated/kyccheck/v1");
     assertThat(dir.resolve("KycCheckTransactionActivity.java")).exists();
@@ -108,7 +125,15 @@ class DslCompilerTest {
                     }
                     """);
 
-    DslCompiler.compile(srcDir, outDir, "abc1234", "cbs.nova.dsl.codegen.test");
+    var options = DslCompilerOptions.builder()
+        .srcDir(srcDir)
+        .outputDir(outDir)
+        .buildVersion("abc1234")
+        .targetPackage("cbs.nova.dsl.codegen.test")
+        .logLevel(Level.INFO)
+        .classpath(null)
+        .build();
+    DslCompiler.compile(options);
 
     assertThat(outDir.resolve("cbs/nova/dsl/codegen/test/testprocess/abc1234/TestModels.class"))
             .exists();
@@ -151,7 +176,15 @@ class DslCompilerTest {
                     }
                     """);
 
-    DslCompiler.compile(srcDir, outDir);
+    var options = DslCompilerOptions.builder()
+        .srcDir(srcDir)
+        .outputDir(outDir)
+        .buildVersion(DEFAULT_BUILD_VERSION)
+        .targetPackage(null)
+        .logLevel(Level.INFO)
+        .classpath(null)
+        .build();
+    DslCompiler.compile(options);
 
     var dir = outDir.resolve("cbs/nova/dsl/generated/paramprocess/v1");
     assertThat(dir.resolve("ParamProcessProcessWorkflow.java")).exists();

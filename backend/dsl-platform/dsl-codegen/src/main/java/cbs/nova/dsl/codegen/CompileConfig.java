@@ -25,18 +25,13 @@ import org.slf4j.event.Level;
 public final class CompileConfig implements SingletonSupport {
 
   private final Scope scope;
-  private final Level logLevel;
 
   public static CompileConfig compileConfig() {
     return Holder.INSTANCE.compileConfig();
   }
 
-  public static CompileConfig compileConfig(Level logLevel) {
-    return Holder.INSTANCE.compileConfig(SingletonScope.of(), logLevel);
-  }
-
-  public static CompileConfig compileConfig(Scope scope, Level logLevel) {
-    return Holder.INSTANCE.compileConfig(scope, logLevel);
+  public static CompileConfig compileConfig(Scope scope) {
+    return Holder.INSTANCE.compileConfig(scope);
   }
 
   /* ============= */
@@ -47,7 +42,7 @@ public final class CompileConfig implements SingletonSupport {
 
   public @NonNull SourceCompiler sourceCompiler() {
     return singleton(() -> new SourceCompiler(
-            logLevel, definitionProviderGenerator(), codeWriter(), codegenNaming()));
+            definitionProviderGenerator(), codeWriter(), codegenNaming()));
   }
 
   public @NonNull DslSourceCompiler dslSourceCompiler() {
@@ -78,7 +73,7 @@ public final class CompileConfig implements SingletonSupport {
 
   public @NonNull GeneratedClassProviderGenerator generatedClassProviderGenerator() {
     return singleton(
-            () -> new GeneratedClassProviderGenerator(codegenNaming(), executeAstJsonExtractor()));
+            () -> new GeneratedClassProviderGenerator(executeAstJsonExtractor(), new DslPackageNameResolver(codegenNaming())));
   }
 
   public @NonNull ModelTypeExtractor modelTypeExtractor() {
@@ -135,11 +130,11 @@ public final class CompileConfig implements SingletonSupport {
     private final SingletonScope scope = SingletonScope.of();
 
     public CompileConfig compileConfig() {
-      return compileConfig(SingletonScope.of(), Level.INFO);
+      return compileConfig(SingletonScope.of());
     }
 
-    public CompileConfig compileConfig(Scope scope, Level logLevel) {
-      return singleton(scope.id(), () -> new CompileConfig(scope, logLevel));
+    public CompileConfig compileConfig(Scope scope) {
+      return singleton(scope.id(), () -> new CompileConfig(scope));
     }
   }
 }

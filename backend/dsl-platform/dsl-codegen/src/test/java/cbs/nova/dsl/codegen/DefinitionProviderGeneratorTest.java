@@ -17,7 +17,7 @@ class DefinitionProviderGeneratorTest {
   @Test
   void writesProviderSourceAndSpiFile(@TempDir Path outDir) throws Exception {
     var generator = new DefinitionProviderGenerator(new CodeWriter());
-    var fqcn = generator.generate(outDir, List.of("FooDsl", "BarDsl"));
+    var fqcn = generator.generate(outDir, List.of("FooDsl", "BarDsl"), null);
 
     var source = outDir.resolve("GeneratedDslDefinitionProvider.java");
     assertThat(source).exists();
@@ -38,7 +38,7 @@ class DefinitionProviderGeneratorTest {
   @Test
   void emptyClassListProducesEmptyRegistrations(@TempDir Path outDir) throws Exception {
     var generator = new DefinitionProviderGenerator(new CodeWriter());
-    var fqcn = generator.generate(outDir, List.of());
+    var fqcn = generator.generate(outDir, List.of(), null);
 
     var source = outDir.resolve("GeneratedDslDefinitionProvider.java");
     var text = Files.readString(source);

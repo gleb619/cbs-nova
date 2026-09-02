@@ -38,7 +38,6 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public final class SourceCompiler {
 
-  private final Level logLevel;
   private final DefinitionProviderGenerator definitionProviderGenerator;
   private final CodeWriter codeWriter;
   private final CodegenNaming codegenNaming;
@@ -383,6 +382,7 @@ public final class SourceCompiler {
   public record CompileOptions(
           String buildVersion,
           String targetPackage,
+          @Deprecated(forRemoval = true)
           Level logLevel,
           String classpath,
           boolean useFileNameSubPackage) {

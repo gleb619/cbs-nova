@@ -48,11 +48,6 @@ public final class DefinitionProviderGenerator {
                   }
                   """;
 
-  public @NonNull String generate(@NonNull Path outputDir, @NonNull List<String> classNames)
-          throws IOException {
-    return generate(outputDir, classNames, null);
-  }
-
   public @NonNull String generate(
           @NonNull Path outputDir,
           @NonNull List<String> classNames,
@@ -83,14 +78,14 @@ public final class DefinitionProviderGenerator {
     return providerFqcn;
   }
 
-  static @NonNull String providerFqcn(String targetPackage) {
+  private @NonNull String providerFqcn(String targetPackage) {
     if (targetPackage == null || targetPackage.isBlank()) {
       return PROVIDER_CLASS;
     }
     return targetPackage + "." + PROVIDER_CLASS;
   }
 
-  private static @NonNull Path sourcePath(@NonNull Path outputDir, String targetPackage) {
+  private @NonNull Path sourcePath(@NonNull Path outputDir, String targetPackage) {
     if (targetPackage == null || targetPackage.isBlank()) {
       return outputDir.resolve(PROVIDER_CLASS + ".java");
     }

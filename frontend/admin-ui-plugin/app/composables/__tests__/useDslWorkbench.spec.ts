@@ -147,7 +147,11 @@ describe('useDslWorkbench', () => {
         { name: 'c1', type: 'Process' as const, status: 'Valid' as const },
         { name: 'c2', type: 'Helper' as const, status: 'Draft' as const },
       ])
-      api.publishDraft.mockResolvedValueOnce({ ok: true })
+      api.getDefinitions.mockResolvedValueOnce([
+        { name: 'c1', type: 'Process' as const, status: 'Valid' as const },
+        { name: 'c2', type: 'Helper' as const, status: 'Published' as const },
+      ])
+      api.publishDraft.mockResolvedValueOnce({ reloaded: true })
 
       const wb = useDslWorkbench()
       await wb.loadConstructs()
@@ -300,7 +304,10 @@ describe('useDslWorkbench', () => {
       api.getDefinitions.mockResolvedValueOnce([
         { name: 'c2', type: 'Helper' as const, status: 'Draft' as const },
       ])
-      api.publishDraft.mockResolvedValueOnce({ ok: true })
+      api.getDefinitions.mockResolvedValueOnce([
+        { name: 'c2', type: 'Helper' as const, status: 'Published' as const },
+      ])
+      api.publishDraft.mockResolvedValueOnce({ reloaded: true })
 
       const wb = useDslWorkbench()
       await wb.loadConstructs()

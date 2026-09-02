@@ -61,13 +61,6 @@ public final class ModelRegistryGenerator {
   public @NonNull GeneratedSource generate(
           @NonNull Path srcDir,
           @NonNull Path outputDir,
-          String targetPackage) throws IOException {
-    return generate(srcDir, outputDir, targetPackage, true);
-  }
-
-  public @NonNull GeneratedSource generate(
-          @NonNull Path srcDir,
-          @NonNull Path outputDir,
           String targetPackage,
           boolean useFileNameSubPackage) throws IOException {
     var dslDir = srcDir.resolve(CompilerConstants.DSL_FOLDER);

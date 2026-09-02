@@ -37,6 +37,7 @@ const statusClass: Record<string, string> = {
   Valid: 'bg-green-100 text-green-700',
   Invalid: 'bg-red-100 text-red-700',
   Published: 'bg-blue-100 text-blue-700',
+  Modified: 'bg-yellow-100 text-yellow-700',
 }
 
 function isCollapsed(type: string): boolean {
@@ -76,21 +77,17 @@ function handleDelete(name: string) {
 
       <ul v-show="!isCollapsed(group.type)" class="space-y-0.5">
         <li v-if="group.items.length === 0" class="px-2 py-1 text-xs text-gray-500 italic">none</li>
-        <li
-          v-for="item in group.items"
-          :key="item.name"
-          class="flex items-center gap-1"
-        >
+        <li v-for="item in group.items" :key="item.name" class="flex items-center gap-2">
           <button
             type="button"
-            class="flex-1 text-left px-2 py-1.5 rounded text-sm flex items-center justify-between gap-2 hover:bg-gray-800 transition-colors"
+            class="flex-1 min-w-0 text-left px-2 py-1.5 rounded text-sm flex items-center justify-between gap-2 hover:bg-gray-800 transition-colors"
             :class="selectedName === item.name ? 'bg-gray-800 text-white' : 'text-gray-300'"
             :data-testid="`plain-construct-list-item-${item.name}`"
             @click="handleClick(item.name)"
           >
             <span class="truncate">{{ item.name }}</span>
             <span
-              class="text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap"
+              class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap"
               :class="statusClass[item.status] ?? 'bg-gray-200 text-gray-700'"
             >
               {{ item.status }}
@@ -104,8 +101,20 @@ function handleDelete(name: string) {
             aria-label="Delete draft"
             @click.stop="handleDelete(item.name)"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-5 h-5">
-            <path d="M6 12L18 12" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              class="w-5 h-5"
+              aria-hidden="true"
+            >
+              <path
+                d="M6 12L18 12"
+                stroke="#ffffff"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
             </svg>
           </button>
         </li>
