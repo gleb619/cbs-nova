@@ -289,3 +289,33 @@ if (sessionId.present()) {
     String id = sessionId.value();
 }
 ```
+
+## CSV in / CSV out
+
+`parseCsv` turns an RFC 4180 CSV payload into a list of rows; `formatCsv` turns rows back into a
+CSV string. Use `CsvOptions(delimiter, withHeader, lineSeparator)` to override the defaults:
+`,` (first character only), `false`, and `\r\n`.
+
+```java
+ParseCsvOut data = ctx.runHelper("parseCsv",
+        new ParseCsvIn(payload, new CsvOptions(",", false, "\r\n")))
+        .as(ParseCsvOut.class);
+
+List<List<String>> rows = data.rows();
+```
+
+`withHeader = true` drops the first row so you can treat it as headers:
+
+```java
+ParseCsvOut body = ctx.runHelper("parseCsv",
+        new ParseCsvIn(csv, new CsvOptions(null, true, null)))
+        .as(ParseCsvOut.class);
+```
+
+`formatCsv` prepends an optional `headerRow` and enforces strict rectangular output:
+
+```java
+FormatCsvOut csv = ctx.runHelper("formatCsv",
+        new FormatCsvIn(rows, headerRow, new CsvOptions("\t", false, "\n")))
+        .as(FormatCsvOut.class);
+```
