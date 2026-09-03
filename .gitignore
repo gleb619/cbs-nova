@@ -160,3 +160,4 @@ backend/.intellijPlatform/
 /workbench-reload.yml
 /workbench-reload2.yml
 /workbench-reload-clientonly.yml
+docs/adr/
