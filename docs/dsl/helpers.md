@@ -229,6 +229,28 @@ JsonExtractOut orderId = ctx.runHelper("jsonExtract",
 if (orderId.present()) { /* use orderId.value() */ }
 ```
 
+### Validate an outbound payload with `validateJson`
+
+`validateJson` (`ValidateJsonIn(payload, schema)`) checks a JSON string against a JSON Schema
+object and returns the list of validation errors plus a `valid` flag. It has no side effect, so
+it is safe to call in Preview mode.
+
+```java
+ValidateJsonOut check = ctx.runHelper("validateJson",
+        new ValidateJsonIn(body, "{\"type\":\"object\",\"required\":[\"orderId\",\"amount\"]}"))
+        .as(ValidateJsonOut.class);
+
+if (!check.valid()) {
+    List<ValidationError> errors = check.errors();
+    // surface errors before making the downstream call
+}
+
+HttpCallOut resp = ctx.runHelper("httpCall",
+        new HttpCallIn("https://api.partner.example.com/events", "POST",
+                Map.of("Content-Type", "application/json"), body, null, null))
+        .as(HttpCallOut.class);
+```
+
 In **Preview mode** `httpCall` is intercepted and recorded, not sent — see
 [`preview-mode.md`](preview-mode.md).
 
