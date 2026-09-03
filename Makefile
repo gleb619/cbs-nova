@@ -71,3 +71,88 @@ logs: ## Tail logs from all docker compose services
 .PHONY: clean
 clean: ## Stop the stack AND delete all volumes (DESTRUCTIVE — wipes DB data)
 	$(COMPOSE) down -v
+
+.PHONY: doctor
+doctor: ## Run smoke checks against the running stack and report per-check health
+	@printf '\n==> Running smoke checks...\n\n'; \
+	fails=0; \
+	\
+	if [ -n "$$($(COMPOSE) ps -q 2>/dev/null)" ]; then \
+		printf '    [ok]   Docker compose stack has running services\n'; \
+	else \
+		printf '    [fail] Docker compose stack has running services\n'; \
+		fails=$$((fails+1)); \
+	fi; \
+	\
+	if curl --silent --show-error --fail --max-time 5 http://localhost:8080/realms/master >/dev/null 2>&1; then \
+		printf '    [ok]   Keycloak (http://localhost:8080/realms/master)\n'; \
+	else \
+		printf '    [fail] Keycloak (http://localhost:8080/realms/master)\n'; \
+		fails=$$((fails+1)); \
+	fi; \
+	\
+	if curl --silent --show-error --fail --max-time 5 http://localhost:8000/ >/dev/null 2>&1; then \
+		printf '    [ok]   Bugsink (http://localhost:8000/)\n'; \
+	else \
+		printf '    [fail] Bugsink (http://localhost:8000/)\n'; \
+		fails=$$((fails+1)); \
+	fi; \
+	\
+	BE=$${BACKEND_BASE_URL:-http://localhost:$${SERVER_PORT:-8090}}; \
+	body=$$(curl --silent --show-error --fail --max-time 5 "$$BE/actuator/health" 2>/dev/null) || body=""; \
+	if echo "$$body" | grep -q '"status":"UP"'; then \
+		printf '    [ok]   Backend actuator health (%s)\n' "$$BE/actuator/health"; \
+	else \
+		printf '    [fail] Backend actuator health (%s)\n' "$$BE/actuator/health"; \
+		fails=$$((fails+1)); \
+	fi; \
+	\
+	if $(COMPOSE) config --services 2>/dev/null | grep -qx 'temporal'; then \
+		if curl --silent --show-error --fail --max-time 5 http://localhost:8233/ >/dev/null 2>&1; then \
+			printf '    [ok]   Temporal UI (http://localhost:8233/)\n'; \
+		else \
+			printf '    [fail] Temporal UI (http://localhost:8233/)\n'; \
+			fails=$$((fails+1)); \
+		fi; \
+	else \
+		printf '    [skip] Temporal service not declared in compose — skipping Temporal health check\n'; \
+	fi; \
+	\
+	BFF=$${BFF_BASE_URL:-http://localhost:3000}; \
+	if curl --silent --show-error --fail --max-time 5 "$$BFF" >/dev/null 2>&1; then \
+		printf '    [ok]   BFF reachable (%s)\n' "$$BFF"; \
+	else \
+		printf '    [fail] BFF reachable (%s)\n' "$$BFF"; \
+		fails=$$((fails+1)); \
+	fi; \
+	\
+	helpers_body=$$(curl --silent --show-error --fail --max-time 5 "$$BFF/api/v1/dsl/helpers" 2>/dev/null) || helpers_body=""; \
+	if [ -n "$$helpers_body" ] && echo "$$helpers_body" | grep -q '\['; then \
+		if command -v jq >/dev/null 2>&1; then \
+			if echo "$$helpers_body" | jq -e 'length > 0' >/dev/null 2>&1; then \
+				printf '    [ok]   DSL helpers catalog non-empty (%s)\n' "$$BFF/api/v1/dsl/helpers"; \
+			else \
+				printf '    [fail] DSL helpers catalog empty (%s)\n' "$$BFF/api/v1/dsl/helpers"; \
+				fails=$$((fails+1)); \
+			fi; \
+		else \
+			printf '    [ok]   DSL helpers catalog non-empty (%s)\n' "$$BFF/api/v1/dsl/helpers"; \
+		fi; \
+	else \
+		printf '    [fail] DSL helpers catalog unreachable or invalid (%s)\n' "$$BFF/api/v1/dsl/helpers"; \
+		fails=$$((fails+1)); \
+	fi; \
+	\
+	if curl --silent --show-error --max-time 5 -o /dev/null -w '%{http_code}' "$$BFF/api/v1/dsl/definitions" 2>/dev/null | grep -q '^200$$'; then \
+		printf '    [ok]   DSL definitions list (%s)\n' "$$BFF/api/v1/dsl/definitions"; \
+	else \
+		printf '    [fail] DSL definitions list (%s)\n' "$$BFF/api/v1/dsl/definitions"; \
+		fails=$$((fails+1)); \
+	fi; \
+	\
+	if [ $$fails -gt 0 ]; then \
+		printf '\n%d check(s) failed.\n' $$fails; \
+		exit 1; \
+	else \
+		printf '\nAll required checks passed.\n'; \
+	fi
