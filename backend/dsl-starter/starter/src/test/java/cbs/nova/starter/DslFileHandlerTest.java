@@ -13,16 +13,17 @@ import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslFileHandler;
 import cbs.nova.starter.model.DslFileModels.FileContentResponse;
 import cbs.nova.starter.service.DslFileService;
+import java.io.IOException;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
 import tools.jackson.databind.ObjectMapper;
-
-import java.io.IOException;
-import java.util.List;
 
 class DslFileHandlerTest {
 
@@ -44,15 +45,16 @@ class DslFileHandlerTest {
   }
 
   @Test
-  void readByNameReturnsFileContentWhenFilenameResolved() throws IOException {
+  void readByNameReturnsFileContentWhenFilenameResolved() throws Exception {
     registerProvider("LoanDisbursement", "LoanDisbursementDsl.java");
     when(fileService.readFile("LoanDisbursementDsl.java"))
             .thenReturn(new FileContentResponse("LoanDisbursementDsl.java", "step A {}", false));
 
-    ServerResponse response = handler.readByName(request("GET", "/api/dsl/files/by-name/LoanDisbursement"));
+    ServerResponse response = handler
+            .readByName(request("GET", "/api/dsl/files/by-name/LoanDisbursement"));
 
     assertThat(response.statusCode().value()).isEqualTo(200);
-    assertThat(response.body(String.class)).contains("\"content\":\"step A {}\"");
+    assertThat(renderBody(response)).contains("\"content\":\"step A {}\"");
   }
 
   @Test
@@ -67,7 +69,8 @@ class DslFileHandlerTest {
     DslProperties properties = new DslProperties();
     handler = new DslFileHandler(properties, fileService, new ObjectMapper());
 
-    ServerResponse response = handler.readByName(request("GET", "/api/dsl/files/by-name/LoanDisbursement"));
+    ServerResponse response = handler
+            .readByName(request("GET", "/api/dsl/files/by-name/LoanDisbursement"));
 
     assertThat(response.statusCode().value()).isEqualTo(409);
   }
@@ -123,5 +126,16 @@ class DslFileHandlerTest {
     MockHttpServletRequest servletRequest = new MockHttpServletRequest(method, path);
     servletRequest.setContent(body.getBytes());
     return ServerRequest.create(servletRequest, List.of());
+  }
+
+  private static String renderBody(ServerResponse response) throws Exception {
+    var servletResponse = new MockHttpServletResponse();
+    var servletRequest = new MockHttpServletRequest("GET",
+            "/api/dsl/files/by-name/LoanDisbursement");
+    response.writeTo(
+            servletRequest,
+            servletResponse,
+            () -> List.of(new JacksonJsonHttpMessageConverter()));
+    return servletResponse.getContentAsString();
   }
 }
