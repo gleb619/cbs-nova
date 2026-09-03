@@ -274,3 +274,18 @@ In **Preview mode** `httpCall` is intercepted and recorded, not sent — see
 When a new helper ships, add a recipe to the section that matches its **use case**, not a new
 per-helper section. A recipe is: one or two sentences of problem statement, the minimal call
 snippet, and — if the helper is usually used in combination — one chained example.
+
+### extractXml
+
+`extractXml` (`XmlExtractIn(xml, xpath)`) returns the text of the first node matched by an XPath
+1.0 expression, with a `present` flag. It has no side effect and is safe in Preview mode. The XML
+parser is hardened against XXE — payloads containing a `<!DOCTYPE>` declaration are rejected.
+
+```java
+XmlExtractOut sessionId = ctx.runHelper("extractXml",
+        new XmlExtractIn(soapResponse, "//SessionId/text()"))
+        .as(XmlExtractOut.class);
+if (sessionId.present()) {
+    String id = sessionId.value();
+}
+```
