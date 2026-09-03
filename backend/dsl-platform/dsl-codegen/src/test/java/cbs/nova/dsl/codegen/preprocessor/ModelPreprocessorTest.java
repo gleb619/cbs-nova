@@ -1,11 +1,13 @@
-package cbs.nova.dsl.compact;
+package cbs.nova.dsl.codegen.preprocessor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
-class ModelSourcePreprocessorTest {
+class ModelPreprocessorTest {
+
+  private ModelPreprocessor modelPreprocessor = new ModelPreprocessor();
 
   @Test
   void injectsTargetPackageWhenMissing() {
@@ -15,7 +17,7 @@ class ModelSourcePreprocessorTest {
             }
             """;
 
-    var result = ModelSourcePreprocessor.preprocess("OrderModel.java", source,
+    var result = modelPreprocessor.preprocess("OrderModel.java", source,
             "com.example.generated");
 
     assertThat(result.className()).isEqualTo("OrderModel");
@@ -34,7 +36,7 @@ class ModelSourcePreprocessorTest {
             }
             """;
 
-    var result = ModelSourcePreprocessor.preprocess(
+    var result = modelPreprocessor.preprocess(
             "OrderModel.java", source, "com.example.generated");
 
     var output = result.preprocessedSource();
@@ -54,7 +56,7 @@ class ModelSourcePreprocessorTest {
             }
             """;
 
-    var result = ModelSourcePreprocessor.preprocess("OrderModel.java", source,
+    var result = modelPreprocessor.preprocess("OrderModel.java", source,
             "com.example.generated");
 
     var output = result.preprocessedSource();
@@ -76,7 +78,7 @@ class ModelSourcePreprocessorTest {
             }
             """;
 
-    var result = ModelSourcePreprocessor.preprocess(
+    var result = modelPreprocessor.preprocess(
             "OrderModel.java", source, "com.example.generated");
 
     var output = result.preprocessedSource();
@@ -96,7 +98,7 @@ class ModelSourcePreprocessorTest {
             }
             """;
 
-    var result = ModelSourcePreprocessor.preprocess("OrderModel.java", source,
+    var result = modelPreprocessor.preprocess("OrderModel.java", source,
             "com.example.generated");
 
     assertThat(result.preprocessedSource())
@@ -107,7 +109,7 @@ class ModelSourcePreprocessorTest {
   void classNameIsFileNameMinusJavaExtension() {
     var source = "public class OrderModel {}";
 
-    var result = ModelSourcePreprocessor.preprocess("OrderModel.java", source,
+    var result = modelPreprocessor.preprocess("OrderModel.java", source,
             "com.example.generated");
 
     assertThat(result.className()).isEqualTo("OrderModel");
@@ -115,7 +117,7 @@ class ModelSourcePreprocessorTest {
 
   @Test
   void fileNameWithoutJavaExtensionThrows() {
-    assertThatThrownBy(() -> ModelSourcePreprocessor.preprocess(
+    assertThatThrownBy(() -> modelPreprocessor.preprocess(
             "OrderModel", "public class OrderModel {}", "com.example.generated"))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("must end with .java");
@@ -123,7 +125,7 @@ class ModelSourcePreprocessorTest {
 
   @Test
   void blankTargetPackageThrows() {
-    assertThatThrownBy(() -> ModelSourcePreprocessor.preprocess(
+    assertThatThrownBy(() -> modelPreprocessor.preprocess(
             "OrderModel.java", "public class OrderModel {}", "  "))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("targetPackage is required");
@@ -137,7 +139,7 @@ class ModelSourcePreprocessorTest {
             }
             """;
 
-    var result = ModelSourcePreprocessor.preprocess("OrderModel.java", source,
+    var result = modelPreprocessor.preprocess("OrderModel.java", source,
             "com.example.generated");
 
     assertThat(result.preprocessedSource())
@@ -158,7 +160,7 @@ class ModelSourcePreprocessorTest {
             }
             """;
 
-    var result = ModelSourcePreprocessor.preprocess("OrderModel.java", source,
+    var result = modelPreprocessor.preprocess("OrderModel.java", source,
             "com.example.generated");
 
     assertThat(result.preprocessedSource())
@@ -174,7 +176,7 @@ class ModelSourcePreprocessorTest {
             public record Order(String id) {}
             """;
 
-    var result = ModelSourcePreprocessor.preprocess("OrderModel.java", source,
+    var result = modelPreprocessor.preprocess("OrderModel.java", source,
             "com.example.generated");
 
     var output = result.preprocessedSource();

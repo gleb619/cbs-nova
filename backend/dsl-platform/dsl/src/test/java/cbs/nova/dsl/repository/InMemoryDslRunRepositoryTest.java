@@ -250,7 +250,7 @@ class InMemoryDslRunRepositoryTest {
     repo.save(run("run-1", "OrderProcess", DslRunStatus.COMPLETED.name(), t1, "RUN"));
     repo.save(run("run-2", "OrderProcess", DslRunStatus.RUNNING.name(), t2, "RUN"));
 
-    DslRunSearchResult result = repo.search(null, null, null, 0, 10);
+    DslRunSearchResult result = repo.search(null, null, null, null, 0, 10);
 
     assertThat(result.total()).isEqualTo(2);
     assertThat(result.items()).extracting(DslRun::runId).containsExactly("run-2", "run-1");
@@ -263,7 +263,7 @@ class InMemoryDslRunRepositoryTest {
     repo.save(run("run-1", "OrderProcess", DslRunStatus.COMPLETED.name(), t, "RUN"));
     repo.save(run("run-2", "InvoiceProcess", DslRunStatus.COMPLETED.name(), t, "RUN"));
 
-    DslRunSearchResult result = repo.search("OrderProcess", null, null, 0, 10);
+    DslRunSearchResult result = repo.search("OrderProcess", null, null, null, 0, 10);
 
     assertThat(result.total()).isEqualTo(1);
     assertThat(result.items()).extracting(DslRun::runId).containsExactly("run-1");
@@ -276,7 +276,7 @@ class InMemoryDslRunRepositoryTest {
     repo.save(run("run-1", "OrderProcess", DslRunStatus.COMPLETED.name(), t, "RUN"));
     repo.save(run("run-2", "OrderProcess", DslRunStatus.RUNNING.name(), t, "RUN"));
 
-    DslRunSearchResult result = repo.search(null, "completed", null, 0, 10);
+    DslRunSearchResult result = repo.search(null, "completed", null, null, 0, 10);
 
     assertThat(result.total()).isEqualTo(1);
     assertThat(result.items().get(0).runId()).isEqualTo("run-1");
@@ -289,7 +289,7 @@ class InMemoryDslRunRepositoryTest {
     repo.save(run("run-1", "OrderProcess", DslRunStatus.COMPLETED.name(), t, null));
     repo.save(run("run-2", "OrderProcess", DslRunStatus.COMPLETED.name(), t, "PREVIEW"));
 
-    DslRunSearchResult result = repo.search(null, null, "run", 0, 10);
+    DslRunSearchResult result = repo.search(null, null, "run", null, 0, 10);
 
     assertThat(result.total()).isEqualTo(1);
     assertThat(result.items().get(0).runId()).isEqualTo("run-1");
@@ -303,7 +303,7 @@ class InMemoryDslRunRepositoryTest {
     repo.save(run("run-2", "OrderProcess", DslRunStatus.COMPLETED.name(), t, "RUN"));
     repo.save(run("run-3", "OrderProcess", DslRunStatus.FAILED.name(), t, "RUN"));
 
-    DslRunSearchResult result = repo.search("OrderProcess", "COMPLETED", null, 0, 1);
+    DslRunSearchResult result = repo.search("OrderProcess", "COMPLETED", null, null, 0, 1);
 
     assertThat(result.total()).isEqualTo(2);
     assertThat(result.items()).hasSize(1);
@@ -319,7 +319,7 @@ class InMemoryDslRunRepositoryTest {
     repo.save(run("run-2", "OrderProcess", DslRunStatus.COMPLETED.name(), t2, "RUN"));
     repo.save(run("run-3", "OrderProcess", DslRunStatus.COMPLETED.name(), t3, "RUN"));
 
-    DslRunSearchResult result = repo.search(null, null, null, 1, 1);
+    DslRunSearchResult result = repo.search(null, null, null, null, 1, 1);
 
     assertThat(result.total()).isEqualTo(3);
     assertThat(result.items()).extracting(DslRun::runId).containsExactly("run-2");
@@ -331,7 +331,7 @@ class InMemoryDslRunRepositoryTest {
     Instant t = Instant.parse("2026-08-13T10:00:00Z");
     repo.save(run("run-1", "OrderProcess", DslRunStatus.COMPLETED.name(), t, "RUN"));
 
-    DslRunSearchResult result = repo.search(null, null, null, 10, 10);
+    DslRunSearchResult result = repo.search(null, null, null, null, 10, 10);
 
     assertThat(result.total()).isEqualTo(1);
     assertThat(result.items()).isEmpty();

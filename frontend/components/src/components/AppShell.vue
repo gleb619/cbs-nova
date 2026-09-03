@@ -38,6 +38,9 @@ const props = defineProps<{
         <template #brand>
           <slot name="brand" />
         </template>
+        <template #widgets>
+          <slot name="widgets" />
+        </template>
         <template #trailing>
           <slot name="trailing" />
         </template>

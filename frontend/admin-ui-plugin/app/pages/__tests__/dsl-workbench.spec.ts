@@ -1,9 +1,11 @@
-import { mount, flushPromises } from '@vue/test-utils'
+import { resetSavedDraftsState, useSavedDrafts } from '@cbs/components'
+import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick } from 'vue'
-import DslWorkbench from '../dsl-workbench.vue'
+import { __setRouteQuery } from '../../../vitest.nuxt-app-stub'
 import { __getBeforeRouteLeaveGuard } from '../../../vitest.vue-router-stub'
 import { DSL_TEMPLATES } from '../../utils/dslTemplates'
+import DslWorkbench from '../dsl-workbench.vue'
 
 // Track every mounted page so we can tear down global window listeners
 // (e.g. the Ctrl+S handler from @vueuse/core useEventListener) between tests.
@@ -77,9 +79,8 @@ const { dslApi, useDslApiMock, useDslWorkbenchMock } = vi.hoisted(() => {
     readDraft: vi.fn(),
   }
   const useDslWorkbenchMockFn = vi.fn(() => {
-    const harness = (
-      globalThis as unknown as { __dslWorkbenchHarness?: WorkbenchApiShape }
-    ).__dslWorkbenchHarness
+    const harness = (globalThis as unknown as { __dslWorkbenchHarness?: WorkbenchApiShape })
+      .__dslWorkbenchHarness
     if (!harness) {
       throw new Error('workbench harness not installed yet')
     }
@@ -138,8 +139,7 @@ const harness: WorkbenchApiShape = (() => {
       state.selectedName = name
       state.validationErrors = []
       state.isDirty = false
-      selectedConstructRef.value =
-        state.constructs.find((c) => c.name === name) ?? null
+      selectedConstructRef.value = state.constructs.find((c) => c.name === name) ?? null
     }),
     createConstruct: vi.fn((name: string, type?: string) => {
       const newConstruct: ConstructRow = {
@@ -231,8 +231,7 @@ const makeStub = (testId: string) =>
       'retry',
     ],
     setup(_props, { slots }) {
-      return () =>
-        h('div', { 'data-testid': testId }, slots.default ? slots.default() : [])
+      return () => h('div', { 'data-testid': testId }, slots.default ? slots.default() : [])
     },
   })
 
@@ -336,9 +335,7 @@ describe('dsl-workbench.vue unsaved-changes guard', () => {
 
     wrapper.unmount()
 
-    const beforeunloadRemoves = removeSpy.mock.calls.filter(
-      ([type]) => type === 'beforeunload',
-    )
+    const beforeunloadRemoves = removeSpy.mock.calls.filter(([type]) => type === 'beforeunload')
     expect(beforeunloadRemoves).toHaveLength(1)
     expect(beforeunloadRemoves[0]?.[1]).toBe(beforeunloadAdds[0]?.[1])
   })
@@ -377,9 +374,7 @@ describe('dsl-workbench.vue unsaved-changes guard', () => {
     confirmSpy.mockReturnValueOnce(false)
     await explorer.vm.$emit('select', 'c2')
     await nextTick()
-    expect(confirmSpy).toHaveBeenCalledWith(
-      'Discard unsaved changes to this construct?',
-    )
+    expect(confirmSpy).toHaveBeenCalledWith('Discard unsaved changes to this construct?')
     expect(harness.selectConstruct).not.toHaveBeenCalled()
 
     // Accept: select is called and isDirty is cleared inside the composable.
@@ -433,8 +428,10 @@ describe('dsl-workbench.vue unsaved-changes guard', () => {
   })
 })
 
-describe('dsl-workbench.vue draft picker', () => {
+describe('dsl-workbench.vue saved drafts store', () => {
   beforeEach(() => {
+    resetSavedDraftsState()
+    __setRouteQuery({})
     harness.state.constructs = []
     harness.state.selectedName = null
     harness.state.validationErrors = []
@@ -458,26 +455,24 @@ describe('dsl-workbench.vue draft picker', () => {
     dslApi.deleteSchedule.mockResolvedValue({})
   })
 
-  it('renders the draft names returned by listDrafts', async () => {
+  afterEach(() => {
+    __setRouteQuery({})
+  })
+
+  it('publishes the drafts returned by listDrafts into the shared store', async () => {
     dslApi.listDrafts.mockResolvedValueOnce([
       { name: 'alpha', type: 'Process', status: 'Draft', updatedAt: 1 },
       { name: 'beta', type: 'Helper', status: 'Draft', updatedAt: 2 },
     ])
 
-    const wrapper = mountPage()
+    mountPage()
     await flushPromises()
 
-    const picker = wrapper.find('[data-testid="dsl-draft-picker"]')
-    expect(picker.exists()).toBe(true)
-
-    const items = wrapper.findAll('[data-testid="dsl-draft-picker-item"]')
-    expect(items).toHaveLength(2)
-    expect(items[0].text()).toContain('alpha')
-    expect(items[1].text()).toContain('beta')
     expect(dslApi.listDrafts).toHaveBeenCalled()
+    expect(useSavedDrafts().drafts.value.map((d) => d.name)).toEqual(['alpha', 'beta'])
   })
 
-  it('clicking a draft item triggers selectConstruct', async () => {
+  it('no longer renders the drafts panel in the sidebar', async () => {
     dslApi.listDrafts.mockResolvedValueOnce([
       { name: 'alpha', type: 'Process', status: 'Draft', updatedAt: 1 },
     ])
@@ -485,25 +480,49 @@ describe('dsl-workbench.vue draft picker', () => {
     const wrapper = mountPage()
     await flushPromises()
 
-    const item = wrapper.find('[data-testid="dsl-draft-picker-item"]')
-    expect(item.exists()).toBe(true)
+    expect(wrapper.find('[data-testid="dsl-draft-picker"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="dsl-saved-drafts"]').exists()).toBe(false)
+  })
 
-    await item.trigger('click')
-    await nextTick()
+  it('selects a construct when the store dispatches a pick from the navbar widget', async () => {
+    dslApi.listDrafts.mockResolvedValueOnce([
+      { name: 'alpha', type: 'Process', status: 'Draft', updatedAt: 1 },
+    ])
 
+    mountPage()
+    await flushPromises()
+
+    expect(useSavedDrafts().select('alpha')).toBe(true)
     expect(harness.selectConstruct).toHaveBeenCalledWith('alpha')
   })
 
-  it('shows the empty-state hint when no drafts exist', async () => {
-    dslApi.listDrafts.mockResolvedValueOnce([])
+  it('mirrors the workbench selection into the shared store', async () => {
+    mountPage()
+    await flushPromises()
 
+    harness.state.selectedName = 'alpha'
+    await nextTick()
+
+    expect(useSavedDrafts().selectedName.value).toBe('alpha')
+  })
+
+  it('stops handling picks once the page unmounts', async () => {
     const wrapper = mountPage()
     await flushPromises()
 
-    const picker = wrapper.find('[data-testid="dsl-draft-picker"]')
-    expect(picker.exists()).toBe(true)
-    expect(wrapper.findAll('[data-testid="dsl-draft-picker-item"]')).toHaveLength(0)
-    expect(picker.text()).toContain('No saved drafts yet.')
+    wrapper.unmount()
+
+    expect(useSavedDrafts().select('alpha')).toBe(false)
+    expect(harness.selectConstruct).not.toHaveBeenCalled()
+  })
+
+  it('selects the draft named in the route query on mount', async () => {
+    __setRouteQuery({ draft: 'beta' })
+
+    mountPage()
+    await flushPromises()
+
+    expect(harness.selectConstruct).toHaveBeenCalledWith('beta')
   })
 })
 
@@ -777,14 +796,12 @@ describe('dsl-workbench.vue save-status pill and Ctrl+S', () => {
 
   it('retry button re-attempts saving', async () => {
     let resolveRetry: (() => void) | null = null
-    harness.saveConstruct
-      .mockRejectedValueOnce(new Error('server error'))
-      .mockImplementationOnce(
-        () =>
-          new Promise<void>((resolve) => {
-            resolveRetry = resolve
-          }),
-      )
+    harness.saveConstruct.mockRejectedValueOnce(new Error('server error')).mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveRetry = resolve
+        }),
+    )
 
     const wrapper = mountPage()
     await flushPromises()

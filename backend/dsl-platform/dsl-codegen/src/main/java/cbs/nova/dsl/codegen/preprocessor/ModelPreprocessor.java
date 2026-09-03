@@ -1,10 +1,8 @@
-package cbs.nova.dsl.compact;
+package cbs.nova.dsl.codegen.preprocessor;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.PackageDeclaration;
-import com.github.javaparser.ast.body.BodyDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.EnumDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
@@ -12,16 +10,14 @@ import com.github.javaparser.ast.expr.Name;
 import com.github.javaparser.printer.lexicalpreservation.LexicalPreservingPrinter;
 import org.jspecify.annotations.NonNull;
 
-public final class ModelSourcePreprocessor {
+public final class ModelPreprocessor {
 
-  private static final String JSON_IMPORT = "io.avaje.jsonb.Json";
-  private static final String JSON_ANNOTATION_SIMPLE = "Json";
-  private static final String JSON_ANNOTATION_QUALIFIED = "io.avaje.jsonb.Json";
+  private final String JSON_IMPORT = "io.avaje.jsonb.Json";
+  private final String JSON_ANNOTATION_SIMPLE = "Json";
+  private final String JSON_ANNOTATION_QUALIFIED = "io.avaje.jsonb.Json";
 
-  public record Result(@NonNull String className, @NonNull String preprocessedSource) {
-  }
 
-  public static @NonNull Result preprocess(
+  public @NonNull Result preprocess(
           @NonNull String fileName,
           @NonNull String rawSource,
           @NonNull String targetPackage) {
@@ -46,7 +42,7 @@ public final class ModelSourcePreprocessor {
     return new Result(className(fileName), output);
   }
 
-  private static boolean addMissingJsonAnnotations(CompilationUnit cu) {
+  private boolean addMissingJsonAnnotations(CompilationUnit cu) {
     boolean modified = false;
     for (var type : cu.getTypes()) {
       modified |= annotateType(type);
@@ -54,7 +50,7 @@ public final class ModelSourcePreprocessor {
     return modified;
   }
 
-  private static boolean annotateType(TypeDeclaration<?> type) {
+  private boolean annotateType(TypeDeclaration<?> type) {
     boolean modified = false;
     if (shouldAnnotate(type) && !hasJsonAnnotation(type)) {
       type.addAnnotation(JSON_ANNOTATION_SIMPLE);
@@ -68,24 +64,27 @@ public final class ModelSourcePreprocessor {
     return modified;
   }
 
-  private static boolean shouldAnnotate(TypeDeclaration<?> type) {
+  private boolean shouldAnnotate(TypeDeclaration<?> type) {
     if (type instanceof ClassOrInterfaceDeclaration ci && ci.isInterface()) {
       return false;
     }
     return !(type instanceof EnumDeclaration);
   }
 
-  private static boolean hasJsonAnnotation(TypeDeclaration<?> type) {
+  private boolean hasJsonAnnotation(TypeDeclaration<?> type) {
     return type.getAnnotations().stream().anyMatch(a -> {
       var name = a.getNameAsString();
       return name.equals(JSON_ANNOTATION_SIMPLE) || name.equals(JSON_ANNOTATION_QUALIFIED);
     });
   }
 
-  private static @NonNull String className(@NonNull String fileName) {
+  private @NonNull String className(@NonNull String fileName) {
     if (!fileName.endsWith(".java")) {
       throw new IllegalArgumentException("Model source file must end with .java: " + fileName);
     }
     return fileName.substring(0, fileName.length() - ".java".length());
+  }
+
+  public record Result(@NonNull String className, @NonNull String preprocessedSource) {
   }
 }

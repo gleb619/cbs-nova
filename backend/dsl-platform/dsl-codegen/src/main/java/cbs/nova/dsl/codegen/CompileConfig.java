@@ -7,6 +7,8 @@ import cbs.nova.dsl.codegen.generator.ModelRegistryGenerator;
 import cbs.nova.dsl.codegen.generator.ProcessCodeGenerator;
 import cbs.nova.dsl.codegen.generator.TransactionCodeGenerator;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
+import cbs.nova.dsl.codegen.preprocessor.DslPreprocessor;
+import cbs.nova.dsl.codegen.preprocessor.ModelPreprocessor;
 import cbs.nova.dsl.codegen.util.AstExtractor;
 import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
 import cbs.nova.dsl.codegen.util.Json;
@@ -42,7 +44,12 @@ public final class CompileConfig implements SingletonSupport {
 
   public @NonNull SourceCompiler sourceCompiler() {
     return singleton(() -> new SourceCompiler(
-            definitionProviderGenerator(), codeWriter(), codegenNaming()));
+        definitionProviderGenerator(),
+        codeWriter(),
+        codegenNaming(),
+        dslPreprocessor(),
+        modelPreprocessor()
+    ));
   }
 
   public @NonNull DslSourceCompiler dslSourceCompiler() {
@@ -105,6 +112,14 @@ public final class CompileConfig implements SingletonSupport {
     return singleton(DefaultHelperRegistry::new);
   }
 
+  public @NonNull DslPreprocessor dslPreprocessor() {
+    return singleton(DslPreprocessor::new);
+  }
+
+  public @NonNull ModelPreprocessor modelPreprocessor() {
+    return singleton(ModelPreprocessor::new);
+  }
+
   public @NonNull DslCompiler dslCompiler() {
     return singleton(
             () -> new DslCompiler(
@@ -117,7 +132,9 @@ public final class CompileConfig implements SingletonSupport {
                     descriptorFactory(),
                     semanticValidator(),
                     helperRegistry(),
-                    codegenNaming()));
+                    codegenNaming(),
+                    dslPreprocessor()
+            ));
   }
 
   /* ============= */

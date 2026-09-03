@@ -4,13 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.ServiceLoaderDslDefinitionLoader;
+import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
-import cbs.nova.dslexamples.batchprocessing.v1.BatchModels.BatchIn;
-import cbs.nova.dslexamples.batchprocessing.v1.BatchModels.BatchItem;
-import cbs.nova.dslexamples.batchprocessing.v1.BatchModels.BatchOut;
+import cbs.nova.dslexamples.v1.BatchModels.BatchIn;
+import cbs.nova.dslexamples.v1.BatchModels.BatchItem;
+import cbs.nova.dslexamples.v1.BatchModels.BatchOut;
 import cbs.nova.starter.service.TemporalDslProcessService;
 import cbs.nova.util.ServiceUtil;
 import io.restassured.RestAssured;
@@ -46,7 +46,7 @@ class DslExamplesEndToEndTest extends BaseContainers {
   @BeforeAll
   static void initKeycloak() {
     GlobalManager.globalManager().resetForTests();
-    new ServiceLoaderDslDefinitionLoader().load(GlobalManager.globalManager());
+    new DefinitionLoader().load(GlobalManager.globalManager());
     keycloakRealm = new KeycloakRealmInitializer(KEYCLOAK);
     keycloakRealm.initialize();
   }
@@ -60,7 +60,7 @@ class DslExamplesEndToEndTest extends BaseContainers {
   @AfterEach
   void tearDown() {
     GlobalManager.globalManager().resetForTests();
-    new ServiceLoaderDslDefinitionLoader().load(GlobalManager.globalManager());
+    new DefinitionLoader().load(GlobalManager.globalManager());
   }
 
   @Test

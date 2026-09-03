@@ -1,7 +1,5 @@
 package cbs.nova.dsl.codegen;
 
-import static cbs.nova.dsl.codegen.CompilerConstants.DEFAULT_BUILD_VERSION;
-
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.GeneratedClassProvider;
 import cbs.nova.dsl.codegen.generator.GeneratedClassProviderGenerator;
@@ -12,7 +10,7 @@ import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.model.DslCompilerOptions;
 import cbs.nova.dsl.codegen.model.GeneratedSource;
 import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
-import cbs.nova.dsl.compact.CompactSourcePreprocessor;
+import cbs.nova.dsl.codegen.preprocessor.DslPreprocessor;
 import cbs.nova.dsl.config.DescriptorFactory;
 import cbs.nova.dsl.function.FunctionDescriptor;
 import cbs.nova.dsl.function.FunctionDslObject;
@@ -50,6 +48,7 @@ public final class DslCompiler {
   private final SemanticValidator semanticValidator;
   private final HelperRegistry helperRegistry;
   private final CodegenNaming codegenNaming;
+  private final DslPreprocessor dslPreprocessor;
 
 
   public static void main(String[] args) throws IOException {
@@ -190,7 +189,7 @@ public final class DslCompiler {
                   options.buildVersion(),
                   fileName,
                   options.useFileNameSubPackage());
-          var preprocess = CompactSourcePreprocessor.preprocess(fileName, rawSource, packageName);
+          var preprocess = dslPreprocessor.preprocess(fileName, rawSource, packageName);
           result.add(preprocess.preprocessedSource());
         } catch (IllegalArgumentException e) {
           log.atLevel(Level.WARN).log(

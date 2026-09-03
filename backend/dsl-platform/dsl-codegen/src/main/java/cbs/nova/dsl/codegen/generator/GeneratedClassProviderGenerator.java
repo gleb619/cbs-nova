@@ -20,6 +20,7 @@ import org.slf4j.event.Level;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -43,10 +44,11 @@ public final class GeneratedClassProviderGenerator {
     String providerClass = name + "GeneratedClassProvider";
     String executeJson = executeAstJsonExtractor.extract(
             preprocessedSources, name, DslType.PROCESS);
+    String dslSourceClass = findDslSourceClassName(name, preprocessedSources);
 
     var source = buildSource(pkg, providerClass, DslObject.DslType.PROCESS, descriptor.name(),
             version, descriptor.taskQueue(), interfaceName, implName,
-            descriptor.inputType(), descriptor.outputType(), executeJson);
+            descriptor.inputType(), descriptor.outputType(), executeJson, dslSourceClass);
     log.atLevel(Level.DEBUG)
             .log(() -> "[GeneratedClassProviderGenerator] Generated process provider class %s"
                     .formatted(providerClass));
@@ -67,10 +69,11 @@ public final class GeneratedClassProviderGenerator {
     String providerClass = name + "GeneratedClassProvider";
     String executeJson = executeAstJsonExtractor.extract(
             preprocessedSources, name, DslType.TRANSACTION);
+    String dslSourceClass = findDslSourceClassName(name, preprocessedSources);
 
     var source = buildSource(pkg, providerClass, DslObject.DslType.TRANSACTION, descriptor.name(),
             version, descriptor.taskQueue(), interfaceName, implName,
-            descriptor.inputType(), descriptor.outputType(), executeJson);
+            descriptor.inputType(), descriptor.outputType(), executeJson, dslSourceClass);
     log.atLevel(Level.DEBUG)
             .log(() -> "[GeneratedClassProviderGenerator] Generated transaction provider class %s"
                     .formatted(providerClass));
@@ -86,10 +89,20 @@ public final class GeneratedClassProviderGenerator {
   private GeneratedSource buildSource(
           String pkg, String providerClass, DslObject.DslType type, String name,
           String version, String taskQueue, String interfaceName, String implName,
-          Class<?> inputType, Class<?> outputType, String executeJson) {
+          Class<?> inputType, Class<?> outputType, String executeJson,
+          @Nullable String dslSourceClass) {
     String inputLiteral = typeLiteral(inputType);
     String outputLiteral = typeLiteral(outputType);
     String executeJsonLiteral = escapeJavaString(executeJson);
+    String dslObjectMethod = dslSourceClass == null ? "" :
+                      //language=java
+                      """
+
+                      @Override
+                      public DslObject dslObject() {
+                        return new %s().byName("%s").orElseThrow();
+                      }
+                      """.formatted(dslSourceClass, name);
 
     List<String> imports = new ArrayList<>();
     addImport(imports, inputType);
@@ -135,7 +148,7 @@ public final class GeneratedClassProviderGenerator {
                       @Override
                       public Object implementationInstance() {
                         return new ${implName}();
-                      }
+                      }${dslObjectMethod}
 
                     }
                     """,
@@ -152,7 +165,8 @@ public final class GeneratedClassProviderGenerator {
                     Map.entry("implName", implName),
                     Map.entry("inputLiteral", inputLiteral),
                     Map.entry("outputLiteral", outputLiteral),
-                    Map.entry("executeJsonLiteral", executeJsonLiteral)));
+                    Map.entry("executeJsonLiteral", executeJsonLiteral),
+                    Map.entry("dslObjectMethod", dslObjectMethod)));
 
     log.atLevel(Level.DEBUG).log(() -> "[GeneratedClassProviderGenerator] Built source for %s"
             .formatted(providerClass));
@@ -168,5 +182,26 @@ public final class GeneratedClassProviderGenerator {
       return;
     }
     imports.add("import %s;".formatted(type.getCanonicalName()));
+  }
+
+  private @Nullable String findDslSourceClassName(
+          @NonNull String dslObjectName,
+          @NonNull List<String> preprocessedSources) {
+    var dslReference = Pattern.compile(
+            "Dsl\\.(process|transaction|function)\\s*\\(\\s*\""
+                    + Pattern.quote(dslObjectName) + "\"\\s*\\)");
+    for (String preprocessedSource : preprocessedSources) {
+      if (dslReference.matcher(preprocessedSource).find()) {
+        return extractClassName(preprocessedSource);
+      }
+    }
+    return null;
+  }
+
+  private @Nullable String extractClassName(@NonNull String preprocessedSource) {
+    var classPattern = Pattern.compile(
+            "public\\s+class\\s+(\\w+)\\s+implements\\s+DslCompactSource");
+    var matcher = classPattern.matcher(preprocessedSource);
+    return matcher.find() ? matcher.group(1) : null;
   }
 }

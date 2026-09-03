@@ -4,13 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.CallKind;
 import cbs.nova.dsl.CallNode;
-import cbs.nova.dsl.CompilingDslDefinitionLoader;
 import cbs.nova.dsl.DslDefinitionLoader;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.LoadResult;
 import cbs.nova.dsl.PreviewReport;
-import cbs.nova.dsl.ServiceLoaderDslDefinitionLoader;
+import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.starter.config.DslReloadRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslReloadHandler;
@@ -53,8 +52,7 @@ import tools.jackson.databind.ObjectMapper;
 class DslReloadResourceTest {
 
   private DslReloadHandler resource;
-  private final DslDefinitionLoader loader = new CompilingDslDefinitionLoader(
-          new ServiceLoaderDslDefinitionLoader());
+  private final DslDefinitionLoader loader = new DefinitionLoader();
 
   @BeforeEach
   void setUp() {
@@ -533,7 +531,7 @@ class DslReloadResourceTest {
 
     @Bean
     DslDefinitionLoader dslDefinitionLoader() {
-      return new CompilingDslDefinitionLoader(new ServiceLoaderDslDefinitionLoader());
+      return new DefinitionLoader();
     }
   }
 

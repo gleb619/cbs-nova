@@ -6,15 +6,13 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import cbs.nova.dsl.config.ContextFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
-import java.nio.file.Path;
+import java.net.URL;
+import java.net.URLClassLoader;
 
 class DefinitionLoaderTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
-  @TempDir
-  Path tempDir;
 
   @BeforeEach
   void reset() {
@@ -22,10 +20,12 @@ class DefinitionLoaderTest {
   }
 
   @Test
-  void loadsProcessFromSpiProvider() {
+  void loadDiscoversProvidersFromContextClassLoader() {
     var gm = GlobalManager.globalManager();
-    new DefinitionLoader().load(tempDir, gm);
 
+    new DefinitionLoader().load(gm);
+
+    assertThat(gm.hasProcess("SpiLoadedProcess")).isTrue();
     var ctx = contextFactory.of("test", ExecutionMode.PREVIEW);
     var result = gm.runProcess("SpiLoadedProcess", ctx);
     assertThat(result.isSuccess()).isTrue();
@@ -33,9 +33,34 @@ class DefinitionLoaderTest {
   }
 
   @Test
-  void loadIgnoresSourceDirectoryArgument() {
+  void loadReturnsDrilldownWithCountsAndNamesPerType() {
     var gm = GlobalManager.globalManager();
-    assertThatCode(() -> new DefinitionLoader().load(tempDir, gm)).doesNotThrowAnyException();
+
+    var load = new DefinitionLoader().load(gm);
+
+    assertThat(load.total()).isEqualTo(1);
+    assertThat(load.processCount()).isEqualTo(1);
+    assertThat(load.transactionCount()).isZero();
+    assertThat(load.functionCount()).isZero();
+    assertThat(load.processes()).containsExactly("SpiLoadedProcess");
+    assertThat(load.transactions()).isEmpty();
+    assertThat(load.functions()).isEmpty();
+  }
+
+  @Test
+  void loadDiscoversProvidersFromExplicitClassLoader() throws Exception {
+    var gm = GlobalManager.globalManager();
+    var parent = Thread.currentThread().getContextClassLoader();
+    var classLoader = new URLClassLoader(new URL[0], parent);
+
+    var load = new DefinitionLoader().load(classLoader, gm);
+    assertThat(load.total()).isEqualTo(1);
+    assertThat(load.processes()).containsExactly("SpiLoadedProcess");
+
     assertThat(gm.hasProcess("SpiLoadedProcess")).isTrue();
+    var ctx = contextFactory.of("test", ExecutionMode.PREVIEW);
+    var result = gm.runProcess("SpiLoadedProcess", ctx);
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value()).isEqualTo("spi-loaded");
   }
 }

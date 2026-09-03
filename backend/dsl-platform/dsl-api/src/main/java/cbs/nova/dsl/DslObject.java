@@ -11,6 +11,6 @@ public interface DslObject {
   DslType type();
 
   enum DslType {
-    PROCESS, TRANSACTION, FUNCTION
+    PROCESS, TRANSACTION, FUNCTION, OTHER
   }
 }

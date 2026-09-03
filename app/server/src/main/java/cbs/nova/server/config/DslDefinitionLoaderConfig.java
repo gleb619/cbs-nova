@@ -1,7 +1,7 @@
 package cbs.nova.server.config;
 
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.ServiceLoaderDslDefinitionLoader;
+import cbs.nova.dsl.DefinitionLoader;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
@@ -13,6 +13,6 @@ public class DslDefinitionLoaderConfig {
   @Bean
   ApplicationRunner loadDslDefinitions() {
     return (ApplicationArguments args) ->
-        new ServiceLoaderDslDefinitionLoader().load(GlobalManager.globalManager());
+        new DefinitionLoader().load(GlobalManager.globalManager());
   }
 }

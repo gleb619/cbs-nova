@@ -9,9 +9,16 @@
  */
 import { ref } from 'vue'
 
+let currentQuery: Record<string, string | string[]> = {}
+
+/** Test hook — sets the query returned by the `useRoute` stub. */
+export const __setRouteQuery = (query: Record<string, string | string[]>) => {
+  currentQuery = query
+}
+
 export const useState = (_key: string, init: () => unknown) => ref(init())
 export const navigateTo = () => Promise.resolve()
-export const useRoute = () => ({ path: '/', params: {}, query: {}, meta: {} })
+export const useRoute = () => ({ path: '/', params: {}, query: currentQuery, meta: {} })
 export const useRouter = () => ({ push: () => Promise.resolve(), replace: () => Promise.resolve() })
 export const useCookie = () => ({ value: undefined as unknown })
 export const clearError = () => {}

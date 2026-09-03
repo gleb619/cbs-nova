@@ -1,12 +1,14 @@
-package cbs.nova.dsl.compact;
+package cbs.nova.dsl.codegen.preprocessor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import cbs.nova.dsl.compact.CompactSourcePreprocessor.Result;
+import cbs.nova.dsl.codegen.preprocessor.DslPreprocessor.Result;
 import org.junit.jupiter.api.Test;
 
-class CompactSourcePreprocessorTest {
+class DslPreprocessorTest {
+
+  private DslPreprocessor dslPreprocessor = new DslPreprocessor();
 
   private static final String VALID_COMPACT_SOURCE = """
           List<DslObject> define() {
@@ -16,7 +18,7 @@ class CompactSourcePreprocessorTest {
 
   @Test
   void classNameIsFileNameMinusJavaExtension() {
-    var result = CompactSourcePreprocessor.preprocess("OrderSaga.java", VALID_COMPACT_SOURCE);
+    var result = dslPreprocessor.preprocess("OrderSaga.java", VALID_COMPACT_SOURCE, null);
 
     assertThat(result.className()).isEqualTo("OrderSaga");
   }
@@ -24,14 +26,14 @@ class CompactSourcePreprocessorTest {
   @Test
   void fileNameWithoutJavaExtensionThrows() {
     assertThatThrownBy(
-            () -> CompactSourcePreprocessor.preprocess("OrderSaga", VALID_COMPACT_SOURCE))
+            () -> dslPreprocessor.preprocess("OrderSaga", VALID_COMPACT_SOURCE, null))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("must end with .java");
   }
 
   @Test
   void twoArgOverloadEmitsNoPackageLine() {
-    var result = CompactSourcePreprocessor.preprocess("OrderSaga.java", VALID_COMPACT_SOURCE);
+    var result = dslPreprocessor.preprocess("OrderSaga.java", VALID_COMPACT_SOURCE, null);
 
     assertThat(result.preprocessedSource())
             .doesNotContainPattern("(?m)^package\\s+\\w+;");
@@ -39,7 +41,7 @@ class CompactSourcePreprocessorTest {
 
   @Test
   void threeArgOverloadEmitsTargetPackageLine() {
-    var result = CompactSourcePreprocessor.preprocess(
+    var result = dslPreprocessor.preprocess(
             "OrderSaga.java", VALID_COMPACT_SOURCE, "com.example.generated");
 
     assertThat(result.preprocessedSource())
@@ -56,7 +58,7 @@ class CompactSourcePreprocessorTest {
             }
             """;
 
-    var result = CompactSourcePreprocessor.preprocess("OrderSaga.java", source);
+    var result = dslPreprocessor.preprocess("OrderSaga.java", source, null);
 
     var output = result.preprocessedSource();
     assertThat(output).contains("import java.util.List;");
@@ -76,7 +78,7 @@ class CompactSourcePreprocessorTest {
             }
             """;
 
-    var result = CompactSourcePreprocessor.preprocess("OrderSaga.java", source);
+    var result = dslPreprocessor.preprocess("OrderSaga.java", source, null);
 
     assertThat(result.preprocessedSource())
             .contains("import java.util.List;\nimport java.util.List;");
@@ -84,7 +86,7 @@ class CompactSourcePreprocessorTest {
 
   @Test
   void generatedSourceImplementsDslCompactSource() {
-    var result = CompactSourcePreprocessor.preprocess("OrderSaga.java", VALID_COMPACT_SOURCE);
+    var result = dslPreprocessor.preprocess("OrderSaga.java", VALID_COMPACT_SOURCE, null);
 
     assertThat(result.preprocessedSource())
             .contains("public class OrderSaga")
@@ -99,7 +101,7 @@ class CompactSourcePreprocessorTest {
             }
             """;
 
-    var result = CompactSourcePreprocessor.preprocess("OrderSaga.java", source);
+    var result = dslPreprocessor.preprocess("OrderSaga.java", source, null);
 
     var output = result.preprocessedSource();
     assertThat(output).contains("public @Override List<DslObject> define() {");
@@ -114,7 +116,7 @@ class CompactSourcePreprocessorTest {
             int unrelated = 42;
             """;
 
-    assertThatThrownBy(() -> CompactSourcePreprocessor.preprocess("OrderSaga.java", source))
+    assertThatThrownBy(() -> dslPreprocessor.preprocess("OrderSaga.java", source, null))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("is not a valid compact DSL source")
             .hasMessageContaining("must declare a List<DslObject> define() method");
@@ -127,7 +129,7 @@ class CompactSourcePreprocessorTest {
             }
             """;
 
-    assertThatThrownBy(() -> CompactSourcePreprocessor.preprocess("OrderSaga.java", source))
+    assertThatThrownBy(() -> dslPreprocessor.preprocess("OrderSaga.java", source, null))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("must not declare a top-level class/interface/enum/record");
   }
@@ -142,7 +144,7 @@ class CompactSourcePreprocessorTest {
             }
             """;
 
-    assertThatThrownBy(() -> CompactSourcePreprocessor.preprocess("OrderSaga.java", source))
+    assertThatThrownBy(() -> dslPreprocessor.preprocess("OrderSaga.java", source, null))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("must not declare a package");
   }
@@ -155,7 +157,7 @@ class CompactSourcePreprocessorTest {
             int unrelated = 42;
             """;
 
-    assertThatThrownBy(() -> CompactSourcePreprocessor.preprocess("OrderSaga.java", source))
+    assertThatThrownBy(() -> dslPreprocessor.preprocess("OrderSaga.java", source, null))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("must not declare a package")
             .hasMessageContaining("must declare a List<DslObject> define() method")
@@ -165,7 +167,7 @@ class CompactSourcePreprocessorTest {
 
   @Test
   void resultRecordExposesNonBlankClassNameAndSource() {
-    var result = CompactSourcePreprocessor.preprocess("OrderSaga.java", VALID_COMPACT_SOURCE);
+    var result = dslPreprocessor.preprocess("OrderSaga.java", VALID_COMPACT_SOURCE, null);
 
     assertThat(result).isInstanceOf(Result.class);
     assertThat(result.className()).isNotNull().isNotBlank().isEqualTo("OrderSaga");
@@ -179,10 +181,10 @@ class CompactSourcePreprocessorTest {
 
   @Test
   void isValidCompactSourceMatchesPreprocessAcceptance() {
-    assertThat(CompactSourcePreprocessor.isValidCompactSource(VALID_COMPACT_SOURCE)).isTrue();
-    assertThat(CompactSourcePreprocessor.isValidCompactSource("package com.foo;")).isFalse();
-    assertThat(CompactSourcePreprocessor.isValidCompactSource("public class X {}")).isFalse();
-    assertThat(CompactSourcePreprocessor.isValidCompactSource("// no define here")).isFalse();
+    assertThat(dslPreprocessor.isValidCompactSource(VALID_COMPACT_SOURCE)).isTrue();
+    assertThat(dslPreprocessor.isValidCompactSource("package com.foo;")).isFalse();
+    assertThat(dslPreprocessor.isValidCompactSource("public class X {}")).isFalse();
+    assertThat(dslPreprocessor.isValidCompactSource("// no define here")).isFalse();
   }
 
   @Test
@@ -193,7 +195,7 @@ class CompactSourcePreprocessorTest {
             }
             """;
 
-    var result = CompactSourcePreprocessor.preprocess("Sample.java", source);
+    var result = dslPreprocessor.preprocess("Sample.java", source, null);
     var output = result.preprocessedSource();
 
     assertThat(output).contains("import cbs.nova.dsl.*;");
@@ -213,7 +215,7 @@ class CompactSourcePreprocessorTest {
             }
             """;
 
-    var result = CompactSourcePreprocessor.preprocess("Sample.java", source);
+    var result = dslPreprocessor.preprocess("Sample.java", source, null);
     var output = result.preprocessedSource();
 
     long count = output.lines().filter(l -> l.equals("import cbs.nova.dsl.*;")).count();

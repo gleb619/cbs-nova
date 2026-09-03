@@ -26,7 +26,9 @@ export { default as DslPlainConstructList } from './components/dsl/PlainConstruc
 export { default as DslPlainConstructListSkeleton } from './components/dsl/PlainConstructListSkeleton.vue'
 export { default as DslProblemsPanel } from './components/dsl/ProblemsPanel.vue'
 export { default as DslReferencePicker } from './components/dsl/ReferencePicker.vue'
+export { default as DslSavedDraftsList } from './components/dsl/SavedDraftsList.vue'
 export { default as DslScheduleList } from './components/dsl/ScheduleList.vue'
+export { default as DslSavedDraftsWidget } from './components/dsl/SavedDraftsWidget.vue'
 export { default as DslStructureTab } from './components/dsl/StructureTab.vue'
 export { default as ErrorBanner } from './components/ErrorBanner.vue'
 

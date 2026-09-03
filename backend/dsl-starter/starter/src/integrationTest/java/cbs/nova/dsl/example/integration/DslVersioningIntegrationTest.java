@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.controller.DslReloadHandler;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
@@ -12,9 +14,9 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.process.DslTemporalProcessRequest;
-import cbs.nova.dslexamples.versionprobe.v1.VersionProbeModels.VersionProbeIn;
-import cbs.nova.dslexamples.versionprobe.v1.VersionProbeModels.VersionProbeOut;
-import cbs.nova.dslexamples.versionprobe.v1.VersionProbeProcessWorkflow;
+import cbs.nova.dslexamples.v1.VersionProbeModels.VersionProbeIn;
+import cbs.nova.dslexamples.v1.VersionProbeModels.VersionProbeOut;
+import cbs.nova.dslexamples.v1.VersionProbeProcessWorkflow;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
 import cbs.nova.starter.helper.*;
@@ -173,7 +175,9 @@ class DslVersioningIntegrationTest {
             .isTrue();
 
     Path v2Dir = Path.of("src/integrationTest/resources/dsl-versioning-v2");
-    new DefinitionLoader().load(v2Dir, GlobalManager.globalManager());
+    var v2Props = new DslProperties();
+    v2Props.setSourceDir(v2Dir.toString());
+    new DslReloadHandler(v2Props, new DefinitionLoader()).reloadDefinitions();
 
     assertThat(GlobalManager.globalManager().findProcess("VersionProbe").orElseThrow().version())
             .as("latest registered DSL version should be v2 after reload")

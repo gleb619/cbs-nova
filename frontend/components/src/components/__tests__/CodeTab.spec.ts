@@ -12,20 +12,24 @@ describe('CodeTab', () => {
   it('renders the syntax-highlighted editor surface pre-filled with the code prop', () => {
     const wrapper = mount(CodeTab, { props: { code: 'step Greet {}' } })
 
-    // The new editor surface pairs a Prism-highlighted <pre> with an
-    // overlaid <textarea> that captures user input.
     const editor = wrapper.find('[data-testid="code-tab-editor"]')
     expect(editor.exists()).toBe(true)
 
     const highlight = wrapper.find('[data-testid="code-tab-highlight"]')
     expect(highlight.exists()).toBe(true)
-    // Prism tokenizes identifiers like Greet, so assert on the display's
-    // text content rather than its raw HTML.
     expect(highlight.text()).toContain('step Greet {}')
 
     const textarea = wrapper.find('textarea[data-testid="code-tab-textarea"]')
     expect(textarea.exists()).toBe(true)
     expect((textarea.element as HTMLTextAreaElement).value).toBe('step Greet {}')
+  })
+
+  it('wraps Java tokens in Prism spans', () => {
+    const wrapper = mount(CodeTab, { props: { code: 'public class Greet {}' } })
+
+    const html = wrapper.find('[data-testid="code-tab-highlight"]').html()
+    expect(html).toContain('<span class="token keyword">public</span>')
+    expect(html).toContain('<span class="token class-name">Greet</span>')
   })
 
   it('uses the editable placeholder and is not readonly by default', () => {
@@ -39,9 +43,6 @@ describe('CodeTab', () => {
   it('uses the read-only placeholder and sets readonly when readOnly is true', () => {
     const wrapper = mount(CodeTab, { props: { code: '', readOnly: true } })
 
-    // Read-only mode still keeps a (transparent) textarea in the DOM so the
-    // editor surface remains queryable, but it now layers a highlighted
-    // <pre data-testid="code-tab-display"> on top.
     const textarea = wrapper.find('textarea[data-testid="code-tab-textarea"]')
     expect(textarea.exists()).toBe(true)
     expect(textarea.attributes('placeholder')).toBe('No code available')

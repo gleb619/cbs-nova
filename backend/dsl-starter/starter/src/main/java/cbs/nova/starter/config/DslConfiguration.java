@@ -3,7 +3,7 @@ package cbs.nova.starter.config;
 import cbs.nova.dsl.DslDefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.JsonSchemaGenerator;
-import cbs.nova.dsl.ServiceLoaderDslDefinitionLoader;
+import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.history.DslRunRepository;
@@ -94,7 +94,7 @@ public class DslConfiguration {
   @Bean
   @ConditionalOnMissingBean(DslDefinitionLoader.class)
   public DslDefinitionLoader dslDefinitionLoader() {
-    return new ServiceLoaderDslDefinitionLoader();
+    return new DefinitionLoader();
   }
 
   @Bean

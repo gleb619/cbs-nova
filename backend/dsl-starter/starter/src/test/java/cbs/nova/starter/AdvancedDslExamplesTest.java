@@ -6,7 +6,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.ServiceLoaderDslDefinitionLoader;
+import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
@@ -33,7 +33,7 @@ class AdvancedDslExamplesTest {
   void loadCompactDsls() {
     GlobalManager.globalManager().resetForTests();
     DslConfig.dslConfig().helperInstanceResolver().replace(typedHelperResolver());
-    new ServiceLoaderDslDefinitionLoader().load(GlobalManager.globalManager());
+    new DefinitionLoader().load(GlobalManager.globalManager());
     GlobalManager.globalManager().registerHelperResolvers();
   }
 

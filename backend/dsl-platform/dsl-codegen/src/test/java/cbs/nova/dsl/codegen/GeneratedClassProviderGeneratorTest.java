@@ -11,7 +11,7 @@ import cbs.nova.dsl.codegen.model.GeneratedSource;
 import cbs.nova.dsl.codegen.util.AstExtractor;
 import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
 import cbs.nova.dsl.codegen.util.Json;
-import cbs.nova.dsl.compact.CompactSourcePreprocessor;
+import cbs.nova.dsl.codegen.preprocessor.DslPreprocessor;
 import cbs.nova.dsl.config.DescriptorFactory;
 import cbs.nova.dsl.model.MapInput;
 import org.junit.jupiter.api.Test;
@@ -293,7 +293,7 @@ class GeneratedClassProviderGeneratorTest {
                   .buildList();
             }
             """;
-    var preprocessed = CompactSourcePreprocessor.preprocess("LoanDsl.java", rawSource, null);
+    var preprocessed = new DslPreprocessor().preprocess("LoanDsl.java", rawSource, null);
 
     var source = generator.forProcess(descriptor, List.of(preprocessed.preprocessedSource()), null,
             null, true);
@@ -301,6 +301,83 @@ class GeneratedClassProviderGeneratorTest {
     assertThat(source.source()).contains("executeJson()");
     assertThat(source.source()).contains("LambdaExpr");
     assertThat(source.source()).contains("@" + Generated.class.getSimpleName());
+  }
+
+
+  @Test
+  void generatedProviderIncludesDslObjectWhenPreprocessedSourceProvided() {
+    var descriptor = descriptorFactory.fromProcess(
+            Dsl.process("LoanDisbursement")
+                    .input(String.class)
+                    .output(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+    var rawSource = """
+            import cbs.nova.dsl.*;
+            import java.util.List;
+
+            List<DslObject> define() {
+              return Dsl.process("LoanDisbursement")
+                  .input(String.class)
+                  .output(String.class)
+                  .execute(ctx -> Result.success("ok"))
+                  .buildList();
+            }
+            """;
+    var preprocessed = new DslPreprocessor().preprocess("LoanDsl.java", rawSource, null);
+
+    var source = generator.forProcess(descriptor, List.of(preprocessed.preprocessedSource()), null,
+            null, true);
+    var body = source.source();
+
+    assertThat(body).contains("public DslObject dslObject()");
+    assertThat(body).contains("new LoanDsl().byName(\"LoanDisbursement\").orElseThrow()");
+  }
+
+  @Test
+  void generatedProviderIncludesDslObjectForTransactionWhenPreprocessedSourceProvided() {
+    var descriptor = descriptorFactory.fromTransaction(
+            Dsl.transaction("ReserveInventory")
+                    .input(String.class)
+                    .output(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+    var rawSource = """
+            import cbs.nova.dsl.*;
+            import java.util.List;
+
+            List<DslObject> define() {
+              return Dsl.transaction("ReserveInventory")
+                  .input(String.class)
+                  .output(String.class)
+                  .execute(ctx -> Result.success("ok"))
+                  .buildList();
+            }
+            """;
+    var preprocessed = new DslPreprocessor().preprocess("InventoryDsl.java", rawSource, null);
+
+    var source = generator.forTransaction(descriptor, List.of(preprocessed.preprocessedSource()), null,
+            null, true);
+    var body = source.source();
+
+    assertThat(body).contains("public DslObject dslObject()");
+    assertThat(body).contains("new InventoryDsl().byName(\"ReserveInventory\").orElseThrow()");
+  }
+
+  @Test
+  void generatedProviderOmitsDslObjectWhenPreprocessedSourceMissing() {
+    var descriptor = descriptorFactory.fromProcess(
+            Dsl.process("LoanDisbursement")
+                    .input(String.class)
+                    .output(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+
+    var source = generator.forProcess(descriptor, List.of(), null, null, true);
+    var body = source.source();
+
+    assertThat(body).doesNotContain("public DslObject dslObject()");
+    assertThat(body).doesNotContain(".byName(");
   }
 
   private static long countOccurrences(String haystack, String needle) {

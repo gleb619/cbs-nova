@@ -5,8 +5,8 @@ import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.codegen.generator.DefinitionProviderGenerator;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.util.SourcePackageResolver;
-import cbs.nova.dsl.compact.CompactSourcePreprocessor;
-import cbs.nova.dsl.compact.ModelSourcePreprocessor;
+import cbs.nova.dsl.codegen.preprocessor.DslPreprocessor;
+import cbs.nova.dsl.codegen.preprocessor.ModelPreprocessor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
@@ -41,6 +41,8 @@ public final class SourceCompiler {
   private final DefinitionProviderGenerator definitionProviderGenerator;
   private final CodeWriter codeWriter;
   private final CodegenNaming codegenNaming;
+  private final DslPreprocessor dslPreprocessor;
+  private final ModelPreprocessor modelPreprocessor;
 
   public @NonNull List<DslObject> compileAndLoad(
           @NonNull Path srcDir,
@@ -136,7 +138,7 @@ public final class SourceCompiler {
           var targetPackage = dslPackages.get(source);
           var rewritten = packageResolver.rewriteModelImports(
                   raw, basePackage, modelPackages, modelClassNames);
-          var result = CompactSourcePreprocessor.preprocess(fileName, rewritten, targetPackage);
+          var result = dslPreprocessor.preprocess(fileName, rewritten, targetPackage);
           return new PreprocessResult(
                   result.className(), fileName, result.preprocessedSource(), targetPackage);
         } catch (IllegalArgumentException e) {
@@ -145,7 +147,7 @@ public final class SourceCompiler {
         }
       });
     }
-    return runPreprocessTasks(tasks, "DSL");
+    return runPreprocessTasks(tasks);
   }
 
   private List<PreprocessResult> preprocessModelSources(
@@ -164,7 +166,7 @@ public final class SourceCompiler {
           var targetPackage = modelPackages.getOrDefault(className, basePackage);
           var rewritten = packageResolver.rewriteModelImports(
                   raw, basePackage, modelPackages, modelClassNames);
-          var result = ModelSourcePreprocessor.preprocess(fileName, rewritten, targetPackage);
+          var result = modelPreprocessor.preprocess(fileName, rewritten, targetPackage);
           return new PreprocessResult(
                   result.className(), fileName, result.preprocessedSource(), targetPackage);
         } catch (IllegalArgumentException e) {
@@ -173,12 +175,11 @@ public final class SourceCompiler {
         }
       });
     }
-    return runPreprocessTasks(tasks, "model");
+    return runPreprocessTasks(tasks);
   }
 
   private List<PreprocessResult> runPreprocessTasks(
-          List<Callable<PreprocessResult>> tasks,
-          String label) throws IOException {
+          List<Callable<PreprocessResult>> tasks) throws IOException {
     if (tasks.isEmpty()) {
       return List.of();
     }
@@ -237,7 +238,7 @@ public final class SourceCompiler {
     return written;
   }
 
-  private static Path outputFile(Path outputDir, String targetPackage, String fileName) {
+  private Path outputFile(Path outputDir, String targetPackage, String fileName) {
     if (targetPackage != null && !targetPackage.isBlank()) {
       return outputDir.resolve(targetPackage.replace('.', '/')).resolve(fileName);
     }
@@ -257,6 +258,10 @@ public final class SourceCompiler {
               .toList());
       var task = compiler.getTask(null, fm, diagnostics, options, null, units);
       if (!task.call()) {
+        log.atLevel(Level.WARN).log(() ->
+            "[SourceCompiler] %d errors occurred during file compilation.".formatted(
+                diagnostics.getDiagnostics().size()));
+
         diagnostics.getDiagnostics().forEach(d -> log.atLevel(Level.DEBUG)
                 .log(() -> {
                   String fileName = d.getSource().getName();
@@ -270,7 +275,7 @@ public final class SourceCompiler {
       }
       return true;
     } catch (IOException e) {
-      log.atLevel(Level.DEBUG).setCause(e)
+      log.atLevel(Level.ERROR).setCause(e)
               .log(() -> "[SourceCompiler] Compilation failed: %s".formatted(e.getMessage()));
       return false;
     }
@@ -306,7 +311,7 @@ public final class SourceCompiler {
     }
   }
 
-  private static @NonNull String qualifiedClassName(
+  private @NonNull String qualifiedClassName(
           @NonNull String className,
           String targetPackage) {
     return (targetPackage != null && !targetPackage.isBlank())
@@ -314,7 +319,7 @@ public final class SourceCompiler {
             : className;
   }
 
-  private static @NonNull String resolveClasspath(CompileOptions options) {
+  private @NonNull String resolveClasspath(CompileOptions options) {
     if (options != null && options.classpath() != null && !options.classpath().isBlank()) {
       return options.classpath();
     }
@@ -332,7 +337,7 @@ public final class SourceCompiler {
     return defaultClasspath;
   }
 
-  private static @NonNull String className(@NonNull String fileName) {
+  private @NonNull String className(@NonNull String fileName) {
     if (!fileName.endsWith(".java")) {
       throw new IllegalArgumentException("Source file must end with .java: " + fileName);
     }

@@ -1,45 +1,62 @@
 package cbs.nova.dsl;
 
+import cbs.nova.dsl.function.FunctionDslObject;
+import cbs.nova.dsl.process.ProcessDslObject;
+import cbs.nova.dsl.transaction.TransactionDslObject;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ServiceLoader;
 
 @Slf4j
-// TODO: @deprecated since T230, use `ServiceLoaderDslDefinitionLoader` instead
-@Deprecated(forRemoval = true)
 public final class DefinitionLoader implements DslDefinitionLoader {
-
-  private final ServiceLoaderDslDefinitionLoader serviceLoader = new ServiceLoaderDslDefinitionLoader();
-  private final CompilingDslDefinitionLoader compiler = new CompilingDslDefinitionLoader(
-          new ServiceLoaderDslDefinitionLoader());
-
-  @Override
-  public LoadResult load(@NonNull Path sourceDir, @NonNull GlobalManager gm) {
-    if (hasJavaSources(sourceDir)) {
-      return compiler.load(sourceDir, gm);
-    }
-    return serviceLoader.load(gm);
-  }
 
   @Override
   public LoadResult load(@NonNull GlobalManager gm) {
-    return serviceLoader.load(gm);
+    return load(Thread.currentThread().getContextClassLoader(), gm);
+  }
+
+  @Override
+  public LoadResult load(@NonNull Path sourceDir, @NonNull GlobalManager gm) {
+    throw new UnsupportedOperationException(
+            "DefinitionLoader does not support loading from source directories");
   }
 
   @Override
   public LoadResult load(@NonNull ClassLoader classLoader, @NonNull GlobalManager gm) {
-    return serviceLoader.load(classLoader, gm);
+    var providers = ServiceLoader.load(DslDefinitionProvider.class, classLoader);
+    var iterator = providers.iterator();
+    var result = LoadResult.builder();
+    if (!iterator.hasNext()) {
+      log.warn(
+              "[DefinitionLoader] No DslDefinitionProvider on classpath — registry stays empty");
+      return result.build();
+    }
+    iterator.forEachRemaining(provider -> {
+      for (var obj : provider.definitions()) {
+        register(obj, gm, result);
+      }
+    });
+
+    return result.build();
   }
 
-  private boolean hasJavaSources(@NonNull Path sourceDir) {
-    try (var stream = Files.walk(sourceDir)) {
-      return stream.anyMatch(p -> p.toString().endsWith(".java"));
-    } catch (IOException e) {
-      log.warn("[DefinitionLoader] Failed to scan {}: {}", sourceDir, e.getMessage());
-      return false;
+  private void register(@NonNull DslObject obj, @NonNull GlobalManager gm,
+          LoadResult.@NonNull Builder result) {
+    switch (obj.type()) {
+      case PROCESS -> {
+        gm.registerProcess((ProcessDslObject) obj);
+        result.add(DslObject.DslType.PROCESS, obj.name());
+      }
+      case TRANSACTION -> {
+        gm.registerTransaction((TransactionDslObject) obj);
+        result.add(DslObject.DslType.TRANSACTION, obj.name());
+      }
+      case FUNCTION -> {
+        gm.registerFunction((FunctionDslObject) obj);
+        result.add(DslObject.DslType.FUNCTION, obj.name());
+      }
     }
   }
 }

@@ -23,6 +23,9 @@ const props = withDefaults(
     <div class="flex items-center gap-2">
       <slot name="brand" />
     </div>
+    <div class="flex items-center gap-2">
+      <slot name="widgets" />
+    </div>
     <div class="ml-auto flex items-center gap-2">
       <slot name="trailing" />
     </div>

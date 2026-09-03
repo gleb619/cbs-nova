@@ -1,13 +1,41 @@
 <script setup lang="ts">
 import { useAuth } from '@cbs/admin-ui-plugin/composables/useAuth'
-import { AppFooter, AppShell, AppSidebarToggle } from '@cbs/components'
-import { useRoute } from 'nuxt/app'
+import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
+import {
+  AppFooter,
+  AppShell,
+  AppSidebarToggle,
+  DslSavedDraftsWidget,
+  useSavedDrafts,
+} from '@cbs/components'
+import { navigateTo, useRoute } from 'nuxt/app'
 import { computed } from 'vue'
 import { NuxtLink } from '#components'
 
 const route = useRoute()
 const { data: info } = useAdminInfo()
 const { enabled: authEnabled, authenticated, user, login, logout } = useAuth()
+
+const dslApi = useDslApi()
+
+// Shared with the workbench page through the per-app drafts store. The layout
+// owns the fetcher so the widget has data on every route; the workbench page
+// registers the select handler while it is mounted.
+const {
+  drafts,
+  loading: draftsLoading,
+  error: draftsError,
+  selectedName: draftsSelectedName,
+  refresh: refreshDrafts,
+  select: selectDraft,
+} = useSavedDrafts({ fetcher: () => dslApi.listDrafts() })
+
+async function onDraftSelect(name: string) {
+  // The workbench handles selection itself when mounted. Anywhere else, send
+  // the user there and let the page pick the draft up from the query.
+  if (selectDraft(name)) return
+  await navigateTo({ path: '/dsl-workbench', query: { draft: name } })
+}
 
 const navItems = computed(() => [
   { to: '/', label: 'Dashboard', icon: '🏠', isActive: route.path === '/' },
@@ -66,6 +94,17 @@ const displayName = computed(
     </template>
     <template #brand>
       <span class="text-neutral-800 font-semibold">CBS Nova Admin</span>
+    </template>
+    <template #widgets>
+      <DslSavedDraftsWidget
+        :drafts="drafts"
+        :loading="draftsLoading"
+        :error="draftsError"
+        :selected-name="draftsSelectedName"
+        auto-load
+        @select="onDraftSelect"
+        @refresh="refreshDrafts"
+      />
     </template>
     <template #trailing>
       <div v-if="authEnabled" class="flex items-center gap-3">

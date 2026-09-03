@@ -2,10 +2,9 @@ package cbs.nova.starter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.CompilingDslDefinitionLoader;
 import cbs.nova.dsl.DslDefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.ServiceLoaderDslDefinitionLoader;
+import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslReloadHandler;
 import org.junit.jupiter.api.AfterEach;
@@ -27,8 +26,7 @@ import tools.jackson.databind.ObjectMapper;
 class DslReloadDiagnosticsTest {
 
   private DslReloadHandler resource;
-  private final DslDefinitionLoader loader = new CompilingDslDefinitionLoader(
-          new ServiceLoaderDslDefinitionLoader());
+  private final DslDefinitionLoader loader = new DefinitionLoader();
   private final ObjectMapper mapper = new ObjectMapper();
 
   @BeforeEach

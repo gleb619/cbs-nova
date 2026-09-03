@@ -27,16 +27,18 @@ import {
   DslProblemsPanel,
   ErrorBanner,
   useHelperSearch,
+  useSavedDrafts,
 } from '@cbs/components'
 import { useEventListener } from '@vueuse/core'
-import { useCookie } from 'nuxt/app'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useCookie, useRoute } from 'nuxt/app'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import type { RunnerOutput } from '~/types'
 import DslTemplateGallery from '../components/DslTemplateGallery.vue'
 import type { DslTemplate } from '../utils/dslTemplates'
 
 const workbench = useDslWorkbench()
+const route = useRoute()
 const {
   state,
   selectedConstruct,
@@ -66,29 +68,31 @@ const helperCatalogOpen = useWorkbenchStorage<boolean>('helper-catalog-open', fa
 const dslApi = useDslApi()
 const log = useClientLogger('dsl-workbench')
 
-interface DraftSummary {
-  name: string
-  type?: string
-  status?: string
-  version?: string
-  updatedAt: number
-}
+const savedDrafts = useSavedDrafts({
+  fetcher: () => dslApi.listDrafts(),
+  onError: (message) => log.error('failed to load drafts', { error: message }),
+  // The navbar widget dispatches picks here while this page is mounted.
+  onSelect: (name) => safeSelectConstruct(name),
+})
+const { drafts, refresh: refreshDrafts, selectedName: draftsSelectedName } = savedDrafts
 
-const drafts = ref<DraftSummary[]>([])
-const draftsLoading = ref(false)
-
-async function refreshDrafts() {
-  draftsLoading.value = true
-  try {
-    const result = (await dslApi.listDrafts()) as DraftSummary[]
-    drafts.value = Array.isArray(result) ? result : []
-  } catch (err) {
-    log.error('failed to load drafts', { error: (err as Error).message })
-    drafts.value = []
-  } finally {
-    draftsLoading.value = false
+function safeSelectConstruct(name: string) {
+  if (state.isDirty && !window.confirm('Discard unsaved changes to this construct?')) {
+    return
   }
+  selectConstruct(name)
 }
+
+// Mirror the workbench selection into the shared store so the widget can
+// highlight the active draft.
+watch(
+  () => state.selectedName,
+  (name) => {
+    draftsSelectedName.value = name ?? null
+  },
+  { immediate: true },
+)
+
 const helperSearch = useHelperSearch({
   fetch: async (filters: HelperSearchFilters) =>
     (await dslApi.searchObjects(filters)) as ObjectSearchResult[],
@@ -185,13 +189,6 @@ async function confirmDelete() {
 function cancelDelete() {
   if (isDeleting.value) return
   pendingDeleteName.value = null
-}
-
-function safeSelectConstruct(name: string) {
-  if (state.isDirty && !window.confirm('Discard unsaved changes to this construct?')) {
-    return
-  }
-  selectConstruct(name)
 }
 
 function handleBeforeUnload(event: BeforeUnloadEvent) {
@@ -354,6 +351,10 @@ const saveStatusText = computed(() => {
 onMounted(() => {
   loadConstructs()
   refreshDrafts()
+  // A draft picked from the navbar widget on another route arrives as a query.
+  const requested = route.query.draft
+  const requestedName = Array.isArray(requested) ? requested[0] : requested
+  if (requestedName) selectConstruct(String(requestedName))
   window.addEventListener('beforeunload', handleBeforeUnload)
 })
 
@@ -448,37 +449,6 @@ onBeforeUnmount(() => {
         :class="explorerCollapsed ? 'w-12' : 'w-64'"
         class="shrink-0 border-r border-gray-800 overflow-hidden"
       >
-        <section
-          v-if="!explorerCollapsed"
-          data-testid="dsl-draft-picker"
-          class="border-b border-gray-800 bg-gray-900 text-gray-100"
-        >
-          <header
-            class="flex items-center justify-between px-3 py-2 text-xs uppercase tracking-wide text-gray-400"
-          >
-            <span>Saved Drafts</span>
-            <span class="text-gray-500">{{ drafts.length }}</span>
-          </header>
-          <ul v-if="drafts.length" class="max-h-48 overflow-y-auto">
-            <li
-              v-for="draft in drafts"
-              :key="draft.name"
-              data-testid="dsl-draft-picker-item"
-              class="cursor-pointer px-3 py-1.5 text-sm hover:bg-gray-700"
-              :class="state.selectedName === draft.name ? 'bg-gray-700' : ''"
-              @click="safeSelectConstruct(draft.name)"
-              @keydown.enter="safeSelectConstruct(draft.name)"
-            >
-              <div class="font-medium">{{ draft.name }}</div>
-              <div class="text-xs text-gray-400">
-                {{ draft.type ?? '—' }}
-                · {{ draft.status ?? 'Draft' }}
-              </div>
-            </li>
-          </ul>
-          <p v-else-if="draftsLoading" class="px-3 py-2 text-xs text-gray-400">Loading drafts…</p>
-          <p v-else class="px-3 py-2 text-xs text-gray-500">No saved drafts yet.</p>
-        </section>
         <DslConstructExplorer
           v-model:collapsed="explorerCollapsed"
           :constructs="state.constructs"
