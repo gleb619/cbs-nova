@@ -54,7 +54,7 @@ onMounted(async () => {
     wordWrap: 'off',
     renderWhitespace: 'none',
     fixedOverflowWidgets: true,
-    theme: props.readOnly ? 'vs' : 'vs-dark',
+    theme: 'vs',
   })
 
   editor.onDidChangeModelContent(() => {

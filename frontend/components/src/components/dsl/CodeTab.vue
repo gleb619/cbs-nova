@@ -20,6 +20,7 @@ const emit = defineEmits<{
 }>()
 
 const localCode = ref(props.code)
+let syncingFromProps = false
 
 const placeholder = computed(() => (props.readOnly ? 'No code available' : 'Write DSL here...'))
 
@@ -27,6 +28,7 @@ watch(
   () => props.code,
   (value) => {
     if (value !== localCode.value) {
+      syncingFromProps = true
       localCode.value = value
       lastSavedCode.value = value
     }
@@ -128,6 +130,10 @@ const saveStatusText = computed(() => {
 })
 
 watch(localCode, (value) => {
+  if (syncingFromProps) {
+    syncingFromProps = false
+    return
+  }
   emit('update:code', value)
 })
 </script>
@@ -205,7 +211,7 @@ watch(localCode, (value) => {
       <div
         data-testid="code-tab-editor"
         class="relative h-full min-h-[300px] overflow-hidden rounded border"
-        :class="readOnly ? 'border-neutral-200 bg-neutral-50' : 'border-neutral-700 bg-neutral-900'"
+        :class="readOnly ? 'border-neutral-200 bg-neutral-50' : 'border-neutral-200 bg-white'"
       >
         <MonacoEditor
           v-model="localCode"
