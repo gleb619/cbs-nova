@@ -1,4 +1,5 @@
 package cbs.nova.starter.config;
+import cbs.nova.starter.config.properties.DslProperties;
 
 import cbs.nova.dsl.DslDefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
@@ -16,6 +17,8 @@ import cbs.nova.dsl.utils.ExpressionEvaluator;
 import cbs.nova.dsl.utils.MvelExpressionEvaluator;
 import cbs.nova.starter.converter.MapInputConverter;
 import cbs.nova.starter.resolver.SpringBeanHelperInstanceResolver;
+import cbs.nova.starter.service.DslFileBulkhead;
+import cbs.nova.starter.service.DslWorkspaceResolver;
 import cbs.nova.starter.resolver.SpringOrGeneratedHelperInstanceResolver;
 import io.avaje.jsonb.Jsonb;
 import java.net.http.HttpClient;
@@ -24,6 +27,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Semaphore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Configuration;
@@ -116,9 +120,25 @@ public class DslConfiguration {
   }
 
   @Bean
+  @ConditionalOnMissingBean(DslWorkspaceResolver.class)
+  public DslWorkspaceResolver dslWorkspaceResolver(DslProperties dslProperties) {
+    return DslWorkspaceResolver.shared(dslProperties);
+  }
+
+  @Bean
   @ConditionalOnMissingBean(HttpClient.class)
   public HttpClient httpClient() {
     return HttpClient.newHttpClient();
+  }
+
+  @Bean
+  public DslFileBulkhead dslFileBulkhead(DslProperties properties) {
+    int readPermits = properties.getFiles().getReadBulkheadPermits();
+    int writePermits = properties.getFiles().getWriteBulkheadPermits();
+    var readSemaphore = new Semaphore(Math.max(1, readPermits));
+    var writeSemaphore = new Semaphore(Math.max(1, writePermits));
+
+    return new DslFileBulkhead(readSemaphore, writeSemaphore);
   }
 
   private void loadDsl(DslDefinitionLoader loader) {

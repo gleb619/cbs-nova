@@ -17,7 +17,8 @@ import org.springframework.context.annotation.Import;
     WebhookRouterConfiguration.class,
     DslRuntimeRouterConfiguration.class,
     DslReloadRouterConfiguration.class,
-    DslDraftRouterConfiguration.class
+    DslDraftRouterConfiguration.class,
+    DslFileRouterConfiguration.class
 })
 public class DslRouterConfiguration {
 }

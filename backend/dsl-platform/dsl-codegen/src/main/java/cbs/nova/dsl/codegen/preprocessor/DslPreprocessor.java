@@ -15,7 +15,7 @@ public final class DslPreprocessor {
           "import java.time.*;",
           "import java.util.*;",
           "import java.util.stream.*;",
-          DslCompactSource.class.getName()
+          "import " + DslCompactSource.class.getName() + ";"
   );
   private static final Pattern DEFINE_PATTERN = Pattern.compile(
           "(?m)^(\\s*)(?:public\\s+)?(?:java\\.util\\.)?List\\s*<\\s*(?:cbs\\.nova\\.dsl\\.)?DslObject\\s*>\\s+define\\s*\\(\\s*\\)\\s*\\{");

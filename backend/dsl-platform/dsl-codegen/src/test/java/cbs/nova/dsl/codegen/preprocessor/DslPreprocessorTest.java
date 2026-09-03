@@ -90,7 +90,7 @@ class DslPreprocessorTest {
 
     assertThat(result.preprocessedSource())
             .contains("public class OrderSaga")
-            .contains("implements cbs.nova.dsl.DslCompactSource");
+            .contains("implements DslCompactSource");
   }
 
   @Test
@@ -175,7 +175,7 @@ class DslPreprocessorTest {
             .isNotNull()
             .isNotBlank()
             .contains("public class OrderSaga")
-            .contains("implements cbs.nova.dsl.DslCompactSource")
+            .contains("implements DslCompactSource")
             .contains("public @Override List<DslObject> define() {");
   }
 

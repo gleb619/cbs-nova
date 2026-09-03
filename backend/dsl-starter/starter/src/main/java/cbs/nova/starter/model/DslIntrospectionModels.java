@@ -87,9 +87,7 @@ public final class DslIntrospectionModels {
 
   public enum DefinitionStatus {
 
-    PUBLISHED("Published"),
-    DRAFT("Draft"),
-    MODIFIED("Modified");
+    PUBLISHED("Published"), DRAFT("Draft"), MODIFIED("Modified");
 
     private final String value;
 

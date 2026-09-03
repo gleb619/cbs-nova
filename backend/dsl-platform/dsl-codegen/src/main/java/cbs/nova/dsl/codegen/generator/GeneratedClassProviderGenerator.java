@@ -94,15 +94,7 @@ public final class GeneratedClassProviderGenerator {
     String inputLiteral = typeLiteral(inputType);
     String outputLiteral = typeLiteral(outputType);
     String executeJsonLiteral = escapeJavaString(executeJson);
-    String dslObjectMethod = dslSourceClass == null ? "" :
-                      //language=java
-                      """
-
-                      @Override
-                      public DslObject dslObject() {
-                        return new %s().byName("%s").orElseThrow();
-                      }
-                      """.formatted(dslSourceClass, name);
+    String dslObjectMethod = buildDslObjectMethod(dslSourceClass, name);
 
     List<String> imports = new ArrayList<>();
     addImport(imports, inputType);
@@ -148,8 +140,9 @@ public final class GeneratedClassProviderGenerator {
                       @Override
                       public Object implementationInstance() {
                         return new ${implName}();
-                      }${dslObjectMethod}
+                      }
 
+                      ${dslObjectMethod}
                     }
                     """,
             Map.ofEntries(
@@ -171,6 +164,18 @@ public final class GeneratedClassProviderGenerator {
     log.atLevel(Level.DEBUG).log(() -> "[GeneratedClassProviderGenerator] Built source for %s"
             .formatted(providerClass));
     return new GeneratedSource(pkg, providerClass, source);
+  }
+
+  private String buildDslObjectMethod(String dslSourceClass, String name) {
+    if (dslSourceClass == null) {
+      return "";
+    }
+    return """
+@Override
+  public DslObject dslObject() {
+    return new %s().byName("%s").orElseThrow();
+  }
+""".formatted(dslSourceClass, name).stripTrailing();
   }
 
   private String typeLiteral(Class<?> type) {

@@ -28,7 +28,8 @@ class DslIntrospectionServiceTest {
     service = new DslIntrospectionService(
             DslConfig.dslConfig().jsonSchemaGenerator().get(),
             mapper,
-            new DslDefinitionStatusResolver(new DslProperties(), new DslGitStatusResolver(new DslProperties())));
+            new DslDefinitionStatusResolver(new DslProperties(),
+                    new DslGitStatusResolver(new DslProperties())));
   }
 
   @AfterEach

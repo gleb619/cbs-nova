@@ -2,6 +2,7 @@ package cbs.nova.starter.controller;
 
 import cbs.nova.dsl.LoadResult;
 import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.exception.DslCompilationException;
 import cbs.nova.starter.model.VcsModels.DefinitionBundle;
 import cbs.nova.starter.model.VcsModels.DefinitionBundleEntry;
 import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;

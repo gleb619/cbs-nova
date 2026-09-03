@@ -12,6 +12,7 @@ import cbs.nova.dsl.helper.HelperResolver;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.exception.DslCompilationException;
 import cbs.nova.starter.model.CompileDiagnostic;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ReloadResponse;

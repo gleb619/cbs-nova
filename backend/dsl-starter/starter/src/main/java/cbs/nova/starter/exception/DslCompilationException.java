@@ -1,4 +1,4 @@
-package cbs.nova.starter.controller;
+package cbs.nova.starter.exception;
 
 import cbs.nova.starter.model.CompileDiagnostic;
 
