@@ -13,19 +13,30 @@ import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslFileHandler;
 import cbs.nova.starter.model.DslFileModels.FileContentResponse;
 import cbs.nova.starter.service.DslFileService;
-import java.io.IOException;
-import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.web.servlet.function.RouterFunctions;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
 import tools.jackson.databind.ObjectMapper;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import org.springframework.http.converter.HttpMessageConverter;
+import java.util.Map;
+
 class DslFileHandlerTest {
+
+  private static final List<HttpMessageConverter<?>> CONVERTERS = List.of(
+          new StringHttpMessageConverter(),
+          new JacksonJsonHttpMessageConverter());
 
   private DslFileHandler handler;
   private DslFileService fileService;
@@ -50,8 +61,8 @@ class DslFileHandlerTest {
     when(fileService.readFile("LoanDisbursementDsl.java"))
             .thenReturn(new FileContentResponse("LoanDisbursementDsl.java", "step A {}", false));
 
-    ServerResponse response = handler
-            .readByName(request("GET", "/api/dsl/files/by-name/LoanDisbursement"));
+    ServerResponse response = handler.readByName(
+            request("GET", "/api/dsl/files/by-name/LoanDisbursement", "LoanDisbursement"));
 
     assertThat(response.statusCode().value()).isEqualTo(200);
     assertThat(renderBody(response)).contains("\"content\":\"step A {}\"");
@@ -59,7 +70,8 @@ class DslFileHandlerTest {
 
   @Test
   void readByNameReturns404WhenFilenameUnknown() throws IOException {
-    ServerResponse response = handler.readByName(request("GET", "/api/dsl/files/by-name/Missing"));
+    ServerResponse response = handler.readByName(
+            request("GET", "/api/dsl/files/by-name/Missing", "Missing"));
 
     assertThat(response.statusCode().value()).isEqualTo(404);
   }
@@ -69,10 +81,37 @@ class DslFileHandlerTest {
     DslProperties properties = new DslProperties();
     handler = new DslFileHandler(properties, fileService, new ObjectMapper());
 
-    ServerResponse response = handler
-            .readByName(request("GET", "/api/dsl/files/by-name/LoanDisbursement"));
+    ServerResponse response = handler.readByName(
+            request("GET", "/api/dsl/files/by-name/LoanDisbursement", "LoanDisbursement"));
 
     assertThat(response.statusCode().value()).isEqualTo(409);
+  }
+
+  @Test
+  void readByNameResolvesFullRelativePathWhenSourceFileExists() throws Exception {
+    Path temp = Files.createTempDirectory("dsl-source");
+    try {
+      Path nested = temp.resolve("dsl").resolve("InvoiceGenerationDsl.java");
+      Files.createDirectories(nested.getParent());
+      Files.writeString(nested, "step {}");
+
+      DslProperties properties = new DslProperties();
+      properties.setSourceDir(temp.toString());
+      handler = new DslFileHandler(properties, fileService, new ObjectMapper());
+
+      registerProvider("InvoiceGeneration", "InvoiceGenerationDsl.java");
+      when(fileService.readFile("dsl/InvoiceGenerationDsl.java"))
+              .thenReturn(new FileContentResponse("dsl/InvoiceGenerationDsl.java", "step {}", false));
+
+      ServerResponse response = handler.readByName(
+              request("GET", "/api/dsl/files/by-name/InvoiceGeneration", "InvoiceGeneration"));
+
+      assertThat(response.statusCode().value()).isEqualTo(200);
+      assertThat(renderBody(response)).contains("\"content\":\"step {}\"");
+      verify(fileService).readFile("dsl/InvoiceGenerationDsl.java");
+    } finally {
+      deleteRecursively(temp);
+    }
   }
 
   @Test
@@ -80,16 +119,42 @@ class DslFileHandlerTest {
     registerProvider("ReserveInventory", "ReserveInventoryDsl.java");
 
     ServerResponse response = handler.writeByName(
-            requestWithBody("POST", "/api/dsl/files/by-name/ReserveInventory", "new content"));
+            requestWithBody("POST", "/api/dsl/files/by-name/ReserveInventory",
+                    "ReserveInventory", "new content"));
 
     assertThat(response.statusCode().value()).isEqualTo(202);
     verify(fileService).stageWrite("ReserveInventoryDsl.java", "new content");
   }
 
   @Test
+  void writeByNameResolvesFullRelativePathWhenSourceFileExists() throws IOException {
+    Path temp = Files.createTempDirectory("dsl-source");
+    try {
+      Path nested = temp.resolve("dsl").resolve("ReserveInventoryDsl.java");
+      Files.createDirectories(nested.getParent());
+      Files.writeString(nested, "step {}");
+
+      DslProperties properties = new DslProperties();
+      properties.setSourceDir(temp.toString());
+      handler = new DslFileHandler(properties, fileService, new ObjectMapper());
+
+      registerProvider("ReserveInventory", "ReserveInventoryDsl.java");
+
+      ServerResponse response = handler.writeByName(
+              requestWithBody("POST", "/api/dsl/files/by-name/ReserveInventory",
+                      "ReserveInventory", "new content"));
+
+      assertThat(response.statusCode().value()).isEqualTo(202);
+      verify(fileService).stageWrite("dsl/ReserveInventoryDsl.java", "new content");
+    } finally {
+      deleteRecursively(temp);
+    }
+  }
+
+  @Test
   void writeByNameReturns404WhenFilenameUnknown() throws IOException {
     ServerResponse response = handler.writeByName(
-            requestWithBody("POST", "/api/dsl/files/by-name/Missing", "x"));
+            requestWithBody("POST", "/api/dsl/files/by-name/Missing", "Missing", "x"));
 
     assertThat(response.statusCode().value()).isEqualTo(404);
   }
@@ -118,24 +183,42 @@ class DslFileHandlerTest {
     GlobalManager.globalManager().registerGeneratedClass(provider);
   }
 
-  private static ServerRequest request(String method, String path) {
-    return ServerRequest.create(new MockHttpServletRequest(method, path), List.of());
+  private static ServerRequest request(String method, String path, String name) {
+    MockHttpServletRequest req = new MockHttpServletRequest(method, path);
+    req.setAttribute(RouterFunctions.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of("name", name));
+    return ServerRequest.create(req, CONVERTERS);
   }
 
-  private static ServerRequest requestWithBody(String method, String path, String body) {
-    MockHttpServletRequest servletRequest = new MockHttpServletRequest(method, path);
-    servletRequest.setContent(body.getBytes());
-    return ServerRequest.create(servletRequest, List.of());
+  private static ServerRequest requestWithBody(String method, String path, String name,
+          String body) {
+    MockHttpServletRequest req = new MockHttpServletRequest(method, path);
+    req.setAttribute(RouterFunctions.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of("name", name));
+    req.setContent(body.getBytes());
+    req.setContentType("text/plain");
+    return ServerRequest.create(req, CONVERTERS);
   }
 
   private static String renderBody(ServerResponse response) throws Exception {
     var servletResponse = new MockHttpServletResponse();
-    var servletRequest = new MockHttpServletRequest("GET",
-            "/api/dsl/files/by-name/LoanDisbursement");
     response.writeTo(
-            servletRequest,
+            new MockHttpServletRequest("GET", "/api/dsl/files/by-name/test"),
             servletResponse,
             () -> List.of(new JacksonJsonHttpMessageConverter()));
     return servletResponse.getContentAsString();
+  }
+
+  private static void deleteRecursively(Path path) throws IOException {
+    if (!Files.exists(path)) {
+      return;
+    }
+    try (var stream = Files.walk(path)) {
+      stream.sorted((a, b) -> -a.compareTo(b)).forEach(p -> {
+        try {
+          Files.deleteIfExists(p);
+        } catch (IOException e) {
+          // ignore cleanup failures
+        }
+      });
+    }
   }
 }

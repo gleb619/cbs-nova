@@ -47,7 +47,7 @@ public class DslFileService {
         thread.setDaemon(true);
         return thread;
       });
-      flushExecutor.scheduleWithFixedDelay(() -> flushPending(), interval, interval,
+      flushExecutor.scheduleWithFixedDelay(this::flushPending, interval, interval,
               TimeUnit.SECONDS);
     }
   }
@@ -81,8 +81,17 @@ public class DslFileService {
     }
     bulkhead.acquireRead();
     try {
-      String content = repository.read(workspaceRoot(), relativePath);
-      return new FileContentResponse(relativePath, content, false);
+      Path workspace = workspaceRoot();
+      if (repository.exists(workspace, relativePath)) {
+        String content = repository.read(workspace, relativePath);
+        return new FileContentResponse(relativePath, content, false);
+      }
+      Path source = sourceRoot();
+      if (repository.exists(source, relativePath)) {
+        String content = repository.read(source, relativePath);
+        return new FileContentResponse(relativePath, content, false);
+      }
+      throw new IOException("file not found: " + relativePath);
     } finally {
       bulkhead.releaseRead();
     }
@@ -90,7 +99,11 @@ public class DslFileService {
 
   public boolean exists(String relativePath) {
     ensureRoot();
-    return buffer.get(relativePath) != null || repository.exists(workspaceRoot(), relativePath);
+    if (buffer.get(relativePath) != null) {
+      return true;
+    }
+    return repository.exists(workspaceRoot(), relativePath)
+            || repository.exists(sourceRoot(), relativePath);
   }
 
   public void stageWrite(String relativePath, String content) {
@@ -98,7 +111,7 @@ public class DslFileService {
     buffer.stage(relativePath, content);
     if (buffer.pendingCount() >= dslProperties.getFiles().getMaxQueueSize()) {
       if (flushExecutor != null) {
-        flushExecutor.execute(() -> flushPending());
+        flushExecutor.execute(this::flushPending);
       }
     }
   }
@@ -115,7 +128,7 @@ public class DslFileService {
     }
     if (buffer.pendingCount() >= dslProperties.getFiles().getMaxQueueSize()) {
       if (flushExecutor != null) {
-        flushExecutor.execute(() -> flushPending());
+        flushExecutor.execute(this::flushPending);
       }
     }
     return staged;
@@ -157,6 +170,10 @@ public class DslFileService {
 
   public int pendingCount() {
     return buffer.pendingCount();
+  }
+
+  private Path sourceRoot() {
+    return workspaceResolver.sourceRoot();
   }
 
   private Path workspaceRoot() {

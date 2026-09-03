@@ -173,6 +173,10 @@ function onCodeChange(value: string) {
   if (selectedConstruct.value) markDirty()
 }
 
+function handleEditorSave() {
+  draftSave.save().then(() => refreshDrafts())
+}
+
 async function runPreview(
   name: string,
   body: unknown,
@@ -528,6 +532,7 @@ onBeforeUnmount(() => {
             :preview="runPreview"
             :explain="runExplain"
             @update:code="onCodeChange"
+            @save="handleEditorSave"
           />
         </div>
         <DslProblemsPanel :errors="state.validationErrors" />

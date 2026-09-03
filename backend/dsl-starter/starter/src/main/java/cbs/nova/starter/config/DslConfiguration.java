@@ -17,11 +17,13 @@ import cbs.nova.dsl.utils.ExpressionEvaluator;
 import cbs.nova.dsl.utils.MvelExpressionEvaluator;
 import cbs.nova.starter.converter.MapInputConverter;
 import cbs.nova.starter.resolver.SpringBeanHelperInstanceResolver;
+import cbs.nova.starter.service.DefaultDslWorkspaceResolver;
 import cbs.nova.starter.service.DslFileBulkhead;
 import cbs.nova.starter.service.DslWorkspaceResolver;
 import cbs.nova.starter.resolver.SpringOrGeneratedHelperInstanceResolver;
 import io.avaje.jsonb.Jsonb;
 import java.net.http.HttpClient;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -50,6 +52,8 @@ public class DslConfiguration {
           DslDefinitionLoader loader) {
     return _ -> {
       GlobalManager.globalManager().resetForTests();
+
+      initRegistry();
       loadDsl(loader);
 
       registerExpressionEvaluator(expressionEvaluator);
@@ -122,7 +126,16 @@ public class DslConfiguration {
   @Bean
   @ConditionalOnMissingBean(DslWorkspaceResolver.class)
   public DslWorkspaceResolver dslWorkspaceResolver(DslProperties dslProperties) {
-    return DslWorkspaceResolver.shared(dslProperties);
+    String sourceDir = dslProperties.getSourceDir();
+    if (sourceDir == null || sourceDir.isBlank()) {
+      throw new IllegalStateException("dsl.source-dir is not configured");
+    }
+    var sourceRoot = Path.of(sourceDir).normalize();
+    //TODO: move hardcoded path to app.yml
+    var workspaceRoot = sourceRoot.resolve(".workbench")
+        .resolve("drafts-fs").normalize();
+
+    return new DefaultDslWorkspaceResolver(sourceRoot, workspaceRoot);
   }
 
   @Bean
@@ -139,6 +152,11 @@ public class DslConfiguration {
     var writeSemaphore = new Semaphore(Math.max(1, writePermits));
 
     return new DslFileBulkhead(readSemaphore, writeSemaphore);
+  }
+
+  private void initRegistry() {
+    DslConfig.dslConfig().generatedClassRegistry()
+        .init(GlobalManager.globalManager().defaultClassLoader());
   }
 
   private void loadDsl(DslDefinitionLoader loader) {

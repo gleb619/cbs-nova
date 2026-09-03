@@ -14,7 +14,7 @@ public final class DefinitionLoader implements DslDefinitionLoader {
 
   @Override
   public LoadResult load(@NonNull GlobalManager gm) {
-    return load(Thread.currentThread().getContextClassLoader(), gm);
+    return load(gm.defaultClassLoader(), gm);
   }
 
   @Override

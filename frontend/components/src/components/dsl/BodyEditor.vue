@@ -29,6 +29,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:code': [value: string]
+  save: [value: string]
 }>()
 
 const tab = ref<'structure' | 'code' | 'preview' | 'explain'>('structure')
@@ -156,7 +157,12 @@ watch(
     </div>
     <div class="flex-1 overflow-auto" data-testid="body-editor-content">
       <StructureTab v-show="tab === 'structure'" :steps="steps" />
-      <CodeTab v-show="tab === 'code'" v-model:code="bodyCode" :read-only="!construct" />
+      <CodeTab
+        v-show="tab === 'code'"
+        v-model:code="bodyCode"
+        :read-only="!construct"
+        @save="emit('save', $event)"
+      />
       <PreviewTab
         v-if="tab === 'preview'"
         :output="previewOutput"

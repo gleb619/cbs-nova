@@ -24,9 +24,12 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 @Slf4j
 @Component
@@ -84,7 +87,7 @@ public class DslFileHandler {
     if (name == null || name.isBlank()) {
       return badRequest("name is required");
     }
-    String path = GlobalManager.globalManager().findFilename(name).orElse(null);
+    String path = resolveRelativePath(name);
     if (path == null || path.isBlank()) {
       return ServerResponse.notFound().build();
     }
@@ -100,7 +103,7 @@ public class DslFileHandler {
     if (name == null || name.isBlank()) {
       return badRequest("name is required");
     }
-    String path = GlobalManager.globalManager().findFilename(name).orElse(null);
+    String path = resolveRelativePath(name);
     if (path == null || path.isBlank()) {
       return ServerResponse.notFound().build();
     }
@@ -162,6 +165,29 @@ public class DslFileHandler {
     int pending = fileService.pendingCount();
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
             .body(new PendingWritesStatus(pending));
+  }
+
+  private String resolveRelativePath(String name) {
+    String filename = GlobalManager.globalManager().findFilename(name).orElse(null);
+    if (filename == null || filename.isBlank()) {
+      return null;
+    }
+    String sourceDir = dslProperties.getSourceDir();
+    if (sourceDir == null || sourceDir.isBlank()) {
+      return filename;
+    }
+    Path root = Path.of(sourceDir).normalize();
+    try (Stream<Path> stream = Files.find(root, Integer.MAX_VALUE,
+            (p, _) -> Files.isRegularFile(p) && p.getFileName().toString().equals(filename))) {
+      Optional<Path> found = stream.findFirst();
+      if (found.isPresent()) {
+        return root.relativize(found.get()).toString().replace('\\', '/');
+      }
+    } catch (IOException e) {
+      log.warn("[DSL files] failed to resolve source path for {} under {}: {}", name, root,
+              e.getMessage());
+    }
+    return filename;
   }
 
   private String pathVariable(ServerRequest request) {

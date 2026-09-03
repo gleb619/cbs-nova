@@ -360,4 +360,8 @@ public final class GlobalManager {
   public void replaceGlobalManager(@NonNull GlobalManager replacement) {
     INSTANCE.set(replacement);
   }
+
+  public ClassLoader defaultClassLoader() {
+    return GlobalManager.class.getClassLoader();
+  }
 }

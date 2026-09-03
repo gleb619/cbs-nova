@@ -118,6 +118,10 @@ public class DslConfig implements SingletonSupport {
     return singleton(ObjectMapper::new);
   }
 
+  public @NonNull GeneratedClassRegistry generatedClassRegistry() {
+    return singleton(GeneratedClassRegistry::new);
+  }
+
   public @NonNull GlobalManager globalManager() {
     var contextFactory = contextFactory();
     var compensationRegistry = compensationRegistry();
@@ -128,7 +132,7 @@ public class DslConfig implements SingletonSupport {
                     transactionRunner(contextFactory, compensationRegistry)),
             new HelperManager(new DefaultHelperRegistry(),
                     helperRunner(contextFactory)),
-            new GeneratedClassRegistry(),
+            generatedClassRegistry(),
             new ProcessContextFactory(),
             compensationRegistry);
   }

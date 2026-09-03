@@ -16,12 +16,10 @@ public final class GeneratedClassRegistry {
   private final Map<String, GeneratedClassDescriptor> transactions = new ConcurrentHashMap<>();
   private final Map<String, GeneratedClassProvider> providers = new ConcurrentHashMap<>();
 
-  public GeneratedClassRegistry() {
-    this(Thread.currentThread().getContextClassLoader());
-  }
 
-  public GeneratedClassRegistry(ClassLoader classLoader) {
+  public GeneratedClassRegistry init(ClassLoader classLoader) {
     ServiceLoader.load(GeneratedClassProvider.class, classLoader).forEach(this::register);
+    return this;
   }
 
   public void register(@NonNull GeneratedClassProvider provider) {

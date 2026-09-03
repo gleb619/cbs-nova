@@ -8,6 +8,8 @@ public interface DslDefinitionLoader {
 
   LoadResult load(@NonNull GlobalManager gm);
 
+  //TODO: remove method, app must work only with spi
+  @Deprecated(forRemoval = true)
   LoadResult load(@NonNull Path sourceDir, @NonNull GlobalManager gm);
 
   LoadResult load(@NonNull ClassLoader classLoader, @NonNull GlobalManager gm);

@@ -55,3 +55,4 @@ node_modules/
 /dsl-starter/starter/build/
 /dsl-starter/starter-launcher/.gradle/
 /dsl-starter/starter-launcher/build/
+/dsl-starter/starter/.jqwik-database
