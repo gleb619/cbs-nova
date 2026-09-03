@@ -198,6 +198,8 @@ const makeStub = (testId: string) =>
       'loading',
       'collapsed',
       'code',
+      'saveStatus',
+      'lastSavedAt',
       'preview',
       'explain',
       'open',
@@ -347,26 +349,6 @@ describe('dsl-workbench.vue unsaved-changes guard', () => {
     const beforeunloadRemoves = removeSpy.mock.calls.filter(([type]) => type === 'beforeunload')
     expect(beforeunloadRemoves).toHaveLength(1)
     expect(beforeunloadRemoves[0]?.[1]).toBe(beforeunloadAdds[0]?.[1])
-  })
-
-  it('renders the dirty indicator only when state.isDirty is true', async () => {
-    const wrapper = mountPage()
-    await flushPromises()
-
-    expect(wrapper.find('[data-testid="workbench-dirty-indicator"]').exists()).toBe(false)
-
-    harness.markDirty()
-    await nextTick()
-
-    const indicator = wrapper.find('[data-testid="workbench-dirty-indicator"]')
-    expect(indicator.exists()).toBe(true)
-    expect(indicator.text()).toContain('unsaved changes')
-    expect(indicator.attributes('aria-label')).toBeTruthy()
-
-    await harness.saveConstruct()
-    await nextTick()
-
-    expect(wrapper.find('[data-testid="workbench-dirty-indicator"]').exists()).toBe(false)
   })
 
   it('gates construct switching with a confirm dialog when dirty', async () => {
@@ -604,7 +586,6 @@ describe('dsl-workbench.vue new definition flow', () => {
 
     expect(harness.createConstruct).toHaveBeenCalledWith('NewProcess', 'Process')
     expect(harness.markDirty).toHaveBeenCalled()
-    expect(wrapper.find('[data-testid="workbench-dirty-indicator"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="workbench-new-name-error"]').exists()).toBe(false)
 
     const editor = wrapper.findComponent({ name: 'BodyEditor' })
@@ -742,26 +723,23 @@ describe('dsl-workbench.vue save-status pill and Ctrl+S', () => {
     dslApi.writeDslFile.mockResolvedValue({ ok: true })
   })
 
-  function findStatus(wrapper: ReturnType<typeof mountPage>) {
-    return wrapper.find('[data-testid="draft-save-status"]')
+  function findEditorSaveStatus(wrapper: ReturnType<typeof mountPage>) {
+    return wrapper.findComponent({ name: 'BodyEditor' }).props('saveStatus')
   }
 
-  it('shows "Unsaved changes" when the draft is dirty', async () => {
+  it('reports dirty save status to the editor when the draft is dirty', async () => {
     const wrapper = mountPage()
     await flushPromises()
 
-    expect(findStatus(wrapper).exists()).toBe(false)
+    expect(findEditorSaveStatus(wrapper)).toBe('idle')
 
     harness.markDirty()
     await nextTick()
 
-    const status = findStatus(wrapper)
-    expect(status.exists()).toBe(true)
-    expect(status.text()).toContain('Unsaved changes')
-    expect(status.classes()).toEqual(expect.arrayContaining(['bg-amber-50']))
+    expect(findEditorSaveStatus(wrapper)).toBe('dirty')
   })
 
-  it('shows the saving state while saveConstruct is in flight', async () => {
+  it('reports saving then saved status while saveConstruct runs', async () => {
     let resolveSave: (() => void) | null = null
     harness.saveConstruct.mockImplementationOnce(
       () =>
@@ -781,19 +759,15 @@ describe('dsl-workbench.vue save-status pill and Ctrl+S', () => {
     await dropdown.vm.$emit('select', { value: 'save' })
     await nextTick()
 
-    const status = findStatus(wrapper)
-    expect(status.exists()).toBe(true)
-    expect(status.text()).toContain('Saving')
+    expect(findEditorSaveStatus(wrapper)).toBe('saving')
 
     resolveSave?.()
     await flushPromises()
 
-    expect(status.text()).toContain('Saved')
-    expect(status.text()).toMatch(/Saved (just now|\ds ago)/)
-    expect(status.classes()).toEqual(expect.arrayContaining(['bg-green-50']))
+    expect(findEditorSaveStatus(wrapper)).toBe('saved')
   })
 
-  it('shows the error state with a retry button when save fails', async () => {
+  it('reports error status when save fails', async () => {
     harness.saveConstruct.mockRejectedValueOnce(new Error('server error'))
 
     const wrapper = mountPage()
@@ -806,16 +780,10 @@ describe('dsl-workbench.vue save-status pill and Ctrl+S', () => {
     await dropdown.vm.$emit('select', { value: 'save' })
     await flushPromises()
 
-    const status = findStatus(wrapper)
-    expect(status.exists()).toBe(true)
-    expect(status.text()).toContain('Save failed')
-    expect(status.classes()).toEqual(expect.arrayContaining(['bg-red-50']))
-
-    const retry = status.find('[data-testid="draft-save-retry"]')
-    expect(retry.exists()).toBe(true)
+    expect(findEditorSaveStatus(wrapper)).toBe('error')
   })
 
-  it('retry button re-attempts saving', async () => {
+  it('editor save event re-attempts saving after a failure', async () => {
     let resolveRetry: (() => void) | null = null
     harness.saveConstruct.mockRejectedValueOnce(new Error('server error')).mockImplementationOnce(
       () =>
@@ -832,20 +800,19 @@ describe('dsl-workbench.vue save-status pill and Ctrl+S', () => {
     await dropdown.vm.$emit('select', { value: 'save' })
     await flushPromises()
 
-    const status = findStatus(wrapper)
-    expect(status.text()).toContain('Save failed')
+    expect(findEditorSaveStatus(wrapper)).toBe('error')
 
-    const retry = status.find('[data-testid="draft-save-retry"]')
-    await retry.trigger('click')
+    const editor = wrapper.findComponent({ name: 'BodyEditor' })
+    await editor.vm.$emit('save', 'code')
     await nextTick()
 
-    expect(status.text()).toContain('Saving')
+    expect(findEditorSaveStatus(wrapper)).toBe('saving')
     expect(harness.saveConstruct).toHaveBeenCalledTimes(2)
 
     resolveRetry?.()
     await flushPromises()
 
-    expect(status.text()).toContain('Saved')
+    expect(findEditorSaveStatus(wrapper)).toBe('saved')
   })
 
   it('fires save on Ctrl+S when dirty', async () => {

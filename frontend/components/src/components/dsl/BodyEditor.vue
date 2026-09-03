@@ -15,6 +15,8 @@ const props = defineProps<{
    * existing callers keep working unchanged.
    */
   code?: string
+  saveStatus?: string
+  lastSavedAt?: Date | null
   preview?: (
     name: string,
     body: unknown,
@@ -161,6 +163,8 @@ watch(
         v-show="tab === 'code'"
         v-model:code="bodyCode"
         :read-only="!construct"
+        :save-status="saveStatus"
+        :last-saved-at="lastSavedAt"
         @save="emit('save', $event)"
       />
       <PreviewTab

@@ -5,6 +5,27 @@ import BodyEditor from '../dsl/BodyEditor.vue'
 import CodeTab from '../dsl/CodeTab.vue'
 import StructureTab from '../dsl/StructureTab.vue'
 
+vi.mock('../dsl/MonacoEditor.vue', () => ({
+  default: {
+    name: 'MonacoEditorStub',
+    props: {
+      modelValue: { type: String, default: '' },
+      language: { type: String, default: 'java' },
+      readOnly: { type: Boolean, default: false },
+      placeholder: { type: String, default: '' },
+    },
+    emits: ['update:modelValue', 'blur'],
+    template: `<textarea
+      data-testid="code-tab-textarea"
+      :readonly="readOnly"
+      :placeholder="placeholder"
+      :value="modelValue"
+      @input="$emit('update:modelValue', $event.target.value)"
+      @blur="$emit('blur')"
+    />`,
+  },
+}))
+
 const construct: DslConstruct = {
   name: 'CreateOrder',
   type: 'Process',

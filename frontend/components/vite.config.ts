@@ -11,7 +11,7 @@ export default defineConfig({
       fileName: 'index',
     },
     rollupOptions: {
-      external: ['vue'],
+      external: ['vue', 'monaco-editor'],
       output: { globals: { vue: 'Vue' } },
     },
   },

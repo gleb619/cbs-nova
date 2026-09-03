@@ -31,7 +31,13 @@ class DslFileServiceTest {
     DslProperties properties = new DslProperties();
     properties.setSourceDir(sourceDir.toString());
     properties.getFiles().setFlushIntervalSeconds(0);
-    DslWorkspaceResolver resolver = new DefaultDslWorkspaceResolver(properties);
+
+    String sourceDir = properties.getSourceDir();
+    var sourceRoot = Path.of(sourceDir).normalize();
+    var workspaceRoot = sourceRoot.resolve(".workbench")
+        .resolve("drafts-fs").normalize();
+
+    DslWorkspaceResolver resolver = new DefaultDslWorkspaceResolver(sourceRoot, workspaceRoot);
     DslFileRepository repository = new DslFileRepository();
     DslFileBuffer buffer = new DslFileBuffer();
     DslFileBulkhead bulkhead = new DslFileBulkhead(new Semaphore(1), new Semaphore(1));

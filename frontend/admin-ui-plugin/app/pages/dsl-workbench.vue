@@ -350,46 +350,6 @@ function handleSaveShortcut(event: KeyboardEvent) {
 
 useEventListener(window, 'keydown', handleSaveShortcut)
 
-function formatSavedTime(date: Date | null): string {
-  if (!date) return ''
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
-  if (seconds < 10) return 'just now'
-  if (seconds < 60) return `${seconds}s ago`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  return `${Math.floor(minutes / 60)}h ago`
-}
-
-const saveStatusClasses = computed(() => {
-  switch (draftSave.status.value) {
-    case 'dirty':
-      return 'bg-amber-50 text-amber-700 border border-amber-200'
-    case 'saving':
-      return 'bg-blue-50 text-blue-700 border border-blue-200'
-    case 'saved':
-      return 'bg-green-50 text-green-700 border border-green-200'
-    case 'error':
-      return 'bg-red-50 text-red-700 border border-red-200'
-    default:
-      return 'text-gray-500'
-  }
-})
-
-const saveStatusText = computed(() => {
-  switch (draftSave.status.value) {
-    case 'dirty':
-      return 'Unsaved changes'
-    case 'saving':
-      return 'Saving…'
-    case 'saved':
-      return `Saved ${formatSavedTime(draftSave.lastSavedAt.value)}`
-    case 'error':
-      return 'Save failed — Retry'
-    default:
-      return draftSave.lastSavedAt.value ? 'Saved' : ''
-  }
-})
-
 onMounted(() => {
   loadConstructs()
   refreshDrafts()
@@ -431,39 +391,6 @@ onBeforeUnmount(() => {
         >
           New
         </button>
-        <span
-          v-if="state.isDirty"
-          class="inline-flex items-center gap-1.5 text-xs text-amber-700"
-          data-testid="workbench-dirty-indicator"
-          role="status"
-          aria-label="You have unsaved changes"
-        >
-          <span aria-hidden="true" class="inline-block h-2 w-2 rounded-full bg-amber-500"></span>
-          <span>unsaved changes</span>
-        </span>
-        <span
-          v-if="saveStatusText"
-          class="inline-flex items-center gap-1.5 text-xs rounded-full px-2.5 py-1"
-          :class="saveStatusClasses"
-          data-testid="draft-save-status"
-          role="status"
-        >
-          <span
-            v-if="draftSave.status.value === 'saving'"
-            class="inline-block h-3 w-3 rounded-full border-2 border-current border-t-transparent animate-spin"
-            aria-hidden="true"
-          ></span>
-          <span>{{ saveStatusText }}</span>
-          <button
-            v-if="draftSave.status.value === 'error'"
-            type="button"
-            class="ml-1 underline hover:no-underline"
-            data-testid="draft-save-retry"
-            @click="draftSave.save()"
-          >
-            Retry
-          </button>
-        </span>
         <DropdownMenu label="Actions" align="right" :items="actionItems" @select="runAction" />
       </div>
       <button
@@ -529,6 +456,8 @@ onBeforeUnmount(() => {
           <DslBodyEditor
             :code="editorCode"
             :construct="selectedConstruct"
+            :save-status="draftSave.status.value"
+            :last-saved-at="draftSave.lastSavedAt.value"
             :preview="runPreview"
             :explain="runExplain"
             @update:code="onCodeChange"
