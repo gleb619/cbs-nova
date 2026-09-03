@@ -1,4 +1,4 @@
-package cbs.nova.starter.config;
+package cbs.nova.starter.config.router;
 
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.TransactionExecutionRepository;

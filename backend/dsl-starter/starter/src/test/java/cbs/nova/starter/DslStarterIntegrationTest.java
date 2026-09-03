@@ -10,7 +10,7 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.config.CbsNovaFakesProperties;
 import cbs.nova.starter.config.CbsNovaPreviewProperties;
-import cbs.nova.starter.config.DslRuntimeRouterConfiguration;
+import cbs.nova.starter.config.router.DslRuntimeRouterConfiguration;
 import cbs.nova.starter.config.properties.DslRunsProperties;
 import cbs.nova.starter.web.DslPayloadSizeValidator;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;

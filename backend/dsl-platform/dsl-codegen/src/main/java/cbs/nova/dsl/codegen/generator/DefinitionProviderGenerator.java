@@ -1,7 +1,7 @@
 package cbs.nova.dsl.codegen.generator;
 
 import cbs.nova.dsl.DslDefinitionProvider;
-import cbs.nova.dsl.codegen.CodeWriter;
+import cbs.nova.dsl.codegen.util.CodeWriter;
 import cbs.nova.dsl.utils.Substitutor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

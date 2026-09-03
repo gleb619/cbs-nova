@@ -158,6 +158,44 @@ class GeneratedClassRegistryTest {
   }
 
   @Test
+  void findProviderReturnsRegisteredProvider() {
+    GeneratedClassProvider provider = () -> process("FromProvider");
+
+    registry.register(provider);
+
+    assertThat(registry.findProvider("FromProvider")).contains(provider);
+    assertThat(registry.findProvider("nope")).isEmpty();
+  }
+
+  @Test
+  void findFilenameComesFromProvider() {
+    GeneratedClassProvider provider = new GeneratedClassProvider() {
+      @Override
+      public GeneratedClassDescriptor descriptor() {
+        return process("FromProvider");
+      }
+
+      @Override
+      public String filename() {
+        return "FromProvider.java";
+      }
+    };
+
+    registry.register(provider);
+
+    assertThat(registry.findFilename("FromProvider")).contains("FromProvider.java");
+    assertThat(registry.findFilename("nope")).isEmpty();
+  }
+
+  @Test
+  void registerDescriptorOnlyDoesNotExposeProvider() {
+    registry.register(process("DescOnly"));
+
+    assertThat(registry.findProvider("DescOnly")).isEmpty();
+    assertThat(registry.findFilename("DescOnly")).isEmpty();
+  }
+
+  @Test
   void noArgConstructorDoesNotThrow() {
     assertThatCode(GeneratedClassRegistry::new).doesNotThrowAnyException();
   }

@@ -20,6 +20,7 @@ import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
 import io.sentry.Sentry;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -40,10 +41,8 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -53,9 +52,9 @@ import java.util.function.Supplier;
 @Slf4j
 public class TemporalDslProcessService {
 
-  static final String EMPTY_OUTPUT_JSON = "{}";
+  public static final String EMPTY_OUTPUT_JSON = "{}";
 
-  static final Instant NOT_FINISHED_AT = Instant.EPOCH;
+  public static final Instant NOT_FINISHED_AT = Instant.EPOCH;
 
   public static final String RUN_DURATION_TIMER = "dsl.run.duration";
 
@@ -67,11 +66,11 @@ public class TemporalDslProcessService {
 
   public static final String SWEEP_INSPECTED_COUNTER = "dsl.run.sweep.inspected";
 
-  static final String UNKNOWN_PROCESS = "unknown";
+  public static final String UNKNOWN_PROCESS = "unknown";
 
-  static final String PROCESS_NAME_TAG = "processName";
+  public static final String PROCESS_NAME_TAG = "processName";
 
-  static final String STATUS_TAG = "status";
+  public static final String STATUS_TAG = "status";
 
   private final ContextFactory contextFactory;
   private final DslRunRepository runRepository;
@@ -84,9 +83,10 @@ public class TemporalDslProcessService {
   private final long maxOutputBytes;
   private final MeterRegistry meterRegistry;
   private final RunIdentityResolver runIdentityResolver;
+  private final Optional<WebhookDispatcher> webhookDispatcher;
 
-  private final @Nullable WebhookDispatcher webhookDispatcher;
-
+  //TODO: use only lomboks constructor
+  @Deprecated(forRemoval = true)
   public TemporalDslProcessService(ContextFactory contextFactory, DslRunRepository runRepository,
           ObjectMapper objectMapper,
           ThreadPoolTaskExecutor dslProcessExecutor, ScheduledExecutorService healthcheckExecutor,
@@ -94,9 +94,10 @@ public class TemporalDslProcessService {
           MeterRegistry meterRegistry, RunIdentityResolver runIdentityResolver) {
     this(contextFactory, runRepository, objectMapper, dslProcessExecutor, healthcheckExecutor,
             healthcheckInterval, staleThreshold, asyncDbSave, Long.MAX_VALUE, meterRegistry,
-            runIdentityResolver, null);
+            runIdentityResolver, Optional.empty());
   }
 
+  //TODO: use only lomboks constructor
   public TemporalDslProcessService(ContextFactory contextFactory, DslRunRepository runRepository,
           ObjectMapper objectMapper,
           ThreadPoolTaskExecutor dslProcessExecutor, ScheduledExecutorService healthcheckExecutor,
@@ -105,16 +106,17 @@ public class TemporalDslProcessService {
           RunIdentityResolver runIdentityResolver) {
     this(contextFactory, runRepository, objectMapper, dslProcessExecutor, healthcheckExecutor,
             healthcheckInterval, staleThreshold, asyncDbSave, maxOutputBytes, meterRegistry,
-            runIdentityResolver, null);
+            runIdentityResolver, Optional.empty());
   }
 
+  //TODO: use only lomboks constructor
   public TemporalDslProcessService(ContextFactory contextFactory, DslRunRepository runRepository,
           ObjectMapper objectMapper,
           ThreadPoolTaskExecutor dslProcessExecutor, ScheduledExecutorService healthcheckExecutor,
           Duration healthcheckInterval, Duration staleThreshold, boolean asyncDbSave,
           long maxOutputBytes, MeterRegistry meterRegistry,
           RunIdentityResolver runIdentityResolver,
-          @Nullable WebhookDispatcher webhookDispatcher) {
+          Optional<WebhookDispatcher> webhookDispatcher) {
     this.contextFactory = contextFactory;
     this.runRepository = runRepository;
     this.objectMapper = objectMapper;
@@ -149,6 +151,8 @@ public class TemporalDslProcessService {
    * Sets the OpenTelemetry instance used for DSL run tracing. Defaults to a no-op implementation;
    * when left unset, tracing is completely disabled.
    */
+  //TODO: use constructor
+  @Deprecated(forRemoval = true)
   public void setOpenTelemetry(OpenTelemetry openTelemetry) {
     this.openTelemetry = openTelemetry != null ? openTelemetry : OpenTelemetry.noop();
   }
@@ -265,11 +269,9 @@ public class TemporalDslProcessService {
     current.cancel(false);
     try {
       current.get(SHUTDOWN_JOIN.toMillis(), TimeUnit.MILLISECONDS);
-    } catch (TimeoutException expected) {
-    } catch (CancellationException expected) {
+    } catch (TimeoutException | CancellationException | ExecutionException _) {
     } catch (InterruptedException ex) {
       Thread.currentThread().interrupt();
-    } catch (ExecutionException ignored) {
     }
   }
 
@@ -460,10 +462,9 @@ public class TemporalDslProcessService {
 
       recordRunComplete(processName, status, startedAt, finishedAt);
 
-      if (webhookDispatcher != null) {
-        webhookDispatcher.onRunComplete(runId, processName, status, startedAt, finishedAt,
-                finalError);
-      }
+      webhookDispatcher.ifPresent(
+          dispatcher -> dispatcher.onRunComplete(runId, processName, status, startedAt, finishedAt,
+              finalError));
 
       return result;
     } finally {

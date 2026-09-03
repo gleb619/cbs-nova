@@ -43,4 +43,34 @@ class GlobalManagerLookupTest {
     assertThat(GlobalManager.globalManager().hasHelper("myHelper")).isTrue();
     assertThat(GlobalManager.globalManager().hasHelper("other")).isFalse();
   }
+
+  @Test
+  void findFilenameReturnsProviderFilename() {
+    GeneratedClassProvider provider = new GeneratedClassProvider() {
+      @Override
+      public GeneratedClassDescriptor descriptor() {
+        return new GeneratedClassDescriptor(
+                "GenProc",
+                DslObject.DslType.PROCESS,
+                "v1",
+                "default",
+                Runnable.class,
+                Runnable.class,
+                String.class,
+                String.class,
+                "{}");
+      }
+
+      @Override
+      public String filename() {
+        return "GenProc.java";
+      }
+    };
+
+    GlobalManager.globalManager().registerGeneratedClass(provider);
+
+    assertThat(GlobalManager.globalManager().findFilename("GenProc"))
+            .contains("GenProc.java");
+    assertThat(GlobalManager.globalManager().findFilename("nope")).isEmpty();
+  }
 }

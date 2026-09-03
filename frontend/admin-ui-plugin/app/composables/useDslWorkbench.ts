@@ -3,7 +3,13 @@ import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { createNamespacedLoaderState } from '@cbs/components'
 import { useState } from 'nuxt/app'
 import { computed, readonly } from 'vue'
-import type { CompileDiagnostic, ConstructStatus, ConstructType, DslConstruct, ValidationError } from '~/types'
+import type {
+  CompileDiagnostic,
+  ConstructStatus,
+  ConstructType,
+  DslConstruct,
+  ValidationError,
+} from '~/types'
 
 interface WorkbenchState {
   constructs: DslConstruct[]
@@ -31,6 +37,7 @@ function normalizeConstruct(raw: Partial<DslConstruct> & { name: string }): DslC
     status: (raw.status as ConstructStatus) ?? 'Published',
     version: raw.version,
     taskQueue: raw.taskQueue,
+    filePath: raw.filePath,
   }
 }
 
@@ -129,7 +136,7 @@ export function useDslWorkbench() {
     return errors
   }
 
-  async function saveConstruct() {
+  async function saveConstruct(content?: string) {
     if (!state.value.selectedName) {
       log.warn('save called with no selection')
       return
@@ -137,6 +144,13 @@ export function useDslWorkbench() {
     state.value.isSaving = true
     try {
       const selected = selectedConstruct.value
+      if (selected?.filePath && content !== undefined) {
+        await api.writeDslFile(state.value.selectedName, content)
+        state.value.isDirty = false
+        log.info('source file saved', { name: state.value.selectedName })
+        return
+      }
+
       await api.saveDraft(state.value.selectedName, {
         name: state.value.selectedName,
         type: selected?.type,
@@ -150,7 +164,7 @@ export function useDslWorkbench() {
       state.value.isDirty = false
       log.info('draft saved', { name: state.value.selectedName })
     } catch (err) {
-      log.error('failed to save draft', {
+      log.error('failed to save construct', {
         name: state.value.selectedName,
         error: (err as Error).message,
       })
@@ -232,7 +246,8 @@ export function useDslWorkbench() {
       await loadConstructs()
       log.info('reload definitions finished')
     } catch (err) {
-      const diagnostics = (err as { data?: { diagnostics?: CompileDiagnostic[] } }).data?.diagnostics
+      const diagnostics = (err as { data?: { diagnostics?: CompileDiagnostic[] } }).data
+        ?.diagnostics
       if (diagnostics) {
         state.value.validationErrors = compileDiagnosticsToValidationErrors(diagnostics)
       }

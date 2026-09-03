@@ -1,6 +1,6 @@
 package cbs.nova.dsl.codegen.util;
 
-import cbs.nova.dsl.codegen.model.CodegenNaming;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
 import java.io.IOException;
@@ -27,13 +27,10 @@ import java.util.stream.Collectors;
  * Model sources are associated with the DSL file that imports them and placed in the same versioned
  * package. Models that are not imported by any DSL remain in the base package.
  */
+@RequiredArgsConstructor
 public final class SourcePackageResolver {
 
   private final DslPackageNameResolver packageNameResolver;
-
-  public SourcePackageResolver(@NonNull CodegenNaming codegenNaming) {
-    this.packageNameResolver = new DslPackageNameResolver(codegenNaming);
-  }
 
   public @NonNull Map<Path, String> resolveDslPackages(
           @NonNull List<Path> dslSources,

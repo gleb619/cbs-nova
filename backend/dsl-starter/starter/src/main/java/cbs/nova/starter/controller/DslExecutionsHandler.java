@@ -6,6 +6,7 @@ import cbs.nova.dsl.history.DslRunSearchResult;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.transaction.TransactionExecution;
+import cbs.nova.starter.config.router.DslExecutionsRouterConfiguration;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ExecutionDto;
 import cbs.nova.starter.model.ExecutionListResponse;
@@ -46,7 +47,7 @@ import java.util.Map;
 
 /**
  * Functional handler for the DSL execution runs endpoint. Registered as a {@code RouterFunction}
- * bean by {@link cbs.nova.starter.config.DslExecutionsRouterConfiguration} rather than as a
+ * bean by {@link DslExecutionsRouterConfiguration} rather than as a
  * hardcoded {@code @RestController}, following the same pattern as DSL reload and introspection.
  */
 @Component

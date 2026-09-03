@@ -5,7 +5,7 @@ import org.jspecify.annotations.Nullable;
 
 public final class CodegenNaming {
 
-  //TODO: move to compiler/gradle settings
+  // TODO: move to compiler/gradle settings
   private static final String BASE_PACKAGE = "cbs.nova.dsl.generated";
 
   public @NonNull String registryPackage(@Nullable String targetPackage) {

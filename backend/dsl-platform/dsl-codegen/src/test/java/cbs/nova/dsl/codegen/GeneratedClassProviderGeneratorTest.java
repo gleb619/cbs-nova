@@ -24,7 +24,7 @@ import java.util.Map;
 class GeneratedClassProviderGeneratorTest {
 
   private final GeneratedClassProviderGenerator generator = new GeneratedClassProviderGenerator(
-      new AstExtractor(new Json()), new DslPackageNameResolver(new CodegenNaming()));
+          new AstExtractor(new Json()), new DslPackageNameResolver(new CodegenNaming()));
   private final DescriptorFactory descriptorFactory = new DescriptorFactory();
 
   @Test
@@ -152,7 +152,8 @@ class GeneratedClassProviderGeneratorTest {
     var expectedClass = "LoanDisbursementGeneratedClassProvider";
     assertThat(source.className()).isEqualTo(expectedClass);
     assertThat(source.source()).contains("class " + expectedClass);
-    assertThat(source.packageName()).isEqualTo(new CodegenNaming().versionedPackage("LoanDisbursement", "v1", null));
+    assertThat(source.packageName())
+            .isEqualTo(new CodegenNaming().versionedPackage("LoanDisbursement", "v1", null));
   }
 
   @Test
@@ -303,7 +304,6 @@ class GeneratedClassProviderGeneratorTest {
     assertThat(source.source()).contains("@" + Generated.class.getSimpleName());
   }
 
-
   @Test
   void generatedProviderIncludesDslObjectWhenPreprocessedSourceProvided() {
     var descriptor = descriptorFactory.fromProcess(
@@ -356,7 +356,8 @@ class GeneratedClassProviderGeneratorTest {
             """;
     var preprocessed = new DslPreprocessor().preprocess("InventoryDsl.java", rawSource, null);
 
-    var source = generator.forTransaction(descriptor, List.of(preprocessed.preprocessedSource()), null,
+    var source = generator.forTransaction(descriptor, List.of(preprocessed.preprocessedSource()),
+            null,
             null, true);
     var body = source.source();
 
@@ -378,6 +379,50 @@ class GeneratedClassProviderGeneratorTest {
 
     assertThat(body).doesNotContain("public DslObject dslObject()");
     assertThat(body).doesNotContain(".byName(");
+  }
+
+  @Test
+  void filenameUsesDslSourceClassNameWhenPreprocessedSourceProvided() {
+    var descriptor = descriptorFactory.fromProcess(
+            Dsl.process("LoanDisbursement")
+                    .input(String.class)
+                    .output(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+    var rawSource = """
+            import cbs.nova.dsl.*;
+            import java.util.List;
+
+            List<DslObject> define() {
+              return Dsl.process("LoanDisbursement")
+                  .input(String.class)
+                  .output(String.class)
+                  .execute(ctx -> Result.success("ok"))
+                  .buildList();
+            }
+            """;
+    var preprocessed = new DslPreprocessor().preprocess("LoanDsl.java", rawSource, null);
+
+    var source = generator.forProcess(descriptor, List.of(preprocessed.preprocessedSource()), null,
+            null, true);
+
+    assertThat(source.source()).contains("public String filename()");
+    assertThat(source.source()).contains("return \"LoanDsl.java\";");
+  }
+
+  @Test
+  void filenameFallsBackToProcessNameWhenPreprocessedSourceMissing() {
+    var descriptor = descriptorFactory.fromProcess(
+            Dsl.process("LoanDisbursement")
+                    .input(String.class)
+                    .output(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+
+    var source = generator.forProcess(descriptor, List.of(), null, null, true);
+
+    assertThat(source.source()).contains("public String filename()");
+    assertThat(source.source()).contains("return \"LoanDisbursement.java\";");
   }
 
   private static long countOccurrences(String haystack, String needle) {

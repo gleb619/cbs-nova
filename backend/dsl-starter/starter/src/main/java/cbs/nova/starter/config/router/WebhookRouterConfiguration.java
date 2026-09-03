@@ -1,4 +1,4 @@
-package cbs.nova.starter.config;
+package cbs.nova.starter.config.router;
 
 import cbs.nova.starter.controller.WebhookHandler;
 import cbs.nova.starter.webhook.WebhookDeliveryInfo;
@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springdoc.core.annotations.RouterOperation;
 import org.springdoc.core.annotations.RouterOperations;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -17,6 +18,7 @@ import org.springframework.web.servlet.function.RouterFunctions;
 import org.springframework.web.servlet.function.ServerResponse;
 
 @Configuration
+@ConditionalOnProperty(prefix = "cbs.webhook", name = "enabled", havingValue = "true")
 public class WebhookRouterConfiguration {
 
   @Bean

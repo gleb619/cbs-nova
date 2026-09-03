@@ -1,5 +1,6 @@
 package cbs.nova.starter.config;
 
+import cbs.nova.starter.config.router.DslRouterConfiguration;
 import cbs.nova.starter.webhook.WebhookConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;

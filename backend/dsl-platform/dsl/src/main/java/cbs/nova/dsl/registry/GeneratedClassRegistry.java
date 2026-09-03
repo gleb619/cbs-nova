@@ -14,6 +14,7 @@ public final class GeneratedClassRegistry {
 
   private final Map<String, GeneratedClassDescriptor> processes = new ConcurrentHashMap<>();
   private final Map<String, GeneratedClassDescriptor> transactions = new ConcurrentHashMap<>();
+  private final Map<String, GeneratedClassProvider> providers = new ConcurrentHashMap<>();
 
   public GeneratedClassRegistry() {
     this(Thread.currentThread().getContextClassLoader());
@@ -24,6 +25,7 @@ public final class GeneratedClassRegistry {
   }
 
   public void register(@NonNull GeneratedClassProvider provider) {
+    providers.put(provider.descriptor().name(), provider);
     register(provider.descriptor());
   }
 
@@ -43,6 +45,14 @@ public final class GeneratedClassRegistry {
 
   public @NonNull Optional<GeneratedClassDescriptor> findTransaction(@NonNull String name) {
     return Optional.ofNullable(transactions.get(name));
+  }
+
+  public @NonNull Optional<GeneratedClassProvider> findProvider(@NonNull String name) {
+    return Optional.ofNullable(providers.get(name));
+  }
+
+  public @NonNull Optional<String> findFilename(@NonNull String name) {
+    return findProvider(name).map(GeneratedClassProvider::filename);
   }
 
   public @NonNull List<GeneratedClassDescriptor> processes() {

@@ -1,10 +1,10 @@
 package cbs.nova.dsl.codegen.generator;
 
-import static cbs.nova.dsl.codegen.util.EscapeUtil.escapeJavaString;
+import static cbs.nova.dsl.codegen.util.Util.escapeJavaString;
+import static cbs.nova.dsl.codegen.util.Util.importBlock;
 
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.DslObject.DslType;
-import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.model.GeneratedSource;
 import cbs.nova.dsl.codegen.util.AstExtractor;
 import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
@@ -17,7 +17,6 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.event.Level;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -28,7 +27,6 @@ public final class GeneratedClassProviderGenerator {
 
   private final AstExtractor executeAstJsonExtractor;
   private final DslPackageNameResolver packageNameResolver;
-
 
   public @NonNull GeneratedSource forProcess(
           @NonNull ProcessDescriptor descriptor,
@@ -94,13 +92,10 @@ public final class GeneratedClassProviderGenerator {
     String inputLiteral = typeLiteral(inputType);
     String outputLiteral = typeLiteral(outputType);
     String executeJsonLiteral = escapeJavaString(executeJson);
+    String filename = dslSourceClass != null ? dslSourceClass + ".java" : name + ".java";
     String dslObjectMethod = buildDslObjectMethod(dslSourceClass, name);
 
-    List<String> imports = new ArrayList<>();
-    addImport(imports, inputType);
-    addImport(imports, outputType);
-
-    String importBlock = imports.isEmpty() ? "" : "\n" + String.join("\n", imports) + "\n";
+    String importBlock = importBlock(inputType, outputType);
     String annotation = GeneratorMetadata.annotation(GeneratedClassProviderGenerator.class);
 
     String source = Substitutor.format(// language=java
@@ -142,6 +137,11 @@ public final class GeneratedClassProviderGenerator {
                         return new ${implName}();
                       }
 
+                      @Override
+                      public String filename() {
+                        return "${filenameLiteral}";
+                      }
+
                       ${dslObjectMethod}
                     }
                     """,
@@ -159,6 +159,7 @@ public final class GeneratedClassProviderGenerator {
                     Map.entry("inputLiteral", inputLiteral),
                     Map.entry("outputLiteral", outputLiteral),
                     Map.entry("executeJsonLiteral", executeJsonLiteral),
+                    Map.entry("filenameLiteral", filename),
                     Map.entry("dslObjectMethod", dslObjectMethod)));
 
     log.atLevel(Level.DEBUG).log(() -> "[GeneratedClassProviderGenerator] Built source for %s"
@@ -170,23 +171,17 @@ public final class GeneratedClassProviderGenerator {
     if (dslSourceClass == null) {
       return "";
     }
-    return """
-@Override
-  public DslObject dslObject() {
-    return new %s().byName("%s").orElseThrow();
-  }
-""".formatted(dslSourceClass, name).stripTrailing();
+    return //language=java
+            """
+            @Override
+              public DslObject dslObject() {
+                return new %s().byName("%s").orElseThrow();
+              }
+            """.formatted(dslSourceClass, name).stripTrailing();
   }
 
   private String typeLiteral(Class<?> type) {
     return type == null ? "null" : type.getSimpleName() + ".class";
-  }
-
-  private void addImport(List<String> imports, Class<?> type) {
-    if (type == null || type.getPackageName().startsWith("java.lang")) {
-      return;
-    }
-    imports.add("import %s;".formatted(type.getCanonicalName()));
   }
 
   private @Nullable String findDslSourceClassName(

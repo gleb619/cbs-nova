@@ -1,5 +1,7 @@
 package cbs.nova.dsl.codegen.generator;
 
+import static cbs.nova.dsl.codegen.util.Util.importBlock;
+
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.annotation.DslGenerated;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
@@ -19,17 +21,14 @@ import org.slf4j.event.Level;
 
 import javax.annotation.processing.Generated;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
 public final class ProcessCodeGenerator {
 
   private final DslPackageNameResolver packageNameResolver;
-
 
   public @NonNull List<GeneratedSource> generate(
           @NonNull ProcessDescriptor descriptor,
@@ -63,14 +62,8 @@ public final class ProcessCodeGenerator {
 
   private String generateInterface(String pkg, String interfaceName, ProcessDescriptor descriptor) {
     String inputType = typeName(descriptor.inputType());
-    List<String> imports = new ArrayList<>();
-    addImport(imports, DslTemporalProcess.class);
-    addImport(imports, DslTemporalProcessRequest.class);
-    addImport(imports, descriptor.inputType());
-    addImport(imports, DslGenerated.class);
-    addImport(imports, Generated.class);
-
-    String importBlock = imports.isEmpty() ? "" : "\n" + String.join("\n", imports) + "\n";
+    String importBlock = importBlock(DslTemporalProcess.class, DslTemporalProcessRequest.class,
+            descriptor.inputType(), DslGenerated.class, Generated.class);
     String annotation = GeneratorMetadata.annotation(ProcessCodeGenerator.class);
 
     return Substitutor.format(// language=java
@@ -104,17 +97,10 @@ public final class ProcessCodeGenerator {
           String pkg, String processName, String interfaceName, String implName,
           String versionConstant, Class<?> inputType) {
     String inputTypeName = typeName(inputType);
-    List<String> imports = new ArrayList<>();
-    addImport(imports, DslTemporalProcessRequest.class);
-    addImport(imports, inputType);
-    addImport(imports, GlobalManager.class);
-    addImport(imports, ProcessMain.class);
-    addImport(imports, ProcessCompensation.class);
-    addImport(imports, DslGenerated.class);
-    addImport(imports, Generated.class);
-    imports.add("import java.util.List;");
-
-    String importBlock = "\n" + String.join("\n", imports) + "\n";
+    String importBlock = importBlock(DslTemporalProcessRequest.class, inputType,
+            GlobalManager.class,
+            ProcessMain.class, ProcessCompensation.class, DslGenerated.class, Generated.class,
+            List.class);
     String annotation = GeneratorMetadata.annotation(ProcessCodeGenerator.class);
 
     // TODO: add new method that allow to transfer whole object(e.g. without usage of registry, e.g.
@@ -164,12 +150,5 @@ public final class ProcessCodeGenerator {
 
   private String typeName(Class<?> type) {
     return type == null ? "Object" : type.getSimpleName();
-  }
-
-  private void addImport(List<String> imports, Class<?> type) {
-    if (type == null || type.getPackageName().startsWith("java.lang")) {
-      return;
-    }
-    imports.add("import " + type.getCanonicalName() + ";");
   }
 }

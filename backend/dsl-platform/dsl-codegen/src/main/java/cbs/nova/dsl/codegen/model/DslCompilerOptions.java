@@ -20,8 +20,7 @@ public record DslCompilerOptions(
         @NonNull Path outputDir,
         @NonNull String buildVersion,
         String targetPackage,
-        @Deprecated(forRemoval = true)
-        @NonNull Level logLevel,
+        @Deprecated(forRemoval = true) @NonNull Level logLevel,
         String classpath,
         boolean useFileNameSubPackage) {
 

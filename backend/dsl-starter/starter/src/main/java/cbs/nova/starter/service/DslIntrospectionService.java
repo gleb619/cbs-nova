@@ -129,16 +129,18 @@ public class DslIntrospectionService {
 
     List<DefinitionMetaDto> aggregate = new ArrayList<>();
     gm.processNames().forEach(n -> gm.findProcess(n).ifPresent(p -> {
-      aggregate.add(mapper.toProcessDefinitionMeta(p, inputSchema(p), status(n, statuses)));
+      aggregate.add(mapper.toProcessDefinitionMeta(p, inputSchema(p), status(n, statuses),
+              gm.findFilename(n).orElse(null)));
     }));
     gm.transactionNames().forEach(n -> gm.findTransaction(n).ifPresent(t -> {
-      aggregate.add(mapper.toTransactionDefinitionMeta(t, inputSchema(t), status(n, statuses)));
+      aggregate.add(mapper.toTransactionDefinitionMeta(t, inputSchema(t), status(n, statuses),
+              gm.findFilename(n).orElse(null)));
     }));
     gm.helperNames().forEach(n -> {
       gm.describeHelper(n).ifPresent(d -> aggregate.add(mapper.toHelperDefinitionMeta(n, d,
-              null, status(n, statuses))));
+              null, status(n, statuses), null)));
       gm.describeFunction(n).ifPresent(d -> aggregate.add(mapper.toFunctionDefinitionMeta(d,
-              null, status(n, statuses))));
+              null, status(n, statuses), null)));
     });
     return aggregate;
   }

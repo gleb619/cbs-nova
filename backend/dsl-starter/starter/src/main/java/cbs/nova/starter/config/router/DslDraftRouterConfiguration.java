@@ -1,4 +1,4 @@
-package cbs.nova.starter.config;
+package cbs.nova.starter.config.router;
 
 import cbs.nova.starter.controller.DslDraftHandler;
 import cbs.nova.starter.model.ErrorResponse;
@@ -17,7 +17,7 @@ import org.springframework.web.servlet.function.RouterFunctions;
 import org.springframework.web.servlet.function.ServerResponse;
 
 @Configuration
-@ConditionalOnProperty(prefix = "dsl.drafts", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "cbs.dsl.drafts", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DslDraftRouterConfiguration {
 
   @Bean

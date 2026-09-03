@@ -82,6 +82,20 @@ export function useDslApi() {
     return $fetch(`/api/v1/dsl/drafts/${name}/delete`, { method: 'DELETE' })
   }
 
+  async function readDslFile(name: string) {
+    log.info('readDslFile request', { name })
+    const result = await $fetch(`/api/v1/dsl/files/content/${name}`)
+    return (result as { content?: string }).content ?? ''
+  }
+
+  async function writeDslFile(name: string, content: string) {
+    log.info('writeDslFile request', { name })
+    return $fetch(`/api/v1/dsl/files/content/${name}`, {
+      method: 'POST',
+      body: { content },
+    })
+  }
+
   async function listHelpers() {
     log.info('listHelpers request')
     return $fetch('/api/v1/dsl/helpers')
@@ -149,7 +163,10 @@ export function useDslApi() {
     return $fetch(`/api/v1/dsl/schedules/${definition}`, { method: 'DELETE' })
   }
 
-  async function getProcessDiagram(name: string, format: 'mermaid' | 'plantuml' | 'bpmn' = 'mermaid') {
+  async function getProcessDiagram(
+    name: string,
+    format: 'mermaid' | 'plantuml' | 'bpmn' = 'mermaid',
+  ) {
     log.info('process diagram request', { name, format })
     return $fetch(`/api/v1/dsl/processes/${name}/diagram`, { query: { format } })
   }
@@ -166,6 +183,8 @@ export function useDslApi() {
     saveDraft,
     publishDraft,
     deleteDraft,
+    readDslFile,
+    writeDslFile,
     listDrafts,
     readDraft,
     listPublishHistory,

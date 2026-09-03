@@ -1,6 +1,5 @@
 package cbs.nova.dsl.codegen;
 
-import cbs.nova.dsl.codegen.SemanticValidator;
 import cbs.nova.dsl.codegen.generator.DefinitionProviderGenerator;
 import cbs.nova.dsl.codegen.generator.GeneratedClassProviderGenerator;
 import cbs.nova.dsl.codegen.generator.ModelRegistryGenerator;
@@ -10,6 +9,7 @@ import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.preprocessor.DslPreprocessor;
 import cbs.nova.dsl.codegen.preprocessor.ModelPreprocessor;
 import cbs.nova.dsl.codegen.util.AstExtractor;
+import cbs.nova.dsl.codegen.util.CodeWriter;
 import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
 import cbs.nova.dsl.codegen.util.Json;
 import cbs.nova.dsl.codegen.util.ModelTypeExtractor;
@@ -20,7 +20,6 @@ import cbs.nova.dsl.registry.HelperRegistry;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
-import org.slf4j.event.Level;
 
 @Getter
 @RequiredArgsConstructor
@@ -44,12 +43,11 @@ public final class CompileConfig implements SingletonSupport {
 
   public @NonNull SourceCompiler sourceCompiler() {
     return singleton(() -> new SourceCompiler(
-        definitionProviderGenerator(),
-        codeWriter(),
-        codegenNaming(),
-        dslPreprocessor(),
-        modelPreprocessor()
-    ));
+            definitionProviderGenerator(),
+            codeWriter(),
+            codegenNaming(),
+            dslPreprocessor(),
+            modelPreprocessor()));
   }
 
   public @NonNull DslSourceCompiler dslSourceCompiler() {
@@ -80,7 +78,8 @@ public final class CompileConfig implements SingletonSupport {
 
   public @NonNull GeneratedClassProviderGenerator generatedClassProviderGenerator() {
     return singleton(
-            () -> new GeneratedClassProviderGenerator(executeAstJsonExtractor(), new DslPackageNameResolver(codegenNaming())));
+            () -> new GeneratedClassProviderGenerator(executeAstJsonExtractor(),
+                    new DslPackageNameResolver(codegenNaming())));
   }
 
   public @NonNull ModelTypeExtractor modelTypeExtractor() {
@@ -133,8 +132,7 @@ public final class CompileConfig implements SingletonSupport {
                     semanticValidator(),
                     helperRegistry(),
                     codegenNaming(),
-                    dslPreprocessor()
-            ));
+                    dslPreprocessor()));
   }
 
   /* ============= */

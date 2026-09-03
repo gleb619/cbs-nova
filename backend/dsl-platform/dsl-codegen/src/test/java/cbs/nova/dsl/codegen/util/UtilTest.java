@@ -9,12 +9,12 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.stream.Stream;
 
-class EscapeUtilTest {
+class UtilTest {
 
   @ParameterizedTest(name = "[{index}] {2}")
   @MethodSource("escapeCases")
   void escapesStrings(String input, String expected, @SuppressWarnings("unused") String label) {
-    assertThat(EscapeUtil.escapeJavaString(input)).isEqualTo(expected);
+    assertThat(Util.escapeJavaString(input)).isEqualTo(expected);
   }
 
   static Stream<Arguments> escapeCases() {
@@ -39,13 +39,13 @@ class EscapeUtilTest {
   @Test
   void escapesMixedContentInOnePass() {
     String input = "a\"b\\c\n\t\u0000";
-    assertThat(EscapeUtil.escapeJavaString(input))
+    assertThat(Util.escapeJavaString(input))
             .isEqualTo("a\\\"b\\\\c\\n\\t" + "\\u" + "0000");
   }
 
   @Test
   void treatsAlreadyEscapedInputLiterally() {
     String input = "\\\"";
-    assertThat(EscapeUtil.escapeJavaString(input)).isEqualTo("\\\\\\\"");
+    assertThat(Util.escapeJavaString(input)).isEqualTo("\\\\\\\"");
   }
 }

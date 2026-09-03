@@ -223,6 +223,10 @@ public final class GlobalManager {
     return generatedClassRegistry.findTransaction(name);
   }
 
+  public @NonNull Optional<String> findFilename(@NonNull String name) {
+    return generatedClassRegistry.findFilename(name);
+  }
+
   public boolean hasGeneratedProcess(@NonNull String name) {
     return generatedClassRegistry.findProcess(name).isPresent();
   }
@@ -244,6 +248,10 @@ public final class GlobalManager {
 
   public void registerGeneratedClass(@NonNull GeneratedClassDescriptor descriptor) {
     generatedClassRegistry.register(descriptor);
+  }
+
+  public void registerGeneratedClass(@NonNull GeneratedClassProvider provider) {
+    generatedClassRegistry.register(provider);
   }
 
   public @NonNull Optional<TransactionInvoker> transactionInvoker() {

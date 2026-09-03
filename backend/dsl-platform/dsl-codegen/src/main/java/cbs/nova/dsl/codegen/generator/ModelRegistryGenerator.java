@@ -1,9 +1,10 @@
 package cbs.nova.dsl.codegen.generator;
 
-import cbs.nova.dsl.codegen.CodeWriter;
+import cbs.nova.dsl.codegen.util.CodeWriter;
 import cbs.nova.dsl.codegen.CompilerConstants;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.model.GeneratedSource;
+import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
 import cbs.nova.dsl.codegen.util.ModelTypeExtractor;
 import cbs.nova.dsl.codegen.util.SourcePackageResolver;
 import cbs.nova.dsl.registry.ModelRegistry;
@@ -68,7 +69,8 @@ public final class ModelRegistryGenerator {
     var dslSources = collectJavaSources(dslDir);
     var modelSources = collectJavaSources(modelDir);
 
-    var packageResolver = new SourcePackageResolver(codegenNaming);
+    // TODO: redo to bean from `CompileConfig`
+    var packageResolver = new SourcePackageResolver(new DslPackageNameResolver(codegenNaming));
     var dslPackages = packageResolver.resolveDslPackages(
             dslSources, targetPackage, null, useFileNameSubPackage);
     var modelPackages = packageResolver.resolveModelPackages(

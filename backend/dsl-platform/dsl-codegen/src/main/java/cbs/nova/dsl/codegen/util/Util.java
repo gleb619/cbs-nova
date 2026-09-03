@@ -4,8 +4,12 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-public class EscapeUtil {
+public class Util {
 
   public static @NonNull String escapeJavaString(@NonNull String value) {
     var sb = new StringBuilder(value.length() + 2);
@@ -29,6 +33,16 @@ public class EscapeUtil {
       }
     }
     return sb.toString();
+  }
+
+  public static @NonNull String importBlock(@NonNull Class<?>... types) {
+    var imports = Arrays.stream(types)
+            .filter(Objects::nonNull)
+            .filter(type -> !type.getPackageName().startsWith("java.lang"))
+            .map(type -> "import %s;".formatted(type.getCanonicalName()))
+            .distinct()
+            .collect(Collectors.joining("\n"));
+    return imports.isEmpty() ? "" : "\n" + imports + "\n";
   }
 
 }

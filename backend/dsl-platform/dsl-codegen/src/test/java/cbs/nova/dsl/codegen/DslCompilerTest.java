@@ -39,14 +39,14 @@ class DslCompilerTest {
                     """);
 
     var options = DslCompilerOptions.builder()
-        .srcDir(srcDir)
-        .outputDir(outDir)
-        .buildVersion(DEFAULT_BUILD_VERSION)
-        .targetPackage(null)
-        .logLevel(Level.INFO)
-        .classpath(null)
-        .useFileNameSubPackage(true)
-        .build();
+            .srcDir(srcDir)
+            .outputDir(outDir)
+            .buildVersion(DEFAULT_BUILD_VERSION)
+            .targetPackage(null)
+            .logLevel(Level.INFO)
+            .classpath(null)
+            .useFileNameSubPackage(true)
+            .build();
     DslCompiler.compile(options);
 
     var dir = outDir.resolve("cbs/nova/dsl/generated/loandisbursement/v1");
@@ -79,16 +79,15 @@ class DslCompilerTest {
                     """);
 
     var options = DslCompilerOptions.builder()
-        .srcDir(srcDir)
-        .outputDir(outDir)
-        .buildVersion(DEFAULT_BUILD_VERSION)
-        .targetPackage(null)
-        .logLevel(Level.INFO)
-        .classpath(null)
-        .useFileNameSubPackage(true)
-        .build();
+            .srcDir(srcDir)
+            .outputDir(outDir)
+            .buildVersion(DEFAULT_BUILD_VERSION)
+            .targetPackage(null)
+            .logLevel(Level.INFO)
+            .classpath(null)
+            .useFileNameSubPackage(true)
+            .build();
     DslCompiler.compile(options);
-
 
     var dir = outDir.resolve("cbs/nova/dsl/generated/kyccheck/v1");
     assertThat(dir.resolve("KycCheckTransactionActivity.java")).exists();
@@ -129,16 +128,15 @@ class DslCompilerTest {
                     """);
 
     var options = DslCompilerOptions.builder()
-        .srcDir(srcDir)
-        .outputDir(outDir)
-        .buildVersion("abc1234")
-        .targetPackage("cbs.nova.dsl.codegen.test")
-        .logLevel(Level.INFO)
-        .classpath(null)
-        .useFileNameSubPackage(true)
-        .build();
+            .srcDir(srcDir)
+            .outputDir(outDir)
+            .buildVersion("abc1234")
+            .targetPackage("cbs.nova.dsl.codegen.test")
+            .logLevel(Level.INFO)
+            .classpath(null)
+            .useFileNameSubPackage(true)
+            .build();
     DslCompiler.compile(options);
-
 
     assertThat(outDir.resolve("cbs/nova/dsl/codegen/test/testprocess/abc1234/TestModels.class"))
             .exists();
@@ -182,16 +180,15 @@ class DslCompilerTest {
                     """);
 
     var options = DslCompilerOptions.builder()
-        .srcDir(srcDir)
-        .outputDir(outDir)
-        .buildVersion(DEFAULT_BUILD_VERSION)
-        .targetPackage(null)
-        .logLevel(Level.INFO)
-        .classpath(null)
-        .useFileNameSubPackage(true)
-        .build();
+            .srcDir(srcDir)
+            .outputDir(outDir)
+            .buildVersion(DEFAULT_BUILD_VERSION)
+            .targetPackage(null)
+            .logLevel(Level.INFO)
+            .classpath(null)
+            .useFileNameSubPackage(true)
+            .build();
     DslCompiler.compile(options);
-
 
     var dir = outDir.resolve("cbs/nova/dsl/generated/paramprocess/v1");
     assertThat(dir.resolve("ParamProcessProcessWorkflow.java")).exists();
@@ -230,7 +227,6 @@ class DslCompilerTest {
     var options = new DslCompilerOptions(
             srcDir, outDir, "v1", "cbs.nova.dsl.test", Level.INFO, null, false);
     DslCompiler.compile(options);
-
 
     var flatDir = outDir.resolve("cbs/nova/dsl/test/v1");
     assertThat(flatDir.resolve("TestProcess.java")).exists();

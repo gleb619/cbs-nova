@@ -4,6 +4,8 @@ import cbs.nova.dsl.DslDefinitionProvider;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.codegen.generator.DefinitionProviderGenerator;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
+import cbs.nova.dsl.codegen.util.CodeWriter;
+import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
 import cbs.nova.dsl.codegen.util.SourcePackageResolver;
 import cbs.nova.dsl.codegen.preprocessor.DslPreprocessor;
 import cbs.nova.dsl.codegen.preprocessor.ModelPreprocessor;
@@ -73,7 +75,8 @@ public final class SourceCompiler {
     var basePackage = (options != null) ? options.targetPackage() : null;
     var version = (options != null) ? options.buildVersion() : null;
     var useFileNameSubPackage = (options != null) && options.useFileNameSubPackage();
-    var packageResolver = new SourcePackageResolver(codegenNaming);
+    // TODO: redo to bean from `CompileConfig`
+    var packageResolver = new SourcePackageResolver(new DslPackageNameResolver(codegenNaming));
 
     var dslPackages = packageResolver.resolveDslPackages(
             dslSources, basePackage, version, useFileNameSubPackage);
@@ -258,9 +261,9 @@ public final class SourceCompiler {
               .toList());
       var task = compiler.getTask(null, fm, diagnostics, options, null, units);
       if (!task.call()) {
-        log.atLevel(Level.WARN).log(() ->
-            "[SourceCompiler] %d errors occurred during file compilation.".formatted(
-                diagnostics.getDiagnostics().size()));
+        log.atLevel(Level.WARN)
+                .log(() -> "[SourceCompiler] %d errors occurred during file compilation.".formatted(
+                        diagnostics.getDiagnostics().size()));
 
         diagnostics.getDiagnostics().forEach(d -> log.atLevel(Level.DEBUG)
                 .log(() -> {
@@ -387,8 +390,7 @@ public final class SourceCompiler {
   public record CompileOptions(
           String buildVersion,
           String targetPackage,
-          @Deprecated(forRemoval = true)
-          Level logLevel,
+          @Deprecated(forRemoval = true) Level logLevel,
           String classpath,
           boolean useFileNameSubPackage) {
 

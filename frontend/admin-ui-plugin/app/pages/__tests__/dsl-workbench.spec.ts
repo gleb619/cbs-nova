@@ -77,6 +77,8 @@ const { dslApi, useDslApiMock, useDslWorkbenchMock } = vi.hoisted(() => {
     createSchedule: vi.fn(),
     deleteSchedule: vi.fn(),
     readDraft: vi.fn(),
+    readDslFile: vi.fn(),
+    writeDslFile: vi.fn(),
   }
   const useDslWorkbenchMockFn = vi.fn(() => {
     const harness = (globalThis as unknown as { __dslWorkbenchHarness?: WorkbenchApiShape })
@@ -211,6 +213,9 @@ const makeStub = (testId: string) =>
       'savedAt',
       'errors',
       'templates',
+      'items',
+      'label',
+      'align',
     ],
     emits: [
       'create',
@@ -312,6 +317,10 @@ describe('dsl-workbench.vue unsaved-changes guard', () => {
     dslApi.createSchedule.mockResolvedValue({})
     dslApi.deleteSchedule.mockReset()
     dslApi.deleteSchedule.mockResolvedValue({})
+    dslApi.readDslFile.mockReset()
+    dslApi.readDslFile.mockResolvedValue('class LoanDsl {}')
+    dslApi.writeDslFile.mockReset()
+    dslApi.writeDslFile.mockResolvedValue({ ok: true })
 
     addSpy = vi.spyOn(window, 'addEventListener')
     removeSpy = vi.spyOn(window, 'removeEventListener')
@@ -453,6 +462,10 @@ describe('dsl-workbench.vue saved drafts store', () => {
     dslApi.createSchedule.mockResolvedValue({})
     dslApi.deleteSchedule.mockReset()
     dslApi.deleteSchedule.mockResolvedValue({})
+    dslApi.readDslFile.mockReset()
+    dslApi.readDslFile.mockResolvedValue('class LoanDsl {}')
+    dslApi.writeDslFile.mockReset()
+    dslApi.writeDslFile.mockResolvedValue({ ok: true })
   })
 
   afterEach(() => {
@@ -551,6 +564,10 @@ describe('dsl-workbench.vue new definition flow', () => {
     dslApi.createSchedule.mockResolvedValue({})
     dslApi.deleteSchedule.mockReset()
     dslApi.deleteSchedule.mockResolvedValue({})
+    dslApi.readDslFile.mockReset()
+    dslApi.readDslFile.mockResolvedValue('class LoanDsl {}')
+    dslApi.writeDslFile.mockReset()
+    dslApi.writeDslFile.mockResolvedValue({ ok: true })
   })
 
   it('opens the new-definition panel when the New button is clicked', async () => {
@@ -719,6 +736,10 @@ describe('dsl-workbench.vue save-status pill and Ctrl+S', () => {
     dslApi.createSchedule.mockResolvedValue({})
     dslApi.deleteSchedule.mockReset()
     dslApi.deleteSchedule.mockResolvedValue({})
+    dslApi.readDslFile.mockReset()
+    dslApi.readDslFile.mockResolvedValue('class LoanDsl {}')
+    dslApi.writeDslFile.mockReset()
+    dslApi.writeDslFile.mockResolvedValue({ ok: true })
   })
 
   function findStatus(wrapper: ReturnType<typeof mountPage>) {
@@ -940,5 +961,103 @@ describe('dsl-workbench.vue save-status pill and Ctrl+S', () => {
     await flushPromises()
 
     expect(harness.saveConstruct).not.toHaveBeenCalled()
+  })
+})
+
+describe('dsl-workbench.vue file-backed construct', () => {
+  beforeEach(() => {
+    harness.state.constructs = []
+    harness.state.selectedName = null
+    harness.state.validationErrors = []
+    harness.state.isDirty = false
+    harness.state.isSaving = false
+    harness.state.isLoading = false
+    harness.selectedConstruct.value = null
+    harness.loaders.constructs.value = false
+    harness.saveConstruct.mockClear()
+    useDslWorkbenchMock.mockClear()
+    dslApi.searchObjects.mockReset()
+    dslApi.searchObjects.mockResolvedValue([])
+    dslApi.listDrafts.mockReset()
+    dslApi.listDrafts.mockResolvedValue([])
+    dslApi.listHelpers.mockReset()
+    dslApi.listHelpers.mockResolvedValue({ names: [], helpers: [] })
+    dslApi.listSchedules.mockReset()
+    dslApi.listSchedules.mockResolvedValue([])
+    dslApi.createSchedule.mockReset()
+    dslApi.createSchedule.mockResolvedValue({})
+    dslApi.deleteSchedule.mockReset()
+    dslApi.deleteSchedule.mockResolvedValue({})
+    dslApi.readDslFile.mockReset()
+    dslApi.readDslFile.mockResolvedValue('public class LoanDsl {}')
+    dslApi.writeDslFile.mockReset()
+    dslApi.writeDslFile.mockResolvedValue({ ok: true })
+  })
+
+  it('loads source file content when a file-backed construct is selected', async () => {
+    harness.state.constructs = [
+      { name: 'LoanDsl', type: 'Process', status: 'Published', filePath: 'LoanDsl.java' },
+    ]
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const explorer = wrapper.findComponent({ name: 'ConstructExplorer' })
+    await explorer.vm.$emit('select', 'LoanDsl')
+    await flushPromises()
+
+    expect(dslApi.readDslFile).toHaveBeenCalledWith('LoanDsl')
+    const editor = wrapper.findComponent({ name: 'BodyEditor' })
+    expect(editor.props('code')).toBe('public class LoanDsl {}')
+  })
+
+  it('shows Save File action for file-backed constructs and Save Draft for drafts', async () => {
+    harness.state.constructs = [
+      { name: 'LoanDsl', type: 'Process', status: 'Published', filePath: 'LoanDsl.java' },
+      { name: 'DraftOne', type: 'Helper', status: 'Draft' },
+    ]
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const explorer = wrapper.findComponent({ name: 'ConstructExplorer' })
+    await explorer.vm.$emit('select', 'LoanDsl')
+    await flushPromises()
+
+    const dropdown = wrapper.findComponent({ name: 'DropdownMenu' })
+    let items = dropdown.props('items') as { label: string; value: string }[]
+    expect(items.find((i) => i.value === 'save')?.label).toBe('Save File')
+
+    await explorer.vm.$emit('select', 'DraftOne')
+    await flushPromises()
+
+    items = dropdown.props('items') as { label: string; value: string }[]
+    expect(items.find((i) => i.value === 'save')?.label).toBe('Save Draft')
+  })
+
+  it('passes editor content to saveConstruct when saving a file-backed construct', async () => {
+    harness.state.constructs = [
+      { name: 'LoanDsl', type: 'Process', status: 'Published', filePath: 'LoanDsl.java' },
+    ]
+    harness.saveConstruct.mockImplementationOnce(async () => {
+      harness.state.isDirty = false
+    })
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const explorer = wrapper.findComponent({ name: 'ConstructExplorer' })
+    await explorer.vm.$emit('select', 'LoanDsl')
+    await flushPromises()
+
+    const editor = wrapper.findComponent({ name: 'BodyEditor' })
+    await editor.vm.$emit('update:code', 'public class LoanDsl { }')
+    await nextTick()
+
+    const dropdown = wrapper.findComponent({ name: 'DropdownMenu' })
+    await dropdown.vm.$emit('select', { value: 'save' })
+    await flushPromises()
+
+    expect(harness.saveConstruct).toHaveBeenCalledWith('public class LoanDsl { }')
   })
 })

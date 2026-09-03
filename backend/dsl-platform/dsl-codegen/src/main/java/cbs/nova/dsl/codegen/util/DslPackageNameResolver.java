@@ -18,7 +18,9 @@ public final class DslPackageNameResolver {
           @NonNull String dslFile,
           boolean useFileNameSubPackage) {
     var effectiveBasePackage = (basePackage != null && !basePackage.isBlank()) ? basePackage : null;
-    var effectiveVersion = (version != null && !version.isBlank()) ? version : DEFAULT_BUILD_VERSION;
+    var effectiveVersion = (version != null && !version.isBlank())
+            ? version
+            : DEFAULT_BUILD_VERSION;
     if (!useFileNameSubPackage) {
       return codegenNaming.versionedBasePackage(effectiveVersion, effectiveBasePackage);
     }

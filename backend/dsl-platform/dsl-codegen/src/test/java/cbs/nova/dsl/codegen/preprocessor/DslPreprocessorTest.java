@@ -94,6 +94,15 @@ class DslPreprocessorTest {
   }
 
   @Test
+  void generatedSourceOverridesFilenameWithDslFileName() {
+    var result = dslPreprocessor.preprocess("OrderSaga.java", VALID_COMPACT_SOURCE, null);
+
+    assertThat(result.preprocessedSource())
+            .contains("public String filename() {")
+            .contains("return \"OrderSaga.java\";");
+  }
+
+  @Test
   void defineMethodModifierIsNormalizedToPublicOverride() {
     var source = """
             List<DslObject> define() {

@@ -10,7 +10,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.LoadResult;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.DefinitionLoader;
-import cbs.nova.starter.config.DslReloadRouterConfiguration;
+import cbs.nova.starter.config.router.DslReloadRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslReloadHandler;
 import cbs.nova.starter.model.PreviewModels;

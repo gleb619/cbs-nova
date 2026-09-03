@@ -1,6 +1,7 @@
 package cbs.nova.starter.webhook;
 
 import java.util.concurrent.ThreadPoolExecutor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,6 +10,7 @@ import tools.jackson.databind.ObjectMapper;
 
 @Configuration
 @EnableConfigurationProperties(WebhookProperties.class)
+@ConditionalOnProperty(prefix = "cbs.webhook", name = "enabled", havingValue = "true")
 public class WebhookConfiguration {
 
   @Bean

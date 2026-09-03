@@ -1,4 +1,4 @@
-package cbs.nova.starter.config;
+package cbs.nova.starter.config.router;
 
 import cbs.nova.starter.controller.DslScheduleHandler;
 import cbs.nova.starter.model.ErrorResponse;
@@ -21,7 +21,6 @@ import org.springframework.web.servlet.function.RouterFunctions;
 import org.springframework.web.servlet.function.ServerResponse;
 
 import io.temporal.client.schedules.ScheduleClient;
-import java.util.List;
 
 /**
  * Registers the DSL schedule CRUD routes under {@code /api/dsl/schedules}. The whole router is

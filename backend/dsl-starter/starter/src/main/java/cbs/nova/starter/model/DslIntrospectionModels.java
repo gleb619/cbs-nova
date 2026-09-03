@@ -17,7 +17,8 @@ public final class DslIntrospectionModels {
           Boolean hasCompensation,
           String description,
           @JsonInclude(JsonInclude.Include.NON_NULL) Map<String, Object> inputSchema,
-          DefinitionStatus status) {
+          DefinitionStatus status,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String filePath) {
   }
 
   public record NamesResponse(List<String> names) {

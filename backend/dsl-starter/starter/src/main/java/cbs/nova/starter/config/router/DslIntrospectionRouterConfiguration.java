@@ -1,4 +1,4 @@
-package cbs.nova.starter.config;
+package cbs.nova.starter.config.router;
 
 import cbs.nova.starter.controller.DslIntrospectionHandler;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;

@@ -15,6 +15,8 @@ const { dslApi, useDslApiMock } = vi.hoisted(() => {
     publishDraft: vi.fn(),
     deleteDraft: vi.fn(),
     validateConstruct: vi.fn(),
+    readDslFile: vi.fn(),
+    writeDslFile: vi.fn(),
   }
   return { dslApi: api, useDslApiMock: vi.fn(() => api) }
 })
@@ -33,6 +35,8 @@ type ApiMock = {
   publishDraft: ReturnType<typeof vi.fn>
   deleteDraft: ReturnType<typeof vi.fn>
   validateConstruct: ReturnType<typeof vi.fn>
+  readDslFile: ReturnType<typeof vi.fn>
+  writeDslFile: ReturnType<typeof vi.fn>
 }
 
 const getApi = (): ApiMock => dslApi
@@ -46,6 +50,8 @@ describe('useDslWorkbench', () => {
     api.saveDraft.mockReset()
     api.publishDraft.mockReset()
     api.deleteDraft.mockReset()
+    api.readDslFile.mockReset()
+    api.writeDslFile.mockReset()
   })
 
   afterEach(() => {
@@ -160,10 +166,13 @@ describe('useDslWorkbench', () => {
 
       await wb.publishConstruct()
 
-      expect(api.publishDraft).toHaveBeenCalledWith('c2', expect.objectContaining({
-        name: 'c2',
-        status: 'Published',
-      }))
+      expect(api.publishDraft).toHaveBeenCalledWith(
+        'c2',
+        expect.objectContaining({
+          name: 'c2',
+          status: 'Published',
+        }),
+      )
       const c1 = wb.state.value.constructs.find((c) => c.name === 'c1')
       const c2 = wb.state.value.constructs.find((c) => c.name === 'c2')
       expect(c1?.status).toBe('Valid')
@@ -193,15 +202,63 @@ describe('useDslWorkbench', () => {
 
       await wb.saveConstruct()
 
-      expect(api.saveDraft).toHaveBeenCalledWith('c1', expect.objectContaining({
-        name: 'c1',
-        status: 'Draft',
-      }))
+      expect(api.saveDraft).toHaveBeenCalledWith(
+        'c1',
+        expect.objectContaining({
+          name: 'c1',
+          status: 'Draft',
+        }),
+      )
       expect(wb.state.value.isDirty).toBe(false)
       expect(wb.state.value.isSaving).toBe(false)
     })
   })
 
+  describe('saveConstruct file-backed', () => {
+    it('writes source file content when selected construct has filePath', async () => {
+      const api = getApi()
+      api.getDefinitions.mockResolvedValueOnce([
+        {
+          name: 'c1',
+          type: 'Process' as const,
+          status: 'Published' as const,
+          filePath: 'LoanDsl.java',
+        },
+      ])
+      api.writeDslFile.mockResolvedValueOnce({ ok: true })
+
+      const wb = useDslWorkbench()
+      await wb.loadConstructs()
+      wb.markDirty()
+
+      await wb.saveConstruct('public class C1 {}')
+
+      expect(api.writeDslFile).toHaveBeenCalledWith('c1', 'public class C1 {}')
+      expect(api.saveDraft).not.toHaveBeenCalled()
+      expect(wb.state.value.isDirty).toBe(false)
+      expect(wb.state.value.isSaving).toBe(false)
+    })
+
+    it('falls back to draft save when no filePath is present', async () => {
+      const api = getApi()
+      api.getDefinitions.mockResolvedValueOnce([
+        { name: 'c1', type: 'Process' as const, status: 'Draft' as const },
+      ])
+      api.saveDraft.mockResolvedValueOnce({ ok: true })
+
+      const wb = useDslWorkbench()
+      await wb.loadConstructs()
+      wb.markDirty()
+
+      await wb.saveConstruct('some content')
+
+      expect(api.saveDraft).toHaveBeenCalledWith(
+        'c1',
+        expect.objectContaining({ name: 'c1', status: 'Draft' }),
+      )
+      expect(api.writeDslFile).not.toHaveBeenCalled()
+    })
+  })
   describe('deleteConstruct', () => {
     it('DELETEs via api.deleteDraft and reloads the construct list', async () => {
       const api = getApi()
@@ -222,9 +279,7 @@ describe('useDslWorkbench', () => {
 
       expect(api.deleteDraft).toHaveBeenCalledWith('c1')
       expect(api.getDefinitions).toHaveBeenCalledTimes(2)
-      expect(wb.state.value.constructs).toEqual([
-        { name: 'c2', type: 'Helper', status: 'Draft' },
-      ])
+      expect(wb.state.value.constructs).toEqual([{ name: 'c2', type: 'Helper', status: 'Draft' }])
     })
 
     it('clears the selected name when the deleted construct was selected', async () => {
@@ -278,7 +333,13 @@ describe('useDslWorkbench', () => {
       ])
       api.publishDraft.mockResolvedValueOnce({
         diagnostics: [
-          { file: '/tmp/Bad.java', line: 5, column: 10, message: 'type mismatch', severity: 'error' },
+          {
+            file: '/tmp/Bad.java',
+            line: 5,
+            column: 10,
+            message: 'type mismatch',
+            severity: 'error',
+          },
         ],
         reloadError: 'Failed to compile DSL source: Bad.java',
       })
@@ -288,10 +349,13 @@ describe('useDslWorkbench', () => {
       wb.selectConstruct('c2')
       await wb.publishConstruct()
 
-      expect(api.publishDraft).toHaveBeenCalledWith('c2', expect.objectContaining({
-        name: 'c2',
-        status: 'Published',
-      }))
+      expect(api.publishDraft).toHaveBeenCalledWith(
+        'c2',
+        expect.objectContaining({
+          name: 'c2',
+          status: 'Published',
+        }),
+      )
       const c2 = wb.state.value.constructs.find((c) => c.name === 'c2')
       expect(c2?.status).toBe('Draft')
       expect(wb.state.value.validationErrors).toEqual([
@@ -312,7 +376,9 @@ describe('useDslWorkbench', () => {
       const wb = useDslWorkbench()
       await wb.loadConstructs()
       wb.selectConstruct('c2')
-      wb.state.value.validationErrors = [{ field: 'old', message: 'old', severity: 'error' as const }]
+      wb.state.value.validationErrors = [
+        { field: 'old', message: 'old', severity: 'error' as const },
+      ]
 
       await wb.publishConstruct()
 

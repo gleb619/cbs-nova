@@ -12,6 +12,7 @@ import cbs.nova.dsl.helper.HelperResolver;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.config.router.DslReloadRouterConfiguration;
 import cbs.nova.starter.exception.DslCompilationException;
 import cbs.nova.starter.model.CompileDiagnostic;
 import cbs.nova.starter.model.ErrorResponse;
@@ -48,7 +49,7 @@ import java.util.stream.Stream;
 
 /**
  * Functional handler for the DSL reload endpoint. Registered as a {@code RouterFunction} bean by
- * {@link cbs.nova.starter.config.DslReloadRouterConfiguration} (gated by
+ * {@link DslReloadRouterConfiguration} (gated by
  * {@code dsl.reload.enabled}, on by default) rather than as a hardcoded {@code @RestController}, so
  * host applications can opt out of exposing it.
  *

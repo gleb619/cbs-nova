@@ -1,4 +1,4 @@
-package cbs.nova.starter.config;
+package cbs.nova.starter.config.router;
 
 import cbs.nova.starter.controller.DslFileHandler;
 import cbs.nova.starter.model.ErrorResponse;
@@ -17,7 +17,7 @@ import org.springframework.web.servlet.function.RouterFunctions;
 import org.springframework.web.servlet.function.ServerResponse;
 
 @Configuration
-@ConditionalOnProperty(prefix = "dsl.files", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "cbs.dsl.files", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DslFileRouterConfiguration {
 
   @Bean
@@ -25,6 +25,21 @@ public class DslFileRouterConfiguration {
       @RouterOperation(path = "/api/dsl/files", beanClass = DslFileHandler.class, beanMethod = "list", method = RequestMethod.GET, operation = @Operation(operationId = "listDslFiles", summary = "List DSL source files", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "File entries"),
+              @ApiResponse(responseCode = "409", description = "Source directory not configured", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
+      @RouterOperation(path = "/api/dsl/files/by-name/{name}", beanClass = DslFileHandler.class, beanMethod = "readByName", method = RequestMethod.GET, operation = @Operation(operationId = "readDslFileByName", summary = "Read DSL source file content by construct name", tags = {
+          "DSL Admin"}, responses = {
+              @ApiResponse(responseCode = "200", description = "File content"),
+              @ApiResponse(responseCode = "400", description = "Invalid name", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "404", description = "Construct not found or has no source file"),
+              @ApiResponse(responseCode = "409", description = "Source directory not configured", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "503", description = "Bulkhead saturated", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
+      @RouterOperation(path = "/api/dsl/files/by-name/{name}", beanClass = DslFileHandler.class, beanMethod = "writeByName", method = RequestMethod.POST, operation = @Operation(operationId = "writeDslFileByName", summary = "Stage DSL source file content by construct name", tags = {
+          "DSL Admin"}, responses = {
+              @ApiResponse(responseCode = "202", description = "Write staged"),
+              @ApiResponse(responseCode = "400", description = "Invalid name or body", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "404", description = "Construct not found or has no source file"),
               @ApiResponse(responseCode = "409", description = "Source directory not configured", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
       @RouterOperation(path = "/api/dsl/files/{*path}", beanClass = DslFileHandler.class, beanMethod = "read", method = RequestMethod.GET, operation = @Operation(operationId = "readDslFile", summary = "Read DSL source file content", tags = {
@@ -60,6 +75,8 @@ public class DslFileRouterConfiguration {
   RouterFunction<ServerResponse> dslFileRouter(DslFileHandler fileHandler) {
     return RouterFunctions.route()
             .GET("/api/dsl/files", fileHandler::list)
+            .GET("/api/dsl/files/by-name/{name}", fileHandler::readByName)
+            .POST("/api/dsl/files/by-name/{name}", fileHandler::writeByName)
             .GET("/api/dsl/files/{*path}", fileHandler::read)
             .POST("/api/dsl/files/bulk", fileHandler::bulkWrite)
             .POST("/api/dsl/files/flush", fileHandler::flush)

@@ -33,7 +33,6 @@ vi.mock('~/server/utils/oidcSession', () => ({
   attachAuth: attachAuthMock,
 }))
 
-
 // The route files import `getRouterParam`/`readBody`/`getQuery` directly from
 // `h3` (Nitro auto-imports the same functions at runtime, but the source
 // files use explicit imports). Mock just those three on the real `h3` module
@@ -85,7 +84,9 @@ const saveDraftHandler = (await import('../dsl/drafts/[name]/save.post')).defaul
 const publishDraftHandler = (await import('../dsl/drafts/[name]/publish.post')).default
 const deleteDraftHandler = (await import('../dsl/drafts/[name]/delete.delete')).default
 const listHistoryHandler = (await import('../dsl/drafts/[name]/history/index.get')).default
-const restoreHistoryHandler = (await import('../dsl/drafts/[name]/history/[timestamp]/restore.post')).default
+const restoreHistoryHandler = (
+  await import('../dsl/drafts/[name]/history/[timestamp]/restore.post')
+).default
 const helpersIndexHandler = (await import('../dsl/helpers/index.get')).default
 const processesIndexHandler = (await import('../dsl/processes/index.get')).default
 const processDetailHandler = (await import('../dsl/processes/[name].get')).default
@@ -98,6 +99,8 @@ const schedulesCreateHandler = (await import('../dsl/schedules/index.post')).def
 const schedulesDeleteHandler = (await import('../dsl/schedules/[definition].delete')).default
 const exportDefinitionsHandler = (await import('../dsl/definitions/export.get')).default
 const importDefinitionsHandler = (await import('../dsl/definitions/import.post')).default
+const readDslFileHandler = (await import('../dsl/files/content/[name].get')).default
+const writeDslFileHandler = (await import('../dsl/files/content/[name].post')).default
 
 // Minimal H3Event stub. The route handlers only pass this through to
 // proxyToBackend, which is mocked, so a plain object is sufficient.
@@ -265,10 +268,7 @@ describe('executions/stats/timeseries.get', () => {
     await executionsTimeseriesHandler(fakeEvent)
 
     expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
-    expect(proxyToBackendMock).toHaveBeenCalledWith(
-      fakeEvent,
-      '/api/executions/stats/timeseries',
-    )
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/executions/stats/timeseries')
     expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
   })
 })
@@ -445,10 +445,7 @@ describe('dsl/drafts/[name]/history/index.get', () => {
     await listHistoryHandler(fakeEvent)
 
     expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
-    expect(proxyToBackendMock).toHaveBeenCalledWith(
-      fakeEvent,
-      '/api/dsl/drafts/DraftOne/history',
-    )
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/drafts/DraftOne/history')
     expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
   })
 })
@@ -820,22 +817,19 @@ describe('executions/export.get', () => {
     const result = await executionsExportHandler(exportFakeEvent)
 
     expect($fetchMock.raw).toHaveBeenCalledTimes(1)
-    expect($fetchMock.raw).toHaveBeenCalledWith(
-      'http://localhost:8090/api/executions/export.csv',
-      {
-        method: 'GET',
-        headers: expect.any(Object),
-        query: {
-          status: 'Completed',
-          processName: 'Loan',
-          mode: 'RUN',
-          correlationId: 'c1',
-        },
-        responseType: 'text',
-        timeout: 10000,
-        retry: false,
+    expect($fetchMock.raw).toHaveBeenCalledWith('http://localhost:8090/api/executions/export.csv', {
+      method: 'GET',
+      headers: expect.any(Object),
+      query: {
+        status: 'Completed',
+        processName: 'Loan',
+        mode: 'RUN',
+        correlationId: 'c1',
       },
-    )
+      responseType: 'text',
+      timeout: 10000,
+      retry: false,
+    })
     expect(exportFakeEvent.node.res.statusCode).toBe(200)
     expect(exportFakeEvent.node.res.headers['Content-Type']).toBe('text/csv; charset=utf-8')
     expect(exportFakeEvent.node.res.headers['Content-Disposition']).toBe(
@@ -858,5 +852,31 @@ describe('executions/export.get', () => {
       'http://localhost:8090/api/executions/export.csv',
       expect.objectContaining({ query: {} }),
     )
+  })
+})
+describe('dsl/files/content/[name].get', () => {
+  it('interpolates the :name router param and GETs the backend by-name path', async () => {
+    routerParams = { name: 'LoanDsl' }
+
+    await readDslFileHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/files/by-name/LoanDsl')
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+})
+
+describe('dsl/files/content/[name].post', () => {
+  it('interpolates the :name router param and POSTs the body to the by-name path', async () => {
+    routerParams = { name: 'LoanDsl' }
+    bodyValue = { content: 'public class LoanDsl {}' }
+
+    await writeDslFileHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/files/by-name/LoanDsl', {
+      method: 'POST',
+      body: { content: 'public class LoanDsl {}' },
+    })
   })
 })

@@ -1,8 +1,13 @@
-import { ref, watch, type Ref } from 'vue'
-import { useDraftDirty } from './useDraftDirty'
 import { useDslWorkbench } from '@cbs/admin-ui-plugin/composables/useDslWorkbench'
+import { type Ref, ref, watch } from 'vue'
+import { useDraftDirty } from './useDraftDirty'
 
 export type DraftSaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
+
+export interface UseDraftSaveOptions {
+  /** Optional source for the content being saved (e.g. the workbench editor). */
+  getContent?: () => string
+}
 
 export interface UseDraftSaveReturn {
   status: Ref<DraftSaveStatus>
@@ -20,7 +25,7 @@ const SAVED_RECENTLY_MS = 3_000
  * payload shape and the server dirty flag) and exposes a reactive save status
  * suitable for the header pill and the Ctrl+S shortcut.
  */
-export function useDraftSave(): UseDraftSaveReturn {
+export function useDraftSave(options: UseDraftSaveOptions = {}): UseDraftSaveReturn {
   const workbench = useDslWorkbench()
   const dirty = useDraftDirty()
 
@@ -71,7 +76,8 @@ export function useDraftSave(): UseDraftSaveReturn {
     error.value = null
 
     try {
-      await workbench.saveConstruct()
+      const content = options.getContent?.()
+      await workbench.saveConstruct(content)
       dirty.markClean()
       lastSavedAt.value = new Date()
       enterSavedState()

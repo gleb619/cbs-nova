@@ -1,7 +1,8 @@
 package cbs.nova.dsl.codegen.generator;
 
+import static cbs.nova.dsl.codegen.util.Util.importBlock;
+
 import cbs.nova.dsl.annotation.DslGenerated;
-import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.model.GeneratedSource;
 import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
 import cbs.nova.dsl.transaction.DslTemporalTransactionRequest;
@@ -15,7 +16,6 @@ import org.slf4j.event.Level;
 
 import javax.annotation.processing.Generated;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -24,7 +24,6 @@ import java.util.Map;
 public final class TransactionCodeGenerator {
 
   private final DslPackageNameResolver packageNameResolver;
-
 
   public @NonNull List<GeneratedSource> generate(
           @NonNull TransactionDescriptor descriptor,
@@ -42,11 +41,11 @@ public final class TransactionCodeGenerator {
     var sources = List.of(
             new GeneratedSource(pkg, interfaceName,
                     generateInterface(pkg, name, interfaceName, inputTypeName,
-                            importLine(descriptor.inputType()))),
+                            descriptor.inputType())),
             new GeneratedSource(
                     pkg, implName, generateImpl(pkg, name, interfaceName, implName,
                             versionConstant, descriptor.taskQueue(), inputTypeName,
-                            importLine(descriptor.inputType()))));
+                            descriptor.inputType())));
     log.atLevel(Level.DEBUG)
             .log(() -> "[TransactionCodeGenerator] Generated transaction %s v%s in package %s"
                     .formatted(name, versionConstant, pkg));
@@ -60,11 +59,9 @@ public final class TransactionCodeGenerator {
   }
 
   private String generateInterface(String pkg, String transactionName, String interfaceName,
-          String inputTypeName, String inputImport) {
-    String importBlock = buildImportBlock(inputImport,
-            "import %s;".formatted(DslTemporalTransactionRequest.class.getCanonicalName()),
-            "import %s;".formatted(DslGenerated.class.getCanonicalName()),
-            "import %s;".formatted(Generated.class.getCanonicalName()));
+          String inputTypeName, Class<?> inputType) {
+    String importBlock = importBlock(inputType, DslTemporalTransactionRequest.class,
+            DslGenerated.class, Generated.class);
     String annotation = GeneratorMetadata.annotation(TransactionCodeGenerator.class);
     return Substitutor.format(// language=java
             """
@@ -99,11 +96,9 @@ public final class TransactionCodeGenerator {
 
   private String generateImpl(String pkg, String transactionName, String interfaceName,
           String implName, String versionConstant, String taskQueue, String inputTypeName,
-          String inputImport) {
-    String importBlock = buildImportBlock(inputImport,
-            "import %s;".formatted(DslTemporalTransactionRequest.class.getCanonicalName()),
-            "import %s;".formatted(DslGenerated.class.getCanonicalName()),
-            "import %s;".formatted(Generated.class.getCanonicalName()));
+          Class<?> inputType) {
+    String importBlock = importBlock(inputType, DslTemporalTransactionRequest.class,
+            DslGenerated.class, Generated.class);
     String annotation = GeneratorMetadata.annotation(TransactionCodeGenerator.class);
 
     // TODO: add new method that allow to transfer whole object, like in `ProcessCodeGenerator`
@@ -146,29 +141,7 @@ public final class TransactionCodeGenerator {
                     "inputTypeName", inputTypeName));
   }
 
-  private String buildImportBlock(String inputImport, String requestImport,
-          String generatedImport, String javaxGeneratedImport) {
-    List<String> imports = new ArrayList<>();
-    if (!inputImport.isEmpty()) {
-      imports.add(inputImport);
-    }
-    imports.add(requestImport);
-    imports.add(generatedImport);
-    imports.add(javaxGeneratedImport);
-
-    String result = String.join("\n", imports);
-
-    return "\n%s\n".formatted(result);
-  }
-
   private String typeName(Class<?> type) {
     return type == null ? "Object" : type.getSimpleName();
-  }
-
-  private String importLine(Class<?> type) {
-    if (type == null || type.getPackageName().startsWith("java.lang")) {
-      return "";
-    }
-    return "import %s;".formatted(type.getCanonicalName());
   }
 }

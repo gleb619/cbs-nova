@@ -2,7 +2,7 @@ package cbs.nova.dsl.codegen.generator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.codegen.CodeWriter;
+import cbs.nova.dsl.codegen.util.CodeWriter;
 import cbs.nova.dsl.codegen.CompilerConstants;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.util.ModelTypeExtractor;

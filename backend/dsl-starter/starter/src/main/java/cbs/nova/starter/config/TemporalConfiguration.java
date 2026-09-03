@@ -41,6 +41,7 @@ import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -336,7 +337,7 @@ public class TemporalConfiguration {
           OpenTelemetry openTelemetry,
           MeterRegistry meterRegistry,
           RunIdentityResolver runIdentityResolver,
-          @Autowired(required = false) WebhookDispatcher webhookDispatcher) {
+          Optional<WebhookDispatcher> webhookDispatcher) {
     TemporalDslProcessService service = new TemporalDslProcessService(contextFactory, runRepository,
             JsonMapper.builder().build(),
             dslProcessExecutor, healthcheckExecutor,

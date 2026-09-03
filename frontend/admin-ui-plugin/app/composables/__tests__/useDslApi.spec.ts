@@ -254,4 +254,27 @@ describe('useDslApi', () => {
       query: { dryRun: 'true' },
     })
   })
+
+  it('readDslFile GETs /api/v1/dsl/files/content/{name} and returns content', async () => {
+    fetchMock.mockResolvedValueOnce({ path: 'LoanDsl.java', content: 'class A {}', pending: false })
+    const api = useDslApi()
+
+    const result = await api.readDslFile('LoanDsl')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/files/content/LoanDsl')
+    expect(result).toBe('class A {}')
+  })
+
+  it('writeDslFile POSTs content to /api/v1/dsl/files/content/{name}', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true })
+    const api = useDslApi()
+
+    const result = await api.writeDslFile('LoanDsl', 'public class LoanDsl {}')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/files/content/LoanDsl', {
+      method: 'POST',
+      body: { content: 'public class LoanDsl {}' },
+    })
+    expect(result).toEqual({ ok: true })
+  })
 })

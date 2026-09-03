@@ -3,6 +3,7 @@ package cbs.nova.dsl.codegen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.codegen.model.GeneratedSource;
+import cbs.nova.dsl.codegen.util.CodeWriter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

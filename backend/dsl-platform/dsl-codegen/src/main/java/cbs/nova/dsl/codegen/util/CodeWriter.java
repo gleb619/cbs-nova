@@ -1,4 +1,4 @@
-package cbs.nova.dsl.codegen;
+package cbs.nova.dsl.codegen.util;
 
 import cbs.nova.dsl.codegen.model.GeneratedSource;
 import lombok.extern.slf4j.Slf4j;

@@ -2,12 +2,13 @@ package cbs.nova.dsl.codegen.preprocessor;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ParserConfiguration;
+import com.github.javaparser.ParserConfiguration.LanguageLevel;
 import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.EnumDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.expr.Name;
-import com.github.javaparser.printer.lexicalpreservation.LexicalPreservingPrinter;
 import org.jspecify.annotations.NonNull;
 
 public final class ModelPreprocessor {
@@ -17,6 +18,7 @@ public final class ModelPreprocessor {
   private final String JSON_ANNOTATION_QUALIFIED = "io.avaje.jsonb.Json";
 
 
+
   public @NonNull Result preprocess(
           @NonNull String fileName,
           @NonNull String rawSource,
@@ -24,11 +26,11 @@ public final class ModelPreprocessor {
     if (targetPackage.isBlank()) {
       throw new IllegalArgumentException("targetPackage is required for model preprocessing");
     }
-    var parser = new JavaParser();
-    var cu = parser.parse(rawSource).getResult()
+    var parser = new JavaParser(new ParserConfiguration().setLanguageLevel(LanguageLevel.JAVA_21));
+    var parseResult = parser.parse(rawSource);
+    var cu = parseResult.getResult()
             .orElseThrow(() -> new IllegalArgumentException(
-                    fileName + " is not valid Java source"));
-    LexicalPreservingPrinter.setup(cu);
+                    fileName + " is not valid Java source: " + parseResult.getProblems()));
 
     cu.setPackageDeclaration(new PackageDeclaration(new Name(targetPackage)));
 
@@ -38,7 +40,7 @@ public final class ModelPreprocessor {
       cu.addImport(JSON_IMPORT);
     }
 
-    var output = LexicalPreservingPrinter.print(cu);
+    var output = cu.toString();
     return new Result(className(fileName), output);
   }
 

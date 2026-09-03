@@ -1,4 +1,4 @@
-package cbs.nova.starter.config;
+package cbs.nova.starter.config.router;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;

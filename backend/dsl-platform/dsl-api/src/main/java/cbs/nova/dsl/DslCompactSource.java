@@ -11,6 +11,11 @@ public interface DslCompactSource {
   @NonNull
   List<DslObject> define();
 
+  @NonNull
+  default String filename() {
+    return getClass().getSimpleName() + ".java";
+  }
+
   default Optional<DslObject> byName(String name) {
     return define().stream()
             .filter(dslObject -> dslObject.name().equalsIgnoreCase(name))

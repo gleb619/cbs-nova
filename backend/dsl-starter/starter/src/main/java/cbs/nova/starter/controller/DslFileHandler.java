@@ -8,6 +8,7 @@ import cbs.nova.starter.model.DslFileModels.FileContentResponse;
 import cbs.nova.starter.model.DslFileModels.FileEntry;
 import cbs.nova.starter.model.DslFileModels.FlushResult;
 import cbs.nova.starter.model.DslFileModels.PendingWritesStatus;
+import cbs.nova.dsl.GlobalManager;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.service.DslFileService;
 import jakarta.servlet.ServletException;
@@ -56,12 +57,7 @@ public class DslFileHandler {
     if (path == null || path.isBlank()) {
       return badRequest("path is required");
     }
-    try {
-      FileContentResponse response = fileService.readFile(path);
-      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(response);
-    } catch (IllegalStateException e) {
-      return serviceUnavailable(e.getMessage());
-    }
+    return doReadFile(path);
   }
 
   public ServerResponse write(ServerRequest request) throws IOException {
@@ -77,6 +73,50 @@ public class DslFileHandler {
     fileService.stageWrite(path, content);
     log.info("[DSL files] staged write for {}", path);
     return accepted(new FileContentResponse(path, content, true));
+  }
+
+  public ServerResponse readByName(ServerRequest request) throws IOException {
+    var dirCheck = ensureConfigured();
+    if (dirCheck.isError()) {
+      return dirCheck.response();
+    }
+    String name = nameVariable(request);
+    if (name == null || name.isBlank()) {
+      return badRequest("name is required");
+    }
+    String path = GlobalManager.globalManager().findFilename(name).orElse(null);
+    if (path == null || path.isBlank()) {
+      return ServerResponse.notFound().build();
+    }
+    return doReadFile(path);
+  }
+
+  public ServerResponse writeByName(ServerRequest request) throws IOException {
+    var dirCheck = ensureConfigured();
+    if (dirCheck.isError()) {
+      return dirCheck.response();
+    }
+    String name = nameVariable(request);
+    if (name == null || name.isBlank()) {
+      return badRequest("name is required");
+    }
+    String path = GlobalManager.globalManager().findFilename(name).orElse(null);
+    if (path == null || path.isBlank()) {
+      return ServerResponse.notFound().build();
+    }
+    String content = readBody(request);
+    fileService.stageWrite(path, content);
+    log.info("[DSL files] staged write for {} (resolved from {})", path, name);
+    return accepted(new FileContentResponse(path, content, true));
+  }
+
+  private ServerResponse doReadFile(String path) throws IOException {
+    try {
+      FileContentResponse response = fileService.readFile(path);
+      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(response);
+    } catch (IllegalStateException e) {
+      return serviceUnavailable(e.getMessage());
+    }
   }
 
   public ServerResponse bulkWrite(ServerRequest request) throws IOException {
@@ -134,6 +174,18 @@ public class DslFileHandler {
       return null;
     }
     return path;
+  }
+
+  private String nameVariable(ServerRequest request) {
+    String name = request.pathVariable("name");
+    if (name == null) {
+      return null;
+    }
+    name = name.replace('\\', '/').replaceAll("^/+", "");
+    if (name.contains("..")) {
+      return null;
+    }
+    return name;
   }
 
   private String readBody(ServerRequest request) throws IOException {

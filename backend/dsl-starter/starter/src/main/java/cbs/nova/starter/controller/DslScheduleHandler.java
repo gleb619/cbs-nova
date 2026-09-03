@@ -1,5 +1,6 @@
 package cbs.nova.starter.controller;
 
+import cbs.nova.starter.config.router.DslScheduleRouterConfiguration;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ScheduleModels.CreateScheduleRequest;
 import cbs.nova.starter.model.ScheduleModels.ScheduleSummary;
@@ -23,7 +24,7 @@ import java.util.Map;
 
 /**
  * Functional handler for DSL schedule CRUD. Registered as a {@code RouterFunction} bean by
- * {@link cbs.nova.starter.config.DslScheduleRouterConfiguration}.
+ * {@link DslScheduleRouterConfiguration}.
  */
 @Slf4j
 @Component

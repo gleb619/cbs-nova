@@ -81,8 +81,9 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "description", expression = "java(source.describe().description())")
   @Mapping(target = "inputSchema", source = "inputSchema")
   @Mapping(target = "status", source = "status")
+  @Mapping(target = "filePath", source = "filePath")
   DefinitionMetaDto toProcessDefinitionMeta(ProcessDslObject source,
-          Map<String, Object> inputSchema, DefinitionStatus status);
+          Map<String, Object> inputSchema, DefinitionStatus status, String filePath);
 
   @Mapping(target = "type", constant = "transaction")
   @Mapping(target = "version", source = "source.version")
@@ -104,8 +105,9 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "description", expression = "java(source.describe().description())")
   @Mapping(target = "inputSchema", source = "inputSchema")
   @Mapping(target = "status", source = "status")
+  @Mapping(target = "filePath", source = "filePath")
   DefinitionMetaDto toTransactionDefinitionMeta(TransactionDslObject source,
-          Map<String, Object> inputSchema, DefinitionStatus status);
+          Map<String, Object> inputSchema, DefinitionStatus status, String filePath);
 
   @Mapping(target = "type", constant = "function")
   @Mapping(target = "name", source = "source.name")
@@ -129,8 +131,9 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "description", source = "source.description")
   @Mapping(target = "inputSchema", source = "inputSchema")
   @Mapping(target = "status", source = "status")
+  @Mapping(target = "filePath", source = "filePath")
   DefinitionMetaDto toFunctionDefinitionMeta(DslDescriptor source,
-          Map<String, Object> inputSchema, DefinitionStatus status);
+          Map<String, Object> inputSchema, DefinitionStatus status, String filePath);
 
   @Mapping(target = "type", constant = "helper")
   @Mapping(target = "name", source = "name")
@@ -154,6 +157,7 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "description", ignore = true)
   @Mapping(target = "inputSchema", source = "inputSchema")
   @Mapping(target = "status", source = "status")
+  @Mapping(target = "filePath", source = "filePath")
   DefinitionMetaDto toHelperDefinitionMeta(String name, ExecutableDescriptor descriptor,
-          Map<String, Object> inputSchema, DefinitionStatus status);
+          Map<String, Object> inputSchema, DefinitionStatus status, String filePath);
 }

@@ -14,7 +14,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.function.FunctionDslObject;
-import cbs.nova.starter.config.DslIntrospectionRouterConfiguration;
+import cbs.nova.starter.config.router.DslIntrospectionRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslIntrospectionHandler;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;

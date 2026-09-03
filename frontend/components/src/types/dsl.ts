@@ -11,6 +11,7 @@ export interface DslConstruct {
   outputType?: string
   hasCompensation?: boolean
   description?: string
+  filePath?: string
 }
 
 export interface ValidationError {

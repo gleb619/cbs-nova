@@ -174,6 +174,17 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/dsl/reload',
     bffPath: '/api/v1/dsl/reload',
   },
+  // DslFileRouterConfiguration
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/files/by-name/{name}',
+    bffPath: '/api/v1/dsl/files/content/{name}',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/files/by-name/{name}',
+    bffPath: '/api/v1/dsl/files/content/{name}',
+  },
   // DslExecutionsRouterConfiguration
   {
     method: 'GET',

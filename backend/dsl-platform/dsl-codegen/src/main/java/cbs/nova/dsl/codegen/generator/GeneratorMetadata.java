@@ -1,6 +1,7 @@
 package cbs.nova.dsl.codegen.generator;
 
-import cbs.nova.dsl.codegen.util.EscapeUtil;
+import static cbs.nova.dsl.codegen.util.Util.escapeJavaString;
+
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.NonNull;
@@ -30,12 +31,12 @@ final class GeneratorMetadata {
                 date = "%s",
                 comments = "%s")
             """.formatted(
-            EscapeUtil.escapeJavaString(generator),
-            EscapeUtil.escapeJavaString(timestamp),
-            EscapeUtil.escapeJavaString(javaVersion),
-            EscapeUtil.escapeJavaString(user),
-            EscapeUtil.escapeJavaString(generator),
-            EscapeUtil.escapeJavaString(timestamp),
-            EscapeUtil.escapeJavaString(comments));
+            escapeJavaString(generator),
+            escapeJavaString(timestamp),
+            escapeJavaString(javaVersion),
+            escapeJavaString(user),
+            escapeJavaString(generator),
+            escapeJavaString(timestamp),
+            escapeJavaString(comments));
   }
 }

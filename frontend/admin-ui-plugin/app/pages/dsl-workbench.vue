@@ -54,7 +54,6 @@ const {
 } = workbench
 
 const draftDirty = useDraftDirty()
-const draftSave = useDraftSave()
 
 const useWorkbenchStorage = createNamespacedLocalStorageState('cbs-nova:dsl-workbench')
 
@@ -132,8 +131,45 @@ const {
   restoredFromDraft,
 } = useWorkbenchDraft(draftName)
 
+// Source-file-backed constructs load their Java source from the backend.
+const fileCode = ref('')
+const fileCodeLoading = ref(false)
+const isFileBacked = computed(() => !!selectedConstruct.value?.filePath)
+const editorCode = computed(() => (isFileBacked.value ? fileCode.value : draftBody.value))
+
+// Load source file content when a file-backed construct is selected.
+watch(
+  selectedConstruct,
+  async (construct) => {
+    if (!construct?.filePath) {
+      fileCode.value = ''
+      return
+    }
+    clearDraft()
+    fileCode.value = ''
+    fileCodeLoading.value = true
+    try {
+      const content = await dslApi.readDslFile(construct.name)
+      fileCode.value = content
+      log.info('source file loaded', { name: construct.name, path: construct.filePath })
+    } catch (err) {
+      log.error('failed to load source file', {
+        name: construct.name,
+        error: (err as Error).message,
+      })
+    } finally {
+      fileCodeLoading.value = false
+    }
+  },
+  { immediate: true },
+)
+
 function onCodeChange(value: string) {
-  draftBody.value = value
+  if (isFileBacked.value) {
+    fileCode.value = value
+  } else {
+    draftBody.value = value
+  }
   if (selectedConstruct.value) markDirty()
 }
 
@@ -262,7 +298,7 @@ const actionItems = computed<DropdownMenuItem[]>(() => [
     disabled: !selectedConstruct.value || state.isSaving,
   },
   {
-    label: 'Save Draft',
+    label: isFileBacked.value ? 'Save File' : 'Save Draft',
     value: 'save',
     disabled: !selectedConstruct.value || state.isSaving || !state.isDirty,
   },
@@ -293,6 +329,8 @@ function runAction(item: DropdownMenuItem) {
 }
 
 const isAnyModalOpen = computed(() => showDeleteModal.value || showNewPanel.value)
+
+const draftSave = useDraftSave({ getContent: () => editorCode.value })
 
 function handleSaveShortcut(event: KeyboardEvent) {
   if ((event.key !== 's' && event.key !== 'S') || (!event.metaKey && !event.ctrlKey)) {
@@ -470,15 +508,22 @@ onBeforeUnmount(() => {
 
       <main class="flex-1 flex flex-col overflow-hidden">
         <DslMetadataPanel :construct="selectedConstruct" />
-        <div v-if="restoredFromDraft" class="px-3 pt-2">
+        <div v-if="restoredFromDraft && !isFileBacked" class="px-3 pt-2">
           <DslDraftRestoreBanner :saved-at="draftSavedAt" @discard="clearDraft" />
+        </div>
+        <div
+          v-if="fileCodeLoading"
+          class="px-3 pt-2 text-xs text-gray-500"
+          data-testid="workbench-file-loading"
+        >
+          Loading source file…
         </div>
         <div v-if="deleteError" class="px-3 pt-2" data-testid="dsl-workbench-delete-error">
           <ErrorBanner :message="deleteError" @retry="confirmDelete" />
         </div>
         <div class="flex-1 overflow-hidden">
           <DslBodyEditor
-            :code="draftBody"
+            :code="editorCode"
             :construct="selectedConstruct"
             :preview="runPreview"
             :explain="runExplain"

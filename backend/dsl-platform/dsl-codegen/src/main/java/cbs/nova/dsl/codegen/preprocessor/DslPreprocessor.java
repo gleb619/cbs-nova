@@ -15,15 +15,13 @@ public final class DslPreprocessor {
           "import java.time.*;",
           "import java.util.*;",
           "import java.util.stream.*;",
-          "import " + DslCompactSource.class.getName() + ";"
-  );
+          "import " + DslCompactSource.class.getName() + ";");
   private static final Pattern DEFINE_PATTERN = Pattern.compile(
           "(?m)^(\\s*)(?:public\\s+)?(?:java\\.util\\.)?List\\s*<\\s*(?:cbs\\.nova\\.dsl\\.)?DslObject\\s*>\\s+define\\s*\\(\\s*\\)\\s*\\{");
   private static final Pattern PACKAGE_PATTERN = Pattern.compile("(?m)^\\s*package\\s+");
   private static final Pattern TOP_LEVEL_TYPE_PATTERN = Pattern.compile(
           "(?m)^\\s*(?:public\\s+)?(?:class|interface|enum|record)\\s+");
   private static final Pattern IMPORT_PATTERN = Pattern.compile("(?m)^\\s*import\\s+.*;\\s*$");
-
 
   public @NonNull Result preprocess(
           @NonNull String fileName,
@@ -36,7 +34,8 @@ public final class DslPreprocessor {
     var className = className(fileName);
     var split = splitImports(rawSource);
     var body = ensurePublicDefine(split.body());
-    return new Result(className, wrapInClass(className, split.imports(), body, targetPackage));
+    return new Result(className,
+            wrapInClass(className, fileName, split.imports(), body, targetPackage));
   }
 
   public boolean isValidCompactSource(@NonNull String source) {
@@ -70,9 +69,11 @@ public final class DslPreprocessor {
 
   private @NonNull String wrapInClass(
           @NonNull String className,
+          @NonNull String fileName,
           @NonNull String imports,
           @NonNull String body,
           String targetPackage) {
+    //TODO: redo from StringBuilder to textblock
     var sb = new StringBuilder();
     if (targetPackage != null && !targetPackage.isBlank()) {
       sb.append("package ").append(targetPackage).append(";\n\n");
@@ -90,6 +91,7 @@ public final class DslPreprocessor {
     sb.append("public class ").append(className)
             .append(" implements ").append(DslCompactSource.class.getSimpleName()).append(" {\n")
             .append(body).append("\n")
+            .append(filenameMethod(fileName))
             .append("}\n");
     return sb.toString();
   }
@@ -115,6 +117,16 @@ public final class DslPreprocessor {
       throw new IllegalArgumentException("DSL source file must end with .java: " + fileName);
     }
     return fileName.substring(0, fileName.length() - ".java".length());
+  }
+
+  private String filenameMethod(String fileName) {
+    return //language=java
+        """
+        @Override
+          public String filename() {
+            return "%s";
+          }
+        """.formatted(fileName);
   }
 
   private record SourceSplit(@NonNull String imports, @NonNull String body) {
