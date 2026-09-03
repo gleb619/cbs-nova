@@ -4,6 +4,7 @@ jspecify = "1.0.0"
 orgjson = "20240303"
 junit = "5.12.2"
 assertj = "3.27.3"
+jqwik = "1.9.3"
 temporal = "1.27.0"
 javaparser = "3.28.1"
 openfeign = "13.6"
@@ -64,6 +65,7 @@ junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+jqwik = { module = "net.jqwik:jqwik", version.ref = "jqwik" }
 rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "rest-assured" }
 wiremock = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
 mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }

@@ -86,6 +86,7 @@ dependencies {
   testImplementation libs.spring.boot.starter.actuator
   testImplementation libs.bundles.spring.web
   testImplementation libs.bundles.spring.test
+  testImplementation libs.jqwik
   testImplementation libs.spring.security.test
   testImplementation libs.temporal.testing
   testImplementation libs.openfeign.core
