@@ -222,6 +222,45 @@ ParseDateOut parsed = ctx.runHelper("parseDate",
 String iso = parsed.iso();
 ```
 
+### Compute a "next business day" deadline
+
+`dateMath` covers add / diff / before / after / startOf behind a single `op` discriminator, so
+`DateMathIn(op, date, end, amount, unit, zone)` carries every variant. The output record has
+exactly one populated field per op: `value` (string for `add` / `startOf`), `number` (long for
+`diff`), `flag` (boolean for `before` / `after`). Months and years use calendar arithmetic — Jan
+31 + 1 month → Feb 28, Feb 29 + 1 year → Feb 28. Days and weeks use
+`ZonedDateTime.plus(amount, ChronoUnit)`, which preserves the wall clock across DST (so
+`add("2026-03-08T06:00:00Z", 1, "days", "America/New_York")` lands on `2026-03-09T05:00:00Z`
+— 23 h, not 24 h).
+
+```java
+// "Ship by end of next business day" — add a calendar day, then re-check day-of-week.
+DateMathOut plusOne = ctx.runHelper("dateMath",
+        new DateMathIn("add", orderTimestamp, null, 1L, "days", "America/New_York"))
+        .as(DateMathOut.class);
+DateMathOut atStart = ctx.runHelper("dateMath",
+        new DateMathIn("startOf", plusOne.value(), null, null, "day", "America/New_York"))
+        .as(DateMathOut.class);
+// shipDeadline = atStart.value() adjusted forward if it falls on Saturday / Sunday.
+```
+
+### Detect a stale order
+
+```java
+DateMathOut ageHours = ctx.runHelper("dateMath",
+        new DateMathIn("diff", orderPlacedAt, currentTimestamp, null, "hours", "UTC"))
+        .as(DateMathOut.class);
+if (ageHours.number() > 24) {
+    // escalate, refund, etc.
+}
+```
+
+`dateMath.before` / `dateMath.after` compare two timestamps and return a boolean in `flag` —
+useful for cutoff checks (`before(cutoff, now)`), idempotency windows, or cache-staleness
+guards. `dateMath.startOf` truncates to `minute` / `hour` / `day` / `month` / `year`, which is
+the safe primitive for building cache keys (`startOf(now, "hour")`) or partition boundaries
+(`startOf(now, "day")`) without hand-formatting.
+
 ---
 
 ## HTTP integration
