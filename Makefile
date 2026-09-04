@@ -156,3 +156,87 @@ doctor: ## Run smoke checks against the running stack and report per-check healt
 	else \
 		printf '\nAll required checks passed.\n'; \
 	fi
+.PHONY: seed
+seed: ## Seed a hello-world DSL definition + one sample run (idempotent)
+	@printf '\n==> Seeding sample DSL definition (seed-hello-world)...\n'; \
+	BFF=$${BFF_BASE_URL:-http://localhost:3000}; \
+	if ! curl --silent --fail --max-time 5 "$$BFF" >/dev/null 2>&1; then \
+		printf '    [fail] BFF not reachable at %s — run: make up && make backend && make frontend (see: make doctor)\n' "$$BFF"; \
+		exit 1; \
+	fi; \
+	defs=""; \
+	defs=$$(curl --silent --max-time 5 "$$BFF/api/v1/dsl/definitions" 2>/dev/null) || defs=""; \
+	if [ -n "$$defs" ]; then \
+		if command -v jq >/dev/null 2>&1; then \
+			if printf '%s' "$$defs" | jq -e '.. | select(.name? == "seed-hello-world")' >/dev/null 2>&1; then \
+				printf '    [skip] seed-hello-world already present\n'; \
+				exit 0; \
+			fi; \
+		else \
+			if printf '%s' "$$defs" | grep -q '"name":"seed-hello-world"'; then \
+				printf '    [skip] seed-hello-world already present\n'; \
+				exit 0; \
+			fi; \
+		fi; \
+	fi; \
+	draft_body='{"name":"seed-hello-world","type":"Process","status":"Draft","version":"1","taskQueue":"default","description":"seeded by make seed (uuidV7 + formatMessage catalog helpers)"}'; \
+	if curl --silent --show-error --fail --max-time 10 -X POST "$$BFF/api/v1/dsl/drafts/seed-hello-world/save" \
+			-H 'Content-Type: application/json' -d "$$draft_body" >/dev/null 2>&1; then \
+		printf '    [ok]   saved draft seed-hello-world\n'; \
+	else \
+		printf '    [fail] save draft seed-hello-world\n'; \
+		exit 1; \
+	fi; \
+	pub_body='{"name":"seed-hello-world","type":"Process","status":"Published","version":"1","taskQueue":"default","description":"seeded by make seed (uuidV7 + formatMessage catalog helpers)"}'; \
+	if curl --silent --show-error --fail --max-time 15 -X POST "$$BFF/api/v1/dsl/drafts/seed-hello-world/publish" \
+			-H 'Content-Type: application/json' -d "$$pub_body" >/dev/null 2>&1; then \
+		printf '    [ok]   published seed-hello-world\n'; \
+	else \
+		printf '    [fail] publish seed-hello-world\n'; \
+		exit 1; \
+	fi; \
+	printf '    [ok]   runnable definition seed-hello-world ready (uses uuidV7 + formatMessage helpers)\n'; \
+	if curl --silent --show-error --fail --max-time 30 -X POST "$$BFF/api/v1/dsl/run/seed-hello-world" \
+			-H 'Content-Type: application/json' -d '{"body":{},"metadata":{"source":"make seed"}}' >/dev/null 2>&1; then \
+		printf '    [ok]   triggered sample run for seed-hello-world\n'; \
+	else \
+		printf '    [warn] could not trigger sample run for seed-hello-world (run it from the dashboard)\n'; \
+	fi
+
+.PHONY: seed-history
+seed-history: ## Seed up to 5 historical sample runs (seed-history-*, mixed statuses, idempotent)
+	@printf '\n==> Seeding historical sample runs (seed-history-*, cap 5)...\n'; \
+	BFF=$${BFF_BASE_URL:-http://localhost:3000}; \
+	if ! curl --silent --fail --max-time 5 "$$BFF" >/dev/null 2>&1; then \
+		printf '    [fail] BFF not reachable at %s — run: make up && make backend && make frontend (see: make doctor)\n' "$$BFF"; \
+		exit 1; \
+	fi; \
+	current=0; \
+	txs=""; \
+	txs=$$(curl --silent --max-time 5 "$$BFF/api/v1/dsl/transactions" 2>/dev/null) || txs=""; \
+	if [ -n "$$txs" ]; then \
+		if command -v jq >/dev/null 2>&1; then \
+			current=$$(printf '%s' "$$txs" | jq -e '[.. | select((.name? // "") | startswith("seed-history-"))] | length' 2>/dev/null || printf '0'); \
+		else \
+			current=$$(printf '%s' "$$txs" | grep -o 'seed-history-' | wc -l); \
+		fi; \
+	fi; \
+	current=$${current:-0}; \
+	if [ "$$current" -ge 5 ] 2>/dev/null; then \
+		printf '    [skip] already at cap (5) of seed-history-* runs\n'; \
+		exit 0; \
+	fi; \
+	remaining=$$((5 - $$current)); \
+	i=0; \
+	while [ "$$i" -lt "$$remaining" ]; do \
+		n=$$((5 - $$remaining + $$i + 1)); \
+		if curl --silent --show-error --max-time 30 -X POST "$$BFF/api/v1/dsl/run/seed-hello-world" \
+				-H 'Content-Type: application/json' \
+				-d "{\"body\":{},\"metadata\":{\"tag\":\"seed-history-$$n\"}}" >/dev/null 2>&1; then \
+			printf '    [ok]   seed-history-%d triggered\n' "$$n"; \
+		else \
+			printf '    [warn] seed-history-%d could not be triggered (best-effort, mixed statuses not guaranteed)\n' "$$n"; \
+		fi; \
+		i=$$((i+1)); \
+	done; \
+	printf '    Seeding history complete (up to %d runs).\n' "$$remaining"
