@@ -85,12 +85,14 @@ public class DslFileService {
       Path workspace = workspaceRoot();
       if (repository.exists(workspace, relativePath)) {
         String content = repository.read(workspace, relativePath);
-        return new FileContentResponse(relativePath, content, false, FileContentResponse.crc32(content));
+        return new FileContentResponse(relativePath, content, false,
+                FileContentResponse.crc32(content));
       }
       Path source = sourceRoot();
       if (repository.exists(source, relativePath)) {
         String content = repository.read(source, relativePath);
-        return new FileContentResponse(relativePath, content, false, FileContentResponse.crc32(content));
+        return new FileContentResponse(relativePath, content, false,
+                FileContentResponse.crc32(content));
       }
       throw new IOException("file not found: " + relativePath);
     } finally {

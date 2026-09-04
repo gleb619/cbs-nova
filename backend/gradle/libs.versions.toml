@@ -119,6 +119,9 @@ h2 = { module = "com.h2database:h2", version.ref = "h2" }
 caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
 jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit" }
 
+# -- YAML --
+snakeyaml = { module = "org.yaml:snakeyaml", version = "2.3" }
+
 [bundles]
 spring-web = ["spring-boot-starter-web", "spring-boot-starter-validation", "spring-boot-starter-actuator"]
 spring-test = ["spring-boot-starter-test", "assertj"]
