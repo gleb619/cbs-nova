@@ -293,11 +293,28 @@ In **Preview mode** `httpCall` is intercepted and recorded, not sent — see
 
 ---
 
-## Adding a helper to this page
+## Retry timing
 
-When a new helper ships, add a recipe to the section that matches its **use case**, not a new
-per-helper section. A recipe is: one or two sentences of problem statement, the minimal call
-snippet, and — if the helper is usually used in combination — one chained example.
+### Compute exponential backoff before retrying
+
+`backoff` computes a delay in milliseconds without blocking. Use the returned value to configure a
+Temporal `Timer` in a workflow, or `Thread.sleep` in preview/dev code; jitter is intentionally
+non-deterministic and must not be replayed as workflow state.
+
+```java
+BackoffOut delay = ctx.runHelper("backoff",
+        new BackoffIn(attempt, 1000L, 60000L, "full", null))
+        .as(BackoffOut.class);
+// Temporal Timer / Thread.sleep(delay.delayMillis())
+// retry with httpCall, then validateJson the response
+```
+
+Supported jitter strategies are `none`, `full`, `equal`, and `decorrelated`. The latter accepts a
+previous delay through `previousDelay` and is useful when retry contention is high.
+
+---
+
+## Adding a helper to this page
 
 ### extractXml
 
