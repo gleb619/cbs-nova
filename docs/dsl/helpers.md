@@ -104,6 +104,30 @@ HmacSha256SignOut sig = ctx.runHelper("hmacSha256Sign",
 // send header:  X-Cbs-Signature: sha256=<sig.signature()>
 ```
 
+### Hex-encode a fingerprint with `hex`
+
+`sha256` already returns lowercase hex by default, but `hex` (`HexIn(input, mode)`) is the
+general-purpose primitive when you have a hex string that is *not* a hash digest — a JWT segment,
+a content hash coming from another service, an opaque correlation token you need to compare in
+DSL land.
+
+```java
+HexOut raw = ctx.runHelper("hex", new HexIn(jwtSegment, "decode")).as(HexOut.class);
+String original = raw.result();        // back to the original UTF-8 string
+```
+
+Pairing `sha256` + `hex` for a content fingerprint when you want both the raw digest and a
+re-encoded form (e.g. normalized uppercase for an external system):
+
+```java
+Sha256Out digest = ctx.runHelper("sha256", new Sha256In(body, "hex")).as(Sha256Out.class);
+HexOut upper = ctx.runHelper("hex", new HexIn(digest.result(), "encode")).as(HexOut.class);
+String upperDigest = upper.result().toUpperCase(Locale.ROOT);
+```
+
+Empty input is rejected in both `encode` and `decode` modes; odd-length hex and
+non-hex characters surface as `IllegalArgumentException` at decode time.
+
 ### Chained example — AWS-style canonical request signing
 
 A real signing flow combines three helpers: a formatted timestamp, a payload hash, and the HMAC
