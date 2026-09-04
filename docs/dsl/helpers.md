@@ -319,3 +319,31 @@ FormatCsvOut csv = ctx.runHelper("formatCsv",
         new FormatCsvIn(rows, headerRow, new CsvOptions("\t", false, "\n")))
         .as(FormatCsvOut.class);
 ```
+
+## YAML in / YAML out
+
+`parseYaml` turns a YAML 1.2 document into a nested `Map<String, Object>` (maps stay maps,
+sequences become `List<Object>`, scalars become strings/numbers/booleans/null). `formatYaml` is
+the inverse — any nested `Map`/`List`/scalar tree serializes back to a canonical block-style
+YAML string with two-space indent.
+
+```java
+ParseYamlOut manifest = ctx.runHelper("parseYaml",
+        new ParseYamlIn(k8sPayload)).as(ParseYamlOut.class);
+Map<String, Object> spec = (Map<String, Object>) manifest.data().get("spec");
+int replicas = (Integer) spec.get("replicas");
+```
+
+```java
+FormatYamlOut yaml = ctx.runHelper("formatYaml",
+        new FormatYamlIn(Map.of("spec", Map.of("replicas", 3, "image", "nginx:1.27"))))
+        .as(FormatYamlOut.class);
+// yaml.yaml() == "spec:\n  replicas: 3\n  image: nginx:1.27\n"
+```
+
+YAML 1.2 semantics are enforced: only `true`/`false` parse as booleans — `yes`, `no`, `on`, and
+`off` remain plain strings (the YAML 1.1 trap). The loader is hardened against snakeyaml
+CVE-2017-18640 — a payload like `!!javax.scripting.ScriptEngineManager {}` is refused before any
+class is instantiated (`LoaderOptions` `TagInspector` rejects every global tag, plus
+`setAllowDuplicateKeys(false)`, `setMaxAliasesForCollections(50)`, and a 3 MiB
+`setCodePointLimit`).
