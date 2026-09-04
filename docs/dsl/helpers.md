@@ -388,3 +388,58 @@ CVE-2017-18640 — a payload like `!!javax.scripting.ScriptEngineManager {}` is 
 class is instantiated (`LoaderOptions` `TagInspector` rejects every global tag, plus
 `setAllowDuplicateKeys(false)`, `setMaxAliasesForCollections(50)`, and a 3 MiB
 `setCodePointLimit`).
+
+## Metrics
+
+`metric` registers a Micrometer meter against the host application's `MeterRegistry` bean (the
+same registry that the built-in `MetricsStage` writes its call / duration / external-call meters
+into). Four `type` values are supported, picked by a discriminator field on the input record:
+
+- `"counter"` — increments a `Counter` by `amount` (default `1`).
+- `"gauge"` — sets a `Gauge` backed by an in-memory holder; last call with the same `name` + `tags` wins.
+- `"timer"` — records a `Timer` of `durationMs` (non-negative).
+- `"summary"` — records `value` into a `DistributionSummary` (useful for payload sizes, token
+  counts, raw latencies that are already in milliseconds, etc.).
+
+### Emit a domain KPI on a successful outcome
+
+```java
+// After a successful "place order" branch:
+ctx.runHelper("metric",
+        new MetricIn("counter", "orders.placed.count", Map.of("channel", "web"), null, 1L, null))
+        .as(MetricOut.class);
+```
+
+### Count partner API timeouts (alongside the `httpCall` call site)
+
+```java
+try {
+    ctx.runHelper("httpCall", new HttpCallIn(...));
+} catch (HttpCallTransportException e) {
+    ctx.runHelper("metric",
+            new MetricIn("counter", "partnerapi.timeout.count",
+                    Map.of("partner", "acme"), null, 1L, null))
+            .as(MetricOut.class);
+    throw e;
+}
+```
+
+### Track partner API latency as a distribution summary
+
+```java
+long started = System.nanoTime();
+try {
+    ctx.runHelper("httpCall", new HttpCallIn(...));
+} finally {
+    long elapsedMs = (System.nanoTime() - started) / 1_000_000;
+    ctx.runHelper("metric",
+            new MetricIn("summary", "partnerapi.latency_ms",
+                    Map.of("partner", "acme"), (double) elapsedMs, null, null))
+            .as(MetricOut.class);
+}
+```
+
+`MetricOut.emitted` is `false` when the host application does not provide a `MeterRegistry` bean
+(e.g. it does not pull in the Spring Boot actuator starter) — the helper validates the input and
+no-ops, so the DSL above is safe to call unconditionally. Tag keys must not be `null`; tag values
+that are `null` are coerced to the empty string (Micrometer's `Tag.of` rejects null values).
