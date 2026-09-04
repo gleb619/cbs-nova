@@ -33,8 +33,8 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.List;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = IntegrationTestApplication.class, properties = {
-    "dsl.worker.enabled=true",
-    "dsl.task-queue=BatchProcessing-queue"})
+    "csb.dsl.worker.enabled=true",
+    "csb.dsl.task-queue=BatchProcessing-queue"})
 @Import(TemporalTestConfiguration.class)
 class DslExamplesEndToEndTest extends BaseContainers {
 

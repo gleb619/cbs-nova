@@ -11,6 +11,7 @@ import {
 } from '../useSidebar'
 
 const COLLAPSED_KEY = `${SIDEBAR_STORAGE_NAMESPACE}:collapsed`
+const HIDDEN_KEY = `${SIDEBAR_STORAGE_NAMESPACE}:hidden`
 const MOBILE_OPEN_KEY = `${SIDEBAR_STORAGE_NAMESPACE}:mobile-open`
 
 type Sidebar = ReturnType<typeof useSidebar>
@@ -76,6 +77,45 @@ describe('useSidebar', () => {
     expect(mobileOpen.value).toBe(true)
     closeMobile()
     expect(mobileOpen.value).toBe(false)
+  })
+
+  it('hide() forces collapsed and sets hidden', () => {
+    const { collapsed, hidden, hide } = useSidebar()
+    collapsed.value = false
+    hide()
+    expect(hidden.value).toBe(true)
+    expect(collapsed.value).toBe(true)
+  })
+
+  it('unhide() clears hidden and keeps the rail collapsed', () => {
+    const { collapsed, hidden, unhide } = useSidebar()
+    collapsed.value = false
+    hidden.value = true
+    unhide()
+    expect(hidden.value).toBe(false)
+    expect(collapsed.value).toBe(true)
+  })
+
+  it('toggleHidden() flips between hidden and collapsed-restored', () => {
+    const { collapsed, hidden, toggleHidden } = useSidebar()
+    collapsed.value = false
+    toggleHidden()
+    expect(hidden.value).toBe(true)
+    expect(collapsed.value).toBe(true)
+    toggleHidden()
+    expect(hidden.value).toBe(false)
+    expect(collapsed.value).toBe(true)
+  })
+
+  it('persists hidden state to localStorage', async () => {
+    useSidebar().hide()
+    await nextTick()
+    expect(window.localStorage.getItem(HIDDEN_KEY)).toBe('true')
+  })
+
+  it('restores hidden state from localStorage', () => {
+    window.localStorage.setItem(HIDDEN_KEY, 'true')
+    expect(useSidebar().hidden.value).toBe(true)
   })
 
   it('shares the fallback state between callers', () => {

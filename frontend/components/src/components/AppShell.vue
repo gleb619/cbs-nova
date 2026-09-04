@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { useSidebar } from '../composables/useSidebar'
 import AppMainContent from './AppMainContent.vue'
 import AppMobileDrawer from './AppMobileDrawer.vue'
 import AppNavbar from './AppNavbar.vue'
 import type { NavItem } from './AppSidebar.vue'
 import AppSidebar from './AppSidebar.vue'
+import AppSidebarRestoreHandle from './sidebar/AppSidebarRestoreHandle.vue'
 
 const props = defineProps<{
   pad?: boolean
@@ -13,6 +15,8 @@ const props = defineProps<{
   linkComponent?: 'a' | unknown
   activeClass?: string
 }>()
+
+const { hidden } = useSidebar()
 </script>
 
 <template>
@@ -50,5 +54,7 @@ const props = defineProps<{
       </AppMainContent>
       <slot name="footer" />
     </div>
+    <!-- Tiny floating tab appears only when the rail is dismissed. -->
+    <AppSidebarRestoreHandle v-if="hidden" />
   </div>
 </template>

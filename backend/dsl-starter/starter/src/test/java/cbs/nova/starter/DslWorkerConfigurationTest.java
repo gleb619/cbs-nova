@@ -30,7 +30,7 @@ class DslWorkerConfigurationTest {
   void workerBeanNotCreatedWhenDisabled() {
     new ApplicationContextRunner()
             .withUserConfiguration(DslPropertiesConfiguration.class, DslWorkerConfiguration.class)
-            .withPropertyValues("dsl.worker.enabled=false")
+            .withPropertyValues("csb.dsl.worker.enabled=false")
             .run(ctx -> assertThat(ctx).doesNotHaveBean(Worker.class));
   }
 
@@ -52,7 +52,7 @@ class DslWorkerConfigurationTest {
       new ApplicationContextRunner()
               .withUserConfiguration(DslPropertiesConfiguration.class,
                       TestableDslWorkerConfiguration.class, MockWorkflowClient.class)
-              .withPropertyValues("dsl.worker.enabled=true")
+              .withPropertyValues("csb.dsl.worker.enabled=true")
               .run(ctx -> {
                 assertThat(ctx).hasSingleBean(Worker.class);
                 assertThat(ctx).hasSingleBean(WorkerFactory.class);
@@ -78,7 +78,7 @@ class DslWorkerConfigurationTest {
       new ApplicationContextRunner()
               .withUserConfiguration(DslPropertiesConfiguration.class,
                       TestableDslWorkerConfiguration.class, MockWorkflowClient.class)
-              .withPropertyValues("dsl.worker.enabled=true")
+              .withPropertyValues("csb.dsl.worker.enabled=true")
               .run(ctx -> {
                 SmartLifecycle lifecycle = ctx.getBean(SmartLifecycle.class);
                 int readers = Runtime.getRuntime().availableProcessors() * 2;

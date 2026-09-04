@@ -47,8 +47,8 @@ import java.util.Map;
 
 /**
  * Functional handler for the DSL execution runs endpoint. Registered as a {@code RouterFunction}
- * bean by {@link DslExecutionsRouterConfiguration} rather than as a
- * hardcoded {@code @RestController}, following the same pattern as DSL reload and introspection.
+ * bean by {@link DslExecutionsRouterConfiguration} rather than as a hardcoded
+ * {@code @RestController}, following the same pattern as DSL reload and introspection.
  */
 @Component
 @Tag(name = "DSL Executions", description = "Inspect DSL execution runs")

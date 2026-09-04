@@ -34,7 +34,8 @@ public class DslFileService {
   private final DslFileBuffer buffer;
   private final DslFileBulkhead bulkhead;
 
-  //TODO: since app will be started in docker, we need some other way of lock, to prevent multi flush
+  // TODO: since app will be started in docker, we need some other way of lock, to prevent multi
+  // flush
   private final ReentrantLock flushLock = new ReentrantLock();
   private ScheduledExecutorService flushExecutor;
 

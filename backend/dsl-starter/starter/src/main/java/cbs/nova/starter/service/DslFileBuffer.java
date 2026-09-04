@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class DslFileBuffer {
 
-  //TODO: redo to caffeine, it can leaad to a memory leak now
+  // TODO: redo to caffeine, it can leaad to a memory leak now
   private final ConcurrentHashMap<String, String> pending = new ConcurrentHashMap<>();
 
   public void stage(String relativePath, String content) {

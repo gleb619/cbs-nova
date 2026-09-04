@@ -49,9 +49,8 @@ import java.util.stream.Stream;
 
 /**
  * Functional handler for the DSL reload endpoint. Registered as a {@code RouterFunction} bean by
- * {@link DslReloadRouterConfiguration} (gated by
- * {@code dsl.reload.enabled}, on by default) rather than as a hardcoded {@code @RestController}, so
- * host applications can opt out of exposing it.
+ * {@link DslReloadRouterConfiguration} (gated by {@code dsl.reload.enabled}, on by default) rather
+ * than as a hardcoded {@code @RestController}, so host applications can opt out of exposing it.
  *
  * <h2>Failure semantics</h2> Reload is failure-safe: the live {@link GlobalManager} singleton is
  * only replaced once the newly-compiled DSL set has been built and staged against a throwaway
@@ -65,7 +64,7 @@ import java.util.stream.Stream;
  * rejection that they have to retry.
  */
 @Component
-@ConditionalOnProperty(prefix = "dsl.reload", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "csb.dsl.reload", name = "enabled", havingValue = "true", matchIfMissing = true)
 @Slf4j
 public class DslReloadHandler {
 
@@ -108,7 +107,7 @@ public class DslReloadHandler {
     var sourceDirProperty = dslProperties.getSourceDir();
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
       return error(HttpStatus.CONFLICT, new ErrorResponse(
-              "NOT_CONFIGURED", "dsl.source-dir is not configured", null, null, null));
+              "NOT_CONFIGURED", "csb.dsl.source-dir is not configured", null, null, null));
     }
     var dir = Path.of(sourceDirProperty);
     if (!Files.isDirectory(dir)) {
@@ -145,7 +144,7 @@ public class DslReloadHandler {
   public LoadResult reloadDefinitions() throws IOException {
     var sourceDirProperty = dslProperties.getSourceDir();
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
-      throw new IllegalStateException("dsl.source-dir is not configured");
+      throw new IllegalStateException("csb.dsl.source-dir is not configured");
     }
     var dir = Path.of(sourceDirProperty);
     if (!Files.isDirectory(dir)) {

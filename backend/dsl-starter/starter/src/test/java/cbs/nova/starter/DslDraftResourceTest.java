@@ -330,7 +330,7 @@ class DslDraftResourceTest {
     new ApplicationContextRunner()
             .withUserConfiguration(DslDraftTestConfig.class,
                     DslDraftRouterConfiguration.class, DslDraftHandler.class)
-            .withPropertyValues("dsl.drafts.enabled=false")
+            .withPropertyValues("csb.dsl.drafts.enabled=false")
             .run(ctx -> assertThat(ctx).doesNotHaveBean(RouterFunction.class));
   }
 

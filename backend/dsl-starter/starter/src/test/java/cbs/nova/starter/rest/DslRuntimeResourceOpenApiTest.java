@@ -17,7 +17,7 @@ import org.springframework.web.context.WebApplicationContext;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-@SpringBootTest(classes = DslRuntimeResourceOpenApiTest.TestApplication.class, webEnvironment = SpringBootTest.WebEnvironment.MOCK, properties = "dsl.worker.enabled=false")
+@SpringBootTest(classes = DslRuntimeResourceOpenApiTest.TestApplication.class, webEnvironment = SpringBootTest.WebEnvironment.MOCK, properties = "csb.dsl.worker.enabled=false")
 class DslRuntimeResourceOpenApiTest {
 
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();

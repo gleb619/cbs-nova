@@ -63,7 +63,14 @@ export function useDslApi() {
 
   async function saveDraft(
     name: string,
-    payload: { name: string; type?: string; status?: string; version?: string; taskQueue?: string },
+    payload: {
+      name: string
+      type?: string
+      status?: string
+      version?: string
+      taskQueue?: string
+      description?: string
+    },
   ) {
     log.info('saveDraft request', { name })
     return $fetch(`/api/v1/dsl/drafts/${name}/save`, { method: 'POST', body: payload })
@@ -71,7 +78,14 @@ export function useDslApi() {
 
   async function publishDraft(
     name: string,
-    payload: { name: string; type?: string; status?: string; version?: string; taskQueue?: string },
+    payload: {
+      name: string
+      type?: string
+      status?: string
+      version?: string
+      taskQueue?: string
+      description?: string
+    },
   ) {
     log.info('publishDraft request', { name })
     return $fetch(`/api/v1/dsl/drafts/${name}/publish`, { method: 'POST', body: payload })
@@ -93,6 +107,14 @@ export function useDslApi() {
     return $fetch(`/api/v1/dsl/files/content/${name}`, {
       method: 'POST',
       body: { content },
+    })
+  }
+
+  async function updateDescription(name: string, description: string) {
+    log.info('updateDescription request', { name })
+    return $fetch(`/api/v1/dsl/definitions/${name}/description`, {
+      method: 'PATCH',
+      body: { description },
     })
   }
 
@@ -185,6 +207,7 @@ export function useDslApi() {
     deleteDraft,
     readDslFile,
     writeDslFile,
+    updateDescription,
     listDrafts,
     readDraft,
     listPublishHistory,

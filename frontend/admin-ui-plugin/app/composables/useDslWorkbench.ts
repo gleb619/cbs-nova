@@ -37,6 +37,10 @@ function normalizeConstruct(raw: Partial<DslConstruct> & { name: string }): DslC
     status: (raw.status as ConstructStatus) ?? 'Published',
     version: raw.version,
     taskQueue: raw.taskQueue,
+    inputType: raw.inputType,
+    outputType: raw.outputType,
+    hasCompensation: raw.hasCompensation,
+    description: raw.description,
     filePath: raw.filePath,
   }
 }
@@ -94,6 +98,23 @@ export function useDslWorkbench() {
       throw err
     } finally {
       constructsLoading.value = false
+    }
+  }
+
+  function updateConstruct(name: string, patch: Partial<DslConstruct>) {
+    const index = state.value.constructs.findIndex((c) => c.name === name)
+    if (index < 0) return
+    state.value.constructs[index] = { ...state.value.constructs[index], ...patch }
+  }
+
+  async function updateDescription(name: string, description: string) {
+    if (!name) return
+    updateConstruct(name, { description })
+    try {
+      await api.updateDescription(name, description)
+      log.info('description updated', { name })
+    } catch (err) {
+      log.error('failed to update description', { name, error: (err as Error).message })
     }
   }
 
@@ -157,6 +178,7 @@ export function useDslWorkbench() {
         status: 'Draft',
         version: selected?.version,
         taskQueue: selected?.taskQueue,
+        description: selected?.description,
       })
       if (selected) {
         selected.status = 'Draft'
@@ -188,6 +210,7 @@ export function useDslWorkbench() {
         status: 'Published',
         version: selected?.version,
         taskQueue: selected?.taskQueue,
+        description: selected?.description,
       })
       const diags = (result as { diagnostics?: CompileDiagnostic[] }).diagnostics
       const reloaded = (result as { reloaded?: boolean }).reloaded === true
@@ -260,6 +283,8 @@ export function useDslWorkbench() {
     selectedConstruct,
     loaders: readonly({ constructs: constructsLoading }),
     loadConstructs,
+    updateConstruct,
+    updateDescription,
     selectConstruct,
     createConstruct,
     saveConstruct,

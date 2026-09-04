@@ -33,7 +33,7 @@ import java.util.stream.Stream;
 
 @Slf4j
 @Component
-@ConditionalOnProperty(prefix = "dsl.files", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "csb.dsl.files", name = "enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 public class DslFileHandler {
 
@@ -254,7 +254,8 @@ public class DslFileHandler {
     String sourceDir = dslProperties.getSourceDir();
     if (sourceDir == null || sourceDir.isBlank()) {
       return new PathResult.Err(error(HttpStatus.CONFLICT,
-              new ErrorResponse("NOT_CONFIGURED", "dsl.source-dir is not configured", null, null,
+              new ErrorResponse("NOT_CONFIGURED", "csb.dsl.source-dir is not configured", null,
+                      null,
                       null)));
     }
     return new PathResult.Ok(null);

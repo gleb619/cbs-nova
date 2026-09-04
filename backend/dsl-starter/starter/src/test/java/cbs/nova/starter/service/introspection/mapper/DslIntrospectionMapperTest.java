@@ -232,7 +232,7 @@ class DslIntrospectionMapperTest {
     assertThat(dto.inputType()).isEqualTo("String");
     assertThat(dto.outputType()).isEqualTo("Integer");
     assertThat(dto.hasCompensation()).isNull();
-    assertThat(dto.description()).isNull();
+    assertThat(dto.description()).isEqualTo("desc");
     assertThat(dto.inputSchema()).isNull();
   }
 }

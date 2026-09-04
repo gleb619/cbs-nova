@@ -99,6 +99,8 @@ const schedulesCreateHandler = (await import('../dsl/schedules/index.post')).def
 const schedulesDeleteHandler = (await import('../dsl/schedules/[definition].delete')).default
 const exportDefinitionsHandler = (await import('../dsl/definitions/export.get')).default
 const importDefinitionsHandler = (await import('../dsl/definitions/import.post')).default
+const updateDescriptionHandler = (await import('../dsl/definitions/[name]/description.patch'))
+  .default
 const readDslFileHandler = (await import('../dsl/files/content/[name].get')).default
 const writeDslFileHandler = (await import('../dsl/files/content/[name].post')).default
 
@@ -167,6 +169,25 @@ describe('dsl/definitions.get', () => {
       'process',
       'transaction',
     ])
+  })
+})
+
+describe('dsl/definitions/[name]/description.patch', () => {
+  it('PATCHes /api/dsl/definitions/{name}/description with the body', async () => {
+    routerParams = { name: 'BatchProcessing' }
+    bodyValue = { description: 'Batch processing description' }
+
+    await updateDescriptionHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/definitions/BatchProcessing/description',
+      {
+        method: 'PATCH',
+        body: { description: 'Batch processing description' },
+      },
+    )
   })
 })
 

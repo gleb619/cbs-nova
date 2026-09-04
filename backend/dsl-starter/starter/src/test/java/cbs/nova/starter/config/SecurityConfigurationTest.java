@@ -54,7 +54,7 @@ class SecurityConfigurationTest {
 
   @Nested
   @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = SecurityConfigurationTest.TestApplication.class, properties = {
-      "dsl.worker.enabled=false"
+      "csb.dsl.worker.enabled=false"
   })
   class DefaultOffGuarantee {
 
@@ -113,7 +113,7 @@ class SecurityConfigurationTest {
   @Nested
   @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = SecurityConfigurationTest.GuardEnabledTestApp.class, properties = {
       "cbs.security.oidc.enabled=true",
-      "dsl.worker.enabled=false"
+      "csb.dsl.worker.enabled=false"
   })
   class GuardEnabled {
 

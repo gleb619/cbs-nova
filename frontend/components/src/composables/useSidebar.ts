@@ -3,6 +3,7 @@ import { createNamespacedLocalStorageState, type UseCookieFactory } from './useL
 
 export const SIDEBAR_STORAGE_NAMESPACE = 'cbs-nova:sidebar'
 export const SIDEBAR_COLLAPSED_KEY = 'collapsed'
+export const SIDEBAR_HIDDEN_KEY = 'hidden'
 export const SIDEBAR_MOBILE_OPEN_KEY = 'mobile-open'
 export const SIDEBAR_MOBILE_BREAKPOINT = 768
 
@@ -18,6 +19,7 @@ export interface SidebarStorageOptions {
 
 export interface SidebarState {
   collapsed: Ref<boolean>
+  hidden: Ref<boolean>
   mobileOpen: Ref<boolean>
   breakpoint: number
   /** Stops the persistence watchers. */
@@ -41,10 +43,14 @@ export function createSidebarState(options: SidebarStorageOptions = {}): Sidebar
   // plugin happened to create the state.
   const scope = effectScope(true)
   let collapsed: Ref<boolean> | undefined
+  let hidden: Ref<boolean> | undefined
   let mobileOpen: Ref<boolean> | undefined
 
   scope.run(() => {
     collapsed = useSidebarStorage<boolean>(SIDEBAR_COLLAPSED_KEY, false, {
+      useCookie: options.useCookie,
+    })
+    hidden = useSidebarStorage<boolean>(SIDEBAR_HIDDEN_KEY, false, {
       useCookie: options.useCookie,
     })
     mobileOpen = useSidebarStorage<boolean>(SIDEBAR_MOBILE_OPEN_KEY, false, {
@@ -54,6 +60,7 @@ export function createSidebarState(options: SidebarStorageOptions = {}): Sidebar
 
   return {
     collapsed: collapsed as Ref<boolean>,
+    hidden: hidden as Ref<boolean>,
     mobileOpen: mobileOpen as Ref<boolean>,
     breakpoint: options.breakpoint ?? SIDEBAR_MOBILE_BREAKPOINT,
     dispose: () => scope.stop(),
@@ -78,7 +85,7 @@ export function resetSidebarState(): void {
 }
 
 export function useSidebar() {
-  const { collapsed, mobileOpen, breakpoint } = resolveState()
+  const { collapsed, hidden, mobileOpen, breakpoint } = resolveState()
 
   function isMobileViewport(): boolean {
     if (typeof window === 'undefined') return false
@@ -93,6 +100,20 @@ export function useSidebar() {
   }
   function expand() {
     collapsed.value = false
+  }
+  /** Collapse and dismiss the rail entirely. Free up max horizontal space. */
+  function hide() {
+    collapsed.value = true
+    hidden.value = true
+  }
+  /** Restore the rail in collapsed form — never expand, never surprise. */
+  function unhide() {
+    hidden.value = false
+    collapsed.value = true
+  }
+  function toggleHidden() {
+    if (hidden.value) unhide()
+    else hide()
   }
   function openMobile() {
     mobileOpen.value = true
@@ -114,10 +135,14 @@ export function useSidebar() {
 
   return {
     collapsed,
+    hidden,
     mobileOpen,
     toggle,
     collapse,
     expand,
+    hide,
+    unhide,
+    toggleHidden,
     openMobile,
     closeMobile,
     toggleMobile,

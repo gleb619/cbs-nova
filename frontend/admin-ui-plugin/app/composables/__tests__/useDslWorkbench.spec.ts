@@ -15,6 +15,7 @@ const { dslApi, useDslApiMock } = vi.hoisted(() => {
     publishDraft: vi.fn(),
     deleteDraft: vi.fn(),
     validateConstruct: vi.fn(),
+    updateDescription: vi.fn(),
     readDslFile: vi.fn(),
     writeDslFile: vi.fn(),
   }
@@ -35,6 +36,7 @@ type ApiMock = {
   publishDraft: ReturnType<typeof vi.fn>
   deleteDraft: ReturnType<typeof vi.fn>
   validateConstruct: ReturnType<typeof vi.fn>
+  updateDescription: ReturnType<typeof vi.fn>
   readDslFile: ReturnType<typeof vi.fn>
   writeDslFile: ReturnType<typeof vi.fn>
 }
@@ -51,6 +53,7 @@ describe('useDslWorkbench', () => {
     api.publishDraft.mockReset()
     api.deleteDraft.mockReset()
     api.readDslFile.mockReset()
+    api.updateDescription.mockReset()
     api.writeDslFile.mockReset()
   })
 
@@ -419,6 +422,42 @@ describe('useDslWorkbench', () => {
 
       expect(wb.state.value.isDirty).toBe(false)
       expect(dslApi.saveDraft).not.toHaveBeenCalled()
+    })
+  })
+})
+
+describe('normalizeConstruct', () => {
+  it('preserves all fields returned by the backend', async () => {
+    const api = getApi()
+    api.getDefinitions.mockResolvedValueOnce([
+      {
+        name: 'BatchProcessing',
+        type: 'Process',
+        status: 'Published',
+        version: 'v1',
+        taskQueue: 'BatchProcessing-queue',
+        inputType: 'BatchIn',
+        outputType: 'BatchOut',
+        hasCompensation: false,
+        description: 'Summarizes a batch of items.',
+        filePath: 'dsl/BatchProcessingDsl.java',
+      },
+    ])
+
+    const wb = useDslWorkbench()
+    await wb.loadConstructs()
+
+    expect(wb.selectedConstruct.value).toEqual({
+      name: 'BatchProcessing',
+      type: 'Process',
+      status: 'Published',
+      version: 'v1',
+      taskQueue: 'BatchProcessing-queue',
+      inputType: 'BatchIn',
+      outputType: 'BatchOut',
+      hasCompensation: false,
+      description: 'Summarizes a batch of items.',
+      filePath: 'dsl/BatchProcessingDsl.java',
     })
   })
 })

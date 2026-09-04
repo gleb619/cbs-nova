@@ -19,7 +19,7 @@ import java.util.Map;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Sql(scripts = {"classpath:db/migration/h2/V1__init.sql", "classpath:sql/truncate-dsl-tables.sql"})
 @TestPropertySource(properties = {
-    "dsl.worker.enabled=false"
+    "csb.dsl.worker.enabled=false"
 })
 class JdbcTransactionExecutionRepositoryTest {
 

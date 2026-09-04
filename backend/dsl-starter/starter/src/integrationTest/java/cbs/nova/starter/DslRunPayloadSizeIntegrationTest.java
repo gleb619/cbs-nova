@@ -41,7 +41,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = IntegrationTestApplication.class, properties = {
-    "dsl.worker.enabled=false",
+    "csb.dsl.worker.enabled=false",
     "cbs.runs.max-input-bytes=100",
     "cbs.runs.max-output-bytes=50",
     "cbs.nova.process.async-db-save=false"

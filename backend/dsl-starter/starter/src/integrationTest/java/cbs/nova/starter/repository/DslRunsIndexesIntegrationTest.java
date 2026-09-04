@@ -32,7 +32,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
 @SpringBootTest(classes = IntegrationTestApplication.class, properties = {
-    "dsl.worker.enabled=false"})
+    "csb.dsl.worker.enabled=false"})
 class DslRunsIndexesIntegrationTest {
 
   private static final String TABLE = "dsl_runs";

@@ -27,10 +27,10 @@ class DslPropertiesTest {
   void customValuesAreBound() {
     runner
             .withPropertyValues(
-                    "dsl.source-dir=/tmp/dsl",
-                    "dsl.task-queue=custom-queue",
-                    "dsl.worker.enabled=true",
-                    "dsl.reload.enabled=false")
+                    "csb.dsl.source-dir=/tmp/dsl",
+                    "csb.dsl.task-queue=custom-queue",
+                    "csb.dsl.worker.enabled=true",
+                    "csb.dsl.reload.enabled=false")
             .run(ctx -> {
               DslProperties properties = ctx.getBean(DslProperties.class);
               assertThat(properties.getSourceDir()).isEqualTo("/tmp/dsl");
@@ -44,10 +44,10 @@ class DslPropertiesTest {
   void kebabCaseAndCamelCaseAreEquivalent() {
     runner
             .withPropertyValues(
-                    "dsl.sourceDir=/tmp/dsl-camel",
-                    "dsl.task-queue=kebab-queue",
-                    "dsl.worker.enabled=true",
-                    "dsl.reload.enabled=false")
+                    "csb.dsl.sourceDir=/tmp/dsl-camel",
+                    "csb.dsl.task-queue=kebab-queue",
+                    "csb.dsl.worker.enabled=true",
+                    "csb.dsl.reload.enabled=false")
             .run(ctx -> {
               DslProperties properties = ctx.getBean(DslProperties.class);
               assertThat(properties.getSourceDir()).isEqualTo("/tmp/dsl-camel");

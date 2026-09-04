@@ -8,6 +8,7 @@ import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.ProcessDiagramDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.servlet.function.ServerRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.servlet.function.ServerResponse;
 
 import java.util.List;
@@ -73,5 +74,33 @@ public class DslIntrospectionHandler {
   public ServerResponse definitions(ServerRequest request) {
     List<DefinitionMetaDto> aggregate = service.definitions();
     return ServerResponse.ok().body(aggregate);
+  }
+
+  public ServerResponse updateDescription(ServerRequest request) {
+    String name = request.pathVariable("name");
+    DescriptionUpdate body;
+    try {
+      body = request.body(DescriptionUpdate.class);
+    } catch (Exception e) {
+      return ServerResponse.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("INVALID_REQUEST",
+              "description is required", e.getMessage()));
+    }
+    if (body == null || body.description() == null) {
+      return ServerResponse.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("INVALID_REQUEST",
+              "description is required", name));
+    }
+    try {
+      service.updateDescription(name, body.description());
+      return ServerResponse.ok().build();
+    } catch (IllegalArgumentException e) {
+      return ServerResponse.status(HttpStatus.NOT_FOUND)
+              .body(new ErrorResponse("NOT_FOUND", e.getMessage(), name));
+    }
+  }
+
+  private record DescriptionUpdate(String description) {
+  }
+
+  private record ErrorResponse(String code, String message, Object details) {
   }
 }

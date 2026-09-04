@@ -17,7 +17,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Map;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "dsl.worker.enabled=false")
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "csb.dsl.worker.enabled=false")
 class TemporalDslProcessMetricsActuatorTest {
 
   private static final HttpClient CLIENT = HttpClient.newBuilder()

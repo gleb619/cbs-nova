@@ -101,7 +101,7 @@ class DslReloadResourceTest {
     new ApplicationContextRunner()
             .withUserConfiguration(DslPropertiesConfiguration.class,
                     DslReloadRouterConfiguration.class, DslReloadHandler.class)
-            .withPropertyValues("dsl.reload.enabled=false")
+            .withPropertyValues("csb.dsl.reload.enabled=false")
             .run(ctx -> assertThat(ctx).doesNotHaveBean(RouterFunction.class));
   }
 

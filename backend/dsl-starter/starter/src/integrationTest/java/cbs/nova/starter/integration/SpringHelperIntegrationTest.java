@@ -21,7 +21,7 @@ import org.springframework.context.ApplicationContext;
     "spring.flyway.enabled=false",
     "spring.sql.init.mode=never",
     "temporal.connection-target=127.0.0.1:1",
-    "dsl.worker.enabled=false"
+    "csb.dsl.worker.enabled=false"
 })
 public class SpringHelperIntegrationTest {
 

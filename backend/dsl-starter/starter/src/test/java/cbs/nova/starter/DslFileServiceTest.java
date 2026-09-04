@@ -35,7 +35,7 @@ class DslFileServiceTest {
     String sourceDir = properties.getSourceDir();
     var sourceRoot = Path.of(sourceDir).normalize();
     var workspaceRoot = sourceRoot.resolve(".workbench")
-        .resolve("drafts-fs").normalize();
+            .resolve("drafts-fs").normalize();
 
     DslWorkspaceResolver resolver = new DefaultDslWorkspaceResolver(sourceRoot, workspaceRoot);
     DslFileRepository repository = new DslFileRepository();

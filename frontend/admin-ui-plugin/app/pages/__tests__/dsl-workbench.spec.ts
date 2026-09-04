@@ -55,6 +55,7 @@ interface WorkbenchApiShape {
   publishConstruct: ReturnType<typeof vi.fn>
   deleteConstruct: ReturnType<typeof vi.fn>
   reloadDefinitions: ReturnType<typeof vi.fn>
+  updateDescription: ReturnType<typeof vi.fn>
   markDirty: ReturnType<typeof vi.fn>
   markClean: ReturnType<typeof vi.fn>
 }
@@ -162,6 +163,7 @@ const harness: WorkbenchApiShape = (() => {
     publishConstruct: vi.fn(async () => undefined),
     deleteConstruct: vi.fn(async () => undefined),
     reloadDefinitions: vi.fn(async () => undefined),
+    updateDescription: vi.fn(async () => undefined),
     markDirty: vi.fn(() => {
       state.isDirty = true
     }),

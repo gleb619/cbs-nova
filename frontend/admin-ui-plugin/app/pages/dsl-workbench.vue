@@ -50,6 +50,7 @@ const {
   publishConstruct,
   deleteConstruct,
   reloadDefinitions,
+  updateDescription,
   markDirty,
 } = workbench
 
@@ -438,17 +439,15 @@ onBeforeUnmount(() => {
       </aside>
 
       <main class="flex-1 flex flex-col overflow-hidden">
-        <DslMetadataPanel :construct="selectedConstruct" />
+        <DslMetadataPanel
+          :construct="selectedConstruct"
+          :loading="fileCodeLoading"
+          @update:description="desc => updateDescription(selectedConstruct?.name ?? '', desc)"
+        />
         <div v-if="restoredFromDraft && !isFileBacked" class="px-3 pt-2">
           <DslDraftRestoreBanner :saved-at="draftSavedAt" @discard="clearDraft" />
         </div>
-        <div
-          v-if="fileCodeLoading"
-          class="px-3 pt-2 text-xs text-gray-500"
-          data-testid="workbench-file-loading"
-        >
-          Loading source file…
-        </div>
+
         <div v-if="deleteError" class="px-3 pt-2" data-testid="dsl-workbench-delete-error">
           <ErrorBanner :message="deleteError" @retry="confirmDelete" />
         </div>

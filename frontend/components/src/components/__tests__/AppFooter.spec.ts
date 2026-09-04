@@ -67,4 +67,46 @@ describe('AppFooter', () => {
       'https://github.com/cbs-nova/cbs-nova/blob/main/docs/architecture.md',
     )
   })
+
+  it('renders the three priority sections with the right test ids', () => {
+    const wrapper = mount(AppFooter, {
+      props: {
+        gitInfo: {
+          branch: 'main',
+          commit: { id: 'abc1234' },
+          dirty: false,
+        },
+      },
+    })
+    expect(wrapper.find('[data-testid="app-footer-copyright"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="app-footer-links"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="app-footer-git"]').exists()).toBe(true)
+  })
+
+  it('priority 1 stays visible at every breakpoint; priority 2/3 hide below their breakpoint', () => {
+    const wrapper = mount(AppFooter, {
+      props: {
+        gitInfo: {
+          branch: 'main',
+          commit: { id: 'abc1234' },
+          dirty: false,
+        },
+      },
+    })
+    const copyrightClasses = wrapper.find('[data-testid="app-footer-copyright"]').classes()
+    const gitClasses = wrapper.find('[data-testid="app-footer-git"]').classes()
+    const linksClasses = wrapper.find('[data-testid="app-footer-links"]').classes()
+
+    // priority 1 = always visible, no responsive-hidden prefix
+    expect(copyrightClasses).toContain('flex')
+    expect(copyrightClasses).not.toContain('hidden')
+
+    // priority 2 = hidden below sm
+    expect(gitClasses).toContain('hidden')
+    expect(gitClasses).toContain('sm:flex')
+
+    // priority 3 = hidden below md
+    expect(linksClasses).toContain('hidden')
+    expect(linksClasses).toContain('md:flex')
+  })
 })

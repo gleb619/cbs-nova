@@ -101,7 +101,8 @@ class DslFileHandlerTest {
 
       registerProvider("InvoiceGeneration", "InvoiceGenerationDsl.java");
       when(fileService.readFile("dsl/InvoiceGenerationDsl.java"))
-              .thenReturn(new FileContentResponse("dsl/InvoiceGenerationDsl.java", "step {}", false));
+              .thenReturn(
+                      new FileContentResponse("dsl/InvoiceGenerationDsl.java", "step {}", false));
 
       ServerResponse response = handler.readByName(
               request("GET", "/api/dsl/files/by-name/InvoiceGeneration", "InvoiceGeneration"));

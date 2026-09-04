@@ -128,12 +128,15 @@ public class DslConfiguration {
   public DslWorkspaceResolver dslWorkspaceResolver(DslProperties dslProperties) {
     String sourceDir = dslProperties.getSourceDir();
     if (sourceDir == null || sourceDir.isBlank()) {
-      throw new IllegalStateException("dsl.source-dir is not configured");
+      throw new IllegalStateException("csb.dsl.source-dir is not configured");
     }
+    Path currentPath = Path.of(".").normalize().toAbsolutePath();
+    log.info("[DEBUG] Current path is: {}", currentPath);
+
     var sourceRoot = Path.of(sourceDir).normalize();
-    //TODO: move hardcoded path to app.yml
+    // TODO: move hardcoded path to app.yml
     var workspaceRoot = sourceRoot.resolve(".workbench")
-        .resolve("drafts-fs").normalize();
+            .resolve("drafts-fs").normalize();
 
     return new DefaultDslWorkspaceResolver(sourceRoot, workspaceRoot);
   }
@@ -156,7 +159,7 @@ public class DslConfiguration {
 
   private void initRegistry() {
     DslConfig.dslConfig().generatedClassRegistry()
-        .init(GlobalManager.globalManager().defaultClassLoader());
+            .init(GlobalManager.globalManager().defaultClassLoader());
   }
 
   private void loadDsl(DslDefinitionLoader loader) {

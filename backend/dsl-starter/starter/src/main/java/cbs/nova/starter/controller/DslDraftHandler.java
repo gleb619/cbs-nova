@@ -37,7 +37,7 @@ import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
 @Component
-@ConditionalOnProperty(prefix = "dsl.drafts", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "csb.dsl.drafts", name = "enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 public class DslDraftHandler {
 
@@ -352,7 +352,8 @@ public class DslDraftHandler {
     var sourceDirProperty = dslProperties.getSourceDir();
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
       return new PathResult.Err(error(HttpStatus.CONFLICT,
-              new ErrorResponse("NOT_CONFIGURED", "dsl.source-dir is not configured", name, null,
+              new ErrorResponse("NOT_CONFIGURED", "csb.dsl.source-dir is not configured", name,
+                      null,
                       null)));
     }
     Path dir = Path.of(sourceDirProperty);

@@ -9,9 +9,9 @@ import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
+import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructBodyDto;
-import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperCatalogEntry;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.HelpersResponse;
@@ -29,6 +29,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +38,7 @@ public class DslIntrospectionService {
   private final JsonSchemaGenerator jsonSchemaGenerator;
   private final DslIntrospectionMapper mapper;
   private final DslDefinitionStatusResolver statusResolver;
+  private final ConcurrentHashMap<String, String> descriptionOverrides = new ConcurrentHashMap<>();
 
   public NamesResponse processes() {
     return new NamesResponse(GlobalManager.globalManager().processNames());
@@ -45,7 +47,8 @@ public class DslIntrospectionService {
   public Optional<ProcessDetail> processDetail(String name) {
     return GlobalManager.globalManager()
             .findProcess(name)
-            .map(this::toProcessDetail);
+            .map(this::toProcessDetail)
+            .map(p -> applyDescription(name, p));
   }
 
   public NamesResponse transactions() {
@@ -55,7 +58,8 @@ public class DslIntrospectionService {
   public Optional<TransactionDetail> transactionDetail(String name) {
     return GlobalManager.globalManager()
             .findTransaction(name)
-            .map(this::toTransactionDetail);
+            .map(this::toTransactionDetail)
+            .map(t -> applyDescription(name, t));
   }
 
   public List<HelperSearchResult> searchObjects(String name, String type, String description) {
@@ -129,20 +133,43 @@ public class DslIntrospectionService {
 
     List<DefinitionMetaDto> aggregate = new ArrayList<>();
     gm.processNames().forEach(n -> gm.findProcess(n).ifPresent(p -> {
-      aggregate.add(mapper.toProcessDefinitionMeta(p, inputSchema(p), status(n, statuses),
-              gm.findFilename(n).orElse(null)));
+      aggregate.add(applyDescription(n,
+              mapper.toProcessDefinitionMeta(p, inputSchema(p), status(n, statuses),
+                      gm.findFilename(n).orElse(null))));
     }));
     gm.transactionNames().forEach(n -> gm.findTransaction(n).ifPresent(t -> {
-      aggregate.add(mapper.toTransactionDefinitionMeta(t, inputSchema(t), status(n, statuses),
-              gm.findFilename(n).orElse(null)));
+      aggregate.add(applyDescription(n,
+              mapper.toTransactionDefinitionMeta(t, inputSchema(t), status(n, statuses),
+                      gm.findFilename(n).orElse(null))));
     }));
     gm.helperNames().forEach(n -> {
-      gm.describeHelper(n).ifPresent(d -> aggregate.add(mapper.toHelperDefinitionMeta(n, d,
-              null, status(n, statuses), null)));
-      gm.describeFunction(n).ifPresent(d -> aggregate.add(mapper.toFunctionDefinitionMeta(d,
-              null, status(n, statuses), null)));
+      gm.describeHelper(n)
+              .ifPresent(d -> aggregate.add(applyDescription(n, mapper.toHelperDefinitionMeta(n, d,
+                      null, status(n, statuses), null))));
+      gm.describeFunction(n)
+              .ifPresent(d -> aggregate.add(applyDescription(n, mapper.toFunctionDefinitionMeta(d,
+                      null, status(n, statuses), null))));
     });
     return aggregate;
+  }
+
+  public void updateDescription(String name, String description) {
+    if (!isRegistered(name)) {
+      throw new IllegalArgumentException("Unknown construct: " + name);
+    }
+    if (description == null || description.isBlank()) {
+      descriptionOverrides.remove(name);
+    } else {
+      descriptionOverrides.put(name, description);
+    }
+  }
+
+  private boolean isRegistered(String name) {
+    var gm = GlobalManager.globalManager();
+    return gm.findProcess(name).isPresent()
+            || gm.findTransaction(name).isPresent()
+            || gm.describeHelper(name).isPresent()
+            || gm.describeFunction(name).isPresent();
   }
 
   private DefinitionStatus status(String name, Map<String, DefinitionStatus> statuses) {
@@ -194,5 +221,20 @@ public class DslIntrospectionService {
       return desc.toLowerCase(Locale.ROOT).contains(description.toLowerCase(Locale.ROOT));
     }
     return true;
+  }
+
+  private DefinitionMetaDto applyDescription(String name, DefinitionMetaDto dto) {
+    String override = descriptionOverrides.get(name);
+    return override != null ? dto.withDescription(override) : dto;
+  }
+
+  private ProcessDetail applyDescription(String name, ProcessDetail dto) {
+    String override = descriptionOverrides.get(name);
+    return override != null ? dto.withDescription(override) : dto;
+  }
+
+  private TransactionDetail applyDescription(String name, TransactionDetail dto) {
+    String override = descriptionOverrides.get(name);
+    return override != null ? dto.withDescription(override) : dto;
   }
 }

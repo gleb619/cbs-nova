@@ -4,8 +4,8 @@ import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
-import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
+import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.ProcessDetail;
 import cbs.nova.starter.model.DslIntrospectionModels.TransactionDetail;
@@ -26,18 +26,21 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
   @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
   @Mapping(target = "hasCompensation", expression = "java(source.compensationLogic() != null)")
+  @Mapping(target = "description", expression = "java(source.describe().description())")
   @Mapping(target = "inputSchema", ignore = true)
   ProcessDetail toProcessDetail(ProcessDslObject source);
 
   @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
   @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
   @Mapping(target = "hasCompensation", expression = "java(source.compensationLogic() != null)")
+  @Mapping(target = "description", expression = "java(source.describe().description())")
   @Mapping(target = "inputSchema", source = "inputSchema")
   ProcessDetail toProcessDetail(ProcessDslObject source, Map<String, Object> inputSchema);
 
   @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
   @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
   @Mapping(target = "hasCompensation", expression = "java(source.compensationLogic() != null)")
+  @Mapping(target = "description", expression = "java(source.describe().description())")
   @Mapping(target = "startToCloseTimeoutMs", expression = "java(source.startToCloseTimeout().toMillis())")
   @Mapping(target = "inputSchema", ignore = true)
   TransactionDetail toTransactionDetail(TransactionDslObject source);
@@ -45,6 +48,7 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
   @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
   @Mapping(target = "hasCompensation", expression = "java(source.compensationLogic() != null)")
+  @Mapping(target = "description", expression = "java(source.describe().description())")
   @Mapping(target = "startToCloseTimeoutMs", expression = "java(source.startToCloseTimeout().toMillis())")
   @Mapping(target = "inputSchema", source = "inputSchema")
   TransactionDetail toTransactionDetail(TransactionDslObject source,
@@ -142,7 +146,7 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "inputType", expression = "java(typeName(descriptor.inputType()))")
   @Mapping(target = "outputType", expression = "java(typeName(descriptor.outputType()))")
   @Mapping(target = "hasCompensation", ignore = true)
-  @Mapping(target = "description", ignore = true)
+  @Mapping(target = "description", source = "descriptor.description")
   @Mapping(target = "inputSchema", ignore = true)
   @Mapping(target = "status", ignore = true)
   DefinitionMetaDto toHelperDefinitionMeta(String name, ExecutableDescriptor descriptor);
@@ -154,7 +158,7 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "inputType", expression = "java(typeName(descriptor.inputType()))")
   @Mapping(target = "outputType", expression = "java(typeName(descriptor.outputType()))")
   @Mapping(target = "hasCompensation", ignore = true)
-  @Mapping(target = "description", ignore = true)
+  @Mapping(target = "description", source = "descriptor.description")
   @Mapping(target = "inputSchema", source = "inputSchema")
   @Mapping(target = "status", source = "status")
   @Mapping(target = "filePath", source = "filePath")

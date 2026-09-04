@@ -85,7 +85,7 @@ public class TemporalDslProcessService {
   private final RunIdentityResolver runIdentityResolver;
   private final Optional<WebhookDispatcher> webhookDispatcher;
 
-  //TODO: use only lomboks constructor
+  // TODO: use only lomboks constructor
   @Deprecated(forRemoval = true)
   public TemporalDslProcessService(ContextFactory contextFactory, DslRunRepository runRepository,
           ObjectMapper objectMapper,
@@ -97,7 +97,7 @@ public class TemporalDslProcessService {
             runIdentityResolver, Optional.empty());
   }
 
-  //TODO: use only lomboks constructor
+  // TODO: use only lomboks constructor
   public TemporalDslProcessService(ContextFactory contextFactory, DslRunRepository runRepository,
           ObjectMapper objectMapper,
           ThreadPoolTaskExecutor dslProcessExecutor, ScheduledExecutorService healthcheckExecutor,
@@ -109,7 +109,7 @@ public class TemporalDslProcessService {
             runIdentityResolver, Optional.empty());
   }
 
-  //TODO: use only lomboks constructor
+  // TODO: use only lomboks constructor
   public TemporalDslProcessService(ContextFactory contextFactory, DslRunRepository runRepository,
           ObjectMapper objectMapper,
           ThreadPoolTaskExecutor dslProcessExecutor, ScheduledExecutorService healthcheckExecutor,
@@ -151,7 +151,7 @@ public class TemporalDslProcessService {
    * Sets the OpenTelemetry instance used for DSL run tracing. Defaults to a no-op implementation;
    * when left unset, tracing is completely disabled.
    */
-  //TODO: use constructor
+  // TODO: use constructor
   @Deprecated(forRemoval = true)
   public void setOpenTelemetry(OpenTelemetry openTelemetry) {
     this.openTelemetry = openTelemetry != null ? openTelemetry : OpenTelemetry.noop();
@@ -463,8 +463,9 @@ public class TemporalDslProcessService {
       recordRunComplete(processName, status, startedAt, finishedAt);
 
       webhookDispatcher.ifPresent(
-          dispatcher -> dispatcher.onRunComplete(runId, processName, status, startedAt, finishedAt,
-              finalError));
+              dispatcher -> dispatcher.onRunComplete(runId, processName, status, startedAt,
+                      finishedAt,
+                      finalError));
 
       return result;
     } finally {

@@ -12,12 +12,11 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class DslFileBulkhead {
 
-  //TODO: redo to use a some `DslProperties` property instead of hardcode
+  // TODO: redo to use a some `DslProperties` property instead of hardcode
   private static final long ACQUIRE_TIMEOUT_SECONDS = 5L;
 
   private final Semaphore readSemaphore;
   private final Semaphore writeSemaphore;
-
 
   public void acquireRead() {
     try {
