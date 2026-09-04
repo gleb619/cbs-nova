@@ -182,13 +182,43 @@ const expectedProxies: readonly ExpectedProxy[] = [
   // DslFileRouterConfiguration
   {
     method: 'GET',
+    backendPath: '/api/dsl/files',
+    bffPath: '/api/v1/dsl/files',
+  },
+  {
+    method: 'GET',
     backendPath: '/api/dsl/files/by-name/{name}',
-    bffPath: '/api/v1/dsl/files/content/{name}',
+    bffPath: '/api/v1/dsl/files/by-name/{name}',
   },
   {
     method: 'POST',
     backendPath: '/api/dsl/files/by-name/{name}',
-    bffPath: '/api/v1/dsl/files/content/{name}',
+    bffPath: '/api/v1/dsl/files/by-name/{name}',
+  },
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/files/{*path}',
+    bffPath: '/api/v1/dsl/files/{...path}',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/files/bulk',
+    bffPath: '/api/v1/dsl/files/bulk',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/files/flush',
+    bffPath: '/api/v1/dsl/files/flush',
+  },
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/files/status',
+    bffPath: '/api/v1/dsl/files/status',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/files/{*path}',
+    bffPath: '/api/v1/dsl/files/{...path}',
   },
   // DslExecutionsRouterConfiguration
   {

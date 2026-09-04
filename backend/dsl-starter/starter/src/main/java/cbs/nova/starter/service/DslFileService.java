@@ -78,19 +78,19 @@ public class DslFileService {
     ensureRoot();
     String staged = buffer.get(relativePath);
     if (staged != null) {
-      return new FileContentResponse(relativePath, staged, true);
+      return new FileContentResponse(relativePath, staged, true, FileContentResponse.crc32(staged));
     }
     bulkhead.acquireRead();
     try {
       Path workspace = workspaceRoot();
       if (repository.exists(workspace, relativePath)) {
         String content = repository.read(workspace, relativePath);
-        return new FileContentResponse(relativePath, content, false);
+        return new FileContentResponse(relativePath, content, false, FileContentResponse.crc32(content));
       }
       Path source = sourceRoot();
       if (repository.exists(source, relativePath)) {
         String content = repository.read(source, relativePath);
-        return new FileContentResponse(relativePath, content, false);
+        return new FileContentResponse(relativePath, content, false, FileContentResponse.crc32(content));
       }
       throw new IOException("file not found: " + relativePath);
     } finally {

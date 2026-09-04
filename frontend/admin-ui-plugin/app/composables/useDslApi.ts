@@ -98,13 +98,13 @@ export function useDslApi() {
 
   async function readDslFile(name: string) {
     log.info('readDslFile request', { name })
-    const result = await $fetch(`/api/v1/dsl/files/content/${name}`)
+    const result = await $fetch(`/api/v1/dsl/files/by-name/${name}`)
     return (result as { content?: string }).content ?? ''
   }
 
   async function writeDslFile(name: string, content: string) {
     log.info('writeDslFile request', { name })
-    return $fetch(`/api/v1/dsl/files/content/${name}`, {
+    return $fetch(`/api/v1/dsl/files/by-name/${name}`, {
       method: 'POST',
       body: { content },
     })

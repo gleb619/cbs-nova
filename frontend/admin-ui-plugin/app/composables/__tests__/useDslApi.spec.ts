@@ -255,23 +255,23 @@ describe('useDslApi', () => {
     })
   })
 
-  it('readDslFile GETs /api/v1/dsl/files/content/{name} and returns content', async () => {
+  it('readDslFile GETs /api/v1/dsl/files/by-name/{name} and returns content', async () => {
     fetchMock.mockResolvedValueOnce({ path: 'LoanDsl.java', content: 'class A {}', pending: false })
     const api = useDslApi()
 
     const result = await api.readDslFile('LoanDsl')
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/files/content/LoanDsl')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/files/by-name/LoanDsl')
     expect(result).toBe('class A {}')
   })
 
-  it('writeDslFile POSTs content to /api/v1/dsl/files/content/{name}', async () => {
+  it('writeDslFile POSTs content to /api/v1/dsl/files/by-name/{name}', async () => {
     fetchMock.mockResolvedValueOnce({ ok: true })
     const api = useDslApi()
 
     const result = await api.writeDslFile('LoanDsl', 'public class LoanDsl {}')
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/files/content/LoanDsl', {
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/files/by-name/LoanDsl', {
       method: 'POST',
       body: { content: 'public class LoanDsl {}' },
     })

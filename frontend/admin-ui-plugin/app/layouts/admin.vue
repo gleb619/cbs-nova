@@ -9,8 +9,18 @@ import {
   useSavedDrafts,
 } from '@cbs/components'
 import { navigateTo, useRoute } from 'nuxt/app'
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
 import { NuxtLink } from '#components'
+
+function handleSaveHotkey(event: KeyboardEvent) {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+    event.preventDefault()
+    window.dispatchEvent(new CustomEvent('dsl:save'))
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', handleSaveHotkey))
+onBeforeUnmount(() => window.removeEventListener('keydown', handleSaveHotkey))
 
 const route = useRoute()
 const { data: info } = useAdminInfo()

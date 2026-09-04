@@ -101,8 +101,14 @@ const exportDefinitionsHandler = (await import('../dsl/definitions/export.get'))
 const importDefinitionsHandler = (await import('../dsl/definitions/import.post')).default
 const updateDescriptionHandler = (await import('../dsl/definitions/[name]/description.patch'))
   .default
-const readDslFileHandler = (await import('../dsl/files/content/[name].get')).default
-const writeDslFileHandler = (await import('../dsl/files/content/[name].post')).default
+const listDslFilesHandler = (await import('../dsl/files/index.get')).default
+const readDslFileByNameHandler = (await import('../dsl/files/by-name/[name].get')).default
+const writeDslFileByNameHandler = (await import('../dsl/files/by-name/[name].post')).default
+const readDslFilePathHandler = (await import('../dsl/files/[...path].get')).default
+const writeDslFilePathHandler = (await import('../dsl/files/[...path].post')).default
+const bulkWriteDslFilesHandler = (await import('../dsl/files/bulk.post')).default
+const flushDslFilesHandler = (await import('../dsl/files/flush.post')).default
+const dslFileStatusHandler = (await import('../dsl/files/status.get')).default
 
 // Minimal H3Event stub. The route handlers only pass this through to
 // proxyToBackend, which is mocked, so a plain object is sufficient.
@@ -875,11 +881,21 @@ describe('executions/export.get', () => {
     )
   })
 })
-describe('dsl/files/content/[name].get', () => {
+describe('dsl/files/index.get', () => {
+  it('GETs the backend files list path', async () => {
+    await listDslFilesHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/files')
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+})
+
+describe('dsl/files/by-name/[name].get', () => {
   it('interpolates the :name router param and GETs the backend by-name path', async () => {
     routerParams = { name: 'LoanDsl' }
 
-    await readDslFileHandler(fakeEvent)
+    await readDslFileByNameHandler(fakeEvent)
 
     expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
     expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/files/by-name/LoanDsl')
@@ -887,17 +903,87 @@ describe('dsl/files/content/[name].get', () => {
   })
 })
 
-describe('dsl/files/content/[name].post', () => {
+describe('dsl/files/by-name/[name].post', () => {
   it('interpolates the :name router param and POSTs the body to the by-name path', async () => {
     routerParams = { name: 'LoanDsl' }
     bodyValue = { content: 'public class LoanDsl {}' }
 
-    await writeDslFileHandler(fakeEvent)
+    await writeDslFileByNameHandler(fakeEvent)
 
     expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
     expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/files/by-name/LoanDsl', {
       method: 'POST',
       body: { content: 'public class LoanDsl {}' },
     })
+  })
+})
+
+describe('dsl/files/[...path].get', () => {
+  it('interpolates the :path catch-all param and GETs the backend files path', async () => {
+    routerParams = { path: ['flows', 'LoanDsl.java'] }
+
+    await readDslFilePathHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/files/flows/LoanDsl.java')
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+
+  it('joins a single-segment path without a separator', async () => {
+    routerParams = { path: 'LoanDsl.java' }
+
+    await readDslFilePathHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/files/LoanDsl.java')
+  })
+})
+
+describe('dsl/files/[...path].post', () => {
+  it('interpolates the :path catch-all param and POSTs the body to the backend files path', async () => {
+    routerParams = { path: ['flows', 'LoanDsl.java'] }
+    bodyValue = { content: 'public class LoanDsl {}' }
+
+    await writeDslFilePathHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/files/flows/LoanDsl.java', {
+      method: 'POST',
+      body: { content: 'public class LoanDsl {}' },
+    })
+  })
+})
+
+describe('dsl/files/bulk.post', () => {
+  it('POSTs the body to the backend bulk path', async () => {
+    bodyValue = { writes: [{ path: 'LoanDsl.java', content: 'class A {}' }] }
+
+    await bulkWriteDslFilesHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/files/bulk', {
+      method: 'POST',
+      body: { writes: [{ path: 'LoanDsl.java', content: 'class A {}' }] },
+    })
+  })
+})
+
+describe('dsl/files/flush.post', () => {
+  it('POSTs to the backend flush path', async () => {
+    await flushDslFilesHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/files/flush', {
+      method: 'POST',
+    })
+  })
+})
+
+describe('dsl/files/status.get', () => {
+  it('GETs the backend files status path', async () => {
+    await dslFileStatusHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/files/status')
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
   })
 })

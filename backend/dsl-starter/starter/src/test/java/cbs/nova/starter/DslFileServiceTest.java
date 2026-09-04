@@ -10,6 +10,7 @@ import cbs.nova.starter.service.DslFileBuffer;
 import cbs.nova.starter.service.DslFileService;
 import cbs.nova.starter.service.DefaultDslWorkspaceResolver;
 import cbs.nova.starter.service.DslWorkspaceResolver;
+import cbs.nova.starter.model.DslFileModels.FileContentResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -55,6 +56,7 @@ class DslFileServiceTest {
     assertThat(response.content()).isEqualTo("source content");
     assertThat(response.path()).isEqualTo("dsl/LoanDsl.java");
     assertThat(response.pending()).isFalse();
+    assertThat(response.crc32()).isEqualTo(FileContentResponse.crc32("source content"));
   }
 
   @Test
@@ -67,6 +69,7 @@ class DslFileServiceTest {
 
     var response = service.readFile("dsl/LoanDsl.java");
     assertThat(response.content()).isEqualTo("draft content");
+    assertThat(response.crc32()).isEqualTo(FileContentResponse.crc32("draft content"));
     assertThat(response.pending()).isTrue();
   }
 
@@ -81,6 +84,7 @@ class DslFileServiceTest {
 
     var response = service.readFile("dsl/LoanDsl.java");
     assertThat(response.content()).isEqualTo("draft content");
+    assertThat(response.crc32()).isEqualTo(FileContentResponse.crc32("draft content"));
     assertThat(response.pending()).isFalse();
   }
 

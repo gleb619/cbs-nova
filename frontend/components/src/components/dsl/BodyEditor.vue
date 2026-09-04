@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import {
+  createNamespacedLocalStorageState,
+  type UseCookieFactory,
+} from '../../composables/useLocalStorageState'
 import type { DslConstruct, StepDef } from '../../types/dsl'
 import type { RunnerOutput, RunnerStatus } from '../../types/runner'
 import CodeTab from './CodeTab.vue'
@@ -17,6 +21,7 @@ const props = defineProps<{
   code?: string
   saveStatus?: string
   lastSavedAt?: Date | null
+  savedHash?: number | null
   preview?: (
     name: string,
     body: unknown,
@@ -34,7 +39,30 @@ const emit = defineEmits<{
   save: [value: string]
 }>()
 
-const tab = ref<'structure' | 'code' | 'preview' | 'explain'>('structure')
+type BodyEditorTab = 'structure' | 'code' | 'preview' | 'explain'
+const BODY_EDITOR_TABS: readonly BodyEditorTab[] = ['structure', 'code', 'preview', 'explain']
+
+declare const useCookie: UseCookieFactory | undefined
+
+const useBodyEditorStorage = createNamespacedLocalStorageState('cbs-nova:body-editor')
+
+const tab = useBodyEditorStorage<BodyEditorTab>('active-tab', 'structure', {
+  useCookie:
+    typeof useCookie !== 'undefined'
+      ? (name, options) => useCookie<BodyEditorTab>(name, options)
+      : undefined,
+  read: (raw) => {
+    if (raw === null) return undefined
+    try {
+      const parsed = JSON.parse(raw) as unknown
+      return typeof parsed === 'string' && (BODY_EDITOR_TABS as readonly string[]).includes(parsed)
+        ? (parsed as BodyEditorTab)
+        : undefined
+    } catch {
+      return undefined
+    }
+  },
+})
 
 // stub — future: derive from construct introspection
 const steps = ref<StepDef[]>([])
@@ -165,6 +193,7 @@ watch(
         :read-only="!construct"
         :save-status="saveStatus"
         :last-saved-at="lastSavedAt"
+        :saved-hash="savedHash"
         @save="emit('save', $event)"
       />
       <PreviewTab

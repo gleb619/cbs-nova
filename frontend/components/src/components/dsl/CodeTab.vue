@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useCrc32 } from '../../composables/useCrc32'
 import { createNamespacedLocalStorageState } from '../../composables/useLocalStorageState'
+import HotkeyTooltip from '../HotkeyTooltip.vue'
 import MonacoEditor from './MonacoEditor.vue'
 
 const props = withDefaults(
@@ -10,14 +12,17 @@ const props = withDefaults(
     language?: string
     saveStatus?: string
     lastSavedAt?: Date | null
+    savedHash?: number | null
   }>(),
-  { language: 'java', saveStatus: 'idle', lastSavedAt: null },
+  { language: 'java', saveStatus: 'idle', lastSavedAt: null, savedHash: null },
 )
 
 const emit = defineEmits<{
   'update:code': [value: string]
   save: [value: string]
 }>()
+
+const { calculateCrc32 } = useCrc32()
 
 const localCode = ref(props.code)
 let syncingFromProps = false
@@ -30,7 +35,7 @@ watch(
     if (value !== localCode.value) {
       syncingFromProps = true
       localCode.value = value
-      lastSavedCode.value = value
+      savedHashInternal.value = calculateCrc32(value)
     }
   },
 )
@@ -44,8 +49,12 @@ const AUTOSAVE_INTERVALS: Record<string, number> = {
 const useCodeTabStorage = createNamespacedLocalStorageState('cbs-nova:code-tab')
 const autosaveMode = useCodeTabStorage<string>('autosave-mode', 'off')
 
-const lastSavedCode = ref(props.code)
-const isDirty = computed(() => localCode.value !== lastSavedCode.value)
+const savedHashInternal = ref(calculateCrc32(props.code))
+const localHash = computed(() => calculateCrc32(localCode.value))
+const baselineHash = computed(() =>
+  typeof props.savedHash === 'number' ? props.savedHash : savedHashInternal.value,
+)
+const isDirty = computed(() => localHash.value !== baselineHash.value)
 
 let autosaveTimer: ReturnType<typeof setInterval> | undefined
 
@@ -57,7 +66,7 @@ function clearAutosaveTimer() {
 }
 
 function requestSave() {
-  lastSavedCode.value = localCode.value
+  savedHashInternal.value = localHash.value
   emit('save', localCode.value)
 }
 
@@ -80,6 +89,13 @@ onBeforeUnmount(clearAutosaveTimer)
 function handleBlur() {
   if (autosaveMode.value === 'blur' && isDirty.value) requestSave()
 }
+
+function handleGlobalSave() {
+  if (!props.readOnly && isDirty.value) requestSave()
+}
+
+onMounted(() => window.addEventListener('dsl:save', handleGlobalSave))
+onBeforeUnmount(() => window.removeEventListener('dsl:save', handleGlobalSave))
 
 const autosaveOptions = [
   { value: 'off', label: 'Off' },
@@ -145,18 +161,20 @@ watch(localCode, (value) => {
       class="flex flex-wrap items-center gap-2 px-3 py-1.5 border-b border-neutral-200 bg-white"
       data-testid="code-tab-toolbar"
     >
-      <button
-        type="button"
-        class="px-3 py-1 text-xs font-medium rounded border"
-        :class="isDirty
-          ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
-          : 'border-neutral-300 text-neutral-400 cursor-not-allowed'"
-        :disabled="!isDirty"
-        data-testid="code-tab-save"
-        @click="requestSave"
-      >
-        Save
-      </button>
+      <HotkeyTooltip keys="Ctrl+S">
+        <button
+          type="button"
+          class="px-3 py-1 text-xs font-medium rounded border"
+          :class="isDirty
+            ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
+            : 'border-neutral-300 text-neutral-400 cursor-not-allowed'"
+          :disabled="!isDirty"
+          data-testid="code-tab-save"
+          @click="requestSave"
+        >
+          Save
+        </button>
+      </HotkeyTooltip>
       <div class="flex items-center rounded border border-neutral-300 overflow-hidden">
         <button
           v-for="option in autosaveOptions"

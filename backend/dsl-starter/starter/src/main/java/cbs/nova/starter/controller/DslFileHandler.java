@@ -75,7 +75,7 @@ public class DslFileHandler {
     String content = readBody(request);
     fileService.stageWrite(path, content);
     log.info("[DSL files] staged write for {}", path);
-    return accepted(new FileContentResponse(path, content, true));
+    return accepted(new FileContentResponse(path, content, true, FileContentResponse.crc32(content)));
   }
 
   public ServerResponse readByName(ServerRequest request) throws IOException {
@@ -110,7 +110,7 @@ public class DslFileHandler {
     String content = readBody(request);
     fileService.stageWrite(path, content);
     log.info("[DSL files] staged write for {} (resolved from {})", path, name);
-    return accepted(new FileContentResponse(path, content, true));
+    return accepted(new FileContentResponse(path, content, true, FileContentResponse.crc32(content)));
   }
 
   private ServerResponse doReadFile(String path) throws IOException {
