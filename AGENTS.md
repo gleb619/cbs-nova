@@ -36,7 +36,11 @@ cbs-nova is a Temporal DSL Orchestration Engine with a Java backend and a Vue/Nu
    cd frontend && pnpm dev
    ```
 5. Seed sample data so the dashboard is non-empty: `make seed`
-6. Verify a proxied DSL endpoint:
+6. Run a quick load-test smoke check (optional):
+   ```bash
+   make loadtest DURATION=10 CONCURRENCY=5 RPS=20
+   ```
+7. Verify a proxied DSL endpoint:
    ```bash
    curl http://localhost:3000/api/v1/dsl/definitions
    ```

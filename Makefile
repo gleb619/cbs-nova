@@ -240,3 +240,96 @@ seed-history: ## Seed up to 5 historical sample runs (seed-history-*, mixed stat
 		i=$$((i+1)); \
 	done; \
 	printf '    Seeding history complete (up to %d runs).\n' "$$remaining"
+.PHONY: loadtest
+# ALLOW_MUTATIONS: accepted as an env var but intentionally unused for now — this
+# target only exercises GET endpoints and none of the defaults mutate state. It is
+# a future gate for permitting non-GET (mutating) load tests.
+loadtest: ## Load-test read-only BFF endpoints and report latency percentiles + error rate
+	@# ALLOW_MUTATIONS is documented as a future gate for non-GET endpoints; the
+	@# default endpoint list is read-only, so it currently has no functional effect.
+	@printf '\n==> Load-testing read-only BFF endpoints...\n'; \
+	DURATION=$${DURATION:-30}; \
+	CONCURRENCY=$${CONCURRENCY:-10}; \
+	RPS=$${RPS:-50}; \
+	MAX_P99_MS=$${MAX_P99_MS:-2000}; \
+	MAX_ERROR_RATE=$${MAX_ERROR_RATE:-5}; \
+	BFF=$${BFF_BASE_URL:-http://localhost:3000}; \
+	fails=0; \
+	\
+	if [ -z "$$($(COMPOSE) ps -q 2>/dev/null)" ]; then \
+		printf '    [skip] Docker compose stack not running — skipping load test (run: make up && make backend && make frontend)\n'; \
+		exit 0; \
+	fi; \
+	\
+	if [ -n "$${LOADTEST_ENDPOINTS:-}" ]; then \
+		endpoints="$$LOADTEST_ENDPOINTS"; \
+	else \
+		endpoints='/api/v1/dsl/definitions /api/v1/dsl/helpers /api/v1/dsl/executions?limit=20 /api/v1/dsl/drafts'; \
+	fi; \
+	printf '      config:  duration=%ss  concurrency=%s  rps=%s  max_p99=%sms  max_error_rate=%s%%\n' "$$DURATION" "$$CONCURRENCY" "$$RPS" "$$MAX_P99_MS" "$$MAX_ERROR_RATE"; \
+	\
+	tmpdir=$$(mktemp -d) || exit 1; \
+	trap 'rm -rf "$$tmpdir"' EXIT; \
+	rows=""; \
+	idx=0; \
+	\
+	for ep in $$endpoints; do \
+		idx=$$((idx+1)); \
+		file="$$tmpdir/samples.$$idx"; \
+		printf '  -> %s%s\n' "$$BFF" "$$ep"; \
+		end=$$(( $$(date +%s) + $$DURATION )); \
+		while [ "$$(date +%s)" -lt "$$end" ]; do \
+			for _ in $$(seq 1 "$$CONCURRENCY"); do \
+				curl --silent --show-error --max-time 15 -o /dev/null -s -w '%{http_code} %{time_total}\n' "$$BFF$$ep" >> "$$file" & \
+			done; \
+			wait; \
+			if [ "$$RPS" -gt 0 ] 2>/dev/null; then \
+				interval=$$(awk -v n="$$CONCURRENCY" -v r="$$RPS" 'BEGIN{ d=(n>0 && r>0) ? n/r : 0; printf "%.3f", d }'); \
+				sleep "$$interval"; \
+			fi; \
+		done; \
+		wait 2>/dev/null; \
+		total=$$(wc -l < "$$file"); \
+		total=$$((total+0)); \
+		if [ "$$total" -gt 0 ]; then \
+			errors=$$(awk '{ if ($$1 < 200 || $$1 >= 300) c++ } END { print c+0 }' "$$file"); \
+			err_pct=$$(awk -v e="$$errors" -v t="$$total" 'BEGIN{ printf "%d", e*100/t }'); \
+			rps=$$(awk -v t="$$total" -v d="$$DURATION" 'BEGIN{ printf "%d", t/(d>0?d:1) }'); \
+			sort -n -k2 "$$file" > "$$tmpdir/sorted.$$idx"; \
+			p50=$$(awk -v p=50 -v n="$$total" 'NR==int(n*p/100)+1 {print $$2; exit}' "$$tmpdir/sorted.$$idx"); \
+			p95=$$(awk -v p=95 -v n="$$total" 'NR==int(n*p/100)+1 {print $$2; exit}' "$$tmpdir/sorted.$$idx"); \
+			p99=$$(awk -v p=99 -v n="$$total" 'NR==int(n*p/100)+1 {print $$2; exit}' "$$tmpdir/sorted.$$idx"); \
+			p50=$$(awk -v v="$$p50" 'BEGIN{ printf "%d", v*1000+0.5 }'); \
+			p95=$$(awk -v v="$$p95" 'BEGIN{ printf "%d", v*1000+0.5 }'); \
+			p99=$$(awk -v v="$$p99" 'BEGIN{ printf "%d", v*1000+0.5 }'); \
+		else \
+			errors=0; err_pct=0; rps=0; p50=0; p95=0; p99=0; \
+		fi; \
+		rows="$$rows$$(printf '%s|%s|%s|%s|%s|%s|%s\n' "$$ep" "$$rps" "$$p50" "$$p95" "$$p99" "$$err_pct" "$$total")\n"; \
+	done; \
+	\
+	printf '\n%-40s | %6s | %6s | %6s | %6s | %7s | %7s\n' 'endpoint' 'rps' 'p50' 'p95' 'p99' 'err%' 'total'; \
+	printf '%s\n' '------------------------------------------+--------+--------+--------+--------+---------+---------'; \
+	printf '%b' "$$rows" | grep -v '^$$' | sort -t'|' -k5,5nr | awk -F'|' '{ printf "%-40s | %6s | %6s | %6s | %6s | %7s | %7s\n", $$1, $$2, $$3, $$4, $$5, $$6, $$7 }'; \
+	\
+	while IFS='|' read -r ep rps p50 p95 p99 err total; do \
+		reason=""; \
+		if [ "$$p99" -gt "$$MAX_P99_MS" ] 2>/dev/null; then \
+			reason="p99=$${p99}ms exceeds MAX_P99_MS=$${MAX_P99_MS}ms"; \
+		fi; \
+		if [ "$$err" -gt "$$MAX_ERROR_RATE" ] 2>/dev/null; then \
+			if [ -n "$$reason" ]; then reason="$${reason}; "; fi; \
+			reason="$${reason}err=$${err}% exceeds MAX_ERROR_RATE=$${MAX_ERROR_RATE}%"; \
+		fi; \
+		if [ -n "$$reason" ]; then \
+			fails=$$((fails+1)); \
+			printf '    [fail] %s — %s\n' "$$ep" "$$reason"; \
+		fi; \
+	done < <(printf '%b' "$$rows" | grep -v '^$$'); \
+	\
+	if [ "$$fails" -gt 0 ]; then \
+		printf '\n%d endpoint(s) failed load-test thresholds.\n' "$$fails"; \
+		exit 1; \
+	else \
+		printf '\nAll endpoints within thresholds.\n'; \
+	fi
