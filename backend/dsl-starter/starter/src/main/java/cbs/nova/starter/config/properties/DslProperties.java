@@ -40,6 +40,7 @@ public class DslProperties {
   @Data
   public static class Auth {
 
+    private boolean enabled;
     private String apiKey;
 
   }
