@@ -117,6 +117,11 @@ async function loadHelpers() {
   }
 }
 
+async function fetchHelperCatalog(): Promise<HelperCatalogEntry[]> {
+  if (!helpersCatalog.value.length) await loadHelpers()
+  return helpersCatalog.value
+}
+
 function toggleHelperCatalog() {
   helperCatalogOpen.value = !helperCatalogOpen.value
   if (helperCatalogOpen.value) {
@@ -457,6 +462,7 @@ onBeforeUnmount(() => {
             :construct="selectedConstruct"
             :save-status="draftSave.status.value"
             :last-saved-at="draftSave.lastSavedAt.value"
+            :helper-catalog-fetch="fetchHelperCatalog"
             :preview="runPreview"
             :explain="runExplain"
             @update:code="onCodeChange"

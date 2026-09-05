@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type * as Monaco from 'monaco-editor'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useHelperCompletion } from '../../composables/useHelperCompletion'
+import { useMonacoHelperCompletion } from '../../composables/useMonacoHelperCompletion'
+import type { HelperCatalogEntry } from '../../types/dsl'
 
 const props = withDefaults(
   defineProps<{
@@ -8,6 +11,7 @@ const props = withDefaults(
     language?: string
     readOnly?: boolean
     placeholder?: string
+    helperCatalogFetch?: () => Promise<HelperCatalogEntry[]>
   }>(),
   { language: 'java', readOnly: false, placeholder: '' },
 )
@@ -22,6 +26,7 @@ const container = ref<HTMLElement | null>(null)
 let monaco: typeof Monaco | undefined
 let editor: Monaco.editor.IStandaloneCodeEditor | undefined
 let destroyed = false
+let releaseHelperCompletion: (() => void) | null = null
 
 function installWorkerlessEnvironment() {
   const globalScope = self as unknown as { MonacoEnvironment?: unknown }
@@ -62,6 +67,15 @@ onMounted(async () => {
     if (value !== props.modelValue) emit('update:modelValue', value)
   })
   editor.onDidBlurEditorText(() => emit('blur'))
+
+  if (props.helperCatalogFetch) {
+    const { getCatalog } = useHelperCompletion({ fetch: props.helperCatalogFetch })
+    releaseHelperCompletion = useMonacoHelperCompletion({
+      monaco,
+      getCatalog,
+      language: props.language,
+    })
+  }
 })
 
 watch(
@@ -88,6 +102,8 @@ onBeforeUnmount(() => {
   destroyed = true
   editor?.getModel()?.dispose()
   editor?.dispose()
+  releaseHelperCompletion?.()
+  releaseHelperCompletion = null
 })
 
 defineExpose({ focus: () => editor?.focus() })

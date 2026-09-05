@@ -17,11 +17,16 @@ const editorInstance = {
 
 const create = vi.fn(() => editorInstance)
 const setModelLanguage = vi.fn()
+const registerCompletionItemProvider = vi.fn(() => ({ dispose: vi.fn() }))
 
 vi.mock('monaco-editor', () => ({
   editor: {
     create: (...args: unknown[]) => create(...args),
     setModelLanguage: (...args: unknown[]) => setModelLanguage(...args),
+  },
+  languages: {
+    CompletionItemKind: { Method: 1 },
+    registerCompletionItemProvider,
   },
 }))
 
@@ -87,5 +92,32 @@ describe('MonacoEditor', () => {
     wrapper.unmount()
 
     expect(editorInstance.dispose).toHaveBeenCalled()
+  })
+
+  it('does not register a completion provider when helperCatalogFetch is omitted', async () => {
+    mount(MonacoEditor, { props: { modelValue: 'a' } })
+    await flush()
+
+    expect(registerCompletionItemProvider).not.toHaveBeenCalled()
+  })
+
+  it('registers a completion provider when helperCatalogFetch is provided', async () => {
+    const wrapper = mount(MonacoEditor, {
+      props: {
+        modelValue: 'a',
+        helperCatalogFetch: vi.fn().mockResolvedValue([]),
+      },
+    })
+    await flush()
+
+    expect(registerCompletionItemProvider).toHaveBeenCalledTimes(1)
+    const call = registerCompletionItemProvider.mock.calls[0] as unknown as [
+      string,
+      { triggerCharacters: string[] },
+    ]
+    expect(call[0]).toBe('java')
+    expect(call[1].triggerCharacters).toEqual(['"'])
+
+    wrapper.unmount()
   })
 })

@@ -4,7 +4,7 @@ import {
   createNamespacedLocalStorageState,
   type UseCookieFactory,
 } from '../../composables/useLocalStorageState'
-import type { DslConstruct, StepDef } from '../../types/dsl'
+import type { DslConstruct, HelperCatalogEntry, StepDef } from '../../types/dsl'
 import type { RunnerOutput, RunnerStatus } from '../../types/runner'
 import CodeTab from './CodeTab.vue'
 import ExplainTab from './ExplainTab.vue'
@@ -22,6 +22,7 @@ const props = defineProps<{
   saveStatus?: string
   lastSavedAt?: Date | null
   savedHash?: number | null
+  helperCatalogFetch?: () => Promise<HelperCatalogEntry[]>
   preview?: (
     name: string,
     body: unknown,
@@ -194,6 +195,7 @@ watch(
         :save-status="saveStatus"
         :last-saved-at="lastSavedAt"
         :saved-hash="savedHash"
+        :helper-catalog-fetch="helperCatalogFetch"
         @save="emit('save', $event)"
       />
       <PreviewTab

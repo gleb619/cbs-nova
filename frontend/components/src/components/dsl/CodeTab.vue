@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useCrc32 } from '../../composables/useCrc32'
 import { createNamespacedLocalStorageState } from '../../composables/useLocalStorageState'
+import type { HelperCatalogEntry } from '../../types/dsl'
 import HotkeyTooltip from '../HotkeyTooltip.vue'
 import MonacoEditor from './MonacoEditor.vue'
 
@@ -13,6 +14,7 @@ const props = withDefaults(
     saveStatus?: string
     lastSavedAt?: Date | null
     savedHash?: number | null
+    helperCatalogFetch?: () => Promise<HelperCatalogEntry[]>
   }>(),
   { language: 'java', saveStatus: 'idle', lastSavedAt: null, savedHash: null },
 )
@@ -236,6 +238,7 @@ watch(localCode, (value) => {
           :language="language"
           :read-only="readOnly"
           :placeholder="placeholder"
+          :helper-catalog-fetch="helperCatalogFetch"
           @blur="handleBlur"
         />
       </div>
