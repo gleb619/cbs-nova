@@ -21,6 +21,7 @@ public class DslProperties {
   private Drafts drafts = new Drafts();
   private Files files = new Files();
   private Git git = new Git();
+  private FileBuffer fileBuffer = new FileBuffer();
 
   @Data
   public static class Worker {
@@ -101,6 +102,23 @@ public class DslProperties {
      * the repository on every introspection request while still reflecting recent edits promptly.
      */
     private int statusCacheTtlSeconds = 5;
+
+  }
+
+  @Data
+  public static class FileBuffer {
+
+    /**
+     * Maximum number of staged-but-undrained file entries kept in memory. Oldest entries are
+     * evicted once this bound is exceeded, preventing unbounded heap growth from abandoned
+     * stage-without-drain flows.
+     */
+    private int maxEntries = 1000;
+
+    /**
+     * How long a staged entry survives without being drained before it is evicted, in seconds.
+     */
+    private long expireAfterWriteSeconds = 3600;
 
   }
 }
