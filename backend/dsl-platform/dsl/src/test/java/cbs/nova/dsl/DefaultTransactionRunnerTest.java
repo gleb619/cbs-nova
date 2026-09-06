@@ -5,9 +5,12 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
+import cbs.nova.dsl.runner.DefaultExecutionListener;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
 import cbs.nova.dsl.transaction.CompensationRegistry;
 import cbs.nova.dsl.transaction.TransactionDslObject;
+import cbs.nova.dsl.transaction.TransactionExecutionStatus;
+import cbs.nova.dsl.repository.InMemoryTransactionExecutionRepository;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -153,5 +156,42 @@ class DefaultTransactionRunnerTest {
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(compensationRegistry.hasCompensation("r-no-comp")).isFalse();
+  }
+
+  @Test
+  void failedTransactionIsRecordedWithFailedStatus() {
+    var repo = new InMemoryTransactionExecutionRepository();
+    var listener = new DefaultExecutionListener("run-fail", repo);
+    var tx = Dsl.transaction("BoomTx")
+            .execute(ctx -> Result.failure(new RuntimeException("boom")))
+            .build();
+    var ctx = contextFactory.of("in", ExecutionMode.RUN, "run-fail")
+            .withExecutionListener(listener);
+
+    var result = runner.run(tx, ctx);
+
+    assertThat(result.isSuccess()).isFalse();
+    var history = listener.historyInReverse();
+    assertThat(history).hasSize(1);
+    assertThat(history.get(0).status()).isEqualTo(TransactionExecutionStatus.FAILED);
+    assertThat(history.get(0).error()).isEqualTo("boom");
+  }
+
+  @Test
+  void compensationRunIsRecordedWithCompensatedStatus() {
+    var repo = new InMemoryTransactionExecutionRepository();
+    var listener = new DefaultExecutionListener("run-comp", repo);
+    var tx = Dsl.transaction("CompTx")
+            .execute(ctx -> Result.success("ok"))
+            .build();
+    var ctx = contextFactory.of("in", ExecutionMode.COMPENSATION, "run-comp")
+            .withExecutionListener(listener);
+
+    var result = runner.run(tx, ctx);
+
+    assertThat(result.isSuccess()).isTrue();
+    var history = listener.historyInReverse();
+    assertThat(history).hasSize(1);
+    assertThat(history.get(0).status()).isEqualTo(TransactionExecutionStatus.COMPENSATED);
   }
 }

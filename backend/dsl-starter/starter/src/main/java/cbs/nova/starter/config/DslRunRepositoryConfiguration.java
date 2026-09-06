@@ -62,24 +62,36 @@ public class DslRunRepositoryConfiguration {
   @ConditionalOnBean(DataSource.class)
   @ConditionalOnMissingBean(DslRunRepository.class)
   public DslRunRepository dslRunRepository(
-          DataSource dataSource,
+          NamedParameterJdbcTemplate jdbcTemplate,
           DslRunJdbcRepository jdbcRepository,
           DslRunMapper mapper,
           FieldEncryptor encryptor,
           DslRunPersistenceProperties properties) {
-    return new JdbcDslRunRepository(dataSource, jdbcRepository, mapper, encryptor, properties);
+    return new JdbcDslRunRepository(jdbcTemplate, jdbcRepository, mapper, encryptor,
+            qualifiedTableName(properties));
   }
 
   @Bean
   @ConditionalOnBean(DataSource.class)
   @ConditionalOnMissingBean(TransactionExecutionRepository.class)
   public TransactionExecutionRepository transactionExecutionRepository(
-          DataSource dataSource,
           TransactionExecutionJdbcRepository jdbcRepository,
           TransactionExecutionMapper mapper,
           ObjectMapper objectMapper) {
-    var jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
-    return new JdbcTransactionExecutionRepository(jdbcTemplate, jdbcRepository, mapper,
+    return new JdbcTransactionExecutionRepository(jdbcRepository, mapper,
             objectMapper);
   }
+
+  /* ============= */
+
+  // TODO: use `dslRunNamingStrategy` instead
+  @Deprecated(forRemoval = true)
+  private String qualifiedTableName(DslRunPersistenceProperties properties) {
+    String table = properties.tableName() != null && !properties.tableName().isBlank()
+            ? properties.tableName()
+            : "dsl_runs";
+    String schema = properties.schema();
+    return (schema != null && !schema.isBlank()) ? schema + "." + table : table;
+  }
+
 }

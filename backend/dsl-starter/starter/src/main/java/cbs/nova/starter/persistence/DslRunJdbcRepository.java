@@ -1,6 +1,9 @@
 package cbs.nova.starter.persistence;
 
 import cbs.nova.starter.entity.DslRunEntity;
+import java.time.Instant;
+import org.springframework.data.jdbc.repository.query.Modifying;
+import org.springframework.data.jdbc.repository.query.Query;
 import org.springframework.data.repository.CrudRepository;
 
 import java.util.List;
@@ -19,4 +22,22 @@ public interface DslRunJdbcRepository extends CrudRepository<DslRunEntity, Long>
   Optional<DslRunEntity> findByRunId(String runId);
 
   List<DslRunEntity> findByProcessName(String processName);
+
+  @Modifying
+  @Query("""
+          UPDATE dsl_runs
+          SET status = :status,
+              output_json = :outputJson,
+              error_message = :errorMessage,
+              context_json = :contextJson,
+              finished_at = :finishedAt
+          WHERE run_id = :runId AND status = 'RUNNING'
+          """)
+  int updateFinishedIfRunning(
+          String runId,
+          String status,
+          String outputJson,
+          String errorMessage,
+          String contextJson,
+          Instant finishedAt);
 }

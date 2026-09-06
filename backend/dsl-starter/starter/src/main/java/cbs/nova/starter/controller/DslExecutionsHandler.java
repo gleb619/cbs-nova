@@ -216,7 +216,12 @@ public class DslExecutionsHandler {
     return new TransactionExecutionDto(
             execution.transactionName(),
             execution.input(),
-            execution.executedAt().toString());
+            execution.executedAt().toString(),
+            execution.status().name(),
+            execution.startedAt().toString(),
+            execution.finishedAt() == null ? null : execution.finishedAt().toString(),
+            execution.durationMillis(),
+            execution.error());
   }
 
   /**

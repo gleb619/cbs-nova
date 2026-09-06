@@ -12,6 +12,7 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
+import org.springframework.beans.factory.annotation.Autowired;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,6 +59,7 @@ public class MetricHelper implements Executable<MetricIn, MetricOut> {
   private final @Nullable MeterRegistry registry;
   private final Map<String, AtomicReference<Double>> gaugeHolders = new ConcurrentHashMap<>();
 
+  @Autowired
   public MetricHelper(ObjectProvider<MeterRegistry> registryProvider) {
     this.registry = registryProvider.getIfAvailable();
   }

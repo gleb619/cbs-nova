@@ -23,6 +23,18 @@ public class TransactionExecutionEntity {
   @Column("input_json")
   private String inputJson;
 
+  @Column("status")
+  private String status;
+
+  @Column("started_at")
+  private Instant startedAt;
+
+  @Column("finished_at")
+  private Instant finishedAt;
+
+  @Column("error_message")
+  private String errorMessage;
+
   @Column("executed_at")
   private Instant executedAt;
 }

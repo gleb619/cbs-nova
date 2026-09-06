@@ -10,6 +10,7 @@ import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.transaction.CompensationRegistry;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.dsl.transaction.TransactionExecution;
+import cbs.nova.dsl.transaction.TransactionExecutionStatus;
 import cbs.nova.dsl.transaction.TransactionRichContext;
 import cbs.nova.dsl.transaction.TransactionRunner;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public final class DefaultTransactionRunner implements TransactionRunner {
   public @NonNull Result<?> run(
           @NonNull TransactionDslObject transaction, @NonNull Context<?> ctx) {
     var listener = ctx.executionListener();
+    var startedAt = Instant.now();
     if (listener != null) {
       listener.onTransactionStart(ctx.runId(), transaction.name(), ctx.body());
     }
@@ -41,7 +43,7 @@ public final class DefaultTransactionRunner implements TransactionRunner {
       } else {
         result = transaction.executeLogic().apply(richCtx);
       }
-      notifyListener(ctx, transaction, result);
+      notifyListener(ctx, transaction, result, startedAt, Instant.now());
       if (result.isSuccess()) {
         registerCompensation(transaction, ctx);
       }
@@ -49,7 +51,7 @@ public final class DefaultTransactionRunner implements TransactionRunner {
     } catch (Exception ex) {
       String message = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
       var failure = Result.failure(new DslExecutionException(ctx.runId(), message, ex));
-      notifyFailure(ctx, transaction, ex);
+      notifyFailure(ctx, transaction, ex, startedAt, Instant.now());
       return failure;
     } finally {
       if (listener != null) {
@@ -84,7 +86,9 @@ public final class DefaultTransactionRunner implements TransactionRunner {
   private void notifyListener(
           @NonNull Context<?> ctx,
           @NonNull TransactionDslObject transaction,
-          @NonNull Result<?> result) {
+          @NonNull Result<?> result,
+          @NonNull Instant startedAt,
+          @NonNull Instant finishedAt) {
     var listener = ctx.executionListener();
     if (listener == null) {
       return;
@@ -94,19 +98,50 @@ public final class DefaultTransactionRunner implements TransactionRunner {
               ctx.runId(),
               transaction.name(),
               ctx.body(),
-              Instant.now()));
+              finishedAt,
+              startedAt,
+              finishedAt,
+              statusFor(true, ctx),
+              null));
     } else if (result.cause() != null) {
       listener.onTransactionFailure(ctx.runId(), transaction.name(), result.cause());
+      listener.onTransactionSuccess(new TransactionExecution(
+              ctx.runId(),
+              transaction.name(),
+              ctx.body(),
+              finishedAt,
+              startedAt,
+              finishedAt,
+              statusFor(false, ctx),
+              result.cause().getMessage()));
     }
   }
 
   private void notifyFailure(
           @NonNull Context<?> ctx,
           @NonNull TransactionDslObject transaction,
-          @NonNull Throwable cause) {
+          @NonNull Throwable cause,
+          @NonNull Instant startedAt,
+          @NonNull Instant finishedAt) {
     var listener = ctx.executionListener();
     if (listener != null) {
       listener.onTransactionFailure(ctx.runId(), transaction.name(), cause);
+      listener.onTransactionSuccess(new TransactionExecution(
+              ctx.runId(),
+              transaction.name(),
+              ctx.body(),
+              finishedAt,
+              startedAt,
+              finishedAt,
+              statusFor(false, ctx),
+              cause.getMessage()));
     }
+  }
+
+  private TransactionExecutionStatus statusFor(boolean success, Context<?> ctx) {
+    if (ctx.mode() == ExecutionMode.COMPENSATION) {
+      return success ? TransactionExecutionStatus.COMPENSATED : TransactionExecutionStatus.FAILED;
+    }
+    return success ? TransactionExecutionStatus.SUCCESS : TransactionExecutionStatus.FAILED;
   }
 }

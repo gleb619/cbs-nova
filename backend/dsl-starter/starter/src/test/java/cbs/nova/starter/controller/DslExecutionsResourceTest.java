@@ -23,6 +23,7 @@ import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dsl.repository.InMemoryTransactionExecutionRepository;
 import cbs.nova.dsl.transaction.TransactionExecution;
+import cbs.nova.dsl.transaction.TransactionExecutionStatus;
 import cbs.nova.starter.config.router.DslExecutionsRouterConfiguration;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.persistence.DslRunStats;
@@ -912,6 +913,32 @@ class DslExecutionsResourceTest {
   }
 
   @Test
+  void returnsTransactionsWithStatusAndDuration() throws Exception {
+    repository.save(run("run-enriched", "LoanDisbursement", "COMPLETED",
+            "2026-08-13T10:00:00Z", "2026-08-13T10:00:05Z", "RUN"));
+
+    Instant started = Instant.parse("2026-08-13T10:00:01Z");
+    Instant finished = Instant.parse("2026-08-13T10:00:02Z");
+    transactionExecutionRepository.save(new TransactionExecution(
+            "run-enriched",
+            "ApproveLoan",
+            Map.of("amount", 100),
+            finished,
+            started,
+            finished,
+            TransactionExecutionStatus.SUCCESS,
+            null));
+
+    mockMvc.perform(get("/api/executions/{id}/transactions", "run-enriched"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].transactionName").value("ApproveLoan"))
+            .andExpect(jsonPath("$[0].status").value("SUCCESS"))
+            .andExpect(jsonPath("$[0].duration").value(1000))
+            .andExpect(jsonPath("$[0].startedAt").value("2026-08-13T10:00:01Z"))
+            .andExpect(jsonPath("$[0].finishedAt").value("2026-08-13T10:00:02Z"));
+  }
+
+  @Test
   void transactionsLiteralRouteIsNotCapturedAsDetailId() throws Exception {
     repository.save(run("transactions", "LoanDisbursement", "COMPLETED",
             "2026-08-13T10:00:00Z", "2026-08-13T10:00:05Z", "RUN"));
@@ -1022,7 +1049,10 @@ class DslExecutionsResourceTest {
   }
 
   private TransactionExecution tx(String runId, String name, Object input, String executedAt) {
-    return new TransactionExecution(runId, name, input, Instant.parse(executedAt));
+    Instant finished = Instant.parse(executedAt);
+    Instant started = finished.minusMillis(500);
+    return new TransactionExecution(runId, name, input, finished, started, finished,
+            TransactionExecutionStatus.SUCCESS, null);
   }
 
   // -------------------------------------------------------------------------

@@ -4,6 +4,7 @@ import { useExecutions } from '@cbs/admin-ui-plugin/composables/useExecutions'
 import { useExecutionsApi } from '@cbs/admin-ui-plugin/composables/useExecutionsApi'
 import { useTemporalLink } from '@cbs/admin-ui-plugin/composables/useTemporalLink'
 import {
+  DslExecutionTimeline,
   ErrorBanner,
   ExecutionsCancelConfirmationModal,
   ExecutionsCompensationLane,
@@ -139,6 +140,11 @@ const transactions = ref<TransactionExecutionDto[]>([])
 const transactionsLoading = ref(false)
 const transactionsError = ref<string | null>(null)
 const transactionsLoaded = ref(false)
+const selectedTransaction = ref<TransactionExecutionDto | undefined>(undefined)
+
+function onTimelineSelect(tx: TransactionExecutionDto) {
+  selectedTransaction.value = tx
+}
 
 async function loadTransactions() {
   if (transactionsLoaded.value) return
@@ -286,12 +292,20 @@ onUnmounted(() => {
             :execution="selectedExecution"
             :workflow-link="workflowLink"
           />
-          <ExecutionsTransactionsTab
-            v-else-if="activeTab === 'transactions'"
-            :transactions="transactions"
-            :loading="transactionsLoading"
-            :error="transactionsError"
-          />
+          <div v-else-if="activeTab === 'transactions'" class="space-y-4">
+            <DslExecutionTimeline
+              :transactions="transactions"
+              :loading="transactionsLoading"
+              :error="transactionsError"
+              @select="onTimelineSelect"
+            />
+            <ExecutionsTransactionsTab
+              :transactions="transactions"
+              :loading="transactionsLoading"
+              :error="transactionsError"
+              :selected-transaction="selectedTransaction"
+            />
+          </div>
           <ExecutionsLogsTab v-else-if="activeTab === 'logs'" :logs="selectedExecution.logs" />
           <ExecutionsErrorsTab
             v-else-if="activeTab === 'errors'"

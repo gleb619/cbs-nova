@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.dsl.transaction.TransactionExecution;
+import cbs.nova.dsl.transaction.TransactionExecutionStatus;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -23,7 +24,8 @@ class InMemoryTransactionExecutionRepositoryTest {
 
   private static TransactionExecution execution(String runId, String transactionName,
           Object input) {
-    return new TransactionExecution(runId, transactionName, input, EXECUTED_AT);
+    return new TransactionExecution(runId, transactionName, input, EXECUTED_AT, EXECUTED_AT,
+            EXECUTED_AT, TransactionExecutionStatus.SUCCESS, null);
   }
 
   @Test
@@ -244,6 +246,20 @@ class InMemoryTransactionExecutionRepositoryTest {
 
     repo.deleteByRunId("run-shared");
     assertThat(repo.findByRunId("run-shared")).isEmpty();
+  }
+
+  @Test
+  void saveUpsertsExistingTransactionByName() {
+    var repo = new InMemoryTransactionExecutionRepository();
+    var now = Instant.now();
+    repo.save(new TransactionExecution("run-1", "TxA", null, now, now, now,
+            TransactionExecutionStatus.FAILED, "boom"));
+    repo.save(new TransactionExecution("run-1", "TxA", null, now, now, now,
+            TransactionExecutionStatus.SUCCESS, null));
+
+    var found = repo.findByRunId("run-1");
+    assertThat(found).hasSize(1);
+    assertThat(found.get(0).status()).isEqualTo(TransactionExecutionStatus.SUCCESS);
   }
 
   private static DslRun run(String runId) {

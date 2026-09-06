@@ -1,6 +1,7 @@
 package cbs.nova.starter.converter;
 
 import cbs.nova.dsl.transaction.TransactionExecution;
+import cbs.nova.dsl.transaction.TransactionExecutionStatus;
 import cbs.nova.starter.entity.TransactionExecutionEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -17,7 +18,19 @@ import org.mapstruct.ReportingPolicy;
 public interface TransactionExecutionMapper {
 
   @Mapping(target = "inputJson", ignore = true)
+  @Mapping(target = "status", source = "status")
+  @Mapping(target = "errorMessage", source = "error")
   TransactionExecutionEntity toEntity(TransactionExecution execution);
 
+  @Mapping(target = "status", source = "status")
+  @Mapping(target = "error", source = "errorMessage")
   TransactionExecution toDomain(TransactionExecutionEntity entity);
+
+  default String mapStatus(TransactionExecutionStatus status) {
+    return status == null ? null : status.name();
+  }
+
+  default TransactionExecutionStatus mapStatus(String status) {
+    return status == null ? null : TransactionExecutionStatus.valueOf(status);
+  }
 }

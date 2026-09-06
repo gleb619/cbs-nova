@@ -4,19 +4,27 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.transaction.TransactionExecution;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.jdbc.Sql;
-
+import cbs.nova.dsl.transaction.TransactionExecutionStatus;
+import cbs.nova.starter.config.DslRootAutoConfiguration;
+import cbs.nova.starter.config.DslRunRepositoryConfiguration;
+import cbs.nova.starter.converter.TransactionExecutionMapperImpl;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import javax.sql.DataSource;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.jdbc.DataSourceBuilder;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.data.jdbc.repository.config.EnableJdbcRepositories;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.jdbc.Sql;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@SpringBootTest(classes = JdbcTransactionExecutionRepositoryTest.TestApplication.class, webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Sql(scripts = {"classpath:db/migration/h2/V1__init.sql", "classpath:sql/truncate-dsl-tables.sql"})
 @TestPropertySource(properties = {
     "csb.dsl.worker.enabled=false"
@@ -38,6 +46,7 @@ class JdbcTransactionExecutionRepositoryTest {
     assertThat(found.get(0).transactionName()).isEqualTo("CreateOrder");
     assertThat(found.get(0).executedAt()).isEqualTo(Instant.parse("2026-07-19T00:00:00Z"));
     assertThat(found.get(0).input()).isEqualTo(Map.of("sku", "ABC"));
+    assertThat(found.get(0).status()).isEqualTo(TransactionExecutionStatus.SUCCESS);
   }
 
   @Test
@@ -117,16 +126,66 @@ class JdbcTransactionExecutionRepositoryTest {
     assertThat(repository.findByRunId("run-9")).hasSize(1);
   }
 
-  private static TransactionExecution execution(String runId, String transactionName,
-          Object input) {
-    return new TransactionExecution(runId, transactionName, input,
-            Instant.parse("2026-07-19T00:00:00Z"));
+  @Test
+  void saveInsertsNewRecordWithStatusAndDuration() {
+    Instant started = Instant.parse("2026-01-01T00:00:00Z");
+    Instant finished = Instant.parse("2026-01-01T00:00:01Z");
+    var exec = new TransactionExecution(
+            "run-status", "TxA", Map.of("k", "v"),
+            finished, started, finished,
+            TransactionExecutionStatus.SUCCESS, null);
+
+    repository.save(exec);
+
+    var found = repository.findByRunId("run-status");
+    assertThat(found).hasSize(1);
+    assertThat(found.get(0).status()).isEqualTo(TransactionExecutionStatus.SUCCESS);
+    assertThat(found.get(0).durationMillis()).isEqualTo(1000);
   }
 
-  @SpringBootApplication(scanBasePackages = "cbs.nova.starter")
+  @Test
+  void saveUpsertsExistingTransactionByName() {
+    Instant started = Instant.parse("2026-01-01T00:00:00Z");
+    Instant finished = Instant.parse("2026-01-01T00:00:01Z");
+    repository.save(new TransactionExecution(
+            "run-upsert", "TxB", null,
+            finished, started, finished,
+            TransactionExecutionStatus.FAILED, "boom"));
+
+    Instant finished2 = Instant.parse("2026-01-01T00:00:02Z");
+    repository.save(new TransactionExecution(
+            "run-upsert", "TxB", null,
+            finished2, started, finished2,
+            TransactionExecutionStatus.SUCCESS, null));
+
+    var found = repository.findByRunId("run-upsert");
+    assertThat(found).hasSize(1);
+    assertThat(found.get(0).status()).isEqualTo(TransactionExecutionStatus.SUCCESS);
+    assertThat(found.get(0).durationMillis()).isEqualTo(2000);
+  }
+
+  private static TransactionExecution execution(String runId, String transactionName,
+          Object input) {
+    Instant executedAt = Instant.parse("2026-07-19T00:00:00Z");
+    return new TransactionExecution(runId, transactionName, input, executedAt, executedAt,
+            executedAt, TransactionExecutionStatus.SUCCESS, null);
+  }
+
+  @Configuration
+  @EnableAutoConfiguration(exclude = {
+      DslRootAutoConfiguration.class,
+      DslRunRepositoryConfiguration.class
+  })
+  @EnableJdbcRepositories(basePackages = "cbs.nova.starter.persistence")
+  @Import({JdbcTransactionExecutionRepository.class, TransactionExecutionMapperImpl.class})
   static class TestApplication {
-    public static void main(String[] args) {
-      SpringApplication.run(TestApplication.class, args);
+
+    @Bean
+    DataSource dataSource() {
+      return DataSourceBuilder.create()
+              .driverClassName("org.h2.Driver")
+              .url("jdbc:h2:mem:txexecdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE")
+              .build();
     }
   }
 }

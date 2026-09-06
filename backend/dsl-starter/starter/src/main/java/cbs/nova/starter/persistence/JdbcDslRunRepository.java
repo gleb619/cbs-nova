@@ -7,16 +7,17 @@ import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.starter.config.properties.DslRunPersistenceProperties;
 import cbs.nova.starter.converter.DslRunMapper;
 import cbs.nova.starter.entity.DslRunEntity;
-import java.util.Comparator;
+import com.github.squigglesql.squigglesql.FunctionCall;
+import com.github.squigglesql.squigglesql.Matchable;
+import com.github.squigglesql.squigglesql.Table;
+import com.github.squigglesql.squigglesql.TableColumn;
+import com.github.squigglesql.squigglesql.TableReference;
+import com.github.squigglesql.squigglesql.criteria.Criteria;
+import com.github.squigglesql.squigglesql.literal.Literal;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
-import org.springframework.jdbc.support.KeyHolder;
-
-import javax.sql.DataSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -24,9 +25,11 @@ import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -40,16 +43,9 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
   private final FieldEncryptor encryptor;
   private final String tableName;
 
-  // TODO: remove constructor, use lombok's one
-  public JdbcDslRunRepository(DataSource dataSource, DslRunJdbcRepository delegate,
-          DslRunMapper mapper, FieldEncryptor encryptor,
-          DslRunPersistenceProperties properties) {
-    this(new NamedParameterJdbcTemplate(dataSource), delegate, mapper, encryptor, properties);
-  }
-
-  // TODO: remove constructor, use lombok's one
   public JdbcDslRunRepository(NamedParameterJdbcTemplate jdbcTemplate,
-          DslRunJdbcRepository delegate, DslRunMapper mapper, FieldEncryptor encryptor,
+          DslRunJdbcRepository delegate,
+          DslRunMapper mapper, FieldEncryptor encryptor,
           DslRunPersistenceProperties properties) {
     this(jdbcTemplate, delegate, mapper, encryptor, qualifiedTableName(properties));
   }
@@ -67,18 +63,8 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
     DslRunEntity entity = mapper.toEntity(run);
     encryptEntity(entity);
 
-    if (delegate.findByRunId(entity.getRunId()).isPresent()) {
-      jdbcTemplate.update(getUpsertStatement(), insertParams(entity));
-      return findByRunId(entity.getRunId())
-              .orElseThrow(() -> new IllegalStateException("Run not found: " + entity.getRunId()));
-    }
-
-    KeyHolder keyHolder = new GeneratedKeyHolder();
-    jdbcTemplate.update(getInsertStatement(), insertParams(entity), keyHolder, new String[]{"id"});
-    if (keyHolder.getKey() != null) {
-      entity.setId(keyHolder.getKey().longValue());
-    }
-    return mapper.toDomain(decryptEntity(entity));
+    delegate.findByRunId(entity.getRunId()).ifPresent(existing -> entity.setId(existing.getId()));
+    return mapper.toDomain(decryptEntity(delegate.save(entity)));
   }
 
   @Override
@@ -108,31 +94,22 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
       throw new IllegalArgumentException("limit must be positive, was " + limit);
     }
 
-    List<String> predicates = new ArrayList<>();
-    MapSqlParameterSource params = new MapSqlParameterSource();
-    if (processName != null) {
-      predicates.add("process_name = :processName");
-      params.addValue("processName", processName);
-    }
-    if (status != null) {
-      predicates.add("LOWER(status) = LOWER(:status)");
-      params.addValue("status", status);
-    }
-    if (mode != null) {
-      predicates.add("LOWER(COALESCE(NULLIF(execution_mode, ''), 'RUN')) = LOWER(:mode)");
-      params.addValue("mode", mode);
-    }
-    if (correlationId != null && !correlationId.isBlank()) {
-      predicates.add("correlation_id = :correlationId");
-      params.addValue("correlationId", correlationId);
-    }
-    String where = predicates.isEmpty() ? "" : "WHERE " + String.join(" AND ", predicates);
+    DslRunTable t = new DslRunTable(tableName);
+    TableReference r = t.refer();
 
-    int total = jdbcTemplate.queryForObject(getSearchCountStatement(where), params, Integer.class);
-    params.addValue("limit", limit).addValue("offset", offset);
-    List<DslRun> items = jdbcTemplate.query(
-            getSearchStatement(where),
-            params,
+    ExtendedSelectQuery countQuery = new ExtendedSelectQuery();
+    countQuery.addToSelection(Literal.unsafe("COUNT(*)"));
+    addSearchCriteria(countQuery, t, r, processName, status, mode, correlationId);
+    int total = Objects.requireNonNull(
+            jdbcTemplate.queryForObject(countQuery.toString(), Map.of(), Integer.class));
+
+    ExtendedSelectQuery dataQuery = new ExtendedSelectQuery();
+    addFullSelection(dataQuery, t, r);
+    addSearchCriteria(dataQuery, t, r, processName, status, mode, correlationId);
+    dataQuery.addOrder(r.get(t.startedAt), false);
+    dataQuery.limit(limit);
+    dataQuery.offset(offset);
+    List<DslRun> items = jdbcTemplate.query(dataQuery.toString(),
             (rs, rowNum) -> mapper.toDomain(decryptEntity(mapEntity(rs))));
     return new DslRunSearchResult(items, total);
   }
@@ -145,17 +122,14 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
           @Nullable String error,
           @NonNull Instant finishedAt,
           @Nullable String contextJson) {
-    String sql = getUpdateStatement();
-
-    MapSqlParameterSource params = finishParams(runId, status, output, error, contextJson,
-            finishedAt);
-
-    int updated = jdbcTemplate.update(sql, params);
-    if (updated == 0) {
-      throw new IllegalStateException("Run not found: " + runId);
-    }
-    return findByRunId(runId)
+    DslRunEntity entity = delegate.findByRunId(runId)
             .orElseThrow(() -> new IllegalStateException("Run not found: " + runId));
+    entity.setStatus(status);
+    entity.setOutputJson(encryptor.encrypt(output));
+    entity.setErrorMessage(encryptor.encrypt(error));
+    entity.setContextJson(encryptor.encrypt(contextJson));
+    entity.setFinishedAt(finishedAt);
+    return mapper.toDomain(decryptEntity(delegate.save(entity)));
   }
 
   @Override
@@ -166,13 +140,8 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
           @Nullable String error,
           @NonNull Instant finishedAt,
           @Nullable String contextJson) {
-    String sql = getGuardedUpdateStatement();
-
-    MapSqlParameterSource params = finishParams(runId, status, output, error, contextJson,
-            finishedAt)
-            .addValue("expectedStatus", DslRunStatus.RUNNING.name());
-
-    return jdbcTemplate.update(sql, params);
+    return delegate.updateFinishedIfRunning(runId, status, encryptor.encrypt(output),
+            encryptor.encrypt(error), encryptor.encrypt(contextJson), finishedAt);
   }
 
   @Override
@@ -183,24 +152,27 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
     if (batchSize <= 0) {
       throw new IllegalArgumentException("batchSize must be positive, was " + batchSize);
     }
-    String selectSql = "SELECT run_id FROM %s WHERE finished_at < :cutoff AND status <> :runningStatus LIMIT :batchSize"
-            .formatted(tableName);
-    String deleteSql = "DELETE FROM %s WHERE run_id IN (:ids)".formatted(tableName);
-    MapSqlParameterSource params = new MapSqlParameterSource()
-            .addValue("cutoff", Timestamp.from(cutoff))
-            .addValue("runningStatus", DslRunStatus.RUNNING.name())
-            .addValue("batchSize", batchSize);
+    DslRunTable t = new DslRunTable(tableName);
 
     int total = 0;
     while (true) {
-      List<String> ids = jdbcTemplate.queryForList(selectSql, params, String.class);
-      if (ids.isEmpty()) {
+      TableReference selectRef = t.refer();
+      ExtendedSelectQuery select = new ExtendedSelectQuery();
+      select.addToSelection(selectRef.get(t.id));
+      select.addToSelection(selectRef.get(t.runId));
+      select.addCriteria(Criteria.less(selectRef.get(t.finishedAt), Literal.of(cutoff)));
+      select.addCriteria(Criteria.notEqual(selectRef.get(t.status),
+              Literal.of(DslRunStatus.RUNNING.name())));
+      select.limit(batchSize);
+      List<PurgeBatchRow> batch = jdbcTemplate.query(select.toString(),
+              (rs, rowNum) -> new PurgeBatchRow(rs.getLong(1), rs.getString(2)));
+      if (batch.isEmpty()) {
         break;
       }
-      onBatchBeforeParentDelete.accept(ids);
-      int deleted = jdbcTemplate.update(deleteSql, new MapSqlParameterSource("ids", ids));
-      total += deleted;
-      if (ids.size() < batchSize) {
+      onBatchBeforeParentDelete.accept(batch.stream().map(PurgeBatchRow::runId).toList());
+      delegate.deleteAllById(batch.stream().map(PurgeBatchRow::id).toList());
+      total += batch.size();
+      if (batch.size() < batchSize) {
         break;
       }
     }
@@ -213,31 +185,40 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
       throw new IllegalArgumentException(
               "topProcessesLimit must be positive, was " + topProcessesLimit);
     }
+    DslRunTable t = new DslRunTable(tableName);
 
-    MapSqlParameterSource windowParams = new MapSqlParameterSource()
-            .addValue("windowStart", Timestamp.from(windowStart))
-            .addValue("failedStatus", DslRunStatus.FAILED.name());
-
-    Map<String, Long> statusCounts = new LinkedHashMap<>();
-    jdbcTemplate.query(getStatusCountsStatement(), windowParams, rs -> {
-      statusCounts.put(rs.getString(1), rs.getLong(2));
-    });
+    ExtendedSelectQuery statusQuery = new ExtendedSelectQuery();
+    TableReference statusRef = t.refer();
+    statusQuery.addToSelection(statusRef.get(t.status));
+    statusQuery.addToSelection(Literal.unsafe("COUNT(*)"));
+    statusQuery.addGroupBy(statusRef.get(t.status));
+    statusQuery.addOrder(statusRef.get(t.status), true);
+    Map<String, Long> statusCounts = jdbcTemplate.query(statusQuery.toString(),
+            (rs, rowNum) -> Map.entry(rs.getString(1), rs.getLong(2)))
+            .stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a,
+                    LinkedHashMap::new));
 
     long totalRuns = statusCounts.values().stream().mapToLong(Long::longValue).sum();
 
-    long[] window = new long[2];
-    jdbcTemplate.query(getWindowStatement(), windowParams, rs -> {
-      window[0] = rs.getLong(1);
-      window[1] = rs.getLong(2);
-    });
-    long windowRuns = window[0];
-    long windowFailedRuns = window[1];
+    TableReference windowRef = t.refer();
+    long windowRuns = countWhere(t,
+            Criteria.notLess(windowRef.get(t.startedAt), Literal.of(windowStart)));
+    TableReference failedRef = t.refer();
+    long windowFailedRuns = countWhere(t, Criteria.and(
+            Criteria.notLess(failedRef.get(t.startedAt), Literal.of(windowStart)),
+            Criteria.equal(failedRef.get(t.status), Literal.of(DslRunStatus.FAILED.name()))));
 
-    MapSqlParameterSource topParams = new MapSqlParameterSource()
-            .addValue("topProcessesLimit", topProcessesLimit);
-    List<DslRunStats.ProcessRunCount> topProcesses = jdbcTemplate
-            .query(getTopProcessesStatement(), topParams,
-                    (rs, i) -> new DslRunStats.ProcessRunCount(rs.getString(1), rs.getLong(2)));
+    ExtendedSelectQuery topQuery = new ExtendedSelectQuery();
+    TableReference topRef = t.refer();
+    topQuery.addToSelection(topRef.get(t.processName));
+    topQuery.addToSelection(Literal.unsafe("COUNT(*)"));
+    topQuery.addGroupBy(topRef.get(t.processName));
+    topQuery.addOrder(Literal.unsafe("COUNT(*)"), false);
+    topQuery.addOrder(topRef.get(t.processName), true);
+    topQuery.limit(topProcessesLimit);
+    List<DslRunStats.ProcessRunCount> topProcesses = jdbcTemplate.query(topQuery.toString(),
+            (rs, rowNum) -> new DslRunStats.ProcessRunCount(rs.getString(1), rs.getLong(2)));
 
     double failureRate = windowRuns == 0 ? 0.0 : (double) windowFailedRuns / windowRuns;
     return new DslRunStats(totalRuns, statusCounts, windowRuns, windowFailedRuns, failureRate,
@@ -264,18 +245,79 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
                       + bucketSeconds + ") so bucket boundaries are stable");
     }
 
-    MapSqlParameterSource params = new MapSqlParameterSource()
-            .addValue("windowStart", Timestamp.from(windowStart))
-            .addValue("windowEnd", Timestamp.from(windowEnd));
+    DslRunTable t = new DslRunTable(tableName);
+    TableReference r = t.refer();
 
-    List<RunTimeseriesBucket> minuteRows = jdbcTemplate.query(
-            getTimeseriesStatement(), params,
+    ExtendedSelectQuery query = new ExtendedSelectQuery();
+    query.addToSelection(minuteBucket(t, r));
+    query.addToSelection(r.get(t.status));
+    query.addToSelection(Literal.unsafe("COUNT(*)"));
+    query.addCriteria(Criteria.notLess(r.get(t.startedAt), Literal.of(windowStart)));
+    query.addCriteria(Criteria.less(r.get(t.startedAt), Literal.of(windowEnd)));
+    query.addGroupBy(minuteBucket(t, r));
+    query.addGroupBy(r.get(t.status));
+    query.addOrder(minuteBucket(t, r), true);
+    query.addOrder(r.get(t.status), true);
+
+    List<RunTimeseriesBucket> minuteRows = jdbcTemplate.query(query.toString(),
             (rs, rowNum) -> new RunTimeseriesBucket(
                     rs.getTimestamp(1).toInstant(),
                     rs.getString(2),
                     rs.getLong(3)));
 
     return foldMinuteBuckets(minuteRows, windowStart, bucketSeconds);
+  }
+
+  private long countWhere(DslRunTable t, Criteria criteria) {
+    TableReference r = t.refer();
+    ExtendedSelectQuery query = new ExtendedSelectQuery();
+    query.addToSelection(Literal.unsafe("COUNT(*)"));
+    query.addCriteria(criteria);
+    return Objects
+            .requireNonNull(jdbcTemplate.queryForObject(query.toString(), Map.of(), Long.class));
+  }
+
+  private static FunctionCall minuteBucket(DslRunTable t, TableReference r) {
+    return new FunctionCall("date_trunc", Literal.of("minute"), r.get(t.startedAt));
+  }
+
+  private static FunctionCall lower(Matchable argument) {
+    return new FunctionCall("LOWER", argument);
+  }
+
+  private static void addSearchCriteria(ExtendedSelectQuery query, DslRunTable t, TableReference r,
+          @Nullable String processName, @Nullable String status, @Nullable String mode,
+          @Nullable String correlationId) {
+    if (processName != null) {
+      query.addCriteria(Criteria.equal(r.get(t.processName), Literal.of(processName)));
+    }
+    if (status != null) {
+      query.addCriteria(Criteria.equal(lower(r.get(t.status)), lower(Literal.of(status))));
+    }
+    if (mode != null) {
+      FunctionCall nullIfBlank = new FunctionCall("NULLIF", r.get(t.executionMode), Literal.of(""));
+      FunctionCall coalesced = new FunctionCall("COALESCE", nullIfBlank, Literal.of("RUN"));
+      query.addCriteria(Criteria.equal(lower(coalesced), lower(Literal.of(mode))));
+    }
+    if (correlationId != null && !correlationId.isBlank()) {
+      query.addCriteria(Criteria.equal(r.get(t.correlationId), Literal.of(correlationId)));
+    }
+  }
+
+  private static void addFullSelection(ExtendedSelectQuery query, DslRunTable t, TableReference r) {
+    query.addToSelection(r.get(t.id));
+    query.addToSelection(r.get(t.runId));
+    query.addToSelection(r.get(t.processName));
+    query.addToSelection(r.get(t.status));
+    query.addToSelection(r.get(t.inputJson));
+    query.addToSelection(r.get(t.outputJson));
+    query.addToSelection(r.get(t.errorMessage));
+    query.addToSelection(r.get(t.contextJson));
+    query.addToSelection(r.get(t.startedAt));
+    query.addToSelection(r.get(t.finishedAt));
+    query.addToSelection(r.get(t.executionMode));
+    query.addToSelection(r.get(t.triggeredBy));
+    query.addToSelection(r.get(t.correlationId));
   }
 
   private static List<RunTimeseriesBucket> foldMinuteBuckets(
@@ -301,39 +343,6 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
     return out;
   }
 
-  private MapSqlParameterSource insertParams(DslRunEntity entity) {
-    return new MapSqlParameterSource()
-            .addValue("runId", entity.getRunId())
-            .addValue("processName", entity.getProcessName())
-            .addValue("status", entity.getStatus())
-            .addValue("inputJson", entity.getInputJson())
-            .addValue("outputJson", entity.getOutputJson())
-            .addValue("errorMessage", entity.getErrorMessage())
-            .addValue("contextJson", entity.getContextJson())
-            .addValue("startedAt", Timestamp.from(entity.getStartedAt()))
-            .addValue("finishedAt",
-                    entity.getFinishedAt() != null ? Timestamp.from(entity.getFinishedAt()) : null)
-            .addValue("executionMode", entity.getExecutionMode())
-            .addValue("triggeredBy", entity.getTriggeredBy())
-            .addValue("correlationId", entity.getCorrelationId());
-  }
-
-  private MapSqlParameterSource finishParams(
-          @NonNull String runId,
-          @NonNull String status,
-          @Nullable String output,
-          @Nullable String error,
-          @Nullable String contextJson,
-          @NonNull Instant finishedAt) {
-    return new MapSqlParameterSource()
-            .addValue("status", status)
-            .addValue("outputJson", encryptor.encrypt(output))
-            .addValue("errorMessage", encryptor.encrypt(error))
-            .addValue("contextJson", encryptor.encrypt(contextJson))
-            .addValue("finishedAt", Timestamp.from(finishedAt))
-            .addValue("runId", runId);
-  }
-
   private void encryptEntity(DslRunEntity entity) {
     entity.setInputJson(encryptor.encrypt(entity.getInputJson()));
     entity.setOutputJson(encryptor.encrypt(entity.getOutputJson()));
@@ -345,15 +354,6 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
     entity.setOutputJson(encryptor.decrypt(entity.getOutputJson()));
     entity.setContextJson(encryptor.decrypt(entity.getContextJson()));
     return entity;
-  }
-
-  private String getSearchCountStatement(String where) {
-    return "SELECT COUNT(*) FROM %s %s".formatted(tableName, where);
-  }
-
-  private String getSearchStatement(String where) {
-    return "SELECT * FROM %s %s ORDER BY started_at DESC LIMIT :limit OFFSET :offset"
-            .formatted(tableName, where);
   }
 
   private DslRunEntity mapEntity(ResultSet rs) throws SQLException {
@@ -376,85 +376,45 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
     return entity;
   }
 
-  private String getInsertStatement() {
-    return """
-            INSERT INTO %s (run_id, process_name, status, input_json, output_json, error_message, context_json, started_at, finished_at, execution_mode, triggered_by, correlation_id)
-            VALUES
-            (:runId, :processName, :status, :inputJson, :outputJson, :errorMessage, :contextJson, :startedAt, :finishedAt, :executionMode, :triggeredBy, :correlationId)"""
-            .formatted(tableName);
+  private record PurgeBatchRow(Long id, String runId) {
   }
 
-  private String getUpsertStatement() {
-    return """
-            UPDATE %s SET
-                process_name = :processName
-              , status = :status
-              , input_json = :inputJson
-              , output_json = :outputJson
-              , error_message = :errorMessage
-              , context_json = :contextJson
-              , started_at = :startedAt
-              , finished_at = :finishedAt
-              , execution_mode = :executionMode
-              , triggered_by = :triggeredBy
-              , correlation_id = :correlationId
-            WHERE run_id = :runId""".formatted(tableName);
-  }
+  private static final class DslRunTable {
 
-  private String getUpdateStatement() {
-    return """
-            UPDATE %s SET
-                status = :status
-              , output_json = :outputJson
-              , error_message = :errorMessage
-              , context_json = :contextJson
-              , finished_at = :finishedAt
-            WHERE run_id = :runId""".formatted(
-            tableName);
-  }
+    final Table table;
+    final TableColumn id;
+    final TableColumn runId;
+    final TableColumn processName;
+    final TableColumn status;
+    final TableColumn inputJson;
+    final TableColumn outputJson;
+    final TableColumn errorMessage;
+    final TableColumn contextJson;
+    final TableColumn startedAt;
+    final TableColumn finishedAt;
+    final TableColumn executionMode;
+    final TableColumn triggeredBy;
+    final TableColumn correlationId;
 
-  private String getGuardedUpdateStatement() {
-    return """
-            UPDATE %s SET
-                status = :status
-              , output_json = :outputJson
-              , error_message = :errorMessage
-              , context_json = :contextJson
-              , finished_at = :finishedAt
-            WHERE run_id = :runId
-              AND status = :expectedStatus""".formatted(
-            tableName);
-  }
+    DslRunTable(String name) {
+      table = new Table(name);
+      id = table.get("id");
+      runId = table.get("run_id");
+      processName = table.get("process_name");
+      status = table.get("status");
+      inputJson = table.get("input_json");
+      outputJson = table.get("output_json");
+      errorMessage = table.get("error_message");
+      contextJson = table.get("context_json");
+      startedAt = table.get("started_at");
+      finishedAt = table.get("finished_at");
+      executionMode = table.get("execution_mode");
+      triggeredBy = table.get("triggered_by");
+      correlationId = table.get("correlation_id");
+    }
 
-  private String getStatusCountsStatement() {
-    return "SELECT status, COUNT(*) FROM %s GROUP BY status ORDER BY status".formatted(tableName);
+    TableReference refer() {
+      return table.refer();
+    }
   }
-
-  private String getWindowStatement() {
-    return """
-            SELECT COUNT(*), COUNT(*) FILTER (WHERE status = :failedStatus)
-            FROM %s WHERE started_at >= :windowStart""".formatted(tableName);
-  }
-
-  private String getTimeseriesStatement() {
-    return """
-            SELECT date_trunc('minute', started_at) AS bucket_minute
-                 , status
-                 , COUNT(*) AS run_count
-            FROM %s
-            WHERE started_at >= :windowStart
-              AND started_at <  :windowEnd
-            GROUP BY bucket_minute, status
-            ORDER BY bucket_minute ASC, status ASC""".formatted(tableName);
-  }
-
-  private String getTopProcessesStatement() {
-    return """
-            SELECT process_name, COUNT(*)
-            FROM %s
-            GROUP BY process_name
-            ORDER BY COUNT(*) DESC, process_name ASC
-            LIMIT :topProcessesLimit""".formatted(tableName);
-  }
-
 }

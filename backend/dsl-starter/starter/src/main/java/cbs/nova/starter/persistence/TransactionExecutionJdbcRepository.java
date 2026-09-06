@@ -1,9 +1,14 @@
 package cbs.nova.starter.persistence;
 
 import cbs.nova.starter.entity.TransactionExecutionEntity;
-import org.springframework.data.repository.CrudRepository;
+import org.jspecify.annotations.NonNull;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
+import org.springframework.data.jdbc.repository.query.Modifying;
+import org.springframework.data.jdbc.repository.query.Query;
+import org.springframework.data.repository.CrudRepository;
 
 /**
  * Spring Data JDBC repository for {@link TransactionExecutionEntity} reads.
@@ -16,5 +21,19 @@ public interface TransactionExecutionJdbcRepository
         extends
           CrudRepository<TransactionExecutionEntity, Long> {
 
-  List<TransactionExecutionEntity> findByRunIdOrderByIdDesc(String runId);
+  @NonNull
+  List<TransactionExecutionEntity> findByRunIdOrderByIdDesc(@NonNull String runId);
+
+  @NonNull
+  Optional<TransactionExecutionEntity> findTopByRunIdAndTransactionNameOrderByIdDesc(
+          @NonNull String runId,
+          @NonNull String transactionName);
+
+  @Modifying
+  @Query("DELETE FROM dsl_run_transactions WHERE run_id = :runId")
+  void deleteByRunId(@NonNull String runId);
+
+  @Modifying
+  @Query("DELETE FROM dsl_run_transactions WHERE run_id IN (:runIds)")
+  int deleteByRunIds(@NonNull Collection<String> runIds);
 }

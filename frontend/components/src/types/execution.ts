@@ -9,6 +9,8 @@ export type ExecutionStatus =
 export type ExecutionMode = 'PREVIEW' | 'RUN' | 'EXPLAIN'
 export type StepType = 'Process' | 'Transaction' | 'Function' | 'Helper'
 
+export type TransactionExecutionStatus = 'SUCCESS' | 'FAILED' | 'COMPENSATED'
+
 export interface Execution {
   id: string
   entity: string
@@ -53,6 +55,16 @@ export interface TransactionExecutionDto {
   transactionName: string
   input?: unknown
   executedAt: string
+  /** Transaction lifecycle status. Always present after the T326 backend enrichment. */
+  status: TransactionExecutionStatus
+  /** ISO timestamp when the transaction started. */
+  startedAt: string
+  /** ISO timestamp when the transaction finished. Optional while the transaction is still in-flight. */
+  finishedAt?: string
+  /** Duration in milliseconds. Optional; derived from start/end if absent. */
+  duration?: number
+  /** Error message for FAILED / COMPENSATED records. */
+  error?: string
 }
 
 export interface ExecutionFilters {

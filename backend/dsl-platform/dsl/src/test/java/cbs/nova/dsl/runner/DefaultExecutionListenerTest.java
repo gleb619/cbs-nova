@@ -4,17 +4,32 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.repository.InMemoryTransactionExecutionRepository;
 import cbs.nova.dsl.transaction.TransactionExecution;
+import cbs.nova.dsl.transaction.TransactionExecutionStatus;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class DefaultExecutionListenerTest {
 
+  private static TransactionExecution exec(
+          String runId,
+          String transactionName,
+          Object input,
+          Instant startedAt,
+          Instant finishedAt,
+          TransactionExecutionStatus status,
+          String error) {
+    return new TransactionExecution(
+            runId, transactionName, input,
+            finishedAt, startedAt, finishedAt, status, error);
+  }
+
   @Test
   void onTransactionSuccessPersistsExecutionIntoRepository() {
     var repo = new InMemoryTransactionExecutionRepository();
     var listener = new DefaultExecutionListener("run-listener", repo);
-    var exec = new TransactionExecution("run-listener", "Tx", "in", Instant.now());
+    var now = Instant.now();
+    var exec = exec("run-listener", "Tx", "in", now, now, TransactionExecutionStatus.SUCCESS, null);
 
     listener.onTransactionSuccess(exec);
 
@@ -35,9 +50,10 @@ class DefaultExecutionListenerTest {
   void historyInReverseSurvivesMultipleSuccesses() {
     var repo = new InMemoryTransactionExecutionRepository();
     var listener = new DefaultExecutionListener("run-multi", repo);
-    var e1 = new TransactionExecution("run-multi", "TxA", "in1", Instant.now());
-    var e2 = new TransactionExecution("run-multi", "TxB", "in2", Instant.now());
-    var e3 = new TransactionExecution("run-multi", "TxC", "in3", Instant.now());
+    var now = Instant.now();
+    var e1 = exec("run-multi", "TxA", "in1", now, now, TransactionExecutionStatus.SUCCESS, null);
+    var e2 = exec("run-multi", "TxB", "in2", now, now, TransactionExecutionStatus.SUCCESS, null);
+    var e3 = exec("run-multi", "TxC", "in3", now, now, TransactionExecutionStatus.SUCCESS, null);
 
     listener.onTransactionSuccess(e1);
     listener.onTransactionSuccess(e2);
@@ -45,7 +61,6 @@ class DefaultExecutionListenerTest {
 
     var history = listener.historyInReverse();
     assertThat(history).hasSize(3);
-    // Reverse insertion order — newest first
     assertThat(history.stream().map(TransactionExecution::transactionName).toList())
             .containsExactly("TxC", "TxB", "TxA");
   }
@@ -54,8 +69,8 @@ class DefaultExecutionListenerTest {
   void onTransactionFailureIsNoOpAndDoesNotPolluteHistory() {
     var repo = new InMemoryTransactionExecutionRepository();
     var listener = new DefaultExecutionListener("run-fail", repo);
-    // Pre-seed a successful execution so we can assert failure doesn't touch it.
-    var ok = new TransactionExecution("run-fail", "TxOk", "in", Instant.now());
+    var now = Instant.now();
+    var ok = exec("run-fail", "TxOk", "in", now, now, TransactionExecutionStatus.SUCCESS, null);
     listener.onTransactionSuccess(ok);
 
     listener.onTransactionFailure("run-fail", "TxBoom", new IllegalStateException("boom"));
@@ -63,7 +78,6 @@ class DefaultExecutionListenerTest {
     var history = listener.historyInReverse();
     assertThat(history.stream().map(TransactionExecution::transactionName).toList())
             .containsExactly("TxOk");
-    // Repository records only successes for this run.
     assertThat(repo.findByRunId("run-fail").stream().map(TransactionExecution::transactionName)
             .toList())
             .containsExactly("TxOk");
@@ -74,9 +88,10 @@ class DefaultExecutionListenerTest {
     var repo = new InMemoryTransactionExecutionRepository();
     var runA = new DefaultExecutionListener("run-A", repo);
     var runB = new DefaultExecutionListener("run-B", repo);
+    var now = Instant.now();
 
-    runA.onTransactionSuccess(new TransactionExecution("run-A", "TxA", "in", Instant.now()));
-    runB.onTransactionSuccess(new TransactionExecution("run-B", "TxB", "in", Instant.now()));
+    runA.onTransactionSuccess(exec("run-A", "TxA", "in", now, now, TransactionExecutionStatus.SUCCESS, null));
+    runB.onTransactionSuccess(exec("run-B", "TxB", "in", now, now, TransactionExecutionStatus.SUCCESS, null));
 
     var historyA = runA.historyInReverse();
     var historyB = runB.historyInReverse();

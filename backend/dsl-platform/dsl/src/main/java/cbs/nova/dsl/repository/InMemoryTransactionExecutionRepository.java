@@ -41,7 +41,18 @@ public final class InMemoryTransactionExecutionRepository
         trackedRuns.incrementAndGet();
         firstForRun.set(true);
       }
-      updated.add(execution);
+      int existing = -1;
+      for (int i = 0; i < updated.size(); i++) {
+        if (updated.get(i).transactionName().equals(execution.transactionName())) {
+          existing = i;
+          break;
+        }
+      }
+      if (existing >= 0) {
+        updated.set(existing, execution);
+      } else {
+        updated.add(execution);
+      }
       if (updated.size() > MAX_EXECUTIONS_PER_RUN) {
         updated.remove(0);
       }

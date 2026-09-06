@@ -8,6 +8,7 @@ import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.transaction.TransactionExecution;
+import cbs.nova.dsl.transaction.TransactionExecutionStatus;
 import cbs.nova.starter.IntegrationTestApplication;
 import cbs.nova.starter.service.DslRunRetentionPurger;
 import io.micrometer.core.instrument.Counter;
@@ -52,6 +53,7 @@ class DslRunRetentionIntegrationTest {
     registry.add("spring.datasource.username", postgres::getUsername);
     registry.add("spring.datasource.password", postgres::getPassword);
     registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
+    registry.add("cbs.dsl.source-dir", () -> "dsl-examples");
   }
 
   @Autowired
@@ -172,7 +174,8 @@ class DslRunRetentionIntegrationTest {
   }
 
   private static TransactionExecution transaction(String runId, String transactionName) {
-    return new TransactionExecution(runId, transactionName, null,
-            Instant.parse("2026-06-15T11:00:00Z"));
+    Instant executedAt = Instant.parse("2026-06-15T11:00:00Z");
+    return new TransactionExecution(runId, transactionName, null, executedAt, executedAt,
+            executedAt, TransactionExecutionStatus.SUCCESS, null);
   }
 }

@@ -25,6 +25,7 @@ avaje-jsonb = "3.4"
 avaje-jsonb-generator = "3.4"
 h2 = "2.4.240"
 caffeine = "3.1.8"
+squigglesql = "4.2.1"
 
 jgit = "7.1.0.202411261347-r"
 
@@ -118,6 +119,9 @@ h2 = { module = "com.h2database:h2", version.ref = "h2" }
 # -- Caffeine --
 caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
 jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit" }
+
+# -- SquiggleSQL --
+squigglesql = { module = "com.github.squigglesql:squigglesql", version.ref = "squigglesql" }
 
 # -- YAML --
 snakeyaml = { module = "org.yaml:snakeyaml", version = "2.3" }

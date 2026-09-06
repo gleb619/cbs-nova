@@ -57,6 +57,7 @@ dependencies {
   compileOnly libs.openfeign.core
   compileOnly libs.spring.kafka
   implementation libs.spring.boot.starter.data.jdbc
+  implementation libs.squigglesql
   implementation libs.spring.boot.starter.oauth2.resource.server
   implementation libs.jackson.databind3
   implementation libs.mvel2

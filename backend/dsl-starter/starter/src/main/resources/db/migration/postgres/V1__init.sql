@@ -19,10 +19,15 @@ CREATE TABLE IF NOT EXISTS dsl_run_transactions (
     run_id VARCHAR(255) NOT NULL,
     transaction_name VARCHAR(255) NOT NULL,
     input_json TEXT,
+    status VARCHAR(32) NOT NULL,
+    started_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    finished_at TIMESTAMP WITH TIME ZONE,
+    error_message TEXT,
     executed_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_dsl_run_transactions_run_id ON dsl_run_transactions(run_id);
+CREATE INDEX IF NOT EXISTS idx_dsl_run_transactions_status ON dsl_run_transactions(status);
 
 CREATE INDEX IF NOT EXISTS idx_dsl_runs_status_started_at
     ON dsl_runs (status, started_at DESC);

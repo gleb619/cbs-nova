@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.ExecutionListener;
 import cbs.nova.dsl.transaction.TransactionExecution;
+import cbs.nova.dsl.transaction.TransactionExecutionStatus;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -112,7 +113,9 @@ class ChainedExecutionListenerTest {
   }
 
   private static TransactionExecution tx(String name) {
-    return new TransactionExecution("r", name, "in", Instant.now());
+    var now = Instant.now();
+    return new TransactionExecution("r", name, "in", now, now, now,
+            TransactionExecutionStatus.SUCCESS, null);
   }
 
   @Test

@@ -7,14 +7,9 @@ import cbs.nova.starter.entity.TransactionExecutionEntity;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
-import org.springframework.jdbc.support.KeyHolder;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
-import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,9 +17,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class JdbcTransactionExecutionRepository implements TransactionExecutionRepository {
 
-  private static final String TABLE_NAME = "dsl_run_transactions";
-
-  private final NamedParameterJdbcTemplate jdbcTemplate;
   private final TransactionExecutionJdbcRepository delegate;
   private final TransactionExecutionMapper mapper;
   private final ObjectMapper objectMapper;
@@ -34,17 +26,11 @@ public class JdbcTransactionExecutionRepository implements TransactionExecutionR
     TransactionExecutionEntity entity = mapper.toEntity(execution);
     entity.setInputJson(serializeInput(execution.input()));
 
-    KeyHolder keyHolder = new GeneratedKeyHolder();
-    MapSqlParameterSource params = new MapSqlParameterSource()
-            .addValue("runId", entity.getRunId())
-            .addValue("transactionName", entity.getTransactionName())
-            .addValue("inputJson", entity.getInputJson())
-            .addValue("executedAt", Timestamp.from(entity.getExecutedAt()));
+    delegate.findTopByRunIdAndTransactionNameOrderByIdDesc(
+            execution.runId(), execution.transactionName())
+            .ifPresent(existing -> entity.setId(existing.getId()));
+    delegate.save(entity);
 
-    jdbcTemplate.update(getInsertStatement(), params, keyHolder, new String[]{"id"});
-    if (keyHolder.getKey() != null) {
-      entity.setId(keyHolder.getKey().longValue());
-    }
     return execution;
   }
 
@@ -57,8 +43,7 @@ public class JdbcTransactionExecutionRepository implements TransactionExecutionR
 
   @Override
   public void deleteByRunId(@NonNull String runId) {
-    String sql = "DELETE FROM " + TABLE_NAME + " WHERE run_id = :runId";
-    jdbcTemplate.update(sql, new MapSqlParameterSource("runId", runId));
+    delegate.deleteByRunId(runId);
   }
 
   @Override
@@ -66,8 +51,7 @@ public class JdbcTransactionExecutionRepository implements TransactionExecutionR
     if (runIds.isEmpty()) {
       return 0;
     }
-    String sql = "DELETE FROM " + TABLE_NAME + " WHERE run_id IN (:runIds)";
-    return jdbcTemplate.update(sql, new MapSqlParameterSource("runIds", runIds));
+    return delegate.deleteByRunIds(runIds);
   }
 
   private TransactionExecution toDomain(TransactionExecutionEntity entity) {
@@ -76,7 +60,11 @@ public class JdbcTransactionExecutionRepository implements TransactionExecutionR
             entity.getRunId(),
             entity.getTransactionName(),
             input,
-            entity.getExecutedAt());
+            entity.getExecutedAt(),
+            entity.getStartedAt(),
+            entity.getFinishedAt(),
+            mapper.mapStatus(entity.getStatus()),
+            entity.getErrorMessage());
   }
 
   private @Nullable String serializeInput(@Nullable Object input) {
@@ -99,12 +87,5 @@ public class JdbcTransactionExecutionRepository implements TransactionExecutionR
     } catch (JacksonException e) {
       throw new IllegalStateException("Failed to deserialize transaction input", e);
     }
-  }
-
-  private String getInsertStatement() {
-    return """
-            INSERT INTO %s (run_id, transaction_name, input_json, executed_at)
-            VALUES
-            (:runId, :transactionName, :inputJson, :executedAt)""".formatted(TABLE_NAME);
   }
 }
