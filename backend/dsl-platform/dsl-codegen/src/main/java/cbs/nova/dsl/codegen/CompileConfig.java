@@ -13,6 +13,7 @@ import cbs.nova.dsl.codegen.util.CodeWriter;
 import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
 import cbs.nova.dsl.codegen.util.Json;
 import cbs.nova.dsl.codegen.util.ModelTypeExtractor;
+import cbs.nova.dsl.codegen.util.SourcePackageResolver;
 import cbs.nova.dsl.config.DescriptorFactory;
 import cbs.nova.dsl.config.SingletonSupport;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
@@ -41,13 +42,17 @@ public final class CompileConfig implements SingletonSupport {
     return singleton(CodegenNaming::new);
   }
 
+  public @NonNull SourcePackageResolver sourcePackageResolver() {
+    return singleton(() -> new SourcePackageResolver(new DslPackageNameResolver(codegenNaming())));
+  }
+
   public @NonNull SourceCompiler sourceCompiler() {
     return singleton(() -> new SourceCompiler(
             definitionProviderGenerator(),
             codeWriter(),
-            codegenNaming(),
             dslPreprocessor(),
-            modelPreprocessor()));
+            modelPreprocessor(),
+            sourcePackageResolver()));
   }
 
   public @NonNull DslSourceCompiler dslSourceCompiler() {
@@ -88,7 +93,8 @@ public final class CompileConfig implements SingletonSupport {
 
   public @NonNull ModelRegistryGenerator modelRegistryGenerator() {
     return singleton(
-            () -> new ModelRegistryGenerator(codeWriter(), codegenNaming(), modelTypeExtractor()));
+            () -> new ModelRegistryGenerator(
+                    codeWriter(), codegenNaming(), modelTypeExtractor(), sourcePackageResolver()));
   }
 
   public @NonNull DefinitionProviderGenerator definitionProviderGenerator() {

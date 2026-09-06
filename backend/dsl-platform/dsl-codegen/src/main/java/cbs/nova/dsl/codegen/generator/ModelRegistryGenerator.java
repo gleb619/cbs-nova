@@ -4,7 +4,6 @@ import cbs.nova.dsl.codegen.util.CodeWriter;
 import cbs.nova.dsl.codegen.CompilerConstants;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.model.GeneratedSource;
-import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
 import cbs.nova.dsl.codegen.util.ModelTypeExtractor;
 import cbs.nova.dsl.codegen.util.SourcePackageResolver;
 import cbs.nova.dsl.registry.ModelRegistry;
@@ -34,6 +33,7 @@ public final class ModelRegistryGenerator {
   private final CodeWriter codeWriter;
   private final CodegenNaming codegenNaming;
   private final ModelTypeExtractor modelTypeExtractor;
+  private final SourcePackageResolver sourcePackageResolver;
 
   private static final String SOURCE_TEMPLATE = // language=java
           """
@@ -69,8 +69,7 @@ public final class ModelRegistryGenerator {
     var dslSources = collectJavaSources(dslDir);
     var modelSources = collectJavaSources(modelDir);
 
-    // TODO: redo to bean from `CompileConfig`
-    var packageResolver = new SourcePackageResolver(new DslPackageNameResolver(codegenNaming));
+    var packageResolver = sourcePackageResolver;
     var dslPackages = packageResolver.resolveDslPackages(
             dslSources, targetPackage, null, useFileNameSubPackage);
     var modelPackages = packageResolver.resolveModelPackages(

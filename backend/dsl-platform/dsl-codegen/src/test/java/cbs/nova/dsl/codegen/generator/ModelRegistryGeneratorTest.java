@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.codegen.util.CodeWriter;
 import cbs.nova.dsl.codegen.CompilerConstants;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
+import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
 import cbs.nova.dsl.codegen.util.ModelTypeExtractor;
+import cbs.nova.dsl.codegen.util.SourcePackageResolver;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -20,7 +22,10 @@ class ModelRegistryGeneratorTest {
   Path outDir;
 
   private final ModelRegistryGenerator generator = new ModelRegistryGenerator(
-          new CodeWriter(), new CodegenNaming(), new ModelTypeExtractor());
+          new CodeWriter(),
+          new CodegenNaming(),
+          new ModelTypeExtractor(),
+          new SourcePackageResolver(new DslPackageNameResolver(new CodegenNaming())));
 
   @Test
   void generatesRegistryInTargetPackageWithModelEntries() throws Exception {
