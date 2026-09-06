@@ -194,6 +194,156 @@ FormatMessageOut msg = ctx.runHelper("formatMessage",
         .as(FormatMessageOut.class);
 ```
 
+## JSON object merge patches
+
+`jsonPatch` applies RFC 7396 JSON Merge Patch in two directions. The `mode` discriminator
+selects `"apply"` (merge `patch` into `source`) or `"diff"` (compute the merge-patch
+document that turns `source` into `target`). Both arguments must be JSON object strings —
+arrays or scalars surface `IllegalArgumentException("jsonPatch requires object JSON, got: ARRAY")`
+and malformed JSON surfaces a `"jsonPatch: invalid JSON in …"` message. Both modes return a
+compact (no-whitespace) JSON object string in `JsonPatchOut.result`.
+
+### Apply a partial update to a stored object
+
+A `null` value in the patch removes the key (RFC 7396 §3), nested object values merge
+recursively, and array leaves are replaced as-is.
+
+```java
+JsonPatchOut merged = ctx.runHelper("jsonPatch",
+        new JsonPatchIn(currentJson,
+                "{\"status\":\"shipped\",\"shippedAt\":\"2026-03-09T10:00:00Z\"}",
+                null, "apply"))
+        .as(JsonPatchOut.class);
+String next = merged.result();
+```
+
+### Compute the patch between two states
+
+```java
+JsonPatchOut patch = ctx.runHelper("jsonPatch",
+        new JsonPatchIn(beforeJson, null, afterJson, "diff"))
+        .as(JsonPatchOut.class);
+// patch.result() == "{}"                                  when before == after
+// patch.result() == "{\"a\":null}"                        when 'a' was removed
+// patch.result() == "{\"a\":{\"x\":2,\"y\":3},\"b\":2}"    for nested object diffs
+```
+
+## List & record operations
+
+`listOps` packs eight `mode` values behind one record shape. The discriminator is matched
+case-insensitively, and the helper picks the source argument it needs (`records`,
+`list`, or `nested`) based on the mode. `ListOpsOut.result` is typed as `Object` — its
+concrete shape depends on the mode (`List<Object>`, `Map<Object, List<Map<…>>>`, `Double`,
+`Map<String, Object>`, etc.).
+
+### Pluck a column out of a list of records
+
+`pluck` walks `records` and pulls the named `field` from each one, in order. A missing key
+yields `IllegalArgumentException` naming the offending index — the message uses
+`"index <n>"`.
+
+```java
+ListOpsOut names = ctx.runHelper("listOps",
+        new ListOpsIn("pluck", users, null, null, "name", null))
+        .as(ListOpsOut.class);
+List<Object> values = (List<Object>) names.result();
+```
+
+### Group, count, and aggregate
+
+`groupBy` returns a `Map<Object, List<Map<String, Object>>>` preserving first-seen group
+order. `countBy` returns a `Map<Object, Long>` of frequency counts in first-seen order.
+`sumBy` returns a `Double` total. `minBy` and `maxBy` return the winning record as a
+`Map<String, Object>` (ties broken by first occurrence).
+
+```java
+ListOpsOut grouped = ctx.runHelper("listOps",
+        new ListOpsIn("groupBy", orders, null, null, "region", null))
+        .as(ListOpsOut.class);
+Map<Object, List<Map<String, Object>>> byRegion =
+        (Map<Object, List<Map<String, Object>>>) grouped.result();
+
+ListOpsOut freq = ctx.runHelper("listOps",
+        new ListOpsIn("countBy", orders, null, null, "status", null))
+        .as(ListOpsOut.class);
+Map<Object, Long> counts = (Map<Object, Long>) freq.result();
+
+ListOpsOut total = ctx.runHelper("listOps",
+        new ListOpsIn("sumBy", orders, null, null, "amount", null))
+        .as(ListOpsOut.class);
+Double sum = (Double) total.result();
+
+ListOpsOut top = ctx.runHelper("listOps",
+        new ListOpsIn("maxBy", orders, null, null, "amount", null))
+        .as(ListOpsOut.class);
+Map<String, Object> winner = (Map<String, Object>) top.result();
+```
+
+`sumBy`, `minBy`, and `maxBy` reject empty `records` (`"…: records is empty"`) and a
+non-numeric `field` value (`"non-numeric value at record index <n>"`).
+
+### Flatten or deduplicate a list
+
+`flatten` recursively unrolls nested `List<?>` to the requested `depth` (`1` by default;
+`-1` means "fully flatten"). Scalars pass through unchanged at every level — mixed
+scalar/list input is accepted without error. `distinct` dedupes via `LinkedHashSet`,
+preserving first-seen insertion order across mixed-type elements.
+
+```java
+ListOpsOut flat = ctx.runHelper("listOps",
+        new ListOpsIn("flatten", null, null, nested, null, -1))
+        .as(ListOpsOut.class);
+
+ListOpsOut unique = ctx.runHelper("listOps",
+        new ListOpsIn("distinct", null, items, null, null, null))
+        .as(ListOpsOut.class);
+```
+
+## Numeric aggregations
+
+`math` covers numeric aggregations (`sum`, `min`, `max`, `mean`, `median`, `percentile`,
+`stddev`) plus scalar transforms (`clamp`, `round`, `abs`, `floor`, `ceil`). The `mode`
+discriminator is matched case-insensitively. `MathOut.result` is `Double` for most
+operations and `Long` for `floor` and `ceil`. Aggregation modes take `numbers`; the
+scalar modes take `value` (plus `min`/`max` for `clamp`, `scale` for `round`).
+
+### Summarize a series of measurements
+
+`percentile` uses linear interpolation between adjacent sorted values (NumPy `"linear"` /
+Hyndman-Fan type 7); `p` must be in `[0, 100]` inclusive. `stddev` is sample standard
+deviation (Bessel-corrected, divided by `N-1`) and requires at least two elements.
+
+```java
+MathOut mean = ctx.runHelper("math",
+        new MathIn("mean", latencies, null, null, null, null, null))
+        .as(MathOut.class);
+Double avgMs = (Double) mean.result();
+
+MathOut p99 = ctx.runHelper("math",
+        new MathIn("percentile", latencies, null, null, null, null, 99.0))
+        .as(MathOut.class);
+// For [1..100], p99 -> 99.01 via linear interpolation.
+```
+
+### Clamp and round
+
+`round` uses `BigDecimal` with `RoundingMode.HALF_UP` semantics and accepts `scale` in
+`[-1, 15]` (default `0`). `floor` and `ceil` return a `Long`.
+
+```java
+MathOut bounded = ctx.runHelper("math",
+        new MathIn("clamp", null, rawScore, 0, 100, null, null))
+        .as(MathOut.class);
+
+MathOut rounded = ctx.runHelper("math",
+        new MathIn("round", null, 3.14159, null, null, 2, null))
+        .as(MathOut.class);
+// rounded.result() == 3.14
+```
+
+A non-numeric element inside `numbers` surfaces an `IllegalArgumentException` that
+includes the offending index — useful when an upstream payload has been corrupted mid-stream.
+
 ---
 
 ## Date & time
@@ -317,6 +467,177 @@ HttpCallOut resp = ctx.runHelper("httpCall",
 In **Preview mode** `httpCall` is intercepted and recorded, not sent — see
 [`preview-mode.md`](preview-mode.md).
 
+## HTTP authentication
+
+`httpAuth` builds the header map you attach to an `httpCall`. The `mode` discriminator
+selects `bearer`, `basic`, `apiKey`, or `custom` (case-insensitive). `HttpAuthOut.headers`
+is a `Map<String, String>` — typically a single entry under `"Authorization"`. All
+required-argument failures surface as `IllegalArgumentException`.
+
+### Bearer token (most common)
+
+```java
+HttpAuthOut auth = ctx.runHelper("httpAuth",
+        new HttpAuthIn("bearer", accessToken, null, null, null, null, null, null))
+        .as(HttpAuthOut.class);
+// auth.headers() == {"Authorization": "Bearer <token>"}
+
+HttpCallOut resp = ctx.runHelper("httpCall",
+        new HttpCallIn(url, "GET", auth.headers(), null, null, null))
+        .as(HttpCallOut.class);
+```
+
+`token` must be non-blank; internal whitespace is preserved verbatim per RFC 6750 §2.1
+(use `regex` or `urlEncode` if you need to sanitize the value).
+
+### Basic auth credentials
+
+```java
+HttpAuthOut auth = ctx.runHelper("httpAuth",
+        new HttpAuthIn("basic", null, "Aladdin", "open sesame", null, null, null, null))
+        .as(HttpAuthOut.class);
+// auth.headers() == {"Authorization": "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ=="}
+```
+
+`username` is required (blank/null rejected); `password` may be empty (the helper
+base64-encodes `"username:"`). The encoding uses the standard alphabet with padding — not
+the URL-safe alphabet — so it pairs with the standard `base64` helper, not the JWT-style
+`urlSafe = true` form.
+
+### Vendor API key and custom headers
+
+For `apiKey`, `header` defaults to `"X-Api-Key"` when null; an explicit blank `""` is
+rejected. `prefix` defaults to `""`; when non-blank the value is rendered as
+`"<prefix> <key>"` (one space). For `custom`, `value` may be empty but `header` must be
+non-blank.
+
+```java
+// apiKey with default header "X-Api-Key"
+HttpAuthOut apiKey = ctx.runHelper("httpAuth",
+        new HttpAuthIn("apiKey", null, null, null, "sk_live_xxx", null, null, null))
+        .as(HttpAuthOut.class);
+
+// apiKey fanned into an Authorization header as "Bearer <key>"
+HttpAuthOut bearer = ctx.runHelper("httpAuth",
+        new HttpAuthIn("apiKey", null, null, null, "sk_live_xxx",
+                "Authorization", "Bearer", null))
+        .as(HttpAuthOut.class);
+
+// arbitrary header / value (blank value allowed)
+HttpAuthOut custom = ctx.runHelper("httpAuth",
+        new HttpAuthIn("custom", null, null, null, null, "X-Auth-Token", null, token))
+        .as(HttpAuthOut.class);
+```
+
+## Query string composition
+
+`queryString` builds and parses application/x-www-form-urlencoded bodies behind one
+discriminator: `"build"` joins a `Map<String, String>` of params (spaces become `+`, keys
+preserved in iteration order) and `"parse"` splits a query string into an ordered
+`LinkedHashMap` of percent-decoded entries. An optional leading `?` is stripped on parse.
+Null `params`, null keys, and null values all fail with `IllegalArgumentException`.
+
+### Build a query string from a Map
+
+```java
+Map<String, String> params = new LinkedHashMap<>();
+params.put("q", "hello world");
+params.put("page", "1");
+QueryStringOut qs = ctx.runHelper("queryString",
+        new QueryStringIn("build", params, null))
+        .as(QueryStringOut.class);
+// qs.result() == "q=hello+world&page=1"
+
+HttpCallOut resp = ctx.runHelper("httpCall",
+        new HttpCallIn("https://api.example.com/search", "GET",
+                Map.of(), null, (String) qs.result(), null))
+        .as(HttpCallOut.class);
+```
+
+For an OAuth authorize URL where you need RFC 3986 percent-encoding (space → `%20`,
+literal `+` preserved) instead of form encoding, run each value through `urlEncode`
+directly rather than going through `queryString`.
+
+### Parse an incoming query string
+
+Segments without `=` are skipped with a warning log — useful for tolerating
+trailing-ampersand noise from upstream proxies.
+
+```java
+QueryStringOut parsed = ctx.runHelper("queryString",
+        new QueryStringIn("parse", null, "?a=1&garbage&b=2"))
+        .as(QueryStringOut.class);
+Map<String, String> entries = (Map<String, String>) parsed.result();
+// entries == {"a":"1","b":"2"}
+```
+
+## Tokens & JWT
+
+`jwt` covers RFC 7519 JSON Web Tokens for the symmetric HMAC family (`HS256`, `HS384`,
+`HS512`). The `mode` discriminator picks one of `parse`, `verify`, `sign`, or `claim`.
+The output shape varies per mode (a `Map<String, Object>` for `parse` / `verify`, the
+compact `header.payload.signature` string for `sign`, a single claim value for `claim`).
+
+> **Security:** the `parse` and `claim` modes are **decode-only** — they inspect the
+> payload without verifying the signature and MUST NOT be used to make trust decisions.
+> Only `verify` recomputes the HMAC and validates `exp` / `nbf`; use it for every
+> authentication and authorization flow. The helper unconditionally rejects
+> `"alg": "none"` and the `HS256 ↔ HS384` alg-confusion class (CVE-2015-9235) by
+> requiring the token's header `alg` to match the requested `algorithm` exactly
+> (case-sensitive).
+
+### Sign and verify round-trip
+
+`sign` builds a defensive copy of the caller's `payload` map, overwrites any pre-existing
+`iat` / `exp` with `iat = now` and `exp = now + ttlSeconds` (default 3600, must be
+non-negative), and emits the compact `header.payload.signature` string. `algorithm`
+defaults to `HS256`.
+
+```java
+Map<String, Object> claims = new LinkedHashMap<>();
+claims.put("sub", "alice");
+claims.put("role", "admin");
+
+JwtOut signed = ctx.runHelper("jwt",
+        new JwtIn("sign", null, "super-secret-key", "HS256", 3600L, claims, null))
+        .as(JwtOut.class);
+String token = (String) signed.result();
+
+JwtOut verified = ctx.runHelper("jwt",
+        new JwtIn("verify", token, "super-secret-key", "HS256", null, null, null))
+        .as(JwtOut.class);
+Map<String, Object> payload = (Map<String, Object>)
+        ((Map<String, Object>) verified.result()).get("payload");
+```
+
+`verify` rejects on signature mismatch (`"jwt.verify: signature mismatch"`), expired
+`exp` (`"jwt.verify: token expired"`), not-yet-valid `nbf` (`"jwt.verify: token not yet valid"`),
+a missing/non-string header `alg`, or a token header `alg` that does not match the
+caller's `algorithm` argument.
+
+### Decode-only inspection
+
+Use `parse` and `claim` for telemetry, routing, or surfacing `iat` / `exp` in a debug
+payload — anything that does not authorize the caller.
+
+```java
+// Pull a single claim WITHOUT verifying the signature.
+JwtOut subResult = ctx.runHelper("jwt",
+        new JwtIn("claim", token, null, null, null, null, "sub"))
+        .as(JwtOut.class);
+// subResult.result() == "alice"
+
+// Or pull the full header/payload map (signature segment exposed but not verified).
+JwtOut parsed = ctx.runHelper("jwt",
+        new JwtIn("parse", token, null, null, null, null, null))
+        .as(JwtOut.class);
+Map<String, Object> header  = (Map<String, Object>)
+        ((Map<String, Object>) parsed.result()).get("header");
+Map<String, Object> payload = (Map<String, Object>)
+        ((Map<String, Object>) parsed.result()).get("payload");
+String rawSignature = (String) ((Map<String, Object>) parsed.result()).get("signature");
+```
+
 ---
 
 ## Observability
@@ -350,6 +671,132 @@ BackoffOut delay = ctx.runHelper("backoff",
 
 Supported jitter strategies are `none`, `full`, `equal`, and `decorrelated`. The latter accepts a
 previous delay through `previousDelay` and is useful when retry contention is high.
+
+## Compression
+
+`compression` packs four modes behind one record: `gzip` / `gunzip` and
+`deflate` / `inflate`. All four operate on the UTF-8 bytes of `input`. Compressed output
+is base64-encoded; decompressed output is the UTF-8 string of the recovered bytes. The
+`level` field (`0`-`9`; default `-1` for `Deflater.DEFAULT_COMPRESSION`) applies only to
+the compress directions. Malformed base64, truncated streams, or an out-of-range `level`
+all surface `IllegalArgumentException`.
+
+### Round-trip a payload
+
+```java
+CompressionOut encoded = ctx.runHelper("compression",
+        new CompressionIn("gzip", payload, -1))
+        .as(CompressionOut.class);
+String storedInRedis = encoded.result();
+
+CompressionOut decoded = ctx.runHelper("compression",
+        new CompressionIn("gunzip", storedInRedis, null))
+        .as(CompressionOut.class);
+String recovered = decoded.result();
+```
+
+`level = 9` produces a smaller-or-equal result than `level = 1` for repetitive input —
+use the higher level when caching a payload for reuse, the lower level when generating
+once and reading once. `deflate` / `inflate` use the zlib wrapper (matching the typical
+HTTP `Content-Encoding: deflate` convention); `gzip` / `gunzip` produce a standalone
+gzip container usable from the shell.
+
+## Randomness
+
+`random` generates non-cryptographic pseudo-random values backed by `ThreadLocalRandom`.
+Use it for sample data, ids, and load-test jitter — not for secrets, tokens, or any
+security-sensitive use case. The `mode` discriminator picks `int`, `long`, `double`,
+`string`, or `choice`. Bounds are inclusive for `int` / `long` and half-open
+(`[min, max)`) for `double`.
+
+### Random ids, jitters, and choice
+
+```java
+RandomOut id = ctx.runHelper("random",
+        new RandomIn("int", 1000, 9999, null, null, null, null, null, null, null))
+        .as(RandomOut.class);
+Integer requestId = (Integer) id.result();
+
+// Short hex string for a trace span id
+RandomOut span = ctx.runHelper("random",
+        new RandomIn("string", null, null, null, null, null, null, 16, "hex", null))
+        .as(RandomOut.class);
+String spanId = (String) span.result();
+
+// Pick a region for a canary release
+RandomOut picked = ctx.runHelper("random",
+        new RandomIn("choice", null, null, null, null, null, null, null, null,
+                List.of("us-east", "eu-west", "ap-south")))
+        .as(RandomOut.class);
+```
+
+`string` accepts charset `alphanumeric` (default), `alpha`, `numeric`, `hex`, or
+`base64url`. `length` must be in `[0, 100000]`; a length of `0` returns the empty string.
+`choice` rejects a null or empty `list` (`"random.choice.list must not be empty"`).
+
+## Versioning
+
+`semver` parses, compares, range-checks, bumps, and formats SemVer 2.0.0 versions
+([semver.org](https://semver.org)). The `mode` discriminator selects `parse`, `compare`,
+`satisfies`, `bump`, or `format`. A leading `v` is stripped from the input version on
+`parse`, `compare`, `satisfies`, and `bump`. Build metadata is ignored for precedence
+(spec §11).
+
+### Compare two versions
+
+`compare` returns `-1`, `0`, or `1` per the spec's major → minor → patch → prerelease
+precedence rules. A prerelease version (`1.0.0-alpha`) sorts lower than the same release
+(`1.0.0`); within a prerelease set, numeric identifiers sort numerically while
+alphanumeric identifiers sort lexically.
+
+```java
+SemverOut cmp = ctx.runHelper("semver",
+        new SemverIn("compare", null, "1.2.3-rc.1", "1.2.3", null, null,
+                null, null, null, null, null))
+        .as(SemverOut.class);
+// cmp.result() == -1
+```
+
+### Gate a deployment with a version range
+
+`satisfies` accepts exact (`"1.2.3"`), caret (`"^1.2.3"`), tilde (`"~1.2.3"`),
+comparators (`">=1.2.3"`, `">1.2.3"`, `"<=1.2.3"`, `"<1.2.3"`), and partial wildcards
+(`"1.x"`, `"1.2.x"`, `"1.2.*"`). Use it as a DSL-side gate before pushing a config
+update or routing traffic to a new agent build.
+
+```java
+SemverOut ok = ctx.runHelper("semver",
+        new SemverIn("satisfies", agentVersion, null, null, ">=1.2.0", null,
+                null, null, null, null, null))
+        .as(SemverOut.class);
+if (Boolean.TRUE.equals(ok.result())) {
+    // proceed
+}
+```
+
+For `^0.2.3` the upper bound is the next minor (not the next major), per the spec's
+"0.x.y is initial development" rule; `^1.2.3` locks the major.
+
+### Bump and format
+
+`bumpType` accepts `major`, `minor`, `patch`, and `preRelease`. `preRelease` increments
+the last numeric identifier in the prerelease segment, or appends `.1` when no numeric
+identifier exists. Bumping `preRelease` on a release version (no `-` segment) yields
+`IllegalArgumentException`.
+
+```java
+SemverOut bumped = ctx.runHelper("semver",
+        new SemverIn("bump", "1.2.3-rc.1", null, null, null, "preRelease",
+                null, null, null, null, null))
+        .as(SemverOut.class);
+// bumped.result() == "1.2.3-rc.2"
+
+SemverOut formatted = ctx.runHelper("semver",
+        new SemverIn("format", null, null, null, null, null,
+                1, 2, 3, "rc.1", "build.5"))
+        .as(SemverOut.class);
+// formatted.result() == "1.2.3-rc.1+build.5"
+```
 
 ---
 
