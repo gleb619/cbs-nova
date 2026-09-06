@@ -12,7 +12,7 @@ help: ## Show this help (default target)
 	@printf 'cbs-nova — local development commands\n\n'
 	@printf 'Usage:\n  make <target>\n\nTargets:\n'
 	@awk 'BEGIN {FS = ":.*?## "} \
-		/^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+		/^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 .PHONY: up
 up: ## Start the docker compose stack and wait for Keycloak, Bugsink, Temporal
@@ -240,6 +240,27 @@ seed-history: ## Seed up to 5 historical sample runs (seed-history-*, mixed stat
 		i=$$((i+1)); \
 	done; \
 	printf '    Seeding history complete (up to %d runs).\n' "$$remaining"
+
+.PHONY: test-backend
+test-backend: ## Run the backend (starter) test suite
+	backend/dsl-platform/gradlew -p backend/dsl-starter :starter:test
+
+.PHONY: test-frontend
+test-frontend: ## Run the frontend (admin-ui-plugin) test suite
+	cd frontend && pnpm test
+
+.PHONY: test
+test: ## Run backend + frontend test suites (both always run; nonzero exit if any fail)
+	@printf '\n==> Running backend + frontend test suites...\n\n'; \
+	be=0; fe=0; \
+	printf '==> backend (:starter:test)\n'; \
+	backend/dsl-platform/gradlew -p backend/dsl-starter :starter:test || be=$$?; \
+	printf '\n==> frontend (@cbs/admin-ui-plugin)\n'; \
+	( cd frontend && pnpm test ) || fe=$$?; \
+	printf '\n==> Summary\n'; \
+	if [ $$be -eq 0 ]; then printf '    [ok]   backend tests\n'; else printf '    [fail] backend tests (exit %s)\n' "$$be"; fi; \
+	if [ $$fe -eq 0 ]; then printf '    [ok]   frontend tests\n'; else printf '    [fail] frontend tests (exit %s)\n' "$$fe"; fi; \
+	if [ $$be -ne 0 ] || [ $$fe -ne 0 ]; then exit 1; fi
 .PHONY: loadtest
 # ALLOW_MUTATIONS: accepted as an env var but intentionally unused for now — this
 # target only exercises GET endpoints and none of the defaults mutate state. It is
