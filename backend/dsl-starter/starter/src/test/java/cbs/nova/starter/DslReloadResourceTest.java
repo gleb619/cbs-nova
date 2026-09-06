@@ -580,11 +580,6 @@ class DslReloadResourceTest {
     }
 
     @Override
-    public LoadResult load(Path sourceDir, GlobalManager gm) {
-      throw new UnsupportedOperationException("not used by reload");
-    }
-
-    @Override
     public LoadResult load(ClassLoader classLoader, GlobalManager gm) {
       int myCall = COUNTER.incrementAndGet();
       arrived(myCall).countDown();

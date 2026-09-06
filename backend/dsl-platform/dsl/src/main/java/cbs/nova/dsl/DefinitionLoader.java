@@ -6,7 +6,6 @@ import cbs.nova.dsl.transaction.TransactionDslObject;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 
-import java.nio.file.Path;
 import java.util.ServiceLoader;
 
 @Slf4j
@@ -15,12 +14,6 @@ public final class DefinitionLoader implements DslDefinitionLoader {
   @Override
   public LoadResult load(@NonNull GlobalManager gm) {
     return load(gm.defaultClassLoader(), gm);
-  }
-
-  @Override
-  public LoadResult load(@NonNull Path sourceDir, @NonNull GlobalManager gm) {
-    throw new UnsupportedOperationException(
-            "DefinitionLoader does not support loading from source directories");
   }
 
   @Override
