@@ -14,6 +14,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class DslProperties {
 
   private String sourceDir;
+  /**
+   * Workbench virtual-workspace root for filesystem-backed drafts. Relative values resolve against
+   * {@code sourceDir}; an absolute value is used as-is.
+   */
+  private String workbenchWorkspaceRoot = ".workbench/drafts-fs";
   private String taskQueue = "dsl-task-queue";
   private Worker worker = new Worker();
   private Reload reload = new Reload();
@@ -81,6 +86,11 @@ public class DslProperties {
      * Maximum concurrent file write operations.
      */
     private int writeBulkheadPermits = 8;
+
+    /**
+     * Seconds to wait for a bulkhead permit before failing the file operation.
+     */
+    private long acquireTimeoutSeconds = 5;
   }
 
   @Data

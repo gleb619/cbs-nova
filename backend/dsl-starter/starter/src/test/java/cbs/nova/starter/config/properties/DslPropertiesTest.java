@@ -20,6 +20,8 @@ class DslPropertiesTest {
       assertThat(properties.getTaskQueue()).isEqualTo("dsl-task-queue");
       assertThat(properties.getWorker().isEnabled()).isFalse();
       assertThat(properties.getReload().isEnabled()).isFalse();
+      assertThat(properties.getWorkbenchWorkspaceRoot()).isEqualTo(".workbench/drafts-fs");
+      assertThat(properties.getFiles().getAcquireTimeoutSeconds()).isEqualTo(5L);
     });
   }
 

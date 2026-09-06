@@ -41,7 +41,7 @@ class DslFileServiceTest {
     DslWorkspaceResolver resolver = new DefaultDslWorkspaceResolver(sourceRoot, workspaceRoot);
     DslFileRepository repository = new DslFileRepository();
     DslFileBuffer buffer = new DslFileBuffer();
-    DslFileBulkhead bulkhead = new DslFileBulkhead(new Semaphore(1), new Semaphore(1));
+    DslFileBulkhead bulkhead = new DslFileBulkhead(new Semaphore(1), new Semaphore(1), 5L);
     service = new DslFileService(properties, resolver, repository, buffer, bulkhead);
   }
 

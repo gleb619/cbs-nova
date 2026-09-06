@@ -1,9 +1,7 @@
 package cbs.nova.starter.service;
 
-import cbs.nova.starter.config.properties.DslProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -12,15 +10,13 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class DslFileBulkhead {
 
-  // TODO: redo to use a some `DslProperties` property instead of hardcode
-  private static final long ACQUIRE_TIMEOUT_SECONDS = 5L;
-
   private final Semaphore readSemaphore;
   private final Semaphore writeSemaphore;
+  private final long acquireTimeoutSeconds;
 
   public void acquireRead() {
     try {
-      if (!readSemaphore.tryAcquire(ACQUIRE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+      if (!readSemaphore.tryAcquire(acquireTimeoutSeconds, TimeUnit.SECONDS)) {
         throw new IllegalStateException("file read bulkhead saturated");
       }
     } catch (InterruptedException e) {
@@ -35,7 +31,7 @@ public class DslFileBulkhead {
 
   public void acquireWrite() {
     try {
-      if (!writeSemaphore.tryAcquire(ACQUIRE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+      if (!writeSemaphore.tryAcquire(acquireTimeoutSeconds, TimeUnit.SECONDS)) {
         throw new IllegalStateException("file write bulkhead saturated");
       }
     } catch (InterruptedException e) {

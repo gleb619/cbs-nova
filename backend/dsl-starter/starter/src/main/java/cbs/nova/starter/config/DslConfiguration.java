@@ -130,14 +130,11 @@ public class DslConfiguration {
     if (sourceDir == null || sourceDir.isBlank()) {
       throw new IllegalStateException("csb.dsl.source-dir is not configured");
     }
-    Path currentPath = Path.of(".").normalize().toAbsolutePath();
-    log.info("[DEBUG] Current path is: {}", currentPath);
 
     var sourceRoot = Path.of(sourceDir).normalize();
-    // TODO: move hardcoded path to app.yml
-    var workspaceRoot = sourceRoot.resolve(".workbench")
-            .resolve("drafts-fs").normalize();
-
+    var configured = Path.of(dslProperties.getWorkbenchWorkspaceRoot());
+    var workspaceRoot = (configured.isAbsolute() ? configured : sourceRoot.resolve(configured))
+            .normalize();
     return new DefaultDslWorkspaceResolver(sourceRoot, workspaceRoot);
   }
 
@@ -154,7 +151,8 @@ public class DslConfiguration {
     var readSemaphore = new Semaphore(Math.max(1, readPermits));
     var writeSemaphore = new Semaphore(Math.max(1, writePermits));
 
-    return new DslFileBulkhead(readSemaphore, writeSemaphore);
+    return new DslFileBulkhead(readSemaphore, writeSemaphore,
+            properties.getFiles().getAcquireTimeoutSeconds());
   }
 
   private void initRegistry() {
