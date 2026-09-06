@@ -64,20 +64,21 @@ public class InputValidator {
   }
 
   private DslDescriptor toDescriptor(ExecutableDescriptor helper) {
-    return new DslDescriptor(
-            helper.name() != null ? helper.name() : "",
-            DslObject.DslType.FUNCTION,
-            helper.description(),
-            helper.inputType(),
-            helper.outputType(),
-            false,
-            helper.hasSideEffects(),
-            helper.previewBehavior(),
-            helper.parameters(),
-            null,
-            null,
-            null,
-            null);
+    return DslDescriptor.builder()
+            .name(helper.name() != null ? helper.name() : "")
+            .type(DslObject.DslType.FUNCTION)
+            .description(helper.description())
+            .inputType(helper.inputType())
+            .outputType(helper.outputType())
+            .hasCompensation(false)
+            .hasSideEffects(helper.hasSideEffects())
+            .previewBehavior(helper.previewBehavior())
+            .parameters(helper.parameters())
+            .taskQueue(null)
+            .version(null)
+            .startToCloseTimeout(null)
+            .heartbeatTimeout(null)
+            .build();
   }
 
   private @NonNull String cacheKey(String constructName, DslDescriptor descriptor) {

@@ -42,19 +42,20 @@ public record TransactionDslObject(
     if (descriptor != null) {
       return descriptor.get();
     }
-    return new DslDescriptor(
-            name,
-            DslType.TRANSACTION,
-            null,
-            inputType,
-            outputType,
-            compensationLogic != null,
-            true,
-            "delegates to execute",
-            parameters != null ? parameters : List.of(),
-            taskQueue,
-            version,
-            startToCloseTimeout,
-            heartbeatTimeout);
+    return DslDescriptor.builder()
+            .name(name)
+            .type(DslType.TRANSACTION)
+            .description(null)
+            .inputType(inputType)
+            .outputType(outputType)
+            .hasCompensation(compensationLogic != null)
+            .hasSideEffects(true)
+            .previewBehavior("delegates to execute")
+            .parameters(parameters != null ? parameters : List.of())
+            .taskQueue(taskQueue)
+            .version(version)
+            .startToCloseTimeout(startToCloseTimeout)
+            .heartbeatTimeout(heartbeatTimeout)
+            .build();
   }
 }

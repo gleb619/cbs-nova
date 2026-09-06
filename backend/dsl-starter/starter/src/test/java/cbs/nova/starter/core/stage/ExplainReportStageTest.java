@@ -63,20 +63,21 @@ class ExplainReportStageTest {
     GlobalManager.globalManager().registerFunction(
             Dsl.function(fnName)
                     .execute(c -> Result.success("ok"))
-                    .describe(() -> new DslDescriptor(
-                            fnName,
-                            DslObject.DslType.FUNCTION,
-                            null,
-                            null,
-                            null,
-                            false,
-                            false,
-                            "delegates",
-                            List.of(),
-                            null,
-                            null,
-                            null,
-                            null))
+                    .describe(() -> DslDescriptor.builder()
+                            .name(fnName)
+                            .type(DslObject.DslType.FUNCTION)
+                            .description(null)
+                            .inputType(null)
+                            .outputType(null)
+                            .hasCompensation(false)
+                            .hasSideEffects(false)
+                            .previewBehavior("delegates")
+                            .parameters(List.of())
+                            .taskQueue(null)
+                            .version(null)
+                            .startToCloseTimeout(null)
+                            .heartbeatTimeout(null)
+                            .build())
                     .build());
 
     DslPipeContext pipeContext = pipeContext(fnName, ExecutionMode.PREVIEW);

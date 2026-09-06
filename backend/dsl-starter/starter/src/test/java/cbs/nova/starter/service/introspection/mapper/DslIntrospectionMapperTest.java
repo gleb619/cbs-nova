@@ -82,20 +82,21 @@ class DslIntrospectionMapperTest {
 
   @Test
   void mapsDslDescriptorToHelperSearchResult() {
-    DslDescriptor descriptor = new DslDescriptor(
-            "fn",
-            DslType.FUNCTION,
-            "desc",
-            String.class,
-            Integer.class,
-            false,
-            false,
-            null,
-            List.of(),
-            null,
-            null,
-            null,
-            null);
+    DslDescriptor descriptor = DslDescriptor.builder()
+            .name("fn")
+            .type(DslType.FUNCTION)
+            .description("desc")
+            .inputType(String.class)
+            .outputType(Integer.class)
+            .hasCompensation(false)
+            .hasSideEffects(false)
+            .previewBehavior(null)
+            .parameters(List.of())
+            .taskQueue(null)
+            .version(null)
+            .startToCloseTimeout(null)
+            .heartbeatTimeout(null)
+            .build();
 
     HelperSearchResult result = mapper.toHelperSearchResult(descriptor);
 
@@ -184,20 +185,21 @@ class DslIntrospectionMapperTest {
 
   @Test
   void mapsDslDescriptorToDefinitionMetaDto() {
-    DslDescriptor descriptor = new DslDescriptor(
-            "fn",
-            DslType.FUNCTION,
-            "desc",
-            String.class,
-            Integer.class,
-            false,
-            false,
-            null,
-            List.of(),
-            null,
-            null,
-            null,
-            null);
+    DslDescriptor descriptor = DslDescriptor.builder()
+            .name("fn")
+            .type(DslType.FUNCTION)
+            .description("desc")
+            .inputType(String.class)
+            .outputType(Integer.class)
+            .hasCompensation(false)
+            .hasSideEffects(false)
+            .previewBehavior(null)
+            .parameters(List.of())
+            .taskQueue(null)
+            .version(null)
+            .startToCloseTimeout(null)
+            .heartbeatTimeout(null)
+            .build();
 
     DefinitionMetaDto dto = mapper.toFunctionDefinitionMeta(descriptor);
 

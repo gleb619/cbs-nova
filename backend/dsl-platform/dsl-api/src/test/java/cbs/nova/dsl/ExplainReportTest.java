@@ -15,9 +15,21 @@ class ExplainReportTest {
     Map<String, Integer> counts = Map.of("log", 2);
     var executable = new ExecutableDescriptor(
             "echo", "Echoes", String.class, String.class, false, null, List.of());
-    var dsl = new DslDescriptor(
-            "echo", DslObject.DslType.PROCESS, "Echoes", String.class, String.class,
-            false, false, null, List.of(), null, null, null, null);
+    var dsl = DslDescriptor.builder()
+            .name("echo")
+            .type(DslObject.DslType.PROCESS)
+            .description("Echoes")
+            .inputType(String.class)
+            .outputType(String.class)
+            .hasCompensation(false)
+            .hasSideEffects(false)
+            .previewBehavior(null)
+            .parameters(List.of())
+            .taskQueue(null)
+            .version(null)
+            .startToCloseTimeout(null)
+            .heartbeatTimeout(null)
+            .build();
     var ast = new CallNode("echo", CallKind.PROCESS, null, null, true, List.of(), List.of());
 
     var report = new ExplainReport(

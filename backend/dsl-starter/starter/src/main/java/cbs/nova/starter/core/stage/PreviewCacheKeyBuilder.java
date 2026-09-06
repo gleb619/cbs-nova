@@ -23,22 +23,21 @@ final class PreviewCacheKeyBuilder {
     Optional<DslDescriptor> descriptor = gm.describeProcess(name)
             .or(() -> gm.describeTransaction(name))
             .or(() -> gm.describeHelper(name)
-                    // TODO: find usage of `new DslDescriptor` and replace to a lombok's builder
-                    .map(helper -> new DslDescriptor(
-                            name,
-                            DslObject.DslType.FUNCTION,
-                            helper.description(),
-                            helper.inputType(),
-                            helper.outputType(),
-                            false,
-                            helper.hasSideEffects(),
-                            helper.previewBehavior(),
-                            helper.parameters(),
-                            null, // todo: add default taskqueue
-                            null, // todo: add default version
-                            null, // todo: add default startToCloseTimeout
-                            null// todo: add default heartbeatTimeout
-                    )));
+                    .map(helper -> DslDescriptor.builder()
+                            .name(name)
+                            .type(DslObject.DslType.FUNCTION)
+                            .description(helper.description())
+                            .inputType(helper.inputType())
+                            .outputType(helper.outputType())
+                            .hasCompensation(false)
+                            .hasSideEffects(helper.hasSideEffects())
+                            .previewBehavior(helper.previewBehavior())
+                            .parameters(helper.parameters())
+                            .taskQueue(null) // todo: add default taskqueue
+                            .version(null) // todo: add default version
+                            .startToCloseTimeout(null) // todo: add default startToCloseTimeout
+                            .heartbeatTimeout(null) // todo: add default heartbeatTimeout
+                            .build()));
     String dslHash = descriptor.map(this::dslDescriptorHash).orElse("");
     String inputHash = inputHash(ctx.body());
     return new PreviewCacheKey(name, dslHash, inputHash);

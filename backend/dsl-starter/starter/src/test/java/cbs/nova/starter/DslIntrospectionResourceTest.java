@@ -307,20 +307,21 @@ class DslIntrospectionResourceTest {
             List.of(),
             ctx -> Result.success("ok"),
             null,
-            () -> new DslDescriptor(
-                    "sampleFunction",
-                    DslType.FUNCTION,
-                    "A greeting function",
-                    String.class,
-                    String.class,
-                    false,
-                    false,
-                    null,
-                    List.of(),
-                    null,
-                    null,
-                    null,
-                    null)));
+            () -> DslDescriptor.builder()
+                    .name("sampleFunction")
+                    .type(DslType.FUNCTION)
+                    .description("A greeting function")
+                    .inputType(String.class)
+                    .outputType(String.class)
+                    .hasCompensation(false)
+                    .hasSideEffects(false)
+                    .previewBehavior(null)
+                    .parameters(List.of())
+                    .taskQueue(null)
+                    .version(null)
+                    .startToCloseTimeout(null)
+                    .heartbeatTimeout(null)
+                    .build()));
   }
 
   private static class SampleHelper implements Executable<String, String> {

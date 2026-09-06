@@ -45,8 +45,21 @@ class ExplainDiagramRendererTest {
             Map.of(),
             new ExecutableDescriptor(processName, null, String.class, String.class, false, null,
                     List.of()),
-            new DslDescriptor(processName, DslType.PROCESS, null, String.class,
-                    String.class, false, false, null, List.of(), null, null, null, null),
+            DslDescriptor.builder()
+                    .name(processName)
+                    .type(DslType.PROCESS)
+                    .description(null)
+                    .inputType(String.class)
+                    .outputType(String.class)
+                    .hasCompensation(false)
+                    .hasSideEffects(false)
+                    .previewBehavior(null)
+                    .parameters(List.of())
+                    .taskQueue(null)
+                    .version(null)
+                    .startToCloseTimeout(null)
+                    .heartbeatTimeout(null)
+                    .build(),
             null,
             List.of(),
             null,
