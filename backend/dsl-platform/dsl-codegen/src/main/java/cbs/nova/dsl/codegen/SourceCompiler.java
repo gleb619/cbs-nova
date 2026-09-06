@@ -3,9 +3,7 @@ package cbs.nova.dsl.codegen;
 import cbs.nova.dsl.DslDefinitionProvider;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.codegen.generator.DefinitionProviderGenerator;
-import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.util.CodeWriter;
-import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
 import cbs.nova.dsl.codegen.util.SourcePackageResolver;
 import cbs.nova.dsl.codegen.preprocessor.DslPreprocessor;
 import cbs.nova.dsl.codegen.preprocessor.ModelPreprocessor;
@@ -42,9 +40,9 @@ public final class SourceCompiler {
 
   private final DefinitionProviderGenerator definitionProviderGenerator;
   private final CodeWriter codeWriter;
-  private final CodegenNaming codegenNaming;
   private final DslPreprocessor dslPreprocessor;
   private final ModelPreprocessor modelPreprocessor;
+  private final SourcePackageResolver sourcePackageResolver;
 
   public @NonNull List<DslObject> compileAndLoad(
           @NonNull Path srcDir,
@@ -75,8 +73,7 @@ public final class SourceCompiler {
     var basePackage = (options != null) ? options.targetPackage() : null;
     var version = (options != null) ? options.buildVersion() : null;
     var useFileNameSubPackage = (options != null) && options.useFileNameSubPackage();
-    // TODO: redo to bean from `CompileConfig`
-    var packageResolver = new SourcePackageResolver(new DslPackageNameResolver(codegenNaming));
+    var packageResolver = sourcePackageResolver;
 
     var dslPackages = packageResolver.resolveDslPackages(
             dslSources, basePackage, version, useFileNameSubPackage);
