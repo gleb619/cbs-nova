@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -134,6 +135,36 @@ class DslRuntimeServiceTest {
             .forClass(Context.class);
     verify(dslRuntime).run(eq("P"), captor.capture());
     assertThat(captor.getValue().runId()).startsWith("run-");
+  }
+
+  @Test
+  void explainReturnsStructuredErrorWhenRuntimeThrows() {
+    doThrow(new RuntimeException("boom")).when(dslRuntime).explain(eq("Ghost"), any());
+
+    RuntimeOutcome result = service.explain("Ghost", new DslRequest("in", null), "req-boom");
+
+    assertThat(result.success()).isFalse();
+    assertThat(result.value()).isNull();
+    assertThat(result.error()).isNotNull();
+    assertThat(result.error().code()).isNotBlank();
+    assertThat(result.error().message()).isEqualTo("boom");
+    assertThat(result.error().runId()).isEqualTo("req-boom");
+    assertThat(result.error().entityName()).isEqualTo("Ghost");
+  }
+
+  @Test
+  void explainReturnsStructuredErrorWhenReportNull() {
+    doReturn(null).when(dslRuntime).explain(eq("Ghost"), any());
+
+    RuntimeOutcome result = service.explain("Ghost", new DslRequest("in", null), "req-null");
+
+    assertThat(result.success()).isFalse();
+    assertThat(result.value()).isNull();
+    assertThat(result.error()).isNotNull();
+    assertThat(result.error().runId()).isEqualTo("req-null");
+    assertThat(result.error().entityName()).isEqualTo("Ghost");
+    assertThat(result.error().message()).contains("Ghost");
+    assertThat(result.error().code()).isNotBlank();
   }
 
   @Test

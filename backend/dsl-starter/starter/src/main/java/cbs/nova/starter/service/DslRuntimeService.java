@@ -18,6 +18,7 @@ import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.RuntimeOutcome;
 import cbs.nova.starter.web.RequestIdFilter;
 import java.util.HashMap;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
@@ -88,8 +89,18 @@ public class DslRuntimeService {
   public RuntimeOutcome explain(String name, DslRequest request, @Nullable String requestId) {
     String runId = resolveRunId(requestId);
     Context<?> ctx = toContext(request, ExecutionMode.EXPLAIN, runId);
-    ExplainReport report = executeWithMdc(runId, () -> dslRuntime.explain(name, ctx));
-    PreviewErrorDetail timeoutError = report.errors().stream()
+    ExplainReport report;
+    try {
+      report = executeWithMdc(runId, () -> dslRuntime.explain(name, ctx));
+    } catch (RuntimeException ex) {
+      return RuntimeOutcome.error(toErrorResponse(name, runId, ex));
+    }
+    if (report == null) {
+      return RuntimeOutcome.error(toErrorResponse(name, runId,
+              new IllegalStateException("explain produced no report for " + name)));
+    }
+    List<PreviewErrorDetail> errors = report.errors();
+    PreviewErrorDetail timeoutError = errors.stream()
             .filter(e -> e.code() == PreviewErrorCode.PREVIEW_TIMEOUT)
             .findFirst()
             .orElse(null);
