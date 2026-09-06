@@ -90,8 +90,10 @@ class DefaultExecutionListenerTest {
     var runB = new DefaultExecutionListener("run-B", repo);
     var now = Instant.now();
 
-    runA.onTransactionSuccess(exec("run-A", "TxA", "in", now, now, TransactionExecutionStatus.SUCCESS, null));
-    runB.onTransactionSuccess(exec("run-B", "TxB", "in", now, now, TransactionExecutionStatus.SUCCESS, null));
+    runA.onTransactionSuccess(
+            exec("run-A", "TxA", "in", now, now, TransactionExecutionStatus.SUCCESS, null));
+    runB.onTransactionSuccess(
+            exec("run-B", "TxB", "in", now, now, TransactionExecutionStatus.SUCCESS, null));
 
     var historyA = runA.historyInReverse();
     var historyB = runB.historyInReverse();

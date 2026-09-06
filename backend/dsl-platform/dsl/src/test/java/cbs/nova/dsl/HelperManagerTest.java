@@ -1,6 +1,7 @@
 package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.function.FunctionDslObject;
@@ -15,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 class HelperManagerTest {
@@ -133,10 +135,85 @@ class HelperManagerTest {
     assertThat(registry.allNamesCalls).isEqualTo(2);
   }
 
+  @Test
+  void lazyHelperSupplierNotInvokedAtRegistration() {
+    var registry = new StubHelperRegistry();
+    var manager = new HelperManager(registry, new RecordingHelperRunner());
+    var calls = new AtomicInteger();
+    Executable<String, String> helper = ctx -> Result.success("ignored");
+    Supplier<Executable<?, ?>> supplier = () -> {
+      calls.incrementAndGet();
+      return helper;
+    };
+
+    manager.register("lazy", supplier);
+
+    assertThat(calls.get()).isZero();
+  }
+
+  @Test
+  void lazyHelperSupplierInvokedOnEachFindHelper() {
+    // Mirrors DefaultHelperRegistry: the supplier is re-invoked on every findHelper,
+    // it is deliberately NOT memoized.
+    var registry = new StubHelperRegistry();
+    var manager = new HelperManager(registry, new RecordingHelperRunner());
+    var calls = new AtomicInteger();
+    Executable<String, String> helper = ctx -> Result.success("ignored");
+    Supplier<Executable<?, ?>> supplier = () -> {
+      calls.incrementAndGet();
+      return helper;
+    };
+    manager.register("lazy", supplier);
+
+    assertThat(manager.findHelper("lazy")).contains(helper);
+    assertThat(manager.findHelper("lazy")).contains(helper);
+
+    assertThat(calls.get()).isEqualTo(2);
+  }
+
+  @Test
+  void eagerAndLazyHelpersCoexist() {
+    var registry = new StubHelperRegistry();
+    var manager = new HelperManager(registry, new RecordingHelperRunner());
+    Executable<String, String> eager = ctx -> Result.success("eager");
+    Executable<String, String> lazy = ctx -> Result.success("lazy");
+
+    manager.register("eager", eager);
+    manager.register("lazy", (Supplier<Executable<?, ?>>) () -> lazy);
+
+    assertThat(manager.findHelper("eager")).contains(eager);
+    assertThat(manager.findHelper("lazy")).contains(lazy);
+    assertThat(manager.names()).contains("eager", "lazy");
+  }
+
+  @Test
+  void lazyHelperSupplierReturningNullYieldsEmptyOptional() {
+    var registry = new StubHelperRegistry();
+    var manager = new HelperManager(registry, new RecordingHelperRunner());
+
+    manager.register("lazy", (Supplier<Executable<?, ?>>) () -> null);
+
+    assertThat(manager.findHelper("lazy")).isEmpty();
+  }
+
+  @Test
+  void lazyHelperSupplierThrowingPropagates() {
+    var registry = new StubHelperRegistry();
+    var manager = new HelperManager(registry, new RecordingHelperRunner());
+    manager.register("lazy", (Supplier<Executable<?, ?>>) () -> {
+      throw new IllegalStateException("boom");
+    });
+
+    assertThatThrownBy(() -> manager.findHelper("lazy"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("boom");
+  }
+
   private static final class StubHelperRegistry implements HelperRegistry {
     private final List<Map.Entry<String, Executable<?, ?>>> registeredHelpers = new ArrayList<>();
     private final List<FunctionDslObject> registeredFunctions = new ArrayList<>();
     private final LinkedHashMap<String, Executable<?, ?>> helpers = new LinkedHashMap<>();
+    private final LinkedHashMap<String, Supplier<Executable<?, ?>>> helperSuppliers = new LinkedHashMap<>();
     private final List<FunctionDslObject> functions = new ArrayList<>();
     private final List<String> findHelperLookups = new ArrayList<>();
     private final List<String> findFunctionLookups = new ArrayList<>();
@@ -158,7 +235,12 @@ class HelperManagerTest {
     @Override
     public Optional<Executable<?, ?>> findHelper(String name) {
       findHelperLookups.add(name);
-      return Optional.ofNullable(helpers.get(name));
+      Executable<?, ?> eager = helpers.get(name);
+      if (eager != null) {
+        return Optional.of(eager);
+      }
+      Supplier<Executable<?, ?>> supplier = helperSuppliers.get(name);
+      return supplier == null ? Optional.empty() : Optional.ofNullable(supplier.get());
     }
 
     @Override
@@ -173,6 +255,7 @@ class HelperManagerTest {
     public boolean containsName(String name) {
       containsLookups.add(name);
       return helpers.containsKey(name)
+              || helperSuppliers.containsKey(name)
               || functions.stream().anyMatch(fn -> fn.name().equals(name));
     }
 
@@ -180,6 +263,7 @@ class HelperManagerTest {
     public Collection<String> allNames() {
       allNamesCalls++;
       List<String> names = new ArrayList<>(helpers.keySet());
+      names.addAll(helperSuppliers.keySet());
       functions.forEach(fn -> names.add(fn.name()));
       return names;
     }
@@ -187,7 +271,7 @@ class HelperManagerTest {
     @Override
     public void registerHelper(@NonNull String name,
             @NonNull Supplier<Executable<?, ?>> helperSupplier) {
-      // TODO: implement lazy helper registrations for tests
+      helperSuppliers.put(name, helperSupplier);
     }
   }
 
