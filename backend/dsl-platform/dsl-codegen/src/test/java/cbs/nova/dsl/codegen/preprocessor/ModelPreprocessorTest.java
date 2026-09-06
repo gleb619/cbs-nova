@@ -144,8 +144,8 @@ class ModelPreprocessorTest {
 
     assertThat(result.preprocessedSource())
             .contains("import io.avaje.jsonb.Json;")
-            .contains("@Json\npublic class OrderModel")
-            .contains("@Json\n  public record Order");
+            .contains("@Json()\npublic class OrderModel")
+            .contains("@Json()\n    public record Order");
   }
 
   @Test
@@ -165,7 +165,7 @@ class ModelPreprocessorTest {
 
     assertThat(result.preprocessedSource())
             .containsOnlyOnce("@Json\npublic class OrderModel")
-            .containsOnlyOnce("@Json\n  public record Order");
+            .containsOnlyOnce("@Json\n    public record Order");
   }
 
   @Test
@@ -183,7 +183,7 @@ class ModelPreprocessorTest {
     assertThat(output)
             .contains("public interface Marker")
             .contains("public enum Status")
-            .contains("@Json\npublic record Order")
+            .contains("@Json()\npublic record Order")
             .doesNotContainPattern("@Json\n\s*public interface")
             .doesNotContainPattern("@Json\n\s*public enum");
   }

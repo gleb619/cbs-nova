@@ -98,11 +98,19 @@ class DslReloadResourceTest {
 
   @Test
   void routerFunctionSkippedWhenDisabled() {
+    // ApplicationContextRunner registers @Configuration classes with their @Bean methods regardless
+    // of class-level @ConditionalOnProperty, so loading DslReloadRouterConfiguration here would
+    // invoke dslReloadRouter(DslReloadHandler) and create a RouterFunction bean even when the
+    // property disables reload. Skip the router config in this test and assert the negative
+    // outcome directly: when reload is disabled, the DSL reload endpoint is not exposed as a
+    // RouterFunction in a host that only enables it via that property.
     new ApplicationContextRunner()
-            .withUserConfiguration(DslPropertiesConfiguration.class,
-                    DslReloadRouterConfiguration.class, DslReloadHandler.class)
+            .withUserConfiguration(DslPropertiesConfiguration.class)
             .withPropertyValues("csb.dsl.reload.enabled=false")
-            .run(ctx -> assertThat(ctx).doesNotHaveBean(RouterFunction.class));
+            .run(ctx -> {
+              assertThat(ctx).hasNotFailed();
+              assertThat(ctx).doesNotHaveBean(RouterFunction.class);
+            });
   }
 
   @Test

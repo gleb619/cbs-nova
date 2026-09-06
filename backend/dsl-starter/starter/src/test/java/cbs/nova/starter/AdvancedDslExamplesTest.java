@@ -116,6 +116,60 @@ class AdvancedDslExamplesTest {
       if (helperClass == SortRecordsHelper.class) {
         return new SortRecordsHelper();
       }
+      if (helperClass == ParseYamlHelper.class) {
+        return new ParseYamlHelper();
+      }
+      if (helperClass == FormatCsvHelper.class) {
+        return new FormatCsvHelper();
+      }
+      if (helperClass == BackoffHelper.class) {
+        return new BackoffHelper();
+      }
+      if (helperClass == CompressionHelper.class) {
+        return new CompressionHelper();
+      }
+      if (helperClass == DateMathHelper.class) {
+        return new DateMathHelper();
+      }
+      if (helperClass == FormatYamlHelper.class) {
+        return new FormatYamlHelper();
+      }
+      if (helperClass == HexHelper.class) {
+        return new HexHelper();
+      }
+      if (helperClass == HttpAuthHelper.class) {
+        return new HttpAuthHelper();
+      }
+      if (helperClass == JsonPatchHelper.class) {
+        return new JsonPatchHelper();
+      }
+      if (helperClass == JwtHelper.class) {
+        return new JwtHelper();
+      }
+      if (helperClass == ListOpsHelper.class) {
+        return new ListOpsHelper();
+      }
+      if (helperClass == MathHelper.class) {
+        return new MathHelper();
+      }
+      if (helperClass == ParseCsvHelper.class) {
+        return new ParseCsvHelper();
+      }
+      if (helperClass == QueryStringHelper.class) {
+        return new QueryStringHelper();
+      }
+      if (helperClass == RandomHelper.class) {
+        return new RandomHelper();
+      }
+      if (helperClass == SemverHelper.class) {
+        return new SemverHelper();
+      }
+      if (helperClass == ValidateJsonHelper.class) {
+        return new ValidateJsonHelper();
+      }
+      if (helperClass == XmlExtractHelper.class) {
+        return new XmlExtractHelper();
+      }
       if (helperClass == ArithmeticHelper.class) {
         return new ArithmeticHelper();
       }

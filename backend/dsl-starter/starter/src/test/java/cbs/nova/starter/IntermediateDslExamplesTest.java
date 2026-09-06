@@ -3,11 +3,13 @@ package cbs.nova.starter;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Context;
+import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
@@ -144,24 +146,6 @@ class IntermediateDslExamplesTest {
 
   private static HelperInstanceResolver typedHelperResolver() {
     return helperClass -> {
-      if (helperClass == ConditionalFailingHelper.class) {
-        return new ConditionalFailingHelper();
-      }
-      if (helperClass == CompensationTrackerHelper.class) {
-        return new CompensationTrackerHelper();
-      }
-      if (helperClass == CurrentTimestampHelper.class) {
-        return new CurrentTimestampHelper();
-      }
-      if (helperClass == FileLatchHelper.class) {
-        return new FileLatchHelper();
-      }
-      if (helperClass == FilterRecordsHelper.class) {
-        return new FilterRecordsHelper();
-      }
-      if (helperClass == FormatMessageHelper.class) {
-        return new FormatMessageHelper();
-      }
       if (helperClass == HttpCallHelper.class) {
         return new HttpCallHelper(HttpClient.newHttpClient(),
                 new CbsNovaLoggingProperties(Level.INFO, Level.INFO, true));
@@ -169,48 +153,11 @@ class IntermediateDslExamplesTest {
       if (helperClass == JsonExtractHelper.class) {
         return new JsonExtractHelper(new ObjectMapper());
       }
-      if (helperClass == SortRecordsHelper.class) {
-        return new SortRecordsHelper();
+      try {
+        return (Executable<?, ?>) helperClass.getDeclaredConstructor().newInstance();
+      } catch (ReflectiveOperationException e) {
+        throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName(), e);
       }
-      if (helperClass == ArithmeticHelper.class) {
-        return new ArithmeticHelper();
-      }
-      if (helperClass == UnreliableApiHelper.class) {
-        return new UnreliableApiHelper();
-      }
-      if (helperClass == UuidV7Helper.class) {
-        return new UuidV7Helper();
-      }
-      if (helperClass == FormatDateHelper.class) {
-        return new FormatDateHelper();
-      }
-      if (helperClass == ParseDateHelper.class) {
-        return new ParseDateHelper();
-      }
-      if (helperClass == Base64Helper.class) {
-        return new Base64Helper();
-      }
-      if (helperClass == RegexHelper.class) {
-        return new RegexHelper();
-      }
-      if (helperClass == HmacSha256SignHelper.class) {
-        return new HmacSha256SignHelper();
-      }
-      if (helperClass == HmacSha256VerifyHelper.class) {
-        return new HmacSha256VerifyHelper();
-      }
-      if (helperClass == UrlEncodeHelper.class) {
-        return new UrlEncodeHelper();
-      }
-      if (helperClass == UrlDecodeHelper.class) {
-        return new UrlDecodeHelper();
-      }
-
-      if (helperClass == Sha256Helper.class) {
-        return new Sha256Helper();
-      }
-
-      throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
     };
   }
 }
