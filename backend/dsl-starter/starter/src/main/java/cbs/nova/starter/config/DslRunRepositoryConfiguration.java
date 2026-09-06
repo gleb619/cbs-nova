@@ -6,8 +6,10 @@ import cbs.nova.starter.config.properties.DslRunPersistenceProperties;
 import cbs.nova.starter.converter.DslRunMapper;
 import cbs.nova.starter.converter.TransactionExecutionMapper;
 import cbs.nova.starter.persistence.AesFieldEncryptor;
+import cbs.nova.starter.persistence.DslRunEncryption;
 import cbs.nova.starter.persistence.DslRunJdbcRepository;
 import cbs.nova.starter.persistence.DslRunNamingStrategy;
+import cbs.nova.starter.persistence.ExtendedSelectQueryExecutor;
 import cbs.nova.starter.persistence.FieldEncryptor;
 import cbs.nova.starter.persistence.JdbcDslRunRepository;
 import cbs.nova.starter.persistence.JdbcTransactionExecutionRepository;
@@ -62,13 +64,20 @@ public class DslRunRepositoryConfiguration {
   @ConditionalOnBean(DataSource.class)
   @ConditionalOnMissingBean(DslRunRepository.class)
   public DslRunRepository dslRunRepository(
-          NamedParameterJdbcTemplate jdbcTemplate,
+          ExtendedSelectQueryExecutor selectQueryExecutor,
           DslRunJdbcRepository jdbcRepository,
           DslRunMapper mapper,
           FieldEncryptor encryptor,
           DslRunPersistenceProperties properties) {
-    return new JdbcDslRunRepository(jdbcTemplate, jdbcRepository, mapper, encryptor,
-            qualifiedTableName(properties));
+    return new JdbcDslRunRepository(selectQueryExecutor, jdbcRepository, mapper,
+            new DslRunEncryption(encryptor), qualifiedTableName(properties));
+  }
+
+  @Bean
+  @ConditionalOnBean(DataSource.class)
+  public ExtendedSelectQueryExecutor extendedSelectQueryExecutor(
+          NamedParameterJdbcTemplate jdbcTemplate) {
+    return new ExtendedSelectQueryExecutor(jdbcTemplate);
   }
 
   @Bean

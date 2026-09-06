@@ -40,4 +40,26 @@ public interface DslRunJdbcRepository extends CrudRepository<DslRunEntity, Long>
           String errorMessage,
           String contextJson,
           Instant finishedAt);
+
+  @Modifying
+  @Query("""
+          UPDATE dsl_runs
+          SET status = :status,
+              output_json = :outputJson,
+              error_message = :errorMessage,
+              context_json = :contextJson,
+              finished_at = :finishedAt
+          WHERE run_id = :runId
+          """)
+  int updateFinishedByRunId(
+          String runId,
+          String status,
+          String outputJson,
+          String errorMessage,
+          String contextJson,
+          Instant finishedAt);
+
+  @Modifying
+  @Query("UPDATE dsl_runs SET status = :status WHERE run_id = :runId")
+  int updateStatusByRunId(String runId, String status);
 }

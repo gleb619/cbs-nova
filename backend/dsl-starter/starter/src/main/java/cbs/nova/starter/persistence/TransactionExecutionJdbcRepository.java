@@ -6,6 +6,7 @@ import org.jspecify.annotations.NonNull;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import org.springframework.data.jdbc.repository.query.Modifying;
 import org.springframework.data.jdbc.repository.query.Query;
 import org.springframework.data.repository.CrudRepository;
@@ -36,4 +37,17 @@ public interface TransactionExecutionJdbcRepository
   @Modifying
   @Query("DELETE FROM dsl_run_transactions WHERE run_id IN (:runIds)")
   int deleteByRunIds(@NonNull Collection<String> runIds);
+
+  @Modifying
+  @Query("""
+          UPDATE dsl_run_transactions
+          SET status = :status,
+              error_message = :errorMessage
+          WHERE run_id = :runId AND transaction_name = :transactionName
+          """)
+  int updateStatusAndErrorByRunIdAndTransactionName(
+          @NonNull String runId,
+          @NonNull String transactionName,
+          @NonNull String status,
+          @Nullable String errorMessage);
 }
