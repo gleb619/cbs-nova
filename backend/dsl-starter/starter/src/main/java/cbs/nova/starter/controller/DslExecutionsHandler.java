@@ -7,11 +7,13 @@ import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.transaction.TransactionExecution;
 import cbs.nova.starter.config.router.DslExecutionsRouterConfiguration;
+import cbs.nova.starter.converter.RequestQueryConverter;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ExecutionDto;
 import cbs.nova.starter.model.ExecutionListResponse;
 import cbs.nova.starter.model.ExecutionStatsResponse;
 import cbs.nova.starter.model.ExecutionTimeseriesResponse;
+import cbs.nova.starter.model.RequestQueryModels.ExecutionListQuery;
 import cbs.nova.starter.model.TransactionExecutionDto;
 import cbs.nova.starter.persistence.DslRunStats;
 import cbs.nova.starter.persistence.DslRunStatsRepository;
@@ -53,7 +55,6 @@ import java.util.Map;
 @Component
 @Tag(name = "DSL Executions", description = "Inspect DSL execution runs")
 @RequiredArgsConstructor
-// TODO: Add mapstrcut mapper, that map `request.param` to a record
 public class DslExecutionsHandler {
 
   private static final int MAX_LIMIT = 500;
@@ -76,11 +77,12 @@ public class DslExecutionsHandler {
   private final DslRunCancellationService cancellationService;
   private final @Nullable DslRunStatsRepository statsRepository;
   private final TransactionExecutionRepository transactionExecutionRepository;
+  private final RequestQueryConverter queryConverter;
 
   @Operation(summary = "List DSL execution runs")
   @ApiResponse(responseCode = "200", description = "Matching execution runs", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionListResponse.class)))
   public ServerResponse list(ServerRequest request) throws IOException {
-    ExecutionFilters filters = readFilters(request);
+    ExecutionListQuery filters = queryConverter.toExecutionListQuery(request);
     int limit = intParam(request, "limit", 50);
     int offset = intParam(request, "offset", 0);
     int pageSize = clampLimit(limit);
@@ -96,7 +98,7 @@ public class DslExecutionsHandler {
   @Operation(summary = "Export DSL execution runs as CSV")
   @ApiResponse(responseCode = "200", description = "CSV export of matching execution runs", content = @Content(mediaType = "text/csv"))
   public ServerResponse exportCsv(ServerRequest request) throws IOException {
-    ExecutionFilters filters = readFilters(request);
+    ExecutionListQuery filters = queryConverter.toExecutionListQuery(request);
     DslRunSearchResult result = runRepository.search(filters.processName(), filters.status(),
             filters.mode(), filters.correlationId(), 0, CSV_EXPORT_MAX_ROWS + 1);
     boolean truncated = result.items().size() > CSV_EXPORT_MAX_ROWS;
@@ -279,21 +281,6 @@ public class DslExecutionsHandler {
     return runRepository.knownProcessNames().stream()
             .flatMap(name -> runRepository.findByProcessName(name).stream())
             .toList();
-  }
-
-  private static ExecutionFilters readFilters(ServerRequest request) {
-    String processName = request.param("processName").filter(s -> !s.isBlank()).orElse(null);
-    String status = request.param("status").orElse(null);
-    String mode = request.param("mode").orElse(null);
-    String correlationId = request.param("correlationId")
-            .map(String::trim)
-            .filter(s -> !s.isBlank())
-            .orElse(null);
-    return new ExecutionFilters(processName, status, mode, correlationId);
-  }
-
-  private record ExecutionFilters(String processName, String status, String mode,
-          String correlationId) {
   }
 
   private static int clampLimit(int limit) {

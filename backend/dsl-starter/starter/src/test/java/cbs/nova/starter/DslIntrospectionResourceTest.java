@@ -17,6 +17,7 @@ import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.starter.config.router.DslIntrospectionRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslIntrospectionHandler;
+import cbs.nova.starter.converter.RequestQueryConverter;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import cbs.nova.starter.service.DslDefinitionStatusResolver;
 import cbs.nova.starter.service.DslGitStatusResolver;
@@ -53,7 +54,7 @@ class DslIntrospectionResourceTest {
                     new DslGitStatusResolver(
                             new DslProperties())));
     DslIntrospectionHandler handler = new DslIntrospectionHandler(service,
-            new ExplainDiagramRenderer());
+            new ExplainDiagramRenderer(), new RequestQueryConverter());
     DslIntrospectionRouterConfiguration router = new DslIntrospectionRouterConfiguration();
     mockMvc = MockMvcBuilders.routerFunctions(router.dslIntrospectionRouter(handler)).build();
   }

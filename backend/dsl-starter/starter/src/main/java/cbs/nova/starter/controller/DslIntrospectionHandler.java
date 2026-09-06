@@ -1,5 +1,6 @@
 package cbs.nova.starter.controller;
 
+import cbs.nova.starter.converter.RequestQueryConverter;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import cbs.nova.starter.service.DslIntrospectionService;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructBodyDto;
@@ -14,11 +15,11 @@ import org.springframework.web.servlet.function.ServerResponse;
 import java.util.List;
 
 @RequiredArgsConstructor
-// TODO: Add mapstrcut mapper, that map `request.param` to a record
 public class DslIntrospectionHandler {
 
   private final DslIntrospectionService service;
   private final ExplainDiagramRenderer diagramRenderer;
+  private final RequestQueryConverter queryConverter;
 
   public ServerResponse processes(ServerRequest request) {
     return ServerResponse.ok().body(service.processes());
@@ -53,10 +54,8 @@ public class DslIntrospectionHandler {
   }
 
   public ServerResponse searchObjects(ServerRequest request) {
-    String name = request.param("name").orElse(null);
-    String type = request.param("type").orElse(null);
-    String description = request.param("description").orElse(null);
-    List<HelperSearchResult> results = service.searchObjects(name, type, description);
+    var q = queryConverter.toIntrospectionSearchQuery(request);
+    List<HelperSearchResult> results = service.searchObjects(q.name(), q.type(), q.description());
     return ServerResponse.ok().body(results);
   }
 

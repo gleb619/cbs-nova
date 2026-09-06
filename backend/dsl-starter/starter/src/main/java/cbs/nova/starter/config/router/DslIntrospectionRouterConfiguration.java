@@ -1,6 +1,7 @@
 package cbs.nova.starter.config.router;
 
 import cbs.nova.starter.controller.DslIntrospectionHandler;
+import cbs.nova.starter.converter.RequestQueryConverter;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import cbs.nova.starter.service.DslIntrospectionService;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructBodyDto;
@@ -30,8 +31,9 @@ public class DslIntrospectionRouterConfiguration {
 
   @Bean
   DslIntrospectionHandler dslIntrospectionHandler(DslIntrospectionService service,
-          ExplainDiagramRenderer diagramRenderer) {
-    return new DslIntrospectionHandler(service, diagramRenderer);
+          ExplainDiagramRenderer diagramRenderer,
+          RequestQueryConverter requestQueryConverter) {
+    return new DslIntrospectionHandler(service, diagramRenderer, requestQueryConverter);
   }
 
   @Bean

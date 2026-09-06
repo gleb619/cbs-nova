@@ -3,6 +3,7 @@ package cbs.nova.starter.config.router;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.starter.controller.DslExecutionsHandler;
+import cbs.nova.starter.converter.RequestQueryConverter;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ExecutionDto;
 import cbs.nova.starter.model.ExecutionListResponse;
@@ -35,12 +36,13 @@ public class DslExecutionsRouterConfiguration {
   DslExecutionsHandler dslExecutionsHandler(DslRunRepository runRepository,
           ObjectMapper objectMapper,
           DslRunCancellationService dslRunCancellationService,
-          TransactionExecutionRepository transactionExecutionRepository) {
+          TransactionExecutionRepository transactionExecutionRepository,
+          RequestQueryConverter requestQueryConverter) {
     DslRunStatsRepository statsRepository = runRepository instanceof DslRunStatsRepository stats
             ? stats
             : null;
     return new DslExecutionsHandler(runRepository, objectMapper, dslRunCancellationService,
-            statsRepository, transactionExecutionRepository);
+            statsRepository, transactionExecutionRepository, requestQueryConverter);
   }
 
   @Bean

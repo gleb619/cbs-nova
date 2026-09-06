@@ -26,6 +26,7 @@ import cbs.nova.dsl.transaction.TransactionExecution;
 import cbs.nova.dsl.transaction.TransactionExecutionStatus;
 import cbs.nova.starter.config.router.DslExecutionsRouterConfiguration;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
+import cbs.nova.starter.converter.RequestQueryConverter;
 import cbs.nova.starter.persistence.DslRunStats;
 import cbs.nova.starter.persistence.DslRunStatsRepository;
 import cbs.nova.starter.persistence.RunTimeseriesBucket;
@@ -65,7 +66,7 @@ class DslExecutionsResourceTest {
     DslRunCancellationService cancellationService = new DslRunCancellationService(workflowClient,
             repository);
     DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper,
-            cancellationService, null, transactionExecutionRepository);
+            cancellationService, null, transactionExecutionRepository, new RequestQueryConverter());
     DslExecutionsRouterConfiguration router = new DslExecutionsRouterConfiguration();
     AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();
     adviceContext.registerBean(DslExceptionHandler.class,
@@ -667,7 +668,7 @@ class DslExecutionsResourceTest {
             List.of(new DslRunStats.ProcessRunCount("LoanDisbursement", 20))));
     DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper,
             new DslRunCancellationService(workflowClient, repository), statsRepository,
-            transactionExecutionRepository);
+            transactionExecutionRepository, new RequestQueryConverter());
     mockMvc = MockMvcBuilders
             .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler))
             .build();
@@ -693,7 +694,7 @@ class DslExecutionsResourceTest {
             0, Map.of(), 0, 0, 0.0, List.of()));
     DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper,
             new DslRunCancellationService(workflowClient, repository), statsRepository,
-            transactionExecutionRepository);
+            transactionExecutionRepository, new RequestQueryConverter());
     mockMvc = MockMvcBuilders
             .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler))
             .build();
@@ -753,7 +754,7 @@ class DslExecutionsResourceTest {
             });
     DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper,
             new DslRunCancellationService(workflowClient, repository), statsRepository,
-            transactionExecutionRepository);
+            transactionExecutionRepository, new RequestQueryConverter());
     mockMvc = MockMvcBuilders
             .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler))
             .build();
@@ -1106,7 +1107,7 @@ class DslExecutionsResourceTest {
     DslRunCancellationService cancellationService = new DslRunCancellationService(workflowClient,
             cappedRepository);
     DslExecutionsHandler handler = new DslExecutionsHandler(cappedRepository, objectMapper,
-            cancellationService, null, transactionExecutionRepository);
+            cancellationService, null, transactionExecutionRepository, new RequestQueryConverter());
     MockMvc cappedMockMvc = MockMvcBuilders
             .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler))
             .build();
