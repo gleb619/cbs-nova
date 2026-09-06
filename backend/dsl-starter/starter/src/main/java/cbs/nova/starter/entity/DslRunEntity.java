@@ -7,7 +7,8 @@ import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.Instant;
 
-//TODO: we need limit entity scan, only to one package `cbs.nova.starter.entity`
+// No entity-scan limiting needed: Spring Data JDBC has no entity-scan concept (that is JPA's
+// @EntityScan, which is unused here). @Table types are discovered via repository domain types.
 @Data
 @Table("dsl_runs")
 public class DslRunEntity {
