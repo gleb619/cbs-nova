@@ -32,19 +32,20 @@ public record FunctionDslObject(
     if (descriptor != null) {
       return descriptor.get();
     }
-    return new DslDescriptor(
-            name,
-            DslType.FUNCTION,
-            null,
-            null,
-            null,
-            false,
-            false,
-            "delegates to execute",
-            parameters != null ? parameters : List.of(),
-            null,
-            null,
-            null,
-            null);
+    return DslDescriptor.builder()
+            .name(name)
+            .type(DslType.FUNCTION)
+            .description(null)
+            .inputType(null)
+            .outputType(null)
+            .hasCompensation(false)
+            .hasSideEffects(false)
+            .previewBehavior("delegates to execute")
+            .parameters(parameters != null ? parameters : List.of())
+            .taskQueue(null)
+            .version(null)
+            .startToCloseTimeout(null)
+            .heartbeatTimeout(null)
+            .build();
   }
 }

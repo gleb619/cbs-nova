@@ -43,19 +43,20 @@ public record ProcessDslObject(
     if (descriptor != null) {
       return descriptor.get();
     }
-    return new DslDescriptor(
-            name,
-            DslType.PROCESS,
-            null,
-            inputType,
-            outputType,
-            compensationLogic != null,
-            true,
-            "delegates to execute",
-            parameters != null ? parameters : List.of(),
-            taskQueue,
-            version,
-            null,
-            null);
+    return DslDescriptor.builder()
+            .name(name)
+            .type(DslType.PROCESS)
+            .description(null)
+            .inputType(inputType)
+            .outputType(outputType)
+            .hasCompensation(compensationLogic != null)
+            .hasSideEffects(true)
+            .previewBehavior("delegates to execute")
+            .parameters(parameters != null ? parameters : List.of())
+            .taskQueue(taskQueue)
+            .version(version)
+            .startToCloseTimeout(null)
+            .heartbeatTimeout(null)
+            .build();
   }
 }

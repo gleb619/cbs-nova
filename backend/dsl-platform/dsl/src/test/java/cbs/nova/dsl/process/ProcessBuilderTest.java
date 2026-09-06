@@ -199,11 +199,21 @@ class ProcessBuilderTest {
 
   @Test
   void describeUsesCustomDescriptorSupplierWhenProvided() {
-    var custom = new DslDescriptor(
-            "CustomProc", DslType.PROCESS, "custom-desc",
-            String.class, String.class, true, false,
-            "custom-preview",
-            List.of(), "custom-queue", "v9", null, null);
+    var custom = DslDescriptor.builder()
+            .name("CustomProc")
+            .type(DslType.PROCESS)
+            .description("custom-desc")
+            .inputType(String.class)
+            .outputType(String.class)
+            .hasCompensation(true)
+            .hasSideEffects(false)
+            .previewBehavior("custom-preview")
+            .parameters(List.of())
+            .taskQueue("custom-queue")
+            .version("v9")
+            .startToCloseTimeout(null)
+            .heartbeatTimeout(null)
+            .build();
     var process = Dsl.process("CustomProc")
             .execute(ctx -> Result.success(null))
             .describe(() -> custom)

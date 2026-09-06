@@ -125,11 +125,21 @@ class FunctionBuilderTest {
 
   @Test
   void describeUsesCustomDescriptorSupplierWhenProvided() {
-    var custom = new DslDescriptor(
-            "CustomDescFn", DslType.FUNCTION, "custom-desc",
-            String.class, Integer.class, false, false,
-            "custom-preview",
-            List.of(), null, null, null, null);
+    var custom = DslDescriptor.builder()
+            .name("CustomDescFn")
+            .type(DslType.FUNCTION)
+            .description("custom-desc")
+            .inputType(String.class)
+            .outputType(Integer.class)
+            .hasCompensation(false)
+            .hasSideEffects(false)
+            .previewBehavior("custom-preview")
+            .parameters(List.of())
+            .taskQueue(null)
+            .version(null)
+            .startToCloseTimeout(null)
+            .heartbeatTimeout(null)
+            .build();
     var fn = Dsl.function("CustomDescFn")
             .execute(ctx -> Result.success(null))
             .describe(() -> custom)

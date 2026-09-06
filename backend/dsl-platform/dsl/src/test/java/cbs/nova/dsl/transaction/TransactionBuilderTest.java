@@ -122,11 +122,21 @@ class TransactionBuilderTest {
 
   @Test
   void describeUsesCustomDescriptorSupplierWhenProvided() {
-    var custom = new DslDescriptor(
-            "PayTx", DslType.TRANSACTION, "custom-desc",
-            String.class, String.class, false, false,
-            "custom-preview",
-            List.of(), "custom-queue", "v9", Duration.ofSeconds(1), null);
+    var custom = DslDescriptor.builder()
+            .name("PayTx")
+            .type(DslType.TRANSACTION)
+            .description("custom-desc")
+            .inputType(String.class)
+            .outputType(String.class)
+            .hasCompensation(false)
+            .hasSideEffects(false)
+            .previewBehavior("custom-preview")
+            .parameters(List.of())
+            .taskQueue("custom-queue")
+            .version("v9")
+            .startToCloseTimeout(Duration.ofSeconds(1))
+            .heartbeatTimeout(null)
+            .build();
     var tx = Dsl.transaction("PayTx")
             .execute(ctx -> Result.success(null))
             .describe(() -> custom)
