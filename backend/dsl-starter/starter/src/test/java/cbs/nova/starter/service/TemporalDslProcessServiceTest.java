@@ -97,7 +97,7 @@ class TemporalDslProcessServiceTest {
           long maxOutputBytes,
           SimpleMeterRegistry meterRegistry,
           RunIdentityResolver runIdentityResolver) {
-    return new TemporalDslProcessService(
+    return TemporalDslProcessService.withDefaults(
             contextFactory,
             runRepository,
             objectMapper,
@@ -265,7 +265,7 @@ class TemporalDslProcessServiceTest {
       ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
       Mockito.when(contextFactory.generateRunId()).thenReturn("run-stale-1");
       SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
-      TemporalDslProcessService service = new TemporalDslProcessService(
+      TemporalDslProcessService service = TemporalDslProcessService.withDefaults(
               contextFactory, repo, new ObjectMapper(),
               exec, scheduler, Duration.ofMillis(1), Duration.ofMillis(100), false,
               Long.MAX_VALUE, meterRegistry, nullResolver());
@@ -330,7 +330,7 @@ class TemporalDslProcessServiceTest {
       longAgoClock fixedClock = new longAgoClock();
 
       ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
-      TemporalDslProcessService service = new TemporalDslProcessService(
+      TemporalDslProcessService service = TemporalDslProcessService.withDefaults(
               contextFactory, repo, new ObjectMapper(),
               exec, scheduler, Duration.ofMillis(1), Duration.ofMillis(100), false,
               Long.MAX_VALUE, new SimpleMeterRegistry(), nullResolver());
@@ -373,7 +373,7 @@ class TemporalDslProcessServiceTest {
     InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
     try {
       ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
-      TemporalDslProcessService service = new TemporalDslProcessService(
+      TemporalDslProcessService service = TemporalDslProcessService.withDefaults(
               contextFactory, repo, new ObjectMapper(),
               exec, scheduler, Duration.ofMillis(1), Duration.ofMillis(100), false,
               Long.MAX_VALUE, new SimpleMeterRegistry(), nullResolver());
@@ -413,7 +413,7 @@ class TemporalDslProcessServiceTest {
             Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
             .thenReturn(new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
                     "ignored", TransactionRouting.LOCAL, null, null, null));
-    TemporalDslProcessService service = new TemporalDslProcessService(
+    TemporalDslProcessService service = TemporalDslProcessService.withDefaults(
             contextFactory,
             new InMemoryDslRunRepository(),
             new ObjectMapper(),
@@ -422,6 +422,7 @@ class TemporalDslProcessServiceTest {
             Duration.ofSeconds(30),
             Duration.ofMinutes(5),
             false,
+            Long.MAX_VALUE,
             new SimpleMeterRegistry(), nullResolver());
     try {
       for (int w = 0; w < writers; w++) {

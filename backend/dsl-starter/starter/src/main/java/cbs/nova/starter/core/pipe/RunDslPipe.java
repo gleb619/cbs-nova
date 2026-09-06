@@ -33,7 +33,7 @@ public final class RunDslPipe implements DslExecutionPipe<Object> {
             .stage(new ExecutionTraceStage())
             .stage(new FakingStage(fakesProperties, runScopedFakeConfig))
             .stage(new ExternalCallRecordingStage(recorder))
-            .stage(new DispatchStage(contextFactory, fakeInterceptor))
+            .stage(DispatchStage.inline(contextFactory, fakeInterceptor))
             .build()
             .execute(name, ctx);
   }

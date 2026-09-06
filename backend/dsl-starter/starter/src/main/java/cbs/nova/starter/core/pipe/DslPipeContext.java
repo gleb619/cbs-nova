@@ -3,6 +3,7 @@ package cbs.nova.starter.core.pipe;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -10,6 +11,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 //TODO: redo to a `record` with lombok's builder
+@RequiredArgsConstructor
 public final class DslPipeContext {
 
   @Getter
@@ -25,32 +27,6 @@ public final class DslPipeContext {
   private final @NonNull String runId;
 
   private Map<String, Object> attributes = new ConcurrentHashMap<>();
-
-  // TODO: remove constructor
-  public DslPipeContext(
-          @NonNull String name,
-          @NonNull Context<?> dslContext,
-          @NonNull ExecutionMode mode,
-          @NonNull String runId) {
-    this.name = name;
-    this.dslContext = dslContext;
-    this.mode = mode;
-    this.runId = runId;
-  }
-
-  // TODO: remove constructor
-  private DslPipeContext(
-          @NonNull String name,
-          @NonNull Context<?> dslContext,
-          @NonNull ExecutionMode mode,
-          @NonNull String runId,
-          @NonNull Map<String, Object> attributes) {
-    this.name = name;
-    this.dslContext = dslContext;
-    this.mode = mode;
-    this.runId = runId;
-    this.attributes = attributes;
-  }
 
   public @Nullable Object getAttribute(@NonNull String key) {
     return attributes.get(key);
@@ -71,6 +47,8 @@ public final class DslPipeContext {
   }
 
   public @NonNull DslPipeContext withDslContext(@NonNull Context<?> dslContext) {
-    return new DslPipeContext(name, dslContext, mode, runId, attributes);
+    var copy = new DslPipeContext(name, dslContext, mode, runId);
+    copy.attributes = this.attributes;
+    return copy;
   }
 }

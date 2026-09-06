@@ -144,7 +144,7 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
     DslRunTableColumns t = new DslRunTableColumns(tableName);
 
     int total = 0;
-    //TODO: refactor 'while' loop, to a 'for' loop
+    // TODO: refactor 'while' loop, to a 'for' loop
     while (true) {
       TableReference selectRef = t.refer();
       ExtendedSelectQuery select = dslQueries.select()
