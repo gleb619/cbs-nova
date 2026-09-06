@@ -9,6 +9,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.config.CbsNovaFakesProperties;
+import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.config.CbsNovaPreviewProperties;
 import cbs.nova.starter.config.router.DslRuntimeRouterConfiguration;
 import cbs.nova.starter.config.properties.DslRunsProperties;
@@ -67,7 +68,7 @@ class DslStarterIntegrationTest {
             previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),
             new SimpleMeterRegistry(), null);
     var runPipe = new RunDslPipe(contextFactory, recorder, new CbsNovaFakesProperties(false, null),
-            new RunScopedFakeConfig());
+            new RunScopedFakeConfig(), new DslExecutionEventBus());
     var explainPipe = new ExplainDslPipe(recorder, contextFactory, dryRunLoggingContext,
             bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, previewProperties,
             new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),

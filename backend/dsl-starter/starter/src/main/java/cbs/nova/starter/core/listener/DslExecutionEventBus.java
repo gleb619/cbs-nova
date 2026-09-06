@@ -1,12 +1,13 @@
 package cbs.nova.starter.core.listener;
 
 import cbs.nova.starter.core.event.DslExecutionEvent;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-//TODO: we need to add a dslpipe stage impl, that uses a `DslExecutionListener`/`DslExecutionEventBus` thing
+@Slf4j
 public final class DslExecutionEventBus {
 
   private final List<DslExecutionListener> listeners = new CopyOnWriteArrayList<>();
@@ -19,7 +20,8 @@ public final class DslExecutionEventBus {
     for (DslExecutionListener listener : listeners) {
       try {
         listener.onEvent(event);
-      } catch (Exception ignored) {
+      } catch (Exception ex) {
+        log.debug("DSL execution listener threw", ex);
       }
     }
   }

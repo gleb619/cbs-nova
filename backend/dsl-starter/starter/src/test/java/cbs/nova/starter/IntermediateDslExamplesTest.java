@@ -20,6 +20,7 @@ import cbs.nova.dslexamples.v1.InvoiceModels.InvoiceOut;
 import cbs.nova.dslexamples.v1.LongWorkModels.LongWorkIn;
 import cbs.nova.dslexamples.v1.LongWorkModels.LongWorkOut;
 import cbs.nova.starter.config.CbsNovaFakesProperties;
+import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.config.CbsNovaPreviewProperties;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
@@ -57,7 +58,8 @@ class IntermediateDslExamplesTest {
           null, previewProperties, new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(), new SimpleMeterRegistry(), null);
   private final RunDslPipe runPipe = new RunDslPipe(contextFactory, recorder,
-          new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig());
+          new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),
+          new DslExecutionEventBus());
   private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
           dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
           previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),

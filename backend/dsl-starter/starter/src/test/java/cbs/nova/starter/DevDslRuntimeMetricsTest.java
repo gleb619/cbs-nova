@@ -11,6 +11,7 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.starter.config.CbsNovaFakesProperties;
+import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.config.CbsNovaPreviewProperties;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
@@ -48,7 +49,8 @@ class DevDslRuntimeMetricsTest {
           null, previewProperties, new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(), new SimpleMeterRegistry(), null);
   private final RunDslPipe runPipe = new RunDslPipe(contextFactory, recorder,
-          new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig());
+          new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),
+          new DslExecutionEventBus());
   private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
           dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
           previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),

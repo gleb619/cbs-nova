@@ -222,9 +222,10 @@ public class TemporalConfiguration {
           ContextFactory contextFactory,
           ExternalCallRecorder externalCallRecorder,
           CbsNovaFakesProperties fakesProperties,
-          RunScopedFakeConfig runScopedFakeConfig) {
+          RunScopedFakeConfig runScopedFakeConfig,
+          DslExecutionEventBus dslExecutionEventBus) {
     return new RunDslPipe(contextFactory, externalCallRecorder, fakesProperties,
-            runScopedFakeConfig);
+            runScopedFakeConfig, dslExecutionEventBus);
   }
 
   @Bean
