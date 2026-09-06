@@ -44,7 +44,7 @@ class DispatchStageTest {
       }
       return Optional.empty();
     };
-    var stage = new DispatchStage(contextFactory, interceptor);
+    var stage = DispatchStage.inline(contextFactory, interceptor);
 
     Context<?> ctx = contextFactory.of("body", ExecutionMode.RUN, "run-1");
     DslPipeContext pipeContext = new DslPipeContext("echo", ctx, ExecutionMode.RUN, "run-1");
@@ -71,7 +71,7 @@ class DispatchStageTest {
       intercepted.set(true);
       return Optional.empty();
     };
-    var stage = new DispatchStage(contextFactory, interceptor);
+    var stage = DispatchStage.inline(contextFactory, interceptor);
 
     Context<?> ctx = contextFactory.of("body", ExecutionMode.RUN, "run-3");
     DslPipeContext pipeContext = new DslPipeContext("echo", ctx, ExecutionMode.RUN, "run-3");

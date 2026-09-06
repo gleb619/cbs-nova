@@ -8,20 +8,20 @@ import lombok.Value;
 //TODO: redo to a record
 public class DslRunTableColumns {
 
-   Table table;
-   TableColumn id;
-   TableColumn runId;
-   TableColumn processName;
-   TableColumn status;
-   TableColumn inputJson;
-   TableColumn outputJson;
-   TableColumn errorMessage;
-   TableColumn contextJson;
-   TableColumn startedAt;
-   TableColumn finishedAt;
-   TableColumn executionMode;
-   TableColumn triggeredBy;
-   TableColumn correlationId;
+  Table table;
+  TableColumn id;
+  TableColumn runId;
+  TableColumn processName;
+  TableColumn status;
+  TableColumn inputJson;
+  TableColumn outputJson;
+  TableColumn errorMessage;
+  TableColumn contextJson;
+  TableColumn startedAt;
+  TableColumn finishedAt;
+  TableColumn executionMode;
+  TableColumn triggeredBy;
+  TableColumn correlationId;
 
   public DslRunTableColumns(String name) {
     table = new Table(name);

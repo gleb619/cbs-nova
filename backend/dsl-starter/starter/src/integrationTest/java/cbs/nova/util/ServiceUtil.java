@@ -25,7 +25,7 @@ public class ServiceUtil {
           ContextFactory contextFactory,
           DslRunRepository runRepository,
           ObjectMapper objectMapper) {
-    return new TemporalDslProcessService(
+    return TemporalDslProcessService.withDefaults(
             contextFactory,
             runRepository,
             objectMapper,
@@ -34,6 +34,7 @@ public class ServiceUtil {
             Duration.ofSeconds(30),
             Duration.ofMinutes(5),
             false,
+            Long.MAX_VALUE,
             new SimpleMeterRegistry(),
             new RunIdentityResolver());
   }

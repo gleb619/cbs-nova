@@ -20,7 +20,7 @@ public class ExtendedSelectQueryExecutor {
   private final NamedParameterJdbcTemplate jdbcTemplate;
 
   public Builder select(
-      //TODO: add here a some lamdba, to make api fluent one, like stream api
+  // TODO: add here a some lamdba, to make api fluent one, like stream api
   ) {
     return new Builder();
   }
@@ -52,7 +52,7 @@ public class ExtendedSelectQueryExecutor {
       return this;
     }
 
-    //TODO: add 'or' and 'and' methods, for proper configuration of conditions
+    // TODO: add 'or' and 'and' methods, for proper configuration of conditions
     public Builder where(Criteria criteria) {
       query.addCriteria(criteria);
       return this;

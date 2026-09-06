@@ -21,6 +21,7 @@ import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
+import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -71,8 +72,11 @@ class TemporalDslProcessServiceTracingTest {
             Duration.ofSeconds(30),
             Duration.ofMinutes(5),
             false,
-            new SimpleMeterRegistry(), nullResolver());
-    service.setOpenTelemetry(openTelemetry);
+            Long.MAX_VALUE,
+            new SimpleMeterRegistry(),
+            nullResolver(),
+            Optional.empty(),
+            openTelemetry);
 
     service.startProcess(processName, Map.of(), Map.of()).result().join();
 
@@ -115,7 +119,11 @@ class TemporalDslProcessServiceTracingTest {
             Duration.ofSeconds(30),
             Duration.ofMinutes(5),
             false,
-            new SimpleMeterRegistry(), nullResolver());
+            Long.MAX_VALUE,
+            new SimpleMeterRegistry(),
+            nullResolver(),
+            Optional.empty(),
+            OpenTelemetry.noop());
     // Default OpenTelemetry is no-op and must remain so.
     assertThat(service.getOpenTelemetry()).isSameAs(OpenTelemetry.noop());
 

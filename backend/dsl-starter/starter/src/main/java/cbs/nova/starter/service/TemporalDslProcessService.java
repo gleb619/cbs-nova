@@ -21,6 +21,7 @@ import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
 import io.sentry.Sentry;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -50,6 +51,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 @Slf4j
+@RequiredArgsConstructor
 public class TemporalDslProcessService {
 
   public static final String EMPTY_OUTPUT_JSON = "{}";
@@ -84,51 +86,18 @@ public class TemporalDslProcessService {
   private final MeterRegistry meterRegistry;
   private final RunIdentityResolver runIdentityResolver;
   private final Optional<WebhookDispatcher> webhookDispatcher;
+  private final OpenTelemetry openTelemetry;
 
-  // TODO: use only lomboks constructor
-  @Deprecated(forRemoval = true)
-  public TemporalDslProcessService(ContextFactory contextFactory, DslRunRepository runRepository,
-          ObjectMapper objectMapper,
-          ThreadPoolTaskExecutor dslProcessExecutor, ScheduledExecutorService healthcheckExecutor,
-          Duration healthcheckInterval, Duration staleThreshold, boolean asyncDbSave,
-          MeterRegistry meterRegistry, RunIdentityResolver runIdentityResolver) {
-    this(contextFactory, runRepository, objectMapper, dslProcessExecutor, healthcheckExecutor,
-            healthcheckInterval, staleThreshold, asyncDbSave, Long.MAX_VALUE, meterRegistry,
-            runIdentityResolver, Optional.empty());
-  }
-
-  // TODO: use only lomboks constructor
-  public TemporalDslProcessService(ContextFactory contextFactory, DslRunRepository runRepository,
-          ObjectMapper objectMapper,
+  public static TemporalDslProcessService withDefaults(
+          ContextFactory contextFactory, DslRunRepository runRepository, ObjectMapper objectMapper,
           ThreadPoolTaskExecutor dslProcessExecutor, ScheduledExecutorService healthcheckExecutor,
           Duration healthcheckInterval, Duration staleThreshold, boolean asyncDbSave,
           long maxOutputBytes, MeterRegistry meterRegistry,
           RunIdentityResolver runIdentityResolver) {
-    this(contextFactory, runRepository, objectMapper, dslProcessExecutor, healthcheckExecutor,
-            healthcheckInterval, staleThreshold, asyncDbSave, maxOutputBytes, meterRegistry,
-            runIdentityResolver, Optional.empty());
-  }
-
-  // TODO: use only lomboks constructor
-  public TemporalDslProcessService(ContextFactory contextFactory, DslRunRepository runRepository,
-          ObjectMapper objectMapper,
-          ThreadPoolTaskExecutor dslProcessExecutor, ScheduledExecutorService healthcheckExecutor,
-          Duration healthcheckInterval, Duration staleThreshold, boolean asyncDbSave,
-          long maxOutputBytes, MeterRegistry meterRegistry,
-          RunIdentityResolver runIdentityResolver,
-          Optional<WebhookDispatcher> webhookDispatcher) {
-    this.contextFactory = contextFactory;
-    this.runRepository = runRepository;
-    this.objectMapper = objectMapper;
-    this.dslProcessExecutor = dslProcessExecutor;
-    this.healthcheckExecutor = healthcheckExecutor;
-    this.healthcheckInterval = healthcheckInterval;
-    this.staleThreshold = staleThreshold;
-    this.asyncDbSave = asyncDbSave;
-    this.maxOutputBytes = maxOutputBytes;
-    this.meterRegistry = meterRegistry;
-    this.runIdentityResolver = runIdentityResolver;
-    this.webhookDispatcher = webhookDispatcher;
+    return new TemporalDslProcessService(contextFactory, runRepository, objectMapper,
+            dslProcessExecutor, healthcheckExecutor, healthcheckInterval, staleThreshold,
+            asyncDbSave, maxOutputBytes, meterRegistry, runIdentityResolver,
+            Optional.empty(), OpenTelemetry.noop());
   }
 
   private static final Duration SHUTDOWN_JOIN = Duration.ofSeconds(5);
@@ -139,22 +108,10 @@ public class TemporalDslProcessService {
 
   private final AtomicBoolean healthcheckStarted = new AtomicBoolean(false);
 
-  private OpenTelemetry openTelemetry = OpenTelemetry.noop();
-
   private final Map<String, Span> activeSpans = new ConcurrentHashMap<>();
 
   void setClock(@NonNull Clock clock) {
     this.clock.set(clock);
-  }
-
-  /**
-   * Sets the OpenTelemetry instance used for DSL run tracing. Defaults to a no-op implementation;
-   * when left unset, tracing is completely disabled.
-   */
-  // TODO: use constructor
-  @Deprecated(forRemoval = true)
-  public void setOpenTelemetry(OpenTelemetry openTelemetry) {
-    this.openTelemetry = openTelemetry != null ? openTelemetry : OpenTelemetry.noop();
   }
 
   OpenTelemetry getOpenTelemetry() {

@@ -346,8 +346,8 @@ public class TemporalConfiguration {
             dslRunsProperties.getMaxOutputBytes(),
             meterRegistry,
             runIdentityResolver,
-            webhookDispatcher);
-    service.setOpenTelemetry(openTelemetry);
+            webhookDispatcher,
+            openTelemetry);
     return service;
   }
 
