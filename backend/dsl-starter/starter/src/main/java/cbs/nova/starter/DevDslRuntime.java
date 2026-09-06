@@ -3,11 +3,15 @@ package cbs.nova.starter;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExplainReport;
+import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
+import cbs.nova.starter.core.PreviewErrorHandler;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
@@ -31,7 +35,12 @@ public final class DevDslRuntime implements DslRuntime {
   @Override
   public @NonNull ExplainReport explain(@NonNull String name, @NonNull Context<?> ctx) {
     Result<ExplainReport> result = explainPipe.execute(name, ctx);
-    // TODO: add check for null, add default value case
-    return result.value();
+    ExplainReport report = result.value();
+    if (report != null) {
+      return report;
+    }
+    PreviewErrorDetail error = PreviewErrorHandler.from(result.cause(), name);
+    return new ExplainReport(name, "Entity: " + name, List.of(), List.of(), Map.of(),
+            null, null, null, List.of(), null, List.of(error), null);
   }
 }
