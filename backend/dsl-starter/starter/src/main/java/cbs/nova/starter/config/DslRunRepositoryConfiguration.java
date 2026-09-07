@@ -6,6 +6,7 @@ import cbs.nova.starter.config.properties.DslRunPersistenceProperties;
 import cbs.nova.starter.converter.DslRunMapper;
 import cbs.nova.starter.converter.TransactionExecutionMapper;
 import cbs.nova.starter.persistence.AesFieldEncryptor;
+import cbs.nova.starter.persistence.DslAuditRepository;
 import cbs.nova.starter.persistence.DslRunEncryption;
 import cbs.nova.starter.persistence.DslRunJdbcRepository;
 import cbs.nova.starter.persistence.DslRunNamingStrategy;
@@ -15,6 +16,7 @@ import cbs.nova.starter.persistence.JdbcDslRunRepository;
 import cbs.nova.starter.persistence.JdbcTransactionExecutionRepository;
 import cbs.nova.starter.persistence.NoOpFieldEncryptor;
 import cbs.nova.starter.persistence.TransactionExecutionJdbcRepository;
+import cbs.nova.starter.service.DslAuditService;
 import org.flywaydb.core.Flyway;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -78,6 +80,19 @@ public class DslRunRepositoryConfiguration {
   public ExtendedSelectQueryExecutor extendedSelectQueryExecutor(
           NamedParameterJdbcTemplate jdbcTemplate) {
     return new ExtendedSelectQueryExecutor(jdbcTemplate);
+  }
+
+  @Bean
+  @ConditionalOnBean(DataSource.class)
+  public DslAuditRepository dslAuditRepository(NamedParameterJdbcTemplate jdbcTemplate) {
+    return new DslAuditRepository(jdbcTemplate);
+  }
+
+  @Bean
+  @ConditionalOnBean(DslAuditRepository.class)
+  public DslAuditService dslAuditService(DslAuditRepository auditRepository,
+          ObjectMapper objectMapper) {
+    return new DslAuditService(auditRepository, objectMapper);
   }
 
   @Bean

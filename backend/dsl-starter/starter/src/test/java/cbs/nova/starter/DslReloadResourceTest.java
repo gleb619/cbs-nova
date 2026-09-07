@@ -10,6 +10,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.LoadResult;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.starter.AuditTestSupport;
 import cbs.nova.starter.config.router.DslReloadRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslReloadHandler;
@@ -266,6 +267,47 @@ class DslReloadResourceTest {
    * After a successful registry swap the preview cache must be flushed end-to-end, so the next
    * preview call cannot return a stale result computed against the previous registry.
    */
+  @Test
+  void reloadWritesAuditRowOnSuccess() throws Exception {
+    Path sourceDir = Files.createTempDirectory("dsl-reload-audit-");
+    try {
+      var audit = AuditTestSupport.h2();
+      var handler = new DslReloadHandler(dslProperties(sourceDir.toString()), loader, null,
+              AuditTestSupport.providerOf(audit.service()));
+
+      ServerResponse response = handler.reload(reloadRequest());
+
+      assertThat(response.statusCode().value()).isEqualTo(200);
+      var result = audit.repository().search(null, 0, 10);
+      assertThat(result.total()).isEqualTo(1);
+      var row = result.items().get(0);
+      assertThat(row.action()).isEqualTo("DEFINITION_RELOAD");
+      assertThat(row.outcome()).isEqualTo("SUCCESS");
+      assertThat(row.target()).isEqualTo(sourceDir.toString());
+      assertThat(row.actor()).isEqualTo("anonymous");
+    } finally {
+      deleteRecursively(sourceDir);
+    }
+  }
+
+  @Test
+  void reloadWritesAuditRowOnFailure() throws Exception {
+    var audit = AuditTestSupport.h2();
+    String missing = "/tmp/cbs-nova-audit-missing-" + System.nanoTime();
+    var handler = new DslReloadHandler(dslProperties(missing), loader, null,
+            AuditTestSupport.providerOf(audit.service()));
+
+    ServerResponse response = handler.reload(reloadRequest());
+
+    assertThat(response.statusCode().value()).isEqualTo(409);
+    var result = audit.repository().search(null, 0, 10);
+    assertThat(result.total()).isEqualTo(1);
+    var row = result.items().get(0);
+    assertThat(row.action()).isEqualTo("DEFINITION_RELOAD");
+    assertThat(row.outcome()).isEqualTo("FAILURE");
+    assertThat(row.target()).isEqualTo(missing);
+  }
+
   @Test
   void successfulReloadFlushesPreviewCache() throws Exception {
     Path sourceDir = createTemporaryDslSourceDir();
