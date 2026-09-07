@@ -8,27 +8,27 @@ import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
 
 /**
- * Generic DSL health indicator contributing to the plain {@code /actuator/health} composite.
+ * Readiness-only DSL health indicator.
  *
- * <p>Registered by {@link DslHealthIndicatorConfiguration}. The actual Temporal reachability /
- * DSL registry logic is shared with {@link DslReadinessIndicator} via
- * {@link DslHealthIndicatorSupport} so that the existing {@code dsl} component keeps its detail
- * keys ({@code processes}, {@code transactions}, {@code helpers} and the {@code temporal} block)
- * unchanged.
+ * <p>Registered by {@link DslHealthIndicatorConfiguration} under the health contributor name
+ * {@code dslReadiness} and included in the {@code readiness} health group. It reports the same
+ * DSL registry counts and Temporal reachability details as {@link DslHealthIndicator}, but it is
+ * the only DSL-related check that can make {@code /actuator/health/readiness} go {@code DOWN}.
  *
- * <p>Readiness-specific signal lives in {@link DslReadinessIndicator}; liveness relies on
- * Spring Boot's built-in {@code livenessState} only.
+ * <p>Liveness is intentionally left to Spring Boot's built-in {@code livenessState} and never
+ * consults Temporal, the database, or the DSL registry, so an external dependency outage does not
+ * cause orchestrators to restart the pod.
  */
-public class DslHealthIndicator implements HealthIndicator {
+public class DslReadinessIndicator implements HealthIndicator {
 
   private final @Nullable ObjectProvider<TemporalHealthProbe> probeProvider;
   private final @Nullable ObjectProvider<CbsHealthProperties> propsProvider;
 
-  public DslHealthIndicator() {
+  public DslReadinessIndicator() {
     this(null, null);
   }
 
-  public DslHealthIndicator(@Nullable ObjectProvider<TemporalHealthProbe> probeProvider,
+  public DslReadinessIndicator(@Nullable ObjectProvider<TemporalHealthProbe> probeProvider,
           @Nullable ObjectProvider<CbsHealthProperties> propsProvider) {
     this.probeProvider = probeProvider;
     this.propsProvider = propsProvider;
