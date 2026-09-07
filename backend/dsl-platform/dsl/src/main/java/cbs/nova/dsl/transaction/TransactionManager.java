@@ -19,6 +19,10 @@ public final class TransactionManager {
     registry.register(tx);
   }
 
+  public @NonNull Result<?> execute(@NonNull TransactionDslObject tx, @NonNull Context<?> ctx) {
+    return runner.run(tx, ctx);
+  }
+
   public @NonNull Result<?> execute(@NonNull String name, @NonNull Context<?> ctx) {
     return registry
             .find(name)

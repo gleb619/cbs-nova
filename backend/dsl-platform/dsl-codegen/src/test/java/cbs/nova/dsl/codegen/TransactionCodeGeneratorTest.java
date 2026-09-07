@@ -93,8 +93,10 @@ class TransactionCodeGeneratorTest {
     assertThat(impl.source()).contains("implements LoanDisbursementTransactionActivity");
     assertThat(impl.source())
             .contains("GlobalManager.globalManager().runTransactionWithCompensation(");
-    assertThat(impl.source())
-            .contains("\"LoanDisbursement\", request.runId(), request.payload()");
+    assertThat(impl.source()).contains("LoanDisbursementGeneratedClassProvider");
+    assertThat(impl.source()).contains("(TransactionDslObject)");
+    assertThat(impl.source()).doesNotContain("runTransaction(\"");
+    assertThat(impl.source()).doesNotContain("compensateTransaction(\"");
     assertThat(impl.source()).contains("request.runId()");
     assertThat(impl.source()).contains("request.payload()");
     assertThat(impl.source()).contains("DslTemporalTransactionRequest<String> request");
@@ -103,7 +105,6 @@ class TransactionCodeGeneratorTest {
     assertThat(impl.source()).doesNotContain("ExecutionMode.RUN");
     assertThat(impl.source()).doesNotContain("TransactionRouting");
     assertThat(impl.source()).doesNotContain(".createContext(");
-    assertThat(impl.source()).doesNotContain(".runTransaction(");
   }
 
   @Test
@@ -142,8 +143,9 @@ class TransactionCodeGeneratorTest {
     assertThat(impl.source()).contains("request.payload()");
     assertThat(impl.source())
             .contains("GlobalManager.globalManager().runTransactionWithCompensation(");
-    assertThat(impl.source())
-            .contains("\"ParamTx\", request.runId(), request.payload()");
+    assertThat(impl.source()).contains("ParamTxGeneratedClassProvider");
+    assertThat(impl.source()).contains("(TransactionDslObject)");
+    assertThat(impl.source()).doesNotContain("runTransaction(\"");
     assertThat(impl.source()).doesNotContain("ExecutionMode");
     assertThat(impl.source()).doesNotContain("TransactionRouting");
   }
@@ -168,8 +170,9 @@ class TransactionCodeGeneratorTest {
             "void compensate(DslTemporalTransactionRequest<String> request, Throwable error)");
     assertThat(impl.source())
             .contains("GlobalManager.globalManager().compensateTransaction(");
-    assertThat(impl.source())
-            .contains("\"CompensatedTx\", request.runId(), request.payload(), error");
+    assertThat(impl.source()).contains("CompensatedTxGeneratedClassProvider");
+    assertThat(impl.source()).contains("(TransactionDslObject)");
+    assertThat(impl.source()).doesNotContain("compensateTransaction(\"");
     assertThat(impl.source()).doesNotContain("new CompensationRichContext");
     assertThat(impl.source()).doesNotContain("findTransaction(\"CompensatedTx\")");
   }
@@ -193,7 +196,8 @@ class TransactionCodeGeneratorTest {
             "void compensate(DslTemporalTransactionRequest<String> request, Throwable error)");
     assertThat(impl.source())
             .contains("GlobalManager.globalManager().compensateTransaction(")
-            .contains("\"NoCompTx\"")
-            .contains("request.runId(), request.payload(), error");
+            .contains("NoCompTxGeneratedClassProvider")
+            .contains("(TransactionDslObject)")
+            .doesNotContain("compensateTransaction(\"");
   }
 }

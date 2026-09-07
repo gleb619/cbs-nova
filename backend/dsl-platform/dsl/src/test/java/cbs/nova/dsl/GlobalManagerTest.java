@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.exception.DslEntityNotFoundException;
+import cbs.nova.dsl.process.ProcessDslObject;
+import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.dsl.exception.DslExecutionException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -342,4 +345,168 @@ class GlobalManagerTest {
 
     assertThat(order).containsExactly("process-comp");
   }
+
+  @Test
+  void runProcessObjectOverloadUsesPassedObjectAsSourceOfTruth() {
+    var gm = GlobalManager.globalManager();
+    gm.registerProcess(Dsl.process("Registered")
+            .input(String.class)
+            .execute(ctx -> Result.success("registered"))
+            .build());
+
+    var object = Dsl.process("Other")
+            .input(String.class)
+            .execute(ctx -> Result.success("object-wins"))
+            .build();
+
+    var ctx = contextFactory.of("in", ExecutionMode.PREVIEW);
+    assertThat(gm.runProcess(object, ctx).value()).isEqualTo("object-wins");
+  }
+
+  @Test
+  void runProcessObjectOverloadIgnoresVersionMismatch() {
+    var gm = GlobalManager.globalManager();
+    gm.registerProcess(Dsl.process("P").version("v2")
+            .input(String.class)
+            .execute(ctx -> Result.success("v2"))
+            .build());
+
+    var object = Dsl.process("P").version("v99")
+            .input(String.class)
+            .execute(ctx -> Result.success("v99"))
+            .build();
+
+    var ctx = contextFactory.of("in", ExecutionMode.PREVIEW);
+    assertThat(gm.runProcess(object, ctx).value()).isEqualTo("v99");
+  }
+
+  @Test
+  void runProcessStringOverloadFailureParity() {
+    var ctx = contextFactory.of("in", ExecutionMode.PREVIEW);
+    var result = GlobalManager.globalManager().runProcess("Missing", ctx);
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause()).isInstanceOf(DslEntityNotFoundException.class)
+            .hasMessageContaining("Process not found: Missing");
+  }
+
+  @Test
+  void runTransactionObjectOverloadUsesPassedObjectAsSourceOfTruth() {
+    var gm = GlobalManager.globalManager();
+    gm.registerTransaction(Dsl.transaction("Registered")
+            .execute(ctx -> Result.success("registered"))
+            .build());
+
+    var object = Dsl.transaction("Other")
+            .execute(ctx -> Result.success("object-wins"))
+            .build();
+
+    var ctx = contextFactory.of("in", ExecutionMode.RUN, "run-1");
+    assertThat(gm.runTransaction(object, ctx).value()).isEqualTo("object-wins");
+  }
+
+  @Test
+  void runTransactionWithCompensationObjectOverloadSuccess() {
+    var gm = GlobalManager.globalManager();
+    var tx = Dsl.transaction("SugarTx")
+            .input(String.class)
+            .execute(ctx -> Result.success("tx-" + ctx.body()))
+            .build();
+
+    Object result = gm.runTransactionWithCompensation(tx, "run-1", "payload");
+    assertThat(result).isEqualTo("tx-payload");
+  }
+
+  @Test
+  void runTransactionWithCompensationObjectOverloadThrowsOnFailure() {
+    var gm = GlobalManager.globalManager();
+    var tx = Dsl.transaction("FailingTx")
+            .execute(ctx -> Result.failure(new RuntimeException("boom")))
+            .build();
+
+    assertThatThrownBy(() -> gm.runTransactionWithCompensation(tx, "run-1", "x"))
+            .isInstanceOf(RuntimeException.class)
+            .hasMessage("Transaction failed")
+            .cause()
+            .hasMessage("boom");
+  }
+
+  @Test
+  void runTransactionWithCompensationStringOverloadFailureParity() {
+    assertThatThrownBy(() -> GlobalManager.globalManager()
+            .runTransactionWithCompensation("Missing", "run-1", "x"))
+            .isInstanceOf(RuntimeException.class)
+            .hasMessage("Transaction failed")
+            .cause()
+            .isInstanceOf(DslEntityNotFoundException.class)
+            .hasMessageContaining("Transaction not found: Missing");
+  }
+
+  @Test
+  void compensateProcessObjectOverloadRunsCompensationLogic() {
+    var gm = GlobalManager.globalManager();
+    var order = new ArrayList<String>();
+    var process = Dsl.process("DirectComp")
+            .input(String.class)
+            .execute(ctx -> Result.success("ok"))
+            .compensation(ctx -> {
+              order.add("comp:" + ctx.body());
+              return Result.success(null);
+            })
+            .build();
+
+    var ctx = contextFactory.of("direct-payload", ExecutionMode.COMPENSATION, "run-direct");
+    gm.compensateProcess(process, ctx, new RuntimeException("boom"));
+    assertThat(order).containsExactly("comp:direct-payload");
+  }
+
+  @Test
+  void compensateTransactionObjectOverloadRunsCompensationLogic() {
+    var gm = GlobalManager.globalManager();
+    var order = new ArrayList<String>();
+    var tx = Dsl.transaction("DirectCompTx")
+            .input(String.class)
+            .execute(ctx -> Result.success("ok"))
+            .compensation(ctx -> {
+              order.add("comp:" + ctx.body());
+              return Result.success(null);
+            })
+            .build();
+
+    gm.compensateTransaction(tx, "run-direct", "direct-payload", new RuntimeException("boom"));
+    assertThat(order).containsExactly("comp:direct-payload");
+  }
+
+  @Test
+  void runProcessWithCompensationObjectOverloadSuccess() {
+    var gm = GlobalManager.globalManager();
+    var process = Dsl.process("Pwc")
+            .input(String.class)
+            .execute(ctx -> Result.success("pwc-" + ctx.body()))
+            .build();
+
+    Object result = gm.runProcessWithCompensation("run-1", "body", process);
+    assertThat(result).isEqualTo("pwc-body");
+  }
+
+  @Test
+  void runProcessWithCompensationObjectOverloadCompensatesOnFailure() {
+    var gm = GlobalManager.globalManager();
+    var order = new ArrayList<String>();
+    var process = Dsl.process("PwcFail")
+            .input(String.class)
+            .execute(ctx -> Result.failure(new RuntimeException("boom")))
+            .compensation(ctx -> {
+              order.add("comp:" + ctx.body());
+              return Result.success(null);
+            })
+            .build();
+
+    assertThatThrownBy(() -> gm.runProcessWithCompensation("run-1", "body", process))
+            .isInstanceOf(DslExecutionException.class)
+            .hasMessageContaining("Process failed")
+            .hasMessageContaining("boom");
+
+    assertThat(order).containsExactly("comp:body");
+  }
+
 }

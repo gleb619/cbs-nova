@@ -5,7 +5,9 @@ import static cbs.nova.dsl.codegen.util.Util.importBlock;
 import cbs.nova.dsl.annotation.DslGenerated;
 import cbs.nova.dsl.codegen.model.GeneratedSource;
 import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
+import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.transaction.DslTemporalTransactionRequest;
+import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.utils.Substitutor;
 import lombok.RequiredArgsConstructor;
@@ -98,15 +100,14 @@ public final class TransactionCodeGenerator {
           String implName, String versionConstant, String taskQueue, String inputTypeName,
           Class<?> inputType) {
     String importBlock = importBlock(inputType, DslTemporalTransactionRequest.class,
+            GlobalManager.class, TransactionDslObject.class,
             DslGenerated.class, Generated.class);
     String annotation = GeneratorMetadata.annotation(TransactionCodeGenerator.class);
 
-    // TODO: add new method that allow to transfer whole object, like in `ProcessCodeGenerator`
+    String providerClass = transactionName + "GeneratedClassProvider";
     return Substitutor.format(// language=java
             """
                     package ${pkg};${importBlock}
-                    import cbs.nova.dsl.GlobalManager;
-
                     ${annotation}
                     public class ${implName} implements ${interfaceName} {
 
@@ -119,14 +120,16 @@ public final class TransactionCodeGenerator {
 
                       @Override
                       public Object execute(DslTemporalTransactionRequest<${inputTypeName}> request) {
+                        var tx = (TransactionDslObject) new ${providerClass}().dslObject();
                         return GlobalManager.globalManager().runTransactionWithCompensation(
-                                "${transactionName}", request.runId(), request.payload());
+                                tx, request.runId(), request.payload());
                       }
 
                       @Override
                       public void compensate(DslTemporalTransactionRequest<${inputTypeName}> request, Throwable error) {
+                        var tx = (TransactionDslObject) new ${providerClass}().dslObject();
                         GlobalManager.globalManager().compensateTransaction(
-                                "${transactionName}", request.runId(), request.payload(), error);
+                                tx, request.runId(), request.payload(), error);
                       }
                     }
                     """,
@@ -135,6 +138,7 @@ public final class TransactionCodeGenerator {
                     "importBlock", importBlock,
                     "annotation", annotation,
                     "transactionName", transactionName,
+                    "providerClass", providerClass,
                     "interfaceName", interfaceName,
                     "implName", implName,
                     "version", versionConstant,

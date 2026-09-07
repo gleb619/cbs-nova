@@ -19,6 +19,14 @@ public final class ProcessManager {
     registry.register(process);
   }
 
+  public @NonNull Result<?> execute(@NonNull ProcessDslObject process, @NonNull Context<?> ctx) {
+    return runner.run(process, ctx);
+  }
+
+  public @NonNull Optional<ProcessDslObject> find(@NonNull String name, @NonNull String version) {
+    return registry.find(name, version);
+  }
+
   public @NonNull Result<?> execute(@NonNull String name, @NonNull Context<?> ctx) {
     return registry
             .find(name)

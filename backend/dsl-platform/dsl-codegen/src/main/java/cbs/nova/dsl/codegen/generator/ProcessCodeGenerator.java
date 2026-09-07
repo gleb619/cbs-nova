@@ -3,15 +3,14 @@ package cbs.nova.dsl.codegen.generator;
 import static cbs.nova.dsl.codegen.util.Util.importBlock;
 
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.annotation.DslGenerated;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.model.GeneratedSource;
 import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
 import cbs.nova.dsl.process.DslTemporalProcess;
 import cbs.nova.dsl.process.DslTemporalProcessRequest;
-import cbs.nova.dsl.process.ProcessCompensation;
 import cbs.nova.dsl.process.ProcessDescriptor;
-import cbs.nova.dsl.process.ProcessMain;
 import cbs.nova.dsl.utils.Substitutor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -98,15 +97,12 @@ public final class ProcessCodeGenerator {
           String versionConstant, Class<?> inputType) {
     String inputTypeName = typeName(inputType);
     String importBlock = importBlock(DslTemporalProcessRequest.class, inputType,
-            GlobalManager.class,
-            ProcessMain.class, ProcessCompensation.class, DslGenerated.class, Generated.class,
+            GlobalManager.class, ProcessDslObject.class,
+            DslGenerated.class, Generated.class,
             List.class);
     String annotation = GeneratorMetadata.annotation(ProcessCodeGenerator.class);
 
-    // TODO: add new method that allow to transfer whole object(e.g. without usage of registry, e.g.
-    // use
-    // dsl directly). Like `var process = new
-    // GeneratedDslDefinitionProvider().byName("${processName}").ifPresentOrElse(...)`
+    String providerClass = processName + "GeneratedClassProvider";
     String template = // language=java
             """
                     package ${pkg};${importBlock}
@@ -123,14 +119,9 @@ public final class ProcessCodeGenerator {
                       @Override
                       public Object execute(DslTemporalProcessRequest<${inputTypeName}> request) {
                         ${inputTypeName} input = request.payload();
-                        //TODO: place here new code `var process = ...`
-
+                        var process = (ProcessDslObject) new ${providerClass}().dslObject();
                         return GlobalManager.globalManager().runProcessWithCompensation(
-                                request.runId(),
-                                input,
-                                ctx -> GlobalManager.globalManager().runProcess("${processName}", VERSION, ctx),
-                                (compCtx, error) -> GlobalManager.globalManager()
-                                        .compensateProcess("${processName}", compCtx, error));
+                                request.runId(), input, process);
                       }
                     }
                     """;
@@ -142,6 +133,7 @@ public final class ProcessCodeGenerator {
                     Map.entry("importBlock", importBlock),
                     Map.entry("annotation", annotation),
                     Map.entry("processName", processName),
+                    Map.entry("providerClass", providerClass),
                     Map.entry("interfaceName", interfaceName),
                     Map.entry("implName", implName),
                     Map.entry("version", versionConstant),

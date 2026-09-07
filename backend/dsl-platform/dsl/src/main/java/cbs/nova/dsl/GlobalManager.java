@@ -2,6 +2,7 @@ package cbs.nova.dsl;
 
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.config.ProcessContextFactory;
+import cbs.nova.dsl.exception.DslEntityNotFoundException;
 import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.helper.HelperInterceptor;
@@ -112,44 +113,89 @@ public final class GlobalManager {
     return new CompensationRichContext<>(ctx, error, config.contextFactory());
   }
 
+  public @NonNull Result<?> runProcess(
+          @NonNull ProcessDslObject process,
+          @NonNull Context<?> ctx) {
+    return processManager.execute(process, ctx);
+  }
+
   public @NonNull Result<?> runProcess(@NonNull String name, @NonNull Context<?> ctx) {
-    return processManager.execute(name, ctx);
+    return processManager.find(name)
+            .map(p -> runProcess(p, ctx))
+            .orElse(Result.failure(
+                    new DslEntityNotFoundException(ctx.runId(), "Process not found: " + name)));
   }
 
   public @NonNull Result<?> runProcess(
           @NonNull String name,
           @NonNull String version,
           @NonNull Context<?> ctx) {
-    return processManager.execute(name, version, ctx);
+    return processManager.find(name, version)
+            .map(p -> runProcess(p, ctx))
+            .orElse(Result.failure(
+                    new DslEntityNotFoundException(
+                            ctx.runId(),
+                            "Process not found: " + name + " version " + version)));
   }
 
   public @NonNull Result<?> runTransaction(
-          @NonNull String name, @NonNull Object input, @NonNull Context<?> parentCtx) {
+          @NonNull TransactionDslObject tx,
+          @NonNull Context<?> ctx) {
+    return transactionManager.execute(tx, ctx);
+  }
+
+  public @NonNull Result<?> runTransaction(
+          @NonNull TransactionDslObject tx,
+          @NonNull Object input,
+          @NonNull Context<?> parentCtx) {
     Context<Object> ctx = DslConfig.dslConfig().contextFactory()
             .of(input, parentCtx.metadata(), parentCtx.mode(), parentCtx.runId(),
                     parentCtx.transactionRouting(), parentCtx.executionListener(),
                     parentCtx.saga());
-    return transactionManager.execute(name, ctx);
+    return runTransaction(tx, ctx);
   }
 
   public @NonNull Result<?> runTransaction(@NonNull String name, @NonNull Context<?> ctx) {
-    return transactionManager.execute(name, ctx);
+    return transactionManager.find(name)
+            .map(t -> runTransaction(t, ctx))
+            .orElse(Result.failure(
+                    new DslEntityNotFoundException(ctx.runId(), "Transaction not found: " + name)));
+  }
+
+  public @NonNull Result<?> runTransaction(
+          @NonNull String name, @NonNull Object input, @NonNull Context<?> parentCtx) {
+    return transactionManager.find(name)
+            .map(t -> runTransaction(t, input, parentCtx))
+            .orElse(Result.failure(
+                    new DslEntityNotFoundException(
+                            parentCtx.runId(), "Transaction not found: " + name)));
   }
 
   public @NonNull Object runTransactionWithCompensation(
-          @NonNull String name,
+          @NonNull TransactionDslObject tx,
           @NonNull String runId,
           @NonNull Object input) {
     var saga = DslSaga.create();
     var ctx = createContext(input, Map.of(), ExecutionMode.RUN, runId)
             .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY)
             .withSaga(saga);
-    var result = runTransaction(name, ctx);
+    var result = runTransaction(tx, ctx);
     if (!result.isSuccess()) {
       saga.compensate();
       throw new RuntimeException("Transaction failed", result.cause());
     }
     return result.value();
+  }
+
+  public @NonNull Object runTransactionWithCompensation(
+          @NonNull String name,
+          @NonNull String runId,
+          @NonNull Object input) {
+    return transactionManager.find(name)
+            .map(tx -> runTransactionWithCompensation(tx, runId, input))
+            .orElseThrow(() -> new RuntimeException(
+                    "Transaction failed",
+                    new DslEntityNotFoundException(runId, "Transaction not found: " + name)));
   }
 
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Context<?> ctx) {
@@ -274,15 +320,29 @@ public final class GlobalManager {
   }
 
   public void compensateTransaction(
+          @NonNull TransactionDslObject tx,
+          @NonNull Context<?> ctx,
+          @NonNull Throwable error) {
+    if (tx.compensationLogic() == null) {
+      return;
+    }
+    tx.compensationLogic().apply(createCompensationContext(ctx, error));
+  }
+
+  public void compensateTransaction(
           @NonNull String name,
           @NonNull Context<?> ctx,
           @NonNull Throwable error) {
-    transactionManager.find(name).ifPresent(tx -> {
-      if (tx.compensationLogic() == null) {
-        return;
-      }
-      tx.compensationLogic().apply(createCompensationContext(ctx, error));
-    });
+    transactionManager.find(name).ifPresent(tx -> compensateTransaction(tx, ctx, error));
+  }
+
+  public void compensateTransaction(
+          @NonNull TransactionDslObject tx,
+          @NonNull String runId,
+          @NonNull Object input,
+          @NonNull Throwable error) {
+    var ctx = createContext(input, Map.of(), ExecutionMode.COMPENSATION, runId);
+    compensateTransaction(tx, ctx, error);
   }
 
   public void compensateTransaction(
@@ -290,20 +350,35 @@ public final class GlobalManager {
           @NonNull String runId,
           @NonNull Object input,
           @NonNull Throwable error) {
-    var ctx = createContext(input, Map.of(), ExecutionMode.COMPENSATION, runId);
-    compensateTransaction(name, ctx, error);
+    transactionManager.find(name).ifPresent(tx -> compensateTransaction(tx, runId, input, error));
+  }
+
+  public void compensateProcess(
+          @NonNull ProcessDslObject process,
+          @NonNull Context<?> ctx,
+          @NonNull Throwable error) {
+    if (process.compensationLogic() == null) {
+      return;
+    }
+    process.compensationLogic().apply(createCompensationContext(ctx, error));
   }
 
   public void compensateProcess(
           @NonNull String name,
           @NonNull Context<?> ctx,
           @NonNull Throwable error) {
-    findProcess(name).ifPresent(p -> {
-      if (p.compensationLogic() == null) {
-        return;
-      }
-      p.compensationLogic().apply(createCompensationContext(ctx, error));
-    });
+    findProcess(name).ifPresent(p -> compensateProcess(p, ctx, error));
+  }
+
+  public @NonNull Object runProcessWithCompensation(
+          @NonNull String runId,
+          @NonNull Object input,
+          @NonNull ProcessDslObject process) {
+    return runProcessWithCompensation(
+            runId,
+            input,
+            ctx -> runProcess(process, ctx),
+            (compCtx, error) -> compensateProcess(process, compCtx, error));
   }
 
   public @NonNull Object runProcessWithCompensation(

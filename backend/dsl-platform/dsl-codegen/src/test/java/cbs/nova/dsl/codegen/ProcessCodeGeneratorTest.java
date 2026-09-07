@@ -96,10 +96,12 @@ class ProcessCodeGeneratorTest {
     assertThat(impl.source()).contains("implements LoanDisbursementProcessWorkflow");
     assertThat(impl.source())
             .contains("GlobalManager.globalManager().runProcessWithCompensation(");
-    assertThat(impl.source()).contains(ProcessMain.class.getSimpleName());
-    assertThat(impl.source()).contains(ProcessCompensation.class.getSimpleName());
-    assertThat(impl.source())
-            .contains("GlobalManager.globalManager().runProcess(\"LoanDisbursement\"");
+    assertThat(impl.source()).contains("LoanDisbursementGeneratedClassProvider");
+    assertThat(impl.source()).contains("(ProcessDslObject)");
+    assertThat(impl.source()).doesNotContain("runProcess(\"");
+    assertThat(impl.source()).doesNotContain("compensateProcess(\"");
+    assertThat(impl.source()).doesNotContain(ProcessMain.class.getSimpleName());
+    assertThat(impl.source()).doesNotContain(ProcessCompensation.class.getSimpleName());
     assertThat(impl.source()).doesNotContain("java.lang.reflect.Method");
     assertThat(impl.source()).doesNotContain("class TemporalTransactionInvoker");
     assertThat(impl.source()).doesNotContain("dsl.transaction.invoker");
@@ -118,7 +120,7 @@ class ProcessCodeGeneratorTest {
   }
 
   @Test
-  void withCompensationEmitsFunctionalCompensation() {
+  void withCompensationResolvesDslObjectViaProvider() {
     var descriptor = descriptor().fromProcess(
             Dsl.process("LoanDisbursement")
                     .input(String.class)
@@ -129,15 +131,17 @@ class ProcessCodeGeneratorTest {
 
     var impl = generator.generate(descriptor, null, null, true).get(1);
     assertThat(impl.source()).contains("runProcessWithCompensation");
-    assertThat(impl.source()).contains(ProcessCompensation.class.getSimpleName());
-    assertThat(impl.source()).contains("compensateProcess");
+    assertThat(impl.source()).contains("LoanDisbursementGeneratedClassProvider");
+    assertThat(impl.source()).contains("(ProcessDslObject)");
+    assertThat(impl.source()).doesNotContain("runProcess(\"");
+    assertThat(impl.source()).doesNotContain("compensateProcess(\"");
     assertThat(impl.source()).doesNotContain("Saga");
     assertThat(impl.source()).doesNotContain("saga.addCompensation");
     assertThat(impl.source()).doesNotContain("saga.compensate()");
   }
 
   @Test
-  void withoutCompensationStillUsesCompensateProcessLambda() {
+  void withoutCompensationStillResolvesDslObjectViaProvider() {
     var descriptor = descriptor().fromProcess(
             Dsl.process("LoanDisbursement")
                     .input(String.class)
@@ -147,8 +151,10 @@ class ProcessCodeGeneratorTest {
 
     var impl = generator.generate(descriptor, null, null, true).get(1);
     assertThat(impl.source()).contains("runProcessWithCompensation");
-    assertThat(impl.source()).contains(ProcessCompensation.class.getSimpleName());
-    assertThat(impl.source()).contains("compensateProcess");
+    assertThat(impl.source()).contains("LoanDisbursementGeneratedClassProvider");
+    assertThat(impl.source()).contains("(ProcessDslObject)");
+    assertThat(impl.source()).doesNotContain("runProcess(\"");
+    assertThat(impl.source()).doesNotContain("compensateProcess(\"");
     assertThat(impl.source()).doesNotContain("Saga");
     assertThat(impl.source()).doesNotContain("saga.addCompensation");
     assertThat(impl.source()).doesNotContain("saga.compensate()");
@@ -199,6 +205,9 @@ class ProcessCodeGeneratorTest {
     assertThat(impl.source()).contains("import " + MapInput.class.getCanonicalName() + ";");
     assertThat(impl.source()).contains("MapInput input = request.payload()");
     assertThat(impl.source()).contains("runProcessWithCompensation");
+    assertThat(impl.source()).contains("ParamProcessGeneratedClassProvider");
+    assertThat(impl.source()).contains("(ProcessDslObject)");
+    assertThat(impl.source()).doesNotContain("runProcess(\"");
     assertThat(impl.source()).doesNotContain("ExecutionMode");
     assertThat(impl.source()).doesNotContain("TransactionRouting");
     assertThat(impl.source()).doesNotContain("Saga");
@@ -234,6 +243,9 @@ class ProcessCodeGeneratorTest {
 
     var impl = generator.generate(descriptor, null, null, true).get(1);
     assertThat(impl.source()).contains("runProcessWithCompensation");
+    assertThat(impl.source()).contains("LoanDisbursementGeneratedClassProvider");
+    assertThat(impl.source()).contains("(ProcessDslObject)");
+    assertThat(impl.source()).doesNotContain("runProcess(\"");
     assertThat(impl.source()).doesNotContain("registerTransactionCompensation");
     assertThat(impl.source()).doesNotContain("compensateTransaction");
     assertThat(impl.source()).doesNotContain("private void compensateReserveInventory");
