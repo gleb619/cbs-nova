@@ -102,6 +102,8 @@ class HttpResilienceDslIntegrationTest {
 
     var globalManager = GlobalManager.globalManager();
     new DefinitionLoader().load(globalManager);
+    DslConfig.dslConfig().generatedClassRegistry()
+            .init(globalManager.defaultClassLoader());
     DslConfig.dslConfig().helperInstanceResolver().replace(typedHelperResolver());
     globalManager.registerHelperResolvers();
 

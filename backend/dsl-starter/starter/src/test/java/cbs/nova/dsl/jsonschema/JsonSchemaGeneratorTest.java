@@ -1,8 +1,10 @@
-package cbs.nova.dsl;
+package cbs.nova.dsl.jsonschema;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
+import cbs.nova.dsl.JsonSchemaGenerator;
+import cbs.nova.dsl.ParameterDescriptor;
+import cbs.nova.dsl.ParameterType;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

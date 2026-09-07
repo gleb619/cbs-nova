@@ -7,7 +7,8 @@ import org.junit.jupiter.api.Test;
 
 class DslPackageNameResolverTest {
 
-  private final DslPackageNameResolver resolver = new DslPackageNameResolver(new CodegenNaming("cbs.nova.dsl.generated"));
+  private final DslPackageNameResolver resolver = new DslPackageNameResolver(
+          new CodegenNaming("cbs.nova.dsl.generated"));
 
   @Test
   void usesFileNameSubPackageByDefault() {

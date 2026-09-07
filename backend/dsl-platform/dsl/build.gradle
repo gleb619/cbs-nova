@@ -6,7 +6,7 @@ plugins {
 dependencies {
   api project(":dsl-api")
   implementation libs.slf4j.api
-  implementation libs.javaparser
+  //implementation libs.javaparser
   implementation libs.jackson.databind3
   implementation libs.mvel2
   testAnnotationProcessor libs.avaje.jsonb.generator

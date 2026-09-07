@@ -2,6 +2,7 @@ package cbs.nova.dsl.example.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.config.HelperInstanceResolverConfig;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.starter.config.properties.DslProperties;
@@ -238,53 +239,6 @@ class DslVersioningIntegrationTest {
   }
 
   private static HelperInstanceResolver typedHelperResolver() {
-    return helperClass -> {
-      if (helperClass == ConditionalFailingHelper.class) {
-        return new ConditionalFailingHelper();
-      }
-      if (helperClass == CompensationTrackerHelper.class) {
-        return new CompensationTrackerHelper();
-      }
-      if (helperClass == CurrentTimestampHelper.class) {
-        return new CurrentTimestampHelper();
-      }
-      if (helperClass == FileLatchHelper.class) {
-        return new FileLatchHelper() {
-          @Override
-          public @NonNull Result<FileLatchOut> execute(@NonNull Context<FileLatchIn> ctx) {
-            LATCH_ENTERED.countDown();
-            Workflow.sleep(Duration.ofSeconds(10));
-            return Result.success(new FileLatchOut(ctx.body().payload()));
-          }
-        };
-      }
-      if (helperClass == FilterRecordsHelper.class) {
-        return new FilterRecordsHelper();
-      }
-      if (helperClass == FormatMessageHelper.class) {
-        return new FormatMessageHelper();
-      }
-      if (helperClass == HttpCallHelper.class) {
-        return new HttpCallHelper(HttpClient.newHttpClient(),
-                new CbsNovaLoggingProperties(Level.INFO, Level.INFO,
-                        true));
-      }
-      if (helperClass == JsonExtractHelper.class) {
-        return new JsonExtractHelper(new ObjectMapper());
-      }
-      if (helperClass == SortRecordsHelper.class) {
-        return new SortRecordsHelper();
-      }
-      if (helperClass == ArithmeticHelper.class) {
-        return new ArithmeticHelper();
-      }
-      if (helperClass == UnreliableApiHelper.class) {
-        return new UnreliableApiHelper();
-      }
-      if (helperClass == Base64Helper.class) {
-        return new Base64Helper();
-      }
-      throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
-    };
+    return new HelperInstanceResolverConfig().helperInstanceResolver();
   }
 }

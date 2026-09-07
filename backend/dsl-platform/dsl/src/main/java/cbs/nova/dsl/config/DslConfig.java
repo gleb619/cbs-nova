@@ -6,7 +6,6 @@ import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.converter.AvajeMapConverter;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
-import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
 import cbs.nova.dsl.model.RetryPolicy;
 import cbs.nova.dsl.process.ProcessManager;
 import cbs.nova.dsl.process.ProcessRunner;
@@ -102,7 +101,7 @@ public class DslConfig implements SingletonSupport {
   }
 
   public @NonNull Replaceable<JsonSchemaGenerator> jsonSchemaGenerator() {
-    return singleton("jsonSchemaGenerator", () -> Replaceable.of(JacksonJsonSchemaGenerator::new));
+    return replaceable("jsonSchemaGenerator");
   }
 
   public @NonNull Replaceable<HelperInstanceResolver> helperInstanceResolver() {

@@ -6,6 +6,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
@@ -120,7 +121,7 @@ public class DslConfiguration {
   @Bean
   @ConditionalOnMissingBean(JsonSchemaGenerator.class)
   public JsonSchemaGenerator jsonSchemaGenerator() {
-    return DslConfig.dslConfig().jsonSchemaGenerator().get();
+    return new JacksonJsonSchemaGenerator();
   }
 
   @Bean

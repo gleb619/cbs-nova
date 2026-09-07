@@ -31,6 +31,8 @@ export { default as DslSavedDraftsList } from './components/dsl/SavedDraftsList.
 export { default as DslSavedDraftsWidget } from './components/dsl/SavedDraftsWidget.vue'
 export { default as DslScheduleList } from './components/dsl/ScheduleList.vue'
 export { default as DslStructureTab } from './components/dsl/StructureTab.vue'
+export { default as DslSchemaForm } from './components/dsl/SchemaForm.vue'
+export { default as DslSchemaFormField } from './components/dsl/SchemaFormField.vue'
 export { default as ErrorBanner } from './components/ErrorBanner.vue'
 export { default as ExecutionsCancelConfirmationModal } from './components/executions/CancelExecutionConfirmationModal.vue'
 export { default as ExecutionsCompensationLane } from './components/executions/CompensationLane.vue'
@@ -72,3 +74,4 @@ export { default as AppSidebarRestoreHandle } from './components/sidebar/AppSide
 
 export * from './composables'
 export * from './types'
+export { useConstructSchema, type ConstructType } from './composables/useConstructSchema'

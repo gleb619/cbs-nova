@@ -25,7 +25,8 @@ class ModelRegistryGeneratorTest {
           new CodeWriter(),
           new CodegenNaming("cbs.nova.dsl.generated"),
           new ModelTypeExtractor(),
-          new SourcePackageResolver(new DslPackageNameResolver(new CodegenNaming("cbs.nova.dsl.generated"))));
+          new SourcePackageResolver(
+                  new DslPackageNameResolver(new CodegenNaming("cbs.nova.dsl.generated"))));
 
   @Test
   void generatesRegistryInTargetPackageWithModelEntries() throws Exception {

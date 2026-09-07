@@ -2,6 +2,7 @@ package cbs.nova.dsl.example.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.config.HelperInstanceResolverConfig;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.DslObject;
@@ -230,44 +231,7 @@ class UnreliableApiDslIntegrationTest {
   }
 
   private static HelperInstanceResolver typedHelperResolver() {
-    return helperClass -> {
-      if (helperClass == ConditionalFailingHelper.class) {
-        return new ConditionalFailingHelper();
-      }
-      if (helperClass == CompensationTrackerHelper.class) {
-        return new CompensationTrackerHelper();
-      }
-      if (helperClass == CurrentTimestampHelper.class) {
-        return new CurrentTimestampHelper();
-      }
-      if (helperClass == FileLatchHelper.class) {
-        return new FileLatchHelper();
-      }
-      if (helperClass == FilterRecordsHelper.class) {
-        return new FilterRecordsHelper();
-      }
-      if (helperClass == FormatMessageHelper.class) {
-        return new FormatMessageHelper();
-      }
-      if (helperClass == HttpCallHelper.class) {
-        return new HttpCallHelper(HttpClient.newHttpClient(),
-                new CbsNovaLoggingProperties(Level.INFO, Level.INFO,
-                        true));
-      }
-      if (helperClass == JsonExtractHelper.class) {
-        return new JsonExtractHelper(new ObjectMapper());
-      }
-      if (helperClass == SortRecordsHelper.class) {
-        return new SortRecordsHelper();
-      }
-      if (helperClass == ArithmeticHelper.class) {
-        return new ArithmeticHelper();
-      }
-      if (helperClass == UnreliableApiHelper.class) {
-        return new SharedUnreliableApiHelper();
-      }
-      throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
-    };
+    return new HelperInstanceResolverConfig().helperInstanceResolver();
   }
 
   /**

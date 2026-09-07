@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import type { ConstructType } from '../../composables/useConstructSchema'
 import {
   createNamespacedLocalStorageState,
   type UseCookieFactory,
@@ -28,6 +29,11 @@ const props = defineProps<{
     body: unknown,
     metadata?: Record<string, unknown>,
   ) => Promise<RunnerOutput>
+  preview?: (
+    name: string,
+    body: unknown,
+    metadata?: Record<string, unknown>,
+  ) => Promise<RunnerOutput> | RunnerOutput
 }>()
 
 const emit = defineEmits<{
@@ -174,7 +180,9 @@ watch(
       <PreviewTab
         v-if="tab === 'preview'"
         :name="construct?.name ?? ''"
+        :type="construct?.type as ConstructType | undefined"
         endpoint="preview"
+        :preview="props.preview"
       />
       <ExplainTab
         v-if="tab === 'explain'"

@@ -73,7 +73,7 @@ public final class DslPreprocessor {
           @NonNull String imports,
           @NonNull String body,
           String targetPackage) {
-    //TODO: redo from StringBuilder to textblock
+    // TODO: redo from StringBuilder to textblock
     var sb = new StringBuilder();
     if (targetPackage != null && !targetPackage.isBlank()) {
       sb.append("package ").append(targetPackage).append(";\n\n");
@@ -120,13 +120,13 @@ public final class DslPreprocessor {
   }
 
   private String filenameMethod(String fileName) {
-    return //language=java
-        """
-        @Override
-          public String filename() {
-            return "%s";
-          }
-        """.formatted(fileName);
+    return // language=java
+    """
+            @Override
+              public String filename() {
+                return "%s";
+              }
+            """.formatted(fileName);
   }
 
   private record SourceSplit(@NonNull String imports, @NonNull String body) {

@@ -17,8 +17,6 @@ public final class ModelPreprocessor {
   private final String JSON_ANNOTATION_SIMPLE = "Json";
   private final String JSON_ANNOTATION_QUALIFIED = "io.avaje.jsonb.Json";
 
-
-
   public @NonNull Result preprocess(
           @NonNull String fileName,
           @NonNull String rawSource,

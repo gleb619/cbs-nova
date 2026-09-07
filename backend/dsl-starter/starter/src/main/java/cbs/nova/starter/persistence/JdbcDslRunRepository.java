@@ -71,10 +71,16 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
     DslRunTableColumns t = new DslRunTableColumns(tableName);
     TableReference r = t.refer();
 
-    ExtendedSelectQuery countQuery = searchQuery(t, r, processName, status, mode, correlationId)
-            .select(Literal.unsafe("COUNT(*)"))
-            .build();
-    int total = dslQueries.queryForObject(countQuery, Integer.class);
+    int total;
+    if (processName == null && status == null && mode == null
+            && (correlationId == null || correlationId.isBlank())) {
+      total = (int) delegate.count();
+    } else {
+      ExtendedSelectQuery countQuery = searchQuery(t, r, processName, status, mode, correlationId)
+              .select(Literal.unsafe("COUNT(*)"))
+              .build();
+      total = dslQueries.queryForObject(countQuery, Integer.class);
+    }
 
     ExtendedSelectQuery dataQuery = searchQuery(t, r, processName, status, mode, correlationId)
             .select(DslRunQueryCriteria.fullSelection(t, r).toArray(Selectable[]::new))

@@ -24,7 +24,8 @@ import java.util.Map;
 class GeneratedClassProviderGeneratorTest {
 
   private final GeneratedClassProviderGenerator generator = new GeneratedClassProviderGenerator(
-          new AstExtractor(new Json()), new DslPackageNameResolver(new CodegenNaming("cbs.nova.dsl.generated")));
+          new AstExtractor(new Json()),
+          new DslPackageNameResolver(new CodegenNaming("cbs.nova.dsl.generated")));
   private final DescriptorFactory descriptorFactory = new DescriptorFactory();
 
   @Test
@@ -153,7 +154,8 @@ class GeneratedClassProviderGeneratorTest {
     assertThat(source.className()).isEqualTo(expectedClass);
     assertThat(source.source()).contains("class " + expectedClass);
     assertThat(source.packageName())
-            .isEqualTo(new CodegenNaming("cbs.nova.dsl.generated").versionedPackage("LoanDisbursement", "v1", null));
+            .isEqualTo(new CodegenNaming("cbs.nova.dsl.generated")
+                    .versionedPackage("LoanDisbursement", "v1", null));
   }
 
   @Test

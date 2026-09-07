@@ -32,13 +32,25 @@ const construct: DslConstruct = {
   status: 'Valid',
 }
 
+import PreviewTab from '../dsl/PreviewTab.vue'
+import PreviewResultPanel from '../dsl/PreviewResultPanel.vue'
+import ExplainTab from '../dsl/ExplainTab.vue'
+
 function mountBodyEditor(props: Record<string, unknown>) {
   // BodyEditor references StructureTab / CodeTab in its template without importing
   // them (they are Nuxt auto-imported in the host app). Register real children here
   // so they resolve under vitest, mirroring how OutputPanel registers its children.
   return mount(BodyEditor, {
     props,
-    global: { components: { StructureTab, CodeTab } },
+    global: {
+      components: {
+        StructureTab,
+        CodeTab,
+        PreviewTab,
+        PreviewResultPanel,
+        ExplainTab,
+      },
+    },
   })
 }
 
@@ -126,8 +138,9 @@ describe('BodyEditor', () => {
 
     const previewButton = wrapper.findAll('button').find((b) => b.text() === 'Preview')!
     await previewButton.trigger('click')
+    await flushPromises()
 
-    const runButton = wrapper.findAll('button').find((b) => b.text() === 'Run preview')!
+    const runButton = wrapper.findAll('button').find((b) => b.text() === 'Run')!
     await runButton.trigger('click')
     await flushPromises()
 
@@ -144,6 +157,7 @@ describe('BodyEditor', () => {
 
     const explainButton = wrapper.findAll('button').find((b) => b.text() === 'Explain')!
     await explainButton.trigger('click')
+    await flushPromises()
 
     const runButton = wrapper.findAll('button').find((b) => b.text() === 'Run explain')!
     await runButton.trigger('click')

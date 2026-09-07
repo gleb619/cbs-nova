@@ -3,6 +3,7 @@ package cbs.nova.dsl.example.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.dsl.GeneratedClassProvider;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
@@ -36,6 +37,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.ServiceLoader;
 /**
  * End-to-end test that exercises the public service API rather than a generated workflow interface.
  * The flow is:
@@ -90,6 +92,12 @@ class BatchProcessingDslIntegrationTest {
 
     var globalManager = GlobalManager.globalManager();
     new DefinitionLoader().load(globalManager);
+    ServiceLoader.load(GeneratedClassProvider.class,
+            Thread.currentThread().getContextClassLoader())
+        .stream()
+        .map(ServiceLoader.Provider::get)
+        .filter(provider -> provider.descriptor().name().equals("BatchProcessing"))
+        .forEach(globalManager::registerGeneratedClass);
     assertThat(globalManager.hasProcess("BatchProcessing"))
             .as("DSL process BatchProcessing should be loaded")
             .isTrue();

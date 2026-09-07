@@ -171,8 +171,8 @@ public final class GeneratedClassProviderGenerator {
     if (dslSourceClass == null) {
       return "";
     }
-    return //language=java
-            """
+    return // language=java
+    """
             @Override
               public DslObject dslObject() {
                 return new %s().byName("%s").orElseThrow();

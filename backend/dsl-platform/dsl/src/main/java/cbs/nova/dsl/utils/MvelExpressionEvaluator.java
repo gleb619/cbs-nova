@@ -20,6 +20,9 @@ import java.util.regex.Pattern;
  * referenced as a simple top-level identifier ({@code ${missing}}) renders as an empty string,
  * matching the platform default behavior.
  */
+// TODO: Move `MvelExpressionEvaluator` to
+// `./backend/dsl-starter/starter/src/main/java/cbs/nova/dsl/utils/` with tests
+@Deprecated
 public final class MvelExpressionEvaluator implements ExpressionEvaluator {
 
   private static final Pattern PLACEHOLDER = Pattern.compile("(\\$?\\{([^{}]+)\\})");
