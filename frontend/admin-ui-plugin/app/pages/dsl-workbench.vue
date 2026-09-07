@@ -34,6 +34,7 @@ import { useCookie, useRoute } from 'nuxt/app'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import type { RunnerOutput } from '~/types'
+import DslHistoryPanel from '../components/DslHistoryPanel.vue'
 import DslTemplateGallery from '../components/DslTemplateGallery.vue'
 import type { DslTemplate } from '../utils/dslTemplates'
 
@@ -64,6 +65,15 @@ const explorerCollapsed = useWorkbenchStorage<boolean>('explorer-collapsed', fal
 })
 const helperSearchOpen = useWorkbenchStorage<boolean>('helper-search-open', false)
 const helperCatalogOpen = useWorkbenchStorage<boolean>('helper-catalog-open', false)
+const historyPanelOpen = ref(false)
+
+function toggleHistoryPanel() {
+  historyPanelOpen.value = !historyPanelOpen.value
+}
+
+function onHistoryRestored() {
+  reloadDefinitions()
+}
 
 const dslApi = useDslApi()
 const log = useClientLogger('dsl-workbench')
@@ -410,6 +420,16 @@ onBeforeUnmount(() => {
       <button
         type="button"
         class="px-3 py-1.5 text-sm rounded border border-gray-300 hover:bg-gray-100"
+        :class="historyPanelOpen ? 'bg-blue-50 text-blue-700 border-blue-300' : ''"
+        data-testid="workbench-toggle-history"
+        :disabled="!selectedConstruct"
+        @click="toggleHistoryPanel"
+      >
+        {{ historyPanelOpen ? 'Close History' : 'History' }}
+      </button>
+      <button
+        type="button"
+        class="px-3 py-1.5 text-sm rounded border border-gray-300 hover:bg-gray-100"
         :class="helperCatalogOpen ? 'bg-blue-50 text-blue-700 border-blue-300' : ''"
         data-testid="workbench-toggle-helpers"
         @click="toggleHelperCatalog"
@@ -483,6 +503,23 @@ onBeforeUnmount(() => {
           :helpers="helpersCatalog"
           :loading="helpersLoading"
           :error="helpersError"
+        />
+      </CbsDrawer>
+
+      <CbsDrawer
+        v-model:open="historyPanelOpen"
+        title="History"
+        test-id="history-drawer"
+        close-label="Close publish history"
+        width-class="w-[28rem]"
+      >
+        <DslHistoryPanel
+          :name="selectedConstruct?.name ?? ''"
+          :list-history="dslApi.listPublishHistory"
+          :get-entry="dslApi.getHistoryEntry"
+          :get-diff="dslApi.getHistoryDiff"
+          :restore="dslApi.restorePublishHistory"
+          @restored="onHistoryRestored"
         />
       </CbsDrawer>
 

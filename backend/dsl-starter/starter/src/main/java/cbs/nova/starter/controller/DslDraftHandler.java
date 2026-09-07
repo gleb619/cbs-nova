@@ -9,6 +9,8 @@ import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.model.VcsModels.DraftSummary;
+import cbs.nova.starter.model.VcsModels.HistoryDiffResponse;
+import cbs.nova.starter.model.VcsModels.DiffHunk;
 import cbs.nova.starter.model.VcsModels.ImportBundleResult;
 import cbs.nova.starter.model.VcsModels.ImportEntryResult;
 import cbs.nova.starter.model.CompileDiagnostic;
@@ -18,6 +20,7 @@ import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslDefinitionBundleService;
 import cbs.nova.starter.service.DslDefinitionHistoryService;
+import cbs.nova.starter.util.LineDiff;
 import tools.jackson.core.JacksonException;
 import jakarta.servlet.ServletException;
 import lombok.extern.slf4j.Slf4j;
@@ -155,6 +158,53 @@ public class DslDraftHandler {
     }
     List<DefinitionHistoryEntry> entries = historyService.list(dir.path(), name);
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(entries);
+  }
+
+  public ServerResponse historyEntry(ServerRequest request) throws IOException {
+    String name = request.pathVariable("name");
+    String timestamp = request.pathVariable("timestamp");
+    var dir = ensureConfigured(name);
+    if (dir.isError()) {
+      return dir.response();
+    }
+    var entry = historyService.readEntry(dir.path(), name, timestamp);
+    if (entry.isEmpty()) {
+      return error(HttpStatus.NOT_FOUND,
+              new ErrorResponse("NOT_FOUND",
+                      "No publish history entry " + timestamp + " for " + name,
+                      name, null, null));
+    }
+    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(entry.get());
+  }
+
+  public ServerResponse historyDiff(ServerRequest request) throws IOException {
+    String name = request.pathVariable("name");
+    String timestamp = request.pathVariable("timestamp");
+    var dir = ensureConfigured(name);
+    if (dir.isError()) {
+      return dir.response();
+    }
+    var entry = historyService.readEntry(dir.path(), name, timestamp);
+    if (entry.isEmpty()) {
+      return error(HttpStatus.NOT_FOUND,
+              new ErrorResponse("NOT_FOUND",
+                      "No publish history entry " + timestamp + " for " + name,
+                      name, null, null));
+    }
+    String after = pretty(entry.get());
+    var published = historyService.readPublished(dir.path(), name);
+    String before = null;
+    List<DiffHunk> hunks = List.of();
+    boolean truncated = false;
+    if (published.isPresent()) {
+      before = pretty(published.get());
+      LineDiff.Result result = LineDiff.diff(before, after);
+      hunks = result.hunks();
+      truncated = result.truncated();
+    }
+    return ServerResponse.ok()
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(new HistoryDiffResponse(name, timestamp, before, after, hunks, truncated));
   }
 
   public ServerResponse restore(ServerRequest request) throws IOException {
@@ -486,6 +536,10 @@ public class DslDraftHandler {
       current = current.getCause();
     }
     return null;
+  }
+
+  private String pretty(DraftRequest payload) throws IOException {
+    return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(payload);
   }
 
   private DraftRequest withStatus(DraftRequest body, String status) {

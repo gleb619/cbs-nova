@@ -49,6 +49,25 @@ public final class VcsModels {
 
   }
 
+  public record DiffHunk(
+          int beforeStart,
+          int beforeLines,
+          int afterStart,
+          int afterLines,
+          List<String> lines) {
+
+  }
+
+  public record HistoryDiffResponse(
+          String name,
+          String timestamp,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String before,
+          String after,
+          List<DiffHunk> hunks,
+          boolean truncated) {
+
+  }
+
   public record DefinitionBundleEntry(
           DraftRequest definition,
           String source) {
