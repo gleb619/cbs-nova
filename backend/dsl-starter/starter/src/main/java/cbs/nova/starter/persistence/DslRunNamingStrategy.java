@@ -25,7 +25,14 @@ public class DslRunNamingStrategy implements NamingStrategy {
     return NamingStrategy.super.getTableName(type);
   }
 
-  private String qualifiedTableName() {
+  /**
+   * Returns the schema-qualified table name for the {@code dsl_runs} table.
+   *
+   * <p>Single source of truth shared by SDJ entity mapping
+   * ({@link #getTableName(Class)}) and raw-JDBC consumers (e.g.
+   * {@link JdbcDslRunRepository}).
+   */
+  public String qualifiedTableName() {
     String table = properties.tableName() != null && !properties.tableName().isBlank()
             ? properties.tableName()
             : DEFAULT_TABLE;

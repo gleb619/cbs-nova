@@ -28,7 +28,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.jdbc.repository.config.EnableJdbcRepositories;
-import org.springframework.data.relational.core.mapping.NamingStrategy;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import tools.jackson.databind.ObjectMapper;
 
@@ -58,7 +57,7 @@ public class DslRunRepositoryConfiguration {
 
   @Bean
   @ConditionalOnBean(DataSource.class)
-  public NamingStrategy dslRunNamingStrategy(DslRunPersistenceProperties properties) {
+  public DslRunNamingStrategy dslRunNamingStrategy(DslRunPersistenceProperties properties) {
     return new DslRunNamingStrategy(properties);
   }
 
@@ -70,9 +69,9 @@ public class DslRunRepositoryConfiguration {
           DslRunJdbcRepository jdbcRepository,
           DslRunMapper mapper,
           FieldEncryptor encryptor,
-          DslRunPersistenceProperties properties) {
+          DslRunNamingStrategy dslRunNamingStrategy) {
     return new JdbcDslRunRepository(selectQueryExecutor, jdbcRepository, mapper,
-            new DslRunEncryption(encryptor), qualifiedTableName(properties));
+            new DslRunEncryption(encryptor), dslRunNamingStrategy.qualifiedTableName());
   }
 
   @Bean
@@ -105,17 +104,4 @@ public class DslRunRepositoryConfiguration {
     return new JdbcTransactionExecutionRepository(jdbcRepository, mapper,
             objectMapper);
   }
-
-  /* ============= */
-
-  // TODO: use `dslRunNamingStrategy` instead
-  @Deprecated(forRemoval = true)
-  private String qualifiedTableName(DslRunPersistenceProperties properties) {
-    String table = properties.tableName() != null && !properties.tableName().isBlank()
-            ? properties.tableName()
-            : "dsl_runs";
-    String schema = properties.schema();
-    return (schema != null && !schema.isBlank()) ? schema + "." + table : table;
-  }
-
 }
