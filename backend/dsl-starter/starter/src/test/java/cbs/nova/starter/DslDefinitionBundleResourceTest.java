@@ -47,8 +47,7 @@ class DslDefinitionBundleResourceTest {
   @BeforeEach
   void setUp() throws Exception {
     sourceDir = Files.createTempDirectory("dsl-bundle-test-");
-    DslProperties props = new DslProperties();
-    props.setSourceDir(sourceDir.toString());
+    DslProperties props = DslProperties.builder().sourceDir(sourceDir.toString()).build();
 
     DslDefinitionHistoryService historyService = new DslDefinitionHistoryService(props, mapper);
     DslDefinitionBundleService bundleService = new DslDefinitionBundleService(mapper,
@@ -259,8 +258,7 @@ class DslDefinitionBundleResourceTest {
   }
 
   private void buildHandlerWithBlankSourceDir() {
-    DslProperties blank = new DslProperties();
-    blank.setSourceDir("");
+    DslProperties blank = DslProperties.builder().sourceDir("").build();
     DslDraftHandler handler = new DslDraftHandler(
             blank,
             new DslReloadHandler(blank, null),

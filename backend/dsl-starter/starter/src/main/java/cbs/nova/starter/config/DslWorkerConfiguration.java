@@ -30,7 +30,7 @@ public class DslWorkerConfiguration {
 
   @Bean
   Worker dslWorker(WorkerFactory dslWorkerFactory, DslProperties dslProperties) {
-    Worker worker = dslWorkerFactory.newWorker(dslProperties.getTaskQueue());
+    Worker worker = dslWorkerFactory.newWorker(dslProperties.taskQueue());
     registerGeneratedImplementations(worker);
     return worker;
   }

@@ -56,8 +56,7 @@ class DslDraftResourceTest {
   @BeforeEach
   void setUp() throws IOException {
     sourceDir = Files.createTempDirectory("dsl-draft-test-");
-    props = new DslProperties();
-    props.setSourceDir(sourceDir.toString());
+    props = DslProperties.builder().sourceDir(sourceDir.toString()).build();
     handler = new DslDraftHandler(props, new DslReloadHandler(props, null),
             new DslDefinitionHistoryService(props, mapper), mapper,
             new DslDefinitionBundleService(mapper, Optional.empty()));
@@ -149,8 +148,7 @@ class DslDraftResourceTest {
 
   @Test
   void deleteReturns409WhenSourceDirBlank() throws Exception {
-    DslProperties blank = new DslProperties();
-    blank.setSourceDir("");
+    DslProperties blank = DslProperties.builder().sourceDir("").build();
     handler = new DslDraftHandler(
             blank,
             new DslReloadHandler(blank, null),
@@ -203,8 +201,7 @@ class DslDraftResourceTest {
 
   @Test
   void saveReturns409WhenSourceDirBlank() throws Exception {
-    DslProperties blank = new DslProperties();
-    blank.setSourceDir("");
+    DslProperties blank = DslProperties.builder().sourceDir("").build();
     handler = new DslDraftHandler(
             blank,
             new DslReloadHandler(blank, null),
@@ -238,8 +235,7 @@ class DslDraftResourceTest {
 
   @Test
   void listReturnsEmptyEnvelopeWhenSourceDirBlank() throws Exception {
-    DslProperties blank = new DslProperties();
-    blank.setSourceDir("");
+    DslProperties blank = DslProperties.builder().sourceDir("").build();
     handler = new DslDraftHandler(
             blank,
             new DslReloadHandler(blank, null),
@@ -391,7 +387,12 @@ class DslDraftResourceTest {
 
   @Test
   void historyLimitPrunesOldSnapshots() throws Exception {
-    props.getDrafts().setHistoryLimit(2);
+    props = DslProperties.builder().sourceDir(sourceDir.toString())
+            .drafts(new DslProperties.Drafts(2))
+            .build();
+    handler = new DslDraftHandler(props, new DslReloadHandler(props, null),
+            new DslDefinitionHistoryService(props, mapper), mapper,
+            new DslDefinitionBundleService(mapper, Optional.empty()));
     for (int i = 1; i <= 4; i++) {
       handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", String.valueOf(i)));
       Thread.sleep(2);
@@ -514,8 +515,7 @@ class DslDraftResourceTest {
 
   @Test
   void historyReturns409WhenSourceDirBlank() throws Exception {
-    DslProperties blank = new DslProperties();
-    blank.setSourceDir("");
+    DslProperties blank = DslProperties.builder().sourceDir("").build();
     handler = new DslDraftHandler(
             blank,
             new DslReloadHandler(blank, null),
@@ -531,8 +531,7 @@ class DslDraftResourceTest {
 
   @Test
   void restoreReturns409WhenSourceDirBlank() throws Exception {
-    DslProperties blank = new DslProperties();
-    blank.setSourceDir("");
+    DslProperties blank = DslProperties.builder().sourceDir("").build();
     handler = new DslDraftHandler(
             blank,
             new DslReloadHandler(blank, null),
@@ -621,8 +620,7 @@ class DslDraftResourceTest {
   @Test
   void saveWritesAuditRowWithCorrelationIdOnFailure() throws Exception {
     var audit = AuditTestSupport.h2();
-    DslProperties blank = new DslProperties();
-    blank.setSourceDir("");
+    DslProperties blank = DslProperties.builder().sourceDir("").build();
     DslDraftHandler audited = auditedDraftHandler(audit, blank);
 
     ServerRequest request = postRequestWithHeader("/api/dsl/drafts/foo/save", "foo",

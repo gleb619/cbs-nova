@@ -24,8 +24,7 @@ class DslDefinitionStatusResolverTest {
   @BeforeEach
   void setUp() throws IOException {
     sourceDir = Files.createTempDirectory("dsl-status-test-");
-    DslProperties props = new DslProperties();
-    props.setSourceDir(sourceDir.toString());
+    DslProperties props = DslProperties.builder().sourceDir(sourceDir.toString()).build();
     resolver = new DslDefinitionStatusResolver(props, new DslGitStatusResolver(props));
   }
 

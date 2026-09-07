@@ -83,7 +83,7 @@ public class DslDefinitionHistoryService {
   }
 
   private void prune(Path historyDir) throws IOException {
-    int limit = dslProperties.getDrafts().getHistoryLimit();
+    int limit = dslProperties.drafts().historyLimit();
     if (limit <= 0) {
       return;
     }

@@ -122,7 +122,7 @@ public class DslReloadHandler {
    * was loaded.
    */
   public ServerResponse reload(ServerRequest request) throws IOException {
-    var sourceDirProperty = dslProperties.getSourceDir();
+    var sourceDirProperty = dslProperties.sourceDir();
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
       audit(request, "-", DslAuditService.OUTCOME_FAILURE,
               Map.of("error", "NOT_CONFIGURED: csb.dsl.source-dir is not configured"));
@@ -171,7 +171,7 @@ public class DslReloadHandler {
    * untouched.
    */
   public LoadResult reloadDefinitions() throws IOException {
-    var sourceDirProperty = dslProperties.getSourceDir();
+    var sourceDirProperty = dslProperties.sourceDir();
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
       throw new IllegalStateException("csb.dsl.source-dir is not configured");
     }

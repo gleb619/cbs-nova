@@ -450,7 +450,7 @@ public class DslDraftHandler {
   }
 
   private PathResult ensureConfigured(String name) {
-    var sourceDirProperty = dslProperties.getSourceDir();
+    var sourceDirProperty = dslProperties.sourceDir();
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
       return new PathResult.Err(error(HttpStatus.CONFLICT,
               new ErrorResponse("NOT_CONFIGURED", "csb.dsl.source-dir is not configured", name,

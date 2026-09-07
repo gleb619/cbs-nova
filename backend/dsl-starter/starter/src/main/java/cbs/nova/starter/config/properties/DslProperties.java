@@ -1,135 +1,179 @@
 package cbs.nova.starter.config.properties;
 
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.validation.Valid;
+import lombok.Builder;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.DefaultValue;
+import org.springframework.validation.annotation.Validated;
 
-//TODO: redo to a record(e.g. check git history)
-@Data
-@AllArgsConstructor
-@NoArgsConstructor(access = AccessLevel.PUBLIC)
+/**
+ * Configuration properties for the DSL runtime ({@code cbs.dsl.*}).
+ *
+ * <p>Constructor-bound record: scalar defaults are declared with {@link DefaultValue} for the
+ * Spring binder and re-applied in the compact constructor, so direct construction (canonical
+ * constructor or the Lombok-generated {@link Builder}) yields the same defaults. Scalar
+ * components are boxed so the compact constructor can tell "not set" ({@code null}) apart from an
+ * explicit value — records have no Lombok {@code @Builder.Default} support. Nested-object defaults
+ * follow the {@link DryRunProperties} idiom: {@code @DefaultValue} on the component plus
+ * null-coalescing in the compact constructor.
+ */
+@Builder
 @ConfigurationProperties(prefix = "cbs.dsl")
-public class DslProperties {
+@Validated
+public record DslProperties(
+        String sourceDir,
+        /**
+         * Workbench virtual-workspace root for filesystem-backed drafts. Relative values resolve
+         * against {@code sourceDir}; an absolute value is used as-is.
+         */
+        @DefaultValue(".workbench/drafts-fs") String workbenchWorkspaceRoot,
+        @DefaultValue("dsl-task-queue") String taskQueue,
+        @Valid @DefaultValue Worker worker,
+        @Valid @DefaultValue Reload reload,
+        @Valid @DefaultValue Auth auth,
+        @Valid @DefaultValue Drafts drafts,
+        @Valid @DefaultValue Files files,
+        @Valid @DefaultValue Git git,
+        @Valid @DefaultValue FileBuffer fileBuffer) {
 
-  private String sourceDir;
-  /**
-   * Workbench virtual-workspace root for filesystem-backed drafts. Relative values resolve against
-   * {@code sourceDir}; an absolute value is used as-is.
-   */
-  private String workbenchWorkspaceRoot = ".workbench/drafts-fs";
-  private String taskQueue = "dsl-task-queue";
-  private Worker worker = new Worker();
-  private Reload reload = new Reload();
-  private Auth auth = new Auth();
-  private Drafts drafts = new Drafts();
-  private Files files = new Files();
-  private Git git = new Git();
-  private FileBuffer fileBuffer = new FileBuffer();
-
-  @Data
-  public static class Worker {
-
-    private boolean enabled;
-
+  public DslProperties {
+    workbenchWorkspaceRoot =
+            workbenchWorkspaceRoot == null ? ".workbench/drafts-fs" : workbenchWorkspaceRoot;
+    taskQueue = taskQueue == null ? "dsl-task-queue" : taskQueue;
+    worker = worker == null ? new Worker(false) : worker;
+    reload = reload == null ? new Reload(false) : reload;
+    auth = auth == null ? new Auth(false, null) : auth;
+    drafts = drafts == null ? new Drafts(20) : drafts;
+    files = files == null ? new Files(true, 5, 100, 32, 8, 5L) : files;
+    git = git == null ? new Git(true, null, 5) : git;
+    fileBuffer = fileBuffer == null ? new FileBuffer(1000, 3600L) : fileBuffer;
   }
 
-  @Data
-  public static class Reload {
+  @Builder
+  public record Worker(@DefaultValue("false") Boolean enabled) {
 
-    private boolean enabled;
-
+    public Worker {
+      enabled = enabled == null ? false : enabled;
+    }
   }
 
-  @Data
-  public static class Auth {
+  @Builder
+  public record Reload(@DefaultValue("false") Boolean enabled) {
 
-    private boolean enabled;
-    private String apiKey;
-
+    public Reload {
+      enabled = enabled == null ? false : enabled;
+    }
   }
 
-  @Data
-  public static class Drafts {
+  @Builder
+  public record Auth(
+          @DefaultValue("false") Boolean enabled,
+          String apiKey) {
 
-    /**
-     * How many prior published snapshots to keep per definition. Older snapshots are pruned on
-     * publish; values less than or equal to 0 keep an unlimited history.
-     */
-    private int historyLimit = 20;
-
+    public Auth {
+      enabled = enabled == null ? false : enabled;
+    }
   }
 
-  @Data
-  public static class Files {
+  @Builder
+  public record Drafts(
+          /**
+           * How many prior published snapshots to keep per definition. Older snapshots are pruned
+           * on publish; values less than or equal to 0 keep an unlimited history.
+           */
+          @DefaultValue("20") Integer historyLimit) {
 
-    private boolean enabled = true;
-
-    /**
-     * Seconds between automatic flushes of the staged write buffer. Zero or negative disables
-     * background flushing; call POST /api/dsl/files/flush explicitly.
-     */
-    private int flushIntervalSeconds = 5;
-
-    /**
-     * Maximum number of staged writes before an automatic flush is triggered.
-     */
-    private int maxQueueSize = 100;
-
-    /**
-     * Maximum concurrent file read operations.
-     */
-    private int readBulkheadPermits = 32;
-
-    /**
-     * Maximum concurrent file write operations.
-     */
-    private int writeBulkheadPermits = 8;
-
-    /**
-     * Seconds to wait for a bulkhead permit before failing the file operation.
-     */
-    private long acquireTimeoutSeconds = 5;
+    public Drafts {
+      historyLimit = historyLimit == null ? 20 : historyLimit;
+    }
   }
 
-  @Data
-  public static class Git {
+  @Builder
+  public record Files(
+          @DefaultValue("true") Boolean enabled,
 
-    /**
-     * Whether to inspect the DSL source directory as a Git working tree when resolving definition
-     * statuses. If disabled or if no repository is found, status falls back to filesystem markers
-     * only.
-     */
-    private boolean enabled = true;
+          /**
+           * Seconds between automatic flushes of the staged write buffer. Zero or negative
+           * disables background flushing; call POST /api/dsl/files/flush explicitly.
+           */
+          @DefaultValue("5") Integer flushIntervalSeconds,
 
-    /**
-     * Root directory of the Git repository to inspect. Defaults to {@code dsl.source-dir}.
-     */
-    private String repositoryDir;
+          /**
+           * Maximum number of staged writes before an automatic flush is triggered.
+           */
+          @DefaultValue("100") Integer maxQueueSize,
 
-    /**
-     * How long to cache the result of a Git status call, in seconds. A small TTL avoids re-scanning
-     * the repository on every introspection request while still reflecting recent edits promptly.
-     */
-    private int statusCacheTtlSeconds = 5;
+          /**
+           * Maximum concurrent file read operations.
+           */
+          @DefaultValue("32") Integer readBulkheadPermits,
 
+          /**
+           * Maximum concurrent file write operations.
+           */
+          @DefaultValue("8") Integer writeBulkheadPermits,
+
+          /**
+           * Seconds to wait for a bulkhead permit before failing the file operation.
+           */
+          @DefaultValue("5") Long acquireTimeoutSeconds) {
+
+    public Files {
+      enabled = enabled == null ? true : enabled;
+      flushIntervalSeconds = flushIntervalSeconds == null ? 5 : flushIntervalSeconds;
+      maxQueueSize = maxQueueSize == null ? 100 : maxQueueSize;
+      readBulkheadPermits = readBulkheadPermits == null ? 32 : readBulkheadPermits;
+      writeBulkheadPermits = writeBulkheadPermits == null ? 8 : writeBulkheadPermits;
+      acquireTimeoutSeconds = acquireTimeoutSeconds == null ? 5L : acquireTimeoutSeconds;
+    }
   }
 
-  @Data
-  public static class FileBuffer {
+  @Builder
+  public record Git(
+          /**
+           * Whether to inspect the DSL source directory as a Git working tree when resolving
+           * definition statuses. If disabled or if no repository is found, status falls back to
+           * filesystem markers only.
+           */
+          @DefaultValue("true") Boolean enabled,
 
-    /**
-     * Maximum number of staged-but-undrained file entries kept in memory. Oldest entries are
-     * evicted once this bound is exceeded, preventing unbounded heap growth from abandoned
-     * stage-without-drain flows.
-     */
-    private int maxEntries = 1000;
+          /**
+           * Root directory of the Git repository to inspect. Defaults to {@code dsl.source-dir}.
+           */
+          String repositoryDir,
 
-    /**
-     * How long a staged entry survives without being drained before it is evicted, in seconds.
-     */
-    private long expireAfterWriteSeconds = 3600;
+          /**
+           * How long to cache the result of a Git status call, in seconds. A small TTL avoids
+           * re-scanning the repository on every introspection request while still reflecting
+           * recent edits promptly.
+           */
+          @DefaultValue("5") Integer statusCacheTtlSeconds) {
 
+    public Git {
+      enabled = enabled == null ? true : enabled;
+      statusCacheTtlSeconds = statusCacheTtlSeconds == null ? 5 : statusCacheTtlSeconds;
+    }
+  }
+
+  @Builder
+  public record FileBuffer(
+          /**
+           * Maximum number of staged-but-undrained file entries kept in memory. Oldest entries are
+           * evicted once this bound is exceeded, preventing unbounded heap growth from abandoned
+           * stage-without-drain flows.
+           */
+          @DefaultValue("1000") Integer maxEntries,
+
+          /**
+           * How long a staged entry survives without being drained before it is evicted, in
+           * seconds.
+           */
+          @DefaultValue("3600") Long expireAfterWriteSeconds) {
+
+    public FileBuffer {
+      maxEntries = maxEntries == null ? 1000 : maxEntries;
+      expireAfterWriteSeconds =
+              expireAfterWriteSeconds == null ? 3600L : expireAfterWriteSeconds;
+    }
   }
 }

@@ -41,7 +41,7 @@ public class DslFileService {
 
   @PostConstruct
   public void start() {
-    int interval = dslProperties.getFiles().getFlushIntervalSeconds();
+    int interval = dslProperties.files().flushIntervalSeconds();
     if (interval > 0) {
       flushExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread thread = new Thread(r, "dsl-file-flush");
@@ -112,7 +112,7 @@ public class DslFileService {
   public void stageWrite(String relativePath, String content) {
     ensureRoot();
     buffer.stage(relativePath, content);
-    if (buffer.pendingCount() >= dslProperties.getFiles().getMaxQueueSize()) {
+    if (buffer.pendingCount() >= dslProperties.files().maxQueueSize()) {
       if (flushExecutor != null) {
         flushExecutor.execute(this::flushPending);
       }
@@ -129,7 +129,7 @@ public class DslFileService {
       buffer.stage(file.path(), file.content() == null ? "" : file.content());
       staged++;
     }
-    if (buffer.pendingCount() >= dslProperties.getFiles().getMaxQueueSize()) {
+    if (buffer.pendingCount() >= dslProperties.files().maxQueueSize()) {
       if (flushExecutor != null) {
         flushExecutor.execute(this::flushPending);
       }

@@ -17,7 +17,8 @@ import org.junit.jupiter.api.Test;
 
 class DslFileBufferTest {
 
-  private final DslFileBuffer buffer = new DslFileBuffer(new DslProperties());
+  private final DslFileBuffer buffer =
+          new DslFileBuffer(DslProperties.builder().build());
 
   @Test
   void stageAndGetRoundTrip() {
@@ -109,8 +110,9 @@ class DslFileBufferTest {
 
   @Test
   void sizeEvictionDropsOldestEntriesWhenMaximumExceeded() {
-    DslProperties properties = new DslProperties();
-    properties.getFileBuffer().setMaxEntries(3);
+    DslProperties properties = DslProperties.builder()
+            .fileBuffer(new DslProperties.FileBuffer(3, null))
+            .build();
     DslFileBuffer bounded = new DslFileBuffer(properties);
 
     Map<String, String> staged = Map.of(
@@ -149,8 +151,9 @@ class DslFileBufferTest {
   @Test
   void ttlExpiryEvictsEntryAfterConfiguredSeconds() {
     FakeTicker ticker = new FakeTicker();
-    DslProperties properties = new DslProperties();
-    properties.getFileBuffer().setExpireAfterWriteSeconds(60);
+    DslProperties properties = DslProperties.builder()
+            .fileBuffer(new DslProperties.FileBuffer(null, 60L))
+            .build();
     DslFileBuffer bounded = new DslFileBuffer(properties, ticker);
 
     bounded.stage("a", "content");
@@ -168,8 +171,9 @@ class DslFileBufferTest {
   @Test
   void ttlExpiryDoesNotAffectFresherEntries() {
     FakeTicker ticker = new FakeTicker();
-    DslProperties properties = new DslProperties();
-    properties.getFileBuffer().setExpireAfterWriteSeconds(60);
+    DslProperties properties = DslProperties.builder()
+            .fileBuffer(new DslProperties.FileBuffer(null, 60L))
+            .build();
     DslFileBuffer bounded = new DslFileBuffer(properties, ticker);
 
     bounded.stage("old", "old-content");
@@ -183,8 +187,9 @@ class DslFileBufferTest {
 
   @Test
   void drainIsAtomicPerEntryEvenWithConcurrentOverwrites() throws Exception {
-    DslProperties properties = new DslProperties();
-    properties.getFileBuffer().setMaxEntries(1000);
+    DslProperties properties = DslProperties.builder()
+            .fileBuffer(new DslProperties.FileBuffer(1000, null))
+            .build();
     DslFileBuffer bounded = new DslFileBuffer(properties);
 
     int writers = 4;
@@ -230,18 +235,18 @@ class DslFileBufferTest {
 
   @Test
   void configurationDefaultsAreApplied() {
-    DslProperties properties = new DslProperties();
-    assertThat(properties.getFileBuffer().getMaxEntries()).isEqualTo(1000);
-    assertThat(properties.getFileBuffer().getExpireAfterWriteSeconds()).isEqualTo(3600L);
+    DslProperties properties = DslProperties.builder().build();
+    assertThat(properties.fileBuffer().maxEntries()).isEqualTo(1000);
+    assertThat(properties.fileBuffer().expireAfterWriteSeconds()).isEqualTo(3600L);
   }
 
   @Test
   void configurationCanBeOverridden() {
-    DslProperties properties = new DslProperties();
-    properties.getFileBuffer().setMaxEntries(7);
-    properties.getFileBuffer().setExpireAfterWriteSeconds(13L);
-    assertThat(properties.getFileBuffer().getMaxEntries()).isEqualTo(7);
-    assertThat(properties.getFileBuffer().getExpireAfterWriteSeconds()).isEqualTo(13L);
+    DslProperties properties = DslProperties.builder()
+            .fileBuffer(new DslProperties.FileBuffer(7, 13L))
+            .build();
+    assertThat(properties.fileBuffer().maxEntries()).isEqualTo(7);
+    assertThat(properties.fileBuffer().expireAfterWriteSeconds()).isEqualTo(13L);
   }
 
   /**

@@ -126,13 +126,13 @@ public class DslConfiguration {
   @Bean
   @ConditionalOnMissingBean(DslWorkspaceResolver.class)
   public DslWorkspaceResolver dslWorkspaceResolver(DslProperties dslProperties) {
-    String sourceDir = dslProperties.getSourceDir();
+    String sourceDir = dslProperties.sourceDir();
     if (sourceDir == null || sourceDir.isBlank()) {
       throw new IllegalStateException("csb.dsl.source-dir is not configured");
     }
 
     var sourceRoot = Path.of(sourceDir).normalize();
-    var configured = Path.of(dslProperties.getWorkbenchWorkspaceRoot());
+    var configured = Path.of(dslProperties.workbenchWorkspaceRoot());
     var workspaceRoot = (configured.isAbsolute() ? configured : sourceRoot.resolve(configured))
             .normalize();
     return new DefaultDslWorkspaceResolver(sourceRoot, workspaceRoot);
@@ -146,13 +146,13 @@ public class DslConfiguration {
 
   @Bean
   public DslFileBulkhead dslFileBulkhead(DslProperties properties) {
-    int readPermits = properties.getFiles().getReadBulkheadPermits();
-    int writePermits = properties.getFiles().getWriteBulkheadPermits();
+    int readPermits = properties.files().readBulkheadPermits();
+    int writePermits = properties.files().writeBulkheadPermits();
     var readSemaphore = new Semaphore(Math.max(1, readPermits));
     var writeSemaphore = new Semaphore(Math.max(1, writePermits));
 
     return new DslFileBulkhead(readSemaphore, writeSemaphore,
-            properties.getFiles().getAcquireTimeoutSeconds());
+            properties.files().acquireTimeoutSeconds());
   }
 
   private void initRegistry() {

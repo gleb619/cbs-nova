@@ -17,7 +17,7 @@ public class ApiKeyAuthFilterConfiguration {
   @Bean
   @ConditionalOnMissingBean
   public ApiKeyAuthFilter apiKeyAuthFilter(DslProperties dslProperties, ObjectMapper objectMapper) {
-    return new ApiKeyAuthFilter(dslProperties.getAuth().getApiKey(), objectMapper);
+    return new ApiKeyAuthFilter(dslProperties.auth().apiKey(), objectMapper);
   }
 
   @Bean

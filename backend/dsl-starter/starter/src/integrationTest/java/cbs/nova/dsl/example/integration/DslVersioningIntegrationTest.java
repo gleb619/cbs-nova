@@ -175,8 +175,7 @@ class DslVersioningIntegrationTest {
             .isTrue();
 
     Path v2Dir = Path.of("src/integrationTest/resources/dsl-versioning-v2");
-    var v2Props = new DslProperties();
-    v2Props.setSourceDir(v2Dir.toString());
+    var v2Props = DslProperties.builder().sourceDir(v2Dir.toString()).build();
     new DslReloadHandler(v2Props, new DefinitionLoader()).reloadDefinitions();
 
     assertThat(GlobalManager.globalManager().findProcess("VersionProbe").orElseThrow().version())

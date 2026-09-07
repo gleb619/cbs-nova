@@ -45,8 +45,7 @@ class DslFileHandlerTest {
   void setUp() {
     GlobalManager.globalManager().resetForTests();
     fileService = mock(DslFileService.class);
-    DslProperties properties = new DslProperties();
-    properties.setSourceDir("/tmp/dsl");
+    DslProperties properties = DslProperties.builder().sourceDir("/tmp/dsl").build();
     handler = new DslFileHandler(properties, fileService, new ObjectMapper());
   }
 
@@ -79,7 +78,7 @@ class DslFileHandlerTest {
 
   @Test
   void readByNameReturns409WhenSourceDirNotConfigured() throws IOException {
-    DslProperties properties = new DslProperties();
+    DslProperties properties = DslProperties.builder().build();
     handler = new DslFileHandler(properties, fileService, new ObjectMapper());
 
     ServerResponse response = handler.readByName(
@@ -96,8 +95,7 @@ class DslFileHandlerTest {
       Files.createDirectories(nested.getParent());
       Files.writeString(nested, "step {}");
 
-      DslProperties properties = new DslProperties();
-      properties.setSourceDir(temp.toString());
+      DslProperties properties = DslProperties.builder().sourceDir(temp.toString()).build();
       handler = new DslFileHandler(properties, fileService, new ObjectMapper());
 
       registerProvider("InvoiceGeneration", "InvoiceGenerationDsl.java");
@@ -137,8 +135,7 @@ class DslFileHandlerTest {
       Files.createDirectories(nested.getParent());
       Files.writeString(nested, "step {}");
 
-      DslProperties properties = new DslProperties();
-      properties.setSourceDir(temp.toString());
+      DslProperties properties = DslProperties.builder().sourceDir(temp.toString()).build();
       handler = new DslFileHandler(properties, fileService, new ObjectMapper());
 
       registerProvider("ReserveInventory", "ReserveInventoryDsl.java");

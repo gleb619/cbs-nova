@@ -63,7 +63,7 @@ public class DslDefinitionStatusResolver {
   }
 
   private Path sourceDir() {
-    String sourceDirProperty = dslProperties.getSourceDir();
+    String sourceDirProperty = dslProperties.sourceDir();
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
       return null;
     }

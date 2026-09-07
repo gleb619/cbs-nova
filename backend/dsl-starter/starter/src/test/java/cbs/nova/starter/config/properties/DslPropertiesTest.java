@@ -16,12 +16,22 @@ class DslPropertiesTest {
   void defaultsAreApplied() {
     runner.run(ctx -> {
       DslProperties properties = ctx.getBean(DslProperties.class);
-      assertThat(properties.getSourceDir()).isNull();
-      assertThat(properties.getTaskQueue()).isEqualTo("dsl-task-queue");
-      assertThat(properties.getWorker().isEnabled()).isFalse();
-      assertThat(properties.getReload().isEnabled()).isFalse();
-      assertThat(properties.getWorkbenchWorkspaceRoot()).isEqualTo(".workbench/drafts-fs");
-      assertThat(properties.getFiles().getAcquireTimeoutSeconds()).isEqualTo(5L);
+      assertThat(properties.sourceDir()).isNull();
+      assertThat(properties.taskQueue()).isEqualTo("dsl-task-queue");
+      assertThat(properties.worker().enabled()).isFalse();
+      assertThat(properties.reload().enabled()).isFalse();
+      assertThat(properties.workbenchWorkspaceRoot()).isEqualTo(".workbench/drafts-fs");
+      assertThat(properties.drafts().historyLimit()).isEqualTo(20);
+      assertThat(properties.files().enabled()).isTrue();
+      assertThat(properties.files().flushIntervalSeconds()).isEqualTo(5);
+      assertThat(properties.files().maxQueueSize()).isEqualTo(100);
+      assertThat(properties.files().readBulkheadPermits()).isEqualTo(32);
+      assertThat(properties.files().writeBulkheadPermits()).isEqualTo(8);
+      assertThat(properties.files().acquireTimeoutSeconds()).isEqualTo(5L);
+      assertThat(properties.git().enabled()).isTrue();
+      assertThat(properties.git().statusCacheTtlSeconds()).isEqualTo(5);
+      assertThat(properties.fileBuffer().maxEntries()).isEqualTo(1000);
+      assertThat(properties.fileBuffer().expireAfterWriteSeconds()).isEqualTo(3600L);
     });
   }
 
@@ -35,10 +45,10 @@ class DslPropertiesTest {
                     "cbs.dsl.reload.enabled=false")
             .run(ctx -> {
               DslProperties properties = ctx.getBean(DslProperties.class);
-              assertThat(properties.getSourceDir()).isEqualTo("/tmp/dsl");
-              assertThat(properties.getTaskQueue()).isEqualTo("custom-queue");
-              assertThat(properties.getWorker().isEnabled()).isTrue();
-              assertThat(properties.getReload().isEnabled()).isFalse();
+              assertThat(properties.sourceDir()).isEqualTo("/tmp/dsl");
+              assertThat(properties.taskQueue()).isEqualTo("custom-queue");
+              assertThat(properties.worker().enabled()).isTrue();
+              assertThat(properties.reload().enabled()).isFalse();
             });
   }
 
@@ -52,10 +62,10 @@ class DslPropertiesTest {
                     "cbs.dsl.reload.enabled=false")
             .run(ctx -> {
               DslProperties properties = ctx.getBean(DslProperties.class);
-              assertThat(properties.getSourceDir()).isEqualTo("/tmp/dsl-camel");
-              assertThat(properties.getTaskQueue()).isEqualTo("kebab-queue");
-              assertThat(properties.getWorker().isEnabled()).isTrue();
-              assertThat(properties.getReload().isEnabled()).isFalse();
+              assertThat(properties.sourceDir()).isEqualTo("/tmp/dsl-camel");
+              assertThat(properties.taskQueue()).isEqualTo("kebab-queue");
+              assertThat(properties.worker().enabled()).isTrue();
+              assertThat(properties.reload().enabled()).isFalse();
             });
   }
 

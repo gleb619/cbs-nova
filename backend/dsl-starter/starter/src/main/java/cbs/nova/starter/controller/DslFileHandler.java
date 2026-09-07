@@ -174,7 +174,7 @@ public class DslFileHandler {
     if (filename == null || filename.isBlank()) {
       return null;
     }
-    String sourceDir = dslProperties.getSourceDir();
+    String sourceDir = dslProperties.sourceDir();
     if (sourceDir == null || sourceDir.isBlank()) {
       return filename;
     }
@@ -253,7 +253,7 @@ public class DslFileHandler {
   }
 
   private PathResult ensureConfigured() {
-    String sourceDir = dslProperties.getSourceDir();
+    String sourceDir = dslProperties.sourceDir();
     if (sourceDir == null || sourceDir.isBlank()) {
       return new PathResult.Err(error(HttpStatus.CONFLICT,
               new ErrorResponse("NOT_CONFIGURED", "csb.dsl.source-dir is not configured", null,

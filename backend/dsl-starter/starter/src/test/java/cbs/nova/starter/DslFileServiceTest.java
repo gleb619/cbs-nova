@@ -29,11 +29,12 @@ class DslFileServiceTest {
 
   @BeforeEach
   void setUp() {
-    DslProperties properties = new DslProperties();
-    properties.setSourceDir(sourceDir.toString());
-    properties.getFiles().setFlushIntervalSeconds(0);
+    DslProperties properties = DslProperties.builder()
+            .sourceDir(sourceDir.toString())
+            .files(new DslProperties.Files(null, 0, null, null, null, null))
+            .build();
 
-    String sourceDir = properties.getSourceDir();
+    String sourceDir = properties.sourceDir();
     var sourceRoot = Path.of(sourceDir).normalize();
     var workspaceRoot = sourceRoot.resolve(".workbench")
             .resolve("drafts-fs").normalize();

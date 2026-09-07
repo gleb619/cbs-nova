@@ -58,7 +58,7 @@ class DslReloadResourceTest {
   @BeforeEach
   void setUp() {
     GlobalManager.globalManager().resetForTests();
-    resource = new DslReloadHandler(new DslProperties(), loader);
+    resource = new DslReloadHandler(DslProperties.builder().build(), loader);
   }
 
   @AfterEach
@@ -645,9 +645,7 @@ class DslReloadResourceTest {
   }
 
   private static DslProperties dslProperties(String sourceDir) {
-    DslProperties props = new DslProperties();
-    props.setSourceDir(sourceDir);
-    return props;
+    return DslProperties.builder().sourceDir(sourceDir).build();
   }
 
 }

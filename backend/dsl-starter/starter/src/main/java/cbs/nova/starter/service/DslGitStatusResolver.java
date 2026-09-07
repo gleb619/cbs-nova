@@ -66,12 +66,12 @@ public class DslGitStatusResolver {
   }
 
   private boolean gitEnabled() {
-    return dslProperties.getGit() != null && dslProperties.getGit().isEnabled();
+    return dslProperties.git() != null && dslProperties.git().enabled();
   }
 
   private Path repositoryRoot(Path candidateDir) {
-    String configured = dslProperties.getGit() != null
-            ? dslProperties.getGit().getRepositoryDir()
+    String configured = dslProperties.git() != null
+            ? dslProperties.git().repositoryDir()
             : null;
     return configured != null && !configured.isBlank()
             ? Path.of(configured).toAbsolutePath().normalize()
@@ -79,8 +79,8 @@ public class DslGitStatusResolver {
   }
 
   private Duration ttl() {
-    int seconds = dslProperties.getGit() != null
-            ? dslProperties.getGit().getStatusCacheTtlSeconds()
+    int seconds = dslProperties.git() != null
+            ? dslProperties.git().statusCacheTtlSeconds()
             : 5;
     return Duration.ofSeconds(Math.max(0, seconds));
   }

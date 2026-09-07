@@ -24,7 +24,7 @@ public class DslFileBuffer {
    * without a Spring context). Uses {@link DslProperties} defaults and the system ticker.
    */
   public DslFileBuffer() {
-    this(new DslProperties());
+    this(DslProperties.builder().build());
   }
 
   /**
@@ -39,8 +39,8 @@ public class DslFileBuffer {
    * deterministically without sleeping.
    */
   DslFileBuffer(DslProperties properties, Ticker ticker) {
-    int maxEntries = Math.max(1, properties.getFileBuffer().getMaxEntries());
-    long ttlSeconds = Math.max(1L, properties.getFileBuffer().getExpireAfterWriteSeconds());
+    int maxEntries = Math.max(1, properties.fileBuffer().maxEntries());
+    long ttlSeconds = Math.max(1L, properties.fileBuffer().expireAfterWriteSeconds());
     this.pending = Caffeine.newBuilder()
             .maximumSize(maxEntries)
             .expireAfterWrite(Duration.ofSeconds(ttlSeconds))

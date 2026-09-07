@@ -49,10 +49,8 @@ class DslIntrospectionResourceTest {
     DslIntrospectionService service = new DslIntrospectionService(
             DslConfig.dslConfig().jsonSchemaGenerator().get(),
             mapper,
-            new DslDefinitionStatusResolver(
-                    new DslProperties(),
-                    new DslGitStatusResolver(
-                            new DslProperties())));
+            new DslDefinitionStatusResolver(DslProperties.builder().build(),
+                    new DslGitStatusResolver(DslProperties.builder().build())));
     DslIntrospectionHandler handler = new DslIntrospectionHandler(service,
             new ExplainDiagramRenderer(), new RequestQueryConverter());
     DslIntrospectionRouterConfiguration router = new DslIntrospectionRouterConfiguration();
