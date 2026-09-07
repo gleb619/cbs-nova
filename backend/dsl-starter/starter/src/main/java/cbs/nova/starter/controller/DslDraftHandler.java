@@ -1,6 +1,7 @@
 package cbs.nova.starter.controller;
 
 import cbs.nova.dsl.LoadResult;
+import cbs.nova.dsl.ValidationException;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.exception.DslCompilationException;
 import cbs.nova.starter.model.VcsModels.DefinitionBundle;
@@ -412,6 +413,9 @@ public class DslDraftHandler {
       if (compilation != null) {
         reloadError = compilation.getMessage();
         diagnostics = compilation.diagnostics();
+      } else if (e instanceof ValidationException ve) {
+        reloadError = ve.getMessage();
+        diagnostics = toValidationDiagnostics(ve, bulkTarget);
       } else {
         reloadError = e.getMessage();
       }
@@ -463,6 +467,10 @@ public class DslDraftHandler {
         return new DraftResponse(name, "Published", file.toString(), false,
                 LoadResult.empty(),
                 compilation.getMessage(), compilation.diagnostics());
+      }
+      if (e instanceof ValidationException ve) {
+        return new DraftResponse(name, "Published", file.toString(), false, LoadResult.empty(),
+                ve.getMessage(), toValidationDiagnostics(ve, name));
       }
       return new DraftResponse(name, "Published", file.toString(), false, LoadResult.empty(),
               e.getMessage(), null);
@@ -525,6 +533,13 @@ public class DslDraftHandler {
     } catch (ServletException e) {
       throw new IOException("Failed to read request body", e);
     }
+  }
+
+  private static List<CompileDiagnostic> toValidationDiagnostics(ValidationException ex,
+          String file) {
+    return ex.issues().stream()
+            .map(i -> new CompileDiagnostic(file, null, null, i.message(), "error", i.code()))
+            .toList();
   }
 
   private static DslCompilationException findDslCompilationException(Throwable throwable) {

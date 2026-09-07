@@ -191,6 +191,31 @@ In **Run** mode, the generated Temporal workflow implements a basic Saga pattern
 In **Preview** and **Explain** modes, compensation blocks are first-class execution paths. Preview can simulate failures
 to verify rollback logic; Explain describes and diagrams the compensation flow.
 
+## Diagnostic codes
+
+The DSL compiler and semantic validator emit machine-readable diagnostic codes. Branching on the
+`code` field is safe; the human message text may be reworded without notice.
+
+### Semantic validation codes
+
+These codes are produced by the semantic validator and are stable across releases:
+
+| Code | When it fires | Example message |
+|------|---------------|-----------------|
+| `BLANK_PROCESS_NAME` | A Process definition has a blank name | `Process has blank name` |
+| `BLANK_TRANSACTION_NAME` | A Transaction definition has a blank name | `Transaction has blank name` |
+| `BLANK_FUNCTION_NAME` | A Function definition has a blank name | `Function has blank name` |
+| `DUPLICATE_NAME` | Two definitions share the same name | `Duplicate name: <name>` |
+| `UNKNOWN_HELPER` | A Process or Transaction references an unregistered helper | `Process '<name>' references unknown helper: <helper>` |
+| `CIRCULAR_DEPENDENCY` | A cycle is detected in Function references | `Circular dependency detected involving: [<names>]` |
+
+### Syntax-error codes
+
+When the underlying Java compiler rejects DSL source, the raw javac code (for example
+`compiler.err.cannot.find.symbol`) is passed through on `CompileDiagnostic.code`. These
+identifiers are JDK-versioned: they are stable enough to branch on in practice, but they are not a
+formal compatibility contract.
+
 ## Complete loan disbursement example
 
 ### Input/output records

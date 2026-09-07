@@ -1,6 +1,8 @@
 package cbs.nova.dsl.codegen;
 
+import cbs.nova.dsl.DiagnosticCodes;
 import cbs.nova.dsl.ValidationException;
+import cbs.nova.dsl.ValidationIssue;
 import cbs.nova.dsl.function.FunctionDescriptor;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.registry.HelperRegistry;
@@ -24,17 +26,20 @@ public final class SemanticValidator {
           @NonNull Collection<FunctionDescriptor> functions,
           @NonNull HelperRegistry helperRegistry) {
 
-    var errors = new ArrayList<String>();
+    var issues = new ArrayList<ValidationIssue>();
 
     processes.stream()
             .filter(p -> p.name().isBlank())
-            .forEach(p -> errors.add("Process has blank name"));
+            .forEach(p -> issues.add(new ValidationIssue(
+                    DiagnosticCodes.BLANK_PROCESS_NAME, "Process has blank name")));
     transactions.stream()
             .filter(t -> t.name().isBlank())
-            .forEach(t -> errors.add("Transaction has blank name"));
+            .forEach(t -> issues.add(new ValidationIssue(
+                    DiagnosticCodes.BLANK_TRANSACTION_NAME, "Transaction has blank name")));
     functions.stream()
             .filter(f -> f.name().isBlank())
-            .forEach(f -> errors.add("Function has blank name"));
+            .forEach(f -> issues.add(new ValidationIssue(
+                    DiagnosticCodes.BLANK_FUNCTION_NAME, "Function has blank name")));
 
     var allNames = new ArrayList<String>();
     processes.forEach(p -> allNames.add(p.name()));
@@ -43,7 +48,8 @@ public final class SemanticValidator {
     var seen = new HashSet<String>();
     allNames.stream()
             .filter(n -> !seen.add(n))
-            .forEach(n -> errors.add("Duplicate name: " + n));
+            .forEach(n -> issues.add(new ValidationIssue(
+                    DiagnosticCodes.DUPLICATE_NAME, "Duplicate name: " + n)));
 
     var functionNames = functions.stream().map(FunctionDescriptor::name)
             .collect(Collectors.toSet());
@@ -54,30 +60,30 @@ public final class SemanticValidator {
             p -> p.helperRefs().stream()
                     .filter(ref -> !allKnownHelperNames.contains(ref))
                     .forEach(
-                            ref -> errors.add(
+                            ref -> issues.add(new ValidationIssue(
+                                    DiagnosticCodes.UNKNOWN_HELPER,
                                     "Process '" + p.name() + "' references unknown helper: "
-                                            + ref)));
+                                            + ref))));
     transactions.forEach(
             t -> t.helperRefs().stream()
                     .filter(ref -> !allKnownHelperNames.contains(ref))
                     .forEach(
-                            ref -> errors.add(
-                                    "Transaction '"
-                                            + t.name()
-                                            + "' references unknown helper: "
-                                            + ref)));
+                            ref -> issues.add(new ValidationIssue(
+                                    DiagnosticCodes.UNKNOWN_HELPER,
+                                    "Transaction '" + t.name()
+                                            + "' references unknown helper: " + ref))));
 
-    detectCycles(functions, functionNames, errors);
+    detectCycles(functions, functionNames, issues);
 
-    if (!errors.isEmpty()) {
-      throw new ValidationException(errors);
+    if (!issues.isEmpty()) {
+      throw ValidationException.of(issues);
     }
   }
 
   private void detectCycles(
           @NonNull Collection<FunctionDescriptor> functions,
           @NonNull Set<String> functionNames,
-          @NonNull List<String> errors) {
+          @NonNull List<ValidationIssue> issues) {
     Map<String, List<String>> graph = new HashMap<>();
     for (var fn : functions) {
       graph.put(fn.name(), List.of());
@@ -90,7 +96,9 @@ public final class SemanticValidator {
       if ("WHITE".equals(color.get(fn))) {
         var stack = new ArrayList<String>();
         if (dfs(fn, graph, color, stack)) {
-          errors.add("Circular dependency detected involving: " + stack);
+          issues.add(new ValidationIssue(
+                  DiagnosticCodes.CIRCULAR_DEPENDENCY,
+                  "Circular dependency detected involving: " + stack));
         }
       }
     }

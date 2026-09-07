@@ -329,7 +329,7 @@ public class DslReloadHandler {
       default -> "error";
     };
     return new CompileDiagnostic(sourceName, line, column,
-            d.getMessage(Locale.getDefault()), severity);
+            d.getMessage(Locale.getDefault()), severity, d.getCode());
   }
 
   private void loadCompactSources(ClassLoader classLoader, Path sourceDir, Path outputDir,
