@@ -207,6 +207,9 @@ class AdvancedDslExamplesTest {
       if (helperClass == Sha256Helper.class) {
         return new Sha256Helper();
       }
+      if (helperClass == MaskHelper.class) {
+        return new MaskHelper();
+      }
 
       throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
     };

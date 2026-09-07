@@ -467,3 +467,48 @@ String url = in.baseUrl() + "/" + encodedPath + "?" + queryString;
 ```
 
 Encoding the segment `hello world` gives `hello%20world`, and building params `page=1` and `limit=50` gives `page=1&limit=50`. The result is a URL like `https://api.example.com/hello%20world?page=1&limit=50`.
+
+## Log-safe card number in a notification message with `mask`
+
+Mask a card number with the safe default (keep last 4, mask the rest) before interpolating it
+into a customer-facing notification, so the full PAN never reaches log lines or the messaging
+transport.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/MaskSensitiveDataDsl.java` (input/output models in
+`backend/dsl-starter/dsl-examples/src/models/MaskSensitiveDataModels.java`).
+
+```java
+MaskOut maskedCard = ctx.runHelper("mask",
+        new MaskIn(in.cardNumber(), null, null, null, null, null))
+        .as(MaskOut.class);
+
+var rendered = ctx.runHelper("formatMessage",
+        new FormatMessageIn(in.notificationTemplate(), Map.of("card", maskedCard.result())));
+String message = rendered.as(FormatMessageOut.class).result();
+```
+
+With `in.cardNumber()` = `4111111111111111` the safe default produces `************1111`.
+
+## Redacting a field before writing an audit detail with `mask`
+
+Redact a sensitive field with explicit edges and a custom mask char before placing it into an
+audit-details map (e.g. one that is later serialized into `details_json`) — only the first and
+last 2 code points survive.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/MaskSensitiveDataDsl.java` (input/output models in
+`backend/dsl-starter/dsl-examples/src/models/MaskSensitiveDataModels.java`).
+
+```java
+MaskOut redacted = ctx.runHelper("mask",
+        new MaskIn(in.payerReference(), "edges", 2, 2, "#", null))
+        .as(MaskOut.class);
+
+Map<String, Object> auditDetails = new LinkedHashMap<>();
+auditDetails.put("payerReference", redacted.result());
+auditDetails.put("amount", in.amount());
+```
+
+With `in.payerReference()` = `IBAN-DE8937` the result is `IB#######37`. If `keepFirst + keepLast`
+reaches the value length, the keeps are clamped so at least one code point always stays masked —
+the helper never returns the value unmasked. Use `mode="fixed"` (with an optional `width`,
+default 8) when the output length must not depend on the input at all.
