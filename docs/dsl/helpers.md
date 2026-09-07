@@ -299,6 +299,46 @@ ListOpsOut unique = ctx.runHelper("listOps",
         .as(ListOpsOut.class);
 ```
 
+### Filter records by field equality
+
+Where `listOps` `groupBy`/`countBy` aggregate, `filterRecords` just selects: it keeps the records
+whose `field` equals `value` (`Objects.equals` semantics, so `null` matches `null`) and drops the
+rest. `null` records yield an empty result rather than an error.
+
+```java
+FilterRecordsOut active = ctx.runHelper("filterRecords",
+        new FilterRecordsIn(orders, "status", "active"))
+        .as(FilterRecordsOut.class);
+List<Map<String, Object>> matched = active.matched();
+```
+
+### Sort records by a field
+
+`sortRecords` orders `records` by `field` and returns the full list (nothing is dropped).
+Direction comes from `direction` (`"asc"`/`"desc"`) when set, otherwise from the `ascending`
+boolean (`true` by default). The comparison `algorithm` is:
+
+- `"natural"` (default) — `Comparable` values of the same class compare natively; anything else
+  falls back to string comparison.
+- `"string"` — everything is compared as `String.valueOf(...)`, lexicographic.
+- `"numeric"` — values are coerced through `BigDecimal` (numbers and numeric strings both work).
+
+Records with a `null` field value sort last regardless of direction; `null`/empty `records`
+return empty.
+
+```java
+// "100" / "20" / "3" sort by numeric value, not lexicographically:
+SortRecordsOut byAmount = ctx.runHelper("sortRecords",
+        new SortRecordsIn(orders, "amount", true, "numeric", null))
+        .as(SortRecordsOut.class);
+List<Map<String, Object>> sorted = byAmount.records();
+
+// Newest first via the direction override:
+SortRecordsOut newest = ctx.runHelper("sortRecords",
+        new SortRecordsIn(orders, "createdAt", true, null, "desc"))
+        .as(SortRecordsOut.class);
+```
+
 ## Numeric aggregations
 
 `math` covers numeric aggregations (`sum`, `min`, `max`, `mean`, `median`, `percentile`,
@@ -929,3 +969,68 @@ try {
 (e.g. it does not pull in the Spring Boot actuator starter) — the helper validates the input and
 no-ops, so the DSL above is safe to call unconditionally. Tag keys must not be `null`; tag values
 that are `null` are coerced to the empty string (Micrometer's `Tag.of` rejects null values).
+
+## Distributed tracing (OpenTelemetry)
+
+`otel` exposes OpenTelemetry tracing to DSL authors through seven operations, selected by the
+`mode` discriminator on `OtelIn` (matched case-insensitively):
+
+- `"span"` — starts a span (`name` required, optional `attributes`) and returns its W3C
+  traceparent string. That string is the handle for the span lifecycle operations below.
+- `"endSpan"` — finalizes a span (`spanId` = the traceparent from `"span"`; optional `statusCode`
+  `OK`/`ERROR`/`UNSET`, default `OK`, and `errorMessage`). Fail-fast: ending an already-ended or
+  unknown span is an error, not a silent no-op.
+- `"addEvent"` — attaches a named event (`eventName` required) with optional `attributes` to an
+  open span.
+- `"setBaggage"` / `"getBaggage"` — a local, JVM-scoped key/value store for business-key
+  correlation within a single DSL run. This is *not* W3C baggage propagation; `getBaggage` on a
+  key that was never set is an error.
+- `"injectContext"` — injects W3C `traceparent` headers into a `headers` carrier map (returned
+  as `OtelOut.result`). Useful before an `httpCall` whose headers should join the trace.
+- `"extractContext"` — pulls the span-id out of inbound W3C trace headers; returns `""` when no
+  valid traceparent is present.
+
+`OtelOut.result` carries the per-mode payload: the traceparent for `"span"`, the baggage value for
+`"getBaggage"`, the carrier `Map` for `"injectContext"`, the span-id string for
+`"extractContext"`, and `Boolean.TRUE` for the no-payload modes.
+
+### Bracket a business operation with a span
+
+```java
+String spanHandle = (String) ctx.runHelper("otel",
+        new OtelIn("span", "place-order", Map.of("tenant", "acme"),
+                null, null, null, null, null, null, null))
+        .as(OtelOut.class).result();
+
+try {
+    // ... httpCall, listOps, etc. ...
+    ctx.runHelper("otel", new OtelIn("addEvent", null, null,
+            spanHandle, null, null, "order-validated", null, null, null))
+            .as(OtelOut.class);
+} catch (RuntimeException e) {
+    ctx.runHelper("otel", new OtelIn("endSpan", null, null,
+            spanHandle, "ERROR", e.getMessage(), null, null, null, null))
+            .as(OtelOut.class);
+    throw e;
+}
+ctx.runHelper("otel", new OtelIn("endSpan", null, null,
+        spanHandle, "OK", null, null, null, null, null))
+        .as(OtelOut.class);
+```
+
+### Propagate trace context into an outbound httpCall
+
+```java
+OtelOut injected = ctx.runHelper("otel",
+        new OtelIn("injectContext", null, null, null, null, null,
+                null, null, null, new HashMap<>()))
+        .as(OtelOut.class);
+Map<String, String> traceHeaders = (Map<String, String>) injected.result();
+// merge traceHeaders into the HttpCallIn headers map
+```
+
+Two scope notes worth knowing. Each `"span"` call starts an independent top-level span — the
+helper deliberately does not chain ambient OTel context across helper invocations, so
+parent-child nesting between two helper-initiated spans is not supported. And when tracing is
+disabled in the host application the `OpenTelemetry` bean is a no-op implementation: the helper
+still succeeds, it just produces no exported spans — DSL code can call it unconditionally.
