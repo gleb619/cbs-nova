@@ -4,10 +4,12 @@ import com.github.squigglesql.squigglesql.FromItem;
 import com.github.squigglesql.squigglesql.Matchable;
 import com.github.squigglesql.squigglesql.Selectable;
 import com.github.squigglesql.squigglesql.criteria.Criteria;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
@@ -19,9 +21,7 @@ public class ExtendedSelectQueryExecutor {
 
   private final NamedParameterJdbcTemplate jdbcTemplate;
 
-  public Builder select(
-  // TODO: add here a some lamdba, to make api fluent one, like stream api
-  ) {
+  public Builder select() {
     return new Builder();
   }
 
@@ -38,9 +38,30 @@ public class ExtendedSelectQueryExecutor {
             jdbcTemplate.queryForObject(query.toString(), Map.of(), type));
   }
 
+  /**
+   * Fluent builder for {@link ExtendedSelectQuery}.
+   *
+   * <p>Condition composition rules:
+   * <ul>
+   *   <li>Multiple {@link #where(Criteria)} calls are joined with an implicit {@code AND}.
+   *       This is the historical behavior and remains supported (not deprecated) because
+   *       the generated SQL is stable.</li>
+   *   <li>{@link #and(Criteria)} and {@link #or(Criteria)} explicitly compose the accumulated
+   *       criteria-so-far with the new criteria using {@code Criteria.and} / {@code Criteria.or}.
+   *       Combinators are left-associative: {@code where(a).and(b).or(c)} produces
+   *       {@code (a AND b) OR c}.</li>
+   *   <li>For clarity, prefer {@code where(a).and(b)} over {@code where(a).where(b)} when
+   *       explicit composition is intended.</li>
+   *   <li>{@link #andIf(boolean, Supplier)} / {@link #orIf(boolean, Supplier)} are conditional
+   *       no-ops when the flag is {@code false}.</li>
+   *   <li>Calling {@link #and(Criteria)} or {@link #or(Criteria)} with no criteria accumulated
+   *       yet behaves like {@link #where(Criteria)}.</li>
+   * </ul>
+   */
   public static final class Builder {
 
     private final ExtendedSelectQuery query = new ExtendedSelectQuery();
+    private final List<Criteria> stagedCriterias = new ArrayList<>();
 
     public Builder from(FromItem fromItem) {
       query.addFrom(fromItem);
@@ -52,15 +73,51 @@ public class ExtendedSelectQueryExecutor {
       return this;
     }
 
-    // TODO: add 'or' and 'and' methods, for proper configuration of conditions
+    /**
+     * Adds a criterion. Multiple {@code where} calls are joined with an implicit {@code AND}.
+     *
+     * @see Builder
+     */
     public Builder where(Criteria criteria) {
-      query.addCriteria(criteria);
+      stage(criteria);
       return this;
     }
 
     public Builder whereIf(boolean condition, Supplier<Criteria> criteria) {
       if (condition) {
-        query.addCriteria(criteria.get());
+        stage(criteria.get());
+      }
+      return this;
+    }
+
+    /**
+     * Explicitly composes the accumulated criteria-so-far with {@code criteria} using
+     * {@code Criteria.and}. Left-associative.
+     */
+    public Builder and(Criteria criteria) {
+      compose((left, right) -> Criteria.and(left, right), criteria);
+      return this;
+    }
+
+    public Builder andIf(boolean condition, Supplier<Criteria> criteria) {
+      if (condition) {
+        and(criteria.get());
+      }
+      return this;
+    }
+
+    /**
+     * Explicitly composes the accumulated criteria-so-far with {@code criteria} using
+     * {@code Criteria.or}. Left-associative.
+     */
+    public Builder or(Criteria criteria) {
+      compose((left, right) -> Criteria.or(left, right), criteria);
+      return this;
+    }
+
+    public Builder orIf(boolean condition, Supplier<Criteria> criteria) {
+      if (condition) {
+        or(criteria.get());
       }
       return this;
     }
@@ -94,11 +151,45 @@ public class ExtendedSelectQueryExecutor {
     }
 
     public ExtendedSelectQuery build() {
+      flushCriterias();
       return query;
     }
 
     public String sql() {
+      flushCriterias();
       return query.toString();
+    }
+
+    private void stage(Criteria criteria) {
+      stagedCriterias.add(Objects.requireNonNull(criteria, "Criteria can not be null."));
+    }
+
+    private Criteria accumulated() {
+      if (stagedCriterias.isEmpty()) {
+        return null;
+      }
+      if (stagedCriterias.size() == 1) {
+        return stagedCriterias.get(0);
+      }
+      return Criteria.and(stagedCriterias);
+    }
+
+    private void compose(BiFunction<Criteria, Criteria, Criteria> combiner, Criteria right) {
+      Objects.requireNonNull(right, "Criteria can not be null.");
+      if (stagedCriterias.isEmpty()) {
+        stage(right);
+      } else {
+        Criteria left = accumulated();
+        stagedCriterias.clear();
+        stage(combiner.apply(left, right));
+      }
+    }
+
+    private void flushCriterias() {
+      for (Criteria criteria : stagedCriterias) {
+        query.addCriteria(criteria);
+      }
+      stagedCriterias.clear();
     }
   }
 }
