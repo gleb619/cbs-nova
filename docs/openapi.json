@@ -1,0 +1,2338 @@
+{
+  "components": {
+    "schemas": {
+      "BucketRow": {
+        "properties": {
+          "bucketStart": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "statusCounts": {
+            "additionalProperties": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "CallNode": {
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/CallNode"
+            },
+            "type": "array"
+          },
+          "externalCalls": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "input": {},
+          "kind": {
+            "enum": [
+              "PROCESS",
+              "TRANSACTION",
+              "HELPER",
+              "FUNCTION"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "output": {},
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "CompileDiagnostic": {
+        "properties": {
+          "column": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "file": {
+            "type": "string"
+          },
+          "line": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ConstructBodyDto": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepDto"
+            },
+            "type": "array"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "DefinitionBundle": {
+        "properties": {
+          "definitions": {
+            "items": {
+              "$ref": "#/components/schemas/DefinitionBundleEntry"
+            },
+            "type": "array"
+          },
+          "engineVersion": {
+            "type": "string"
+          },
+          "exportedAt": {
+            "type": "string"
+          },
+          "formatVersion": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "DefinitionBundleEntry": {
+        "properties": {
+          "definition": {
+            "$ref": "#/components/schemas/DraftRequest"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "DraftRequest": {
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "taskQueue": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "DslDescriptor": {
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "hasCompensation": {
+            "type": "boolean"
+          },
+          "hasSideEffects": {
+            "type": "boolean"
+          },
+          "heartbeatTimeout": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parameters": {
+            "items": {
+              "$ref": "#/components/schemas/ParameterDescriptor"
+            },
+            "type": "array"
+          },
+          "previewBehavior": {
+            "type": "string"
+          },
+          "startToCloseTimeout": {
+            "type": "string"
+          },
+          "taskQueue": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "PROCESS",
+              "TRANSACTION",
+              "FUNCTION",
+              "OTHER"
+            ],
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ErrorEntry": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "stackTrace": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "diagnostics": {
+            "items": {
+              "$ref": "#/components/schemas/CompileDiagnostic"
+            },
+            "type": "array"
+          },
+          "entityName": {
+            "type": "string"
+          },
+          "exceptionId": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ExecutableDescriptor": {
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "hasSideEffects": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parameters": {
+            "items": {
+              "$ref": "#/components/schemas/ParameterDescriptor"
+            },
+            "type": "array"
+          },
+          "previewBehavior": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ExecutionDto": {
+        "properties": {
+          "completedAt": {
+            "type": "string"
+          },
+          "correlationId": {
+            "type": "string"
+          },
+          "duration": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "entityType": {
+            "type": "string"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorEntry"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          },
+          "input": {},
+          "mode": {
+            "type": "string"
+          },
+          "output": {},
+          "retries": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "startedAt": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "trace": {
+            "items": {
+              "$ref": "#/components/schemas/TraceStepDto"
+            },
+            "type": "array"
+          },
+          "triggeredBy": {
+            "type": "string"
+          },
+          "workflowId": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ExecutionStatsResponse": {
+        "properties": {
+          "statusCounts": {
+            "additionalProperties": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "type": "object"
+          },
+          "topProcesses": {
+            "items": {
+              "$ref": "#/components/schemas/ProcessRunCount"
+            },
+            "type": "array"
+          },
+          "totalRuns": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "windowFailedRuns": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "windowFailureRate": {
+            "format": "double",
+            "type": "number"
+          },
+          "windowHours": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "windowRuns": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ExecutionTimeseriesResponse": {
+        "properties": {
+          "bucketMinutes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "buckets": {
+            "items": {
+              "$ref": "#/components/schemas/BucketRow"
+            },
+            "type": "array"
+          },
+          "windowEnd": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "windowStart": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ExplainReport": {
+        "properties": {
+          "astTree": {
+            "$ref": "#/components/schemas/CallNode"
+          },
+          "callCounts": {
+            "additionalProperties": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "type": "object"
+          },
+          "description": {
+            "type": "string"
+          },
+          "dryRunLogs": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "dslDescriptor": {
+            "$ref": "#/components/schemas/DslDescriptor"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewErrorDetail"
+            },
+            "type": "array"
+          },
+          "executableDescriptor": {
+            "$ref": "#/components/schemas/ExecutableDescriptor"
+          },
+          "executionTrace": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "externalCalls": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "mermaidDiagram": {
+            "type": "string"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/PreviewMetricsSnapshot"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HelperSearchResult": {
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "inputType": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "outputType": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ImportBundleResult": {
+        "properties": {
+          "diagnostics": {
+            "items": {
+              "$ref": "#/components/schemas/CompileDiagnostic"
+            },
+            "type": "array"
+          },
+          "dryRun": {
+            "type": "boolean"
+          },
+          "failed": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "published": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "reloadError": {
+            "type": "string"
+          },
+          "reloaded": {
+            "type": "boolean"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/ImportEntryResult"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "ImportEntryResult": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "outcome": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "NamesResponse": {
+        "properties": {
+          "names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "PageResponse": {
+        "properties": {
+          "items": {
+            "items": {},
+            "type": "array"
+          },
+          "limit": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "offset": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ParameterDescriptor": {
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "STRING",
+              "NUMBER",
+              "BOOLEAN",
+              "OBJECT"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PreviewErrorDetail": {
+        "properties": {
+          "code": {
+            "enum": [
+              "DSL_COMPILATION_ERROR",
+              "HELPER_NOT_FOUND",
+              "EXTERNAL_CALL_FAILED",
+              "INPUT_VALIDATION_ERROR",
+              "COMPENSATION_ERROR",
+              "PREVIEW_TIMEOUT",
+              "TIMEOUT_EXCEEDED",
+              "UNKNOWN_ERROR"
+            ],
+            "type": "string"
+          },
+          "context": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "message": {
+            "type": "string"
+          },
+          "suggestion": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PreviewMetricsSnapshot": {
+        "properties": {
+          "callCounts": {
+            "additionalProperties": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "type": "object"
+          },
+          "executionDurationMs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "externalCallCounts": {
+            "additionalProperties": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "type": "object"
+          },
+          "memoryUsedBytes": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "PreviewReport": {
+        "properties": {
+          "astTree": {
+            "$ref": "#/components/schemas/CallNode"
+          },
+          "callCounts": {
+            "additionalProperties": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "type": "object"
+          },
+          "dryRunLogs": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewErrorDetail"
+            },
+            "type": "array"
+          },
+          "executionTrace": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "externalCalls": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/PreviewMetricsSnapshot"
+          },
+          "mode": {
+            "enum": [
+              "RUN",
+              "PREVIEW",
+              "EXPLAIN",
+              "COMPENSATION"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "output": {},
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "ProcessDetail": {
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "hasCompensation": {
+            "type": "boolean"
+          },
+          "inputSchema": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "inputType": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "outputType": {
+            "type": "string"
+          },
+          "taskQueue": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ProcessDiagramDto": {
+        "properties": {
+          "diagram": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ProcessRunCount": {
+        "properties": {
+          "processName": {
+            "type": "string"
+          },
+          "runCount": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ServerResponse": {},
+      "StepDto": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "inputMapping": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TraceStepDto": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "isCompensation": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "stepType": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TransactionDetail": {
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "hasCompensation": {
+            "type": "boolean"
+          },
+          "inputSchema": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "inputType": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "outputType": {
+            "type": "string"
+          },
+          "startToCloseTimeoutMs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "taskQueue": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TransactionExecutionDto": {
+        "properties": {
+          "duration": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "error": {
+            "type": "string"
+          },
+          "executedAt": {
+            "type": "string"
+          },
+          "finishedAt": {
+            "type": "string"
+          },
+          "input": {},
+          "startedAt": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "transactionName": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ValidationErrorsResponse": {
+        "properties": {
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "WebhookDeliveryInfo": {
+        "properties": {
+          "definitionPattern": {
+            "type": "string"
+          },
+          "lastAttempts": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "lastDeliveredAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "lastError": {
+            "type": "string"
+          },
+          "lastStatus": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "REST contract for the cbs-nova DSL runtime: introspection, preview / run / explain, and reload of DSL definitions.",
+    "title": "cbs-nova DSL API",
+    "version": "0.0.1-SNAPSHOT"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/dsl/audit": {
+      "get": {
+        "operationId": "listAuditEntries",
+        "parameters": [
+          {
+            "description": "Optional exact action filter (e.g. DEFINITION_PUBLISH)",
+            "in": "query",
+            "name": "action"
+          },
+          {
+            "description": "Maximum number of entries to return",
+            "in": "query",
+            "name": "limit"
+          },
+          {
+            "description": "Number of matching entries to skip before returning results",
+            "in": "query",
+            "name": "offset"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List append-only control-plane audit entries, newest first",
+        "tags": [
+          "DSL Audit"
+        ]
+      }
+    },
+    "/api/dsl/constructs/{name}": {
+      "get": {
+        "operationId": "getConstructBody",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConstructBodyDto"
+                }
+              }
+            },
+            "description": "Construct body"
+          }
+        },
+        "summary": "Get DSL construct body",
+        "tags": [
+          "DSL Introspection"
+        ]
+      }
+    },
+    "/api/dsl/definitions": {
+      "get": {
+        "operationId": "listDefinitions",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponse"
+                }
+              }
+            },
+            "description": "Definitions"
+          }
+        },
+        "summary": "List DSL definitions",
+        "tags": [
+          "DSL Introspection"
+        ]
+      }
+    },
+    "/api/dsl/definitions/export": {
+      "get": {
+        "operationId": "exportDefinitions",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionBundle"
+                }
+              }
+            },
+            "description": "Bundle exported"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured or not found"
+          }
+        },
+        "summary": "Export published (and optionally draft) definition metadata as a bundle",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/definitions/import": {
+      "post": {
+        "operationId": "importDefinitions",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportBundleResult"
+                }
+              }
+            },
+            "description": "Bundle imported (reload may have failed; see response)"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid bundle body or too many definitions"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured or not found"
+          }
+        },
+        "summary": "Import a definition metadata bundle, snapshotting history and reloading DSL",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/definitions/{name}/description": {
+      "patch": {
+        "operationId": "updateDescription",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Description updated"
+          },
+          "400": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Construct not found"
+          }
+        },
+        "summary": "Update DSL construct description",
+        "tags": [
+          "DSL Introspection"
+        ]
+      }
+    },
+    "/api/dsl/drafts": {
+      "get": {
+        "operationId": "listDrafts",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponse"
+                }
+              }
+            },
+            "description": "List of draft summaries"
+          }
+        },
+        "summary": "List Workbench draft summaries from .workbench/drafts",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/drafts/{name}": {
+      "delete": {
+        "operationId": "deleteDraft",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Draft deleted"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Draft not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured or not found"
+          }
+        },
+        "summary": "Delete a Workbench draft construct",
+        "tags": [
+          "DSL Admin"
+        ]
+      },
+      "get": {
+        "operationId": "readDraft",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Draft payload returned"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Draft not found"
+          }
+        },
+        "summary": "Read a single Workbench draft payload",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/drafts/{name}/history": {
+      "get": {
+        "operationId": "listPublishHistory",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "List of history entries"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured or not found"
+          }
+        },
+        "summary": "List published metadata snapshots for a construct",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/drafts/{name}/history/{timestamp}/restore": {
+      "post": {
+        "operationId": "restorePublishHistory",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Snapshot restored"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "History entry not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured or not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Reload failed"
+          }
+        },
+        "summary": "Restore a published metadata snapshot and reload DSL",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/drafts/{name}/publish": {
+      "post": {
+        "operationId": "publishDraft",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Construct published"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured or not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Reload failed"
+          }
+        },
+        "summary": "Persist a Workbench construct as published and reload DSL",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/drafts/{name}/save": {
+      "post": {
+        "operationId": "saveDraft",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Draft saved"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured or not found"
+          }
+        },
+        "summary": "Persist a Workbench draft construct to disk",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/explain/{name}": {
+      "post": {
+        "operationId": "explainDsl",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExplainReport"
+                }
+              }
+            },
+            "description": "Static analysis report including diagrams, AST, and dry-run logs"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorsResponse"
+                }
+              }
+            },
+            "description": "Input validation failed"
+          }
+        },
+        "summary": "Return a static analysis report of a DSL process",
+        "tags": [
+          "DSL Runtime"
+        ]
+      }
+    },
+    "/api/dsl/files": {
+      "get": {
+        "operationId": "listDslFiles",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "File entries"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured"
+          }
+        },
+        "summary": "List DSL source files",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/files/bulk": {
+      "post": {
+        "operationId": "bulkWriteDslFiles",
+        "responses": {
+          "202": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Bulk writes staged"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured"
+          }
+        },
+        "summary": "Stage many DSL file writes",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/files/by-name/{name}": {
+      "get": {
+        "operationId": "readDslFileByName",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "File content"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid name"
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Construct not found or has no source file"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bulkhead saturated"
+          }
+        },
+        "summary": "Read DSL source file content by construct name",
+        "tags": [
+          "DSL Admin"
+        ]
+      },
+      "post": {
+        "operationId": "writeDslFileByName",
+        "responses": {
+          "202": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Write staged"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid name or body"
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Construct not found or has no source file"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured"
+          }
+        },
+        "summary": "Stage DSL source file content by construct name",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/files/flush": {
+      "post": {
+        "operationId": "flushDslFiles",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Flush result"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured"
+          }
+        },
+        "summary": "Flush staged DSL file writes to disk",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/files/status": {
+      "get": {
+        "operationId": "dslFileStatus",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Pending count"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured"
+          }
+        },
+        "summary": "Pending write count",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/files/{path}": {
+      "get": {
+        "operationId": "readDslFile",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "File content"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid path"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bulkhead saturated"
+          }
+        },
+        "summary": "Read DSL source file content",
+        "tags": [
+          "DSL Admin"
+        ]
+      },
+      "post": {
+        "operationId": "writeDslFile",
+        "responses": {
+          "202": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Write staged"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid path or body"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured"
+          }
+        },
+        "summary": "Stage DSL source file content",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/helpers": {
+      "get": {
+        "operationId": "listHelpers",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HelperSearchResult"
+                }
+              }
+            },
+            "description": "Helper catalog"
+          }
+        },
+        "summary": "List DSL helpers",
+        "tags": [
+          "DSL Introspection"
+        ]
+      }
+    },
+    "/api/dsl/objects/search": {
+      "get": {
+        "operationId": "searchObjects",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "name"
+          },
+          {
+            "in": "query",
+            "name": "type"
+          },
+          {
+            "in": "query",
+            "name": "description"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HelperSearchResult"
+                }
+              }
+            },
+            "description": "Search results"
+          }
+        },
+        "summary": "Search DSL objects",
+        "tags": [
+          "DSL Introspection"
+        ]
+      }
+    },
+    "/api/dsl/preview/{name}": {
+      "post": {
+        "operationId": "previewDsl",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewReport"
+                }
+              }
+            },
+            "description": "Dry-run preview report including AST, execution trace, and captured external calls"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorsResponse"
+                }
+              }
+            },
+            "description": "Input validation or execution failed"
+          }
+        },
+        "summary": "Preview a DSL process without side effects",
+        "tags": [
+          "DSL Runtime"
+        ]
+      }
+    },
+    "/api/dsl/processes": {
+      "get": {
+        "operationId": "listProcesses",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NamesResponse"
+                }
+              }
+            },
+            "description": "Process names"
+          }
+        },
+        "summary": "List DSL process names",
+        "tags": [
+          "DSL Introspection"
+        ]
+      }
+    },
+    "/api/dsl/processes/{name}": {
+      "get": {
+        "operationId": "getProcessDetail",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessDetail"
+                }
+              }
+            },
+            "description": "Process detail"
+          }
+        },
+        "summary": "Get DSL process detail",
+        "tags": [
+          "DSL Introspection"
+        ]
+      }
+    },
+    "/api/dsl/processes/{name}/diagram": {
+      "get": {
+        "operationId": "getProcessDiagram",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessDiagramDto"
+                }
+              }
+            },
+            "description": "Process diagram"
+          }
+        },
+        "summary": "Get DSL process diagram",
+        "tags": [
+          "DSL Introspection"
+        ]
+      }
+    },
+    "/api/dsl/reload": {
+      "post": {
+        "operationId": "reload",
+        "responses": {
+          "204": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Reload successful"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured or not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Reload failed"
+          }
+        },
+        "summary": "Reload DSL definitions from configured source directory",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/run/{name}": {
+      "post": {
+        "operationId": "runDsl",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Execution result"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorsResponse"
+                }
+              }
+            },
+            "description": "Input validation or execution failed"
+          }
+        },
+        "summary": "Execute a DSL process with full side effects",
+        "tags": [
+          "DSL Runtime"
+        ]
+      }
+    },
+    "/api/dsl/transactions": {
+      "get": {
+        "operationId": "listTransactions",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NamesResponse"
+                }
+              }
+            },
+            "description": "Transaction names"
+          }
+        },
+        "summary": "List DSL transaction names",
+        "tags": [
+          "DSL Introspection"
+        ]
+      }
+    },
+    "/api/dsl/transactions/{name}": {
+      "get": {
+        "operationId": "getTransactionDetail",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionDetail"
+                }
+              }
+            },
+            "description": "Transaction detail"
+          }
+        },
+        "summary": "Get DSL transaction detail",
+        "tags": [
+          "DSL Introspection"
+        ]
+      }
+    },
+    "/api/executions": {
+      "get": {
+        "operationId": "listExecutions",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "processName"
+          },
+          {
+            "in": "query",
+            "name": "status"
+          },
+          {
+            "description": "Maximum number of runs to return",
+            "in": "query",
+            "name": "limit"
+          },
+          {
+            "description": "Number of matching runs to skip before returning results",
+            "in": "query",
+            "name": "offset"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponse"
+                }
+              }
+            },
+            "description": "Matching execution runs"
+          }
+        },
+        "summary": "List DSL execution runs",
+        "tags": [
+          "DSL Executions"
+        ]
+      }
+    },
+    "/api/executions/export.csv": {
+      "get": {
+        "operationId": "exportExecutionsCsv",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "processName"
+          },
+          {
+            "in": "query",
+            "name": "status"
+          },
+          {
+            "in": "query",
+            "name": "mode"
+          },
+          {
+            "in": "query",
+            "name": "correlationId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {}
+            },
+            "description": "CSV export of matching execution runs"
+          }
+        },
+        "summary": "Export DSL execution runs as CSV",
+        "tags": [
+          "DSL Executions"
+        ]
+      }
+    },
+    "/api/executions/stats": {
+      "get": {
+        "operationId": "getExecutionStats",
+        "parameters": [
+          {
+            "description": "Maximum number of processes in the top-by-run-count list",
+            "in": "query",
+            "name": "topProcesses"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionStatsResponse"
+                }
+              }
+            },
+            "description": "Aggregate run statistics"
+          }
+        },
+        "summary": "Aggregate DSL execution run statistics",
+        "tags": [
+          "DSL Executions"
+        ]
+      }
+    },
+    "/api/executions/stats/timeseries": {
+      "get": {
+        "operationId": "getExecutionTimeseries",
+        "parameters": [
+          {
+            "description": "Trailing window in hours; clamped to [1, 720]",
+            "in": "query",
+            "name": "windowHours"
+          },
+          {
+            "description": "Bucket width in minutes; clamped to [1, 1440]",
+            "in": "query",
+            "name": "bucketMinutes"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionTimeseriesResponse"
+                }
+              }
+            },
+            "description": "Per-bucket run counts"
+          }
+        },
+        "summary": "Per-bucket run counts grouped by status",
+        "tags": [
+          "DSL Executions"
+        ]
+      }
+    },
+    "/api/executions/{id}": {
+      "get": {
+        "operationId": "getExecution",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionDto"
+                }
+              }
+            },
+            "description": "The execution run"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No run with the given id"
+          }
+        },
+        "summary": "Get a single DSL execution run by id",
+        "tags": [
+          "DSL Executions"
+        ]
+      }
+    },
+    "/api/executions/{id}/cancel": {
+      "post": {
+        "operationId": "cancelExecution",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionDto"
+                }
+              }
+            },
+            "description": "The cancelled execution run"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No run with the given id"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The run is not in a cancellable state"
+          }
+        },
+        "summary": "Cancel a running DSL execution run",
+        "tags": [
+          "DSL Executions"
+        ]
+      }
+    },
+    "/api/executions/{id}/transactions": {
+      "get": {
+        "operationId": "getExecutionTransactions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TransactionExecutionDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Transaction executions for the run, most recent first"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No run with the given id"
+          }
+        },
+        "summary": "List transaction executions for a run",
+        "tags": [
+          "DSL Executions"
+        ]
+      }
+    },
+    "/api/webhooks/deliveries": {
+      "get": {
+        "operationId": "listWebhookDeliveries",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WebhookDeliveryInfo"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Last delivery outcome per configured subscription"
+          }
+        },
+        "summary": "List last webhook delivery outcomes",
+        "tags": [
+          "Webhooks"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Generated server url",
+      "url": "http://localhost:8090"
+    }
+  ],
+  "tags": [
+    {
+      "description": "Run-completion webhook diagnostics",
+      "name": "Webhooks"
+    },
+    {
+      "description": "Inspect DSL execution runs",
+      "name": "DSL Executions"
+    }
+  ]
+}

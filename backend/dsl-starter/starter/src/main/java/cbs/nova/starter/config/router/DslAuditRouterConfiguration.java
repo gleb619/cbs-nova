@@ -11,7 +11,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springdoc.core.annotations.RouterOperation;
 import org.springdoc.core.annotations.RouterOperations;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -20,12 +19,16 @@ import org.springframework.web.servlet.function.RouterFunctions;
 import org.springframework.web.servlet.function.ServerResponse;
 
 /**
- * Registers the read side of the append-only audit log under {@code GET /api/dsl/audit}. The whole
- * router is conditional on a {@link DslAuditRepository} bean, so the route vanishes when no
- * {@code DataSource} is configured (mirrors {@link DslScheduleRouterConfiguration}).
+ * Registers the read side of the append-only audit log under {@code GET /api/dsl/audit}.
+ *
+ * <p>
+ * Requires a {@link DslAuditRepository} bean (created when a {@code DataSource} is present), the
+ * same implicit requirement as the executions endpoints' handlers. Note: {@code @ConditionalOnBean}
+ * does not work here — this class is component-scanned from {@code cbs.nova.starter}, so its
+ * conditions evaluate before auto-configuration bean definitions (like {@code DslAuditRepository})
+ * are registered.
  */
 @Configuration
-@ConditionalOnBean(DslAuditRepository.class)
 public class DslAuditRouterConfiguration {
 
   @Bean

@@ -116,7 +116,7 @@ springdoc:
   swagger-ui:
     enabled: true
     path: /swagger-ui.html
-  packages-to-scan: cbs.nova.starter.controllers
+  packages-to-scan: cbs.nova.starter
 
 # Actuator + metrics
 management:
