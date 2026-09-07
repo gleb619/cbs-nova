@@ -324,3 +324,146 @@ if (polled.statusCode() == 304) {
     // no change since last poll — skip downstream processing
 }
 ```
+
+## Calling an authenticated API with `jwt` verify, `httpAuth` bearer, and `httpCall`
+
+Verify a caller's JWT, build an `Authorization: Bearer ...` header, and forward the request to a downstream HTTP API. This wires trust, auth-header construction, and transport together in one process.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/JwtHttpCallDsl.java` (input/output models in `backend/dsl-starter/dsl-examples/src/models/JwtHttpCallModels.java`).
+
+```java
+var verified = ctx.runHelper("jwt",
+        new JwtIn("verify", in.token(), in.secret(), "HS256", null, null, null));
+JwtOut jwtOut = verified.as(JwtOut.class);
+@SuppressWarnings("unchecked")
+Map<String, Object> claims = (Map<String, Object>)
+        ((Map<String, Object>) jwtOut.result()).get("payload");
+String subject = claims != null ? String.valueOf(claims.get("sub")) : null;
+
+var auth = ctx.runHelper("httpAuth",
+        new HttpAuthIn("bearer", in.token(), null, null, null, null, null, null));
+HttpAuthOut authOut = auth.as(HttpAuthOut.class);
+
+var call = ctx.runHelper("httpCall",
+        new HttpCallIn(in.url(), method, authOut.headers(), in.body(), null, null));
+HttpCallOut response = call.as(HttpCallOut.class);
+```
+
+With a valid HS256 token whose payload contains `"sub": "user-42"`, the process returns `verified=true`, `subject=user-42`, plus the HTTP response status and body from the downstream call.
+
+## Applying a JSON Merge Patch and reading back with `jsonPatch` + `jsonExtract`
+
+Use `jsonPatch` in `apply` mode to mutate a stored JSON document, then read a value out of the patched document with `jsonExtract` for a lightweight update-and-read round trip.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/JsonPatchRoundTripDsl.java` (input/output models in `backend/dsl-starter/dsl-examples/src/models/JsonPatchModels.java`).
+
+```java
+var patched = ctx.runHelper("jsonPatch",
+        new JsonPatchIn(in.sourceJson(), in.patchJson(), null, "apply"));
+JsonPatchOut patchedOut = patched.as(JsonPatchOut.class);
+
+var read = ctx.runHelper("jsonExtract",
+        new JsonExtractIn(patchedOut.result(), in.readPath()));
+JsonExtractOut readOut = read.as(JsonExtractOut.class);
+```
+
+Patching `{"status":"pending","counter":1}` with `{"status":"ready","counter":2}` and reading `status` returns `patchedJson={"status":"ready","counter":2}` and `extractedValue=ready` with `present=true`.
+
+## Aggregating records with `listOps` pluck/groupBy and `math` mean/max
+
+Turn a list of records into derived values: pull a numeric column with `listOps` `pluck`, group the same records with `groupBy`, then run `math` `mean` and `max` over the extracted numbers.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/RecordAggregationDsl.java` (input/output models in `backend/dsl-starter/dsl-examples/src/models/AggregationModels.java`).
+
+```java
+var plucked = ctx.runHelper("listOps",
+        new ListOpsIn("pluck", in.records(), null, null, in.valueField(), null));
+List<Object> prices = (List<Object>) plucked.as(ListOpsOut.class).result();
+
+var grouped = ctx.runHelper("listOps",
+        new ListOpsIn("groupBy", in.records(), null, null, in.groupField(), null));
+@SuppressWarnings("unchecked")
+Map<String, List<Map<String, Object>>> groups =
+        (Map<String, List<Map<String, Object>>>) grouped.as(ListOpsOut.class).result();
+
+double mean = ((Number) ctx.runHelper("math",
+        new MathIn("mean", (List<Number>) (List<?>) prices, null, null, null, null, null))
+        .as(MathOut.class).result()).doubleValue();
+
+double max = ((Number) ctx.runHelper("math",
+        new MathIn("max", (List<Number>) (List<?>) prices, null, null, null, null, null))
+        .as(MathOut.class).result()).doubleValue();
+```
+
+Given sales records grouped by `region` and values in `amount`, the process returns the extracted `prices`, a `groups` map keyed by region, plus the `mean` and `max` amounts.
+
+## Checking a release window with `semver` compare and `dateMath` add
+
+Gate a rollout on a minimum semantic version and compute the planned rollout date by adding days to a release anchor with `dateMath`.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/ReleaseWindowDsl.java` (input/output models in `backend/dsl-starter/dsl-examples/src/models/ReleaseWindowModels.java`).
+
+```java
+var cmp = ctx.runHelper("semver",
+        new SemverIn("compare", null, in.currentVersion(), in.minimumVersion(),
+                null, null, null, null, null, null, null));
+int comparison = ((Number) cmp.as(SemverOut.class).result()).intValue();
+boolean versionOk = comparison >= 0;
+
+var shifted = ctx.runHelper("dateMath",
+        new DateMathIn("add", in.releaseDate(), null, in.daysToAdd(), "days", null));
+String rolloutDate = shifted.as(DateMathOut.class).value();
+```
+
+Comparing current version `2.5.1` against minimum `2.4.0` yields `versionOk=true`. Adding `7` days to `2026-09-07` returns `rolloutDate=2026-09-14`.
+
+## Building a CSV export from `parseCsv` and `parseYaml` with `formatCsv`
+
+Parse a CSV data file, enrich it from a YAML lookup table, and emit a new RFC 4180 CSV string with `formatCsv`.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/CsvYamlExportDsl.java` (input/output models in `backend/dsl-starter/dsl-examples/src/models/CsvYamlExportModels.java`).
+
+```java
+var csv = ctx.runHelper("parseCsv",
+        new ParseCsvIn(in.csvPayload(), in.csvOptions()));
+ParseCsvOut csvOut = csv.as(ParseCsvOut.class);
+
+var yaml = ctx.runHelper("parseYaml", new ParseYamlIn(in.yamlPayload()));
+@SuppressWarnings("unchecked")
+Map<String, Object> lookup = (Map<String, Object>) yaml.as(ParseYamlOut.class).data();
+
+List<List<String>> outRows = new ArrayList<>();
+for (List<String> row : csvOut.rows()) {
+  String code = row.get(0);
+  String name = lookup.containsKey(code)
+      ? String.valueOf(lookup.get(code))
+      : code;
+  outRows.add(List.of(code, name, row.size() > 1 ? row.get(1) : ""));
+}
+
+var formatted = ctx.runHelper("formatCsv",
+        new FormatCsvIn(outRows, List.of("Code", "Name", "Source"), in.csvOptions()));
+String csvResult = formatted.as(FormatCsvOut.class).csv();
+```
+
+With `csvOptions` set to `new CsvOptions(",", true, "\r\n")` (so `parseCsv` drops the header), feeding a CSV with header `Code,Source` and rows `US,web` plus a YAML map `US: United States` produces `csvResult` containing `Code,Name,Source\r\nUS,United States,web`.
+
+## Constructing paginated URLs with `queryString` and `urlEncode`
+
+Encode a raw path segment for RFC 3986 and build a form-encoded query string in one helper pipeline, then concatenate a clean paginated URL.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/PaginatedUrlDsl.java` (input/output models in `backend/dsl-starter/dsl-examples/src/models/PaginatedUrlModels.java`).
+
+```java
+var encoded = ctx.runHelper("urlEncode",
+        new UrlEncodeIn(in.pathSegment(), null, false));
+String encodedPath = encoded.as(UrlEncodeOut.class).result();
+
+var query = ctx.runHelper("queryString",
+        new QueryStringIn("build", in.queryParams(), null));
+String queryString = (String) query.as(QueryStringOut.class).result();
+
+String url = in.baseUrl() + "/" + encodedPath + "?" + queryString;
+```
+
+Encoding the segment `hello world` gives `hello%20world`, and building params `page=1` and `limit=50` gives `page=1&limit=50`. The result is a URL like `https://api.example.com/hello%20world?page=1&limit=50`.
