@@ -5,11 +5,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -34,11 +35,26 @@ public class DslFileRepository {
     }
   }
 
+  /**
+   * Writes {@code content} atomically: the full content is staged in a temp file in the same
+   * directory and then published via {@link Files#move(Path, Path, CopyOption...)}
+   * {@code ATOMIC_MOVE}. Concurrent readers therefore always observe a complete old or new
+   * version of the file — never a truncated or interleaved one — which is what makes flush safe
+   * across multiple app replicas sharing one workspace directory (see DslFileService).
+   */
   public Path write(Path root, String relativePath, String content) throws IOException {
     Path file = resolve(root, relativePath);
     Files.createDirectories(file.getParent());
-    try (BufferedWriter writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
-      writer.write(content);
+    Path tmp = Files.createTempFile(file.getParent(), file.getFileName().toString(), ".tmp");
+    try {
+      Files.writeString(tmp, content, StandardCharsets.UTF_8);
+      try {
+        Files.move(tmp, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+      } catch (AtomicMoveNotSupportedException e) {
+        Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
+      }
+    } finally {
+      Files.deleteIfExists(tmp);
     }
     return file;
   }

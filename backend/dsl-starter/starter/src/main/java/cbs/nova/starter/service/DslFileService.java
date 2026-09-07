@@ -34,8 +34,12 @@ public class DslFileService {
   private final DslFileBuffer buffer;
   private final DslFileBulkhead bulkhead;
 
-  // TODO: since app will be started in docker, we need some other way of lock, to prevent multi
-  // flush
+  // Cross-replica flush safety needs no DB lock: each replica has its own DslFileBuffer, and
+  // repository.write publishes whole files atomically (temp file + ATOMIC_MOVE), so concurrent
+  // flushes to a shared workspace are last-write-wins per file, never corruption. This lock
+  // only guards the drain against same-JVM concurrent flush callers (manual flush from the web
+  // thread, @PreDestroy stop) since the single-thread flushExecutor alone does not serialize
+  // those.
   private final ReentrantLock flushLock = new ReentrantLock();
   private ScheduledExecutorService flushExecutor;
 

@@ -9,6 +9,16 @@ an operator needs to grep a log. For architecture, see
 [`architecture-backend.md`](architecture-backend.md) (security & ops layer) and
 [`dsl/configuration.md`](dsl/configuration.md) (every property named here).
 
+## Multi-instance deployment — DSL file flush contract
+
+Multiple app replicas may share one Postgres and one workbench workspace directory. DSL file
+flush is safe under that setup: each replica stages edits in its own in-JVM buffer, and every
+file is published atomically (temp file + atomic rename in the target directory), so concurrent
+flushes are last-write-wins per file — readers never see truncated or interleaved content and
+no cross-process lock is needed. Writes to the *same* DSL file from two replicas within one
+flush interval can still overwrite each other (last flush wins); treat a shared workspace as
+single-writer-per-file by routing edits through one replica or accepting overwrite semantics.
+
 ## Reference — where things live
 
 | Thing | Local URL | Notes |
