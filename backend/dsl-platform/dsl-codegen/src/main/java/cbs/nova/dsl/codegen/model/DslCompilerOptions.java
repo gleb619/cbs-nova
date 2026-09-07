@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Path;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Builder
@@ -20,9 +21,13 @@ public record DslCompilerOptions(
         @NonNull Path outputDir,
         @NonNull String buildVersion,
         String targetPackage,
+        String basePackage,
         @Deprecated(forRemoval = true) @NonNull Level logLevel,
         String classpath,
         boolean useFileNameSubPackage) {
+
+  private static final Pattern PACKAGE_PATTERN = Pattern.compile(
+          "^[a-zA-Z_$][\\w$]*(\\.[a-zA-Z_$][\\w$]*)*$");
 
   public static @NonNull DslCompilerOptions fromProperties(@NonNull String serialized) {
     var properties = new Properties();
@@ -39,15 +44,20 @@ public record DslCompilerOptions(
     var outputDir = requirePath(properties, "outputDir");
     var buildVersion = blankToNull(properties.getProperty("buildVersion"));
     var targetPackage = blankToNull(properties.getProperty("targetPackage"));
+    var basePackage = blankToNull(properties.getProperty("basePackage"));
     var logLevel = parseLogLevel(properties.getProperty("logLevel"));
     var classpath = blankToNull(properties.getProperty("classpath"));
     var useFileNameSubPackage = parseBooleanFlag(properties.getProperty("useFileNameSubPackage"));
+
+    validatePackageName(targetPackage, "targetPackage");
+    validatePackageName(basePackage, "basePackage");
 
     return new DslCompilerOptions(
             srcDir,
             outputDir,
             buildVersion != null ? buildVersion : DEFAULT_BUILD_VERSION,
             targetPackage,
+            basePackage,
             logLevel,
             classpath,
             useFileNameSubPackage);
@@ -60,6 +70,15 @@ public record DslCompilerOptions(
       throw new IllegalArgumentException("Missing required compiler option: " + key);
     }
     return Path.of(value);
+  }
+
+  private static void validatePackageName(String value, String key) {
+    if (value == null) {
+      return;
+    }
+    if (!PACKAGE_PATTERN.matcher(value).matches()) {
+      throw new IllegalArgumentException("Invalid " + key + ": " + value);
+    }
   }
 
   private static @NonNull Level parseLogLevel(String value) {

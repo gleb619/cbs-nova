@@ -38,6 +38,10 @@ public abstract class DslCompileTask extends JavaExec {
 
   @Input
   @Optional
+  public abstract Property<String> getBasePackage();
+
+  @Input
+  @Optional
   public abstract Property<String> getBuildVersion();
 
   @Input
@@ -76,6 +80,7 @@ public abstract class DslCompileTask extends JavaExec {
     properties.setProperty("outputDir", output.getAbsolutePath());
     properties.setProperty("buildVersion", version);
     properties.setProperty("targetPackage", getDslPackage().getOrElse(""));
+    properties.setProperty("basePackage", getBasePackage().getOrElse(""));
     properties.setProperty("logLevel", getLogLevel().getOrElse("INFO"));
     properties.setProperty("classpath", getClasspath().getAsPath());
     properties.setProperty("useFileNameSubPackage",

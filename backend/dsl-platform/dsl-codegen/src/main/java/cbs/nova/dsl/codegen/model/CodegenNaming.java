@@ -1,15 +1,16 @@
 package cbs.nova.dsl.codegen.model;
 
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
+@RequiredArgsConstructor
 public final class CodegenNaming {
 
-  // TODO: move to compiler/gradle settings
-  private static final String BASE_PACKAGE = "cbs.nova.dsl.generated";
+  private final String defaultBasePackage;
 
   public @NonNull String registryPackage(@Nullable String targetPackage) {
-    return (targetPackage != null && !targetPackage.isBlank()) ? targetPackage : BASE_PACKAGE;
+    return (targetPackage != null && !targetPackage.isBlank()) ? targetPackage : defaultBasePackage;
   }
 
   public String versionedPackage(
@@ -18,7 +19,7 @@ public final class CodegenNaming {
           @Nullable String targetPackage) {
     String basePackage = (targetPackage != null && !targetPackage.isBlank())
             ? targetPackage
-            : BASE_PACKAGE;
+            : defaultBasePackage;
     String nameSegment = name.toLowerCase().replaceAll("[^a-z0-9]", "");
     return basePackage + "." + nameSegment + "." + versionSegment(version);
   }
@@ -28,7 +29,7 @@ public final class CodegenNaming {
           @Nullable String targetPackage) {
     String basePackage = (targetPackage != null && !targetPackage.isBlank())
             ? targetPackage
-            : BASE_PACKAGE;
+            : defaultBasePackage;
     return basePackage + "." + versionSegment(version);
   }
 

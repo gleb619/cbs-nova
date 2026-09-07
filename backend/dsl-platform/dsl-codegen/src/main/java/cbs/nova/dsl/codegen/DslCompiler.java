@@ -62,8 +62,11 @@ public final class DslCompiler {
   }
 
   public static void compile(@NonNull DslCompilerOptions options) throws IOException {
+    var defaultBasePackage = options.basePackage() != null && !options.basePackage().isBlank()
+            ? options.basePackage()
+            : CompileConfig.DEFAULT_GENERATED_BASE_PACKAGE;
     CompileConfig.compileConfig()
-            .dslCompiler()
+            .dslCompiler(defaultBasePackage)
             .compileInternal(options);
   }
 

@@ -225,7 +225,7 @@ class DslCompilerTest {
                     """);
 
     var options = new DslCompilerOptions(
-            srcDir, outDir, "v1", "cbs.nova.dsl.test", Level.INFO, null, false);
+            srcDir, outDir, "v1", "cbs.nova.dsl.test", null, Level.INFO, null, false);
     DslCompiler.compile(options);
 
     var flatDir = outDir.resolve("cbs/nova/dsl/test/v1");

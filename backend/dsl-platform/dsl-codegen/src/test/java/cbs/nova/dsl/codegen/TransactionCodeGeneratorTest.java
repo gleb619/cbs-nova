@@ -20,7 +20,7 @@ import java.util.Map;
 class TransactionCodeGeneratorTest {
 
   private final TransactionCodeGenerator generator = new TransactionCodeGenerator(
-          new DslPackageNameResolver(new CodegenNaming()));
+          new DslPackageNameResolver(new CodegenNaming("cbs.nova.dsl.generated")));
 
   @Test
   void generatesTwoSources() {

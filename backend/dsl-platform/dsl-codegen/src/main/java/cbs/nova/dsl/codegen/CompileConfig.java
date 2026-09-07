@@ -26,6 +26,8 @@ import org.jspecify.annotations.NonNull;
 @RequiredArgsConstructor
 public final class CompileConfig implements SingletonSupport {
 
+  public static final String DEFAULT_GENERATED_BASE_PACKAGE = "cbs.nova.dsl.generated";
+
   private final Scope scope;
 
   public static CompileConfig compileConfig() {
@@ -39,7 +41,11 @@ public final class CompileConfig implements SingletonSupport {
   /* ============= */
 
   public @NonNull CodegenNaming codegenNaming() {
-    return singleton(CodegenNaming::new);
+    return codegenNaming(DEFAULT_GENERATED_BASE_PACKAGE);
+  }
+
+  public @NonNull CodegenNaming codegenNaming(@NonNull String defaultBasePackage) {
+    return singleton(() -> new CodegenNaming(defaultBasePackage));
   }
 
   public @NonNull SourcePackageResolver sourcePackageResolver() {
@@ -126,19 +132,36 @@ public final class CompileConfig implements SingletonSupport {
   }
 
   public @NonNull DslCompiler dslCompiler() {
-    return singleton(
-            () -> new DslCompiler(
-                    modelRegistryGenerator(),
-                    dslSourceCompiler(),
-                    processCodeGenerator(),
-                    transactionCodeGenerator(),
-                    generatedClassProviderGenerator(),
-                    codeWriter(),
-                    descriptorFactory(),
-                    semanticValidator(),
-                    helperRegistry(),
-                    codegenNaming(),
-                    dslPreprocessor()));
+    return dslCompiler(DEFAULT_GENERATED_BASE_PACKAGE);
+  }
+
+  public @NonNull DslCompiler dslCompiler(@NonNull String defaultBasePackage) {
+    return singleton(() -> {
+      var codegenNaming = codegenNaming(defaultBasePackage);
+      var packageNameResolver = new DslPackageNameResolver(codegenNaming);
+      var sourcePackageResolver = new SourcePackageResolver(packageNameResolver);
+      var sourceCompiler = new SourceCompiler(
+              definitionProviderGenerator(),
+              codeWriter(),
+              dslPreprocessor(),
+              modelPreprocessor(),
+              sourcePackageResolver);
+      var dslSourceCompiler = new DslSourceCompiler(sourceCompiler);
+
+      return new DslCompiler(
+              new ModelRegistryGenerator(codeWriter(), codegenNaming, modelTypeExtractor(),
+                      sourcePackageResolver),
+              dslSourceCompiler,
+              new ProcessCodeGenerator(packageNameResolver),
+              new TransactionCodeGenerator(packageNameResolver),
+              new GeneratedClassProviderGenerator(executeAstJsonExtractor(), packageNameResolver),
+              codeWriter(),
+              descriptorFactory(),
+              semanticValidator(),
+              helperRegistry(),
+              codegenNaming,
+              dslPreprocessor());
+    });
   }
 
   /* ============= */

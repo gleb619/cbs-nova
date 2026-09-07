@@ -24,7 +24,7 @@ import java.util.Map;
 class ProcessCodeGeneratorTest {
 
   private final ProcessCodeGenerator generator = new ProcessCodeGenerator(
-          new DslPackageNameResolver(new CodegenNaming()));
+          new DslPackageNameResolver(new CodegenNaming("cbs.nova.dsl.generated")));
 
   private static DescriptorFactory descriptor() {
     return new DescriptorFactory();
@@ -251,5 +251,21 @@ class ProcessCodeGeneratorTest {
     assertThat(impl.source()).doesNotContain("private void compensateReserveInventory");
     assertThat(impl.source()).doesNotContain("private void compensateChargePayment");
     assertThat(impl.source()).doesNotContain("Saga");
+  }
+
+  @Test
+  void packageUsesConfiguredBasePackageOption() {
+    var generator = new ProcessCodeGenerator(
+            new DslPackageNameResolver(new CodegenNaming("com.example.workflow")));
+    var descriptor = descriptor().fromProcess(
+            Dsl.process("LoanDisbursement")
+                    .input(String.class)
+                    .output(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+
+    var sources = generator.generate(descriptor, null, null, true);
+    assertThat(sources.get(0).packageName())
+            .isEqualTo("com.example.workflow.loandisbursement.v1");
   }
 }

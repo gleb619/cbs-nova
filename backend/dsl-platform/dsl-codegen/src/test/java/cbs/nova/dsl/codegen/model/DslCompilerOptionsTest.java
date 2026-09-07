@@ -24,6 +24,7 @@ class DslCompilerOptionsTest {
     props.setProperty("outputDir", out.toString());
     props.setProperty("buildVersion", "v2");
     props.setProperty("targetPackage", "cbs.nova.dslexamples");
+    props.setProperty("basePackage", "com.example.base");
     props.setProperty("logLevel", "DEBUG");
     props.setProperty("classpath", "a.jar:b.jar");
     props.setProperty("useFileNameSubPackage", "false");
@@ -34,6 +35,7 @@ class DslCompilerOptionsTest {
     assertThat(options.outputDir()).isEqualTo(out);
     assertThat(options.buildVersion()).isEqualTo("v2");
     assertThat(options.targetPackage()).isEqualTo("cbs.nova.dslexamples");
+    assertThat(options.basePackage()).isEqualTo("com.example.base");
     assertThat(options.logLevel()).isEqualTo(Level.DEBUG);
     assertThat(options.classpath()).isEqualTo("a.jar:b.jar");
     assertThat(options.useFileNameSubPackage()).isFalse();
@@ -51,13 +53,14 @@ class DslCompilerOptionsTest {
 
     assertThat(options.buildVersion()).isEqualTo("v1");
     assertThat(options.targetPackage()).isNull();
+    assertThat(options.basePackage()).isNull();
     assertThat(options.logLevel()).isEqualTo(Level.INFO);
     assertThat(options.classpath()).isNull();
     assertThat(options.useFileNameSubPackage()).isTrue();
   }
 
   @Test
-  void treatsBlankBuildVersionTargetPackageAndClasspathAsNullOrDefault() {
+  void treatsBlankBuildVersionTargetPackageBasePackageAndClasspathAsNullOrDefault() {
     var src = tempDir.resolve("src");
     var out = tempDir.resolve("out");
     var props = new Properties();
@@ -65,12 +68,14 @@ class DslCompilerOptionsTest {
     props.setProperty("outputDir", out.toString());
     props.setProperty("buildVersion", "   ");
     props.setProperty("targetPackage", "\t");
+    props.setProperty("basePackage", "");
     props.setProperty("classpath", "");
 
     var options = DslCompilerOptions.fromProperties(props);
 
     assertThat(options.buildVersion()).isEqualTo("v1");
     assertThat(options.targetPackage()).isNull();
+    assertThat(options.basePackage()).isNull();
     assertThat(options.classpath()).isNull();
   }
 
@@ -119,5 +124,29 @@ class DslCompilerOptionsTest {
     assertThatThrownBy(() -> DslCompilerOptions.fromProperties(props))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("NOPE");
+  }
+
+  @Test
+  void rejectsInvalidBasePackage() {
+    var props = new Properties();
+    props.setProperty("srcDir", tempDir.resolve("src").toString());
+    props.setProperty("outputDir", tempDir.resolve("out").toString());
+    props.setProperty("basePackage", "com..example");
+
+    assertThatThrownBy(() -> DslCompilerOptions.fromProperties(props))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("basePackage");
+  }
+
+  @Test
+  void rejectsInvalidTargetPackage() {
+    var props = new Properties();
+    props.setProperty("srcDir", tempDir.resolve("src").toString());
+    props.setProperty("outputDir", tempDir.resolve("out").toString());
+    props.setProperty("targetPackage", "1cbs.nova");
+
+    assertThatThrownBy(() -> DslCompilerOptions.fromProperties(props))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("targetPackage");
   }
 }
