@@ -49,6 +49,11 @@ management:
     health:
       show-details: always
       show-components: always
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,dslReadiness
   info:
     env:
       enabled: false

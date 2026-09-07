@@ -46,6 +46,42 @@ docker compose -f app/docker-compose.yml ps
 docker compose -f app/docker-compose.yml logs --tail=200 app
 make logs                       # tail all compose services
 ```
+---
+
+## Health endpoints
+
+Use the three actuator health URLs to decide whether a pod is alive, ready to take traffic, or
+unhealthy overall. Each endpoint answers a different fault domain.
+
+| Endpoint | What it reports | Included checks | When it is DOWN | Operator action |
+|---|---|---|---|---|
+| `/actuator/health` | Overall composite | All active indicators (`livenessState`, `readinessState`, `db`, `dsl`, `dslReadiness`, ...) | Any included indicator reports DOWN | Identify the failing component and follow the matching incident below. |
+| `/actuator/health/liveness` | In-process liveness only | `livenessState` | Only when the Spring context/JVM itself cannot respond (crash, OOM, deadlock). | Investigate the process; **do not restart the pod just because Temporal or DB are down**. |
+| `/actuator/health/readiness` | Ready to serve traffic | `readinessState`, `db` (launcher/production profile), `dslReadiness` | Temporal is unreachable **and** `cbs.health.temporal.fail-status=down`; or the database is down. | Pull the pod from the load balancer; fix the dependency. Set `cbs.health.temporal.fail-status=none` to keep serving while Temporal is down. |
+
+**Temporal reachability is a readiness-only failure.** Liveness intentionally makes no external
+calls, so a Temporal outage does **not** cause Kubernetes (or any orchestrator) to restart the
+pod. If readiness is DOWN and the orchestrator stops sending traffic, the pod stays up and
+re-enters rotation automatically once the dependency recovers.
+
+**Liveness stays UP during external dependency outages.** If liveness is DOWN, suspect an
+in-process problem (memory pressure, thread starvation, startup failure) rather than a
+Temporal/Postgres outage.
+
+**Readiness DOWN for Temporal is opt-in.** The default `cbs.health.temporal.fail-status=none`
+keeps readiness UP even when Temporal is unreachable. Operators who want load balancers to stop
+traffic during a Temporal outage must explicitly set `cbs.health.temporal.fail-status=down`.
+
+**Symptom → Triage → Mitigation:**
+1. `curl -s http://localhost:8090/actuator/health/liveness \| jq .status` — should be `UP`.
+2. `curl -s http://localhost:8090/actuator/health/readiness \| jq .status` — `DOWN` means stop
+traffic; check whether `dslReadiness` or `db` is the failing component.
+3. `curl -s http://localhost:8090/actuator/health \| jq .components` — see the full composite to
+tell an external-dependency problem from an internal one.
+
+**Verification.** After the dependency recovers, `/actuator/health/readiness` returns `UP` and
+`dslReadiness.details.temporal.reachable` becomes `true`; the pod re-enters rotation without a
+restart.
 
 ---
 

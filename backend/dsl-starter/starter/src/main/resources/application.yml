@@ -20,6 +20,15 @@ management:
       enabled: true
     build:
       enabled: true
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,dslReadiness
 
 # Expose request-scope MDC keys (rid = X-Request-Id, cid = X-Correlation-Id) on every
 # log line. %X{key:-} renders empty for uncorrelated requests (no noisy "null").
