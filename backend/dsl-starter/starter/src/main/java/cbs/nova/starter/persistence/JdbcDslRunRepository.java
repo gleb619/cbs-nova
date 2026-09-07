@@ -68,7 +68,7 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
       throw new IllegalArgumentException("limit must be positive, was " + limit);
     }
 
-    DslRunTableColumns t = new DslRunTableColumns(tableName);
+    DslRunTableColumns t = DslRunTableColumns.of(tableName);
     TableReference r = t.refer();
 
     int total;
@@ -84,7 +84,7 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
 
     ExtendedSelectQuery dataQuery = searchQuery(t, r, processName, status, mode, correlationId)
             .select(DslRunQueryCriteria.fullSelection(t, r).toArray(Selectable[]::new))
-            .orderByDesc(r.get(t.startedAt))
+            .orderByDesc(r.get(t.startedAt()))
             .limit(limit)
             .offset(offset)
             .build();
@@ -147,16 +147,16 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
     if (batchSize <= 0) {
       throw new IllegalArgumentException("batchSize must be positive, was " + batchSize);
     }
-    DslRunTableColumns t = new DslRunTableColumns(tableName);
+    DslRunTableColumns t = DslRunTableColumns.of(tableName);
 
     int total = 0;
     // TODO: refactor 'while' loop, to a 'for' loop
     while (true) {
       TableReference selectRef = t.refer();
       ExtendedSelectQuery select = dslQueries.select()
-              .select(selectRef.get(t.id), selectRef.get(t.runId))
-              .where(Criteria.less(selectRef.get(t.finishedAt), Literal.of(cutoff)))
-              .where(Criteria.notEqual(selectRef.get(t.status),
+              .select(selectRef.get(t.id()), selectRef.get(t.runId()))
+              .where(Criteria.less(selectRef.get(t.finishedAt()), Literal.of(cutoff)))
+              .where(Criteria.notEqual(selectRef.get(t.status()),
                       Literal.of(DslRunStatus.RUNNING.name())))
               .limit(batchSize)
               .build();
@@ -181,13 +181,13 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
       throw new IllegalArgumentException(
               "topProcessesLimit must be positive, was " + topProcessesLimit);
     }
-    DslRunTableColumns t = new DslRunTableColumns(tableName);
+    DslRunTableColumns t = DslRunTableColumns.of(tableName);
 
     TableReference statusRef = t.refer();
     ExtendedSelectQuery statusQuery = dslQueries.select()
-            .select(statusRef.get(t.status), Literal.unsafe("COUNT(*)"))
-            .groupBy(statusRef.get(t.status))
-            .orderByAsc(statusRef.get(t.status))
+            .select(statusRef.get(t.status()), Literal.unsafe("COUNT(*)"))
+            .groupBy(statusRef.get(t.status()))
+            .orderByAsc(statusRef.get(t.status()))
             .build();
     Map<String, Long> statusCounts = dslQueries.query(statusQuery,
             (rs, rowNum) -> Map.entry(rs.getString(1), rs.getLong(2)))
@@ -199,18 +199,18 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
 
     TableReference windowRef = t.refer();
     long windowRuns = countWhere(t,
-            Criteria.notLess(windowRef.get(t.startedAt), Literal.of(windowStart)));
+            Criteria.notLess(windowRef.get(t.startedAt()), Literal.of(windowStart)));
     TableReference failedRef = t.refer();
     long windowFailedRuns = countWhere(t, Criteria.and(
-            Criteria.notLess(failedRef.get(t.startedAt), Literal.of(windowStart)),
-            Criteria.equal(failedRef.get(t.status), Literal.of(DslRunStatus.FAILED.name()))));
+            Criteria.notLess(failedRef.get(t.startedAt()), Literal.of(windowStart)),
+            Criteria.equal(failedRef.get(t.status()), Literal.of(DslRunStatus.FAILED.name()))));
 
     TableReference topRef = t.refer();
     ExtendedSelectQuery topQuery = dslQueries.select()
-            .select(topRef.get(t.processName), Literal.unsafe("COUNT(*)"))
-            .groupBy(topRef.get(t.processName))
+            .select(topRef.get(t.processName()), Literal.unsafe("COUNT(*)"))
+            .groupBy(topRef.get(t.processName()))
             .orderByDesc(Literal.unsafe("COUNT(*)"))
-            .orderByAsc(topRef.get(t.processName))
+            .orderByAsc(topRef.get(t.processName()))
             .limit(topProcessesLimit)
             .build();
     List<DslRunStats.ProcessRunCount> topProcesses = dslQueries.query(topQuery,
@@ -241,17 +241,17 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
                       + bucketSeconds + ") so bucket boundaries are stable");
     }
 
-    DslRunTableColumns t = new DslRunTableColumns(tableName);
+    DslRunTableColumns t = DslRunTableColumns.of(tableName);
     TableReference r = t.refer();
 
     ExtendedSelectQuery query = dslQueries.select()
-            .select(DslRunQueryCriteria.minuteBucket(t, r), r.get(t.status),
+            .select(DslRunQueryCriteria.minuteBucket(t, r), r.get(t.status()),
                     Literal.unsafe("COUNT(*)"))
-            .where(Criteria.notLess(r.get(t.startedAt), Literal.of(windowStart)))
-            .where(Criteria.less(r.get(t.startedAt), Literal.of(windowEnd)))
-            .groupBy(DslRunQueryCriteria.minuteBucket(t, r), r.get(t.status))
+            .where(Criteria.notLess(r.get(t.startedAt()), Literal.of(windowStart)))
+            .where(Criteria.less(r.get(t.startedAt()), Literal.of(windowEnd)))
+            .groupBy(DslRunQueryCriteria.minuteBucket(t, r), r.get(t.status()))
             .orderByAsc(DslRunQueryCriteria.minuteBucket(t, r))
-            .orderByAsc(r.get(t.status))
+            .orderByAsc(r.get(t.status()))
             .build();
 
     List<RunTimeseriesBucket> minuteRows = dslQueries.query(query,
