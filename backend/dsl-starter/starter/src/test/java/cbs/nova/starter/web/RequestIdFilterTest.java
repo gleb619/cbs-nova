@@ -1,24 +1,27 @@
 package cbs.nova.starter.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
+import cbs.nova.starter.model.ErrorResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatchers;
-import org.mockito.Mockito;
 import org.slf4j.MDC;
-
-import java.io.IOException;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import tools.jackson.databind.ObjectMapper;
 
 class RequestIdFilterTest {
 
-  private final RequestIdFilter filter = new RequestIdFilter();
+  private final ObjectMapper objectMapper = new ObjectMapper();
+
+  private final RequestIdFilter filter = new RequestIdFilter(objectMapper);
 
   @AfterEach
   void tearDown() {
@@ -27,29 +30,84 @@ class RequestIdFilterTest {
 
   @Test
   void propagatesIncomingRequestIdToMdcAndResponse() throws ServletException, IOException {
-    HttpServletRequest request = mock(HttpServletRequest.class);
-    HttpServletResponse response = mock(HttpServletResponse.class);
-    FilterChain chain = mock(FilterChain.class);
-    when(request.getHeader("X-Request-Id")).thenReturn("req-abc");
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    request.addHeader("X-Request-Id", "req-abc");
+    MockHttpServletResponse response = new MockHttpServletResponse();
 
-    filter.doFilterInternal(request, response, chain);
+    filter.doFilterInternal(request, response, chainThatCapturesMdc());
 
-    assertThat(MDC.get("requestId")).isNull();
-    Mockito.verify(response).setHeader("X-Request-Id", "req-abc");
+    assertThat(capturedMdc.get("requestId")).isNull();
+    assertThat(response.getHeader("X-Request-Id")).isEqualTo("req-abc");
   }
 
   @Test
   void generatesRequestIdWhenHeaderMissing() throws ServletException, IOException {
-    HttpServletRequest request = mock(HttpServletRequest.class);
-    HttpServletResponse response = mock(HttpServletResponse.class);
-    FilterChain chain = mock(FilterChain.class);
-    when(request.getHeader("X-Request-Id")).thenReturn(null);
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    MockHttpServletResponse response = new MockHttpServletResponse();
 
-    filter.doFilterInternal(request, response, chain);
+    filter.doFilterInternal(request, response, chainThatCapturesMdc());
 
-    Mockito.verify(response)
-            .setHeader(ArgumentMatchers.eq("X-Request-Id"),
-                    ArgumentMatchers.argThat(
-                            (String id) -> id != null && !id.isBlank()));
+    assertThat(response.getHeader("X-Request-Id")).isNotBlank();
+  }
+
+  @Test
+  void putsValidCorrelationIdIntoMdcDuringRequestOnly() throws ServletException, IOException {
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    request.addHeader("X-Correlation-Id", "order-4711");
+    MockHttpServletResponse response = new MockHttpServletResponse();
+
+    filter.doFilterInternal(request, response, chainThatCapturesMdc());
+
+    assertThat(capturedMdc.get(RequestIdFilter.CORRELATION_ID_MDC_KEY)).isEqualTo("order-4711");
+    assertThat(MDC.get(RequestIdFilter.CORRELATION_ID_MDC_KEY)).isNull();
+    assertThat(MDC.get(RequestIdFilter.REQUEST_ID_MDC_KEY)).isNull();
+  }
+
+  @Test
+  void absentCorrelationIdLeavesNoCidInMdc() throws ServletException, IOException {
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    MockHttpServletResponse response = new MockHttpServletResponse();
+
+    filter.doFilterInternal(request, response, chainThatCapturesMdc());
+
+    assertThat(capturedMdc.containsKey(RequestIdFilter.CORRELATION_ID_MDC_KEY)).isFalse();
+    assertThat(MDC.get(RequestIdFilter.CORRELATION_ID_MDC_KEY)).isNull();
+  }
+
+  @Test
+  void invalidCorrelationIdRejectedWith400AndShortCircuits() throws ServletException, IOException {
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    request.addHeader("X-Correlation-Id", "bad id!");
+    MockHttpServletResponse response = new MockHttpServletResponse();
+
+    filter.doFilterInternal(request, response, chainThatFailsIfInvoked());
+
+    assertThat(response.getStatus()).isEqualTo(400);
+    assertThat(response.getContentType()).contains("application/json");
+    ErrorResponse body = objectMapper.readValue(response.getContentAsString(), ErrorResponse.class);
+    assertThat(body.code()).isEqualTo("INVALID_CORRELATION_ID");
+  }
+
+  private final Map<String, String> capturedMdc = new HashMap<>();
+
+  private FilterChain chainThatCapturesMdc() {
+    return new FilterChain() {
+      @Override
+      public void doFilter(ServletRequest request, ServletResponse response) {
+        capturedMdc.putAll(MDC.getCopyOfContextMap() == null ? Map.of()
+                : MDC.getCopyOfContextMap());
+      }
+    };
+  }
+
+  private static FilterChain chainThatFailsIfInvoked() {
+    return new FilterChain() {
+      @Override
+      public void doFilter(ServletRequest request, ServletResponse response) {
+        throw new AssertionError(
+                "RequestIdFilter must short-circuit and not invoke the chain on an invalid"
+                        + " X-Correlation-Id");
+      }
+    };
   }
 }

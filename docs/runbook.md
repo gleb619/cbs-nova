@@ -332,6 +332,54 @@ artifacts are deployed.
 
 ---
 
+## Correlating a request across logs
+
+Every request carries two ids. Both are optional — the caller may send either, neither, or both:
+
+- **`X-Request-Id`** — per-hop request id. If absent, the app generates a UUID and echoes it
+  back on the response so the caller learns it. The BFF also generates one per backend call.
+- **`X-Correlation-Id`** — caller-owned business-transaction id. The server **never**
+  generates one; absence means absent. Persisted on `dsl_runs.correlation_id` for run-path
+  lookups (see incident #4 for stuck runs).
+
+Where they show up:
+
+- **Backend log lines** carry both MDC keys on every line:
+  `INFO [rid=3f0a… cid=order-4711] …`. Uncorrelated requests render the segment with empty
+  values (`[rid=3f0a… cid=]`) — no noise, no `null`.
+- **BFF logs** (Nuxt/Nitro console) print a structured object next to each
+  `[BFF >]` / `[BFF <]` / `[BFF !]` line containing `requestId` and, when the browser sent
+  one, `correlationId`.
+- **`dsl_runs.correlation_id`** — query it directly to map a cid to its runs, then grep the
+  app log by the run ids.
+
+Trace one correlation id end-to-end:
+
+```bash
+# 1. Backend: every log line for this business transaction
+docker compose -f app/docker-compose.yml logs app | grep 'cid=order-4711'
+
+# 2. BFF: structured log objects mentioning the same cid (console.log of an object —
+#    Node renders it, jq not applicable; grep the plain text)
+docker compose -f app/docker-compose.yml logs frontend | grep 'order-4711'
+
+# 3. Run path: map the cid to run rows, then to the request ids in the app log
+docker exec -i $(docker ps -qf name=postgres) psql -U nova -d nova \
+  -c "SELECT run_id, process_name, status, started_at FROM dsl_runs WHERE correlation_id='order-4711';"
+```
+
+Feed a request a correlation id from the admin UI's API or any client:
+
+```bash
+curl -H 'X-Correlation-Id: order-4711' -H 'Content-Type: application/json' \
+  -d '{"body":{}}' http://localhost:8090/api/dsl/run/<name>
+```
+
+An `X-Correlation-Id` that violates the charset/length rules (`[A-Za-z0-9_.:/-]`, ≤200 chars)
+is rejected with `400 INVALID_CORRELATION_ID` before any handler runs.
+
+---
+
 ## Maintaining this runbook
 
 Every new ops-relevant change (a scheduled job, a new failure mode, a new external dependency)

@@ -16,6 +16,10 @@ spring:
   flyway:
     enabled: false
 
+logging:
+  pattern:
+    level: "%5p [rid=%X{rid:-} cid=%X{cid:-}]"
+
 management:
   endpoints:
     web:
