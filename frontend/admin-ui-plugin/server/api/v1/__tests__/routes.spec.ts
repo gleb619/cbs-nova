@@ -69,6 +69,7 @@ vi.mock('h3', async (importOriginal) => {
 const healthHandler = (await import('../health.get')).default
 const definitionsHandler = (await import('../dsl/definitions.get')).default
 const reloadHandler = (await import('../dsl/reload.post')).default
+const auditHandler = (await import('../dsl/audit.get')).default
 const runHandler = (await import('../dsl/run/[name].post')).default
 const previewHandler = (await import('../dsl/preview/[name].post')).default
 const explainHandler = (await import('../dsl/explain/[name].post')).default
@@ -206,6 +207,24 @@ describe('dsl/reload.post', () => {
     expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
     expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/reload', {
       method: 'POST',
+    })
+  })
+})
+
+describe('dsl/audit.get', () => {
+  it('GETs /api/dsl/audit with no query and no opts', async () => {
+    await auditHandler(fakeEvent)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/audit')
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+
+  it('forwards offset, limit and action query params', async () => {
+    queryValue = { offset: '20', limit: '10', action: 'DEFINITION_PUBLISH' }
+
+    await auditHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/audit', {
+      query: { offset: '20', limit: '10', action: 'DEFINITION_PUBLISH' },
     })
   })
 })
