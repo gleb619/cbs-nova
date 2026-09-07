@@ -36,6 +36,10 @@ springdoc:
     path: /swagger-ui.html
   packages-to-scan: cbs.nova.starter.controllers
 
+logging:
+  pattern:
+    level: "%5p [rid=%X{rid:-} cid=%X{cid:-}]"
+
 management:
   endpoints:
     web:

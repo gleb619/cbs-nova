@@ -81,6 +81,7 @@ export async function proxyToBackend<T>(
       onRequest({ request }) {
         writeLog('info', `[BFF >] ${method} ${request}`, {
           requestId,
+          correlationId,
           headers: Object.keys({ ...headers, ...extraHeaders }),
         })
       },
@@ -90,12 +91,14 @@ export async function proxyToBackend<T>(
           `[BFF <] ${method} ${url} ${response.status} ${Date.now() - startedAt}ms`,
           {
             requestId,
+            correlationId,
           },
         )
       },
       onResponseError({ response, error }) {
         writeLog('error', `[BFF !] ${method} ${url} ${response?.status ?? 'network'}`, {
           requestId,
+          correlationId,
           backendUrl: baseUrl,
           error: (error as Error | undefined)?.message,
         })
@@ -122,6 +125,7 @@ export async function proxyToBackend<T>(
     const message = (err as Error | undefined)?.message ?? String(err)
     writeLog('error', `[BFF !] ${method} ${url} failed`, {
       requestId,
+      correlationId,
       backendUrl: baseUrl,
       error: message,
     })
