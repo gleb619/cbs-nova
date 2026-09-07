@@ -183,6 +183,24 @@ describe('useDslApi', () => {
     expect(result).toEqual({ ok: true })
   })
 
+  it('getHistoryEntry GETs /api/v1/dsl/drafts/{name}/history/{timestamp}', async () => {
+    fetchMock.mockResolvedValueOnce({ name: 'draft-1', version: 'A' })
+    const api = useDslApi()
+    const result = await api.getHistoryEntry('draft-1', '123')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/drafts/draft-1/history/123')
+    expect(result).toEqual({ name: 'draft-1', version: 'A' })
+  })
+
+  it('getHistoryDiff GETs /api/v1/dsl/drafts/{name}/history/{timestamp}/diff', async () => {
+    fetchMock.mockResolvedValueOnce({ name: 'draft-1', timestamp: '123', hunks: [] })
+    const api = useDslApi()
+    const result = await api.getHistoryDiff('draft-1', '123')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/drafts/draft-1/history/123/diff')
+    expect(result).toEqual({ name: 'draft-1', timestamp: '123', hunks: [] })
+  })
+
   it('validateConstruct delegates to preview with empty body', async () => {
     fetchMock.mockResolvedValueOnce({})
     const api = useDslApi()

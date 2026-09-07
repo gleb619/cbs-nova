@@ -82,6 +82,20 @@ public class DslDefinitionHistoryService {
     }
   }
 
+  public Optional<DraftRequest> readPublished(Path dir, String name) {
+    Path file = safePublishedFile(dir, name);
+    if (!Files.exists(file)) {
+      return Optional.empty();
+    }
+    try {
+      return Optional.of(objectMapper.readValue(file.toFile(), DraftRequest.class));
+    } catch (Exception e) {
+      log.warn("[DSL drafts] failed to read published definition for {}: {}",
+              name, e.getMessage());
+      return Optional.empty();
+    }
+  }
+
   private void prune(Path historyDir) throws IOException {
     int limit = dslProperties.drafts().historyLimit();
     if (limit <= 0) {

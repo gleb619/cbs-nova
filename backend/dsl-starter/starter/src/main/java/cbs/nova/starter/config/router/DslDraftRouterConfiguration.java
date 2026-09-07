@@ -41,6 +41,18 @@ public class DslDraftRouterConfiguration {
               @ApiResponse(responseCode = "200", description = "List of history entries"),
               @ApiResponse(responseCode = "409", description = "Source directory not configured or not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
+      @RouterOperation(path = "/api/dsl/drafts/{name}/history/{timestamp}", beanClass = DslDraftHandler.class, beanMethod = "historyEntry", method = RequestMethod.GET, operation = @Operation(operationId = "readPublishHistoryEntry", summary = "Read a single published metadata snapshot's content", tags = {
+          "DSL Admin"}, responses = {
+              @ApiResponse(responseCode = "200", description = "History entry content"),
+              @ApiResponse(responseCode = "404", description = "History entry not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "409", description = "Source directory not configured or not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
+      @RouterOperation(path = "/api/dsl/drafts/{name}/history/{timestamp}/diff", beanClass = DslDraftHandler.class, beanMethod = "historyDiff", method = RequestMethod.GET, operation = @Operation(operationId = "diffPublishHistoryEntry", summary = "Diff a published metadata snapshot against the current published definition", tags = {
+          "DSL Admin"}, responses = {
+              @ApiResponse(responseCode = "200", description = "Line-level diff of entry vs published"),
+              @ApiResponse(responseCode = "404", description = "History entry not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "409", description = "Source directory not configured or not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
       @RouterOperation(path = "/api/dsl/drafts/{name}/history/{timestamp}/restore", beanClass = DslDraftHandler.class, beanMethod = "restore", method = RequestMethod.POST, operation = @Operation(operationId = "restorePublishHistory", summary = "Restore a published metadata snapshot and reload DSL", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "Snapshot restored"),
@@ -72,6 +84,8 @@ public class DslDraftRouterConfiguration {
             .POST("/api/dsl/drafts/{name}/save", draftHandler::save)
             .POST("/api/dsl/drafts/{name}/publish", draftHandler::publish)
             .GET("/api/dsl/drafts/{name}/history", draftHandler::history)
+            .GET("/api/dsl/drafts/{name}/history/{timestamp}", draftHandler::historyEntry)
+            .GET("/api/dsl/drafts/{name}/history/{timestamp}/diff", draftHandler::historyDiff)
             .POST("/api/dsl/drafts/{name}/history/{timestamp}/restore", draftHandler::restore)
             .DELETE("/api/dsl/drafts/{name}", draftHandler::delete)
             .build();

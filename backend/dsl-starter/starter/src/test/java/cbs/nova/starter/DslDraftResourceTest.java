@@ -12,6 +12,7 @@ import cbs.nova.starter.controller.DslDraftHandler;
 import cbs.nova.starter.controller.DslReloadHandler;
 import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
+import cbs.nova.starter.model.VcsModels.HistoryDiffResponse;
 import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.model.VcsModels.DraftSummary;
 import cbs.nova.starter.model.PageResponse;
@@ -544,6 +545,97 @@ class DslDraftResourceTest {
             Map.of("name", "X", "timestamp", "123")));
 
     assertThat(response.statusCode().value()).isEqualTo(409);
+  }
+
+  @Test
+  void historyEntryReturnsEntryContent() throws Exception {
+    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "A"));
+    Thread.sleep(2);
+    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "B"));
+
+    List<DefinitionHistoryEntry> entries = historyEntries("X");
+    assertThat(entries).hasSize(1);
+    String timestamp = entries.get(0).timestamp();
+
+    ServerResponse response = handler.historyEntry(getRequest(
+            "/api/dsl/drafts/X/history/" + timestamp,
+            Map.of("name", "X", "timestamp", timestamp)));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    DraftRequest entry = (DraftRequest) ((EntityResponse<?>) response).entity();
+    assertThat(entry.name()).isEqualTo("X");
+    assertThat(entry.version()).isEqualTo("A");
+    assertThat(entry.status()).isEqualTo("Published");
+  }
+
+  @Test
+  void historyEntryUnknownTimestampReturns404() throws Exception {
+    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "A"));
+
+    ServerResponse response = handler.historyEntry(getRequest(
+            "/api/dsl/drafts/X/history/9999999999999",
+            Map.of("name", "X", "timestamp", "9999999999999")));
+
+    assertThat(response.statusCode().value()).isEqualTo(404);
+  }
+
+  @Test
+  void historyDiffReturnsShapeWithHunks() throws Exception {
+    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "A"));
+    Thread.sleep(2);
+    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "B"));
+
+    List<DefinitionHistoryEntry> entries = historyEntries("X");
+    assertThat(entries).hasSize(1);
+    String timestamp = entries.get(0).timestamp();
+
+    ServerResponse response = handler.historyDiff(getRequest(
+            "/api/dsl/drafts/X/history/" + timestamp + "/diff",
+            Map.of("name", "X", "timestamp", timestamp)));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    HistoryDiffResponse diff = (HistoryDiffResponse) ((EntityResponse<?>) response).entity();
+    assertThat(diff.name()).isEqualTo("X");
+    assertThat(diff.timestamp()).isEqualTo(timestamp);
+    assertThat(diff.before()).contains("\"version\" : \"B\"");
+    assertThat(diff.after()).contains("\"version\" : \"A\"");
+    assertThat(diff.hunks()).isNotEmpty();
+    assertThat(diff.hunks().stream().flatMap(h -> h.lines().stream()))
+            .anyMatch(line -> line.startsWith("-") && line.contains("B"));
+    assertThat(diff.hunks().stream().flatMap(h -> h.lines().stream()))
+            .anyMatch(line -> line.startsWith("+") && line.contains("A"));
+    assertThat(diff.truncated()).isFalse();
+  }
+
+  @Test
+  void historyDiffWithoutPublishedReturnsNullBeforeAndNoHunks() throws Exception {
+    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "A"));
+    Thread.sleep(2);
+    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "B"));
+    List<DefinitionHistoryEntry> entries = historyEntries("X");
+    String timestamp = entries.get(0).timestamp();
+    // Simulate "published was deleted/never readable": no published file on disk.
+    Files.deleteIfExists(sourceDir.resolve(".workbench/published/X.json"));
+
+    ServerResponse response = handler.historyDiff(getRequest(
+            "/api/dsl/drafts/X/history/" + timestamp + "/diff",
+            Map.of("name", "X", "timestamp", timestamp)));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    HistoryDiffResponse diff = (HistoryDiffResponse) ((EntityResponse<?>) response).entity();
+    assertThat(diff.before()).isNull();
+    assertThat(diff.after()).isNotNull();
+    assertThat(diff.hunks()).isEmpty();
+    assertThat(diff.truncated()).isFalse();
+  }
+
+  @Test
+  void historyDiffEmptyHistoryReturns404() throws Exception {
+    ServerResponse response = handler.historyDiff(getRequest(
+            "/api/dsl/drafts/X/history/123/diff",
+            Map.of("name", "X", "timestamp", "123")));
+
+    assertThat(response.statusCode().value()).isEqualTo(404);
   }
 
   private List<DefinitionHistoryEntry> historyEntries(String name) throws Exception {

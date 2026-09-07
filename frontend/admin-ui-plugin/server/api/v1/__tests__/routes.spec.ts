@@ -88,6 +88,12 @@ const listHistoryHandler = (await import('../dsl/drafts/[name]/history/index.get
 const restoreHistoryHandler = (
   await import('../dsl/drafts/[name]/history/[timestamp]/restore.post')
 ).default
+const historyEntryHandler = (
+  await import('../dsl/drafts/[name]/history/[timestamp]/index.get')
+).default
+const historyDiffHandler = (
+  await import('../dsl/drafts/[name]/history/[timestamp]/diff.get')
+).default
 const helpersIndexHandler = (await import('../dsl/helpers/index.get')).default
 const processesIndexHandler = (await import('../dsl/processes/index.get')).default
 const processDetailHandler = (await import('../dsl/processes/[name].get')).default
@@ -510,6 +516,36 @@ describe('dsl/drafts/[name]/history/[timestamp]/restore.post', () => {
       fakeEvent,
       '/api/dsl/drafts/DraftOne/history/123456789/restore',
       { method: 'POST' },
+    )
+  })
+})
+
+describe('dsl/drafts/[name]/history/[timestamp]/index.get', () => {
+  it('interpolates :name and :timestamp and GETs the backend history entry path', async () => {
+    routerParams = { name: 'DraftOne', timestamp: '123456789' }
+
+    await historyEntryHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/drafts/DraftOne/history/123456789',
+      { method: 'GET' },
+    )
+  })
+})
+
+describe('dsl/drafts/[name]/history/[timestamp]/diff.get', () => {
+  it('interpolates :name and :timestamp and GETs the backend diff path', async () => {
+    routerParams = { name: 'DraftOne', timestamp: '123456789' }
+
+    await historyDiffHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/drafts/DraftOne/history/123456789/diff',
+      { method: 'GET' },
     )
   })
 })

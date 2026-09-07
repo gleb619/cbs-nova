@@ -163,6 +163,16 @@ export function useDslApi() {
     return $fetch(`/api/v1/dsl/drafts/${name}/history/${timestamp}/restore`, { method: 'POST' })
   }
 
+  async function getHistoryEntry(name: string, timestamp: string) {
+    log.info('getHistoryEntry request', { name, timestamp })
+    return $fetch(`/api/v1/dsl/drafts/${name}/history/${timestamp}`)
+  }
+
+  async function getHistoryDiff(name: string, timestamp: string) {
+    log.info('getHistoryDiff request', { name, timestamp })
+    return $fetch(`/api/v1/dsl/drafts/${name}/history/${timestamp}/diff`)
+  }
+
   async function validateConstruct(name: string) {
     // stub — calls preview to validate
     log.info('validate request', { name })
@@ -216,6 +226,8 @@ export function useDslApi() {
     readDraft,
     listPublishHistory,
     restorePublishHistory,
+    getHistoryEntry,
+    getHistoryDiff,
     validateConstruct,
     reload,
     listSchedules,

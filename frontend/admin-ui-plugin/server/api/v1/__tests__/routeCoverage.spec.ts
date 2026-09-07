@@ -142,6 +142,16 @@ const expectedProxies: readonly ExpectedProxy[] = [
     bffPath: '/api/v1/dsl/drafts/{name}/history/{timestamp}/restore',
   },
   {
+    method: 'GET',
+    backendPath: '/api/dsl/drafts/{name}/history/{timestamp}',
+    bffPath: '/api/v1/dsl/drafts/{name}/history/{timestamp}',
+  },
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/drafts/{name}/history/{timestamp}/diff',
+    bffPath: '/api/v1/dsl/drafts/{name}/history/{timestamp}/diff',
+  },
+  {
     method: 'DELETE',
     backendPath: '/api/dsl/drafts/{name}',
     bffPath: '/api/v1/dsl/drafts/{name}/delete',
