@@ -2,6 +2,8 @@ package cbs.nova.starter.controller;
 
 import cbs.nova.starter.config.router.DslScheduleRouterConfiguration;
 import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.starter.model.PageResponse;
+import cbs.nova.starter.controller.Pagination;
 import cbs.nova.starter.model.ScheduleModels.CreateScheduleRequest;
 import cbs.nova.starter.model.ScheduleModels.ScheduleSummary;
 import cbs.nova.starter.service.DslScheduleService;
@@ -47,10 +49,20 @@ public class DslScheduleHandler {
   }
 
   public ServerResponse list(ServerRequest request) {
+    int limit = Pagination.intParam(request, "limit", Pagination.DEFAULT_LIMIT);
+    int offset = Pagination.intParam(request, "offset", Pagination.DEFAULT_OFFSET);
+    int pageSize = Pagination.clampLimit(limit);
+    int skip = Pagination.clampOffset(offset);
+
     List<ScheduleSummary> schedules = service.list();
+    long total = schedules.size();
+    List<ScheduleSummary> paged = schedules.stream()
+            .skip(skip)
+            .limit(pageSize)
+            .toList();
     return ServerResponse.ok()
             .contentType(MediaType.APPLICATION_JSON)
-            .body(schedules);
+            .body(new PageResponse<>(paged, total, skip, pageSize));
   }
 
   public ServerResponse delete(ServerRequest request) {

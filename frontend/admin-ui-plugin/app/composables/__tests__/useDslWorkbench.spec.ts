@@ -62,6 +62,21 @@ describe('useDslWorkbench', () => {
   })
 
   describe('loadConstructs', () => {
+    it('handles {items:[]} paged response shape', async () => {
+      const api = getApi()
+      const list = [
+        { name: 'c1', type: 'Function' as const, status: 'Valid' as const },
+        { name: 'c2', type: 'Helper' as const, status: 'Draft' as const },
+      ]
+      api.getDefinitions.mockResolvedValueOnce({ items: list, total: 2, offset: 0, limit: 50 })
+
+      const wb = useDslWorkbench()
+      await wb.loadConstructs()
+
+      expect(wb.state.value.constructs).toEqual(list)
+      expect(wb.state.value.selectedName).toBe('c1')
+    })
+
     it('handles plain array response and auto-selects first construct', async () => {
       const api = getApi()
       const construct = { name: 'c1', type: 'Process' as const, status: 'Draft' as const }

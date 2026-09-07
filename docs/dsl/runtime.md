@@ -166,8 +166,8 @@ All paths are relative to the application root. The reload and draft routers are
 | GET | `/api/dsl/objects/search` | Search helpers, processes, transactions, and functions | query params `name`, `type`, `description` → `HelperSearchResult[]` |
 | GET | `/api/dsl/helpers` | List registered helper names | `NamesResponse` |
 | GET | `/api/dsl/constructs/{name}` | Structure and generated code body of a construct | `ConstructBodyDto` |
-| GET | `/api/dsl/definitions` | Flat list of all registered DSL entities | `DefinitionMetaDto[]` |
-| GET | `/api/executions` | List execution runs | query params `processName`, `status`, `mode`, `limit`, `offset` → `ExecutionListResponse` |
+| GET | `/api/dsl/definitions` | Paged list of all registered DSL entities | `PageResponse<DefinitionMetaDto>` |
+| GET | `/api/executions` | List execution runs | query params `processName`, `status`, `mode`, `limit`, `offset` → `PageResponse<ExecutionDto>` |
 | GET | `/api/executions/stats` | Aggregate execution statistics | query param `topProcesses` → `ExecutionStatsResponse` |
 | GET | `/api/executions/{id}` | Single execution run | `ExecutionDto` |
 | POST | `/api/executions/{id}/cancel` | Cancel a running execution run | `ExecutionDto` |

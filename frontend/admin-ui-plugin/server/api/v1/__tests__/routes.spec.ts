@@ -153,23 +153,26 @@ describe('dsl/definitions.get', () => {
     expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
   })
 
-  it('returns the aggregated backend body verbatim (200 path, no reshaping)', async () => {
-    const aggregated = [
-      { name: 'LoanDisbursement', type: 'process', inputSchema: { type: 'object' } },
-      { name: 'SampleTransaction', type: 'transaction' },
-      { name: 'sampleHelper', type: 'helper' },
-      { name: 'sampleFunction', type: 'function' },
-    ]
+  it('returns the paged backend body verbatim (200 path, no reshaping)', async () => {
+    const aggregated = {
+      items: [
+        { name: 'LoanDisbursement', type: 'process', inputSchema: { type: 'object' } },
+        { name: 'SampleTransaction', type: 'transaction' },
+        { name: 'sampleHelper', type: 'helper' },
+        { name: 'sampleFunction', type: 'function' },
+      ],
+      total: 4,
+      offset: 0,
+      limit: 50,
+    }
     proxyToBackendMock.mockResolvedValueOnce(aggregated)
 
     const result = await definitionsHandler(fakeEvent)
 
-    // BFF is a thin passthrough — selector-friendly {name,type} shape is
-    // guaranteed by the backend DslIntrospectionResource. See
-    // docs/plans/T182-fix-definitions-introspection-wiring.md.
+    // BFF is a thin passthrough — the paged envelope is produced by the
+    // backend DslIntrospectionHandler. See T382.
     expect(result).toEqual(aggregated)
-    expect(result).toHaveLength(4)
-    expect((result as Array<{ type: string }>).map((d) => d.type).sort()).toEqual([
+    expect((result as { items?: Array<{ type: string }> }).items?.map((d) => d.type).sort()).toEqual([
       'function',
       'helper',
       'process',

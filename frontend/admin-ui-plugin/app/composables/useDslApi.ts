@@ -10,7 +10,9 @@ export function useDslApi() {
       const result = await $fetch('/api/v1/dsl/definitions')
       const list = Array.isArray(result)
         ? result
-        : ((result as { constructs?: unknown[] }).constructs ?? [])
+        : ((result as { items?: unknown[] }).items
+            ?? (result as { constructs?: unknown[] }).constructs
+            ?? [])
       log.info('definitions loaded', { count: list.length })
       return result
     } catch (err) {
@@ -139,9 +141,11 @@ export function useDslApi() {
     })
   }
 
-  async function listDrafts() {
+  async function listDrafts(): Promise<unknown[]> {
     log.info('listDrafts request')
-    return $fetch('/api/v1/dsl/drafts')
+    const result = await $fetch('/api/v1/dsl/drafts')
+    if (Array.isArray(result)) return result
+    return ((result as { items?: unknown[] }).items ?? [])
   }
 
   async function readDraft(name: string) {

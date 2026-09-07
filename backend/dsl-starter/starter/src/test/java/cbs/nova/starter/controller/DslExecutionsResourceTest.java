@@ -1003,6 +1003,30 @@ class DslExecutionsResourceTest {
             .andExpect(jsonPath("$.items.length()").value(1));
   }
 
+  @Test
+  void listResponseEchoesClampedOffsetAndLimit() throws Exception {
+    repository.save(run("run-1", "LoanDisbursement", "COMPLETED", "2026-08-13T10:00:00Z",
+            "2026-08-13T10:00:05Z", "RUN"));
+    repository.save(run("run-2", "LoanDisbursement", "COMPLETED", "2026-08-13T10:01:00Z",
+            "2026-08-13T10:01:05Z", "RUN"));
+
+    mockMvc.perform(get("/api/executions")
+            .param("limit", "1")
+            .param("offset", "1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(2))
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.offset").value(1))
+            .andExpect(jsonPath("$.limit").value(1));
+
+    mockMvc.perform(get("/api/executions")
+            .param("limit", "9999")
+            .param("offset", "-5"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.offset").value(0))
+            .andExpect(jsonPath("$.limit").value(500));
+  }
+
   private DslRun run(String id, String processName, String status, String startedAt,
           String finishedAt, String mode) {
     return run(id, processName, status, startedAt, finishedAt, mode, null, null, null);

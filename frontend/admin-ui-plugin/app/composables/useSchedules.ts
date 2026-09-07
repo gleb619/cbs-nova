@@ -15,8 +15,10 @@ export function useSchedules() {
     loading.value = true
     error.value = null
     try {
-      const result = (await api.listSchedules()) as ScheduleSummary[]
-      schedules.value = Array.isArray(result) ? result : []
+      const result = (await api.listSchedules()) as ScheduleSummary[] | { items?: ScheduleSummary[] }
+      schedules.value = Array.isArray(result)
+        ? result
+        : ((result as { items?: ScheduleSummary[] }).items ?? [])
     } catch (err) {
       log.error('failed to load schedules', { error: (err as Error).message })
       error.value = (err as Error).message

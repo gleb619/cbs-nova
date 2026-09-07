@@ -6,6 +6,7 @@ import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import cbs.nova.starter.service.DslIntrospectionService;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructBodyDto;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
+import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.NamesResponse;
 import cbs.nova.starter.model.DslIntrospectionModels.ProcessDetail;
@@ -59,7 +60,7 @@ public class DslIntrospectionRouterConfiguration {
       @RouterOperation(path = "/api/dsl/constructs/{name}", beanClass = DslIntrospectionHandler.class, beanMethod = "constructBody", method = RequestMethod.GET, operation = @Operation(operationId = "getConstructBody", summary = "Get DSL construct body", tags = {
           "DSL Introspection"}, parameters = @Parameter(name = "name", in = ParameterIn.PATH), responses = @ApiResponse(responseCode = "200", description = "Construct body", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ConstructBodyDto.class))))),
       @RouterOperation(path = "/api/dsl/definitions", beanClass = DslIntrospectionHandler.class, beanMethod = "definitions", method = RequestMethod.GET, operation = @Operation(operationId = "listDefinitions", summary = "List DSL definitions", tags = {
-          "DSL Introspection"}, responses = @ApiResponse(responseCode = "200", description = "Definitions", content = @Content(mediaType = "application/json", schema = @Schema(implementation = DefinitionMetaDto.class))))),
+          "DSL Introspection"}, responses = @ApiResponse(responseCode = "200", description = "Definitions", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class))))),
       @RouterOperation(path = "/api/dsl/definitions/{name}/description", beanClass = DslIntrospectionHandler.class, beanMethod = "updateDescription", method = RequestMethod.PATCH, operation = @Operation(operationId = "updateDescription", summary = "Update DSL construct description", tags = {
           "DSL Introspection"}, parameters = @Parameter(name = "name", in = ParameterIn.PATH), responses = {
               @ApiResponse(responseCode = "200", description = "Description updated"),

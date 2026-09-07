@@ -12,6 +12,8 @@ import cbs.nova.starter.model.VcsModels.DraftSummary;
 import cbs.nova.starter.model.VcsModels.ImportBundleResult;
 import cbs.nova.starter.model.VcsModels.ImportEntryResult;
 import cbs.nova.starter.model.CompileDiagnostic;
+import cbs.nova.starter.model.PageResponse;
+import cbs.nova.starter.controller.Pagination;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.service.DslDefinitionBundleService;
 import cbs.nova.starter.service.DslDefinitionHistoryService;
@@ -139,13 +141,20 @@ public class DslDraftHandler {
   }
 
   public ServerResponse list(ServerRequest request) {
+    int limit = Pagination.intParam(request, "limit", Pagination.DEFAULT_LIMIT);
+    int offset = Pagination.intParam(request, "offset", Pagination.DEFAULT_OFFSET);
+    int pageSize = Pagination.clampLimit(limit);
+    int skip = Pagination.clampOffset(offset);
+
     var dir = ensureConfigured(null);
     if (dir.isError()) {
-      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(List.of());
+      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+              .body(new PageResponse<>(List.of(), 0L, skip, pageSize));
     }
     Path drafts = draftsDir(dir.path());
     if (!Files.isDirectory(drafts)) {
-      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(List.of());
+      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+              .body(new PageResponse<>(List.of(), 0L, skip, pageSize));
     }
     List<DraftSummary> summaries = new ArrayList<>();
     try (var stream = Files.list(drafts)) {
@@ -171,10 +180,17 @@ public class DslDraftHandler {
       }
     } catch (IOException e) {
       log.warn("[DSL drafts] failed to list drafts in {}: {}", drafts, e.getMessage());
-      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(List.of());
+      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+              .body(new PageResponse<>(List.of(), 0L, skip, pageSize));
     }
-    log.info("[DSL drafts] listed {} drafts from {}", summaries.size(), drafts);
-    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(summaries);
+    long total = summaries.size();
+    List<DraftSummary> paged = summaries.stream()
+            .skip(skip)
+            .limit(pageSize)
+            .toList();
+    log.info("[DSL drafts] listed {} drafts from {} (total {})", paged.size(), drafts, total);
+    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+            .body(new PageResponse<>(paged, total, skip, pageSize));
   }
 
   public ServerResponse read(ServerRequest request) throws IOException {

@@ -6,7 +6,7 @@ import cbs.nova.starter.controller.DslExecutionsHandler;
 import cbs.nova.starter.converter.RequestQueryConverter;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ExecutionDto;
-import cbs.nova.starter.model.ExecutionListResponse;
+import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.model.ExecutionStatsResponse;
 import cbs.nova.starter.model.ExecutionTimeseriesResponse;
 import cbs.nova.starter.model.TransactionExecutionDto;
@@ -53,7 +53,7 @@ public class DslExecutionsRouterConfiguration {
               @Parameter(name = "status", in = ParameterIn.QUERY),
               @Parameter(name = "limit", in = ParameterIn.QUERY, description = "Maximum number of runs to return"),
               @Parameter(name = "offset", in = ParameterIn.QUERY, description = "Number of matching runs to skip before returning results")
-          }, responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionListResponse.class))))),
+          }, responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class))))),
       // Routed before "/api/executions/{id}" below so the literal "stats" segment wins over {id}.
       @RouterOperation(path = "/api/executions/stats", beanClass = DslExecutionsHandler.class, beanMethod = "stats", method = RequestMethod.GET, operation = @Operation(operationId = "getExecutionStats", summary = "Aggregate DSL execution run statistics", tags = {
           "DSL Executions"}, parameters = {

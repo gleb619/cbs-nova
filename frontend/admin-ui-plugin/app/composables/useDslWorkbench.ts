@@ -86,7 +86,9 @@ export function useDslWorkbench() {
       const result = await api.getDefinitions()
       const rawList = Array.isArray(result)
         ? result
-        : ((result as { constructs?: DslConstruct[] }).constructs ?? [])
+        : ((result as { items?: DslConstruct[] }).items
+            ?? (result as { constructs?: DslConstruct[] }).constructs
+            ?? [])
       const list = rawList.map((c) => normalizeConstruct(c as { name: string }))
       state.value.constructs = list
       if (list.length && !state.value.selectedName) {

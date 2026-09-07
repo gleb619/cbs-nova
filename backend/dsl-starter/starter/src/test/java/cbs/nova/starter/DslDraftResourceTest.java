@@ -11,6 +11,7 @@ import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.model.VcsModels.DraftSummary;
+import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.service.DslDefinitionHistoryService;
 import cbs.nova.starter.service.DslDefinitionBundleService;
 import org.junit.jupiter.api.AfterEach;
@@ -220,17 +221,20 @@ class DslDraftResourceTest {
   }
 
   @Test
-  void listReturnsEmptyWhenDraftsDirMissing() throws Exception {
+  void listReturnsEmptyEnvelopeWhenDraftsDirMissing() throws Exception {
     ServerResponse response = handler.list(getRequest("/api/dsl/drafts", null));
 
     assertThat(response.statusCode().value()).isEqualTo(200);
-    Object body = ((EntityResponse<?>) response).entity();
-    assertThat(body).isInstanceOf(List.class);
-    assertThat((List<?>) body).isEmpty();
+    @SuppressWarnings("unchecked")
+    PageResponse<DraftSummary> body = (PageResponse<DraftSummary>) ((EntityResponse<?>) response).entity();
+    assertThat(body.items()).isEmpty();
+    assertThat(body.total()).isEqualTo(0L);
+    assertThat(body.offset()).isEqualTo(0);
+    assertThat(body.limit()).isEqualTo(50);
   }
 
   @Test
-  void listReturnsEmptyWhenSourceDirBlank() throws Exception {
+  void listReturnsEmptyEnvelopeWhenSourceDirBlank() throws Exception {
     DslProperties blank = new DslProperties();
     blank.setSourceDir("");
     handler = new DslDraftHandler(
@@ -243,13 +247,14 @@ class DslDraftResourceTest {
     ServerResponse response = handler.list(getRequest("/api/dsl/drafts", null));
 
     assertThat(response.statusCode().value()).isEqualTo(200);
-    Object body = ((EntityResponse<?>) response).entity();
-    assertThat(body).isInstanceOf(List.class);
-    assertThat((List<?>) body).isEmpty();
+    @SuppressWarnings("unchecked")
+    PageResponse<DraftSummary> body = (PageResponse<DraftSummary>) ((EntityResponse<?>) response).entity();
+    assertThat(body.items()).isEmpty();
+    assertThat(body.total()).isEqualTo(0L);
   }
 
   @Test
-  void listReturnsSummariesForSavedDrafts() throws Exception {
+  void listReturnsPaginatedSummariesForSavedDrafts() throws Exception {
     handler.save(postRequest("/api/dsl/drafts/foo/save"));
     handler.save(postRequest("/api/dsl/drafts/bar/save", "bar"));
     handler.publish(postRequest("/api/dsl/drafts/bar/publish", "bar"));
@@ -257,15 +262,14 @@ class DslDraftResourceTest {
     ServerResponse response = handler.list(getRequest("/api/dsl/drafts", null));
 
     assertThat(response.statusCode().value()).isEqualTo(200);
-    Object body = ((EntityResponse<?>) response).entity();
-    assertThat(body).isInstanceOf(List.class);
     @SuppressWarnings("unchecked")
-    List<DraftSummary> summaries = (List<DraftSummary>) body;
-    assertThat(summaries).hasSize(2);
-    assertThat(summaries)
+    PageResponse<DraftSummary> body = (PageResponse<DraftSummary>) ((EntityResponse<?>) response).entity();
+    assertThat(body.items()).hasSize(2);
+    assertThat(body.total()).isEqualTo(2L);
+    assertThat(body.items())
             .extracting(DraftSummary::name)
             .containsExactlyInAnyOrder("foo", "bar");
-    assertThat(summaries)
+    assertThat(body.items())
             .allSatisfy(s -> {
               assertThat(s.name()).isNotBlank();
               assertThat(s.updatedAt()).isGreaterThan(0L);
@@ -284,10 +288,11 @@ class DslDraftResourceTest {
 
     assertThat(response.statusCode().value()).isEqualTo(200);
     @SuppressWarnings("unchecked")
-    List<DraftSummary> summaries = (List<DraftSummary>) ((EntityResponse<?>) response)
+    PageResponse<DraftSummary> body = (PageResponse<DraftSummary>) ((EntityResponse<?>) response)
             .entity();
-    assertThat(summaries).hasSize(1);
-    assertThat(summaries.get(0).name()).isEqualTo("foo");
+    assertThat(body.items()).hasSize(1);
+    assertThat(body.total()).isEqualTo(1L);
+    assertThat(body.items().get(0).name()).isEqualTo("foo");
   }
 
   @Test

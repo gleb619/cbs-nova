@@ -36,6 +36,7 @@ const helpersFixture = loadFixture('helpers.json')
 const draftsFixture = loadFixture('drafts.json')
 const executionsFixture = loadFixture('executions.json')
 const executionsStatsFixture = loadFixture('executions-stats.json')
+const schedulesFixture = loadFixture('schedules.json')
 
 // Import handlers after mocks are hoisted.
 const definitionsHandler = (await import('../dsl/definitions.get')).default
@@ -43,6 +44,7 @@ const helpersHandler = (await import('../dsl/helpers/index.get')).default
 const draftsHandler = (await import('../dsl/drafts/index.get')).default
 const executionsHandler = (await import('../executions/index.get')).default
 const executionsStatsHandler = (await import('../executions/stats.get')).default
+const schedulesHandler = (await import('../dsl/schedules/index.get')).default
 
 type RouteCase = {
   /** Fixture filename under contract/fixtures/. */
@@ -91,6 +93,13 @@ const routes: RouteCase[] = [
     name: 'GET /api/v1/executions/stats',
     handler: executionsStatsHandler,
     fixture: executionsStatsFixture,
+    deltas: [],
+  },
+  {
+    fixtureName: 'schedules.json',
+    name: 'GET /api/v1/dsl/schedules',
+    handler: schedulesHandler,
+    fixture: schedulesFixture,
     deltas: [],
   },
 ]

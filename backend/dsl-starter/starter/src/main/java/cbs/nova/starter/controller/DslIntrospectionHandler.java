@@ -1,6 +1,8 @@
 package cbs.nova.starter.controller;
 
 import cbs.nova.starter.converter.RequestQueryConverter;
+import cbs.nova.starter.model.PageResponse;
+import cbs.nova.starter.controller.Pagination;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import cbs.nova.starter.service.DslIntrospectionService;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructBodyDto;
@@ -71,8 +73,18 @@ public class DslIntrospectionHandler {
   }
 
   public ServerResponse definitions(ServerRequest request) {
+    int limit = Pagination.intParam(request, "limit", Pagination.DEFAULT_LIMIT);
+    int offset = Pagination.intParam(request, "offset", Pagination.DEFAULT_OFFSET);
+    int pageSize = Pagination.clampLimit(limit);
+    int skip = Pagination.clampOffset(offset);
+
     List<DefinitionMetaDto> aggregate = service.definitions();
-    return ServerResponse.ok().body(aggregate);
+    long total = aggregate.size();
+    List<DefinitionMetaDto> paged = aggregate.stream()
+            .skip(skip)
+            .limit(pageSize)
+            .toList();
+    return ServerResponse.ok().body(new PageResponse<>(paged, total, skip, pageSize));
   }
 
   public ServerResponse updateDescription(ServerRequest request) {

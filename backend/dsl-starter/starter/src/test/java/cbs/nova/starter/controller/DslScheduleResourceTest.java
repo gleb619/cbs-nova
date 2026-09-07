@@ -60,16 +60,35 @@ class DslScheduleResourceTest {
   }
 
   @Test
-  void listReturnsServiceSummaries() throws Exception {
+  void listReturnsPaginatedEnvelope() throws Exception {
     when(service.list()).thenReturn(List.of(
-            new ScheduleSummary("sched-A", "A", "0 9 * * *", "UTC", "daily", null, false)));
+            new ScheduleSummary("sched-A", "A", "0 9 * * *", "UTC", "daily", null, false),
+            new ScheduleSummary("sched-B", "B", "0 10 * * *", "UTC", "hourly", null, false)));
 
     mockMvc.perform(get("/api/dsl/schedules"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$").isArray())
-            .andExpect(jsonPath("$", hasSize(1)))
-            .andExpect(jsonPath("$[0].scheduleId").value("sched-A"))
-            .andExpect(jsonPath("$[0].definition").value("A"));
+            .andExpect(jsonPath("$.items").isArray())
+            .andExpect(jsonPath("$.items", hasSize(2)))
+            .andExpect(jsonPath("$.items[0].scheduleId").value("sched-A"))
+            .andExpect(jsonPath("$.items[0].definition").value("A"))
+            .andExpect(jsonPath("$.total").value(2))
+            .andExpect(jsonPath("$.offset").value(0))
+            .andExpect(jsonPath("$.limit").value(50));
+  }
+
+  @Test
+  void listHonoursOffsetAndLimit() throws Exception {
+    when(service.list()).thenReturn(List.of(
+            new ScheduleSummary("sched-A", "A", "0 9 * * *", "UTC", "daily", null, false),
+            new ScheduleSummary("sched-B", "B", "0 10 * * *", "UTC", "hourly", null, false)));
+
+    mockMvc.perform(get("/api/dsl/schedules").param("limit", "1").param("offset", "1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items", hasSize(1)))
+            .andExpect(jsonPath("$.items[0].scheduleId").value("sched-B"))
+            .andExpect(jsonPath("$.total").value(2))
+            .andExpect(jsonPath("$.offset").value(1))
+            .andExpect(jsonPath("$.limit").value(1));
   }
 
   @Test

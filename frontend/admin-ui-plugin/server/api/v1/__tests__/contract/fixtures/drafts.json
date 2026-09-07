@@ -1,23 +1,28 @@
-[
-  {
-    "name": "LoanApproval",
-    "type": "Process",
-    "status": "Draft",
-    "version": "1.1.0",
-    "updatedAt": 1756831200000
-  },
-  {
-    "name": "ValidateAddress",
-    "type": "Transaction",
-    "status": "Published",
-    "version": "0.3.0",
-    "updatedAt": 1756831300000
-  },
-  {
-    "name": "FormatDate",
-    "type": "Function",
-    "status": "Draft",
-    "version": "3.5.0",
-    "updatedAt": 1756831400000
-  }
-]
+{
+  "items": [
+    {
+      "name": "LoanApproval",
+      "type": "Process",
+      "status": "Draft",
+      "version": "1.1.0",
+      "updatedAt": 1756831200000
+    },
+    {
+      "name": "ValidateAddress",
+      "type": "Transaction",
+      "status": "Published",
+      "version": "0.3.0",
+      "updatedAt": 1756831300000
+    },
+    {
+      "name": "FormatDate",
+      "type": "Function",
+      "status": "Draft",
+      "version": "3.5.0",
+      "updatedAt": 1756831400000
+    }
+  ],
+  "total": 3,
+  "offset": 0,
+  "limit": 50
+}

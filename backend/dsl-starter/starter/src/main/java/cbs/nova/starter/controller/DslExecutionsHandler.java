@@ -10,7 +10,8 @@ import cbs.nova.starter.config.router.DslExecutionsRouterConfiguration;
 import cbs.nova.starter.converter.RequestQueryConverter;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ExecutionDto;
-import cbs.nova.starter.model.ExecutionListResponse;
+import cbs.nova.starter.model.PageResponse;
+import cbs.nova.starter.controller.Pagination;
 import cbs.nova.starter.model.ExecutionStatsResponse;
 import cbs.nova.starter.model.ExecutionTimeseriesResponse;
 import cbs.nova.starter.model.RequestQueryModels.ExecutionListQuery;
@@ -57,7 +58,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class DslExecutionsHandler {
 
-  private static final int MAX_LIMIT = 500;
   static final int CSV_EXPORT_MAX_ROWS = 50_000;
   private static final String CSV_FILENAME_PATTERN = "yyyyMMdd-HHmmss";
   private static final DateTimeFormatter CSV_FILENAME_FORMATTER = DateTimeFormatter
@@ -80,19 +80,19 @@ public class DslExecutionsHandler {
   private final RequestQueryConverter queryConverter;
 
   @Operation(summary = "List DSL execution runs")
-  @ApiResponse(responseCode = "200", description = "Matching execution runs", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionListResponse.class)))
+  @ApiResponse(responseCode = "200", description = "Matching execution runs", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))
   public ServerResponse list(ServerRequest request) throws IOException {
     ExecutionListQuery filters = queryConverter.toExecutionListQuery(request);
-    int limit = intParam(request, "limit", 50);
-    int offset = intParam(request, "offset", 0);
-    int pageSize = clampLimit(limit);
-    int skip = clampOffset(offset);
+    int limit = Pagination.intParam(request, "limit", Pagination.DEFAULT_LIMIT);
+    int offset = Pagination.intParam(request, "offset", Pagination.DEFAULT_OFFSET);
+    int pageSize = Pagination.clampLimit(limit);
+    int skip = Pagination.clampOffset(offset);
     DslRunSearchResult result = runRepository.search(filters.processName(), filters.status(),
             filters.mode(), filters.correlationId(), skip, pageSize);
     List<ExecutionDto> items = result.items().stream()
             .map(ExecutionDto::from)
             .toList();
-    return ServerResponse.ok().body(new ExecutionListResponse(items, result.total()));
+    return ServerResponse.ok().body(new PageResponse<>(items, result.total(), skip, pageSize));
   }
 
   @Operation(summary = "Export DSL execution runs as CSV")
@@ -136,7 +136,7 @@ public class DslExecutionsHandler {
   @ApiResponse(responseCode = "200", description = "Aggregate run statistics", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionStatsResponse.class)))
   public ServerResponse stats(ServerRequest request) {
     int topProcesses = clampTopProcesses(
-            intParam(request, "topProcesses", DEFAULT_TOP_PROCESSES));
+            Pagination.intParam(request, "topProcesses", DEFAULT_TOP_PROCESSES));
     Instant windowStart = Instant.now().minus(Duration.ofHours(STATS_WINDOW_HOURS));
 
     DslRunStats stats = statsRepository != null
@@ -161,9 +161,9 @@ public class DslExecutionsHandler {
   @ApiResponse(responseCode = "200", description = "Per-bucket run counts", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionTimeseriesResponse.class)))
   public ServerResponse timeseries(ServerRequest request) {
     int windowHours = clampWindowHours(
-            intParam(request, "windowHours", TIMESERIES_DEFAULT_WINDOW_HOURS));
+            Pagination.intParam(request, "windowHours", TIMESERIES_DEFAULT_WINDOW_HOURS));
     int bucketMinutes = clampBucketMinutes(
-            intParam(request, "bucketMinutes", TIMESERIES_DEFAULT_BUCKET_MINUTES), windowHours);
+            Pagination.intParam(request, "bucketMinutes", TIMESERIES_DEFAULT_BUCKET_MINUTES), windowHours);
 
     Instant windowEnd = Instant.now();
     Instant windowStart = windowEnd.minus(Duration.ofHours(windowHours));
@@ -283,13 +283,7 @@ public class DslExecutionsHandler {
             .toList();
   }
 
-  private static int clampLimit(int limit) {
-    return Math.max(1, Math.min(limit, MAX_LIMIT));
-  }
 
-  private static int clampOffset(int offset) {
-    return Math.max(0, offset);
-  }
 
   private static int clampTopProcesses(int topProcesses) {
     return Math.max(1, Math.min(topProcesses, MAX_TOP_PROCESSES));
@@ -316,19 +310,6 @@ public class DslExecutionsHandler {
     return clamped;
   }
 
-  private static int intParam(ServerRequest request, String name, int defaultValue) {
-    var raw = request.param(name).filter(s -> !s.isBlank()).orElse(null);
-    if (raw == null) {
-      return defaultValue;
-    }
-    try {
-      return Integer.parseInt(raw.trim());
-    } catch (NumberFormatException e) {
-      throw new IllegalArgumentException(
-              "Invalid value for query parameter '" + name + "': '" + raw
-                      + "' (expected an integer)");
-    }
-  }
 
   /**
    * Fallback aggregation over the repository's full contents, used when the store cannot aggregate

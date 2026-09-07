@@ -3,9 +3,9 @@ package cbs.nova.starter.config.router;
 import cbs.nova.starter.controller.DslScheduleHandler;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ScheduleModels.CreateScheduleResponse;
-import cbs.nova.starter.model.ScheduleModels.ScheduleSummary;
+import cbs.nova.starter.model.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
+
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -34,7 +34,7 @@ public class DslScheduleRouterConfiguration {
   @Bean
   @RouterOperations({
       @RouterOperation(path = "/api/dsl/schedules", beanClass = DslScheduleHandler.class, beanMethod = "list", method = RequestMethod.GET, operation = @Operation(operationId = "listSchedules", summary = "List Temporal schedules for published DSL definitions", tags = {
-          "DSL Schedules"}, responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = ScheduleSummary.class)))))),
+          "DSL Schedules"}, responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class))))),
       @RouterOperation(path = "/api/dsl/schedules", beanClass = DslScheduleHandler.class, beanMethod = "create", method = RequestMethod.POST, operation = @Operation(operationId = "createSchedule", summary = "Create a Temporal schedule that starts a DSL definition workflow", tags = {
           "DSL Schedules"}, responses = {
               @ApiResponse(responseCode = "201", description = "Schedule created", content = @Content(mediaType = "application/json", schema = @Schema(implementation = CreateScheduleResponse.class))),

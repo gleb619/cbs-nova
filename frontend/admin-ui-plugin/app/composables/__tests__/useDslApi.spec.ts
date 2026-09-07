@@ -132,13 +132,26 @@ describe('useDslApi', () => {
     expect(result).toEqual({ ok: true })
   })
 
-  it('listDrafts GETs /api/v1/dsl/drafts', async () => {
-    fetchMock.mockResolvedValueOnce([{ name: 'draft-1', type: 'process' }])
+  it('listDrafts GETs /api/v1/dsl/drafts and unwraps the envelope', async () => {
+    fetchMock.mockResolvedValueOnce({
+      items: [{ name: 'draft-1', type: 'process' }],
+      total: 1,
+      offset: 0,
+      limit: 50,
+    })
     const api = useDslApi()
     const result = await api.listDrafts()
 
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/drafts')
     expect(result).toEqual([{ name: 'draft-1', type: 'process' }])
+  })
+
+  it('listDrafts still tolerates a legacy array response', async () => {
+    fetchMock.mockResolvedValueOnce([{ name: 'legacy-draft', type: 'helper' }])
+    const api = useDslApi()
+    const result = await api.listDrafts()
+
+    expect(result).toEqual([{ name: 'legacy-draft', type: 'helper' }])
   })
 
   it('readDraft GETs /api/v1/dsl/drafts/{name}', async () => {

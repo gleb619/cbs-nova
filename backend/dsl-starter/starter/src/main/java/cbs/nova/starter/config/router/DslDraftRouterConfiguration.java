@@ -2,6 +2,7 @@ package cbs.nova.starter.config.router;
 
 import cbs.nova.starter.controller.DslDraftHandler;
 import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.starter.model.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -56,7 +57,7 @@ public class DslDraftRouterConfiguration {
           })),
       @RouterOperation(path = "/api/dsl/drafts", beanClass = DslDraftHandler.class, beanMethod = "list", method = RequestMethod.GET, operation = @Operation(operationId = "listDrafts", summary = "List Workbench draft summaries from .workbench/drafts", tags = {
           "DSL Admin"}, responses = {
-              @ApiResponse(responseCode = "200", description = "List of draft summaries")
+              @ApiResponse(responseCode = "200", description = "List of draft summaries", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))
           })),
       @RouterOperation(path = "/api/dsl/drafts/{name}", beanClass = DslDraftHandler.class, beanMethod = "read", method = RequestMethod.GET, operation = @Operation(operationId = "readDraft", summary = "Read a single Workbench draft payload", tags = {
           "DSL Admin"}, responses = {
