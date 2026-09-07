@@ -1,6 +1,7 @@
 package cbs.nova.config;
 
 import cbs.nova.dsl.Context;
+import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
@@ -11,20 +12,30 @@ import cbs.nova.starter.helper.CompensationTrackerHelper;
 import cbs.nova.starter.helper.CompressionHelper;
 import cbs.nova.starter.helper.ConditionalFailingHelper;
 import cbs.nova.starter.helper.CurrentTimestampHelper;
+import cbs.nova.starter.helper.DateMathHelper;
 import cbs.nova.starter.helper.FileLatchHelper;
 import cbs.nova.starter.helper.FilterRecordsHelper;
 import cbs.nova.starter.helper.FormatCsvHelper;
 import cbs.nova.starter.helper.FormatMessageHelper;
+import cbs.nova.starter.helper.HmacSha256SignHelper;
+import cbs.nova.starter.helper.HmacSha256VerifyHelper;
 import cbs.nova.starter.helper.HttpAuthHelper;
 import cbs.nova.starter.helper.HttpCallHelper;
 import cbs.nova.starter.helper.JsonExtractHelper;
+import cbs.nova.starter.helper.MaskHelper;
+import cbs.nova.starter.helper.ParseDateHelper;
 import cbs.nova.starter.helper.ParseYamlHelper;
+import cbs.nova.starter.helper.RandomHelper;
 import cbs.nova.starter.helper.SemverHelper;
+import cbs.nova.starter.helper.Sha256Helper;
 import cbs.nova.starter.helper.SortRecordsHelper;
 import cbs.nova.starter.helper.UnreliableApiHelper;
+import cbs.nova.starter.helper.UrlDecodeHelper;
+import cbs.nova.starter.helper.UuidV7Helper;
 import cbs.nova.starter.helper.model.FileLatchIn;
 import cbs.nova.starter.helper.model.FileLatchOut;
 import io.temporal.workflow.Workflow;
+import java.lang.reflect.InvocationTargetException;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
@@ -97,7 +108,39 @@ public class HelperInstanceResolverConfig {
       if (helperClass == HttpAuthHelper.class) {
         return new HttpAuthHelper();
       }
-      throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
+      if (helperClass == DateMathHelper.class) {
+        return new DateMathHelper();
+      }
+      if (helperClass == HmacSha256VerifyHelper.class) {
+        return new HmacSha256VerifyHelper();
+      }
+      if (helperClass == UrlDecodeHelper.class) {
+        return new UrlDecodeHelper();
+      }
+      if (helperClass == UuidV7Helper.class) {
+        return new UuidV7Helper();
+      }
+      if (helperClass == Sha256Helper.class) {
+        return new Sha256Helper();
+      }
+      if (helperClass == RandomHelper.class) {
+        return new RandomHelper();
+      }
+      if (helperClass == ParseDateHelper.class) {
+        return new ParseDateHelper();
+      }
+      if (helperClass == HmacSha256SignHelper.class) {
+        return new HmacSha256SignHelper();
+      }
+      if (helperClass == MaskHelper.class) {
+        return new MaskHelper();
+      }
+
+      try {
+        return (Executable<?, ?>) helperClass.getConstructor().newInstance();
+      } catch (Exception e) {
+        throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
+      }
     };
   }
 

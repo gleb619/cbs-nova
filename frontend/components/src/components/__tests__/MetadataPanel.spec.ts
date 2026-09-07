@@ -37,8 +37,12 @@ describe('MetadataPanel', () => {
   it('prompts the user to select a construct when construct is null', () => {
     const wrapper = mount(MetadataPanel, { props: { construct: null } })
 
-    expect(wrapper.text()).toContain('Select a construct to view metadata.')
+    // No construct → header + toggle render, but body fields/textarea do not.
+    expect(wrapper.find('[data-testid="metadata-panel"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Metadata')
+    expect(wrapper.find('[data-testid="metadata-panel-toggle"]').exists()).toBe(true)
     expect(wrapper.find('dl').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="metadata-field-description"]').exists()).toBe(false)
   })
 
   it('renders the construct name, type, and status', async () => {

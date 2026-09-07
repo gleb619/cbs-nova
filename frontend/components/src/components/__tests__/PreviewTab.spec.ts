@@ -96,6 +96,51 @@ describe('PreviewTab', () => {
     expect(wrapper.text()).toContain('failed')
   })
 
+  it('normalizes BFF error envelope ({message, code}) into errors[] for the result panel', async () => {
+    const fetchMock = vi.fn().mockRejectedValue({
+      data: {
+        message: 'LinkedHashMap cannot be cast to BatchModels$BatchIn',
+        code: 'UNPROCESSABLE_ENTITY',
+        details: { exceptionClass: 'ClassCastException' },
+        diagnostics: null,
+        backendUrl: 'http://localhost:8090',
+        originalError: 'raw upstream message',
+      },
+      statusCode: 422,
+      statusMessage: 'LinkedHashMap cannot be cast to BatchModels$BatchIn',
+    })
+    vi.stubGlobal('$fetch', fetchMock)
+
+    const wrapper = mountTab()
+    await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
+    await wrapper.findAll('button').find((b) => b.text() === 'Run')!.trigger('click')
+    await flushPromises()
+
+    // Result panel must show the upstream error rather than "No result yet".
+    expect(wrapper.text()).toContain('LinkedHashMap cannot be cast')
+    expect(wrapper.text()).toContain('failed')
+    // The normalized envelope should round-trip to the stubbed result panel
+    // as a JSON string that contains the upstream code.
+    const resultText = wrapper.find('[data-testid="runner-result-tab"]').text()
+    expect(resultText).toContain('UNPROCESSABLE_ENTITY')
+  })
+
+  it('falls back to statusMessage when BFF envelope has no message', async () => {
+    const fetchMock = vi.fn().mockRejectedValue({
+      data: { code: 'BACKEND_TIMEOUT', details: null, diagnostics: null },
+      statusMessage: 'Backend request timed out',
+    })
+    vi.stubGlobal('$fetch', fetchMock)
+
+    const wrapper = mountTab()
+    await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
+    await wrapper.findAll('button').find((b) => b.text() === 'Run')!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Backend request timed out')
+    expect(wrapper.text()).toContain('failed')
+  })
+
   it('uses the explain endpoint when configured', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ result: { ok: true } })
     vi.stubGlobal('$fetch', fetchMock)

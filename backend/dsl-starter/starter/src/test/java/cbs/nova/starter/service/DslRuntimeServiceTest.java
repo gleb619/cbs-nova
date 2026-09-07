@@ -13,12 +13,15 @@ import cbs.nova.dsl.DslErrorCode;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExplainReport;
+import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.exception.DslException;
+import cbs.nova.dslexamples.v1.BatchModels.BatchIn;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.core.pipe.PreviewTimeoutException;
 import cbs.nova.starter.converter.DslRuntimeMapper;
@@ -28,6 +31,7 @@ import cbs.nova.starter.model.RuntimeOutcome;
 import cbs.nova.starter.service.CorrelationId;
 import cbs.nova.starter.service.IdempotentReplayException;
 import cbs.nova.starter.web.RequestIdFilter;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.time.Duration;
 import java.util.Map;
@@ -313,5 +317,82 @@ class DslRuntimeServiceTest {
             .forClass(Context.class);
     verify(dslRuntime).run(eq("P"), captor.capture());
     assertThat(captor.getValue().runId()).isEqualTo("req-9");
+  }
+
+  @Test
+  void previewCoercesMapBodyIntoTypedInputRecord() {
+    // Register a synthetic process directly so GlobalManager lookup resolves its inputType
+    // without dragging in helper-instance resolution.
+    GlobalManager.globalManager().resetForTests();
+    try {
+      var process = new cbs.nova.dsl.process.ProcessDslObject(
+              "Synthetic",
+              "default",
+              "v1",
+              BatchIn.class,
+              null,
+              null,
+              ctx -> Result.success("ok"),
+              null,
+              null,
+              null,
+              null,
+              null);
+      GlobalManager.globalManager().registerProcess(process);
+
+      PreviewReport report = previewReport("Synthetic", true, List.of());
+      doReturn(Result.success(report)).when(dslRuntime).preview(eq("Synthetic"), any());
+
+      Map<String, Object> rawMap = new LinkedHashMap<>();
+      rawMap.put("items", List.of(
+              Map.of("id", "a", "value", 10),
+              Map.of("id", "b", "value", 20)));
+
+      service.preview("Synthetic", new DslRequest(rawMap, null), "req-coerce");
+
+      ArgumentCaptor<Context<?>> captor = ArgumentCaptor.forClass(Context.class);
+      verify(dslRuntime).preview(eq("Synthetic"), captor.capture());
+      Object coerced = captor.getValue().body();
+      assertThat(coerced).isInstanceOf(BatchIn.class);
+      BatchIn in = (BatchIn) coerced;
+      assertThat(in.items()).hasSize(2);
+      assertThat(in.items().get(0).id()).isEqualTo("a");
+      assertThat(in.items().get(0).value()).isEqualTo(10);
+    } finally {
+      GlobalManager.globalManager().resetForTests();
+    }
+  }
+
+  @Test
+  void previewLeavesNonMapBodyUntouched() {
+    GlobalManager.globalManager().resetForTests();
+    try {
+      var process = new cbs.nova.dsl.process.ProcessDslObject(
+              "Synthetic",
+              "default",
+              "v1",
+              BatchIn.class,
+              null,
+              null,
+              ctx -> Result.success("ok"),
+              null,
+              null,
+              null,
+              null,
+              null);
+      GlobalManager.globalManager().registerProcess(process);
+
+      PreviewReport report = previewReport("Synthetic", true, List.of());
+      doReturn(Result.success(report)).when(dslRuntime).preview(eq("Synthetic"), any());
+
+      Object stringBody = "not-a-map";
+      service.preview("Synthetic", new DslRequest(stringBody, null), "req-str");
+
+      ArgumentCaptor<Context<?>> captor = ArgumentCaptor.forClass(Context.class);
+      verify(dslRuntime).preview(eq("Synthetic"), captor.capture());
+      assertThat(captor.getValue().body()).isSameAs(stringBody);
+    } finally {
+      GlobalManager.globalManager().resetForTests();
+    }
   }
 }

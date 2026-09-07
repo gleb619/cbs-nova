@@ -46,8 +46,40 @@ async function run() {
     output.value = res
     status.value = 'success'
   } catch (err) {
-    const e = err as { data?: RunnerOutput; statusMessage?: string; message?: string }
-    output.value = e.data ?? { errors: [{ message: e.statusMessage ?? e.message ?? 'Request failed' }] }
+    const e = err as {
+      data?: Partial<RunnerOutput> & {
+        message?: string
+        code?: string
+        details?: unknown
+        diagnostics?: unknown
+      }
+      statusMessage?: string
+      message?: string
+    }
+    const data = e.data
+    if (data && (Array.isArray(data.errors) || data.message)) {
+      // BFF envelope (or legacy {errors:[]}) — surface as-is.
+      output.value = {
+        ...(data as RunnerOutput),
+        errors: Array.isArray(data.errors)
+          ? data.errors
+          : [
+              {
+                message: data.message ?? e.statusMessage ?? e.message ?? 'Request failed',
+                code: data.code,
+              },
+            ],
+      }
+    } else {
+      output.value = {
+        errors: [
+          {
+            message: e.statusMessage ?? e.message ?? 'Request failed',
+            code: undefined,
+          },
+        ],
+      }
+    }
     status.value = 'failed'
   }
 }

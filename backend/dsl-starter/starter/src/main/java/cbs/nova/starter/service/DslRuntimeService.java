@@ -4,11 +4,13 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExplainReport;
+import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.converter.DslRuntimeMapper;
 import cbs.nova.starter.core.pipe.PreviewTimeoutException;
@@ -22,6 +24,8 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -40,6 +44,8 @@ import java.util.function.Supplier;
 @RequiredArgsConstructor
 public class DslRuntimeService {
 
+  private static final Logger LOG = LoggerFactory.getLogger(DslRuntimeService.class);
+
   private final DslRuntime dslRuntime;
   private final ContextFactory contextFactory;
   private final LoggingExecutionListener loggingListener;
@@ -47,7 +53,7 @@ public class DslRuntimeService {
 
   public RuntimeOutcome preview(String name, DslRequest request, @Nullable String requestId) {
     String runId = resolveRunId(requestId);
-    Context<?> ctx = toContext(request, ExecutionMode.PREVIEW, runId);
+    Context<?> ctx = toContext(name, request, ExecutionMode.PREVIEW, runId);
     Result<PreviewReport> result = executeWithMdc(runId, () -> dslRuntime.preview(name, ctx));
     if (!result.isSuccess() && result.cause() instanceof PreviewTimeoutException cause) {
       return RuntimeOutcome.error(mapper.toErrorResponse(
@@ -75,7 +81,7 @@ public class DslRuntimeService {
           @Nullable String forcedRunId, @Nullable String correlationId) {
     String runId = forcedRunId != null ? forcedRunId : resolveRunId(requestId);
     String mdcRunId = requestId != null && !requestId.isBlank() ? requestId : runId;
-    Context<?> ctx = toContext(request, ExecutionMode.RUN, runId, correlationId);
+    Context<?> ctx = toContext(name, request, ExecutionMode.RUN, runId, correlationId);
     Result<?> result = executeWithMdc(mdcRunId, () -> dslRuntime.run(name, ctx));
     if (result.isSuccess()) {
       return RuntimeOutcome.ok(result.value());
@@ -88,7 +94,7 @@ public class DslRuntimeService {
 
   public RuntimeOutcome explain(String name, DslRequest request, @Nullable String requestId) {
     String runId = resolveRunId(requestId);
-    Context<?> ctx = toContext(request, ExecutionMode.EXPLAIN, runId);
+    Context<?> ctx = toContext(name, request, ExecutionMode.EXPLAIN, runId);
     ExplainReport report;
     try {
       report = executeWithMdc(runId, () -> dslRuntime.explain(name, ctx));
@@ -125,20 +131,68 @@ public class DslRuntimeService {
     return requestId != null && !requestId.isBlank() ? requestId : contextFactory.generateRunId();
   }
 
-  private Context<?> toContext(DslRequest request, ExecutionMode mode, String runId) {
-    return toContext(request, mode, runId, null);
+  private Context<?> toContext(String name, DslRequest request, ExecutionMode mode, String runId) {
+    return toContext(name, request, mode, runId, null);
   }
 
-  private Context<?> toContext(DslRequest request, ExecutionMode mode, String runId,
-          @Nullable String correlationId) {
+  private Context<?> toContext(String name, DslRequest request, ExecutionMode mode,
+          String runId, @Nullable String correlationId) {
     Map<String, Object> metadata = request.metadata() != null
             ? new HashMap<>(request.metadata())
             : new HashMap<>();
     if (correlationId != null && !correlationId.isBlank()) {
       metadata.put(CorrelationId.CORRELATION_ID_METADATA_KEY, correlationId);
     }
-    Context<?> ctx = contextFactory.of(request.body(), metadata, mode, runId);
+    Object body = coerceBody(name, runId, request.body());
+    Context<?> ctx = contextFactory.of(body, metadata, mode, runId);
     return ctx.withExecutionListener(loggingListener);
+  }
+
+  /**
+   * Coerce an inbound {@code Map<String,Object>} body into the typed input record declared on the
+   * target construct (process / transaction). HTTP callers send JSON which Spring binds as a
+   * {@link java.util.LinkedHashMap}; user DSL code reads {@code ctx.body()} and casts to a typed
+   * record (e.g. {@code BatchIn}). Without this coercion, the cast at the user code site throws
+   * {@code ClassCastException} and the request fails with HTTP 422.
+   *
+   * <p>Best-effort: if the construct cannot be resolved, the body is not a map, or conversion
+   * throws, the original body is returned untouched and the existing failure mode applies.
+   */
+  private Object coerceBody(String name, String runId, Object body) {
+    if (!(body instanceof Map<?, ?> rawMap)) {
+      return body;
+    }
+    Class<?> inputType = resolveInputType(name, runId);
+    if (inputType == null) {
+      return body;
+    }
+    try {
+      @SuppressWarnings("unchecked")
+      Map<String, Object> map = (Map<String, Object>) rawMap;
+      return DslConfig.dslConfig().avajeMapConverter().fromMap(map, inputType);
+    } catch (RuntimeException ex) {
+      LOG.warn("[runId:{}] failed to coerce map body to {} — passing raw map downstream",
+              runId, inputType.getName(), ex);
+      return body;
+    }
+  }
+
+  @Nullable
+  private Class<?> resolveInputType(String name, String runId) {
+    try {
+      GlobalManager gm = GlobalManager.globalManager();
+      // The service does not know whether {@code name} refers to a process or transaction.
+      // Probe both registries; helper/function constructs are not affected by this path.
+      Class<?> fromProcess = gm.findProcess(name).map(p -> p.inputType()).orElse(null);
+      if (fromProcess != null) {
+        return fromProcess;
+      }
+      return gm.findTransaction(name).map(t -> t.inputType()).orElse(null);
+    } catch (RuntimeException ex) {
+      LOG.warn("[runId:{}] could not resolve input type for {} — skipping coercion",
+              runId, name, ex);
+      return null;
+    }
   }
 
   private <R> R executeWithMdc(String correlationId, Supplier<R> action) {
