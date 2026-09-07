@@ -155,8 +155,9 @@ public class DslRuntimeService {
    * record (e.g. {@code BatchIn}). Without this coercion, the cast at the user code site throws
    * {@code ClassCastException} and the request fails with HTTP 422.
    *
-   * <p>Best-effort: if the construct cannot be resolved, the body is not a map, or conversion
-   * throws, the original body is returned untouched and the existing failure mode applies.
+   * <p>
+   * Best-effort: if the construct cannot be resolved, the body is not a map, or conversion throws,
+   * the original body is returned untouched and the existing failure mode applies.
    */
   private Object coerceBody(String name, String runId, Object body) {
     if (!(body instanceof Map<?, ?> rawMap)) {

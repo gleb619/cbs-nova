@@ -72,6 +72,21 @@ class DslReloadDiagnosticsTest {
   }
 
   @Test
+  void failedReloadDiagnosticsIncludeJavacCode() throws Exception {
+    Path badDir = createTemporaryBrokenDslSourceDir();
+    try {
+      setSourceDir(badDir.toString());
+      ServerResponse response = resource.reload(reloadRequest());
+
+      var node = mapper.readTree(renderBody(response));
+      var first = node.path("diagnostics").get(0);
+      assertThat(first.path("code").asText()).startsWith("compiler.");
+    } finally {
+      deleteRecursively(badDir);
+    }
+  }
+
+  @Test
   void successfulReloadOmitsDiagnosticsField() throws Exception {
     Path sourceDir = createTemporaryDslSourceDir();
     try {

@@ -1,10 +1,13 @@
 package cbs.nova.starter.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 public record CompileDiagnostic(
         String file,
         Long line,
         Long column,
         String message,
-        String severity) {
+        String severity,
+        @JsonInclude(JsonInclude.Include.NON_NULL) String code) {
 
 }
