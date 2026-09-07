@@ -1,62 +1,92 @@
-import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
-import type { RunnerOutput, RunnerStatus } from '../../types/runner'
+import { mount, flushPromises } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import PreviewTab from '../dsl/PreviewTab.vue'
 
-function output(overrides: Partial<RunnerOutput> = {}): RunnerOutput {
-  return { result: { ok: true }, ...overrides }
+function mountTab(props: Record<string, unknown> = {}) {
+  return mount(PreviewTab, {
+    props: { name: 'demo', ...props },
+    global: {
+      stubs: {
+        ResultTab: {
+          template: '<div data-testid="runner-result-tab">{{ result !== undefined ? JSON.stringify(result) : "No result yet." }}</div>',
+          props: ['result'],
+        },
+      },
+    },
+  })
 }
 
 describe('PreviewTab', () => {
-  it('emits run when the Run preview button is clicked', async () => {
-    const wrapper = mount(PreviewTab, { props: { output: null, status: 'idle' } })
-
-    await wrapper.find('button').trigger('click')
-
-    expect(wrapper.emitted('run')).toBeTruthy()
-    expect(wrapper.emitted('run')).toHaveLength(1)
+  beforeEach(() => {
+    vi.stubGlobal('$fetch', vi.fn())
   })
 
-  it.each([
-    ['loading', 'Loading…'],
-    ['success', 'Done'],
-    ['failed', 'Failed'],
-  ])('shows %s status text', (status, text) => {
-    const wrapper = mount(PreviewTab, {
-      props: { output: null, status: status as RunnerStatus },
-    })
-
-    expect(wrapper.text()).toContain(text)
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
-  it('renders output errors when present and hides ResultTab', () => {
-    const wrapper = mount(PreviewTab, {
-      props: {
-        output: output({ errors: [{ message: 'preview failed' }] }),
-        status: 'failed',
-      },
+  it('renders both input and result panels', () => {
+    const wrapper = mountTab()
+    expect(wrapper.text()).toContain('Input')
+    expect(wrapper.text()).toContain('Result · preview')
+    expect(wrapper.text()).toContain('idle')
+  })
+
+  it('disables Run when JSON is invalid', async () => {
+    const wrapper = mountTab()
+    const textarea = wrapper.find('textarea')
+    await textarea.setValue('{ bad json')
+    const runBtn = wrapper.findAll('button').find((b) => b.text() === 'Run')!
+    expect(runBtn.attributes('disabled')).toBeDefined()
+  })
+
+  it('calls $fetch and shows done on success', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ result: { ok: true } })
+    vi.stubGlobal('$fetch', fetchMock)
+
+    const wrapper = mountTab()
+    await wrapper.find('textarea').setValue('{"a":1}')
+    await wrapper.findAll('button').find((b) => b.text() === 'Run')!.trigger('click')
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/dsl/preview/demo',
+      expect.objectContaining({ method: 'POST', body: { body: { a: 1 } } }),
+    )
+    expect(wrapper.text()).toContain('done')
+    expect(wrapper.find('[data-testid="runner-result-tab"]').exists()).toBe(true)
+  })
+
+  it('surfaces backend errors on failure', async () => {
+    const fetchMock = vi.fn().mockRejectedValue({
+      data: { errors: [{ message: 'preview failed' }] },
+      statusMessage: 'Unprocessable Entity',
     })
+    vi.stubGlobal('$fetch', fetchMock)
+
+    const wrapper = mountTab()
+    await wrapper.find('textarea').setValue('{}')
+    await wrapper.findAll('button').find((b) => b.text() === 'Run')!.trigger('click')
+    await flushPromises()
 
     expect(wrapper.text()).toContain('preview failed')
+    expect(wrapper.text()).toContain('failed')
     expect(wrapper.find('[data-testid="runner-result-tab"]').exists()).toBe(false)
   })
 
-  it('renders ResultTab with the result when there are no errors', () => {
-    const wrapper = mount(PreviewTab, {
-      props: {
-        output: output({ result: { ok: true } }),
-        status: 'success',
-      },
-    })
+  it('uses the explain endpoint when configured', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ result: { ok: true } })
+    vi.stubGlobal('$fetch', fetchMock)
 
-    expect(wrapper.find('[data-testid="runner-result-tab"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('ok')
-  })
+    const wrapper = mountTab({ endpoint: 'explain' })
+    await wrapper.find('textarea').setValue('{}')
+    await wrapper.findAll('button').find((b) => b.text() === 'Run')!.trigger('click')
+    await flushPromises()
 
-  it('renders an empty ResultTab when output is null', () => {
-    const wrapper = mount(PreviewTab, { props: { output: null, status: 'idle' } })
-
-    expect(wrapper.find('[data-testid="runner-result-tab"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('No result yet.')
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/dsl/explain/demo',
+      expect.any(Object),
+    )
+    expect(wrapper.text()).toContain('Result · explain')
   })
 })

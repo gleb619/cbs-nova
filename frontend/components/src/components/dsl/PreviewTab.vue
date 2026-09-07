@@ -1,30 +1,48 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { RunnerOutput, RunnerStatus } from '../../types/runner'
-import ResultTab from '../runner/ResultTab.vue'
+import PreviewInputPanel from './PreviewInputPanel.vue'
+import PreviewResultPanel from './PreviewResultPanel.vue'
 
-defineProps<{ output: RunnerOutput | null; status: RunnerStatus }>()
+const props = defineProps<{
+  name: string
+  endpoint?: 'preview' | 'run' | 'explain'
+}>()
 
-defineEmits<{ run: [] }>()
+const inputJson = ref<string>('{\n  \n}')
+const output = ref<RunnerOutput | null>(null)
+const status = ref<RunnerStatus>('idle')
+
+async function run() {
+  status.value = 'loading'
+  output.value = null
+  try {
+    const path = props.endpoint ?? 'preview'
+    const res = await $fetch<RunnerOutput>(
+      `/api/v1/dsl/${path}/${encodeURIComponent(props.name)}`,
+      { method: 'POST', body: { body: JSON.parse(inputJson.value) } },
+    )
+    output.value = res
+    status.value = 'success'
+  } catch (err) {
+    const e = err as { data?: RunnerOutput; statusMessage?: string; message?: string }
+    output.value = e.data ?? { errors: [{ message: e.statusMessage ?? e.message ?? 'Request failed' }] }
+    status.value = 'failed'
+  }
+}
 </script>
 
 <template>
-  <div class="p-3 h-full overflow-auto">
-    <div class="flex items-center gap-3 mb-3">
-      <button
-        type="button"
-        class="px-3 py-1.5 text-sm font-medium rounded border border-gray-300 hover:bg-gray-50"
-        @click="$emit('run')"
-      >
-        Run preview
-      </button>
-      <span v-if="status === 'loading'" class="text-sm text-gray-500">Loading…</span>
-      <span v-else-if="status === 'success'" class="text-sm text-green-600">Done</span>
-      <span v-else-if="status === 'failed'" class="text-sm text-red-600">Failed</span>
+  <div class="h-full p-3 bg-[#F4F5F7]">
+    <div class="grid gap-3 h-full min-h-0 md:grid-cols-2 grid-cols-1">
+      <PreviewInputPanel
+        v-model="inputJson"
+        :name="name"
+        :endpoint="endpoint"
+        :busy="status === 'loading'"
+        @submit="run"
+      />
+      <PreviewResultPanel :output="output" :status="status" :endpoint="endpoint" />
     </div>
-
-    <div v-if="output?.errors?.length" class="text-sm text-red-600">
-      <p v-for="(err, i) in output.errors" :key="i">{{ err.message }}</p>
-    </div>
-    <ResultTab v-else :result="output?.result" />
   </div>
 </template>
