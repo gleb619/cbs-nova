@@ -1034,3 +1034,49 @@ helper deliberately does not chain ambient OTel context across helper invocation
 parent-child nesting between two helper-initiated spans is not supported. And when tracing is
 disabled in the host application the `OpenTelemetry` bean is a no-op implementation: the helper
 still succeeds, it just produces no exported spans — DSL code can call it unconditionally.
+
+## Masking sensitive values
+
+`mask` redacts sensitive values (card numbers, IBANs, emails, credentials) at the point of use,
+so they can be safely interpolated into log lines, notification messages, or audit
+`details_json`. It takes `MaskIn(value, mode, keepFirst, keepLast, maskChar, width)` and returns
+`MaskOut(result)`.
+
+Two modes, selected by `mode` (case-insensitive):
+
+- `null` / `"edges"` — keep the configured edges visible and mask the middle.
+- `"fixed"` — output is exactly `width` mask characters (default `8`), independent of the
+  input length.
+
+### Safe default (no `keepFirst`/`keepLast`)
+
+When `mode` is `null` or `"edges"` and neither `keepFirst` nor `keepLast` is given, the exact
+rule is: if the value has **8 or more Unicode code points**, the last 4 code points stay visible
+and everything before them is masked (`"4111111111111111" → "************1111"`); if it is
+shorter, the output is **exactly 8 mask characters** — a short value's true length never leaks
+(`"abc" → "********"`).
+
+```java
+// Card number into a notification template:
+MaskOut safeCard = ctx.runHelper("mask",
+        new MaskIn(cardNumber, null, null, null, null, null))
+        .as(MaskOut.class);
+// safeCard.result() == "************1111"
+
+// Explicit edges + custom mask char:
+MaskOut ref = ctx.runHelper("mask",
+        new MaskIn(payerReference, "edges", 2, 2, "#", null))
+        .as(MaskOut.class);
+
+// Fixed width, independent of input length:
+MaskOut token = ctx.runHelper("mask",
+        new MaskIn(apiToken, "fixed", null, null, null, 12))
+        .as(MaskOut.class);
+```
+
+Conventions: a `null` `value` is rejected (`"mask.value is required"`, same as `hex`); an empty
+value returns an empty result. `maskChar` defaults to `'*'`; when more than one character is
+supplied, the first is used. Keeps are counted in Unicode code points (emoji / surrogate pairs
+are never split), and negative `keepFirst`/`keepLast` are treated as `0`. If
+`keepFirst + keepLast` reaches the value length, the keeps are clamped so exactly one code point
+stays masked — the value is **never** returned unmasked. `width < 1` is rejected.
