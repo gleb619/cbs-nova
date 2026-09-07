@@ -15,12 +15,14 @@ import cbs.nova.starter.model.CompileDiagnostic;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.controller.Pagination;
 import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslDefinitionBundleService;
 import cbs.nova.starter.service.DslDefinitionHistoryService;
 import tools.jackson.core.JacksonException;
 import jakarta.servlet.ServletException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -35,59 +37,114 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
 @Component
 @ConditionalOnProperty(prefix = "csb.dsl.drafts", name = "enabled", havingValue = "true", matchIfMissing = true)
-@RequiredArgsConstructor
 public class DslDraftHandler {
 
   private static final String DRAFTS_DIR = ".workbench/drafts";
   private static final String PUBLISHED_DIR = ".workbench/published";
   private static final int BUNDLE_MAX_DEFINITIONS = 200;
 
+  static final String ACTION_DRAFT_WRITE = "DRAFT_WRITE";
+  static final String ACTION_DEFINITION_PUBLISH = "DEFINITION_PUBLISH";
+  static final String ACTION_DRAFT_BULK_WRITE = "DRAFT_BULK_WRITE";
+
   private final DslProperties dslProperties;
   private final DslReloadHandler reloadHandler;
   private final DslDefinitionHistoryService historyService;
   private final ObjectMapper objectMapper;
   private final DslDefinitionBundleService bundleService;
+  private final ObjectProvider<DslAuditService> auditServiceProvider;
+
+  public DslDraftHandler(DslProperties dslProperties, DslReloadHandler reloadHandler,
+          DslDefinitionHistoryService historyService, ObjectMapper objectMapper,
+          DslDefinitionBundleService bundleService) {
+    this(dslProperties, reloadHandler, historyService, objectMapper, bundleService, null);
+  }
+
+  @Autowired
+  public DslDraftHandler(DslProperties dslProperties, DslReloadHandler reloadHandler,
+          DslDefinitionHistoryService historyService, ObjectMapper objectMapper,
+          DslDefinitionBundleService bundleService,
+          ObjectProvider<DslAuditService> auditServiceProvider) {
+    this.dslProperties = dslProperties;
+    this.reloadHandler = reloadHandler;
+    this.historyService = historyService;
+    this.objectMapper = objectMapper;
+    this.bundleService = bundleService;
+    this.auditServiceProvider = auditServiceProvider;
+  }
 
   public ServerResponse save(ServerRequest request) throws IOException {
     String name = request.pathVariable("name");
     DraftRequest body = parse(request);
     if (body == null || body.name() == null || body.name().isBlank()) {
+      audit(request, ACTION_DRAFT_WRITE, name, DslAuditService.OUTCOME_FAILURE,
+              Map.of("error", "name is required"));
       return error(HttpStatus.BAD_REQUEST,
               new ErrorResponse("INVALID_REQUEST", "name is required", name, null, null));
     }
     var dir = ensureConfigured(name);
     if (dir.isError()) {
+      audit(request, ACTION_DRAFT_WRITE, name, DslAuditService.OUTCOME_FAILURE,
+              Map.of("error", "drafts directory not configured"));
       return dir.response();
     }
     var payload = withStatus(body, "Draft");
-    Path file = writePayload(dir.path().resolve(DRAFTS_DIR), payload);
-    log.info("[DSL drafts] saved {} to {}", name, file);
-    return ServerResponse.ok()
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(new DraftResponse(name, "Draft", file.toString(), false, LoadResult.empty()));
+    try {
+      Path file = writePayload(dir.path().resolve(DRAFTS_DIR), payload);
+      audit(request, ACTION_DRAFT_WRITE, name, DslAuditService.OUTCOME_SUCCESS,
+              Map.of("location", file.toString()));
+      log.info("[DSL drafts] saved {} to {}", name, file);
+      return ServerResponse.ok()
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(new DraftResponse(name, "Draft", file.toString(), false, LoadResult.empty()));
+    } catch (IOException | RuntimeException e) {
+      audit(request, ACTION_DRAFT_WRITE, name, DslAuditService.OUTCOME_FAILURE,
+              Map.of("error", String.valueOf(e.getMessage())));
+      throw e;
+    }
   }
 
   public ServerResponse publish(ServerRequest request) throws IOException {
     String name = request.pathVariable("name");
     DraftRequest body = parse(request);
     if (body == null || body.name() == null || body.name().isBlank()) {
+      audit(request, ACTION_DEFINITION_PUBLISH, name, DslAuditService.OUTCOME_FAILURE,
+              Map.of("error", "name is required"));
       return error(HttpStatus.BAD_REQUEST,
               new ErrorResponse("INVALID_REQUEST", "name is required", name, null, null));
     }
     var dir = ensureConfigured(name);
     if (dir.isError()) {
+      audit(request, ACTION_DEFINITION_PUBLISH, name, DslAuditService.OUTCOME_FAILURE,
+              Map.of("error", "drafts directory not configured"));
       return dir.response();
     }
     var payload = withStatus(body, "Published");
-    historyService.snapshotBeforePublish(dir.path(), name);
-    Path file = writePayload(dir.path().resolve(PUBLISHED_DIR), payload);
-    log.info("[DSL drafts] published {} to {}", name, file);
-    return finishPublish(name, dir.path(), file);
+    try {
+      historyService.snapshotBeforePublish(dir.path(), name);
+      Path file = writePayload(dir.path().resolve(PUBLISHED_DIR), payload);
+      log.info("[DSL drafts] published {} to {}", name, file);
+      DraftResponse response = finishPublish(name, dir.path(), file);
+      boolean success = response.reloadError() == null;
+      audit(request, ACTION_DEFINITION_PUBLISH, name,
+              success ? DslAuditService.OUTCOME_SUCCESS : DslAuditService.OUTCOME_FAILURE,
+              Map.of("location", file.toString(),
+                      "reloaded", response.reloaded(),
+                      "error", success ? "" : String.valueOf(response.reloadError())));
+      return ServerResponse.ok()
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(response);
+    } catch (IOException | RuntimeException e) {
+      audit(request, ACTION_DEFINITION_PUBLISH, name, DslAuditService.OUTCOME_FAILURE,
+              Map.of("error", String.valueOf(e.getMessage())));
+      throw e;
+    }
   }
 
   public ServerResponse history(ServerRequest request) {
@@ -118,7 +175,9 @@ public class DslDraftHandler {
     var payload = withStatus(entry.get(), "Published");
     Path file = writePayload(dir.path().resolve(PUBLISHED_DIR), payload);
     log.info("[DSL drafts] restored {} to published {} from history {}", name, file, timestamp);
-    return finishPublish(name, dir.path(), file);
+    return ServerResponse.ok()
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(finishPublish(name, dir.path(), file));
   }
 
   public ServerResponse delete(ServerRequest request) throws IOException {
@@ -267,13 +326,24 @@ public class DslDraftHandler {
     }
 
     List<ImportEntryResult> results = new ArrayList<>();
-    for (DefinitionBundleEntry entry : bundle.definitions()) {
-      DraftRequest payload = withStatus(entry.definition(), "Published");
-      String name = payload.name();
-      historyService.snapshotBeforePublish(dir.path(), name);
-      Path file = writePayload(dir.path().resolve(PUBLISHED_DIR), payload);
-      results.add(new ImportEntryResult(name, "published", null));
-      log.info("[DSL bundle] imported published marker {} to {}", name, file);
+    String bulkTarget = bundleTarget(bundle);
+    try {
+      for (DefinitionBundleEntry entry : bundle.definitions()) {
+        DraftRequest payload = withStatus(entry.definition(), "Published");
+        String name = payload.name();
+        historyService.snapshotBeforePublish(dir.path(), name);
+        Path file = writePayload(dir.path().resolve(PUBLISHED_DIR), payload);
+        results.add(new ImportEntryResult(name, "published", null));
+        log.info("[DSL bundle] imported published marker {} to {}", name, file);
+      }
+      audit(request, ACTION_DRAFT_BULK_WRITE, bulkTarget, DslAuditService.OUTCOME_SUCCESS,
+              Map.of("count", results.size()));
+    } catch (RuntimeException e) {
+      audit(request, ACTION_DRAFT_BULK_WRITE, bulkTarget, DslAuditService.OUTCOME_FAILURE,
+              Map.of("error", String.valueOf(e.getMessage()),
+                      "succeeded", results.size(),
+                      "attempted", bundle.definitions().size()));
+      throw e;
     }
 
     boolean reloaded = false;
@@ -304,7 +374,28 @@ public class DslDraftHandler {
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(result);
   }
 
-  private ServerResponse finishPublish(String name, Path dir, Path file) throws IOException {
+  private void audit(ServerRequest request, String action, String target, String outcome,
+          Object details) {
+    if (auditServiceProvider == null) {
+      return;
+    }
+    var auditService = auditServiceProvider.getIfAvailable();
+    if (auditService == null) {
+      return;
+    }
+    auditService.record(DslAuditService.currentActor(), action, target,
+            DslAuditService.correlationIdOf(request), outcome, details);
+  }
+
+  private static String bundleTarget(DefinitionBundle bundle) {
+    String joined = bundle.definitions().stream()
+            .map(e -> e.definition().name())
+            .reduce((a, b) -> a + "," + b)
+            .orElse("");
+    return joined.length() > 400 ? joined.substring(0, 400) + "…" : joined;
+  }
+
+  private DraftResponse finishPublish(String name, Path dir, Path file) throws IOException {
     boolean reloaded = false;
     LoadResult loadResult = LoadResult.empty();
     try {
@@ -319,20 +410,14 @@ public class DslDraftHandler {
       log.warn("[DSL drafts] publish of {} succeeded but reload failed: {}", name, e.getMessage());
       var compilation = findDslCompilationException(e);
       if (compilation != null) {
-        return ServerResponse.ok()
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(new DraftResponse(name, "Published", file.toString(), false,
-                        LoadResult.empty(),
-                        compilation.getMessage(), compilation.diagnostics()));
+        return new DraftResponse(name, "Published", file.toString(), false,
+                LoadResult.empty(),
+                compilation.getMessage(), compilation.diagnostics());
       }
-      return ServerResponse.ok()
-              .contentType(MediaType.APPLICATION_JSON)
-              .body(new DraftResponse(name, "Published", file.toString(), false, LoadResult.empty(),
-                      e.getMessage(), null));
+      return new DraftResponse(name, "Published", file.toString(), false, LoadResult.empty(),
+              e.getMessage(), null);
     }
-    return ServerResponse.ok()
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(new DraftResponse(name, "Published", file.toString(), reloaded, loadResult));
+    return new DraftResponse(name, "Published", file.toString(), reloaded, loadResult);
   }
 
   private sealed interface PathResult {

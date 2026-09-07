@@ -6,9 +6,11 @@ import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.controller.Pagination;
 import cbs.nova.starter.model.ScheduleModels.CreateScheduleRequest;
 import cbs.nova.starter.model.ScheduleModels.ScheduleSummary;
+import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslScheduleService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -31,21 +33,48 @@ import java.util.Map;
 @Slf4j
 @Component
 @ConditionalOnBean(ScheduleClient.class)
-@RequiredArgsConstructor
 public class DslScheduleHandler {
+
+  static final String ACTION_SCHEDULE_CREATE = "SCHEDULE_CREATE";
+  static final String ACTION_SCHEDULE_DELETE = "SCHEDULE_DELETE";
 
   private final DslScheduleService service;
   private final ObjectMapper objectMapper;
+  private final ObjectProvider<DslAuditService> auditServiceProvider;
+
+  public DslScheduleHandler(DslScheduleService service, ObjectMapper objectMapper) {
+    this(service, objectMapper, null);
+  }
+
+  @Autowired
+  public DslScheduleHandler(DslScheduleService service, ObjectMapper objectMapper,
+          ObjectProvider<DslAuditService> auditServiceProvider) {
+    this.service = service;
+    this.objectMapper = objectMapper;
+    this.auditServiceProvider = auditServiceProvider;
+  }
 
   public ServerResponse create(ServerRequest request) throws IOException {
     CreateScheduleRequest body = parse(request);
     if (body == null) {
+      audit(request, ACTION_SCHEDULE_CREATE, "-", DslAuditService.OUTCOME_FAILURE,
+              Map.of("error", "request body is required"));
       return badRequest("Request body is required");
     }
-    var response = service.create(body);
-    return ServerResponse.status(HttpStatus.CREATED)
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(response);
+    try {
+      var response = service.create(body);
+      audit(request, ACTION_SCHEDULE_CREATE, response.scheduleId(),
+              DslAuditService.OUTCOME_SUCCESS,
+              Map.of("definition", String.valueOf(response.definition()),
+                      "cron", String.valueOf(response.cron())));
+      return ServerResponse.status(HttpStatus.CREATED)
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(response);
+    } catch (RuntimeException e) {
+      audit(request, ACTION_SCHEDULE_CREATE, String.valueOf(body.definition()),
+              DslAuditService.OUTCOME_FAILURE, Map.of("error", String.valueOf(e.getMessage())));
+      throw e;
+    }
   }
 
   public ServerResponse list(ServerRequest request) {
@@ -67,10 +96,30 @@ public class DslScheduleHandler {
 
   public ServerResponse delete(ServerRequest request) {
     String definition = request.pathVariable("definition");
-    service.delete(definition);
-    return ServerResponse.ok()
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(Map.of("deleted", true));
+    try {
+      service.delete(definition);
+      audit(request, ACTION_SCHEDULE_DELETE, definition, DslAuditService.OUTCOME_SUCCESS, null);
+      return ServerResponse.ok()
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(Map.of("deleted", true));
+    } catch (RuntimeException e) {
+      audit(request, ACTION_SCHEDULE_DELETE, definition, DslAuditService.OUTCOME_FAILURE,
+              Map.of("error", String.valueOf(e.getMessage())));
+      throw e;
+    }
+  }
+
+  private void audit(ServerRequest request, String action, String target, String outcome,
+          Object details) {
+    if (auditServiceProvider == null) {
+      return;
+    }
+    var auditService = auditServiceProvider.getIfAvailable();
+    if (auditService == null) {
+      return;
+    }
+    auditService.record(DslAuditService.currentActor(), action, target,
+            DslAuditService.correlationIdOf(request), outcome, details);
   }
 
   private CreateScheduleRequest parse(ServerRequest request) throws IOException {

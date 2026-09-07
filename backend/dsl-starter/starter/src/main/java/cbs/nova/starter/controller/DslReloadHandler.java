@@ -17,6 +17,7 @@ import cbs.nova.starter.exception.DslCompilationException;
 import cbs.nova.starter.model.CompileDiagnostic;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ReloadResponse;
+import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.PreviewResultCache;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -43,6 +44,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
@@ -68,33 +70,49 @@ import java.util.stream.Stream;
 @Slf4j
 public class DslReloadHandler {
 
+  public static final String ACTION_DEFINITION_RELOAD = "DEFINITION_RELOAD";
+
   private static final String RELOAD_TEMP_PREFIX = "dsl-reload-";
   private static final int DIAGNOSTIC_CAP = 20;
 
   private final DslProperties dslProperties;
   private final DslDefinitionLoader loader;
   private final ObjectProvider<PreviewResultCache> previewCacheProvider;
+  private final ObjectProvider<DslAuditService> auditServiceProvider;
   private final ReentrantLock reloadLock = new ReentrantLock();
 
   /**
    * Spring-injected constructor. The {@link PreviewResultCache} bean is resolved through an
    * {@link ObjectProvider} so the reload path stays usable when the cache is absent (e.g. in tests
-   * that don't wire the starter preview cache, or when a host disables preview caching).
+   * that don't wire the starter preview cache, or when a host disables preview caching). The same
+   * applies to the {@link DslAuditService}: when no {@code DataSource} is configured there is no
+   * audit bean and the reload simply is not audited.
    */
   @Autowired
   public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader,
-          ObjectProvider<PreviewResultCache> previewCacheProvider) {
+          ObjectProvider<PreviewResultCache> previewCacheProvider,
+          ObjectProvider<DslAuditService> auditServiceProvider) {
     this.dslProperties = dslProperties;
     this.loader = loader;
     this.previewCacheProvider = previewCacheProvider;
+    this.auditServiceProvider = auditServiceProvider;
   }
 
   /**
    * Backwards-compatible constructor for tests and direct instantiation: builds a handler with no
-   * preview cache flush wired in. Delegates to the Spring constructor with a {@code null} provider.
+   * preview cache flush and no audit logging wired in. Delegates to the Spring constructor with
+   * {@code null} providers.
    */
   public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader) {
-    this(dslProperties, loader, null);
+    this(dslProperties, loader, null, null);
+  }
+
+  /**
+   * Constructor for callers that wire a preview cache but no audit service (tests).
+   */
+  public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader,
+          ObjectProvider<PreviewResultCache> previewCacheProvider) {
+    this(dslProperties, loader, previewCacheProvider, null);
   }
 
   /**
@@ -106,11 +124,15 @@ public class DslReloadHandler {
   public ServerResponse reload(ServerRequest request) throws IOException {
     var sourceDirProperty = dslProperties.getSourceDir();
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
+      audit(request, "-", DslAuditService.OUTCOME_FAILURE,
+              Map.of("error", "NOT_CONFIGURED: csb.dsl.source-dir is not configured"));
       return error(HttpStatus.CONFLICT, new ErrorResponse(
               "NOT_CONFIGURED", "csb.dsl.source-dir is not configured", null, null, null));
     }
     var dir = Path.of(sourceDirProperty);
     if (!Files.isDirectory(dir)) {
+      audit(request, dir.toString(), DslAuditService.OUTCOME_FAILURE,
+              Map.of("error", "NOT_FOUND: Source directory does not exist: " + dir));
       return error(HttpStatus.CONFLICT, new ErrorResponse(
               "NOT_FOUND", "Source directory does not exist: " + dir, null, null, null));
     }
@@ -118,10 +140,17 @@ public class DslReloadHandler {
     reloadLock.lock();
     try {
       var load = doReload(dir);
+      audit(request, dir.toString(), DslAuditService.OUTCOME_SUCCESS, Map.of(
+              "processes", load.processCount(),
+              "transactions", load.transactionCount(),
+              "functions", load.functionCount(),
+              "total", load.total()));
       return ServerResponse.ok()
               .contentType(MediaType.APPLICATION_JSON)
               .body(new ReloadResponse(dir.toString(), load));
     } catch (Exception e) {
+      audit(request, dir.toString(), DslAuditService.OUTCOME_FAILURE,
+              Map.of("error", String.valueOf(e.getMessage())));
       log.error("[DSL reload] Failed to reload DSL definitions from {}", dir, e);
       if (e instanceof DslCompilationException dce) {
         return error(HttpStatus.INTERNAL_SERVER_ERROR, new ErrorResponse(
@@ -378,6 +407,18 @@ public class DslReloadHandler {
         log.warn("[DSL reload] Failed to delete temp path {}: {}", p, e.getMessage());
       }
     }
+  }
+
+  private void audit(ServerRequest request, String target, String outcome, Object details) {
+    if (auditServiceProvider == null) {
+      return;
+    }
+    var auditService = auditServiceProvider.getIfAvailable();
+    if (auditService == null) {
+      return;
+    }
+    auditService.record(DslAuditService.currentActor(), ACTION_DEFINITION_RELOAD, target,
+            DslAuditService.correlationIdOf(request), outcome, details);
   }
 
   private static ServerResponse error(HttpStatus status, ErrorResponse body) throws IOException {

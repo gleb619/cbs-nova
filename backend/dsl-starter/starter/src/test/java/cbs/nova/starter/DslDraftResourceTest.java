@@ -3,6 +3,9 @@ package cbs.nova.starter;
 import static java.nio.charset.StandardCharsets.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.starter.AuditTestSupport;
+import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.dsl.GlobalManager;
 import cbs.nova.starter.config.router.DslDraftRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
@@ -595,6 +598,91 @@ class DslDraftResourceTest {
             HttpOutputMessage outputMessage) {
       throw new UnsupportedOperationException();
     }
+  }
+
+  @Test
+  void saveWritesAuditRowOnSuccess() throws Exception {
+    var audit = AuditTestSupport.h2();
+    DslDraftHandler audited = auditedDraftHandler(audit, props);
+
+    ServerResponse response = audited.save(postRequest("/api/dsl/drafts/foo/save"));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    var result = audit.repository().search(null, 0, 10);
+    assertThat(result.total()).isEqualTo(1);
+    var row = result.items().get(0);
+    assertThat(row.action()).isEqualTo("DRAFT_WRITE");
+    assertThat(row.outcome()).isEqualTo("SUCCESS");
+    assertThat(row.target()).isEqualTo("foo");
+    assertThat(row.actor()).isEqualTo("anonymous");
+    assertThat(row.correlationId()).isNull();
+  }
+
+  @Test
+  void saveWritesAuditRowWithCorrelationIdOnFailure() throws Exception {
+    var audit = AuditTestSupport.h2();
+    DslProperties blank = new DslProperties();
+    blank.setSourceDir("");
+    DslDraftHandler audited = auditedDraftHandler(audit, blank);
+
+    ServerRequest request = postRequestWithHeader("/api/dsl/drafts/foo/save", "foo",
+            "X-Correlation-Id", "corr-draft-1");
+    ServerResponse response = audited.save(request);
+
+    assertThat(response.statusCode().value()).isEqualTo(409);
+    var result = audit.repository().search(null, 0, 10);
+    assertThat(result.total()).isEqualTo(1);
+    var row = result.items().get(0);
+    assertThat(row.action()).isEqualTo("DRAFT_WRITE");
+    assertThat(row.outcome()).isEqualTo("FAILURE");
+    assertThat(row.target()).isEqualTo("foo");
+    assertThat(row.correlationId()).isEqualTo("corr-draft-1");
+  }
+
+  @Test
+  void publishWritesAuditRowOnSuccess() throws Exception {
+    GlobalManager.globalManager().resetForTests();
+    try {
+      var audit = AuditTestSupport.h2();
+      DslDraftHandler audited = new DslDraftHandler(props,
+              new DslReloadHandler(props, new DefinitionLoader()),
+              new DslDefinitionHistoryService(props, mapper), mapper,
+              new DslDefinitionBundleService(mapper, Optional.empty()),
+              AuditTestSupport.providerOf(audit.service()));
+
+      ServerResponse response = audited.publish(postRequest("/api/dsl/drafts/foo/publish"));
+
+      assertThat(response.statusCode().value()).isEqualTo(200);
+      var result = audit.repository().search(null, 0, 10);
+      assertThat(result.total()).isEqualTo(1);
+      var row = result.items().get(0);
+      assertThat(row.action()).isEqualTo("DEFINITION_PUBLISH");
+      assertThat(row.outcome()).as(row.detailsJson()).isEqualTo("SUCCESS");
+      assertThat(row.target()).isEqualTo("foo");
+    } finally {
+      GlobalManager.globalManager().resetForTests();
+    }
+  }
+
+  private DslDraftHandler auditedDraftHandler(AuditTestSupport.Harness audit,
+          DslProperties properties) {
+    return new DslDraftHandler(properties, new DslReloadHandler(properties, null),
+            new DslDefinitionHistoryService(properties, mapper), mapper,
+            new DslDefinitionBundleService(mapper, Optional.empty()),
+            AuditTestSupport.providerOf(audit.service()));
+  }
+
+  private static ServerRequest postRequestWithHeader(String path, String name, String header,
+          String value) {
+    var req = new MockHttpServletRequest("POST", path);
+    req.setAttribute(RouterFunctions.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of("name", name));
+    req.setContentType("application/json");
+    req.addHeader(header, value);
+    req.setContent(
+            ("{\"name\":\"" + name
+                    + "\",\"type\":\"process\",\"status\":\"Draft\",\"version\":\"1\"}")
+                    .getBytes());
+    return ServerRequest.create(req, CONVERTERS);
   }
 
   @Configuration

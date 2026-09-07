@@ -24,6 +24,7 @@ import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dsl.repository.InMemoryTransactionExecutionRepository;
 import cbs.nova.dsl.transaction.TransactionExecution;
 import cbs.nova.dsl.transaction.TransactionExecutionStatus;
+import cbs.nova.starter.AuditTestSupport;
 import cbs.nova.starter.config.router.DslExecutionsRouterConfiguration;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.converter.RequestQueryConverter;
@@ -610,6 +611,69 @@ class DslExecutionsResourceTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value("Cancelled"))
             .andExpect(jsonPath("$.completedAt").exists());
+  }
+
+  @Test
+  void cancelWritesAuditRowOnSuccess() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = auditedMvc(audit);
+    WorkflowStub stub = mock(WorkflowStub.class);
+    when(workflowClient.newUntypedWorkflowStub("run-audit-live")).thenReturn(stub);
+    repository.save(run("run-audit-live", "LoanDisbursement", "RUNNING",
+            "2026-08-13T10:00:00Z", null, "RUN"));
+
+    mockMvc.perform(post("/api/executions/run-audit-live/cancel"))
+            .andExpect(status().isOk());
+
+    var result = audit.repository().search(null, 0, 10);
+    assertThat(result.total()).isEqualTo(1);
+    var row = result.items().get(0);
+    assertThat(row.action()).isEqualTo("RUN_CANCEL");
+    assertThat(row.outcome()).isEqualTo("SUCCESS");
+    assertThat(row.target()).isEqualTo("run-audit-live");
+    assertThat(row.actor()).isEqualTo("anonymous");
+  }
+
+  @Test
+  void cancelWritesAuditRowOnConflict() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = auditedMvc(audit);
+    repository.save(run("run-audit-done", "LoanDisbursement", "COMPLETED",
+            "2026-08-13T10:00:00Z", "2026-08-13T10:00:05Z", "RUN"));
+
+    mockMvc.perform(post("/api/executions/run-audit-done/cancel"))
+            .andExpect(status().isConflict());
+
+    var result = audit.repository().search(null, 0, 10);
+    assertThat(result.total()).isEqualTo(1);
+    var row = result.items().get(0);
+    assertThat(row.action()).isEqualTo("RUN_CANCEL");
+    assertThat(row.outcome()).isEqualTo("FAILURE");
+    assertThat(row.target()).isEqualTo("run-audit-done");
+  }
+
+  private MockMvc auditedMvc(AuditTestSupport.Harness audit) {
+    DslRunCancellationService cancellationService = new DslRunCancellationService(workflowClient,
+            repository);
+    DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper,
+            cancellationService, null, transactionExecutionRepository, new RequestQueryConverter(),
+            AuditTestSupport.providerOf(audit.service()));
+    DslExecutionsRouterConfiguration router = new DslExecutionsRouterConfiguration();
+    AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();
+    adviceContext.registerBean(DslExceptionHandler.class,
+            () -> new DslExceptionHandler(new DefaultDslExceptionMapper()));
+    adviceContext.refresh();
+
+    ExceptionHandlerExceptionResolver exceptionResolver = new ExceptionHandlerExceptionResolver();
+    exceptionResolver.setApplicationContext(adviceContext);
+    exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
+    exceptionResolver.afterPropertiesSet();
+
+    return MockMvcBuilders.routerFunctions(router.dslExecutionsRouter(handler))
+            .setMessageConverters(new StringHttpMessageConverter(),
+                    new JacksonJsonHttpMessageConverter())
+            .setHandlerExceptionResolvers(exceptionResolver)
+            .build();
   }
 
   @Test

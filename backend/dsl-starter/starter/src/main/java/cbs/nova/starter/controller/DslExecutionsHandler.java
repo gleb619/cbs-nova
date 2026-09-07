@@ -19,6 +19,7 @@ import cbs.nova.starter.model.TransactionExecutionDto;
 import cbs.nova.starter.persistence.DslRunStats;
 import cbs.nova.starter.persistence.DslRunStatsRepository;
 import cbs.nova.starter.persistence.RunTimeseriesBucket;
+import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslRunCancellationService;
 import cbs.nova.starter.service.ExecutionCsvWriter;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,8 +29,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Comparator;
-import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -55,7 +57,6 @@ import java.util.Map;
  */
 @Component
 @Tag(name = "DSL Executions", description = "Inspect DSL execution runs")
-@RequiredArgsConstructor
 public class DslExecutionsHandler {
 
   static final int CSV_EXPORT_MAX_ROWS = 50_000;
@@ -72,12 +73,42 @@ public class DslExecutionsHandler {
   private static final int TIMESERIES_MIN_BUCKET_MINUTES = 1;
   private static final int TIMESERIES_MAX_BUCKET_MINUTES = 60 * 24;
 
+  static final String ACTION_RUN_CANCEL = "RUN_CANCEL";
+
   private final DslRunRepository runRepository;
   private final ObjectMapper objectMapper;
   private final DslRunCancellationService cancellationService;
   private final @Nullable DslRunStatsRepository statsRepository;
   private final TransactionExecutionRepository transactionExecutionRepository;
   private final RequestQueryConverter queryConverter;
+  private final ObjectProvider<DslAuditService> auditServiceProvider;
+
+  public DslExecutionsHandler(DslRunRepository runRepository,
+          ObjectMapper objectMapper,
+          DslRunCancellationService cancellationService,
+          @Nullable DslRunStatsRepository statsRepository,
+          TransactionExecutionRepository transactionExecutionRepository,
+          RequestQueryConverter queryConverter) {
+    this(runRepository, objectMapper, cancellationService, statsRepository,
+            transactionExecutionRepository, queryConverter, null);
+  }
+
+  @Autowired
+  public DslExecutionsHandler(DslRunRepository runRepository,
+          ObjectMapper objectMapper,
+          DslRunCancellationService cancellationService,
+          @Nullable DslRunStatsRepository statsRepository,
+          TransactionExecutionRepository transactionExecutionRepository,
+          RequestQueryConverter queryConverter,
+          ObjectProvider<DslAuditService> auditServiceProvider) {
+    this.runRepository = runRepository;
+    this.objectMapper = objectMapper;
+    this.cancellationService = cancellationService;
+    this.statsRepository = statsRepository;
+    this.transactionExecutionRepository = transactionExecutionRepository;
+    this.queryConverter = queryConverter;
+    this.auditServiceProvider = auditServiceProvider;
+  }
 
   @Operation(summary = "List DSL execution runs")
   @ApiResponse(responseCode = "200", description = "Matching execution runs", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))
@@ -251,19 +282,49 @@ public class DslExecutionsHandler {
   @ApiResponse(responseCode = "409", description = "The run is not in a cancellable state", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
   public ServerResponse cancel(ServerRequest request) {
     String id = request.pathVariable("id");
-    DslRunCancellationService.CancelResult result = cancellationService.cancel(id);
+    DslRunCancellationService.CancelResult result;
+    try {
+      result = cancellationService.cancel(id);
+    } catch (RuntimeException e) {
+      audit(request, id, DslAuditService.OUTCOME_FAILURE,
+              Map.of("error", String.valueOf(e.getMessage())));
+      throw e;
+    }
     return switch (result.outcome()) {
-      case NOT_FOUND -> ServerResponse.status(HttpStatus.NOT_FOUND)
-              .body(new ErrorResponse("NOT_FOUND", "Execution run not found: " + id,
-                      null, id, null));
-      case NOT_CANCELLABLE -> ServerResponse.status(HttpStatus.CONFLICT)
-              .body(new ErrorResponse("CONFLICT",
-                      "Execution run is not cancellable: " + id + " (status "
-                              + result.currentStatus() + ")",
-                      null, id, null));
-      case CANCELLED -> ServerResponse.ok()
-              .body(ExecutionDto.fromDetail(requireRun(result, id), objectMapper));
+      case NOT_FOUND -> {
+        audit(request, id, DslAuditService.OUTCOME_FAILURE, Map.of("reason", "NOT_FOUND"));
+        yield ServerResponse.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse("NOT_FOUND", "Execution run not found: " + id,
+                        null, id, null));
+      }
+      case NOT_CANCELLABLE -> {
+        audit(request, id, DslAuditService.OUTCOME_FAILURE,
+                Map.of("reason", "NOT_CANCELLABLE", "status",
+                        String.valueOf(result.currentStatus())));
+        yield ServerResponse.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse("CONFLICT",
+                        "Execution run is not cancellable: " + id + " (status "
+                                + result.currentStatus() + ")",
+                        null, id, null));
+      }
+      case CANCELLED -> {
+        audit(request, id, DslAuditService.OUTCOME_SUCCESS, null);
+        yield ServerResponse.ok()
+                .body(ExecutionDto.fromDetail(requireRun(result, id), objectMapper));
+      }
     };
+  }
+
+  private void audit(ServerRequest request, String target, String outcome, Object details) {
+    if (auditServiceProvider == null) {
+      return;
+    }
+    var auditService = auditServiceProvider.getIfAvailable();
+    if (auditService == null) {
+      return;
+    }
+    auditService.record(DslAuditService.currentActor(), ACTION_RUN_CANCEL, target,
+            DslAuditService.correlationIdOf(request), outcome, details);
   }
 
   private static DslRun requireRun(DslRunCancellationService.CancelResult result, String id) {
