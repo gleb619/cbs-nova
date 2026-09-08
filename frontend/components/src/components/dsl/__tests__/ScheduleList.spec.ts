@@ -61,14 +61,107 @@ describe('ScheduleList', () => {
     expect(rows[1].text()).toContain('paused')
   })
 
-  it('emits delete with the definition when the delete button is clicked', async () => {
+  it('requires a second confirm click before emitting delete with the definition', async () => {
     wrapper = mountList({ schedules, loading: false })
 
     const buttons = wrapper.findAll('[data-testid="schedule-delete"]')
     await buttons[0].trigger('click')
 
+    // First click only arms the row — no emission yet.
+    expect(wrapper.emitted('delete')).toBeUndefined()
+
+    const rowsAfterArm = wrapper.findAll('[data-testid="schedule-row"]')
+    expect(rowsAfterArm[0].find('[data-testid="schedule-delete"]').exists()).toBe(false)
+    expect(rowsAfterArm[0].find('[data-testid="schedule-delete-confirm"]').exists()).toBe(true)
+    expect(rowsAfterArm[0].find('[data-testid="schedule-delete-cancel"]').exists()).toBe(true)
+    // Other rows are unaffected.
+    expect(rowsAfterArm[1].find('[data-testid="schedule-delete"]').exists()).toBe(true)
+
+    await wrapper.find('[data-testid="schedule-delete-confirm"]').trigger('click')
+
     expect(wrapper.emitted('delete')).toHaveLength(1)
     expect(wrapper.emitted('delete')![0]).toEqual(['LoanDisbursement'])
+
+    // After confirm, the row returns to its initial state (delete button visible again).
+    const rows = wrapper.findAll('[data-testid="schedule-row"]')
+    expect(rows[0].find('[data-testid="schedule-delete"]').exists()).toBe(true)
+    expect(rows[0].find('[data-testid="schedule-delete-confirm"]').exists()).toBe(false)
+  })
+
+  it('cancels the pending delete without emitting when Cancel is clicked', async () => {
+    wrapper = mountList({ schedules, loading: false })
+
+    const buttons = wrapper.findAll('[data-testid="schedule-delete"]')
+    await buttons[1].trigger('click')
+
+    expect(wrapper.find('[data-testid="schedule-delete-confirm"]').exists()).toBe(true)
+
+    await wrapper.find('[data-testid="schedule-delete-cancel"]').trigger('click')
+
+    expect(wrapper.emitted('delete')).toBeUndefined()
+
+    const rows = wrapper.findAll('[data-testid="schedule-row"]')
+    expect(rows[1].find('[data-testid="schedule-delete"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="schedule-delete-confirm"]').exists()).toBe(false)
+  })
+
+  it('cancels the pending delete when Escape is pressed', async () => {
+    wrapper = mountList({ schedules, loading: false })
+
+    const buttons = wrapper.findAll('[data-testid="schedule-delete"]')
+    await buttons[0].trigger('click')
+
+    expect(wrapper.find('[data-testid="schedule-delete-confirm"]').exists()).toBe(true)
+
+    await wrapper.find('[data-testid="schedule-delete-confirm-group"]').trigger('keydown', { key: 'Escape' })
+
+    expect(wrapper.emitted('delete')).toBeUndefined()
+    const rows = wrapper.findAll('[data-testid="schedule-row"]')
+    expect(rows[0].find('[data-testid="schedule-delete"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="schedule-delete-confirm"]').exists()).toBe(false)
+  })
+
+  it('arms only the most recently clicked row when switching pending state', async () => {
+    wrapper = mountList({ schedules, loading: false })
+
+    const buttons = wrapper.findAll('[data-testid="schedule-delete"]')
+    await buttons[0].trigger('click')
+
+    let rows = wrapper.findAll('[data-testid="schedule-row"]')
+    expect(rows[0].find('[data-testid="schedule-delete-confirm"]').exists()).toBe(true)
+    expect(rows[0].find('[data-testid="schedule-delete"]').exists()).toBe(false)
+    expect(rows[1].find('[data-testid="schedule-delete"]').exists()).toBe(true)
+
+    await buttons[1].trigger('click')
+
+    rows = wrapper.findAll('[data-testid="schedule-row"]')
+    // Row A is no longer pending — its Delete button is visible again.
+    expect(rows[0].find('[data-testid="schedule-delete"]').exists()).toBe(true)
+    expect(rows[0].find('[data-testid="schedule-delete-confirm"]').exists()).toBe(false)
+    // Row B is now the pending one.
+    expect(rows[1].find('[data-testid="schedule-delete-confirm"]').exists()).toBe(true)
+    expect(rows[1].find('[data-testid="schedule-delete"]').exists()).toBe(false)
+
+    await wrapper.find('[data-testid="schedule-delete-confirm"]').trigger('click')
+
+    expect(wrapper.emitted('delete')).toHaveLength(1)
+    expect(wrapper.emitted('delete')![0]).toEqual(['Repayment'])
+  })
+
+  it('clears the pending state when the schedules prop changes', async () => {
+    wrapper = mountList({ schedules, loading: false })
+
+    const buttons = wrapper.findAll('[data-testid="schedule-delete"]')
+    await buttons[0].trigger('click')
+
+    expect(wrapper.find('[data-testid="schedule-delete-confirm"]').exists()).toBe(true)
+
+    await wrapper.setProps({ schedules: [...schedules] })
+
+    const rows = wrapper.findAll('[data-testid="schedule-row"]')
+    expect(rows[0].find('[data-testid="schedule-delete"]').exists()).toBe(true)
+    expect(rows[1].find('[data-testid="schedule-delete"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="schedule-delete-confirm"]').exists()).toBe(false)
   })
 
   it('emits create with the assembled payload when the form is submitted', async () => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import type { CreateSchedulePayload, ScheduleSummary } from '../../types/dsl'
 
 const props = defineProps<{
@@ -19,6 +19,19 @@ const timezone = ref('UTC')
 const note = ref('')
 const inputJson = ref('')
 const inputError = ref('')
+
+// Inline two-step delete confirmation guard: only one row can be in the pending
+// state at a time. First click arms the row, second (Confirm) actually deletes,
+// Cancel reverts. Reset whenever the `schedules` prop changes.
+const pendingConfirm = ref<string | null>(null)
+const confirmButtonRef = ref<HTMLButtonElement | null>(null)
+
+watch(
+  () => props.schedules,
+  () => {
+    pendingConfirm.value = null
+  },
+)
 
 const canCreate = computed(() => definition.value.trim().length > 0 && cron.value.trim().length > 0)
 
@@ -60,8 +73,37 @@ function onCreate() {
   resetForm()
 }
 
-function onDelete(definition: string) {
-  emit('delete', definition)
+function onDelete(schedule: ScheduleSummary) {
+  if (pendingConfirm.value === schedule.scheduleId) {
+    return
+  }
+  pendingConfirm.value = schedule.scheduleId
+  nextTick(() => {
+    confirmButtonRef.value?.focus()
+  })
+}
+
+function confirmDelete(schedule: ScheduleSummary) {
+  emit('delete', schedule.definition)
+  pendingConfirm.value = null
+}
+
+function cancelDelete() {
+  pendingConfirm.value = null
+}
+
+function setConfirmButtonRef(scheduleId: string, el: HTMLButtonElement | null) {
+  if (el && pendingConfirm.value === scheduleId) {
+    confirmButtonRef.value = el
+  } else if (pendingConfirm.value === scheduleId && confirmButtonRef.value === el) {
+    confirmButtonRef.value = null
+  }
+}
+
+function onPendingKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    cancelDelete()
+  }
 }
 </script>
 
@@ -191,13 +233,38 @@ function onDelete(definition: string) {
             </div>
           </div>
           <button
+            v-if="pendingConfirm !== schedule.scheduleId"
             type="button"
             data-testid="schedule-delete"
             class="px-2 py-1 text-xs rounded border border-red-300 text-red-700 hover:bg-red-50 shrink-0"
-            @click="onDelete(schedule.definition)"
+            @click="onDelete(schedule)"
           >
             Delete
           </button>
+          <fieldset
+            v-else
+            class="flex items-center gap-1 shrink-0 border-0 p-0 m-0"
+            data-testid="schedule-delete-confirm-group"
+            @keydown="onPendingKeydown"
+          >
+            <button
+              :ref="(el) => setConfirmButtonRef(schedule.scheduleId, el as HTMLButtonElement | null)"
+              type="button"
+              data-testid="schedule-delete-confirm"
+              class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700"
+              @click="confirmDelete(schedule)"
+            >
+              Confirm
+            </button>
+            <button
+              type="button"
+              data-testid="schedule-delete-cancel"
+              class="px-2 py-1 text-xs rounded border border-gray-300 text-gray-700 hover:bg-gray-100"
+              @click="cancelDelete"
+            >
+              Cancel
+            </button>
+          </fieldset>
         </li>
       </ul>
     </div>
