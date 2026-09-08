@@ -8,7 +8,8 @@ import org.springframework.validation.annotation.Validated;
 
 @ConfigurationProperties(prefix = "cbs.nova.dry-run")
 @Validated
-// Constructor-bound record + @DefaultValue is the chosen config-properties idiom (see DslProperties).
+// Constructor-bound record + @DefaultValue is the chosen config-properties idiom (see
+// DslProperties).
 public record DryRunProperties(
         @DefaultValue Context context,
         @Valid @DefaultValue Log log) {

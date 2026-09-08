@@ -34,7 +34,7 @@ public class GitService {
     }
   }
 
-  //TODO: wire, add endpoint and use method
+  // TODO: wire, add endpoint and use method
   @Deprecated
   public void pull(Path repoDir, CredentialsProvider credentials) {
     try (Git git = Git.open(repoDir.toFile())) {

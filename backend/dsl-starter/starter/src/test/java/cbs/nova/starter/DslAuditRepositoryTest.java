@@ -15,8 +15,9 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.jdbc.Sql;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = DslAuditRepositoryTest.TestApplication.class)
-@Sql(scripts = {"classpath:db/migration/h2/V1__init.sql", "classpath:db/migration/h2/V2__dsl_audit.sql",
-        "classpath:sql/truncate-dsl-audit.sql"})
+@Sql(scripts = {"classpath:db/migration/h2/V1__init.sql",
+    "classpath:db/migration/h2/V2__dsl_audit.sql",
+    "classpath:sql/truncate-dsl-audit.sql"})
 @TestPropertySource(properties = {
     "csb.dsl.worker.enabled=false"
 })
@@ -28,7 +29,8 @@ class DslAuditRepositoryTest {
   @Test
   void insertThenSearchRoundTripsNewestFirst() {
     Instant now = Instant.now();
-    repository.insert(row("op-1", "DEFINITION_PUBLISH", "LoanFlow", now.minus(2, ChronoUnit.MINUTES)));
+    repository.insert(
+            row("op-1", "DEFINITION_PUBLISH", "LoanFlow", now.minus(2, ChronoUnit.MINUTES)));
     repository.insert(row("op-2", "DRAFT_WRITE", "LoanFlow", now.minus(1, ChronoUnit.MINUTES)));
     repository.insert(row("op-3", "DEFINITION_PUBLISH", "CreditFlow", now));
 
@@ -48,7 +50,8 @@ class DslAuditRepositoryTest {
   @Test
   void actionFilterNarrowsResultsAndTotal() {
     Instant now = Instant.now();
-    repository.insert(row("op-1", "DEFINITION_PUBLISH", "LoanFlow", now.minus(2, ChronoUnit.MINUTES)));
+    repository.insert(
+            row("op-1", "DEFINITION_PUBLISH", "LoanFlow", now.minus(2, ChronoUnit.MINUTES)));
     repository.insert(row("op-2", "DRAFT_WRITE", "LoanFlow", now.minus(1, ChronoUnit.MINUTES)));
     repository.insert(row("op-3", "DEFINITION_PUBLISH", "CreditFlow", now));
 
@@ -64,7 +67,8 @@ class DslAuditRepositoryTest {
   void searchAppliesLimitAndOffset() {
     Instant now = Instant.now();
     for (int i = 0; i < 5; i++) {
-      repository.insert(row("op-" + i, "DRAFT_WRITE", "d" + i, now.minus(5 - i, ChronoUnit.MINUTES)));
+      repository
+              .insert(row("op-" + i, "DRAFT_WRITE", "d" + i, now.minus(5 - i, ChronoUnit.MINUTES)));
     }
 
     var page = repository.search(null, 1, 2);
@@ -82,7 +86,8 @@ class DslAuditRepositoryTest {
             .isInstanceOf(IllegalArgumentException.class);
   }
 
-  private static DslAuditEntity row(String actor, String action, String target, Instant occurredAt) {
+  private static DslAuditEntity row(String actor, String action, String target,
+          Instant occurredAt) {
     return new DslAuditEntity(null, occurredAt, actor, action, target, null, "SUCCESS",
             "{\"n\":1}");
   }

@@ -17,22 +17,22 @@ class ExtendedSelectQueryExecutorSqlPinTest {
 
   // Closing delimiter is on the last content line so there is NO trailing newline.
   private static final String PINNED_TWO_WHERE_SQL = """
-      SELECT
-          d.id
-      FROM
-          dsl_run d
-      WHERE
-          d.id = 1 AND
-          d.status = 'RUNNING'""";
+          SELECT
+              d.id
+          FROM
+              dsl_run d
+          WHERE
+              d.id = 1 AND
+              d.status = 'RUNNING'""";
 
   private static final String PINNED_WHERE_IF_WHERE_SQL = """
-      SELECT
-          d.id
-      FROM
-          dsl_run d
-      WHERE
-          d.id = 1 AND
-          d.status = 'RUNNING'""";
+          SELECT
+              d.id
+          FROM
+              dsl_run d
+          WHERE
+              d.id = 1 AND
+              d.status = 'RUNNING'""";
 
   private final ExtendedSelectQueryExecutor executor = new ExtendedSelectQueryExecutor(null);
 
@@ -44,11 +44,11 @@ class ExtendedSelectQueryExecutorSqlPinTest {
     TableReference r = table.refer();
 
     String sql = executor.select()
-        .from(r)
-        .select(r.get(id))
-        .where(Criteria.equal(r.get(id), Literal.of(1)))
-        .where(Criteria.equal(r.get(status), Literal.of("RUNNING")))
-        .sql();
+            .from(r)
+            .select(r.get(id))
+            .where(Criteria.equal(r.get(id), Literal.of(1)))
+            .where(Criteria.equal(r.get(status), Literal.of("RUNNING")))
+            .sql();
 
     assertThat(sql).isEqualTo(PINNED_TWO_WHERE_SQL);
   }
@@ -61,11 +61,11 @@ class ExtendedSelectQueryExecutorSqlPinTest {
     TableReference r = table.refer();
 
     String sql = executor.select()
-        .from(r)
-        .select(r.get(id))
-        .whereIf(true, () -> Criteria.equal(r.get(id), Literal.of(1)))
-        .where(Criteria.equal(r.get(status), Literal.of("RUNNING")))
-        .sql();
+            .from(r)
+            .select(r.get(id))
+            .whereIf(true, () -> Criteria.equal(r.get(id), Literal.of(1)))
+            .where(Criteria.equal(r.get(status), Literal.of("RUNNING")))
+            .sql();
 
     assertThat(sql).isEqualTo(PINNED_WHERE_IF_WHERE_SQL);
   }
@@ -78,22 +78,22 @@ class ExtendedSelectQueryExecutorSqlPinTest {
     TableReference r = table.refer();
 
     String sql = executor.select()
-        .from(r)
-        .select(r.get(id))
-        .where(Criteria.equal(r.get(id), Literal.of(1)))
-        .and(Criteria.equal(r.get(status), Literal.of("RUNNING")))
-        .sql();
+            .from(r)
+            .select(r.get(id))
+            .where(Criteria.equal(r.get(id), Literal.of(1)))
+            .and(Criteria.equal(r.get(status), Literal.of("RUNNING")))
+            .sql();
 
     // Explicit composition uses Criteria.and(...) which renders parentheses.
     assertThat(sql).isEqualTo("""
-        SELECT
-            d.id
-        FROM
-            dsl_run d
-        WHERE
-            (
-                d.id = 1 AND
-                d.status = 'RUNNING'
-            )""");
+            SELECT
+                d.id
+            FROM
+                dsl_run d
+            WHERE
+                (
+                    d.id = 1 AND
+                    d.status = 'RUNNING'
+                )""");
   }
 }

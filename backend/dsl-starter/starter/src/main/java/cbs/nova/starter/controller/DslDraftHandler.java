@@ -2,6 +2,7 @@ package cbs.nova.starter.controller;
 
 import cbs.nova.dsl.LoadResult;
 import cbs.nova.dsl.ValidationException;
+import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.exception.DslCompilationException;
 import cbs.nova.starter.model.VcsModels.DefinitionBundle;
@@ -63,24 +64,35 @@ public class DslDraftHandler {
   private final ObjectMapper objectMapper;
   private final DslDefinitionBundleService bundleService;
   private final ObjectProvider<DslAuditService> auditServiceProvider;
+  private final ObjectProvider<DslBuilderClient> builderClientProvider;
 
   public DslDraftHandler(DslProperties dslProperties, DslReloadHandler reloadHandler,
           DslDefinitionHistoryService historyService, ObjectMapper objectMapper,
           DslDefinitionBundleService bundleService) {
-    this(dslProperties, reloadHandler, historyService, objectMapper, bundleService, null);
+    this(dslProperties, reloadHandler, historyService, objectMapper, bundleService, null, null);
+  }
+
+  public DslDraftHandler(DslProperties dslProperties, DslReloadHandler reloadHandler,
+          DslDefinitionHistoryService historyService, ObjectMapper objectMapper,
+          DslDefinitionBundleService bundleService,
+          ObjectProvider<DslAuditService> auditServiceProvider) {
+    this(dslProperties, reloadHandler, historyService, objectMapper, bundleService,
+            auditServiceProvider, null);
   }
 
   @Autowired
   public DslDraftHandler(DslProperties dslProperties, DslReloadHandler reloadHandler,
           DslDefinitionHistoryService historyService, ObjectMapper objectMapper,
           DslDefinitionBundleService bundleService,
-          ObjectProvider<DslAuditService> auditServiceProvider) {
+          ObjectProvider<DslAuditService> auditServiceProvider,
+          ObjectProvider<DslBuilderClient> builderClientProvider) {
     this.dslProperties = dslProperties;
     this.reloadHandler = reloadHandler;
     this.historyService = historyService;
     this.objectMapper = objectMapper;
     this.bundleService = bundleService;
     this.auditServiceProvider = auditServiceProvider;
+    this.builderClientProvider = builderClientProvider;
   }
 
   public ServerResponse save(ServerRequest request) throws IOException {
@@ -99,6 +111,20 @@ public class DslDraftHandler {
       return dir.response();
     }
     var payload = withStatus(body, "Draft");
+    var builder = builderClient();
+    if (builder != null) {
+      try {
+        DraftResponse saved = builder.saveDraft(name, payload);
+        audit(request, ACTION_DRAFT_WRITE, name, DslAuditService.OUTCOME_SUCCESS,
+                Map.of("location", String.valueOf(saved.location())));
+        log.info("[DSL drafts] saved {} via DSL builder", name);
+        return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(saved);
+      } catch (RuntimeException e) {
+        audit(request, ACTION_DRAFT_WRITE, name, DslAuditService.OUTCOME_FAILURE,
+                Map.of("error", String.valueOf(e.getMessage())));
+        throw e;
+      }
+    }
     try {
       Path file = writePayload(dir.path().resolve(DRAFTS_DIR), payload);
       audit(request, ACTION_DRAFT_WRITE, name, DslAuditService.OUTCOME_SUCCESS,
@@ -130,11 +156,32 @@ public class DslDraftHandler {
       return dir.response();
     }
     var payload = withStatus(body, "Published");
+    var builder = builderClient();
+    if (builder != null) {
+      try {
+        var published = builder.publishDraft(name, payload);
+        log.info("[DSL drafts] published {} via DSL builder", name);
+        DraftResponse response = finishPublish(name, published.location(), dir.path());
+        boolean success = response.reloadError() == null;
+        audit(request, ACTION_DEFINITION_PUBLISH, name,
+                success ? DslAuditService.OUTCOME_SUCCESS : DslAuditService.OUTCOME_FAILURE,
+                Map.of("location", String.valueOf(published.location()),
+                        "reloaded", response.reloaded(),
+                        "error", success ? "" : String.valueOf(response.reloadError())));
+        return ServerResponse.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(response);
+      } catch (IOException | RuntimeException e) {
+        audit(request, ACTION_DEFINITION_PUBLISH, name, DslAuditService.OUTCOME_FAILURE,
+                Map.of("error", String.valueOf(e.getMessage())));
+        throw e;
+      }
+    }
     try {
       historyService.snapshotBeforePublish(dir.path(), name);
       Path file = writePayload(dir.path().resolve(PUBLISHED_DIR), payload);
       log.info("[DSL drafts] published {} to {}", name, file);
-      DraftResponse response = finishPublish(name, dir.path(), file);
+      DraftResponse response = finishPublish(name, file.toString(), dir.path());
       boolean success = response.reloadError() == null;
       audit(request, ACTION_DEFINITION_PUBLISH, name,
               success ? DslAuditService.OUTCOME_SUCCESS : DslAuditService.OUTCOME_FAILURE,
@@ -157,6 +204,11 @@ public class DslDraftHandler {
     if (dir.isError()) {
       return dir.response();
     }
+    var builder = builderClient();
+    if (builder != null) {
+      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+              .body(builder.history(name));
+    }
     List<DefinitionHistoryEntry> entries = historyService.list(dir.path(), name);
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(entries);
   }
@@ -167,6 +219,11 @@ public class DslDraftHandler {
     var dir = ensureConfigured(name);
     if (dir.isError()) {
       return dir.response();
+    }
+    var builder = builderClient();
+    if (builder != null) {
+      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+              .body(builder.historyEntry(name, timestamp));
     }
     var entry = historyService.readEntry(dir.path(), name, timestamp);
     if (entry.isEmpty()) {
@@ -184,6 +241,11 @@ public class DslDraftHandler {
     var dir = ensureConfigured(name);
     if (dir.isError()) {
       return dir.response();
+    }
+    var builder = builderClient();
+    if (builder != null) {
+      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+              .body(builder.historyDiff(name, timestamp));
     }
     var entry = historyService.readEntry(dir.path(), name, timestamp);
     if (entry.isEmpty()) {
@@ -215,6 +277,14 @@ public class DslDraftHandler {
     if (dir.isError()) {
       return dir.response();
     }
+    var builder = builderClient();
+    if (builder != null) {
+      var restored = builder.restoreDraft(name, timestamp);
+      log.info("[DSL drafts] restored {} via DSL builder from history {}", name, timestamp);
+      return ServerResponse.ok()
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(finishPublish(name, restored.location(), dir.path()));
+    }
     var entry = historyService.readEntry(dir.path(), name, timestamp);
     if (entry.isEmpty()) {
       return error(HttpStatus.NOT_FOUND,
@@ -228,7 +298,7 @@ public class DslDraftHandler {
     log.info("[DSL drafts] restored {} to published {} from history {}", name, file, timestamp);
     return ServerResponse.ok()
             .contentType(MediaType.APPLICATION_JSON)
-            .body(finishPublish(name, dir.path(), file));
+            .body(finishPublish(name, file.toString(), dir.path()));
   }
 
   public ServerResponse delete(ServerRequest request) throws IOException {
@@ -236,6 +306,12 @@ public class DslDraftHandler {
     var dir = ensureConfigured(name);
     if (dir.isError()) {
       return dir.response();
+    }
+    var builder = builderClient();
+    if (builder != null) {
+      DraftResponse deleted = builder.deleteDraft(name);
+      log.info("[DSL drafts] deleted {} via DSL builder", name);
+      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(deleted);
     }
     Path draftsDir = dir.path().resolve(DRAFTS_DIR);
     Path draftFile = draftsDir.resolve(safeFileName(name) + ".json").normalize();
@@ -260,6 +336,11 @@ public class DslDraftHandler {
     if (dir.isError()) {
       return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
               .body(new PageResponse<>(List.of(), 0L, skip, pageSize));
+    }
+    var builder = builderClient();
+    if (builder != null) {
+      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+              .body(builder.listDrafts(pageSize, skip));
     }
     Path drafts = draftsDir(dir.path());
     if (!Files.isDirectory(drafts)) {
@@ -309,6 +390,12 @@ public class DslDraftHandler {
     if (dir.isError()) {
       return dir.response();
     }
+    var builder = builderClient();
+    if (builder != null) {
+      DraftRequest payload = builder.readDraft(name);
+      log.info("[DSL drafts] read {} via DSL builder", name);
+      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(payload);
+    }
     Path drafts = draftsDir(dir.path());
     Path draftFile = drafts.resolve(safeFileName(name) + ".json").normalize();
     if (!draftFile.startsWith(drafts) || !Files.exists(draftFile)) {
@@ -326,6 +413,13 @@ public class DslDraftHandler {
       return dir.response();
     }
     boolean includeDrafts = request.param("include").map("drafts"::equals).orElse(false);
+    var builder = builderClient();
+    if (builder != null) {
+      DefinitionBundle bundle = builder.exportBundle(includeDrafts);
+      log.info("[DSL bundle] exported {} definitions via DSL builder (includeDrafts={})",
+              bundle.definitions().size(), includeDrafts);
+      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(bundle);
+    }
     DefinitionBundle bundle = bundleService.export(dir.path(), includeDrafts);
     log.info("[DSL bundle] exported {} definitions (includeDrafts={})",
             bundle.definitions().size(), includeDrafts);
@@ -376,6 +470,11 @@ public class DslDraftHandler {
       return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(result);
     }
 
+    var builder = builderClient();
+    if (builder != null) {
+      return importBundleViaBuilder(request, bundle, bundleTarget(bundle));
+    }
+
     List<ImportEntryResult> results = new ArrayList<>();
     String bulkTarget = bundleTarget(bundle);
     try {
@@ -397,35 +496,50 @@ public class DslDraftHandler {
       throw e;
     }
 
-    boolean reloaded = false;
-    String reloadError = null;
-    List<CompileDiagnostic> diagnostics = null;
+    ReloadOutcome outcome = reloadOutcome(bulkTarget);
+    long publishedCount = results.stream().filter(r -> "published".equals(r.outcome())).count();
+    long failedCount = results.size() - publishedCount;
+    ImportBundleResult result = new ImportBundleResult(false, outcome.reloaded(),
+            (int) publishedCount,
+            (int) failedCount, results, outcome.error(), outcome.diagnostics());
+    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(result);
+  }
+
+  private ServerResponse importBundleViaBuilder(ServerRequest request, DefinitionBundle bundle,
+          String bulkTarget) throws IOException {
+    ImportBundleResult imported = builderClient().importBundle(bundle, false);
+    audit(request, ACTION_DRAFT_BULK_WRITE, bulkTarget, DslAuditService.OUTCOME_SUCCESS,
+            Map.of("count", imported.results().size()));
+    ReloadOutcome outcome = reloadOutcome(bulkTarget);
+    ImportBundleResult result = new ImportBundleResult(false, outcome.reloaded(),
+            imported.published(), imported.failed(), imported.results(), outcome.error(),
+            outcome.diagnostics());
+    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(result);
+  }
+
+  private ReloadOutcome reloadOutcome(String target) {
     try {
       LoadResult loadResult = reloadHandler.reloadDefinitions();
-      reloaded = true;
       log.info("[DSL bundle] import reloaded {} definitions: processes={}, transactions={},"
               + " functions={}",
               loadResult.total(), loadResult.processCount(), loadResult.transactionCount(),
               loadResult.functionCount());
+      return new ReloadOutcome(true, null, null);
     } catch (Exception e) {
       log.warn("[DSL bundle] import wrote published markers but reload failed: {}", e.getMessage());
       var compilation = findDslCompilationException(e);
       if (compilation != null) {
-        reloadError = compilation.getMessage();
-        diagnostics = compilation.diagnostics();
-      } else if (e instanceof ValidationException ve) {
-        reloadError = ve.getMessage();
-        diagnostics = toValidationDiagnostics(ve, bulkTarget);
-      } else {
-        reloadError = e.getMessage();
+        return new ReloadOutcome(false, compilation.getMessage(), compilation.diagnostics());
       }
+      if (e instanceof ValidationException ve) {
+        return new ReloadOutcome(false, ve.getMessage(), toValidationDiagnostics(ve, target));
+      }
+      return new ReloadOutcome(false, e.getMessage(), null);
     }
+  }
 
-    long publishedCount = results.stream().filter(r -> "published".equals(r.outcome())).count();
-    long failedCount = results.size() - publishedCount;
-    ImportBundleResult result = new ImportBundleResult(false, reloaded, (int) publishedCount,
-            (int) failedCount, results, reloadError, diagnostics);
-    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(result);
+  private record ReloadOutcome(boolean reloaded, String error,
+          List<CompileDiagnostic> diagnostics) {
   }
 
   private void audit(ServerRequest request, String action, String target, String outcome,
@@ -441,6 +555,10 @@ public class DslDraftHandler {
             DslAuditService.correlationIdOf(request), outcome, details);
   }
 
+  private DslBuilderClient builderClient() {
+    return builderClientProvider == null ? null : builderClientProvider.getIfAvailable();
+  }
+
   private static String bundleTarget(DefinitionBundle bundle) {
     String joined = bundle.definitions().stream()
             .map(e -> e.definition().name())
@@ -449,7 +567,7 @@ public class DslDraftHandler {
     return joined.length() > 400 ? joined.substring(0, 400) + "…" : joined;
   }
 
-  private DraftResponse finishPublish(String name, Path dir, Path file) throws IOException {
+  private DraftResponse finishPublish(String name, String location, Path dir) throws IOException {
     boolean reloaded = false;
     LoadResult loadResult = LoadResult.empty();
     try {
@@ -464,18 +582,18 @@ public class DslDraftHandler {
       log.warn("[DSL drafts] publish of {} succeeded but reload failed: {}", name, e.getMessage());
       var compilation = findDslCompilationException(e);
       if (compilation != null) {
-        return new DraftResponse(name, "Published", file.toString(), false,
+        return new DraftResponse(name, "Published", location, false,
                 LoadResult.empty(),
                 compilation.getMessage(), compilation.diagnostics());
       }
       if (e instanceof ValidationException ve) {
-        return new DraftResponse(name, "Published", file.toString(), false, LoadResult.empty(),
+        return new DraftResponse(name, "Published", location, false, LoadResult.empty(),
                 ve.getMessage(), toValidationDiagnostics(ve, name));
       }
-      return new DraftResponse(name, "Published", file.toString(), false, LoadResult.empty(),
+      return new DraftResponse(name, "Published", location, false, LoadResult.empty(),
               e.getMessage(), null);
     }
-    return new DraftResponse(name, "Published", file.toString(), reloaded, loadResult);
+    return new DraftResponse(name, "Published", location, reloaded, loadResult);
   }
 
   private sealed interface PathResult {

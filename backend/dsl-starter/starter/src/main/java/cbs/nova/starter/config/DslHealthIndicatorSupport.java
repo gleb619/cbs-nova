@@ -14,12 +14,12 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.health.contributor.Health;
 
 /**
- * Shared DSL health contribution logic used by both the generic {@code dsl} health indicator
- * and the {@code dslReadiness} readiness indicator.
+ * Shared DSL health contribution logic used by both the generic {@code dsl} health indicator and
+ * the {@code dslReadiness} readiness indicator.
  *
  * <p>
- * Keeping the logic in one place guarantees that plain {@code /actuator/health} and the
- * readiness probe see the same DSL registry counts and Temporal reachability details.
+ * Keeping the logic in one place guarantees that plain {@code /actuator/health} and the readiness
+ * probe see the same DSL registry counts and Temporal reachability details.
  */
 final class DslHealthIndicatorSupport {
 

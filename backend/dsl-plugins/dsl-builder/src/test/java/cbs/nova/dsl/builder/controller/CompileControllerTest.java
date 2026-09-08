@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
+import cbs.nova.dsl.builder.service.BuilderWorkQueue;
 import cbs.nova.dsl.builder.service.CompileService;
 import cbs.nova.dsl.builder.service.GitService;
 import cbs.nova.dsl.builder.service.GradleService;
@@ -21,7 +22,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(CompileController.class)
-@Import({CompileService.class, GitService.class, GradleService.class,
+@Import({CompileService.class, GitService.class, GradleService.class, BuilderWorkQueue.class,
     CompileControllerTest.Config.class})
 class CompileControllerTest {
 
@@ -71,7 +72,13 @@ class CompileControllerTest {
               "v1",
               List.of("clean", "build"),
               List.of("dsl", "models"),
-              "project/templates");
+              "project/templates",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null);
     }
   }
 

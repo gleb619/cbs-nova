@@ -11,14 +11,37 @@ import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.helper.HelperResolver;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
+import cbs.nova.starter.exception.BuilderClientBusyException;
+import cbs.nova.starter.exception.BuilderUnavailableException;
+import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.config.router.DslReloadRouterConfiguration;
 import cbs.nova.starter.exception.DslCompilationException;
 import cbs.nova.starter.model.CompileDiagnostic;
+import cbs.nova.starter.model.CompileModels.CompileRequest;
+import cbs.nova.starter.model.CompileModels.CompileResult;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ReloadResponse;
 import cbs.nova.starter.service.DslAuditService;
+import cbs.nova.starter.service.JavaSourceCompiler;
 import cbs.nova.starter.service.PreviewResultCache;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.ServiceLoader;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,26 +52,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
 
-import javax.tools.Diagnostic;
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaFileObject;
-import javax.tools.StandardJavaFileManager;
-import javax.tools.ToolProvider;
-
-import java.io.IOException;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.ServiceLoader;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Stream;
-
 /**
  * Functional handler for the DSL reload endpoint. Registered as a {@code RouterFunction} bean by
  * {@link DslReloadRouterConfiguration} (gated by {@code dsl.reload.enabled}, on by default) rather
@@ -58,6 +61,11 @@ import java.util.stream.Stream;
  * only replaced once the newly-compiled DSL set has been built and staged against a throwaway
  * candidate. If compilation or staging throws, the previously-loaded registry keeps serving
  * requests — the runtime is never bricked.
+ *
+ * <h2>Compilation</h2> When the DSL builder client is enabled ({@code csb.dsl.builder-client
+ * .enabled}, on by default) sources are compiled remotely by the dsl-builder service and the
+ * generated classes are downloaded as a zip. When disabled, sources are compiled in-process with
+ * javac via {@link JavaSourceCompiler}.
  *
  * <h2>Concurrency</h2> A {@link ReentrantLock} serializes overlapping reload calls. Policy: the
  * second (and any further) concurrent caller <em>waits</em> for the first to complete and then runs
@@ -73,29 +81,33 @@ public class DslReloadHandler {
   public static final String ACTION_DEFINITION_RELOAD = "DEFINITION_RELOAD";
 
   private static final String RELOAD_TEMP_PREFIX = "dsl-reload-";
-  private static final int DIAGNOSTIC_CAP = 20;
 
   private final DslProperties dslProperties;
   private final DslDefinitionLoader loader;
   private final ObjectProvider<PreviewResultCache> previewCacheProvider;
   private final ObjectProvider<DslAuditService> auditServiceProvider;
+  private final ObjectProvider<DslBuilderClient> builderClientProvider;
   private final ReentrantLock reloadLock = new ReentrantLock();
+  private final JavaSourceCompiler javaSourceCompiler = new JavaSourceCompiler();
 
   /**
    * Spring-injected constructor. The {@link PreviewResultCache} bean is resolved through an
    * {@link ObjectProvider} so the reload path stays usable when the cache is absent (e.g. in tests
    * that don't wire the starter preview cache, or when a host disables preview caching). The same
    * applies to the {@link DslAuditService}: when no {@code DataSource} is configured there is no
-   * audit bean and the reload simply is not audited.
+   * audit bean and the reload simply is not audited. The {@link DslBuilderClient} is equally
+   * optional: when absent, compilation falls back to in-process javac.
    */
   @Autowired
   public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader,
           ObjectProvider<PreviewResultCache> previewCacheProvider,
-          ObjectProvider<DslAuditService> auditServiceProvider) {
+          ObjectProvider<DslAuditService> auditServiceProvider,
+          ObjectProvider<DslBuilderClient> builderClientProvider) {
     this.dslProperties = dslProperties;
     this.loader = loader;
     this.previewCacheProvider = previewCacheProvider;
     this.auditServiceProvider = auditServiceProvider;
+    this.builderClientProvider = builderClientProvider;
   }
 
   /**
@@ -104,7 +116,7 @@ public class DslReloadHandler {
    * {@code null} providers.
    */
   public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader) {
-    this(dslProperties, loader, null, null);
+    this(dslProperties, loader, null, null, null);
   }
 
   /**
@@ -112,7 +124,16 @@ public class DslReloadHandler {
    */
   public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader,
           ObjectProvider<PreviewResultCache> previewCacheProvider) {
-    this(dslProperties, loader, previewCacheProvider, null);
+    this(dslProperties, loader, previewCacheProvider, null, null);
+  }
+
+  /**
+   * Constructor for callers that wire audit but keep the default compilation mode (tests).
+   */
+  public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader,
+          ObjectProvider<PreviewResultCache> previewCacheProvider,
+          ObjectProvider<DslAuditService> auditServiceProvider) {
+    this(dslProperties, loader, previewCacheProvider, auditServiceProvider, null);
   }
 
   /**
@@ -193,7 +214,7 @@ public class DslReloadHandler {
     Path outputDir = Files.createTempDirectory(RELOAD_TEMP_PREFIX);
     URLClassLoader reloadClassLoader = null;
     try {
-      compileJavaSources(sourceDir, outputDir);
+      compileSources(sourceDir, outputDir);
       reloadClassLoader = new URLClassLoader(
               new URL[]{sourceDir.toUri().toURL(), outputDir.toUri().toURL()}, parent);
       Thread.currentThread().setContextClassLoader(reloadClassLoader);
@@ -219,6 +240,84 @@ public class DslReloadHandler {
         }
       }
       deleteRecursively(outputDir);
+    }
+  }
+
+  private void compileSources(Path sourceDir, Path outputDir) throws IOException {
+    var builder = builderClient();
+    if (builder == null) {
+      javaSourceCompiler.compile(sourceDir, outputDir);
+      return;
+    }
+    var sources = collectSources(sourceDir);
+    if (sources.isEmpty()) {
+      return;
+    }
+    var request = new CompileRequest(null, null, null, null, null, null, sources);
+    CompileResult result = compileRemotely(builder, request);
+    if (!result.success()) {
+      throw new DslCompilationException("DSL compilation failed",
+              toDiagnostics(result.diagnostics()));
+    }
+    byte[] zip = downloadRemotely(builder, result.id());
+    extractZip(zip, outputDir);
+  }
+
+  private CompileResult compileRemotely(DslBuilderClient builder, CompileRequest request) {
+    try {
+      return builder.compile(request);
+    } catch (BuilderUnavailableException | BuilderClientBusyException e) {
+      throw new DslCompilationException("DSL builder unavailable: " + e.getMessage(), List.of());
+    }
+  }
+
+  private byte[] downloadRemotely(DslBuilderClient builder, String compileId) {
+    try {
+      return builder.downloadZip(compileId);
+    } catch (BuilderUnavailableException | BuilderClientBusyException e) {
+      throw new DslCompilationException("DSL builder unavailable: " + e.getMessage(), List.of());
+    }
+  }
+
+  private DslBuilderClient builderClient() {
+    return builderClientProvider == null ? null : builderClientProvider.getIfAvailable();
+  }
+
+  private static Map<String, String> collectSources(Path sourceDir) throws IOException {
+    Map<String, String> sources = new LinkedHashMap<>();
+    try (Stream<Path> stream = Files.walk(sourceDir)) {
+      for (Path file : stream.filter(p -> p.toString().endsWith(".java")).toList()) {
+        sources.put(sourceDir.relativize(file).toString().replace('\\', '/'),
+                Files.readString(file));
+      }
+    }
+    return sources;
+  }
+
+  private static List<CompileDiagnostic> toDiagnostics(List<String> messages) {
+    if (messages == null) {
+      return List.of();
+    }
+    return messages.stream()
+            .map(message -> new CompileDiagnostic(null, null, null, message, "error", null))
+            .toList();
+  }
+
+  private static void extractZip(byte[] zip, Path outputDir) throws IOException {
+    try (var input = new ZipInputStream(new ByteArrayInputStream(zip))) {
+      ZipEntry entry;
+      while ((entry = input.getNextEntry()) != null) {
+        Path target = outputDir.resolve(entry.getName()).normalize();
+        if (!target.startsWith(outputDir)) {
+          continue;
+        }
+        if (entry.isDirectory()) {
+          Files.createDirectories(target);
+        } else {
+          Files.createDirectories(target.getParent());
+          Files.copy(input, target, StandardCopyOption.REPLACE_EXISTING);
+        }
+      }
     }
   }
 
@@ -274,62 +373,6 @@ public class DslReloadHandler {
               "[DSL reload] HelperInstanceResolver not available, skipping HelperResolver loading");
       return null;
     }
-  }
-
-  private void compileJavaSources(Path sourceDir, Path outputDir) throws IOException {
-    List<Path> javaFiles;
-    try (Stream<Path> stream = Files.walk(sourceDir)) {
-      javaFiles = stream.filter(p -> p.toString().endsWith(".java")).toList();
-    }
-    if (javaFiles.isEmpty()) {
-      return;
-    }
-    var compiler = ToolProvider.getSystemJavaCompiler();
-    if (compiler == null) {
-      throw new IllegalStateException("No system Java compiler available (JDK required)");
-    }
-    var classpath = System.getProperty("java.class.path");
-    var collected = new ArrayList<CompileDiagnostic>();
-    Path firstFailedFile = null;
-    try (StandardJavaFileManager fm = compiler.getStandardFileManager(null, null, null)) {
-      var options = List.of("-classpath", classpath, "-d", outputDir.toString());
-      for (var file : javaFiles) {
-        var diagnostics = new DiagnosticCollector<JavaFileObject>();
-        var unit = fm.getJavaFileObjectsFromFiles(List.of(file.toFile()));
-        var task = compiler.getTask(null, fm, diagnostics, options, null, unit);
-        if (!task.call()) {
-          if (firstFailedFile == null) {
-            firstFailedFile = file;
-          }
-          for (var d : diagnostics.getDiagnostics()) {
-            if (collected.size() >= DIAGNOSTIC_CAP) {
-              break;
-            }
-            collected.add(toCompileDiagnostic(d, file));
-          }
-        }
-      }
-    }
-    if (!collected.isEmpty()) {
-      throw new DslCompilationException(
-              "Failed to compile DSL source: " + firstFailedFile.getFileName(), collected);
-    }
-  }
-
-  private static CompileDiagnostic toCompileDiagnostic(Diagnostic<? extends JavaFileObject> d,
-          Path file) {
-    var source = d.getSource();
-    var sourceName = source != null ? source.getName() : file.getFileName().toString();
-    var line = d.getLineNumber() == Diagnostic.NOPOS ? null : Long.valueOf(d.getLineNumber());
-    var column = d.getColumnNumber() == Diagnostic.NOPOS
-            ? null
-            : Long.valueOf(d.getColumnNumber());
-    var severity = switch (d.getKind()) {
-      case WARNING, MANDATORY_WARNING -> "warning";
-      default -> "error";
-    };
-    return new CompileDiagnostic(sourceName, line, column,
-            d.getMessage(Locale.getDefault()), severity, d.getCode());
   }
 
   private void loadCompactSources(ClassLoader classLoader, Path sourceDir, Path outputDir,

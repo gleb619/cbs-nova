@@ -18,17 +18,17 @@ class ExtendedSelectQueryExecutorCombinatorTest {
     QueryParts q = parts();
 
     String sql = executor.select()
-        .from(q.r)
-        .select(q.r.get(q.id))
-        .where(Criteria.equal(q.r.get(q.id), Literal.of(1)))
-        .and(Criteria.equal(q.r.get(q.status), Literal.of("RUNNING")))
-        .sql();
+            .from(q.r)
+            .select(q.r.get(q.id))
+            .where(Criteria.equal(q.r.get(q.id), Literal.of(1)))
+            .and(Criteria.equal(q.r.get(q.status), Literal.of("RUNNING")))
+            .sql();
 
     assertThat(sql).contains("WHERE")
-                   .contains("(")
-                   .contains("d.id = 1 AND")
-                   .contains("d.status = 'RUNNING'")
-                   .contains(")");
+            .contains("(")
+            .contains("d.id = 1 AND")
+            .contains("d.status = 'RUNNING'")
+            .contains(")");
   }
 
   @Test
@@ -36,17 +36,17 @@ class ExtendedSelectQueryExecutorCombinatorTest {
     QueryParts q = parts();
 
     String sql = executor.select()
-        .from(q.r)
-        .select(q.r.get(q.id))
-        .where(Criteria.equal(q.r.get(q.id), Literal.of(1)))
-        .or(Criteria.equal(q.r.get(q.status), Literal.of("RUNNING")))
-        .sql();
+            .from(q.r)
+            .select(q.r.get(q.id))
+            .where(Criteria.equal(q.r.get(q.id), Literal.of(1)))
+            .or(Criteria.equal(q.r.get(q.status), Literal.of("RUNNING")))
+            .sql();
 
     assertThat(sql).contains("WHERE")
-                   .contains("(")
-                   .contains("d.id = 1 OR")
-                   .contains("d.status = 'RUNNING'")
-                   .contains(")");
+            .contains("(")
+            .contains("d.id = 1 OR")
+            .contains("d.status = 'RUNNING'")
+            .contains(")");
   }
 
   @Test
@@ -54,14 +54,14 @@ class ExtendedSelectQueryExecutorCombinatorTest {
     QueryParts q = parts();
 
     String sql = executor.select()
-        .from(q.r)
-        .select(q.r.get(q.id))
-        .where(Criteria.equal(q.r.get(q.id), Literal.of(1)))
-        .andIf(true, () -> Criteria.equal(q.r.get(q.status), Literal.of("RUNNING")))
-        .sql();
+            .from(q.r)
+            .select(q.r.get(q.id))
+            .where(Criteria.equal(q.r.get(q.id), Literal.of(1)))
+            .andIf(true, () -> Criteria.equal(q.r.get(q.status), Literal.of("RUNNING")))
+            .sql();
 
     assertThat(sql).contains("d.id = 1 AND")
-                   .contains("d.status = 'RUNNING'");
+            .contains("d.status = 'RUNNING'");
   }
 
   @Test
@@ -69,11 +69,11 @@ class ExtendedSelectQueryExecutorCombinatorTest {
     QueryParts q = parts();
 
     String sql = executor.select()
-        .from(q.r)
-        .select(q.r.get(q.id))
-        .where(Criteria.equal(q.r.get(q.id), Literal.of(1)))
-        .andIf(false, () -> Criteria.equal(q.r.get(q.status), Literal.of("RUNNING")))
-        .sql();
+            .from(q.r)
+            .select(q.r.get(q.id))
+            .where(Criteria.equal(q.r.get(q.id), Literal.of(1)))
+            .andIf(false, () -> Criteria.equal(q.r.get(q.status), Literal.of("RUNNING")))
+            .sql();
 
     assertThat(sql).contains("d.id = 1");
     assertThat(sql).doesNotContain("d.status");
@@ -84,14 +84,14 @@ class ExtendedSelectQueryExecutorCombinatorTest {
     QueryParts q = parts();
 
     String sql = executor.select()
-        .from(q.r)
-        .select(q.r.get(q.id))
-        .where(Criteria.equal(q.r.get(q.id), Literal.of(1)))
-        .orIf(true, () -> Criteria.equal(q.r.get(q.status), Literal.of("RUNNING")))
-        .sql();
+            .from(q.r)
+            .select(q.r.get(q.id))
+            .where(Criteria.equal(q.r.get(q.id), Literal.of(1)))
+            .orIf(true, () -> Criteria.equal(q.r.get(q.status), Literal.of("RUNNING")))
+            .sql();
 
     assertThat(sql).contains("d.id = 1 OR")
-                   .contains("d.status = 'RUNNING'");
+            .contains("d.status = 'RUNNING'");
   }
 
   @Test
@@ -99,11 +99,11 @@ class ExtendedSelectQueryExecutorCombinatorTest {
     QueryParts q = parts();
 
     String sql = executor.select()
-        .from(q.r)
-        .select(q.r.get(q.id))
-        .where(Criteria.equal(q.r.get(q.id), Literal.of(1)))
-        .orIf(false, () -> Criteria.equal(q.r.get(q.status), Literal.of("RUNNING")))
-        .sql();
+            .from(q.r)
+            .select(q.r.get(q.id))
+            .where(Criteria.equal(q.r.get(q.id), Literal.of(1)))
+            .orIf(false, () -> Criteria.equal(q.r.get(q.status), Literal.of("RUNNING")))
+            .sql();
 
     assertThat(sql).contains("d.id = 1");
     assertThat(sql).doesNotContain("d.status");
@@ -114,18 +114,18 @@ class ExtendedSelectQueryExecutorCombinatorTest {
     QueryParts q = parts();
 
     String sql = executor.select()
-        .from(q.r)
-        .select(q.r.get(q.id))
-        .where(Criteria.equal(q.r.get(q.id), Literal.of(1)))
-        .and(Criteria.equal(q.r.get(q.status), Literal.of("RUNNING")))
-        .or(Criteria.equal(q.r.get(q.processName), Literal.of("proc")))
-        .sql();
+            .from(q.r)
+            .select(q.r.get(q.id))
+            .where(Criteria.equal(q.r.get(q.id), Literal.of(1)))
+            .and(Criteria.equal(q.r.get(q.status), Literal.of("RUNNING")))
+            .or(Criteria.equal(q.r.get(q.processName), Literal.of("proc")))
+            .sql();
 
     // Logical grouping: (id = 1 AND status = 'RUNNING') OR process_name = 'proc'
     assertThat(sql).contains("d.id = 1 AND")
-                   .contains("d.status = 'RUNNING'")
-                   .contains("OR")
-                   .contains("d.process_name = 'proc'");
+            .contains("d.status = 'RUNNING'")
+            .contains("OR")
+            .contains("d.process_name = 'proc'");
   }
 
   @Test
@@ -133,18 +133,18 @@ class ExtendedSelectQueryExecutorCombinatorTest {
     QueryParts q = parts();
 
     String sql = executor.select()
-        .from(q.r)
-        .select(q.r.get(q.id))
-        .and(Criteria.equal(q.r.get(q.id), Literal.of(1)))
-        .sql();
+            .from(q.r)
+            .select(q.r.get(q.id))
+            .and(Criteria.equal(q.r.get(q.id), Literal.of(1)))
+            .sql();
 
     assertThat(sql).isEqualTo("""
-        SELECT
-            d.id
-        FROM
-            dsl_run d
-        WHERE
-            d.id = 1""");
+            SELECT
+                d.id
+            FROM
+                dsl_run d
+            WHERE
+                d.id = 1""");
   }
 
   @Test
@@ -152,21 +152,22 @@ class ExtendedSelectQueryExecutorCombinatorTest {
     QueryParts q = parts();
 
     String sql = executor.select()
-        .from(q.r)
-        .select(q.r.get(q.id))
-        .or(Criteria.equal(q.r.get(q.id), Literal.of(1)))
-        .sql();
+            .from(q.r)
+            .select(q.r.get(q.id))
+            .or(Criteria.equal(q.r.get(q.id), Literal.of(1)))
+            .sql();
 
     assertThat(sql).isEqualTo("""
-        SELECT
-            d.id
-        FROM
-            dsl_run d
-        WHERE
-            d.id = 1""");
+            SELECT
+                d.id
+            FROM
+                dsl_run d
+            WHERE
+                d.id = 1""");
   }
 
-  private record QueryParts(TableReference r, TableColumn id, TableColumn status, TableColumn processName) {
+  private record QueryParts(TableReference r, TableColumn id, TableColumn status,
+          TableColumn processName) {
   }
 
   private static QueryParts parts() {

@@ -45,7 +45,12 @@ class DslRootAutoConfigurationTest {
             ApiKeyAuthFilterConfiguration.class,
             RateLimitFilterConfiguration.class,
             DslRunRetentionConfiguration.class,
-            DslRunReconciliationConfiguration.class);
+            DslRunReconciliationConfiguration.class,
+            DslRunRepositoryConfiguration.class,
+            SecurityConfiguration.class,
+            ApiKeyAuthMisconfigurationWarning.class,
+            DslHealthIndicatorConfiguration.class,
+            BuilderClientConfiguration.class);
   }
 
   @Test

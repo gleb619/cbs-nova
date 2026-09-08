@@ -74,10 +74,10 @@ function toggleHistoryPanel() {
   historyPanelOpen.value = !historyPanelOpen.value
 }
 
-// Translate `state.validationErrors` into Monaco marker records. Scoped to the
+// Translate `state.value.validationErrors` into Monaco marker records. Scoped to the
 // selected construct — no file filter needed today (YAGNI).
 const editorMarkers = computed<EditorMarker[]>(() =>
-  state.validationErrors.map((err) => ({
+  state.value.validationErrors.map((err) => ({
     line: err.line ?? null,
     column: err.column ?? null,
     message: err.message,
@@ -114,7 +114,7 @@ const savedDrafts = useSavedDrafts({
 const { drafts, refresh: refreshDrafts, selectedName: draftsSelectedName } = savedDrafts
 
 function safeSelectConstruct(name: string) {
-  if (state.isDirty && !window.confirm('Discard unsaved changes to this construct?')) {
+  if (state.value.isDirty && !window.confirm('Discard unsaved changes to this construct?')) {
     return
   }
   selectConstruct(name)
@@ -123,7 +123,7 @@ function safeSelectConstruct(name: string) {
 // Mirror the workbench selection into the shared store so the widget can
 // highlight the active draft.
 watch(
-  () => state.selectedName,
+  () => state.value.selectedName,
   (name) => {
     draftsSelectedName.value = name ?? null
   },
@@ -275,13 +275,13 @@ function cancelDelete() {
 }
 
 function handleBeforeUnload(event: BeforeUnloadEvent) {
-  if (!state.isDirty) return
+  if (!state.value.isDirty) return
   event.preventDefault()
   event.returnValue = ''
 }
 
 onBeforeRouteLeave(() => {
-  if (state.isDirty && !window.confirm('You have unsaved changes. Leave anyway?')) {
+  if (state.value.isDirty && !window.confirm('You have unsaved changes. Leave anyway?')) {
     return false
   }
   return true
@@ -298,7 +298,7 @@ const newNameError = computed(() => {
   if (!VALID_NAME_RE.test(name)) {
     return 'Name may only contain letters, numbers, dots, dashes and underscores.'
   }
-  const existsInConstructs = state.constructs.some((c) => c.name === name)
+  const existsInConstructs = state.value.constructs.some((c) => c.name === name)
   const existsInDrafts = drafts.value.some((d) => d.name === name)
   if (existsInConstructs || existsInDrafts) {
     return `A definition or draft named "${name}" already exists.`
@@ -338,21 +338,21 @@ async function confirmCreate() {
 type ActionValue = 'refresh' | 'validate' | 'save' | 'publish'
 
 const actionItems = computed<DropdownMenuItem[]>(() => [
-  { label: 'Refresh', value: 'refresh', disabled: state.isLoading },
+  { label: 'Refresh', value: 'refresh', disabled: state.value.isLoading },
   {
     label: 'Validate',
     value: 'validate',
-    disabled: !selectedConstruct.value || state.isSaving,
+    disabled: !selectedConstruct.value || state.value.isSaving,
   },
   {
     label: isFileBacked.value ? 'Save File' : 'Save Draft',
     value: 'save',
-    disabled: !selectedConstruct.value || state.isSaving || !state.isDirty,
+    disabled: !selectedConstruct.value || state.value.isSaving || !state.value.isDirty,
   },
   {
     label: 'Publish',
     value: 'publish',
-    disabled: !selectedConstruct.value || state.isSaving,
+    disabled: !selectedConstruct.value || state.value.isSaving,
     variant: 'primary',
   },
 ])

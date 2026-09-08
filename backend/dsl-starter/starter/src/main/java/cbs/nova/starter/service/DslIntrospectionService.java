@@ -174,7 +174,6 @@ public class DslIntrospectionService {
     }
   }
 
-
   private ConstructSchemaDto toSchemaDto(ProcessDslObject process) {
     var descriptor = process.describe();
     return toSchemaDto(
@@ -239,7 +238,7 @@ public class DslIntrospectionService {
             : jsonSchemaGenerator.generateSchema(parameters);
   }
 
-  //TODO: remove
+  // TODO: remove
   @Deprecated(forRemoval = true)
   private Map<String, Object> schemaForOutput(Class<?> type) {
     return jsonSchemaGenerator.generateSchema(type);

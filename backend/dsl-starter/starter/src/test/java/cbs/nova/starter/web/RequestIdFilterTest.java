@@ -94,7 +94,8 @@ class RequestIdFilterTest {
     return new FilterChain() {
       @Override
       public void doFilter(ServletRequest request, ServletResponse response) {
-        capturedMdc.putAll(MDC.getCopyOfContextMap() == null ? Map.of()
+        capturedMdc.putAll(MDC.getCopyOfContextMap() == null
+                ? Map.of()
                 : MDC.getCopyOfContextMap());
       }
     };

@@ -34,7 +34,7 @@ class DslIntrospectionServiceTest {
             new JacksonJsonSchemaGenerator(),
             mapper,
             new DslDefinitionStatusResolver(DslProperties.builder().build(),
-                    new DslGitStatusResolver(DslProperties.builder().build())));
+                    new DslGitStatusResolver(DslProperties.builder().build(), null)));
   }
 
   @AfterEach
@@ -210,7 +210,8 @@ class DslIntrospectionServiceTest {
     assertThat(dto.type()).isEqualTo("function");
     assertThat(dto.inputSchema()).isNotNull();
     assertThat(dto.inputSchema()).containsKey("properties");
-    assertThat((java.util.Map<String, Object>) dto.inputSchema().get("properties")).containsKey("greeting");
+    assertThat((java.util.Map<String, Object>) dto.inputSchema().get("properties"))
+            .containsKey("greeting");
   }
 
   @Test

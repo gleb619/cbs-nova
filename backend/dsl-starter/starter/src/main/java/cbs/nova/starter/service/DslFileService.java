@@ -1,5 +1,6 @@
 package cbs.nova.starter.service;
 
+import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.model.DslFileModels.FileContentRequest;
 import cbs.nova.starter.model.DslFileModels.FileContentResponse;
@@ -10,6 +11,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -33,6 +35,7 @@ public class DslFileService {
   private final DslFileRepository repository;
   private final DslFileBuffer buffer;
   private final DslFileBulkhead bulkhead;
+  private final ObjectProvider<DslBuilderClient> builderClientProvider;
 
   // Cross-replica flush safety needs no DB lock: each replica has its own DslFileBuffer, and
   // repository.write publishes whole files atomically (temp file + ATOMIC_MOVE), so concurrent
@@ -46,7 +49,7 @@ public class DslFileService {
   @PostConstruct
   public void start() {
     int interval = dslProperties.files().flushIntervalSeconds();
-    if (interval > 0) {
+    if (interval > 0 && builderClient() == null) {
       flushExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread thread = new Thread(r, "dsl-file-flush");
         thread.setDaemon(true);
@@ -74,11 +77,19 @@ public class DslFileService {
   }
 
   public List<FileEntry> listFiles(String prefix) {
+    var builder = builderClient();
+    if (builder != null) {
+      return builder.listFiles(prefix);
+    }
     ensureRoot();
     return repository.list(workspaceRoot(), prefix);
   }
 
   public FileContentResponse readFile(String relativePath) throws IOException {
+    var builder = builderClient();
+    if (builder != null) {
+      return builder.readFile(relativePath);
+    }
     ensureRoot();
     String staged = buffer.get(relativePath);
     if (staged != null) {
@@ -105,6 +116,10 @@ public class DslFileService {
   }
 
   public boolean exists(String relativePath) {
+    var builder = builderClient();
+    if (builder != null) {
+      return builder.fileExists(relativePath);
+    }
     ensureRoot();
     if (buffer.get(relativePath) != null) {
       return true;
@@ -114,6 +129,11 @@ public class DslFileService {
   }
 
   public void stageWrite(String relativePath, String content) {
+    var builder = builderClient();
+    if (builder != null) {
+      builder.stageWrite(relativePath, content);
+      return;
+    }
     ensureRoot();
     buffer.stage(relativePath, content);
     if (buffer.pendingCount() >= dslProperties.files().maxQueueSize()) {
@@ -124,6 +144,10 @@ public class DslFileService {
   }
 
   public int stageAll(List<FileContentRequest> files) {
+    var builder = builderClient();
+    if (builder != null) {
+      return builder.stageAll(files).staged();
+    }
     ensureRoot();
     int staged = 0;
     for (FileContentRequest file : files) {
@@ -142,6 +166,10 @@ public class DslFileService {
   }
 
   public FlushResult flushPending() {
+    var builder = builderClient();
+    if (builder != null) {
+      return builder.flushFiles();
+    }
     ensureRoot();
     if (!flushLock.tryLock()) {
       return new FlushResult(0, 0, List.of("flush already in progress"));
@@ -176,7 +204,15 @@ public class DslFileService {
   }
 
   public int pendingCount() {
+    var builder = builderClient();
+    if (builder != null) {
+      return builder.pendingCount();
+    }
     return buffer.pendingCount();
+  }
+
+  private DslBuilderClient builderClient() {
+    return builderClientProvider == null ? null : builderClientProvider.getIfAvailable();
   }
 
   private Path sourceRoot() {

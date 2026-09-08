@@ -10,9 +10,9 @@ import org.junit.jupiter.api.Test;
  * Pins the qualified {@code dsl_runs} table name produced by
  * {@link DslRunNamingStrategy#qualifiedTableName()}.
  *
- * <p>Covers the four branches of the single naming rule (default, custom table,
- * schema only, schema + custom table) and verifies SDJ
- * {@link DslRunNamingStrategy#getTableName(Class)} delegates to it.
+ * <p>
+ * Covers the four branches of the single naming rule (default, custom table, schema only, schema +
+ * custom table) and verifies SDJ {@link DslRunNamingStrategy#getTableName(Class)} delegates to it.
  */
 class DslRunNamingStrategyTest {
 

@@ -98,7 +98,7 @@ class DslFileRepositoryTest {
     }
 
     assertThat(observed).isNotEmpty();
-    assertThat(observed).allSatisfy(content ->
-            assertThat(contents).as("read must be one complete writer version").contains(content));
+    assertThat(observed).allSatisfy(content -> assertThat(contents)
+            .as("read must be one complete writer version").contains(content));
   }
 }

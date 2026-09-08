@@ -11,7 +11,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Import;
 
 @AutoConfiguration
-@AutoConfigureAfter({DslRunRepositoryConfiguration.class, DataSourceAutoConfiguration.class})
+@AutoConfigureAfter(DataSourceAutoConfiguration.class)
 @Import({
     RequestIdFilterConfiguration.class,
     LoggingConfiguration.class,
@@ -33,7 +33,11 @@ import org.springframework.context.annotation.Import;
     SpringHelperConfiguration.class,
     ApiKeyAuthFilterConfiguration.class,
     RateLimitFilterConfiguration.class,
-
+    DslRunRepositoryConfiguration.class,
+    SecurityConfiguration.class,
+    ApiKeyAuthMisconfigurationWarning.class,
+    DslHealthIndicatorConfiguration.class,
+    BuilderClientConfiguration.class,
 })
 @EnableConfigurationProperties({DslProperties.class, CbsNovaCacheProperties.class,
     CbsHealthProperties.class})

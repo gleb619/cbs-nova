@@ -1,15 +1,26 @@
 package cbs.nova.starter;
 
 import static java.nio.charset.StandardCharsets.*;
+import static cbs.nova.starter.BuilderClientTestSupport.providerOf;
+import static cbs.nova.starter.BuilderClientTestSupport.stubSuccessfulCompile;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import cbs.nova.starter.AuditTestSupport;
 import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.LoadResult;
+import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.router.DslDraftRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
 import cbs.nova.starter.controller.DslReloadHandler;
+import cbs.nova.starter.exception.DslCompilationException;
+import cbs.nova.starter.model.CompileDiagnostic;
 import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.HistoryDiffResponse;
@@ -227,7 +238,8 @@ class DslDraftResourceTest {
 
     assertThat(response.statusCode().value()).isEqualTo(200);
     @SuppressWarnings("unchecked")
-    PageResponse<DraftSummary> body = (PageResponse<DraftSummary>) ((EntityResponse<?>) response).entity();
+    PageResponse<DraftSummary> body = (PageResponse<DraftSummary>) ((EntityResponse<?>) response)
+            .entity();
     assertThat(body.items()).isEmpty();
     assertThat(body.total()).isEqualTo(0L);
     assertThat(body.offset()).isEqualTo(0);
@@ -248,7 +260,8 @@ class DslDraftResourceTest {
 
     assertThat(response.statusCode().value()).isEqualTo(200);
     @SuppressWarnings("unchecked")
-    PageResponse<DraftSummary> body = (PageResponse<DraftSummary>) ((EntityResponse<?>) response).entity();
+    PageResponse<DraftSummary> body = (PageResponse<DraftSummary>) ((EntityResponse<?>) response)
+            .entity();
     assertThat(body.items()).isEmpty();
     assertThat(body.total()).isEqualTo(0L);
   }
@@ -263,7 +276,8 @@ class DslDraftResourceTest {
 
     assertThat(response.statusCode().value()).isEqualTo(200);
     @SuppressWarnings("unchecked")
-    PageResponse<DraftSummary> body = (PageResponse<DraftSummary>) ((EntityResponse<?>) response).entity();
+    PageResponse<DraftSummary> body = (PageResponse<DraftSummary>) ((EntityResponse<?>) response)
+            .entity();
     assertThat(body.items()).hasSize(2);
     assertThat(body.total()).isEqualTo(2L);
     assertThat(body.items())
@@ -689,6 +703,102 @@ class DslDraftResourceTest {
             HttpOutputMessage outputMessage) {
       throw new UnsupportedOperationException();
     }
+  }
+
+  @Test
+  void saveDelegatesToBuilderClient() throws Exception {
+    DslBuilderClient client = mock(DslBuilderClient.class);
+    stubSuccessfulCompile(client);
+    when(client.saveDraft(eq("foo"), any())).thenReturn(
+            new DraftResponse("foo", "Draft", "/remote/.workbench/drafts/foo.json", false,
+                    LoadResult.empty()));
+    handler = builderDraftHandler(client);
+
+    ServerResponse response = handler.save(postRequest("/api/dsl/drafts/foo/save"));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    DraftResponse body = (DraftResponse) ((EntityResponse<?>) response).entity();
+    assertThat(body.location()).isEqualTo("/remote/.workbench/drafts/foo.json");
+    verify(client).saveDraft(eq("foo"), any());
+    assertThat(sourceDir.resolve(".workbench/drafts/foo.json")).doesNotExist();
+  }
+
+  @Test
+  void publishDelegatesToBuilderClientAndReloadsLocally() throws Exception {
+    DslBuilderClient client = mock(DslBuilderClient.class);
+    stubSuccessfulCompile(client);
+    when(client.publishDraft(eq("foo"), any())).thenReturn(
+            new DraftResponse("foo", "Published", "/remote/.workbench/published/foo.json", false,
+                    LoadResult.empty()));
+    handler = builderDraftHandler(client);
+
+    ServerResponse response = handler.publish(postRequest("/api/dsl/drafts/foo/publish"));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    DraftResponse body = (DraftResponse) ((EntityResponse<?>) response).entity();
+    assertThat(body.location()).isEqualTo("/remote/.workbench/published/foo.json");
+    assertThat(body.reloaded()).isTrue();
+    assertThat(body.reloadError()).isNull();
+    assertThat(sourceDir.resolve(".workbench/published/foo.json")).doesNotExist();
+  }
+
+  @Test
+  void publishSurfacesReloadFailureWhenBuilderCompileFails() throws Exception {
+    Files.writeString(sourceDir.resolve("Broken.java"),
+            "this is not valid Java at all; { class Broken { ???");
+    DslBuilderClient client = mock(DslBuilderClient.class);
+    stubSuccessfulCompile(client);
+    when(client.compile(any())).thenThrow(new DslCompilationException("DSL compilation failed",
+            List.of(new CompileDiagnostic("Broken.java", 1L, null, "bad syntax", "error", null))));
+    when(client.publishDraft(eq("foo"), any())).thenReturn(
+            new DraftResponse("foo", "Published", "/remote/.workbench/published/foo.json", false,
+                    LoadResult.empty()));
+    handler = builderDraftHandler(client);
+
+    ServerResponse response = handler.publish(postRequest("/api/dsl/drafts/foo/publish"));
+
+    DraftResponse body = (DraftResponse) ((EntityResponse<?>) response).entity();
+    assertThat(body.reloaded()).isFalse();
+    assertThat(body.reloadError()).contains("DSL compilation failed");
+    assertThat(body.diagnostics()).isNotEmpty();
+    assertThat(body.diagnostics().get(0).file()).isEqualTo("Broken.java");
+  }
+
+  @Test
+  void deleteDelegatesToBuilderClient() throws Exception {
+    DslBuilderClient client = mock(DslBuilderClient.class);
+    when(client.deleteDraft("foo")).thenReturn(
+            new DraftResponse("foo", "Deleted", null, false, LoadResult.empty()));
+    handler = builderDraftHandler(client);
+
+    ServerResponse response = handler.delete(deleteRequest("foo", "/api/dsl/drafts/foo"));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    verify(client).deleteDraft("foo");
+  }
+
+  @Test
+  void listDelegatesToBuilderClient() throws Exception {
+    DslBuilderClient client = mock(DslBuilderClient.class);
+    when(client.listDrafts(50, 0)).thenReturn(
+            new PageResponse<>(List.of(new DraftSummary("foo", "process", "Draft", "1", 42)), 1,
+                    0, 50));
+    handler = builderDraftHandler(client);
+
+    ServerResponse response = handler.list(getRequest("/api/dsl/drafts", null));
+
+    @SuppressWarnings("unchecked")
+    PageResponse<DraftSummary> body = (PageResponse<DraftSummary>) ((EntityResponse<?>) response)
+            .entity();
+    assertThat(body.items()).hasSize(1);
+    assertThat(body.items().get(0).name()).isEqualTo("foo");
+  }
+
+  private DslDraftHandler builderDraftHandler(DslBuilderClient client) {
+    return new DslDraftHandler(props,
+            new DslReloadHandler(props, new DefinitionLoader(), null, null, providerOf(client)),
+            new DslDefinitionHistoryService(props, mapper), mapper,
+            new DslDefinitionBundleService(mapper, Optional.empty()), null, providerOf(client));
   }
 
   @Test

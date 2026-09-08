@@ -17,8 +17,7 @@ import org.junit.jupiter.api.Test;
 
 class DslFileBufferTest {
 
-  private final DslFileBuffer buffer =
-          new DslFileBuffer(DslProperties.builder().build());
+  private final DslFileBuffer buffer = new DslFileBuffer(DslProperties.builder().build());
 
   @Test
   void stageAndGetRoundTrip() {

@@ -42,10 +42,18 @@ class CompileServiceTest {
             "v1",
             List.of("clean", "build"),
             List.of("dsl", "models"),
-            "project/templates");
+            "project/templates",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
     var gradleService = new GradleService(properties);
+    var workQueue = new BuilderWorkQueue(properties);
+    workQueue.start();
     var service = new CompileService(
-            properties, new GitService(), gradleService, new DefaultResourceLoader());
+            properties, new GitService(), gradleService, new DefaultResourceLoader(), workQueue);
     service.loadTemplates();
     return service;
   }

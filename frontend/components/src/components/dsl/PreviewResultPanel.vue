@@ -13,7 +13,12 @@ const props = defineProps<{
   endpoint?: 'preview' | 'run' | 'explain'
 }>()
 
-const activeTab = ref<'result' | 'output'>('result')
+const emit = defineEmits<{
+  history: []
+  format: [formatted: string]
+}>()
+
+const mode = ref<'form' | 'json'>('json')
 
 const { outputSchema, outputType, loading, error, hasOutputSchema } = useConstructSchema({
   name: () => props.name,
@@ -35,14 +40,72 @@ const outputFormValue = computed(() => {
   return {}
 })
 
-function setTab(next: 'result' | 'output') {
-  activeTab.value = next
+const transient = ref<{ text: string; type: 'danger' | 'success' } | null>(null)
+let transientTimeout: ReturnType<typeof setTimeout> | null = null
+
+function setTransient(message: { text: string; type: 'danger' | 'success' }) {
+  if (transientTimeout) clearTimeout(transientTimeout)
+  transient.value = message
+  transientTimeout = setTimeout(() => {
+    transient.value = null
+  }, 1500)
 }
+
+function formatResult() {
+  const raw = props.output?.result
+  if (raw === undefined || raw === null) return
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+    const pretty = `${JSON.stringify(parsed, null, 2)}\n`
+    emit('format', pretty)
+    setTransient({ text: 'Formatted', type: 'success' })
+  } catch (e) {
+    setTransient({ text: `Format failed: ${(e as Error).message}`, type: 'danger' })
+  }
+}
+
+function setMode(next: 'form' | 'json') {
+  mode.value = next
+}
+
+const footerStatus = computed(() => {
+  if (transient.value) return transient.value
+  if (props.status === 'loading' || props.status === 'running') {
+    return { text: 'Running…', type: 'accent' as const }
+  }
+  if (props.status === 'failed') {
+    const count = props.output?.errors?.length ?? 0
+    return { text: count > 0 ? `Failed — ${count} error(s)` : 'Failed', type: 'danger' as const }
+  }
+  if (props.status === 'success') return { text: 'Done', type: 'success' as const }
+  if (mode.value === 'form') {
+    if (loading.value) return { text: 'Loading schema…', type: 'muted' as const }
+    if (error.value) return { text: `Schema unavailable: ${error.value}`, type: 'danger' as const }
+    if (!hasOutputSchema.value) return { text: 'Output schema unavailable', type: 'muted' as const }
+    return { text: 'Form output', type: 'muted' as const }
+  }
+  return { text: 'Result JSON', type: 'muted' as const }
+})
+
+const canFormat = computed(() => {
+  if (mode.value === 'form') return false
+  if (props.status === 'loading') return false
+  const raw = props.output?.result
+  return raw !== undefined && raw !== null
+})
 
 watch(
   () => props.name,
   () => {
-    activeTab.value = 'result'
+    mode.value = 'json'
+  },
+)
+
+watch(
+  () => props.output,
+  () => {
+    transient.value = null
+    if (transientTimeout) clearTimeout(transientTimeout)
   },
 )
 </script>
@@ -56,46 +119,21 @@ watch(
         <span class="text-xs text-ink-muted">| {{ endpoint ?? 'preview' }}</span>
       </div>
       <div class="flex items-center gap-2 shrink-0">
-        <div class="flex items-center border border-line rounded-sm overflow-hidden shrink-0">
-          <button
-            type="button"
-            class="text-xs px-2 py-1"
-            :class="activeTab === 'result' ? 'bg-accent-500 text-white' : 'hover:bg-surface text-ink'"
-            data-testid="tab-result"
-            @click="setTab('result')"
-          >
-            Result
-          </button>
-          <button
-            type="button"
-            class="text-xs px-2 py-1"
-            :class="activeTab === 'output' ? 'bg-accent-500 text-white' : 'hover:bg-surface text-ink'"
-            data-testid="tab-output"
-            @click="setTab('output')"
-          >
-            Output schema
-          </button>
-        </div>
-        <span
-          class="text-xs font-mono"
-          :class="{
-            'text-ink-muted': status === 'idle',
-            'text-accent-500': status === 'success' || status === 'running',
-            'text-danger': status === 'failed',
-          }"
+        <button
+          type="button"
+          class="text-xs px-3 py-1 bg-accent-500 text-white hover:bg-accent-600 disabled:opacity-50"
+          data-testid="history-button"
+          @click="emit('history')"
         >
-          <span v-if="status === 'loading'">running…</span>
-          <span v-else-if="status === 'success'">done</span>
-          <span v-else-if="status === 'failed'">failed</span>
-          <span v-else>idle</span>
-        </span>
+          History
+        </button>
       </div>
     </header>
 
     <div class="flex-1 min-h-0 overflow-auto p-3">
-      <div v-if="activeTab === 'result'">
-        <div v-if="status === 'loading'" class="text-xs text-ink-muted font-mono">
-          request in flight…
+      <div v-if="mode === 'json'">
+        <div v-if="status === 'loading'" class="space-y-2" data-testid="result-skeleton">
+          <div v-for="i in 6" :key="i" class="h-3 bg-gray-200 rounded animate-pulse" />
         </div>
         <div v-else-if="output?.errors?.length" class="space-y-1">
           <p
@@ -109,8 +147,10 @@ watch(
         <ResultTab v-else :result="output?.result" />
       </div>
 
-      <div v-else-if="activeTab === 'output'">
-        <div v-if="loading" class="text-xs text-ink-muted">Loading schema…</div>
+      <div v-else-if="mode === 'form'">
+        <div v-if="loading" class="space-y-2" data-testid="schema-skeleton">
+          <div v-for="i in 6" :key="i" class="h-3 bg-gray-200 rounded animate-pulse" />
+        </div>
         <div v-else-if="error" class="text-xs text-danger">Schema unavailable: {{ error }}</div>
         <div v-else-if="!outputSchema || !hasOutputSchema" class="text-xs text-ink-muted">
           Output schema unavailable.
@@ -120,5 +160,57 @@ watch(
         </div>
       </div>
     </div>
+
+    <footer class="flex items-center justify-between px-3 py-2 border-t border-line gap-3">
+      <div class="flex items-center shrink-0">
+        <div class="flex items-center border border-line rounded-sm overflow-hidden">
+          <button
+            type="button"
+            class="text-xs px-2 py-1"
+            :class="mode === 'form' ? 'bg-accent-500 text-white' : 'hover:bg-surface text-ink'"
+            data-testid="mode-form"
+            @click="setMode('form')"
+          >
+            Form
+          </button>
+          <button
+            type="button"
+            class="text-xs px-2 py-1"
+            :class="mode === 'json' ? 'bg-accent-500 text-white' : 'hover:bg-surface text-ink'"
+            data-testid="mode-json"
+            @click="setMode('json')"
+          >
+            JSON
+          </button>
+        </div>
+      </div>
+
+      <div class="flex-1 min-w-0 text-center">
+        <span
+          data-testid="result-status"
+          class="text-xs truncate"
+          :class="{
+            'text-accent-500': footerStatus.type === 'accent',
+            'text-danger': footerStatus.type === 'danger',
+            'text-success-600': footerStatus.type === 'success',
+            'text-ink-muted': footerStatus.type === 'muted',
+          }"
+        >
+          {{ footerStatus.text }}
+        </span>
+      </div>
+
+      <div class="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          class="text-xs px-2 py-1 border border-line hover:bg-surface disabled:opacity-50"
+          data-testid="format-result"
+          :disabled="!canFormat"
+          @click="formatResult"
+        >
+          Format
+        </button>
+      </div>
+    </footer>
   </section>
 </template>

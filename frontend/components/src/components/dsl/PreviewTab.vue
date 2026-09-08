@@ -16,6 +16,12 @@ const props = defineProps<{
   ) => Promise<RunnerOutput> | RunnerOutput
 }>()
 
+const emit = defineEmits<{
+  submit: []
+  history: []
+  format: [formatted: string]
+}>()
+
 const inputJson = ref<string>('{\n  \n}')
 const formValue = ref<unknown>(undefined)
 const output = ref<RunnerOutput | null>(null)
@@ -129,6 +135,8 @@ watch(inputJson, (v) => {
         :endpoint="endpoint"
         :name="name"
         :type="type"
+        @history="emit('history')"
+        @format="emit('format', $event)"
       />
     </div>
   </div>

@@ -1,5 +1,6 @@
 package cbs.nova.dsl.builder.controller;
 
+import cbs.nova.dsl.builder.exception.BuilderBusyException;
 import cbs.nova.dsl.builder.model.CompileModels.CompileErrorResponse;
 import cbs.nova.dsl.builder.model.CompileModels.CompileRequest;
 import cbs.nova.dsl.builder.model.CompileModels.CompileResult;
@@ -71,6 +72,12 @@ public class CompileController {
   @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
   public CompileErrorResponse handleCompileFailure(CompileException ex) {
     return new CompileErrorResponse("COMPILE_FAILED", ex.getDiagnostics());
+  }
+
+  @ExceptionHandler(BuilderBusyException.class)
+  @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
+  public CompileErrorResponse handleBusy(BuilderBusyException ex) {
+    return CompileErrorResponse.of("BUILDER_BUSY", messageOf(ex));
   }
 
   @ExceptionHandler(ResponseStatusException.class)

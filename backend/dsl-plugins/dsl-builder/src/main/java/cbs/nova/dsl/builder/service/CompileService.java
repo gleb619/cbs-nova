@@ -42,11 +42,11 @@ public class CompileService {
   private final GitService gitService;
   private final GradleService gradleService;
   private final ResourceLoader resourceLoader;
+  private final BuilderWorkQueue workQueue;
   private final Map<String, CompileSession> sessions = new ConcurrentHashMap<>();
 
   private String settingsTemplate = "";
   private String buildTemplate = "";
-
 
   @PostConstruct
   void loadTemplates() {
@@ -57,6 +57,10 @@ public class CompileService {
   }
 
   public CompileResult compile(CompileRequest request) {
+    return workQueue.submit(() -> compileInternal(request));
+  }
+
+  private CompileResult compileInternal(CompileRequest request) {
     validatePackage(request.targetPackage(), "targetPackage");
     validatePackage(request.basePackage(), "basePackage");
     if (isBlank(request.repoUrl()) && (request.sources() == null || request.sources().isEmpty())) {

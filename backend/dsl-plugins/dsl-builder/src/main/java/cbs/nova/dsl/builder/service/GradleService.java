@@ -23,7 +23,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class GradleService {
 
-  //TODO: redo, remove hardcode, use app.yml for settings
+  // TODO: redo, remove hardcode, use app.yml for settings
   private static final int MAX_GRADLE_JAVA_MAJOR = 25;
   private static final int MIN_GRADLE_JAVA_MAJOR = 8;
   private static final int MAX_LOG_LINES = 200;
@@ -58,7 +58,7 @@ public class GradleService {
     }
   }
 
-  //TODO: redo, remove hardcode, use app.yml for settings
+  // TODO: redo, remove hardcode, use app.yml for settings
   private Path resolveBuildJavaHome() {
     if (properties.gradleJavaHome() != null) {
       return properties.gradleJavaHome();
@@ -78,7 +78,7 @@ public class GradleService {
     return major >= MIN_GRADLE_JAVA_MAJOR && major <= MAX_GRADLE_JAVA_MAJOR;
   }
 
-  //TODO: redo, remove hardcode, use app.yml for settings
+  // TODO: redo, remove hardcode, use app.yml for settings
   private List<Path> installedJdks() {
     var candidates = new ArrayList<Path>();
     var env = System.getenv("DSL_BUILDER_JAVA_HOME");

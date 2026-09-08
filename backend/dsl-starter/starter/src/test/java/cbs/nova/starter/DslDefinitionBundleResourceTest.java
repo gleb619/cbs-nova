@@ -1,17 +1,28 @@
 package cbs.nova.starter;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.router.DslDefinitionBundleRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
 import cbs.nova.starter.controller.DslExceptionHandler;
 import cbs.nova.starter.controller.DslReloadHandler;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
+import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.starter.model.VcsModels.DefinitionBundle;
+import cbs.nova.starter.model.VcsModels.DefinitionBundleEntry;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
+import cbs.nova.starter.model.VcsModels.ImportBundleResult;
+import cbs.nova.starter.model.VcsModels.ImportEntryResult;
 import cbs.nova.starter.service.DslDefinitionBundleService;
 import cbs.nova.starter.service.DslDefinitionHistoryService;
 import org.junit.jupiter.api.AfterEach;
@@ -58,6 +69,10 @@ class DslDefinitionBundleResourceTest {
             historyService,
             mapper,
             bundleService);
+    mockMvc = mockMvcFor(handler);
+  }
+
+  private MockMvc mockMvcFor(DslDraftHandler handler) {
     DslDefinitionBundleRouterConfiguration router = new DslDefinitionBundleRouterConfiguration();
 
     AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();
@@ -70,7 +85,7 @@ class DslDefinitionBundleResourceTest {
     exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
     exceptionResolver.afterPropertiesSet();
 
-    mockMvc = MockMvcBuilders.routerFunctions(router.dslDefinitionBundleRouter(handler))
+    return MockMvcBuilders.routerFunctions(router.dslDefinitionBundleRouter(handler))
             .setMessageConverters(new StringHttpMessageConverter(),
                     new JacksonJsonHttpMessageConverter(),
                     new InputStreamHttpMessageConverter())
@@ -233,6 +248,37 @@ class DslDefinitionBundleResourceTest {
     assertThat(files).hasSize(1);
     DraftRequest snapshot = mapper.readValue(files.get(0).toFile(), DraftRequest.class);
     assertThat(snapshot.version()).isEqualTo("v1");
+  }
+
+  @Test
+  void importDelegatesToBuilderClientAndReloadsLocally() throws Exception {
+    DslProperties props = DslProperties.builder().sourceDir(sourceDir.toString()).build();
+    DslBuilderClient client = mock(DslBuilderClient.class);
+    BuilderClientTestSupport.stubSuccessfulCompile(client);
+    when(client.importBundle(any(DefinitionBundle.class), eq(false)))
+            .thenReturn(new ImportBundleResult(false, false, 1, 0,
+                    List.of(new ImportEntryResult("A", "published", null)), null, null));
+    DslDraftHandler handler = new DslDraftHandler(props,
+            new DslReloadHandler(props, new DefinitionLoader(), null, null,
+                    BuilderClientTestSupport.providerOf(client)),
+            new DslDefinitionHistoryService(props, mapper), mapper,
+            new DslDefinitionBundleService(mapper, Optional.empty()), null,
+            BuilderClientTestSupport.providerOf(client));
+    MockMvc builderMvc = mockMvcFor(handler);
+    String bundle = "{\"formatVersion\":1,\"definitions\":["
+            + "{\"definition\":{\"name\":\"A\",\"type\":\"process\",\"status\":\"Published\",\"version\":\"v1\",\"taskQueue\":\"q\"},\"source\":\"published\"}]}";
+
+    String result = builderMvc.perform(post("/api/dsl/definitions/import")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(bundle))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+
+    assertThat(result).contains("\"dryRun\":false");
+    assertThat(result).contains("\"reloaded\":true");
+    assertThat(result).contains("\"published\":1");
+    verify(client).importBundle(any(DefinitionBundle.class), eq(false));
+    assertThat(sourceDir.resolve(".workbench/published/A.json")).doesNotExist();
   }
 
   @Test

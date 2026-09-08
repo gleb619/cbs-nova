@@ -24,3 +24,20 @@ cbs:
         - dsl
         - models
       templates-dir: project/templates
+      queue:
+        capacity: 100
+        workers: 4
+      drafts:
+        history-limit: 20
+      files:
+        flush-interval-seconds: 5
+        max-queue-size: 100
+        read-bulkhead-permits: 32
+        write-bulkhead-permits: 8
+        acquire-timeout-seconds: 5
+      git:
+        enabled: true
+        status-cache-ttl-seconds: 5
+      file-buffer:
+        max-entries: 1000
+        expire-after-write-seconds: 3600

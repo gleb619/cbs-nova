@@ -20,11 +20,12 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  * Follows the {@link JdbcDslRunRepository} idioms: constructor injection via Lombok, named
  * parameters, and an explicit {@link RowMapper}.
  */
+//TODO: add CrudRepository to work with audit
+@Deprecated
 @RequiredArgsConstructor
 public class DslAuditRepository {
 
-  private static final String COLUMNS =
-          "id, occurred_at, actor, action, target, correlation_id, outcome, details_json";
+  private static final String COLUMNS = "id, occurred_at, actor, action, target, correlation_id, outcome, details_json";
 
   private static final RowMapper<DslAuditEntity> ROW_MAPPER = (rs, rowNum) -> new DslAuditEntity(
           rs.getLong("id"),

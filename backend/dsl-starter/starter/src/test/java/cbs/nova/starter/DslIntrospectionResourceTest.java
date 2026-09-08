@@ -51,7 +51,7 @@ class DslIntrospectionResourceTest {
             new JacksonJsonSchemaGenerator(),
             mapper,
             new DslDefinitionStatusResolver(DslProperties.builder().build(),
-                    new DslGitStatusResolver(DslProperties.builder().build())));
+                    new DslGitStatusResolver(DslProperties.builder().build(), null)));
     DslIntrospectionHandler handler = new DslIntrospectionHandler(service,
             new ExplainDiagramRenderer(), new RequestQueryConverter());
     DslIntrospectionRouterConfiguration router = new DslIntrospectionRouterConfiguration();
@@ -254,10 +254,13 @@ class DslIntrospectionResourceTest {
     mockMvc.perform(get("/api/dsl/definitions").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items").isArray())
-            .andExpect(jsonPath("$.items[?(@.name=='LoanDisbursement' && @.type=='process')]").exists())
-            .andExpect(jsonPath("$.items[?(@.name=='SampleTransaction' && @.type=='transaction')]").exists())
+            .andExpect(jsonPath("$.items[?(@.name=='LoanDisbursement' && @.type=='process')]")
+                    .exists())
+            .andExpect(jsonPath("$.items[?(@.name=='SampleTransaction' && @.type=='transaction')]")
+                    .exists())
             .andExpect(jsonPath("$.items[?(@.name=='sampleHelper' && @.type=='helper')]").exists())
-            .andExpect(jsonPath("$.items[?(@.name=='sampleFunction' && @.type=='function')]").exists())
+            .andExpect(
+                    jsonPath("$.items[?(@.name=='sampleFunction' && @.type=='function')]").exists())
             .andExpect(jsonPath("$.total").value(4))
             .andExpect(jsonPath("$.offset").value(0))
             .andExpect(jsonPath("$.limit").value(50));
@@ -336,7 +339,8 @@ class DslIntrospectionResourceTest {
     mockMvc.perform(get("/api/dsl/definitions").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items.length()").value(1))
-            .andExpect(jsonPath("$.items[?(@.name=='LoanDisbursement' && @.type=='process')]").exists())
+            .andExpect(jsonPath("$.items[?(@.name=='LoanDisbursement' && @.type=='process')]")
+                    .exists())
             .andExpect(jsonPath("$.total").value(1));
   }
 

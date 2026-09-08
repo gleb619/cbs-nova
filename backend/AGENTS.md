@@ -56,7 +56,21 @@ backend/
 - `dsl-builder` is a Spring Boot service (port 8091) that compiles DSL sources on demand: it stages a session
   workspace, renders Gradle build templates that apply `dsl-gradle-plugin`, optionally clones sources from a Git
   repo (JGit), runs the build via the Gradle Tooling API, and exposes `POST /api/dsl/compile` +
-  `GET /api/dsl/compile/{id}/download` (zip of generated sources). See `backend/dsl-plugins/dsl-builder/README.md`.
+  `GET /api/dsl/compile/{id}/download` (zip of generated sources). Compile runs through a bounded server-side
+  `BuilderWorkQueue` (capacity/workers under `cbs.dsl.builder.queue.*`; queue full → HTTP 429). The service also
+  hosts the draft/file/vcs workbench surface ported from the starter: `DraftController` (`/api/dsl/drafts/**`),
+  `DefinitionBundleController` (`/api/dsl/definitions/export|import`), `FileController` (`/api/dsl/files/**`,
+  Caffeine-staged writes + bulkhead under `cbs.dsl.builder.files|file-buffer.*`), and `VcsController`
+  (`/api/dsl/vcs/status`). Publish/restore/import only write files and return `reloaded=false` — registry reload
+  stays in the starter. See `backend/dsl-plugins/dsl-builder/README.md`.
+- The starter talks to dsl-builder through `cbs.nova.starter.builder.DslBuilderClient` (enabled by default via
+  `csb.dsl.builder-client.enabled`, base URL `csb.dsl.builder-client.base-url` = `http://localhost:8091`). Reload
+  compiles remotely (HTTP/2 via JDK `HttpClient`, h2c prior-knowledge) and swaps the registry locally; drafts,
+  files, bundles, and VCS status delegate to the builder while keeping the starter endpoints as the REST surface.
+  Calls pass through a bounded client queue (`queue.*`), a semaphore bulkhead (`bulkhead.*`), and a hand-rolled
+  circuit breaker (`breaker.*`): builder 5xx/network errors open the breaker → 503 `BUILDER_UNAVAILABLE`, builder
+  429 → 429 `BUILDER_BUSY`, compile failures → 422 diagnostics mapped to `DslCompilationException`. Set
+  `csb.dsl.builder-client.enabled=false` to fall back to in-process javac compilation and local drafts/files.
 - **Call Hierarchy constraints**:
     - **Process** can call: Transactions, Helpers, Functions (never Processes).
     - **Transaction / Function / Helper / Compensation** can call: Helpers, Functions (never Processes/Transactions).

@@ -12,16 +12,15 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 /**
- * Verifies the logback pattern syntax used by {@code logging.pattern.level} in
- * application.yml (keep in sync): both MDC keys render with their values when set and as
- * empty strings — not {@code null} — when a request is uncorrelated.
+ * Verifies the logback pattern syntax used by {@code logging.pattern.level} in application.yml
+ * (keep in sync): both MDC keys render with their values when set and as empty strings — not
+ * {@code null} — when a request is uncorrelated.
  */
 class MdcLogPatternTest {
 
   private static final String LOG_LEVEL_PATTERN = "%5p [rid=%X{rid:-} cid=%X{cid:-}]";
 
-  private final LoggerContext loggerContext =
-          (LoggerContext) LoggerFactory.getILoggerFactory();
+  private final LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
 
   @AfterEach
   void tearDown() {
@@ -34,8 +33,8 @@ class MdcLogPatternTest {
     appender.setContext(loggerContext);
     appender.start();
     PatternLayout layout = newPatternLayout();
-    ch.qos.logback.classic.Logger logger =
-            loggerContext.getLogger(MdcLogPatternTest.class.getName());
+    ch.qos.logback.classic.Logger logger = loggerContext
+            .getLogger(MdcLogPatternTest.class.getName());
     logger.addAppender(appender);
     try {
       MDC.put("rid", "req-abc");
@@ -43,8 +42,7 @@ class MdcLogPatternTest {
       logger.info("correlated request");
 
       assertThat(layout.doLayout(appender.list.get(0)))
-              .contains("INFO [rid=req-abc cid=order-4711]")
-              ;
+              .contains("INFO [rid=req-abc cid=order-4711]");
     } finally {
       logger.detachAppender(appender);
       layout.stop();
@@ -58,8 +56,8 @@ class MdcLogPatternTest {
     appender.setContext(loggerContext);
     appender.start();
     PatternLayout layout = newPatternLayout();
-    ch.qos.logback.classic.Logger logger =
-            loggerContext.getLogger(MdcLogPatternTest.class.getName());
+    ch.qos.logback.classic.Logger logger = loggerContext
+            .getLogger(MdcLogPatternTest.class.getName());
     logger.addAppender(appender);
     try {
       logger.info("uncorrelated request");

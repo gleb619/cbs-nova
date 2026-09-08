@@ -75,8 +75,8 @@ public class HelperInstanceResolverConfig {
       }
       if (helperClass == HttpCallHelper.class) {
         return new HttpCallHelper(HttpClient.newHttpClient(),
-            new CbsNovaLoggingProperties(Level.INFO, Level.INFO,
-                true));
+                new CbsNovaLoggingProperties(Level.INFO, Level.INFO,
+                        true));
       }
       if (helperClass == JsonExtractHelper.class) {
         return new JsonExtractHelper(new ObjectMapper());

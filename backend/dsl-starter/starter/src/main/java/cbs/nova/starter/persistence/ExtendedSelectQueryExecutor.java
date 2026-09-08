@@ -41,21 +41,22 @@ public class ExtendedSelectQueryExecutor {
   /**
    * Fluent builder for {@link ExtendedSelectQuery}.
    *
-   * <p>Condition composition rules:
+   * <p>
+   * Condition composition rules:
    * <ul>
-   *   <li>Multiple {@link #where(Criteria)} calls are joined with an implicit {@code AND}.
-   *       This is the historical behavior and remains supported (not deprecated) because
-   *       the generated SQL is stable.</li>
-   *   <li>{@link #and(Criteria)} and {@link #or(Criteria)} explicitly compose the accumulated
-   *       criteria-so-far with the new criteria using {@code Criteria.and} / {@code Criteria.or}.
-   *       Combinators are left-associative: {@code where(a).and(b).or(c)} produces
-   *       {@code (a AND b) OR c}.</li>
-   *   <li>For clarity, prefer {@code where(a).and(b)} over {@code where(a).where(b)} when
-   *       explicit composition is intended.</li>
-   *   <li>{@link #andIf(boolean, Supplier)} / {@link #orIf(boolean, Supplier)} are conditional
-   *       no-ops when the flag is {@code false}.</li>
-   *   <li>Calling {@link #and(Criteria)} or {@link #or(Criteria)} with no criteria accumulated
-   *       yet behaves like {@link #where(Criteria)}.</li>
+   * <li>Multiple {@link #where(Criteria)} calls are joined with an implicit {@code AND}. This is
+   * the historical behavior and remains supported (not deprecated) because the generated SQL is
+   * stable.</li>
+   * <li>{@link #and(Criteria)} and {@link #or(Criteria)} explicitly compose the accumulated
+   * criteria-so-far with the new criteria using {@code Criteria.and} / {@code Criteria.or}.
+   * Combinators are left-associative: {@code where(a).and(b).or(c)} produces
+   * {@code (a AND b) OR c}.</li>
+   * <li>For clarity, prefer {@code where(a).and(b)} over {@code where(a).where(b)} when explicit
+   * composition is intended.</li>
+   * <li>{@link #andIf(boolean, Supplier)} / {@link #orIf(boolean, Supplier)} are conditional no-ops
+   * when the flag is {@code false}.</li>
+   * <li>Calling {@link #and(Criteria)} or {@link #or(Criteria)} with no criteria accumulated yet
+   * behaves like {@link #where(Criteria)}.</li>
    * </ul>
    */
   public static final class Builder {

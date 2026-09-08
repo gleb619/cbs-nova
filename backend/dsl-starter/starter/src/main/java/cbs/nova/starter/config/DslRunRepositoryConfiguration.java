@@ -19,14 +19,12 @@ import cbs.nova.starter.persistence.TransactionExecutionJdbcRepository;
 import cbs.nova.starter.service.DslAuditService;
 import org.flywaydb.core.Flyway;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jdbc.repository.config.EnableJdbcRepositories;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import tools.jackson.databind.ObjectMapper;
@@ -36,8 +34,7 @@ import java.sql.SQLException;
 
 import javax.sql.DataSource;
 
-@AutoConfiguration
-@AutoConfigureAfter(DataSourceAutoConfiguration.class)
+@Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(DslRunPersistenceProperties.class)
 @EnableJdbcRepositories(basePackages = "cbs.nova.starter.persistence")
 public class DslRunRepositoryConfiguration {

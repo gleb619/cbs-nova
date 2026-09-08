@@ -1,12 +1,20 @@
 package cbs.nova.starter;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import cbs.nova.dsl.DslDefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.starter.exception.BuilderUnavailableException;
+import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslReloadHandler;
+import cbs.nova.starter.model.CompileModels.CompileRequest;
+import cbs.nova.starter.model.CompileModels.CompileResult;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -125,6 +133,63 @@ class DslReloadDiagnosticsTest {
             servletResponse,
             () -> List.of(new JacksonJsonHttpMessageConverter()));
     return servletResponse.getContentAsString();
+  }
+
+  @Test
+  void reloadDelegatesCompilationToBuilderClient() throws Exception {
+    Path sourceDir = createTemporaryPlainSourceDir();
+    try {
+      DslBuilderClient client = mock(DslBuilderClient.class);
+      when(client.compile(any(CompileRequest.class)))
+              .thenReturn(new CompileResult("s-1", true, List.of("Plain.class"),
+                      List.of(), 7));
+      when(client.downloadZip("s-1")).thenReturn(BuilderClientTestSupport.emptyZip());
+      resource = new DslReloadHandler(dslProperties(sourceDir.toString()), loader, null, null,
+              BuilderClientTestSupport.providerOf(client));
+
+      ServerResponse response = resource.reload(reloadRequest());
+
+      assertThat(response.statusCode().value()).isEqualTo(200);
+      var node = mapper.readTree(renderBody(response));
+      assertThat(node.path("load").path("total").asInt()).isEqualTo(0);
+      verify(client).compile(argThatSourcesContain("Plain.java"));
+    } finally {
+      deleteRecursively(sourceDir);
+    }
+  }
+
+  @Test
+  void reloadSurfacesBuilderUnavailableAsCompilationFailure() throws Exception {
+    Path sourceDir = createTemporaryPlainSourceDir();
+    try {
+      DslBuilderClient client = mock(DslBuilderClient.class);
+      when(client.compile(any(CompileRequest.class)))
+              .thenThrow(new BuilderUnavailableException("connection refused"));
+      resource = new DslReloadHandler(dslProperties(sourceDir.toString()), loader, null, null,
+              BuilderClientTestSupport.providerOf(client));
+
+      ServerResponse response = resource.reload(reloadRequest());
+
+      assertThat(response.statusCode().value()).isEqualTo(500);
+      var node = mapper.readTree(renderBody(response));
+      assertThat(node.path("code").asString()).isEqualTo("RELOAD_FAILED");
+      assertThat(node.path("message").asString()).contains("DSL builder unavailable");
+      assertThat(node.path("diagnostics").isArray()).isTrue();
+    } finally {
+      deleteRecursively(sourceDir);
+    }
+  }
+
+  private Path createTemporaryPlainSourceDir() throws IOException {
+    Path sourceDir = Files.createTempDirectory("reload-diagnostics-plain-");
+    Files.writeString(sourceDir.resolve("Plain.java"), "class Plain {}\n");
+    return sourceDir;
+  }
+
+  private static CompileRequest argThatSourcesContain(String fileName) {
+    return org.mockito.ArgumentMatchers.argThat(
+            request -> request != null && request.sources() != null
+                    && request.sources().containsKey(fileName));
   }
 
   private Path createTemporaryDslSourceDir() throws IOException {

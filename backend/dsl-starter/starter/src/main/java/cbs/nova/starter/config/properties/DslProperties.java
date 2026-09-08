@@ -9,13 +9,14 @@ import org.springframework.validation.annotation.Validated;
 /**
  * Configuration properties for the DSL runtime ({@code cbs.dsl.*}).
  *
- * <p>Constructor-bound record: scalar defaults are declared with {@link DefaultValue} for the
- * Spring binder and re-applied in the compact constructor, so direct construction (canonical
- * constructor or the Lombok-generated {@link Builder}) yields the same defaults. Scalar
- * components are boxed so the compact constructor can tell "not set" ({@code null}) apart from an
- * explicit value — records have no Lombok {@code @Builder.Default} support. Nested-object defaults
- * follow the {@link DryRunProperties} idiom: {@code @DefaultValue} on the component plus
- * null-coalescing in the compact constructor.
+ * <p>
+ * Constructor-bound record: scalar defaults are declared with {@link DefaultValue} for the Spring
+ * binder and re-applied in the compact constructor, so direct construction (canonical constructor
+ * or the Lombok-generated {@link Builder}) yields the same defaults. Scalar components are boxed so
+ * the compact constructor can tell "not set" ({@code null}) apart from an explicit value — records
+ * have no Lombok {@code @Builder.Default} support. Nested-object defaults follow the
+ * {@link DryRunProperties} idiom: {@code @DefaultValue} on the component plus null-coalescing in
+ * the compact constructor.
  */
 @Builder
 @ConfigurationProperties(prefix = "cbs.dsl")
@@ -37,8 +38,9 @@ public record DslProperties(
         @Valid @DefaultValue FileBuffer fileBuffer) {
 
   public DslProperties {
-    workbenchWorkspaceRoot =
-            workbenchWorkspaceRoot == null ? ".workbench/drafts-fs" : workbenchWorkspaceRoot;
+    workbenchWorkspaceRoot = workbenchWorkspaceRoot == null
+            ? ".workbench/drafts-fs"
+            : workbenchWorkspaceRoot;
     taskQueue = taskQueue == null ? "dsl-task-queue" : taskQueue;
     worker = worker == null ? new Worker(false) : worker;
     reload = reload == null ? new Reload(false) : reload;
@@ -93,8 +95,8 @@ public record DslProperties(
           @DefaultValue("true") Boolean enabled,
 
           /**
-           * Seconds between automatic flushes of the staged write buffer. Zero or negative
-           * disables background flushing; call POST /api/dsl/files/flush explicitly.
+           * Seconds between automatic flushes of the staged write buffer. Zero or negative disables
+           * background flushing; call POST /api/dsl/files/flush explicitly.
            */
           @DefaultValue("5") Integer flushIntervalSeconds,
 
@@ -144,8 +146,8 @@ public record DslProperties(
 
           /**
            * How long to cache the result of a Git status call, in seconds. A small TTL avoids
-           * re-scanning the repository on every introspection request while still reflecting
-           * recent edits promptly.
+           * re-scanning the repository on every introspection request while still reflecting recent
+           * edits promptly.
            */
           @DefaultValue("5") Integer statusCacheTtlSeconds) {
 
@@ -172,8 +174,7 @@ public record DslProperties(
 
     public FileBuffer {
       maxEntries = maxEntries == null ? 1000 : maxEntries;
-      expireAfterWriteSeconds =
-              expireAfterWriteSeconds == null ? 3600L : expireAfterWriteSeconds;
+      expireAfterWriteSeconds = expireAfterWriteSeconds == null ? 3600L : expireAfterWriteSeconds;
     }
   }
 }

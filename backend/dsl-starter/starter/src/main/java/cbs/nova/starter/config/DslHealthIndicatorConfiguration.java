@@ -10,14 +10,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Registers the DSL health indicators only when Spring Boot actuator's {@link HealthIndicator}
- * is on the classpath.
+ * Registers the DSL health indicators only when Spring Boot actuator's {@link HealthIndicator} is
+ * on the classpath.
  *
- * <p>Both indicators are explicit beans so they are available in every auto-configured
- * application context (including tests that do not component-scan {@code cbs.nova.starter.config}).
- * The bean names are chosen so that Spring Boot's health contributor name generator produces
- * {@code dsl} and {@code dslReadiness}, matching the readiness group include list in
- * {@code application.yml}.
+ * <p>
+ * Both indicators are explicit beans so they are available in every auto-configured application
+ * context (including tests that do not component-scan {@code cbs.nova.starter.config}). The bean
+ * names are chosen so that Spring Boot's health contributor name generator produces {@code dsl} and
+ * {@code dslReadiness}, matching the readiness group include list in {@code application.yml}.
  */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnClass(HealthIndicator.class)

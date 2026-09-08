@@ -1,5 +1,1 @@
-cbs.nova.starter.config.DslRunRepositoryConfiguration
 cbs.nova.starter.config.DslRootAutoConfiguration
-cbs.nova.starter.config.SecurityConfiguration
-cbs.nova.starter.config.ApiKeyAuthMisconfigurationWarning
-cbs.nova.starter.config.DslHealthIndicatorConfiguration

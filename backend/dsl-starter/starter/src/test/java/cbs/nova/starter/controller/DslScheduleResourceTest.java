@@ -69,8 +69,8 @@ class DslScheduleResourceTest {
             AuditTestSupport.providerOf(audit.service())));
 
     mockMvc.perform(post("/api/dsl/schedules")
-                    .contentType("application/json")
-                    .content("{\"definition\":\"A\",\"cron\":\"0 9 * * *\"}"))
+            .contentType("application/json")
+            .content("{\"definition\":\"A\",\"cron\":\"0 9 * * *\"}"))
             .andExpect(status().isCreated());
 
     var result = audit.repository().search(null, 0, 10);
@@ -90,8 +90,8 @@ class DslScheduleResourceTest {
             AuditTestSupport.providerOf(audit.service())));
 
     mockMvc.perform(post("/api/dsl/schedules")
-                    .contentType("application/json")
-                    .content("{\"definition\":\"ghost\",\"cron\":\"0 9 * * *\"}"))
+            .contentType("application/json")
+            .content("{\"definition\":\"ghost\",\"cron\":\"0 9 * * *\"}"))
             .andExpect(status().isNotFound());
 
     var result = audit.repository().search(null, 0, 10);

@@ -62,8 +62,8 @@ class MaskHelperPropertyTest {
   }
 
   /**
-   * Property 3: the plain/default overload's output length does not vary with the input length
-   * for inputs below the keep-last-4 threshold (no length leak).
+   * Property 3: the plain/default overload's output length does not vary with the input length for
+   * inputs below the keep-last-4 threshold (no length leak).
    */
   @Property(tries = 1000)
   void defaultMaskingLeaksNoLengthBelowThreshold(

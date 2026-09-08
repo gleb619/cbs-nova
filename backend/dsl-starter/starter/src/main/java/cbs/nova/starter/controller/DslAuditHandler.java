@@ -12,7 +12,8 @@ import org.springframework.web.servlet.function.ServerResponse;
 
 /**
  * Functional handler for the read side of the append-only audit log. Registered as a
- * {@code RouterFunction} bean by {@code cbs.nova.starter.config.router.DslAuditRouterConfiguration}.
+ * {@code RouterFunction} bean by
+ * {@code cbs.nova.starter.config.router.DslAuditRouterConfiguration}.
  */
 @RequiredArgsConstructor
 public class DslAuditHandler {

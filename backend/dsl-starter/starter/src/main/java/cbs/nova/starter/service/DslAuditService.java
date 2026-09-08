@@ -50,9 +50,9 @@ public class DslAuditService {
 
   /**
    * Resolves the acting principal for an audit row from the Spring Security context: the
-   * authenticated principal name when OIDC/JWT auth is in force, {@code "anonymous"} otherwise
-   * (the default permit-all chain, or the API-key filter, which validates the key but does not
-   * populate an {@link Authentication}).
+   * authenticated principal name when OIDC/JWT auth is in force, {@code "anonymous"} otherwise (the
+   * default permit-all chain, or the API-key filter, which validates the key but does not populate
+   * an {@link Authentication}).
    */
   public static String currentActor() {
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();

@@ -94,10 +94,10 @@ class BatchProcessingDslIntegrationTest {
     new DefinitionLoader().load(globalManager);
     ServiceLoader.load(GeneratedClassProvider.class,
             Thread.currentThread().getContextClassLoader())
-        .stream()
-        .map(ServiceLoader.Provider::get)
-        .filter(provider -> provider.descriptor().name().equals("BatchProcessing"))
-        .forEach(globalManager::registerGeneratedClass);
+            .stream()
+            .map(ServiceLoader.Provider::get)
+            .filter(provider -> provider.descriptor().name().equals("BatchProcessing"))
+            .forEach(globalManager::registerGeneratedClass);
     assertThat(globalManager.hasProcess("BatchProcessing"))
             .as("DSL process BatchProcessing should be loaded")
             .isTrue();

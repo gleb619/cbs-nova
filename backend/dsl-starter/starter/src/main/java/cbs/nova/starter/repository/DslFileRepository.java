@@ -38,9 +38,9 @@ public class DslFileRepository {
   /**
    * Writes {@code content} atomically: the full content is staged in a temp file in the same
    * directory and then published via {@link Files#move(Path, Path, CopyOption...)}
-   * {@code ATOMIC_MOVE}. Concurrent readers therefore always observe a complete old or new
-   * version of the file — never a truncated or interleaved one — which is what makes flush safe
-   * across multiple app replicas sharing one workspace directory (see DslFileService).
+   * {@code ATOMIC_MOVE}. Concurrent readers therefore always observe a complete old or new version
+   * of the file — never a truncated or interleaved one — which is what makes flush safe across
+   * multiple app replicas sharing one workspace directory (see DslFileService).
    */
   public Path write(Path root, String relativePath, String content) throws IOException {
     Path file = resolve(root, relativePath);

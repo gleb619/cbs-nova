@@ -1,5 +1,6 @@
 package cbs.nova.starter.service;
 
+import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -15,6 +16,7 @@ import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -23,9 +25,14 @@ import org.springframework.stereotype.Component;
 public class DslGitStatusResolver {
 
   private final DslProperties dslProperties;
+  private final ObjectProvider<DslBuilderClient> builderClientProvider;
   private final ConcurrentHashMap<Path, Snapshot> cache = new ConcurrentHashMap<>();
 
   public Optional<RepoStatus> status(Path candidateDir) {
+    var builder = builderClient();
+    if (builder != null) {
+      return builder.vcsStatus();
+    }
     if (!gitEnabled()) {
       return Optional.empty();
     }
@@ -86,6 +93,10 @@ public class DslGitStatusResolver {
   }
 
   public record RepoStatus(Path workTree, Set<String> dirtyPaths) {
+  }
+
+  private DslBuilderClient builderClient() {
+    return builderClientProvider == null ? null : builderClientProvider.getIfAvailable();
   }
 
   private record Snapshot(RepoStatus repoStatus, Instant expiresAt) {

@@ -16,30 +16,28 @@ import org.jspecify.annotations.NonNull;
  * <p>
  * Two modes, selected by {@code MaskIn.mode()} (case-insensitive):
  * <ul>
- * <li>{@code null} or {@code "edges"} — keep the configured edges visible and mask the middle.
- *   When neither {@code keepFirst} nor {@code keepLast} is given, the <b>safe default</b>
- *   applies: a value of {@value #SAFE_DEFAULT_THRESHOLD} or more Unicode code points keeps the
- *   last {@value #SAFE_DEFAULT_KEEP_LAST} code points visible and masks everything before them
- *   (e.g. {@code "4111111111111111" → "************1111"}); a shorter value is replaced by
- *   exactly {@value #DEFAULT_FIXED_WIDTH} mask characters, so the true length never leaks.
- *   With explicit {@code keepFirst}/{@code keepLast}, those edges stay visible and the middle is
- *   masked.</li>
+ * <li>{@code null} or {@code "edges"} — keep the configured edges visible and mask the middle. When
+ * neither {@code keepFirst} nor {@code keepLast} is given, the <b>safe default</b> applies: a value
+ * of {@value #SAFE_DEFAULT_THRESHOLD} or more Unicode code points keeps the last
+ * {@value #SAFE_DEFAULT_KEEP_LAST} code points visible and masks everything before them (e.g.
+ * {@code "4111111111111111" → "************1111"}); a shorter value is replaced by exactly
+ * {@value #DEFAULT_FIXED_WIDTH} mask characters, so the true length never leaks. With explicit
+ * {@code keepFirst}/{@code keepLast}, those edges stay visible and the middle is masked.</li>
  * <li>{@code "fixed"} — the output is exactly {@code width} mask characters (default
- *   {@value #DEFAULT_FIXED_WIDTH}), independent of the input length.</li>
+ * {@value #DEFAULT_FIXED_WIDTH}), independent of the input length.</li>
  * </ul>
  *
  * <p>
  * Conventions:
  * <ul>
- * <li>A {@code null} value is rejected with an {@link IllegalArgumentException} (same convention
- *   as {@code hex}: {@code "mask.value is required"}); an empty value returns an empty
- *   result.</li>
+ * <li>A {@code null} value is rejected with an {@link IllegalArgumentException} (same convention as
+ * {@code hex}: {@code "mask.value is required"}); an empty value returns an empty result.</li>
  * <li>{@code maskChar} defaults to {@value #DEFAULT_MASK_CHAR}; when more than one character is
- *   supplied, the first character is used.</li>
+ * supplied, the first character is used.</li>
  * <li>{@code keepFirst}/{@code keepLast} are counted in Unicode code points (surrogate pairs are
- *   never split); negative values are treated as {@code 0}.</li>
- * <li>Clamp rule: {@code keepFirst + keepLast >= codePointCount} never returns the value
- *   unmasked — the keeps are reduced so exactly one code point stays masked.</li>
+ * never split); negative values are treated as {@code 0}.</li>
+ * <li>Clamp rule: {@code keepFirst + keepLast >= codePointCount} never returns the value unmasked —
+ * the keeps are reduced so exactly one code point stays masked.</li>
  * <li>{@code width < 1} is rejected with an {@link IllegalArgumentException}.</li>
  * </ul>
  */

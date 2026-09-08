@@ -1,6 +1,9 @@
 package cbs.nova.starter.controller;
 
 import cbs.nova.dsl.exception.DslException;
+import cbs.nova.starter.exception.BuilderApiException;
+import cbs.nova.starter.exception.BuilderClientBusyException;
+import cbs.nova.starter.exception.BuilderUnavailableException;
 import cbs.nova.starter.converter.DslExceptionMapper;
 import cbs.nova.starter.exception.DefinitionNotFoundException;
 import cbs.nova.starter.exception.DslPayloadTooLargeException;
@@ -62,6 +65,30 @@ public class DslExceptionHandler extends ResponseEntityExceptionHandler {
     log.error("CONFLICT: {}", ex.getMessage(), ex);
     return ResponseEntity.status(HttpStatus.CONFLICT)
             .body(new ErrorResponse("CONFLICT", ex.getMessage(), null, null, null));
+  }
+
+  @ExceptionHandler(BuilderUnavailableException.class)
+  public ResponseEntity<ErrorResponse> handleBuilderUnavailable(BuilderUnavailableException ex,
+          WebRequest request) {
+    log.error("BUILDER_UNAVAILABLE: {}", ex.getMessage(), ex);
+    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+            .body(new ErrorResponse("BUILDER_UNAVAILABLE", ex.getMessage(), null, null, null));
+  }
+
+  @ExceptionHandler(BuilderClientBusyException.class)
+  public ResponseEntity<ErrorResponse> handleBuilderBusy(BuilderClientBusyException ex,
+          WebRequest request) {
+    log.error("BUILDER_BUSY: {}", ex.getMessage(), ex);
+    return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+            .body(new ErrorResponse("BUILDER_BUSY", ex.getMessage(), null, null, null));
+  }
+
+  @ExceptionHandler(BuilderApiException.class)
+  public ResponseEntity<ErrorResponse> handleBuilderApi(BuilderApiException ex,
+          WebRequest request) {
+    log.error("BUILDER_API_ERROR: {}", ex.getMessage(), ex);
+    return ResponseEntity.status(ex.getStatusCode())
+            .body(new ErrorResponse(ex.getCode(), ex.getMessage(), null, null, null));
   }
 
   @ExceptionHandler(IllegalArgumentException.class)

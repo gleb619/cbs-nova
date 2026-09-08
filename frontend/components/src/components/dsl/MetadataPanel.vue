@@ -94,19 +94,22 @@ function onDescriptionInput(event: Event) {
         </div>
       </div>
 
-      <CbsSpinner v-if="loading" size="sm" label="" />
 
-      <button
-        type="button"
-        class="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium text-neutral-600 hover:bg-neutral-100 hover:text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-300"
-        :aria-expanded="!isCollapsed"
-        aria-controls="metadata-panel-body"
-        data-testid="metadata-panel-toggle"
-        @click="toggleCollapsed"
-      >
-        <span aria-hidden="true">{{ isCollapsed ? '▸' : '▾' }}</span>
-        <span>{{ isCollapsed ? 'Expand' : 'Collapse' }}</span>
-      </button>
+      <div class="flex items-center gap-2 shrink-0">
+        <CbsSpinner v-if="loading" size="sm" label="" />
+
+        <button
+          type="button"
+          class="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium text-neutral-600 hover:bg-neutral-100 hover:text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-300"
+          :aria-expanded="!isCollapsed"
+          aria-controls="metadata-panel-body"
+          data-testid="metadata-panel-toggle"
+          @click="toggleCollapsed"
+        >
+          <span aria-hidden="true">{{ isCollapsed ? '▸' : '▾' }}</span>
+          <span>{{ isCollapsed ? 'Expand' : 'Collapse' }}</span>
+        </button>
+      </div>
     </header>
 
     <div v-if="!construct"/>

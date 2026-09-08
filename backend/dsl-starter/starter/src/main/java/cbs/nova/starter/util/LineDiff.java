@@ -7,9 +7,11 @@ import java.util.List;
 
 /**
  * Minimal LCS-based line diff producing unified-style hunks with {@code +}/{@code -}/{@code " "}
- * prefixed lines. Textual only — no AST awareness. Hunk count is capped; when the cap is
- * exceeded the result is marked truncated.
+ * prefixed lines. Textual only — no AST awareness. Hunk count is capped; when the cap is exceeded
+ * the result is marked truncated.
  */
+//TODO: remove, put to a `dsl-builder` or to `dsl-api` module
+@Deprecated(forRemoval = true)
 public final class LineDiff {
 
   /** Default maximum number of hunks returned before truncation kicks in. */

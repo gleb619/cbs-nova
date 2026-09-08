@@ -10,14 +10,15 @@ import org.springframework.boot.health.contributor.HealthIndicator;
 /**
  * Generic DSL health indicator contributing to the plain {@code /actuator/health} composite.
  *
- * <p>Registered by {@link DslHealthIndicatorConfiguration}. The actual Temporal reachability /
- * DSL registry logic is shared with {@link DslReadinessIndicator} via
- * {@link DslHealthIndicatorSupport} so that the existing {@code dsl} component keeps its detail
- * keys ({@code processes}, {@code transactions}, {@code helpers} and the {@code temporal} block)
- * unchanged.
+ * <p>
+ * Registered by {@link DslHealthIndicatorConfiguration}. The actual Temporal reachability / DSL
+ * registry logic is shared with {@link DslReadinessIndicator} via {@link DslHealthIndicatorSupport}
+ * so that the existing {@code dsl} component keeps its detail keys ({@code processes},
+ * {@code transactions}, {@code helpers} and the {@code temporal} block) unchanged.
  *
- * <p>Readiness-specific signal lives in {@link DslReadinessIndicator}; liveness relies on
- * Spring Boot's built-in {@code livenessState} only.
+ * <p>
+ * Readiness-specific signal lives in {@link DslReadinessIndicator}; liveness relies on Spring
+ * Boot's built-in {@code livenessState} only.
  */
 public class DslHealthIndicator implements HealthIndicator {
 

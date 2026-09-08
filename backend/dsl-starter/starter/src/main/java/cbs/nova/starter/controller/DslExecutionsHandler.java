@@ -194,7 +194,8 @@ public class DslExecutionsHandler {
     int windowHours = clampWindowHours(
             Pagination.intParam(request, "windowHours", TIMESERIES_DEFAULT_WINDOW_HOURS));
     int bucketMinutes = clampBucketMinutes(
-            Pagination.intParam(request, "bucketMinutes", TIMESERIES_DEFAULT_BUCKET_MINUTES), windowHours);
+            Pagination.intParam(request, "bucketMinutes", TIMESERIES_DEFAULT_BUCKET_MINUTES),
+            windowHours);
 
     Instant windowEnd = Instant.now();
     Instant windowStart = windowEnd.minus(Duration.ofHours(windowHours));
@@ -344,8 +345,6 @@ public class DslExecutionsHandler {
             .toList();
   }
 
-
-
   private static int clampTopProcesses(int topProcesses) {
     return Math.max(1, Math.min(topProcesses, MAX_TOP_PROCESSES));
   }
@@ -370,7 +369,6 @@ public class DslExecutionsHandler {
     }
     return clamped;
   }
-
 
   /**
    * Fallback aggregation over the repository's full contents, used when the store cannot aggregate

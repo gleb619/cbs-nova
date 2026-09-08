@@ -20,7 +20,10 @@ public final class AuditTestSupport {
   private AuditTestSupport() {
   }
 
-  /** Live audit stack: {@code service} is what handlers record through, {@code repository} is what tests assert against. */
+  /**
+   * Live audit stack: {@code service} is what handlers record through, {@code repository} is what
+   * tests assert against.
+   */
   public record Harness(DslAuditService service, DslAuditRepository repository) {
   }
 

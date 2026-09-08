@@ -31,11 +31,12 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 /**
  * Verifies the DSL health indicators without booting a full Spring Boot application.
  *
- * <p>Both {@link DslHealthIndicator} (plain {@code /actuator/health}) and
+ * <p>
+ * Both {@link DslHealthIndicator} (plain {@code /actuator/health}) and
  * {@link DslReadinessIndicator} (readiness group) share the same contribution logic, registered
- * together by {@link DslHealthIndicatorConfiguration}. These tests pin that the generic
- * {@code dsl} component keeps its original detail keys and that the readiness indicator behaves
- * correctly when Temporal is unreachable.
+ * together by {@link DslHealthIndicatorConfiguration}. These tests pin that the generic {@code dsl}
+ * component keeps its original detail keys and that the readiness indicator behaves correctly when
+ * Temporal is unreachable.
  */
 class DslHealthIndicatorTest {
 

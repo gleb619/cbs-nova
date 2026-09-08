@@ -43,6 +43,27 @@ describe('PreviewInputPanel', () => {
     vi.unstubAllGlobals()
   })
 
+  it('keeps Run button in the header', async () => {
+    const wrapper = mountPanel({}, vi.fn().mockResolvedValue(schemaResponse))
+    await flushPromises()
+
+    const header = wrapper.find('header')
+    expect(header.find('[data-testid="run-button"]').exists()).toBe(true)
+    expect(header.text()).toContain('Run')
+  })
+
+  it('moves mode toggle and action buttons into the footer', async () => {
+    const wrapper = mountPanel({}, vi.fn().mockResolvedValue(schemaResponse))
+    await flushPromises()
+
+    const footer = wrapper.find('footer')
+    expect(footer.find('[data-testid="mode-form"]').exists()).toBe(true)
+    expect(footer.find('[data-testid="mode-json"]').exists()).toBe(true)
+    expect(footer.find('[data-testid="generate-input"]').exists()).toBe(true)
+    expect(footer.find('[data-testid="format-input"]').exists()).toBe(true)
+    expect(wrapper.find('header').find('[data-testid="mode-form"]').exists()).toBe(false)
+  })
+
   it('shows generate button when schema available', async () => {
     const wrapper = mountPanel({}, vi.fn().mockResolvedValue(schemaResponse))
     await flushPromises()
@@ -121,5 +142,65 @@ describe('PreviewInputPanel', () => {
     const wrapper = mountPanel({ type: undefined }, vi.fn())
     await flushPromises()
     expect(wrapper.find('[data-testid="generate-input"]').exists()).toBe(false)
+  })
+
+  it('formats JSON in json mode', async () => {
+    const wrapper = mountPanel({ modelValue: '{"a":1}' }, vi.fn().mockResolvedValue(schemaResponse))
+    await flushPromises()
+
+    await wrapper.find('[data-testid="format-input"]').trigger('click')
+    await flushPromises()
+
+    const emitted = wrapper.emitted('update:modelValue')
+    expect(emitted).toBeTruthy()
+    const last = emitted?.[emitted.length - 1]?.[0] as string
+    expect(last).toBe('{\n  "a": 1\n}\n')
+  })
+
+  it('disables format button in form mode', async () => {
+    const wrapper = mountPanel({}, vi.fn().mockResolvedValue(schemaResponse))
+    await flushPromises()
+
+    await wrapper.find('[data-testid="mode-form"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="format-input"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('shows invalid JSON status in the footer', async () => {
+    const wrapper = mountPanel({ modelValue: '{ bad' }, vi.fn().mockResolvedValue(schemaResponse))
+    await flushPromises()
+
+    const status = wrapper.find('[data-testid="input-status"]')
+    expect(status.text()).toContain('Invalid JSON')
+    expect(status.classes()).toContain('text-danger')
+  })
+
+  it('shows valid JSON status in the footer', async () => {
+    const wrapper = mountPanel(
+      { modelValue: '{"ok":true}' },
+      vi.fn().mockResolvedValue(schemaResponse),
+    )
+    await flushPromises()
+
+    const status = wrapper.find('[data-testid="input-status"]')
+    expect(status.text()).toBe('Valid JSON')
+  })
+
+  it('shows schema loading skeleton while the schema is loading', async () => {
+    vi.stubGlobal('$fetch', () => new Promise(() => {}))
+    const wrapper = mountPanel({ type: 'Process' }, () => new Promise(() => {}))
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="input-skeleton"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="json-textarea"]').exists()).toBe(false)
+  })
+
+  it('hides the skeleton after the schema loads', async () => {
+    const wrapper = mountPanel({ type: 'Process' }, vi.fn().mockResolvedValue(schemaResponse))
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="input-skeleton"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="json-textarea"]').exists()).toBe(true)
   })
 })
