@@ -17,24 +17,26 @@ import cbs.nova.starter.persistence.JdbcTransactionExecutionRepository;
 import cbs.nova.starter.persistence.NoOpFieldEncryptor;
 import cbs.nova.starter.persistence.TransactionExecutionJdbcRepository;
 import cbs.nova.starter.service.DslAuditService;
-import org.flywaydb.core.Flyway;
-import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jdbc.repository.config.EnableJdbcRepositories;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import tools.jackson.databind.ObjectMapper;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-
 import javax.sql.DataSource;
 
-@Configuration(proxyBeanMethods = false)
+/**
+ * Persistence beans for DSL run history. Deliberately NOT annotated with {@code @Configuration}:
+ * it is aggregated through {@link DslRootAutoConfiguration}'s {@code @Import} so its
+ * {@code @ConditionalOnBean(DataSource)} methods are evaluated in the auto-configuration phase,
+ * after {@code DataSourceAutoConfiguration}. Annotating it would make it a component-scan
+ * candidate in host applications that scan {@code cbs.nova.starter}, where those conditions would
+ * be evaluated before the {@code DataSource} bean definition exists and the beans would be
+ * silently skipped.
+ */
 @EnableConfigurationProperties(DslRunPersistenceProperties.class)
 @EnableJdbcRepositories(basePackages = "cbs.nova.starter.persistence")
 public class DslRunRepositoryConfiguration {

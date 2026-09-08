@@ -10,16 +10,32 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Import;
 import org.springframework.core.annotation.AnnotationUtils;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Set;
 
 /**
- * Verifies the starter advertises a root autoconfiguration that aggregates the rest via
- * {@link Import}. {@link DslRunRepositoryConfiguration} stays a standalone auto-configuration
- * (listed before the root in the imports file) so its {@code @ConditionalOnBean(DataSource)} beans
- * are evaluated after {@code DataSourceAutoConfiguration}.
+ * Verifies the starter advertises exactly one auto-configuration — the root — that aggregates the
+ * rest via {@link Import}. {@link DslRunRepositoryConfiguration} is imported by the root but
+ * carries no {@code @Configuration} stereotype, so its {@code @ConditionalOnBean(DataSource)}
+ * beans are only evaluated in the auto-configuration phase, after
+ * {@code DataSourceAutoConfiguration}, and never via component scanning.
  */
 class DslRootAutoConfigurationTest {
+
+  @Test
+  void importsFileAdvertisesExactlyOneAutoConfiguration() throws IOException {
+    var imports = ClassLoader.getSystemResourceAsStream(
+            "META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports");
+    assertThat(imports).as("auto-configuration imports file must exist").isNotNull();
+    try (var reader = new BufferedReader(new InputStreamReader(imports, StandardCharsets.UTF_8))) {
+      assertThat(reader.lines().map(String::trim).filter(line -> !line.isEmpty()))
+              .containsExactly(DslRootAutoConfiguration.class.getName());
+    }
+  }
 
   @Test
   void rootImportsEverySubConfiguration() {
@@ -47,6 +63,7 @@ class DslRootAutoConfigurationTest {
             RateLimitFilterConfiguration.class,
             DslRunRetentionConfiguration.class,
             DslRunReconciliationConfiguration.class,
+            DslRunRepositoryConfiguration.class,
             SecurityConfiguration.class,
             ApiKeyAuthMisconfigurationWarning.class,
             DslHealthIndicatorConfiguration.class,

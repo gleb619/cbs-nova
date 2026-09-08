@@ -6,7 +6,6 @@ import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.transaction.TransactionExecution;
 import cbs.nova.dsl.transaction.TransactionExecutionStatus;
 import cbs.nova.starter.config.DslRootAutoConfiguration;
-import cbs.nova.starter.config.DslRunRepositoryConfiguration;
 import cbs.nova.starter.converter.TransactionExecutionMapperImpl;
 import java.time.Instant;
 import java.util.List;
@@ -173,10 +172,7 @@ class JdbcTransactionExecutionRepositoryTest {
   }
 
   @Configuration
-  @EnableAutoConfiguration(exclude = {
-      DslRootAutoConfiguration.class,
-      DslRunRepositoryConfiguration.class
-  })
+  @EnableAutoConfiguration(exclude = DslRootAutoConfiguration.class)
   @EnableJdbcRepositories(basePackages = "cbs.nova.starter.persistence")
   @Import({JdbcTransactionExecutionRepository.class, TransactionExecutionMapperImpl.class})
   static class TestApplication {

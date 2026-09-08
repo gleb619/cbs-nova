@@ -273,4 +273,26 @@ describe('PreviewResultPanel', () => {
     expect(wrapper.find('[data-testid="runner-result-tab"]').text()).toContain('{"ok":true}')
   })
 
+  it('renders actual output values in Form mode', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      inputSchema: schemaResponse.inputSchema,
+      outputSchema: schemaResponse.outputSchema,
+    })
+    vi.stubGlobal('$fetch', fetchMock)
+
+    const wrapper = mountPanel({
+      type: 'Process',
+      output: { result: { result: 'live value' } },
+      status: 'success',
+    })
+    await flushPromises()
+
+    await wrapper.find('[data-testid="mode-form"]').trigger('click')
+    await flushPromises()
+
+    const field = wrapper.find('[data-testid="schema-field-result"]')
+    expect(field.exists()).toBe(true)
+    expect((field.element as HTMLInputElement).value).toBe('live value')
+  })
+
 })
