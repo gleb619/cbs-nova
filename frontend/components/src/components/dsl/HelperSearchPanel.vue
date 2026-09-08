@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue'
 import type { ObjectSearchResult } from '../../composables/useHelperSearch'
 import CbsDrawer from '../CbsDrawer.vue'
 
-defineProps<{
+const props = defineProps<{
   results: ObjectSearchResult[]
   isLoading?: boolean
   error?: string | null
@@ -14,6 +15,7 @@ const emit = defineEmits<{
   'update:description': [value: string]
   search: []
   clear: []
+  select: [result: ObjectSearchResult]
 }>()
 
 const open = defineModel<boolean>('open', { default: false })
@@ -39,6 +41,37 @@ const typeClass: Record<string, string> = {
 
 function rowTypeClass(resultType: string): string {
   return typeClass[resultType.toLowerCase()] ?? 'bg-gray-100 text-gray-700'
+}
+
+const activeIndex = ref(-1)
+
+watch(
+  () => props.results,
+  () => {
+    activeIndex.value = -1
+  },
+)
+
+const activeResult = computed<ObjectSearchResult | null>(
+  () => props.results[activeIndex.value] ?? null,
+)
+
+function choose(index: number) {
+  const result = props.results[index]
+  if (!result) return
+  activeIndex.value = index
+  emit('select', result)
+}
+
+function move(delta: number) {
+  if (props.results.length === 0) return
+  const first = delta > 0 ? 0 : props.results.length - 1
+  const next = activeIndex.value < 0 ? first : activeIndex.value + delta
+  activeIndex.value = Math.min(Math.max(next, 0), props.results.length - 1)
+}
+
+function closePanel() {
+  open.value = false
 }
 </script>
 
@@ -110,7 +143,15 @@ function rowTypeClass(resultType: string): string {
         No helpers found.
       </div>
 
-      <table v-else class="w-full text-sm">
+      <table
+        v-else
+        class="w-full text-sm"
+        aria-label="Object search results"
+        data-testid="helper-search-results"
+        @keydown.down.prevent="move(1)"
+        @keydown.up.prevent="move(-1)"
+        @keydown.esc="closePanel"
+      >
         <thead class="text-xs uppercase text-gray-400">
           <tr>
             <th class="text-left px-2 py-1.5">Name</th>
@@ -120,10 +161,16 @@ function rowTypeClass(resultType: string): string {
         </thead>
         <tbody class="divide-y divide-gray-800">
           <tr
-            v-for="result in results"
+            v-for="(result, index) in results"
             :key="`${result.name}-${result.type}`"
-            class="hover:bg-gray-800"
+            class="cursor-pointer hover:bg-gray-800 focus:outline-none focus:bg-gray-800"
+            :class="index === activeIndex ? 'bg-gray-800' : ''"
             :data-testid="`helper-search-result-row-${result.name}`"
+            tabindex="0"
+            :aria-selected="index === activeIndex"
+            @click="choose(index)"
+            @keydown.enter.prevent="choose(index)"
+            @focus="activeIndex = index"
           >
             <td class="px-2 py-2 align-top">
               <div class="text-gray-100 font-medium truncate" :title="result.name">
@@ -148,6 +195,20 @@ function rowTypeClass(resultType: string): string {
           </tr>
         </tbody>
       </table>
+
+      <div
+        v-if="activeResult"
+        class="mt-2 rounded border border-gray-800 bg-gray-800/60 px-2 py-2"
+        data-testid="helper-search-active-detail"
+      >
+        <div class="text-xs text-gray-300 font-mono">
+          {{ activeResult.inputType || '—' }}
+          → {{ activeResult.outputType || '—' }}
+        </div>
+        <div class="text-xs text-gray-400 mt-1">
+          {{ activeResult.description || 'No description' }}
+        </div>
+      </div>
     </div>
   </CbsDrawer>
 </template>

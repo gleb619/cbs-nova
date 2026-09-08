@@ -162,7 +162,11 @@ function revealPosition(line: number, column = 1) {
   monacoRef.value?.revealPosition(line, column)
 }
 
-defineExpose({ revealPosition })
+function insertAtCursor(text: string) {
+  monacoRef.value?.insertAtCursor(text)
+}
+
+defineExpose({ revealPosition, insertAtCursor })
 </script>
 
 <template>

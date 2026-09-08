@@ -169,7 +169,28 @@ function revealPosition(line: number, column = 1): void {
   editor.focus()
 }
 
-defineExpose({ focus: () => editor?.focus(), revealPosition })
+function insertAtCursor(text: string): void {
+  if (!editor || !text) return
+  const selection = editor.getSelection()
+  const position = selection ? null : editor.getPosition()
+  const range = selection
+    ? {
+        startLineNumber: selection.startLineNumber,
+        startColumn: selection.startColumn,
+        endLineNumber: selection.endLineNumber,
+        endColumn: selection.endColumn,
+      }
+    : {
+        startLineNumber: position?.lineNumber ?? 1,
+        startColumn: position?.column ?? 1,
+        endLineNumber: position?.lineNumber ?? 1,
+        endColumn: position?.column ?? 1,
+      }
+  editor.executeEdits('helper-insert', [{ range, text, forceMoveMarkers: true }])
+  editor.focus()
+}
+
+defineExpose({ focus: () => editor?.focus(), revealPosition, insertAtCursor })
 </script>
 
 <template>

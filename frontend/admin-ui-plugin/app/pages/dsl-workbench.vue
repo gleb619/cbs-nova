@@ -39,6 +39,7 @@ import type { RunnerOutput } from '~/types'
 import DslHistoryPanel from '../components/DslHistoryPanel.vue'
 import DslTemplateGallery from '../components/DslTemplateGallery.vue'
 import type { DslTemplate } from '../utils/dslTemplates'
+import { buildHelperSnippet } from '../utils/helperSnippet'
 
 const workbench = useDslWorkbench()
 const route = useRoute()
@@ -91,6 +92,10 @@ function onProblemSelect(payload: { index: number; error: ValidationError }) {
   if (typeof line === 'number' && line > 0) {
     bodyEditorRef.value?.revealPosition(line, payload.error.column ?? 1)
   }
+}
+
+function onHelperSelect(result: ObjectSearchResult) {
+  bodyEditorRef.value?.insertAtCursor(buildHelperSnippet(result))
 }
 
 function onHistoryRestored() {
@@ -557,6 +562,7 @@ onBeforeUnmount(() => {
         :error="helperSearch.error.value"
         @search="helperSearch.search"
         @clear="helperSearch.clearFilters"
+        @select="onHelperSelect"
       />
     </div>
 
