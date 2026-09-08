@@ -1,5 +1,6 @@
-import { defineEventHandler, getQuery, getRequestHeader, setResponseHeader, setResponseStatus } from 'h3'
+import { defineEventHandler, getQuery, setResponseHeader, setResponseStatus } from 'h3'
 import { $fetch } from 'ofetch'
+import { buildBackendHeaders } from '~/server/utils/backendHeaders'
 import { useBackendConfig } from '~/server/utils/config'
 import { attachAuth } from '~/server/utils/oidcSession'
 
@@ -19,26 +20,9 @@ export default defineEventHandler(async (event) => {
   if (query.processName !== undefined) params.processName = String(query.processName)
   if (query.correlationId !== undefined) params.correlationId = String(query.correlationId)
 
-  const { baseUrl, apiKey, timeoutMs } = useBackendConfig()
+  const { baseUrl, timeoutMs } = useBackendConfig()
   const url = `${baseUrl.replace(/\/$/, '')}/api/executions/export.csv`
-  const headers: Record<string, string> = {}
-  if (apiKey) headers['X-Api-Key'] = apiKey
-
-  const inboundRequestId = getRequestHeader(event, 'x-request-id')
-  const requestId = inboundRequestId || globalThis.crypto.randomUUID()
-  headers['X-Request-Id'] = requestId
-
-  const traceparent = getRequestHeader(event, 'traceparent')
-  if (traceparent) headers.traceparent = traceparent
-
-  const authorization = getRequestHeader(event, 'authorization')
-  if (authorization) headers.Authorization = authorization
-
-  const idempotencyKey = getRequestHeader(event, 'idempotency-key')
-  if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey
-
-  const correlationId = getRequestHeader(event, 'x-correlation-id')
-  if (correlationId) headers['X-Correlation-Id'] = correlationId
+  const { headers } = buildBackendHeaders(event, { json: false })
 
   attachAuth(event, headers)
 
