@@ -46,6 +46,25 @@ describe('SavedDraftsList', () => {
     expect(wrapper.emitted('select')).toEqual([['alpha']])
   })
 
+  it('emits select on Space for keyboard users', async () => {
+    const wrapper = mountList()
+
+    await wrapper
+      .findAll('[data-testid="dsl-saved-drafts-item"]')[1]
+      .trigger('keydown.space')
+
+    expect(wrapper.emitted('select')).toEqual([['beta']])
+  })
+
+  it('marks draft rows as keyboard-operable buttons with an accessible label', () => {
+    const wrapper = mountList()
+
+    const alpha = wrapper.findAll('[data-testid="dsl-saved-drafts-item"]')[0]
+    expect(alpha.attributes('tabindex')).toBe('0')
+    expect(alpha.attributes('role')).toBe('button')
+    expect(alpha.attributes('aria-label')).toBe('Open draft alpha')
+  })
+
   it('highlights the selected draft only', () => {
     const wrapper = mountList({ selectedName: 'beta' })
 

@@ -110,6 +110,22 @@
           }
         }
       }
+    },
+    {
+      "includes": [
+        "components/src/components/executions/ExecutionList.vue",
+        "components/src/components/dashboard/RecentExecutions.vue",
+        "components/src/components/dashboard/RecentRunsTable.vue",
+        "components/src/components/dsl/SavedDraftsList.vue"
+      ],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useSemanticElements": "off",
+            "noNoninteractiveElementToInteractiveRole": "off"
+          }
+        }
+      }
     }
   ]
 }

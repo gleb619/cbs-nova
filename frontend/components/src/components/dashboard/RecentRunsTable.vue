@@ -9,9 +9,13 @@ withDefaults(
   { loading: false },
 )
 
-defineEmits<{
+const emit = defineEmits<{
   select: [id: string]
 }>()
+
+function onRowActivate(_event: KeyboardEvent | MouseEvent, id: string) {
+  emit('select', id)
+}
 
 function formatDate(s?: string) {
   if (!s) return '—'
@@ -53,8 +57,13 @@ function formatDate(s?: string) {
             v-for="exec in executions"
             :key="exec.id"
             :data-testid="`recent-runs-table-row-${exec.id}`"
-            class="border-t border-gray-100 hover:bg-gray-50 cursor-pointer"
-            @click="$emit('select', exec.id)"
+            :aria-label="`Open run ${exec.id}`"
+            tabindex="0"
+            role="button"
+            class="border-t border-gray-100 hover:bg-gray-50 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-500"
+            @click="onRowActivate($event, exec.id)"
+            @keydown.enter="onRowActivate($event, exec.id)"
+            @keydown.space.prevent="onRowActivate($event, exec.id)"
           >
             <td class="px-3 py-2">{{ exec.entity }}</td>
             <td class="px-3 py-2">

@@ -15,7 +15,7 @@ defineProps<{
 
 const emit = defineEmits<(e: 'select', id: string) => void>()
 
-function onSelect(id: string) {
+function onRowActivate(_event: KeyboardEvent | MouseEvent, id: string) {
   emit('select', id)
 }
 
@@ -53,8 +53,13 @@ function statusClass(status: ExecutionStatus) {
           v-for="exec in executions"
           :key="exec.id"
           :data-testid="`recent-executions-row-${exec.id}`"
-          class="hover:bg-gray-50 cursor-pointer"
-          @click="onSelect(exec.id)"
+          :aria-label="`Open execution ${exec.id}`"
+          tabindex="0"
+          role="button"
+          class="hover:bg-gray-50 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-500"
+          @click="onRowActivate($event, exec.id)"
+          @keydown.enter="onRowActivate($event, exec.id)"
+          @keydown.space.prevent="onRowActivate($event, exec.id)"
         >
           <td class="px-4 py-2 text-sm text-gray-700">{{ exec.entity }}</td>
           <td class="px-4 py-2">
