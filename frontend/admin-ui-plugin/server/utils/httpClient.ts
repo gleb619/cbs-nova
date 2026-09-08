@@ -1,4 +1,5 @@
 import type { H3Event } from 'h3'
+import { buildBackendHeaders } from './backendHeaders'
 import { useBackendConfig } from './config'
 import { useAuthConfig } from './config'
 import {
@@ -35,11 +36,6 @@ function writeLog(level: LogLevel, message: string, data?: Record<string, unknow
   fn(message)
 }
 
-function getRequestHeader(event: H3Event, name: string): string | undefined {
-  const raw = event.node.req.headers?.[name.toLowerCase()]
-  return Array.isArray(raw) ? raw[0] : raw
-}
-
 function errorIsUnauthorized(err: unknown): boolean {
   const status = (err as { response?: { status?: number } }).response?.status
   return status === 401 || status === 403
@@ -50,26 +46,10 @@ export async function proxyToBackend<T>(
   path: string,
   options: { method?: string; body?: unknown; query?: Record<string, unknown> } = {},
 ): Promise<T> {
-  const { baseUrl, apiKey, timeoutMs } = useBackendConfig()
+  const { baseUrl, timeoutMs } = useBackendConfig()
   const authConfig = useAuthConfig()
   const url = `${baseUrl.replace(/\/$/, '')}${path}`
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  }
-  if (apiKey) headers['X-Api-Key'] = apiKey
-
-  const inboundRequestId = getRequestHeader(event, 'x-request-id')
-  const requestId = inboundRequestId || globalThis.crypto.randomUUID()
-  headers['X-Request-Id'] = requestId
-  const traceparent = getRequestHeader(event, 'traceparent')
-  if (traceparent) headers.traceparent = traceparent
-  const authorization = getRequestHeader(event, 'authorization')
-  if (authorization) headers.Authorization = authorization
-  const idempotencyKey = getRequestHeader(event, 'idempotency-key')
-  if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey
-
-  const correlationId = getRequestHeader(event, 'x-correlation-id')
-  if (correlationId) headers['X-Correlation-Id'] = correlationId
+  const { headers, requestId, correlationId } = buildBackendHeaders(event, { json: true })
 
   // Attach a Bearer token from the BFF session when OIDC is enabled and the
   // inbound request did not already provide an Authorization header.
