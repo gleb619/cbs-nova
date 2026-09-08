@@ -5,6 +5,7 @@ let cookieJar: Record<string, string | undefined> = {}
 let redirectUrl: string | undefined
 let redirectStatus: number | undefined
 let setCookies: Array<{ name: string; value: string; opts: Record<string, unknown> }> = []
+let requestHeaders: Record<string, string> = {}
 
 vi.mock('h3', async (importOriginal) => {
   const actual = await importOriginal<typeof import('h3')>()
@@ -25,6 +26,7 @@ vi.mock('h3', async (importOriginal) => {
       redirectStatus = status
       return undefined
     },
+    getHeader: (_event: unknown, name: string) => requestHeaders[name.toLowerCase()],
   }
 })
 
@@ -40,7 +42,9 @@ vi.mock('~/server/utils/oidcSession', async (importOriginal) => {
         userinfo_endpoint: 'http://keycloak/userinfo',
       }),
     ),
-    createPkcePair: vi.fn(() => Promise.resolve({ verifier: 'verifier-xyz', challenge: 'challenge-xyz' })),
+    createPkcePair: vi.fn(() =>
+      Promise.resolve({ verifier: 'verifier-xyz', challenge: 'challenge-xyz' }),
+    ),
     randomState: vi.fn(() => 'state-xyz'),
     exchangeCode: vi.fn(() =>
       Promise.resolve({
@@ -70,6 +74,7 @@ vi.mock('~/server/utils/oidcSession', async (importOriginal) => {
 const loginHandler = (await import('../login.get')).default
 const callbackHandler = (await import('../callback.get')).default
 const logoutHandler = (await import('../logout.get')).default
+const logoutPostHandler = (await import('../logout.post')).default
 const sessionHandler = (await import('../session.get')).default
 
 const fakeEvent = {} as Parameters<typeof loginHandler>[0]
@@ -84,6 +89,10 @@ function setRuntimeConfig(overrides: Record<string, unknown> = {}) {
     authClientSecret: '',
     authCallbackUrl: 'http://localhost:3000/api/v1/auth/callback',
     authPostLogoutRedirect: '/',
+    authSessionIdleTimeoutSeconds: 0,
+    authSessionAbsoluteTimeoutSeconds: 0,
+    authSessionSecureCookies: '',
+    authSessionRotateOnRefresh: '',
     public: { appName: 'CBS Nova Admin', authEnabled: false },
     ...overrides,
   } as ReturnType<typeof useRuntimeConfig>)
@@ -94,6 +103,12 @@ function setRuntimeConfig(overrides: Record<string, unknown> = {}) {
     callbackUrl: overrides.authCallbackUrl ?? 'http://localhost:3000/api/v1/auth/callback',
     postLogoutRedirect: overrides.authPostLogoutRedirect ?? '/',
     enabled: Boolean(overrides.authIssuer ?? ''),
+    sessionIdleTimeoutSeconds: (overrides.authSessionIdleTimeoutSeconds as number) ?? 0,
+    sessionAbsoluteTimeoutSeconds: (overrides.authSessionAbsoluteTimeoutSeconds as number) ?? 0,
+    sessionSecureCookies: (overrides.authSessionSecureCookies as string) === 'true',
+    sessionRotateOnRefresh:
+      (overrides.authSessionRotateOnRefresh as string) === '' ||
+      (overrides.authSessionRotateOnRefresh as string) === 'true',
   })
 }
 
@@ -103,6 +118,7 @@ beforeEach(() => {
   redirectUrl = undefined
   redirectStatus = undefined
   setCookies = []
+  requestHeaders = {}
   setRuntimeConfig()
 })
 
@@ -178,7 +194,11 @@ describe('callback.get', () => {
 
   it('exchanges code, writes session cookies, clears txn, and redirects to stored path', async () => {
     setRuntimeConfig({ authIssuer: 'http://keycloak:8080/realms/cbs-nova' })
-    cookieJar.cbs_oidc_txn = JSON.stringify({ state: 'state-xyz', verifier: 'verifier-xyz', redirect: '/runner' })
+    cookieJar.cbs_oidc_txn = JSON.stringify({
+      state: 'state-xyz',
+      verifier: 'verifier-xyz',
+      redirect: '/runner',
+    })
     queryValue = { code: 'auth-code', state: 'state-xyz' }
 
     await callbackHandler(fakeEvent)
@@ -195,7 +215,11 @@ describe('callback.get', () => {
 
   it('ignores open-redirect stored path and falls back to /', async () => {
     setRuntimeConfig({ authIssuer: 'http://keycloak:8080/realms/cbs-nova' })
-    cookieJar.cbs_oidc_txn = JSON.stringify({ state: 'state-xyz', verifier: 'v', redirect: 'https://evil' })
+    cookieJar.cbs_oidc_txn = JSON.stringify({
+      state: 'state-xyz',
+      verifier: 'v',
+      redirect: 'https://evil',
+    })
     queryValue = { code: 'auth-code', state: 'state-xyz' }
 
     await callbackHandler(fakeEvent)
@@ -226,6 +250,53 @@ describe('logout.get', () => {
   })
 })
 
+describe('logout.post', () => {
+  it('returns 404 when auth is not configured', async () => {
+    setRuntimeConfig()
+    await expect(logoutPostHandler(fakeEvent)).rejects.toMatchObject({
+      statusCode: 404,
+    })
+  })
+
+  it('rejects 403 when X-Requested-With header is missing', async () => {
+    setRuntimeConfig({ authIssuer: 'http://keycloak:8080/realms/cbs-nova' })
+    cookieJar.cbs_at = 'access-xyz'
+    cookieJar.cbs_rt = 'refresh-xyz'
+
+    await expect(logoutPostHandler(fakeEvent)).rejects.toMatchObject({
+      statusCode: 403,
+      statusMessage: 'missing X-Requested-With',
+    })
+    // Cookies must NOT be cleared when the request is rejected.
+    expect(cookieJar.cbs_at).toBe('access-xyz')
+    expect(cookieJar.cbs_rt).toBe('refresh-xyz')
+  })
+
+  it('rejects 403 when X-Requested-With has the wrong value', async () => {
+    setRuntimeConfig({ authIssuer: 'http://keycloak:8080/realms/cbs-nova' })
+    requestHeaders['x-requested-with'] = 'something-else'
+
+    await expect(logoutPostHandler(fakeEvent)).rejects.toMatchObject({
+      statusCode: 403,
+    })
+  })
+
+  it('clears session and returns { redirect } when X-Requested-With is XMLHttpRequest', async () => {
+    setRuntimeConfig({ authIssuer: 'http://keycloak:8080/realms/cbs-nova' })
+    cookieJar.cbs_at = 'access-xyz'
+    cookieJar.cbs_rt = 'refresh-xyz'
+    requestHeaders['x-requested-with'] = 'XMLHttpRequest'
+
+    const result = await logoutPostHandler(fakeEvent)
+
+    expect(cookieJar.cbs_at).toBeUndefined()
+    expect(cookieJar.cbs_rt).toBeUndefined()
+    expect(result).toEqual({ redirect: '/' })
+    // No 302 — the client navigates from the returned URL.
+    expect(redirectStatus).toBeUndefined()
+  })
+})
+
 describe('session.get', () => {
   it('returns {authenticated:false,enabled:false} when auth is not configured', async () => {
     setRuntimeConfig()
@@ -248,7 +319,12 @@ describe('session.get', () => {
 
     expect(result).toEqual({
       authenticated: true,
-      user: { sub: 'u-1', preferred_username: 'devuser', email: 'devuser@example.com', name: 'Dev User' },
+      user: {
+        sub: 'u-1',
+        preferred_username: 'devuser',
+        email: 'devuser@example.com',
+        name: 'Dev User',
+      },
     })
   })
 
@@ -262,6 +338,9 @@ describe('session.get', () => {
 
     const result = await sessionHandler(fakeEvent)
 
-    expect(result).toEqual({ authenticated: true, user: { sub: 'u-2', preferred_username: 'refreshed' } })
+    expect(result).toEqual({
+      authenticated: true,
+      user: { sub: 'u-2', preferred_username: 'refreshed' },
+    })
   })
 })

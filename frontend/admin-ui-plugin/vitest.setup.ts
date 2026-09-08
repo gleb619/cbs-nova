@@ -54,6 +54,10 @@ const defaultRuntimeConfig = {
   authClientSecret: '',
   authCallbackUrl: 'http://localhost:3000/api/v1/auth/callback',
   authPostLogoutRedirect: '/',
+  authSessionIdleTimeoutSeconds: 0,
+  authSessionAbsoluteTimeoutSeconds: 0,
+  authSessionSecureCookies: '',
+  authSessionRotateOnRefresh: '',
   public: { appName: 'CBS Nova Admin', authEnabled: false },
 }
 g.useRuntimeConfig = vi.fn(() => defaultRuntimeConfig)
@@ -75,6 +79,12 @@ g.useAuthConfig = vi.fn(() => ({
   callbackUrl: defaultRuntimeConfig.authCallbackUrl,
   postLogoutRedirect: defaultRuntimeConfig.authPostLogoutRedirect,
   enabled: Boolean(defaultRuntimeConfig.authIssuer),
+  sessionIdleTimeoutSeconds: defaultRuntimeConfig.authSessionIdleTimeoutSeconds,
+  sessionAbsoluteTimeoutSeconds: defaultRuntimeConfig.authSessionAbsoluteTimeoutSeconds,
+  sessionSecureCookies: defaultRuntimeConfig.authSessionSecureCookies === 'true',
+  sessionRotateOnRefresh:
+    defaultRuntimeConfig.authSessionRotateOnRefresh === '' ||
+    defaultRuntimeConfig.authSessionRotateOnRefresh === 'true',
 }))
 
 // Layout header uses useAdminInfo; stub it with empty data so layout specs mount.
@@ -138,6 +148,12 @@ beforeEach(() => {
     callbackUrl: defaultRuntimeConfig.authCallbackUrl,
     postLogoutRedirect: defaultRuntimeConfig.authPostLogoutRedirect,
     enabled: Boolean(defaultRuntimeConfig.authIssuer),
+    sessionIdleTimeoutSeconds: defaultRuntimeConfig.authSessionIdleTimeoutSeconds,
+    sessionAbsoluteTimeoutSeconds: defaultRuntimeConfig.authSessionAbsoluteTimeoutSeconds,
+    sessionSecureCookies: defaultRuntimeConfig.authSessionSecureCookies === 'true',
+    sessionRotateOnRefresh:
+      defaultRuntimeConfig.authSessionRotateOnRefresh === '' ||
+      defaultRuntimeConfig.authSessionRotateOnRefresh === 'true',
   }))
   vi.mocked(g.useAdminInfo as never).mockImplementation(() => ({ data: ref({}) }))
   vi.mocked(g.useFetch as never).mockImplementation(() => ({ data: ref({}) }))

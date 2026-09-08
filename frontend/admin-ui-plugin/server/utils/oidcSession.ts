@@ -34,6 +34,16 @@ export type OidcTxn = {
   redirect: string
 }
 
+export type WriteSessionOptions = {
+  /**
+   * When true, this writeSession call is the result of a token refresh,
+   * not a fresh login. The SESSION_START_COOKIE (used for absolute
+   * timeout) is preserved, and the previous RT value is hashed into
+   * RT_PREV_COOKIE to enable reuse detection on the next refresh.
+   */
+  isRefresh?: boolean
+}
+
 const discoveryCache = new Map<string, OidcMetadata>()
 
 const BASE64URL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
@@ -104,7 +114,15 @@ export function randomState(): string {
 const TXN_COOKIE = 'cbs_oidc_txn'
 const AT_COOKIE = 'cbs_at'
 const RT_COOKIE = 'cbs_rt'
+const RT_PREV_COOKIE = 'cbs_rt_prev'
+const SESSION_START_COOKIE = 'cbs_sess_start'
 const REFRESH_TOKEN_MAX_AGE_SECONDS = 30 * 24 * 60 * 60
+// RT_PREV is a short-lived marker cookie holding a hash of the
+// rotated-out refresh token. It catches the common "replay immediately
+// after rotation" case — not a distributed/long-window attack (that
+// needs a server-side token store and is intentionally out of scope
+// for this change).
+const RT_PREV_MAX_AGE_SECONDS = 120
 
 function isSecureCallbackUrl(callbackUrl: string): boolean {
   try {
@@ -115,10 +133,15 @@ function isSecureCallbackUrl(callbackUrl: string): boolean {
 }
 
 function cookieDefaults(callbackUrl: string) {
+  const { sessionSecureCookies } = useAuthConfig()
   return {
     httpOnly: true,
     sameSite: 'lax' as const,
-    secure: isSecureCallbackUrl(callbackUrl),
+    // Force Secure on every auth cookie when explicitly enabled — useful
+    // when the BFF is behind a TLS-terminating proxy that already stripped
+    // https:// from the original callbackUrl. When not enabled we fall
+    // back to the auto-detection of the callback URL protocol.
+    secure: sessionSecureCookies || isSecureCallbackUrl(callbackUrl),
     path: '/',
   }
 }
@@ -156,24 +179,84 @@ export function readSession(event: H3Event): Session {
   }
 }
 
-export function writeSession(event: H3Event, tokenResponse: TokenResponse, callbackUrl: string) {
-  const atMaxAge = tokenResponse.expires_in ?? 3600
+export async function writeSession(
+  event: H3Event,
+  tokenResponse: TokenResponse,
+  callbackUrl: string,
+  opts?: WriteSessionOptions,
+) {
+  const config = useAuthConfig()
+  const idle = config.sessionIdleTimeoutSeconds
+  const absolute = config.sessionAbsoluteTimeoutSeconds
+  const rotateOnRefresh = config.sessionRotateOnRefresh
+  const defaults = cookieDefaults(callbackUrl)
+
+  const requestedAtMaxAge = tokenResponse.expires_in ?? 3600
+  // Idle-timeout cap: when configured, never let AT live longer than the
+  // idle window. Floor at 1 s so we never accidentally set maxAge=0.
+  const atMaxAge = idle > 0 ? Math.max(1, Math.min(requestedAtMaxAge, idle)) : requestedAtMaxAge
+
   setCookie(event, AT_COOKIE, tokenResponse.access_token, {
-    ...cookieDefaults(callbackUrl),
+    ...defaults,
     maxAge: atMaxAge,
   })
+
   if (tokenResponse.refresh_token) {
+    // On a successful refresh that hands back a new refresh_token, hash the
+    // OLD RT into RT_PREV_COOKIE before overwriting. The next caller of
+    // refreshTokens() will compare its incoming RT against RT_PREV_COOKIE
+    // and treat a match as reuse.
+    if (opts?.isRefresh && rotateOnRefresh) {
+      const oldRt = getCookie(event, RT_COOKIE)
+      if (oldRt) {
+        const hash = await sha256b64url(oldRt)
+        setCookie(event, RT_PREV_COOKIE, hash, {
+          ...defaults,
+          maxAge: RT_PREV_MAX_AGE_SECONDS,
+        })
+      }
+    }
     setCookie(event, RT_COOKIE, tokenResponse.refresh_token, {
-      ...cookieDefaults(callbackUrl),
+      ...defaults,
       maxAge: REFRESH_TOKEN_MAX_AGE_SECONDS,
     })
   }
+
+  // Session-start marker for absolute-timeout enforcement. Set on every
+  // fresh login — preserved across refreshes so the wall clock measures
+  // total session age, not idle age.
+  if (!opts?.isRefresh) {
+    const existingStart = getCookie(event, SESSION_START_COOKIE)
+    if (!existingStart) {
+      const start = String(Math.floor(Date.now() / 1000))
+      // Must outlive the RT so absolute-timeout still has a reference
+      // point even after the RT cookie expires.
+      const startMaxAge = Math.max(absolute, REFRESH_TOKEN_MAX_AGE_SECONDS)
+      setCookie(event, SESSION_START_COOKIE, start, {
+        ...defaults,
+        maxAge: startMaxAge,
+      })
+    }
+  }
+}
+
+export function sessionExpiredAbsolute(event: H3Event): boolean {
+  const absolute = useAuthConfig().sessionAbsoluteTimeoutSeconds
+  if (absolute <= 0) return false
+  const startRaw = getCookie(event, SESSION_START_COOKIE)
+  if (!startRaw) return false
+  const start = Number(startRaw)
+  if (!Number.isFinite(start)) return false
+  const nowSec = Math.floor(Date.now() / 1000)
+  return nowSec - start > absolute
 }
 
 export function clearOidcSession(event: H3Event, callbackUrl: string) {
   const defaults = cookieDefaults(callbackUrl)
   deleteCookie(event, AT_COOKIE, defaults)
   deleteCookie(event, RT_COOKIE, defaults)
+  deleteCookie(event, SESSION_START_COOKIE, defaults)
+  deleteCookie(event, RT_PREV_COOKIE, defaults)
 }
 
 async function tokenRequest(endpoint: string, body: URLSearchParams): Promise<TokenResponse> {
@@ -215,6 +298,18 @@ export async function refreshTokens(refreshToken: string): Promise<TokenResponse
   return tokenRequest(token_endpoint, body)
 }
 
+export async function sha256b64url(input: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input))
+  return base64url(new Uint8Array(digest))
+}
+
+export async function detectRefreshReuse(event: H3Event, refreshToken: string): Promise<boolean> {
+  const prev = getCookie(event, RT_PREV_COOKIE)
+  if (!prev) return false
+  const hash = await sha256b64url(refreshToken)
+  return hash === prev
+}
+
 export async function fetchUserInfo(accessToken: string): Promise<UserInfo> {
   const { issuer } = useAuthConfig()
   const { userinfo_endpoint } = await discoverOidc(issuer)
@@ -253,4 +348,12 @@ export function expiringSoon(accessToken: string, bufferSeconds = 60): boolean {
   }
 }
 
-export { TXN_COOKIE, AT_COOKIE, RT_COOKIE }
+export {
+  TXN_COOKIE,
+  AT_COOKIE,
+  RT_COOKIE,
+  RT_PREV_COOKIE,
+  SESSION_START_COOKIE,
+  REFRESH_TOKEN_MAX_AGE_SECONDS,
+  RT_PREV_MAX_AGE_SECONDS,
+}

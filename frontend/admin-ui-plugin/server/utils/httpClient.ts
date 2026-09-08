@@ -1,7 +1,15 @@
 import type { H3Event } from 'h3'
 import { useBackendConfig } from './config'
 import { useAuthConfig } from './config'
-import { attachAuth, clearOidcSession, readSession, refreshTokens, writeSession } from './oidcSession'
+import {
+  attachAuth,
+  clearOidcSession,
+  detectRefreshReuse,
+  readSession,
+  refreshTokens,
+  sessionExpiredAbsolute,
+  writeSession,
+} from './oidcSession'
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
@@ -111,10 +119,28 @@ export async function proxyToBackend<T>(
   } catch (err: unknown) {
     const { refreshToken } = readSession(event)
 
-    if (authConfig.enabled && refreshToken && errorIsUnauthorized(err)) {
+    // Absolute-timeout enforcement: if the wall-clock session age
+    // exceeds the configured limit, clear immediately and fall through
+    // to the original backend error (the user is logged out either way).
+    if (authConfig.enabled && sessionExpiredAbsolute(event)) {
+      clearOidcSession(event, authConfig.callbackUrl)
+    } else if (authConfig.enabled && refreshToken && errorIsUnauthorized(err)) {
+      // Refresh-token reuse detection. A replay of the previously
+      // rotated-out refresh token (within the RT_PREV_COOKIE marker
+      // window) is treated as a stolen-token signal: clear the
+      // session and fail the request with a 401 so the client knows
+      // to drop credentials.
+      if (authConfig.sessionRotateOnRefresh && (await detectRefreshReuse(event, refreshToken))) {
+        clearOidcSession(event, authConfig.callbackUrl)
+        console.warn('[auth] refresh-token reuse detected — session cleared')
+        throw createError({
+          statusCode: 401,
+          statusMessage: 'session revoked',
+        })
+      }
       try {
         const refreshed = await refreshTokens(refreshToken)
-        writeSession(event, refreshed, authConfig.callbackUrl)
+        await writeSession(event, refreshed, authConfig.callbackUrl, { isRefresh: true })
         return await doFetch({ Authorization: `Bearer ${refreshed.access_token}` })
       } catch {
         clearOidcSession(event, authConfig.callbackUrl)

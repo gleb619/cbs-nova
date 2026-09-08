@@ -20,7 +20,9 @@ const makeEvent = (headers: HeaderMap = {}, cookie?: string) => {
         appendHeader: (name: string, value: string) => {
           const key = name.toLowerCase()
           const current = responseHeaders[key]
-          responseHeaders[key] = current ? [...(Array.isArray(current) ? current : [current]), value] : value
+          responseHeaders[key] = current
+            ? [...(Array.isArray(current) ? current : [current]), value]
+            : value
         },
         removeHeader: (name: string) => {
           delete responseHeaders[name.toLowerCase()]
@@ -40,6 +42,10 @@ const setRuntimeConfig = (overrides: Record<string, unknown> = {}) => {
     authClientSecret: '',
     authCallbackUrl: 'http://localhost:3000/api/v1/auth/callback',
     authPostLogoutRedirect: '/',
+    authSessionIdleTimeoutSeconds: 0,
+    authSessionAbsoluteTimeoutSeconds: 0,
+    authSessionSecureCookies: '',
+    authSessionRotateOnRefresh: '',
     public: { appName: 'CBS Nova Admin', authEnabled: false },
     ...overrides,
   }
@@ -58,6 +64,12 @@ const setRuntimeConfig = (overrides: Record<string, unknown> = {}) => {
     callbackUrl: merged.authCallbackUrl as string,
     postLogoutRedirect: merged.authPostLogoutRedirect as string,
     enabled: Boolean(merged.authIssuer),
+    sessionIdleTimeoutSeconds: (merged.authSessionIdleTimeoutSeconds as number) ?? 0,
+    sessionAbsoluteTimeoutSeconds: (merged.authSessionAbsoluteTimeoutSeconds as number) ?? 0,
+    sessionSecureCookies: (merged.authSessionSecureCookies as string) === 'true',
+    sessionRotateOnRefresh:
+      (merged.authSessionRotateOnRefresh as string) === '' ||
+      (merged.authSessionRotateOnRefresh as string) === 'true',
   })
 }
 
@@ -456,7 +468,9 @@ describe('proxyToBackend', () => {
         authorization_endpoint: 'http://keycloak:8080/realms/cbs-nova/protocol/openid-connect/auth',
         token_endpoint: 'http://keycloak:8080/realms/cbs-nova/protocol/openid-connect/token',
       })
-    ;($fetch.raw as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('refresh failed'))
+    ;($fetch.raw as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error('refresh failed'),
+    )
 
     await expect(proxyToBackend(event, '/api/foo')).rejects.toMatchObject({
       statusCode: 401,

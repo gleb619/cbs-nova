@@ -47,8 +47,16 @@ export function useAuth() {
     return navigateTo(`/api/v1/auth/login?redirect=${redirect}`, { external: true })
   }
 
-  function logout() {
-    return navigateTo('/api/v1/auth/logout', { external: true })
+  async function logout() {
+    try {
+      const result = await $fetch<{ redirect?: string }>('/api/v1/auth/logout', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      })
+      return navigateTo(result.redirect ?? '/', { external: true })
+    } catch {
+      return navigateTo('/', { external: true })
+    }
   }
 
   return {

@@ -95,6 +95,36 @@ export interface ModuleOptions {
   authPostLogoutRedirect?: string
 
   /**
+   * Maximum idle session lifetime in seconds. When > 0, the AT cookie
+   * `maxAge` is capped at `min(expires_in, idleTimeout)`. Default 0 = off
+   * (AT cookie lives for its full `expires_in`).
+   */
+  authSessionIdleTimeoutSeconds?: number
+
+  /**
+   * Maximum absolute session lifetime in seconds. When > 0, the BFF
+   * rejects any request once the wall-clock time since the original
+   * login exceeds this value, regardless of refresh activity. Default 0
+   * = off (sessions never expire by absolute age).
+   */
+  authSessionAbsoluteTimeoutSeconds?: number
+
+  /**
+   * Force the `Secure` attribute on every auth cookie regardless of the
+   * callback URL protocol. Useful when the BFF runs behind a TLS-
+   * terminating proxy that already rewrote the original `https://`
+   * callbackUrl. Set to `true` to enable. Default unset = auto-detect.
+   */
+  authSessionSecureCookies?: string
+
+  /**
+   * Enable refresh-token rotation + reuse detection. Set to `'false'`
+   * to disable (the RT is then overwritten in place without hashing
+   * the previous value). Default unset = enabled.
+   */
+  authSessionRotateOnRefresh?: string
+
+  /**
    * Display name shown in the admin UI title bar.
    * Defaults to 'CBS Nova Admin'.
    */
@@ -130,9 +160,14 @@ export default defineNuxtModule<ModuleOptions>({
     authIssuer: process.env.AUTH_ISSUER ?? '',
     authClientId: process.env.AUTH_CLIENT_ID ?? 'cbs-nova-bff',
     authClientSecret: process.env.AUTH_CLIENT_SECRET ?? '',
-    authCallbackUrl:
-      process.env.AUTH_CALLBACK_URL ?? 'http://localhost:3000/api/v1/auth/callback',
+    authCallbackUrl: process.env.AUTH_CALLBACK_URL ?? 'http://localhost:3000/api/v1/auth/callback',
     authPostLogoutRedirect: process.env.AUTH_POST_LOGOUT_REDIRECT ?? '/',
+    authSessionIdleTimeoutSeconds: Number(process.env.AUTH_SESSION_IDLE_TIMEOUT_SECONDS ?? 0),
+    authSessionAbsoluteTimeoutSeconds: Number(
+      process.env.AUTH_SESSION_ABSOLUTE_TIMEOUT_SECONDS ?? 0,
+    ),
+    authSessionSecureCookies: process.env.AUTH_SESSION_SECURE_COOKIES ?? '',
+    authSessionRotateOnRefresh: process.env.AUTH_SESSION_ROTATE_ON_REFRESH ?? '',
     appName: 'CBS Nova Admin',
     temporalUiBaseUrl: process.env.TEMPORAL_UI_BASE_URL ?? '',
     temporalNamespace: process.env.TEMPORAL_NAMESPACE ?? 'default',
@@ -165,6 +200,22 @@ export default defineNuxtModule<ModuleOptions>({
       'http://localhost:3000/api/v1/auth/callback'
     nuxt.options.runtimeConfig.authPostLogoutRedirect =
       nuxt.options.runtimeConfig.authPostLogoutRedirect || options.authPostLogoutRedirect || '/'
+    // Session-hardening runtime knobs (T416). All optional — unset values
+    // preserve the pre-hardening behaviour exactly.
+    nuxt.options.runtimeConfig.authSessionIdleTimeoutSeconds =
+      nuxt.options.runtimeConfig.authSessionIdleTimeoutSeconds ||
+      options.authSessionIdleTimeoutSeconds ||
+      0
+    nuxt.options.runtimeConfig.authSessionAbsoluteTimeoutSeconds =
+      nuxt.options.runtimeConfig.authSessionAbsoluteTimeoutSeconds ||
+      options.authSessionAbsoluteTimeoutSeconds ||
+      0
+    nuxt.options.runtimeConfig.authSessionSecureCookies =
+      nuxt.options.runtimeConfig.authSessionSecureCookies || options.authSessionSecureCookies || ''
+    nuxt.options.runtimeConfig.authSessionRotateOnRefresh =
+      nuxt.options.runtimeConfig.authSessionRotateOnRefresh ||
+      options.authSessionRotateOnRefresh ||
+      ''
     // Public flag so the app can render a Sign-in affordance only when OIDC is configured.
     nuxt.options.runtimeConfig.public.authEnabled =
       nuxt.options.runtimeConfig.public.authEnabled || Boolean(authIssuer)
@@ -302,9 +353,10 @@ export default defineNuxtModule<ModuleOptions>({
       nitroConfig.scanDirs = nitroConfig.scanDirs || []
       // Use pre-built JS server routes when the plugin is installed as a package,
       // otherwise use the workspace TypeScript sources for local development.
-      const serverDir = !nuxt.options.dev && existsSync(resolve('./dist/server'))
-        ? resolve('./dist/server')
-        : resolve('./server')
+      const serverDir =
+        !nuxt.options.dev && existsSync(resolve('./dist/server'))
+          ? resolve('./dist/server')
+          : resolve('./server')
       nitroConfig.scanDirs.push(serverDir)
     })
 

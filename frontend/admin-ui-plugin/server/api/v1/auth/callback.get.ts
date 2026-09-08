@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const tokenResponse = await exchangeCode(code, txn.verifier)
-  writeSession(event, tokenResponse, config.callbackUrl)
+  await writeSession(event, tokenResponse, config.callbackUrl)
   clearOidcTxn(event, config.callbackUrl)
 
   return sendRedirect(event, sameOriginRedirect(txn.redirect, '/'), 302)
