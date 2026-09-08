@@ -14,6 +14,7 @@ export { default as DashboardRecentRunsTable } from './components/dashboard/Rece
 export { default as DashboardStatCard } from './components/dashboard/StatCard.vue'
 export { type DropdownMenuItem, default as DropdownMenu } from './components/dropdownMenu'
 export { default as DslBodyEditor } from './components/dsl/BodyEditor.vue'
+export type { EditorMarker } from './components/dsl/MonacoEditor.vue'
 export { default as DslCodeTab } from './components/dsl/CodeTab.vue'
 export { default as DslConstructExplorer } from './components/dsl/ConstructExplorer.vue'
 export { default as DslDeleteDraftConfirmationModal } from './components/dsl/DeleteDraftConfirmationModal.vue'

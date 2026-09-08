@@ -46,9 +46,29 @@ describe('ProblemsPanel', () => {
 
     const wrapper = mount(ProblemsPanel, { props: { errors } })
 
-    const dots = wrapper.findAll('li > span.rounded-full')
+    const dots = wrapper.findAll('li > button > span.rounded-full')
     expect(dots).toHaveLength(2)
-    expect(dots[0]!.classes()).toContain('bg-red-500')
-    expect(dots[1]!.classes()).toContain('bg-yellow-500')
+    expect(dots[0]?.classes()).toContain('bg-red-500')
+    expect(dots[1]?.classes()).toContain('bg-yellow-500')
+  })
+
+  it('emits select with { index, error } when a row button is clicked', async () => {
+    const errors: ValidationError[] = [
+      { field: 'a', message: 'bad', severity: 'error', line: 3, column: 5 },
+      { field: 'b', message: 'meh', severity: 'warning' },
+    ]
+
+    const wrapper = mount(ProblemsPanel, { props: { errors } })
+
+    await wrapper.find('[data-testid="problems-panel-row-button-0"]').trigger('click')
+
+    const events = wrapper.emitted('select') ?? []
+    expect(events).toHaveLength(1)
+    expect(events[0]).toEqual([
+      {
+        index: 0,
+        error: { field: 'a', message: 'bad', severity: 'error', line: 3, column: 5 },
+      },
+    ])
   })
 })

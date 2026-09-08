@@ -18,6 +18,10 @@ export interface ValidationError {
   field: string
   message: string
   severity: 'error' | 'warning'
+  /** 1-based source line, when known. `null`/omitted → editor falls back to line 1. */
+  line?: number | null
+  /** 1-based source column, when known. `null`/omitted → editor falls back to column 1. */
+  column?: number | null
 }
 
 export interface StepDef {

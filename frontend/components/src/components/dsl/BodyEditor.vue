@@ -7,34 +7,40 @@ import {
 } from '../../composables/useLocalStorageState'
 import type { DslConstruct, HelperCatalogEntry, StepDef } from '../../types/dsl'
 import type { RunnerOutput, RunnerStatus } from '../../types/runner'
+import type { EditorMarker } from './MonacoEditor.vue'
 import CodeTab from './CodeTab.vue'
 import ExplainTab from './ExplainTab.vue'
 import PreviewTab from './PreviewTab.vue'
 import StructureTab from './StructureTab.vue'
 
-const props = defineProps<{
-  construct: DslConstruct | null
-  /**
-   * Optional controlled body content (e.g. driven by `useWorkbenchDraft`).
-   * When omitted, the editor falls back to its own internal stub state so
-   * existing callers keep working unchanged.
-   */
-  code?: string
-  saveStatus?: string
-  lastSavedAt?: Date | null
-  savedHash?: number | null
-  helperCatalogFetch?: () => Promise<HelperCatalogEntry[]>
-  explain?: (
-    name: string,
-    body: unknown,
-    metadata?: Record<string, unknown>,
-  ) => Promise<RunnerOutput>
-  preview?: (
-    name: string,
-    body: unknown,
-    metadata?: Record<string, unknown>,
-  ) => Promise<RunnerOutput> | RunnerOutput
-}>()
+const props = withDefaults(
+  defineProps<{
+    construct: DslConstruct | null
+    /**
+     * Optional controlled body content (e.g. driven by `useWorkbenchDraft`).
+     * When omitted, the editor falls back to its own internal stub state so
+     * existing callers keep working unchanged.
+     */
+    code?: string
+    saveStatus?: string
+    lastSavedAt?: Date | null
+    savedHash?: number | null
+    helperCatalogFetch?: () => Promise<HelperCatalogEntry[]>
+    explain?: (
+      name: string,
+      body: unknown,
+      metadata?: Record<string, unknown>,
+    ) => Promise<RunnerOutput>
+    preview?: (
+      name: string,
+      body: unknown,
+      metadata?: Record<string, unknown>,
+    ) => Promise<RunnerOutput> | RunnerOutput
+    /** Inline diagnostic markers — forwarded to the Code tab. */
+    markers?: EditorMarker[]
+  }>(),
+  { markers: () => [] },
+)
 
 const emit = defineEmits<{
   'update:code': [value: string]
@@ -122,6 +128,14 @@ watch(
   },
   { immediate: true },
 )
+
+const codeTabRef = ref<InstanceType<typeof CodeTab> | null>(null)
+
+function revealPosition(line: number, column = 1) {
+  codeTabRef.value?.revealPosition(line, column)
+}
+
+defineExpose({ revealPosition })
 </script>
 
 <template>
@@ -168,6 +182,7 @@ watch(
     <div class="flex-1 overflow-auto" data-testid="body-editor-content">
       <StructureTab v-show="tab === 'structure'" :steps="steps" />
       <CodeTab
+        ref="codeTabRef"
         v-show="tab === 'code'"
         v-model:code="bodyCode"
         :read-only="!construct"
@@ -175,6 +190,7 @@ watch(
         :last-saved-at="lastSavedAt"
         :saved-hash="savedHash"
         :helper-catalog-fetch="helperCatalogFetch"
+        :markers="markers"
         @save="emit('save', $event)"
       />
       <PreviewTab

@@ -5,6 +5,18 @@ import { useHelperCompletion } from '../../composables/useHelperCompletion'
 import { useMonacoHelperCompletion } from '../../composables/useMonacoHelperCompletion'
 import type { HelperCatalogEntry } from '../../types/dsl'
 
+/** Monaco marker owner — shared between every code tab instance. */
+const MARKER_OWNER = 'dsl'
+
+export interface EditorMarker {
+  /** 1-based source line; `null`/omitted lands the marker at line 1. */
+  line?: number | null
+  /** 1-based source column; `null`/omitted lands the marker at column 1. */
+  column?: number | null
+  message: string
+  severity: 'error' | 'warning'
+}
+
 const props = withDefaults(
   defineProps<{
     modelValue: string
@@ -12,8 +24,10 @@ const props = withDefaults(
     readOnly?: boolean
     placeholder?: string
     helperCatalogFetch?: () => Promise<HelperCatalogEntry[]>
+    /** Inline diagnostic markers — rendered via `monaco.editor.setModelMarkers`. */
+    markers?: EditorMarker[]
   }>(),
-  { language: 'java', readOnly: false, placeholder: '' },
+  { language: 'java', readOnly: false, placeholder: '', markers: () => [] },
 )
 
 const emit = defineEmits<{
@@ -38,6 +52,34 @@ function installWorkerlessEnvironment() {
   } catch {
     globalScope.MonacoEnvironment = { getWorker: () => undefined as unknown as Worker }
   }
+}
+
+function severityFor(monacoNs: typeof Monaco, kind: EditorMarker['severity']): Monaco.MarkerSeverity {
+  if (kind === 'warning') return monacoNs.MarkerSeverity.Warning
+  return monacoNs.MarkerSeverity.Error
+}
+
+function toMonacoMarkers(monacoNs: typeof Monaco, markers: EditorMarker[]): Monaco.editor.IMarkerData[] {
+  return markers.map((m) => {
+    const startLineNumber = m.line && m.line > 0 ? m.line : 1
+    const startColumn = m.column && m.column > 0 ? m.column : 1
+    return {
+      severity: severityFor(monacoNs, m.severity),
+      message: m.message,
+      startLineNumber,
+      startColumn,
+      endLineNumber: startLineNumber,
+      endColumn: startColumn + 1,
+    }
+  })
+}
+
+function applyMarkers(markers: EditorMarker[] | undefined) {
+  if (!monaco || !editor) return
+  const model = editor.getModel()
+  if (!model) return
+  const list = markers ? toMonacoMarkers(monaco, markers) : []
+  monaco.editor.setModelMarkers(model, MARKER_OWNER, list)
 }
 
 onMounted(async () => {
@@ -76,6 +118,8 @@ onMounted(async () => {
       language: props.language,
     })
   }
+
+  applyMarkers(props.markers)
 })
 
 watch(
@@ -98,15 +142,34 @@ watch(
   },
 )
 
+watch(
+  () => props.markers,
+  (markers) => applyMarkers(markers),
+  { deep: true },
+)
+
 onBeforeUnmount(() => {
   destroyed = true
+  // Best-effort marker cleanup so an unmounted model never keeps stale markers.
+  if (monaco && editor) {
+    const model = editor.getModel()
+    if (model) monaco.editor.setModelMarkers(model, MARKER_OWNER, [])
+  }
   editor?.getModel()?.dispose()
   editor?.dispose()
   releaseHelperCompletion?.()
   releaseHelperCompletion = null
 })
 
-defineExpose({ focus: () => editor?.focus() })
+function revealPosition(line: number, column = 1): void {
+  if (!editor || !line || line < 1) return
+  const safeColumn = column && column > 0 ? column : 1
+  editor.revealLineInCenter(line)
+  editor.setPosition({ lineNumber: line, column: safeColumn })
+  editor.focus()
+}
+
+defineExpose({ focus: () => editor?.focus(), revealPosition })
 </script>
 
 <template>
