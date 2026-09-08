@@ -107,15 +107,22 @@ color theme so that other projects can embed them without depending on the full 
 
 The BFF is the only piece of the admin UI that talks to Spring Boot. Its security behaviour is governed by `frontend/admin-ui-plugin/server/utils/httpClient.ts` and `frontend/admin-ui-plugin/server/utils/oidcSession.ts`.
 
-- **Header pass-through allowlist** — `proxyToBackend` forwards a small set of inbound headers to the backend: `Authorization`, `X-Api-Key`, `X-Request-Id`, `traceparent`, `Idempotency-Key`, and `X-Correlation-Id`. `X-Request-Id` is generated if absent. A static `X-Api-Key` is also sent when `backendApiKey` is configured.
+- **Header pass-through allowlist** — the forwarded-header set (`Authorization`, `X-Api-Key`, `X-Request-Id`, `traceparent`, `Idempotency-Key`, `X-Correlation-Id`) is built once in `server/utils/backendHeaders.ts` (`buildBackendHeaders(event, { json })`, `FORWARDED_HEADERS` const) and used by both `proxyToBackend` and the raw-streaming `executions/export.get.ts` route (T430 — previously a hand-rolled copy in each). `X-Request-Id` is generated if absent and returned for logging. A static `X-Api-Key` is sent when `backendApiKey` is configured. `attachAuth` is applied by the callers after, not by the util (it is refresh-aware).
 - **No generic catch-all** — BFF routes are explicit Nitro files under `frontend/admin-ui-plugin/server/api/v1/`; the convention is recorded in [`../CLAUDE.md`](../CLAUDE.md). Each new backend path needs a matching proxy route.
-- **Opt-in OIDC login flow** — When `AUTH_ISSUER` is unset, `/api/v1/auth/login`, `/api/v1/auth/callback`, and `/api/v1/auth/logout` return 404; `/api/v1/auth/session` returns `{ authenticated: false, enabled: false }`. When an issuer is configured, the module exposes four GET routes:
-  - `/api/v1/auth/login` — builds PKCE + state, sets the short-lived `cbs_oidc_txn` httpOnly cookie, and redirects to the issuer.
-  - `/api/v1/auth/callback` — validates state, exchanges the code, writes `cbs_at` + `cbs_rt` httpOnly cookies, and redirects back.
-  - `/api/v1/auth/logout` — clears cookies and calls the issuer end-session endpoint.
-  - `/api/v1/auth/session` — returns the OIDC userinfo session, refreshing once on 401/403.
+- **Opt-in OIDC login flow** — When `AUTH_ISSUER` is unset, `/api/v1/auth/login`, `/api/v1/auth/callback`, and `/api/v1/auth/logout` return 404; `/api/v1/auth/session` returns `{ authenticated: false, enabled: false }`. When an issuer is configured, the module exposes:
+  - `GET /api/v1/auth/login` — builds PKCE + state, sets the short-lived `cbs_oidc_txn` httpOnly cookie, and redirects to the issuer.
+  - `GET /api/v1/auth/callback` — validates state, exchanges the code, writes `cbs_at` + `cbs_rt` httpOnly cookies and the `cbs_sess_start` marker, and redirects back.
+  - `POST /api/v1/auth/logout` — clears cookies and calls the issuer end-session endpoint. Requires an `X-Requested-With: XMLHttpRequest` header (same-site CSRF guard); a request without it is rejected `403`. `GET /api/v1/auth/logout` still works but is deprecated (logs a warning); the UI (`useAuth.logout()`) uses the POST form (T416).
+  - `GET /api/v1/auth/session` — returns the OIDC userinfo session, refreshing once on 401/403.
 
-  Session cookies are httpOnly, `SameSite=Lax`, and `Secure` only when the callback URL is HTTPS. The BFF attaches the session access token as `Authorization: Bearer <cbs_at>` unless the inbound request already provided an `Authorization` header (inbound wins). On a backend 401/403, the BFF attempts one token refresh using `cbs_rt` and retries the original request.
+  Session cookies are httpOnly and `SameSite=Lax`. `Secure` is set when the callback URL is HTTPS **or** when `authSessionSecureCookies` is enabled (force-override for deployments behind a TLS-terminating proxy that strips `https://` from the callback URL). The BFF attaches the session access token as `Authorization: Bearer <cbs_at>` unless the inbound request already provided an `Authorization` header (inbound wins).
+
+- **Session lifetime & refresh hardening** (T416, `server/utils/oidcSession.ts` + `httpClient.ts`, all opt-in — nothing set ⇒ behaviour unchanged):
+  - `authSessionIdleTimeoutSeconds` — caps the `cbs_at` cookie `maxAge` at `min(expires_in, idle)`.
+  - `authSessionAbsoluteTimeoutSeconds` — enforced server-side against the `cbs_sess_start` cookie (set once at login, preserved across refreshes); once exceeded the session is cleared on the next proxied call.
+  - `authSessionRotateOnRefresh` (default on) — on a refresh that returns a new refresh token, the rotated-out `cbs_rt` value is hashed into a short-lived `cbs_rt_prev` cookie.
+  - **Refresh-token reuse detection** — a proxied 401/403 whose `cbs_rt` matches `cbs_rt_prev` (a replay of the just-rotated token) clears the session and fails the request `401 session revoked`. This is a per-node, ~120s marker — it catches replay-right-after-rotation, not a distributed or long-window attack (a server-side token store is out of scope).
+  - Otherwise, on a backend 401/403 the BFF attempts one token refresh using `cbs_rt` and retries the original request.
 
 See [`architecture-backend.md`](architecture-backend.md#security) for the backend security layer (API key, rate limiting, OIDC resource-server) that the BFF proxies into.
 
@@ -196,6 +203,13 @@ The `usePreviewDiff` composable (the backing logic for `PreviewDiffView`) delega
 The backend endpoint searches across processes, transactions, helpers, and functions and returns
 `{name, type, description, inputType, outputType}`.
 
+`DslHelperSearchPanel` result rows are actionable (T400): click or `Enter` inserts a
+`ctx.runHelper("<name>", new <InputType>()).as(<OutputType>.class)` reference at the Monaco cursor
+(via `MonacoEditor.insertAtCursor`, forwarded through `CodeTab`/`BodyEditor`, which also switches to
+the Code tab), the panel supports `↑`/`↓`/`Enter`/`Esc` keyboard navigation, and the active row
+shows its `inputType → outputType` contract inline on all screen sizes. The panel stays open after
+an insert for repeated use.
+
 ## Introspection surface (`T182`)
 
 Two complementary endpoints power the runner's discovery UI:
@@ -229,6 +243,21 @@ The Executions page lists past and in-flight DSL runs. Before `T200` it had no w
   fires one immediate re-check when the tab becomes visible again. As soon as a poll observes any status other than
   `Stale`, the composable pushes the new status into the caller's ref and stops — no further polling for that run.
 
+## DSL Workbench editor
+
+The Workbench code editor is Monaco, wrapped worker-less by `components/src/components/dsl/MonacoEditor.vue`
+(→ `CodeTab.vue` → `BodyEditor.vue`); see [`frontend/dsl-workbench.md`](./frontend/dsl-workbench.md) for the
+full editing experience. Editor-depth features shipped incrementally:
+
+- **Schema-aware autocomplete** (T362) — `useMonacoHelperCompletion` registers a completion provider that
+  suggests helper/function names (with input/output types) from the helper catalog, triggered inside string
+  literals.
+- **Inline compile diagnostics** (T396) — `useDslWorkbench.state.validationErrors` (from preview / publish /
+  reload) are mapped to Monaco markers (`setModelMarkers`, owner `'dsl'`) so failing lines are squiggled in
+  place; markers clear on the next successful validation. `DslProblemsPanel` rows are click-to-jump — selecting
+  a problem reveals and focuses that line in the editor.
+- **Helper insert-at-cursor** (T400) — see [Helper search](#helper-search-t177) above.
+
 ## Workbench draft autosave (`T201`)
 
 The DSL Workbench edits construct definitions (JSON/YAML) but previously lost all in-progress edits on a browser
@@ -241,6 +270,11 @@ refresh. `frontend/admin-ui-plugin/app/composables/useWorkbenchDraft.ts` adds cl
 - On restore, `restoredFromDraft` flips true so the caller can show a restore banner; `clearDraft()` discards the
   draft and resets the editor.
 - SSR-safe: every `window`/`localStorage` access is guarded, so calling the composable during SSR is a no-op.
+
+A server-side per-construct draft API exists (`DslDraftHandler` — save / read / list / delete) and the **manual**
+"Save Draft" action persists server-side. **Autosave** remains `localStorage`-only: moving it server-authoritative
+(T401) is blocked because the draft API's `DraftRequest` carries only metadata (`name`, `type`, `status`,
+`version`, `taskQueue`) and no definition-body field, so there is nowhere server-side to store the edited source.
 
 ## Styling
 
