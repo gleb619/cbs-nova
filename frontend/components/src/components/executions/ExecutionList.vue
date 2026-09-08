@@ -24,7 +24,7 @@ const props = withDefaults(
   },
 )
 
-defineEmits<{
+const emit = defineEmits<{
   select: [id: string]
   cancel: [id: string]
 }>()
@@ -56,6 +56,12 @@ function isCancelling(id: string): boolean {
   if (!ids) return false
   if (Array.isArray(ids)) return ids.includes(id)
   return ids.has(id)
+}
+
+function onRowActivate(event: KeyboardEvent | MouseEvent, id: string) {
+  const target = event.target as HTMLElement | null
+  if (target?.closest('[data-testid^="execution-list-row-cancel-"]')) return
+  emit('select', id)
 }
 </script>
 
@@ -101,8 +107,13 @@ function isCancelling(id: string): boolean {
             v-for="exec in executions"
             :key="exec.id"
             :data-testid="`execution-list-row-${exec.id}`"
-            class="border-t border-gray-100 hover:bg-gray-50 cursor-pointer"
-            @click="$emit('select', exec.id)"
+            :aria-label="`Open execution ${exec.id}`"
+            tabindex="0"
+            role="button"
+            class="border-t border-gray-100 hover:bg-gray-50 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-500"
+            @click="onRowActivate($event, exec.id)"
+            @keydown.enter="onRowActivate($event, exec.id)"
+            @keydown.space.prevent="onRowActivate($event, exec.id)"
           >
             <td class="px-3 py-2 font-mono text-xs">{{ truncate(exec.id) }}</td>
             <td class="px-3 py-2">

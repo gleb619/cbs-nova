@@ -71,4 +71,35 @@ describe('RecentExecutions', () => {
 
     expect(wrapper.text()).toContain(new Date('2025-06-15T10:00:00Z').toLocaleString())
   })
+
+  it('marks rows as keyboard-operable buttons with an accessible label', () => {
+    const wrapper = mount(RecentExecutions, {
+      props: { executions: [exec('1', 'SUCCESS')], loading: false },
+    })
+
+    const tr = wrapper.find('[data-testid="recent-executions-row-1"]')
+    expect(tr.attributes('tabindex')).toBe('0')
+    expect(tr.attributes('role')).toBe('button')
+    expect(tr.attributes('aria-label')).toBe('Open execution 1')
+  })
+
+  it('emits select on Enter when a row receives the keydown', async () => {
+    const wrapper = mount(RecentExecutions, {
+      props: { executions: [exec('1', 'SUCCESS')], loading: false },
+    })
+
+    await wrapper.find('[data-testid="recent-executions-row-1"]').trigger('keydown.enter')
+
+    expect(wrapper.emitted('select')).toEqual([['1']])
+  })
+
+  it('emits select on Space when a row receives the keydown', async () => {
+    const wrapper = mount(RecentExecutions, {
+      props: { executions: [exec('2', 'FAILED')], loading: false },
+    })
+
+    await wrapper.find('[data-testid="recent-executions-row-2"]').trigger('keydown.space')
+
+    expect(wrapper.emitted('select')).toEqual([['2']])
+  })
 })

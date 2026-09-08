@@ -18,6 +18,10 @@ withDefaults(
 )
 
 const emit = defineEmits<(event: 'select', name: string) => void>()
+
+function onRowActivate(_event: KeyboardEvent | MouseEvent, name: string) {
+  emit('select', name)
+}
 </script>
 
 <template>
@@ -27,10 +31,14 @@ const emit = defineEmits<(event: 'select', name: string) => void>()
         v-for="draft in drafts"
         :key="draft.name"
         :data-testid="itemTestId"
-        class="cursor-pointer border-b border-gray-800 px-3 py-2 text-sm hover:bg-gray-700"
+        :aria-label="`Open draft ${draft.name}`"
+        tabindex="0"
+        role="button"
+        class="cursor-pointer border-b border-gray-800 px-3 py-2 text-sm hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-500"
         :class="selectedName === draft.name ? 'bg-gray-700' : ''"
-        @click="emit('select', draft.name)"
-        @keydown.enter="emit('select', draft.name)"
+        @click="onRowActivate($event, draft.name)"
+        @keydown.enter="onRowActivate($event, draft.name)"
+        @keydown.space.prevent="onRowActivate($event, draft.name)"
       >
         <div class="font-medium text-gray-100">{{ draft.name }}</div>
         <div class="text-xs text-gray-400">

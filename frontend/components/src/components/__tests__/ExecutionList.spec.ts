@@ -97,6 +97,76 @@ describe('ExecutionList', () => {
     expect(wrapper.emitted('select')?.[0]).toEqual(['completed-1'])
   })
 
+  it('marks rows as keyboard-operable buttons with an accessible label', () => {
+    const wrapper = mount(ExecutionList, {
+      props: {
+        executions: [row({ id: 'exec-99' })],
+        loading: false,
+      },
+    })
+
+    const tr = wrapper.find('[data-testid="execution-list-row-exec-99"]')
+    expect(tr.attributes('tabindex')).toBe('0')
+    expect(tr.attributes('role')).toBe('button')
+    expect(tr.attributes('aria-label')).toBe('Open execution exec-99')
+  })
+
+  it('emits select on Enter when a row receives the keydown', async () => {
+    const wrapper = mount(ExecutionList, {
+      props: {
+        executions: [row({ id: 'exec-1' })],
+        loading: false,
+      },
+    })
+
+    await wrapper.find('[data-testid="execution-list-row-exec-1"]').trigger('keydown.enter')
+
+    expect(wrapper.emitted('select')?.[0]).toEqual(['exec-1'])
+  })
+
+  it('emits select on Space when a row receives the keydown', async () => {
+    const wrapper = mount(ExecutionList, {
+      props: {
+        executions: [row({ id: 'exec-2' })],
+        loading: false,
+      },
+    })
+
+    await wrapper.find('[data-testid="execution-list-row-exec-2"]').trigger('keydown.space')
+
+    expect(wrapper.emitted('select')?.[0]).toEqual(['exec-2'])
+  })
+
+  it('does not emit select when Enter is pressed inside the cancel button', async () => {
+    const wrapper = mount(ExecutionList, {
+      props: {
+        executions: [row({ id: 'running-1', status: 'Running' })],
+        loading: false,
+      },
+    })
+
+    await wrapper
+      .find('[data-testid="execution-list-row-cancel-running-1"]')
+      .trigger('keydown.enter')
+
+    expect(wrapper.emitted('select')).toBeFalsy()
+  })
+
+  it('does not emit select when Space is pressed inside the cancel button', async () => {
+    const wrapper = mount(ExecutionList, {
+      props: {
+        executions: [row({ id: 'running-2', status: 'Running' })],
+        loading: false,
+      },
+    })
+
+    await wrapper
+      .find('[data-testid="execution-list-row-cancel-running-2"]')
+      .trigger('keydown.space')
+
+    expect(wrapper.emitted('select')).toBeFalsy()
+  })
+
   it('dims the cancel button and suppresses click while cancellingIds contains the row id', async () => {
     const wrapper = mount(ExecutionList, {
       props: {

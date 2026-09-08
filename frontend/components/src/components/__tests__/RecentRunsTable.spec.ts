@@ -74,4 +74,29 @@ describe('RecentRunsTable', () => {
 
     expect(wrapper.emitted('select')).toEqual([['run-42']])
   })
+
+  it('marks rows as keyboard-operable buttons with an accessible label', () => {
+    const wrapper = mountTable({ executions: [execution({ id: 'run-7' })] })
+
+    const tr = wrapper.find('[data-testid="recent-runs-table-row-run-7"]')
+    expect(tr.attributes('tabindex')).toBe('0')
+    expect(tr.attributes('role')).toBe('button')
+    expect(tr.attributes('aria-label')).toBe('Open run run-7')
+  })
+
+  it('emits select on Enter when a row receives the keydown', async () => {
+    const wrapper = mountTable({ executions: [execution({ id: 'run-1' })] })
+
+    await wrapper.find('[data-testid="recent-runs-table-row-run-1"]').trigger('keydown.enter')
+
+    expect(wrapper.emitted('select')).toEqual([['run-1']])
+  })
+
+  it('emits select on Space when a row receives the keydown', async () => {
+    const wrapper = mountTable({ executions: [execution({ id: 'run-2' })] })
+
+    await wrapper.find('[data-testid="recent-runs-table-row-run-2"]').trigger('keydown.space')
+
+    expect(wrapper.emitted('select')).toEqual([['run-2']])
+  })
 })
