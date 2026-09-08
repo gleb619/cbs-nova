@@ -1,4 +1,4 @@
-import { type ComputedRef, computed } from 'vue'
+import { type ComputedRef, computed, type MaybeRefOrGetter, toValue } from 'vue'
 
 export type DiffLineKind = 'same' | 'lhs-only' | 'rhs-only'
 
@@ -25,10 +25,13 @@ function buildLcsTable<T>(a: T[], b: T[]): number[][] {
   return dp
 }
 
-export function useDiffLines(lhs: string, rhs: string): ComputedRef<DiffLine[]> {
+export function useDiffLines(
+  lhs: MaybeRefOrGetter<string>,
+  rhs: MaybeRefOrGetter<string>,
+): ComputedRef<DiffLine[]> {
   return computed(() => {
-    const lhsLines = splitLines(lhs)
-    const rhsLines = splitLines(rhs)
+    const lhsLines = splitLines(toValue(lhs))
+    const rhsLines = splitLines(toValue(rhs))
 
     if (lhsLines.length + rhsLines.length > 2000) {
       console.warn('useDiffLines: combined line count exceeds 2000, falling back to raw diff')

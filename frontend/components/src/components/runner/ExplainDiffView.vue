@@ -13,13 +13,12 @@ const props = defineProps<{
 const windowWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1024)
 const preferredLayout = ref<'split' | 'unified' | null>(null)
 
-onMounted(() => {
-  const handleResize = () => {
-    windowWidth.value = window.innerWidth
-  }
-  window.addEventListener('resize', handleResize)
-  onUnmounted(() => window.removeEventListener('resize', handleResize))
-})
+function handleResize() {
+  windowWidth.value = window.innerWidth
+}
+
+onMounted(() => window.addEventListener('resize', handleResize))
+onUnmounted(() => window.removeEventListener('resize', handleResize))
 
 const effectiveLayout = computed(
   () => props.layout ?? preferredLayout.value ?? (windowWidth.value >= 768 ? 'split' : 'unified'),
@@ -34,7 +33,10 @@ const runJson = computed(() => JSON.stringify(props.runOutput ?? null, null, 2))
 const hasRunOutput = computed(() => props.runOutput !== undefined)
 
 // biome-ignore lint/correctness/noUnusedVariables: used in the unified layout template
-const unifiedLines = computed(() => useDiffLines(explainJson.value, runJson.value).value)
+const unifiedLines = useDiffLines(
+  () => explainJson.value,
+  () => runJson.value,
+)
 
 function toggleLayout() {
   preferredLayout.value = effectiveLayout.value === 'split' ? 'unified' : 'split'

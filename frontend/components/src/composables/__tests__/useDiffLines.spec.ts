@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { ref } from 'vue'
 import { useDiffLines } from '../useDiffLines'
 
 describe('useDiffLines', () => {
@@ -66,5 +67,81 @@ describe('useDiffLines', () => {
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('useDiffLines'))
 
     warnSpy.mockRestore()
+  })
+
+  it('accepts a Ref<string> on the left and a plain string on the right', () => {
+    const lhs = ref('a\nb\nc')
+
+    const result = useDiffLines(lhs, 'a\nc').value
+
+    expect(result).toEqual([
+      { kind: 'same', text: 'a' },
+      { kind: 'lhs-only', text: 'b' },
+      { kind: 'same', text: 'c' },
+    ])
+  })
+
+  it('accepts getter functions on both sides', () => {
+    const lhs = 'a\nb'
+    const rhs = 'a\nc'
+
+    const result = useDiffLines(
+      () => lhs,
+      () => rhs,
+    ).value
+
+    expect(result).toEqual([
+      { kind: 'same', text: 'a' },
+      { kind: 'lhs-only', text: 'b' },
+      { kind: 'rhs-only', text: 'c' },
+    ])
+  })
+
+  it('reacts to mutations of a source Ref on either side', () => {
+    const lhs = ref('a\nb')
+    const rhs = ref('a\nb')
+
+    const lines = useDiffLines(lhs, rhs)
+    expect(lines.value.every((line) => line.kind === 'same')).toBe(true)
+
+    // Mutating the rhs ref should be picked up by the same ComputedRef.
+    rhs.value = 'a\nc'
+    expect(lines.value).toEqual([
+      { kind: 'same', text: 'a' },
+      { kind: 'lhs-only', text: 'b' },
+      { kind: 'rhs-only', text: 'c' },
+    ])
+
+    lhs.value = 'x'
+    expect(lines.value).toEqual([
+      { kind: 'lhs-only', text: 'x' },
+      { kind: 'rhs-only', text: 'a' },
+      { kind: 'rhs-only', text: 'c' },
+    ])
+  })
+
+  it('reacts to mutations of source data behind a getter', () => {
+    const lhs = ref('a\nb')
+    const rhs = ref('a\nb')
+
+    const lines = useDiffLines(
+      () => lhs.value,
+      () => rhs.value,
+    )
+    expect(lines.value.every((line) => line.kind === 'same')).toBe(true)
+
+    rhs.value = 'a\nx'
+    expect(lines.value).toEqual([
+      { kind: 'same', text: 'a' },
+      { kind: 'lhs-only', text: 'b' },
+      { kind: 'rhs-only', text: 'x' },
+    ])
+
+    lhs.value = 'z'
+    expect(lines.value).toEqual([
+      { kind: 'lhs-only', text: 'z' },
+      { kind: 'rhs-only', text: 'a' },
+      { kind: 'rhs-only', text: 'x' },
+    ])
   })
 })

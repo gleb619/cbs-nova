@@ -376,9 +376,10 @@ export function usePreviewDiff(
   const lhsJson = computed(() => asString(baselineValue.value?.result))
   const rhsJson = computed(() => asString(currentValue.value?.result))
 
-  // Call useDiffLines inside a computed so changes to lhsJson/rhsJson propagate
-  // through the LCS pipeline without us having to subscribe manually.
-  const diffLines = computed<DiffLine[]>(() => useDiffLines(lhsJson.value, rhsJson.value).value)
+  const diffLines = useDiffLines(
+    () => lhsJson.value,
+    () => rhsJson.value,
+  )
 
   const astDiff = computed<ASTDiffNode | null>(() =>
     diffAst(baselineValue.value?.astTree, currentValue.value?.astTree, 'same'),
