@@ -50,11 +50,13 @@ function basename(path: string): string {
   return index >= 0 ? path.slice(index + 1) : path
 }
 
-function compileDiagnosticsToValidationErrors(diags: CompileDiagnostic[]): ValidationError[] {
+export function compileDiagnosticsToValidationErrors(diags: CompileDiagnostic[]): ValidationError[] {
   return diags.map((d) => ({
     field: d.line != null ? `${basename(d.file)}:${d.line}` : basename(d.file),
     message: d.message,
     severity: d.severity === 'warning' ? 'warning' : 'error',
+    line: d.line ?? null,
+    column: d.column ?? null,
   }))
 }
 

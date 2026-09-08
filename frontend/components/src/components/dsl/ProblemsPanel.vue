@@ -2,6 +2,14 @@
 import type { ValidationError } from '../../types/dsl'
 
 defineProps<{ errors: ValidationError[] }>()
+
+const emit = defineEmits<{
+  select: [payload: { index: number; error: ValidationError }]
+}>()
+
+function onSelect(index: number, error: ValidationError) {
+  emit('select', { index, error })
+}
 </script>
 
 <template>
@@ -19,14 +27,21 @@ defineProps<{ errors: ValidationError[] }>()
         class="px-4 py-2 text-sm flex items-start gap-2"
         :data-testid="`problems-panel-row-${idx}`"
       >
-        <span
-          class="inline-block w-2 h-2 rounded-full mt-1.5 shrink-0"
-          :class="err.severity === 'error' ? 'bg-red-500' : 'bg-yellow-500'"
-        />
-        <div class="flex-1">
-          <div class="font-mono text-xs text-gray-500">{{ err.field }}</div>
-          <div class="text-gray-800">{{ err.message }}</div>
-        </div>
+        <button
+          type="button"
+          class="flex items-start gap-2 w-full text-left bg-transparent border-0 p-0 cursor-pointer"
+          :data-testid="`problems-panel-row-button-${idx}`"
+          @click="onSelect(idx, err)"
+        >
+          <span
+            class="inline-block w-2 h-2 rounded-full mt-1.5 shrink-0"
+            :class="err.severity === 'error' ? 'bg-red-500' : 'bg-yellow-500'"
+          />
+          <div class="flex-1">
+            <div class="font-mono text-xs text-gray-500">{{ err.field }}</div>
+            <div class="text-gray-800">{{ err.message }}</div>
+          </div>
+        </button>
       </li>
     </ul>
   </div>

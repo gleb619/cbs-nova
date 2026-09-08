@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { useDslWorkbench } from '../useDslWorkbench'
+import { compileDiagnosticsToValidationErrors, useDslWorkbench } from '../useDslWorkbench'
 
 // The composable under test imports the real useDslApi module, so the module
 // itself must be mocked (the globalThis.useDslApi stub from vitest.setup.ts is
@@ -377,7 +377,13 @@ describe('useDslWorkbench', () => {
       const c2 = wb.state.value.constructs.find((c) => c.name === 'c2')
       expect(c2?.status).toBe('Draft')
       expect(wb.state.value.validationErrors).toEqual([
-        { field: 'Bad.java:5', message: 'type mismatch', severity: 'error' as const },
+        {
+          field: 'Bad.java:5',
+          message: 'type mismatch',
+          severity: 'error' as const,
+          line: 5,
+          column: 10,
+        },
       ])
     })
 
@@ -422,7 +428,13 @@ describe('useDslWorkbench', () => {
       await expect(wb.reloadDefinitions()).rejects.toEqual(reloadError)
 
       expect(wb.state.value.validationErrors).toEqual([
-        { field: 'Broken.java:2', message: 'missing semicolon', severity: 'error' as const },
+        {
+          field: 'Broken.java:2',
+          message: 'missing semicolon',
+          severity: 'error' as const,
+          line: 2,
+          column: null,
+        },
       ])
     })
   })
@@ -474,5 +486,31 @@ describe('normalizeConstruct', () => {
       description: 'Summarizes a batch of items.',
       filePath: 'dsl/BatchProcessingDsl.java',
     })
+  })
+})
+
+describe('compileDiagnosticsToValidationErrors', () => {
+  it('preserves line/column from the diagnostic on each mapped error', () => {
+    expect(
+      compileDiagnosticsToValidationErrors([
+        { file: '/x/Y.java', line: 7, column: 3, message: 'm1', severity: 'error' },
+        { file: '/x/Z.java', line: null, column: null, message: 'm2', severity: 'warning' },
+      ]),
+    ).toEqual([
+      {
+        field: 'Y.java:7',
+        message: 'm1',
+        severity: 'error',
+        line: 7,
+        column: 3,
+      },
+      {
+        field: 'Z.java',
+        message: 'm2',
+        severity: 'warning',
+        line: null,
+        column: null,
+      },
+    ])
   })
 })

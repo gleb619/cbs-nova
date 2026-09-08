@@ -6,10 +6,12 @@ import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { useDslWorkbench } from '@cbs/admin-ui-plugin/composables/useDslWorkbench'
 import { useWorkbenchDraft } from '@cbs/admin-ui-plugin/composables/useWorkbenchDraft'
 import type {
+  EditorMarker,
   HelperCatalogEntry,
   HelperSearchFilters,
   HelpersResponse,
   ObjectSearchResult,
+  ValidationError,
 } from '@cbs/components'
 import {
   CbsDrawer,
@@ -69,6 +71,26 @@ const historyPanelOpen = ref(false)
 
 function toggleHistoryPanel() {
   historyPanelOpen.value = !historyPanelOpen.value
+}
+
+// Translate `state.validationErrors` into Monaco marker records. Scoped to the
+// selected construct — no file filter needed today (YAGNI).
+const editorMarkers = computed<EditorMarker[]>(() =>
+  state.validationErrors.map((err) => ({
+    line: err.line ?? null,
+    column: err.column ?? null,
+    message: err.message,
+    severity: err.severity,
+  })),
+)
+
+const bodyEditorRef = ref<InstanceType<typeof DslBodyEditor> | null>(null)
+
+function onProblemSelect(payload: { index: number; error: ValidationError }) {
+  const line = payload.error.line
+  if (typeof line === 'number' && line > 0) {
+    bodyEditorRef.value?.revealPosition(line, payload.error.column ?? 1)
+  }
 }
 
 function onHistoryRestored() {
@@ -478,6 +500,7 @@ onBeforeUnmount(() => {
         </div>
         <div class="flex-1 overflow-hidden">
           <DslBodyEditor
+            ref="bodyEditorRef"
             :code="editorCode"
             :construct="selectedConstruct"
             :save-status="draftSave.status.value"
@@ -485,11 +508,12 @@ onBeforeUnmount(() => {
             :helper-catalog-fetch="fetchHelperCatalog"
             :preview="runPreview"
             :explain="runExplain"
+            :markers="editorMarkers"
             @update:code="onCodeChange"
             @save="handleEditorSave"
           />
         </div>
-        <DslProblemsPanel :errors="state.validationErrors" />
+        <DslProblemsPanel :errors="state.validationErrors" @select="onProblemSelect" />
       </main>
 
       <CbsDrawer

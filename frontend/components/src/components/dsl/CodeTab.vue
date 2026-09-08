@@ -4,7 +4,7 @@ import { useCrc32 } from '../../composables/useCrc32'
 import { createNamespacedLocalStorageState } from '../../composables/useLocalStorageState'
 import type { HelperCatalogEntry } from '../../types/dsl'
 import HotkeyTooltip from '../HotkeyTooltip.vue'
-import MonacoEditor from './MonacoEditor.vue'
+import MonacoEditor, { type EditorMarker } from './MonacoEditor.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -15,8 +15,9 @@ const props = withDefaults(
     lastSavedAt?: Date | null
     savedHash?: number | null
     helperCatalogFetch?: () => Promise<HelperCatalogEntry[]>
+    markers?: EditorMarker[]
   }>(),
-  { language: 'java', saveStatus: 'idle', lastSavedAt: null, savedHash: null },
+  { language: 'java', saveStatus: 'idle', lastSavedAt: null, savedHash: null, markers: () => [] },
 )
 
 const emit = defineEmits<{
@@ -154,6 +155,14 @@ watch(localCode, (value) => {
   }
   emit('update:code', value)
 })
+
+const monacoRef = ref<InstanceType<typeof MonacoEditor> | null>(null)
+
+function revealPosition(line: number, column = 1) {
+  monacoRef.value?.revealPosition(line, column)
+}
+
+defineExpose({ revealPosition })
 </script>
 
 <template>
@@ -234,11 +243,13 @@ watch(localCode, (value) => {
         :class="readOnly ? 'border-neutral-200 bg-neutral-50' : 'border-neutral-200 bg-white'"
       >
         <MonacoEditor
+          ref="monacoRef"
           v-model="localCode"
           :language="language"
           :read-only="readOnly"
           :placeholder="placeholder"
           :helper-catalog-fetch="helperCatalogFetch"
+          :markers="markers"
           @blur="handleBlur"
         />
       </div>
