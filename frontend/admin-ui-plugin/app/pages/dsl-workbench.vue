@@ -26,7 +26,6 @@ import {
   DslHelperSearchPanel,
   DslMetadataPanel,
   DslPlainConstructList,
-  DslProblemsPanel,
   ErrorBanner,
   useHelperSearch,
   useSavedDrafts,
@@ -88,10 +87,7 @@ const editorMarkers = computed<EditorMarker[]>(() =>
 const bodyEditorRef = ref<InstanceType<typeof DslBodyEditor> | null>(null)
 
 function onProblemSelect(payload: { index: number; error: ValidationError }) {
-  const line = payload.error.line
-  if (typeof line === 'number' && line > 0) {
-    bodyEditorRef.value?.revealPosition(line, payload.error.column ?? 1)
-  }
+  bodyEditorRef.value?.selectProblem(payload)
 }
 
 function onHelperSelect(result: ObjectSearchResult) {
@@ -514,11 +510,12 @@ onBeforeUnmount(() => {
             :preview="runPreview"
             :explain="runExplain"
             :markers="editorMarkers"
+            :errors="state.validationErrors"
             @update:code="onCodeChange"
             @save="handleEditorSave"
+            @select="onProblemSelect"
           />
         </div>
-        <DslProblemsPanel :errors="state.validationErrors" @select="onProblemSelect" />
       </main>
 
       <CbsDrawer

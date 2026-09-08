@@ -259,4 +259,24 @@ describe('PreviewTab', () => {
 
     expect(wrapper.text()).toContain('BatchIn')
   })
+  it('normalizes backend responses that use the output field', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      output: { total: 42, summary: 'processed' },
+      success: true,
+    })
+    vi.stubGlobal('$fetch', fetchMock)
+
+    const wrapper = mountTab()
+    await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Run')!
+      .trigger('click')
+    await flushPromises()
+
+    const resultText = wrapper.find('[data-testid="runner-result-tab"]').text()
+    expect(resultText).toContain('"result":{"total":42,"summary":"processed"}')
+    expect(wrapper.text()).toContain('done')
+  })
+
 })

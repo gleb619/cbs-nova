@@ -223,6 +223,21 @@ describe('PreviewResultPanel', () => {
     expect(wrapper.find('[data-testid="format-result"]').attributes('disabled')).toBeDefined()
   })
 
+  it('shows the read-only output schema in Schema mode', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(schemaResponse)
+    vi.stubGlobal('$fetch', fetchMock)
+
+    const wrapper = mountPanel({ type: 'Process' })
+    await flushPromises()
+
+    await wrapper.find('[data-testid="mode-schema"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="schema-view"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="schema-view"]').text()).toContain('result')
+    expect(wrapper.find('[data-testid="runner-result-tab"]').exists()).toBe(false)
+  })
+
   it('formats string results that contain compact JSON', async () => {
     const wrapper = mountPanel({
       output: { result: '{"ok":true}' },
@@ -234,4 +249,28 @@ describe('PreviewResultPanel', () => {
     const emitted = wrapper.emitted('format')
     expect(emitted?.[0]?.[0]).toBe('{\n  "ok": true\n}\n')
   })
+  it('renders the result again after switching to Schema mode and back to JSON', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(schemaResponse)
+    vi.stubGlobal('$fetch', fetchMock)
+
+    const wrapper = mountPanel({
+      type: 'Process',
+      output: { result: { ok: true } },
+      status: 'success',
+    })
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="runner-result-tab"]').text()).toContain('{"ok":true}')
+
+    await wrapper.find('[data-testid="mode-schema"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="schema-view"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="runner-result-tab"]').exists()).toBe(false)
+
+    await wrapper.find('[data-testid="mode-json"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="runner-result-tab"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="runner-result-tab"]').text()).toContain('{"ok":true}')
+  })
+
 })

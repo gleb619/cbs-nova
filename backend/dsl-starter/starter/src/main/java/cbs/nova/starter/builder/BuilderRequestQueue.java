@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-//TODO: replace with a Resilience4j
+// TODO: replace with a Resilience4j
 public class BuilderRequestQueue {
 
   private record QueuedTask<T>(Callable<T> call, CompletableFuture<T> future) {
@@ -23,7 +23,7 @@ public class BuilderRequestQueue {
   private final List<Thread> workers;
   private volatile boolean accepting = true;
 
-  //TODO: move config to a spring configuration class
+  // TODO: move config to a spring configuration class
   public BuilderRequestQueue(int capacity, long offerTimeoutMillis, int workers) {
     this.queue = new ArrayBlockingQueue<>(Math.max(1, capacity));
     this.offerTimeoutMillis = offerTimeoutMillis;

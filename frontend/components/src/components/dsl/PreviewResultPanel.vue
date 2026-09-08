@@ -18,7 +18,7 @@ const emit = defineEmits<{
   format: [formatted: string]
 }>()
 
-const mode = ref<'form' | 'json'>('json')
+const mode = ref<'form' | 'json' | 'schema'>('json')
 
 const { outputSchema, outputType, loading, error, hasOutputSchema } = useConstructSchema({
   name: () => props.name,
@@ -26,6 +26,9 @@ const { outputSchema, outputType, loading, error, hasOutputSchema } = useConstru
 })
 
 const outputFormValue = computed(() => {
+  const result = props.output?.result
+  if (result !== undefined && result !== null) return result
+
   const s = outputSchema.value
   if (!s || !hasOutputSchema.value) return {}
   if (s.type === 'object' && s.properties) {
@@ -64,7 +67,7 @@ function formatResult() {
   }
 }
 
-function setMode(next: 'form' | 'json') {
+function setMode(next: 'form' | 'json' | 'schema') {
   mode.value = next
 }
 
@@ -84,11 +87,12 @@ const footerStatus = computed(() => {
     if (!hasOutputSchema.value) return { text: 'Output schema unavailable', type: 'muted' as const }
     return { text: 'Form output', type: 'muted' as const }
   }
+  if (mode.value === 'schema') return { text: 'Output schema', type: 'muted' as const }
   return { text: 'Result JSON', type: 'muted' as const }
 })
 
 const canFormat = computed(() => {
-  if (mode.value === 'form') return false
+  if (mode.value !== 'json') return false
   if (props.status === 'loading') return false
   const raw = props.output?.result
   return raw !== undefined && raw !== null
@@ -100,6 +104,12 @@ watch(
     mode.value = 'json'
   },
 )
+
+watch(hasOutputSchema, (available) => {
+  if (!available && mode.value === 'schema') {
+    mode.value = 'json'
+  }
+})
 
 watch(
   () => props.output,
@@ -130,8 +140,8 @@ watch(
       </div>
     </header>
 
-    <div class="flex-1 min-h-0 overflow-auto p-3">
-      <div v-if="mode === 'json'">
+    <div class="flex-1 min-h-0 overflow-hidden">
+      <div v-if="mode === 'json'" class="h-full overflow-auto p-3">
         <div v-if="status === 'loading'" class="space-y-2" data-testid="result-skeleton">
           <div v-for="i in 6" :key="i" class="h-3 bg-gray-200 rounded animate-pulse" />
         </div>
@@ -147,7 +157,7 @@ watch(
         <ResultTab v-else :result="output?.result" />
       </div>
 
-      <div v-else-if="mode === 'form'">
+      <div v-else-if="mode === 'form'" class="h-full overflow-auto p-3">
         <div v-if="loading" class="space-y-2" data-testid="schema-skeleton">
           <div v-for="i in 6" :key="i" class="h-3 bg-gray-200 rounded animate-pulse" />
         </div>
@@ -159,10 +169,17 @@ watch(
           <SchemaForm :schema="outputSchema" :model-value="outputFormValue" readonly />
         </div>
       </div>
+
+      <div v-else-if="mode === 'schema'" class="h-full overflow-auto p-3">
+        <pre
+          data-testid="schema-view"
+          class="w-full h-full min-h-0 overflow-auto font-mono text-xs leading-relaxed text-ink bg-white whitespace-pre-wrap break-words"
+        >{{ JSON.stringify(outputSchema, null, 2) }}</pre>
+      </div>
     </div>
 
     <footer class="flex items-center justify-between px-3 py-2 border-t border-line gap-3">
-      <div class="flex items-center shrink-0">
+      <div class="flex items-center shrink-0 gap-2">
         <div class="flex items-center border border-line rounded-sm overflow-hidden">
           <button
             type="button"
@@ -183,6 +200,17 @@ watch(
             JSON
           </button>
         </div>
+
+        <button
+          v-if="hasOutputSchema"
+          type="button"
+          class="text-xs px-2 py-1 border border-line hover:bg-surface disabled:opacity-50"
+          :class="mode === 'schema' ? 'bg-accent-500 text-white' : 'text-ink'"
+          data-testid="mode-schema"
+          @click="setMode('schema')"
+        >
+          Schema
+        </button>
       </div>
 
       <div class="flex-1 min-w-0 text-center">

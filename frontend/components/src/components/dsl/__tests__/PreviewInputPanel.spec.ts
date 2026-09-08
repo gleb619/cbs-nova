@@ -157,6 +157,18 @@ describe('PreviewInputPanel', () => {
     expect(last).toBe('{\n  "a": 1\n}\n')
   })
 
+  it('shows the read-only input schema in Schema mode', async () => {
+    const wrapper = mountPanel({}, vi.fn().mockResolvedValue(schemaResponse))
+    await flushPromises()
+
+    await wrapper.find('[data-testid="mode-schema"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="schema-view"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="schema-view"]').text()).toContain('"type": "object"')
+    expect(wrapper.find('[data-testid="json-textarea"]').exists()).toBe(false)
+  })
+
   it('disables format button in form mode', async () => {
     const wrapper = mountPanel({}, vi.fn().mockResolvedValue(schemaResponse))
     await flushPromises()

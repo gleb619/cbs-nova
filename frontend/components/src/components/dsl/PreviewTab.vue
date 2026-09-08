@@ -31,6 +31,14 @@ function currentPayload(): unknown {
   return formValue.value !== undefined ? formValue.value : JSON.parse(inputJson.value)
 }
 
+function normalizeResponse(response: unknown): RunnerOutput {
+  if (response && typeof response === 'object' && !Array.isArray(response)) {
+    const r = response as Record<string, unknown>
+    return { ...r, result: r.result ?? r.body ?? r.output } as RunnerOutput
+  }
+  return { result: response }
+}
+
 async function run() {
   status.value = 'loading'
   output.value = null
@@ -38,18 +46,18 @@ async function run() {
     const body = currentPayload()
     const metadata = { startedFrom: 'workbench' }
 
+    let raw: unknown
     if (props.preview) {
-      output.value = await props.preview(props.name, body, metadata)
-      status.value = 'success'
-      return
+      raw = await props.preview(props.name, body, metadata)
+    } else {
+      const path = props.endpoint ?? 'preview'
+      raw = await $fetch(
+        `/api/v1/dsl/${path}/${encodeURIComponent(props.name)}`,
+        { method: 'POST', body: { body, metadata } },
+      )
     }
 
-    const path = props.endpoint ?? 'preview'
-    const res = await $fetch<RunnerOutput>(
-      `/api/v1/dsl/${path}/${encodeURIComponent(props.name)}`,
-      { method: 'POST', body: { body, metadata } },
-    )
-    output.value = res
+    output.value = normalizeResponse(raw)
     status.value = 'success'
   } catch (err) {
     const e = err as {

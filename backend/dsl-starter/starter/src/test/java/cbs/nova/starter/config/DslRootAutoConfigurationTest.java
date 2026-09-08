@@ -14,9 +14,10 @@ import java.util.Arrays;
 import java.util.Set;
 
 /**
- * Verifies the starter advertises a single root autoconfiguration that aggregates the rest via
- * {@link Import}, so the published artifact exposes one entry point in the autoconfiguration
- * imports file.
+ * Verifies the starter advertises a root autoconfiguration that aggregates the rest via
+ * {@link Import}. {@link DslRunRepositoryConfiguration} stays a standalone auto-configuration
+ * (listed before the root in the imports file) so its {@code @ConditionalOnBean(DataSource)} beans
+ * are evaluated after {@code DataSourceAutoConfiguration}.
  */
 class DslRootAutoConfigurationTest {
 
@@ -46,7 +47,6 @@ class DslRootAutoConfigurationTest {
             RateLimitFilterConfiguration.class,
             DslRunRetentionConfiguration.class,
             DslRunReconciliationConfiguration.class,
-            DslRunRepositoryConfiguration.class,
             SecurityConfiguration.class,
             ApiKeyAuthMisconfigurationWarning.class,
             DslHealthIndicatorConfiguration.class,

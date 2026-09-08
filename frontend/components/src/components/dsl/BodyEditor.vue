@@ -5,12 +5,13 @@ import {
   createNamespacedLocalStorageState,
   type UseCookieFactory,
 } from '../../composables/useLocalStorageState'
-import type { DslConstruct, HelperCatalogEntry, StepDef } from '../../types/dsl'
+import type { DslConstruct, HelperCatalogEntry, StepDef, ValidationError } from '../../types/dsl'
 import type { RunnerOutput, RunnerStatus } from '../../types/runner'
 import type { EditorMarker } from './MonacoEditor.vue'
 import CodeTab from './CodeTab.vue'
 import ExplainTab from './ExplainTab.vue'
 import PreviewTab from './PreviewTab.vue'
+import ProblemsPanel from './ProblemsPanel.vue'
 import StructureTab from './StructureTab.vue'
 
 const props = withDefaults(
@@ -38,17 +39,26 @@ const props = withDefaults(
     ) => Promise<RunnerOutput> | RunnerOutput
     /** Inline diagnostic markers — forwarded to the Code tab. */
     markers?: EditorMarker[]
+    /** Validation errors — surfaced under the Problems tab. */
+    errors?: ValidationError[]
   }>(),
-  { markers: () => [] },
+  { markers: () => [], errors: () => [] },
 )
 
 const emit = defineEmits<{
   'update:code': [value: string]
   save: [value: string]
+  select: [payload: { index: number; error: ValidationError }]
 }>()
 
-type BodyEditorTab = 'structure' | 'code' | 'preview' | 'explain'
-const BODY_EDITOR_TABS: readonly BodyEditorTab[] = ['structure', 'code', 'preview', 'explain']
+type BodyEditorTab = 'structure' | 'code' | 'preview' | 'explain' | 'problems'
+const BODY_EDITOR_TABS: readonly BodyEditorTab[] = [
+  'structure',
+  'code',
+  'preview',
+  'explain',
+  'problems',
+]
 
 declare const useCookie: UseCookieFactory | undefined
 
@@ -140,7 +150,17 @@ function insertAtCursor(text: string) {
   codeTabRef.value?.insertAtCursor(text)
 }
 
-defineExpose({ revealPosition, insertAtCursor })
+// Pick a problem from the Problems tab — jump to the Code tab and reveal the offending line.
+function selectProblem(payload: { index: number; error: ValidationError }) {
+  emit('select', payload)
+  const line = payload.error.line
+  if (typeof line === 'number' && line > 0) {
+    tab.value = 'code'
+    codeTabRef.value?.revealPosition(line, payload.error.column ?? 1)
+  }
+}
+
+defineExpose({ revealPosition, insertAtCursor, selectProblem })
 </script>
 
 <template>
@@ -183,6 +203,22 @@ defineExpose({ revealPosition, insertAtCursor })
       >
         Explain
       </button>
+      <button
+        type="button"
+        class="px-3 py-2 text-sm font-medium border-b-2 transition-colors"
+        :class="tab === 'problems' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+        data-testid="body-editor-tab-problems"
+        @click="tab = 'problems'"
+      >
+        Problems
+        <span
+          v-if="props.errors.length"
+          class="ml-1 inline-flex items-center justify-center min-w-[1.25rem] px-1 rounded-full text-xs"
+          :class="tab === 'problems' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'"
+        >
+          {{ props.errors.length }}
+        </span>
+      </button>
     </div>
     <div class="flex-1 overflow-auto" data-testid="body-editor-content">
       <StructureTab v-show="tab === 'structure'" :steps="steps" />
@@ -210,6 +246,11 @@ defineExpose({ revealPosition, insertAtCursor })
         :output="explainOutput"
         :status="explainStatus"
         @run="runExplain"
+      />
+      <ProblemsPanel
+        v-show="tab === 'problems'"
+        :errors="props.errors"
+        @select="selectProblem"
       />
     </div>
   </div>

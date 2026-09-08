@@ -20,7 +20,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  * Follows the {@link JdbcDslRunRepository} idioms: constructor injection via Lombok, named
  * parameters, and an explicit {@link RowMapper}.
  */
-//TODO: add CrudRepository to work with audit
+// TODO: add CrudRepository to work with audit
 @Deprecated
 @RequiredArgsConstructor
 public class DslAuditRepository {

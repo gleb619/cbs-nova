@@ -10,7 +10,7 @@ import java.util.List;
  * prefixed lines. Textual only — no AST awareness. Hunk count is capped; when the cap is exceeded
  * the result is marked truncated.
  */
-//TODO: remove, put to a `dsl-builder` or to `dsl-api` module
+// TODO: remove, put to a `dsl-builder` or to `dsl-api` module
 @Deprecated(forRemoval = true)
 public final class LineDiff {
 

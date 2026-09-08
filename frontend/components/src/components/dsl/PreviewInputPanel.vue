@@ -26,7 +26,7 @@ const text = computed({
 })
 
 const parseError = ref<string | null>(null)
-const mode = ref<'form' | 'json'>('json')
+const mode = ref<'form' | 'json' | 'schema'>('json')
 const formValue = ref<unknown>(undefined)
 
 const { schema, inputType, loading, error, hasSchema } = useConstructSchema({
@@ -81,14 +81,18 @@ function syncFormToJson() {
   }
 }
 
-function setMode(next: 'form' | 'json') {
+function setMode(next: 'form' | 'json' | 'schema') {
   if (next === mode.value) return
   if (next === 'form') {
     syncJsonToForm()
     mode.value = 'form'
-  } else {
-    syncFormToJson()
+  } else if (next === 'json') {
+    if (mode.value === 'form') {
+      syncFormToJson()
+    }
     mode.value = 'json'
+  } else {
+    mode.value = 'schema'
   }
 }
 
@@ -137,6 +141,12 @@ watch(
   },
 )
 
+watch(hasSchema, (available) => {
+  if (!available && mode.value === 'schema') {
+    mode.value = 'json'
+  }
+})
+
 const hasFormError = computed(() => {
   if (mode.value === 'json') return !!parseError.value
   return false
@@ -149,6 +159,7 @@ const footerStatus = computed(() => {
     return { text: `Schema unavailable — JSON only: ${error.value}`, type: 'danger' as const }
   if (loading.value) return { text: 'Loading schema…', type: 'muted' as const }
   if (mode.value === 'form') return { text: 'Form input', type: 'muted' as const }
+  if (mode.value === 'schema') return { text: 'Input schema', type: 'muted' as const }
   return { text: 'Valid JSON', type: 'muted' as const }
 })
 </script>
@@ -174,12 +185,18 @@ const footerStatus = computed(() => {
       </div>
     </header>
 
-    <div class="flex-1 min-h-0 p-3 overflow-auto">
-      <div v-if="loading" class="space-y-2" data-testid="input-skeleton">
+    <div class="flex-1 min-h-0 overflow-hidden">
+      <div v-if="loading" class="h-full overflow-auto p-3 space-y-2" data-testid="input-skeleton">
         <div v-for="i in 6" :key="i" class="h-3 bg-gray-200 rounded animate-pulse" />
       </div>
-      <div v-else-if="mode === 'form' && schema">
+      <div v-else-if="mode === 'form' && schema" class="h-full overflow-auto p-3">
         <SchemaForm :schema="schema" :model-value="formValue" @update:model-value="onFormUpdate" />
+      </div>
+      <div v-else-if="mode === 'schema'" class="h-full overflow-auto p-3">
+        <pre
+          data-testid="schema-view"
+          class="w-full h-full min-h-0 overflow-auto font-mono text-xs leading-relaxed text-ink bg-white whitespace-pre-wrap break-words"
+        >{{ JSON.stringify(schema, null, 2) }}</pre>
       </div>
       <textarea
         v-else
@@ -188,12 +205,12 @@ const footerStatus = computed(() => {
         autocomplete="off"
         autocapitalize="off"
         data-testid="json-textarea"
-        class="w-full h-full min-h-[6rem] p-0 font-mono text-xs leading-relaxed text-ink bg-white resize-none focus:outline-none focus:ring-1 focus:ring-accent-500"
+        class="w-full h-full min-h-0 p-3 font-mono text-xs leading-relaxed text-ink bg-white resize-none focus:outline-none focus:ring-1 focus:ring-accent-500"
       />
     </div>
 
     <footer class="flex items-center justify-between px-3 py-2 border-t border-line gap-3">
-      <div class="flex items-center shrink-0">
+      <div class="flex items-center shrink-0 gap-2">
         <div
           v-if="canUseForm"
           class="flex items-center border border-line rounded-sm overflow-hidden"
@@ -218,6 +235,17 @@ const footerStatus = computed(() => {
           </button>
         </div>
         <span v-else class="text-xs text-ink-muted">JSON</span>
+
+        <button
+          v-if="hasSchema"
+          type="button"
+          class="text-xs px-2 py-1 border border-line hover:bg-surface disabled:opacity-50"
+          :class="mode === 'schema' ? 'bg-accent-500 text-white' : 'text-ink'"
+          data-testid="mode-schema"
+          @click="setMode('schema')"
+        >
+          Schema
+        </button>
       </div>
 
       <div class="flex-1 min-w-0 text-center">
@@ -248,7 +276,7 @@ const footerStatus = computed(() => {
           type="button"
           class="text-xs px-2 py-1 border border-line hover:bg-surface disabled:opacity-50"
           data-testid="format-input"
-          :disabled="busy || mode === 'form'"
+          :disabled="busy || mode !== 'json'"
           @click="format"
         >
           Format
