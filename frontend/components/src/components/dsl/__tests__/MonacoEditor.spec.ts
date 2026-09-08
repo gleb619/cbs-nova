@@ -17,6 +17,14 @@ const editorInstance = {
   onDidBlurEditorText: vi.fn((cb: () => void) => blurHandlers.push(cb)),
   revealLineInCenter: vi.fn(),
   setPosition: vi.fn(),
+  getSelection: vi.fn(() => ({
+    startLineNumber: 2,
+    startColumn: 3,
+    endLineNumber: 2,
+    endColumn: 3,
+  })),
+  getPosition: vi.fn(() => ({ lineNumber: 5, column: 7 })),
+  executeEdits: vi.fn(),
 }
 
 const create = vi.fn(() => editorInstance)
@@ -203,5 +211,72 @@ describe('MonacoEditor', () => {
     expect(editorInstance.revealLineInCenter).not.toHaveBeenCalled()
     expect(editorInstance.setPosition).not.toHaveBeenCalled()
     expect(editorInstance.focus).not.toHaveBeenCalled()
+  })
+
+  it('insertAtCursor replaces the current selection and focuses the editor', async () => {
+    const wrapper = mount(MonacoEditor, { props: { modelValue: 'x' } })
+    await flush()
+
+    const editor = wrapper.vm as unknown as { insertAtCursor: (text: string) => void }
+    editor.insertAtCursor('foo')
+
+    expect(editorInstance.executeEdits).toHaveBeenCalledTimes(1)
+    const [source, edits] = editorInstance.executeEdits.mock.calls[0] as unknown as [
+      string,
+      Array<{ text: string; range: Record<string, number>; forceMoveMarkers?: boolean }>,
+    ]
+    expect(source).toBe('helper-insert')
+    expect(edits).toHaveLength(1)
+    expect(edits[0].text).toBe('foo')
+    expect(edits[0].forceMoveMarkers).toBe(true)
+    expect(edits[0].range).toEqual({
+      startLineNumber: 2,
+      startColumn: 3,
+      endLineNumber: 2,
+      endColumn: 3,
+    })
+    expect(editorInstance.focus).toHaveBeenCalled()
+  })
+
+  it('insertAtCursor falls back to the cursor position when there is no selection', async () => {
+    const wrapper = mount(MonacoEditor, { props: { modelValue: 'x' } })
+    await flush()
+
+    editorInstance.getSelection.mockReturnValueOnce(null as never)
+
+    const editor = wrapper.vm as unknown as { insertAtCursor: (text: string) => void }
+    editor.insertAtCursor('bar')
+
+    const [, edits] = editorInstance.executeEdits.mock.calls[0] as unknown as [
+      string,
+      Array<{ text: string; range: Record<string, number> }>,
+    ]
+    expect(edits[0].text).toBe('bar')
+    expect(edits[0].range).toEqual({
+      startLineNumber: 5,
+      startColumn: 7,
+      endLineNumber: 5,
+      endColumn: 7,
+    })
+  })
+
+  it('insertAtCursor is a no-op for empty text', async () => {
+    const wrapper = mount(MonacoEditor, { props: { modelValue: 'x' } })
+    await flush()
+
+    const editor = wrapper.vm as unknown as { insertAtCursor: (text: string) => void }
+    editor.insertAtCursor('')
+
+    expect(editorInstance.executeEdits).not.toHaveBeenCalled()
+    expect(editorInstance.focus).not.toHaveBeenCalled()
+  })
+
+  it('insertAtCursor is a no-op before the editor is created', () => {
+    const wrapper = mount(MonacoEditor, { props: { modelValue: 'x' } })
+
+    const editor = wrapper.vm as unknown as { insertAtCursor: (text: string) => void }
+    editor.insertAtCursor('foo')
+
+    expect(editorInstance.executeEdits).not.toHaveBeenCalled()
   })
 })

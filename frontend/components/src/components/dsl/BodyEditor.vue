@@ -135,7 +135,12 @@ function revealPosition(line: number, column = 1) {
   codeTabRef.value?.revealPosition(line, column)
 }
 
-defineExpose({ revealPosition })
+function insertAtCursor(text: string) {
+  tab.value = 'code'
+  codeTabRef.value?.insertAtCursor(text)
+}
+
+defineExpose({ revealPosition, insertAtCursor })
 </script>
 
 <template>
