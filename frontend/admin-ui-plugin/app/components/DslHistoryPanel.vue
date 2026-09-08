@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import type { DiffLine } from '@cbs/components'
 import { RunnerDiffLine, useDiffLines } from '@cbs/components'
-import { computed, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 
 export interface DefinitionHistoryEntry {
   timestamp: string
@@ -49,10 +48,9 @@ const diff = ref<HistoryDiffResponse | null>(null)
 
 const diffBefore = ref('')
 const diffAfter = ref('')
-// useDiffLines takes plain strings, so re-invoke it inside a computed to stay
-// reactive to freshly fetched content while reusing the shared LCS helper.
-const diffLines = computed<DiffLine[]>(
-  () => useDiffLines(diffBefore.value, diffAfter.value).value,
+const diffLines = useDiffLines(
+  () => diffBefore.value,
+  () => diffAfter.value,
 )
 
 const hasDiff = computed(() => diff.value !== null && !detailLoading.value)

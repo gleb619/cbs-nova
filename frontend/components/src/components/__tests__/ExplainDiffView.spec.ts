@@ -1,10 +1,14 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import ExplainDiffView from '../runner/ExplainDiffView.vue'
 
 function mountExplainDiffView(props: Record<string, unknown>) {
   return mount(ExplainDiffView, { props })
 }
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 describe('ExplainDiffView', () => {
   it('shows placeholder when runOutput is undefined', () => {
@@ -96,5 +100,40 @@ describe('ExplainDiffView', () => {
     })
 
     expect(wrapper.find('[data-testid="explain-diff-view"]').exists()).toBe(true)
+  })
+
+  it('registers and removes the resize listener once per mount cycle', async () => {
+    const addSpy = vi.spyOn(window, 'addEventListener')
+    const removeSpy = vi.spyOn(window, 'removeEventListener')
+
+    const countResize = (spy: ReturnType<typeof vi.spyOn>) =>
+      spy.mock.calls.filter(([type]) => type === 'resize').length
+
+    // First mount: +1 add, +0 remove.
+    const wrapper = mountExplainDiffView({
+      explainOutput: { a: 1 },
+      runOutput: { a: 2 },
+    })
+    const addAfterMount = countResize(addSpy)
+    const removeAfterMount = countResize(removeSpy)
+    expect(addAfterMount).toBe(1)
+    expect(removeAfterMount).toBe(0)
+
+    // First unmount: +1 remove. add count stays at 1.
+    wrapper.unmount()
+    expect(countResize(addSpy)).toBe(addAfterMount)
+    expect(countResize(removeSpy)).toBe(removeAfterMount + 1)
+
+    // Remount: another +1 add, no new remove. The two mounts never overlap.
+    const wrapper2 = mountExplainDiffView({
+      explainOutput: { a: 1 },
+      runOutput: { a: 2 },
+    })
+    expect(countResize(addSpy)).toBe(addAfterMount + 1)
+    expect(countResize(removeSpy)).toBe(removeAfterMount + 1)
+
+    wrapper2.unmount()
+    expect(countResize(addSpy)).toBe(addAfterMount + 1)
+    expect(countResize(removeSpy)).toBe(removeAfterMount + 2)
   })
 })
