@@ -118,7 +118,9 @@ pnpm install                 # install workspace dependencies
 pnpm dev                     # start admin-ui-plugin dev server (standalone)
 pnpm build                   # build admin-ui-plugin standalone
 pnpm build:components        # build component library
-pnpm test                    # run admin-ui-plugin tests
+pnpm test                    # run BOTH suites: @cbs/admin-ui-plugin + @cbs/components (--no-bail)
+pnpm test:plugin             # admin-ui-plugin suite only
+pnpm test:components         # component-library suite only
 pnpm check                   # biome lint + format check
 pnpm check:fix               # biome fix
 ```
