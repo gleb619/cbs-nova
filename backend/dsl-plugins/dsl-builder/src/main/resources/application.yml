@@ -1,0 +1,26 @@
+server:
+  port: 8091
+  shutdown: graceful
+
+spring:
+  application:
+    name: dsl-builder
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+cbs:
+  dsl:
+    builder:
+      workspace-dir: ${java.io.tmpdir}/dsl-builder
+      cleanup-interval: PT10M
+      session-ttl: PT1H
+      dsl-version: 0.0.1-SNAPSHOT
+      temporal-version: 1.27.0
+      default-build-version: v1
+      build-tasks:
+        - clean
+        - build
+      source-folders:
+        - dsl
+        - models
+      templates-dir: project/templates

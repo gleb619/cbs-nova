@@ -71,6 +71,7 @@ frontend/
 - Source of truth: `components/src/tailwind.config.ts`
 - Prefer semantic tokens: `bg-background`, `text-neutral-800`, `bg-primary-500`
 - No hard-coded colors in `admin-ui-plugin`
+- **No arbitrary color values in `.vue` files.** Forbidden: `bg-[#1F8F8A]`, `text-[#0E1116]`, `border-[rgb(...)]`, or any other inline hex/rgb/hsl bracket-syntax color. Use only existing theme tokens (e.g. `bg-red`, `bg-sky`, `text-neutral-800`, `bg-primary-500`). Need a new shade? Add it once to `components/src/tailwind.config.ts` and document it in `docs/colors.md`, then reuse by name. Singleton one-off colors are not allowed.
 
 ### Vue/Nuxt/TS
 - Use `<script setup lang="ts">` for all SFCs

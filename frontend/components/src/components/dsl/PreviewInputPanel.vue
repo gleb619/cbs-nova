@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useConstructSchema, type ConstructType } from '../../composables/useConstructSchema'
-import type { JsonSchema } from '../../types/jsonSchema'
+import {
+  type ConstructType,
+  generateFakeValue,
+  useConstructSchema,
+} from '../../composables/useConstructSchema'
 import SchemaForm from './SchemaForm.vue'
 
 const props = defineProps<{
@@ -26,19 +29,30 @@ const parseError = ref<string | null>(null)
 const mode = ref<'form' | 'json'>('json')
 const formValue = ref<unknown>(undefined)
 
-const { schema, loading, error, hasSchema } = useConstructSchema({
-  name: computed(() => props.name).value,
-  type: computed(() => props.type).value,
+const { schema, inputType, error, hasSchema } = useConstructSchema({
+  name: () => props.name,
+  type: () => props.type,
 })
 
 const canUseForm = computed(() => {
-  const ok = !loading.value && !error.value && hasSchema.value && schema.value != null
-  return ok
+  return !error.value && hasSchema.value && schema.value != null
 })
 
 function format() {
   try {
-    text.value = JSON.stringify(JSON.parse(text.value), null, 2) + '\n'
+    text.value = `${JSON.stringify(JSON.parse(text.value), null, 2)}\n`
+    parseError.value = null
+  } catch (e) {
+    parseError.value = (e as Error).message
+  }
+}
+
+function generate() {
+  if (!schema.value) return
+  const fake = generateFakeValue(schema.value)
+  formValue.value = fake
+  try {
+    text.value = `${JSON.stringify(fake ?? {}, null, 2)}\n`
     parseError.value = null
   } catch (e) {
     parseError.value = (e as Error).message
@@ -60,7 +74,7 @@ function syncJsonToForm() {
 
 function syncFormToJson() {
   try {
-    text.value = JSON.stringify(formValue.value ?? {}, null, 2) + '\n'
+    text.value = `${JSON.stringify(formValue.value ?? {}, null, 2)}\n`
     parseError.value = null
   } catch (e) {
     parseError.value = (e as Error).message
@@ -81,25 +95,25 @@ function setMode(next: 'form' | 'json') {
 function onFormUpdate(value: unknown) {
   formValue.value = value
   try {
-    text.value = JSON.stringify(value ?? {}, null, 2) + '\n'
+    text.value = `${JSON.stringify(value ?? {}, null, 2)}\n`
     parseError.value = null
   } catch (e) {
     parseError.value = (e as Error).message
   }
 }
 
-watch(
-  text,
-  (v) => {
-    if (!v.trim()) { parseError.value = null; return }
-    try {
-      JSON.parse(v)
-      parseError.value = null
-    } catch (e) {
-      parseError.value = (e as Error).message
-    }
-  },
-)
+watch(text, (v) => {
+  if (!v.trim()) {
+    parseError.value = null
+    return
+  }
+  try {
+    JSON.parse(v)
+    parseError.value = null
+  } catch (e) {
+    parseError.value = (e as Error).message
+  }
+})
 
 watch(
   () => props.name,
@@ -126,19 +140,22 @@ const hasFormError = computed(() => {
 </script>
 
 <template>
-  <section class="flex flex-col h-full min-h-0 border border-[#E1E4E8] rounded-sm bg-white">
-    <header class="flex items-center justify-between px-3 py-2 border-b border-[#E1E4E8]">
-      <div class="flex items-baseline gap-2 min-w-0">
-        <span class="text-xs text-[#5A6470]">Input</span>
-        <span class="font-mono text-xs text-[#0E1116] truncate">{{ name }}</span>
-        <span class="text-xs text-[#5A6470]">· {{ endpoint ?? 'preview' }}</span>
+  <section class="flex flex-col h-full min-h-0 border border-line rounded-sm bg-white">
+    <header class="flex items-center justify-between px-3 py-2 border-b border-line">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="text-xs font-medium text-ink">Input</span>
+        <span class="font-mono text-xs text-ink truncate">{{ inputType ?? name }}</span>
+        <span class="text-xs text-ink-muted">| {{ endpoint ?? 'preview' }}</span>
       </div>
       <div class="flex items-center gap-2 shrink-0">
-        <div v-if="canUseForm" class="flex items-center border border-[#E1E4E8] rounded-sm overflow-hidden">
+        <div
+          v-if="canUseForm"
+          class="flex items-center border border-line rounded-sm overflow-hidden"
+        >
           <button
             type="button"
             class="text-xs px-2 py-1"
-            :class="mode === 'form' ? 'bg-[#1F8F8A] text-white' : 'hover:bg-[#F4F5F7] text-[#0E1116]'"
+            :class="mode === 'form' ? 'bg-accent-500 text-white' : 'hover:bg-surface text-ink'"
             data-testid="mode-form"
             @click="setMode('form')"
           >
@@ -147,7 +164,7 @@ const hasFormError = computed(() => {
           <button
             type="button"
             class="text-xs px-2 py-1"
-            :class="mode === 'json' ? 'bg-[#1F8F8A] text-white' : 'hover:bg-[#F4F5F7] text-[#0E1116]'"
+            :class="mode === 'json' ? 'bg-accent-500 text-white' : 'hover:bg-surface text-ink'"
             data-testid="mode-json"
             @click="setMode('json')"
           >
@@ -156,8 +173,18 @@ const hasFormError = computed(() => {
         </div>
 
         <button
+          v-if="hasSchema"
           type="button"
-          class="text-xs px-2 py-1 border border-[#E1E4E8] hover:bg-[#F4F5F7] disabled:opacity-50"
+          class="text-xs px-2 py-1 border border-line hover:bg-surface disabled:opacity-50"
+          data-testid="generate-input"
+          :disabled="busy"
+          @click="generate"
+        >
+          Generate
+        </button>
+        <button
+          type="button"
+          class="text-xs px-2 py-1 border border-line hover:bg-surface disabled:opacity-50"
           :disabled="busy || mode === 'form'"
           @click="format"
         >
@@ -165,7 +192,7 @@ const hasFormError = computed(() => {
         </button>
         <button
           type="button"
-          class="text-xs px-3 py-1 bg-[#1F8F8A] text-white hover:bg-[#196E6A] disabled:opacity-50"
+          class="text-xs px-3 py-1 bg-accent-500 text-white hover:bg-accent-600 disabled:opacity-50"
           :disabled="busy || hasFormError"
           @click="emit('submit')"
         >
@@ -185,21 +212,18 @@ const hasFormError = computed(() => {
         autocomplete="off"
         autocapitalize="off"
         data-testid="json-textarea"
-        class="w-full h-full min-h-[6rem] p-0 font-mono text-xs leading-relaxed text-[#0E1116] bg-white resize-none focus:outline-none focus:ring-1 focus:ring-[#1F8F8A]"
+        class="w-full h-full min-h-[6rem] p-0 font-mono text-xs leading-relaxed text-ink bg-white resize-none focus:outline-none focus:ring-1 focus:ring-accent-500"
       />
     </div>
 
     <footer
       v-if="parseError"
-      class="px-3 py-1.5 border-t border-[#E1E4E8] text-xs font-mono text-[#B42318] truncate"
+      class="px-3 py-1.5 border-t border-line text-xs font-mono text-danger truncate"
     >
       {{ parseError }}
     </footer>
 
-    <footer
-      v-else-if="error"
-      class="px-3 py-1.5 border-t border-[#E1E4E8] text-xs text-[#B42318] truncate"
-    >
+    <footer v-else-if="error" class="px-3 py-1.5 border-t border-line text-xs text-danger truncate">
       Schema unavailable — JSON only: {{ error }}
     </footer>
   </section>

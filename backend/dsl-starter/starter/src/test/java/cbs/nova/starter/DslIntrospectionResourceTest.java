@@ -13,6 +13,7 @@ import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.starter.config.router.DslIntrospectionRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
@@ -47,7 +48,7 @@ class DslIntrospectionResourceTest {
                             .execute(ctx -> Result.success("ok")).build());
     DslIntrospectionMapper mapper = Mappers.getMapper(DslIntrospectionMapper.class);
     DslIntrospectionService service = new DslIntrospectionService(
-            DslConfig.dslConfig().jsonSchemaGenerator().get(),
+            new JacksonJsonSchemaGenerator(),
             mapper,
             new DslDefinitionStatusResolver(DslProperties.builder().build(),
                     new DslGitStatusResolver(DslProperties.builder().build())));
@@ -280,6 +281,54 @@ class DslIntrospectionResourceTest {
             .andExpect(jsonPath("$.items[?(@.name=='sampleHelper')].inputSchema").doesNotExist())
             .andExpect(jsonPath("$.items[?(@.name=='sampleFunction')].inputSchema").doesNotExist())
             .andExpect(jsonPath("$.items[?(@.name=='LoanDisbursement')].inputSchema").exists());
+  }
+
+  @Test
+  void constructSchemaEndpointReturnsInputAndOutputSchemasForProcess() throws Exception {
+    mockMvc
+            .perform(get("/api/dsl/schemas/LoanDisbursement").accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("LoanDisbursement"))
+            .andExpect(jsonPath("$.type").value("process"))
+            .andExpect(jsonPath("$.inputSchema").exists())
+            .andExpect(jsonPath("$.outputSchema").exists());
+  }
+
+  @Test
+  void constructSchemaEndpointReturnsInputAndOutputSchemasForHelper() throws Exception {
+    registerSampleEntities();
+
+    mockMvc
+            .perform(get("/api/dsl/schemas/sampleHelper").accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("sampleHelper"))
+            .andExpect(jsonPath("$.type").value("helper"))
+            .andExpect(jsonPath("$.inputType").value("String"))
+            .andExpect(jsonPath("$.outputType").value("String"))
+            .andExpect(jsonPath("$.inputSchema").exists())
+            .andExpect(jsonPath("$.outputSchema").exists());
+  }
+
+  @Test
+  void constructSchemaEndpointReturnsInputAndOutputSchemasForFunction() throws Exception {
+    registerSampleEntities();
+
+    mockMvc
+            .perform(get("/api/dsl/schemas/sampleFunction").accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("sampleFunction"))
+            .andExpect(jsonPath("$.type").value("function"))
+            .andExpect(jsonPath("$.inputType").value("String"))
+            .andExpect(jsonPath("$.outputType").value("String"))
+            .andExpect(jsonPath("$.inputSchema").exists())
+            .andExpect(jsonPath("$.outputSchema").exists());
+  }
+
+  @Test
+  void constructSchemaEndpointReturns404ForUnknown() throws Exception {
+    mockMvc
+            .perform(get("/api/dsl/schemas/Unknown").accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isNotFound());
   }
 
   @Test

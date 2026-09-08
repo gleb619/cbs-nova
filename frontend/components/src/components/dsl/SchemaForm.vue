@@ -6,6 +6,7 @@ import SchemaFormField from './SchemaFormField.vue'
 const props = defineProps<{
   schema: JsonSchema
   modelValue: unknown
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -16,7 +17,11 @@ const isObject = computed(() => props.schema.type === 'object')
 const isArray = computed(() => props.schema.type === 'array')
 
 const objectValue = computed(() => {
-  if (props.modelValue && typeof props.modelValue === 'object' && !Array.isArray(props.modelValue)) {
+  if (
+    props.modelValue &&
+    typeof props.modelValue === 'object' &&
+    !Array.isArray(props.modelValue)
+  ) {
     return props.modelValue as Record<string, unknown>
   }
   return {}
@@ -28,17 +33,20 @@ const arrayValue = computed(() => {
 })
 
 function setField(name: string, value: unknown) {
+  if (props.readonly) return
   const next = { ...objectValue.value, [name]: value }
   emit('update:modelValue', next)
 }
 
 function removeField(name: string) {
+  if (props.readonly) return
   const next = { ...objectValue.value }
   delete next[name]
   emit('update:modelValue', next)
 }
 
 function addArrayItem() {
+  if (props.readonly) return
   const itemSchema = props.schema.items
   const defaultItem = itemSchema?.type === 'object' ? {} : undefined
   const next = [...arrayValue.value, defaultItem]
@@ -46,18 +54,21 @@ function addArrayItem() {
 }
 
 function removeArrayItem(index: number) {
+  if (props.readonly) return
   const next = [...arrayValue.value]
   next.splice(index, 1)
   emit('update:modelValue', next)
 }
 
 function updateArrayItem(index: number, value: unknown) {
+  if (props.readonly) return
   const next = [...arrayValue.value]
   next[index] = value
   emit('update:modelValue', next)
 }
 
 function initializeFromDefaults() {
+  if (props.readonly) return
   if (!isObject.value || !props.schema.properties) return
   let changed = false
   const next = { ...objectValue.value }
@@ -85,10 +96,14 @@ watch(() => props.schema, initializeFromDefaults, { immediate: true })
         :schema="propSchema"
         :required="schema.required?.includes(String(key)) ?? false"
         :model-value="objectValue[key]"
+        :readonly="readonly"
         @update:model-value="setField(String(key), $event)"
         @remove="removeField(String(key))"
       />
-      <div v-if="!schema.properties || Object.keys(schema.properties).length === 0" class="text-xs text-[#5A6470]">
+      <div
+        v-if="!schema.properties || Object.keys(schema.properties).length === 0"
+        class="text-xs text-ink-muted"
+      >
         No schema properties to render.
       </div>
     </template>
@@ -98,18 +113,20 @@ watch(() => props.schema, initializeFromDefaults, { immediate: true })
         <div
           v-for="(item, index) in arrayValue"
           :key="index"
-          class="flex items-start gap-2 p-2 border border-[#E1E4E8] rounded-sm"
+          class="flex items-start gap-2 p-2 border border-line rounded-sm"
         >
           <div class="flex-1 min-w-0">
             <SchemaForm
               :schema="schema.items ?? { type: 'any' }"
               :model-value="item"
+              :readonly="readonly"
               @update:model-value="updateArrayItem(index, $event)"
             />
           </div>
           <button
+            v-if="!readonly"
             type="button"
-            class="text-xs px-2 py-1 border border-[#E1E4E8] hover:bg-[#F4F5F7] text-[#B42318]"
+            class="text-xs px-2 py-1 border border-line hover:bg-surface text-danger"
             :data-testid="`remove-array-item-${index}`"
             @click="removeArrayItem(index)"
           >
@@ -117,10 +134,11 @@ watch(() => props.schema, initializeFromDefaults, { immediate: true })
           </button>
         </div>
         <button
+          v-if="!readonly"
           type="button"
-          class="text-xs px-2 py-1 border border-[#E1E4E8] hover:bg-[#F4F5F7]"
+          class="text-xs px-2 py-1 border border-line hover:bg-surface"
           data-testid="add-array-item"
-          @click="addArrayItem"
+          @click="addArrayItem()"
         >
           + Add item
         </button>
@@ -133,6 +151,7 @@ watch(() => props.schema, initializeFromDefaults, { immediate: true })
         :schema="schema"
         :required="false"
         :model-value="modelValue"
+        :readonly="readonly"
         @update:model-value="emit('update:modelValue', $event)"
       />
     </template>

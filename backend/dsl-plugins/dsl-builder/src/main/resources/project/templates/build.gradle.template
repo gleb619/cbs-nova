@@ -1,0 +1,30 @@
+plugins {
+  id 'java'
+  id 'cbs.nova.dsl' version '__DSL_VERSION__'
+}
+
+version = '__DSL_VERSION__'
+
+repositories {
+  mavenLocal()
+  mavenCentral()
+}
+
+dependencies {
+  implementation 'cbs.nova:dsl-api:__DSL_VERSION__'
+  implementation 'cbs.nova:dsl:__DSL_VERSION__'
+  implementation 'io.avaje:avaje-jsonb:3.4'
+  annotationProcessor 'io.avaje:avaje-jsonb-generator:3.4'
+  compileOnly 'io.temporal:temporal-sdk:__TEMPORAL_VERSION__'
+
+  dslCompiler 'io.avaje:avaje-jsonb-generator:3.4'
+}
+
+dslCompile {
+  dslVersion = '__DSL_VERSION__'
+  dslPackage = '__TARGET_PACKAGE__'
+  basePackage = '__BASE_PACKAGE__'
+  buildVersion = '__BUILD_VERSION__'
+  runtimeModule = ''
+  useFileNameSubPackage = __USE_FILENAME_SUB_PACKAGE__
+}

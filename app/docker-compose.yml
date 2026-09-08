@@ -8,5 +8,6 @@ include:
   - path: ./compose/error-tracking.yml
   - path: ./compose/orchestration.yml
   - path: ./compose/app.yml
+  - path: ./compose/dsl-builder.yml
   - path: ./compose/gitea.yml
   - path: ./compose/observability.yml

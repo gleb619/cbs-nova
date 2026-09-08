@@ -5,7 +5,7 @@ import cbs.nova.starter.converter.RequestQueryConverter;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import cbs.nova.starter.service.DslIntrospectionService;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructBodyDto;
-import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
+import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaDto;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.NamesResponse;
@@ -59,6 +59,8 @@ public class DslIntrospectionRouterConfiguration {
           "DSL Introspection"}, responses = @ApiResponse(responseCode = "200", description = "Helper catalog", content = @Content(mediaType = "application/json", schema = @Schema(implementation = HelperSearchResult.class))))),
       @RouterOperation(path = "/api/dsl/constructs/{name}", beanClass = DslIntrospectionHandler.class, beanMethod = "constructBody", method = RequestMethod.GET, operation = @Operation(operationId = "getConstructBody", summary = "Get DSL construct body", tags = {
           "DSL Introspection"}, parameters = @Parameter(name = "name", in = ParameterIn.PATH), responses = @ApiResponse(responseCode = "200", description = "Construct body", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ConstructBodyDto.class))))),
+      @RouterOperation(path = "/api/dsl/schemas/{name}", beanClass = DslIntrospectionHandler.class, beanMethod = "constructSchema", method = RequestMethod.GET, operation = @Operation(operationId = "getConstructSchema", summary = "Get DSL construct input/output schemas", tags = {
+          "DSL Introspection"}, parameters = @Parameter(name = "name", in = ParameterIn.PATH), responses = @ApiResponse(responseCode = "200", description = "Construct schemas", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ConstructSchemaDto.class))))),
       @RouterOperation(path = "/api/dsl/definitions", beanClass = DslIntrospectionHandler.class, beanMethod = "definitions", method = RequestMethod.GET, operation = @Operation(operationId = "listDefinitions", summary = "List DSL definitions", tags = {
           "DSL Introspection"}, responses = @ApiResponse(responseCode = "200", description = "Definitions", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class))))),
       @RouterOperation(path = "/api/dsl/definitions/{name}/description", beanClass = DslIntrospectionHandler.class, beanMethod = "updateDescription", method = RequestMethod.PATCH, operation = @Operation(operationId = "updateDescription", summary = "Update DSL construct description", tags = {
@@ -78,6 +80,7 @@ public class DslIntrospectionRouterConfiguration {
             .GET("/api/dsl/objects/search", handler::searchObjects)
             .GET("/api/dsl/helpers", handler::helpers)
             .GET("/api/dsl/constructs/{name}", handler::constructBody)
+            .GET("/api/dsl/schemas/{name}", handler::constructSchema)
             .GET("/api/dsl/definitions", handler::definitions)
             .PATCH("/api/dsl/definitions/{name}/description", handler::updateDescription)
             .build();

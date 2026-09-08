@@ -48,6 +48,9 @@ node_modules/
 /dsl-plugins/dsl-gradle-plugin/build/
 /dsl-plugins/dsl-idea-plugin/.codegraph/
 /dsl-plugins/dsl-idea-plugin/build/
+/dsl-plugins/dsl-builder/.codegraph/
+/dsl-plugins/dsl-builder/.gradle/
+/dsl-plugins/dsl-builder/build/
 
 /dsl-starter/.gradle/
 /dsl-starter/build/

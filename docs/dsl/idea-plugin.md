@@ -20,16 +20,18 @@ Thin IntelliJ IDEA plugin so compact DSL/model sources in `src/dsl/` and `src/mo
 
 No code completion, no go-to-declaration, no refactoring, no live templates for DSL/model files.
 All compilation, validation, and code generation stays owned by `dsl-gradle-plugin`
-(`backend/dsl-gradle-plugin`) — this plugin is a sync/typing/action layer only.
+(`backend/dsl-plugins/dsl-gradle-plugin`) — this plugin is a sync/typing/action layer only.
+(The same compiler is also driven remotely by the `dsl-builder` Spring Boot service; see
+`backend/dsl-plugins/dsl-builder/README.md`.)
 
 ## Build & install
 
 ```bash
 cd backend
-./gradlew :dsl-idea-plugin:buildPlugin
+./gradlew -p dsl-plugins :dsl-idea-plugin:buildPlugin
 ```
 
-Produces a zip under `backend/dsl-idea-plugin/build/distributions/`. In IDEA: **Settings > Plugins
+Produces a zip under `backend/dsl-plugins/dsl-idea-plugin/build/distributions/`. In IDEA: **Settings > Plugins
 > ⚙ > Install Plugin from Disk...** and select the zip.
 
 ## Troubleshooting

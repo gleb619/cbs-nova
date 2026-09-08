@@ -5,6 +5,7 @@ import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
@@ -12,6 +13,7 @@ import cbs.nova.starter.converter.DslIntrospectionMapper;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructBodyDto;
+import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperCatalogEntry;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.HelpersResponse;
@@ -123,6 +125,14 @@ public class DslIntrospectionService {
     return Optional.empty();
   }
 
+  public Optional<ConstructSchemaDto> constructSchema(String name) {
+    var gm = GlobalManager.globalManager();
+    return gm.findProcess(name).map(this::toSchemaDto)
+            .or(() -> gm.findTransaction(name).map(this::toSchemaDto))
+            .or(() -> gm.describeHelper(name).map(d -> toSchemaDto(name, d)))
+            .or(() -> gm.describeFunction(name).map(this::toSchemaDto));
+  }
+
   public List<DefinitionMetaDto> definitions() {
     var gm = GlobalManager.globalManager();
     Set<String> allNames = new HashSet<>();
@@ -164,6 +174,77 @@ public class DslIntrospectionService {
     }
   }
 
+
+  private ConstructSchemaDto toSchemaDto(ProcessDslObject process) {
+    var descriptor = process.describe();
+    return toSchemaDto(
+            descriptor.name(),
+            descriptor.type().name().toLowerCase(Locale.ROOT),
+            descriptor.description(),
+            descriptor.inputType(),
+            descriptor.outputType(),
+            descriptor.parameters());
+  }
+
+  private ConstructSchemaDto toSchemaDto(TransactionDslObject transaction) {
+    var descriptor = transaction.describe();
+    return toSchemaDto(
+            descriptor.name(),
+            descriptor.type().name().toLowerCase(Locale.ROOT),
+            descriptor.description(),
+            descriptor.inputType(),
+            descriptor.outputType(),
+            descriptor.parameters());
+  }
+
+  private ConstructSchemaDto toSchemaDto(String name, ExecutableDescriptor descriptor) {
+    return toSchemaDto(
+            name,
+            "helper",
+            descriptor.description(),
+            descriptor.inputType(),
+            descriptor.outputType(),
+            descriptor.parameters());
+  }
+
+  private ConstructSchemaDto toSchemaDto(DslDescriptor descriptor) {
+    return toSchemaDto(
+            descriptor.name(),
+            descriptor.type().name().toLowerCase(Locale.ROOT),
+            descriptor.description(),
+            descriptor.inputType(),
+            descriptor.outputType(),
+            descriptor.parameters());
+  }
+
+  private ConstructSchemaDto toSchemaDto(String name, String type, String description,
+          Class<?> inputType, Class<?> outputType, List<ParameterDescriptor> parameters) {
+    Map<String, Object> inputSchema = inputType != null
+            ? jsonSchemaGenerator.generateSchema(inputType)
+            : jsonSchemaGenerator.generateSchema(parameters);
+    Map<String, Object> outputSchema = jsonSchemaGenerator.generateSchema(outputType);
+    return new ConstructSchemaDto(
+            name,
+            type,
+            mapper.typeName(inputType),
+            mapper.typeName(outputType),
+            description,
+            inputSchema,
+            outputSchema);
+  }
+
+  private Map<String, Object> schemaForInput(Class<?> type, List<ParameterDescriptor> parameters) {
+    return type != null
+            ? jsonSchemaGenerator.generateSchema(type)
+            : jsonSchemaGenerator.generateSchema(parameters);
+  }
+
+  //TODO: remove
+  @Deprecated(forRemoval = true)
+  private Map<String, Object> schemaForOutput(Class<?> type) {
+    return jsonSchemaGenerator.generateSchema(type);
+  }
+
   private boolean isRegistered(String name) {
     var gm = GlobalManager.globalManager();
     return gm.findProcess(name).isPresent()
@@ -186,16 +267,12 @@ public class DslIntrospectionService {
 
   private Map<String, Object> inputSchema(DslObject entity) {
     if (entity instanceof ProcessDslObject p) {
-      return p.inputType() != null
-              ? jsonSchemaGenerator.generateSchema(p.inputType())
-              : jsonSchemaGenerator.generateSchema(p.parameters());
+      return schemaForInput(p.inputType(), p.parameters());
     }
     if (entity instanceof TransactionDslObject t) {
-      return t.inputType() != null
-              ? jsonSchemaGenerator.generateSchema(t.inputType())
-              : jsonSchemaGenerator.generateSchema(t.parameters());
+      return schemaForInput(t.inputType(), t.parameters());
     }
-    return jsonSchemaGenerator.generateSchema((Class<?>) null);
+    return schemaForInput(null, null);
   }
 
   private HelperSearchResult toResult(DslDescriptor descriptor) {

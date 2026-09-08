@@ -1,0 +1,21 @@
+plugins {
+  id 'java'
+  alias(libs.plugins.spring.boot)
+  alias(libs.plugins.spring.dm)
+  alias(libs.plugins.test.logger)
+}
+
+dependencies {
+  implementation libs.jgit
+  implementation 'org.gradle:gradle-tooling-api:9.4.1'
+  implementation libs.bundles.spring.web
+  implementation libs.springdoc.openapi.starter.webmvc.ui
+  compileOnly libs.lombok
+  annotationProcessor libs.lombok
+  testImplementation libs.bundles.spring.test
+  testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+}
+
+springBoot {
+  mainClass = 'cbs.nova.dsl.builder.DslBuilderApplication'
+}

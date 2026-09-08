@@ -122,7 +122,7 @@ describe('SchemaForm', () => {
     const wrapper = mountSchemaForm({ schema, modelValue: {} })
     await flushPromises()
     const emitted = wrapper.emitted('update:modelValue')
-    expect(emitted?.[emitted?.length - 1]).toEqual([{ count: 7 }])
+    expect(emitted?.[emitted.length - 1]).toEqual([{ count: 7 }])
   })
 
   it('renders textarea for type any and emits parsed JSON on input', async () => {
@@ -133,7 +133,7 @@ describe('SchemaForm', () => {
     await textarea.setValue('{ "foo": 1 }')
     await flushPromises()
     const emitted = wrapper.emitted('update:modelValue')
-    expect(emitted?.[emitted?.length - 1]).toEqual([{ foo: 1 }])
+    expect(emitted?.[emitted.length - 1]).toEqual([{ foo: 1 }])
   })
 
   it('shows JSON error for invalid any textarea', async () => {
@@ -143,5 +143,46 @@ describe('SchemaForm', () => {
     await textarea.setValue('not json')
     await flushPromises()
     expect(wrapper.text()).toContain('Invalid JSON')
+  })
+
+  describe('readonly', () => {
+    it('disables all inputs when readonly', () => {
+      const wrapper = mountSchemaForm({ schema: objectSchema, modelValue: {}, readonly: true })
+      expect(wrapper.find('[data-testid="schema-field-name"]').attributes('disabled')).toBeDefined()
+      expect(wrapper.find('[data-testid="schema-field-age"]').attributes('disabled')).toBeDefined()
+      expect(
+        wrapper.find('[data-testid="schema-field-active"]').attributes('disabled'),
+      ).toBeDefined()
+      expect(wrapper.find('[data-testid="schema-field-role"]').attributes('disabled')).toBeDefined()
+    })
+
+    it('does not emit updates when readonly', async () => {
+      const wrapper = mountSchemaForm({ schema: objectSchema, modelValue: {}, readonly: true })
+      await wrapper.find('[data-testid="schema-field-name"]').setValue('alice')
+      await flushPromises()
+      expect(wrapper.emitted('update:modelValue')).toBeFalsy()
+    })
+
+    it('hides array add/remove buttons when readonly', async () => {
+      const schema = {
+        type: 'array',
+        items: { type: 'string' },
+      }
+      const wrapper = mountSchemaForm({ schema, modelValue: ['a'], readonly: true })
+      expect(wrapper.find('[data-testid="add-array-item"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="remove-array-item-0"]').exists()).toBe(false)
+    })
+
+    it('does not initialize defaults when readonly', async () => {
+      const schema = {
+        type: 'object',
+        properties: {
+          count: { type: 'number', default: 7 },
+        },
+      }
+      const wrapper = mountSchemaForm({ schema, modelValue: {}, readonly: true })
+      await flushPromises()
+      expect(wrapper.emitted('update:modelValue')).toBeFalsy()
+    })
   })
 })

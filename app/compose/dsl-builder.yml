@@ -1,0 +1,26 @@
+# DSL Builder — Spring Boot service that compiles DSL sources on demand.
+# Runs the Gradle Tooling API internally, so it has no external Temporal/
+# Postgres dependency, but shares the default compose network so the main
+# Spring app can reach it via http://dsl-builder:8091 if it wants to.
+
+services:
+  dsl-builder:
+    image: cbs-nova/dsl-builder:latest
+    build:
+      context: ../..
+      dockerfile: backend/dsl-plugins/dsl-builder/Dockerfile
+    ports:
+      - "8091:8091"
+    stop_grace_period: 35s
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      CBS_DSL_BUILDER_WORKSPACE_DIR: ${CBS_DSL_BUILDER_WORKSPACE_DIR:-/tmp/dsl-builder}
+    healthcheck:
+      # TCP probe via /dev/tcp (the JRE image strips curl/wget; see app.yml
+      # for rationale). Spring binds 8091 only once the embedded server is
+      # fully up, so this is a meaningful readiness gate.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8091 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 45s

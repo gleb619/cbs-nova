@@ -1,20 +1,17 @@
 package cbs.nova.starter.controller;
 
 import cbs.nova.starter.converter.RequestQueryConverter;
-import cbs.nova.starter.model.PageResponse;
-import cbs.nova.starter.controller.Pagination;
-import cbs.nova.starter.reporting.ExplainDiagramRenderer;
-import cbs.nova.starter.service.DslIntrospectionService;
-import cbs.nova.starter.model.DslIntrospectionModels.ConstructBodyDto;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.ProcessDiagramDto;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.servlet.function.ServerRequest;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.servlet.function.ServerResponse;
-
+import cbs.nova.starter.model.PageResponse;
+import cbs.nova.starter.reporting.ExplainDiagramRenderer;
+import cbs.nova.starter.service.DslIntrospectionService;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.servlet.function.ServerRequest;
+import org.springframework.web.servlet.function.ServerResponse;
 
 @RequiredArgsConstructor
 public class DslIntrospectionHandler {
@@ -72,6 +69,13 @@ public class DslIntrospectionHandler {
             .orElse(ServerResponse.notFound().build());
   }
 
+  public ServerResponse constructSchema(ServerRequest request) {
+    String name = request.pathVariable("name");
+    return service.constructSchema(name)
+            .map(s -> ServerResponse.ok().body(s))
+            .orElse(ServerResponse.notFound().build());
+  }
+
   public ServerResponse definitions(ServerRequest request) {
     int limit = Pagination.intParam(request, "limit", Pagination.DEFAULT_LIMIT);
     int offset = Pagination.intParam(request, "offset", Pagination.DEFAULT_OFFSET);
@@ -96,7 +100,7 @@ public class DslIntrospectionHandler {
       return ServerResponse.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("INVALID_REQUEST",
               "description is required", e.getMessage()));
     }
-    if (body == null || body.description() == null) {
+    if (body.description() == null) {
       return ServerResponse.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("INVALID_REQUEST",
               "description is required", name));
     }

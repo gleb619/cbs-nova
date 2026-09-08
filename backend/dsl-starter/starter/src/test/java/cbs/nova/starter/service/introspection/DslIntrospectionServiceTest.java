@@ -3,9 +3,14 @@ package cbs.nova.starter.service.introspection;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.Context;
+import cbs.nova.dsl.Executable;
+import cbs.nova.dsl.ExecutableDescriptor;
+import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaDto;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
@@ -26,7 +31,7 @@ class DslIntrospectionServiceTest {
     GlobalManager.globalManager().resetForTests();
     DslIntrospectionMapper mapper = Mappers.getMapper(DslIntrospectionMapper.class);
     service = new DslIntrospectionService(
-            DslConfig.dslConfig().jsonSchemaGenerator().get(),
+            new JacksonJsonSchemaGenerator(),
             mapper,
             new DslDefinitionStatusResolver(DslProperties.builder().build(),
                     new DslGitStatusResolver(DslProperties.builder().build())));
@@ -124,5 +129,92 @@ class DslIntrospectionServiceTest {
               assertThat(d.inputSchema()).isNotNull();
               assertThat(d.status()).isEqualTo(DefinitionStatus.PUBLISHED);
             });
+  }
+
+  @Test
+  void constructSchemaReturnsInputAndOutputForProcess() {
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("PSchema")
+                    .input(String.class)
+                    .output(Integer.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+
+    var dto = service.constructSchema("PSchema").orElseThrow();
+
+    assertThat(dto.type()).isEqualTo("process");
+    assertThat(dto.inputType()).isEqualTo("String");
+    assertThat(dto.outputType()).isEqualTo("Integer");
+    assertThat(dto.inputSchema()).isNotNull();
+    assertThat(dto.outputSchema()).isNotNull();
+  }
+
+  @Test
+  void constructSchemaReturnsInputAndOutputForTransaction() {
+    GlobalManager.globalManager().registerTransaction(
+            Dsl.transaction("TSchema")
+                    .input(Long.class)
+                    .output(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+
+    var dto = service.constructSchema("TSchema").orElseThrow();
+
+    assertThat(dto.type()).isEqualTo("transaction");
+    assertThat(dto.inputType()).isEqualTo("Long");
+    assertThat(dto.outputType()).isEqualTo("String");
+    assertThat(dto.inputSchema()).isNotNull();
+    assertThat(dto.outputSchema()).isNotNull();
+  }
+
+  @Test
+  void constructSchemaReturnsInputAndOutputForHelper() {
+    GlobalManager.globalManager().registerHelper("HSchema", new Executable<String, Integer>() {
+      @Override
+      public Result<Integer> execute(Context<String> ctx) {
+        return Result.success(1);
+      }
+
+      @Override
+      public ExecutableDescriptor describe() {
+        return new ExecutableDescriptor(
+                "HSchema",
+                "A helper",
+                String.class,
+                Integer.class,
+                false,
+                null,
+                java.util.List.of());
+      }
+    });
+
+    var dto = service.constructSchema("HSchema").orElseThrow();
+
+    assertThat(dto.type()).isEqualTo("helper");
+    assertThat(dto.inputType()).isEqualTo("String");
+    assertThat(dto.outputType()).isEqualTo("Integer");
+    assertThat(dto.inputSchema()).isNotNull();
+    assertThat(dto.outputSchema()).isNotNull();
+  }
+
+  @Test
+  void constructSchemaReturnsInputSchemaForParameterBasedFunction() {
+    GlobalManager.globalManager().registerFunction(
+            Dsl.function("FSchema")
+                    .parameters(p -> p.string("greeting"))
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+
+    var dto = service.constructSchema("FSchema").orElseThrow();
+
+    assertThat(dto.type()).isEqualTo("function");
+    assertThat(dto.inputSchema()).isNotNull();
+    assertThat(dto.inputSchema()).containsKey("properties");
+    assertThat((java.util.Map<String, Object>) dto.inputSchema().get("properties")).containsKey("greeting");
+  }
+
+  @Test
+  void constructSchemaReturnsEmptyForUnknown() {
+    assertThat(service.constructSchema("NoSuchConstruct")).isEmpty();
   }
 }

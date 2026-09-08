@@ -77,6 +77,17 @@ export default {
           900: '#2e3a40',
         },
         background: '#f8f8f6',
+        accent: {
+          500: '#1F8F8A',
+          600: '#196E6A',
+        },
+        ink: {
+          DEFAULT: '#0E1116',
+          muted: '#5A6470',
+        },
+        line: '#E1E4E8',
+        surface: '#F4F5F7',
+        danger: '#B42318',
       },
     },
   },

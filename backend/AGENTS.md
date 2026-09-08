@@ -26,7 +26,8 @@ backend/
 │   └── misc-codegen/        # SPI generator for `@Helper` classes
 ├── dsl-plugins/             # Parent build for tooling plugins
 │   ├── dsl-gradle-plugin/   # Standalone Gradle plugin that compiles DSL sources
-│   └── dsl-idea-plugin/     # IntelliJ IDEA support plugin
+│   ├── dsl-idea-plugin/     # IntelliJ IDEA support plugin
+│   └── dsl-builder/         # Spring Boot service: compiles DSL sources via Gradle (Tooling API) + JGit
 └── dsl-starter/             # Parent build for runtime + examples
     ├── dsl-examples/        # JEP-512 compact DSL source files (no class/package/public)
     ├── starter/             # Spring Boot starter & REST surface (e.g. POST /api/dsl/reload)
@@ -51,7 +52,11 @@ backend/
 - `DefinitionLoader` uses the same preprocessor when a configured source directory contains `.java` files; otherwise it
   loads definitions from the classpath via `ServiceLoader`.
 - `dsl-gradle-plugin` provides a standalone Gradle plugin (`cbs.nova.dsl`) that compacts DSL sources. It resolves the
-  compiler runtime from Maven Local using configurable `dslVersion`. See `backend/dsl-gradle-plugin/README.md`.
+  compiler runtime from Maven Local using configurable `dslVersion`. See `backend/dsl-plugins/dsl-gradle-plugin/README.md`.
+- `dsl-builder` is a Spring Boot service (port 8091) that compiles DSL sources on demand: it stages a session
+  workspace, renders Gradle build templates that apply `dsl-gradle-plugin`, optionally clones sources from a Git
+  repo (JGit), runs the build via the Gradle Tooling API, and exposes `POST /api/dsl/compile` +
+  `GET /api/dsl/compile/{id}/download` (zip of generated sources). See `backend/dsl-plugins/dsl-builder/README.md`.
 - **Call Hierarchy constraints**:
     - **Process** can call: Transactions, Helpers, Functions (never Processes).
     - **Transaction / Function / Helper / Compensation** can call: Helpers, Functions (never Processes/Transactions).
@@ -127,7 +132,7 @@ You can also run each sub-build directly:
 ```bash
 ./gradlew -p dsl-platform build     # Build DSL platform modules
 ./gradlew -p dsl-platform test      # Run DSL platform tests
-./gradlew -p dsl-plugins build      # Build DSL Gradle + IDEA plugins
+./gradlew -p dsl-plugins build      # Build DSL Gradle + IDEA plugins + builder service
 ./gradlew -p dsl-starter build      # Build starter, launcher and DSL examples
 ./gradlew -p dsl-platform spotlessCheck
 ./gradlew -p dsl-platform spotlessApply

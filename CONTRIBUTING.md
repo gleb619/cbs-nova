@@ -16,14 +16,19 @@ example, the kanban task workflow, and the commit convention.
 
 ```
 backend/
-├── dsl-api/              # Base contracts, registries & context interfaces (zero dep)
-├── dsl/                  # Runtime: registries, runners, managers, context, result
-├── dsl-codegen/          # Annotation processor → Temporal workflows/activities
-├── dsl-examples/         # Compact DSL source files (process/transaction examples)
-├── starter/              # Spring Boot starter, REST surface, built-in @Helpers
-├── dsl-gradle-plugin/    # Standalone Gradle plugin for DSL compilation
-├── misc-codegen/         # SPI generator for @Helper classes
-└── dsl-idea-plugin/      # IntelliJ IDEA plugin (experimental)
+├── dsl-platform/         # Parent build for the DSL platform
+│   ├── dsl-api/          # Base contracts, registries & context interfaces (zero dep)
+│   ├── dsl/              # Runtime: registries, runners, managers, context, result
+│   ├── dsl-codegen/      # Annotation processor → Temporal workflows/activities
+│   └── misc-codegen/     # SPI generator for @Helper classes
+├── dsl-plugins/          # Parent build for tooling plugins
+│   ├── dsl-gradle-plugin/    # Standalone Gradle plugin for DSL compilation
+│   ├── dsl-idea-plugin/      # IntelliJ IDEA plugin (experimental)
+│   └── dsl-builder/          # Spring Boot service: on-demand DSL compilation via Tooling API + JGit
+└── dsl-starter/          # Parent build for runtime + examples
+    ├── dsl-examples/     # Compact DSL source files (process/transaction examples)
+    ├── starter/          # Spring Boot starter, REST surface, built-in @Helpers
+    └── starter-launcher/ # Example Spring Boot host for the starter
 
 frontend/
 ├── admin-ui-plugin/      # Nuxt module — mounts the admin UI + Nitro BFF
@@ -38,7 +43,8 @@ docs/
 └── plans/                    # Detailed plan files per task (<ID>-*.md)
 ```
 
-Backend modules are declared in `backend/settings.gradle:25-32`. All modules are
+Backend modules live in three independent Gradle sub-builds (`dsl-platform`, `dsl-plugins`,
+`dsl-starter`), coordinated by the root `backend/build.gradle` delegate tasks. All modules are
 cross-referenced in [`backend/AGENTS.md`](backend/AGENTS.md#1-project-map--architecture).
 
 ---
@@ -61,29 +67,31 @@ cross-referenced in [`backend/AGENTS.md`](backend/AGENTS.md#1-project-map--archi
 
 ### Backend
 
-Run all commands from `backend/`.
+Run all commands from `backend/`. `./gradlew build` / `./gradlew test` delegate to the
+three sub-builds in order (platform → plugins → starter).
 
 ```bash
-./gradlew build                    # build + code generation
+./gradlew build                    # build + code generation (all sub-builds)
 ./gradlew test                     # all module tests
 ./gradlew spotlessApply            # format code (required before commit)
 ```
 
-Per module:
+Per module (each sub-build has its own Gradle wrapper invocation):
 
 ```bash
-./gradlew :dsl-api:test            # base contracts
-./gradlew :dsl:test                # runtime
-./gradlew :dsl-codegen:test        # code generation
-./gradlew :dsl-examples:build      # DSL examples (compile-validated)
-./gradlew :starter:test            # Spring Boot starter
-./gradlew :starter:bootRun         # run the backend server (hot-reload)
-./gradlew :dsl-gradle-plugin:test  # Gradle plugin
-./gradlew :misc-codegen:test       # SPI generator
+./gradlew -p dsl-platform :dsl-api:test        # base contracts
+./gradlew -p dsl-platform :dsl:test            # runtime
+./gradlew -p dsl-platform :dsl-codegen:test    # code generation
+./gradlew -p dsl-starter :dsl-examples:build   # DSL examples (compile-validated)
+./gradlew -p dsl-starter :starter:test         # Spring Boot starter
+./gradlew -p dsl-starter :starter:bootRun      # run the backend server (hot-reload)
+./gradlew -p dsl-plugins :dsl-gradle-plugin:test  # Gradle plugin
+./gradlew -p dsl-plugins :dsl-builder:test        # DSL builder service
+./gradlew -p dsl-platform :misc-codegen:test   # SPI generator
 ```
 
-The full module list is in `backend/settings.gradle`; each module name maps to a
-`:`-prefixed Gradle path.
+Each module name maps to its directory under `dsl-platform/`, `dsl-plugins/`, or
+`dsl-starter/` and is invoked with `-p <sub-build> :<module>:<task>`.
 
 ### Frontend
 
@@ -230,7 +238,9 @@ If the example defines custom In/Out records, place them under
 
 The `dsl-gradle-plugin` compiles compact sources, aggregates them via
 `ServiceLoader`, and validates them at build time. No manual registration is
-required.
+required. The same compilation is also exposed as an on-demand REST service by
+`dsl-plugins/dsl-builder` (no local Gradle setup needed) — see
+[`backend/dsl-plugins/dsl-builder/README.md`](backend/dsl-plugins/dsl-builder/README.md).
 
 Real examples to reference:
 - [`HelperPipelineDsl.java`](backend/dsl-examples/src/dsl/HelperPipelineDsl.java)

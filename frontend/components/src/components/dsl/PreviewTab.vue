@@ -113,7 +113,7 @@ watch(inputJson, (v) => {
 </script>
 
 <template>
-  <div class="h-full p-3 bg-[#F4F5F7]">
+  <div class="h-full p-3 bg-surface">
     <div class="grid gap-3 h-full min-h-0 md:grid-cols-2 grid-cols-1">
       <PreviewInputPanel
         v-model="inputPanelModel"
@@ -123,7 +123,13 @@ watch(inputJson, (v) => {
         :busy="status === 'loading'"
         @submit="run"
       />
-      <PreviewResultPanel :output="output" :status="status" :endpoint="endpoint" />
+      <PreviewResultPanel
+        :output="output"
+        :status="status"
+        :endpoint="endpoint"
+        :name="name"
+        :type="type"
+      />
     </div>
   </div>
 </template>

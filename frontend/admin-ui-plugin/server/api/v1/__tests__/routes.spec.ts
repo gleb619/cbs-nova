@@ -88,18 +88,17 @@ const listHistoryHandler = (await import('../dsl/drafts/[name]/history/index.get
 const restoreHistoryHandler = (
   await import('../dsl/drafts/[name]/history/[timestamp]/restore.post')
 ).default
-const historyEntryHandler = (
-  await import('../dsl/drafts/[name]/history/[timestamp]/index.get')
-).default
-const historyDiffHandler = (
-  await import('../dsl/drafts/[name]/history/[timestamp]/diff.get')
-).default
+const historyEntryHandler = (await import('../dsl/drafts/[name]/history/[timestamp]/index.get'))
+  .default
+const historyDiffHandler = (await import('../dsl/drafts/[name]/history/[timestamp]/diff.get'))
+  .default
 const helpersIndexHandler = (await import('../dsl/helpers/index.get')).default
 const processesIndexHandler = (await import('../dsl/processes/index.get')).default
 const processDetailHandler = (await import('../dsl/processes/[name].get')).default
 const transactionsIndexHandler = (await import('../dsl/transactions/index.get')).default
 const transactionDetailHandler = (await import('../dsl/transactions/[name].get')).default
 const constructBodyHandler = (await import('../dsl/constructs/[name].get')).default
+const constructSchemaHandler = (await import('../dsl/schemas/[name].get')).default
 const processDiagramHandler = (await import('../dsl/processes/[name]/diagram.get')).default
 const schedulesIndexHandler = (await import('../dsl/schedules/index.get')).default
 const schedulesCreateHandler = (await import('../dsl/schedules/index.post')).default
@@ -179,12 +178,9 @@ describe('dsl/definitions.get', () => {
     // BFF is a thin passthrough — the paged envelope is produced by the
     // backend DslIntrospectionHandler. See T382.
     expect(result).toEqual(aggregated)
-    expect((result as { items?: Array<{ type: string }> }).items?.map((d) => d.type).sort()).toEqual([
-      'function',
-      'helper',
-      'process',
-      'transaction',
-    ])
+    expect(
+      (result as { items?: Array<{ type: string }> }).items?.map((d) => d.type).sort(),
+    ).toEqual(['function', 'helper', 'process', 'transaction'])
   })
 })
 
@@ -678,6 +674,34 @@ describe('dsl/constructs/[name].get', () => {
     expect(result).toEqual(payload)
   })
 })
+
+describe('dsl/schemas/[name].get', () => {
+  it('interpolates the :name router param into the backend path with GET (no opts)', async () => {
+    routerParams = { name: 'LoanDisbursement' }
+
+    await constructSchemaHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/schemas/LoanDisbursement')
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+
+  it('returns the backend ConstructSchemaDto verbatim', async () => {
+    routerParams = { name: 'SampleProcess' }
+    const payload = {
+      name: 'SampleProcess',
+      type: 'process',
+      inputSchema: { type: 'object', properties: {} },
+      outputSchema: { type: 'object', properties: {} },
+    }
+    proxyToBackendMock.mockResolvedValueOnce(payload)
+
+    const result = await constructSchemaHandler(fakeEvent)
+
+    expect(result).toEqual(payload)
+  })
+})
+
 describe('dsl/transactions/index.get', () => {
   it('GETs /api/dsl/transactions with no body and no opts', async () => {
     await transactionsIndexHandler(fakeEvent)
@@ -1004,10 +1028,14 @@ describe('dsl/files/[...path].post', () => {
     await writeDslFilePathHandler(fakeEvent)
 
     expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
-    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/files/flows/LoanDsl.java', {
-      method: 'POST',
-      body: { content: 'public class LoanDsl {}' },
-    })
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/files/flows/LoanDsl.java',
+      {
+        method: 'POST',
+        body: { content: 'public class LoanDsl {}' },
+      },
+    )
   })
 })
 

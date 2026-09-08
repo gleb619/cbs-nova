@@ -17,6 +17,7 @@ rootProject.name = 'cbs-nova-dsl-plugins'
 
 include 'dsl-gradle-plugin'
 include 'dsl-idea-plugin'
+include 'dsl-builder'
 
 dependencyResolutionManagement {
   versionCatalogs {
@@ -28,6 +29,9 @@ dependencyResolutionManagement {
   repositories {
     mavenLocal()
     mavenCentral()
+    maven {
+      url = 'https://repo.gradle.org/gradle/libs-releases'
+    }
     intellijPlatform {
       defaultRepositories()
     }

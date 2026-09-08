@@ -1,8 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import PreviewTab from '../dsl/PreviewTab.vue'
-import PreviewInputPanel from '../dsl/PreviewInputPanel.vue'
 import { __resetConstructSchemaCache } from '../../composables/useConstructSchema'
+import PreviewTab from '../dsl/PreviewTab.vue'
 
 function mountTab(props: Record<string, unknown> = {}) {
   return mount(PreviewTab, {
@@ -18,10 +17,11 @@ function mountTab(props: Record<string, unknown> = {}) {
               </header>
               <div data-testid="runner-result-tab">{{ output !== undefined ? JSON.stringify(output) : 'No result yet.' }}</div>
             </section>`,
-          props: ['output', 'status', 'endpoint'],
+          props: ['output', 'status', 'endpoint', 'name', 'type'],
         },
         ResultTab: {
-          template: '<div data-testid="runner-result-tab">{{ result !== undefined ? JSON.stringify(result) : "No result yet." }}</div>',
+          template:
+            '<div data-testid="runner-result-tab">{{ result !== undefined ? JSON.stringify(result) : "No result yet." }}</div>',
           props: ['result'],
         },
       },
@@ -37,6 +37,12 @@ const schemaResponse = {
       count: { type: 'number' },
     },
     required: ['name'],
+  },
+  outputSchema: {
+    type: 'object',
+    properties: {
+      result: { type: 'string' },
+    },
   },
 }
 
@@ -70,12 +76,18 @@ describe('PreviewTab', () => {
 
     const wrapper = mountTab()
     await wrapper.find('[data-testid="json-textarea"]').setValue('{"a":1}')
-    await wrapper.findAll('button').find((b) => b.text() === 'Run')!.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Run')!
+      .trigger('click')
     await flushPromises()
 
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v1/dsl/preview/demo',
-      expect.objectContaining({ method: 'POST', body: { body: { a: 1 }, metadata: { startedFrom: 'workbench' } } }),
+      expect.objectContaining({
+        method: 'POST',
+        body: { body: { a: 1 }, metadata: { startedFrom: 'workbench' } },
+      }),
     )
     expect(wrapper.text()).toContain('done')
   })
@@ -89,7 +101,10 @@ describe('PreviewTab', () => {
 
     const wrapper = mountTab()
     await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
-    await wrapper.findAll('button').find((b) => b.text() === 'Run')!.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Run')!
+      .trigger('click')
     await flushPromises()
 
     expect(wrapper.text()).toContain('preview failed')
@@ -113,7 +128,10 @@ describe('PreviewTab', () => {
 
     const wrapper = mountTab()
     await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
-    await wrapper.findAll('button').find((b) => b.text() === 'Run')!.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Run')!
+      .trigger('click')
     await flushPromises()
 
     // Result panel must show the upstream error rather than "No result yet".
@@ -134,7 +152,10 @@ describe('PreviewTab', () => {
 
     const wrapper = mountTab()
     await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
-    await wrapper.findAll('button').find((b) => b.text() === 'Run')!.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Run')!
+      .trigger('click')
     await flushPromises()
 
     expect(wrapper.text()).toContain('Backend request timed out')
@@ -147,13 +168,13 @@ describe('PreviewTab', () => {
 
     const wrapper = mountTab({ endpoint: 'explain' })
     await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
-    await wrapper.findAll('button').find((b) => b.text() === 'Run')!.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Run')!
+      .trigger('click')
     await flushPromises()
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/dsl/explain/demo',
-      expect.any(Object),
-    )
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/explain/demo', expect.any(Object))
   })
 
   it('fetches schema when type is Process and renders Form toggle', async () => {
@@ -162,7 +183,7 @@ describe('PreviewTab', () => {
 
     const wrapper = mountTab({ type: 'Process' })
     await flushPromises()
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/processes/demo')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/demo')
     expect(wrapper.find('[data-testid="mode-form"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="mode-json"]').exists()).toBe(true)
   })
@@ -181,12 +202,18 @@ describe('PreviewTab', () => {
     await wrapper.find('[data-testid="schema-field-count"]').setValue('3')
     await flushPromises()
 
-    await wrapper.findAll('button').find((b) => b.text() === 'Run')!.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Run')!
+      .trigger('click')
     await flushPromises()
 
     expect(fetchMock).toHaveBeenLastCalledWith(
       '/api/v1/dsl/preview/demo',
-      expect.objectContaining({ method: 'POST', body: { body: { name: 'alice', count: 3 }, metadata: { startedFrom: 'workbench' } } }),
+      expect.objectContaining({
+        method: 'POST',
+        body: { body: { name: 'alice', count: 3 }, metadata: { startedFrom: 'workbench' } },
+      }),
     )
   })
 
@@ -203,5 +230,33 @@ describe('PreviewTab', () => {
     // Error path forces JSON-only; no toggle rendered
     expect(wrapper.find('[data-testid="mode-form"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="json-textarea"]').exists()).toBe(true)
+  })
+
+  it('reacts to name change and fetches new schema', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(schemaResponse)
+    vi.stubGlobal('$fetch', fetchMock)
+
+    const wrapper = mountTab({ type: 'Process' })
+    await flushPromises()
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/demo')
+
+    fetchMock.mockClear()
+    await wrapper.setProps({ name: 'other' })
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/other')
+  })
+
+  it('renders input type name from schema endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ...schemaResponse,
+      inputType: 'BatchIn',
+    })
+    vi.stubGlobal('$fetch', fetchMock)
+
+    const wrapper = mountTab({ type: 'Process' })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('BatchIn')
   })
 })

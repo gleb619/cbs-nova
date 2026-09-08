@@ -30,6 +30,17 @@ public final class DslIntrospectionModels {
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
+  public record ConstructSchemaDto(
+          String name,
+          String type,
+          String inputType,
+          String outputType,
+          String description,
+          Map<String, Object> inputSchema,
+          Map<String, Object> outputSchema) {
+  }
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public record HelperCatalogEntry(
           String name,
           String description,

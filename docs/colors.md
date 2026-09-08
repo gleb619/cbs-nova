@@ -238,6 +238,23 @@ Use these color roles consistently across the UI.
 ## 8. Design Principles
 
 - **Harmony:** All colors are derived from the same warm base to ensure visual unity.
+
+---
+
+## 11. Workbench Tokens (DSL Runner UI)
+
+Saturated accents used by the DSL preview/workbench panels. Reuse by class name — never inline hex.
+
+| Role | Tailwind Class | Hex |
+|---|---|---|
+| Accent | `bg-accent-500` / `text-accent-500` / `ring-accent-500` | `#1F8F8A` |
+| Accent hover | `bg-accent-600` | `#196E6A` |
+| Ink (primary text) | `text-ink` | `#0E1116` |
+| Muted text | `text-ink-muted` | `#5A6470` |
+| Border | `border-line` | `#E1E4E8` |
+| Hover / disabled surface | `bg-surface` | `#F4F5F7` |
+| Danger | `text-danger` / `border-danger` | `#B42318` |
+
 - **Clarity:** Semantic colors are distinct but muted to avoid visual clutter in data-heavy interfaces.
 - **Accessibility:** Contrast ratios are intentionally checked for readability.
 - **Flexibility:** The 10‑shade system provides enough variation for hover, active, and disabled states without
