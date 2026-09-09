@@ -86,6 +86,7 @@ dependencies {
 
   testImplementation libs.springdoc.openapi.starter.webmvc.ui
   testImplementation libs.spring.boot.starter.actuator
+  testImplementation libs.micrometer.registry.prometheus
   testImplementation libs.bundles.spring.web
   testImplementation libs.bundles.spring.test
   testImplementation libs.jqwik

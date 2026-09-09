@@ -20,6 +20,11 @@ management:
       enabled: true
     build:
       enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
   endpoint:
     health:
       probes:
