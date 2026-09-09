@@ -289,6 +289,13 @@ test-backend: ## Run the backend (starter) test suite
 test-frontend: ## Run the frontend (admin-ui-plugin) test suite
 	cd frontend && pnpm test
 
+.PHONY: typecheck-frontend
+typecheck-frontend: ## Typecheck the frontend packages
+	cd frontend && pnpm typecheck
+
+.PHONY: typecheck
+typecheck: typecheck-frontend ## Typecheck frontend (TODO: add backend typecheck later)
+
 .PHONY: test
 test: ## Run backend + frontend test suites (both always run; nonzero exit if any fail)
 	@printf '\n==> Running backend + frontend test suites...\n\n'; \

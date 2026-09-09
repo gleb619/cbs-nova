@@ -50,6 +50,11 @@ jobs:
         working-directory: frontend
         run: pnpm install
 
+      - name: Typecheck frontend
+        working-directory: frontend
+        run: pnpm typecheck
+        continue-on-error: true
+
       - name: Test frontend
         working-directory: frontend
         run: pnpm test
