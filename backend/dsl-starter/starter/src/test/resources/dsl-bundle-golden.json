@@ -1,0 +1,28 @@
+{
+  "formatVersion": 1,
+  "engineVersion": "golden",
+  "exportedAt": "2026-01-01T00:00:00Z",
+  "definitions": [
+    {
+      "definition": {
+        "name": "Alpha",
+        "type": "process",
+        "status": "Published",
+        "version": "1",
+        "taskQueue": "q"
+      },
+      "source": "published"
+    },
+    {
+      "definition": {
+        "name": "Beta",
+        "type": "transaction",
+        "status": "Published",
+        "version": "2",
+        "taskQueue": "q"
+      },
+      "source": "published"
+    }
+  ],
+  "digest": "6bdd5a95547aae66f077ef562ebb0742df7951565cb4ad1555a08355180e0f36"
+}

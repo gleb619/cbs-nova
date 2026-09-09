@@ -447,10 +447,23 @@ public class DslDraftHandler {
 
     try {
       bundleService.validateForImport(bundle);
+      bundleService.verifyDigest(bundle);
     } catch (IllegalArgumentException e) {
+      String raw = e.getMessage();
+      String code = "BAD_REQUEST";
+      String detail = raw;
+      if (raw != null && raw.startsWith("BUNDLE_DIGEST_")) {
+        int sep = raw.indexOf(':');
+        if (sep > 0) {
+          code = raw.substring(0, sep);
+          detail = raw.substring(sep + 1).trim();
+        } else {
+          code = raw;
+          detail = raw;
+        }
+      }
       log.warn("[DSL bundle] import validation failed: {}", e.getMessage());
-      return error(HttpStatus.BAD_REQUEST,
-              new ErrorResponse("BAD_REQUEST", e.getMessage(), null, null, null));
+      return error(HttpStatus.BAD_REQUEST, new ErrorResponse(code, detail, null, null, null));
     }
 
     if (bundle.definitions().size() > BUNDLE_MAX_DEFINITIONS) {
@@ -460,13 +473,15 @@ public class DslDraftHandler {
     }
 
     if (dryRun) {
-      List<ImportEntryResult> results = bundle.definitions().stream()
-              .map(e -> new ImportEntryResult(e.definition().name(), "skipped", "dry run"))
-              .toList();
-      ImportBundleResult result = new ImportBundleResult(true, false, bundle.definitions().size(),
-              0,
+      List<ImportEntryResult> results = bundleService.diffForImport(dir.path(), bundle);
+      int published = (int) results.stream()
+              .filter(r -> "created".equals(r.outcome()) || "updated".equals(r.outcome()))
+              .count();
+      int failed = (int) results.stream().filter(r -> "skipped".equals(r.outcome())).count();
+      ImportBundleResult result = new ImportBundleResult(true, false, published, failed,
               results, null, null);
-      log.info("[DSL bundle] dry-run import of {} definitions", bundle.definitions().size());
+      log.info("[DSL bundle] dry-run import preview: {} created/updated, {} skipped",
+              published, failed);
       return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(result);
     }
 
