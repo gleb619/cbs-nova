@@ -1,4 +1,4 @@
-import { computed, type MaybeRefOrGetter, ref, toValue, watch } from 'vue'
+import { computed, type InjectionKey, inject, type MaybeRefOrGetter, ref, toValue, watch } from 'vue'
 import type { JsonSchema } from '../types/jsonSchema'
 
 export type ConstructType = 'Process' | 'Transaction' | 'Helper' | 'Function'
@@ -6,10 +6,9 @@ export type ConstructType = 'Process' | 'Transaction' | 'Helper' | 'Function'
 const cache = new Map<string, JsonSchema>()
 const outputCache = new Map<string, JsonSchema>()
 
-export interface UseConstructSchemaOptions {
-  name: MaybeRefOrGetter<string>
-  type: MaybeRefOrGetter<ConstructType | undefined>
-}
+export const DSL_SCHEMA_FETCH_KEY: InjectionKey<(url: string) => Promise<unknown>> = Symbol(
+  'cbs-nova:dsl-schema-fetch',
+)
 
 export function __resetConstructSchemaCache() {
   cache.clear()
@@ -73,6 +72,8 @@ export function useConstructSchema({ name: nameRef, type: typeRef }: UseConstruc
   const loading = ref(false)
   const error = ref<string | null>(null)
 
+  const schemaFetch = inject(DSL_SCHEMA_FETCH_KEY, null)
+
   const hasKnownEndpoint = computed(
     () =>
       type.value === 'Process' ||
@@ -106,6 +107,15 @@ export function useConstructSchema({ name: nameRef, type: typeRef }: UseConstruc
       error.value = null
       return
     }
+    if (!schemaFetch) {
+      error.value = 'Schema fetcher is not provided. Register the DSL schema fetch plugin.'
+      inputSchema.value = null
+      outputSchema.value = null
+      inputType.value = null
+      outputType.value = null
+      loading.value = false
+      return
+    }
     const key = cacheKey()
     const cached = cache.get(key)
     if (cached) {
@@ -123,7 +133,7 @@ export function useConstructSchema({ name: nameRef, type: typeRef }: UseConstruc
     inputType.value = null
     outputType.value = null
     try {
-      const response = (await $fetch(endpoint())) as {
+      const response = (await schemaFetch(endpoint())) as {
         inputSchema?: JsonSchema | null
         outputSchema?: JsonSchema | null
         inputType?: string | null
@@ -198,4 +208,9 @@ function hasUsefulSchema(s: JsonSchema | null): boolean {
     return !!s.items
   }
   return true
+}
+
+export interface UseConstructSchemaOptions {
+  name: MaybeRefOrGetter<string>
+  type: MaybeRefOrGetter<ConstructType | undefined>
 }

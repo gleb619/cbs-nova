@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ref } from 'vue'
+import { defineComponent, h, ref } from 'vue'
+import { mount } from '@vue/test-utils'
 import {
   __resetConstructSchemaCache,
+  DSL_SCHEMA_FETCH_KEY,
   generateFakeValue,
   useConstructSchema,
 } from '../useConstructSchema'
@@ -12,21 +14,38 @@ function waitForNextTick() {
   return new Promise((resolve) => setTimeout(resolve, 0))
 }
 
+function mountUseConstructSchema(
+  options: Parameters<typeof useConstructSchema>[0],
+  providedFetch: typeof fetchMock = fetchMock,
+) {
+  let result: ReturnType<typeof useConstructSchema> | undefined
+  const Comp = defineComponent({
+    setup() {
+      result = useConstructSchema(options)
+      return () => h('div')
+    },
+  })
+  mount(Comp, {
+    global: {
+      provide: { [DSL_SCHEMA_FETCH_KEY as symbol]: providedFetch },
+    },
+  })
+  return result as ReturnType<typeof useConstructSchema>
+}
+
 describe('useConstructSchema', () => {
   beforeEach(() => {
     __resetConstructSchemaCache()
     fetchMock = vi.fn()
-    vi.stubGlobal('$fetch', fetchMock)
   })
 
   afterEach(() => {
-    vi.unstubAllGlobals()
     vi.resetModules()
   })
 
   it('fetches process schema on mount', async () => {
     fetchMock.mockResolvedValue({ inputSchema: { type: 'object', properties: {} } })
-    const { schema, loading } = useConstructSchema({ name: 'Demo', type: 'Process' })
+    const { schema, loading } = mountUseConstructSchema({ name: 'Demo', type: 'Process' })
     await waitForNextTick()
     await waitForNextTick()
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Demo')
@@ -36,7 +55,7 @@ describe('useConstructSchema', () => {
 
   it('fetches transaction schema when type is Transaction', async () => {
     fetchMock.mockResolvedValue({ inputSchema: { type: 'object', properties: {} } })
-    const { schema } = useConstructSchema({ name: 'Tx', type: 'Transaction' })
+    const { schema } = mountUseConstructSchema({ name: 'Tx', type: 'Transaction' })
     await waitForNextTick()
     await waitForNextTick()
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Tx')
@@ -44,7 +63,7 @@ describe('useConstructSchema', () => {
   })
 
   it('returns null schema for unsupported types', async () => {
-    const { schema, loading } = useConstructSchema({ name: 'H' })
+    const { schema, loading } = mountUseConstructSchema({ name: 'H' })
     await waitForNextTick()
     await waitForNextTick()
     expect(fetchMock).not.toHaveBeenCalled()
@@ -56,7 +75,7 @@ describe('useConstructSchema', () => {
     fetchMock.mockResolvedValue({
       inputSchema: { type: 'object', properties: { greeting: { type: 'string' } } },
     })
-    const { schema } = useConstructSchema({ name: 'HelperA', type: 'Helper' })
+    const { schema } = mountUseConstructSchema({ name: 'HelperA', type: 'Helper' })
     await waitForNextTick()
     await waitForNextTick()
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/HelperA')
@@ -65,7 +84,7 @@ describe('useConstructSchema', () => {
 
   it('fetches function schema from new schema endpoint', async () => {
     fetchMock.mockResolvedValue({ inputSchema: { type: 'string' } })
-    const { schema } = useConstructSchema({ name: 'FnA', type: 'Function' })
+    const { schema } = mountUseConstructSchema({ name: 'FnA', type: 'Function' })
     await waitForNextTick()
     await waitForNextTick()
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/FnA')
@@ -77,7 +96,10 @@ describe('useConstructSchema', () => {
       inputSchema: { type: 'object', properties: { name: { type: 'string' } } },
       outputSchema: { type: 'object', properties: { id: { type: 'number' } } },
     })
-    const { inputSchema, outputSchema } = useConstructSchema({ name: 'Demo', type: 'Process' })
+    const { inputSchema, outputSchema } = mountUseConstructSchema({
+      name: 'Demo',
+      type: 'Process',
+    })
     await waitForNextTick()
     await waitForNextTick()
     expect(inputSchema.value).toBeTruthy()
@@ -92,7 +114,7 @@ describe('useConstructSchema', () => {
       inputType: 'BatchIn',
       outputType: 'BatchOut',
     })
-    const { inputType, outputType } = useConstructSchema({ name: 'Demo', type: 'Process' })
+    const { inputType, outputType } = mountUseConstructSchema({ name: 'Demo', type: 'Process' })
     await waitForNextTick()
     await waitForNextTick()
     expect(inputType.value).toBe('BatchIn')
@@ -103,13 +125,13 @@ describe('useConstructSchema', () => {
     fetchMock.mockResolvedValue({
       inputSchema: { type: 'object', properties: { name: { type: 'string' } } },
     })
-    const first = useConstructSchema({ name: 'Demo', type: 'Process' })
+    const first = mountUseConstructSchema({ name: 'Demo', type: 'Process' })
     await waitForNextTick()
     await waitForNextTick()
     expect(first.schema.value).toBeTruthy()
     fetchMock.mockClear()
 
-    const second = useConstructSchema({ name: 'Demo', type: 'Process' })
+    const second = mountUseConstructSchema({ name: 'Demo', type: 'Process' })
     await waitForNextTick()
     expect(second.schema.value).toBeTruthy()
     expect(fetchMock).not.toHaveBeenCalled()
@@ -117,7 +139,7 @@ describe('useConstructSchema', () => {
 
   it('cache miss when name or type differs', async () => {
     fetchMock.mockResolvedValue({ inputSchema: { type: 'object', properties: {} } })
-    const _first = useConstructSchema({ name: 'Demo', type: 'Process' })
+    const _first = mountUseConstructSchema({ name: 'Demo', type: 'Process' })
     await waitForNextTick()
     await waitForNextTick()
     fetchMock.mockClear()
@@ -125,7 +147,7 @@ describe('useConstructSchema', () => {
     fetchMock.mockResolvedValue({
       inputSchema: { type: 'object', properties: { x: { type: 'number' } } },
     })
-    const _second = useConstructSchema({ name: 'Other', type: 'Process' })
+    const _second = mountUseConstructSchema({ name: 'Other', type: 'Process' })
     await waitForNextTick()
     await waitForNextTick()
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Other')
@@ -134,7 +156,7 @@ describe('useConstructSchema', () => {
   it('reacts to name change', async () => {
     fetchMock.mockResolvedValue({ inputSchema: { type: 'object', properties: {} } })
     const currentName = ref('Alpha')
-    const { schema } = useConstructSchema({ name: currentName, type: 'Process' })
+    const { schema } = mountUseConstructSchema({ name: currentName, type: 'Process' })
     await waitForNextTick()
     await waitForNextTick()
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Alpha')
@@ -153,7 +175,7 @@ describe('useConstructSchema', () => {
   it('reacts to type change', async () => {
     fetchMock.mockResolvedValue({ inputSchema: { type: 'object', properties: {} } })
     const currentType = ref<'Process' | 'Helper'>('Process')
-    const { schema } = useConstructSchema({ name: 'Demo', type: currentType })
+    const { schema } = mountUseConstructSchema({ name: 'Demo', type: currentType })
     await waitForNextTick()
     await waitForNextTick()
     expect(schema.value).toBeTruthy()
@@ -169,7 +191,7 @@ describe('useConstructSchema', () => {
   it('stops fetching when type becomes unsupported', async () => {
     fetchMock.mockResolvedValue({ inputSchema: { type: 'object', properties: {} } })
     const currentType = ref<'Process' | 'Unknown'>('Process')
-    const { schema } = useConstructSchema({ name: 'Demo', type: currentType })
+    const { schema } = mountUseConstructSchema({ name: 'Demo', type: currentType })
     await waitForNextTick()
     await waitForNextTick()
     expect(schema.value).toBeTruthy()
@@ -184,11 +206,23 @@ describe('useConstructSchema', () => {
 
   it('exposes error when fetch fails', async () => {
     fetchMock.mockRejectedValue({ statusMessage: 'Network error' })
-    const { error, schema, loading } = useConstructSchema({ name: 'Bad', type: 'Process' })
+    const { error, schema, loading } = mountUseConstructSchema({ name: 'Bad', type: 'Process' })
     await waitForNextTick()
     await waitForNextTick()
     expect(loading.value).toBe(false)
     expect(error.value).toContain('Network error')
+    expect(schema.value).toBeNull()
+  })
+
+  it('exposes error and does not throw when schema fetcher is missing', async () => {
+    const { error, schema, loading } = mountUseConstructSchema(
+      { name: 'Demo', type: 'Process' },
+      null as unknown as typeof fetchMock,
+    )
+    await waitForNextTick()
+    await waitForNextTick()
+    expect(loading.value).toBe(false)
+    expect(error.value).toContain('Schema fetcher is not provided')
     expect(schema.value).toBeNull()
   })
 })

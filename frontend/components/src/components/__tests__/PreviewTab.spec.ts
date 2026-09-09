@@ -1,6 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { __resetConstructSchemaCache } from '../../composables/useConstructSchema'
+import { DSL_SCHEMA_FETCH_KEY, __resetConstructSchemaCache } from '../../composables/useConstructSchema'
 import PreviewTab from '../dsl/PreviewTab.vue'
 
 function mountTab(
@@ -8,6 +8,7 @@ function mountTab(
   preview: (name: string, body: unknown, metadata?: Record<string, unknown>) => unknown = vi
     .fn()
     .mockResolvedValue({ result: { ok: true } }),
+  fetchMock = vi.fn().mockResolvedValue({}),
 ) {
   return mount(PreviewTab, {
     props: { name: 'demo', preview, ...props },
@@ -15,21 +16,22 @@ function mountTab(
       stubs: {
         PreviewResultPanel: {
           name: 'PreviewResultPanel',
-          template: `\u003csection data-testid="runner-result-panel"\u003e
-              \u003cheader\u003e
-                \u003cspan data-testid="result-title"\u003eResult · {{ endpoint ?? 'preview' }}\u003c/span\u003e
-                \u003cspan data-testid="result-status"\u003e{{ status === 'success' ? 'done' : status }}\u003c/span\u003e
-              \u003c/header\u003e
-              \u003cdiv data-testid="runner-result-tab"\u003e{{ output !== undefined ? JSON.stringify(output) : 'No result yet.' }}\u003c/div\u003e
-            \u003c/section\u003e`,
+          template: `<section data-testid="runner-result-panel">
+              <header>
+                <span data-testid="result-title">Result · {{ endpoint ?? 'preview' }}</span>
+                <span data-testid="result-status">{{ status === 'success' ? 'done' : status }}</span>
+              </header>
+              <div data-testid="runner-result-tab">{{ output !== undefined ? JSON.stringify(output) : 'No result yet.' }}</div>
+            </section>`,
           props: ['output', 'status', 'endpoint', 'name', 'type'],
         },
         ResultTab: {
           template:
-            '\u003cdiv data-testid="runner-result-tab"\u003e{{ result !== undefined ? JSON.stringify(result) : "No result yet." }}\u003c/div\u003e',
+            '<div data-testid="runner-result-tab">{{ result !== undefined ? JSON.stringify(result) : "No result yet." }}</div>',
           props: ['result'],
         },
       },
+      provide: { [DSL_SCHEMA_FETCH_KEY as symbol]: fetchMock },
     },
   })
 }
@@ -54,11 +56,10 @@ const schemaResponse = {
 describe('PreviewTab', () => {
   beforeEach(() => {
     __resetConstructSchemaCache()
-    vi.stubGlobal('$fetch', vi.fn())
   })
 
   afterEach(() => {
-    vi.unstubAllGlobals()
+    vi.resetModules()
   })
 
   it('renders both input and result panels', () => {
@@ -158,9 +159,8 @@ describe('PreviewTab', () => {
 
   it('fetches schema when type is Process and renders Form toggle', async () => {
     const fetchMock = vi.fn().mockResolvedValue(schemaResponse)
-    vi.stubGlobal('$fetch', fetchMock)
 
-    const wrapper = mountTab({ type: 'Process' })
+    const wrapper = mountTab({ type: 'Process' }, undefined, fetchMock)
     await flushPromises()
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/demo')
     expect(wrapper.find('[data-testid="mode-form"]').exists()).toBe(true)
@@ -169,10 +169,9 @@ describe('PreviewTab', () => {
 
   it('switches to Form mode and submits the form value', async () => {
     const fetchMock = vi.fn().mockResolvedValue(schemaResponse)
-    vi.stubGlobal('$fetch', fetchMock)
 
     const preview = vi.fn().mockResolvedValue({ result: { ok: true } })
-    const wrapper = mountTab({ type: 'Process' }, preview)
+    const wrapper = mountTab({ type: 'Process' }, preview, fetchMock)
     await flushPromises()
 
     await wrapper.find('[data-testid="mode-form"]').trigger('click')
@@ -197,9 +196,8 @@ describe('PreviewTab', () => {
 
   it('hides Form toggle and locks JSON when schema fetch fails', async () => {
     const fetchMock = vi.fn().mockRejectedValue({ statusMessage: 'Server error' })
-    vi.stubGlobal('$fetch', fetchMock)
 
-    const wrapper = mountTab({ type: 'Process' })
+    const wrapper = mountTab({ type: 'Process' }, undefined, fetchMock)
     // wait for watch + microtasks
     for (let i = 0; i < 50; i++) {
       await flushPromises()
@@ -212,9 +210,8 @@ describe('PreviewTab', () => {
 
   it('reacts to name change and fetches new schema', async () => {
     const fetchMock = vi.fn().mockResolvedValue(schemaResponse)
-    vi.stubGlobal('$fetch', fetchMock)
 
-    const wrapper = mountTab({ type: 'Process' })
+    const wrapper = mountTab({ type: 'Process' }, undefined, fetchMock)
     await flushPromises()
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/demo')
 
@@ -230,9 +227,8 @@ describe('PreviewTab', () => {
       ...schemaResponse,
       inputType: 'BatchIn',
     })
-    vi.stubGlobal('$fetch', fetchMock)
 
-    const wrapper = mountTab({ type: 'Process' })
+    const wrapper = mountTab({ type: 'Process' }, undefined, fetchMock)
     await flushPromises()
 
     expect(wrapper.text()).toContain('BatchIn')

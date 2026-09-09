@@ -1,10 +1,13 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { __resetConstructSchemaCache } from '../../composables/useConstructSchema'
+import { DSL_SCHEMA_FETCH_KEY, __resetConstructSchemaCache } from '../../composables/useConstructSchema'
 import PreviewResultPanel from '../dsl/PreviewResultPanel.vue'
 import SchemaFormField from '../dsl/SchemaFormField.vue'
 
-function mountPanel(props: Record<string, unknown> = {}) {
+function mountPanel(
+  props: Record<string, unknown> = {},
+  fetchMock = vi.fn().mockResolvedValue({}),
+) {
   return mount(PreviewResultPanel, {
     props: {
       name: 'demo',
@@ -21,6 +24,7 @@ function mountPanel(props: Record<string, unknown> = {}) {
           props: ['result'],
         },
       },
+      provide: { [DSL_SCHEMA_FETCH_KEY as symbol]: fetchMock },
     },
   })
 }
@@ -45,11 +49,10 @@ const schemaResponse = {
 describe('PreviewResultPanel', () => {
   beforeEach(() => {
     __resetConstructSchemaCache()
-    vi.stubGlobal('$fetch', vi.fn())
   })
 
   afterEach(() => {
-    vi.unstubAllGlobals()
+    vi.resetModules()
   })
 
   it('renders JSON mode by default and exposes a history button in the header', () => {
@@ -71,9 +74,8 @@ describe('PreviewResultPanel', () => {
       ...schemaResponse,
       outputType: 'BatchOut',
     })
-    vi.stubGlobal('$fetch', fetchMock)
 
-    const wrapper = mountPanel({ type: 'Process' })
+    const wrapper = mountPanel({ type: 'Process' }, fetchMock)
     await flushPromises()
 
     expect(wrapper.text()).toContain('BatchOut')
@@ -90,9 +92,8 @@ describe('PreviewResultPanel', () => {
 
   it('switches to Form mode and renders read-only form', async () => {
     const fetchMock = vi.fn().mockResolvedValue(schemaResponse)
-    vi.stubGlobal('$fetch', fetchMock)
 
-    const wrapper = mountPanel({ type: 'Process' })
+    const wrapper = mountPanel({ type: 'Process' }, fetchMock)
     await flushPromises()
 
     await wrapper.find('[data-testid="mode-form"]').trigger('click')
@@ -105,9 +106,7 @@ describe('PreviewResultPanel', () => {
   })
 
   it('shows skeleton while schema is loading in Form mode', async () => {
-    vi.stubGlobal('$fetch', () => new Promise(() => {}))
-
-    const wrapper = mountPanel({ type: 'Process' })
+    const wrapper = mountPanel({ type: 'Process' }, () => new Promise(() => {}))
     await flushPromises()
 
     await wrapper.find('[data-testid="mode-form"]').trigger('click')
@@ -118,9 +117,8 @@ describe('PreviewResultPanel', () => {
 
   it('shows error state when schema fetch fails in Form mode', async () => {
     const fetchMock = vi.fn().mockRejectedValue({ statusMessage: 'Server error' })
-    vi.stubGlobal('$fetch', fetchMock)
 
-    const wrapper = mountPanel({ type: 'Process' })
+    const wrapper = mountPanel({ type: 'Process' }, fetchMock)
     // wait for rejected promise to settle
     for (let i = 0; i < 20; i++) {
       await flushPromises()
@@ -138,9 +136,8 @@ describe('PreviewResultPanel', () => {
       inputSchema: schemaResponse.inputSchema,
       outputSchema: null,
     })
-    vi.stubGlobal('$fetch', fetchMock)
 
-    const wrapper = mountPanel({ type: 'Process' })
+    const wrapper = mountPanel({ type: 'Process' }, fetchMock)
     await flushPromises()
 
     await wrapper.find('[data-testid="mode-form"]').trigger('click')
@@ -151,9 +148,8 @@ describe('PreviewResultPanel', () => {
 
   it('resets to JSON mode when name changes', async () => {
     const fetchMock = vi.fn().mockResolvedValue(schemaResponse)
-    vi.stubGlobal('$fetch', fetchMock)
 
-    const wrapper = mountPanel({ type: 'Process' })
+    const wrapper = mountPanel({ type: 'Process' }, fetchMock)
     await flushPromises()
 
     await wrapper.find('[data-testid="mode-form"]').trigger('click')
@@ -207,9 +203,8 @@ describe('PreviewResultPanel', () => {
 
   it('disables the format button in form mode', async () => {
     const fetchMock = vi.fn().mockResolvedValue(schemaResponse)
-    vi.stubGlobal('$fetch', fetchMock)
 
-    const wrapper = mountPanel({ type: 'Process' })
+    const wrapper = mountPanel({ type: 'Process' }, fetchMock)
     await flushPromises()
 
     await wrapper.find('[data-testid="mode-form"]').trigger('click')
@@ -225,9 +220,8 @@ describe('PreviewResultPanel', () => {
 
   it('shows the read-only output schema in Schema mode', async () => {
     const fetchMock = vi.fn().mockResolvedValue(schemaResponse)
-    vi.stubGlobal('$fetch', fetchMock)
 
-    const wrapper = mountPanel({ type: 'Process' })
+    const wrapper = mountPanel({ type: 'Process' }, fetchMock)
     await flushPromises()
 
     await wrapper.find('[data-testid="mode-schema"]').trigger('click')
@@ -251,13 +245,15 @@ describe('PreviewResultPanel', () => {
   })
   it('renders the result again after switching to Schema mode and back to JSON', async () => {
     const fetchMock = vi.fn().mockResolvedValue(schemaResponse)
-    vi.stubGlobal('$fetch', fetchMock)
 
-    const wrapper = mountPanel({
-      type: 'Process',
-      output: { result: { ok: true } },
-      status: 'success',
-    })
+    const wrapper = mountPanel(
+      {
+        type: 'Process',
+        output: { result: { ok: true } },
+        status: 'success',
+      },
+      fetchMock,
+    )
     await flushPromises()
 
     expect(wrapper.find('[data-testid="runner-result-tab"]').text()).toContain('{"ok":true}')
@@ -278,13 +274,15 @@ describe('PreviewResultPanel', () => {
       inputSchema: schemaResponse.inputSchema,
       outputSchema: schemaResponse.outputSchema,
     })
-    vi.stubGlobal('$fetch', fetchMock)
 
-    const wrapper = mountPanel({
-      type: 'Process',
-      output: { result: { result: 'live value' } },
-      status: 'success',
-    })
+    const wrapper = mountPanel(
+      {
+        type: 'Process',
+        output: { result: { result: 'live value' } },
+        status: 'success',
+      },
+      fetchMock,
+    )
     await flushPromises()
 
     await wrapper.find('[data-testid="mode-form"]').trigger('click')
