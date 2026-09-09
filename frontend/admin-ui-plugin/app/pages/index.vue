@@ -59,7 +59,7 @@ function onSelectRun(id: string) {
       <div
         v-for="i in 5"
         :key="i"
-        class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 h-24 animate-pulse"
+        class="bg-white rounded-lg shadow-sm border border-neutral-200 p-6 h-24 animate-pulse"
       />
     </div>
     <div
@@ -124,7 +124,7 @@ function onSelectRun(id: string) {
 
     <section v-if="topProcesses.length > 0" class="space-y-2" data-testid="dashboard-top-processes">
       <h2 class="text-lg font-semibold text-neutral-900">Most executed processes</h2>
-      <ul class="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100 text-sm">
+      <ul class="bg-white border border-neutral-200 rounded-lg divide-y divide-neutral-100 text-sm">
         <li
           v-for="proc in topProcesses"
           :key="proc.processName"
