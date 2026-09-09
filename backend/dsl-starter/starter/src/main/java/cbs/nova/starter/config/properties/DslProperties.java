@@ -35,7 +35,8 @@ public record DslProperties(
         @Valid @DefaultValue Drafts drafts,
         @Valid @DefaultValue Files files,
         @Valid @DefaultValue Git git,
-        @Valid @DefaultValue FileBuffer fileBuffer) {
+        @Valid @DefaultValue FileBuffer fileBuffer,
+        @Valid @DefaultValue Bundles bundles) {
 
   public DslProperties {
     workbenchWorkspaceRoot = workbenchWorkspaceRoot == null
@@ -49,6 +50,7 @@ public record DslProperties(
     files = files == null ? new Files(true, 5, 100, 32, 8, 5L) : files;
     git = git == null ? new Git(true, null, 5) : git;
     fileBuffer = fileBuffer == null ? new FileBuffer(1000, 3600L) : fileBuffer;
+    bundles = bundles == null ? new Bundles(false) : bundles;
   }
 
   @Builder
@@ -175,6 +177,19 @@ public record DslProperties(
     public FileBuffer {
       maxEntries = maxEntries == null ? 1000 : maxEntries;
       expireAfterWriteSeconds = expireAfterWriteSeconds == null ? 3600L : expireAfterWriteSeconds;
+    }
+  }
+
+  @Builder
+  public record Bundles(
+          /**
+           * Whether imported bundles must carry a digest. When true, bundles without a digest are
+           * rejected with BUNDLE_DIGEST_MISSING.
+           */
+          @DefaultValue("false") Boolean requireDigest) {
+
+    public Bundles {
+      requireDigest = requireDigest == null ? false : requireDigest;
     }
   }
 }

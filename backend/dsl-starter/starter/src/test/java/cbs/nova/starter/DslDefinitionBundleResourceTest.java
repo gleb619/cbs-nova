@@ -115,6 +115,7 @@ class DslDefinitionBundleResourceTest {
     assertThat(json).contains("\"source\":\"published\"");
     assertThat(json).contains("\"engineVersion\"");
     assertThat(json).contains("\"exportedAt\"");
+    assertThat(json).contains("\"digest\"");
   }
 
   @Test
@@ -168,8 +169,90 @@ class DslDefinitionBundleResourceTest {
             .andReturn().getResponse().getContentAsString();
 
     assertThat(result).contains("\"dryRun\":true");
-    assertThat(result).contains("\"outcome\":\"skipped\"");
+    assertThat(result).contains("\"published\":1");
+    assertThat(result).contains("\"outcome\":\"created\"");
     assertThat(sourceDir.resolve(".workbench/published/A.json")).doesNotExist();
+  }
+
+  @Test
+  void dryRunImportClassifiesCreatedUpdatedUnchangedSkipped() throws Exception {
+    publish("A", "v1");
+    publish("B", "v2");
+    String bundle = "{\"formatVersion\":1,\"definitions\":["
+            + "{\"definition\":{\"name\":\"A\",\"type\":\"process\",\"status\":\"Published\",\"version\":\"v1\",\"taskQueue\":\"q\"},\"source\":\"published\"},"
+            + "{\"definition\":{\"name\":\"B\",\"type\":\"transaction\",\"status\":\"Published\",\"version\":\"v3\",\"taskQueue\":\"q\"},\"source\":\"published\"},"
+            + "{\"definition\":{\"name\":\"C\",\"type\":\"helper\",\"status\":\"Published\",\"version\":\"v1\",\"taskQueue\":\"q\"},\"source\":\"published\"}]}";
+
+    String result = mockMvc.perform(post("/api/dsl/definitions/import?dryRun=true")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(bundle))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+
+    assertThat(result).contains("\"dryRun\":true");
+    assertThat(result).contains("\"published\":2");
+    assertThat(result).contains("\"failed\":0");
+    assertThat(result).contains("\"outcome\":\"unchanged\"");
+    assertThat(result).contains("\"outcome\":\"updated\"");
+    assertThat(result).contains("\"outcome\":\"created\"");
+    assertThat(sourceDir.resolve(".workbench/published/A.json")).exists();
+    assertThat(sourceDir.resolve(".workbench/published/B.json")).exists();
+    assertThat(sourceDir.resolve(".workbench/published/C.json")).doesNotExist();
+  }
+
+  @Test
+  void tamperedBundleDigestReturns400() throws Exception {
+    publish("A", "v1");
+    String bundle = mockMvc.perform(get("/api/dsl/definitions/export"))
+            .andReturn().getResponse().getContentAsString();
+    String tampered = bundle.replace("\"version\":\"v1\"", "\"version\":\"v2\"");
+
+    mockMvc.perform(post("/api/dsl/definitions/import")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(tampered))
+            .andExpect(status().isBadRequest())
+            .andExpect(result -> assertThat(result.getResponse().getContentAsString())
+                    .contains("BUNDLE_DIGEST_MISMATCH"));
+  }
+
+  @Test
+  void legacyBundleWithoutDigestIsAccepted() throws Exception {
+    String bundle = "{\"formatVersion\":1,\"definitions\":["
+            + "{\"definition\":{\"name\":\"A\",\"type\":\"process\",\"status\":\"Published\",\"version\":\"v1\",\"taskQueue\":\"q\"},\"source\":\"published\"}]}";
+
+    String result = mockMvc.perform(post("/api/dsl/definitions/import?dryRun=true")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(bundle))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+
+    assertThat(result).contains("\"dryRun\":true");
+    assertThat(result).contains("\"outcome\":\"created\"");
+  }
+
+  @Test
+  void missingRequiredDigestReturns400() throws Exception {
+    DslProperties strict = DslProperties.builder().sourceDir(sourceDir.toString())
+            .bundles(new DslProperties.Bundles(true)).build();
+    DslDefinitionBundleService bundleService = new DslDefinitionBundleService(mapper,
+            Optional.empty(), strict);
+    DslDraftHandler handler = new DslDraftHandler(
+            strict,
+            new DslReloadHandler(strict, null),
+            new DslDefinitionHistoryService(strict, mapper),
+            mapper,
+            bundleService);
+    mockMvc = mockMvcFor(handler);
+
+    String bundle = "{\"formatVersion\":1,\"definitions\":["
+            + "{\"definition\":{\"name\":\"A\",\"type\":\"process\",\"status\":\"Published\",\"version\":\"v1\",\"taskQueue\":\"q\"},\"source\":\"published\"}]}";
+
+    mockMvc.perform(post("/api/dsl/definitions/import")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(bundle))
+            .andExpect(status().isBadRequest())
+            .andExpect(result -> assertThat(result.getResponse().getContentAsString())
+                    .contains("BUNDLE_DIGEST_MISSING"));
   }
 
   @Test

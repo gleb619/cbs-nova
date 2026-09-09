@@ -78,7 +78,13 @@ public final class VcsModels {
           int formatVersion,
           String engineVersion,
           String exportedAt,
-          List<DefinitionBundleEntry> definitions) {
+          List<DefinitionBundleEntry> definitions,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String digest) {
+
+    public DefinitionBundle(int formatVersion, String engineVersion, String exportedAt,
+            List<DefinitionBundleEntry> definitions) {
+      this(formatVersion, engineVersion, exportedAt, definitions, null);
+    }
 
   }
 
