@@ -3,6 +3,7 @@ import { useExecutionsApi } from '@cbs/admin-ui-plugin/composables/useExecutions
 import { useStalePolling } from '@cbs/admin-ui-plugin/composables/useStalePolling'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import type { Execution, ExecutionDetail, ExecutionFilters, ExecutionStatus } from '~/types'
+import { extractApiError } from '../utils/extractApiError'
 
 export function useExecutions() {
   const log = useClientLogger('runtime')
@@ -105,7 +106,7 @@ export function useExecutions() {
             selectedExecution.value = fresh
           }
         } catch (err) {
-          log.error('stale polling refresh failed', { id, error: (err as Error).message })
+          log.error('stale polling refresh failed', { id, error: extractApiError(err).message })
         }
         stopStalePolling(id)
       }
@@ -276,10 +277,10 @@ export function useExecutions() {
         page: page.value,
       })
     } catch (err) {
-      log.error('failed to load executions', { error: (err as Error).message })
+      log.error('failed to load executions', { error: extractApiError(err).message })
       executions.value = []
       total.value = 0
-      error.value = (err as Error).message || 'Failed to load'
+      error.value = extractApiError(err, 'Failed to load').message
     } finally {
       if (!silent) loading.value = false
     }
@@ -298,9 +299,9 @@ export function useExecutions() {
         startStalePolling(id)
       }
     } catch (err) {
-      log.error('failed to load execution detail', { id, error: (err as Error).message })
+      log.error('failed to load execution detail', { id, error: extractApiError(err).message })
       selectedExecution.value = null
-      error.value = (err as Error).message || 'Failed to load'
+      error.value = extractApiError(err, 'Failed to load').message
     } finally {
       loading.value = false
     }
@@ -352,7 +353,7 @@ export function useExecutions() {
       log.info('execution cancelled', { id, status: fresh.status })
       return fresh
     } catch (err) {
-      const message = (err as Error).message || 'Failed to cancel execution'
+      const message = extractApiError(err, 'Failed to cancel execution').message
       error.value = message
       log.error('failed to cancel execution', { id, error: message })
       throw err

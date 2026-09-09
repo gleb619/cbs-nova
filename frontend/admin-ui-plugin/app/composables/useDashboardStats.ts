@@ -2,6 +2,7 @@ import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogge
 import { $fetch } from 'ofetch'
 import { ref } from 'vue'
 import type { DashboardStats, DashboardTimeseries, Execution } from '~/types'
+import { extractApiError } from '../utils/extractApiError'
 
 /**
  * Dashboard data loader.
@@ -34,7 +35,7 @@ export function useDashboardStats(recentRunsLimit = 10) {
       stats.value = statsResult
       recentRuns.value = Array.isArray(runsResult) ? runsResult : (runsResult.items ?? [])
     } catch (err: unknown) {
-      const message = (err as Error | undefined)?.message ?? String(err)
+      const message = extractApiError(err).message
       log.error('failed to load dashboard data', { error: message })
       error.value = 'Failed to load dashboard data. Is the backend reachable?'
     } finally {
@@ -56,7 +57,7 @@ export function useDashboardStats(recentRunsLimit = 10) {
         },
       )
     } catch (err: unknown) {
-      const message = (err as Error | undefined)?.message ?? String(err)
+      const message = extractApiError(err).message
       log.error('failed to load dashboard timeseries', { error: message })
       timeseriesError.value = 'Failed to load trend chart data. Is the backend reachable?'
     } finally {
