@@ -1,6 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { __resetConstructSchemaCache } from '../../../composables/useConstructSchema'
+import { DSL_SCHEMA_FETCH_KEY, __resetConstructSchemaCache } from '../../../composables/useConstructSchema'
 import PreviewInputPanel from '../PreviewInputPanel.vue'
 import SchemaForm from '../SchemaForm.vue'
 import SchemaFormField from '../SchemaFormField.vue'
@@ -27,10 +27,12 @@ function mountPanel(
   props: Record<string, unknown> = {},
   fetchMock = vi.fn().mockResolvedValue({}),
 ) {
-  vi.stubGlobal('$fetch', fetchMock)
   return mount(PreviewInputPanel, {
     props: { name: 'demo', type: 'Process', modelValue: '', ...props },
-    global: { components: { SchemaForm, SchemaFormField } },
+    global: {
+      components: { SchemaForm, SchemaFormField },
+      provide: { [DSL_SCHEMA_FETCH_KEY as symbol]: fetchMock },
+    },
   })
 }
 
@@ -40,7 +42,7 @@ describe('PreviewInputPanel', () => {
   })
 
   afterEach(() => {
-    vi.unstubAllGlobals()
+    vi.resetModules()
   })
 
   it('keeps Run button in the header', async () => {
@@ -200,7 +202,6 @@ describe('PreviewInputPanel', () => {
   })
 
   it('shows schema loading skeleton while the schema is loading', async () => {
-    vi.stubGlobal('$fetch', () => new Promise(() => {}))
     const wrapper = mountPanel({ type: 'Process' }, () => new Promise(() => {}))
     await flushPromises()
 

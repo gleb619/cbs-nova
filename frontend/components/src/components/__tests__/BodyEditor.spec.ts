@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DslConstruct } from '../../types/dsl'
+import { DSL_SCHEMA_FETCH_KEY, __resetConstructSchemaCache } from '../../composables/useConstructSchema'
 import BodyEditor from '../dsl/BodyEditor.vue'
 import CodeTab from '../dsl/CodeTab.vue'
 import StructureTab from '../dsl/StructureTab.vue'
@@ -36,7 +37,9 @@ import ExplainTab from '../dsl/ExplainTab.vue'
 import PreviewResultPanel from '../dsl/PreviewResultPanel.vue'
 import PreviewTab from '../dsl/PreviewTab.vue'
 
-function mountBodyEditor(props: Record<string, unknown>) {
+const defaultFetchMock = vi.fn().mockResolvedValue({})
+
+function mountBodyEditor(props: Record<string, unknown>, fetchMock = defaultFetchMock) {
   // BodyEditor references StructureTab / CodeTab in its template without importing
   // them (they are Nuxt auto-imported in the host app). Register real children here
   // so they resolve under vitest, mirroring how OutputPanel registers its children.
@@ -50,6 +53,7 @@ function mountBodyEditor(props: Record<string, unknown>) {
         PreviewResultPanel,
         ExplainTab,
       },
+      provide: { [DSL_SCHEMA_FETCH_KEY as symbol]: fetchMock },
     },
   })
 }
@@ -57,6 +61,7 @@ function mountBodyEditor(props: Record<string, unknown>) {
 describe('BodyEditor', () => {
   beforeEach(() => {
     localStorage.clear()
+    __resetConstructSchemaCache()
   })
   it('exposes root data-testid', () => {
     const wrapper = mountBodyEditor({ construct })

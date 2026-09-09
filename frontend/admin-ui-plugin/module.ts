@@ -279,6 +279,11 @@ export default defineNuxtModule<ModuleOptions>({
     // localStorage and mirrored to a cookie so SSR renders the saved layout
     // -----------------------------------------------------------------------
     addPlugin({ src: resolve('./app/plugins/sidebarState.ts') })
+    // -----------------------------------------------------------------------
+    // DSL schema fetcher — provided per Vue app so @cbs/components can stay
+    // free of $fetch. Mirrors the sidebarState plugin pattern.
+    // -----------------------------------------------------------------------
+    addPlugin({ src: resolve('./app/plugins/dslSchemaFetch.ts') })
 
     // -----------------------------------------------------------------------
     // Pinia

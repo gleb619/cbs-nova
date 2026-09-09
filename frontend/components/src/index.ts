@@ -76,6 +76,6 @@ export { default as AppSidebarHideButton } from './components/sidebar/AppSidebar
 export { default as AppSidebarRestoreHandle } from './components/sidebar/AppSidebarRestoreHandle.vue'
 
 export * from './composables'
-export { type ConstructType, useConstructSchema } from './composables/useConstructSchema'
+export { DSL_SCHEMA_FETCH_KEY, type ConstructType, useConstructSchema } from './composables/useConstructSchema'
 export * from './types'
 export * from './utils/unwrapList'
