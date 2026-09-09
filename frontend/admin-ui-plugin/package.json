@@ -16,6 +16,7 @@
     "generate": "nuxt generate --config nuxt.config.dev.ts --cwd .",
     "preview": "nuxt preview",
     "test": "vitest run",
+    "typecheck": "nuxi typecheck",
     "lint": "biome lint .",
     "test:watch": "vitest",
     "build:server": "files=$(find server -type f -name '*.ts' ! -name '*.spec.ts') && pnpm exec esbuild $files --outdir=dist/server --platform=node --format=esm --bundle=false && find dist/server -name '*.js' -exec sed -i 's|from \"~/server/utils/httpClient\"|from \"@cbs/admin-ui-plugin/server/utils/httpClient\"|g' {} +"
@@ -39,6 +40,7 @@
     "@vue/test-utils": "^2.4.0",
     "happy-dom": "^17.0.0",
     "typescript": "^5.4.0",
-    "vitest": "^2.1.0"
+    "vitest": "^2.1.0",
+    "vue-tsc": "^2.0.0"
   }
 }

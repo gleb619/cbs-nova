@@ -9,6 +9,7 @@
     "build": "pnpm --filter @cbs/admin-ui-plugin build",
     "build:components": "pnpm --filter components build",
     "test": "pnpm --filter @cbs/admin-ui-plugin --filter @cbs/components --no-bail run test",
+    "typecheck": "pnpm --filter @cbs/admin-ui-plugin --filter @cbs/components --no-bail run typecheck",
     "test:plugin": "pnpm --filter @cbs/admin-ui-plugin test",
     "test:components": "pnpm --filter @cbs/components test",
     "test:e2e": "playwright test",
