@@ -1,8 +1,7 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
-import { createNamespacedLoaderState } from '@cbs/components'
+import { createNamespacedLoaderState, unwrapList } from '@cbs/components'
 import { useState } from 'nuxt/app'
-import { extractApiError } from '../utils/extractApiError'
 import { computed, readonly } from 'vue'
 import type {
   CompileDiagnostic,
@@ -11,6 +10,7 @@ import type {
   DslConstruct,
   ValidationError,
 } from '~/types'
+import { extractApiError } from '../utils/extractApiError'
 
 interface WorkbenchState {
   constructs: DslConstruct[]
@@ -51,7 +51,9 @@ function basename(path: string): string {
   return index >= 0 ? path.slice(index + 1) : path
 }
 
-export function compileDiagnosticsToValidationErrors(diags: CompileDiagnostic[]): ValidationError[] {
+export function compileDiagnosticsToValidationErrors(
+  diags: CompileDiagnostic[],
+): ValidationError[] {
   return diags.map((d) => ({
     field: d.line != null ? `${basename(d.file)}:${d.line}` : basename(d.file),
     message: d.message,
@@ -87,11 +89,7 @@ export function useDslWorkbench() {
     constructsLoading.value = true
     try {
       const result = await api.getDefinitions()
-      const rawList = Array.isArray(result)
-        ? result
-        : ((result as { items?: DslConstruct[] }).items
-            ?? (result as { constructs?: DslConstruct[] }).constructs
-            ?? [])
+      const rawList = unwrapList(result)
       const list = rawList.map((c) => normalizeConstruct(c as { name: string }))
       state.value.constructs = list
       if (list.length && !state.value.selectedName) {
@@ -274,9 +272,7 @@ export function useDslWorkbench() {
       await loadConstructs()
       log.info('reload definitions finished')
     } catch (err) {
-      const diagnostics = extractApiError(err).diagnostics as
-        | CompileDiagnostic[]
-        | undefined
+      const diagnostics = extractApiError(err).diagnostics as CompileDiagnostic[] | undefined
       if (diagnostics) {
         state.value.validationErrors = compileDiagnosticsToValidationErrors(diagnostics)
       }

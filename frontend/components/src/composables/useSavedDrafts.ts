@@ -7,6 +7,7 @@ import {
   reactive,
   toRef,
 } from 'vue'
+import { unwrapList } from '../utils/unwrapList'
 
 export interface SavedDraftSummary {
   name: string
@@ -134,8 +135,8 @@ export function useSavedDrafts(options: UseSavedDraftsOptions = {}): UseSavedDra
     state.error = null
     store.inFlight = (async () => {
       try {
-        const result = (await fetcher()) as SavedDraftSummary[] | null | undefined
-        state.drafts = Array.isArray(result) ? result : []
+        const result = await fetcher()
+        state.drafts = unwrapList<SavedDraftSummary>(result)
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         state.error = message

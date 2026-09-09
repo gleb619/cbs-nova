@@ -19,9 +19,9 @@ vi.mock('../useClientLogger', () => {
 })
 
 // eslint-disable-next-line import/first
-import * as apiModule from '../useDslApi'
-// eslint-disable-next-line import/first
 import * as loggerModule from '../useClientLogger'
+// eslint-disable-next-line import/first
+import * as apiModule from '../useDslApi'
 import { useSchedules } from '../useSchedules'
 
 type ApiMock = {

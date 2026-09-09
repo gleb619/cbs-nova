@@ -1,4 +1,5 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
+import { unwrapList } from '@cbs/components'
 import { $fetch } from 'ofetch'
 import { ref } from 'vue'
 import type { DashboardStats, DashboardTimeseries, Execution } from '~/types'
@@ -33,7 +34,7 @@ export function useDashboardStats(recentRunsLimit = 10) {
         }),
       ])
       stats.value = statsResult
-      recentRuns.value = Array.isArray(runsResult) ? runsResult : (runsResult.items ?? [])
+      recentRuns.value = unwrapList<Execution>(runsResult)
     } catch (err: unknown) {
       const message = extractApiError(err).message
       log.error('failed to load dashboard data', { error: message })
@@ -43,19 +44,13 @@ export function useDashboardStats(recentRunsLimit = 10) {
     }
   }
 
-  async function loadTimeseries(
-    windowHours = 24,
-    bucketMinutes = 60,
-  ): Promise<void> {
+  async function loadTimeseries(windowHours = 24, bucketMinutes = 60): Promise<void> {
     loadingTimeseries.value = true
     timeseriesError.value = null
     try {
-      timeseries.value = await $fetch<DashboardTimeseries>(
-        '/api/v1/executions/stats/timeseries',
-        {
-          query: { windowHours, bucketMinutes },
-        },
-      )
+      timeseries.value = await $fetch<DashboardTimeseries>('/api/v1/executions/stats/timeseries', {
+        query: { windowHours, bucketMinutes },
+      })
     } catch (err: unknown) {
       const message = extractApiError(err).message
       log.error('failed to load dashboard timeseries', { error: message })

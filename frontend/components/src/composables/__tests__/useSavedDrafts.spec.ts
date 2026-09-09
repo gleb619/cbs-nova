@@ -60,6 +60,16 @@ describe('useSavedDrafts', () => {
     expect(parent.drafts.value).toEqual(DRAFTS)
   })
 
+  it('unwraps a { items: [...] } envelope from the fetcher', async () => {
+    const fetcher = vi.fn().mockResolvedValue({ items: DRAFTS, total: 2 })
+    const { parent } = mountParentChild({ fetcher })
+
+    await parent.refresh()
+
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(parent.drafts.value).toEqual(DRAFTS)
+  })
+
   it('replays a refresh requested before any fetcher was registered', async () => {
     const fetcher = vi.fn().mockResolvedValue(DRAFTS)
 
