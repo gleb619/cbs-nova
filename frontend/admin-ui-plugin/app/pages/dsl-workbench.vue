@@ -67,7 +67,7 @@ const explorerCollapsed = useWorkbenchStorage<boolean>('explorer-collapsed', fal
 })
 const helperSearchOpen = useWorkbenchStorage<boolean>('helper-search-open', false)
 const helperCatalogOpen = useWorkbenchStorage<boolean>('helper-catalog-open', false)
-const historyPanelOpen = ref(false)
+const historyPanelOpen = useWorkbenchStorage<boolean>('history-panel-open', false)
 
 function toggleHistoryPanel() {
   historyPanelOpen.value = !historyPanelOpen.value

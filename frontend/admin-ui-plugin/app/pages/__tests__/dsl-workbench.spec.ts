@@ -80,6 +80,10 @@ const { dslApi, useDslApiMock, useDslWorkbenchMock } = vi.hoisted(() => {
     readDraft: vi.fn(),
     readDslFile: vi.fn(),
     writeDslFile: vi.fn(),
+    listPublishHistory: vi.fn(),
+    getHistoryEntry: vi.fn(),
+    getHistoryDiff: vi.fn(),
+    restorePublishHistory: vi.fn(),
   }
   const useDslWorkbenchMockFn = vi.fn(() => {
     const harness = (globalThis as unknown as { __dslWorkbenchHarness?: WorkbenchApiShape })
@@ -1028,5 +1032,85 @@ describe('dsl-workbench.vue file-backed construct', () => {
     await flushPromises()
 
     expect(harness.saveConstruct).toHaveBeenCalledWith('public class LoanDsl { }')
+  })
+})
+
+describe('dsl-workbench.vue history panel persistence', () => {
+  let storage: Record<string, string> = {}
+
+  function installLocalStorageMock() {
+    storage = {}
+    vi.stubGlobal('localStorage', {
+      getItem: vi.fn((key: string) => storage[key] ?? null),
+      setItem: vi.fn((key: string, value: string) => {
+        storage[key] = value
+      }),
+      removeItem: vi.fn((key: string) => {
+        delete storage[key]
+      }),
+    })
+  }
+
+  beforeEach(() => {
+    installLocalStorageMock()
+    harness.state.constructs = []
+    harness.state.selectedName = null
+    harness.state.validationErrors = []
+    harness.state.isDirty = false
+    harness.state.isSaving = false
+    harness.state.isLoading = false
+    harness.selectedConstruct.value = null
+    harness.loaders.constructs.value = false
+    useDslWorkbenchMock.mockClear()
+    dslApi.searchObjects.mockReset()
+    dslApi.searchObjects.mockResolvedValue([])
+    dslApi.listDrafts.mockReset()
+    dslApi.listDrafts.mockResolvedValue([])
+    dslApi.listHelpers.mockReset()
+    dslApi.listHelpers.mockResolvedValue({ names: [], helpers: [] })
+    dslApi.listSchedules.mockReset()
+    dslApi.listSchedules.mockResolvedValue([])
+    dslApi.createSchedule.mockReset()
+    dslApi.createSchedule.mockResolvedValue({})
+    dslApi.deleteSchedule.mockReset()
+    dslApi.deleteSchedule.mockResolvedValue({})
+    dslApi.readDslFile.mockReset()
+    dslApi.readDslFile.mockResolvedValue('class LoanDsl {}')
+    dslApi.writeDslFile.mockReset()
+    dslApi.writeDslFile.mockResolvedValue({ ok: true })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('defaults history panel to closed with fresh localStorage', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(document.querySelector('[data-testid="history-drawer"]')).toBeNull()
+    expect(storage['cbs-nova:dsl-workbench:history-panel-open']).toBeUndefined()
+
+    wrapper.unmount()
+  })
+
+  it('persists history panel open state across reload', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    await wrapper.find('[data-testid="workbench-toggle-history"]').trigger('click')
+    await nextTick()
+
+    expect(document.querySelector('[data-testid="history-drawer"]')).not.toBeNull()
+    expect(storage['cbs-nova:dsl-workbench:history-panel-open']).toBe('true')
+
+    wrapper.unmount()
+
+    const wrapper2 = mountPage()
+    await flushPromises()
+
+    expect(document.querySelector('[data-testid="history-drawer"]')).not.toBeNull()
+
+    wrapper2.unmount()
   })
 })
