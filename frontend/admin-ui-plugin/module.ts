@@ -324,6 +324,12 @@ export default defineNuxtModule<ModuleOptions>({
           meta: { layout: 'cbs-admin' },
         },
         {
+          name: 'cbs-admin-schedules',
+          path: `${prefix}/schedules`,
+          file: resolve('./app/pages/schedules.vue'),
+          meta: { layout: 'cbs-admin' },
+        },
+        {
           name: 'cbs-admin-dsl-workbench',
           path: `${prefix}/dsl-workbench`,
           file: resolve('./app/pages/dsl-workbench.vue'),
