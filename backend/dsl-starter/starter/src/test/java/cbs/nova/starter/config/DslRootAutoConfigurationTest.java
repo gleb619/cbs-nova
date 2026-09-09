@@ -20,9 +20,9 @@ import java.util.Set;
 /**
  * Verifies the starter advertises exactly one auto-configuration — the root — that aggregates the
  * rest via {@link Import}. {@link DslRunRepositoryConfiguration} is imported by the root but
- * carries no {@code @Configuration} stereotype, so its {@code @ConditionalOnBean(DataSource)}
- * beans are only evaluated in the auto-configuration phase, after
- * {@code DataSourceAutoConfiguration}, and never via component scanning.
+ * carries no {@code @Configuration} stereotype, so its {@code @ConditionalOnBean(DataSource)} beans
+ * are only evaluated in the auto-configuration phase, after {@code DataSourceAutoConfiguration},
+ * and never via component scanning.
  */
 class DslRootAutoConfigurationTest {
 

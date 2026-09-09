@@ -19,6 +19,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HexFormat;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.crypto.Mac;
@@ -39,6 +40,8 @@ public class WebhookDispatcher {
 
   private static final String EVENT_HEADER = "X-Cbs-Event";
 
+  private static final int URL_MAX_LENGTH = 2048;
+
   private final WebhookProperties properties;
 
   private final ObjectMapper objectMapper;
@@ -49,11 +52,20 @@ public class WebhookDispatcher {
 
   private final Map<SubscriptionKey, WebhookDeliveryInfo> outcomes = new ConcurrentHashMap<>();
 
+  private final Optional<WebhookDeliveryRecordRepository> deliveryRepository;
+
   public WebhookDispatcher(WebhookProperties properties, ObjectMapper objectMapper,
           ThreadPoolTaskExecutor deliveryExecutor) {
+    this(properties, objectMapper, deliveryExecutor, Optional.empty());
+  }
+
+  public WebhookDispatcher(WebhookProperties properties, ObjectMapper objectMapper,
+          ThreadPoolTaskExecutor deliveryExecutor,
+          Optional<WebhookDeliveryRecordRepository> deliveryRepository) {
     this.properties = properties;
     this.objectMapper = objectMapper;
     this.deliveryExecutor = deliveryExecutor;
+    this.deliveryRepository = deliveryRepository;
     this.httpClient = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.NEVER)
             .connectTimeout(properties.getTimeout())
@@ -112,18 +124,20 @@ public class WebhookDispatcher {
   }
 
   private void deliver(WebhookSubscription subscription, WebhookPayload payload) {
+    Instant deliveryStarted = Instant.now();
     String url = subscription.url();
     byte[] body;
     try {
       body = objectMapper.writeValueAsBytes(payload);
     } catch (Exception ex) {
-      recordOutcome(subscription, "serialization_failed", 0, ex.getMessage());
+      recordOutcome(subscription, "serialization_failed", 0, ex.getMessage(), 0L);
       log.warn("Failed to serialize webhook payload for {}", url, ex);
       return;
     }
 
     if (!isUrlAllowed(url)) {
-      recordOutcome(subscription, "rejected", 0, "Non-https URL not allowed: " + url);
+      recordOutcome(subscription, "rejected", 0,
+              "Non-https URL not allowed: " + truncate(url), 0L);
       log.warn("Rejecting webhook delivery to non-https URL: {}", url);
       return;
     }
@@ -140,11 +154,13 @@ public class WebhookDispatcher {
                 HttpResponse.BodyHandlers.discarding());
         lastStatus = response.statusCode();
         if (isSuccess(lastStatus)) {
-          recordOutcome(subscription, String.valueOf(lastStatus), attempt, null);
+          recordOutcome(subscription, String.valueOf(lastStatus), attempt, null,
+                  durationMs(deliveryStarted));
           return;
         }
         if (isTerminalClientError(lastStatus)) {
-          recordOutcome(subscription, String.valueOf(lastStatus), attempt, null);
+          recordOutcome(subscription, String.valueOf(lastStatus), attempt, null,
+                  durationMs(deliveryStarted));
           return;
         }
         if (attempt < maxAttempts) {
@@ -157,7 +173,8 @@ public class WebhookDispatcher {
         }
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
-        recordOutcome(subscription, "interrupted", attempt, ex.getMessage());
+        recordOutcome(subscription, "interrupted", attempt, ex.getMessage(),
+                durationMs(deliveryStarted));
         return;
       }
     }
@@ -165,7 +182,8 @@ public class WebhookDispatcher {
     recordOutcome(subscription,
             lastStatus >= 0 ? String.valueOf(lastStatus) : "failed",
             maxAttempts,
-            lastError);
+            lastError,
+            durationMs(deliveryStarted));
   }
 
   private boolean isUrlAllowed(String url) {
@@ -235,7 +253,8 @@ public class WebhookDispatcher {
   }
 
   private void recordOutcome(WebhookSubscription subscription, String status, int attempts,
-          @Nullable String error) {
+          @Nullable String error, long durationMs) {
+    Instant occurredAt = Instant.now();
     SubscriptionKey key = new SubscriptionKey(subscription.url(), subscription.definitionPattern());
     outcomes.put(key, new WebhookDeliveryInfo(
             subscription.url(),
@@ -243,7 +262,32 @@ public class WebhookDispatcher {
             status,
             attempts,
             error,
-            Instant.now()));
+            occurredAt));
+    deliveryRepository.ifPresent(repository -> {
+      try {
+        // URLs longer than the column width are truncated rather than rejected so that the delivery
+        // still leaves an audit trace. The same applies to last_error.
+        String url = subscription.url().length() > URL_MAX_LENGTH
+                ? subscription.url().substring(0, URL_MAX_LENGTH)
+                : subscription.url();
+        repository.insert(
+                new WebhookDeliveryRecord(null, occurredAt, subscription.definitionPattern(),
+                        EVENT, url, status, attempts, error, durationMs));
+      } catch (Exception ex) {
+        log.warn("Failed to persist webhook delivery outcome", ex);
+      }
+    });
+  }
+
+  private static long durationMs(Instant started) {
+    return Duration.between(started, Instant.now()).toMillis();
+  }
+
+  private static String truncate(String value) {
+    if (value.length() <= URL_MAX_LENGTH) {
+      return value;
+    }
+    return value.substring(0, URL_MAX_LENGTH);
   }
 
   private record SubscriptionKey(String url, String definitionPattern) {
