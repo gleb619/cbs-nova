@@ -17,6 +17,7 @@ import cbs.nova.starter.persistence.JdbcTransactionExecutionRepository;
 import cbs.nova.starter.persistence.NoOpFieldEncryptor;
 import cbs.nova.starter.persistence.TransactionExecutionJdbcRepository;
 import cbs.nova.starter.service.DslAuditService;
+import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
 import cbs.nova.starter.webhook.WebhookDeliveryRecordRepository;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -99,6 +100,13 @@ public class DslRunRepositoryConfiguration {
   public WebhookDeliveryRecordRepository webhookDeliveryRecordRepository(
           NamedParameterJdbcTemplate jdbcTemplate) {
     return new WebhookDeliveryRecordRepository(jdbcTemplate);
+  }
+
+  @Bean
+  @ConditionalOnBean(DataSource.class)
+  public CompileDiagnosticRecordRepository compileDiagnosticRecordRepository(
+          NamedParameterJdbcTemplate jdbcTemplate) {
+    return new CompileDiagnosticRecordRepository(jdbcTemplate);
   }
 
   @Bean

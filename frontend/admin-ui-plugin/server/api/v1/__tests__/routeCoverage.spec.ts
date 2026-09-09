@@ -38,6 +38,7 @@ type ExpectedProxy = {
 //     - DslRuntimeRouterConfiguration.java
 //     - DslReloadRouterConfiguration.java
 //     - DslExecutionsRouterConfiguration.java
+//     - DslDiagnosticsRouterConfiguration.java
 //
 // When a new backend route is added under `/api/dsl/*` or `/api/executions*`,
 // add a matching entry here AND a Nitro proxy file under server/api/v1/.
@@ -205,6 +206,12 @@ const expectedProxies: readonly ExpectedProxy[] = [
     method: 'GET',
     backendPath: '/api/dsl/webhooks/deliveries',
     bffPath: '/api/v1/dsl/webhooks/deliveries',
+  },
+  // DslDiagnosticsRouterConfiguration
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/diagnostics',
+    bffPath: '/api/v1/dsl/diagnostics',
   },
 
   // DslFileRouterConfiguration

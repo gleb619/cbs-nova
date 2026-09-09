@@ -19,8 +19,6 @@ import javax.tools.ToolProvider;
 @Deprecated(forRemoval = true)
 public class JavaSourceCompiler {
 
-  private static final int DIAGNOSTIC_CAP = 20;
-
   public void compile(Path sourceDir, Path outputDir) throws IOException {
     List<Path> javaFiles;
     try (Stream<Path> stream = Files.walk(sourceDir)) {
@@ -47,9 +45,6 @@ public class JavaSourceCompiler {
             firstFailedFile = file;
           }
           for (var d : diagnostics.getDiagnostics()) {
-            if (collected.size() >= DIAGNOSTIC_CAP) {
-              break;
-            }
             collected.add(toCompileDiagnostic(d, file));
           }
         }
