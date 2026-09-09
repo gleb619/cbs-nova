@@ -6,8 +6,9 @@ import {
   ExecutionsExecutionFilters,
   ExecutionsExecutionList,
 } from '@cbs/components'
-import { navigateTo } from 'nuxt/app'
-import { computed, ref } from 'vue'
+import { useLocalStorageState } from '@cbs/components/composables'
+import { navigateTo, useRuntimeConfig } from 'nuxt/app'
+import { computed, onMounted, ref } from 'vue'
 
 import type { ExecutionFilters } from '~/types'
 
@@ -31,15 +32,37 @@ const {
 } = useExecutions()
 
 await loadExecutions()
-// Polling is user-controlled via isPollingEnabled toggle; default off.
 
-const pageCount = computed(() => Math.ceil(total.value / pageSize))
-const isPollingEnabled = ref(false)
+function resolveStalePollMs(): number {
+  const cfg = useRuntimeConfig()
+  return cfg.public?.stalePollMs ?? 5000
+}
+
+const defaultPollMs = resolveStalePollMs()
+const isPollingEnabled = useLocalStorageState('executions.livePolling.enabled', false)
+const pollingIntervalMs = useLocalStorageState('executions.livePolling.intervalMs', defaultPollMs)
+
+function restartListPolling() {
+  stopListPolling()
+  startListPolling(pollingIntervalMs.value)
+}
+
 function onTogglePolling(enabled: boolean) {
   isPollingEnabled.value = enabled
-  if (enabled) startListPolling()
+  if (enabled) startListPolling(pollingIntervalMs.value)
   else stopListPolling()
 }
+
+function onIntervalChange() {
+  if (!isPollingEnabled.value) return
+  restartListPolling()
+}
+
+onMounted(() => {
+  if (isPollingEnabled.value) startListPolling(pollingIntervalMs.value)
+})
+
+const pageCount = computed(() => Math.ceil(total.value / pageSize))
 
 const exportUrl = computed(() => {
   const params = new URLSearchParams()
@@ -107,19 +130,34 @@ function nextPage() {
     <header class="flex items-center justify-between">
       <h1 class="text-2xl font-bold text-neutral-900">Executions</h1>
       <div class="flex items-center gap-4">
-        <label class="inline-flex items-center cursor-pointer select-none">
-          <input
-            type="checkbox"
-            :checked="isPollingEnabled"
-            class="sr-only peer"
-            data-testid="executions-live-polling-toggle"
-            @change="onTogglePolling(($event.target as HTMLInputElement).checked)"
+        <div class="flex items-center gap-2">
+          <label class="inline-flex items-center cursor-pointer select-none">
+            <input
+              type="checkbox"
+              :checked="isPollingEnabled"
+              class="sr-only peer"
+              data-testid="executions-live-polling-toggle"
+              @change="onTogglePolling(($event.target as HTMLInputElement).checked)"
+            >
+            <div
+              class="relative w-11 h-6 bg-neutral-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"
+            ></div>
+            <span class="ms-3 text-sm font-medium text-neutral-900"> Live updates </span>
+          </label>
+          <select
+            v-model.number="pollingIntervalMs"
+            :disabled="!isPollingEnabled"
+            data-testid="executions-live-polling-interval"
+            aria-label="Polling interval"
+            class="px-2 py-1.5 rounded border text-sm font-medium border-neutral-300 bg-white text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-300 disabled:bg-neutral-100 disabled:text-neutral-500"
+            @change="onIntervalChange"
           >
-          <div
-            class="relative w-11 h-6 bg-neutral-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"
-          ></div>
-          <span class="ms-3 text-sm font-medium text-neutral-900"> Live updates </span>
-        </label>
+            <option :value="2000">2s</option>
+            <option :value="5000">5s</option>
+            <option :value="10000">10s</option>
+            <option :value="30000">30s</option>
+          </select>
+        </div>
         <a
           :href="exportUrl"
           download
