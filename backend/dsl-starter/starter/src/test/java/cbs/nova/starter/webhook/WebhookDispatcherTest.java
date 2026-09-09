@@ -18,12 +18,14 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+import java.util.Optional;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.mockito.Mockito;
 import tools.jackson.databind.ObjectMapper;
 
 class WebhookDispatcherTest {
@@ -210,6 +212,31 @@ class WebhookDispatcherTest {
   }
 
   @Test
+  void persistenceFailureDoesNotBreakDeliveryFlow() {
+    WebhookDeliveryRecordRepository failingRepository = Mockito
+            .mock(WebhookDeliveryRecordRepository.class);
+    Mockito.doThrow(new RuntimeException("db down")).when(failingRepository)
+            .insert(Mockito.any(WebhookDeliveryRecord.class));
+
+    WebhookProperties properties = enabledProperties(
+            new WebhookSubscription("*", baseUrl() + "/hook", null, null));
+    WebhookDispatcher dispatcher = newDispatcher(properties, failingRepository);
+
+    wireMock.stubFor(post("/hook").willReturn(ok()));
+
+    dispatcher.onRunComplete("run-db-fail", "demo", "COMPLETED", Instant.now(), Instant.now(),
+            null);
+
+    await().atMost(Duration.ofSeconds(3))
+            .untilAsserted(() -> assertThat(wireMock.findAll(postRequestedFor(urlEqualTo("/hook"))))
+                    .hasSize(1));
+
+    WebhookDeliveryInfo outcome = singleOutcome(dispatcher);
+    assertThat(outcome.lastStatus()).isEqualTo("200");
+    assertThat(outcome.lastAttempts()).isEqualTo(1);
+  }
+
+  @Test
   void plainHttpIsRejectedWhenNotAllowed() {
     WebhookProperties properties = enabledProperties(
             new WebhookSubscription("*", baseUrl() + "/hook", null, null));
@@ -248,6 +275,11 @@ class WebhookDispatcherTest {
                     .hasSize(1));
   }
 
+  private WebhookDispatcher newDispatcher(WebhookProperties properties,
+          WebhookDeliveryRecordRepository deliveryRepository) {
+    return new WebhookDispatcher(properties, objectMapper, executor,
+            Optional.ofNullable(deliveryRepository));
+  }
   private WebhookProperties enabledProperties(WebhookSubscription... subscriptions) {
     WebhookProperties properties = new WebhookProperties();
     properties.setEnabled(true);

@@ -17,6 +17,7 @@ import cbs.nova.starter.persistence.JdbcTransactionExecutionRepository;
 import cbs.nova.starter.persistence.NoOpFieldEncryptor;
 import cbs.nova.starter.persistence.TransactionExecutionJdbcRepository;
 import cbs.nova.starter.service.DslAuditService;
+import cbs.nova.starter.webhook.WebhookDeliveryRecordRepository;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -29,13 +30,13 @@ import tools.jackson.databind.ObjectMapper;
 import javax.sql.DataSource;
 
 /**
- * Persistence beans for DSL run history. Deliberately NOT annotated with {@code @Configuration}:
- * it is aggregated through {@link DslRootAutoConfiguration}'s {@code @Import} so its
+ * Persistence beans for DSL run history. Deliberately NOT annotated with {@code @Configuration}: it
+ * is aggregated through {@link DslRootAutoConfiguration}'s {@code @Import} so its
  * {@code @ConditionalOnBean(DataSource)} methods are evaluated in the auto-configuration phase,
- * after {@code DataSourceAutoConfiguration}. Annotating it would make it a component-scan
- * candidate in host applications that scan {@code cbs.nova.starter}, where those conditions would
- * be evaluated before the {@code DataSource} bean definition exists and the beans would be
- * silently skipped.
+ * after {@code DataSourceAutoConfiguration}. Annotating it would make it a component-scan candidate
+ * in host applications that scan {@code cbs.nova.starter}, where those conditions would be
+ * evaluated before the {@code DataSource} bean definition exists and the beans would be silently
+ * skipped.
  */
 @EnableConfigurationProperties(DslRunPersistenceProperties.class)
 @EnableJdbcRepositories(basePackages = "cbs.nova.starter.persistence")
@@ -91,6 +92,13 @@ public class DslRunRepositoryConfiguration {
   public DslAuditService dslAuditService(DslAuditRepository auditRepository,
           ObjectMapper objectMapper) {
     return new DslAuditService(auditRepository, objectMapper);
+  }
+
+  @Bean
+  @ConditionalOnBean(DataSource.class)
+  public WebhookDeliveryRecordRepository webhookDeliveryRecordRepository(
+          NamedParameterJdbcTemplate jdbcTemplate) {
+    return new WebhookDeliveryRecordRepository(jdbcTemplate);
   }
 
   @Bean

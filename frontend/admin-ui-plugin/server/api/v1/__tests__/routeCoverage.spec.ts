@@ -200,6 +200,13 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/dsl/audit',
     bffPath: '/api/v1/dsl/audit',
   },
+  // WebhookRouterConfiguration
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/webhooks/deliveries',
+    bffPath: '/api/v1/dsl/webhooks/deliveries',
+  },
+
   // DslFileRouterConfiguration
   {
     method: 'GET',

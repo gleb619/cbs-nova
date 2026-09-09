@@ -1,5 +1,6 @@
 package cbs.nova.starter.webhook;
 
+import java.util.Optional;
 import java.util.concurrent.ThreadPoolExecutor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -15,8 +16,10 @@ public class WebhookConfiguration {
 
   @Bean
   WebhookDispatcher webhookDispatcher(WebhookProperties properties, ObjectMapper objectMapper,
-          ThreadPoolTaskExecutor cbsNovaWebhookDeliveryExecutor) {
-    return new WebhookDispatcher(properties, objectMapper, cbsNovaWebhookDeliveryExecutor);
+          ThreadPoolTaskExecutor cbsNovaWebhookDeliveryExecutor,
+          Optional<WebhookDeliveryRecordRepository> deliveryRecordRepository) {
+    return new WebhookDispatcher(properties, objectMapper, cbsNovaWebhookDeliveryExecutor,
+            deliveryRecordRepository);
   }
 
   @Bean(name = "cbsNovaWebhookDeliveryExecutor", destroyMethod = "shutdown")
