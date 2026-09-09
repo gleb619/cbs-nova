@@ -1,5 +1,6 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { $fetch } from 'ofetch'
+import { extractApiError } from '../utils/extractApiError'
 
 export function useDslApi() {
   const log = useClientLogger('dsl')
@@ -16,7 +17,7 @@ export function useDslApi() {
       log.info('definitions loaded', { count: list.length })
       return result
     } catch (err) {
-      log.error('failed to load definitions', { error: (err as Error).message })
+      log.error('failed to load definitions', { error: extractApiError(err).message })
       throw err
     }
   }

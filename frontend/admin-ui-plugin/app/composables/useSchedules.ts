@@ -1,5 +1,6 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
+import { extractApiError } from '../utils/extractApiError'
 import type { CreateSchedulePayload, ScheduleSummary } from '@cbs/components'
 import { ref } from 'vue'
 
@@ -20,8 +21,8 @@ export function useSchedules() {
         ? result
         : ((result as { items?: ScheduleSummary[] }).items ?? [])
     } catch (err) {
-      log.error('failed to load schedules', { error: (err as Error).message })
-      error.value = (err as Error).message
+      log.error('failed to load schedules', { error: extractApiError(err).message })
+      error.value = extractApiError(err).message
       schedules.value = []
     } finally {
       loading.value = false

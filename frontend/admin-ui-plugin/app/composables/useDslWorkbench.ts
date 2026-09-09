@@ -2,6 +2,7 @@ import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogge
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { createNamespacedLoaderState } from '@cbs/components'
 import { useState } from 'nuxt/app'
+import { extractApiError } from '../utils/extractApiError'
 import { computed, readonly } from 'vue'
 import type {
   CompileDiagnostic,
@@ -98,7 +99,7 @@ export function useDslWorkbench() {
       }
       log.info('constructs loaded', { count: list.length, selected: state.value.selectedName })
     } catch (err) {
-      log.error('failed to load constructs', { error: (err as Error).message })
+      log.error('failed to load constructs', { error: extractApiError(err).message })
       throw err
     } finally {
       constructsLoading.value = false
@@ -118,7 +119,7 @@ export function useDslWorkbench() {
       await api.updateDescription(name, description)
       log.info('description updated', { name })
     } catch (err) {
-      log.error('failed to update description', { name, error: (err as Error).message })
+      log.error('failed to update description', { name, error: extractApiError(err).message })
     }
   }
 
@@ -192,7 +193,7 @@ export function useDslWorkbench() {
     } catch (err) {
       log.error('failed to save construct', {
         name: state.value.selectedName,
-        error: (err as Error).message,
+        error: extractApiError(err).message,
       })
       throw err
     } finally {
@@ -237,7 +238,7 @@ export function useDslWorkbench() {
     } catch (err) {
       log.error('failed to publish construct', {
         name: state.value.selectedName,
-        error: (err as Error).message,
+        error: extractApiError(err).message,
       })
       throw err
     } finally {
@@ -273,8 +274,9 @@ export function useDslWorkbench() {
       await loadConstructs()
       log.info('reload definitions finished')
     } catch (err) {
-      const diagnostics = (err as { data?: { diagnostics?: CompileDiagnostic[] } }).data
-        ?.diagnostics
+      const diagnostics = extractApiError(err).diagnostics as
+        | CompileDiagnostic[]
+        | undefined
       if (diagnostics) {
         state.value.validationErrors = compileDiagnosticsToValidationErrors(diagnostics)
       }

@@ -2,6 +2,7 @@ import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogge
 import { useExecutionsApi } from '@cbs/admin-ui-plugin/composables/useExecutionsApi'
 import { onUnmounted, ref, watch } from 'vue'
 import type { ExecutionDetail, ExecutionStatus } from '~/types'
+import { extractApiError } from '../utils/extractApiError'
 
 function resolveIntervalMs(explicit?: number): number {
   if (typeof explicit === 'number' && explicit > 0) return explicit
@@ -86,7 +87,7 @@ export function useStalePolling(options: {
       // Network blip — leave the interval alive, surface via console.
       // The host's status ref is unchanged so the consumer keeps
       // seeing Stale until the next successful fetch resolves it.
-      log.error('stale poll failed', { id: execId, error: (err as Error).message })
+      log.error('stale poll failed', { id: execId, error: extractApiError(err).message })
       return
     }
 

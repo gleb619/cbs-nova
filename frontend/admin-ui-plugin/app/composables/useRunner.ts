@@ -1,6 +1,7 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { ref } from 'vue'
+import { extractApiError } from '../utils/extractApiError'
 import type { RunnerMode, RunnerOutput, RunnerStatus } from '~/types'
 
 const selectedDefinition = ref<string | null>(null)
@@ -68,7 +69,7 @@ export function useRunner() {
       log.error('submit failed', {
         name,
         mode: mode.value,
-        error: (err as Error | undefined)?.message,
+        error: extractApiError(err).message,
       })
     }
   }
@@ -117,15 +118,16 @@ export function useRunner() {
   }
 
   function errorToOutput(err: unknown): RunnerOutput {
-    const fetchErr = err as {
-      data?: { message?: string; errors?: RunnerOutput['errors'] }
-      message?: string
-      statusMessage?: string
-    }
-    const message =
-      fetchErr?.data?.message ?? fetchErr?.statusMessage ?? fetchErr?.message ?? 'Request failed'
+    const { message } = extractApiError(err)
+    // `data.errors` is the structured runner error list produced by the BFF —
+    // keep passing it through untouched so the error panel renders per-item
+    // codes/messages instead of the flattened single message.
+    const dataErrors =
+      err && typeof err === 'object' && !Array.isArray(err)
+        ? (err as { data?: { errors?: RunnerOutput['errors'] } }).data?.errors
+        : undefined
     return {
-      errors: fetchErr?.data?.errors ?? [{ message, code: 'REQUEST_FAILED' }],
+      errors: dataErrors ?? [{ message, code: 'REQUEST_FAILED' }],
     }
   }
 
