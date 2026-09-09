@@ -1,20 +1,9 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { useExecutionsApi } from '@cbs/admin-ui-plugin/composables/useExecutionsApi'
+import { resolveStalePollMs } from '@cbs/admin-ui-plugin/composables/useStalePollInterval'
 import { onUnmounted, ref, watch } from 'vue'
 import type { ExecutionDetail, ExecutionStatus } from '~/types'
 import { extractApiError } from '../utils/extractApiError'
-
-function resolveIntervalMs(explicit?: number): number {
-  if (typeof explicit === 'number' && explicit > 0) return explicit
-  try {
-    const config = (useRuntimeConfig as () => { public?: { stalePollMs?: number } } | undefined)()
-    const fromConfig = config?.public?.stalePollMs
-    if (typeof fromConfig === 'number' && fromConfig > 0) return fromConfig
-  } catch {
-    // not in a Nuxt context — fall through to default
-  }
-  return 5000
-}
 
 /**
  * useStalePolling
@@ -47,7 +36,7 @@ export function useStalePolling(options: {
   intervalMs?: number
 }) {
   const { status, id } = options
-  const intervalMs = resolveIntervalMs(options.intervalMs)
+  const intervalMs = resolveStalePollMs(options.intervalMs)
 
   const api = useExecutionsApi()
   const log = useClientLogger('runtime')

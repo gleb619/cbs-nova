@@ -1,6 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useExecutions } from '../useExecutions'
 
+// useExecutions now resolves the stale-poll interval through the shared
+// useStalePollInterval util, which imports useRuntimeConfig from 'nuxt/app'
+// rather than relying on the global auto-import stub. Bridge the global
+// runtime-config mock so existing test overrides continue to take effect.
+vi.mock('nuxt/app', () => ({
+  useRuntimeConfig: () =>
+    (globalThis as unknown as { useRuntimeConfig: () => unknown }).useRuntimeConfig(),
+}))
+
 vi.mock('../useExecutionsApi', () => {
   const list = vi.fn()
   const get = vi.fn()
