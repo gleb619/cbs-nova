@@ -8,8 +8,7 @@ import PreviewResultPanel from './PreviewResultPanel.vue'
 const props = defineProps<{
   name: string
   type?: ConstructType
-  endpoint?: 'preview' | 'run' | 'explain'
-  preview?: (
+  preview: (
     name: string,
     body: unknown,
     metadata?: Record<string, unknown>,
@@ -46,16 +45,7 @@ async function run() {
     const body = currentPayload()
     const metadata = { startedFrom: 'workbench' }
 
-    let raw: unknown
-    if (props.preview) {
-      raw = await props.preview(props.name, body, metadata)
-    } else {
-      const path = props.endpoint ?? 'preview'
-      raw = await $fetch(
-        `/api/v1/dsl/${path}/${encodeURIComponent(props.name)}`,
-        { method: 'POST', body: { body, metadata } },
-      )
-    }
+    const raw = await props.preview(props.name, body, metadata)
 
     output.value = normalizeResponse(raw)
     status.value = 'success'
@@ -133,14 +123,12 @@ watch(inputJson, (v) => {
         v-model="inputPanelModel"
         :name="name"
         :type="type"
-        :endpoint="endpoint"
         :busy="status === 'loading'"
         @submit="run"
       />
       <PreviewResultPanel
         :output="output"
         :status="status"
-        :endpoint="endpoint"
         :name="name"
         :type="type"
         @history="emit('history')"

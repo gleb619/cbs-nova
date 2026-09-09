@@ -3,25 +3,30 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { __resetConstructSchemaCache } from '../../composables/useConstructSchema'
 import PreviewTab from '../dsl/PreviewTab.vue'
 
-function mountTab(props: Record<string, unknown> = {}) {
+function mountTab(
+  props: Record<string, unknown> = {},
+  preview: (name: string, body: unknown, metadata?: Record<string, unknown>) => unknown = vi
+    .fn()
+    .mockResolvedValue({ result: { ok: true } }),
+) {
   return mount(PreviewTab, {
-    props: { name: 'demo', ...props },
+    props: { name: 'demo', preview, ...props },
     global: {
       stubs: {
         PreviewResultPanel: {
           name: 'PreviewResultPanel',
-          template: `<section data-testid="runner-result-panel">
-              <header>
-                <span data-testid="result-title">Result · {{ endpoint ?? 'preview' }}</span>
-                <span data-testid="result-status">{{ status === 'success' ? 'done' : status }}</span>
-              </header>
-              <div data-testid="runner-result-tab">{{ output !== undefined ? JSON.stringify(output) : 'No result yet.' }}</div>
-            </section>`,
+          template: `\u003csection data-testid="runner-result-panel"\u003e
+              \u003cheader\u003e
+                \u003cspan data-testid="result-title"\u003eResult · {{ endpoint ?? 'preview' }}\u003c/span\u003e
+                \u003cspan data-testid="result-status"\u003e{{ status === 'success' ? 'done' : status }}\u003c/span\u003e
+              \u003c/header\u003e
+              \u003cdiv data-testid="runner-result-tab"\u003e{{ output !== undefined ? JSON.stringify(output) : 'No result yet.' }}\u003c/div\u003e
+            \u003c/section\u003e`,
           props: ['output', 'status', 'endpoint', 'name', 'type'],
         },
         ResultTab: {
           template:
-            '<div data-testid="runner-result-tab">{{ result !== undefined ? JSON.stringify(result) : "No result yet." }}</div>',
+            '\u003cdiv data-testid="runner-result-tab"\u003e{{ result !== undefined ? JSON.stringify(result) : "No result yet." }}\u003c/div\u003e',
           props: ['result'],
         },
       },
@@ -70,11 +75,9 @@ describe('PreviewTab', () => {
     expect(runBtn.attributes('disabled')).toBeDefined()
   })
 
-  it('calls $fetch and shows done on success', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ result: { ok: true } })
-    vi.stubGlobal('$fetch', fetchMock)
-
-    const wrapper = mountTab()
+  it('calls the preview prop and shows done on success', async () => {
+    const preview = vi.fn().mockResolvedValue({ result: { ok: true } })
+    const wrapper = mountTab({}, preview)
     await wrapper.find('[data-testid="json-textarea"]').setValue('{"a":1}')
     await wrapper
       .findAll('button')
@@ -82,24 +85,17 @@ describe('PreviewTab', () => {
       .trigger('click')
     await flushPromises()
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/dsl/preview/demo',
-      expect.objectContaining({
-        method: 'POST',
-        body: { body: { a: 1 }, metadata: { startedFrom: 'workbench' } },
-      }),
-    )
+    expect(preview).toHaveBeenCalledWith('demo', { a: 1 }, { startedFrom: 'workbench' })
     expect(wrapper.text()).toContain('done')
   })
 
   it('surfaces backend errors on failure', async () => {
-    const fetchMock = vi.fn().mockRejectedValue({
+    const preview = vi.fn().mockRejectedValue({
       data: { errors: [{ message: 'preview failed' }] },
       statusMessage: 'Unprocessable Entity',
     })
-    vi.stubGlobal('$fetch', fetchMock)
 
-    const wrapper = mountTab()
+    const wrapper = mountTab({}, preview)
     await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
     await wrapper
       .findAll('button')
@@ -112,7 +108,7 @@ describe('PreviewTab', () => {
   })
 
   it('normalizes BFF error envelope ({message, code}) into errors[] for the result panel', async () => {
-    const fetchMock = vi.fn().mockRejectedValue({
+    const preview = vi.fn().mockRejectedValue({
       data: {
         message: 'LinkedHashMap cannot be cast to BatchModels$BatchIn',
         code: 'UNPROCESSABLE_ENTITY',
@@ -124,9 +120,8 @@ describe('PreviewTab', () => {
       statusCode: 422,
       statusMessage: 'LinkedHashMap cannot be cast to BatchModels$BatchIn',
     })
-    vi.stubGlobal('$fetch', fetchMock)
 
-    const wrapper = mountTab()
+    const wrapper = mountTab({}, preview)
     await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
     await wrapper
       .findAll('button')
@@ -144,13 +139,12 @@ describe('PreviewTab', () => {
   })
 
   it('falls back to statusMessage when BFF envelope has no message', async () => {
-    const fetchMock = vi.fn().mockRejectedValue({
+    const preview = vi.fn().mockRejectedValue({
       data: { code: 'BACKEND_TIMEOUT', details: null, diagnostics: null },
       statusMessage: 'Backend request timed out',
     })
-    vi.stubGlobal('$fetch', fetchMock)
 
-    const wrapper = mountTab()
+    const wrapper = mountTab({}, preview)
     await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
     await wrapper
       .findAll('button')
@@ -160,21 +154,6 @@ describe('PreviewTab', () => {
 
     expect(wrapper.text()).toContain('Backend request timed out')
     expect(wrapper.text()).toContain('failed')
-  })
-
-  it('uses the explain endpoint when configured', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ result: { ok: true } })
-    vi.stubGlobal('$fetch', fetchMock)
-
-    const wrapper = mountTab({ endpoint: 'explain' })
-    await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
-    await wrapper
-      .findAll('button')
-      .find((b) => b.text() === 'Run')!
-      .trigger('click')
-    await flushPromises()
-
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/explain/demo', expect.any(Object))
   })
 
   it('fetches schema when type is Process and renders Form toggle', async () => {
@@ -192,7 +171,8 @@ describe('PreviewTab', () => {
     const fetchMock = vi.fn().mockResolvedValue(schemaResponse)
     vi.stubGlobal('$fetch', fetchMock)
 
-    const wrapper = mountTab({ type: 'Process' })
+    const preview = vi.fn().mockResolvedValue({ result: { ok: true } })
+    const wrapper = mountTab({ type: 'Process' }, preview)
     await flushPromises()
 
     await wrapper.find('[data-testid="mode-form"]').trigger('click')
@@ -208,12 +188,10 @@ describe('PreviewTab', () => {
       .trigger('click')
     await flushPromises()
 
-    expect(fetchMock).toHaveBeenLastCalledWith(
-      '/api/v1/dsl/preview/demo',
-      expect.objectContaining({
-        method: 'POST',
-        body: { body: { name: 'alice', count: 3 }, metadata: { startedFrom: 'workbench' } },
-      }),
+    expect(preview).toHaveBeenLastCalledWith(
+      'demo',
+      { name: 'alice', count: 3 },
+      { startedFrom: 'workbench' },
     )
   })
 
@@ -259,14 +237,14 @@ describe('PreviewTab', () => {
 
     expect(wrapper.text()).toContain('BatchIn')
   })
+
   it('normalizes backend responses that use the output field', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
+    const preview = vi.fn().mockResolvedValue({
       output: { total: 42, summary: 'processed' },
       success: true,
     })
-    vi.stubGlobal('$fetch', fetchMock)
 
-    const wrapper = mountTab()
+    const wrapper = mountTab({}, preview)
     await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
     await wrapper
       .findAll('button')
@@ -278,5 +256,4 @@ describe('PreviewTab', () => {
     expect(resultText).toContain('"result":{"total":42,"summary":"processed"}')
     expect(wrapper.text()).toContain('done')
   })
-
 })
