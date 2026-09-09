@@ -43,6 +43,7 @@ export function useHelperSearch(options: UseHelperSearchOptions) {
 
     const promise = Promise.resolve(options.fetch(filters.value))
       .then((data) => {
+        // fetch contract guarantees an array (ObjectSearchResult[]); guard only for malformed/sync returns.
         results.value = Array.isArray(data) ? data : []
       })
       .catch((err: unknown) => {

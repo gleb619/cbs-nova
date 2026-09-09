@@ -1,4 +1,5 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
+import { unwrapList } from '@cbs/components'
 import { $fetch } from 'ofetch'
 import { extractApiError } from '../utils/extractApiError'
 
@@ -9,11 +10,7 @@ export function useDslApi() {
     log.debug('fetching definitions')
     try {
       const result = await $fetch('/api/v1/dsl/definitions')
-      const list = Array.isArray(result)
-        ? result
-        : ((result as { items?: unknown[] }).items
-            ?? (result as { constructs?: unknown[] }).constructs
-            ?? [])
+      const list = unwrapList(result)
       log.info('definitions loaded', { count: list.length })
       return result
     } catch (err) {
@@ -145,8 +142,7 @@ export function useDslApi() {
   async function listDrafts(): Promise<unknown[]> {
     log.info('listDrafts request')
     const result = await $fetch('/api/v1/dsl/drafts')
-    if (Array.isArray(result)) return result
-    return ((result as { items?: unknown[] }).items ?? [])
+    return unwrapList(result)
   }
 
   async function readDraft(name: string) {

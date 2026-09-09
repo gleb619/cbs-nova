@@ -1,6 +1,7 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { useExecutionsApi } from '@cbs/admin-ui-plugin/composables/useExecutionsApi'
 import { useStalePolling } from '@cbs/admin-ui-plugin/composables/useStalePolling'
+import { unwrapListWithTotal } from '@cbs/components'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import type { Execution, ExecutionDetail, ExecutionFilters, ExecutionStatus } from '~/types'
 import { extractApiError } from '../utils/extractApiError'
@@ -263,13 +264,9 @@ export function useExecutions() {
     try {
       const offset = (page.value - 1) * pageSize
       const result = await api.list({ ...filters.value, offset, limit: pageSize })
-      if (Array.isArray(result)) {
-        executions.value = result
-        total.value = result.length
-      } else {
-        executions.value = result.items ?? []
-        total.value = result.total ?? executions.value.length
-      }
+      const envelope = unwrapListWithTotal<Execution>(result)
+      executions.value = envelope.items
+      total.value = envelope.total
       reconcileStalePolling()
       log.info('executions loaded', {
         count: executions.value.length,

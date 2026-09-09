@@ -66,7 +66,16 @@ describe('useHelperCompletion', () => {
     expect(warnSpy).toHaveBeenCalled()
   })
 
-  it('normalises non-array results to an empty array', async () => {
+  it('unwraps a { items: [...] } envelope', async () => {
+    const fetch = vi.fn().mockResolvedValue({ items: sampleCatalog })
+    const { getCatalog } = useHelperCompletion({ fetch })
+
+    const result = await getCatalog()
+
+    expect(result).toEqual(sampleCatalog)
+  })
+
+  it('normalises malformed results to an empty array', async () => {
     const fetch = vi.fn().mockResolvedValue({ not: 'an array' })
     const { getCatalog } = useHelperCompletion({ fetch })
 

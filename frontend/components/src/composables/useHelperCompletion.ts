@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import type { HelperCatalogEntry } from '../types/dsl'
+import { unwrapList } from '../utils/unwrapList'
 import { useLogger } from './useLogger'
 
 export interface UseHelperCompletionOptions {
@@ -23,7 +24,7 @@ export function useHelperCompletion(options: UseHelperCompletionOptions) {
     const promise = (async () => {
       try {
         const result = await options.fetch()
-        const list = Array.isArray(result) ? result : []
+        const list = unwrapList<HelperCatalogEntry>(result)
         cache.value = list
         return list
       } catch (err) {
