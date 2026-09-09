@@ -18,10 +18,12 @@ import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.config.router.DslReloadRouterConfiguration;
 import cbs.nova.starter.exception.DslCompilationException;
 import cbs.nova.starter.model.CompileDiagnostic;
+import cbs.nova.starter.model.CompileDiagnosticSource;
 import cbs.nova.starter.model.CompileModels.CompileRequest;
 import cbs.nova.starter.model.CompileModels.CompileResult;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ReloadResponse;
+import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.JavaSourceCompiler;
 import cbs.nova.starter.service.PreviewResultCache;
@@ -87,6 +89,7 @@ public class DslReloadHandler {
   private final ObjectProvider<PreviewResultCache> previewCacheProvider;
   private final ObjectProvider<DslAuditService> auditServiceProvider;
   private final ObjectProvider<DslBuilderClient> builderClientProvider;
+  private final ObjectProvider<CompileDiagnosticRecordRepository> compileDiagnosticRepositoryProvider;
   private final ReentrantLock reloadLock = new ReentrantLock();
   private final JavaSourceCompiler javaSourceCompiler = new JavaSourceCompiler();
 
@@ -102,12 +105,14 @@ public class DslReloadHandler {
   public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader,
           ObjectProvider<PreviewResultCache> previewCacheProvider,
           ObjectProvider<DslAuditService> auditServiceProvider,
-          ObjectProvider<DslBuilderClient> builderClientProvider) {
+          ObjectProvider<DslBuilderClient> builderClientProvider,
+          ObjectProvider<CompileDiagnosticRecordRepository> compileDiagnosticRepositoryProvider) {
     this.dslProperties = dslProperties;
     this.loader = loader;
     this.previewCacheProvider = previewCacheProvider;
     this.auditServiceProvider = auditServiceProvider;
     this.builderClientProvider = builderClientProvider;
+    this.compileDiagnosticRepositoryProvider = compileDiagnosticRepositoryProvider;
   }
 
   /**
@@ -116,7 +121,7 @@ public class DslReloadHandler {
    * {@code null} providers.
    */
   public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader) {
-    this(dslProperties, loader, null, null, null);
+    this(dslProperties, loader, null, null, null, null);
   }
 
   /**
@@ -124,7 +129,7 @@ public class DslReloadHandler {
    */
   public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader,
           ObjectProvider<PreviewResultCache> previewCacheProvider) {
-    this(dslProperties, loader, previewCacheProvider, null, null);
+    this(dslProperties, loader, previewCacheProvider, null, null, null);
   }
 
   /**
@@ -133,7 +138,19 @@ public class DslReloadHandler {
   public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader,
           ObjectProvider<PreviewResultCache> previewCacheProvider,
           ObjectProvider<DslAuditService> auditServiceProvider) {
-    this(dslProperties, loader, previewCacheProvider, auditServiceProvider, null);
+    this(dslProperties, loader, previewCacheProvider, auditServiceProvider, null, null);
+  }
+
+  /**
+   * Constructor for callers that wire audit and builder client but no diagnostic persistence
+   * (tests).
+   */
+  public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader,
+          ObjectProvider<PreviewResultCache> previewCacheProvider,
+          ObjectProvider<DslAuditService> auditServiceProvider,
+          ObjectProvider<DslBuilderClient> builderClientProvider) {
+    this(dslProperties, loader, previewCacheProvider, auditServiceProvider, builderClientProvider,
+            null);
   }
 
   /**
@@ -174,8 +191,10 @@ public class DslReloadHandler {
               Map.of("error", String.valueOf(e.getMessage())));
       log.error("[DSL reload] Failed to reload DSL definitions from {}", dir, e);
       if (e instanceof DslCompilationException dce) {
+        recordDiagnostics(CompileDiagnosticSource.RELOAD, dir.toString(), dce.diagnostics());
+        var responseDiagnostics = dce.diagnostics().stream().limit(20).toList();
         return error(HttpStatus.INTERNAL_SERVER_ERROR, new ErrorResponse(
-                "RELOAD_FAILED", dce.getMessage(), null, null, null, dce.diagnostics()));
+                "RELOAD_FAILED", dce.getMessage(), null, null, null, responseDiagnostics));
       }
       return error(HttpStatus.INTERNAL_SERVER_ERROR,
               new ErrorResponse("RELOAD_FAILED", e.getMessage(), null, null, null));
@@ -462,6 +481,23 @@ public class DslReloadHandler {
     }
     auditService.record(DslAuditService.currentActor(), ACTION_DEFINITION_RELOAD, target,
             DslAuditService.correlationIdOf(request), outcome, details);
+  }
+
+  private void recordDiagnostics(CompileDiagnosticSource source, String definition,
+          List<CompileDiagnostic> diagnostics) {
+    if (compileDiagnosticRepositoryProvider == null) {
+      return;
+    }
+    var repository = compileDiagnosticRepositoryProvider.getIfAvailable();
+    if (repository == null) {
+      return;
+    }
+    try {
+      repository.insertAll(source, definition, diagnostics);
+    } catch (RuntimeException e) {
+      log.warn("[DSL diagnostics] failed to persist compile diagnostics from {} for {}: {}",
+              source, definition, e.getMessage());
+    }
   }
 
   private static ServerResponse error(HttpStatus status, ErrorResponse body) throws IOException {

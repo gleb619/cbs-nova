@@ -16,10 +16,12 @@ import cbs.nova.starter.model.VcsModels.DiffHunk;
 import cbs.nova.starter.model.VcsModels.ImportBundleResult;
 import cbs.nova.starter.model.VcsModels.ImportEntryResult;
 import cbs.nova.starter.model.CompileDiagnostic;
+import cbs.nova.starter.model.CompileDiagnosticSource;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.controller.Pagination;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.service.DslAuditService;
+import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
 import cbs.nova.starter.service.DslDefinitionBundleService;
 import cbs.nova.starter.service.DslDefinitionHistoryService;
 import cbs.nova.starter.util.LineDiff;
@@ -65,11 +67,13 @@ public class DslDraftHandler {
   private final DslDefinitionBundleService bundleService;
   private final ObjectProvider<DslAuditService> auditServiceProvider;
   private final ObjectProvider<DslBuilderClient> builderClientProvider;
+  private final ObjectProvider<CompileDiagnosticRecordRepository> compileDiagnosticRepositoryProvider;
 
   public DslDraftHandler(DslProperties dslProperties, DslReloadHandler reloadHandler,
           DslDefinitionHistoryService historyService, ObjectMapper objectMapper,
           DslDefinitionBundleService bundleService) {
-    this(dslProperties, reloadHandler, historyService, objectMapper, bundleService, null, null);
+    this(dslProperties, reloadHandler, historyService, objectMapper, bundleService, null, null,
+            null);
   }
 
   public DslDraftHandler(DslProperties dslProperties, DslReloadHandler reloadHandler,
@@ -77,7 +81,20 @@ public class DslDraftHandler {
           DslDefinitionBundleService bundleService,
           ObjectProvider<DslAuditService> auditServiceProvider) {
     this(dslProperties, reloadHandler, historyService, objectMapper, bundleService,
-            auditServiceProvider, null);
+            auditServiceProvider, null, null);
+  }
+
+  /**
+   * Constructor for callers that wire audit and builder client but no diagnostic persistence
+   * (tests).
+   */
+  public DslDraftHandler(DslProperties dslProperties, DslReloadHandler reloadHandler,
+          DslDefinitionHistoryService historyService, ObjectMapper objectMapper,
+          DslDefinitionBundleService bundleService,
+          ObjectProvider<DslAuditService> auditServiceProvider,
+          ObjectProvider<DslBuilderClient> builderClientProvider) {
+    this(dslProperties, reloadHandler, historyService, objectMapper, bundleService,
+            auditServiceProvider, builderClientProvider, null);
   }
 
   @Autowired
@@ -85,7 +102,8 @@ public class DslDraftHandler {
           DslDefinitionHistoryService historyService, ObjectMapper objectMapper,
           DslDefinitionBundleService bundleService,
           ObjectProvider<DslAuditService> auditServiceProvider,
-          ObjectProvider<DslBuilderClient> builderClientProvider) {
+          ObjectProvider<DslBuilderClient> builderClientProvider,
+          ObjectProvider<CompileDiagnosticRecordRepository> compileDiagnosticRepositoryProvider) {
     this.dslProperties = dslProperties;
     this.reloadHandler = reloadHandler;
     this.historyService = historyService;
@@ -93,6 +111,7 @@ public class DslDraftHandler {
     this.bundleService = bundleService;
     this.auditServiceProvider = auditServiceProvider;
     this.builderClientProvider = builderClientProvider;
+    this.compileDiagnosticRepositoryProvider = compileDiagnosticRepositoryProvider;
   }
 
   public ServerResponse save(ServerRequest request) throws IOException {
@@ -171,6 +190,11 @@ public class DslDraftHandler {
         return ServerResponse.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(response);
+      } catch (DslCompilationException e) {
+        recordDiagnostics(CompileDiagnosticSource.PUBLISH, name, e.diagnostics());
+        audit(request, ACTION_DEFINITION_PUBLISH, name, DslAuditService.OUTCOME_FAILURE,
+                Map.of("error", String.valueOf(e.getMessage())));
+        throw e;
       } catch (IOException | RuntimeException e) {
         audit(request, ACTION_DEFINITION_PUBLISH, name, DslAuditService.OUTCOME_FAILURE,
                 Map.of("error", String.valueOf(e.getMessage())));
@@ -544,7 +568,9 @@ public class DslDraftHandler {
       log.warn("[DSL bundle] import wrote published markers but reload failed: {}", e.getMessage());
       var compilation = findDslCompilationException(e);
       if (compilation != null) {
-        return new ReloadOutcome(false, compilation.getMessage(), compilation.diagnostics());
+        recordDiagnostics(CompileDiagnosticSource.PUBLISH, target, compilation.diagnostics());
+        return new ReloadOutcome(false, compilation.getMessage(),
+                compilation.diagnostics().stream().limit(20).toList());
       }
       if (e instanceof ValidationException ve) {
         return new ReloadOutcome(false, ve.getMessage(), toValidationDiagnostics(ve, target));
@@ -568,6 +594,23 @@ public class DslDraftHandler {
     }
     auditService.record(DslAuditService.currentActor(), action, target,
             DslAuditService.correlationIdOf(request), outcome, details);
+  }
+
+  private void recordDiagnostics(CompileDiagnosticSource source, String definition,
+          List<CompileDiagnostic> diagnostics) {
+    if (compileDiagnosticRepositoryProvider == null) {
+      return;
+    }
+    var repository = compileDiagnosticRepositoryProvider.getIfAvailable();
+    if (repository == null) {
+      return;
+    }
+    try {
+      repository.insertAll(source, definition, diagnostics);
+    } catch (RuntimeException e) {
+      log.warn("[DSL diagnostics] failed to persist compile diagnostics from {} for {}: {}",
+              source, definition, e.getMessage());
+    }
   }
 
   private DslBuilderClient builderClient() {
@@ -597,13 +640,14 @@ public class DslDraftHandler {
       log.warn("[DSL drafts] publish of {} succeeded but reload failed: {}", name, e.getMessage());
       var compilation = findDslCompilationException(e);
       if (compilation != null) {
+        recordDiagnostics(CompileDiagnosticSource.PUBLISH, name, compilation.diagnostics());
         return new DraftResponse(name, "Published", location, false,
                 LoadResult.empty(),
-                compilation.getMessage(), compilation.diagnostics());
+                compilation.getMessage(), compilation.diagnostics().stream().limit(20).toList());
       }
       if (e instanceof ValidationException ve) {
         return new DraftResponse(name, "Published", location, false, LoadResult.empty(),
-                ve.getMessage(), toValidationDiagnostics(ve, name));
+                ve.getMessage(), toValidationDiagnostics(ve, name).stream().limit(20).toList());
       }
       return new DraftResponse(name, "Published", location, false, LoadResult.empty(),
               e.getMessage(), null);

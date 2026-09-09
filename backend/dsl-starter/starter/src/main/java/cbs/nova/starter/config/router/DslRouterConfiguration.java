@@ -18,7 +18,8 @@ import org.springframework.context.annotation.Import;
     DslRuntimeRouterConfiguration.class,
     DslReloadRouterConfiguration.class,
     DslDraftRouterConfiguration.class,
-    DslFileRouterConfiguration.class
+    DslFileRouterConfiguration.class,
+    DslDiagnosticsRouterConfiguration.class
 })
 public class DslRouterConfiguration {
 }
