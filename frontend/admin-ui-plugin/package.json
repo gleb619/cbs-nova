@@ -15,6 +15,7 @@
     "build": "nuxt build --config nuxt.config.dev.ts --cwd .",
     "generate": "nuxt generate --config nuxt.config.dev.ts --cwd .",
     "preview": "nuxt preview",
+    "pretest": "nuxi prepare",
     "test": "vitest run",
     "typecheck": "nuxi typecheck",
     "lint": "biome lint .",
