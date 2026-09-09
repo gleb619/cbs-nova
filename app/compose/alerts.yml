@@ -1,0 +1,44 @@
+# Prometheus alert rules for cbs-nova.
+# Loaded by app/compose/prometheus.yml.
+
+groups:
+  - name: cbs-nova-run-errors
+    rules:
+      # VERIFY series name against a booted app: curl -s :8090/actuator/prometheus | grep dsl_run
+      - alert: CbsNovaRunErrorRate
+        expr: |
+          sum(rate(dsl_run_count_total{status!~"SUCCESS"}[5m]))
+          /
+          sum(rate(dsl_run_count_total[5m])) > 0.10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "cbs-nova DSL run error rate is high"
+          description: "More than 10% of DSL runs are finishing with a non-SUCCESS status over the last 5 minutes, sustained for 10 minutes."
+
+  - name: cbs-nova-preview-latency
+    rules:
+      # VERIFY series name against a booted app: curl -s :8090/actuator/prometheus | grep dsl_preview
+      # Threshold (2s) must be tuned to the observed p95 baseline.
+      # A true preview timeout-rate alert needs an outcome-tagged preview counter; that metric does not exist yet.
+      - alert: CbsNovaPreviewLatencyP95
+        expr: histogram_quantile(0.95, sum(rate(dsl_preview_duration_seconds_bucket[5m])) by (le)) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "cbs-nova DSL preview p95 latency is high"
+          description: "The 95th percentile DSL preview duration exceeded 2 seconds for 10 minutes. Tune the threshold to the observed baseline."
+
+  - name: cbs-nova-app-down
+    rules:
+      # Temporal-specific reachability alerting rides on T390 readiness work (future dsl_temporal_reachable gauge).
+      - alert: CbsNovaAppDown
+        expr: up{job="cbs-nova"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "cbs-nova application is down"
+          description: "Prometheus cannot scrape the cbs-nova job at spring-app:8090/actuator/prometheus for 2 minutes."

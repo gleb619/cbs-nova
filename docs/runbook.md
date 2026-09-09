@@ -426,6 +426,27 @@ is rejected with `400 INVALID_CORRELATION_ID` before any handler runs.
 
 ---
 
+## Monitoring
+
+Prometheus scrapes the Spring Boot actuator at `http://spring-app:8090/actuator/prometheus` (job `cbs-nova`). The exposed DSL metric families include `dsl_run_*`, `dsl_preview_*`, and JVM/process series. The first alert rules live in `app/compose/alerts.yml`.
+
+### Alert rules
+
+| Alert | Meaning | Operator action |
+|---|---|---|
+| `CbsNovaRunErrorRate` | More than 10% of DSL runs finished with a non-`SUCCESS` status over the last 5 minutes, sustained for 10 minutes. | Check Temporal connectivity and recent deployments; grep app logs for the failing `processName` and `status`. |
+| `CbsNovaPreviewLatencyP95` | The 95th percentile of DSL preview durations exceeded 2 seconds for 10 minutes. | Tune the threshold to your observed baseline; investigate if preview compute or helper mocks are slow. A true preview timeout-rate alert needs an outcome-tagged preview counter (follow-up task). |
+| `CbsNovaAppDown` | Prometheus cannot scrape the `cbs-nova` job for 2 minutes. | Verify the app container is running, `SERVER_PORT`, and the `management.endpoints.web.exposure.include` list contains `prometheus`. Temporal-specific reachability alerting rides on the future `dsl_temporal_reachable` gauge (T390). |
+
+### First-boot verification checklist
+
+Before trusting the alert expressions, boot the app and confirm the real series names:
+
+```bash
+curl -s http://localhost:8090/actuator/prometheus | grep -E "dsl_run|dsl_preview" | head
+```
+
+If the counter or bucket names differ from the conventional names used in `alerts.yml`, update the expressions and this runbook to match the live output. This check is intentionally deferred to a human or CI boot because it requires Postgres + Temporal.
 ## Maintaining this runbook
 
 Every new ops-relevant change (a scheduled job, a new failure mode, a new external dependency)
