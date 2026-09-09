@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DslConstruct } from '../../types/dsl'
 import BodyEditor from '../dsl/BodyEditor.vue'
 import CodeTab from '../dsl/CodeTab.vue'
@@ -32,9 +32,9 @@ const construct: DslConstruct = {
   status: 'Valid',
 }
 
-import PreviewTab from '../dsl/PreviewTab.vue'
-import PreviewResultPanel from '../dsl/PreviewResultPanel.vue'
 import ExplainTab from '../dsl/ExplainTab.vue'
+import PreviewResultPanel from '../dsl/PreviewResultPanel.vue'
+import PreviewTab from '../dsl/PreviewTab.vue'
 
 function mountBodyEditor(props: Record<string, unknown>) {
   // BodyEditor references StructureTab / CodeTab in its template without importing
@@ -55,6 +55,9 @@ function mountBodyEditor(props: Record<string, unknown>) {
 }
 
 describe('BodyEditor', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
   it('exposes root data-testid', () => {
     const wrapper = mountBodyEditor({ construct })
 

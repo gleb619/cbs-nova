@@ -7,9 +7,9 @@ import {
 } from '../../composables/useLocalStorageState'
 import type { DslConstruct, HelperCatalogEntry, StepDef, ValidationError } from '../../types/dsl'
 import type { RunnerOutput, RunnerStatus } from '../../types/runner'
-import type { EditorMarker } from './MonacoEditor.vue'
 import CodeTab from './CodeTab.vue'
 import ExplainTab from './ExplainTab.vue'
+import type { EditorMarker } from './MonacoEditor.vue'
 import PreviewTab from './PreviewTab.vue'
 import ProblemsPanel from './ProblemsPanel.vue'
 import StructureTab from './StructureTab.vue'
@@ -238,7 +238,6 @@ defineExpose({ revealPosition, insertAtCursor, selectProblem })
         v-if="tab === 'preview'"
         :name="construct?.name ?? ''"
         :type="construct?.type as ConstructType | undefined"
-        endpoint="preview"
         :preview="props.preview"
       />
       <ExplainTab
@@ -247,11 +246,7 @@ defineExpose({ revealPosition, insertAtCursor, selectProblem })
         :status="explainStatus"
         @run="runExplain"
       />
-      <ProblemsPanel
-        v-show="tab === 'problems'"
-        :errors="props.errors"
-        @select="selectProblem"
-      />
+      <ProblemsPanel v-show="tab === 'problems'" :errors="props.errors" @select="selectProblem" />
     </div>
   </div>
 </template>
