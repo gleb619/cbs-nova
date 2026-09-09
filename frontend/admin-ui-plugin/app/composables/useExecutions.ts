@@ -1,6 +1,7 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { useExecutionsApi } from '@cbs/admin-ui-plugin/composables/useExecutionsApi'
 import { useStalePolling } from '@cbs/admin-ui-plugin/composables/useStalePolling'
+import { resolveStalePollMs } from '@cbs/admin-ui-plugin/composables/useStalePollInterval'
 import { unwrapListWithTotal } from '@cbs/components'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import type { Execution, ExecutionDetail, ExecutionFilters, ExecutionStatus } from '~/types'
@@ -32,22 +33,6 @@ export function useExecutions() {
    */
   const stalePollers: Map<string, () => void> = new Map()
 
-  /**
-   * Default stale poll interval. Read from `runtimeConfig.public.stalePollMs`
-   * with a 5000ms fallback — mirrors `useStalePolling`'s own resolution so
-   * tests can override via `useRuntimeConfig` instead of having to thread
-   * a custom interval through every call site.
-   */
-  function resolveStalePollMs(): number {
-    try {
-      const cfg = (useRuntimeConfig as () => { public?: { stalePollMs?: number } } | undefined)()
-      const v = cfg?.public?.stalePollMs
-      if (typeof v === 'number' && v > 0) return v
-    } catch {
-      // not in a Nuxt context — fall through to default
-    }
-    return 5000
-  }
 
   let pollHandle: ReturnType<typeof setInterval> | null = null
 
