@@ -279,5 +279,45 @@ file.
 
 ---
 
+## 12. Which vocabulary? (app chrome vs. workbench)
+
+The token set in §2–6 (**app chrome**: `primary` / `neutral` / `success` / `warning` /
+`error` / `info` / `background`) and the set in §11 (**workbench**: `accent` / `ink` /
+`ink-muted` / `line` / `surface` / `danger`) are **not interchangeable**. Pick per file/area:
+
+### Workbench vocabulary
+
+- `admin-ui-plugin/app/pages/dsl-workbench.vue`
+- `admin-ui-plugin/app/pages/runner.vue` — the **preview / output panes only**
+  (page header, run button, form chrome stay app-chrome)
+- everything under `frontend/components/src/components/dsl/`,
+  `frontend/components/src/components/runner/`, and any `preview*` component
+- **executions detail** (`app/pages/executions/[id].vue`): the **diagram / logs /
+  trace panels** — the data-dense inner surfaces
+
+### App-chrome vocabulary
+
+- dashboard (`index.vue`), nav, sidebar, footer, generic forms, the Nuxt error page
+- `schedules.vue`, executions **list** page (`executions/index.vue`)
+- **executions detail**: the **page header, filters, status pills, pagination** —
+  the outer chrome around the workbench panels
+
+The executions detail page deliberately **straddles both** — split by region, not by file.
+
+### No-scale tokens
+
+`background`, `line`, `surface`, `danger`, `ink`, `ink-muted` are flat; `accent` only
+has `500` / `600`. Never write a numeric suffix outside those. See
+[`docs/color-token-mapping.md`](./color-token-mapping.md) for the full raw→semantic tables.
+
+### Open question (for a human)
+
+`accent` (teal) and `primary` (terracotta) are two unrelated brand hues living in one
+config, as are `neutral` and `ink`. Whether the workbench should really have its own
+hue long-term, or collapse onto the app-chrome palette, is a **design decision** — not
+resolved here. Flag it; do not collapse the tokens during T457/T458.
+
+---
+
 This brandbook ensures a consistent, maintainable, and visually appealing admin interface. All developers should refer
 to this document when adding new components or modifying existing styles.
