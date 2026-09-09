@@ -405,26 +405,26 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex flex-col h-full bg-gray-50">
-    <header class="flex items-center px-4 py-2 bg-white border-b border-gray-200">
+  <div class="flex flex-col h-full bg-surface">
+    <header class="flex items-center px-4 py-2 bg-white border-b border-line">
       <div class="flex items-center gap-3">
         <button
           type="button"
-          class="md:hidden p-1.5 rounded hover:bg-gray-100"
+          class="md:hidden p-1.5 rounded hover:bg-surface"
           aria-label="Toggle explorer"
           @click="toggleExplorer"
         >
           ☰
         </button>
-        <h1 class="text-lg font-semibold text-gray-900">DSL Workbench</h1>
-        <span v-if="selectedConstruct" class="text-sm text-gray-500">
+        <h1 class="text-lg font-semibold text-ink">DSL Workbench</h1>
+        <span v-if="selectedConstruct" class="text-sm text-ink-muted">
           / {{ selectedConstruct.name }}
         </span>
       </div>
       <div class="ml-auto flex items-center gap-3">
         <button
           type="button"
-          class="px-3 py-1.5 text-sm rounded border border-gray-300 hover:bg-gray-100"
+          class="px-3 py-1.5 text-sm rounded border border-line hover:bg-surface"
           data-testid="workbench-new-definition"
           @click="openNewPanel"
         >
@@ -434,16 +434,16 @@ onBeforeUnmount(() => {
       </div>
       <button
         type="button"
-        class="px-3 py-1.5 text-sm rounded border border-gray-300 hover:bg-gray-100"
-        :class="helperSearchOpen ? 'bg-blue-50 text-blue-700 border-blue-300' : ''"
+        class="px-3 py-1.5 text-sm rounded border border-line hover:bg-surface"
+        :class="helperSearchOpen ? 'bg-accent-500/10 text-accent-500 border-accent-500' : ''"
         @click="toggleHelperSearch"
       >
         {{ helperSearchOpen ? 'Close Objects' : 'Objects' }}
       </button>
       <button
         type="button"
-        class="px-3 py-1.5 text-sm rounded border border-gray-300 hover:bg-gray-100"
-        :class="historyPanelOpen ? 'bg-blue-50 text-blue-700 border-blue-300' : ''"
+        class="px-3 py-1.5 text-sm rounded border border-line hover:bg-surface"
+        :class="historyPanelOpen ? 'bg-accent-500/10 text-accent-500 border-accent-500' : ''"
         data-testid="workbench-toggle-history"
         :disabled="!selectedConstruct"
         @click="toggleHistoryPanel"
@@ -452,8 +452,8 @@ onBeforeUnmount(() => {
       </button>
       <button
         type="button"
-        class="px-3 py-1.5 text-sm rounded border border-gray-300 hover:bg-gray-100"
-        :class="helperCatalogOpen ? 'bg-blue-50 text-blue-700 border-blue-300' : ''"
+        class="px-3 py-1.5 text-sm rounded border border-line hover:bg-surface"
+        :class="helperCatalogOpen ? 'bg-accent-500/10 text-accent-500 border-accent-500' : ''"
         data-testid="workbench-toggle-helpers"
         @click="toggleHelperCatalog"
       >
@@ -465,7 +465,7 @@ onBeforeUnmount(() => {
       <aside
         v-show="explorerOpen"
         :class="explorerCollapsed ? 'w-12' : 'w-64'"
-        class="shrink-0 border-r border-gray-800 overflow-hidden"
+        class="shrink-0 border-r border-line overflow-hidden"
       >
         <DslConstructExplorer
           v-model:collapsed="explorerCollapsed"
@@ -581,31 +581,31 @@ onBeforeUnmount(() => {
       @click.self="closeNewPanel"
     >
       <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full flex flex-col max-h-[90vh]">
-        <header class="px-6 py-4 border-b border-gray-200">
-          <h2 id="workbench-new-title" class="text-lg font-semibold text-gray-900">
+        <header class="px-6 py-4 border-b border-line">
+          <h2 id="workbench-new-title" class="text-lg font-semibold text-ink">
             New definition
           </h2>
-          <p class="text-sm text-gray-600 mt-1">
+          <p class="text-sm text-ink-muted mt-1">
             Choose a starter template and name for the new DSL definition.
           </p>
         </header>
 
         <div class="px-6 py-4 overflow-y-auto">
           <div class="mb-4">
-            <label for="workbench-new-name" class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="workbench-new-name" class="block text-sm font-medium text-ink mb-1">
               Name
             </label>
             <input
               id="workbench-new-name"
               v-model="newName"
               type="text"
-              class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-line rounded focus:outline-none focus:ring-2 focus:ring-accent-500"
               placeholder="Definition name"
               data-testid="workbench-new-name"
             >
             <p
               v-if="newNameError"
-              class="mt-1 text-xs text-red-600"
+              class="mt-1 text-xs text-danger"
               data-testid="workbench-new-name-error"
             >
               {{ newNameError }}
@@ -615,10 +615,10 @@ onBeforeUnmount(() => {
           <DslTemplateGallery @select="handleTemplateSelect" />
         </div>
 
-        <footer class="px-6 py-4 border-t border-gray-200 flex justify-end gap-2">
+        <footer class="px-6 py-4 border-t border-line flex justify-end gap-2">
           <button
             type="button"
-            class="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-100"
+            class="px-4 py-2 rounded-lg text-sm font-medium border border-line text-ink hover:bg-surface"
             data-testid="workbench-new-cancel"
             @click="closeNewPanel"
           >
@@ -628,8 +628,8 @@ onBeforeUnmount(() => {
             type="button"
             class="px-4 py-2 rounded-lg text-sm font-medium text-white"
             :class="(!newName.trim() || newNameError || !selectedTemplate)
-                ? 'bg-blue-300 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700'"
+                ? 'bg-accent-500/20 cursor-not-allowed'
+                : 'bg-accent-500 hover:bg-accent-600'"
             :disabled="!newName.trim() || !!newNameError || !selectedTemplate"
             data-testid="workbench-new-create"
             @click="confirmCreate"
