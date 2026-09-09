@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { useLoggerSpy } = vi.hoisted(() => ({
-  useLoggerSpy: vi.fn((scope: string) => ({
+  useLoggerSpy: vi.fn((_scope: string) => ({
     trace: vi.fn(),
     debug: vi.fn(),
     info: vi.fn(),
