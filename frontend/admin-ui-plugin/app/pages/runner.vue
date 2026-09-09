@@ -157,23 +157,23 @@ onMounted(() => {
   <div class="flex flex-col gap-6">
     <header class="flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Runner</h1>
-        <p class="text-sm text-gray-600">Preview, run, or explain DSL definitions.</p>
+        <h1 class="text-2xl font-bold text-neutral-900">Runner</h1>
+        <p class="text-sm text-neutral-600">Preview, run, or explain DSL definitions.</p>
       </div>
       <div class="flex items-center gap-3">
         <RunnerStatusIndicator :status="status" />
       </div>
     </header>
 
-    <div class="flex flex-wrap items-end gap-4 bg-white border border-gray-200 rounded-xl p-4">
+    <div class="flex flex-wrap items-end gap-4 bg-white border border-neutral-200 rounded-xl p-4">
       <div class="min-w-[16rem] flex-1">
         <RunnerDefinitionSelector
           :definitions="definitions"
           :model-value="selectedDefinition"
           @update:model-value="onSelectDefinition"
         />
-        <p v-if="loadingDefinitions" class="text-xs text-gray-500 mt-1">Loading definitions…</p>
-        <p v-else-if="loadError" class="text-xs text-red-600 mt-1">{{ loadError }}</p>
+        <p v-if="loadingDefinitions" class="text-xs text-neutral-500 mt-1">Loading definitions…</p>
+        <p v-else-if="loadError" class="text-xs text-error-600 mt-1">{{ loadError }}</p>
       </div>
 
       <RunnerModeSwitcher :model-value="mode" @update:model-value="onSetMode" />
@@ -182,7 +182,7 @@ onMounted(() => {
         <button
           v-if="mode === 'preview'"
           type="button"
-          class="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+          class="px-4 py-2 rounded-lg text-sm font-medium border border-neutral-300 text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
           :disabled="!canCompareWithPrevious"
           data-testid="compare-with-previous-button"
           @click="onCompareWithPrevious"
@@ -191,7 +191,7 @@ onMounted(() => {
         </button>
         <button
           type="button"
-          class="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+          class="px-4 py-2 rounded-lg text-sm font-medium border border-neutral-300 text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
           :disabled="!selectedDefinition || status === 'loading' || status === 'running'"
           @click="resetOutput"
         >
@@ -199,7 +199,7 @@ onMounted(() => {
         </button>
         <button
           type="button"
-          class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed"
+          class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:bg-primary-300 disabled:cursor-not-allowed"
           :disabled="!selectedDefinition || status === 'loading' || status === 'running'"
           @click="onSubmit"
         >
@@ -209,8 +209,8 @@ onMounted(() => {
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <section class="bg-white border border-gray-200 rounded-xl p-5">
-        <h2 class="text-sm font-semibold text-gray-700 mb-4">Input</h2>
+      <section class="bg-white border border-neutral-200 rounded-xl p-5">
+        <h2 class="text-sm font-semibold text-neutral-700 mb-4">Input</h2>
         <RunnerInputForm
           :schema="selectedSchema"
           :model-value="formData"
@@ -218,8 +218,8 @@ onMounted(() => {
         />
       </section>
 
-      <section class="bg-white border border-gray-200 rounded-xl p-5">
-        <h2 class="text-sm font-semibold text-gray-700 mb-4">Output</h2>
+      <section class="bg-white border border-neutral-200 rounded-xl p-5">
+        <h2 class="text-sm font-semibold text-neutral-700 mb-4">Output</h2>
         <RunnerOutputPanel
           :output="output"
           :mode="mode"
@@ -231,16 +231,16 @@ onMounted(() => {
 
       <section
         v-if="mode === 'preview'"
-        class="bg-white border border-gray-200 rounded-xl p-5 lg:col-span-2"
+        class="bg-white border border-neutral-200 rounded-xl p-5 lg:col-span-2"
       >
-        <h2 class="text-sm font-semibold text-gray-700 mb-4">Faking external calls</h2>
-        <p class="text-sm text-gray-600">
+        <h2 class="text-sm font-semibold text-neutral-700 mb-4">Faking external calls</h2>
+        <p class="text-sm text-neutral-600">
           Preview requests no longer accept per-request mocks. To fake an external call's response,
           configure it ahead of time via
-          <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">cbs.nova.fakes.config.entries</code>
-          in <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">application.yml</code>
+          <code class="text-xs bg-neutral-100 px-1 py-0.5 rounded">cbs.nova.fakes.config.entries</code>
+          in <code class="text-xs bg-neutral-100 px-1 py-0.5 rounded">application.yml</code>
           (entries shaped
-          <code class="text-xs bg-gray-100 px-1 py-0.5 rounded"
+          <code class="text-xs bg-neutral-100 px-1 py-0.5 rounded"
             >{ type: helper, code: &lt;helperName&gt;, response: &lt;payload&gt; }</code
           >).
         </p>
