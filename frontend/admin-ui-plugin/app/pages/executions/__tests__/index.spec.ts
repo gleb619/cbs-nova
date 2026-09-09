@@ -188,8 +188,38 @@ const flush = async () => {
   await nextTick()
 }
 
+let storage: Record<string, string> = {}
+
+function installLocalStorageMock() {
+  storage = {}
+  const target = typeof window !== 'undefined' ? window : globalThis
+  Object.defineProperty(target, 'localStorage', {
+    value: {
+      getItem: vi.fn((key: string) => storage[key] ?? null),
+      setItem: vi.fn((key: string, value: string) => {
+        storage[key] = value
+      }),
+      removeItem: vi.fn((key: string) => {
+        delete storage[key]
+      }),
+    },
+    writable: true,
+    configurable: true,
+  })
+}
+
+function findToggle(wrapper: ReturnType<typeof mountPage>) {
+  return wrapper.find('[data-testid="executions-live-polling-toggle"]').element as HTMLInputElement
+}
+
+function findIntervalSelect(wrapper: ReturnType<typeof mountPage>) {
+  return wrapper.find('[data-testid="executions-live-polling-interval"]')
+    .element as HTMLSelectElement
+}
+
 describe('executions/index.vue list page', () => {
   beforeEach(() => {
+    installLocalStorageMock()
     harness.executions.value = []
     harness.filters.value = {}
     harness.loading.value = false
@@ -210,6 +240,7 @@ describe('executions/index.vue list page', () => {
 
   afterEach(() => {
     document.body.innerHTML = ''
+    vi.useRealTimers()
   })
 
   it('renders rows from executions ref and passes loading flag', async () => {
@@ -332,18 +363,16 @@ describe('executions/index.vue list page', () => {
     wrapper.unmount()
   })
 
-  it('starts list polling when live updates toggle is enabled', async () => {
+  it('starts list polling with the selected interval when live updates toggle is enabled', async () => {
     const wrapper = mountPage()
     await flush()
 
-    const toggle = wrapper.find('[data-testid="executions-live-polling-toggle"]')
-      .element as HTMLInputElement
+    const toggle = findToggle(wrapper)
     toggle.checked = true
     await toggle.dispatchEvent(new Event('change', { bubbles: true }))
     await flush()
-    await flush()
 
-    expect(harness.startListPolling).toHaveBeenCalled()
+    expect(harness.startListPolling).toHaveBeenCalledWith(5000)
 
     wrapper.unmount()
   })
@@ -352,11 +381,9 @@ describe('executions/index.vue list page', () => {
     const wrapper = mountPage()
     await flush()
 
-    const toggle = wrapper.find('[data-testid="executions-live-polling-toggle"]')
-      .element as HTMLInputElement
+    const toggle = findToggle(wrapper)
     toggle.checked = true
     await toggle.dispatchEvent(new Event('change', { bubbles: true }))
-    await flush()
     await flush()
     harness.startListPolling.mockClear()
     harness.stopListPolling.mockClear()
@@ -364,11 +391,123 @@ describe('executions/index.vue list page', () => {
     toggle.checked = false
     await toggle.dispatchEvent(new Event('change', { bubbles: true }))
     await flush()
-    await flush()
 
     expect(harness.stopListPolling).toHaveBeenCalled()
 
     wrapper.unmount()
+  })
+
+  it('renders the interval selector with preset options and enables it only when polling is on', async () => {
+    const wrapper = mountPage()
+    await flush()
+
+    const select = wrapper.find('[data-testid="executions-live-polling-interval"]')
+    expect(select.exists()).toBe(true)
+    expect(select.element.disabled).toBe(true)
+
+    const options = select.findAll('option')
+    expect(options.map((o) => ({ value: o.element.value, text: o.text() }))).toEqual([
+      { value: '2000', text: '2s' },
+      { value: '5000', text: '5s' },
+      { value: '10000', text: '10s' },
+      { value: '30000', text: '30s' },
+    ])
+
+    const toggle = findToggle(wrapper)
+    toggle.checked = true
+    await toggle.dispatchEvent(new Event('change', { bubbles: true }))
+    await flush()
+
+    expect(select.element.disabled).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  it('defaults toggle to off and interval to stalePollMs with fresh localStorage', async () => {
+    const wrapper = mountPage()
+    await flush()
+
+    expect(harness.startListPolling).not.toHaveBeenCalled()
+    expect(findToggle(wrapper).checked).toBe(false)
+
+    const select = findIntervalSelect(wrapper)
+    expect(select.value).toBe('5000')
+    expect(select.disabled).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  it('restarts list polling with the new interval when changed while polling is on', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+
+    const wrapper = mountPage()
+    await flush()
+
+    const toggle = findToggle(wrapper)
+    toggle.checked = true
+    await toggle.dispatchEvent(new Event('change', { bubbles: true }))
+    await flush()
+
+    harness.startListPolling.mockClear()
+    harness.stopListPolling.mockClear()
+
+    const select = findIntervalSelect(wrapper)
+    select.value = '10000'
+    await select.dispatchEvent(new Event('change', { bubbles: true }))
+    await flush()
+
+    expect(harness.stopListPolling).toHaveBeenCalled()
+    expect(harness.startListPolling).toHaveBeenCalledWith(10000)
+
+    wrapper.unmount()
+  })
+
+  it('restores persisted toggle and interval on mount and starts polling', async () => {
+    storage['executions.livePolling.enabled'] = 'true'
+    storage['executions.livePolling.intervalMs'] = '10000'
+
+    const wrapper = mountPage()
+    await flush()
+
+    expect(harness.startListPolling).toHaveBeenCalledWith(10000)
+    expect(findToggle(wrapper).checked).toBe(true)
+
+    const select = findIntervalSelect(wrapper)
+    expect(select.value).toBe('10000')
+    expect(select.disabled).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  it('persists toggle and interval across reload', async () => {
+    const wrapper = mountPage()
+    await flush()
+
+    const toggle = findToggle(wrapper)
+    toggle.checked = true
+    await toggle.dispatchEvent(new Event('change', { bubbles: true }))
+    await flush()
+
+    const select = findIntervalSelect(wrapper)
+    select.value = '10000'
+    await select.dispatchEvent(new Event('change', { bubbles: true }))
+    await flush()
+
+    expect(storage['executions.livePolling.enabled']).toBe('true')
+    expect(storage['executions.livePolling.intervalMs']).toBe('10000')
+
+    harness.startListPolling.mockClear()
+
+    wrapper.unmount()
+
+    const wrapper2 = mountPage()
+    await flush()
+
+    expect(harness.startListPolling).toHaveBeenCalledWith(10000)
+    expect(findToggle(wrapper2).checked).toBe(true)
+    expect(findIntervalSelect(wrapper2).value).toBe('10000')
+
+    wrapper2.unmount()
   })
 
   it('renders error banner and retries loadExecutions on retry', async () => {
