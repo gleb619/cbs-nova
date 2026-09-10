@@ -110,10 +110,6 @@ export function useDslApi() {
     })
   }
 
-
-
-  }
-
   async function listHelpers() {
     log.info('listHelpers request')
     return $fetch('/api/v1/dsl/helpers')

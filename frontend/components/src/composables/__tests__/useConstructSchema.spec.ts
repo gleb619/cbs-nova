@@ -225,6 +225,64 @@ describe('useConstructSchema', () => {
     expect(error.value).toContain('Schema fetcher is not provided')
     expect(schema.value).toBeNull()
   })
+
+  it('dedupes concurrent calls with the same name and type into one fetch', async () => {
+    let resolveFetch: (value: unknown) => void = () => {}
+    fetchMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveFetch = resolve
+        }),
+    )
+    const results: ReturnType<typeof useConstructSchema>[] = []
+    const Parent = defineComponent({
+      setup() {
+        results.push(useConstructSchema({ name: 'BatchProcessing', type: 'Process' }))
+        results.push(useConstructSchema({ name: 'BatchProcessing', type: 'Process' }))
+        return () => h('div')
+      },
+    })
+    mount(Parent, {
+      global: { provide: { [DSL_SCHEMA_FETCH_KEY as symbol]: fetchMock } },
+    })
+    await waitForNextTick()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/BatchProcessing')
+
+    resolveFetch({
+      inputSchema: { type: 'object', properties: { x: { type: 'number' } } },
+      outputSchema: { type: 'object', properties: { y: { type: 'number' } } },
+    })
+    await waitForNextTick()
+    await waitForNextTick()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(results[0].schema.value).toBeTruthy()
+    expect(results[1].schema.value).toBeTruthy()
+    expect(results[1].outputSchema.value).toBeTruthy()
+  })
+
+  it('does not refetch after a concurrent call resolves (cache hit on next mount)', async () => {
+    fetchMock.mockResolvedValue({
+      inputSchema: { type: 'object', properties: { x: { type: 'number' } } },
+    })
+    const Parent = defineComponent({
+      setup() {
+        useConstructSchema({ name: 'Cached', type: 'Process' })
+        useConstructSchema({ name: 'Cached', type: 'Process' })
+        return () => h('div')
+      },
+    })
+    mount(Parent, {
+      global: { provide: { [DSL_SCHEMA_FETCH_KEY as symbol]: fetchMock } },
+    })
+    await waitForNextTick()
+    await waitForNextTick()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    mountUseConstructSchema({ name: 'Cached', type: 'Process' })
+    await waitForNextTick()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('generateFakeValue', () => {

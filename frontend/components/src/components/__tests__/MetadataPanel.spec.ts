@@ -72,11 +72,12 @@ describe('MetadataPanel', () => {
     expect(text).not.toContain('1.2.3')
     expect(text).not.toContain('order-worker')
 
-    // Four optional fields default to em-dashes when absent:
-    // version, taskQueue, inputType, outputType.
+    // Five optional fields default to em-dashes when absent:
+    // version, taskQueue, inputType, outputType, hasCompensation.
+    // The empty description fallback adds one more em-dash.
     const emDashCount = text.split('—').length - 1
-    expect(emDashCount).toBeGreaterThanOrEqual(4)
-    expect(emDashCount).toBeLessThanOrEqual(5)
+    expect(emDashCount).toBeGreaterThanOrEqual(5)
+    expect(emDashCount).toBeLessThanOrEqual(6)
   })
 
   it('renders inputType, outputType, and hasCompensation when provided', async () => {

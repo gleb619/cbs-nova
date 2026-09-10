@@ -224,7 +224,7 @@ function nextPage() {
     </div>
 
     <ExecutionsCancelConfirmationModal
-      :show="showCancelModal"
+      v-if="showCancelModal"
       :execution-id="cancelTargetId ?? undefined"
       :busy="cancellingTarget"
       @confirm="onCancelConfirm"

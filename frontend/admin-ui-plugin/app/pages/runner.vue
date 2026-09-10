@@ -120,6 +120,10 @@ function onSetMode(next: RunnerMode) {
   pushQuery(selectedDefinition.value, next)
 }
 
+function onUpdateFormData(data: Record<string, unknown>) {
+  formData.value = data
+}
+
 function onSubmit() {
   confirmRun()
 }
@@ -216,7 +220,7 @@ onMounted(() => {
         <RunnerInputForm
           :schema="selectedSchema"
           :model-value="formData"
-          @update:model-value="(val) => (formData = val)"
+          @update:model-value="onUpdateFormData"
         />
       </section>
 

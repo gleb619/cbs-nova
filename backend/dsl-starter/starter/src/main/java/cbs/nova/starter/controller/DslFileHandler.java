@@ -179,8 +179,9 @@ public class DslFileHandler {
       return filename;
     }
     Path root = Path.of(sourceDir).normalize();
+    String bareFilename = Path.of(filename).getFileName().toString();
     try (Stream<Path> stream = Files.find(root, Integer.MAX_VALUE,
-            (p, _) -> Files.isRegularFile(p) && p.getFileName().toString().equals(filename))) {
+            (p, _) -> Files.isRegularFile(p) && p.getFileName().toString().equals(bareFilename))) {
       Optional<Path> found = stream.findFirst();
       if (found.isPresent()) {
         return root.relativize(found.get()).toString().replace('\\', '/');
@@ -193,11 +194,8 @@ public class DslFileHandler {
   }
 
   private String pathVariable(ServerRequest request) {
-    String path = request.pathVariable("path");
-    if (path == null) {
-      return null;
-    }
-    path = path.replace('\\', '/').replaceAll("^/+", "");
+    String path = request.pathVariable("path")
+        .replace('\\', '/').replaceAll("^/+", "");
     if (path.contains("..")) {
       return null;
     }
@@ -205,11 +203,8 @@ public class DslFileHandler {
   }
 
   private String nameVariable(ServerRequest request) {
-    String name = request.pathVariable("name");
-    if (name == null) {
-      return null;
-    }
-    name = name.replace('\\', '/').replaceAll("^/+", "");
+    String name = request.pathVariable("name")
+        .replace('\\', '/').replaceAll("^/+", "");
     if (name.contains("..")) {
       return null;
     }
@@ -219,7 +214,7 @@ public class DslFileHandler {
   private String readBody(ServerRequest request) throws IOException {
     try {
       String raw = request.body(String.class);
-      if (raw == null || raw.isBlank()) {
+      if (raw.isBlank()) {
         return "";
       }
       try {

@@ -127,7 +127,7 @@ const listStub = defineComponent({
 
 const cancelModalStub = defineComponent({
   name: 'CancelExecutionConfirmationModal',
-  props: ['show', 'executionId', 'busy'],
+  props: ['executionId', 'busy'],
   setup(_props, { emit }) {
     return () =>
       h('div', { 'data-testid': 'cancel-modal' }, [
@@ -299,7 +299,6 @@ describe('executions/index.vue list page', () => {
 
     const modal = wrapper.findComponent({ name: 'CancelExecutionConfirmationModal' })
     expect(modal.exists()).toBe(true)
-    expect(modal.props('show')).toBe(true)
     expect(modal.props('executionId')).toBe('exec-running')
 
     wrapper.unmount()
@@ -320,7 +319,7 @@ describe('executions/index.vue list page', () => {
     await flush()
 
     expect(harness.cancelExecution).toHaveBeenCalledWith('exec-running')
-    expect(modal.props('show')).toBe(false)
+    expect(wrapper.findComponent({ name: 'CancelExecutionConfirmationModal' }).exists()).toBe(false)
 
     wrapper.unmount()
   })
@@ -349,7 +348,7 @@ describe('executions/index.vue list page', () => {
     expect(cancelBanner.find('[data-testid="retry-button"]').text()).toBe('Dismiss')
 
     // cancelTargetId is only cleared on success
-    expect(modal.props('show')).toBe(true)
+    expect(modal.exists()).toBe(true)
 
     wrapper.unmount()
   })

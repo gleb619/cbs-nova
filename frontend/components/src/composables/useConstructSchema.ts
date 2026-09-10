@@ -5,6 +5,7 @@ export type ConstructType = 'Process' | 'Transaction' | 'Helper' | 'Function'
 
 const cache = new Map<string, JsonSchema>()
 const outputCache = new Map<string, JsonSchema>()
+const inFlight = new Map<string, Promise<void>>()
 
 export const DSL_SCHEMA_FETCH_KEY: InjectionKey<(url: string) => Promise<unknown>> = Symbol(
   'cbs-nova:dsl-schema-fetch',
@@ -13,6 +14,7 @@ export const DSL_SCHEMA_FETCH_KEY: InjectionKey<(url: string) => Promise<unknown
 export function __resetConstructSchemaCache() {
   cache.clear()
   outputCache.clear()
+  inFlight.clear()
 }
 
 export function generateFakeValue(
@@ -126,44 +128,70 @@ export function useConstructSchema({ name: nameRef, type: typeRef }: UseConstruc
       error.value = null
       return
     }
+    const pending = inFlight.get(key)
+    if (pending) {
+      loading.value = true
+      try {
+        await pending
+      } finally {
+        loading.value = false
+      }
+      const after = cache.get(key)
+      if (after) {
+        inputSchema.value = after.inputSchema
+        outputSchema.value = after.outputSchema
+        inputType.value = after.inputType
+        outputType.value = after.outputType
+        error.value = null
+      }
+      return
+    }
     loading.value = true
     error.value = null
     inputSchema.value = null
     outputSchema.value = null
     inputType.value = null
     outputType.value = null
+    const fetchPromise = (async () => {
+      try {
+        const response = (await schemaFetch(endpoint())) as {
+          inputSchema?: JsonSchema | null
+          outputSchema?: JsonSchema | null
+          inputType?: string | null
+          outputType?: string | null
+        }
+        const inSchema = response?.inputSchema ?? null
+        const outSchema = response?.outputSchema ?? null
+        const inType = response?.inputType ?? null
+        const outType = response?.outputType ?? null
+        if (inSchema || outSchema) {
+          cache.set(key, {
+            inputSchema: inSchema,
+            outputSchema: outSchema,
+            inputType: inType,
+            outputType: outType,
+          })
+        }
+        inputSchema.value = inSchema
+        outputSchema.value = outSchema
+        inputType.value = inType
+        outputType.value = outType
+      } catch (err) {
+        error.value =
+          (err as { statusMessage?: string; message?: string }).statusMessage ??
+          (err as Error).message ??
+          'Failed to load schema'
+        inputSchema.value = null
+        outputSchema.value = null
+        inputType.value = null
+        outputType.value = null
+      } finally {
+        inFlight.delete(key)
+      }
+    })()
+    inFlight.set(key, fetchPromise)
     try {
-      const response = (await schemaFetch(endpoint())) as {
-        inputSchema?: JsonSchema | null
-        outputSchema?: JsonSchema | null
-        inputType?: string | null
-        outputType?: string | null
-      }
-      const inSchema = response?.inputSchema ?? null
-      const outSchema = response?.outputSchema ?? null
-      const inType = response?.inputType ?? null
-      const outType = response?.outputType ?? null
-      if (inSchema || outSchema) {
-        cache.set(key, {
-          inputSchema: inSchema,
-          outputSchema: outSchema,
-          inputType: inType,
-          outputType: outType,
-        })
-      }
-      inputSchema.value = inSchema
-      outputSchema.value = outSchema
-      inputType.value = inType
-      outputType.value = outType
-    } catch (err) {
-      error.value =
-        (err as { statusMessage?: string; message?: string }).statusMessage ??
-        (err as Error).message ??
-        'Failed to load schema'
-      inputSchema.value = null
-      outputSchema.value = null
-      inputType.value = null
-      outputType.value = null
+      await fetchPromise
     } finally {
       loading.value = false
     }

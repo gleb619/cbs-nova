@@ -2,6 +2,7 @@ package cbs.nova.starter.service;
 
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.exception.BuilderApiException;
 import cbs.nova.starter.model.DslFileModels.FileContentRequest;
 import cbs.nova.starter.model.DslFileModels.FileContentResponse;
 import cbs.nova.starter.model.DslFileModels.FileEntry;
@@ -88,8 +89,34 @@ public class DslFileService {
   public FileContentResponse readFile(String relativePath) throws IOException {
     var builder = builderClient();
     if (builder != null) {
-      return builder.readFile(relativePath);
+      try {
+        return builder.readFile(relativePath);
+      } catch (BuilderApiException e) {
+        if (e.getStatusCode().value() != 404) {
+          throw e;
+        }
+        return readFileLocally(relativePath);
+      }
     }
+    return readFileLocally(relativePath);
+  }
+
+  public boolean exists(String relativePath) {
+    var builder = builderClient();
+    if (builder != null) {
+      try {
+        return builder.fileExists(relativePath);
+      } catch (BuilderApiException e) {
+        if (e.getStatusCode().value() != 404) {
+          throw e;
+        }
+        return existsLocally(relativePath);
+      }
+    }
+    return existsLocally(relativePath);
+  }
+
+  private FileContentResponse readFileLocally(String relativePath) throws IOException {
     ensureRoot();
     String staged = buffer.get(relativePath);
     if (staged != null) {
@@ -115,11 +142,7 @@ public class DslFileService {
     }
   }
 
-  public boolean exists(String relativePath) {
-    var builder = builderClient();
-    if (builder != null) {
-      return builder.fileExists(relativePath);
-    }
+  private boolean existsLocally(String relativePath) {
     ensureRoot();
     if (buffer.get(relativePath) != null) {
       return true;

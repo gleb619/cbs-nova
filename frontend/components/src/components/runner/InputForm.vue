@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps<{
   schema: Record<string, unknown> | undefined
@@ -19,19 +19,29 @@ interface FieldSpec {
 const freeform = ref(JSON.stringify(props.modelValue ?? {}, null, 2))
 const freeformError = ref<string | null>(null)
 
-watch(freeform, (next) => {
-  if (!isSchemaEmpty.value) return
+function parseFreeform(value: string): Record<string, unknown> | null {
+  if (!isSchemaEmpty.value) return null
   try {
-    const parsed = next.trim() ? JSON.parse(next) : {}
+    const parsed = value.trim() ? JSON.parse(value) : {}
     freeformError.value = null
-    emit(
-      'update:modelValue',
-      parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {},
-    )
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed
+      : {}
   } catch (err) {
     freeformError.value = (err as Error).message
+    return null
   }
-})
+}
+
+function onFreeformInput(event: Event): void {
+  const target = event.target as HTMLTextAreaElement
+  const value = target.value
+  freeform.value = value
+  const parsed = parseFreeform(value)
+  if (parsed !== null) {
+    emit('update:modelValue', parsed)
+  }
+}
 
 const isSchemaEmpty = computed(() => {
   if (!props.schema || typeof props.schema !== 'object') return true
@@ -76,14 +86,14 @@ function updateField(name: string, value: unknown) {
       <label class="flex flex-col gap-1 text-sm">
         <span class="text-gray-700 font-medium">Input (JSON)</span>
         <textarea
-          v-model="freeform"
+          :value="freeform"
           rows="10"
           class="px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
           :class="freeformError ? 'border-red-400' : 'border-gray-300'"
+          @input="onFreeformInput"
         />
         <span v-if="freeformError" class="text-xs text-red-600"
-          >Invalid JSON: {{ freeformError }}</span
-        >
+          >Invalid JSON: {{ freeformError }}</span>
       </label>
     </template>
 
@@ -95,7 +105,7 @@ function updateField(name: string, value: unknown) {
         :type="field.type"
         :required="field.required"
         :model-value="props.modelValue[field.name]"
-        @update:model-value="(val) => updateField(field.name, val)"
+        @update:model-value="(val: unknown) => updateField(field.name, val)"
       />
       <div v-if="fields.length === 0" class="text-sm text-gray-500">No inputs required.</div>
     </template>

@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { onMounted, ref } from 'vue'
 
 import { useModalDialog } from '../../composables/useModalDialog'
 
 const props = defineProps<{
-  show: boolean
   executionId?: string
   busy?: boolean
 }>()
@@ -15,18 +14,13 @@ const emit = defineEmits<{
 }>()
 
 const dialogRef = ref<HTMLElement | null>(null)
-const { open: openDialog, close: closeDialog } = useModalDialog(dialogRef, {
+const { open: openDialog } = useModalDialog(dialogRef, {
   onClose: onCancel,
 })
 
-watch(
-  () => props.show,
-  (open) => {
-    if (open) openDialog()
-    else closeDialog()
-  },
-  { immediate: true },
-)
+onMounted(() => {
+  void openDialog()
+})
 
 function onConfirm() {
   if (props.busy) return
@@ -43,7 +37,6 @@ function onCancel() {
   <Teleport to="body">
     <!-- biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click dismisses modal -->
     <div
-      v-if="props.show"
       ref="dialogRef"
       data-testid="cancel-confirmation-modal"
       class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"

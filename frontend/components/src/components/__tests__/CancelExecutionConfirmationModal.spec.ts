@@ -8,7 +8,7 @@ const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0))
 // The modal teleports its content into <body>. Stubbing the Teleport render
 // keeps it inside the wrapper so we can drive interactions via the test-utils
 // API (matching the convention used in HelperSearchPanel.spec.ts).
-const mountModal = (props: Record<string, unknown>) =>
+const mountModal = (props: Record<string, unknown> = {}) =>
   mount(CancelExecutionConfirmationModal, {
     props,
     global: { stubs: { teleport: true } },
@@ -27,14 +27,8 @@ describe('CancelExecutionConfirmationModal', () => {
     wrapper = null
   })
 
-  it('renders nothing when show is false', () => {
-    wrapper = mountModal({ show: false })
-
-    expect(wrapper.find('[data-testid="cancel-confirmation-modal"]').exists()).toBe(false)
-  })
-
-  it('renders the dialog with confirm/cancel buttons when show is true', () => {
-    wrapper = mountModal({ show: true })
+  it('renders the dialog with confirm/cancel buttons', () => {
+    wrapper = mountModal()
 
     const modal = wrapper.find('[data-testid="cancel-confirmation-modal"]')
     expect(modal.exists()).toBe(true)
@@ -50,13 +44,13 @@ describe('CancelExecutionConfirmationModal', () => {
   })
 
   it('shows the execution id when provided', () => {
-    wrapper = mountModal({ show: true, executionId: 'exec-abc-123' })
+    wrapper = mountModal({ executionId: 'exec-abc-123' })
 
     expect(wrapper.text()).toContain('exec-abc-123')
   })
 
   it('emits confirm when the confirm button is clicked', async () => {
-    wrapper = mountModal({ show: true })
+    wrapper = mountModal()
 
     await wrapper.find('[data-testid="cancel-confirmation-modal-confirm"]').trigger('click')
 
@@ -65,7 +59,7 @@ describe('CancelExecutionConfirmationModal', () => {
   })
 
   it('emits cancel when the cancel button is clicked', async () => {
-    wrapper = mountModal({ show: true })
+    wrapper = mountModal()
 
     await wrapper.find('[data-testid="cancel-confirmation-modal-cancel"]').trigger('click')
 
@@ -74,7 +68,7 @@ describe('CancelExecutionConfirmationModal', () => {
   })
 
   it('emits cancel when the backdrop is clicked', async () => {
-    wrapper = mountModal({ show: true })
+    wrapper = mountModal()
 
     await wrapper.find('[data-testid="cancel-confirmation-modal"]').trigger('click')
 
@@ -82,7 +76,7 @@ describe('CancelExecutionConfirmationModal', () => {
   })
 
   it('disables both buttons, updates the label and suppresses emits while busy', async () => {
-    wrapper = mountModal({ show: true, busy: true })
+    wrapper = mountModal({ busy: true })
 
     const cancelButton = wrapper.find('[data-testid="cancel-confirmation-modal-cancel"]')
     const confirmButton = wrapper.find('[data-testid="cancel-confirmation-modal-confirm"]')
@@ -102,7 +96,7 @@ describe('CancelExecutionConfirmationModal', () => {
     document.body.appendChild(trigger)
     trigger.focus()
 
-    wrapper = mountModal({ show: true })
+    wrapper = mountModal()
     await nextTick()
     await flushPromises()
 
@@ -111,7 +105,7 @@ describe('CancelExecutionConfirmationModal', () => {
   })
 
   it('emits cancel when Escape is pressed', async () => {
-    wrapper = mountModal({ show: true })
+    wrapper = mountModal()
     await nextTick()
     await flushPromises()
 
@@ -128,12 +122,13 @@ describe('CancelExecutionConfirmationModal', () => {
     document.body.appendChild(trigger)
     trigger.focus()
 
-    wrapper = mountModal({ show: true })
+    wrapper = mountModal()
     await nextTick()
     await flushPromises()
     expect(document.activeElement).not.toBe(trigger)
 
-    await wrapper.setProps({ show: false })
+    wrapper.unmount()
+    wrapper = null
     await nextTick()
     await flushPromises()
 
@@ -141,7 +136,7 @@ describe('CancelExecutionConfirmationModal', () => {
   })
 
   it('cycles focus within the dialog with Tab', async () => {
-    wrapper = mountModal({ show: true })
+    wrapper = mountModal()
     await nextTick()
     await flushPromises()
 

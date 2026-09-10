@@ -116,6 +116,34 @@ class DslFileHandlerTest {
   }
 
   @Test
+  void readByNameResolvesPrefixedProviderFilenameWhenSourceFileExists() throws Exception {
+    Path temp = Files.createTempDirectory("dsl-source");
+    try {
+      Path nested = temp.resolve("src").resolve("dsl").resolve("BatchProcessingDsl.java");
+      Files.createDirectories(nested.getParent());
+      Files.writeString(nested, "step {}");
+
+      DslProperties properties = DslProperties.builder().sourceDir(temp.toString()).build();
+      handler = new DslFileHandler(properties, fileService, new ObjectMapper());
+
+      registerProvider("BatchProcessing", "src/dsl/BatchProcessingDsl.java");
+      when(fileService.readFile("src/dsl/BatchProcessingDsl.java"))
+              .thenReturn(
+                      new FileContentResponse("src/dsl/BatchProcessingDsl.java", "step {}", false,
+                              FileContentResponse.crc32("step {}")));
+
+      ServerResponse response = handler.readByName(
+              request("GET", "/api/dsl/files/by-name/BatchProcessing", "BatchProcessing"));
+
+      assertThat(response.statusCode().value()).isEqualTo(200);
+      assertThat(renderBody(response)).contains("\"content\":\"step {}\"");
+      verify(fileService).readFile("src/dsl/BatchProcessingDsl.java");
+    } finally {
+      deleteRecursively(temp);
+    }
+  }
+
+  @Test
   void writeByNameStagesWriteWhenFilenameResolved() throws IOException {
     registerProvider("ReserveInventory", "ReserveInventoryDsl.java");
 

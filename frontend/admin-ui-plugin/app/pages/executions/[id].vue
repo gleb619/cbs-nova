@@ -307,7 +307,7 @@ onUnmounted(() => {
       </div>
 
       <ExecutionsCancelConfirmationModal
-        :show="showCancelModal"
+        v-if="showCancelModal"
         :execution-id="selectedExecution?.id"
         :busy="cancelling"
         @confirm="confirmCancel"

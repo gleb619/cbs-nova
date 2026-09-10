@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { marked } from 'marked'
 import { useLocalStorageState } from '../../composables/useLocalStorageState'
 import type { DslConstruct } from '../../types/dsl'
@@ -8,15 +8,10 @@ import CbsSpinner from '../CbsSpinner.vue'
 const props = defineProps<{ construct: DslConstruct | null; loading?: boolean }>()
 
 const isCollapsed = useLocalStorageState<boolean>('metadata-panel-collapsed', true)
-const editedDescription = ref('')
 
-watch(
-  () => props.construct?.description,
-  (description) => {
-    editedDescription.value = description ?? ''
-  },
-  { immediate: true },
-)
+// Derive editable description directly from the prop. The parent owns the
+// value; this panel renders it read-only as markdown HTML.
+const editedDescription = computed(() => props.construct?.description ?? '')
 
 function toggleCollapsed() {
   isCollapsed.value = !isCollapsed.value

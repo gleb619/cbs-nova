@@ -2,8 +2,13 @@ package cbs.nova.starter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.exception.BuilderApiException;
 import cbs.nova.starter.repository.DslFileRepository;
 import cbs.nova.starter.service.DslFileBulkhead;
 import cbs.nova.starter.service.DslFileBuffer;
@@ -14,6 +19,8 @@ import cbs.nova.starter.model.DslFileModels.FileContentResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.http.HttpStatus;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -107,5 +114,64 @@ class DslFileServiceTest {
 
     service.stageWrite("dsl/MissingDsl.java", "draft");
     assertThat(service.exists("dsl/MissingDsl.java")).isTrue();
+  }
+
+  @Test
+  void builderReadNotFoundFallsBackToLocalSourceRoot() throws IOException {
+    Path nested = sourceDir.resolve("dsl").resolve("LoanDsl.java");
+    Files.createDirectories(nested.getParent());
+    Files.writeString(nested, "source content");
+
+    DslBuilderClient builder = builderThrowing(HttpStatus.NOT_FOUND);
+    var response = serviceWithBuilder(builder).readFile("dsl/LoanDsl.java");
+
+    assertThat(response.content()).isEqualTo("source content");
+    assertThat(response.pending()).isFalse();
+  }
+
+  @Test
+  void builderReadServerErrorPropagatesWithoutFallback() {
+    DslBuilderClient builder = builderThrowing(HttpStatus.INTERNAL_SERVER_ERROR);
+
+    assertThatThrownBy(() -> serviceWithBuilder(builder).readFile("dsl/LoanDsl.java"))
+            .isInstanceOf(BuilderApiException.class)
+            .extracting(e -> ((BuilderApiException) e).getStatusCode().value())
+            .isEqualTo(500);
+  }
+
+  @Test
+  void builderExistsNotFoundFallsBackToLocalRoots() throws IOException {
+    Path nested = sourceDir.resolve("dsl").resolve("LoanDsl.java");
+    Files.createDirectories(nested.getParent());
+    Files.writeString(nested, "source content");
+
+    DslBuilderClient builder = builderThrowing(HttpStatus.NOT_FOUND);
+    var service = serviceWithBuilder(builder);
+
+    assertThat(service.exists("dsl/LoanDsl.java")).isTrue();
+    assertThat(service.exists("dsl/MissingDsl.java")).isFalse();
+  }
+
+  private DslFileService serviceWithBuilder(DslBuilderClient builder) {
+    DslProperties properties = DslProperties.builder()
+            .sourceDir(sourceDir.toString())
+            .files(new DslProperties.Files(null, 0, null, null, null, null))
+            .build();
+    var sourceRoot = Path.of(properties.sourceDir()).normalize();
+    var workspaceRoot = sourceRoot.resolve(".workbench").resolve("drafts-fs").normalize();
+    DslWorkspaceResolver resolver = new DefaultDslWorkspaceResolver(sourceRoot, workspaceRoot);
+    @SuppressWarnings("unchecked")
+    ObjectProvider<DslBuilderClient> provider = mock(ObjectProvider.class);
+    when(provider.getIfAvailable()).thenReturn(builder);
+    return new DslFileService(properties, resolver, new DslFileRepository(), new DslFileBuffer(),
+            new DslFileBulkhead(new Semaphore(1), new Semaphore(1), 5L), provider);
+  }
+
+  private DslBuilderClient builderThrowing(HttpStatus status) {
+    DslBuilderClient builder = mock(DslBuilderClient.class);
+    var error = new BuilderApiException(status, "TEST", "builder " + status.value());
+    when(builder.readFile(anyString())).thenThrow(error);
+    when(builder.fileExists(anyString())).thenThrow(error);
+    return builder;
   }
 }
