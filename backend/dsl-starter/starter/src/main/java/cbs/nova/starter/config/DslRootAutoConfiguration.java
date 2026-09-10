@@ -2,6 +2,7 @@ package cbs.nova.starter.config;
 
 import cbs.nova.starter.config.properties.CbsHealthProperties;
 import cbs.nova.starter.config.router.DslRouterConfiguration;
+import cbs.nova.starter.security.RbacFilterConfiguration;
 import cbs.nova.starter.webhook.WebhookConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -33,6 +34,7 @@ import org.springframework.context.annotation.Import;
     SpringHelperConfiguration.class,
     ApiKeyAuthFilterConfiguration.class,
     RateLimitFilterConfiguration.class,
+    RbacFilterConfiguration.class,
     DslRunRepositoryConfiguration.class,
     SecurityConfiguration.class,
     ApiKeyAuthMisconfigurationWarning.class,

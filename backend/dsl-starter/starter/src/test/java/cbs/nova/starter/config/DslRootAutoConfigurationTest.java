@@ -1,6 +1,7 @@
 package cbs.nova.starter.config;
 
 import cbs.nova.starter.config.router.DslRouterConfiguration;
+import cbs.nova.starter.security.RbacFilterConfiguration;
 import cbs.nova.starter.webhook.WebhookConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -61,6 +62,7 @@ class DslRootAutoConfigurationTest {
             SpringHelperConfiguration.class,
             ApiKeyAuthFilterConfiguration.class,
             RateLimitFilterConfiguration.class,
+            RbacFilterConfiguration.class,
             DslRunRetentionConfiguration.class,
             DslRunReconciliationConfiguration.class,
             DslRunRepositoryConfiguration.class,

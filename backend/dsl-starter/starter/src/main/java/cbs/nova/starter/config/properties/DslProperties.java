@@ -45,7 +45,7 @@ public record DslProperties(
     taskQueue = taskQueue == null ? "dsl-task-queue" : taskQueue;
     worker = worker == null ? new Worker(false) : worker;
     reload = reload == null ? new Reload(false) : reload;
-    auth = auth == null ? new Auth(false, null) : auth;
+    auth = auth == null ? new Auth(false, null, new Rbac(false, "roles")) : auth;
     drafts = drafts == null ? new Drafts(20) : drafts;
     files = files == null ? new Files(true, 5, 100, 32, 8, 5L) : files;
     git = git == null ? new Git(true, null, 5) : git;
@@ -72,10 +72,36 @@ public record DslProperties(
   @Builder
   public record Auth(
           @DefaultValue("false") Boolean enabled,
-          String apiKey) {
+          String apiKey,
+          @Valid @DefaultValue Rbac rbac) {
 
     public Auth {
       enabled = enabled == null ? false : enabled;
+      rbac = rbac == null ? new Rbac(false, "roles") : rbac;
+    }
+  }
+
+  /**
+   * Role-based access control (RBAC) sub-feature of {@code cbs.dsl.auth} (T408, phase 1). When
+   * {@code cbs.dsl.auth.rbac.enabled=true} the starter registers a servlet filter that enforces a
+   * per-route {@link cbs.nova.starter.security.Role} table on every {@code /api/**} request. The
+   * filter is OFF by default; existing deployments see zero behaviour change.
+   *
+   * @param enabled
+   *          whether the RBAC filter is registered.
+   * @param claim
+   *          the JWT claim name to read roles from when an OIDC principal is authenticated. Default
+   *          {@code "roles"}. Standard OAuth 2.0 {@code "scope"} / {@code "scp"} claims are also
+   *          consulted when the default claim is in use.
+   */
+  @Builder
+  public record Rbac(
+          @DefaultValue("false") Boolean enabled,
+          @DefaultValue("roles") String claim) {
+
+    public Rbac {
+      enabled = enabled == null ? false : enabled;
+      claim = (claim == null || claim.isBlank()) ? "roles" : claim;
     }
   }
 
