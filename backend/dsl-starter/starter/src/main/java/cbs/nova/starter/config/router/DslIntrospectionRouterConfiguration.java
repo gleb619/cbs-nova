@@ -62,9 +62,7 @@ public class DslIntrospectionRouterConfiguration {
       @RouterOperation(path = "/api/dsl/schemas/{name}", beanClass = DslIntrospectionHandler.class, beanMethod = "constructSchema", method = RequestMethod.GET, operation = @Operation(operationId = "getConstructSchema", summary = "Get DSL construct input/output schemas", tags = {
           "DSL Introspection"}, parameters = @Parameter(name = "name", in = ParameterIn.PATH), responses = @ApiResponse(responseCode = "200", description = "Construct schemas", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ConstructSchemaDto.class))))),
       @RouterOperation(path = "/api/dsl/definitions", beanClass = DslIntrospectionHandler.class, beanMethod = "definitions", method = RequestMethod.GET, operation = @Operation(operationId = "listDefinitions", summary = "List DSL definitions", tags = {
-          "DSL Introspection"}, responses = @ApiResponse(responseCode = "200", description = "Definitions", content =
-        @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class))))
-      )
+          "DSL Introspection"}, responses = @ApiResponse(responseCode = "200", description = "Definitions", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))))
   })
   public RouterFunction<ServerResponse> dslIntrospectionRouter(DslIntrospectionHandler handler) {
     return RouterFunctions.route()

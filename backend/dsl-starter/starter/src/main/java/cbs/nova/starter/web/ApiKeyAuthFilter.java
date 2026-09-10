@@ -53,7 +53,7 @@ public final class ApiKeyAuthFilter extends OncePerRequestFilter {
   private final ObjectMapper objectMapper;
   private final AtomicBoolean deprecationLogged = new AtomicBoolean(false);
 
-  //TODO: replace with lombok's constructor and spring config class
+  // TODO: replace with lombok's constructor and spring config class
   public ApiKeyAuthFilter(@Nullable String configuredApiKey,
           @Nullable ApiKeyStore apiKeyStore,
           ObjectMapper objectMapper) {

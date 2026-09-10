@@ -1,6 +1,7 @@
 package cbs.nova.dsl.jsonschema;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.ParameterDescriptor;
@@ -9,6 +10,7 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -172,6 +174,118 @@ class JsonSchemaGeneratorTest {
     Map<String, Object> schema = generator.generateSchema(Empty.class);
     assertThat(schema).containsEntry("$schema", DRAFT_URI).containsEntry("type", "object");
     assertThat(schema).doesNotContainKey("properties");
+  }
+
+  // --- T423: cache + deep-immutability tests for generateSchema(Class<?>) ---
+
+  @Test
+  void sameRecordClassIsCachedAcrossCalls() {
+    Map<String, Object> first = generator.generateSchema(Person.class);
+    Map<String, Object> second = generator.generateSchema(Person.class);
+    assertThat(first).isEqualTo(second);
+    // Same instance proves the cache returned the stored entry.
+    assertThat(first).isSameAs(second);
+  }
+
+  @Test
+  void distinctRecordClassesCachedIndependently() {
+    Map<String, Object> personSchema = generator.generateSchema(Person.class);
+    Map<String, Object> addressSchema = generator.generateSchema(Address.class);
+
+    assertThat(personSchema).containsEntry("type", "object");
+    assertThat(addressSchema).containsEntry("type", "object");
+    assertThat(getProperties(personSchema)).containsKey("name").doesNotContainKey("city");
+    assertThat(getProperties(addressSchema)).containsKey("city").doesNotContainKey("name");
+
+    // Both classes are also cached on a second call.
+    assertThat(generator.generateSchema(Person.class)).isSameAs(personSchema);
+    assertThat(generator.generateSchema(Address.class)).isSameAs(addressSchema);
+  }
+
+  @Test
+  void cachedSchemaIsDeeplyUnmodifiable() {
+    Map<String, Object> schema = generator.generateSchema(NestedPerson.class);
+
+    // Top-level Map.put must throw.
+    assertThrows(UnsupportedOperationException.class,
+            () -> schema.put("sneaky", "value"));
+
+    // Nested property Map must also throw.
+    @SuppressWarnings("unchecked")
+    Map<String, Object> properties = (Map<String, Object>) schema.get("properties");
+    @SuppressWarnings("unchecked")
+    Map<String, Object> addressSchema = (Map<String, Object>) properties.get("address");
+    assertThrows(UnsupportedOperationException.class,
+            () -> addressSchema.put("sneaky", "value"));
+
+    // Nested required List must also throw.
+    @SuppressWarnings("unchecked")
+    List<String> addressRequired = (List<String>) addressSchema.get("required");
+    assertThrows(UnsupportedOperationException.class,
+            () -> addressRequired.add("sneaky"));
+
+    // A subsequent call must still return the same correct (and unmodifiable) schema.
+    Map<String, Object> second = generator.generateSchema(NestedPerson.class);
+    assertThat(second).isSameAs(schema);
+    assertThat(getProperties(second)).containsKey("address");
+  }
+
+  @Test
+  void arrayItemsAreDeeplyUnmodifiable() {
+    Map<String, Object> schema = generator.generateSchema(WithList.class);
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> properties = (Map<String, Object>) schema.get("properties");
+    @SuppressWarnings("unchecked")
+    Map<String, Object> addressesSchema = (Map<String, Object>) properties.get("addresses");
+    // addresses.items is a Map (nested record elements) — must be unmodifiable.
+    Object items = addressesSchema.get("items");
+    assertThat(items).isInstanceOf(Map.class);
+    assertThrows(UnsupportedOperationException.class,
+            () -> ((Map<String, Object>) items).put("sneaky", "value"));
+  }
+
+  @Test
+  void nullAndNonRecordReturnFreshEmptyObjectSchemaEachCall() {
+    Map<String, Object> nullSchema1 = generator.generateSchema((Class<?>) null);
+    Map<String, Object> nullSchema2 = generator.generateSchema((Class<?>) null);
+    assertThat(nullSchema1).containsEntry("$schema", DRAFT_URI).containsEntry("type", "object");
+    // Each call must produce a fresh, mutable map (not cached, not shared).
+    assertThat(nullSchema1).isNotSameAs(nullSchema2);
+    assertThat(nullSchema1).isEqualTo(nullSchema2);
+
+    Map<String, Object> stringSchema = generator.generateSchema(String.class);
+    assertThat(stringSchema).containsEntry("type", "object");
+    assertThat(stringSchema).doesNotContainKey("properties");
+  }
+
+  @Test
+  void computePathInvokedOncePerDistinctRecordClass() {
+    // Two distinct classes must each trigger exactly one compute.
+    CountingGenerator counting = new CountingGenerator();
+    counting.generateSchema(Person.class);
+    counting.generateSchema(Person.class);
+    counting.generateSchema(Person.class);
+    counting.generateSchema(Address.class);
+    counting.generateSchema(Address.class);
+
+    assertThat(counting.computeCount(Person.class)).isEqualTo(1);
+    assertThat(counting.computeCount(Address.class)).isEqualTo(1);
+  }
+
+  /** Test subclass that records how often {@code computeSchema} is invoked per Class. */
+  private static final class CountingGenerator extends JacksonJsonSchemaGenerator {
+    private final Map<Class<?>, Integer> counts = new HashMap<>();
+
+    int computeCount(Class<?> type) {
+      return counts.getOrDefault(type, 0);
+    }
+
+    @Override
+    protected Map<String, Object> computeSchema(Class<?> inputType) {
+      counts.merge(inputType, 1, Integer::sum);
+      return super.computeSchema(inputType);
+    }
   }
 
   private static void assertSchemaHeader(Map<String, Object> schema) {
