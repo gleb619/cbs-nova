@@ -5,7 +5,6 @@ import cbs.nova.dsl.config.ProcessContextFactory;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
 import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.function.FunctionDslObject;
-import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.helper.HelperResolver;
 import cbs.nova.dsl.process.ProcessCompensation;
 import cbs.nova.dsl.process.ProcessDslObject;
@@ -21,7 +20,6 @@ import cbs.nova.dsl.transaction.TransactionManager;
 import cbs.nova.dsl.transaction.TransactionRouting;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
@@ -73,10 +71,6 @@ public final class GlobalManager {
 
   public void registerHelpers(@NonNull HelperResolver resolver) {
     resolver.registerHelpers(helperManager, DslConfig.dslConfig().helperInstanceResolver().get());
-  }
-
-  public void registerHelperInterceptor(@Nullable HelperInterceptor interceptor) {
-    helperManager.setInterceptor(interceptor);
   }
 
   public void registerHelperResolvers() {
@@ -151,7 +145,8 @@ public final class GlobalManager {
     Context<Object> ctx = DslConfig.dslConfig().contextFactory()
             .of(input, parentCtx.metadata(), parentCtx.mode(), parentCtx.runId(),
                     parentCtx.transactionRouting(), parentCtx.executionListener(),
-                    parentCtx.saga());
+                    parentCtx.saga())
+            .withHelperInterceptor(parentCtx.helperInterceptor());
     return runTransaction(tx, ctx);
   }
 

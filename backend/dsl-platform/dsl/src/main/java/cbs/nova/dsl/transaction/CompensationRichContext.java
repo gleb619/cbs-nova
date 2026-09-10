@@ -9,6 +9,7 @@ import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.model.MapInput;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -71,6 +72,11 @@ public final class CompensationRichContext<T> implements CompensationContext<T> 
   }
 
   @Override
+  public @Nullable HelperInterceptor helperInterceptor() {
+    return delegate.helperInterceptor();
+  }
+
+  @Override
   public @NonNull <U> Context<U> withBody(@NonNull U body) {
     return delegate.withBody(body);
   }
@@ -102,6 +108,12 @@ public final class CompensationRichContext<T> implements CompensationContext<T> 
           @Nullable ExecutionTraceCollector executionTraceCollector) {
     return new CompensationRichContext<>(
             delegate.withExecutionTraceCollector(executionTraceCollector), error, contextFactory);
+  }
+
+  @Override
+  public @NonNull Context<T> withHelperInterceptor(@Nullable HelperInterceptor interceptor) {
+    return new CompensationRichContext<>(delegate.withHelperInterceptor(interceptor), error,
+            contextFactory);
   }
 
   private void trace(@NonNull String entry) {

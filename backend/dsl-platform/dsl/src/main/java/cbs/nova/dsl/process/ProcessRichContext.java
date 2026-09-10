@@ -8,6 +8,7 @@ import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.transaction.TransactionRouting;
 import lombok.RequiredArgsConstructor;
@@ -65,6 +66,11 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   }
 
   @Override
+  public @Nullable HelperInterceptor helperInterceptor() {
+    return delegate.helperInterceptor();
+  }
+
+  @Override
   public @NonNull <U> Context<U> withBody(@NonNull U body) {
     return delegate.withBody(body);
   }
@@ -94,6 +100,11 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
           @Nullable ExecutionTraceCollector executionTraceCollector) {
     return new ProcessRichContext<>(
             delegate.withExecutionTraceCollector(executionTraceCollector), contextFactory);
+  }
+
+  @Override
+  public @NonNull Context<T> withHelperInterceptor(@Nullable HelperInterceptor interceptor) {
+    return new ProcessRichContext<>(delegate.withHelperInterceptor(interceptor), contextFactory);
   }
 
   private void trace(@NonNull String entry) {
@@ -183,7 +194,8 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
     Context<Object> ctx = contextFactory.of(input, delegate.metadata(), delegate.mode(),
             delegate.runId(), delegate.transactionRouting(), delegate.executionListener(),
             delegate.saga())
-            .withExecutionTraceCollector(delegate.executionTraceCollector());
+            .withExecutionTraceCollector(delegate.executionTraceCollector())
+            .withHelperInterceptor(delegate.helperInterceptor());
     if (delegate.transactionRouting() == TransactionRouting.TEMPORAL_ACTIVITY) {
       var invoker = GlobalManager.globalManager().transactionInvoker().orElse(null);
       if (invoker != null) {

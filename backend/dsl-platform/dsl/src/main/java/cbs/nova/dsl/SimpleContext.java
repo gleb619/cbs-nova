@@ -1,6 +1,7 @@
 package cbs.nova.dsl;
 
 import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.json.JsonValues;
 import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.transaction.TransactionRouting;
@@ -24,6 +25,7 @@ public final class SimpleContext<T> implements Context<T> {
   private final ExecutionListener executionListener;
   private final DslSaga saga;
   private final ExecutionTraceCollector executionTraceCollector;
+  private final HelperInterceptor helperInterceptor;
 
   @Override
   @SuppressWarnings("unchecked")
@@ -67,6 +69,11 @@ public final class SimpleContext<T> implements Context<T> {
   }
 
   @Override
+  public @Nullable HelperInterceptor helperInterceptor() {
+    return helperInterceptor;
+  }
+
+  @Override
   public @NonNull JsonValue json() {
     return JsonValues.of(body, DslConfig.dslConfig().jsonMapper());
   }
@@ -101,7 +108,7 @@ public final class SimpleContext<T> implements Context<T> {
   @Override
   public <U> @NonNull Context<U> withBody(@NonNull U newBody) {
     return new SimpleContext<>(newBody, metadata, mode, runId, transactionRouting,
-            executionListener, saga, executionTraceCollector);
+            executionListener, saga, executionTraceCollector, helperInterceptor);
   }
 
   @Override
@@ -109,31 +116,37 @@ public final class SimpleContext<T> implements Context<T> {
     var updated = new LinkedHashMap<>(metadata);
     updated.put(key, value);
     return new SimpleContext<>(body, Map.copyOf(updated), mode, runId, transactionRouting,
-            executionListener, saga, executionTraceCollector);
+            executionListener, saga, executionTraceCollector, helperInterceptor);
   }
 
   @Override
   public @NonNull Context<T> withTransactionRouting(@NonNull TransactionRouting routing) {
     return new SimpleContext<>(body, metadata, mode, runId, routing, executionListener, saga,
-            executionTraceCollector);
+            executionTraceCollector, helperInterceptor);
   }
 
   @Override
   public @NonNull Context<T> withExecutionListener(@NonNull ExecutionListener listener) {
     return new SimpleContext<>(body, metadata, mode, runId, transactionRouting, listener, saga,
-            executionTraceCollector);
+            executionTraceCollector, helperInterceptor);
   }
 
   @Override
   public @NonNull Context<T> withSaga(@Nullable DslSaga saga) {
     return new SimpleContext<>(body, metadata, mode, runId, transactionRouting,
-            executionListener, saga, executionTraceCollector);
+            executionListener, saga, executionTraceCollector, helperInterceptor);
   }
 
   @Override
   public @NonNull Context<T> withExecutionTraceCollector(
           @Nullable ExecutionTraceCollector executionTraceCollector) {
     return new SimpleContext<>(body, metadata, mode, runId, transactionRouting,
-            executionListener, saga, executionTraceCollector);
+            executionListener, saga, executionTraceCollector, helperInterceptor);
+  }
+
+  @Override
+  public @NonNull Context<T> withHelperInterceptor(@Nullable HelperInterceptor interceptor) {
+    return new SimpleContext<>(body, metadata, mode, runId, transactionRouting,
+            executionListener, saga, executionTraceCollector, interceptor);
   }
 }

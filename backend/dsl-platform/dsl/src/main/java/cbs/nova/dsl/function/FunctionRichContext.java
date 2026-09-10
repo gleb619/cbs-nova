@@ -8,6 +8,7 @@ import cbs.nova.dsl.FunctionContext;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.transaction.TransactionRouting;
 import lombok.RequiredArgsConstructor;
@@ -58,6 +59,11 @@ public final class FunctionRichContext<T> implements FunctionContext<T> {
   }
 
   @Override
+  public @Nullable HelperInterceptor helperInterceptor() {
+    return delegate.helperInterceptor();
+  }
+
+  @Override
   public @NonNull <U> Context<U> withBody(@NonNull U body) {
     return delegate.withBody(body);
   }
@@ -82,6 +88,11 @@ public final class FunctionRichContext<T> implements FunctionContext<T> {
           @Nullable ExecutionTraceCollector executionTraceCollector) {
     return new FunctionRichContext<>(
             delegate.withExecutionTraceCollector(executionTraceCollector), contextFactory);
+  }
+
+  @Override
+  public @NonNull Context<T> withHelperInterceptor(@Nullable HelperInterceptor interceptor) {
+    return new FunctionRichContext<>(delegate.withHelperInterceptor(interceptor), contextFactory);
   }
 
   private void trace(@NonNull String entry) {

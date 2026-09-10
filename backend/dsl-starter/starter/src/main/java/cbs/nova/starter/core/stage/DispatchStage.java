@@ -2,8 +2,8 @@ package cbs.nova.starter.core.stage;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslSaga;
-import cbs.nova.dsl.ExecutionListener;
 import cbs.nova.dsl.ExecutionTraceCollector;
+import cbs.nova.dsl.ExecutionListener;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
@@ -28,9 +28,14 @@ import java.util.concurrent.TimeoutException;
  * Executes the DSL entity for the current pipe run.
  *
  * <p>
+ * The {@code helperInterceptor} is applied by setting it on the per-execution {@link Context} via
+ * {@link Context#withHelperInterceptor}; the dispatcher reads it from the context (no ThreadLocal,
+ * no GlobalManager mutation).
+ *
+ * <p>
  * When a non-zero timeout and executor are configured, only the actual dispatch call runs on a
- * dedicated worker thread. The helper interceptor is still registered and cleared on the request
- * thread around the whole block.
+ * dedicated worker thread. The helper interceptor travels with the context the worker receives, so
+ * faked helpers still fire on the worker thread.
  *
  * <p>
  * Cancellation is cooperative: {@code Future.cancel(true)} sends an interrupt, which ends
@@ -62,14 +67,9 @@ public final class DispatchStage implements DslPipeStage {
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
     Context<?> modeCtx = buildModeContext(context);
     GlobalManager gm = GlobalManager.globalManager();
-    gm.registerHelperInterceptor(helperInterceptor);
-    try {
-      Result<?> result = dispatchWithOptionalTimeout(context.name(), modeCtx, gm);
-      context.setAttribute("dslResult", result);
-      return next.proceed(context);
-    } finally {
-      gm.registerHelperInterceptor(null);
-    }
+    Result<?> result = dispatchWithOptionalTimeout(context.name(), modeCtx, gm);
+    context.setAttribute("dslResult", result);
+    return next.proceed(context);
   }
 
   private @NonNull Context<?> buildModeContext(@NonNull DslPipeContext context) {
@@ -83,6 +83,7 @@ public final class DispatchStage implements DslPipeStage {
     modeCtx = withExistingListener(modeCtx, original.executionListener());
     modeCtx = withExistingSaga(modeCtx, original.saga());
     modeCtx = withExistingCollector(modeCtx, original.executionTraceCollector());
+    modeCtx = withHelperInterceptor(modeCtx);
     return modeCtx;
   }
 
@@ -98,6 +99,10 @@ public final class DispatchStage implements DslPipeStage {
   private @NonNull Context<?> withExistingCollector(@NonNull Context<?> ctx,
           @Nullable ExecutionTraceCollector collector) {
     return collector != null ? ctx.withExecutionTraceCollector(collector) : ctx;
+  }
+
+  private @NonNull Context<?> withHelperInterceptor(@NonNull Context<?> ctx) {
+    return helperInterceptor != null ? ctx.withHelperInterceptor(helperInterceptor) : ctx;
   }
 
   private @NonNull Result<?> dispatchWithOptionalTimeout(@NonNull String name,
