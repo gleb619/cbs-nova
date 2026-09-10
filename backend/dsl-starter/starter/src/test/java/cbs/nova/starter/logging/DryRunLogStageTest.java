@@ -64,7 +64,7 @@ class DryRunLogStageTest {
   void bufferIsRemovedFromRegistryAfterSuccessfulRun() {
     String runId = "run-success";
     DryRunLogStage stage = new DryRunLogStage(context, registry, 100);
-    DslPipeContext ctx = new DslPipeContext("test", contextFactory.of("in", ExecutionMode.PREVIEW),
+    DslPipeContext ctx = DslPipeContext.of("test", contextFactory.of("in", ExecutionMode.PREVIEW),
             ExecutionMode.PREVIEW, runId);
 
     Result<?> result = stage.execute(ctx, next -> {
@@ -83,7 +83,7 @@ class DryRunLogStageTest {
   void bufferIsRemovedFromRegistryAfterException() {
     String runId = "run-exception";
     DryRunLogStage stage = new DryRunLogStage(context, registry, 100);
-    DslPipeContext ctx = new DslPipeContext("test", contextFactory.of("in", ExecutionMode.PREVIEW),
+    DslPipeContext ctx = DslPipeContext.of("test", contextFactory.of("in", ExecutionMode.PREVIEW),
             ExecutionMode.PREVIEW, runId);
 
     assertThatThrownBy(() -> stage.execute(ctx, next -> {
@@ -100,14 +100,14 @@ class DryRunLogStageTest {
     String runId = "run-reuse";
     DryRunLogStage stage = new DryRunLogStage(context, registry, 100);
 
-    DslPipeContext first = new DslPipeContext("test",
+    DslPipeContext first = DslPipeContext.of("test",
             contextFactory.of("in", ExecutionMode.PREVIEW), ExecutionMode.PREVIEW, runId);
     stage.execute(first, next -> {
       slf4jLogger.info("first run");
       return Result.success("first");
     });
 
-    DslPipeContext second = new DslPipeContext("test",
+    DslPipeContext second = DslPipeContext.of("test",
             contextFactory.of("in", ExecutionMode.PREVIEW), ExecutionMode.PREVIEW, runId);
     stage.execute(second, next -> {
       slf4jLogger.info("second run");
@@ -125,7 +125,7 @@ class DryRunLogStageTest {
     String runId = "run-reuse-after-exception";
     DryRunLogStage stage = new DryRunLogStage(context, registry, 100);
 
-    DslPipeContext first = new DslPipeContext("test",
+    DslPipeContext first = DslPipeContext.of("test",
             contextFactory.of("in", ExecutionMode.PREVIEW), ExecutionMode.PREVIEW, runId);
     try {
       stage.execute(first, next -> {
@@ -136,7 +136,7 @@ class DryRunLogStageTest {
       // expected
     }
 
-    DslPipeContext second = new DslPipeContext("test",
+    DslPipeContext second = DslPipeContext.of("test",
             contextFactory.of("in", ExecutionMode.PREVIEW), ExecutionMode.PREVIEW, runId);
     stage.execute(second, next -> {
       slf4jLogger.info("second run");
@@ -153,7 +153,7 @@ class DryRunLogStageTest {
   void runModeSkipsBufferRegistration() {
     String runId = "run-mode";
     DryRunLogStage stage = new DryRunLogStage(context, registry, 100);
-    DslPipeContext ctx = new DslPipeContext("test", contextFactory.of("in", ExecutionMode.RUN),
+    DslPipeContext ctx = DslPipeContext.of("test", contextFactory.of("in", ExecutionMode.RUN),
             ExecutionMode.RUN, runId);
 
     Result<?> result = stage.execute(ctx, next -> {

@@ -159,6 +159,6 @@ class PreviewReportStageTest {
 
   private DslPipeContext pipeContext() {
     Context<?> ctx = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
-    return new DslPipeContext("Ping", ctx, ExecutionMode.PREVIEW, "run-1");
+    return DslPipeContext.of("Ping", ctx, ExecutionMode.PREVIEW, "run-1");
   }
 }

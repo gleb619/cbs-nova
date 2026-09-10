@@ -20,17 +20,17 @@ public final class ExecutionTreeStage implements DslPipeStage {
 
   @Override
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
-    if (context.getMode() == ExecutionMode.RUN) {
+    if (context.mode() == ExecutionMode.RUN) {
       return next.proceed(context);
     }
     ExecutionTreeCollector collector = new ExecutionTreeCollector(maxDepth);
     collector.start();
-    Context<?> original = context.getDslContext();
+    Context<?> original = context.dslContext();
     Context<?> modeCtx = contextFactory.of(
             original.body(),
             original.metadata(),
-            context.getMode(),
-            context.getRunId(),
+            context.mode(),
+            context.runId(),
             original.transactionRouting())
             .withExecutionListener(collector)
             .withExecutionTraceCollector(original.executionTraceCollector());

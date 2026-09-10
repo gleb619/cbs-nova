@@ -20,7 +20,7 @@ class FakingStageTest {
 
   private DslPipeContext newContext(String runId) {
     Context<?> ctx = contextFactory.of("body", ExecutionMode.PREVIEW, runId);
-    return new DslPipeContext("Ping", ctx, ExecutionMode.PREVIEW, runId);
+    return DslPipeContext.of("Ping", ctx, ExecutionMode.PREVIEW, runId);
   }
 
   @Test

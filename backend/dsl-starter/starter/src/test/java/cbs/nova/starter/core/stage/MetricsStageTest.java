@@ -29,7 +29,7 @@ class MetricsStageTest {
   @Test
   void runModeSkipsCollectionAndPassesThroughUntouched() {
     MeterRegistry registry = new SimpleMeterRegistry();
-    DslPipeContext pipeContext = new DslPipeContext(
+    DslPipeContext pipeContext = DslPipeContext.of(
             "Ping",
             contextFactory.of("body", ExecutionMode.RUN, "run-1"),
             ExecutionMode.RUN,
@@ -48,7 +48,7 @@ class MetricsStageTest {
   @Test
   void previewModeRecordsCallCountsFromAstTreeAndRegistersMeters() {
     MeterRegistry registry = new SimpleMeterRegistry();
-    DslPipeContext pipeContext = new DslPipeContext(
+    DslPipeContext pipeContext = DslPipeContext.of(
             "Ping",
             contextFactory.of("body", ExecutionMode.PREVIEW, "run-1"),
             ExecutionMode.PREVIEW,
@@ -90,7 +90,7 @@ class MetricsStageTest {
   @Test
   void previewModeRecordsExternalCallTypesAndRegistersCounters() {
     MeterRegistry registry = new SimpleMeterRegistry();
-    DslPipeContext pipeContext = new DslPipeContext(
+    DslPipeContext pipeContext = DslPipeContext.of(
             "Ping",
             contextFactory.of("body", ExecutionMode.PREVIEW, "run-1"),
             ExecutionMode.PREVIEW,
@@ -123,7 +123,7 @@ class MetricsStageTest {
   @Test
   void metricsAttributeSetEvenWhenProceedThrows() {
     MeterRegistry registry = new SimpleMeterRegistry();
-    DslPipeContext pipeContext = new DslPipeContext(
+    DslPipeContext pipeContext = DslPipeContext.of(
             "Ping",
             contextFactory.of("body", ExecutionMode.PREVIEW, "run-1"),
             ExecutionMode.PREVIEW,
@@ -154,7 +154,7 @@ class MetricsStageTest {
   @Test
   void missingAstTreeAndExternalCallsAttributesDoNotThrow() {
     MeterRegistry registry = new SimpleMeterRegistry();
-    DslPipeContext pipeContext = new DslPipeContext(
+    DslPipeContext pipeContext = DslPipeContext.of(
             "Ping",
             contextFactory.of("body", ExecutionMode.PREVIEW, "run-1"),
             ExecutionMode.PREVIEW,
@@ -178,7 +178,7 @@ class MetricsStageTest {
   @Test
   void explainModeAlsoCollectsMetricsAndTagsTimerWithExplain() {
     MeterRegistry registry = new SimpleMeterRegistry();
-    DslPipeContext pipeContext = new DslPipeContext(
+    DslPipeContext pipeContext = DslPipeContext.of(
             "Ping",
             contextFactory.of("body", ExecutionMode.EXPLAIN, "run-1"),
             ExecutionMode.EXPLAIN,

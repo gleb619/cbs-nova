@@ -223,7 +223,7 @@ class ExplainReportStageTest {
 
   private DslPipeContext pipeContext(String name, ExecutionMode mode) {
     Context<?> ctx = contextFactory.of("body", mode, "run-1");
-    return new DslPipeContext(name, ctx, mode, "run-1");
+    return DslPipeContext.of(name, ctx, mode, "run-1");
   }
 
   private static final class EchoHelper implements Executable<Object, Object> {

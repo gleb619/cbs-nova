@@ -28,7 +28,7 @@ public final class MetricsStage implements DslPipeStage {
 
   @Override
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
-    if (context.getMode() == ExecutionMode.RUN) {
+    if (context.mode() == ExecutionMode.RUN) {
       return next.proceed(context);
     }
     PreviewMetricsCollector collector = PreviewMetricsCollector.start();
@@ -41,8 +41,8 @@ public final class MetricsStage implements DslPipeStage {
       PreviewMetricsSnapshot snapshot = collector.stop();
       sample.stop(Timer.builder(DURATION_TIMER)
               .description("Duration of a preview or explain run")
-              .tag("mode", context.getMode().name())
-              .tag("process", context.getName())
+              .tag("mode", context.mode().name())
+              .tag("process", context.name())
               .register(meterRegistry));
       context.setAttribute(StarterConstant.METRICS_ATTRIBUTE, snapshot);
     }

@@ -21,7 +21,7 @@ public final class DslExecutionPipeline<R> implements DslExecutionPipe<R> {
 
   @Override
   public @NonNull Result<R> execute(@NonNull String name, @NonNull Context<?> ctx) {
-    DslPipeContext context = new DslPipeContext(
+    DslPipeContext context = DslPipeContext.of(
             name, ctx, ctx.mode(), generateRunId(ctx));
     return executeStage(context, 0);
   }
@@ -40,7 +40,7 @@ public final class DslExecutionPipeline<R> implements DslExecutionPipe<R> {
     Result<?> result = (Result<?>) context.getAttribute("dslResult");
     if (result == null) {
       throw new IllegalStateException(
-              "No dispatch stage set dslResult for runId=" + context.getRunId());
+              "No dispatch stage set dslResult for runId=" + context.runId());
     }
     return (Result<R>) result;
   }

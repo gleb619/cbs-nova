@@ -17,15 +17,15 @@ public final class DslExecutionEventStage implements DslPipeStage {
   @Override
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
     eventBus.publish(
-            new DslRunStartedEvent(context.getRunId(), context.getName(), context.getMode()));
+            new DslRunStartedEvent(context.runId(), context.name(), context.mode()));
     try {
       Result<?> result = next.proceed(context);
       eventBus.publish(new DslRunCompletedEvent(
-              context.getRunId(), context.getName(), context.getMode(), result));
+              context.runId(), context.name(), context.mode(), result));
       return result;
     } catch (RuntimeException ex) {
       eventBus.publish(new DslRunCompletedEvent(
-              context.getRunId(), context.getName(), context.getMode(), Result.failure(ex)));
+              context.runId(), context.name(), context.mode(), Result.failure(ex)));
       throw ex;
     }
   }
