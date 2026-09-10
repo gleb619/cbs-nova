@@ -2,6 +2,8 @@ package cbs.nova.dsl.jsonschema;
 
 import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.ParameterDescriptor;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.BeanProperty;
 import tools.jackson.databind.JavaType;
@@ -22,6 +24,7 @@ import tools.jackson.databind.jsonFormatVisitors.JsonObjectFormatVisitor;
 import tools.jackson.databind.jsonFormatVisitors.JsonStringFormatVisitor;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +47,17 @@ public class JacksonJsonSchemaGenerator implements JsonSchemaGenerator {
           .annotationIntrospector(new NullableRecordAnnotationIntrospector())
           .build();
 
+  // Bounded size keeps memory under control; entries are interned by Class<?> identity so
+  // eviction pressure is negligible in practice. Recompiled DSL input classes get new
+  // identities, so stale entries are harmless and bounded by maximumSize. Cached values are
+  // deeply unmodifiable so callers cannot corrupt the shared entry.
+  private final Cache<Class<?>, Map<String, Object>> schemaCache = Caffeine.newBuilder()
+          .maximumSize(1_024L)
+          .build();
+
   @Override
+  // TODO: this overload could be memoized too by keying on List.copyOf(parameters) since
+  // ParameterDescriptor is a record with value equality; left uncached for now.
   public Map<String, Object> generateSchema(@Nullable List<ParameterDescriptor> parameters) {
     Map<String, Object> schema = emptyObjectSchema();
     if (parameters == null || parameters.isEmpty()) {
@@ -67,12 +80,19 @@ public class JacksonJsonSchemaGenerator implements JsonSchemaGenerator {
     if (inputType == null || !inputType.isRecord()) {
       return emptyObjectSchema();
     }
+    return schemaCache.get(inputType, this::computeSchema);
+  }
 
+  /**
+   * Compute the schema for a record class on cache miss. Visible for test subclasses that want to
+   * count or instrument invocations; production callers go through {@link #generateSchema}.
+   */
+  protected Map<String, Object> computeSchema(Class<?> inputType) {
     SchemaBuildingVisitor visitor = new SchemaBuildingVisitor();
     objectMapper.acceptJsonFormatVisitor(inputType, visitor);
     Map<String, Object> generated = visitor.schema();
     if (generated == null) {
-      return emptyObjectSchema();
+      return (Map<String, Object>) deepUnmodifiable(emptyObjectSchema());
     }
 
     Map<String, Object> schema = new LinkedHashMap<>();
@@ -82,7 +102,27 @@ public class JacksonJsonSchemaGenerator implements JsonSchemaGenerator {
       schema.remove("properties");
       schema.remove("required");
     }
-    return schema;
+    return (Map<String, Object>) deepUnmodifiable(schema);
+  }
+
+  @SuppressWarnings("unchecked")
+  private static Object deepUnmodifiable(Object value) {
+    if (value instanceof Map<?, ?> map) {
+      Map<Object, Object> copy = new LinkedHashMap<>(map.size());
+      for (Map.Entry<?, ?> entry : map.entrySet()) {
+        copy.put(entry.getKey(), deepUnmodifiable(entry.getValue()));
+      }
+      return Collections.unmodifiableMap(copy);
+    }
+    if (value instanceof List<?> list) {
+      List<Object> copy = new ArrayList<>(list.size());
+      for (Object element : list) {
+        copy.add(deepUnmodifiable(element));
+      }
+      return Collections.unmodifiableList(copy);
+    }
+    // Scalars (String, Boolean, Number) and any other immutable value pass through as-is.
+    return value;
   }
 
   private Map<String, Object> emptyObjectSchema() {
