@@ -5,8 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.eclipse.jgit.api.Git;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -15,23 +13,12 @@ class GitServiceTest {
   @TempDir
   Path tempDir;
 
-  @BeforeAll
-  static void checkNativeGit() {
-    var available = new ProcessBuilder("git", "--version").redirectErrorStream(true);
-    try {
-      var process = available.start();
-      Assumptions.assumeTrue(process.waitFor() == 0, "native git binary not available");
-    } catch (Exception e) {
-      Assumptions.assumeTrue(false, "native git binary not available");
-    }
-  }
-
   @Test
   void clonesRepository() throws Exception {
     var origin = createRepositoryWithCommit();
     var service = new GitService();
 
-    var clone = service.cloneRepository(origin.toString(), tempDir.resolve("clone"), null, null);
+    var clone = service.cloneRepository(origin.toString(), tempDir.resolve("clone"), null);
 
     assertThat(clone.resolve("README.md")).exists();
     assertThat(clone.resolve(".git")).exists();

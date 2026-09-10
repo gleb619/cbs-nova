@@ -11,8 +11,11 @@ repositories {
 }
 
 dependencies {
+  implementation platform('org.springframework.boot:spring-boot-dependencies:__SPRING_BOOT_VERSION__')
+  dslCompiler platform('org.springframework.boot:spring-boot-dependencies:__SPRING_BOOT_VERSION__')
   implementation 'cbs.nova:dsl-api:__DSL_VERSION__'
   implementation 'cbs.nova:dsl:__DSL_VERSION__'
+  compileOnly 'cbs.nova:starter:__DSL_VERSION__'
   implementation 'io.avaje:avaje-jsonb:3.4'
   annotationProcessor 'io.avaje:avaje-jsonb-generator:3.4'
   compileOnly 'io.temporal:temporal-sdk:__TEMPORAL_VERSION__'
@@ -25,6 +28,6 @@ dslCompile {
   dslPackage = '__TARGET_PACKAGE__'
   basePackage = '__BASE_PACKAGE__'
   buildVersion = '__BUILD_VERSION__'
-  runtimeModule = ''
+  runtimeModule = 'starter'
   useFileNameSubPackage = __USE_FILENAME_SUB_PACKAGE__
 }

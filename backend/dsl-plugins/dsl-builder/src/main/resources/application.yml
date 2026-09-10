@@ -16,6 +16,7 @@ cbs:
       session-ttl: PT1H
       dsl-version: 0.0.1-SNAPSHOT
       temporal-version: 1.27.0
+      spring-boot-version: 4.0.4
       default-build-version: v1
       build-tasks:
         - clean
@@ -37,6 +38,11 @@ cbs:
         acquire-timeout-seconds: 5
       git:
         enabled: true
+        repository-dir: ${CBS_DSL_BUILDER_GIT_REPOSITORY_DIR:}
+        worktrees-dir: ${CBS_DSL_BUILDER_GIT_WORKTREES_DIR:}
+        repo-url: ${CBS_DSL_BUILDER_GIT_REPO_URL:}
+        sub-path: ${CBS_DSL_BUILDER_GIT_SUB_PATH:}
+        branch: ${CBS_DSL_BUILDER_GIT_BRANCH:}
         status-cache-ttl-seconds: 5
       file-buffer:
         max-entries: 1000

@@ -63,17 +63,24 @@ public class CompileService {
   private CompileResult compileInternal(CompileRequest request) {
     validatePackage(request.targetPackage(), "targetPackage");
     validatePackage(request.basePackage(), "basePackage");
-    if (isBlank(request.repoUrl()) && (request.sources() == null || request.sources().isEmpty())) {
-      throw new IllegalArgumentException("Either sources or repoUrl must be provided");
+    var repoUrl = firstNonBlank(request.repoUrl(), properties.git().repoUrl());
+    if (isBlank(repoUrl) && (request.sources() == null || request.sources().isEmpty())) {
+      throw new IllegalArgumentException("Either sources or a git repository must be provided");
     }
     var session = createSession();
     try {
       scaffoldProject(session, request);
-      if (!isBlank(request.repoUrl())) {
-        var repoDir = gitService.cloneRepository(
-                request.repoUrl(), session.getSessionDir().resolve("repo"),
-                request.baseBranch(), null);
-        copyRepoSources(repoDir, session.srcDir());
+      if (!isBlank(repoUrl)) {
+        var repoDir = ensureRepoClone(repoUrl);
+        var worktreesDir = worktreesDir();
+        Files.createDirectories(worktreesDir);
+        var worktreeDir = gitService.createWorktree(
+                repoDir, worktreesDir.resolve(session.getId()), request.baseBranch());
+        try {
+          copyRepoSources(worktreeDir, session.srcDir());
+        } finally {
+          gitService.removeWorktree(repoDir, worktreeDir);
+        }
       }
       if (request.sources() != null && !request.sources().isEmpty()) {
         writeSources(session, request.sources());
@@ -151,6 +158,7 @@ public class CompileService {
     return buildTemplate
             .replace("__DSL_VERSION__", properties.dslVersion())
             .replace("__TEMPORAL_VERSION__", properties.temporalVersion())
+            .replace("__SPRING_BOOT_VERSION__", properties.springBootVersion())
             .replace("__TARGET_PACKAGE__", groovyString(request.targetPackage()))
             .replace("__BASE_PACKAGE__", groovyString(request.basePackage()))
             .replace("__BUILD_VERSION__", groovyString(resolveBuildVersion(request.buildVersion())))
@@ -205,14 +213,45 @@ public class CompileService {
   }
 
   private void copyRepoSources(Path repoDir, Path srcDir) throws IOException {
-    var repoSrc = repoDir.resolve("src");
-    var base = Files.isDirectory(repoSrc) ? repoSrc : repoDir;
+    var subPath = properties.git().subPath();
+    var base = isBlank(subPath) ? repoDir : repoDir.resolve(subPath);
+    var repoSrc = base.resolve("src");
+    var sourceBase = Files.isDirectory(repoSrc) ? repoSrc : base;
     for (var folder : properties.sourceFolders()) {
-      var source = base.resolve(folder);
+      var source = sourceBase.resolve(folder);
       if (Files.isDirectory(source)) {
         copyDirectory(source, srcDir.resolve(folder));
       }
     }
+  }
+
+  private Path ensureRepoClone(String repoUrl) {
+    var repoDir = repositoryDir();
+    if (Files.isDirectory(repoDir.resolve(".git"))) {
+      gitService.pull(repoDir, properties.git().branch());
+      return repoDir;
+    }
+    try {
+      Files.createDirectories(repoDir.getParent());
+    } catch (IOException e) {
+      throw new CompileException("Failed to create repository directory: " + e.getMessage(),
+              List.of(e.getMessage()));
+    }
+    return gitService.cloneRepository(repoUrl, repoDir, properties.git().branch());
+  }
+
+  private Path repositoryDir() {
+    var configured = properties.git().repositoryDir();
+    return !isBlank(configured)
+            ? Path.of(configured)
+            : properties.workspaceDir().resolve("repo");
+  }
+
+  private Path worktreesDir() {
+    var configured = properties.git().worktreesDir();
+    return !isBlank(configured)
+            ? Path.of(configured)
+            : properties.workspaceDir().resolve("worktrees");
   }
 
   private void copyDirectory(Path source, Path target) throws IOException {
@@ -250,6 +289,10 @@ public class CompileService {
 
   private boolean isBlank(String value) {
     return value == null || value.isBlank();
+  }
+
+  private String firstNonBlank(String first, String second) {
+    return !isBlank(first) ? first : second;
   }
 
   private String groovyString(String value) {

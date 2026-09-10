@@ -54,8 +54,10 @@ backend/
 - `dsl-gradle-plugin` provides a standalone Gradle plugin (`cbs.nova.dsl`) that compacts DSL sources. It resolves the
   compiler runtime from Maven Local using configurable `dslVersion`. See `backend/dsl-plugins/dsl-gradle-plugin/README.md`.
 - `dsl-builder` is a Spring Boot service (port 8091) that compiles DSL sources on demand: it stages a session
-  workspace, renders Gradle build templates that apply `dsl-gradle-plugin`, optionally clones sources from a Git
-  repo (JGit), runs the build via the Gradle Tooling API, and exposes `POST /api/dsl/compile` +
+  workspace, renders Gradle build templates that apply `dsl-gradle-plugin`, checks out sources from a
+  configurable Git repo (`cbs.dsl.builder.git.repo-url` + `git.sub-path`, JGit-managed worktrees
+  under `git.worktrees-dir`; per-request `repoUrl` overrides), runs the build via the Gradle Tooling API, and exposes
+  `POST /api/dsl/compile` +
   `GET /api/dsl/compile/{id}/download` (zip of generated sources). Compile runs through a bounded server-side
   `BuilderWorkQueue` (capacity/workers under `cbs.dsl.builder.queue.*`; queue full → HTTP 429). The service also
   hosts the draft/file/vcs workbench surface ported from the starter: `DraftController` (`/api/dsl/drafts/**`),

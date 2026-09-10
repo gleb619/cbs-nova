@@ -34,6 +34,7 @@ class FileServiceTest {
             null,
             "0.0.1-SNAPSHOT",
             "1.27.0",
+            "4.0.4",
             "v1",
             List.of("clean", "build"),
             List.of("dsl", "models"),

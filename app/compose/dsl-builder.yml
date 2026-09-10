@@ -2,19 +2,33 @@
 # Runs the Gradle Tooling API internally, so it has no external Temporal/
 # Postgres dependency, but shares the default compose network so the main
 # Spring app can reach it via http://dsl-builder:8091 if it wants to.
+#
+# APP_UID/APP_GID default to 1000:1000; pass the host user's ids so files the
+# service creates on the data volume are owned by the host user:
+#   APP_UID=$(id -u) APP_GID=$(id -g) docker compose up -d dsl-builder
 
 services:
   dsl-builder:
     image: cbs-nova/dsl-builder:latest
+    restart: unless-stopped
     build:
       context: ../..
       dockerfile: backend/dsl-plugins/dsl-builder/Dockerfile
+      args:
+        APP_UID: ${APP_UID:-1000}
+        APP_GID: ${APP_GID:-1000}
     ports:
       - "8091:8091"
     stop_grace_period: 35s
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
-      CBS_DSL_BUILDER_WORKSPACE_DIR: ${CBS_DSL_BUILDER_WORKSPACE_DIR:-/tmp/dsl-builder}
+      CBS_DSL_BUILDER_GIT_REPO_URL: ${CBS_DSL_BUILDER_GIT_REPO_URL:-git@github.com:gleb619/cbs-nova.git}
+      CBS_DSL_BUILDER_GIT_SUB_PATH: ${CBS_DSL_BUILDER_GIT_SUB_PATH:-backend/dsl-starter/dsl-examples}
+      CBS_DSL_BUILDER_GIT_BRANCH: ${CBS_DSL_BUILDER_GIT_BRANCH:-}
+      GIT_SSH_COMMAND: ssh -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/var/lib/dsl-builder/known_hosts
+    volumes:
+      - dsl-builder-data:/var/lib/dsl-builder
+      - ${HOME}/.ssh:/home/appuser/.ssh:ro
     healthcheck:
       # TCP probe via /dev/tcp (the JRE image strips curl/wget; see app.yml
       # for rationale). Spring binds 8091 only once the embedded server is
@@ -24,3 +38,6 @@ services:
       timeout: 5s
       retries: 10
       start_period: 45s
+
+volumes:
+  dsl-builder-data:

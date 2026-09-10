@@ -2,99 +2,130 @@ package cbs.nova.dsl.builder.service;
 
 import cbs.nova.dsl.builder.exception.CompileException;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.MergeCommand.FastForwardMode;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.transport.CredentialsProvider;
+import org.eclipse.jgit.lib.Constants;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
 public class GitService {
 
-  public Path cloneRepository(
-          String repoUrl, Path targetDir, String branch, CredentialsProvider credentials) {
-    var command = Git.cloneRepository().setURI(repoUrl).setDirectory(targetDir.toFile());
-    if (branch != null && !branch.isBlank()) {
-      command.setBranch(branch);
-    }
-    if (credentials != null) {
-      command.setCredentialsProvider(credentials);
-    }
-    try (Git git = command.call()) {
-      return git.getRepository().getWorkTree().toPath();
+  public Path cloneRepository(String repoUrl, Path targetDir, String branch) {
+    try {
+      var clone = Git.cloneRepository().setURI(repoUrl).setDirectory(targetDir.toFile());
+      if (branch != null && !branch.isBlank()) {
+        clone.setBranch(branch);
+      }
+      clone.call();
+      return targetDir;
     } catch (GitAPIException e) {
-      throw new CompileException("Failed to clone repository: " + e.getMessage(),
-              List.of(e.getMessage()));
+      throw compileError("clone", e);
     }
   }
 
-  // TODO: wire, add endpoint and use method
-  @Deprecated
-  public void pull(Path repoDir, CredentialsProvider credentials) {
-    try (Git git = Git.open(repoDir.toFile())) {
-      var pull = git.pull();
-      if (credentials != null) {
-        pull.setCredentialsProvider(credentials);
+  public void pull(Path repoDir, String branch) {
+    try (Git git = open(repoDir)) {
+      var pull = git.pull().setFastForward(FastForwardMode.FF_ONLY);
+      if (branch != null && !branch.isBlank()) {
+        pull.setRemote("origin").setRemoteBranchName(branch);
       }
       pull.call();
-    } catch (IOException | GitAPIException e) {
-      throw new CompileException("Failed to pull repository: " + e.getMessage(),
-              List.of(e.getMessage()));
+    } catch (GitAPIException | IOException e) {
+      throw compileError("pull", e);
     }
   }
 
   public Path createWorktree(Path repoDir, Path worktreeDir, String baseBranch) {
     var branch = "dsl-" + UUID.randomUUID();
-    var args = new ArrayList<String>();
-    args.add("worktree");
-    args.add("add");
-    args.add("-b");
-    args.add(branch);
-    args.add(worktreeDir.toString());
-    if (baseBranch != null && !baseBranch.isBlank()) {
-      args.add(baseBranch);
+    try (Git git = open(repoDir)) {
+      var startPoint = baseBranch == null || baseBranch.isBlank() ? Constants.HEAD : baseBranch;
+      git.branchCreate().setName(branch).setStartPoint(startPoint).call();
+      var adminDir = git.getRepository().getDirectory().toPath()
+              .resolve("worktrees").resolve(branch);
+      Files.createDirectories(worktreeDir);
+      Files.createDirectories(adminDir);
+      Files.writeString(adminDir.resolve("commondir"), "../..\n");
+      Files.writeString(adminDir.resolve("gitdir"), worktreeDir.resolve(".git") + "\n");
+      Files.writeString(adminDir.resolve("HEAD"), "ref: " + Constants.R_HEADS + branch + "\n");
+      Files.writeString(worktreeDir.resolve(".git"), "gitdir: " + adminDir + "\n");
+      try (Git worktree = open(worktreeDir)) {
+        worktree.checkout().setName(branch).call();
+      }
+      return worktreeDir;
+    } catch (GitAPIException | IOException e) {
+      throw compileError("worktree add", e);
     }
-    runGit(repoDir, args);
-    return worktreeDir;
   }
 
   public List<String> listWorktrees(Path repoDir) {
-    return runGit(repoDir, List.of("worktree", "list", "--porcelain")).lines()
-            .filter(line -> line.startsWith("worktree "))
-            .map(line -> line.substring("worktree ".length()))
-            .toList();
+    try (Git git = open(repoDir)) {
+      var worktreesDir = git.getRepository().getDirectory().toPath().resolve("worktrees");
+      if (!Files.isDirectory(worktreesDir)) {
+        return List.of();
+      }
+      try (var stream = Files.list(worktreesDir)) {
+        return stream.filter(Files::isDirectory)
+                .map(dir -> dir.resolve("gitdir"))
+                .filter(Files::isRegularFile)
+                .map(this::readWorktreePath)
+                .toList();
+      }
+    } catch (IOException e) {
+      throw compileError("worktree list", e);
+    }
   }
 
   public void removeWorktree(Path repoDir, Path worktreeDir) {
-    runGit(repoDir, List.of("worktree", "remove", "--force", worktreeDir.toString()));
+    try {
+      var gitFile = worktreeDir.resolve(".git");
+      if (Files.isRegularFile(gitFile)) {
+        var content = Files.readString(gitFile).strip();
+        if (content.startsWith("gitdir: ")) {
+          deleteRecursively(Path.of(content.substring("gitdir: ".length())));
+        }
+      }
+      deleteRecursively(worktreeDir);
+    } catch (IOException e) {
+      throw compileError("worktree remove", e);
+    }
   }
 
-  private String runGit(Path repoDir, List<String> args) {
-    var command = new ArrayList<String>();
-    command.add("git");
-    command.add("-C");
-    command.add(repoDir.toString());
-    command.addAll(args);
+  private Git open(Path repoDir) throws IOException {
+    return Git.open(repoDir.toFile());
+  }
+
+  private String readWorktreePath(Path gitdirFile) {
     try {
-      var process = new ProcessBuilder(command).redirectErrorStream(true).start();
-      var output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-      if (process.waitFor() != 0) {
-        throw new CompileException("git %s failed: %s".formatted(args.getFirst(),
-                output.strip()), output.lines().toList());
-      }
-      return output;
+      var path = Path.of(Files.readString(gitdirFile).strip());
+      return path.getParent() == null ? path.toString() : path.getParent().toString();
     } catch (IOException e) {
-      throw new CompileException("Failed to run git: " + e.getMessage(),
-              List.of(e.getMessage()));
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new CompileException("git interrupted", List.of("git interrupted"));
+      throw compileError("worktree list", e);
     }
+  }
+
+  private void deleteRecursively(Path dir) throws IOException {
+    if (!Files.exists(dir)) {
+      return;
+    }
+    try (var stream = Files.walk(dir)) {
+      var paths = stream.sorted(Comparator.reverseOrder()).toList();
+      for (var path : paths) {
+        Files.delete(path);
+      }
+    }
+  }
+
+  private CompileException compileError(String operation, Exception e) {
+    log.warn("git {} failed: {}", operation, e.getMessage());
+    return new CompileException("git %s failed: %s".formatted(operation, e.getMessage()),
+            List.of(e.getMessage()));
   }
 }

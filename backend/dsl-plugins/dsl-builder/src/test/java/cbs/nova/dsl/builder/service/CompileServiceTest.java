@@ -32,23 +32,10 @@ class CompileServiceTest {
   Path workspaceDir;
 
   private CompileService service() {
-    var properties = new DslBuilderProperties(
-            workspaceDir,
-            Duration.ofMinutes(10),
-            Duration.ofHours(1),
-            null,
-            "0.0.1-SNAPSHOT",
-            "1.27.0",
-            "v1",
-            List.of("clean", "build"),
-            List.of("dsl", "models"),
-            "project/templates",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+    return service(properties(null));
+  }
+
+  private CompileService service(DslBuilderProperties properties) {
     var gradleService = new GradleService(properties);
     var workQueue = new BuilderWorkQueue(properties);
     workQueue.start();
@@ -56,6 +43,27 @@ class CompileServiceTest {
             properties, new GitService(), gradleService, new DefaultResourceLoader(), workQueue);
     service.loadTemplates();
     return service;
+  }
+
+  private DslBuilderProperties properties(DslBuilderProperties.Git git) {
+    return new DslBuilderProperties(
+            workspaceDir,
+            Duration.ofMinutes(10),
+            Duration.ofHours(1),
+            null,
+            "0.0.1-SNAPSHOT",
+            "1.27.0",
+            "4.0.4",
+                        "v1",
+            List.of("clean", "build"),
+            List.of("dsl", "models"),
+            "project/templates",
+            null,
+            null,
+            null,
+            null,
+            git,
+            null);
   }
 
   @Test
@@ -89,6 +97,39 @@ class CompileServiceTest {
 
     assertThatThrownBy(() -> service().compile(request))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("sources or repoUrl");
+            .hasMessageContaining("sources or a git repository");
+  }
+
+  @Test
+  void compilesFromConfiguredGitRepository() throws Exception {
+    var origin = createRepositoryWithCommit();
+    var git = new DslBuilderProperties.Git(
+            true, null, null, origin.toString(), null, "main", 5);
+    var request = new CompileRequest("v1", null, null, null, null, null, null);
+
+    var result = service(properties(git)).compile(request);
+
+    assertThat(result.success()).isTrue();
+    assertThat(result.generatedFiles())
+            .anyMatch(path -> path.endsWith("ProcessWorkflow.java"));
+  }
+
+  private Path createRepositoryWithCommit() throws Exception {
+    var repoDir = workspaceDir.resolve("origin");
+    try (var git = org.eclipse.jgit.api.Git.init()
+            .setDirectory(repoDir.toFile())
+            .setInitialBranch("main")
+            .call()) {
+      var dslDir = repoDir.resolve("dsl");
+      java.nio.file.Files.createDirectories(dslDir);
+      java.nio.file.Files.writeString(dslDir.resolve("SampleDsl.java"), SAMPLE_SOURCE);
+      git.add().addFilepattern(".").call();
+      git.commit()
+              .setMessage("initial")
+              .setAuthor("dsl-builder-test", "test@example.com")
+              .setCommitter("dsl-builder-test", "test@example.com")
+              .call();
+    }
+    return repoDir;
   }
 }
