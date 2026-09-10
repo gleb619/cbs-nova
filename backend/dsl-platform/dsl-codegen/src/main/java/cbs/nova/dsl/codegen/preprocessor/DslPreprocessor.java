@@ -6,6 +6,7 @@ import org.jspecify.annotations.NonNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public final class DslPreprocessor {
 
@@ -73,27 +74,23 @@ public final class DslPreprocessor {
           @NonNull String imports,
           @NonNull String body,
           String targetPackage) {
-    // TODO: redo from StringBuilder to textblock
-    var sb = new StringBuilder();
-    if (targetPackage != null && !targetPackage.isBlank()) {
-      sb.append("package ").append(targetPackage).append(";\n\n");
+    var packagePrefix = (targetPackage != null && !targetPackage.isBlank())
+            ? "package " + targetPackage + ";\n\n"
+            : "";
+    var defaultImports = DEFAULT_IMPORTS.stream()
+            .filter(di -> !imports.contains(di))
+            .collect(Collectors.joining("\n"));
+    if (!defaultImports.isEmpty()) {
+      defaultImports = defaultImports + "\n";
     }
-    for (var defaultImport : DEFAULT_IMPORTS) {
-      if (!imports.contains(defaultImport)) {
-        sb.append(defaultImport).append("\n");
-      }
-    }
-    if (!imports.isEmpty()) {
-      sb.append(imports).append("\n\n");
-    } else {
-      sb.append("\n");
-    }
-    sb.append("public class ").append(className)
-            .append(" implements ").append(DslCompactSource.class.getSimpleName()).append(" {\n")
-            .append(body).append("\n")
-            .append(filenameMethod(fileName))
-            .append("}\n");
-    return sb.toString();
+    var importsBlock = imports.isEmpty() ? "\n" : imports + "\n\n";
+    var header = packagePrefix + defaultImports + importsBlock;
+    return """
+            %spublic class %s implements %s {
+            %s
+            %s}
+            """.formatted(header, className, DslCompactSource.class.getSimpleName(),
+            body, filenameMethod(fileName));
   }
 
   private SourceSplit splitImports(@NonNull String source) {
