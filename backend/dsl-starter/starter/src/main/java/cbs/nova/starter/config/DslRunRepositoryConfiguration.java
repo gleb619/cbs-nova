@@ -6,7 +6,9 @@ import cbs.nova.starter.config.properties.DslRunPersistenceProperties;
 import cbs.nova.starter.converter.DslRunMapper;
 import cbs.nova.starter.converter.TransactionExecutionMapper;
 import cbs.nova.starter.persistence.AesFieldEncryptor;
+import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
 import cbs.nova.starter.persistence.DslAuditRepository;
+import cbs.nova.starter.persistence.DslDefinitionTestRepository;
 import cbs.nova.starter.persistence.DslRunEncryption;
 import cbs.nova.starter.persistence.DslRunJdbcRepository;
 import cbs.nova.starter.persistence.DslRunNamingStrategy;
@@ -17,7 +19,8 @@ import cbs.nova.starter.persistence.JdbcTransactionExecutionRepository;
 import cbs.nova.starter.persistence.NoOpFieldEncryptor;
 import cbs.nova.starter.persistence.TransactionExecutionJdbcRepository;
 import cbs.nova.starter.service.DslAuditService;
-import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
+import cbs.nova.starter.service.DslDefinitionTestService;
+import cbs.nova.starter.service.DslRuntimeService;
 import cbs.nova.starter.webhook.WebhookDeliveryRecordRepository;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -26,6 +29,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.jdbc.repository.config.EnableJdbcRepositories;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.ObjectMapper;
 
 import javax.sql.DataSource;
@@ -107,6 +111,23 @@ public class DslRunRepositoryConfiguration {
   public CompileDiagnosticRecordRepository compileDiagnosticRecordRepository(
           NamedParameterJdbcTemplate jdbcTemplate) {
     return new CompileDiagnosticRecordRepository(jdbcTemplate);
+  }
+
+  @Bean
+  @ConditionalOnBean(DataSource.class)
+  public DslDefinitionTestRepository dslDefinitionTestRepository(
+          NamedParameterJdbcTemplate jdbcTemplate,
+          TransactionTemplate transactionTemplate) {
+    return new DslDefinitionTestRepository(jdbcTemplate, transactionTemplate);
+  }
+
+  @Bean
+  @ConditionalOnBean(DataSource.class)
+  public DslDefinitionTestService dslDefinitionTestService(
+          DslDefinitionTestRepository repository,
+          DslRuntimeService previewService,
+          ObjectMapper objectMapper) {
+    return new DslDefinitionTestService(repository, previewService, objectMapper);
   }
 
   @Bean
