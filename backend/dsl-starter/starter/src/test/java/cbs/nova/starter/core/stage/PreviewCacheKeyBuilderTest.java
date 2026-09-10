@@ -129,6 +129,21 @@ class PreviewCacheKeyBuilderTest {
   }
 
   @Test
+  void helperDescriptorHashIsDeterministic() {
+    String helperName = "determinism-helper-" + System.nanoTime();
+    GlobalManager.globalManager().registerHelper(helperName, new EchoHelper());
+
+    Context<?> ctx = contextFactory.of("payload", ExecutionMode.PREVIEW, "run-1");
+    PreviewCacheKeyBuilder otherBuilder = new PreviewCacheKeyBuilder();
+
+    PreviewCacheKey first = builder.build(helperName, ctx);
+    PreviewCacheKey second = otherBuilder.build(helperName, ctx);
+
+    assertThat(first.dslDescriptorHash()).isNotEmpty();
+    assertThat(first.dslDescriptorHash()).isEqualTo(second.dslDescriptorHash());
+  }
+
+  @Test
   void inputHashIsSha256HexLowercase64Chars() {
     String name = "unregistered-name-" + System.nanoTime();
     Context<?> ctx = contextFactory.of("payload", ExecutionMode.PREVIEW, "run-1");
