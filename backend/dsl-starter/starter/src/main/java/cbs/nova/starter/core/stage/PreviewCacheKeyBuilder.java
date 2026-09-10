@@ -33,10 +33,17 @@ final class PreviewCacheKeyBuilder {
                             .hasSideEffects(helper.hasSideEffects())
                             .previewBehavior(helper.previewBehavior())
                             .parameters(helper.parameters())
-                            .taskQueue(null) // todo: add default taskqueue
-                            .version(null) // todo: add default version
-                            .startToCloseTimeout(null) // todo: add default startToCloseTimeout
-                            .heartbeatTimeout(null) // todo: add default heartbeatTimeout
+                            .taskQueue(null) // helpers are not Temporal-scheduled; no task queue
+                                             // applies (dropped from hash by non_null inclusion)
+                            .version(null) // version is a Temporal workflow/activity concept;
+                                           // helpers carry no version (dropped from hash by
+                                           // non_null inclusion)
+                            .startToCloseTimeout(null) // helpers run in-process; no Temporal
+                                                       // activity start-to-close timeout applies
+                                                       // (dropped from hash by non_null inclusion)
+                            .heartbeatTimeout(null) // helpers run in-process; no Temporal activity
+                                                    // heartbeat applies (dropped from hash by
+                                                    // non_null inclusion)
                             .build()));
     String dslHash = descriptor.map(this::dslDescriptorHash).orElse("");
     String inputHash = inputHash(ctx.body());

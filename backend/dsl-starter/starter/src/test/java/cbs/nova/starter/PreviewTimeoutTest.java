@@ -94,7 +94,7 @@ class PreviewTimeoutTest {
     assertThat(result.value().errors()).hasSize(1);
     assertThat(result.value().errors().get(0).code()).isEqualTo(PreviewErrorCode.PREVIEW_TIMEOUT);
     assertThat(elapsed).isLessThan(500);
-    assertThat(meterRegistry.counter("cbs.nova.preview.timeout.count").count()).isEqualTo(1.0);
+    assertThat(meterRegistry.counter("dsl.preview.timeout").count()).isEqualTo(1.0);
   }
 
   @Test

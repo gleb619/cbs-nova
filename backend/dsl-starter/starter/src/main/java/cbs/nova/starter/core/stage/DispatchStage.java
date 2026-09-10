@@ -124,7 +124,7 @@ public final class DispatchStage implements DslPipeStage {
     } catch (TimeoutException e) {
       future.cancel(true);
       if (meterRegistry != null) {
-        meterRegistry.counter("cbs.nova.preview.timeout.count").increment();
+        meterRegistry.counter("dsl.preview.timeout").increment();
       }
       return Result.failure(new PreviewTimeoutException(name, timeout));
     } catch (InterruptedException e) {
