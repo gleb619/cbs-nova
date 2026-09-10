@@ -54,6 +54,9 @@
       },
       "CompileDiagnostic": {
         "properties": {
+          "code": {
+            "type": "string"
+          },
           "column": {
             "format": "int64",
             "type": "integer"
@@ -94,6 +97,34 @@
         },
         "type": "object"
       },
+      "ConstructSchemaDto": {
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "inputSchema": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "inputType": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "outputSchema": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "outputType": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "DefinitionBundle": {
         "properties": {
           "definitions": {
@@ -101,6 +132,9 @@
               "$ref": "#/components/schemas/DefinitionBundleEntry"
             },
             "type": "array"
+          },
+          "digest": {
+            "type": "string"
           },
           "engineVersion": {
             "type": "string"
@@ -122,6 +156,69 @@
           },
           "source": {
             "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "DefinitionTestCase": {
+        "properties": {
+          "caseName": {
+            "type": "string"
+          },
+          "expectedOutput": {
+            "$ref": "#/components/schemas/JsonNode"
+          },
+          "input": {
+            "$ref": "#/components/schemas/JsonNode"
+          }
+        },
+        "type": "object"
+      },
+      "DefinitionTestCaseResult": {
+        "properties": {
+          "actual": {
+            "$ref": "#/components/schemas/JsonNode"
+          },
+          "diagnostics": {},
+          "durationMs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "expected": {
+            "$ref": "#/components/schemas/JsonNode"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "DefinitionTestRunReport": {
+        "properties": {
+          "cases": {
+            "items": {
+              "$ref": "#/components/schemas/DefinitionTestCaseResult"
+            },
+            "type": "array"
+          },
+          "errored": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "failed": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "passed": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total": {
+            "format": "int32",
+            "type": "integer"
           }
         },
         "type": "object"
@@ -497,6 +594,95 @@
           },
           "outcome": {
             "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "JsonNode": {
+        "properties": {
+          "array": {
+            "type": "boolean"
+          },
+          "bigDecimal": {
+            "type": "boolean"
+          },
+          "bigInteger": {
+            "type": "boolean"
+          },
+          "binary": {
+            "type": "boolean"
+          },
+          "boolean": {
+            "type": "boolean"
+          },
+          "container": {
+            "type": "boolean"
+          },
+          "double": {
+            "type": "boolean"
+          },
+          "embeddedValue": {
+            "type": "boolean"
+          },
+          "empty": {
+            "type": "boolean"
+          },
+          "float": {
+            "type": "boolean"
+          },
+          "floatingPointNumber": {
+            "type": "boolean"
+          },
+          "int": {
+            "type": "boolean"
+          },
+          "integralNumber": {
+            "type": "boolean"
+          },
+          "long": {
+            "type": "boolean"
+          },
+          "missingNode": {
+            "type": "boolean"
+          },
+          "nodeType": {
+            "enum": [
+              "ARRAY",
+              "BINARY",
+              "BOOLEAN",
+              "MISSING",
+              "NULL",
+              "NUMBER",
+              "OBJECT",
+              "POJO",
+              "STRING"
+            ],
+            "type": "string"
+          },
+          "null": {
+            "type": "boolean"
+          },
+          "number": {
+            "type": "boolean"
+          },
+          "object": {
+            "type": "boolean"
+          },
+          "pojo": {
+            "type": "boolean"
+          },
+          "short": {
+            "type": "boolean"
+          },
+          "string": {
+            "type": "boolean"
+          },
+          "textual": {
+            "deprecated": true,
+            "type": "boolean"
+          },
+          "valueNode": {
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -915,6 +1101,94 @@
         ]
       }
     },
+    "/api/dsl/auth/keys": {
+      "get": {
+        "operationId": "listApiKeys",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List stored API keys (label, prefix, timestamps). NEVER the hash or plaintext.",
+        "tags": [
+          "DSL Auth"
+        ]
+      },
+      "post": {
+        "operationId": "createApiKey",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Key created; plaintext returned in the response body"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing or invalid 'label'"
+          }
+        },
+        "summary": "Create a new API key. Returns the plaintext exactly once.",
+        "tags": [
+          "DSL Auth"
+        ]
+      }
+    },
+    "/api/dsl/auth/keys/{id}": {
+      "delete": {
+        "operationId": "revokeApiKey",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Key revoked"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unknown id"
+          }
+        },
+        "summary": "Revoke a stored API key by id. Idempotent for already-revoked ids (404 when unknown).",
+        "tags": [
+          "DSL Auth"
+        ]
+      }
+    },
     "/api/dsl/constructs/{name}": {
       "get": {
         "operationId": "getConstructBody",
@@ -1084,6 +1358,103 @@
         ]
       }
     },
+    "/api/dsl/definitions/{name}/tests": {
+      "get": {
+        "operationId": "listDefinitionTests",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionTestCase"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List stored test cases for a definition",
+        "tags": [
+          "DSL Testing"
+        ]
+      },
+      "put": {
+        "operationId": "replaceDefinitionTests",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Replaced case set stored"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Definition not found"
+          }
+        },
+        "summary": "Replace the whole test case set for a definition",
+        "tags": [
+          "DSL Testing"
+        ]
+      }
+    },
+    "/api/dsl/definitions/{name}/tests/run": {
+      "post": {
+        "operationId": "runDefinitionTests",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true
+          },
+          {
+            "description": "Optional case-name subset; may be repeated",
+            "in": "query",
+            "name": "case"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionTestRunReport"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Run a definition's test cases through the preview pipeline",
+        "tags": [
+          "DSL Testing"
+        ]
+      }
+    },
     "/api/dsl/drafts": {
       "get": {
         "operationId": "listDrafts",
@@ -1211,6 +1582,88 @@
           }
         },
         "summary": "List published metadata snapshots for a construct",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/drafts/{name}/history/{timestamp}": {
+      "get": {
+        "operationId": "readPublishHistoryEntry",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "History entry content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "History entry not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured or not found"
+          }
+        },
+        "summary": "Read a single published metadata snapshot's content",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/drafts/{name}/history/{timestamp}/diff": {
+      "get": {
+        "operationId": "diffPublishHistoryEntry",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Line-level diff of entry vs published"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "History entry not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured or not found"
+          }
+        },
+        "summary": "Diff a published metadata snapshot against the current published definition",
         "tags": [
           "DSL Admin"
         ]
@@ -1356,6 +1809,64 @@
         "summary": "Persist a Workbench draft construct to disk",
         "tags": [
           "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/events": {
+      "get": {
+        "operationId": "listDomainEvents",
+        "parameters": [
+          {
+            "description": "Optional exact event_type filter (e.g. RunCompleted)",
+            "in": "query",
+            "name": "type"
+          },
+          {
+            "description": "Optional exact aggregate_type filter (run|draft|definition)",
+            "in": "query",
+            "name": "aggregateType"
+          },
+          {
+            "description": "Optional exact aggregate_id filter (runId or definition name)",
+            "in": "query",
+            "name": "aggregateId"
+          },
+          {
+            "description": "Optional exact correlation_id filter",
+            "in": "query",
+            "name": "correlationId"
+          },
+          {
+            "description": "Optional ISO-8601 instant lower bound on created_at (inclusive)",
+            "in": "query",
+            "name": "since"
+          },
+          {
+            "description": "Maximum number of events to return",
+            "in": "query",
+            "name": "limit"
+          },
+          {
+            "description": "Number of matching events to skip before returning results",
+            "in": "query",
+            "name": "offset"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List append-only domain events, newest first",
+        "tags": [
+          "DSL Events"
         ]
       }
     },
@@ -1981,6 +2492,34 @@
         ]
       }
     },
+    "/api/dsl/schemas/{name}": {
+      "get": {
+        "operationId": "getConstructSchema",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConstructSchemaDto"
+                }
+              }
+            },
+            "description": "Construct schemas"
+          }
+        },
+        "summary": "Get DSL construct input/output schemas",
+        "tags": [
+          "DSL Introspection"
+        ]
+      }
+    },
     "/api/dsl/transactions": {
       "get": {
         "operationId": "listTransactions",
@@ -2027,6 +2566,44 @@
         "summary": "Get DSL transaction detail",
         "tags": [
           "DSL Introspection"
+        ]
+      }
+    },
+    "/api/dsl/webhooks/deliveries": {
+      "get": {
+        "operationId": "listWebhookDeliveryRows",
+        "parameters": [
+          {
+            "description": "Optional exact subscription id filter (definition pattern)",
+            "in": "query",
+            "name": "subscriptionId"
+          },
+          {
+            "description": "Maximum number of deliveries to return",
+            "in": "query",
+            "name": "limit"
+          },
+          {
+            "description": "Number of matching deliveries to skip before returning results",
+            "in": "query",
+            "name": "offset"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponse"
+                }
+              }
+            },
+            "description": "Paged append-only delivery log, newest first"
+          }
+        },
+        "summary": "List persisted webhook delivery outcomes",
+        "tags": [
+          "Webhooks"
         ]
       }
     },
