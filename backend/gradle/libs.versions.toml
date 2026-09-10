@@ -38,6 +38,10 @@ test-logger = "4.0.0"
 gradle-git-properties = "2.5.2"
 sentry-plugin = "6.19.0"
 
+# supply-chain tooling (T414): pinned SBOM + CVE-scan plugins
+cyclonedx-bom = "3.4.1"
+dependency-check = "12.1.5"
+
 [libraries]
 # -- Temporal --
 temporal-sdk = { module = "io.temporal:temporal-sdk", version.ref = "temporal" }
@@ -138,3 +142,5 @@ spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 test-logger = { id = "com.adarshr.test-logger", version.ref = "test-logger" }
 git-properties = { id = "com.gorylenko.gradle-git-properties", version.ref = "gradle-git-properties" }
 sentry = { id = "io.sentry.jvm.gradle", version.ref = "sentry-plugin" }
+cyclonedx-bom = { id = "org.cyclonedx.bom", version.ref = "cyclonedx-bom" }
+dependency-check = { id = "org.owasp.dependencycheck", version.ref = "dependency-check" }

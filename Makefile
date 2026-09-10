@@ -296,6 +296,119 @@ typecheck-frontend: ## Typecheck the frontend packages
 .PHONY: typecheck
 typecheck: typecheck-frontend ## Typecheck frontend (TODO: add backend typecheck later)
 
+# Output location for both SBOMs (CycloneDX JSON, spec 1.6).
+SBOM_DIR := build/sbom
+BACKEND_SBOM_GRADLE := backend/dsl-starter/build/reports/cyclonedx/aggregate-bom.json
+
+.PHONY: sbom
+sbom: ## Generate CycloneDX SBOMs for backend (Gradle) + frontend (pnpm) into build/sbom/
+	@printf '\n==> Generating CycloneDX SBOMs...\n'; \
+	mkdir -p $(SBOM_DIR); \
+	fails=0; \
+	\
+	printf '==> backend SBOM (CycloneDX Gradle plugin @ :cyclonedxBom)\n'; \
+	if backend/dsl-platform/gradlew -p backend/dsl-starter :cyclonedxBom; then \
+		if [ -f $(BACKEND_SBOM_GRADLE) ]; then \
+			cp -f $(BACKEND_SBOM_GRADLE) $(SBOM_DIR)/backend.cdx.json; \
+			printf '    [ok]   wrote %s/backend.cdx.json\n' "$(SBOM_DIR)"; \
+		else \
+			printf '    [fail] backend SBOM task reported success but %s missing\n' "$(BACKEND_SBOM_GRADLE)"; \
+			fails=$$((fails+1)); \
+		fi; \
+	else \
+		printf '    [fail] backend SBOM generation failed\n'; \
+		fails=$$((fails+1)); \
+	fi; \
+	\
+	printf '==> frontend SBOM (@cyclonedx/cyclonedx-npm via scripts/sbom-merge.mjs)\n'; \
+	if ( cd frontend && pnpm run sbom ); then \
+		if [ -f $(SBOM_DIR)/frontend.cdx.json ]; then \
+			printf '    [ok]   wrote %s/frontend.cdx.json\n' "$(SBOM_DIR)"; \
+		else \
+			printf '    [fail] frontend SBOM script reported success but %s missing\n' "$(SBOM_DIR)/frontend.cdx.json"; \
+			fails=$$((fails+1)); \
+		fi; \
+	else \
+		printf '    [fail] frontend SBOM generation failed\n'; \
+		fails=$$((fails+1)); \
+	fi; \
+	\
+	printf '\n==> SBOM summary\n'; \
+	if [ $$fails -gt 0 ]; then \
+		printf '    %d SBOM generation step(s) failed.\n' $$fails; \
+		exit 1; \
+	else \
+		ls -la $(SBOM_DIR); \
+		printf '    [ok]   both SBOMs produced under %s/\n' "$(SBOM_DIR)"; \
+	fi
+
+.PHONY: cve-scan
+# Gate: OWASP dependency-check (Gradle) + pnpm audit (frontend). Exits non-zero
+# on HIGH+ non-baselined findings. NEVER wired into `make test` — call this
+# target explicitly when you want to enforce the gate. See docs/security/README.md.
+cve-scan: ## Run dependency-check (Gradle) + pnpm audit --prod --audit-level high; prints report paths
+	@printf '\n==> Running CVE gate (OWASP dependency-check + pnpm audit)...\n'; \
+	be=0; fe=0; \
+	\
+	printf '==> backend (OWASP dependency-check @ :starter-launcher:dependencyCheckAnalyze)\n'; \
+	if [ "$${CBS_DEPENDENCY_CHECK_DISABLED:-}" = "true" ]; then \
+		printf '    [skip] CBS_DEPENDENCY_CHECK_DISABLED=true; skipping backend CVE scan\n'; \
+		be=0; \
+	elif timeout --kill-after=10 $${CBS_DCHECK_TIMEOUT_SECONDS:-180} backend/dsl-platform/gradlew -p backend/dsl-starter :starter-launcher:dependencyCheckAnalyze 2>&1 | tee /tmp/cbs-nova-dcheck-$$.log; then \
+		printf '    [ok]   backend CVE scan completed (reports under backend/dsl-starter/starter-launcher/build/reports/dependency-check/)\n'; \
+		be=0; \
+	else \
+		be_raw=$$?; \
+		if grep -q 'NVD API request failures are occurring' /tmp/cbs-nova-dcheck-$$.log 2>/dev/null; then \
+			printf '    [warn] NVD feed unavailable, skipping backend CVE scan (treated as degraded)\n'; \
+			be=0; \
+		elif grep -q '^make:.*Terminated' /tmp/cbs-nova-dcheck-$$.log 2>/dev/null; then \
+			printf '    [warn] backend CVE scan exceeded CBS_DCHECK_TIMEOUT_SECONDS; skipping (treated as degraded)\n'; \
+			be=0; \
+		else \
+			printf '    [fail] backend CVE scan failed (exit %s)\n' "$$be_raw"; \
+			be=$$be_raw; \
+		fi; \
+	fi; \
+	rm -f /tmp/cbs-nova-dcheck-$$.log; \
+	\
+	printf '\n==> frontend (pnpm audit --prod --audit-level high)\n'; \
+	FE_OUT=$$(mktemp); \
+	if ( cd frontend && pnpm audit --prod --audit-level high --json ) > "$$FE_OUT" 2>&1; then \
+		printf '    [ok]   no HIGH+ findings reported\n'; \
+		fe=0; \
+	else \
+		fe_raw=$$?; \
+		if ! curl --silent --show-error --fail --max-time 5 --request POST 'https://registry.npmjs.org/-/npm/v1/security/advisories/bulk' -H 'Content-Type: application/json' -d '{}' -o /dev/null 2>&1; then \
+			printf '    [warn] npm advisory service unavailable, skipping frontend CVE scan (treated as degraded)\n'; \
+			fe=0; \
+		else \
+			ALLOWLIST=docs/security/pnpm-audit-baseline.json; \
+			if [ -f "$$ALLOWLIST" ] && command -v python3 >/dev/null 2>&1; then \
+				report=$$(python3 scripts/cve-frontend-gate.py "$$FE_OUT" "$$ALLOWLIST" 2>&1); \
+				gate_exit=$$?; \
+				first_line=$${report%%$$'\n'*}; \
+				if [ "$$gate_exit" -eq 0 ]; then \
+					printf '    [ok]   %s\n' "$$report"; \
+					fe=0; \
+				else \
+					printf '    [fail] unbaselined HIGH/CRITICAL findings:\n'; \
+					printf '%s\n' "$$report" | sed 's/^/      /'; \
+					fe=$$fe_raw; \
+				fi; \
+			else \
+				printf '    [fail] pnpm audit returned exit %s (allowlist %s missing or python3 unavailable)\n' "$$fe_raw" "$$ALLOWLIST"; \
+				fe=$$fe_raw; \
+			fi; \
+		fi; \
+	fi; \
+	rm -f "$$FE_OUT"; \
+	\
+	printf '\n==> Summary\n'; \
+	if [ $$be -eq 0 ]; then printf '    [ok]   backend CVE gate (or degraded gracefully)\n'; else printf '    [fail] backend CVE gate (exit %s)\n' "$$be"; fi; \
+	if [ $$fe -eq 0 ]; then printf '    [ok]   frontend CVE gate (or degraded gracefully)\n'; else printf '    [fail] frontend CVE gate (exit %s)\n' "$$fe"; fi; \
+	if [ $$be -ne 0 ] || [ $$fe -ne 0 ]; then exit 1; fi
+
 .PHONY: test
 test: ## Run backend + frontend test suites (both always run; nonzero exit if any fail)
 	@printf '\n==> Running backend + frontend test suites...\n\n'; \

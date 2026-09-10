@@ -20,10 +20,13 @@
     "lint:fix": "biome lint --write .",
     "format": "biome format --write .",
     "format:check": "biome format .",
-    "ci": "biome ci ."
+    "ci": "biome ci .",
+    "sbom": "node scripts/sbom-merge.mjs",
+    "audit:prod": "pnpm audit --prod --audit-level high"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.3",
+    "@cyclonedx/cyclonedx-npm": "6.0.0",
     "@playwright/test": "^1.49.0",
     "@types/node": "^26.4.0",
     "typescript": "^5.4.0"

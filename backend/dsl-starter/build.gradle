@@ -2,6 +2,11 @@ plugins {
   id 'idea'
   alias(libs.plugins.spotless) apply false
   alias(libs.plugins.test.logger) apply false
+  // T414: SBOM generation (CycloneDX) for the full Spring Boot runtime classpath.
+  // Pinned in backend/gradle/libs.versions.toml as `cyclonedx-bom`.
+  // Applied at the root to register `:cyclonedxBom` (Aggregate SBOM); the
+  // `subprojects {}` block below registers `cyclonedxDirectBom` per module.
+  alias(libs.plugins.cyclonedx.bom)
 }
 
 // Pin the catalog Lombok version across all Spring Boot-managed configurations.
@@ -34,6 +39,10 @@ subprojects {
   apply from: "${rootDir}/../gradle/java.gradle"
   apply from: "${rootDir}/../gradle/test.gradle"
   apply from: "${rootDir}/../gradle/code-style.gradle"
+  // T414: register CycloneDX Direct SBOM tasks on every subproject so the
+  // Aggregate SBOM emitted by `:cyclonedxBom` at the root covers the full
+  // Spring Boot runtime classpath (notably starter-launcher).
+  apply plugin: 'org.cyclonedx.bom'
 
   plugins.withType(JavaPlugin).configureEach {
     dependencies {
@@ -62,4 +71,16 @@ idea {
   module {
     name = 'cbs-nova-dsl-starter'
   }
+}
+
+// T414: configure the CycloneDX Aggregate SBOM (`:cyclonedxBom`) to emit
+// JSON only into a deterministic location under the worktree root. The Makefile
+// `make sbom` target copies this file to `build/sbom/backend.cdx.json` so it
+// can be published alongside the per-workspace artifacts.
+import org.gradle.api.file.RegularFile
+
+tasks.named('cyclonedxBom').configure {
+  jsonOutput = layout.buildDirectory.file('reports/cyclonedx/aggregate-bom.json')
+  xmlOutput.convention((RegularFile) null)
+  includeBuildSystem = false
 }
