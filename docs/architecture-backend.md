@@ -144,7 +144,49 @@ SPRING_PROFILES_ACTIVE=production
 ## Observability & operations
 
 - **Metrics (Micrometer)** — The starter publishes run-path and preview-path metrics to any `MeterRegistry` bean. Preview/explain runs are instrumented by `MetricsStage`: counters `dsl.preview.calls` (tagged by `kind`) and `dsl.preview.external.calls` (tagged by `type`), and timer `dsl.preview.duration` (tagged by `mode` and `process`). Production runs are instrumented by `TemporalDslProcessService`: timer `dsl.run.duration` and counters `dsl.run.count` and `dsl.run.cancel`, all tagged by `processName` and `status`. The retention purger additionally emits `dsl.runs.purged` and `dsl.run.transactions.purged` counters.
-- **Tracing (OpenTelemetry)** — `TracingConfiguration` builds an OpenTelemetry SDK only when an OTLP endpoint is configured via `cbs.nova.tracing.otlp.endpoint` or the standard `OTEL_EXPORTER_OTLP_ENDPOINT` env var; otherwise it installs a no-op. Spans are batched to the OTLP HTTP trace exporter, and `OpenTelemetryContextPropagator` carries the W3C `traceparent` context into DSL executions.
+- **Tracing (OpenTelemetry)** — `TracingConfiguration` builds an OpenTelemetry SDK only when an OTLP endpoint is configured via `cbs.nova.tracing.otlp.endpoint` or the standard `OTEL_EXPORTER_OTLP_ENDPOINT` env var; otherwise it installs a no-op. Spans are batched to the OTLP HTTP trace exporter, and `OpenTelemetryContextPropagator` carries the W3C `traceparent` context into DSL executions. The SDK installs `W3CTraceContextPropagator` for cross-process propagation (W3C `tracecontext` + `baggage`).
+
+### Tracing in compose (default-on)
+
+In `app/compose/app.yml` the `spring-app` service sets `OTEL_EXPORTER_OTLP_ENDPOINT` and `CBS_NOVA_TRACING_OTLP_ENDPOINT` to `http://otel-collector:4318/v1/traces` by default, so a `make up` starts exporting spans out of the box. Outside compose both env vars are unset and tracing is a no-op (zero behavior change for non-compose users).
+
+Pipeline:
+
+```
+spring-app ──OTLP HTTP──▶ otel-collector:4318 ──OTLP gRPC──▶ jaeger:4317
+                                                          └─▶ Jaeger UI :16686
+```
+
+End-to-end span chain when a request flows BFF → backend → Temporal:
+
+1. BFF `$fetch` / Nitro handler span (`http.client`)
+2. Spring MVC `DispatcherServlet` server span (`HTTP POST /api/dsl/preview/{name}`)
+3. `OpenTelemetryHelper` / `TemporalDslProcessService` dispatch span (`dsl.dispatch`)
+4. Temporal workflow / activity spans (carried via `OpenTelemetryContextPropagator` in `TemporalConfiguration.setContextPropagators(...)`; the same `traceparent` is used as the Temporal `WorkflowId` correlation key)
+5. The request-scope `correlation_id` MDC key (set from `X-Correlation-Id` / `X-Request-Id`, T384) is added to the active span as the `correlation_id` attribute so a trace can be joined back to the BFF log line.
+
+View in Jaeger at `http://localhost:16686` → service `spring-app`.
+
+Verify programmatically:
+
+```bash
+make trace-smoke   # curls one preview, then queries Jaeger /api/traces
+```
+
+The target degrades gracefully when the stack is down: it prints `trace-smoke: stack not running (start with docker compose ... up), skipping` and exits 0 — it never hangs and never hard-fails a dev machine.
+
+#### "Tracing is a no-op" troubleshooting checklist
+
+If `make trace-smoke` reports no traces in Jaeger (or Jaeger shows no `spring-app` service), check, in order:
+
+1. **Endpoint env set on the running container?** `docker compose exec spring-app printenv OTEL_EXPORTER_OTLP_ENDPOINT` must return `http://otel-collector:4318/v1/traces`. If empty, the env did not inherit from `app/compose/app.yml`.
+2. **OTLP exporter on the runtime classpath?** `libs.opentelemetry.exporter.otlp` (1.48.0, pinned via `backend/gradle/libs.versions.toml`) must be on the runtime classpath of the deployable. `app/Dockerfile` copies the Spring Boot fat jar — verify with `unzip -l app/build/libs/*.jar | grep opentelemetry-exporter-otlp`. Without this dep, the env var is inert.
+3. **Collector reachable from the app container?** `docker compose exec spring-app wget -qO- http://otel-collector:13133/status || curl http://otel-collector:13133/status` must return 200 (the collector's health-check extension).
+4. **Jaeger reachable from the host?** `curl http://localhost:16686/api/services` must list `spring-app`. If not, the collector is dropping the pipeline — inspect with `docker compose logs otel-collector`.
+5. **Was a request actually executed?** A span is only exported when `TracingConfiguration` builds a real SDK (endpoint set) AND a span is recorded — make a request first (`make seed` then `curl -X POST http://localhost:3000/api/v1/dsl/preview/seed-hello-world -H 'Content-Type: application/json' -d '{}'`).
+6. **Sampling / network policy.** `MANAGEMENT_TRACING_SAMPLING_PROBABILITY=1.0` (compose default) means every span is sampled. Behind a corporate proxy, `OTEL_EXPORTER_OTLP_ENDPOINT` must use a hostname the container can resolve — prefer the compose service name `otel-collector`, not `localhost`.
+
+Outside compose (e.g. running the backend via `make backend`), set `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318` and run an OTel collector + Jaeger on the host to see spans.
 - **Health** — `/actuator/health` exposes a `dsl` component via `DslHealthIndicator`, reporting registry counts (`processes`, `transactions`, `helpers`). When a `WorkflowServiceStubs` bean is present, `TemporalHealthProbe` adds a `temporal` detail with `reachable`, `target`, `configuredTaskQueues`, and `error`. `cbs.health.temporal.fail-status` controls the outcome when Temporal is unreachable: `NONE` (default) keeps the indicator `UP` with `reachable=false`; `DOWN` makes the actuator report `DOWN` so compose/Kubernetes readiness probes gate on Temporal state. The gRPC probe timeout is `cbs.health.temporal.timeout` (default `PT2S`).
 - **Input validation** — `cbs.runtime.input-validation.enabled` (default `true`, class `InputValidationProperties`) enables server-side JSON-schema validation of record inputs on `run`, `preview`, and `explain` via `InputValidator`. Non-record inputs are not shape-validated.
 - **Payload caps** — `cbs.nova.starter.web.DslPayloadSizeValidator` checks incoming `POST /api/dsl/run/**` and `POST /api/dsl/preview/**` bodies against `cbs.runs.max-input-bytes` (default 1 MiB, class `DslRunsProperties`); oversize requests are rejected with `413 Payload Too Large` before any workflow is submitted. Persisted run outputs are bounded by `cbs.runs.max-output-bytes` and truncated rather than failing the run.

@@ -518,3 +518,52 @@ loadtest: ## Load-test read-only BFF endpoints and report latency percentiles + 
 	else \
 		printf '\nAll endpoints within thresholds.\n'; \
 	fi
+.PHONY: trace-smoke
+trace-smoke: ## Curl one preview through the stack and verify a backend span reached Jaeger
+	@printf '\n==> Smoke-checking that OTLP traces from the backend reach Jaeger...\n'; \
+	\
+	BE=$${BACKEND_BASE_URL:-http://localhost:$${SERVER_PORT:-8090}}; \
+	BFF=$${BFF_BASE_URL:-http://localhost:3000}; \
+	JAEGER=$${JAEGER_BASE_URL:-http://localhost:16686}; \
+	OTEL_SVC=$${TRACE_SMOKE_SERVICE:-spring-app}; \
+	WAIT_SECONDS=$${TRACE_SMOKE_WAIT:-5}; \
+	\
+	if ! curl --silent --show-error --fail --max-time 3 "$$JAEGER/api/services" >/dev/null 2>&1; then \
+		printf '    [skip] trace-smoke: stack not running (start with docker compose ... up), skipping\n'; \
+		exit 0; \
+	fi; \
+	if ! curl --silent --show-error --fail --max-time 3 "$$BE/actuator/health" >/dev/null 2>&1; then \
+		printf '    [skip] trace-smoke: backend not reachable at %s, skipping\n' "$$BE"; \
+		exit 0; \
+	fi; \
+	\
+	probe_name="seed-hello-world"; \
+	probe_body='{"inputs":{"name":"trace-smoke"}}'; \
+	probe_url="$$BFF/api/v1/dsl/preview/$$probe_name"; \
+	probe_code=$$(curl --silent --show-error --max-time 10 -o /dev/null -w '%{http_code}' \
+		-X POST -H 'Content-Type: application/json' \
+		--data "$$probe_body" "$$probe_url" 2>/dev/null) || probe_code=000; \
+	if [ "$$probe_code" = "000" ] || [ -z "$$probe_code" ]; then \
+		printf '    [warn] trace-smoke: preview probe could not reach BFF (%s) — spans may still be exported for the running workload\n' "$$probe_url"; \
+	elif [ "$$probe_code" -ge 400 ] 2>/dev/null; then \
+		printf '    [warn] trace-smoke: preview probe returned HTTP %s — spans may still be exported for the running workload\n' "$$probe_code"; \
+	else \
+		printf '    [ok]   preview probe HTTP %s — sleeping %ss for OTLP batch flush\n' "$$probe_code" "$$WAIT_SECONDS"; \
+		sleep "$$WAIT_SECONDS"; \
+	fi; \
+	\
+	jaeger_body=$$(curl --silent --show-error --fail --max-time 10 \
+		"$$JAEGER/api/traces?service=$$OTEL_SVC&limit=20" 2>/dev/null) || jaeger_body=""; \
+	if [ -z "$$jaeger_body" ]; then \
+		printf '    [fail] trace-smoke: Jaeger query failed at %s\n' "$$JAEGER/api/traces?service=$$OTEL_SVC"; \
+		exit 1; \
+	fi; \
+	trace_count=$$(printf '%s' "$$jaeger_body" | grep -o '"traceID"' | wc -l | tr -d ' '); \
+	if [ "$$trace_count" = "0" ]; then \
+		printf '    [fail] trace-smoke: no traces found in Jaeger for service=%s\n' "$$OTEL_SVC"; \
+		printf '           Troubleshooting: see docs/architecture-backend.md#observability--operations.\n'; \
+		exit 1; \
+	fi; \
+	backend_span_count=$$(printf '%s' "$$jaeger_body" | grep -oE '"processes":\{[^}]*"service.name":"[^"]*"' | grep -c "$$OTEL_SVC" || true); \
+	printf '    [ok]   trace-smoke: found %s trace(s) for service=%s in Jaeger\n' "$$trace_count" "$$OTEL_SVC"; \
+	exit 0

@@ -17,14 +17,28 @@ services:
       TEMPORAL_ADDRESS: temporal:7233
       SENTRY_DSN: "${BUGSINK_DSN:-}"
       KEYCLOAK_URL: "${KEYCLOAK_URL:-}"
-      # Observability wiring (Spring Boot 3.x / Micrometer OTLP)
+      # --- Tracing (default-on in compose; see docs/architecture-backend.md#observability--operations) ---
+      # TracingConfiguration (backend/dsl-starter/.../config/TracingConfiguration.java)
+      # builds an OpenTelemetry SDK only when one of these two env values is set:
+      #   * OTEL_EXPORTER_OTLP_ENDPOINT          (standard OTel SDK auto-discovery)
+      #   * cbs.nova.tracing.otlp.endpoint      (Spring property, takes precedence)
+      # We set BOTH so ops can override either way. W3C tracecontext is the
+      # configured propagator (TracingConfiguration sets
+      # W3CTraceContextPropagator; TemporalConfiguration carries it into
+      # workflows via OpenTelemetryContextPropagator). Outside compose, both
+      # are unset by default → tracing is a no-op (no network calls, no spans).
       OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318/v1/traces}"
-      MANAGEMENT_OTLP_TRACING_ENDPOINT: "${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-http://otel-collector:4318/v1/traces}"
-      MANAGEMENT_OTLP_LOGS_ENDPOINT: "${OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:-http://otel-collector:4318/v1/logs}"
-      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "${TRACING_SAMPLING:-1.0}"
-      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "${MANAGEMENT_ENDPOINTS:-health,info,prometheus}"
+      CBS_NOVA_TRACING_OTLP_ENDPOINT: "${CBS_NOVA_TRACING_OTLP_ENDPOINT:-http://otel-collector:4318/v1/traces}"
       OTEL_SERVICE_NAME: "${OTEL_SERVICE_NAME:-cbs-nova}"
       OTEL_RESOURCE_ATTRIBUTES: "${OTEL_RESOURCE_ATTRIBUTES:-deployment.environment=local}"
+      # The MANAGEMENT_OTLP_TRACING_* keys are no-ops today (no Spring Boot
+      # Micrometer tracing on the classpath) but are wired so flipping on
+      # Micrometer tracing later requires no compose change.
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: "${MANAGEMENT_OTLP_TRACING_ENDPOINT:-http://otel-collector:4318/v1/traces}"
+      MANAGEMENT_OTLP_LOGS_ENDPOINT: "${MANAGEMENT_OTLP_LOGS_ENDPOINT:-http://otel-collector:4318/v1/logs}"
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "${MANAGEMENT_TRACING_SAMPLING_PROBABILITY:-1.0}"
+      MANAGEMENT_TRACING_ENABLED: "${MANAGEMENT_TRACING_ENABLED:-true}"
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "${MANAGEMENT_ENDPOINTS:-health,info,prometheus}"
     healthcheck:
       # The runtime image (eclipse-temurin:25-jre-jammy) does not ship
       # curl or wget, and we want to keep the Dockerfile minimal. Bash is
