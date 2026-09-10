@@ -151,7 +151,7 @@ class TemporalDslProcessServiceTest {
   @Test
   void runProcessSingleArgDefaultsMetadataToEmptyMap() {
     SimpleContext<Object> stubCtx = new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
-            "run-id-1", TransactionRouting.LOCAL, null, null, null);
+            "run-id-1", TransactionRouting.LOCAL, null, null, null, null);
     ContextFactory contextFactory = mockContextFactoryWith("run-id-1", stubCtx);
 
     newService(contextFactory).runProcess(unique(), "payload");
@@ -166,7 +166,7 @@ class TemporalDslProcessServiceTest {
   @Test
   void startProcessThreeArgCoercesNullInputToEmptyMap() {
     SimpleContext<Object> stubCtx = new SimpleContext<>(Map.of(), Map.of("k", "v"),
-            ExecutionMode.RUN, "run-id-2", TransactionRouting.LOCAL, null, null, null);
+            ExecutionMode.RUN, "run-id-2", TransactionRouting.LOCAL, null, null, null, null);
     ContextFactory contextFactory = mockContextFactoryWith("run-id-2", stubCtx);
 
     newService(contextFactory).startProcess(unique(), null, Map.of("k", "v"));
@@ -183,7 +183,7 @@ class TemporalDslProcessServiceTest {
   @Test
   void startProcessUsesRunIdGeneratedByContextFactory() {
     SimpleContext<Object> stubCtx = new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
-            "run-id-3", TransactionRouting.LOCAL, null, null, null);
+            "run-id-3", TransactionRouting.LOCAL, null, null, null, null);
     ContextFactory contextFactory = mockContextFactoryWith("run-id-3", stubCtx);
 
     newService(contextFactory).startProcess(unique(), "payload", Map.of());
@@ -215,7 +215,7 @@ class TemporalDslProcessServiceTest {
   void startContextCarriesNonEmptyInputThroughToContextFactory() {
     Map<String, Object> input = Map.of("a", 1, "b", "two");
     SimpleContext<Object> stubCtx = new SimpleContext<>(input, Map.of(), ExecutionMode.RUN,
-            "run-id-4", TransactionRouting.LOCAL, null, null, null);
+            "run-id-4", TransactionRouting.LOCAL, null, null, null, null);
     ContextFactory contextFactory = mockContextFactoryWith("run-id-4", stubCtx);
 
     newService(contextFactory).startProcess(unique(), input, Map.of("meta", "data"));
@@ -230,7 +230,7 @@ class TemporalDslProcessServiceTest {
   @Test
   void startProcessPropagatesRunIdToMdcAndSentry() {
     SimpleContext<Object> stubCtx = new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
-            "run-id-5", TransactionRouting.LOCAL, null, null, null);
+            "run-id-5", TransactionRouting.LOCAL, null, null, null, null);
     ContextFactory contextFactory = mockContextFactoryWith("run-id-5", stubCtx);
 
     try (MockedStatic<Sentry> sentry = Mockito.mockStatic(Sentry.class);
@@ -412,7 +412,7 @@ class TemporalDslProcessServiceTest {
     Mockito.when(contextFactory.of(
             Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
             .thenReturn(new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
-                    "ignored", TransactionRouting.LOCAL, null, null, null));
+                    "ignored", TransactionRouting.LOCAL, null, null, null, null));
     TemporalDslProcessService service = TemporalDslProcessService.withDefaults(
             contextFactory,
             new InMemoryDslRunRepository(),

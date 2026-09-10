@@ -63,7 +63,7 @@ class TemporalDslProcessServiceTracingTest {
             Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
             .thenReturn(new SimpleContext<>(
                     Map.of(), Map.of(), ExecutionMode.RUN,
-                    runId, TransactionRouting.LOCAL, null, null, null));
+                    runId, TransactionRouting.LOCAL, null, null, null, null));
 
     TemporalDslProcessService service = new TemporalDslProcessService(
             contextFactory,
@@ -112,7 +112,7 @@ class TemporalDslProcessServiceTracingTest {
             .thenReturn(new SimpleContext<>(
                     Map.of(), Map.of(), ExecutionMode.RUN,
                     "run-trace-2", TransactionRouting.LOCAL, null, null,
-                    null));
+                    null, null));
 
     TemporalDslProcessService service = new TemporalDslProcessService(
             contextFactory,

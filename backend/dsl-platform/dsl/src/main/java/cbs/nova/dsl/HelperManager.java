@@ -7,7 +7,6 @@ import cbs.nova.dsl.registry.HelperRegistry;
 import cbs.nova.dsl.runner.HelperRunner;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,23 +17,6 @@ public final class HelperManager implements HelperRegistrar {
 
   private final HelperRegistry registry;
   private final HelperRunner runner;
-  // TODO: it can cause to a memory leak, instead make some interceptor, that log to db, like
-  // `DslRun`
-  // TODO: Instead, method `executeHelper` or others, must now accept some ExecuteContext(or
-  // something like that),
-  // context must have a Intercepter, so one of `DslPipeStage` impls must be used there. So pipe
-  // itself will have an
-  // adapter to work with interception
-  @Deprecated(forRemoval = true)
-  private final ThreadLocal<HelperInterceptor> threadLocalInterceptor = new ThreadLocal<>();
-
-  public void setInterceptor(@Nullable HelperInterceptor interceptor) {
-    if (interceptor == null) {
-      threadLocalInterceptor.remove();
-    } else {
-      threadLocalInterceptor.set(interceptor);
-    }
-  }
 
   @Override
   public void register(@NonNull String name, @NonNull Executable<?, ?> helper) {
@@ -51,7 +33,7 @@ public final class HelperManager implements HelperRegistrar {
   }
 
   public @NonNull Result<?> executeHelper(@NonNull String name, @NonNull Context<?> ctx) {
-    HelperInterceptor interceptor = threadLocalInterceptor.get();
+    HelperInterceptor interceptor = ctx.helperInterceptor();
     if (interceptor != null) {
       Optional<Result<?>> fake = interceptor.intercept(name, ctx);
       if (fake.isPresent()) {
@@ -62,7 +44,7 @@ public final class HelperManager implements HelperRegistrar {
   }
 
   public @NonNull Result<?> executeFunction(@NonNull String name, @NonNull Context<?> ctx) {
-    HelperInterceptor interceptor = threadLocalInterceptor.get();
+    HelperInterceptor interceptor = ctx.helperInterceptor();
     if (interceptor != null) {
       Optional<Result<?>> fake = interceptor.intercept(name, ctx);
       if (fake.isPresent()) {

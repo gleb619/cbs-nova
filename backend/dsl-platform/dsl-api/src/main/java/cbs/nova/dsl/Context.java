@@ -1,5 +1,6 @@
 package cbs.nova.dsl;
 
+import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.transaction.TransactionRouting;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -79,6 +80,11 @@ public interface Context<T> {
     return null;
   }
 
+  @Nullable
+  default HelperInterceptor helperInterceptor() {
+    return null;
+  }
+
   @NonNull
   default Context<T> withTransactionRouting(@NonNull TransactionRouting routing) {
     return this;
@@ -97,6 +103,11 @@ public interface Context<T> {
   @NonNull
   default Context<T> withExecutionTraceCollector(
           @Nullable ExecutionTraceCollector executionTraceCollector) {
+    return this;
+  }
+
+  @NonNull
+  default Context<T> withHelperInterceptor(@Nullable HelperInterceptor helperInterceptor) {
     return this;
   }
 }

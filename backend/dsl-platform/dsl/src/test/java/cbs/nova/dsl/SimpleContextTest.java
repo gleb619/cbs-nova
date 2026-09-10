@@ -4,11 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.transaction.TransactionRouting;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+import java.util.Optional;
 
 class SimpleContextTest {
 
@@ -129,5 +131,42 @@ class SimpleContextTest {
             .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);
     var updated = ctx.withMetadata("x", 1);
     assertThat(updated.transactionRouting()).isEqualTo(TransactionRouting.TEMPORAL_ACTIVITY);
+  }
+
+  @Test
+  void helperInterceptorDefaultsToNull() {
+    var ctx = contextFactory.of("body", ExecutionMode.RUN, "r1");
+    assertThat(ctx.helperInterceptor()).isNull();
+  }
+
+  @Test
+  void withHelperInterceptorReturnsNewContextWithInterceptor() {
+    var ctx = contextFactory.of("body", ExecutionMode.RUN, "r1");
+    HelperInterceptor interceptor = (name, c) -> Optional.empty();
+    var updated = ctx.withHelperInterceptor(interceptor);
+    assertThat(updated.helperInterceptor()).isSameAs(interceptor);
+    assertThat(ctx.helperInterceptor()).isNull();
+  }
+
+  @Test
+  void withHelperInterceptorPreservesOtherFields() {
+    var ctx = contextFactory.of("body", ExecutionMode.RUN, "r1")
+            .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);
+    HelperInterceptor interceptor = (name, c) -> Optional.empty();
+    var updated = ctx.withHelperInterceptor(interceptor);
+    assertThat(updated.body()).isEqualTo("body");
+    assertThat(updated.mode()).isEqualTo(ExecutionMode.RUN);
+    assertThat(updated.runId()).isEqualTo("r1");
+    assertThat(updated.transactionRouting()).isEqualTo(TransactionRouting.TEMPORAL_ACTIVITY);
+    assertThat(updated.helperInterceptor()).isSameAs(interceptor);
+  }
+
+  @Test
+  void withHelperInterceptorAcceptsNull() {
+    HelperInterceptor interceptor = (name, c) -> Optional.empty();
+    var ctx = contextFactory.of("body", ExecutionMode.RUN, "r1")
+            .withHelperInterceptor(interceptor);
+    var cleared = ctx.withHelperInterceptor(null);
+    assertThat(cleared.helperInterceptor()).isNull();
   }
 }

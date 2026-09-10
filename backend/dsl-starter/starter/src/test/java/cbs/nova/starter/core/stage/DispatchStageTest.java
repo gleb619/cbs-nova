@@ -35,7 +35,7 @@ class DispatchStageTest {
   }
 
   @Test
-  void registersInterceptorPerRunAndClearsInFinally() {
+  void threadsInterceptorThroughContextDuringDispatch() {
     AtomicBoolean intercepted = new AtomicBoolean(false);
     HelperInterceptor interceptor = (helperName, ctx) -> {
       if ("echo".equals(helperName)) {
@@ -57,15 +57,10 @@ class DispatchStageTest {
     Result<?> dslResult = (Result<?>) pipeContext.getAttribute("dslResult");
     assertThat(dslResult).isNotNull();
     assertThat(dslResult.value()).isEqualTo("faked");
-
-    // Finally cleared the interceptor: a direct helper call no longer short-circuits.
-    Context<?> followUp = contextFactory.of("body", ExecutionMode.RUN, "run-2");
-    Result<?> after = GlobalManager.globalManager().runHelper("echo", followUp);
-    assertThat(after.value()).isEqualTo("real");
   }
 
   @Test
-  void clearsInterceptorEvenWhenDownstreamThrows() {
+  void downstreamExceptionDoesNotLeakInterceptorState() {
     AtomicBoolean intercepted = new AtomicBoolean(false);
     HelperInterceptor interceptor = (helperName, ctx) -> {
       intercepted.set(true);
@@ -83,12 +78,57 @@ class DispatchStageTest {
             .isInstanceOf(RuntimeException.class)
             .hasMessage("downstream boom");
 
-    // Interceptor was registered during dispatch and the real helper ran (no short-circuit).
+    // Interceptor fired during dispatch (so the real helper ran with no short-circuit).
     assertThat(intercepted.get()).isTrue();
-    // Finally cleared the interceptor even though the downstream stage threw.
+    // No "finally" was needed: the interceptor lived on the mode context, not on a ThreadLocal.
+    // A fresh, un-decorated context must therefore NOT see the interceptor.
     Context<?> followUp = contextFactory.of("body", ExecutionMode.RUN, "run-4");
+    assertThat(followUp.helperInterceptor()).isNull();
     Result<?> after = GlobalManager.globalManager().runHelper("echo", followUp);
     assertThat(after.value()).isEqualTo("real");
+  }
+
+  @Test
+  void doesNotMutateGlobalManager() {
+    // T417 regression: pre-T417 the stage called gm.registerHelperInterceptor(...) inside a
+    // try/finally, which mutated the GlobalManager singleton. After T417 the interceptor lives
+    // on the per-execution Context, so the singleton stays untouched.
+    AtomicBoolean intercepted = new AtomicBoolean(false);
+    HelperInterceptor interceptor = (helperName, ctx) -> {
+      intercepted.set(true);
+      return Optional.empty();
+    };
+    var stage = DispatchStage.inline(contextFactory, interceptor);
+
+    Context<?> ctx = contextFactory.of("body", ExecutionMode.RUN, "run-no-mutate");
+    DslPipeContext pipeContext = DslPipeContext.of("echo", ctx, ExecutionMode.RUN,
+            "run-no-mutate");
+    DslPipeStage.Next next = c -> Result.success("ok");
+
+    stage.execute(pipeContext, next);
+
+    assertThat(intercepted.get()).isTrue();
+    // The mode context built for the run carried the interceptor; the original ctx did not.
+    assertThat(ctx.helperInterceptor()).isNull();
+    Result<?> after = GlobalManager.globalManager().runHelper("echo", ctx);
+    assertThat(after.value()).isEqualTo("real");
+  }
+
+  @Test
+  void withNullInterceptorBehavesLikeOriginalHelper() {
+    // Passing a null interceptor must NOT cause a NPE; helpers should run as before.
+    var stage = DispatchStage.inline(contextFactory, null);
+
+    Context<?> ctx = contextFactory.of("body", ExecutionMode.RUN, "run-null");
+    DslPipeContext pipeContext = DslPipeContext.of("echo", ctx, ExecutionMode.RUN, "run-null");
+    DslPipeStage.Next next = c -> Result.success("ok");
+
+    stage.execute(pipeContext, next);
+
+    Result<?> dslResult = (Result<?>) pipeContext.getAttribute("dslResult");
+    assertThat(dslResult).isNotNull();
+    assertThat(dslResult.isSuccess()).isTrue();
+    assertThat(dslResult.value()).isEqualTo("real");
   }
 
   /** Simple helper returning a constant so we can tell faked vs real results apart. */

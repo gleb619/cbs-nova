@@ -187,7 +187,7 @@ class DomainEventLifecycleIntegrationTest {
                     .substring(0, 8));
     SimpleContext<Object> ctx = new SimpleContext<>(
             java.util.Map.of(), java.util.Map.of(), cbs.nova.dsl.ExecutionMode.RUN,
-            "run-x", cbs.nova.dsl.transaction.TransactionRouting.LOCAL, null, null, null);
+            "run-x", cbs.nova.dsl.transaction.TransactionRouting.LOCAL, null, null, null, null);
     Mockito.when(contextFactory.of(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
             .thenReturn(ctx);
     return contextFactory;

@@ -21,13 +21,13 @@ public final class ContextFactory {
 
   public <U> @NonNull SimpleContext<U> of(@NonNull U body, @NonNull ExecutionMode mode) {
     return new SimpleContext<>(body, Map.of(), mode, generateRunId(), TransactionRouting.LOCAL,
-            null, null, null);
+            null, null, null, null);
   }
 
   public <U> @NonNull SimpleContext<U> of(
           @NonNull U body, @NonNull ExecutionMode mode, @NonNull String runId) {
     return new SimpleContext<>(body, Map.of(), mode, runId, TransactionRouting.LOCAL,
-            null, null, null);
+            null, null, null, null);
   }
 
   public <U> @NonNull SimpleContext<U> of(
@@ -36,7 +36,7 @@ public final class ContextFactory {
           @NonNull ExecutionMode mode,
           @NonNull String runId) {
     return new SimpleContext<>(body, metadata, mode, runId, TransactionRouting.LOCAL,
-            null, null, null);
+            null, null, null, null);
   }
 
   public <U> @NonNull SimpleContext<U> of(
@@ -46,7 +46,7 @@ public final class ContextFactory {
           @NonNull String runId,
           @NonNull TransactionRouting transactionRouting) {
     return new SimpleContext<>(body, metadata, mode, runId, transactionRouting,
-            null, null, null);
+            null, null, null, null);
   }
 
   public <U> @NonNull SimpleContext<U> of(
@@ -57,7 +57,7 @@ public final class ContextFactory {
           @NonNull TransactionRouting transactionRouting,
           @Nullable ExecutionListener executionListener) {
     return new SimpleContext<>(body, metadata, mode, runId, transactionRouting,
-            executionListener, null, null);
+            executionListener, null, null, null);
   }
 
   public <U> @NonNull SimpleContext<U> of(
@@ -69,6 +69,6 @@ public final class ContextFactory {
           @Nullable ExecutionListener executionListener,
           @Nullable DslSaga saga) {
     return new SimpleContext<>(body, metadata, mode, runId, transactionRouting,
-            executionListener, saga, null);
+            executionListener, saga, null, null);
   }
 }

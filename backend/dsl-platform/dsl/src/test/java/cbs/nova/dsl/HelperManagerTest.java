@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.function.FunctionDslObject;
+import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.registry.HelperRegistry;
 import cbs.nova.dsl.runner.HelperRunner;
 import org.jspecify.annotations.NonNull;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 class HelperManagerTest {
@@ -79,6 +81,78 @@ class HelperManagerTest {
     assertThat(runner.functionContexts).containsExactly(ctx);
     assertThat(runner.functionRegistries).containsExactly(registry);
     assertThat(runner.helperNames).isEmpty();
+  }
+
+  @Test
+  void executeHelperShortCircuitsWhenContextCarriesInterceptor() {
+    var registry = new StubHelperRegistry();
+    var runner = new RecordingHelperRunner();
+    var manager = new HelperManager(registry, runner);
+    AtomicReference<String> seen = new AtomicReference<>();
+    HelperInterceptor interceptor = (name, ctx) -> {
+      seen.set(name);
+      return Optional.of(Result.success("faked"));
+    };
+    var ctx = contextFactory.of("input", ExecutionMode.PREVIEW, "run-intercept-h")
+            .withHelperInterceptor(interceptor);
+
+    var result = manager.executeHelper("greet", ctx);
+
+    assertThat(seen.get()).isEqualTo("greet");
+    assertThat(result.value()).isEqualTo("faked");
+    assertThat(runner.helperNames).isEmpty();
+  }
+
+  @Test
+  void executeHelperFallsThroughWhenInterceptorReturnsEmpty() {
+    var registry = new StubHelperRegistry();
+    var expected = Result.success("real");
+    var runner = new RecordingHelperRunner(expected, Result.success("unused-fn"));
+    var manager = new HelperManager(registry, runner);
+    HelperInterceptor interceptor = (name, ctx) -> Optional.empty();
+    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-intercept-h-fall")
+            .withHelperInterceptor(interceptor);
+
+    var result = manager.executeHelper("greet", ctx);
+
+    assertThat(result).isSameAs(expected);
+    assertThat(runner.helperNames).containsExactly("greet");
+  }
+
+  @Test
+  void executeFunctionShortCircuitsWhenContextCarriesInterceptor() {
+    var registry = new StubHelperRegistry();
+    var runner = new RecordingHelperRunner();
+    var manager = new HelperManager(registry, runner);
+    AtomicReference<String> seen = new AtomicReference<>();
+    HelperInterceptor interceptor = (name, ctx) -> {
+      seen.set(name);
+      return Optional.of(Result.success("faked-fn"));
+    };
+    var ctx = contextFactory.of("input", ExecutionMode.PREVIEW, "run-intercept-fn")
+            .withHelperInterceptor(interceptor);
+
+    var result = manager.executeFunction("greetFn", ctx);
+
+    assertThat(seen.get()).isEqualTo("greetFn");
+    assertThat(result.value()).isEqualTo("faked-fn");
+    assertThat(runner.functionNames).isEmpty();
+  }
+
+  @Test
+  void contextWithoutInterceptorNeverConsultsAnythingGlobal() {
+    // T417 regression: prior to threading the interceptor on Context, HelperManager held a
+    // ThreadLocal that any context on the same thread would observe. Assert that a plain
+    // context (no withHelperInterceptor call) executes the helper without checking a global.
+    var registry = new StubHelperRegistry();
+    var expected = Result.success("plain");
+    var runner = new RecordingHelperRunner(expected, expected);
+    var manager = new HelperManager(registry, runner);
+    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-plain");
+
+    assertThat(ctx.helperInterceptor()).isNull();
+    assertThat(manager.executeHelper("greet", ctx).value()).isEqualTo("plain");
+    assertThat(runner.helperNames).containsExactly("greet");
   }
 
   @Test

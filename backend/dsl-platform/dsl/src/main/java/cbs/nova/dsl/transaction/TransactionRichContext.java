@@ -8,6 +8,7 @@ import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.model.MapInput;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
@@ -62,6 +63,11 @@ public final class TransactionRichContext<T> implements TransactionContext<T> {
   }
 
   @Override
+  public @Nullable HelperInterceptor helperInterceptor() {
+    return delegate.helperInterceptor();
+  }
+
+  @Override
   public @NonNull <U> Context<U> withBody(@NonNull U body) {
     return delegate.withBody(body);
   }
@@ -91,6 +97,12 @@ public final class TransactionRichContext<T> implements TransactionContext<T> {
           @Nullable ExecutionTraceCollector executionTraceCollector) {
     return new TransactionRichContext<>(
             delegate.withExecutionTraceCollector(executionTraceCollector), contextFactory);
+  }
+
+  @Override
+  public @NonNull Context<T> withHelperInterceptor(@Nullable HelperInterceptor interceptor) {
+    return new TransactionRichContext<>(delegate.withHelperInterceptor(interceptor),
+            contextFactory);
   }
 
   private void trace(@NonNull String entry) {
