@@ -228,6 +228,12 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/dsl/diagnostics',
     bffPath: '/api/v1/dsl/diagnostics',
   },
+  // DslEventRouterConfiguration (T411)
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/events',
+    bffPath: '/api/v1/dsl/events',
+  },
 
   // DslFileRouterConfiguration
   {

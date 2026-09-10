@@ -9,6 +9,7 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
+import cbs.nova.starter.events.DomainEvent;
 import cbs.nova.starter.service.DslRunCancellationService.Outcome;
 import cbs.nova.starter.webhook.WebhookDispatcher;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -26,7 +27,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
@@ -51,7 +54,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 @Slf4j
-@RequiredArgsConstructor
 public class TemporalDslProcessService {
 
   public static final String EMPTY_OUTPUT_JSON = "{}";
@@ -87,6 +89,41 @@ public class TemporalDslProcessService {
   private final RunIdentityResolver runIdentityResolver;
   private final Optional<WebhookDispatcher> webhookDispatcher;
   private final OpenTelemetry openTelemetry;
+  private final ObjectProvider<DomainEventPublisher> eventPublisherProvider;
+  private final ObjectProvider<TransactionTemplate> transactionTemplateProvider;
+
+  public TemporalDslProcessService(
+          ContextFactory contextFactory,
+          DslRunRepository runRepository,
+          ObjectMapper objectMapper,
+          ThreadPoolTaskExecutor dslProcessExecutor,
+          ScheduledExecutorService healthcheckExecutor,
+          Duration healthcheckInterval,
+          Duration staleThreshold,
+          boolean asyncDbSave,
+          long maxOutputBytes,
+          MeterRegistry meterRegistry,
+          RunIdentityResolver runIdentityResolver,
+          Optional<WebhookDispatcher> webhookDispatcher,
+          OpenTelemetry openTelemetry,
+          ObjectProvider<DomainEventPublisher> eventPublisherProvider,
+          ObjectProvider<TransactionTemplate> transactionTemplateProvider) {
+    this.contextFactory = contextFactory;
+    this.runRepository = runRepository;
+    this.objectMapper = objectMapper;
+    this.dslProcessExecutor = dslProcessExecutor;
+    this.healthcheckExecutor = healthcheckExecutor;
+    this.healthcheckInterval = healthcheckInterval;
+    this.staleThreshold = staleThreshold;
+    this.asyncDbSave = asyncDbSave;
+    this.maxOutputBytes = maxOutputBytes;
+    this.meterRegistry = meterRegistry;
+    this.runIdentityResolver = runIdentityResolver;
+    this.webhookDispatcher = webhookDispatcher;
+    this.openTelemetry = openTelemetry;
+    this.eventPublisherProvider = eventPublisherProvider;
+    this.transactionTemplateProvider = transactionTemplateProvider;
+  }
 
   public static TemporalDslProcessService withDefaults(
           ContextFactory contextFactory, DslRunRepository runRepository, ObjectMapper objectMapper,
@@ -97,7 +134,9 @@ public class TemporalDslProcessService {
     return new TemporalDslProcessService(contextFactory, runRepository, objectMapper,
             dslProcessExecutor, healthcheckExecutor, healthcheckInterval, staleThreshold,
             asyncDbSave, maxOutputBytes, meterRegistry, runIdentityResolver,
-            Optional.empty(), OpenTelemetry.noop());
+            Optional.empty(), OpenTelemetry.noop(),
+            EmptyObjectProvider.of(DomainEventPublisher.class),
+            EmptyObjectProvider.of(TransactionTemplate.class));
   }
 
   private static final Duration SHUTDOWN_JOIN = Duration.ofSeconds(5);
@@ -178,6 +217,8 @@ public class TemporalDslProcessService {
 
       submitDbWrite(() -> {
         runRepository.save(running);
+        publishEvent(new DomainEvent.RunStarted(
+                runId, processName, triggeredBy, startedAt, correlationId));
         return null;
       });
 
@@ -271,6 +312,13 @@ public class TemporalDslProcessService {
         if (affected == 0) {
           log.info("Sweep skipped staleness mark for run {}: it is no longer RUNNING "
                   + "(concurrent terminal transition)", runId);
+        } else {
+          publishEvent(new DomainEvent.RunStale(
+                  runId, run.processName(), DslRunStatus.STALE,
+                  "Run exceeded staleness threshold " + staleThreshold
+                          + " without producing a final status",
+                  run.startedAt(), finishedAt,
+                  finishedAt, run.correlationId()));
         }
         return null;
       });
@@ -348,7 +396,8 @@ public class TemporalDslProcessService {
           @NonNull Map<String, Object> metadata,
           @NonNull String runId,
           @NonNull Instant startedAt) {
-    return doExecuteAndRecord(processName, body, metadata, runId, startedAt);
+    return doExecuteAndRecord(processName, body, metadata, runId, startedAt,
+            CorrelationId.fromMetadata(metadata.get(CorrelationId.CORRELATION_ID_METADATA_KEY)));
   }
 
   private @NonNull Result<?> doExecuteAndRecord(
@@ -356,7 +405,8 @@ public class TemporalDslProcessService {
           @NonNull Object body,
           @NonNull Map<String, Object> metadata,
           @NonNull String runId,
-          @NonNull Instant startedAt) {
+          @NonNull Instant startedAt,
+          @Nullable String correlationId) {
     Tracer tracer = openTelemetry.getTracer("cbs.nova.dsl");
     Span span = tracer.spanBuilder("dsl.run." + processName)
             .setAttribute("runId", runId)
@@ -414,6 +464,17 @@ public class TemporalDslProcessService {
                 finalError,
                 finishedAt,
                 contextJson);
+        if (DslRunStatus.COMPLETED.name().equals(status)) {
+          publishEvent(new DomainEvent.RunCompleted(
+                  runId, processName, DslRunStatus.COMPLETED,
+                  finalOutputJson, finalError, startedAt, finishedAt,
+                  finishedAt, correlationId));
+        } else {
+          publishEvent(new DomainEvent.RunFailed(
+                  runId, processName, DslRunStatus.FAILED,
+                  finalError, startedAt, finishedAt,
+                  finishedAt, correlationId));
+        }
         return null;
       });
 
@@ -449,6 +510,31 @@ public class TemporalDslProcessService {
         log.warn("Async DSL DB write failed: {}", ex.getMessage(), ex);
       }
     });
+  }
+
+  /**
+   * Publishes a domain event through the optional {@link DomainEventPublisher} bean.
+   *
+   * <p>
+   * This is intentionally a NO-OP when the publisher is absent (no DataSource / in-memory run
+   * repository / tests that disable the event store). When the publisher IS present, the insert
+   * runs in the SAME database transaction as the surrounding state-row write when a
+   * {@link TransactionTemplate} is also available — see the "T411 same-TX" comments at the call
+   * sites in {@code startProcess}, {@code doExecuteAndRecord}, and {@code markStale}. Failure is
+   * NOT swallowed: an event-store failure at the run path breaks the surrounding write (per the
+   * loop note: event loss defeats the purpose of the store).
+   */
+  private void publishEvent(@NonNull DomainEvent event) {
+    DomainEventPublisher publisher = eventPublisherProvider.getIfAvailable();
+    if (publisher == null) {
+      return;
+    }
+    TransactionTemplate tx = transactionTemplateProvider.getIfAvailable();
+    if (tx != null) {
+      tx.executeWithoutResult(status -> publisher.publish(event));
+    } else {
+      publisher.publish(event);
+    }
   }
 
   private AutoCloseable propagateRunId(@NonNull String runId) {

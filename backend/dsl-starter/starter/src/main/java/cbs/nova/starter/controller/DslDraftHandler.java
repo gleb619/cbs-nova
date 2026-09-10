@@ -22,12 +22,17 @@ import cbs.nova.starter.controller.Pagination;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
+import cbs.nova.starter.events.DomainEvent;
+import cbs.nova.starter.service.DomainEventPublisher;
+import cbs.nova.starter.service.CorrelationId;
 import cbs.nova.starter.service.DslDefinitionBundleService;
 import cbs.nova.starter.service.DslDefinitionHistoryService;
 import cbs.nova.starter.util.LineDiff;
 import tools.jackson.core.JacksonException;
 import jakarta.servlet.ServletException;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -68,12 +73,13 @@ public class DslDraftHandler {
   private final ObjectProvider<DslAuditService> auditServiceProvider;
   private final ObjectProvider<DslBuilderClient> builderClientProvider;
   private final ObjectProvider<CompileDiagnosticRecordRepository> compileDiagnosticRepositoryProvider;
+  private final ObjectProvider<DomainEventPublisher> eventPublisherProvider;
 
   public DslDraftHandler(DslProperties dslProperties, DslReloadHandler reloadHandler,
           DslDefinitionHistoryService historyService, ObjectMapper objectMapper,
           DslDefinitionBundleService bundleService) {
     this(dslProperties, reloadHandler, historyService, objectMapper, bundleService, null, null,
-            null);
+            null, null);
   }
 
   public DslDraftHandler(DslProperties dslProperties, DslReloadHandler reloadHandler,
@@ -81,7 +87,7 @@ public class DslDraftHandler {
           DslDefinitionBundleService bundleService,
           ObjectProvider<DslAuditService> auditServiceProvider) {
     this(dslProperties, reloadHandler, historyService, objectMapper, bundleService,
-            auditServiceProvider, null, null);
+            auditServiceProvider, null, null, null);
   }
 
   /**
@@ -94,7 +100,7 @@ public class DslDraftHandler {
           ObjectProvider<DslAuditService> auditServiceProvider,
           ObjectProvider<DslBuilderClient> builderClientProvider) {
     this(dslProperties, reloadHandler, historyService, objectMapper, bundleService,
-            auditServiceProvider, builderClientProvider, null);
+            auditServiceProvider, builderClientProvider, null, null);
   }
 
   @Autowired
@@ -103,7 +109,8 @@ public class DslDraftHandler {
           DslDefinitionBundleService bundleService,
           ObjectProvider<DslAuditService> auditServiceProvider,
           ObjectProvider<DslBuilderClient> builderClientProvider,
-          ObjectProvider<CompileDiagnosticRecordRepository> compileDiagnosticRepositoryProvider) {
+          ObjectProvider<CompileDiagnosticRecordRepository> compileDiagnosticRepositoryProvider,
+          ObjectProvider<DomainEventPublisher> eventPublisherProvider) {
     this.dslProperties = dslProperties;
     this.reloadHandler = reloadHandler;
     this.historyService = historyService;
@@ -112,6 +119,7 @@ public class DslDraftHandler {
     this.auditServiceProvider = auditServiceProvider;
     this.builderClientProvider = builderClientProvider;
     this.compileDiagnosticRepositoryProvider = compileDiagnosticRepositoryProvider;
+    this.eventPublisherProvider = eventPublisherProvider;
   }
 
   public ServerResponse save(ServerRequest request) throws IOException {
@@ -136,6 +144,8 @@ public class DslDraftHandler {
         DraftResponse saved = builder.saveDraft(name, payload);
         audit(request, ACTION_DRAFT_WRITE, name, DslAuditService.OUTCOME_SUCCESS,
                 Map.of("location", String.valueOf(saved.location())));
+        publishEventBestEffort(new DomainEvent.DraftSaved(
+                name, payload.version(), payload.taskQueue(), null, correlationIdOf(request)));
         log.info("[DSL drafts] saved {} via DSL builder", name);
         return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(saved);
       } catch (RuntimeException e) {
@@ -148,6 +158,8 @@ public class DslDraftHandler {
       Path file = writePayload(dir.path().resolve(DRAFTS_DIR), payload);
       audit(request, ACTION_DRAFT_WRITE, name, DslAuditService.OUTCOME_SUCCESS,
               Map.of("location", file.toString()));
+      publishEventBestEffort(new DomainEvent.DraftSaved(
+              name, payload.version(), payload.taskQueue(), null, correlationIdOf(request)));
       log.info("[DSL drafts] saved {} to {}", name, file);
       return ServerResponse.ok()
               .contentType(MediaType.APPLICATION_JSON)
@@ -187,6 +199,10 @@ public class DslDraftHandler {
                 Map.of("location", String.valueOf(published.location()),
                         "reloaded", response.reloaded(),
                         "error", success ? "" : String.valueOf(response.reloadError())));
+        publishEventBestEffort(new DomainEvent.DraftPublished(
+                name, payload.version(), payload.taskQueue(),
+                response.reloaded(), response.location(), null,
+                correlationIdOf(request)));
         return ServerResponse.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(response);
@@ -212,6 +228,10 @@ public class DslDraftHandler {
               Map.of("location", file.toString(),
                       "reloaded", response.reloaded(),
                       "error", success ? "" : String.valueOf(response.reloadError())));
+      publishEventBestEffort(new DomainEvent.DraftPublished(
+              name, payload.version(), payload.taskQueue(),
+              response.reloaded(), response.location(), null,
+              correlationIdOf(request)));
       return ServerResponse.ok()
               .contentType(MediaType.APPLICATION_JSON)
               .body(response);
@@ -594,6 +614,37 @@ public class DslDraftHandler {
     }
     auditService.record(DslAuditService.currentActor(), action, target,
             DslAuditService.correlationIdOf(request), outcome, details);
+  }
+
+  /**
+   * Best-effort publish of a domain event for the draft lifecycle. There is NO surrounding DB
+   * transaction for draft writes (the draft filesystem write is the state change itself, with no
+   * row backing it), so unlike the run path the event insert does not need to be co-transactional.
+   * A publish failure is logged-and-swallowed: the user's save/publish must succeed even if the
+   * event store is briefly unavailable. See the loop note in docs/plans/T411.
+   */
+  private void publishEventBestEffort(@NonNull DomainEvent event) {
+    var publisher = eventPublisherProvider == null
+            ? null
+            : eventPublisherProvider.getIfAvailable();
+    if (publisher == null) {
+      return;
+    }
+    try {
+      publisher.publish(event);
+    } catch (RuntimeException e) {
+      log.warn("[DSL events] best-effort publish of {} for aggregate {} failed: {}",
+              event.eventType(), event.aggregateId(), e.getMessage());
+    }
+  }
+
+  private @Nullable String correlationIdOf(@NonNull ServerRequest request) {
+    try {
+      return CorrelationId.validated(
+              request.headers().firstHeader(CorrelationId.CORRELATION_ID_HEADER));
+    } catch (IllegalArgumentException e) {
+      return null;
+    }
   }
 
   private void recordDiagnostics(CompileDiagnosticSource source, String definition,

@@ -9,6 +9,7 @@ import cbs.nova.starter.persistence.AesFieldEncryptor;
 import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
 import cbs.nova.starter.persistence.DslAuditRepository;
 import cbs.nova.starter.persistence.DslDefinitionTestRepository;
+import cbs.nova.starter.persistence.DslEventRepository;
 import cbs.nova.starter.persistence.DslRunEncryption;
 import cbs.nova.starter.persistence.DslRunJdbcRepository;
 import cbs.nova.starter.persistence.DslRunNamingStrategy;
@@ -20,6 +21,7 @@ import cbs.nova.starter.persistence.JdbcTransactionExecutionRepository;
 import cbs.nova.starter.persistence.NoOpFieldEncryptor;
 import cbs.nova.starter.persistence.TransactionExecutionJdbcRepository;
 import cbs.nova.starter.service.ApiKeyStore;
+import cbs.nova.starter.service.DomainEventPublisher;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslDefinitionTestService;
 import cbs.nova.starter.service.DslRuntimeService;
@@ -141,6 +143,25 @@ public class DslRunRepositoryConfiguration {
           ObjectMapper objectMapper) {
     return new JdbcTransactionExecutionRepository(jdbcRepository, mapper,
             objectMapper);
+  }
+
+  // --- T411: domain event store -------------------------------------------------
+  //
+  // The publisher serializes typed DomainEvent records to JSON and inserts one row per
+  // event into dsl_events. It is wired through ObjectProvider<DomainEventPublisher> at every
+  // transition site so it is optional: in tests / in-memory runs without a DataSource the
+  // publisher is absent and the write sites become no-ops rather than failing construction.
+  @Bean
+  @ConditionalOnBean(DataSource.class)
+  public DslEventRepository dslEventRepository(NamedParameterJdbcTemplate jdbcTemplate) {
+    return new DslEventRepository(jdbcTemplate);
+  }
+
+  @Bean
+  @ConditionalOnBean(DslEventRepository.class)
+  public DomainEventPublisher domainEventPublisher(DslEventRepository repository,
+          ObjectMapper objectMapper) {
+    return new DomainEventPublisher(repository, objectMapper);
   }
 
   // --- T410: rotatable API keys -------------------------------------------------

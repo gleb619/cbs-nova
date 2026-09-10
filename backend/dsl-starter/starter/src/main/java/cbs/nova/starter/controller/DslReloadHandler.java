@@ -24,6 +24,8 @@ import cbs.nova.starter.model.CompileModels.CompileResult;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ReloadResponse;
 import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
+import cbs.nova.starter.events.DomainEvent;
+import cbs.nova.starter.service.DomainEventPublisher;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.JavaSourceCompiler;
 import cbs.nova.starter.service.PreviewResultCache;
@@ -90,6 +92,7 @@ public class DslReloadHandler {
   private final ObjectProvider<DslAuditService> auditServiceProvider;
   private final ObjectProvider<DslBuilderClient> builderClientProvider;
   private final ObjectProvider<CompileDiagnosticRecordRepository> compileDiagnosticRepositoryProvider;
+  private final ObjectProvider<DomainEventPublisher> eventPublisherProvider;
   private final ReentrantLock reloadLock = new ReentrantLock();
   private final JavaSourceCompiler javaSourceCompiler = new JavaSourceCompiler();
 
@@ -106,13 +109,15 @@ public class DslReloadHandler {
           ObjectProvider<PreviewResultCache> previewCacheProvider,
           ObjectProvider<DslAuditService> auditServiceProvider,
           ObjectProvider<DslBuilderClient> builderClientProvider,
-          ObjectProvider<CompileDiagnosticRecordRepository> compileDiagnosticRepositoryProvider) {
+          ObjectProvider<CompileDiagnosticRecordRepository> compileDiagnosticRepositoryProvider,
+          ObjectProvider<DomainEventPublisher> eventPublisherProvider) {
     this.dslProperties = dslProperties;
     this.loader = loader;
     this.previewCacheProvider = previewCacheProvider;
     this.auditServiceProvider = auditServiceProvider;
     this.builderClientProvider = builderClientProvider;
     this.compileDiagnosticRepositoryProvider = compileDiagnosticRepositoryProvider;
+    this.eventPublisherProvider = eventPublisherProvider;
   }
 
   /**
@@ -121,7 +126,7 @@ public class DslReloadHandler {
    * {@code null} providers.
    */
   public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader) {
-    this(dslProperties, loader, null, null, null, null);
+    this(dslProperties, loader, null, null, null, null, null);
   }
 
   /**
@@ -129,7 +134,7 @@ public class DslReloadHandler {
    */
   public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader,
           ObjectProvider<PreviewResultCache> previewCacheProvider) {
-    this(dslProperties, loader, previewCacheProvider, null, null, null);
+    this(dslProperties, loader, previewCacheProvider, null, null, null, null);
   }
 
   /**
@@ -138,7 +143,7 @@ public class DslReloadHandler {
   public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader,
           ObjectProvider<PreviewResultCache> previewCacheProvider,
           ObjectProvider<DslAuditService> auditServiceProvider) {
-    this(dslProperties, loader, previewCacheProvider, auditServiceProvider, null, null);
+    this(dslProperties, loader, previewCacheProvider, auditServiceProvider, null, null, null);
   }
 
   /**
@@ -150,7 +155,7 @@ public class DslReloadHandler {
           ObjectProvider<DslAuditService> auditServiceProvider,
           ObjectProvider<DslBuilderClient> builderClientProvider) {
     this(dslProperties, loader, previewCacheProvider, auditServiceProvider, builderClientProvider,
-            null);
+            null, null);
   }
 
   /**
@@ -190,6 +195,12 @@ public class DslReloadHandler {
       audit(request, dir.toString(), DslAuditService.OUTCOME_FAILURE,
               Map.of("error", String.valueOf(e.getMessage())));
       log.error("[DSL reload] Failed to reload DSL definitions from {}", dir, e);
+      // T411: best-effort ReloadFailed event. Reload has no DB transaction (the live
+      // GlobalManager stays untouched on compile failure), so log-and-continue on a publish
+      // failure rather than fabricate a TX or block the operator-facing error response.
+      String reloadErr = e.getMessage() != null ? e.getMessage() : e.getClass().getName();
+      String source = dir.toString();
+      publishReloadFailedBestEffort(request, source, reloadErr);
       if (e instanceof DslCompilationException dce) {
         recordDiagnostics(CompileDiagnosticSource.RELOAD, dir.toString(), dce.diagnostics());
         var responseDiagnostics = dce.diagnostics().stream().limit(20).toList();
@@ -481,6 +492,33 @@ public class DslReloadHandler {
     }
     auditService.record(DslAuditService.currentActor(), ACTION_DEFINITION_RELOAD, target,
             DslAuditService.correlationIdOf(request), outcome, details);
+  }
+
+  /**
+   * Best-effort publish of a {@link DomainEvent.ReloadFailed} event. Reload has no DB transaction
+   * (the live registry stays untouched on compile failure) so we log-and-swallow on publish
+   * failure: the operator-facing error response is what must reach the client. See the loop note in
+   * docs/plans/T411.
+   */
+  private void publishReloadFailedBestEffort(ServerRequest request, String source, String error) {
+    var publisher = eventPublisherProvider == null
+            ? null
+            : eventPublisherProvider.getIfAvailable();
+    if (publisher == null) {
+      return;
+    }
+    String correlationId = null;
+    try {
+      correlationId = DslAuditService.correlationIdOf(request);
+    } catch (RuntimeException ignored) {
+      // fall back to null
+    }
+    try {
+      publisher.publish(new DomainEvent.ReloadFailed(null, source, error, null, correlationId));
+    } catch (RuntimeException e) {
+      log.warn("[DSL events] best-effort publish of ReloadFailed for source '{}' failed: {}",
+              source, e.getMessage());
+    }
   }
 
   private void recordDiagnostics(CompileDiagnosticSource source, String definition,
