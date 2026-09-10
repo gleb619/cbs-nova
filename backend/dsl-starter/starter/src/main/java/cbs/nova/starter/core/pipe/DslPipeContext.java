@@ -2,31 +2,37 @@ package cbs.nova.starter.core.pipe;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.Builder;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
-//TODO: redo to a `record` with lombok's builder
-@RequiredArgsConstructor
-public final class DslPipeContext {
+@Builder
+public record DslPipeContext(
+        @NonNull String name,
+        @NonNull Context<?> dslContext,
+        @NonNull ExecutionMode mode,
+        @NonNull String runId,
+        @NonNull Map<String, Object> attributes) {
 
-  @Getter
-  private final @NonNull String name;
+  public DslPipeContext {
+    Objects.requireNonNull(name, "name");
+    Objects.requireNonNull(dslContext, "dslContext");
+    Objects.requireNonNull(mode, "mode");
+    Objects.requireNonNull(runId, "runId");
+    attributes = attributes == null ? new ConcurrentHashMap<>() : attributes;
+  }
 
-  @Getter
-  private final @NonNull Context<?> dslContext;
-
-  @Getter
-  private final @NonNull ExecutionMode mode;
-
-  @Getter
-  private final @NonNull String runId;
-
-  private Map<String, Object> attributes = new ConcurrentHashMap<>();
+  public static @NonNull DslPipeContext of(
+          @NonNull String name,
+          @NonNull Context<?> dslContext,
+          @NonNull ExecutionMode mode,
+          @NonNull String runId) {
+    return new DslPipeContext(name, dslContext, mode, runId, new ConcurrentHashMap<>());
+  }
 
   public @Nullable Object getAttribute(@NonNull String key) {
     return attributes.get(key);
@@ -47,8 +53,6 @@ public final class DslPipeContext {
   }
 
   public @NonNull DslPipeContext withDslContext(@NonNull Context<?> dslContext) {
-    var copy = new DslPipeContext(name, dslContext, mode, runId);
-    copy.attributes = this.attributes;
-    return copy;
+    return new DslPipeContext(name, dslContext, mode, runId, this.attributes);
   }
 }

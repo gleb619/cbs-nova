@@ -19,7 +19,7 @@ public final class ExecutionTraceStage implements DslPipeStage {
   @Override
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
     ExecutionTraceCollector collector = new ExecutionTraceCollector();
-    Context<?> ctx = context.getDslContext().withExecutionTraceCollector(collector);
+    Context<?> ctx = context.dslContext().withExecutionTraceCollector(collector);
     DslPipeContext wrappedContext = context.withDslContext(ctx);
     collector.start();
     try {

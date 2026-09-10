@@ -17,12 +17,12 @@ public final class FakingStage implements DslPipeStage {
   @Override
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
     if (properties.enabled()) {
-      runScopedFakeConfig.register(context.getRunId(), properties.config());
+      runScopedFakeConfig.register(context.runId(), properties.config());
     }
     try {
       return next.proceed(context);
     } finally {
-      runScopedFakeConfig.remove(context.getRunId());
+      runScopedFakeConfig.remove(context.runId());
     }
   }
 }

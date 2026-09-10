@@ -18,11 +18,11 @@ public final class ExternalCallRecordingStage implements DslPipeStage {
 
   @Override
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
-    recorder.startRun(context.getRunId());
+    recorder.startRun(context.runId());
     try {
       return next.proceed(context);
     } finally {
-      List<ExternalCall> calls = recorder.finishRun(context.getRunId());
+      List<ExternalCall> calls = recorder.finishRun(context.runId());
       context.setAttribute(StarterConstant.EXTERNAL_CALLS_ATTRIBUTE, calls);
     }
   }

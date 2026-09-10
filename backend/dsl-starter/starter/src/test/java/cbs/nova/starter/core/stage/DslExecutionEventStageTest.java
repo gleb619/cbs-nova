@@ -31,7 +31,7 @@ class DslExecutionEventStageTest {
     this.eventBus = new DslExecutionEventBus();
     eventBus.register(captured::add);
     this.stage = new DslExecutionEventStage(eventBus);
-    this.pipeContext = new DslPipeContext(
+    this.pipeContext = DslPipeContext.of(
             "Ping",
             contextFactory.of("body", ExecutionMode.RUN, "run-1"),
             ExecutionMode.RUN,

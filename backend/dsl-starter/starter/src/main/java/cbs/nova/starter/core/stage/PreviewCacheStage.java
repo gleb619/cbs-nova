@@ -22,14 +22,14 @@ public final class PreviewCacheStage implements DslPipeStage {
     if (cache == null) {
       return next.proceed(context);
     }
-    PreviewCacheKey key = keyBuilder.build(context.getName(), context.getDslContext());
+    PreviewCacheKey key = keyBuilder.build(context.name(), context.dslContext());
     context.setAttribute("previewCacheKey", key);
     PreviewReport cached = cache.get(key);
     if (cached != null) {
-      log.debug("Preview cache hit for {}", context.getName());
+      log.debug("Preview cache hit for {}", context.name());
       return Result.success(cached);
     }
-    log.debug("Preview cache miss for {}", context.getName());
+    log.debug("Preview cache miss for {}", context.name());
     Result<?> result = next.proceed(context);
     if (result.isSuccess() && result.value() instanceof PreviewReport report && report.success()) {
       cache.put(key, report);

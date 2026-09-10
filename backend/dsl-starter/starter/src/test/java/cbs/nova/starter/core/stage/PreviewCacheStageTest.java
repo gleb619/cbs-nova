@@ -146,7 +146,7 @@ class PreviewCacheStageTest {
 
   private DslPipeContext newPipeContext() {
     Context<Object> ctx = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
-    return new DslPipeContext("Ping", ctx, ExecutionMode.PREVIEW, "run-1");
+    return DslPipeContext.of("Ping", ctx, ExecutionMode.PREVIEW, "run-1");
   }
 
   private static PreviewReport previewReport(Object output) {

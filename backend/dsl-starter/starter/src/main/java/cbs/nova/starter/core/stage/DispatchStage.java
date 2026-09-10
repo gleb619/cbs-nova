@@ -64,7 +64,7 @@ public final class DispatchStage implements DslPipeStage {
     GlobalManager gm = GlobalManager.globalManager();
     gm.registerHelperInterceptor(helperInterceptor);
     try {
-      Result<?> result = dispatchWithOptionalTimeout(context.getName(), modeCtx, gm);
+      Result<?> result = dispatchWithOptionalTimeout(context.name(), modeCtx, gm);
       context.setAttribute("dslResult", result);
       return next.proceed(context);
     } finally {
@@ -73,12 +73,12 @@ public final class DispatchStage implements DslPipeStage {
   }
 
   private @NonNull Context<?> buildModeContext(@NonNull DslPipeContext context) {
-    Context<?> original = context.getDslContext();
+    Context<?> original = context.dslContext();
     Context<?> modeCtx = contextFactory.of(
             original.body(),
             original.metadata(),
-            context.getMode(),
-            context.getRunId(),
+            context.mode(),
+            context.runId(),
             original.transactionRouting());
     modeCtx = withExistingListener(modeCtx, original.executionListener());
     modeCtx = withExistingSaga(modeCtx, original.saga());

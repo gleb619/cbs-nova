@@ -47,7 +47,7 @@ class DispatchStageTest {
     var stage = DispatchStage.inline(contextFactory, interceptor);
 
     Context<?> ctx = contextFactory.of("body", ExecutionMode.RUN, "run-1");
-    DslPipeContext pipeContext = new DslPipeContext("echo", ctx, ExecutionMode.RUN, "run-1");
+    DslPipeContext pipeContext = DslPipeContext.of("echo", ctx, ExecutionMode.RUN, "run-1");
     DslPipeStage.Next next = c -> Result.success("downstream");
 
     stage.execute(pipeContext, next);
@@ -74,7 +74,7 @@ class DispatchStageTest {
     var stage = DispatchStage.inline(contextFactory, interceptor);
 
     Context<?> ctx = contextFactory.of("body", ExecutionMode.RUN, "run-3");
-    DslPipeContext pipeContext = new DslPipeContext("echo", ctx, ExecutionMode.RUN, "run-3");
+    DslPipeContext pipeContext = DslPipeContext.of("echo", ctx, ExecutionMode.RUN, "run-3");
     DslPipeStage.Next next = c -> {
       throw new RuntimeException("downstream boom");
     };

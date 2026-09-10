@@ -31,7 +31,7 @@ public final class PreviewReportStage implements DslPipeStage {
     Object output = success ? dslResult.value() : null;
     List<PreviewErrorDetail> errors = new ArrayList<>();
     if (dslResult != null && !dslResult.isSuccess()) {
-      errors.add(PreviewErrorHandler.from(dslResult.cause(), context.getName()));
+      errors.add(PreviewErrorHandler.from(dslResult.cause(), context.name()));
     }
 
     @SuppressWarnings("unchecked")
@@ -45,7 +45,7 @@ public final class PreviewReportStage implements DslPipeStage {
             : Map.of();
 
     PreviewReport report = new PreviewReport(
-            context.getName(),
+            context.name(),
             ExecutionMode.PREVIEW,
             success,
             output,

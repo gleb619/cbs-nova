@@ -21,7 +21,7 @@ class ExecutionTraceStageTest {
   @Test
   void proceedReceivesWrappedContextWithFreshExecutionTraceCollector() {
     Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
-    DslPipeContext pipeContext = new DslPipeContext(
+    DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
     AtomicReference<DslPipeContext> captured = new AtomicReference<>();
@@ -35,20 +35,20 @@ class ExecutionTraceStageTest {
     DslPipeContext wrapped = captured.get();
     assertThat(wrapped).isNotNull();
     assertThat(wrapped).isNotSameAs(pipeContext);
-    assertThat(wrapped.getDslContext()).isNotSameAs(originalDsl);
+    assertThat(wrapped.dslContext()).isNotSameAs(originalDsl);
 
-    ExecutionTraceCollector collector = wrapped.getDslContext().executionTraceCollector();
+    ExecutionTraceCollector collector = wrapped.dslContext().executionTraceCollector();
     assertThat(collector).isNotNull();
   }
 
   @Test
   void executionTraceAttributeIsSetFromCollectorSnapshot() {
     Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
-    DslPipeContext pipeContext = new DslPipeContext(
+    DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
     DslPipeStage.Next next = c -> {
-      ExecutionTraceCollector inside = c.getDslContext().executionTraceCollector();
+      ExecutionTraceCollector inside = c.dslContext().executionTraceCollector();
       assertThat(inside).isNotNull();
       inside.add("first-step");
       inside.add("second-step");
@@ -65,7 +65,7 @@ class ExecutionTraceStageTest {
   @Test
   void executionTraceAttributeIsSetEvenWhenProceedThrows() {
     Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
-    DslPipeContext pipeContext = new DslPipeContext(
+    DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
     DslPipeStage.Next next = c -> {
@@ -85,20 +85,20 @@ class ExecutionTraceStageTest {
   @Test
   void collectorStartEnablesAddAndStopClearsEntries() {
     Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
-    DslPipeContext pipeContext = new DslPipeContext(
+    DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
     AtomicReference<DslPipeContext> captured = new AtomicReference<>();
     DslPipeStage.Next next = c -> {
       captured.set(c);
-      ExecutionTraceCollector inside = c.getDslContext().executionTraceCollector();
+      ExecutionTraceCollector inside = c.dslContext().executionTraceCollector();
       inside.add("while-running");
       return Result.success("ok");
     };
 
     new ExecutionTraceStage().execute(pipeContext, next);
 
-    ExecutionTraceCollector capturedCollector = captured.get().getDslContext()
+    ExecutionTraceCollector capturedCollector = captured.get().dslContext()
             .executionTraceCollector();
     assertThat(capturedCollector.snapshot()).isEmpty();
 

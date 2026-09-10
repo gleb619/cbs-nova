@@ -23,7 +23,7 @@ class ExecutionTreeStageTest {
   @Test
   void runModePassesThroughOriginalContextUnchanged() {
     Context<?> originalDsl = contextFactory.of("body", ExecutionMode.RUN, "run-1");
-    DslPipeContext pipeContext = new DslPipeContext(
+    DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.RUN, "run-1");
 
     AtomicReference<DslPipeContext> captured = new AtomicReference<>();
@@ -43,16 +43,16 @@ class ExecutionTreeStageTest {
   @Test
   void previewModeSetsAstTreeAttributeFromCollectorTree() {
     Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
-    DslPipeContext pipeContext = new DslPipeContext(
+    DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
     DslPipeStage.Next next = c -> {
-      ExecutionListener listener = c.getDslContext().executionListener();
+      ExecutionListener listener = c.dslContext().executionListener();
       assertThat(listener).isNotNull();
-      listener.onProcessStart(c.getRunId(), "Ping", c.getDslContext().body());
-      listener.onTransactionStart(c.getRunId(), "tx1", null);
-      listener.onTransactionEnd(c.getRunId(), "tx1", "ok", true);
-      listener.onProcessEnd(c.getRunId(), "Ping", "done", true);
+      listener.onProcessStart(c.runId(), "Ping", c.dslContext().body());
+      listener.onTransactionStart(c.runId(), "tx1", null);
+      listener.onTransactionEnd(c.runId(), "tx1", "ok", true);
+      listener.onProcessEnd(c.runId(), "Ping", "done", true);
       return Result.success("downstream");
     };
 
@@ -70,7 +70,7 @@ class ExecutionTreeStageTest {
   @Test
   void previewModeSetsAstTreeAttributeToNullWhenCollectorTreeEmpty() {
     Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
-    DslPipeContext pipeContext = new DslPipeContext(
+    DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
     DslPipeStage.Next next = c -> Result.success("downstream");
@@ -83,7 +83,7 @@ class ExecutionTreeStageTest {
   @Test
   void previewModeProceedsWithWrappedContext() {
     Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
-    DslPipeContext pipeContext = new DslPipeContext(
+    DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
     AtomicReference<DslPipeContext> captured = new AtomicReference<>();
@@ -96,16 +96,16 @@ class ExecutionTreeStageTest {
 
     DslPipeContext wrapped = captured.get();
     assertThat(wrapped).isNotSameAs(pipeContext);
-    assertThat(wrapped.getDslContext()).isNotSameAs(originalDsl);
-    assertThat(wrapped.getDslContext().executionListener()).isNotNull();
-    assertThat(wrapped.getDslContext().mode()).isEqualTo(ExecutionMode.PREVIEW);
-    assertThat(wrapped.getDslContext().runId()).isEqualTo("run-1");
+    assertThat(wrapped.dslContext()).isNotSameAs(originalDsl);
+    assertThat(wrapped.dslContext().executionListener()).isNotNull();
+    assertThat(wrapped.dslContext().mode()).isEqualTo(ExecutionMode.PREVIEW);
+    assertThat(wrapped.dslContext().runId()).isEqualTo("run-1");
   }
 
   @Test
   void astTreeAttributeIsSetEvenWhenProceedThrows() {
     Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
-    DslPipeContext pipeContext = new DslPipeContext(
+    DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
     DslPipeStage.Next next = c -> {
@@ -122,7 +122,7 @@ class ExecutionTreeStageTest {
   @Test
   void explainModeAlsoBuildsTree() {
     Context<?> originalDsl = contextFactory.of("body", ExecutionMode.EXPLAIN, "run-1");
-    DslPipeContext pipeContext = new DslPipeContext(
+    DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.EXPLAIN, "run-1");
 
     DslPipeStage.Next next = c -> Result.success("downstream");

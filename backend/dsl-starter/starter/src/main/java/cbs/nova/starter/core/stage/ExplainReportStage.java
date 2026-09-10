@@ -33,15 +33,15 @@ public final class ExplainReportStage implements DslPipeStage {
     Result<?> dslResult = (Result<?>) context.getAttribute("dslResult");
 
     GlobalManager gm = GlobalManager.globalManager();
-    DslDescriptor dslDesc = gm.describeProcess(context.getName())
-            .or(() -> gm.describeTransaction(context.getName()))
-            .or(() -> gm.describeFunction(context.getName()))
+    DslDescriptor dslDesc = gm.describeProcess(context.name())
+            .or(() -> gm.describeTransaction(context.name()))
+            .or(() -> gm.describeFunction(context.name()))
             .orElse(null);
-    String description = describeEntity(dslDesc, gm, context.getName());
+    String description = describeEntity(dslDesc, gm, context.name());
 
     List<PreviewErrorDetail> errors = new ArrayList<>();
     if (dslResult != null && !dslResult.isSuccess()) {
-      errors.add(PreviewErrorHandler.from(dslResult.cause(), context.getName()));
+      errors.add(PreviewErrorHandler.from(dslResult.cause(), context.name()));
     }
 
     @SuppressWarnings("unchecked")
@@ -54,12 +54,12 @@ public final class ExplainReportStage implements DslPipeStage {
             : Map.of();
 
     ExplainReport baseReport = new ExplainReport(
-            context.getName(),
+            context.name(),
             description,
             attribute(context, "executionTrace", List.class, List.of()),
             externalCalls,
             callCounts,
-            gm.describeHelper(context.getName()).orElse(null),
+            gm.describeHelper(context.name()).orElse(null),
             dslDesc,
             context.getAttribute("astTree", CallNode.class),
             attribute(context, "dryRunLogs", List.class, List.of()),

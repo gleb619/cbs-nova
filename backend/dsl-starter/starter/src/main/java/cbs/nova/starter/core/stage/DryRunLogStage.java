@@ -29,13 +29,13 @@ public final class DryRunLogStage implements DslPipeStage {
 
   @Override
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
-    if (context.getMode() == ExecutionMode.RUN) {
+    if (context.mode() == ExecutionMode.RUN) {
       return next.proceed(context);
     }
 
     Deque<DryRunLogEvent> queue = new LinkedBlockingDeque<>(maxEventsPerRun);
     DryRunLogBuffer buffer = new DryRunLogBuffer(maxEventsPerRun, queue);
-    String runId = context.getRunId();
+    String runId = context.runId();
     bufferRegistry.register(runId, buffer);
     context.setAttribute(StarterConstant.DRY_RUN_LOG_BUFFER_ATTRIBUTE, buffer);
     dryRunLoggingContext.setRunId(runId);
