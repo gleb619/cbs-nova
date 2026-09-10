@@ -1,0 +1,25 @@
+{
+  "$comment": "T414 — pnpm audit baseline allowlist. Each entry is one advisory ID that `make cve-scan` should NOT count as a gate failure. Add an entry ONLY after triage (out-of-tree upgrade path is tracked or accepted as residual risk).",
+  "version": 1,
+  "allowlisted_advisories": [
+    {
+      "id": "1137043",
+      "package": "nuxt",
+      "severity": "high",
+      "title": "Nuxt: Unauthenticated out-of-memory crash via unbounded v-for payload",
+      "reason": "Triaged for T414: only reachable in dev preview mode behind reverse proxy; production builds disable devtools. Tracked in T415 for Nuxt 3.x upgrade.",
+      "added_at": "2026-09-10",
+      "expires_on": "2026-12-31"
+    },
+    {
+      "id": "1137074",
+      "package": "@nuxt/devtools",
+      "severity": "critical",
+      "title": "Unauthenticated Nuxt DevTools RPC allows arbitrary command execution",
+      "reason": "DEV-only dependency; never bundled into production artifact (verified by `make build`). Critical for review but does not reach the deployable.",
+      "added_at": "2026-09-10",
+      "expires_on": "2026-12-31"
+    }
+  ],
+  "audit_baseline_level": "high"
+}

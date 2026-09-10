@@ -4,6 +4,10 @@ plugins {
   alias(libs.plugins.spring.dm)
   alias(libs.plugins.test.logger)
   //alias(libs.plugins.sentry)
+  // T414: apply OWASP dependency-check ONLY to the deployable launcher module.
+  // This bounds the NVD scan to the Spring Boot runtime classpath that ships.
+  // Pinned in backend/gradle/libs.versions.toml as `dependency-check`.
+  alias(libs.plugins.dependency.check)
 }
 
 dependencies {
@@ -19,4 +23,23 @@ dependencies {
   //implementation libs.spring.kafka
 
   testImplementation libs.bundles.spring.test
+}
+
+// T414: OWASP dependency-check configuration. Bound short timeouts so that
+// when the NVD feed is unreachable from this environment, the gate degrades
+// gracefully (see `make cve-scan`). Suppression file lives at
+// `docs/security/cve-baseline.xml` (dependency-check native format).
+dependencyCheck {
+  suppressionFile = file("${rootDir}/../../../docs/security/cve-baseline.xml")
+  failBuildOnCVSS = 7.0
+  failOnError = false
+  // Bound the NVD feed / NVD API endpoints to short timeouts so the gate
+  // can fail-fast and degrade gracefully when the host cannot reach NIST.
+  nvd {
+    delay = 4000
+    maxRetryCount = 1
+    validForHours = 24
+  }
+  // Skip the analysis entirely if explicitly disabled (CI without network).
+  skip = System.getenv('CBS_DEPENDENCY_CHECK_DISABLED') == 'true'
 }
