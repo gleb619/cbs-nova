@@ -44,57 +44,40 @@ public class DslBuilderClient {
   private final BuilderRequestQueue queue;
   private final BuilderBulkhead bulkhead;
   private final BuilderCircuitBreaker breaker;
+  private final BuilderCache cache;
 
   public CompileResult compile(CompileRequest request) {
     return execute(() -> doCompile(request));
-  }
-
-  public CompletableFuture<CompileResult> compileAsync(CompileRequest request) {
-    return submit(() -> doCompile(request));
   }
 
   public byte[] downloadZip(String id) {
     return execute(() -> doDownloadZip(id));
   }
 
-  public CompletableFuture<byte[]> downloadZipAsync(String id) {
-    return submit(() -> doDownloadZip(id));
-  }
-
   public DraftResponse saveDraft(String name, DraftRequest body) {
     return execute(() -> doSaveDraft(name, body));
-  }
-
-  public CompletableFuture<DraftResponse> saveDraftAsync(String name, DraftRequest body) {
-    return submit(() -> doSaveDraft(name, body));
   }
 
   public DraftResponse publishDraft(String name, DraftRequest body) {
     return execute(() -> doPublishDraft(name, body));
   }
 
-  public CompletableFuture<DraftResponse> publishDraftAsync(String name, DraftRequest body) {
-    return submit(() -> doPublishDraft(name, body));
-  }
-
   public List<DefinitionHistoryEntry> history(String name) {
-    return execute(() -> doHistory(name));
+    return cache.history(name, () -> execute(() -> doHistory(name)));
   }
 
   public DraftRequest historyEntry(String name, String timestamp) {
-    return execute(() -> doHistoryEntry(name, timestamp));
+    return cache.historyEntry(name, timestamp,
+            () -> execute(() -> doHistoryEntry(name, timestamp)));
   }
 
   public HistoryDiffResponse historyDiff(String name, String timestamp) {
-    return execute(() -> doHistoryDiff(name, timestamp));
+    return cache.historyDiff(name, timestamp,
+            () -> execute(() -> doHistoryDiff(name, timestamp)));
   }
 
   public DraftResponse restoreDraft(String name, String timestamp) {
     return execute(() -> doRestoreDraft(name, timestamp));
-  }
-
-  public CompletableFuture<DraftResponse> restoreDraftAsync(String name, String timestamp) {
-    return submit(() -> doRestoreDraft(name, timestamp));
   }
 
   public DraftResponse deleteDraft(String name) {
@@ -102,36 +85,31 @@ public class DslBuilderClient {
   }
 
   public PageResponse<DraftSummary> listDrafts(int limit, int offset) {
-    return execute(() -> doListDrafts(limit, offset));
+    return cache.listDrafts(limit, offset, () -> execute(() -> doListDrafts(limit, offset)));
   }
 
   public DraftRequest readDraft(String name) {
-    return execute(() -> doReadDraft(name));
+    return cache.readDraft(name, () -> execute(() -> doReadDraft(name)));
   }
 
   public DefinitionBundle exportBundle(boolean includeDrafts) {
-    return execute(() -> doExportBundle(includeDrafts));
+    return cache.exportBundle(includeDrafts, () -> execute(() -> doExportBundle(includeDrafts)));
   }
 
   public ImportBundleResult importBundle(DefinitionBundle bundle, boolean dryRun) {
     return execute(() -> doImportBundle(bundle, dryRun));
   }
 
-  public CompletableFuture<ImportBundleResult> importBundleAsync(DefinitionBundle bundle,
-          boolean dryRun) {
-    return submit(() -> doImportBundle(bundle, dryRun));
-  }
-
   public List<FileEntry> listFiles(String prefix) {
-    return execute(() -> doListFiles(prefix));
+    return cache.listFiles(prefix, () -> execute(() -> doListFiles(prefix)));
   }
 
   public FileContentResponse readFile(String path) {
-    return execute(() -> doReadFile(path));
+    return cache.readFile(path, () -> execute(() -> doReadFile(path)));
   }
 
   public boolean fileExists(String path) {
-    return execute(() -> doFileExists(path));
+    return cache.fileExists(path, () -> execute(() -> doFileExists(path)));
   }
 
   public void stageWrite(String path, String content) {
@@ -143,26 +121,24 @@ public class DslBuilderClient {
   }
 
   public FlushResult flushFiles() {
-    return execute(() -> doFlushFiles());
-  }
-
-  public CompletableFuture<FlushResult> flushFilesAsync() {
-    return submit(() -> doFlushFiles());
+    return execute(this::doFlushFiles);
   }
 
   public int pendingCount() {
-    return execute(() -> doPendingCount());
+    return cache.pendingCount(() -> execute(this::doPendingCount));
   }
 
   public Optional<RepoStatus> vcsStatus() {
-    try {
-      return Optional.of(execute(() -> doVcsStatus()));
-    } catch (BuilderApiException e) {
-      if (e.getStatusCode().value() == 404) {
-        return Optional.empty();
+    return cache.vcsStatus(() -> {
+      try {
+        return Optional.of(execute(this::doVcsStatus));
+      } catch (BuilderApiException e) {
+        if (e.getStatusCode().value() == 404) {
+          return Optional.empty();
+        }
+        throw e;
       }
-      throw e;
-    }
+    });
   }
 
   private CompileResult doCompile(CompileRequest request) {

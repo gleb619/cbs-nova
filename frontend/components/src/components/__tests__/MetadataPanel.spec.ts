@@ -19,9 +19,8 @@ describe('MetadataPanel', () => {
     window.localStorage.clear()
   })
 
-  // Most tests want to inspect the field <dl>/textarea, which only render when
-  // the panel is expanded. Open it once and return both the wrapper and the
-  // mounted component for callers that need to drill further.
+  // Most tests want to inspect the field <dl>/description, which only render when
+  // the panel is expanded. Open it once and return the wrapper.
   async function mountExpanded(props: Parameters<typeof mount>[1]) {
     const wrapper = mount(MetadataPanel, props)
     await wrapper.find('[data-testid="metadata-panel-toggle"]').trigger('click')
@@ -37,7 +36,7 @@ describe('MetadataPanel', () => {
   it('prompts the user to select a construct when construct is null', () => {
     const wrapper = mount(MetadataPanel, { props: { construct: null } })
 
-    // No construct → header + toggle render, but body fields/textarea do not.
+    // No construct → header + toggle render, but body fields/description do not.
     expect(wrapper.find('[data-testid="metadata-panel"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Metadata')
     expect(wrapper.find('[data-testid="metadata-panel-toggle"]').exists()).toBe(true)
@@ -108,26 +107,42 @@ describe('MetadataPanel', () => {
     expect(visible.find('[data-testid="cbs-spinner"]').exists()).toBe(true)
   })
 
-  it('renders description in an editable textarea', async () => {
+  it('renders description as markdown HTML', async () => {
     const wrapper = await mountExpanded({
       props: {
         construct: {
           name: 'Charge',
           type: 'Transaction',
           status: 'Valid',
-          description: 'Charges a customer and refunds on failure.',
+          description: '# Charge\n\nCharges a **customer**.',
         },
       },
     })
 
-    const textarea = wrapper.find('[data-testid="metadata-field-description"]')
-    expect(textarea.exists()).toBe(true)
-    expect((textarea.element as HTMLTextAreaElement).value).toBe(
-      'Charges a customer and refunds on failure.',
-    )
+    const container = wrapper.find('[data-testid="metadata-field-description"]')
+    expect(container.exists()).toBe(true)
+    expect(container.element.tagName).toBe('DIV')
+    expect(container.html()).toContain('<h1>')
+    expect(container.html()).toContain('customer')
+    expect(container.find('strong').text()).toBe('customer')
   })
 
-  it('emits update:description when the textarea changes', async () => {
+  it('falls back to em-dash when no description is provided', async () => {
+    const wrapper = await mountExpanded({
+      props: {
+        construct: {
+          name: 'Charge',
+          type: 'Transaction',
+          status: 'Valid',
+        },
+      },
+    })
+
+    const container = wrapper.find('[data-testid="metadata-field-description"]')
+    expect(container.text()).toBe('—')
+  })
+
+  it('does not emit update:description because description is read-only', async () => {
     const wrapper = await mountExpanded({
       props: {
         construct: {
@@ -139,10 +154,7 @@ describe('MetadataPanel', () => {
       },
     })
 
-    const textarea = wrapper.find('[data-testid="metadata-field-description"]')
-    await textarea.setValue('Updated description')
-
-    expect(wrapper.emitted('update:description')).toEqual([['Updated description']])
+    expect(wrapper.emitted('update:description')).toBeUndefined()
   })
 
   it('collapses to name + type summary when toggle is clicked', async () => {

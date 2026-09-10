@@ -1,4 +1,4 @@
-package cbs.nova.starter.config;
+package cbs.nova.starter.config.properties;
 
 import cbs.nova.dsl.fake.FakeConfig;
 import org.springframework.boot.context.properties.ConfigurationProperties;

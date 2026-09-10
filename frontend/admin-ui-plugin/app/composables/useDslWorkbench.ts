@@ -110,17 +110,6 @@ export function useDslWorkbench() {
     state.value.constructs[index] = { ...state.value.constructs[index], ...patch }
   }
 
-  async function updateDescription(name: string, description: string) {
-    if (!name) return
-    updateConstruct(name, { description })
-    try {
-      await api.updateDescription(name, description)
-      log.info('description updated', { name })
-    } catch (err) {
-      log.error('failed to update description', { name, error: extractApiError(err).message })
-    }
-  }
-
   function selectConstruct(name: string) {
     state.value.selectedName = name
     state.value.validationErrors = []
@@ -286,7 +275,6 @@ export function useDslWorkbench() {
     loaders: readonly({ constructs: constructsLoading }),
     loadConstructs,
     updateConstruct,
-    updateDescription,
     selectConstruct,
     createConstruct,
     saveConstruct,

@@ -30,6 +30,7 @@ GRANT ALL PRIVILEGES ON DATABASE bugsink TO bugsinkuser;
 -- temporal
 CREATE DATABASE temporal;
 CREATE USER temporal WITH ENCRYPTED PASSWORD '${TEMPORAL_DB_PASSWORD:-temporal}';
+ALTER USER temporal CREATEDB;
 GRANT ALL PRIVILEGES ON DATABASE temporal TO temporal;
 
 -- nova

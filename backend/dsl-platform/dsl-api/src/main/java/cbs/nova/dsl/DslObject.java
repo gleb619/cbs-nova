@@ -10,6 +10,10 @@ public interface DslObject {
   @NonNull
   DslType type();
 
+  default String description() {
+    return "<!-- NONE -->";
+  }
+
   enum DslType {
     PROCESS, TRANSACTION, FUNCTION, OTHER
   }

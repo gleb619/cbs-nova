@@ -1,7 +1,7 @@
 package cbs.nova.starter.core.stage;
 
 import cbs.nova.dsl.Result;
-import cbs.nova.starter.config.CbsNovaFakesProperties;
+import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import cbs.nova.starter.core.pipe.RunScopedFakeConfig;

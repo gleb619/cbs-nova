@@ -88,10 +88,30 @@ vi.mock('@cbs/admin-ui-plugin/composables/useRunner', () => ({
   useRunner: useRunnerMock,
 }))
 
-// Control the route the page derives its query params (name/mode) from.
+// Control the route the page derives its query params (name/mode) from, and
+// capture the router navigation hook the page registers with afterEach().
+const { routeState, routerHooks } = vi.hoisted(() => {
+  const routeState = {
+    path: '/runner',
+    params: {} as Record<string, string>,
+    query: { name: 'c1', mode: 'run' } as Record<string, string>,
+  }
+  const routerHooks: { afterEach?: (to: { path: string }) => void } = {}
+  return { routeState, routerHooks }
+})
+
 vi.mock('nuxt/app', () => ({
-  useRoute: () => ({ params: {}, query: { name: 'c1', mode: 'run' } }),
-  useRouter: () => ({ replace: () => Promise.resolve(), push: () => Promise.resolve() }),
+  useRoute: () => routeState,
+  useRouter: () => ({
+    replace: () => Promise.resolve(),
+    push: () => Promise.resolve(),
+    afterEach: (hook: (to: { path: string }) => void) => {
+      routerHooks.afterEach = hook
+      return () => {
+        routerHooks.afterEach = undefined
+      }
+    },
+  }),
 }))
 
 // ---------------------------------------------------------------------------
@@ -148,6 +168,8 @@ describe('runner.vue run-again handoff', () => {
     harness.setMode.mockClear()
     dslApi.getDefinitions.mockReset()
     dslApi.getDefinitions.mockResolvedValue(DEFINITIONS)
+    routeState.path = '/runner'
+    routeState.query = { name: 'c1', mode: 'run' }
     window.sessionStorage.clear()
   })
 
@@ -189,6 +211,70 @@ describe('runner.vue run-again handoff', () => {
 
     expect(harness.selectedDefinition.value).toBe('c1')
     expect(harness.formData.value).toEqual({})
+
+    wrapper.unmount()
+  })
+})
+
+describe('runner.vue event-driven selection sync', () => {
+  beforeEach(() => {
+    harness.selectedDefinition.value = null
+    harness.mode.value = 'preview'
+    harness.status.value = 'idle'
+    harness.formData.value = {}
+    harness.selectDefinition.mockClear()
+    harness.setMode.mockClear()
+    dslApi.getDefinitions.mockReset()
+    dslApi.getDefinitions.mockResolvedValue(DEFINITIONS)
+    routeState.path = '/runner'
+    routeState.query = { name: 'c1', mode: 'run' }
+    window.sessionStorage.clear()
+  })
+
+  afterEach(() => {
+    window.sessionStorage.clear()
+  })
+
+  it('blanks formData when the user selects another definition', async () => {
+    const wrapper = mountPage()
+    await flush()
+
+    harness.formData.value = { foo: 'bar' }
+    await wrapper.findComponent({ name: 'DefinitionSelector' }).vm.$emit('update:model-value', 'c2')
+    await nextTick()
+
+    expect(harness.selectedDefinition.value).toBe('c2')
+    expect(harness.formData.value).toEqual({})
+
+    wrapper.unmount()
+  })
+
+  it('re-syncs selection and form when a same-page navigation changes the query', async () => {
+    const wrapper = mountPage()
+    await flush()
+
+    expect(harness.selectedDefinition.value).toBe('c1')
+    expect(routerHooks.afterEach).toBeTypeOf('function')
+
+    routeState.query = { name: 'c2', mode: 'run' }
+    routerHooks.afterEach?.({ path: '/runner' })
+    await nextTick()
+
+    expect(harness.selectedDefinition.value).toBe('c2')
+    expect(harness.formData.value).toEqual({})
+
+    wrapper.unmount()
+  })
+
+  it('ignores navigations that leave the runner page', async () => {
+    const wrapper = mountPage()
+    await flush()
+
+    routeState.query = { name: 'c2', mode: 'run' }
+    routerHooks.afterEach?.({ path: '/executions/exec-1' })
+    await nextTick()
+
+    expect(harness.selectedDefinition.value).toBe('c1')
 
     wrapper.unmount()
   })

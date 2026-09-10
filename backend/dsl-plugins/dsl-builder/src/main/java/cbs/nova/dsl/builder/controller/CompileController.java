@@ -1,7 +1,7 @@
 package cbs.nova.dsl.builder.controller;
 
+import cbs.nova.dsl.BuilderErrorResponse;
 import cbs.nova.dsl.builder.exception.BuilderBusyException;
-import cbs.nova.dsl.builder.model.CompileModels.CompileErrorResponse;
 import cbs.nova.dsl.builder.model.CompileModels.CompileRequest;
 import cbs.nova.dsl.builder.model.CompileModels.CompileResult;
 import cbs.nova.dsl.builder.exception.CompileException;
@@ -54,43 +54,47 @@ public class CompileController {
 
   @ExceptionHandler(IllegalArgumentException.class)
   @ResponseStatus(HttpStatus.BAD_REQUEST)
-  public CompileErrorResponse handleBadRequest(IllegalArgumentException ex) {
-    return CompileErrorResponse.of("INVALID_REQUEST", messageOf(ex));
+  public BuilderErrorResponse handleBadRequest(IllegalArgumentException ex) {
+    return of("INVALID_REQUEST", messageOf(ex));
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
   @ResponseStatus(HttpStatus.BAD_REQUEST)
-  public CompileErrorResponse handleValidation(MethodArgumentNotValidException ex) {
+  public BuilderErrorResponse handleValidation(MethodArgumentNotValidException ex) {
     var details = ex.getBindingResult().getFieldErrors().stream()
             .map(error -> error.getField() + ": " + error.getDefaultMessage())
             .toList();
     var diagnostics = details.isEmpty() ? List.of("Invalid request body") : details;
-    return new CompileErrorResponse("VALIDATION_FAILED", diagnostics);
+    return new BuilderErrorResponse(null, null, "VALIDATION_FAILED", diagnostics);
   }
 
   @ExceptionHandler(CompileException.class)
   @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
-  public CompileErrorResponse handleCompileFailure(CompileException ex) {
-    return new CompileErrorResponse("COMPILE_FAILED", ex.getDiagnostics());
+  public BuilderErrorResponse handleCompileFailure(CompileException ex) {
+    return new BuilderErrorResponse(null, null, "COMPILE_FAILED", ex.getDiagnostics());
   }
 
   @ExceptionHandler(BuilderBusyException.class)
   @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
-  public CompileErrorResponse handleBusy(BuilderBusyException ex) {
-    return CompileErrorResponse.of("BUILDER_BUSY", messageOf(ex));
+  public BuilderErrorResponse handleBusy(BuilderBusyException ex) {
+    return of("BUILDER_BUSY", messageOf(ex));
   }
 
   @ExceptionHandler(ResponseStatusException.class)
-  public ResponseEntity<CompileErrorResponse> handleStatus(ResponseStatusException ex) {
-    var body = CompileErrorResponse.of("REQUEST_FAILED",
+  public ResponseEntity<BuilderErrorResponse> handleStatus(ResponseStatusException ex) {
+    var body = of("REQUEST_FAILED",
             ex.getReason() != null ? ex.getReason() : messageOf(ex));
     return ResponseEntity.status(ex.getStatusCode()).body(body);
   }
 
   @ExceptionHandler(Exception.class)
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-  public CompileErrorResponse handleUnexpected(Exception ex) {
-    return CompileErrorResponse.of("INTERNAL_ERROR", messageOf(ex));
+  public BuilderErrorResponse handleUnexpected(Exception ex) {
+    return of("INTERNAL_ERROR", messageOf(ex));
+  }
+
+  private static BuilderErrorResponse of(String error, String message) {
+    return new BuilderErrorResponse(null, null, error, List.of(message));
   }
 
   private String messageOf(Exception ex) {

@@ -35,12 +35,7 @@ cbs-nova is a Temporal DSL Orchestration Engine with a Java backend and a Vue/Nu
    ```bash
    cd frontend && pnpm dev
    ```
-5. Seed sample data so the dashboard is non-empty: `make seed`
-6. Run a quick load-test smoke check (optional):
-   ```bash
-   make loadtest DURATION=10 CONCURRENCY=5 RPS=20
-   ```
-7. Verify a proxied DSL endpoint:
+5. Verify a proxied DSL endpoint:
    ```bash
    curl http://localhost:3000/api/v1/dsl/definitions
    ```
@@ -50,7 +45,3 @@ cbs-nova is a Temporal DSL Orchestration Engine with a Java backend and a Vue/Nu
 - **Java 25 is required.** Root `./gradlew` is Gradle 8.13 and fails under Java 25. Use `backend/dsl-platform/gradlew` (Gradle 9.4.1) for platform/starter builds.
 - **Port mismatch:** backend defaults to 8080, frontend BFF defaults to `http://localhost:8090`. Use `SERVER_PORT=8090` for backend, or override `BACKEND_BASE_URL` for the frontend.
 - **No generic `/api/v1/dsl/*` catch-all.** BFF routes are explicit Nitro files under `frontend/admin-ui-plugin/server/api/v1/`. Add a matching proxy route when exposing a new backend DSL path.
-- **`make backend` and `make publish`** wrap the same commands as steps 2–3 above (`backend/dsl-platform/gradlew`, correct module paths, `SERVER_PORT` default 8090).
-- `make openapi` regenerates docs/openapi.json from the live /v3/api-docs (needs Postgres; Temporal optional).
-- `make openapi-check` is the non-mutating drift gate (fetches to a temp file, classifies via `scripts/openapi-diff.py`). Not in `make test` — opt-in, like `make cve-scan`.
-- Run all tests: `make test` (backend + frontend; `make test-backend` / `make test-frontend` for one tier).

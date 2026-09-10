@@ -6,6 +6,7 @@ plugins {
 }
 
 dependencies {
+  implementation "cbs.nova:dsl-api:${project.version}"
   implementation "cbs.nova:dsl:${project.version}"
   implementation libs.jgit
   implementation libs.caffeine

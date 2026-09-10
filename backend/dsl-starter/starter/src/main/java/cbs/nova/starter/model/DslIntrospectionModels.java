@@ -19,11 +19,6 @@ public final class DslIntrospectionModels {
           @JsonInclude(JsonInclude.Include.NON_NULL) Map<String, Object> inputSchema,
           DefinitionStatus status,
           @JsonInclude(JsonInclude.Include.NON_NULL) String filePath) {
-
-    public DefinitionMetaDto withDescription(String description) {
-      return new DefinitionMetaDto(name, type, version, taskQueue, inputType, outputType,
-              hasCompensation, description, inputSchema, status, filePath);
-    }
   }
 
   public record NamesResponse(List<String> names) {
@@ -62,11 +57,6 @@ public final class DslIntrospectionModels {
           boolean hasCompensation,
           String description,
           Map<String, Object> inputSchema) {
-
-    public ProcessDetail withDescription(String description) {
-      return new ProcessDetail(name, version, taskQueue, inputType, outputType,
-              hasCompensation, description, inputSchema);
-    }
   }
 
   public record TransactionDetail(
@@ -79,11 +69,6 @@ public final class DslIntrospectionModels {
           String description,
           long startToCloseTimeoutMs,
           Map<String, Object> inputSchema) {
-
-    public TransactionDetail withDescription(String description) {
-      return new TransactionDetail(name, version, taskQueue, inputType, outputType,
-              hasCompensation, description, startToCloseTimeoutMs, inputSchema);
-    }
   }
 
   public record HelperSearchResult(

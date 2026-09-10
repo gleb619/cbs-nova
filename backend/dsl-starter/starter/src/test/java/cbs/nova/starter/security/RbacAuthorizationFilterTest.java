@@ -66,7 +66,6 @@ class RbacAuthorizationFilterTest {
       "POST,   /api/dsl/files/flush",
       "POST,   /api/dsl/files/by-name/foo",
       "POST,   /api/dsl/files/bulk",
-      "PATCH,  /api/dsl/definitions/foo/description",
       "POST,   /api/dsl/definitions/import",
       "POST,   /api/dsl/schedules",
       "DELETE, /api/dsl/schedules/foo",
@@ -103,8 +102,6 @@ class RbacAuthorizationFilterTest {
       "DELETE, /api/dsl/drafts/foo,  RUNNER,   false",
       "POST, /api/dsl/definitions/import, AUTHOR, true",
       "POST, /api/dsl/definitions/import, RUNNER, false",
-      "PATCH, /api/dsl/definitions/foo/description, AUTHOR, true",
-      "PATCH, /api/dsl/definitions/foo/description, RUNNER, false",
       // OPERATOR routes — AUTHOR denied
       "POST,   /api/dsl/schedules,    OPERATOR, true",
       "POST,   /api/dsl/schedules,    AUTHOR,   false",
@@ -246,8 +243,6 @@ class RbacAuthorizationFilterTest {
             .isEqualTo(Role.AUTHOR);
     assertThat(filter.requiredRole(req("POST", "/api/dsl/files/flush"))).isEqualTo(Role.AUTHOR);
     assertThat(filter.requiredRole(req("POST", "/api/dsl/definitions/import")))
-            .isEqualTo(Role.AUTHOR);
-    assertThat(filter.requiredRole(req("PATCH", "/api/dsl/definitions/foo/description")))
             .isEqualTo(Role.AUTHOR);
     assertThat(filter.requiredRole(req("POST", "/api/dsl/schedules"))).isEqualTo(Role.OPERATOR);
     assertThat(filter.requiredRole(req("DELETE", "/api/dsl/schedules/foo")))

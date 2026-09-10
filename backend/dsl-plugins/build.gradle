@@ -11,11 +11,6 @@ file('../gradle.properties').withInputStream { parentProps.load(it) }
 allprojects {
   group = 'cbs.nova'
   version = parentProps.getProperty('version', '0.0.1-SNAPSHOT')
-
-  repositories {
-    mavenLocal()
-    mavenCentral()
-  }
 }
 
 subprojects {
@@ -43,6 +38,13 @@ subprojects {
           }
         }
       }
+    }
+  }
+
+  plugins.withId('io.spring.dependency-management') {
+    tasks.withType(GenerateMavenPom).configureEach {
+      notCompatibleWithConfigurationCache(
+        'io.spring.dependency-management resolves managed dependency versions against Project at POM generation time')
     }
   }
 }

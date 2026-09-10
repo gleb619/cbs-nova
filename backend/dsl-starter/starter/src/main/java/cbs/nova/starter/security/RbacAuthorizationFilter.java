@@ -1,5 +1,6 @@
 package cbs.nova.starter.security;
 
+import cbs.nova.starter.config.RbacFilterConfiguration;
 import cbs.nova.starter.model.ErrorResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -8,8 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.util.AntPathMatcher;
@@ -43,9 +43,8 @@ import tools.jackson.databind.ObjectMapper;
  * {@link Role#OPERATOR} and emits a WARN log so the missing rule can be diagnosed. Reads always
  * fall back to {@link Role#VIEWER}.
  */
+@Slf4j
 public final class RbacAuthorizationFilter extends OncePerRequestFilter {
-
-  private static final Logger LOG = LoggerFactory.getLogger(RbacAuthorizationFilter.class);
 
   private static final String FORBIDDEN_CODE = "FORBIDDEN";
   private static final List<RouteRule> RULES = List.of(
@@ -54,7 +53,7 @@ public final class RbacAuthorizationFilter extends OncePerRequestFilter {
           new RouteRule(HttpMethod.POST, "/api/dsl/run/**", Role.RUNNER),
           new RouteRule(HttpMethod.POST, "/api/dsl/explain/**", Role.RUNNER),
           new RouteRule(HttpMethod.POST, "/api/executions/*/cancel", Role.RUNNER),
-          // --- AUTHOR: draft writes / publish / reload / file staging / description / bundle
+          // --- AUTHOR: draft writes / publish / reload / file staging / bundle
           // import ---
           new RouteRule(HttpMethod.POST, "/api/dsl/reload", Role.AUTHOR),
           new RouteRule(HttpMethod.POST, "/api/dsl/drafts/*/save", Role.AUTHOR),
@@ -63,7 +62,6 @@ public final class RbacAuthorizationFilter extends OncePerRequestFilter {
           new RouteRule(HttpMethod.DELETE, "/api/dsl/drafts/*", Role.AUTHOR),
           new RouteRule(HttpMethod.POST, "/api/dsl/files/**", Role.AUTHOR),
           new RouteRule(HttpMethod.POST, "/api/dsl/definitions/import", Role.AUTHOR),
-          new RouteRule(HttpMethod.PATCH, "/api/dsl/definitions/*/description", Role.AUTHOR),
           // --- OPERATOR: schedule CRUD ---
           new RouteRule(HttpMethod.POST, "/api/dsl/schedules", Role.OPERATOR),
           new RouteRule(HttpMethod.DELETE, "/api/dsl/schedules/*", Role.OPERATOR),
@@ -92,7 +90,7 @@ public final class RbacAuthorizationFilter extends OncePerRequestFilter {
       return;
     }
     String principal = caller.name();
-    LOG.warn("denying {} {} — caller role {} < required role {} (principal={})",
+    log.warn("denying {} {} — caller role {} < required role {} (principal={})",
             request.getMethod(), request.getRequestURI(), caller, required, principal);
     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
@@ -124,7 +122,7 @@ public final class RbacAuthorizationFilter extends OncePerRequestFilter {
             || HttpMethod.OPTIONS.matches(method)) {
       return Role.VIEWER;
     }
-    LOG.warn("no RBAC rule for {} {} — defaulting to OPERATOR (strict) — add a rule explicitly",
+    log.warn("no RBAC rule for {} {} — defaulting to OPERATOR (strict) — add a rule explicitly",
             method, path);
     return Role.OPERATOR;
   }

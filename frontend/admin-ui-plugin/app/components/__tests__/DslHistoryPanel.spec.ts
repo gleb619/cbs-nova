@@ -148,4 +148,31 @@ describe('DslHistoryPanel', () => {
 
     expect(wrapper.find('[data-testid="history-detail-error"]').text()).toContain('boom')
   })
+
+  it('loads entries once per mount and does not react to in-place name changes', async () => {
+    const { wrapper, props } = mountPanel()
+    await flushPromises()
+
+    expect(props.listHistory).toHaveBeenCalledTimes(1)
+    expect(props.listHistory).toHaveBeenCalledWith('Demo')
+
+    // The parent remounts the panel (via :key) when the construct changes,
+    // so an in-place prop update must not trigger a reload.
+    await wrapper.setProps({ name: 'Other' })
+    await flushPromises()
+
+    expect(props.listHistory).toHaveBeenCalledTimes(1)
+  })
+
+  it('reloads entries when remounted for another construct', async () => {
+    const first = mountPanel()
+    await flushPromises()
+    expect(first.props.listHistory).toHaveBeenCalledWith('Demo')
+    first.wrapper.unmount()
+
+    const second = mountPanel({ name: 'Other', listHistory: vi.fn().mockResolvedValue([]) })
+    await flushPromises()
+    expect(second.props.listHistory).toHaveBeenCalledWith('Other')
+    second.wrapper.unmount()
+  })
 })

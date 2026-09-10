@@ -1,9 +1,10 @@
-package cbs.nova.starter.security;
+package cbs.nova.starter.config;
 
-import cbs.nova.starter.config.ApiKeyAuthFilterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import cbs.nova.starter.security.RbacAuthorizationFilter;
+import cbs.nova.starter.security.Role;
+import cbs.nova.starter.security.RoleResolver;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -44,17 +45,16 @@ import tools.jackson.databind.ObjectMapper;
  * as {@link Role#ADMIN} and JWT claims (configurable via {@code cbs.dsl.auth.rbac.claim}, default
  * {@code "roles"}) as the source of roles for OIDC principals.
  */
+@Slf4j
 @Configuration
 @ConditionalOnProperty(prefix = "cbs.dsl.auth.rbac", name = "enabled", havingValue = "true")
 public class RbacFilterConfiguration {
-
-  private static final Logger LOG = LoggerFactory.getLogger(RbacFilterConfiguration.class);
 
   @Bean
   @ConditionalOnMissingBean
   public RoleResolver rbacRoleResolver(DslProperties properties) {
     String claim = properties.auth().rbac().claim();
-    LOG.info("cbs.dsl.auth.rbac.enabled=true — RBAC filter active; claim={}", claim);
+    log.info("cbs.dsl.auth.rbac.enabled=true — RBAC filter active; claim={}", claim);
     return new RoleResolver(claim);
   }
 

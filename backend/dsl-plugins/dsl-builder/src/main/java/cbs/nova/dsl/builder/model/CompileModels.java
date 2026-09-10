@@ -25,11 +25,4 @@ public final class CompileModels {
           List<String> diagnostics,
           long durationMillis) {
   }
-
-  public record CompileErrorResponse(String error, List<String> diagnostics) {
-
-    public static CompileErrorResponse of(String error, String message) {
-      return new CompileErrorResponse(error, List.of(message));
-    }
-  }
 }

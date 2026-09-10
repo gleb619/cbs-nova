@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { onMounted, ref } from 'vue'
 
 import { useModalDialog } from '../../composables/useModalDialog'
 
@@ -15,18 +15,13 @@ const emit = defineEmits<{
 }>()
 
 const dialogRef = ref<HTMLElement | null>(null)
-const { open: openDialog, close: closeDialog } = useModalDialog(dialogRef, {
+const { open: openDialog } = useModalDialog(dialogRef, {
   onClose: onCancel,
 })
 
-watch(
-  () => props.show,
-  (open) => {
-    if (open) openDialog()
-    else closeDialog()
-  },
-  { immediate: true },
-)
+onMounted(() => {
+  if (props.show) void openDialog()
+})
 
 function onConfirm() {
   if (props.busy) return

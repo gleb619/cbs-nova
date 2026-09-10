@@ -56,7 +56,7 @@ public class RoleResolver {
     this(DEFAULT_CLAIM_NAME);
   }
 
-  RoleResolver(String claimName) {
+  public RoleResolver(String claimName) {
     this.claimName = claimName == null || claimName.isBlank() ? DEFAULT_CLAIM_NAME : claimName;
   }
 

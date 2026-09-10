@@ -127,9 +127,16 @@ describe('DeleteDraftConfirmationModal', () => {
     await flushPromises()
     expect(document.activeElement).not.toBe(trigger)
 
-    await wrapper.setProps({ show: false })
+    document.activeElement?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+    )
     await nextTick()
-    await flushPromises()
+
+    expect(wrapper.emitted('cancel')).toBeTruthy()
+
+    wrapper.unmount()
+    wrapper = null
+    await nextTick()
 
     expect(document.activeElement).toBe(trigger)
   })

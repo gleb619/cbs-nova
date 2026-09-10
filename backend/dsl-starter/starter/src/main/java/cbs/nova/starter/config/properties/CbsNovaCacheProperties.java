@@ -1,4 +1,4 @@
-package cbs.nova.starter.config;
+package cbs.nova.starter.config.properties;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -48,6 +48,7 @@ public record CbsNovaCacheProperties(
     public static final String MAP_INPUT_ADAPTERS = "mapInputAdapters";
     public static final String HELPER_INSTANCE_RESOLUTION = "helperInstanceResolution";
     public static final String INPUT_SCHEMA = "inputSchema";
+    public static final String BUILDER_READS = "builderReads";
 
     private Names() {
     }

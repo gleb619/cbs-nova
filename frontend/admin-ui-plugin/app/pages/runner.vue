@@ -10,7 +10,7 @@ import {
   RunnerStatusIndicator,
 } from '@cbs/components'
 import { useRoute, useRouter } from 'nuxt/app'
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { consumeRunAgain } from '../utils/runAgainHandoff'
 
 import type { DefinitionMeta, RunnerMode } from '~/types'
@@ -65,9 +65,13 @@ function extractDefinitions(response: unknown): DefinitionMeta[] {
 function syncFromQuery() {
   const nameParam = route.query.name
   if (typeof nameParam === 'string' && nameParam) {
-    if (selectedDefinition.value !== nameParam) selectDefinition(nameParam)
+    if (selectedDefinition.value !== nameParam) {
+      selectDefinition(nameParam)
+      formData.value = {}
+    }
   } else if (selectedDefinition.value === null && definitions.value.length > 0) {
     selectDefinition(definitions.value[0].name)
+    formData.value = {}
   }
 
   const modeParam = route.query.mode
@@ -76,25 +80,27 @@ function syncFromQuery() {
   }
 
   // T293 — consume the run-again handoff (if any) left behind by the
-  // execution detail page once a definition is selected. It must run inside
-  // nextTick so it executes after the `watch(selectedDefinition, ...)` reset
-  // (which blanks formData when the selection changes); consuming any earlier
-  // would have the pre-filled input immediately wiped. Consuming is one-shot
-  // and a pure no-op when there is no stash, so the normal flow is untouched.
-  nextTick(() => {
-    const name = selectedDefinition.value
-    if (name === null) return
-    const stashed = consumeRunAgain(name)
-    if (stashed !== null && typeof stashed === 'object' && !Array.isArray(stashed)) {
-      formData.value = stashed as Record<string, unknown>
-    }
-  })
+  // execution detail page once a definition is selected. The form reset for
+  // the newly selected definition happens synchronously above, so consuming
+  // here cannot be wiped by it. Consuming is one-shot and a pure no-op when
+  // there is no stash, so the normal flow is untouched.
+  const name = selectedDefinition.value
+  if (name === null) return
+  const stashed = consumeRunAgain(name)
+  if (stashed !== null && typeof stashed === 'object' && !Array.isArray(stashed)) {
+    formData.value = stashed as Record<string, unknown>
+  }
 }
 
-watch(
-  () => route.query,
-  () => syncFromQuery(),
-)
+// The runner page stays mounted across in-app navigations that only change
+// the query (back/forward, run-again handoffs), so listen for router
+// navigation events instead of watching the route. Navigations to other
+// pages are ignored — the page is about to unmount.
+const unregisterRouteHook = router.afterEach((to) => {
+  if (to.path !== route.path) return
+  syncFromQuery()
+})
+onBeforeUnmount(unregisterRouteHook)
 
 function pushQuery(name: string | null, nextMode: RunnerMode) {
   const query: Record<string, string> = {}
@@ -105,6 +111,7 @@ function pushQuery(name: string | null, nextMode: RunnerMode) {
 
 function onSelectDefinition(name: string) {
   selectDefinition(name)
+  formData.value = {}
   pushQuery(name, mode.value)
 }
 
@@ -141,11 +148,6 @@ async function onCompareWithPrevious() {
 const selectedSchema = computed<Record<string, unknown> | undefined>(() => {
   const def = definitions.value.find((d) => d.name === selectedDefinition.value)
   return def?.inputSchema
-})
-
-watch(selectedDefinition, () => {
-  formData.value = {}
-  resetOutput()
 })
 
 onMounted(() => {

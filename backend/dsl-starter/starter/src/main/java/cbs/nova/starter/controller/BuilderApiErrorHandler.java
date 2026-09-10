@@ -1,5 +1,6 @@
 package cbs.nova.starter.controller;
 
+import cbs.nova.dsl.BuilderErrorResponse;
 import cbs.nova.starter.exception.BuilderApiException;
 import cbs.nova.starter.exception.BuilderClientBusyException;
 import cbs.nova.starter.exception.BuilderUnavailableException;
@@ -14,7 +15,6 @@ import org.springframework.http.HttpRequest;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.util.StreamUtils;
-import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 @RequiredArgsConstructor
@@ -25,14 +25,14 @@ public class BuilderApiErrorHandler {
   public void handle(HttpRequest request, ClientHttpResponse response) throws IOException {
     String body = StreamUtils.copyToString(response.getBody(), StandardCharsets.UTF_8);
     HttpStatusCode status = response.getStatusCode();
-    JsonNode node = parse(body);
-    String code = firstNonBlank(text(node, "code"), text(node, "error"), "BUILDER_ERROR");
-    String message = firstNonBlank(text(node, "message"), status.toString());
+    BuilderErrorResponse error = parse(body);
+    String code = error.primaryCode();
+    String message = error.primaryMessage();
     if (status.value() == 429) {
       throw new BuilderClientBusyException(message);
     }
     if (status.value() == 422) {
-      throw new DslCompilationException(message, diagnostics(node));
+      throw new DslCompilationException(message, diagnostics(error));
     }
     if (status.is5xxServerError()) {
       throw new BuilderUnavailableException(message);
@@ -40,43 +40,27 @@ public class BuilderApiErrorHandler {
     throw new BuilderApiException(status, code, message);
   }
 
-  private JsonNode parse(String body) {
+  private BuilderErrorResponse parse(String body) {
     if (body == null || body.isBlank()) {
-      return null;
+      return new BuilderErrorResponse(null, null, null, null);
     }
     try {
-      return objectMapper.readTree(body);
+      return objectMapper.readValue(body, BuilderErrorResponse.class);
     } catch (Exception e) {
-      return null;
+      return new BuilderErrorResponse(null, body, null, null);
     }
   }
 
-  private List<CompileDiagnostic> diagnostics(JsonNode node) {
-    JsonNode values = node == null ? null : node.get("diagnostics");
-    if (values == null || !values.isArray()) {
+  private List<CompileDiagnostic> diagnostics(BuilderErrorResponse error) {
+    List<String> values = error.diagnostics();
+    if (values.isEmpty()) {
       return List.of();
     }
-    List<CompileDiagnostic> diagnostics = new ArrayList<>();
-    for (JsonNode value : values) {
-      if (value.isString()) {
-        diagnostics.add(new CompileDiagnostic(null, null, null, value.asString(), "error", null));
-      }
+    List<CompileDiagnostic> diagnostics = new ArrayList<>(values.size());
+    for (String value : values) {
+      diagnostics.add(new CompileDiagnostic(null, null, null, value, "error", null));
     }
     return diagnostics;
-  }
-
-  private String text(JsonNode node, String field) {
-    JsonNode value = node == null ? null : node.get(field);
-    return value != null && value.isString() ? value.asString() : null;
-  }
-
-  private String firstNonBlank(String... candidates) {
-    for (String candidate : candidates) {
-      if (candidate != null && !candidate.isBlank()) {
-        return candidate;
-      }
-    }
-    return "builder request failed";
   }
 
 }

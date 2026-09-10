@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import type { ObjectSearchResult } from '../../composables/useHelperSearch'
 import CbsDrawer from '../CbsDrawer.vue'
 
@@ -25,10 +25,12 @@ const type = defineModel<string>('type', { default: '' })
 const description = defineModel<string>('description', { default: '' })
 
 function onSearch() {
+  activeIndex.value = -1
   emit('search')
 }
 
 function onClear() {
+  activeIndex.value = -1
   emit('clear')
 }
 
@@ -44,13 +46,6 @@ function rowTypeClass(resultType: string): string {
 }
 
 const activeIndex = ref(-1)
-
-watch(
-  () => props.results,
-  () => {
-    activeIndex.value = -1
-  },
-)
 
 const activeResult = computed<ObjectSearchResult | null>(
   () => props.results[activeIndex.value] ?? null,

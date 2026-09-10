@@ -22,6 +22,7 @@ import cbs.nova.starter.web.RequestIdFilter;
 import java.util.HashMap;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
 import org.slf4j.Logger;
@@ -40,11 +41,10 @@ import java.util.function.Supplier;
  * path/body/header, delegate here, translate the {@link RuntimeOutcome} back into a
  * {@code ServerResponse}.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DslRuntimeService {
-
-  private static final Logger LOG = LoggerFactory.getLogger(DslRuntimeService.class);
 
   private final DslRuntime dslRuntime;
   private final ContextFactory contextFactory;
@@ -172,7 +172,7 @@ public class DslRuntimeService {
       Map<String, Object> map = (Map<String, Object>) rawMap;
       return DslConfig.dslConfig().avajeMapConverter().fromMap(map, inputType);
     } catch (RuntimeException ex) {
-      LOG.warn("[runId:{}] failed to coerce map body to {} — passing raw map downstream",
+      log.warn("[runId:{}] failed to coerce map body to {} — passing raw map downstream",
               runId, inputType.getName(), ex);
       return body;
     }
@@ -190,7 +190,7 @@ public class DslRuntimeService {
       }
       return gm.findTransaction(name).map(t -> t.inputType()).orElse(null);
     } catch (RuntimeException ex) {
-      LOG.warn("[runId:{}] could not resolve input type for {} — skipping coercion",
+      log.warn("[runId:{}] could not resolve input type for {} — skipping coercion",
               runId, name, ex);
       return null;
     }

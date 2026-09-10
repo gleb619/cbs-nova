@@ -8,8 +8,8 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
-import cbs.nova.starter.config.CbsNovaFakesProperties;
-import cbs.nova.starter.config.CbsNovaPreviewProperties;
+import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
+import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
@@ -24,9 +24,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 

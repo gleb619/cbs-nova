@@ -12,7 +12,7 @@ import {
   ExecutionsExecutionTrace,
 } from '@cbs/components'
 import { navigateTo, useRoute } from 'nuxt/app'
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 import type { ExecutionMode, TransactionExecutionDto } from '~/types'
 import { stashRunAgain } from '../../utils/runAgainHandoff'
 
@@ -30,34 +30,25 @@ const {
   cancelExecution,
 } = useExecutions()
 
-const activeTab = ref<'diagram' | 'payload' | 'metadata' | 'logs' | 'errors' | 'transactions'>(
-  'diagram',
-)
+type DetailTab = 'diagram' | 'payload' | 'metadata' | 'logs' | 'errors' | 'transactions'
+
+const activeTab = ref<DetailTab>('diagram')
 
 // T296 — the backend has no log source for production runs today, so the
-// Logs tab only appears when the detail payload actually carries one.
-// We still keep the tab in the activeTab type so an existing selection
-// survives a refresh; below we fall back to 'diagram' if logs disappear.
+// Logs tab only appears when the detail payload actually carries one. The
+// user's tab choice is kept in `activeTab`; `visibleTab` falls back to
+// 'diagram' while the chosen tab is not available, so the panel never goes
+// blank when e.g. logs disappear after a refresh.
 const hasLogs = computed(() => (selectedExecution.value?.logs?.length ?? 0) > 0)
-const availableTabs = computed(() => {
-  const tabs: Array<'diagram' | 'payload' | 'metadata' | 'logs' | 'errors' | 'transactions'> = [
-    'diagram',
-    'payload',
-    'metadata',
-    'transactions',
-  ]
+const availableTabs = computed<DetailTab[]>(() => {
+  const tabs: DetailTab[] = ['diagram', 'payload', 'metadata', 'transactions']
   if (hasLogs.value) tabs.push('logs')
   tabs.push('errors')
   return tabs
 })
-
-// If activeTab is no longer available (e.g. logs disappeared after refresh),
-// fall back to the diagram so the panel never goes blank.
-watch(availableTabs, (tabs) => {
-  if (!tabs.includes(activeTab.value)) {
-    activeTab.value = 'diagram'
-  }
-})
+const visibleTab = computed<DetailTab>(() =>
+  availableTabs.value.includes(activeTab.value) ? activeTab.value : 'diagram',
+)
 
 await loadDetail(id.value)
 if (selectedExecution.value?.status === 'Running') {
@@ -160,11 +151,12 @@ async function loadTransactions() {
   }
 }
 
-watch(activeTab, (tab) => {
+function onTabSelect(tab: DetailTab) {
+  activeTab.value = tab
   if (tab === 'transactions') {
-    loadTransactions()
+    void loadTransactions()
   }
-})
+}
 
 if (selectedExecution.value?.entity) {
   await loadDiagram()
@@ -273,26 +265,26 @@ onUnmounted(() => {
             :key="tab"
             type="button"
             :class="['px-4 py-2 text-sm font-medium border-b-2',
-                           activeTab === tab ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-600 hover:text-gray-900']"
-            @click="activeTab = tab"
+                           visibleTab === tab ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-600 hover:text-gray-900']"
+            @click="onTabSelect(tab)"
           >
             {{ tab === 'diagram' ? 'Diagram' : tab === 'payload' ? 'I/O Payload' : tab === 'transactions' ? 'Transactions' : tab[0].toUpperCase() + tab.slice(1) }}
           </button>
         </div>
         <div class="p-4">
-          <ExecutionsDiagramTab v-if="activeTab === 'diagram'" :diagram="diagram" />
+          <ExecutionsDiagramTab v-if="visibleTab === 'diagram'" :diagram="diagram" />
           <ExecutionsPayloadTab
-            v-else-if="activeTab === 'payload'"
+            v-else-if="visibleTab === 'payload'"
             :input="selectedExecution.input"
             :output="selectedExecution.output"
           />
           <ExecutionsMetadataTab
-            v-else-if="activeTab === 'metadata'"
+            v-else-if="visibleTab === 'metadata'"
             :metadata="selectedExecution.metadata"
             :execution="selectedExecution"
             :workflow-link="workflowLink"
           />
-          <div v-else-if="activeTab === 'transactions'" class="space-y-4">
+          <div v-else-if="visibleTab === 'transactions'" class="space-y-4">
             <DslExecutionTimeline
               :transactions="transactions"
               :loading="transactionsLoading"
@@ -306,9 +298,9 @@ onUnmounted(() => {
               :selected-transaction="selectedTransaction"
             />
           </div>
-          <ExecutionsLogsTab v-else-if="activeTab === 'logs'" :logs="selectedExecution.logs" />
+          <ExecutionsLogsTab v-else-if="visibleTab === 'logs'" :logs="selectedExecution.logs" />
           <ExecutionsErrorsTab
-            v-else-if="activeTab === 'errors'"
+            v-else-if="visibleTab === 'errors'"
             :errors="selectedExecution.errors"
           />
         </div>

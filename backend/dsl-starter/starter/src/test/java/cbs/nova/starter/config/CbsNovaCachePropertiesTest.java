@@ -2,6 +2,7 @@ package cbs.nova.starter.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import java.time.Duration;
 import java.util.Map;
 import org.junit.jupiter.api.Test;

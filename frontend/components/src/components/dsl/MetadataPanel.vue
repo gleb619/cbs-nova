@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { marked } from 'marked'
 import { useLocalStorageState } from '../../composables/useLocalStorageState'
 import type { DslConstruct } from '../../types/dsl'
 import CbsSpinner from '../CbsSpinner.vue'
 
 const props = defineProps<{ construct: DslConstruct | null; loading?: boolean }>()
-const emit = defineEmits<(e: 'update:description', description: string) => void>()
 
 const isCollapsed = useLocalStorageState<boolean>('metadata-panel-collapsed', true)
 const editedDescription = ref('')
@@ -58,11 +58,11 @@ const fields = computed<FieldRow[]>(() => {
   ]
 })
 
-function onDescriptionInput(event: Event) {
-  const value = (event.target as HTMLTextAreaElement).value
-  editedDescription.value = value
-  emit('update:description', value)
-}
+const renderedDescription = computed(() => {
+  const raw = editedDescription.value
+  if (!raw) return ''
+  return marked.parse(raw, { async: false }) as string
+})
 </script>
 
 <template>
@@ -131,14 +131,11 @@ function onDescriptionInput(event: Event) {
 
       <div class="flex flex-col gap-1 min-w-0" v-if="construct">
         <label for="metadata-description" class="text-neutral-500 text-sm">Description</label>
-        <textarea
+        <div
           id="metadata-description"
-          v-model="editedDescription"
           data-testid="metadata-field-description"
-          rows="6"
-          class="w-full resize-y rounded border border-neutral-300 bg-surface px-3 py-2 text-neutral-800 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-          placeholder="Add a description..."
-          @input="onDescriptionInput"
+          class="w-full rounded border border-neutral-300 bg-surface px-3 py-2 text-neutral-800 prose prose-sm max-w-none"
+          v-html="renderedDescription || '—'"
         />
       </div>
     </div>

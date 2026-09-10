@@ -107,3 +107,7 @@ tasks.register('test') {
 tasks.named('build') {
   dependsOn 'platformBuild', 'pluginsBuild', 'starterBuild'
 }
+
+// Ensure starter artifacts exist before misc-codegen tests try to compile against them.
+platformBuild.dependsOn('starterBuild')
+platformTest.dependsOn('starterBuild')

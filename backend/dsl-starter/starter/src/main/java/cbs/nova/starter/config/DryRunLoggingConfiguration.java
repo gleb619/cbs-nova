@@ -1,6 +1,7 @@
 package cbs.nova.starter.config;
 
 import cbs.nova.dsl.logging.DryRunLoggingContext;
+import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.DryRunProperties;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;

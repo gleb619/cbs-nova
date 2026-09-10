@@ -1,11 +1,14 @@
 package cbs.nova.starter.config;
 
 import cbs.nova.starter.builder.BuilderBulkhead;
+import cbs.nova.starter.builder.BuilderCache;
 import cbs.nova.starter.builder.BuilderCircuitBreaker;
 import cbs.nova.starter.builder.BuilderRequestQueue;
 import cbs.nova.starter.builder.DslBuilderClient;
+import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.DslBuilderClientProperties;
 import cbs.nova.starter.controller.BuilderApiErrorHandler;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.concurrent.Semaphore;
@@ -79,11 +82,21 @@ public class BuilderClientConfiguration {
   }
 
   @Bean
+  public BuilderCache builderCache(CbsNovaCacheProperties cacheProperties) {
+    var spec = cacheProperties.specFor(CbsNovaCacheProperties.Names.BUILDER_READS);
+    return new BuilderCache(Caffeine.newBuilder()
+            .expireAfterWrite(spec.ttl())
+            .maximumSize(spec.maxSize())
+            .recordStats()
+            .build());
+  }
+
+  @Bean
   public DslBuilderClient dslBuilderClient(RestClient dslBuilderRestClient,
           BuilderRequestQueue builderRequestQueue, BuilderBulkhead builderBulkhead,
-          BuilderCircuitBreaker builderCircuitBreaker) {
+          BuilderCircuitBreaker builderCircuitBreaker, BuilderCache builderCache) {
     return new DslBuilderClient(dslBuilderRestClient, builderRequestQueue, builderBulkhead,
-            builderCircuitBreaker);
+            builderCircuitBreaker, builderCache);
   }
 
 }

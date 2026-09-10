@@ -2,6 +2,7 @@ package cbs.nova.starter.config;
 
 import cbs.nova.starter.config.properties.CbsSecurityOidcProperties;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -51,12 +52,11 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
  * realm, e.g. {@code http://keycloak:8080/realms/cbs-nova}).</li>
  * </ul>
  */
+@Slf4j
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @EnableConfigurationProperties(CbsSecurityOidcProperties.class)
 public class SecurityConfiguration {
-
-  private static final Logger LOG = LoggerFactory.getLogger(SecurityConfiguration.class);
 
   /**
    * Default permissive chain. Always registered (when no OIDC chain is in scope) so that Spring
@@ -68,7 +68,7 @@ public class SecurityConfiguration {
   @Order(Ordered.LOWEST_PRECEDENCE)
   @ConditionalOnProperty(name = "cbs.security.oidc.enabled", havingValue = "false", matchIfMissing = true)
   public SecurityFilterChain permitAllSecurityFilterChain(HttpSecurity http) throws Exception {
-    LOG.info("cbs.security.oidc.enabled is false (default) — DSL REST API is unauthenticated");
+    log.info("cbs.security.oidc.enabled is false (default) — DSL REST API is unauthenticated");
     return http
             .securityMatcher("/**")
             .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
@@ -88,7 +88,7 @@ public class SecurityConfiguration {
   @ConditionalOnProperty(name = "cbs.security.oidc.enabled", havingValue = "true")
   public SecurityFilterChain oidcSecurityFilterChain(HttpSecurity http,
           CbsSecurityOidcProperties properties) throws Exception {
-    LOG.info("cbs.security.oidc.enabled=true — DSL REST API requires JWT for {}",
+    log.info("cbs.security.oidc.enabled=true — DSL REST API requires JWT for {}",
             properties.protectedPaths());
     var protectedMatchers = properties.protectedPaths().stream()
             .<RequestMatcher>map(PathPatternRequestMatcher::pathPattern)

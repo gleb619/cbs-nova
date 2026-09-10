@@ -3,6 +3,7 @@ package cbs.nova.starter.security;
 import cbs.nova.starter.config.properties.CbsSecurityOidcProperties;
 import cbs.nova.starter.config.properties.CbsSecurityRateLimitProperties;
 import cbs.nova.starter.config.properties.DslProperties;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.SmartInitializingSingleton;
@@ -38,6 +39,7 @@ import org.springframework.core.env.Environment;
  * echoed). The {@code ProductionSecurityPostureValidator} prints the masked URL — this reporter
  * just prints a boolean.
  */
+@Slf4j
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties({DslProperties.class,
     CbsSecurityOidcProperties.class,
@@ -46,8 +48,6 @@ public class SecurityPostureReporter {
 
   static final String PRODUCTION_PROFILE = ProductionSecurityPostureValidator.PRODUCTION_PROFILE;
   static final String OIDC_ISSUER_URI_PROPERTY = ProductionSecurityPostureValidator.OIDC_ISSUER_URI_PROPERTY;
-
-  private static final Logger LOG = LoggerFactory.getLogger(SecurityPostureReporter.class);
 
   /**
    * Build the {@link SmartInitializingSingleton} that emits the posture block. Captures the
@@ -85,12 +85,12 @@ public class SecurityPostureReporter {
 
       boolean allGuardsOn = authOn && rateLimitOn && oidcOn && issuerConfigured;
       if (allGuardsOn) {
-        LOG.info(block);
+        log.info(block);
       } else {
         // WARN: an operator explicitly turned a guard off under the production profile. The
         // escape hatch is documented in application-production.yml, but we still want a loud
         // one-shot reminder at boot.
-        LOG.warn(block);
+        log.warn(block);
       }
     };
   }

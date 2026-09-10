@@ -413,6 +413,13 @@ public final class GlobalManager {
     }
   }
 
+  public @NonNull Optional<String> description(@NonNull String name) {
+    return describeProcess(name).map(DslDescriptor::description)
+            .or(() -> describeTransaction(name).map(DslDescriptor::description))
+            .or(() -> describeHelper(name).map(ExecutableDescriptor::description))
+            .or(() -> describeFunction(name).map(DslDescriptor::description));
+  }
+
   public void resetForTests() {
     INSTANCE.set(null);
     DslConfig.dslConfig().temporalProcessLauncher().replace(null);

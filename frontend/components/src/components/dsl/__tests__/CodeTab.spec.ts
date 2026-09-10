@@ -158,14 +158,14 @@ describe('CodeTab', () => {
     expect(textarea.attributes('placeholder')).toBe('No code available')
   })
 
-  it('syncs the editor when the code prop changes externally', async () => {
+  it('treats the code prop as initial value (external refresh via remount)', async () => {
     wrapper = mountTab()
 
     await wrapper.setProps({ code: 'from server' })
 
     expect(
       (wrapper.find('[data-testid="code-tab-textarea"]').element as HTMLTextAreaElement).value,
-    ).toBe('from server')
+    ).toBe('initial')
     expect(wrapper.find('[data-testid="workbench-dirty-indicator"]').exists()).toBe(false)
   })
 

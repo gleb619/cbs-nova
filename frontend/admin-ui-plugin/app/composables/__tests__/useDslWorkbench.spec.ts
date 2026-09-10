@@ -15,7 +15,6 @@ const { dslApi, useDslApiMock } = vi.hoisted(() => {
     publishDraft: vi.fn(),
     deleteDraft: vi.fn(),
     validateConstruct: vi.fn(),
-    updateDescription: vi.fn(),
     readDslFile: vi.fn(),
     writeDslFile: vi.fn(),
   }
@@ -36,7 +35,6 @@ type ApiMock = {
   publishDraft: ReturnType<typeof vi.fn>
   deleteDraft: ReturnType<typeof vi.fn>
   validateConstruct: ReturnType<typeof vi.fn>
-  updateDescription: ReturnType<typeof vi.fn>
   readDslFile: ReturnType<typeof vi.fn>
   writeDslFile: ReturnType<typeof vi.fn>
 }
@@ -53,7 +51,6 @@ describe('useDslWorkbench', () => {
     api.publishDraft.mockReset()
     api.deleteDraft.mockReset()
     api.readDslFile.mockReset()
-    api.updateDescription.mockReset()
     api.writeDslFile.mockReset()
   })
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RunnerDiffLine, useDiffLines } from '@cbs/components'
-import { ref, watch } from 'vue'
+import { onMounted, ref } from 'vue'
 
 export interface DefinitionHistoryEntry {
   timestamp: string
@@ -141,18 +141,13 @@ function cancelRestore(): void {
   restoreArmed.value = false
 }
 
-watch(
-  () => props.name,
-  () => {
-    selectedTimestamp.value = null
-    diff.value = null
-    entryContent.value = null
-    restoreArmed.value = false
-    restoreError.value = null
-    void loadEntries()
-  },
-  { immediate: true },
-)
+// The panel is remounted (via `:key` on the parent) whenever the construct
+// name changes, so mounting is the only moment that needs a load — a fresh
+// mount also starts from clean selection/restore state, which is exactly the
+// reset the previous prop watcher performed.
+onMounted(() => {
+  void loadEntries()
+})
 </script>
 
 <template>

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.List;
 
 class GlobalManagerTest {
 
@@ -507,6 +508,90 @@ class GlobalManagerTest {
             .hasMessageContaining("boom");
 
     assertThat(order).containsExactly("comp:body");
+  }
+
+
+
+  @Test
+  void descriptionReturnsProcessDescription() {
+    var gm = GlobalManager.globalManager();
+    gm.registerProcess(
+            Dsl.process("DescribedP")
+                    .describe(() -> DslDescriptor.builder()
+                            .name("DescribedP")
+                            .type(DslObject.DslType.PROCESS)
+                            .description("A process that greets")
+                            .inputType(String.class)
+                            .outputType(String.class)
+                            .hasCompensation(false)
+                            .hasSideEffects(false)
+                            .previewBehavior(null)
+                            .parameters(List.of())
+                            .taskQueue(null)
+                            .version(null)
+                            .startToCloseTimeout(null)
+                            .heartbeatTimeout(null)
+                            .build())
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+
+    assertThat(gm.description("DescribedP")).contains("A process that greets");
+  }
+
+  @Test
+  void descriptionReturnsTransactionDescription() {
+    var gm = GlobalManager.globalManager();
+    gm.registerTransaction(
+            Dsl.transaction("DescribedT")
+                    .describe(() -> DslDescriptor.builder()
+                            .name("DescribedT")
+                            .type(DslObject.DslType.TRANSACTION)
+                            .description("A transaction that pays")
+                            .inputType(String.class)
+                            .outputType(String.class)
+                            .hasCompensation(false)
+                            .hasSideEffects(false)
+                            .previewBehavior(null)
+                            .parameters(List.of())
+                            .taskQueue(null)
+                            .version(null)
+                            .startToCloseTimeout(null)
+                            .heartbeatTimeout(null)
+                            .build())
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+
+    assertThat(gm.description("DescribedT")).contains("A transaction that pays");
+  }
+
+  @Test
+  void descriptionReturnsHelperDescription() {
+    var gm = GlobalManager.globalManager();
+    gm.registerHelper("DescribedH", new Executable<String, String>() {
+      @Override
+      public Result<String> execute(Context<String> ctx) {
+        return Result.success(ctx.body());
+      }
+
+      @Override
+      public ExecutableDescriptor describe() {
+        return new ExecutableDescriptor(
+                "DescribedH",
+                "A helpful helper",
+                String.class,
+                String.class,
+                false,
+                null,
+                List.of());
+      }
+    });
+
+    assertThat(gm.description("DescribedH")).contains("A helpful helper");
+  }
+
+  @Test
+  void descriptionReturnsEmptyForUnknown() {
+    assertThat(GlobalManager.globalManager().description("Missing")).isEmpty();
   }
 
 }

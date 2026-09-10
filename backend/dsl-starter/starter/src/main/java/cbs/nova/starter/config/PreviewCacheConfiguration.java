@@ -1,5 +1,7 @@
 package cbs.nova.starter.config;
 
+import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
+import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
 import cbs.nova.starter.service.PreviewResultCache;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.binder.MeterBinder;

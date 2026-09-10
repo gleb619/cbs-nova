@@ -62,13 +62,9 @@ public class DslIntrospectionRouterConfiguration {
       @RouterOperation(path = "/api/dsl/schemas/{name}", beanClass = DslIntrospectionHandler.class, beanMethod = "constructSchema", method = RequestMethod.GET, operation = @Operation(operationId = "getConstructSchema", summary = "Get DSL construct input/output schemas", tags = {
           "DSL Introspection"}, parameters = @Parameter(name = "name", in = ParameterIn.PATH), responses = @ApiResponse(responseCode = "200", description = "Construct schemas", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ConstructSchemaDto.class))))),
       @RouterOperation(path = "/api/dsl/definitions", beanClass = DslIntrospectionHandler.class, beanMethod = "definitions", method = RequestMethod.GET, operation = @Operation(operationId = "listDefinitions", summary = "List DSL definitions", tags = {
-          "DSL Introspection"}, responses = @ApiResponse(responseCode = "200", description = "Definitions", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class))))),
-      @RouterOperation(path = "/api/dsl/definitions/{name}/description", beanClass = DslIntrospectionHandler.class, beanMethod = "updateDescription", method = RequestMethod.PATCH, operation = @Operation(operationId = "updateDescription", summary = "Update DSL construct description", tags = {
-          "DSL Introspection"}, parameters = @Parameter(name = "name", in = ParameterIn.PATH), responses = {
-              @ApiResponse(responseCode = "200", description = "Description updated"),
-              @ApiResponse(responseCode = "400", description = "Invalid request"),
-              @ApiResponse(responseCode = "404", description = "Construct not found")
-          }))
+          "DSL Introspection"}, responses = @ApiResponse(responseCode = "200", description = "Definitions", content =
+        @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class))))
+      )
   })
   public RouterFunction<ServerResponse> dslIntrospectionRouter(DslIntrospectionHandler handler) {
     return RouterFunctions.route()
@@ -82,7 +78,6 @@ public class DslIntrospectionRouterConfiguration {
             .GET("/api/dsl/constructs/{name}", handler::constructBody)
             .GET("/api/dsl/schemas/{name}", handler::constructSchema)
             .GET("/api/dsl/definitions", handler::definitions)
-            .PATCH("/api/dsl/definitions/{name}/description", handler::updateDescription)
             .build();
   }
 }

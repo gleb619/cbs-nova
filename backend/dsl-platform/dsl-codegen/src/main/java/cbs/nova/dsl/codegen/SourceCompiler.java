@@ -259,8 +259,8 @@ public final class SourceCompiler {
       var task = compiler.getTask(null, fm, diagnostics, options, null, units);
       if (!task.call()) {
         log.atLevel(Level.WARN)
-                .log(() -> "[SourceCompiler] %d errors occurred during file compilation.".formatted(
-                        diagnostics.getDiagnostics().size()));
+                .log(() -> ("[SourceCompiler] %d errors occurred during file compilation. Set `logLevel = 'DEBUG'` for `dslCompile` gradle task in `build.gradle` file")
+                    .formatted(diagnostics.getDiagnostics().size()));
 
         diagnostics.getDiagnostics().forEach(d -> log.atLevel(Level.DEBUG)
                 .log(() -> {

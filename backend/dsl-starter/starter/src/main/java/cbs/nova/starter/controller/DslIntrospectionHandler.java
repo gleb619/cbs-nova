@@ -9,7 +9,6 @@ import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import cbs.nova.starter.service.DslIntrospectionService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
 
@@ -91,31 +90,5 @@ public class DslIntrospectionHandler {
     return ServerResponse.ok().body(new PageResponse<>(paged, total, skip, pageSize));
   }
 
-  public ServerResponse updateDescription(ServerRequest request) {
-    String name = request.pathVariable("name");
-    DescriptionUpdate body;
-    try {
-      body = request.body(DescriptionUpdate.class);
-    } catch (Exception e) {
-      return ServerResponse.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("INVALID_REQUEST",
-              "description is required", e.getMessage()));
-    }
-    if (body.description() == null) {
-      return ServerResponse.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("INVALID_REQUEST",
-              "description is required", name));
-    }
-    try {
-      service.updateDescription(name, body.description());
-      return ServerResponse.ok().build();
-    } catch (IllegalArgumentException e) {
-      return ServerResponse.status(HttpStatus.NOT_FOUND)
-              .body(new ErrorResponse("NOT_FOUND", e.getMessage(), name));
-    }
-  }
 
-  private record DescriptionUpdate(String description) {
-  }
-
-  private record ErrorResponse(String code, String message, Object details) {
-  }
 }

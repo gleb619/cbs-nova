@@ -206,28 +206,6 @@ The frontend index (`frontend/.codegraph/`) is a separate database and must not 
 
 ---
 
-## OpenAPI artifact drift gate
-
-The committed `docs/openapi.json` is regenerated from the running backend via `make openapi`
-(headless `:starter-launcher:bootRun` on `SERVER_PORT` (default 8090), wait for
-`/actuator/health` UP, curl `/v3/api-docs`, normalize `indent=2 sort_keys=True`,
-assert `MIN_OPENAPI_PATHS`). `make openapi` overwrites the artifact and is the
-right tool when you have intentionally changed routes/DTOs.
-
-`make openapi-check` is the *guard* counterpart: it fetches the live spec into
-a temp file and compares it to the committed `docs/openapi.json`. It is
-**not** wired into `make test` (boots Postgres, mirrors the `make cve-scan`
-opt-in convention) — call it explicitly in CI when you want drift enforced.
-Classified changes go through `scripts/openapi-diff.py` (coarse phase-1:
-additive / required-property-removed / enum-removed / type-changed / path-
-or-operation-removed); exit 0 for additive only, exit 0 + `[warn]` when
-breaking but `info.version` bumped, exit 2 when breaking and the version
-is unchanged. bats e2e for the make target is deferred (matches the
-"bats deferred" convention); `scripts/test/test-openapi-diff.sh` exercises
-the classifier against fixtures in `scripts/test/fixtures/`.
-
----
-
 ## 5. Agent Workflows
 
 - **Adding a DSL construct**: Update `dsl/` API, `dsl-codegen/` templates/validation, add tests, update docs.

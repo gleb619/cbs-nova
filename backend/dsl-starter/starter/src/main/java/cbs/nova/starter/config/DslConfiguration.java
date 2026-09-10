@@ -1,4 +1,5 @@
 package cbs.nova.starter.config;
+import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.DslProperties;
 
 import cbs.nova.dsl.DslDefinitionLoader;

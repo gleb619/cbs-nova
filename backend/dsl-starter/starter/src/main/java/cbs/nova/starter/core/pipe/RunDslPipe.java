@@ -4,7 +4,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.helper.HelperInterceptor;
-import cbs.nova.starter.config.CbsNovaFakesProperties;
+import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import cbs.nova.starter.core.stage.DispatchStage;

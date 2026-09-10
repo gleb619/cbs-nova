@@ -174,4 +174,22 @@ describe('BodyEditor', () => {
     expect(explain).toHaveBeenCalledWith('CreateOrder', {}, { startedFrom: 'workbench' })
     expect(wrapper.text()).toContain('Test flow')
   })
+
+  it('pulls in externally changed controlled code via keyed remount when the construct changes', async () => {
+    const wrapper = mountBodyEditor({
+      construct: { name: 'ConstructA', type: 'Process', status: 'Valid' },
+      code: 'aaa',
+    })
+
+    const codeButton = wrapper.findAll('button').find((b) => b.text() === 'Code')!
+    await codeButton.trigger('click')
+    expect((wrapper.find('textarea').element as HTMLTextAreaElement).value).toBe('aaa')
+
+    await wrapper.setProps({
+      construct: { name: 'ConstructB', type: 'Process', status: 'Valid' },
+      code: 'bbb',
+    })
+
+    expect((wrapper.find('textarea').element as HTMLTextAreaElement).value).toBe('bbb')
+  })
 })

@@ -10,10 +10,11 @@ const STASH_KEY = 'cbs.nova.run-again'
 // Mocks for the composables the page consumes.
 // ---------------------------------------------------------------------------
 
-const { useExecutionsMock, useDslApiMock, useExecutionsApiMock, navigateTo, dslApi } = vi.hoisted(
-  () => {
+const { useExecutionsMock, useDslApiMock, useExecutionsApiMock, navigateTo, dslApi, execApi } =
+  vi.hoisted(() => {
     const navigateToSpy = vi.fn()
     const api = { getProcessDiagram: vi.fn() }
+    const execApi = { getTransactions: vi.fn().mockResolvedValue([]) }
     const useExecutionsMockFn = vi.fn(() => {
       const harness = (globalThis as unknown as { __execDetailHarness?: unknown })
         .__execDetailHarness
@@ -21,18 +22,16 @@ const { useExecutionsMock, useDslApiMock, useExecutionsApiMock, navigateTo, dslA
       return harness
     })
     const useDslApiMockFn = vi.fn(() => api)
-    const useExecutionsApiMockFn = vi.fn(() => ({
-      getTransactions: vi.fn().mockResolvedValue([]),
-    }))
+    const useExecutionsApiMockFn = vi.fn(() => execApi)
     return {
       useExecutionsMock: useExecutionsMockFn,
       useDslApiMock: useDslApiMockFn,
       useExecutionsApiMock: useExecutionsApiMockFn,
       navigateTo: navigateToSpy,
       dslApi: api,
+      execApi,
     }
-  },
-)
+  })
 
 interface ExecDetailHarness {
   selectedExecution: Ref<ExecutionDetail | null>
@@ -162,6 +161,8 @@ describe('executions/[id].vue run-again button', () => {
     harness.startPolling.mockClear()
     dslApi.getProcessDiagram.mockReset()
     dslApi.getProcessDiagram.mockResolvedValue({ diagram: 'graph TD' })
+    execApi.getTransactions.mockReset()
+    execApi.getTransactions.mockResolvedValue([])
     navigateTo.mockClear()
     window.sessionStorage.clear()
   })
@@ -315,6 +316,8 @@ describe('executions/[id].vue run-again button', () => {
       harness.loadDetail.mockClear()
       dslApi.getProcessDiagram.mockReset()
       dslApi.getProcessDiagram.mockResolvedValue({ diagram: 'graph TD' })
+      execApi.getTransactions.mockReset()
+      execApi.getTransactions.mockResolvedValue([])
     })
 
     it('renders the Transactions tab and the TransactionsTab component', async () => {
@@ -334,6 +337,84 @@ describe('executions/[id].vue run-again button', () => {
       await flush()
 
       expect(wrapper.find('[data-testid="ExecutionsTransactionsTab"]').exists()).toBe(true)
+
+      wrapper.unmount()
+    })
+
+    it('fetches transactions on tab click instead of watching the active tab', async () => {
+      harness.selectedExecution.value = detail()
+
+      const wrapper = mountPage()
+      await flush()
+
+      expect(execApi.getTransactions).not.toHaveBeenCalled()
+
+      const buttons = wrapper.findAll('button')
+      const txButton = buttons.find((b) => b.text().trim() === 'Transactions')
+      if (!txButton) throw new Error('Transactions tab not rendered')
+      await txButton.trigger('click')
+      await flush()
+
+      expect(execApi.getTransactions).toHaveBeenCalledWith('exec-1')
+      expect(wrapper.find('[data-testid="ExecutionsTransactionsTab"]').exists()).toBe(true)
+
+      wrapper.unmount()
+    })
+
+    it('fetches transactions only once across repeated tab visits', async () => {
+      harness.selectedExecution.value = detail()
+
+      const wrapper = mountPage()
+      await flush()
+
+      const clickTab = async (label: string) => {
+        const button = wrapper.findAll('button').find((b) => b.text().trim() === label)
+        if (!button) throw new Error(`${label} tab not rendered`)
+        await button.trigger('click')
+        await flush()
+      }
+
+      await clickTab('Transactions')
+      await clickTab('Diagram')
+      await clickTab('Transactions')
+
+      expect(execApi.getTransactions).toHaveBeenCalledTimes(1)
+
+      wrapper.unmount()
+    })
+  })
+
+  describe('executions/[id].vue tab availability fallback', () => {
+    beforeEach(() => {
+      harness.selectedExecution.value = null
+      harness.error.value = null
+      harness.loadDetail.mockClear()
+      dslApi.getProcessDiagram.mockReset()
+      dslApi.getProcessDiagram.mockResolvedValue({ diagram: 'graph TD' })
+    })
+
+    it('falls back to the Diagram tab when the selected tab disappears', async () => {
+      harness.selectedExecution.value = detail({
+        logs: [{ timestamp: '2026-01-01T00:00:00Z', severity: 'info', message: 'hi' }],
+      })
+
+      const wrapper = mountPage()
+      await flush()
+
+      const logsButton = wrapper.findAll('button').find((b) => b.text().trim() === 'Logs')
+      if (!logsButton) throw new Error('Logs tab not rendered')
+      await logsButton.trigger('click')
+      await flush()
+
+      expect(wrapper.find('[data-testid="ExecutionsLogsTab"]').exists()).toBe(true)
+
+      // The refreshed payload no longer carries logs — the Logs tab vanishes
+      // and the visible panel falls back to Diagram instead of going blank.
+      harness.selectedExecution.value = detail()
+      await flush()
+
+      expect(wrapper.find('[data-testid="ExecutionsLogsTab"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="ExecutionsDiagramTab"]').exists()).toBe(true)
 
       wrapper.unmount()
     })

@@ -29,7 +29,8 @@
   "dependencies": {
     "monaco-editor": "^0.56.0",
     "prismjs": "^1.30.0",
-    "vue": "^3.4.0"
+    "vue": "^3.4.0",
+    "marked": "^12.0.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",

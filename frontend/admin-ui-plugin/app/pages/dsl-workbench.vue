@@ -32,7 +32,7 @@ import {
 } from '@cbs/components'
 import { useEventListener } from '@vueuse/core'
 import { useCookie, useRoute } from 'nuxt/app'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import type { RunnerOutput } from '~/types'
 import DslHistoryPanel from '../components/DslHistoryPanel.vue'
@@ -53,7 +53,6 @@ const {
   publishConstruct,
   deleteConstruct,
   reloadDefinitions,
-  updateDescription,
   markDirty,
 } = workbench
 
@@ -114,17 +113,15 @@ function safeSelectConstruct(name: string) {
     return
   }
   selectConstruct(name)
+  syncSelectionEffects()
 }
 
-// Mirror the workbench selection into the shared store so the widget can
-// highlight the active draft.
-watch(
-  () => state.value.selectedName,
-  (name) => {
-    draftsSelectedName.value = name ?? null
-  },
-  { immediate: true },
-)
+// Side effects that follow every workbench selection change: mirroring the
+// selection into the shared drafts store (so the navbar widget can highlight
+// the active draft) and loading the source file for file-backed constructs.
+function mirrorSelectionToDrafts() {
+  draftsSelectedName.value = state.value.selectedName ?? null
+}
 
 const helperSearch = useHelperSearch({
   fetch: async (filters: HelperSearchFilters) =>
@@ -176,32 +173,32 @@ const fileCodeLoading = ref(false)
 const isFileBacked = computed(() => !!selectedConstruct.value?.filePath)
 const editorCode = computed(() => (isFileBacked.value ? fileCode.value : draftBody.value))
 
-// Load source file content when a file-backed construct is selected.
-watch(
-  selectedConstruct,
-  async (construct) => {
-    if (!construct?.filePath) {
-      fileCode.value = ''
-      return
-    }
-    clearDraft()
+async function loadSourceFile(construct: typeof selectedConstruct.value) {
+  if (!construct?.filePath) {
     fileCode.value = ''
-    fileCodeLoading.value = true
-    try {
-      const content = await dslApi.readDslFile(construct.name)
-      fileCode.value = content
-      log.info('source file loaded', { name: construct.name, path: construct.filePath })
-    } catch (err) {
-      log.error('failed to load source file', {
-        name: construct.name,
-        error: (err as Error).message,
-      })
-    } finally {
-      fileCodeLoading.value = false
-    }
-  },
-  { immediate: true },
-)
+    return
+  }
+  clearDraft()
+  fileCode.value = ''
+  fileCodeLoading.value = true
+  try {
+    const content = await dslApi.readDslFile(construct.name)
+    fileCode.value = content
+    log.info('source file loaded', { name: construct.name, path: construct.filePath })
+  } catch (err) {
+    log.error('failed to load source file', {
+      name: construct.name,
+      error: (err as Error).message,
+    })
+  } finally {
+    fileCodeLoading.value = false
+  }
+}
+
+function syncSelectionEffects() {
+  mirrorSelectionToDrafts()
+  void loadSourceFile(selectedConstruct.value)
+}
 
 function onCodeChange(value: string) {
   if (isFileBacked.value) {
@@ -257,6 +254,7 @@ async function confirmDelete() {
   try {
     await deleteConstruct(pendingDeleteName.value)
     pendingDeleteName.value = null
+    syncSelectionEffects()
     await refreshDrafts()
   } catch (err) {
     deleteError.value = (err as Error).message
@@ -325,6 +323,7 @@ async function confirmCreate() {
   const type =
     (parsed.type as 'Process' | 'Transaction' | 'Function' | 'Helper' | undefined) ?? 'Process'
   createConstruct(name, type)
+  syncSelectionEffects()
   await nextTick()
   draftBody.value = selectedTemplate.value.body
   markDirty()
@@ -356,7 +355,7 @@ const actionItems = computed<DropdownMenuItem[]>(() => [
 function runAction(item: DropdownMenuItem) {
   switch (item.value as ActionValue) {
     case 'refresh':
-      reloadDefinitions()
+      void reloadDefinitions().then(() => syncSelectionEffects())
       refreshDrafts()
       break
     case 'validate':
@@ -390,12 +389,15 @@ function handleSaveShortcut(event: KeyboardEvent) {
 useEventListener(window, 'keydown', handleSaveShortcut)
 
 onMounted(() => {
-  loadConstructs()
+  void loadConstructs().then(() => syncSelectionEffects())
   refreshDrafts()
   // A draft picked from the navbar widget on another route arrives as a query.
   const requested = route.query.draft
   const requestedName = Array.isArray(requested) ? requested[0] : requested
-  if (requestedName) selectConstruct(String(requestedName))
+  if (requestedName) {
+    selectConstruct(String(requestedName))
+    syncSelectionEffects()
+  }
   window.addEventListener('beforeunload', handleBeforeUnload)
 })
 
@@ -490,7 +492,6 @@ onBeforeUnmount(() => {
         <DslMetadataPanel
           :construct="selectedConstruct"
           :loading="fileCodeLoading"
-          @update:description="desc => updateDescription(selectedConstruct?.name ?? '', desc)"
         />
         <div v-if="restoredFromDraft && !isFileBacked" class="px-3 pt-2">
           <DslDraftRestoreBanner :saved-at="draftSavedAt" @discard="clearDraft" />
@@ -540,6 +541,7 @@ onBeforeUnmount(() => {
         width-class="w-[28rem]"
       >
         <DslHistoryPanel
+          :key="selectedConstruct?.name ?? ''"
           :name="selectedConstruct?.name ?? ''"
           :list-history="dslApi.listPublishHistory"
           :get-entry="dslApi.getHistoryEntry"
@@ -564,7 +566,7 @@ onBeforeUnmount(() => {
     </div>
 
     <DslDeleteDraftConfirmationModal
-      :show="showDeleteModal"
+      v-if="showDeleteModal"
       :draft-name="pendingDeleteName ?? ''"
       :busy="isDeleting"
       @confirm="confirmDelete"

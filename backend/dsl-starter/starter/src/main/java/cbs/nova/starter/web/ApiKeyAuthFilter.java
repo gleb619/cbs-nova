@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.MediaType;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -42,6 +43,7 @@ import tools.jackson.databind.ObjectMapper;
  * hash lookup ({@link JdbcApiKeyRepository} is the only place that ever sees a hash). The plaintext
  * key never appears in a log line or in the response body.
  */
+@Slf4j
 public final class ApiKeyAuthFilter extends OncePerRequestFilter {
 
   public static final String API_KEY_HEADER = "X-Api-Key";
@@ -51,6 +53,7 @@ public final class ApiKeyAuthFilter extends OncePerRequestFilter {
   private final ObjectMapper objectMapper;
   private final AtomicBoolean deprecationLogged = new AtomicBoolean(false);
 
+  //TODO: replace with lombok's constructor and spring config class
   public ApiKeyAuthFilter(@Nullable String configuredApiKey,
           @Nullable ApiKeyStore apiKeyStore,
           ObjectMapper objectMapper) {
@@ -81,7 +84,7 @@ public final class ApiKeyAuthFilter extends OncePerRequestFilter {
             && MessageDigest.isEqual(headerValue.getBytes(StandardCharsets.UTF_8),
                     configuredApiKey.getBytes(StandardCharsets.UTF_8))) {
       if (deprecationLogged.compareAndSet(false, true)) {
-        org.slf4j.LoggerFactory.getLogger(ApiKeyAuthFilter.class)
+        log
                 .warn("cbs.dsl.auth.api-key (property) authenticated a request — this bootstrap "
                         + "key is deprecated; rotate to a stored key via "
                         + "POST /api/dsl/auth/keys and remove the property");

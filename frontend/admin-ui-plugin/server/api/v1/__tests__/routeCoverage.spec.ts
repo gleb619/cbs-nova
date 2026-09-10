@@ -51,11 +51,6 @@ const expectedProxies: readonly ExpectedProxy[] = [
     bffPath: '/api/v1/dsl/definitions',
   },
   {
-    method: 'PATCH',
-    backendPath: '/api/dsl/definitions/{name}/description',
-    bffPath: '/api/v1/dsl/definitions/{name}/description',
-  },
-  {
     method: 'GET',
     backendPath: '/api/dsl/definitions/{name}/tests',
     bffPath: '/api/v1/dsl/definitions/{name}/tests',

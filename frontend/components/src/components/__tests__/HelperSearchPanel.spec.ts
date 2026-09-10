@@ -257,13 +257,14 @@ describe('HelperSearchPanel', () => {
     expect(wrapper.emitted('update:open')!.at(-1)).toEqual([false])
   })
 
-  it('resets the active row when new results arrive', async () => {
+  it('resets the active row when a new search runs', async () => {
     wrapper = mountPanel({ results, open: true, isLoading: false })
 
     await wrapper.get('[data-testid="helper-search-results"]').trigger('keydown.down')
     expect(wrapper.find('[data-testid="helper-search-active-detail"]').exists()).toBe(true)
 
     await wrapper.setProps({ results: [results[1]] })
+    await wrapper.get('[data-testid="helper-search-search-button"]').trigger('click')
 
     expect(wrapper.find('[data-testid="helper-search-active-detail"]').exists()).toBe(false)
   })

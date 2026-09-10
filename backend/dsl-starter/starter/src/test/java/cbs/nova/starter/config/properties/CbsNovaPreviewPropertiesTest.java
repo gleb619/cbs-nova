@@ -2,7 +2,6 @@ package cbs.nova.starter.config.properties;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.starter.config.CbsNovaPreviewProperties;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.Test;

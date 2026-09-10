@@ -1,8 +1,9 @@
 package cbs.nova.starter.config;
 
+import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
+import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
 import cbs.nova.starter.config.router.DslRouterConfiguration;
 import cbs.nova.starter.security.ProductionSecurityPostureValidator;
-import cbs.nova.starter.security.RbacFilterConfiguration;
 import cbs.nova.starter.security.SecurityPostureReporter;
 import cbs.nova.starter.webhook.WebhookConfiguration;
 

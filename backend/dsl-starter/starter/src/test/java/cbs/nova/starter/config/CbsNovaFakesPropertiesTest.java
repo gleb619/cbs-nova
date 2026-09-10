@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.fake.FakeConfig;
 import cbs.nova.dsl.fake.FakeEntry;
+import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import org.junit.jupiter.api.Test;
 
 class CbsNovaFakesPropertiesTest {

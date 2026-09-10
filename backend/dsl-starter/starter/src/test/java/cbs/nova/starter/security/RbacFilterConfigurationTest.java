@@ -2,6 +2,7 @@ package cbs.nova.starter.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.starter.config.RbacFilterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

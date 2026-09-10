@@ -11,11 +11,6 @@ file('../gradle.properties').withInputStream { parentProps.load(it) }
 allprojects {
   group = 'cbs.nova'
   version = parentProps.getProperty('version', '0.0.1-SNAPSHOT')
-
-  repositories {
-    mavenLocal()
-    mavenCentral()
-  }
 }
 
 subprojects {
@@ -35,7 +30,7 @@ subprojects {
   }
 
   afterEvaluate {
-    if (plugins.hasPlugin(JavaPlugin) && !plugins.hasPlugin('java-gradle-plugin')) {
+    if (plugins.hasPlugin(JavaPlugin)) {
       publishing {
         publications {
           mavenJava(MavenPublication) {

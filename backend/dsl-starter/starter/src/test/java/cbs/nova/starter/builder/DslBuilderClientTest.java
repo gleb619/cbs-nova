@@ -12,6 +12,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import cbs.nova.starter.config.BuilderClientConfiguration;
 import cbs.nova.starter.config.properties.DslBuilderClientProperties;
 import cbs.nova.starter.controller.BuilderApiErrorHandler;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import cbs.nova.starter.exception.BuilderApiException;
 import cbs.nova.starter.exception.BuilderClientBusyException;
 import cbs.nova.starter.exception.BuilderUnavailableException;
@@ -257,7 +258,7 @@ class DslBuilderClientTest {
     server = MockRestServiceServer.bindTo(builder).build();
     queue = new BuilderRequestQueue(10, 5000, 2);
     return new DslBuilderClient(builder.build(), queue, new BuilderBulkhead(new Semaphore(10), 5),
-            circuit);
+            circuit, new BuilderCache(Caffeine.newBuilder().build()));
   }
 
 }

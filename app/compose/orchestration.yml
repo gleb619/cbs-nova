@@ -12,7 +12,7 @@ services:
       POSTGRES_USER: temporal
       POSTGRES_PWD: ${TEMPORAL_DB_PASSWORD:-temporal}
       POSTGRES_SEEDS: postgres
-      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development.yaml
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/docker.yaml
     healthcheck:
       # TCP probe on the gRPC port: the auto-setup image strips curl/wget/nc
       # for size, but bash with /dev/tcp is available. auto-setup runs

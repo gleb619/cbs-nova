@@ -55,7 +55,6 @@ interface WorkbenchApiShape {
   publishConstruct: ReturnType<typeof vi.fn>
   deleteConstruct: ReturnType<typeof vi.fn>
   reloadDefinitions: ReturnType<typeof vi.fn>
-  updateDescription: ReturnType<typeof vi.fn>
   markDirty: ReturnType<typeof vi.fn>
   markClean: ReturnType<typeof vi.fn>
 }
@@ -167,7 +166,6 @@ const harness: WorkbenchApiShape = (() => {
     publishConstruct: vi.fn(async () => undefined),
     deleteConstruct: vi.fn(async () => undefined),
     reloadDefinitions: vi.fn(async () => undefined),
-    updateDescription: vi.fn(async () => undefined),
     markDirty: vi.fn(() => {
       state.isDirty = true
     }),
@@ -235,7 +233,6 @@ const makeStub = (testId: string) =>
       'update:open',
       'update:name',
       'update:type',
-      'update:description',
       'search',
       'clear',
       'confirm',
@@ -497,14 +494,39 @@ describe('dsl-workbench.vue saved drafts store', () => {
     expect(harness.selectConstruct).toHaveBeenCalledWith('alpha')
   })
 
-  it('mirrors the workbench selection into the shared store', async () => {
-    mountPage()
+  it('mirrors the workbench selection into the shared store as selection changes', async () => {
+    const wrapper = mountPage()
     await flushPromises()
 
-    harness.state.selectedName = 'alpha'
+    // loadConstructs auto-selects the first construct on mount.
+    expect(useSavedDrafts().selectedName.value).toBe('c1')
+
+    // Switching constructs through the explorer updates the shared store
+    // without any watcher on the workbench state.
+    const explorer = wrapper.findComponent({ name: 'ConstructExplorer' })
+    await explorer.vm.$emit('select', 'c2')
     await nextTick()
 
-    expect(useSavedDrafts().selectedName.value).toBe('alpha')
+    expect(useSavedDrafts().selectedName.value).toBe('c2')
+  })
+
+  it('reloads publish history when the selected construct changes', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    await wrapper.find('[data-testid="workbench-toggle-history"]').trigger('click')
+    await flushPromises()
+
+    expect(dslApi.listPublishHistory).toHaveBeenCalledWith('c1')
+
+    // The history panel is keyed by construct name, so switching constructs
+    // remounts it and loads the other construct's history.
+    const explorer = wrapper.findComponent({ name: 'ConstructExplorer' })
+    await explorer.vm.$emit('select', 'c2')
+    await flushPromises()
+
+    expect(dslApi.listPublishHistory).toHaveBeenCalledTimes(2)
+    expect(dslApi.listPublishHistory).toHaveBeenLastCalledWith('c2')
   })
 
   it('stops handling picks once the page unmounts', async () => {

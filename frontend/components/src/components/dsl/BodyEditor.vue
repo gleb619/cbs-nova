@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUpdate, ref } from 'vue'
 import type { ConstructType } from '../../composables/useConstructSchema'
 import {
   createNamespacedLocalStorageState,
@@ -85,11 +85,21 @@ const tab = useBodyEditorStorage<BodyEditorTab>('active-tab', 'structure', {
 // stub — future: derive from construct introspection
 const steps = ref<StepDef[]>([])
 
-// Internal fallback body, used only when the caller doesn't pass `code`.
-const internalCode = ref('')
-
-const explainOutput = ref<RunnerOutput | null>(null)
-const explainStatus = ref<RunnerStatus>('idle')
+const explainRun = ref<{
+  name: string
+  output: RunnerOutput | null
+  status: RunnerStatus
+} | null>(null)
+const explainOutput = computed<RunnerOutput | null>(() =>
+  explainRun.value && explainRun.value.name === props.construct?.name
+    ? explainRun.value.output
+    : null,
+)
+const explainStatus = computed<RunnerStatus>(() =>
+  explainRun.value && explainRun.value.name === props.construct?.name
+    ? explainRun.value.status
+    : 'idle',
+)
 
 function errorOutput(err: unknown): RunnerOutput {
   const message = (err instanceof Error ? err.message : undefined) ?? 'Request failed'
@@ -98,27 +108,35 @@ function errorOutput(err: unknown): RunnerOutput {
 
 async function runExplain() {
   if (!props.construct || !props.explain) return
-  explainStatus.value = 'loading'
-  explainOutput.value = null
+  const { name } = props.construct
+  explainRun.value = { name, output: null, status: 'loading' }
   try {
-    explainOutput.value = await props.explain(
-      props.construct.name,
-      {},
-      { startedFrom: 'workbench' },
-    )
-    explainStatus.value = explainOutput.value.errors?.length ? 'failed' : 'success'
+    const output = await props.explain(name, {}, { startedFrom: 'workbench' })
+    explainRun.value = { name, output, status: output.errors?.length ? 'failed' : 'success' }
   } catch (err: unknown) {
-    explainOutput.value = errorOutput(err)
-    explainStatus.value = 'failed'
+    explainRun.value = { name, output: errorOutput(err), status: 'failed' }
   }
 }
 
 const isControlled = computed(() => props.code !== undefined)
 
+const codeEpoch = ref(0)
+const lastEmittedCode = ref<string | null>(null)
+
+const draftsByName = ref<Record<string, string>>({})
+const draftName = computed(() => props.construct?.name ?? '')
+const internalCode = computed<string>({
+  get: () => draftsByName.value[draftName.value] ?? '',
+  set: (value: string) => {
+    draftsByName.value[draftName.value] = value
+  },
+})
+
 const bodyCode = computed<string>({
   get: () => (isControlled.value ? (props.code ?? '') : internalCode.value),
   set: (value: string) => {
     if (isControlled.value) {
+      lastEmittedCode.value = value
       emit('update:code', value)
     } else {
       internalCode.value = value
@@ -126,18 +144,17 @@ const bodyCode = computed<string>({
   },
 })
 
-watch(
-  () => props.construct?.name,
-  () => {
-    steps.value = []
-    explainOutput.value = null
-    explainStatus.value = 'idle'
-    if (!isControlled.value) {
-      internalCode.value = ''
-    }
-  },
-  { immediate: true },
-)
+onBeforeUpdate(() => {
+  if (props.code === undefined) return
+  if (lastEmittedCode.value === null) {
+    lastEmittedCode.value = props.code
+    return
+  }
+  if (props.code !== lastEmittedCode.value) {
+    codeEpoch.value++
+    lastEmittedCode.value = props.code
+  }
+})
 
 const codeTabRef = ref<InstanceType<typeof CodeTab> | null>(null)
 
@@ -225,6 +242,7 @@ defineExpose({ revealPosition, insertAtCursor, selectProblem })
       <CodeTab
         ref="codeTabRef"
         v-show="tab === 'code'"
+        :key="`${construct?.name ?? 'none'}:${codeEpoch}`"
         v-model:code="bodyCode"
         :read-only="!construct"
         :save-status="saveStatus"

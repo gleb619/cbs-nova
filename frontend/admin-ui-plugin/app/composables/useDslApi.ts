@@ -110,12 +110,8 @@ export function useDslApi() {
     })
   }
 
-  async function updateDescription(name: string, description: string) {
-    log.info('updateDescription request', { name })
-    return $fetch(`/api/v1/dsl/definitions/${name}/description`, {
-      method: 'PATCH',
-      body: { description },
-    })
+
+
   }
 
   async function listHelpers() {
@@ -218,7 +214,6 @@ export function useDslApi() {
     deleteDraft,
     readDslFile,
     writeDslFile,
-    updateDescription,
     listDrafts,
     readDraft,
     listPublishHistory,

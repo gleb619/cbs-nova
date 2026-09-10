@@ -34,7 +34,11 @@ gitProperties {
       }
     }
   }
-  dotGitDirectory = gitDir
+  if (gitDir.exists()) {
+    dotGitDirectory = gitDir
+  } else {
+    failOnNoGitDirectory = false
+  }
 }
 
 dependencies {

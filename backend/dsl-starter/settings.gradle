@@ -4,13 +4,13 @@ pluginManagement {
     mavenCentral()
     gradlePluginPortal()
   }
-  resolutionStrategy {
+  /*resolutionStrategy {
     eachPlugin {
       if (requested.id.id == 'cbs.nova.dsl') {
         useModule("cbs.nova:dsl-gradle-plugin:${requested.version ?: version}")
       }
     }
-  }
+  }*/
 }
 
 rootProject.name = 'cbs-nova-dsl-starter'

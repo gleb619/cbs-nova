@@ -1,4 +1,4 @@
-package cbs.nova.starter.config;
+package cbs.nova.starter.config.properties;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useCrc32 } from '../../composables/useCrc32'
 import { createNamespacedLocalStorageState } from '../../composables/useLocalStorageState'
 import type { HelperCatalogEntry } from '../../types/dsl'
@@ -28,20 +28,8 @@ const emit = defineEmits<{
 const { calculateCrc32 } = useCrc32()
 
 const localCode = ref(props.code)
-let syncingFromProps = false
 
 const placeholder = computed(() => (props.readOnly ? 'No code available' : 'Write DSL here...'))
-
-watch(
-  () => props.code,
-  (value) => {
-    if (value !== localCode.value) {
-      syncingFromProps = true
-      localCode.value = value
-      savedHashInternal.value = calculateCrc32(value)
-    }
-  },
-)
 
 const AUTOSAVE_INTERVALS: Record<string, number> = {
   '5s': 5000,
@@ -73,20 +61,22 @@ function requestSave() {
   emit('save', localCode.value)
 }
 
-watch(
-  autosaveMode,
-  (mode) => {
-    clearAutosaveTimer()
-    const interval = AUTOSAVE_INTERVALS[mode]
-    if (interval !== undefined && !props.readOnly) {
-      autosaveTimer = setInterval(() => {
-        if (isDirty.value) requestSave()
-      }, interval)
-    }
-  },
-  { immediate: true },
-)
+function applyAutosaveMode() {
+  clearAutosaveTimer()
+  const interval = AUTOSAVE_INTERVALS[autosaveMode.value]
+  if (interval !== undefined && !props.readOnly) {
+    autosaveTimer = setInterval(() => {
+      if (isDirty.value) requestSave()
+    }, interval)
+  }
+}
 
+function setAutosaveMode(mode: string) {
+  autosaveMode.value = mode
+  applyAutosaveMode()
+}
+
+onMounted(applyAutosaveMode)
 onBeforeUnmount(clearAutosaveTimer)
 
 function handleBlur() {
@@ -148,13 +138,10 @@ const saveStatusText = computed(() => {
   }
 })
 
-watch(localCode, (value) => {
-  if (syncingFromProps) {
-    syncingFromProps = false
-    return
-  }
+function onEditorInput(value: string) {
+  localCode.value = value
   emit('update:code', value)
-})
+}
 
 const monacoRef = ref<InstanceType<typeof MonacoEditor> | null>(null)
 
@@ -201,7 +188,7 @@ defineExpose({ revealPosition, insertAtCursor })
             : 'text-neutral-600 hover:bg-neutral-100'"
           :data-testid="`code-tab-autosave-${option.value}`"
           :aria-pressed="autosaveMode === option.value"
-          @click="autosaveMode = option.value"
+          @click="setAutosaveMode(option.value)"
         >
           {{ option.label }}
         </button>
@@ -248,12 +235,13 @@ defineExpose({ revealPosition, insertAtCursor })
       >
         <MonacoEditor
           ref="monacoRef"
-          v-model="localCode"
+          :model-value="localCode"
           :language="language"
           :read-only="readOnly"
           :placeholder="placeholder"
           :helper-catalog-fetch="helperCatalogFetch"
           :markers="markers"
+          @update:model-value="onEditorInput"
           @blur="handleBlur"
         />
       </div>
