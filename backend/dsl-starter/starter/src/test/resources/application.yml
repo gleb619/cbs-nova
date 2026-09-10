@@ -15,6 +15,13 @@ spring:
     driver-class-name: org.h2.Driver
   flyway:
     enabled: false
+  main:
+    # Allow test slices that scan the starter package to override mock beans declared by other
+    # test slices. Several @SpringBootTest classes (e.g. SecurityConfigurationTest,
+    # ProductionSecurityProfileTest) each provide their own @Primary JwtDecoder mock; without
+    # this flag the second one fails with BeanDefinitionOverrideException. The override is
+    # benign — both mocks are equivalent — and only happens inside :starter's test classpath.
+    allow-bean-definition-overriding: true
 
 logging:
   pattern:
