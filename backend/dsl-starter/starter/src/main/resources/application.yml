@@ -41,7 +41,42 @@ logging:
   pattern:
     level: "%5p [rid=%X{rid:-} cid=%X{cid:-}]"
 
-# cbs.dsl.auth.* — DSL REST-API authentication & authorization (T408, T410)
+# cbs.runs.retention* — legacy per-job knobs honoured by DslRunRetentionPurger
+# (T276) and (when dsl.maintenance.unified.enabled=true) by the unified
+# DslMaintenanceService via the run-retention adapter:
+#   cbs.runs.retention         Duration finished dsl_runs are kept. 0 disables the purge.
+#   cbs.runs.purge-interval    How often the (legacy) purge job runs.
+#   cbs.runs.purge-batch-size  Max rows deleted per pass.
+# When the master flag dsl.maintenance.unified.enabled is true the legacy
+# self-schedule is suppressed and the purge runs on
+# dsl.maintenance.schedule.
+#
+# cbs.runs.reconciliation.* — legacy per-job knobs for DslRunReconciliationService
+# (T350 orphan sweep). Honoured identically when the master flag is on
+# (rolled into the orphans adapter).
+
+# dsl.maintenance.* — unified retention/GC (T412). Default state is OFF; flip
+# dsl.maintenance.unified.enabled=true to fold the per-job purges into one
+# scheduled service with shared Micrometer meters (dsl.maintenance.task.duration,
+# dsl.maintenance.task.purged, tagged task=<name>).
+#
+# Cadence: a single schedule drives every registered task; the default is the
+# retention purger's existing 1h cadence. Per-task enable flags override the
+# master switch on a per-task basis.
+#
+# dsl.maintenance:
+#   unified-enabled: false           # master rollout switch (default false)
+#   schedule: 1h                     # default cadence (matches legacy purger)
+#   tasks:
+#     run-retention:
+#       enabled: true                # legacy cbs.runs.retention purge
+#     orphans:
+#       enabled: true                # legacy cbs.runs.reconciliation.* sweep
+#     audit-retention:
+#       enabled: true                # forward-compat stub — no-op for now
+#
+# When dsl.maintenance.audit-retention.* keys are set they are accepted but
+# do nothing until T383-derived retention ships.
 #
 # cbs.dsl.auth.enabled=true activates the X-Api-Key guard registered by
 # ApiKeyAuthFilterConfiguration. The starter ships this OFF; flipping it on also requires
@@ -70,3 +105,5 @@ logging:
 #   cbs.dsl.auth.rbac.claim: roles
 #   cbs.security.oidc.enabled: true
 #   spring.security.oauth2.resourceserver.jwt.issuer-uri: https://idp.example/realms/cbs-nova
+
+# cbs.dsl.auth.* — DSL REST-API authentication & authorization (T408, T410)

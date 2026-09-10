@@ -30,6 +30,7 @@ import org.springframework.context.annotation.Import;
     WebhookConfiguration.class,
     DslRunRetentionConfiguration.class,
     DslRunReconciliationConfiguration.class,
+    DslMaintenanceConfiguration.class,
     DslErrorHandlingConfiguration.class,
     SpringHelperConfiguration.class,
     ApiKeyAuthFilterConfiguration.class,
