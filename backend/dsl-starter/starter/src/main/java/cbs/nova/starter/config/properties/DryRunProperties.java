@@ -2,6 +2,7 @@ package cbs.nova.starter.config.properties;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import java.util.Set;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
@@ -14,16 +15,18 @@ public record DryRunProperties(
         @DefaultValue Context context,
         @Valid @DefaultValue Log log) {
   public DryRunProperties {
-    context = context == null ? new Context("threadlocal") : context;
+    context = context == null ? new Context("mdc") : context;
     log = log == null ? new Log(1000) : log;
   }
 
-  public record Context(@DefaultValue("threadlocal") String type) {
+  public record Context(@DefaultValue("mdc") String type) {
+    private static final Set<String> SUPPORTED = Set.of("mdc", "threadlocal");
+
     public Context {
-      if (!"threadlocal".equals(type)) {
+      if (!SUPPORTED.contains(type)) {
         throw new IllegalArgumentException(
                 "Invalid cbs.nova.dry-run.context.type '" + type
-                        + "'; only 'threadlocal' is supported");
+                        + "'; supported values: " + SUPPORTED);
       }
     }
   }

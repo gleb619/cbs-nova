@@ -20,7 +20,7 @@ class DryRunPropertiesTest {
   void defaultsAreApplied() {
     runner.run(ctx -> {
       DryRunProperties properties = ctx.getBean(DryRunProperties.class);
-      assertThat(properties.context().type()).isEqualTo("threadlocal");
+      assertThat(properties.context().type()).isEqualTo("mdc");
       assertThat(properties.log().maxEventsPerRun()).isEqualTo(1000);
     });
   }
@@ -35,6 +35,16 @@ class DryRunPropertiesTest {
               DryRunProperties properties = ctx.getBean(DryRunProperties.class);
               assertThat(properties.context().type()).isEqualTo("threadlocal");
               assertThat(properties.log().maxEventsPerRun()).isEqualTo(100);
+            });
+  }
+
+  @Test
+  void mdcContextTypeIsAccepted() {
+    runner
+            .withPropertyValues("cbs.nova.dryRun.context.type=mdc")
+            .run(ctx -> {
+              DryRunProperties properties = ctx.getBean(DryRunProperties.class);
+              assertThat(properties.context().type()).isEqualTo("mdc");
             });
   }
 
