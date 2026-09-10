@@ -150,21 +150,8 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
     DslRunTableColumns t = DslRunTableColumns.of(tableName);
 
     int total = 0;
-    // TODO: refactor 'while' loop, to a 'for' loop
-    while (true) {
-      TableReference selectRef = t.refer();
-      ExtendedSelectQuery select = dslQueries.select()
-              .select(selectRef.get(t.id()), selectRef.get(t.runId()))
-              .where(Criteria.less(selectRef.get(t.finishedAt()), Literal.of(cutoff)))
-              .where(Criteria.notEqual(selectRef.get(t.status()),
-                      Literal.of(DslRunStatus.RUNNING.name())))
-              .limit(batchSize)
-              .build();
-      List<PurgeBatchRow> batch = dslQueries.query(select,
-              (rs, rowNum) -> new PurgeBatchRow(rs.getLong(1), rs.getString(2)));
-      if (batch.isEmpty()) {
-        break;
-      }
+    for (List<PurgeBatchRow> batch = fetchPurgeBatch(t, cutoff, batchSize); !batch
+            .isEmpty(); batch = fetchPurgeBatch(t, cutoff, batchSize)) {
       onBatchBeforeParentDelete.accept(batch.stream().map(PurgeBatchRow::runId).toList());
       delegate.deleteAllById(batch.stream().map(PurgeBatchRow::id).toList());
       total += batch.size();
@@ -173,6 +160,20 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
       }
     }
     return total;
+  }
+
+  private List<PurgeBatchRow> fetchPurgeBatch(
+          DslRunTableColumns t, Instant cutoff, int batchSize) {
+    TableReference selectRef = t.refer();
+    ExtendedSelectQuery select = dslQueries.select()
+            .select(selectRef.get(t.id()), selectRef.get(t.runId()))
+            .where(Criteria.less(selectRef.get(t.finishedAt()), Literal.of(cutoff)))
+            .where(Criteria.notEqual(selectRef.get(t.status()),
+                    Literal.of(DslRunStatus.RUNNING.name())))
+            .limit(batchSize)
+            .build();
+    return dslQueries.query(select,
+            (rs, rowNum) -> new PurgeBatchRow(rs.getLong(1), rs.getString(2)));
   }
 
   @Override
