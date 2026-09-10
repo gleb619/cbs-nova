@@ -4,6 +4,7 @@ import cbs.nova.dsl.logging.DryRunLoggingContext;
 import cbs.nova.starter.config.properties.DryRunProperties;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
+import cbs.nova.starter.logging.MdcDryRunLoggingContext;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import ch.qos.logback.classic.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,8 +21,15 @@ public class DryRunLoggingConfiguration {
 
   @Bean
   @ConditionalOnMissingBean(DryRunLoggingContext.class)
-  @ConditionalOnProperty(name = "cbs.nova.dryRun.context.type", havingValue = "threadlocal", matchIfMissing = true)
+  @ConditionalOnProperty(name = "cbs.nova.dryRun.context.type", havingValue = "mdc", matchIfMissing = true)
   public DryRunLoggingContext dryRunLoggingContext() {
+    return new MdcDryRunLoggingContext();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(DryRunLoggingContext.class)
+  @ConditionalOnProperty(name = "cbs.nova.dryRun.context.type", havingValue = "threadlocal")
+  public DryRunLoggingContext threadLocalDryRunLoggingContext() {
     return new ThreadLocalDryRunLoggingContext();
   }
 

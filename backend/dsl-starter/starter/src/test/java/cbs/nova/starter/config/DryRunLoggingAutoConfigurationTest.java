@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.logging.DryRunLoggingContext;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
+import cbs.nova.starter.logging.MdcDryRunLoggingContext;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.ApplicationRunner;
@@ -21,8 +22,11 @@ import org.springframework.context.annotation.Configuration;
  * Conditional matrix pinned by these tests:
  * <ul>
  * <li>{@code dryRunLoggingContext} bean: gated by {@code @ConditionalOnMissingBean} AND
- * {@code @ConditionalOnProperty(name="cbs.nova.dryRun.context.type", havingValue="threadlocal",
- *       matchIfMissing=true)}.</li>
+ * {@code @ConditionalOnProperty(name="cbs.nova.dryRun.context.type", havingValue="mdc",
+ *       matchIfMissing=true)}; the {@link MdcDryRunLoggingContext} implementation is the default.
+ * An opt-in {@code threadlocal} variant (returning {@link ThreadLocalDryRunLoggingContext}) is
+ * registered when the property is explicitly set to {@code threadlocal}; both bean methods carry
+ * {@code @ConditionalOnMissingBean} so a downstream override still wins.</li>
  * <li>{@code dryRunLogBufferRegistry} bean: only gated by {@code @ConditionalOnMissingBean}.</li>
  * <li>{@code dryRunLogbackAppender} bean: only gated by {@code @ConditionalOnMissingBean}; it
  * depends on the (auto or user-supplied) {@link DryRunLoggingContext} and
@@ -40,7 +44,7 @@ class DryRunLoggingConfigurationTest {
     runner.run(ctx -> {
       assertThat(ctx).hasSingleBean(DryRunLoggingContext.class);
       assertThat(ctx.getBean(DryRunLoggingContext.class))
-              .isInstanceOf(ThreadLocalDryRunLoggingContext.class);
+              .isInstanceOf(MdcDryRunLoggingContext.class);
       assertThat(ctx).hasSingleBean(DryRunLogBufferRegistry.class);
       assertThat(ctx).hasSingleBean(DryRunLogbackAppender.class);
       assertThat(ctx).hasSingleBean(ApplicationRunner.class);
@@ -56,21 +60,34 @@ class DryRunLoggingConfigurationTest {
   }
 
   @Test
+  void explicitMdcContextTypeEnablesContextBean() {
+    runner
+            .withPropertyValues("cbs.nova.dryRun.context.type=mdc")
+            .run(ctx -> {
+              assertThat(ctx).hasSingleBean(DryRunLoggingContext.class);
+              assertThat(ctx.getBean(DryRunLoggingContext.class))
+                      .isInstanceOf(MdcDryRunLoggingContext.class);
+            });
+  }
+
+  @Test
   void explicitThreadLocalContextTypeEnablesContextBean() {
     runner
             .withPropertyValues("cbs.nova.dryRun.context.type=threadlocal")
             .run(ctx -> {
               assertThat(ctx).hasSingleBean(DryRunLoggingContext.class);
+              assertThat(ctx.getBean(DryRunLoggingContext.class))
+                      .isInstanceOf(ThreadLocalDryRunLoggingContext.class);
               assertThat(ctx).hasSingleBean(DryRunLogBufferRegistry.class);
               assertThat(ctx).hasSingleBean(DryRunLogbackAppender.class);
             });
   }
 
   @Test
-  void nonThreadLocalContextTypeFailsContextStartBecauseAppenderDependsOnContext() {
-    // The dryRunLoggingContext bean is gated by cbs.nova.dryRun.context.type=threadlocal. With a
-    // non-matching value the bean is skipped, and the dryRunLogbackAppender bean (which depends on
-    // DryRunLoggingContext) cannot be created, so the context fails to start.
+  void unrecognisedContextTypeFailsContextStartBecauseAppenderDependsOnContext() {
+    // Neither cbs.nova.dryRun.context.type=mdc nor =threadlocal matches, so the auto-configured
+    // DryRunLoggingContext bean is skipped in both branches and the dryRunLogbackAppender bean
+    // (which depends on DryRunLoggingContext) cannot be created — the context fails to start.
     runner
             .withPropertyValues("cbs.nova.dryRun.context.type=scoped")
             .run(ctx -> assertThat(ctx).hasFailed());
