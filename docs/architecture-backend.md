@@ -115,6 +115,32 @@ RouterFunction handler
 
 See [Runtime Engine — Auth and ops notes](dsl/runtime.md#auth-and-ops-notes) for the REST auth details, idempotency, and correlation headers, [`app/compose/auth.yml`](../app/compose/auth.yml) and `app/compose/keycloak/cbs-nova-realm.json` for local Keycloak setup, and [Starter Configuration Reference](dsl/configuration.md) for the full property tables.
 
+### Production secure-default profile (T413)
+
+Activate with `--spring.profiles.active=production` (or `SPRING_PROFILES_ACTIVE=production`). The starter ships `backend/dsl-starter/starter/src/main/resources/application-production.yml` which raises three DEFAULTS — **not** overrides — so the profile yml sits between `application.yml` and env vars / `-D` / `TestPropertySource`:
+
+| Knob                                                  | Default in profile | What it does |
+|-------------------------------------------------------|--------------------|--------------|
+| `cbs.dsl.auth.enabled`                                | `true`             | Registers the `ApiKeyAuthFilter` against `/api/*`. Pair with `cbs.dsl.auth.api-key=…` or stored keys via `POST /api/dsl/auth/keys` (T410). |
+| `cbs.security.ratelimit.enabled`                      | `true`             | Token-bucket limiter on mutating DSL routes (capacity `20`, refill `5.0/s`; same defaults as opt-in). |
+| `cbs.security.oidc.enabled`                           | `true`             | Switches from the permissive chain to the OIDC JWT resource-server chain. |
+| `spring.security.oauth2.resourceserver.jwt.issuer-uri`| `${OIDC_ISSUER_URI:}` | Issuer URI (Keycloak / generic OIDC). **Must be supplied by the deployment** (env, secret, `-D`). |
+
+**Precedence — the escape hatches work exactly because env / cmdline / `@TestPropertySource` outrank the profile yml.** Examples for a single deploy that wants to opt a guard back out:
+
+```bash
+CBS_DSL_AUTH_ENABLED=false              # X-Api-Key off for this deploy only
+CBS_SECURITY_RATELIMIT_ENABLED=false    # rate-limit off for this deploy only
+OIDC_ISSUER_URI=https://idp.example/realms/cbs-nova
+SPRING_PROFILES_ACTIVE=production
+```
+
+`application.yml` cannot override `application-production.yml` (lower precedence). The documented contract is that the production profile yml is the **floor**, env / cmdline / explicit deployment overrides are the **ceiling**, and tests using `properties=` / `@TestPropertySource` sit above this file just like env vars do.
+
+**Fail-fast.** `ProductionSecurityPostureValidator` runs as a `SmartInitializingSingleton` once the context is fully wired. When `production` is active and the issuer URI is blank, the context fails to refresh with an `IllegalStateException` that names the exact property and the env var (`OIDC_ISSUER_URI`) the operator must set. Dev / default / explicit-test profiles never hit this check.
+
+**Startup posture log.** `SecurityPostureReporter` emits one block at startup (production profile only) summarising the actual guard states — `api-key guard`, `rate-limit guard`, `OIDC resource-server`, `OIDC issuer URI configured` (boolean — the URI itself is masked in `ProductionSecurityPostureValidator`), and `RBAC` (T408 phase 1; stays independently opt-in — production does **not** force RBAC on). Block is at `INFO` when every guard is on, at `WARN` when an operator flipped an escape hatch so the deviation is loud at boot. Dev / default profiles are intentionally quiet.
+
 ## Observability & operations
 
 - **Metrics (Micrometer)** — The starter publishes run-path and preview-path metrics to any `MeterRegistry` bean. Preview/explain runs are instrumented by `MetricsStage`: counters `dsl.preview.calls` (tagged by `kind`) and `dsl.preview.external.calls` (tagged by `type`), and timer `dsl.preview.duration` (tagged by `mode` and `process`). Production runs are instrumented by `TemporalDslProcessService`: timer `dsl.run.duration` and counters `dsl.run.count` and `dsl.run.cancel`, all tagged by `processName` and `status`. The retention purger additionally emits `dsl.runs.purged` and `dsl.run.transactions.purged` counters.

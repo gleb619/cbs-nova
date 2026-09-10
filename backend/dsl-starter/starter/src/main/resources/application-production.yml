@@ -1,0 +1,75 @@
+# T413 — `production` secure-default profile.
+#
+# Activated with --spring.profiles.active=production (or SPRING_PROFILES_ACTIVE=production).
+#
+# Goal: a bare deploy under this profile is NOT anonymous. All three guards
+# (X-Api-Key for service-to-service, rate limiting, OIDC resource-server)
+# default ON. The default / dev profile remains untouched — opt-in as before.
+#
+# =============================================================================
+# Property precedence — IMPORTANT
+# =============================================================================
+# Spring resolves properties in this order (highest first):
+#   1. Command-line arguments          (--cbs.dsl.auth.enabled=false)
+#   2. SPRING_APPLICATION_JSON / OS env (OIDC_ISSUER_URI=...)
+#   3. application-{profile}.yml       <-- this file
+#   4. application.yml                 (the base file)
+#
+# So this profile raises the DEFAULTS. Per-guard escape hatches still work —
+# set `cbs.dsl.auth.enabled=false` via env var, -D system property, or a
+# deployment-specific application-prod-overrides.yml to opt a single guard
+# back out for one deploy. The base application.yml cannot override this
+# file (lower precedence). That is the documented contract: the production
+# profile yml is the floor, env / cmdline / explicit overrides are the
+# ceiling, and tests that pass properties via @TestPropertySource /
+# `properties=` sit above this file just like env vars do.
+#
+# If you need to disable any guard for one specific deployment:
+#   cbs.dsl.auth.enabled=false                    # API-key off
+#   cbs.security.ratelimit.enabled=false          # rate-limit off
+#   cbs.security.oidc.enabled=false               # OIDC off (NOT recommended in prod)
+# The OIDC issuer URI is required when the OIDC guard is on; the starter
+# fail-fasts with a clear message if it is blank under the production
+# profile (see ProductionSecurityPostureValidator).
+
+cbs:
+  dsl:
+    auth:
+      # X-Api-Key guard — ON in prod. Filter beans register against /api/*.
+      # Pair with cbs.dsl.auth.api-key=... OR with stored keys issued via
+      # POST /api/dsl/auth/keys (T410).
+      enabled: true
+
+  security:
+    ratelimit:
+      # Token-bucket rate limiter — ON in prod. Same defaults as opt-in
+      # (capacity 20, refill 5.0/s); tune via cbs.security.ratelimit.*
+      enabled: true
+    oidc:
+      # OIDC resource-server — ON in prod. The starter fail-fasts at boot
+      # if spring.security.oauth2.resourceserver.jwt.issuer-uri below is
+      # blank (ProductionSecurityPostureValidator).
+      #
+      # Escape hatch (NOT recommended in production): set
+      # CBS_SECURITY_OIDC_ENABLED=false in the deploy env to opt out.
+      enabled: true
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Issuer URI — must be supplied by the deployment. The default
+          # here is read from the OIDC_ISSUER_URI env var (or the
+          # SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI system
+          # property). The OIDC_ISSUER_URI placeholder has no default, so
+          # an unset deployment fails with
+          #   "Could not resolve placeholder 'OIDC_ISSUER_URI'"
+          # at property-binding time before the validator runs. To get
+          # the validator's clearer error message, set the env var to an
+          # empty string — ProductionSecurityPostureValidator then
+          # reports exactly which property must be configured.
+          #
+          # Local example (compose Keycloak):
+          #   OIDC_ISSUER_URI=http://keycloak:8080/realms/cbs-nova
+          issuer-uri: ${OIDC_ISSUER_URI:}

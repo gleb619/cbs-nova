@@ -1,7 +1,9 @@
 package cbs.nova.starter.config;
 
 import cbs.nova.starter.config.router.DslRouterConfiguration;
+import cbs.nova.starter.security.ProductionSecurityPostureValidator;
 import cbs.nova.starter.security.RbacFilterConfiguration;
+import cbs.nova.starter.security.SecurityPostureReporter;
 import cbs.nova.starter.webhook.WebhookConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -69,6 +71,8 @@ class DslRootAutoConfigurationTest {
             DslRunRepositoryConfiguration.class,
             SecurityConfiguration.class,
             ApiKeyAuthMisconfigurationWarning.class,
+            ProductionSecurityPostureValidator.class,
+            SecurityPostureReporter.class,
             DslHealthIndicatorConfiguration.class,
             BuilderClientConfiguration.class);
   }
