@@ -20,7 +20,7 @@ function resolveHere(): string {
 const here = resolveHere()
 const apiDir = join(here, '..')
 
-type Method = 'GET' | 'POST' | 'PATCH' | 'DELETE'
+type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 type ExpectedProxy = {
   /** HTTP method exposed by the backend endpoint. */
@@ -54,6 +54,21 @@ const expectedProxies: readonly ExpectedProxy[] = [
     method: 'PATCH',
     backendPath: '/api/dsl/definitions/{name}/description',
     bffPath: '/api/v1/dsl/definitions/{name}/description',
+  },
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/definitions/{name}/tests',
+    bffPath: '/api/v1/dsl/definitions/{name}/tests',
+  },
+  {
+    method: 'PUT',
+    backendPath: '/api/dsl/definitions/{name}/tests',
+    bffPath: '/api/v1/dsl/definitions/{name}/tests',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/definitions/{name}/tests/run',
+    bffPath: '/api/v1/dsl/definitions/{name}/tests/run',
   },
   // DslDefinitionBundleRouterConfiguration
   {
@@ -296,7 +311,7 @@ const expectedProxies: readonly ExpectedProxy[] = [
 // Nitro route filename: "<segments>.<method>.ts". Examples:
 //   dsl/explain/[name].post.ts → POST /api/v1/dsl/explain/{name}
 //   executions/index.get.ts    → GET  /api/v1/executions
-const ROUTE_FILENAME = /^(?<route>.+)\.(?<method>get|post|patch|delete)\.ts$/
+const ROUTE_FILENAME = /^(?<route>.+)\.(?<method>get|post|put|patch|delete)\.ts$/
 
 type DiscoveredRoute = {
   method: Method

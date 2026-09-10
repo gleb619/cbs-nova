@@ -107,6 +107,15 @@ const exportDefinitionsHandler = (await import('../dsl/definitions/export.get'))
 const importDefinitionsHandler = (await import('../dsl/definitions/import.post')).default
 const updateDescriptionHandler = (await import('../dsl/definitions/[name]/description.patch'))
   .default
+const listDefinitionTestsHandler = (
+  await import('../dsl/definitions/[name]/tests/index.get')
+).default
+const replaceDefinitionTestsHandler = (
+  await import('../dsl/definitions/[name]/tests/index.put')
+).default
+const runDefinitionTestsHandler = (
+  await import('../dsl/definitions/[name]/tests/run.post')
+).default
 const listDslFilesHandler = (await import('../dsl/files/index.get')).default
 const readDslFileByNameHandler = (await import('../dsl/files/by-name/[name].get')).default
 const writeDslFileByNameHandler = (await import('../dsl/files/by-name/[name].post')).default
@@ -1071,5 +1080,82 @@ describe('dsl/files/status.get', () => {
     expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
     expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/files/status')
     expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+})
+
+describe('dsl/definitions/[name]/tests/index.get', () => {
+  it('interpolates the :name router param and GETs the backend tests path', async () => {
+    routerParams = { name: 'LoanDisbursement' }
+
+    await listDefinitionTestsHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/definitions/LoanDisbursement/tests',
+    )
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+})
+
+describe('dsl/definitions/[name]/tests/index.put', () => {
+  it('interpolates the :name router param and PUTs the body to the backend tests path', async () => {
+    routerParams = { name: 'LoanDisbursement' }
+    bodyValue = [
+      { caseName: 'happy', input: { x: 1 }, expectedOutput: { y: 2 } },
+    ]
+
+    await replaceDefinitionTestsHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/definitions/LoanDisbursement/tests',
+      {
+        method: 'PUT',
+        body: [{ caseName: 'happy', input: { x: 1 }, expectedOutput: { y: 2 } }],
+      },
+    )
+  })
+})
+
+describe('dsl/definitions/[name]/tests/run.post', () => {
+  it('interpolates the :name router param and POSTs without query params when no case subset is provided', async () => {
+    routerParams = { name: 'LoanDisbursement' }
+
+    await runDefinitionTestsHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/definitions/LoanDisbursement/tests/run',
+      { method: 'POST', query: {} },
+    )
+  })
+
+  it('forwards a single case subset query param', async () => {
+    routerParams = { name: 'LoanDisbursement' }
+    queryValue = { case: 'happy' }
+
+    await runDefinitionTestsHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/definitions/LoanDisbursement/tests/run',
+      { method: 'POST', query: { case: ['happy'] } },
+    )
+  })
+
+  it('forwards multiple repeated case query params', async () => {
+    routerParams = { name: 'LoanDisbursement' }
+    queryValue = { case: ['happy', 'edge'] }
+
+    await runDefinitionTestsHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/definitions/LoanDisbursement/tests/run',
+      { method: 'POST', query: { case: ['happy', 'edge'] } },
+    )
   })
 })
