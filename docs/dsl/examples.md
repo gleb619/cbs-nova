@@ -1,59 +1,65 @@
 # How to work with DSL examples
 
-The `backend/dsl-examples` module contains real-world DSL definitions. They are written as
+The `backend/dsl-starter/dsl-examples` module contains real-world DSL definitions. They are written as
 [JEP-512 compact source files](https://openjdk.org/jeps/512) and compiled into Temporal
 workflows/activities at build time.
+
+> Java 25 is required for building. The root `./gradlew` is Gradle 8.13 and **fails under Java 25**;
+> all Gradle commands below use `backend/dsl-platform/gradlew` (Gradle 9.4.1).
 
 ## Where the examples live
 
 ```
-backend/dsl-examples/src/
-├── BatchProcessingDsl.java
-├── ExceptionProbeDsl.java
-├── InvoiceGenerationDsl.java
-├── LongWorkSimulationDsl.java
-├── NestedCompensationDsl.java
-├── OrderSagaDsl.java
-├── SampleProcessDsl.java
-├── SimpleGreetingDsl.java
-├── SimpleOrderDsl.java
-├── SimpleValidationDsl.java
-└── ...
+backend/dsl-starter/dsl-examples/src/
+├── dsl/                      # Compact DSL definitions (the `define()` entry points)
+│   ├── BatchProcessingDsl.java
+│   ├── ExceptionProbeDsl.java
+│   ├── InvoiceGenerationDsl.java
+│   ├── LongWorkSimulationDsl.java
+│   ├── SimpleGreetingDsl.java
+│   ├── SimpleValidationDsl.java
+│   └── ... (run `ls backend/dsl-starter/dsl-examples/src/dsl/` for the current set — 21 files)
+└── models/                   # Typed records (@Json / Avaje Jsonb) shared by the DSL sources
+    └── ... (one `*Models.java` per process/transaction that declares typed I/O)
 ```
 
-Every file exposes a `List<DslObject> define()` method built with the fluent DSL API.
+Every file in `src/dsl/` exposes a `List<DslObject> define()` method built with the fluent DSL API; the
+companion `src/models/` records are imported by the compact sources (e.g. `import cbs.nova.dslexamples.BatchModels.*;`).
 
 ## Building the examples
 
-The `compileDsl` Gradle task scans `dsl-examples/src`, loads the definitions, validates them,
-and generates Temporal classes under `dsl-examples/build/generated`.
+The `compileDsl` Gradle task (registered by the `cbs.nova.dsl` plugin) scans
+`backend/dsl-starter/dsl-examples/src/dsl/`, loads the definitions, validates them,
+and generates Temporal classes under `backend/dsl-starter/dsl-examples/build/generated`.
 
 ```bash
-cd backend
-./gradlew :dsl-examples:compileDsl
+backend/dsl-platform/gradlew -p backend/dsl-starter :dsl-examples:compileDsl
 ```
 
 After a successful run you will find generated classes such as:
 
 ```
-backend/dsl-examples/build/generated/cbs/nova/dsl/generated/batchprocessing/v1/
+backend/dsl-starter/dsl-examples/build/generated/cbs/nova/dslexamples/batchprocessing/v1/
 ├── BatchProcessingProcessWorkflow.java
 └── BatchProcessingProcessDefinition.java
 ```
 
-The generated package is `cbs.nova.dsl.generated.<name>.<version>` where `<name>` is the
-process/transaction name lower-cased and `<version>` is the version declared in the DSL
-(default `v1`).
+The generated package is `cbs.nova.dslexamples.<name>.<version>` — `cbs.nova.dslexamples` is the
+module's `dslCompile { dslPackage = '...' }` base, `<name>` is the process/transaction name
+lower-cased, and `<version>` is the version declared in the DSL (default `v1`).
 
 ## Running the integration test
 
-`backend/starter-example` contains a Testcontainers-based integration test that starts a real
-Temporal server plus PostgreSQL, registers the generated `BatchProcessing` worker, and runs
-the workflow end-to-end.
+`backend/dsl-starter/starter` hosts the example integration tests in its `integrationTest` source set
+(`backend/dsl-starter/starter/src/integrationTest/java/cbs/nova/dsl/example/integration/`).
+The Testcontainers-based suite starts a real Temporal server plus PostgreSQL, registers the generated
+`BatchProcessing` worker, and runs the workflow end-to-end. Other example-driven ITs in the same
+package: `HttpResilienceDslIntegrationTest`, `UnreliableApiDslIntegrationTest`,
+`DslVersioningIntegrationTest`, `PreviewDryRunIntegrationTest`, plus
+`cbs.nova.starter.DslExamplesEndToEndTest`.
 
 ```bash
-cd backend
-./gradlew :starter-example:test \
+backend/dsl-platform/gradlew -p backend/dsl-starter :starter:integrationTest \
   --tests cbs.nova.dsl.example.integration.BatchProcessingDslIntegrationTest
 ```
 
@@ -61,7 +67,7 @@ The test does the following:
 
 1. Starts `postgres:15` and `temporalio/auto-setup:1.25.2` containers on a shared Docker
    network.
-2. Loads `dsl-examples/src` with `DefinitionLoader` into a fresh `GlobalManager`.
+2. Loads `backend/dsl-starter/dsl-examples/src/dsl/` with `DefinitionLoader` into a fresh `GlobalManager`.
 3. Points a Temporal `WorkflowClient` at the exposed gRPC port.
 4. Registers `BatchProcessingProcessDefinition` on the `BatchProcessing-queue` task queue.
 5. Executes the workflow with a `BatchIn` record and asserts the returned `BatchOut`.
@@ -85,11 +91,14 @@ would fail with a `ClassCastException`.
 
 ## Adding a new example
 
-1. Create a compact source file in `backend/dsl-examples/src/`.
+1. Create a compact source file in `backend/dsl-starter/dsl-examples/src/dsl/` (plus a companion
+   `*Models.java` under `backend/dsl-starter/dsl-examples/src/models/` if the new process/transaction
+   needs typed records).
 2. Use `Dsl.process(...)`, `Dsl.transaction(...)`, or `Dsl.function(...)` inside `define()`.
 3. Declare `.input(...)` / `.output(...)` when the workflow needs typed payloads.
-4. Run `./gradlew :dsl-examples:compileDsl` to validate generation.
-5. Optionally add an integration test in `backend/starter-example/src/test/java` that loads
+4. Run `backend/dsl-platform/gradlew -p backend/dsl-starter :dsl-examples:compileDsl` to validate generation.
+5. Optionally add an integration test under
+   `backend/dsl-starter/starter/src/integrationTest/java/cbs/nova/dsl/example/integration/` that loads
    the new DSL, starts a Temporal worker, and executes the generated workflow.
 
 ## Tips
