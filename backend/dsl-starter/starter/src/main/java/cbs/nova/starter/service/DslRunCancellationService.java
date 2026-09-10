@@ -3,16 +3,19 @@ package cbs.nova.starter.service;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
+import cbs.nova.starter.events.DomainEvent;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowNotFoundException;
 import io.temporal.client.WorkflowStub;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.util.Optional;
 
 /**
  * User-initiated cancellation of a RUNNING DSL process run.
@@ -43,18 +46,24 @@ public class DslRunCancellationService {
   private final DslRunRepository runRepository;
   private final Clock clock;
   private final TemporalDslProcessService metricsRecorder;
+  private final ObjectProvider<DomainEventPublisher> eventPublisherProvider;
+  private final ObjectProvider<TransactionTemplate> transactionTemplateProvider;
 
   public DslRunCancellationService(
           @NonNull WorkflowClient workflowClient,
           @NonNull DslRunRepository runRepository) {
-    this(workflowClient, runRepository, Clock.systemUTC(), null);
+    this(workflowClient, runRepository, Clock.systemUTC(), null,
+            EmptyObjectProvider.of(DomainEventPublisher.class),
+            EmptyObjectProvider.of(TransactionTemplate.class));
   }
 
   public DslRunCancellationService(
           @NonNull WorkflowClient workflowClient,
           @NonNull DslRunRepository runRepository,
           @NonNull Clock clock) {
-    this(workflowClient, runRepository, clock, null);
+    this(workflowClient, runRepository, clock, null,
+            EmptyObjectProvider.of(DomainEventPublisher.class),
+            EmptyObjectProvider.of(TransactionTemplate.class));
   }
 
   public DslRunCancellationService(
@@ -62,10 +71,24 @@ public class DslRunCancellationService {
           @NonNull DslRunRepository runRepository,
           @NonNull Clock clock,
           @Nullable TemporalDslProcessService metricsRecorder) {
+    this(workflowClient, runRepository, clock, metricsRecorder,
+            EmptyObjectProvider.of(DomainEventPublisher.class),
+            EmptyObjectProvider.of(TransactionTemplate.class));
+  }
+
+  public DslRunCancellationService(
+          @NonNull WorkflowClient workflowClient,
+          @NonNull DslRunRepository runRepository,
+          @NonNull Clock clock,
+          @Nullable TemporalDslProcessService metricsRecorder,
+          @NonNull ObjectProvider<DomainEventPublisher> eventPublisherProvider,
+          @NonNull ObjectProvider<TransactionTemplate> transactionTemplateProvider) {
     this.workflowClient = workflowClient;
     this.runRepository = runRepository;
     this.clock = clock;
     this.metricsRecorder = metricsRecorder;
+    this.eventPublisherProvider = eventPublisherProvider;
+    this.transactionTemplateProvider = transactionTemplateProvider;
   }
 
   public enum Outcome {
@@ -112,9 +135,44 @@ public class DslRunCancellationService {
       return new CancelResult(Outcome.NOT_CANCELLABLE, latest, latest.status());
     }
 
+    // T411: emit RunCancelled in the same DB transaction as the terminal status row. With
+    // asyncDbSave=false the publisher runs synchronously inside TransactionTemplate; with
+    // asyncDbSave=true both writes happen later on the executor — each in its own TX, both
+    // succeed-or-rollback together per task. With the in-memory repository there is no TX
+    // (best-effort; see the loop note in the plan file).
+    DomainEvent.RunCancelled cancelledEvent = new DomainEvent.RunCancelled(
+            runId, run.processName(), DslRunStatus.CANCELLED,
+            CANCELLED_REASON, run.startedAt(), finishedAt,
+            finishedAt, run.correlationId());
+    publishEvent(cancelledEvent);
+
     log.info("Run {} cancelled by user request", runId);
     recordCancel(run.processName(), run.startedAt(), Outcome.CANCELLED, finishedAt);
     return new CancelResult(Outcome.CANCELLED, latest, latest.status());
+  }
+
+  /**
+   * Publishes a domain event through the optional {@link DomainEventPublisher} bean.
+   *
+   * <p>
+   * When both the publisher and a {@link TransactionTemplate} are available, the event insert runs
+   * in the SAME transaction as the surrounding state-row write (same TX boundary as the run
+   * lifecycle sites in {@link TemporalDslProcessService}). The publisher is intentionally optional:
+   * tests / in-memory runs construct this service without an event store, and the call becomes a
+   * no-op. Failure is NOT swallowed at the run path — losing an event row would defeat the store's
+   * purpose.
+   */
+  private void publishEvent(@NonNull DomainEvent event) {
+    DomainEventPublisher publisher = eventPublisherProvider.getIfAvailable();
+    if (publisher == null) {
+      return;
+    }
+    TransactionTemplate tx = transactionTemplateProvider.getIfAvailable();
+    if (tx != null) {
+      tx.executeWithoutResult(status -> publisher.publish(event));
+    } else {
+      publisher.publish(event);
+    }
   }
 
   private void recordCancel(@Nullable String processName, @Nullable Instant startedAt,

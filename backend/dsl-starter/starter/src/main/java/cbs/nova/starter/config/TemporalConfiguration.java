@@ -33,6 +33,7 @@ import cbs.nova.starter.webhook.WebhookDispatcher;
 import cbs.nova.starter.service.TemporalHealthProbe;
 import cbs.nova.starter.service.TemporalTransactionInvoker;
 import cbs.nova.starter.tracing.OpenTelemetryContextPropagator;
+import cbs.nova.starter.service.DomainEventPublisher;
 import io.opentelemetry.api.OpenTelemetry;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowClientOptions;
@@ -44,6 +45,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -59,6 +61,7 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.task.TaskDecorator;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Clock;
@@ -338,7 +341,9 @@ public class TemporalConfiguration {
           OpenTelemetry openTelemetry,
           MeterRegistry meterRegistry,
           RunIdentityResolver runIdentityResolver,
-          Optional<WebhookDispatcher> webhookDispatcher) {
+          Optional<WebhookDispatcher> webhookDispatcher,
+          ObjectProvider<DomainEventPublisher> eventPublisherProvider,
+          ObjectProvider<TransactionTemplate> transactionTemplateProvider) {
     TemporalDslProcessService service = new TemporalDslProcessService(contextFactory, runRepository,
             JsonMapper.builder().build(),
             dslProcessExecutor, healthcheckExecutor,
@@ -347,7 +352,9 @@ public class TemporalConfiguration {
             meterRegistry,
             runIdentityResolver,
             webhookDispatcher,
-            openTelemetry);
+            openTelemetry,
+            eventPublisherProvider,
+            transactionTemplateProvider);
     return service;
   }
 
@@ -362,9 +369,12 @@ public class TemporalConfiguration {
   @ConditionalOnMissingBean
   DslRunCancellationService dslRunCancellationService(WorkflowClient workflowClient,
           DslRunRepository runRepository,
-          TemporalDslProcessService temporalDslProcessService) {
+          TemporalDslProcessService temporalDslProcessService,
+          ObjectProvider<DomainEventPublisher> eventPublisherProvider,
+          ObjectProvider<TransactionTemplate> transactionTemplateProvider) {
     return new DslRunCancellationService(workflowClient, runRepository,
-            Clock.systemUTC(), temporalDslProcessService);
+            Clock.systemUTC(), temporalDslProcessService,
+            eventPublisherProvider, transactionTemplateProvider);
   }
 
 }

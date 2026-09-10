@@ -8,6 +8,7 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dsl.transaction.TransactionRouting;
+import cbs.nova.starter.service.EmptyObjectProvider;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
@@ -25,6 +26,7 @@ import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.mockito.Mockito;
 import org.slf4j.MDC;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -76,7 +78,9 @@ class TemporalDslProcessServiceTracingTest {
             new SimpleMeterRegistry(),
             nullResolver(),
             Optional.empty(),
-            openTelemetry);
+            openTelemetry,
+            EmptyObjectProvider.of(DomainEventPublisher.class),
+            EmptyObjectProvider.of(TransactionTemplate.class));
 
     service.startProcess(processName, Map.of(), Map.of()).result().join();
 
@@ -123,7 +127,9 @@ class TemporalDslProcessServiceTracingTest {
             new SimpleMeterRegistry(),
             nullResolver(),
             Optional.empty(),
-            OpenTelemetry.noop());
+            OpenTelemetry.noop(),
+            EmptyObjectProvider.of(DomainEventPublisher.class),
+            EmptyObjectProvider.of(TransactionTemplate.class));
     // Default OpenTelemetry is no-op and must remain so.
     assertThat(service.getOpenTelemetry()).isSameAs(OpenTelemetry.noop());
 

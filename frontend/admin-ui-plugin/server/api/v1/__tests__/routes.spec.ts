@@ -70,6 +70,7 @@ const healthHandler = (await import('../health.get')).default
 const definitionsHandler = (await import('../dsl/definitions.get')).default
 const reloadHandler = (await import('../dsl/reload.post')).default
 const auditHandler = (await import('../dsl/audit.get')).default
+const eventsHandler = (await import('../dsl/events.get')).default
 const runHandler = (await import('../dsl/run/[name].post')).default
 const previewHandler = (await import('../dsl/preview/[name].post')).default
 const explainHandler = (await import('../dsl/explain/[name].post')).default
@@ -236,6 +237,40 @@ describe('dsl/audit.get', () => {
 
     expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/audit', {
       query: { offset: '20', limit: '10', action: 'DEFINITION_PUBLISH' },
+    })
+  })
+})
+
+describe('dsl/events.get', () => {
+  it('GETs /api/dsl/events with no query and no opts', async () => {
+    await eventsHandler(fakeEvent)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/events')
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+
+  it('forwards offset, limit, type, aggregateType, aggregateId, correlationId and since', async () => {
+    queryValue = {
+      offset: '20',
+      limit: '10',
+      type: 'RunCompleted',
+      aggregateType: 'run',
+      aggregateId: 'run-123',
+      correlationId: 'corr-1',
+      since: '2026-09-10T12:00:00Z',
+    }
+
+    await eventsHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/events', {
+      query: {
+        offset: '20',
+        limit: '10',
+        type: 'RunCompleted',
+        aggregateType: 'run',
+        aggregateId: 'run-123',
+        correlationId: 'corr-1',
+        since: '2026-09-10T12:00:00Z',
+      },
     })
   })
 })
