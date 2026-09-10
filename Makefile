@@ -65,40 +65,26 @@ MIN_OPENAPI_PATHS := 37
 
 .PHONY: openapi
 openapi: ## Regenerate docs/openapi.json from the live /v3/api-docs (needs Postgres; Temporal optional)
+	MIN_OPENAPI_PATHS=$(MIN_OPENAPI_PATHS) bash scripts/openapi-fetch.sh docs/openapi.json
+
+# NOT wired into `make test` — needs a Postgres-backed bootRun. Opt-in mirror
+# of `make cve-scan` (T414). Detects drift between the committed docs/openapi.json
+# and a freshly fetched spec without ever writing docs/openapi.json.
+.PHONY: openapi-check
+openapi-check: ## Fail if docs/openapi.json drifts from live /v3/api-docs (classifier: scripts/openapi-diff.py)
 	@set -euo pipefail; \
-	PORT=$${SERVER_PORT:-8090}; BASE=http://localhost:$$PORT; \
-	printf '\n==> Booting starter-launcher headless on port %s...\n' "$$PORT"; \
-	LOG=$$(mktemp /tmp/cbs-nova-openapi-boot.XXXXXX.log); \
-	cleanup() { pkill -f 'cbs.nova.starter.[S]tarterApplication' 2>/dev/null || true; rm -f "$$LOG"; }; \
+	TMP=$$(mktemp /tmp/cbs-nova-openapi-check.XXXXXX.json); \
+	cleanup() { rm -f "$$TMP"; }; \
 	trap cleanup EXIT; \
-	env SERVER_PORT=$$PORT CBS_WEBHOOK_ENABLED=true \
-		backend/dsl-platform/gradlew -p backend/dsl-starter :starter-launcher:bootRun --console=plain >"$$LOG" 2>&1 & \
-	up=0; for i in $$(seq 1 40); do \
-		if curl -sf --max-time 2 "$$BASE/actuator/health" 2>/dev/null | grep -q '"status":"UP"'; then up=1; break; fi; \
-		sleep 3; done; \
-	if [ $$up -ne 1 ]; then \
-		printf '    [fail] backend not healthy after ~120s (log: %s)\n' "$$LOG" >&2; \
-		tail -20 "$$LOG" >&2; \
-		exit 1; \
+	MIN_OPENAPI_PATHS=$(MIN_OPENAPI_PATHS) bash scripts/openapi-fetch.sh "$$TMP"; \
+	if cmp -s "$$TMP" docs/openapi.json; then \
+		printf '    [ok]   docs/openapi.json is byte-identical to the freshly fetched spec\n'; \
+		exit 0; \
 	fi; \
-	printf '    [ok]   backend healthy (%s/actuator/health)\n' "$$BASE"; \
-	TMP=$$(mktemp /tmp/cbs-nova-openapi.XXXXXX.json); \
-	curl -sf --max-time 30 "$$BASE/v3/api-docs" | python3 -c \
-		'import json,sys; print(json.dumps(json.load(sys.stdin), indent=2, sort_keys=True))' > "$$TMP"; \
-	python3 -c \
-		'import json,sys; d=json.load(open(sys.argv[1])); n=len(d.get("paths",{})); assert n>=int(sys.argv[2]), f"paths count {n} < {sys.argv[2]}"; print(f"    [ok]   {n} paths (>= {sys.argv[2]})")' \
-		"$$TMP" $(MIN_OPENAPI_PATHS); \
-	mv "$$TMP" docs/openapi.json; \
-	printf '    [ok]   wrote docs/openapi.json\n'; \
-	printf '==> Shutting down backend...\n'; \
-	pkill -f 'cbs.nova.starter.[S]tarterApplication' 2>/dev/null || true; \
-	for i in $$(seq 1 15); do \
-		curl -s --max-time 1 "$$BASE/" >/dev/null 2>&1 || break; sleep 1; done; \
-	if curl -s --max-time 1 "$$BASE/" >/dev/null 2>&1; then \
-		printf '    [fail] backend still serving on %s\n' "$$BASE" >&2; exit 1; \
-	fi; \
-	trap - EXIT; rm -f "$$LOG"; \
-	printf '    [ok]   backend stopped, docs/openapi.json regenerated\n'
+	printf '\n==> docs/openapi.json drifts from the live spec:\n'; \
+	diff -u docs/openapi.json "$$TMP" | head -200 || true; \
+	printf '\n==> Classifier (scripts/openapi-diff.py):\n'; \
+	python3 scripts/openapi-diff.py docs/openapi.json "$$TMP"
 
 .PHONY: frontend
 frontend: ## Run the Nuxt admin UI dev server (cd frontend && pnpm dev)

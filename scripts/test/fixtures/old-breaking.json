@@ -1,0 +1,46 @@
+{
+  "openapi": "3.0.1",
+  "info": { "title": "fixture", "version": "1.0.0" },
+  "paths": {
+    "/widgets": {
+      "get": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "secret"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "secret": { "type": "string" },
+                  "count": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["id"],
+                  "properties": {
+                    "id": { "type": "string" },
+                    "kind": { "type": "string", "enum": ["A", "B", "C"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/legacy": {
+      "post": {
+        "responses": { "204": { "description": "ok" } }
+      }
+    }
+  }
+}
