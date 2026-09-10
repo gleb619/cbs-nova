@@ -97,9 +97,12 @@ public record PreviewReport(
 
 ## Related docs
 
+- [ADR 0004 — Preview, dry-run, and Explain execution modes](../adr/0004-preview-dry-run-explain-modes.md) — the
+  architectural rationale, alternatives considered, and the mechanism (pipes, `DispatchStage`,
+  `HelperInterceptor` / `FakeHelperInterceptor`, capture `BeanPostProcessor`s).
 - [Runtime Engine](runtime.md) — registry, runner, manager, and mode-agnostic REST surface.
 - [DSL Constructs & Execution Contract](constructs.md) — the `Executable` interface and `preview(...)` method contract.
-- [Dry-run/Preview and Explain Modes](../ideas/dry-run-preview-explain.ignore.md) — detailed endpoints, output formats, and
-  diagram library integrations.
+- [Dry-run/Preview and Explain Modes](../ideas/dry-run-preview-explain.ignore.md) — non-authoritative brainstorm,
+  superseded by [ADR 0004](../adr/0004-preview-dry-run-explain-modes.md); kept for historical context.
 - `docs/plans/T146-*` through `T151-*` — implementation tasks for external call capture, call-tree collection, dry-run
   logs, and the integration test.

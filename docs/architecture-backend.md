@@ -30,6 +30,9 @@ See [DSL Constructs & Execution Contract](dsl/constructs.md), [Authoring DSL Flo
 3. **Explain** — preview mode that also returns a human-readable description and a Mermaid diagram.
 
 See [Preview Mode (dry-run)](dsl/preview-mode.md) and [Runtime Engine](dsl/runtime.md#operational-modes).
+For the architectural rationale, alternatives considered, and the mechanism behind the three modes (`DslRuntime`,
+pipes, `DispatchStage`, `HelperInterceptor` / `FakeHelperInterceptor`, capture `BeanPostProcessor`s), see
+[ADR 0004](adr/0004-preview-dry-run-explain-modes.md).
 
 ## High-level architecture
 
