@@ -57,6 +57,10 @@ publish: ## Publish the DSL platform to Maven Local (backend/dsl-platform/gradle
 	backend/dsl-platform/gradlew -p backend/dsl-platform publishToMavenLocal -x test
 
 # Minimum number of paths expected in /v3/api-docs. Bump when new DSL routes are added.
+# NOTE: /api/dsl/schedules (DslScheduleRouterConfiguration) is intentionally NOT counted here —
+# it is gated behind @ConditionalOnBean(ScheduleClient.class) and only appears in the document
+# when Temporal (and thus the ScheduleClient bean) is reachable. Boot with Temporal running to
+# document it; otherwise the route is absent from the openapi, which is intentional.
 MIN_OPENAPI_PATHS := 37
 
 .PHONY: openapi

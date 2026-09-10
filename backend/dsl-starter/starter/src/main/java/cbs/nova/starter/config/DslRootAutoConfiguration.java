@@ -29,6 +29,7 @@ import org.springframework.context.annotation.Import;
     MessagingCallCaptureConfiguration.class,
     PreviewMetricsConfiguration.class,
     DslRouterConfiguration.class,
+    DslScheduleConfiguration.class,
     WebhookConfiguration.class,
     DslRunRetentionConfiguration.class,
     DslRunReconciliationConfiguration.class,
