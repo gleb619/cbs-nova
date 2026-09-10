@@ -210,6 +210,9 @@ class AdvancedDslExamplesTest {
       if (helperClass == MaskHelper.class) {
         return new MaskHelper();
       }
+      if (helperClass == InterpolateHelper.class) {
+        return new InterpolateHelper();
+      }
 
       throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
     };

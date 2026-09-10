@@ -194,6 +194,28 @@ FormatMessageOut msg = ctx.runHelper("formatMessage",
         .as(FormatMessageOut.class);
 ```
 
+### Fill an operator-supplied template (no expression evaluation)
+
+`interpolate` is the safe sibling of `formatMessage`: literal `${key}` substitution, no SpEL.
+Where `formatMessage` evaluates the template as a single expression (powerful but unsafe for
+templates that originate as operator or user config — Epic 3 notification rules), `interpolate`
+treats the template as data: `$$` escapes a literal `$`, keys are looked up in the params `Map`,
+and a key absent from the map follows `onMissing` — `error` (default, fails), `empty`
+(substitutes `""`), or `keep` (leaves `${key}` verbatim). A value present in the map but mapped
+to `null` always renders as `""` (missing ≠ null). Phase 1 supports flat keys only — dotted
+paths (`${order.id}`) and default-value syntax (`${name:-anon}`) are deliberate follow-ups.
+
+```java
+InterpolateOut msg = ctx.runHelper("interpolate",
+        new InterpolateIn(
+                "Run ${runId} for ${customer} failed at step ${step}",
+                Map.of("runId", runId, "customer", name, "step", step),
+                "error"))
+        .as(InterpolateOut.class);
+String body = msg.result();                       // rendered template
+List<String> touched = msg.resolvedKeys();        // distinct keys, first-seen order
+```
+
 ## JSON object merge patches
 
 `jsonPatch` applies RFC 7396 JSON Merge Patch in two directions. The `mode` discriminator
