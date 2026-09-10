@@ -133,7 +133,12 @@ public class DslRunReconciliationService {
     }
   }
 
-  void reconcileOnce() {
+  /**
+   * One stuck-run sweep pass. Made {@code public} (was package-private) by T412 so the
+   * {@code DslRunReconciliationMaintenanceTask} adapter in {@code cbs.nova.starter.maintenance} can
+   * invoke it; existing tests in {@code cbs.nova.starter.service} retain the same access.
+   */
+  public void reconcileOnce() {
     Instant cutoff = clock.instant().minus(gracePeriod);
     runRepository.knownProcessNames().stream()
             .flatMap(processName -> runRepository.findByProcessName(processName).stream())

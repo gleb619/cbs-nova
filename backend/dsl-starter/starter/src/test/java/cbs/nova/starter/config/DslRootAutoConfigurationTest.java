@@ -65,6 +65,7 @@ class DslRootAutoConfigurationTest {
             RbacFilterConfiguration.class,
             DslRunRetentionConfiguration.class,
             DslRunReconciliationConfiguration.class,
+            DslMaintenanceConfiguration.class,
             DslRunRepositoryConfiguration.class,
             SecurityConfiguration.class,
             ApiKeyAuthMisconfigurationWarning.class,

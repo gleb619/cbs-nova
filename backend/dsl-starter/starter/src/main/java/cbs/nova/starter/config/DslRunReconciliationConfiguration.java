@@ -53,6 +53,7 @@ public class DslRunReconciliationConfiguration {
 
   @Bean
   @ConditionalOnBean(DslRunReconciliationService.class)
+  @ConditionalOnProperty(prefix = "dsl.maintenance", name = "unified-enabled", havingValue = "false", matchIfMissing = true)
   ApplicationRunner dslRunReconciliationServiceStarter(DslRunReconciliationService service) {
     return args -> service.start();
   }
