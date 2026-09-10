@@ -135,6 +135,7 @@ public final class AvajeJsonValue implements JsonValue {
     if (raw instanceof Map<?, ?> map) {
       Map<String, JsonValue> result = new LinkedHashMap<>();
       map.forEach((key, val) -> result.put(String.valueOf(key), of(val)));
+      return result;
     }
 
     return Map.of();

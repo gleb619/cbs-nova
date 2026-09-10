@@ -1,6 +1,9 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { DSL_SCHEMA_FETCH_KEY, __resetConstructSchemaCache } from '../../composables/useConstructSchema'
+import {
+  __resetConstructSchemaCache,
+  DSL_SCHEMA_FETCH_KEY,
+} from '../../composables/useConstructSchema'
 import PreviewResultPanel from '../dsl/PreviewResultPanel.vue'
 import SchemaFormField from '../dsl/SchemaFormField.vue'
 
@@ -27,6 +30,11 @@ function mountPanel(
       provide: { [DSL_SCHEMA_FETCH_KEY as symbol]: fetchMock },
     },
   })
+}
+
+async function openHistory(wrapper: Awaited<ReturnType<typeof mountPanel>>) {
+  await wrapper.find('[data-testid="history-button"]').trigger('click')
+  await flushPromises()
 }
 
 const schemaResponse = {
@@ -63,10 +71,215 @@ describe('PreviewResultPanel', () => {
     expect(wrapper.find('[data-testid="runner-result-tab"]').text()).toContain('{"ok":true}')
   })
 
-  it('emits history when the header history button is clicked', async () => {
+  it('toggles history mode when the header history button is clicked', async () => {
     const wrapper = mountPanel({ output: { result: { ok: true } }, status: 'success' })
+    expect(wrapper.find('[data-testid="history-empty"]').exists()).toBe(false)
+
     await wrapper.find('[data-testid="history-button"]').trigger('click')
-    expect(wrapper.emitted('history')).toBeTruthy()
+    expect(wrapper.find('[data-testid="history-empty"]').exists()).toBe(true)
+    expect(wrapper.emitted('history')).toBeFalsy()
+
+    await wrapper.find('[data-testid="history-button"]').trigger('click')
+    expect(wrapper.find('[data-testid="history-empty"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="runner-result-tab"]').exists()).toBe(true)
+  })
+
+  it('lists history entries with status, time and payload summary', async () => {
+    const history = [
+      {
+        id: '1',
+        name: 'demo',
+        payload: { a: 1 },
+        output: { result: { ok: true } },
+        status: 'success',
+        startedAt: '2026-09-10T10:00:00.000Z',
+      },
+      {
+        id: '2',
+        name: 'demo',
+        payload: { b: 2 },
+        output: { errors: [{ message: 'boom' }] },
+        status: 'failed',
+        startedAt: '2026-09-10T11:00:00.000Z',
+      },
+    ]
+    const wrapper = mountPanel({ history })
+    await openHistory(wrapper)
+    const items = wrapper.findAll('[data-testid="history-item"]')
+    expect(items).toHaveLength(2)
+    expect(items[0].text()).toContain('OK')
+    expect(items[0].text()).toContain('{"a":1}')
+    expect(items[1].text()).toContain('ERR')
+    expect(wrapper.find('[data-testid="result-status"]').text()).toBe('History — 2 run(s)')
+  })
+
+  it('truncates long payloads in the history list', async () => {
+    const longPayload = { data: 'x'.repeat(200) }
+    const wrapper = mountPanel({
+      history: [
+        {
+          id: '1',
+          name: 'demo',
+          payload: longPayload,
+          status: 'success',
+          startedAt: '2026-09-10T10:00:00.000Z',
+        },
+      ],
+    })
+    await openHistory(wrapper)
+    const summary = wrapper.find('[data-testid="history-item"]').text()
+    expect(summary).toContain('…')
+    expect(summary).not.toContain('x'.repeat(150))
+  })
+
+  it('shows the stored result when a history entry is opened', async () => {
+    const wrapper = mountPanel({
+      history: [
+        {
+          id: '1',
+          name: 'demo',
+          payload: { a: 1 },
+          output: { result: { stored: true } },
+          status: 'success',
+          startedAt: '2026-09-10T10:00:00.000Z',
+        },
+      ],
+    })
+    await openHistory(wrapper)
+    await wrapper.find('[data-testid="history-view"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="history-detail"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="history-detail-payload"]').text()).toContain('"a": 1')
+    expect(wrapper.find('[data-testid="runner-result-tab"]').text()).toContain('{"stored":true}')
+    expect(wrapper.find('[data-testid="result-status"]').text()).toBe('History — stored result')
+
+    await wrapper.find('[data-testid="history-back"]').trigger('click')
+    expect(wrapper.find('[data-testid="history-list"]').exists()).toBe(true)
+  })
+
+  it('shows stored errors for failed entries', async () => {
+    const wrapper = mountPanel({
+      history: [
+        {
+          id: '1',
+          name: 'demo',
+          payload: { a: 1 },
+          output: { errors: [{ message: 'stored failure' }] },
+          status: 'failed',
+          startedAt: '2026-09-10T10:00:00.000Z',
+        },
+      ],
+    })
+    await openHistory(wrapper)
+    await wrapper.find('[data-testid="history-view"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="history-detail"]').text()).toContain('stored failure')
+  })
+
+  it('emits rerun with the entry payload', async () => {
+    const wrapper = mountPanel({
+      history: [
+        {
+          id: '1',
+          name: 'demo',
+          payload: { a: 1 },
+          output: { result: { ok: true } },
+          status: 'success',
+          startedAt: '2026-09-10T10:00:00.000Z',
+        },
+      ],
+    })
+    await openHistory(wrapper)
+    await wrapper.find('[data-testid="history-rerun"]').trigger('click')
+
+    const emitted = wrapper.emitted('rerun')
+    expect(emitted).toBeTruthy()
+    expect(emitted?.[0]?.[0]).toEqual({ a: 1 })
+  })
+
+  it('emits rerun from the detail view', async () => {
+    const wrapper = mountPanel({
+      history: [
+        {
+          id: '1',
+          name: 'demo',
+          payload: { a: 1 },
+          output: { result: { ok: true } },
+          status: 'success',
+          startedAt: '2026-09-10T10:00:00.000Z',
+        },
+      ],
+    })
+    await openHistory(wrapper)
+    await wrapper.find('[data-testid="history-view"]').trigger('click')
+    await wrapper.find('[data-testid="history-run-again"]').trigger('click')
+
+    const emitted = wrapper.emitted('rerun')
+    expect(emitted).toBeTruthy()
+    expect(emitted?.[0]?.[0]).toEqual({ a: 1 })
+  })
+
+  it('disables rerun while a run is in flight', async () => {
+    const wrapper = mountPanel({
+      status: 'loading',
+      history: [
+        {
+          id: '1',
+          name: 'demo',
+          payload: { a: 1 },
+          status: 'success',
+          startedAt: '2026-09-10T10:00:00.000Z',
+        },
+      ],
+    })
+    await openHistory(wrapper)
+    expect(wrapper.find('[data-testid="history-rerun"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('emits clearHistory from the footer', async () => {
+    const wrapper = mountPanel({
+      history: [
+        {
+          id: '1',
+          name: 'demo',
+          payload: { a: 1 },
+          status: 'success',
+          startedAt: '2026-09-10T10:00:00.000Z',
+        },
+      ],
+    })
+    await openHistory(wrapper)
+    await wrapper.find('[data-testid="clear-history"]').trigger('click')
+    expect(wrapper.emitted('clearHistory')).toBeTruthy()
+  })
+
+  it('disables clear when there are no entries', async () => {
+    const wrapper = mountPanel({ history: [] })
+    await openHistory(wrapper)
+    expect(wrapper.find('[data-testid="clear-history"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('drops the open entry detail when the entry disappears', async () => {
+    const wrapper = mountPanel({
+      history: [
+        {
+          id: '1',
+          name: 'demo',
+          payload: { a: 1 },
+          status: 'success',
+          startedAt: '2026-09-10T10:00:00.000Z',
+        },
+      ],
+    })
+    await openHistory(wrapper)
+    await wrapper.find('[data-testid="history-view"]').trigger('click')
+    expect(wrapper.find('[data-testid="history-detail"]').exists()).toBe(true)
+
+    await wrapper.setProps({ history: [] })
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="history-detail"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="history-empty"]').exists()).toBe(true)
   })
 
   it('renders output type name from schema endpoint', async () => {
@@ -292,5 +505,4 @@ describe('PreviewResultPanel', () => {
     expect(field.exists()).toBe(true)
     expect((field.element as HTMLInputElement).value).toBe('live value')
   })
-
 })

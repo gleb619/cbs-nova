@@ -1,6 +1,10 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { DSL_SCHEMA_FETCH_KEY, __resetConstructSchemaCache } from '../../composables/useConstructSchema'
+import {
+  __resetConstructSchemaCache,
+  DSL_SCHEMA_FETCH_KEY,
+} from '../../composables/useConstructSchema'
+import { __resetPreviewHistoryForTests } from '../../composables/usePreviewHistory'
 import PreviewTab from '../dsl/PreviewTab.vue'
 
 function mountTab(
@@ -23,7 +27,7 @@ function mountTab(
               </header>
               <div data-testid="runner-result-tab">{{ output !== undefined ? JSON.stringify(output) : 'No result yet.' }}</div>
             </section>`,
-          props: ['output', 'status', 'endpoint', 'name', 'type'],
+          props: ['output', 'status', 'endpoint', 'name', 'type', 'history'],
         },
         ResultTab: {
           template:
@@ -56,6 +60,8 @@ const schemaResponse = {
 describe('PreviewTab', () => {
   beforeEach(() => {
     __resetConstructSchemaCache()
+    __resetPreviewHistoryForTests()
+    window.localStorage.clear()
   })
 
   afterEach(() => {
@@ -251,5 +257,68 @@ describe('PreviewTab', () => {
     const resultText = wrapper.find('[data-testid="runner-result-tab"]').text()
     expect(resultText).toContain('"result":{"total":42,"summary":"processed"}')
     expect(wrapper.text()).toContain('done')
+  })
+
+  it('records a successful run in history', async () => {
+    const preview = vi.fn().mockResolvedValue({ result: { ok: true } })
+    const wrapper = mountTab({}, preview)
+    await wrapper.find('[data-testid="json-textarea"]').setValue('{"a":1}')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Run')!
+      .trigger('click')
+    await flushPromises()
+
+    const stored = JSON.parse(window.localStorage.getItem('cbs-nova:preview:history') ?? '[]')
+    expect(stored).toHaveLength(1)
+    expect(stored[0]).toMatchObject({
+      name: 'demo',
+      payload: { a: 1 },
+      status: 'success',
+      output: { result: { ok: true } },
+    })
+    expect(stored[0].id).toBeTruthy()
+    expect(stored[0].startedAt).toBeTruthy()
+  })
+
+  it('records a failed run in history', async () => {
+    const preview = vi.fn().mockRejectedValue({
+      data: { errors: [{ message: 'preview failed' }] },
+      statusMessage: 'Unprocessable Entity',
+    })
+
+    const wrapper = mountTab({}, preview)
+    await wrapper.find('[data-testid="json-textarea"]').setValue('{"a":1}')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Run')!
+      .trigger('click')
+    await flushPromises()
+
+    const stored = JSON.parse(window.localStorage.getItem('cbs-nova:preview:history') ?? '[]')
+    expect(stored).toHaveLength(1)
+    expect(stored[0].status).toBe('failed')
+    expect(stored[0].output.errors[0].message).toBe('preview failed')
+  })
+
+  it('reruns a stored history payload through the preview function', async () => {
+    const preview = vi.fn().mockResolvedValue({ result: { ok: true } })
+    const wrapper = mountTab({}, preview)
+    await wrapper.find('[data-testid="json-textarea"]').setValue('{"a":1}')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Run')!
+      .trigger('click')
+    await flushPromises()
+    preview.mockClear()
+
+    wrapper.findComponent({ name: 'PreviewResultPanel' }).vm.$emit('rerun', { b: 2 })
+    await flushPromises()
+
+    expect(preview).toHaveBeenCalledWith('demo', { b: 2 }, { startedFrom: 'workbench' })
+    expect(wrapper.text()).toContain('done')
+
+    const textarea = wrapper.find('[data-testid="json-textarea"]')
+    expect((textarea.element as HTMLTextAreaElement).value).toContain('"b": 2')
   })
 })

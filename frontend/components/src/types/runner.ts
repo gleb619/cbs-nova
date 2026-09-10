@@ -41,6 +41,16 @@ export interface RunnerError {
   code?: string
 }
 
+export interface PreviewHistoryEntry {
+  id: string
+  name: string
+  type?: string
+  payload: unknown
+  output?: RunnerOutput
+  status: RunnerStatus
+  startedAt: string
+}
+
 export interface RunnerOutput {
   result?: unknown
   metadata?: Record<string, unknown>

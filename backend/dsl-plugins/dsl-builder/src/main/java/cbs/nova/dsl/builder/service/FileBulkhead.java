@@ -15,7 +15,7 @@ public class FileBulkhead {
   private final Semaphore writeSemaphore;
   private final long acquireTimeoutSeconds;
 
-  //TODO: replace constructor init with spring configuration
+  // TODO: replace constructor init with spring configuration
   @Autowired
   public FileBulkhead(DslBuilderProperties properties) {
     this(new Semaphore(properties.files().readBulkheadPermits()),
@@ -23,7 +23,7 @@ public class FileBulkhead {
             properties.files().acquireTimeoutSeconds());
   }
 
-  //TODO: replace with lomboks constructor
+  // TODO: replace with lomboks constructor
   public FileBulkhead(Semaphore readSemaphore, Semaphore writeSemaphore,
           long acquireTimeoutSeconds) {
     this.readSemaphore = readSemaphore;

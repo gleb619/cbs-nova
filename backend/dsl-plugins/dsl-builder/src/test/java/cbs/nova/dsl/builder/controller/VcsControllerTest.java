@@ -62,7 +62,7 @@ class VcsControllerTest {
               "0.0.1-SNAPSHOT",
               "1.27.0",
               "4.0.4",
-                            "v1",
+              "v1",
               List.of("clean", "build"),
               List.of("dsl", "models"),
               "project/templates",
@@ -70,7 +70,8 @@ class VcsControllerTest {
               null,
               null,
               null,
-              new cbs.nova.dsl.builder.config.DslBuilderProperties.Git(true, null, null, null, null, null, 0),
+              new cbs.nova.dsl.builder.config.DslBuilderProperties.Git(true, null, null, null, null,
+                      null, 0),
               null);
     }
   }

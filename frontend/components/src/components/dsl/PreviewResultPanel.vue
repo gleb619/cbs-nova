@@ -1,24 +1,30 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { type ConstructType, useConstructSchema } from '../../composables/useConstructSchema'
-import type { RunnerOutput, RunnerStatus } from '../../types/runner'
+import type { PreviewHistoryEntry, RunnerOutput, RunnerStatus } from '../../types/runner'
 import ResultTab from '../runner/ResultTab.vue'
 import SchemaForm from './SchemaForm.vue'
 
-const props = defineProps<{
-  name: string
-  type?: ConstructType
-  output: RunnerOutput | null
-  status: RunnerStatus
-  endpoint?: 'preview' | 'run' | 'explain'
-}>()
+const props = withDefaults(
+  defineProps<{
+    name: string
+    type?: ConstructType
+    output: RunnerOutput | null
+    status: RunnerStatus
+    endpoint?: 'preview' | 'run' | 'explain'
+    history?: PreviewHistoryEntry[]
+  }>(),
+  { history: () => [] },
+)
 
 const emit = defineEmits<{
-  history: []
+  rerun: [payload: unknown]
+  clearHistory: []
   format: [formatted: string]
 }>()
 
-const mode = ref<'form' | 'json' | 'schema'>('json')
+type PanelMode = 'form' | 'json' | 'schema' | 'history'
+const mode = ref<PanelMode>('json')
 
 const { outputSchema, outputType, loading, error, hasOutputSchema } = useConstructSchema({
   name: () => props.name,
@@ -67,8 +73,47 @@ function formatResult() {
   }
 }
 
-function setMode(next: 'form' | 'json' | 'schema') {
+function setMode(next: PanelMode) {
+  if (next === mode.value) return
   mode.value = next
+  if (next !== 'history') {
+    selectedEntryId.value = null
+  }
+}
+
+function toggleHistory() {
+  setMode(mode.value === 'history' ? 'json' : 'history')
+}
+
+const selectedEntryId = ref<string | null>(null)
+
+const selectedEntry = computed(() =>
+  selectedEntryId.value === null
+    ? undefined
+    : props.history.find((entry) => entry.id === selectedEntryId.value),
+)
+
+function selectEntry(id: string) {
+  selectedEntryId.value = id
+}
+
+function payloadSummary(payload: unknown): string {
+  let text: string
+  try {
+    text = JSON.stringify(payload)
+  } catch {
+    text = String(payload)
+  }
+  return text.length > 80 ? `${text.slice(0, 80)}…` : text
+}
+
+function entryTime(entry: PreviewHistoryEntry): string {
+  const date = new Date(entry.startedAt)
+  return Number.isNaN(date.getTime()) ? entry.startedAt : date.toLocaleString()
+}
+
+function runAgain(entry: PreviewHistoryEntry) {
+  emit('rerun', entry.payload)
 }
 
 const footerStatus = computed(() => {
@@ -81,6 +126,10 @@ const footerStatus = computed(() => {
     return { text: count > 0 ? `Failed — ${count} error(s)` : 'Failed', type: 'danger' as const }
   }
   if (props.status === 'success') return { text: 'Done', type: 'success' as const }
+  if (mode.value === 'history') {
+    if (selectedEntry.value) return { text: 'History — stored result', type: 'muted' as const }
+    return { text: `History — ${props.history.length} run(s)`, type: 'muted' as const }
+  }
   if (mode.value === 'form') {
     if (loading.value) return { text: 'Loading schema…', type: 'muted' as const }
     if (error.value) return { text: `Schema unavailable: ${error.value}`, type: 'danger' as const }
@@ -102,6 +151,7 @@ watch(
   () => props.name,
   () => {
     mode.value = 'json'
+    selectedEntryId.value = null
   },
 )
 
@@ -116,6 +166,15 @@ watch(
   () => {
     transient.value = null
     if (transientTimeout) clearTimeout(transientTimeout)
+  },
+)
+
+watch(
+  () => props.history,
+  (entries) => {
+    if (selectedEntryId.value && !entries.some((entry) => entry.id === selectedEntryId.value)) {
+      selectedEntryId.value = null
+    }
   },
 )
 </script>
@@ -133,7 +192,7 @@ watch(
           type="button"
           class="text-xs px-3 py-1 bg-accent-500 text-white hover:bg-accent-600 disabled:opacity-50"
           data-testid="history-button"
-          @click="emit('history')"
+          @click="toggleHistory"
         >
           History
         </button>
@@ -175,6 +234,102 @@ watch(
           data-testid="schema-view"
           class="w-full h-full min-h-0 overflow-auto font-mono text-xs leading-relaxed text-ink bg-white whitespace-pre-wrap break-words"
         >{{ JSON.stringify(outputSchema, null, 2) }}</pre>
+      </div>
+
+      <div v-else class="h-full overflow-auto p-3" data-testid="history-panel">
+        <p v-if="history.length === 0" class="text-xs text-ink-muted" data-testid="history-empty">
+          No runs yet.
+        </p>
+
+        <div v-else-if="selectedEntry" class="space-y-2" data-testid="history-detail">
+          <div class="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              class="text-xs px-2 py-1 border border-line hover:bg-surface"
+              data-testid="history-back"
+              @click="selectedEntryId = null"
+            >
+              Back
+            </button>
+            <div class="flex items-center gap-2 min-w-0">
+              <span
+                class="text-xs shrink-0"
+                :class="selectedEntry.status === 'success' ? 'text-success-600' : 'text-danger'"
+              >
+                {{ selectedEntry.status === 'success' ? 'Success' : 'Failed' }}
+              </span>
+              <span class="text-xs text-ink-muted truncate">{{ entryTime(selectedEntry) }}</span>
+            </div>
+            <button
+              type="button"
+              class="text-xs px-2 py-1 bg-accent-500 text-white hover:bg-accent-600 disabled:opacity-50 shrink-0"
+              data-testid="history-run-again"
+              :disabled="status === 'loading' || status === 'running'"
+              @click="runAgain(selectedEntry)"
+            >
+              Run again
+            </button>
+          </div>
+
+          <div>
+            <p class="text-xs font-medium text-ink mb-1">Input</p>
+            <pre
+              class="font-mono text-xs leading-relaxed text-ink whitespace-pre-wrap break-words bg-surface p-2"
+              data-testid="history-detail-payload"
+            >{{ JSON.stringify(selectedEntry.payload, null, 2) }}</pre>
+          </div>
+
+          <div>
+            <p class="text-xs font-medium text-ink mb-1">Result</p>
+            <div v-if="selectedEntry.output?.errors?.length" class="space-y-1">
+              <p
+                v-for="(err, i) in selectedEntry.output.errors"
+                :key="i"
+                class="text-xs font-mono text-danger whitespace-pre-wrap"
+              >
+                {{ err.message }}
+              </p>
+            </div>
+            <ResultTab v-else :result="selectedEntry.output?.result" />
+          </div>
+        </div>
+
+        <ul v-else class="space-y-1" data-testid="history-list">
+          <li
+            v-for="entry in history"
+            :key="entry.id"
+            class="flex items-center gap-2 border border-line px-2 py-1"
+            data-testid="history-item"
+          >
+            <span
+              class="text-xs shrink-0"
+              :class="entry.status === 'success' ? 'text-success-600' : 'text-danger'"
+            >
+              {{ entry.status === 'success' ? 'OK' : 'ERR' }}
+            </span>
+            <span class="text-xs text-ink-muted shrink-0">{{ entryTime(entry) }}</span>
+            <span class="flex-1 min-w-0 font-mono text-xs text-ink truncate">
+              {{ payloadSummary(entry.payload) }}
+            </span>
+            <button
+              type="button"
+              class="text-xs px-2 py-1 border border-line hover:bg-surface shrink-0"
+              data-testid="history-view"
+              @click="selectEntry(entry.id)"
+            >
+              View
+            </button>
+            <button
+              type="button"
+              class="text-xs px-2 py-1 border border-line hover:bg-surface shrink-0"
+              data-testid="history-rerun"
+              :disabled="status === 'loading' || status === 'running'"
+              @click="runAgain(entry)"
+            >
+              Run again
+            </button>
+          </li>
+        </ul>
       </div>
     </div>
 
@@ -229,6 +384,16 @@ watch(
       </div>
 
       <div class="flex items-center gap-2 shrink-0">
+        <button
+          v-if="mode === 'history'"
+          type="button"
+          class="text-xs px-2 py-1 border border-line hover:bg-surface disabled:opacity-50"
+          data-testid="clear-history"
+          :disabled="history.length === 0"
+          @click="emit('clearHistory')"
+        >
+          Clear
+        </button>
         <button
           type="button"
           class="text-xs px-2 py-1 border border-line hover:bg-surface disabled:opacity-50"

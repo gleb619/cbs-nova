@@ -51,15 +51,16 @@ cross-referenced in [`backend/AGENTS.md`](backend/AGENTS.md#1-project-map--archi
 
 ## Prerequisites
 
-| Tool       | Version                      | Notes                                            |
-|------------|------------------------------|--------------------------------------------------|
-| **JDK**    | 25 (see note)                | Defined in `backend/gradle/libs.versions.toml:2` |
-| **pnpm**   | 9.x                          | Package manager (`frontend/package.json:7`)      |
-| **Docker** | 24+ with Compose v2          | For the full stack (Postgres, Keycloak, etc.)    |
+| Tool       | Version                              | Why                                       |
+|------------|--------------------------------------|-------------------------------------------|
+| **JDK**    | 25 (or 21+ supported by Spring Boot) | Backend Gradle / Spring Boot starter       |
+| **pnpm**   | 9.x                                  | Frontend (Nuxt admin-ui-plugin workspace) |
+| **Docker** | 24+ with Compose v2                  | Local infra (Postgres / Keycloak / Temporal) |
 
-> Java 25 is the version used in CI. Any JDK 21+ supported by Spring Boot will
-> work for local development. See [`DEVELOPING.md`](DEVELOPING.md) for
-> per-platform install instructions.
+Per-platform install commands (apt / brew), service ports, and credentials live
+in [`DEVELOPING.md`](DEVELOPING.md). JDK 25 is the CI matrix default — locally
+any 21+ Spring Boot supports works through `make backend`, which handles the
+Gradle wrapper selection for you.
 
 ---
 
@@ -93,6 +94,19 @@ Per module (each sub-build has its own Gradle wrapper invocation):
 Each module name maps to its directory under `dsl-platform/`, `dsl-plugins/`, or
 `dsl-starter/` and is invoked with `-p <sub-build> :<module>:<task>`.
 
+> **BootRun caveats** — easy footguns when running the backend on the host:
+>
+> - **Port**: Spring Boot defaults to `8080`. The Nuxt BFF and `make backend`
+>   both expect **`8090`**. Either set `SERVER_PORT=8090` before `bootRun`, or
+>   use `make backend` (which sets it for you). See
+>   [`DEVELOPING.md`](DEVELOPING.md#services-ports-and-default-credentials) for
+>   the canonical ports table.
+> - **Gradle wrapper**: the repo-root `./gradlew` is Gradle 8.13 and fails
+>   under JDK 25. The per-sub-build wrappers (`backend/dsl-platform/gradlew`,
+>   `backend/dsl-starter/gradlew`) target Gradle 9.4.1 and are what the commands
+>   above resolve to. If you see "Unsupported class file major version" or
+>   "JAVA_HOME not set" you're hitting the wrong wrapper.
+
 ### Frontend
 
 Run all commands from `frontend/`.
@@ -119,26 +133,27 @@ Scripts are defined in `frontend/package.json` (workspace root),
 
 ## Adding a built-in `@Helper`
 
-Built-in helpers live in `backend/starter/src/main/java/cbs/nova/starter/helpers/`.
-Each helper follows the same template.
+Built-in helpers live in `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/helper/` (singular).
+Each helper follows the same template. The directory name follows the convention seen in
+shipped helpers (`BackoffHelper.java`, `Base64Helper.java`, `CompressionHelper.java`, ...).
 
 ### 1. Input/Output records
 
-Create the In/Out records under `helpers/model/`:
+Create the In/Out records under `helper/model/`:
 
 ```java
-// backend/starter/src/main/java/cbs/nova/starter/helpers/model/MyHelperIn.java
+// backend/dsl-starter/starter/src/main/java/cbs/nova/starter/helper/model/MyHelperIn.java
 public record MyHelperIn(String value) {}
 ```
 
 ```java
-// backend/starter/src/main/java/cbs/nova/starter/helpers/model/MyHelperOut.java
+// backend/dsl-starter/starter/src/main/java/cbs/nova/starter/helper/model/MyHelperOut.java
 public record MyHelperOut(String result) {}
 ```
 
 ### 2. Helper class
 
-Place the helper in `helpers/`:
+Place the helper in `helper/`:
 
 ```java
 package cbs.nova.starter.helper;
@@ -148,7 +163,7 @@ import cbs.nova.starter.helper.model.MyHelperIn;
 import cbs.nova.starter.helper.model.MyHelperOut;
 
 @Helper(name = "myHelper")
-public class MyHelperHelper implements Executable<MyHelperIn, MyHelperOut> {
+public class MyHelper implements Executable<MyHelperIn, MyHelperOut> {
 
   @Override
   public @NonNull Result<MyHelperOut> execute(@NonNull Context<MyHelperIn> ctx) {
@@ -165,13 +180,13 @@ SPI descriptor consumed by `DslAutoConfiguration`.
 
 ### 3. Unit test
 
-Place the test under `src/test/java/cbs/nova/starter/helpers/`:
+Place the test under `src/test/java/cbs/nova/starter/helper/`:
 
 ```java
-class MyHelperHelperTest {
+class MyHelperTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
-  private final MyHelperHelper helper = new MyHelperHelper();
+  private final MyHelper helper = new MyHelper();
 
   @Test
   void doesSomething() {
@@ -184,11 +199,11 @@ class MyHelperHelperTest {
 ```
 
 Real examples:
-- [`FilterRecordsHelper.java`](backend/starter/src/main/java/cbs/nova/starter/helpers/FilterRecordsHelper.java)
-- [`SortRecordsHelper.java`](backend/starter/src/main/java/cbs/nova/starter/helpers/SortRecordsHelper.java)
-- [`JsonExtractHelper.java`](backend/starter/src/main/java/cbs/nova/starter/helpers/JsonExtractHelper.java)
-- In/Out model records in [`helpers/model/`](backend/starter/src/main/java/cbs/nova/starter/helpers/model/)
-- Test examples in [`src/test/java/cbs/nova/starter/helpers/`](backend/starter/src/test/java/cbs/nova/starter/helpers/)
+- [`FilterRecordsHelper.java`](backend/dsl-starter/starter/src/main/java/cbs/nova/starter/helper/FilterRecordsHelper.java)
+- [`SortRecordsHelper.java`](backend/dsl-starter/starter/src/main/java/cbs/nova/starter/helper/SortRecordsHelper.java)
+- [`JsonExtractHelper.java`](backend/dsl-starter/starter/src/main/java/cbs/nova/starter/helper/JsonExtractHelper.java)
+- In/Out model records in [`helper/model/`](backend/dsl-starter/starter/src/main/java/cbs/nova/starter/helper/model/)
+- Test examples in [`src/test/java/cbs/nova/starter/helper/`](backend/dsl-starter/starter/src/test/java/cbs/nova/starter/helper/)
 
 ### 4. Verify
 
@@ -203,13 +218,13 @@ The helper is auto-registered at runtime — no manual SPI wiring needed.
 ## Adding a DSL example
 
 DSL examples are compact source files under
-`backend/dsl-examples/src/dsl/`. Each file declares a single
+`backend/dsl-starter/dsl-examples/src/dsl/`. Each file declares a single
 `List<DslObject> define()` method without a class or package declaration.
 
 ### 1. Create a compact source file
 
 ```java
-// backend/dsl-examples/src/dsl/MyExampleDsl.java
+// backend/dsl-starter/dsl-examples/src/dsl/MyExampleDsl.java
 import ...;
 
 List<DslObject> define() {
@@ -227,7 +242,7 @@ List<DslObject> define() {
 ### 2. Register input/output model records
 
 If the example defines custom In/Out records, place them under
-`backend/dsl-examples/src/models/` in the package
+`backend/dsl-starter/dsl-examples/src/models/` in the package
 `cbs.nova.dslexamples`.
 
 ### 3. Verify
@@ -243,11 +258,11 @@ required. The same compilation is also exposed as an on-demand REST service by
 [`backend/dsl-plugins/dsl-builder/README.md`](backend/dsl-plugins/dsl-builder/README.md).
 
 Real examples to reference:
-- [`HelperPipelineDsl.java`](backend/dsl-examples/src/dsl/HelperPipelineDsl.java)
+- [`HelperPipelineDsl.java`](backend/dsl-starter/dsl-examples/src/dsl/HelperPipelineDsl.java)
   (helper composition pipeline, added in T126)
-- [`OrderSagaDsl.java`](backend/dsl-examples/src/dsl/OrderSagaDsl.java) (saga
+- [`OrderSagaDsl.java`](backend/dsl-starter/dsl-examples/src/dsl/OrderSagaDsl.java) (saga
   with compensation)
-- [`SimpleGreetingDsl.java`](backend/dsl-examples/src/dsl/SimpleGreetingDsl.java)
+- [`SimpleGreetingDsl.java`](backend/dsl-starter/dsl-examples/src/dsl/SimpleGreetingDsl.java)
 
 ---
 

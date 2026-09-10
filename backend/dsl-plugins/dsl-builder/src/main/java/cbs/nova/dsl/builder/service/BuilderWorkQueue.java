@@ -20,7 +20,7 @@ public class BuilderWorkQueue {
   private final LinkedBlockingQueue<Runnable> queue;
   private final List<Thread> workers;
 
-  //TODO: move to a configuration. replace with lomboks contructor
+  // TODO: move to a configuration. replace with lomboks contructor
   public BuilderWorkQueue(DslBuilderProperties properties) {
     this.queue = new LinkedBlockingQueue<>(Math.max(1, properties.queue().capacity()));
     int workerCount = Math.max(1, properties.queue().workers());

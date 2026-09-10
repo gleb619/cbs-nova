@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { ConstructType } from '../../composables/useConstructSchema'
+import { usePreviewHistory } from '../../composables/usePreviewHistory'
 import type { RunnerOutput, RunnerStatus } from '../../types/runner'
 import PreviewInputPanel from './PreviewInputPanel.vue'
 import PreviewResultPanel from './PreviewResultPanel.vue'
@@ -17,7 +18,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   submit: []
-  history: []
   format: [formatted: string]
 }>()
 
@@ -25,6 +25,9 @@ const inputJson = ref<string>('{\n  \n}')
 const formValue = ref<unknown>(undefined)
 const output = ref<RunnerOutput | null>(null)
 const status = ref<RunnerStatus>('idle')
+
+const history = usePreviewHistory(() => props.name)
+const historyEntries = computed(() => history.entries.value)
 
 function currentPayload(): unknown {
   return formValue.value !== undefined ? formValue.value : JSON.parse(inputJson.value)
@@ -41,14 +44,21 @@ function normalizeResponse(response: unknown): RunnerOutput {
 async function run() {
   status.value = 'loading'
   output.value = null
+  const payload = currentPayload()
   try {
-    const body = currentPayload()
     const metadata = { startedFrom: 'workbench' }
 
-    const raw = await props.preview(props.name, body, metadata)
+    const raw = await props.preview(props.name, payload, metadata)
 
     output.value = normalizeResponse(raw)
     status.value = 'success'
+    history.record({
+      name: props.name,
+      type: props.type,
+      payload,
+      output: output.value,
+      status: 'success',
+    })
   } catch (err) {
     const e = err as {
       data?: Partial<RunnerOutput> & {
@@ -85,7 +95,20 @@ async function run() {
       }
     }
     status.value = 'failed'
+    history.record({
+      name: props.name,
+      type: props.type,
+      payload,
+      output: output.value ?? undefined,
+      status: 'failed',
+    })
   }
+}
+
+function rerun(payload: unknown) {
+  inputJson.value = `${JSON.stringify(payload ?? {}, null, 2)}\n`
+  formValue.value = payload
+  void run()
 }
 
 watch(
@@ -131,7 +154,9 @@ watch(inputJson, (v) => {
         :status="status"
         :name="name"
         :type="type"
-        @history="emit('history')"
+        :history="historyEntries"
+        @rerun="rerun"
+        @clear-history="history.clear"
         @format="emit('format', $event)"
       />
     </div>

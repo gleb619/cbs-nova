@@ -24,7 +24,7 @@ import tools.jackson.databind.ObjectMapper;
 @RequiredArgsConstructor
 public class DefinitionBundleService {
 
-  //TODO: replace hardcode with app.yml settings
+  // TODO: replace hardcode with app.yml settings
   public static final int BUNDLE_FORMAT_VERSION = 1;
   private static final String PUBLISHED_DIR = ".workbench/published";
   private static final String DRAFTS_DIR = ".workbench/drafts";

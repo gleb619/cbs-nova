@@ -20,7 +20,7 @@ import tools.jackson.databind.ObjectMapper;
 @RequiredArgsConstructor
 public class DefinitionHistoryService {
 
-  //TODO: replace hardcode with app.yml settings
+  // TODO: replace hardcode with app.yml settings
   private static final String HISTORY_DIR = ".workbench/history";
   private static final String PUBLISHED_DIR = ".workbench/published";
   private static final String TIMESTAMP_PATTERN = "^[0-9]+$";

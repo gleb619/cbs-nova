@@ -33,7 +33,7 @@ import tools.jackson.databind.ObjectMapper;
 @RequiredArgsConstructor
 public class DraftService {
 
-  //TODO: replace hardcode with app.yml settings
+  // TODO: replace hardcode with app.yml settings
   private static final String DRAFTS_DIR = ".workbench/drafts";
   private static final String PUBLISHED_DIR = ".workbench/published";
   private static final int BUNDLE_MAX_DEFINITIONS = 200;
