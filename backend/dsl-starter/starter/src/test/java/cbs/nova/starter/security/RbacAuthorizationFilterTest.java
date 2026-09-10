@@ -69,7 +69,9 @@ class RbacAuthorizationFilterTest {
       "PATCH,  /api/dsl/definitions/foo/description",
       "POST,   /api/dsl/definitions/import",
       "POST,   /api/dsl/schedules",
-      "DELETE, /api/dsl/schedules/foo"
+      "DELETE, /api/dsl/schedules/foo",
+      "POST,   /api/dsl/auth/keys",
+      "DELETE, /api/dsl/auth/keys/1"
   })
   void adminPassesEveryProtectedRoute(String method, String path) throws Exception {
     authenticateAs("admin", Role.ADMIN);
@@ -108,6 +110,11 @@ class RbacAuthorizationFilterTest {
       "POST,   /api/dsl/schedules,    AUTHOR,   false",
       "DELETE, /api/dsl/schedules/foo, OPERATOR, true",
       "DELETE, /api/dsl/schedules/foo, AUTHOR,   false",
+      // OPERATOR routes — admin API-key surface (T410)
+      "POST,   /api/dsl/auth/keys,    OPERATOR, true",
+      "POST,   /api/dsl/auth/keys,    AUTHOR,   false",
+      "DELETE, /api/dsl/auth/keys/1,  OPERATOR, true",
+      "DELETE, /api/dsl/auth/keys/1,  AUTHOR,   false",
   })
   void routeRoleMatrixIsEnforced(String method, String path, String roleName,
           String shouldPass) throws Exception {
@@ -143,6 +150,7 @@ class RbacAuthorizationFilterTest {
       "GET, /api/dsl/drafts/foo/history",
       "GET, /api/dsl/diagnostics",
       "GET, /api/dsl/audit",
+      "GET, /api/dsl/auth/keys",
       "GET, /api/executions",
       "GET, /api/executions/abc",
       "GET, /api/dsl/schedules",
@@ -243,6 +251,9 @@ class RbacAuthorizationFilterTest {
             .isEqualTo(Role.AUTHOR);
     assertThat(filter.requiredRole(req("POST", "/api/dsl/schedules"))).isEqualTo(Role.OPERATOR);
     assertThat(filter.requiredRole(req("DELETE", "/api/dsl/schedules/foo")))
+            .isEqualTo(Role.OPERATOR);
+    assertThat(filter.requiredRole(req("POST", "/api/dsl/auth/keys"))).isEqualTo(Role.OPERATOR);
+    assertThat(filter.requiredRole(req("DELETE", "/api/dsl/auth/keys/1")))
             .isEqualTo(Role.OPERATOR);
     // reads
     assertThat(filter.requiredRole(req("GET", "/api/dsl/processes"))).isEqualTo(Role.VIEWER);

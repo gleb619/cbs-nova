@@ -20,7 +20,8 @@ import org.springframework.context.annotation.Import;
     DslDraftRouterConfiguration.class,
     DslFileRouterConfiguration.class,
     DslDiagnosticsRouterConfiguration.class,
-    DslDefinitionTestRouterConfiguration.class
+    DslDefinitionTestRouterConfiguration.class,
+    ApiKeyAdminRouterConfiguration.class
 })
 public class DslRouterConfiguration {
 }

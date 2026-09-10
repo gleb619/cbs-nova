@@ -3,6 +3,7 @@ package cbs.nova.starter.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.service.ApiKeyStore;
 import cbs.nova.starter.web.ApiKeyAuthFilter;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -184,6 +186,29 @@ class ApiKeyAuthFilterConfigurationTest {
     @Bean
     ObjectMapper objectMapper() {
       return new ObjectMapper();
+    }
+
+    @Bean
+    ObjectProvider<ApiKeyStore> apiKeyStoreProvider() {
+      // T410: the filter takes an ObjectProvider<ApiKeyStore> and tolerates it being empty when
+      // the application has no DataSource / store. The test runner provides an empty provider
+      // so the legacy property-key path is exercised exactly as before.
+      return new ObjectProvider<>() {
+        @Override
+        public ApiKeyStore getIfAvailable() {
+          return null;
+        }
+
+        @Override
+        public ApiKeyStore getIfUnique() {
+          return null;
+        }
+
+        @Override
+        public ApiKeyStore getObject() {
+          throw new IllegalStateException("no ApiKeyStore bean in this test context");
+        }
+      };
     }
   }
 }

@@ -66,7 +66,10 @@ public final class RbacAuthorizationFilter extends OncePerRequestFilter {
           new RouteRule(HttpMethod.PATCH, "/api/dsl/definitions/*/description", Role.AUTHOR),
           // --- OPERATOR: schedule CRUD ---
           new RouteRule(HttpMethod.POST, "/api/dsl/schedules", Role.OPERATOR),
-          new RouteRule(HttpMethod.DELETE, "/api/dsl/schedules/*", Role.OPERATOR));
+          new RouteRule(HttpMethod.DELETE, "/api/dsl/schedules/*", Role.OPERATOR),
+          // --- OPERATOR: rotatable API-key admin surface (T410) ---
+          new RouteRule(HttpMethod.POST, "/api/dsl/auth/keys", Role.OPERATOR),
+          new RouteRule(HttpMethod.DELETE, "/api/dsl/auth/keys/*", Role.OPERATOR));
 
   private final RoleResolver roleResolver;
   private final ObjectMapper objectMapper;
