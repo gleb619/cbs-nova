@@ -41,17 +41,29 @@ logging:
   pattern:
     level: "%5p [rid=%X{rid:-} cid=%X{cid:-}]"
 
-# cbs.dsl.auth.* — DSL REST-API authentication & authorization (T408)
+# cbs.dsl.auth.* — DSL REST-API authentication & authorization (T408, T410)
 #
 # cbs.dsl.auth.enabled=true activates the X-Api-Key guard registered by
 # ApiKeyAuthFilterConfiguration. The starter ships this OFF; flipping it on also requires
-# setting cbs.dsl.auth.api-key (any non-blank value). A non-blank api-key with enabled=false
-# triggers ApiKeyAuthMisconfigurationWarning at boot.
+# either a stored key (issued via POST /api/dsl/auth/keys) or the legacy bootstrap property
+# cbs.dsl.auth.api-key. A non-blank api-key with enabled=false triggers
+# ApiKeyAuthMisconfigurationWarning at boot.
+#
+# cbs.dsl.auth.api-key — BOOTSTRAP/LEGACY. This single-key property is kept for back-compat
+# (T410); once any key is issued via the admin endpoints the recommended path is to revoke
+# this property and rely on the stored-key table exclusively. The filter logs a one-time
+# deprecation hint the first time this property authenticates a request.
+#
+# Rotatable keys (T410):
+#   GET    /api/dsl/auth/keys        list stored keys (label, prefix, timestamps; no hashes/plaintext)
+#   POST   /api/dsl/auth/keys        body {"label":"..."} -> returns {id,label,prefix,key} (plaintext ONCE)
+#   DELETE /api/dsl/auth/keys/{id}   revoke (404 on unknown id; 204 on success)
 #
 # cbs.dsl.auth.rbac.enabled=true activates RbacAuthorizationFilter (T408 phase 1) — a per-route
 # role enforcement filter on /api/**. Default OFF: zero behaviour change. Roles for OIDC
 # principals are read from cbs.dsl.auth.rbac.claim (default "roles"; "scope"/"scp" are also
-# honoured when this is the default). API-key principals always resolve to ADMIN.
+# honoured when this is the default). API-key principals always resolve to ADMIN. When RBAC is
+# on, the admin endpoints above require OPERATOR.
 #
 # Example wiring for OIDC + RBAC:
 #   cbs.dsl.auth.rbac.enabled: true

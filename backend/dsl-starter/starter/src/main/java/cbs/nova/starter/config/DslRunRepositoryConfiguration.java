@@ -14,10 +14,12 @@ import cbs.nova.starter.persistence.DslRunJdbcRepository;
 import cbs.nova.starter.persistence.DslRunNamingStrategy;
 import cbs.nova.starter.persistence.ExtendedSelectQueryExecutor;
 import cbs.nova.starter.persistence.FieldEncryptor;
+import cbs.nova.starter.persistence.JdbcApiKeyRepository;
 import cbs.nova.starter.persistence.JdbcDslRunRepository;
 import cbs.nova.starter.persistence.JdbcTransactionExecutionRepository;
 import cbs.nova.starter.persistence.NoOpFieldEncryptor;
 import cbs.nova.starter.persistence.TransactionExecutionJdbcRepository;
+import cbs.nova.starter.service.ApiKeyStore;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslDefinitionTestService;
 import cbs.nova.starter.service.DslRuntimeService;
@@ -139,5 +141,22 @@ public class DslRunRepositoryConfiguration {
           ObjectMapper objectMapper) {
     return new JdbcTransactionExecutionRepository(jdbcRepository, mapper,
             objectMapper);
+  }
+
+  // --- T410: rotatable API keys -------------------------------------------------
+
+  @Bean
+  @ConditionalOnBean(DataSource.class)
+  public JdbcApiKeyRepository jdbcApiKeyRepository(NamedParameterJdbcTemplate jdbcTemplate) {
+    return new JdbcApiKeyRepository(jdbcTemplate);
+  }
+
+  @Bean
+  @ConditionalOnBean(JdbcApiKeyRepository.class)
+  public ApiKeyStore apiKeyStore(
+          JdbcApiKeyRepository repository,
+          ObjectMapper objectMapper,
+          org.springframework.beans.factory.ObjectProvider<ApiKeyStore> selfProvider) {
+    return new ApiKeyStore(repository, objectMapper, selfProvider);
   }
 }

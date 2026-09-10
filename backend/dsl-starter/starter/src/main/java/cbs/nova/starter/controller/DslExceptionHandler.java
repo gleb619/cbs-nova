@@ -5,6 +5,7 @@ import cbs.nova.starter.exception.BuilderApiException;
 import cbs.nova.starter.exception.BuilderClientBusyException;
 import cbs.nova.starter.exception.BuilderUnavailableException;
 import cbs.nova.starter.converter.DslExceptionMapper;
+import cbs.nova.starter.exception.ApiKeyNotFoundException;
 import cbs.nova.starter.exception.DefinitionNotFoundException;
 import cbs.nova.starter.exception.DslPayloadTooLargeException;
 import cbs.nova.starter.exception.ScheduleConflictException;
@@ -57,6 +58,15 @@ public class DslExceptionHandler extends ResponseEntityExceptionHandler {
     log.error("NOT_FOUND: {}", ex.getMessage(), ex);
     return ResponseEntity.status(HttpStatus.NOT_FOUND)
             .body(new ErrorResponse("NOT_FOUND", ex.getMessage(), ex.getEntityName(), null, null));
+  }
+
+  @ExceptionHandler(ApiKeyNotFoundException.class)
+  public ResponseEntity<ErrorResponse> handleApiKeyNotFound(ApiKeyNotFoundException ex,
+          WebRequest request) {
+    log.error("API_KEY_NOT_FOUND: {}", ex.getMessage(), ex);
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(new ErrorResponse("NOT_FOUND", ex.getMessage(),
+                    "api-key:" + ex.getKeyId(), null, null));
   }
 
   @ExceptionHandler(ScheduleConflictException.class)
