@@ -254,6 +254,7 @@ defineExpose({ revealPosition, insertAtCursor, selectProblem })
       />
       <PreviewTab
         v-if="tab === 'preview'"
+        :key="construct?.name ?? ''"
         :name="construct?.name ?? ''"
         :type="construct?.type as ConstructType | undefined"
         :preview="props.preview"

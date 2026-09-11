@@ -2,11 +2,11 @@ package cbs.nova.starter.core.stage;
 
 import cbs.nova.dsl.CallNode;
 import cbs.nova.dsl.DslDescriptor;
-import cbs.nova.dsl.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.PreviewMetricsSnapshot;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.model.ExplainTraceReport;
 import cbs.nova.starter.core.PreviewErrorHandler;
 import cbs.nova.starter.converter.ExternalCallConverter;
 import cbs.nova.starter.core.pipe.DslPipeContext;
@@ -53,7 +53,7 @@ public final class ExplainReportStage implements DslPipeStage {
             ? ExternalCallConverter.toCallCounts(calls)
             : Map.of();
 
-    ExplainReport baseReport = new ExplainReport(
+    ExplainTraceReport baseReport = new ExplainTraceReport(
             context.name(),
             description,
             attribute(context, "executionTrace", List.class, List.of()),
@@ -69,7 +69,7 @@ public final class ExplainReportStage implements DslPipeStage {
 
     String mermaidDiagram = diagramRenderer.mermaidDiagram(baseReport);
 
-    ExplainReport report = new ExplainReport(
+    ExplainTraceReport report = new ExplainTraceReport(
             baseReport.name(),
             baseReport.description(),
             baseReport.executionTrace(),

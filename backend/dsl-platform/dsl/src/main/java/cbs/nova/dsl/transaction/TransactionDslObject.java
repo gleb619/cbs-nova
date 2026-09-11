@@ -27,7 +27,8 @@ public record TransactionDslObject(
         @Nullable RetryPolicy retryPolicy,
         @Nullable Duration heartbeatTimeout,
         @Nullable Function<TransactionContext<?>, Result<?>> previewLogic,
-        @Nullable Supplier<DslDescriptor> descriptor) implements DslObject {
+        @Nullable Supplier<DslDescriptor> descriptor,
+        @Nullable String description) implements DslObject {
 
   @Override
   public @NonNull DslType type() {
@@ -45,7 +46,7 @@ public record TransactionDslObject(
     return DslDescriptor.builder()
             .name(name)
             .type(DslType.TRANSACTION)
-            .description(null)
+            .description(description)
             .inputType(inputType)
             .outputType(outputType)
             .hasCompensation(compensationLogic != null)

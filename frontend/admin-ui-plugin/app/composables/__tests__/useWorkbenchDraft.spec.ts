@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ref } from 'vue'
+
 import { useWorkbenchDraft } from '../useWorkbenchDraft'
 
 const KEY = 'cbs.nova.draft.c1'
@@ -142,22 +142,64 @@ describe('useWorkbenchDraft', () => {
     expect(window.localStorage.getItem(KEY)).toBeNull()
   })
 
-  it('reloads the draft when a reactive name ref changes', async () => {
+  it('reloads the draft when setName is called', async () => {
     window.localStorage.setItem(
       'cbs.nova.draft.c2',
       JSON.stringify({ body: 'construct two draft', savedAt: Date.now() }),
     )
 
-    const name = ref('c1')
-    const { body, restoredFromDraft } = useWorkbenchDraft(name)
+    const { body, restoredFromDraft, setName } = useWorkbenchDraft('c1')
     expect(body.value).toBe('')
     expect(restoredFromDraft.value).toBe(false)
 
-    name.value = 'c2'
+    setName('c2')
     await flush()
 
     expect(body.value).toBe('construct two draft')
     expect(restoredFromDraft.value).toBe(true)
+  })
+
+  it('emits restored, saved and cleared events', async () => {
+    window.localStorage.setItem(
+      'cbs.nova.draft.c2',
+      JSON.stringify({ body: 'restored body', savedAt: Date.now() }),
+    )
+
+    const restoredHandler = vi.fn()
+    const savedHandler = vi.fn()
+    const clearedHandler = vi.fn()
+
+    const {
+      body,
+      clearDraft,
+      setName,
+      onRestored,
+      onSaved,
+      onCleared,
+    } = useWorkbenchDraft('c1')
+    onRestored(restoredHandler)
+    onSaved(savedHandler)
+    onCleared(clearedHandler)
+
+    setName('c2')
+    await flush()
+
+    expect(restoredHandler).toHaveBeenCalledTimes(1)
+    expect(restoredHandler).toHaveBeenLastCalledWith(
+      expect.objectContaining({ body: 'restored body' }),
+    )
+
+    body.value = 'edited'
+    await vi.advanceTimersByTimeAsync(250)
+    await flush()
+
+    expect(savedHandler).toHaveBeenCalledTimes(1)
+    expect(savedHandler).toHaveBeenLastCalledWith(
+      expect.objectContaining({ body: 'edited' }),
+    )
+
+    clearDraft()
+    expect(clearedHandler).toHaveBeenCalledTimes(1)
   })
 
   it('is an SSR no-op when window is unavailable: no throw, no persisted state', async () => {

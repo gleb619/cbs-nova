@@ -4,6 +4,7 @@ import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.starter.events.DomainEvent;
+import cbs.nova.starter.sse.ExecutionStatusEventPublisher;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowNotFoundException;
 import io.temporal.client.WorkflowStub;
@@ -12,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
@@ -48,6 +50,7 @@ public class DslRunCancellationService {
   private final TemporalDslProcessService metricsRecorder;
   private final ObjectProvider<DomainEventPublisher> eventPublisherProvider;
   private final ObjectProvider<TransactionTemplate> transactionTemplateProvider;
+  private @Nullable ExecutionStatusEventPublisher statusPublisher;
 
   public DslRunCancellationService(
           @NonNull WorkflowClient workflowClient,
@@ -145,10 +148,23 @@ public class DslRunCancellationService {
             CANCELLED_REASON, run.startedAt(), finishedAt,
             finishedAt, run.correlationId());
     publishEvent(cancelledEvent);
+    publishStatusChanged(runId, DslRunStatus.CANCELLED.name());
 
     log.info("Run {} cancelled by user request", runId);
     recordCancel(run.processName(), run.startedAt(), Outcome.CANCELLED, finishedAt);
     return new CancelResult(Outcome.CANCELLED, latest, latest.status());
+  }
+
+  @Autowired(required = false)
+  public void setExecutionStatusEventPublisher(@Nullable ExecutionStatusEventPublisher publisher) {
+    this.statusPublisher = publisher;
+  }
+
+  private void publishStatusChanged(@NonNull String runId, @NonNull String status) {
+    if (statusPublisher == null) {
+      return;
+    }
+    statusPublisher.publish(runId, status);
   }
 
   /**

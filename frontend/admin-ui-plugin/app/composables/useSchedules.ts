@@ -1,6 +1,11 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
-import { type CreateSchedulePayload, type ScheduleSummary, unwrapList } from '@cbs/components'
+import {
+  type CreateSchedulePayload,
+  notifySchedulesChanged,
+  type ScheduleSummary,
+  unwrapList,
+} from '@cbs/components'
 import { ref } from 'vue'
 import { extractApiError } from '../utils/extractApiError'
 
@@ -25,6 +30,7 @@ export function useSchedules() {
     } finally {
       loading.value = false
     }
+    notifySchedulesChanged()
   }
 
   async function create(payload: CreateSchedulePayload) {

@@ -1,11 +1,11 @@
 package cbs.nova.starter.core.pipe;
 
 import cbs.nova.dsl.Context;
-import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.logging.DryRunLoggingContext;
+import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.starter.service.PreviewResultCache;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;

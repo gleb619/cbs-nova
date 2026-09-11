@@ -1,10 +1,16 @@
 package cbs.nova.dsl.function;
 
+import static cbs.nova.dsl.config.DslConstants.DEFAULT_HEARTBEAT_TIMEOUT;
+import static cbs.nova.dsl.config.DslConstants.DEFAULT_START_TO_CLOSE_TIMEOUT;
+import static cbs.nova.dsl.config.DslConstants.DEFAULT_TASK_QUEUE;
+import static cbs.nova.dsl.config.DslConstants.DEFAULT_VERSION;
+
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.FunctionContext;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
+import java.time.Duration;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -15,9 +21,12 @@ import java.util.function.Supplier;
 public record FunctionDslObject(
         @NonNull String name,
         @Nullable List<ParameterDescriptor> parameters,
+        @Nullable Class<?> inputType,
+        @Nullable Class<?> outputType,
         @NonNull Function<FunctionContext<?>, Result<?>> executeLogic,
         @Nullable Function<FunctionContext<?>, Result<?>> previewLogic,
-        @Nullable Supplier<DslDescriptor> descriptor) implements DslObject {
+        @Nullable Supplier<DslDescriptor> descriptor,
+        @Nullable String description) implements DslObject {
 
   @Override
   public @NonNull DslType type() {
@@ -35,17 +44,17 @@ public record FunctionDslObject(
     return DslDescriptor.builder()
             .name(name)
             .type(DslType.FUNCTION)
-            .description(null)
-            .inputType(null)
-            .outputType(null)
+            .description(description)
+            .inputType(inputType)
+            .outputType(outputType)
             .hasCompensation(false)
             .hasSideEffects(false)
             .previewBehavior("delegates to execute")
             .parameters(parameters != null ? parameters : List.of())
-            .taskQueue(null)
-            .version(null)
-            .startToCloseTimeout(null)
-            .heartbeatTimeout(null)
+            .taskQueue(DEFAULT_TASK_QUEUE)
+            .version(DEFAULT_VERSION)
+            .startToCloseTimeout(DEFAULT_START_TO_CLOSE_TIMEOUT)
+            .heartbeatTimeout(DEFAULT_HEARTBEAT_TIMEOUT)
             .build();
   }
 }

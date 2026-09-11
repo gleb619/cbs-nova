@@ -3,6 +3,7 @@ package cbs.nova.starter.service;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
+import cbs.nova.starter.sse.ExecutionStatusEventPublisher;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
 import io.temporal.client.WorkflowClient;
@@ -18,6 +19,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import org.springframework.beans.factory.annotation.Autowired;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -53,6 +55,7 @@ public class DslRunReconciliationService {
   private final int batchSize;
   private final ScheduledExecutorService schedulingExecutor;
   private final Clock clock;
+  private @Nullable ExecutionStatusEventPublisher statusPublisher;
 
   private final AtomicReference<ScheduledFuture<?>> handle = new AtomicReference<>();
   private final AtomicBoolean started = new AtomicBoolean(false);
@@ -195,6 +198,18 @@ public class DslRunReconciliationService {
     // re-evaluate.
   }
 
+  @Autowired(required = false)
+  public void setExecutionStatusEventPublisher(@Nullable ExecutionStatusEventPublisher publisher) {
+    this.statusPublisher = publisher;
+  }
+
+  private void publishStatusChanged(@NonNull String runId, @NonNull String status) {
+    if (statusPublisher == null) {
+      return;
+    }
+    statusPublisher.publish(runId, status);
+  }
+
   private void writeTerminal(
           @NonNull DslRun run,
           @NonNull DslRunStatus status,
@@ -212,6 +227,7 @@ public class DslRunReconciliationService {
       meterRegistry.counter(RESOLVED_COUNTER,
               PROCESS_NAME_TAG, safeProcessName(run.processName()),
               STATUS_TAG, status.name()).increment();
+      publishStatusChanged(run.runId(), status.name());
       log.info("Reconciled run {} to status {}", run.runId(), status.name());
     }
   }

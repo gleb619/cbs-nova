@@ -4,11 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslDescriptor;
-import cbs.nova.dsl.ExplainReport;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.model.ExplainTraceReport;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
@@ -37,7 +37,7 @@ class ExplainDiagramRendererTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    ExplainReport report = new ExplainReport(
+    ExplainTraceReport report = new ExplainTraceReport(
             processName,
             "Process: " + processName,
             List.of(),

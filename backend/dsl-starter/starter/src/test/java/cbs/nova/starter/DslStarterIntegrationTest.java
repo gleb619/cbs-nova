@@ -131,7 +131,8 @@ class DslStarterIntegrationTest {
                             .content("{\"body\": \"customer-3\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("LoanDisbursement"))
-            .andExpect(jsonPath("$.astTree").isNotEmpty());
+            .andExpect(jsonPath("$.description").isNotEmpty())
+            .andExpect(jsonPath("$.mermaid").isNotEmpty());
   }
 
   @Test

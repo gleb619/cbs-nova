@@ -126,7 +126,7 @@ public final class ProcessBuilder<I, O> {
             rawPreview(),
             descriptor,
             rawUserCompensationHandler(),
-            transactionRefs);
+            transactionRefs, null);
   }
 
   public @NonNull List<DslObject> buildList() {

@@ -26,9 +26,9 @@ public record ProcessDslObject(
         @Nullable Function<ProcessContext<?>, Result<?>> previewLogic,
         @Nullable Supplier<DslDescriptor> descriptor,
         @Nullable BiConsumer<CompensationContext<?>, List<TransactionExecution>> userCompensationHandler,
-        @Nullable List<String> transactionRefs)
-        implements
-          DslObject {
+        // TODO: remove, as unused
+        @Deprecated(forRemoval = true) @Nullable List<String> transactionRefs,
+        @Nullable String description) implements DslObject {
 
   @Override
   public @NonNull DslType type() {
@@ -46,7 +46,7 @@ public record ProcessDslObject(
     return DslDescriptor.builder()
             .name(name)
             .type(DslType.PROCESS)
-            .description(null)
+            .description(description)
             .inputType(inputType)
             .outputType(outputType)
             .hasCompensation(compensationLogic != null)

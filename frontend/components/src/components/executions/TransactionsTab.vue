@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
+import { onTransactionSelected } from '../../composables/useTransactionSelection'
 import type { TransactionExecutionDto } from '../../types/execution'
 import ErrorBanner from '../ErrorBanner.vue'
 
@@ -7,12 +8,6 @@ const props = defineProps<{
   transactions: TransactionExecutionDto[] | undefined
   loading: boolean
   error: string | null
-  /**
-   * When provided, the matching transaction row is automatically expanded.
-   * This lets external controls (e.g. the execution timeline) open the
-   * existing input panel without duplicating it.
-   */
-  selectedTransaction?: TransactionExecutionDto
 }>()
 
 const expanded = ref<Set<number>>(new Set())
@@ -31,20 +26,16 @@ function toggle(idx: number) {
   expanded.value = new Set(expanded.value)
 }
 
-watch(
-  () => props.selectedTransaction,
-  (selected) => {
-    if (!selected || !props.transactions) return
-    const idx = props.transactions.findIndex(
+onTransactionSelected((selected) => {
+  const idx =
+    props.transactions?.findIndex(
       (tx) =>
         tx.transactionName === selected.transactionName && tx.executedAt === selected.executedAt,
-    )
-    if (idx >= 0) {
-      expandIndex(idx)
-    }
-  },
-  { immediate: true },
-)
+    ) ?? -1
+  if (idx >= 0) {
+    expandIndex(idx)
+  }
+})
 
 function formatTime(s: string): string {
   return new Date(s).toLocaleString()

@@ -1,7 +1,7 @@
 package cbs.nova.starter.reporting;
 
 import cbs.nova.dsl.DslDescriptor;
-import cbs.nova.dsl.ExplainReport;
+import cbs.nova.dsl.model.ExplainTraceReport;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.generator.DiagramGenerator;
 import cbs.nova.dsl.generator.MermaidDiagramGenerator;
@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Renders diagram strings from an {@link ExplainReport}. The report carries an AST/tree and
+ * Renders diagram strings from an {@link ExplainTraceReport}. The report carries an AST/tree and
  * metadata; this service converts that tree into mermaid, PlantUML and BPMN representations on
  * demand so the runtime does not need to know about diagram formats.
  */
@@ -27,21 +27,21 @@ public class ExplainDiagramRenderer {
   private final DiagramGenerator plantUml = new PlantUmlDiagramGenerator();
   private final DiagramGenerator bpmn = new BpmnDiagramGenerator();
 
-  public @NonNull String mermaidDiagram(@NonNull ExplainReport report) {
+  public @NonNull String mermaidDiagram(@NonNull ExplainTraceReport report) {
     return render(report, mermaid);
   }
 
-  public @NonNull String plantUmlDiagram(@NonNull ExplainReport report) {
+  public @NonNull String plantUmlDiagram(@NonNull ExplainTraceReport report) {
     return render(report, plantUml);
   }
 
-  public @NonNull String bpmnXml(@NonNull ExplainReport report) {
+  public @NonNull String bpmnXml(@NonNull ExplainTraceReport report) {
     return render(report, bpmn);
   }
 
   /**
    * Renders a diagram for a known process/transaction/helper by name without requiring a
-   * precomputed {@link ExplainReport}. The {@code format} is one of {@code mermaid},
+   * precomputed {@link ExplainTraceReport}. The {@code format} is one of {@code mermaid},
    * {@code plantuml}, or {@code bpmn} (case-insensitive); any other value defaults to mermaid.
    * Returns {@code null} when no matching process/transaction is registered.
    */
@@ -68,7 +68,7 @@ public class ExplainDiagramRenderer {
     };
   }
 
-  private @NonNull String render(@NonNull ExplainReport report,
+  private @NonNull String render(@NonNull ExplainTraceReport report,
           @NonNull DiagramGenerator generator) {
     GlobalManager gm = GlobalManager.globalManager();
     String name = report.name();

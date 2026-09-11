@@ -1,5 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it } from 'vitest'
+import { nextTick } from 'vue'
+import { notifySchedulesChanged } from '../../../composables/useScheduleListEvents'
 import type { ScheduleSummary } from '../../types/dsl'
 import ScheduleList from '../ScheduleList.vue'
 
@@ -113,7 +115,9 @@ describe('ScheduleList', () => {
 
     expect(wrapper.find('[data-testid="schedule-delete-confirm"]').exists()).toBe(true)
 
-    await wrapper.find('[data-testid="schedule-delete-confirm-group"]').trigger('keydown', { key: 'Escape' })
+    await wrapper
+      .find('[data-testid="schedule-delete-confirm-group"]')
+      .trigger('keydown', { key: 'Escape' })
 
     expect(wrapper.emitted('delete')).toBeUndefined()
     const rows = wrapper.findAll('[data-testid="schedule-row"]')
@@ -148,7 +152,7 @@ describe('ScheduleList', () => {
     expect(wrapper.emitted('delete')![0]).toEqual(['Repayment'])
   })
 
-  it('clears the pending state when the schedules prop changes', async () => {
+  it('clears the pending state when the schedules change', async () => {
     wrapper = mountList({ schedules, loading: false })
 
     const buttons = wrapper.findAll('[data-testid="schedule-delete"]')
@@ -156,7 +160,8 @@ describe('ScheduleList', () => {
 
     expect(wrapper.find('[data-testid="schedule-delete-confirm"]').exists()).toBe(true)
 
-    await wrapper.setProps({ schedules: [...schedules] })
+    notifySchedulesChanged()
+    await nextTick()
 
     const rows = wrapper.findAll('[data-testid="schedule-row"]')
     expect(rows[0].find('[data-testid="schedule-delete"]').exists()).toBe(true)

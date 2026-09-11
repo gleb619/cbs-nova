@@ -17,7 +17,9 @@ public record DslDescriptor(
         @Nullable Class<?> outputType,
         boolean hasCompensation,
         boolean hasSideEffects,
-        @Nullable String previewBehavior,
+        // TODO: instead of string field previewBehavior, it must be a new method `explain` that
+        // return a md text
+        @Deprecated(forRemoval = true) @Nullable String previewBehavior,
         @NonNull List<ParameterDescriptor> parameters,
         @Nullable String taskQueue,
         @Nullable String version,

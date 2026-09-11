@@ -12,14 +12,13 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslErrorCode;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.ExplainReport;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
-import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.dslexamples.v1.BatchModels.BatchIn;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
@@ -28,8 +27,6 @@ import cbs.nova.starter.converter.DslRuntimeMapper;
 import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.model.DslRequest;
 import cbs.nova.starter.model.RuntimeOutcome;
-import cbs.nova.starter.service.CorrelationId;
-import cbs.nova.starter.service.IdempotentReplayException;
 import cbs.nova.starter.web.RequestIdFilter;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -173,9 +170,7 @@ class DslRuntimeServiceTest {
 
   @Test
   void explainDelegatesToRuntime() {
-    ExplainReport report = new ExplainReport(
-            "P", "desc", List.of(), List.of(), Map.of(), null, null, null, List.of(), null,
-            List.of(), null);
+    ExplainReport report = new ExplainReport("P", "desc", "graph TD\n  P[P]");
     doReturn(report).when(dslRuntime).explain(eq("P"), any());
 
     RuntimeOutcome result = service.explain("P", new DslRequest("in", null), "req-4");
@@ -187,22 +182,9 @@ class DslRuntimeServiceTest {
   }
 
   @Test
-  void explainReturnsTimeoutErrorForPreviewTimeoutError() {
-    ExplainReport report = new ExplainReport(
-            "Slow",
-            "desc",
-            List.of(),
-            List.of(),
-            Map.of(),
-            null,
-            null,
-            null,
-            List.of(),
-            null,
-            List.of(new PreviewErrorDetail(PreviewErrorCode.PREVIEW_TIMEOUT,
-                    "timed out", "increase timeout", Map.of())),
-            null);
-    doReturn(report).when(dslRuntime).explain(eq("Slow"), any());
+  void explainReturnsTimeoutErrorWhenRuntimeThrowsPreviewTimeout() {
+    doThrow(new PreviewTimeoutException("Slow", Duration.ofMillis(100)))
+            .when(dslRuntime).explain(eq("Slow"), any());
 
     RuntimeOutcome result = service.explain("Slow", new DslRequest("in", null), "req-5");
 
@@ -337,7 +319,7 @@ class DslRuntimeServiceTest {
               null,
               null,
               null,
-              null);
+              null, null);
       GlobalManager.globalManager().registerProcess(process);
 
       PreviewReport report = previewReport("Synthetic", true, List.of());
@@ -379,7 +361,7 @@ class DslRuntimeServiceTest {
               null,
               null,
               null,
-              null);
+              null, null);
       GlobalManager.globalManager().registerProcess(process);
 
       PreviewReport report = previewReport("Synthetic", true, List.of());

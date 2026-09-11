@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.ExplainReport;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.PreviewErrorDetail;
@@ -138,9 +138,6 @@ class DevDslRuntimeErrorHandlingTest {
 
     assertThat(report).isNotNull();
     assertThat(report.name()).isEqualTo("Ghost");
-    assertThat(report.errors()).hasSize(1);
-    PreviewErrorDetail firstError = report.errors().get(0);
-    assertThat(firstError.code()).isEqualTo(PreviewErrorCode.HELPER_NOT_FOUND);
-    assertThat(firstError.context()).containsEntry("name", "Ghost");
+    assertThat(report.description()).contains("Entity: Ghost", "1 errors");
   }
 }

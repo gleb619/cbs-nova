@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -17,7 +18,7 @@ import cbs.nova.dsl.DslErrorCode;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.ExplainReport;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.PreviewErrorDetail;
@@ -193,9 +194,7 @@ class DslRuntimeResourceTest {
 
   @Test
   void explainReturns200WithReport() throws Exception {
-    ExplainReport report = new ExplainReport(
-            "P", "desc",
-            List.of(), List.of(), Map.of(), null, null, null, List.of(), null, List.of(), null);
+    ExplainReport report = new ExplainReport("P", "desc", "graph TD\n  P[P]");
     doReturn(report).when(dslRuntime).explain(eq("P"), any());
 
     mockMvc
@@ -227,21 +226,8 @@ class DslRuntimeResourceTest {
 
   @Test
   void explainReturns504ForPreviewTimeout() throws Exception {
-    ExplainReport report = new ExplainReport(
-            "Slow",
-            "desc",
-            List.of(),
-            List.of(),
-            Map.of(),
-            null,
-            null,
-            null,
-            List.of(),
-            null,
-            List.of(new PreviewErrorDetail(PreviewErrorCode.PREVIEW_TIMEOUT,
-                    "timed out", "increase timeout", Map.of())),
-            null);
-    doReturn(report).when(dslRuntime).explain(eq("Slow"), any());
+    doThrow(new PreviewTimeoutException("Slow", Duration.ofMillis(100)))
+            .when(dslRuntime).explain(eq("Slow"), any());
 
     mockMvc
             .perform(

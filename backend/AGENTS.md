@@ -204,6 +204,16 @@ The frontend index (`frontend/.codegraph/`) is a separate database and must not 
   bean therefore takes precedence. See `docs/architecture-backend.md` for the supported expression
   subset.
 
+- **Explain support**: `ExplainSupport<IN, OUT>` (dsl-api) lets any `Executable` produce an
+  `ExplainReport` (simple 3-field record: name, markdown description, mermaid) via
+  `explain(ctx, budgetChars)`; the budget bounds description + diagram and is enforced by truncation
+  (`ExplainSupport.DEFAULT_BUDGET_CHARS` = 4000). `GlobalManager.explain` / `explainHelper` dispatch
+  across process → transaction → helper → function and enrich reports with Mermaid diagrams via
+  `generator.ExplainReportFactory`; helpers override `explain` for mode/argument-specific reports
+  (see `MathHelper`). The starter's explain pipe still builds the full 12-field `ExplainTraceReport`
+  (declared in package `cbs.nova.dsl`, file under `model/`; traces, calls, metrics, AST);
+  `DevDslRuntime` maps it to the simple `ExplainReport` with a one-line trace summary.
+
 ---
 
 ## 5. Agent Workflows

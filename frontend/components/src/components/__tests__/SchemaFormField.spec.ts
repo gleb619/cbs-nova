@@ -1,6 +1,8 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+import { nextTick } from 'vue'
 import SchemaFormField from '../dsl/SchemaFormField.vue'
+import { createSchemaFieldEventBus, SCHEMA_FIELD_EVENTS_KEY } from '../dsl/schemaFieldEvents'
 
 function mountField(props: Record<string, unknown> = {}) {
   return mount(SchemaFormField, { props })
@@ -360,9 +362,7 @@ describe('SchemaFormField', () => {
           readonly: true,
         },
       })
-      expect(
-        wrapper.find('[data-testid="schema-field-name"]').attributes('disabled'),
-      ).toBeDefined()
+      expect(wrapper.find('[data-testid="schema-field-name"]').attributes('disabled')).toBeDefined()
 
       const num = mount(SchemaFormField, {
         props: { name: 'age', schema: { type: 'number' }, modelValue: 1, readonly: true },
@@ -421,21 +421,42 @@ describe('SchemaFormField', () => {
     })
   })
 
-  describe('jsonError cleared on modelValue change', () => {
-    it('clears a prior jsonError when modelValue prop is updated', async () => {
-      const wrapper = mountField({
-        name: 'payload',
-        schema: { type: 'any' },
-        modelValue: undefined,
+  describe('jsonError cleared via schema field events', () => {
+    it('clears a prior jsonError when the bus emits clear-error for the field', async () => {
+      const bus = createSchemaFieldEventBus()
+      const wrapper = mount(SchemaFormField, {
+        props: {
+          name: 'payload',
+          schema: { type: 'any' },
+          modelValue: undefined,
+        },
+        global: { provide: { [SCHEMA_FIELD_EVENTS_KEY as symbol]: bus } },
       })
       const textarea = wrapper.find('[data-testid="schema-field-payload"]')
-      // Trigger invalid JSON to populate jsonError.
       await textarea.setValue('not json')
       expect(wrapper.text()).toContain('Invalid JSON')
 
-      // Prop change must clear jsonError.
-      await wrapper.setProps({ modelValue: { reset: true } })
+      bus.emitClearError('payload')
+      await nextTick()
       expect(wrapper.text()).not.toContain('Invalid JSON')
+    })
+
+    it('ignores clear-error events for other fields', async () => {
+      const bus = createSchemaFieldEventBus()
+      const wrapper = mount(SchemaFormField, {
+        props: {
+          name: 'payload',
+          schema: { type: 'any' },
+          modelValue: undefined,
+        },
+        global: { provide: { [SCHEMA_FIELD_EVENTS_KEY as symbol]: bus } },
+      })
+      const textarea = wrapper.find('[data-testid="schema-field-payload"]')
+      await textarea.setValue('not json')
+      expect(wrapper.text()).toContain('Invalid JSON')
+
+      bus.emitClearError('other')
+      expect(wrapper.text()).toContain('Invalid JSON')
     })
   })
 })

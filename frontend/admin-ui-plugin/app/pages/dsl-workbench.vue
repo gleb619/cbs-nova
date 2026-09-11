@@ -159,13 +159,13 @@ function toggleHelperCatalog() {
   }
 }
 
-const draftName = computed(() => selectedConstruct.value?.name ?? '')
+const workbenchDraft = useWorkbenchDraft(state.value.selectedName ?? '')
 const {
   body: draftBody,
   clearDraft,
   lastSavedAt: draftSavedAt,
   restoredFromDraft,
-} = useWorkbenchDraft(draftName)
+} = workbenchDraft
 
 // Source-file-backed constructs load their Java source from the backend.
 const fileCode = ref('')
@@ -197,6 +197,7 @@ async function loadSourceFile(construct: typeof selectedConstruct.value) {
 
 function syncSelectionEffects() {
   mirrorSelectionToDrafts()
+  workbenchDraft.setName(state.value.selectedName ?? "")
   void loadSourceFile(selectedConstruct.value)
 }
 

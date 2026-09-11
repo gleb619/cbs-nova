@@ -1,9 +1,11 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { useExecutionsApi } from '@cbs/admin-ui-plugin/composables/useExecutionsApi'
 import { useStalePolling } from '@cbs/admin-ui-plugin/composables/useStalePolling'
+import { useExecutionEvents } from '@cbs/admin-ui-plugin/composables/useExecutionEvents'
 import { resolveStalePollMs } from '@cbs/admin-ui-plugin/composables/useStalePollInterval'
+import { useIntervalEmitter } from '@cbs/admin-ui-plugin/composables/useIntervalEmitter'
 import { unwrapListWithTotal } from '@cbs/components'
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 import type { Execution, ExecutionDetail, ExecutionFilters, ExecutionStatus } from '~/types'
 import { extractApiError } from '../utils/extractApiError'
 
@@ -17,6 +19,8 @@ export function useExecutions() {
   const loading = ref<boolean>(false)
   const selectedExecution = ref<ExecutionDetail | null>(null)
   const error = ref<string | null>(null)
+
+  const cancellingIds = ref<Set<string>>(new Set())
 
   /**
    * Set of execution ids that currently have an active stale poll.
@@ -33,13 +37,81 @@ export function useExecutions() {
    */
   const stalePollers: Map<string, () => void> = new Map()
 
-
-  let pollHandle: ReturnType<typeof setInterval> | null = null
+  const sseEnabled = ref<boolean>(true)
+  const sseIds = ref<Set<string>>(new Set())
 
   const api = useExecutionsApi()
   const stalePollMs = resolveStalePollMs()
 
-  const cancellingIds = ref<Set<string>>(new Set())
+  const events = useExecutionEvents({ ids: sseIds })
+  events.onExecutionEvent(({ id, status }) => {
+    void handleExecutionEvent(id, status)
+  })
+  events.onOpen(() => {
+    sseEnabled.value = true
+    syncListPolling()
+  })
+  events.onError(() => {
+    sseEnabled.value = false
+    syncListPolling()
+  })
+
+  // -------------------------------------------------------------------
+  // List polling (T269) — event-driven ticker. It keeps refreshing the
+  // executions list while any visible (filtered) row is in-flight. Uses
+  // the same interval as the stale poller, pauses on hidden tabs, and
+  // reuses the existing `loading` guard so a background tick never
+  // clobbers a user-initiated load.
+  // -------------------------------------------------------------------
+
+  /**
+   * Statuses that mean "still in flight — keep refreshing the list".
+   * `Stale` is deliberately excluded: rows in that state already have a
+   * dedicated stale poller driving their transition out of Stale.
+   */
+  const IN_FLIGHT_STATUSES: ReadonlyArray<ExecutionStatus> = ['Pending', 'Running']
+
+  const inFlightRowCount = computed(
+    () => executions.value.filter((e) => IN_FLIGHT_STATUSES.includes(e.status)).length,
+  )
+
+  const listTicker = useIntervalEmitter({ intervalMs: stalePollMs, pauseOnHidden: true })
+  const stopListTick = listTicker.onTick(() => {
+    void tickListPoll()
+  })
+
+  async function tickListPoll(): Promise<void> {
+    // The ticker already gates ticks while hidden, but guard again for
+    // callers that might invoke this directly.
+    if (typeof document !== 'undefined' && document.hidden) return
+    // Reuse the existing `loading` guard so a background tick never
+    // races a user-initiated load (page change, filter apply, retry).
+    if (loading.value) return
+    await loadExecutions({ silent: true })
+  }
+
+  function startListPolling(intervalMs: number = stalePollMs): void {
+    listTicker.setIntervalMs(intervalMs)
+    listTicker.start()
+  }
+
+  function stopListPolling(): void {
+    listTicker.stop()
+  }
+
+  /**
+   * Drive list polling from the current executions state. Called after
+   * every list mutation so polling tracks in-flight rows without a
+   * generic `watch` on the computed count.
+   */
+  function syncListPolling(): void {
+    if (sseEnabled.value && sseIds.value.size > 0) {
+      stopListPolling()
+      return
+    }
+    if (inFlightRowCount.value > 0) startListPolling()
+    else stopListPolling()
+  }
 
   // -------------------------------------------------------------------
   // Stale polling helpers
@@ -51,9 +123,9 @@ export function useExecutions() {
 
   /**
    * Start stale polling for `id`. The `useStalePolling` composable
-   * drives the loop, observing a per-id status ref. We update the
-   * shared `executions` list (or `selectedExecution` if it matches) as
-   * soon as the backend reports a transition out of Stale.
+   * drives the loop. We update the shared `executions` list (and
+   * `selectedExecution` if it matches) by listening to its
+   * `transition` event instead of watching a shared status ref.
    */
   function startStalePolling(id: string, intervalMs: number = stalePollMs) {
     if (stalePollers.has(id)) return
@@ -63,47 +135,39 @@ export function useExecutions() {
     const poller = useStalePolling({ status: statusRef, id, intervalMs })
 
     // Mirror polling state into the shared set so consumers can read it.
-    const watcher = watch(
-      poller.polling,
-      (p) => {
-        if (p) {
-          const next = new Set(stalePollingIds.value)
-          next.add(id)
-          stalePollingIds.value = next
-        } else {
-          const next = new Set(stalePollingIds.value)
-          next.delete(id)
-          stalePollingIds.value = next
-        }
-      },
-      { immediate: true },
-    )
+    const next = new Set(stalePollingIds.value)
+    next.add(id)
+    stalePollingIds.value = next
 
-    // When the per-id status ref transitions out of Stale, refresh the
-    // affected row in the shared state and tear down the poller.
-    const stopStatusWatch = watch(statusRef, async (s) => {
+    // When the per-id poller confirms a transition out of Stale, refresh
+    // the affected row in the shared state and tear down the poller.
+    const stopTransition = poller.onTransition(async ({ id: execId, status: s }) => {
       if (s && s !== 'Stale') {
         // Re-fetch the row to pick up any other field changes too
         // (startedAt, completedAt, …).
         try {
-          const fresh = await api.get(id)
+          const fresh = await api.get(execId)
           updateRowInList(fresh)
-          if (selectedExecution.value && selectedExecution.value.id === id) {
+          if (selectedExecution.value && selectedExecution.value.id === execId) {
             selectedExecution.value = fresh
           }
         } catch (err) {
-          log.error('stale polling refresh failed', { id, error: extractApiError(err).message })
+          log.error('stale polling refresh failed', { id: execId, error: extractApiError(err).message })
         }
-        stopStalePolling(id)
+        stopStalePolling(execId)
       }
     })
 
-    // Wrap the composable's stop so we also detach our watchers.
+    // Wrap the composable's stop so we also detach our listener.
     const originalStop = poller.stop
     stalePollers.set(id, () => {
       originalStop()
-      stopStatusWatch()
-      watcher()
+      stopTransition()
+      if (stalePollingIds.value.has(id)) {
+        const next = new Set(stalePollingIds.value)
+        next.delete(id)
+        stalePollingIds.value = next
+      }
     })
   }
 
@@ -112,8 +176,7 @@ export function useExecutions() {
     if (stop) {
       stop()
       stalePollers.delete(id)
-    }
-    if (stalePollingIds.value.has(id)) {
+    } else if (stalePollingIds.value.has(id)) {
       const next = new Set(stalePollingIds.value)
       next.delete(id)
       stalePollingIds.value = next
@@ -139,6 +202,25 @@ export function useExecutions() {
     executions.value = next
   }
 
+  async function handleExecutionEvent(id: string, status: ExecutionStatus): Promise<void> {
+    log.info('execution sse event', { id, status })
+    if (!IN_FLIGHT_STATUSES.includes(status)) {
+      const next = new Set(sseIds.value)
+      next.delete(id)
+      sseIds.value = next
+    }
+    try {
+      const fresh = await api.get(id)
+      updateRowInList(fresh)
+      if (selectedExecution.value && selectedExecution.value.id === id) {
+        selectedExecution.value = fresh
+      }
+      syncListPolling()
+    } catch (err) {
+      log.error('sse refresh failed', { id, error: extractApiError(err).message })
+    }
+  }
+
   /**
    * Reconcile stale pollers against the current `executions` list. For
    * each row that is Stale, ensure a poller is running; for each poller
@@ -157,88 +239,6 @@ export function useExecutions() {
   }
 
   // -------------------------------------------------------------------
-  // List polling (T269) — refresh the executions list while any visible
-  // (filtered) row is in-flight. Reuses the same `stalePollMs` runtime
-  // config key as the per-row stale poller above; mirrors the visibility
-  // pause/resume behaviour; and reuses the existing `loading` guard so a
-  // background tick never clobbers a user-initiated load.
-  // -------------------------------------------------------------------
-
-  /**
-   * Statuses that mean "still in flight — keep refreshing the list".
-   * `Stale` is deliberately excluded: rows in that state already have a
-   * dedicated stale poller driving their transition out of Stale.
-   */
-  const IN_FLIGHT_STATUSES: ReadonlyArray<ExecutionStatus> = ['Pending', 'Running']
-
-  const inFlightRowCount = computed(
-    () => executions.value.filter((e) => IN_FLIGHT_STATUSES.includes(e.status)).length,
-  )
-
-  let listPollInterval: ReturnType<typeof setInterval> | null = null
-  let listPollVisibilityHandler: (() => void) | null = null
-
-  function clearListPollInterval(): void {
-    if (listPollInterval != null) {
-      clearInterval(listPollInterval)
-      listPollInterval = null
-    }
-  }
-
-  function detachListPollVisibilityListener(): void {
-    if (listPollVisibilityHandler && typeof document !== 'undefined') {
-      document.removeEventListener('visibilitychange', listPollVisibilityHandler)
-    }
-    listPollVisibilityHandler = null
-  }
-
-  async function tickListPoll(): Promise<void> {
-    if (typeof document !== 'undefined' && document.hidden) return
-    // Reuse the existing `loading` guard so a background tick never
-    // races a user-initiated load (page change, filter apply, retry).
-    if (loading.value) return
-    await loadExecutions({ silent: true })
-  }
-
-  function startListPolling(intervalMs: number = stalePollMs): void {
-    if (listPollInterval != null) return
-    if (typeof document === 'undefined') return
-    if (inFlightRowCount.value === 0) return
-
-    listPollInterval = setInterval(() => {
-      void tickListPoll()
-    }, intervalMs)
-
-    listPollVisibilityHandler = () => {
-      if (!listPollInterval) return
-      if (document.hidden) return
-      // Resumed: fire one immediate tick so the user sees fresh data
-      // the moment they come back to the tab.
-      void tickListPoll()
-    }
-    document.addEventListener('visibilitychange', listPollVisibilityHandler)
-  }
-
-  function stopListPolling(): void {
-    clearListPollInterval()
-    detachListPollVisibilityListener()
-  }
-
-  // Drive start/stop from the in-flight row count: the interval only
-  // runs while at least one visible row is in-flight; it tears itself
-  // down as soon as the last in-flight row reaches a terminal state,
-  // and restarts on the next load that brings an in-flight row back
-  // into view (filter change, fresh fetch).
-  watch(
-    inFlightRowCount,
-    (count) => {
-      if (count > 0) startListPolling()
-      else stopListPolling()
-    },
-    { immediate: true },
-  )
-
-  // -------------------------------------------------------------------
   // Public loaders
   // -------------------------------------------------------------------
 
@@ -251,8 +251,18 @@ export function useExecutions() {
       const result = await api.list({ ...filters.value, offset, limit: pageSize })
       const envelope = unwrapListWithTotal<Execution>(result)
       executions.value = envelope.items
-      total.value = envelope.total
+      total.value = envelope.total ?? 0
       reconcileStalePolling()
+      if (sseEnabled.value) {
+        sseIds.value = new Set(
+          executions.value
+            .filter((e) => IN_FLIGHT_STATUSES.includes(e.status))
+            .map((e) => e.id),
+        )
+      } else {
+        sseIds.value = new Set()
+      }
+      syncListPolling()
       log.info('executions loaded', {
         count: executions.value.length,
         total: total.value,
@@ -274,6 +284,15 @@ export function useExecutions() {
     try {
       selectedExecution.value = await api.get(id)
       log.info('execution detail loaded', { id, status: selectedExecution.value?.status })
+      if (
+        selectedExecution.value &&
+        IN_FLIGHT_STATUSES.includes(selectedExecution.value.status)
+      ) {
+        const next = new Set(sseIds.value)
+        next.add(id)
+        sseIds.value = next
+      }
+      syncListPolling()
       // If the detail came back Stale, also drive a stale poller for it
       // so the banner re-renders as soon as the backend transitions the
       // status out.
@@ -331,7 +350,12 @@ export function useExecutions() {
       if (selectedExecution.value && selectedExecution.value.id === id) {
         selectedExecution.value = fresh
       }
-      stopPolling()
+      if (fresh.status && !IN_FLIGHT_STATUSES.includes(fresh.status)) {
+        const next = new Set(sseIds.value)
+        next.delete(id)
+        sseIds.value = next
+      }
+      syncListPolling()
       log.info('execution cancelled', { id, status: fresh.status })
       return fresh
     } catch (err) {
@@ -348,23 +372,28 @@ export function useExecutions() {
 
   // -------------------------------------------------------------------
   // Legacy Running polling — kept for explicit opt-in (e.g. from the
-  // detail page when navigating to a known-Running execution).
+  // detail page when navigating to a known-Running execution). Uses the
+  // shared interval emitter so it no longer owns a raw setInterval.
   // -------------------------------------------------------------------
+
+  let detailPoller: ReturnType<typeof useIntervalEmitter> | null = null
 
   function startPolling(id: string) {
     stopPolling()
-    pollHandle = setInterval(async () => {
+    detailPoller = useIntervalEmitter({ intervalMs: 3000, pauseOnHidden: true })
+    detailPoller.onTick(async () => {
       await loadDetail(id)
       if (selectedExecution.value && selectedExecution.value.status !== 'Running') {
         stopPolling()
       }
-    }, 3000)
+    })
+    detailPoller.start()
   }
 
   function stopPolling() {
-    if (pollHandle) {
-      clearInterval(pollHandle)
-      pollHandle = null
+    if (detailPoller) {
+      detailPoller.stop()
+      detailPoller = null
     }
   }
 
@@ -372,6 +401,7 @@ export function useExecutions() {
     stopPolling()
     stopAllStalePolling()
     stopListPolling()
+    stopListTick()
   })
 
   return {

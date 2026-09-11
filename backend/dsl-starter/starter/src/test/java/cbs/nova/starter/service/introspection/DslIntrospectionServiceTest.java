@@ -17,6 +17,7 @@ import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
 import cbs.nova.starter.service.DslDefinitionStatusResolver;
 import cbs.nova.starter.service.DslGitStatusResolver;
 import cbs.nova.starter.service.DslIntrospectionService;
+import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -210,7 +211,7 @@ class DslIntrospectionServiceTest {
     assertThat(dto.type()).isEqualTo("function");
     assertThat(dto.inputSchema()).isNotNull();
     assertThat(dto.inputSchema()).containsKey("properties");
-    assertThat((java.util.Map<String, Object>) dto.inputSchema().get("properties"))
+    assertThat((Map<String, Object>) dto.inputSchema().get("properties"))
             .containsKey("greeting");
   }
 

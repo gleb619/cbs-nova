@@ -5,7 +5,10 @@ import cbs.nova.dsl.config.ProcessContextFactory;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
 import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.function.FunctionDslObject;
+import cbs.nova.dsl.generator.ExplainReportFactory;
+import cbs.nova.dsl.generator.MermaidDiagramGenerator;
 import cbs.nova.dsl.helper.HelperResolver;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.process.ProcessCompensation;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.process.ProcessMain;
@@ -39,6 +42,9 @@ public final class GlobalManager {
   private final GeneratedClassRegistry generatedClassRegistry;
   private final ProcessContextFactory processContextFactory;
   private final CompensationRegistry compensationRegistry;
+  //TODO: its break a DI principle, move to a config class inatead
+  private final ExplainReportFactory explainReportFactory = new ExplainReportFactory(
+          new MermaidDiagramGenerator());
 
   public static @NonNull GlobalManager globalManager() {
     var instance = INSTANCE.get();
@@ -418,6 +424,39 @@ public final class GlobalManager {
             .or(() -> describeTransaction(name).map(DslDescriptor::description))
             .or(() -> describeHelper(name).map(ExecutableDescriptor::description))
             .or(() -> describeFunction(name).map(DslDescriptor::description));
+  }
+
+  public @NonNull Optional<ExplainReport> explainHelper(
+          @NonNull String name, @NonNull Context<?> ctx) {
+    return explainHelper(name, ctx, ExplainSupport.DEFAULT_BUDGET_CHARS);
+  }
+
+  public @NonNull Optional<ExplainReport> explainHelper(
+          @NonNull String name, @NonNull Context<?> ctx, int budgetChars) {
+    return helperManager.findHelper(name)
+            .map(helper -> explainReportFactory.forHelper(
+                    name, invokeExplain(helper, ctx, budgetChars), budgetChars));
+  }
+
+  public @NonNull Optional<ExplainReport> explain(@NonNull String name, @NonNull Context<?> ctx) {
+    return explain(name, ctx, ExplainSupport.DEFAULT_BUDGET_CHARS);
+  }
+
+  public @NonNull Optional<ExplainReport> explain(
+          @NonNull String name, @NonNull Context<?> ctx, int budgetChars) {
+    return findProcess(name)
+            .map(process -> explainReportFactory.forProcess(process, budgetChars))
+            .or(() -> findTransaction(name)
+                    .map(tx -> explainReportFactory.forTransaction(tx, budgetChars)))
+            .or(() -> explainHelper(name, ctx, budgetChars))
+            .or(() -> helperManager.findFunction(name)
+                    .map(fn -> explainReportFactory.forFunction(fn, budgetChars)));
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <T> @NonNull ExplainReport invokeExplain(
+          @NonNull Executable<T, ?> helper, @NonNull Context<?> ctx, int budgetChars) {
+    return helper.explain((Context<T>) ctx, budgetChars);
   }
 
   public void resetForTests() {

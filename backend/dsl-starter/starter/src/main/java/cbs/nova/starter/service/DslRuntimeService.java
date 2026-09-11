@@ -3,10 +3,8 @@ package cbs.nova.starter.service;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.ExplainReport;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.PreviewErrorCode;
-import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
@@ -20,13 +18,10 @@ import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.RuntimeOutcome;
 import cbs.nova.starter.web.RequestIdFilter;
 import java.util.HashMap;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -95,7 +90,7 @@ public class DslRuntimeService {
   public RuntimeOutcome explain(String name, DslRequest request, @Nullable String requestId) {
     String runId = resolveRunId(requestId);
     Context<?> ctx = toContext(name, request, ExecutionMode.EXPLAIN, runId);
-    ExplainReport report;
+    final ExplainReport report;
     try {
       report = executeWithMdc(runId, () -> dslRuntime.explain(name, ctx));
     } catch (RuntimeException ex) {
@@ -104,15 +99,6 @@ public class DslRuntimeService {
     if (report == null) {
       return RuntimeOutcome.error(toErrorResponse(name, runId,
               new IllegalStateException("explain produced no report for " + name)));
-    }
-    List<PreviewErrorDetail> errors = report.errors();
-    PreviewErrorDetail timeoutError = errors.stream()
-            .filter(e -> e.code() == PreviewErrorCode.PREVIEW_TIMEOUT)
-            .findFirst()
-            .orElse(null);
-    if (timeoutError != null) {
-      return RuntimeOutcome.error(mapper.toErrorResponse(
-              mapper.fromPreviewTimeoutException(name, runId, timeoutError.message())));
     }
     return RuntimeOutcome.ok(report);
   }

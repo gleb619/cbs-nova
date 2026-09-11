@@ -5,109 +5,139 @@ plugins {
 group = 'cbs.nova'
 version = property('version') as String
 
-// Delegate to the three independent Gradle builds. Ordering matters because groups
-// are connected through Maven Local: platform -> plugins -> starter.
+// ---------------------------------------------------------------------------
+// Three independent Gradle builds connected through Maven Local.
+// Cross-group chain: platform -> plugins -> starter.
+// Each group runs its own per-group sequence: assemble -> publishToMavenLocal.
+// The next group's `assemble` depends on the prior group's `publishToMavenLocal`
+// so a clean checkout always resolves transitive `cbs.nova:*` deps correctly.
+// ---------------------------------------------------------------------------
+
+ext {
+  // Run from each sub-build's working dir (dsl-platform / dsl-plugins / dsl-starter).
+  // Relative path `../gradlew` resolves to `backend/gradlew` (Gradle 9.4.1, Java 25).
+  gradleArgs = ['-Pversion=' + version]
+}
+
+// --- platform group ---------------------------------------------------------
+
+tasks.register('platformAssemble', Exec) {
+  group = 'build'
+  description = 'Assemble DSL platform artifacts (dsl-api, dsl, dsl-codegen, misc-codegen).'
+  workingDir = file('dsl-platform')
+  commandLine = ['../gradlew'] + gradleArgs + ['assemble']
+  outputs.upToDateWhen { false }
+}
 
 tasks.register('platformPublishToMavenLocal', Exec) {
-  group = 'build'
-  description = 'Publish DSL platform artifacts (dsl-api, dsl, dsl-codegen, misc-codegen) to Maven Local'
+  group = 'publishing'
+  description = 'Publish DSL platform artifacts to Maven Local.'
+  dependsOn 'platformAssemble'
   workingDir = file('dsl-platform')
-  commandLine = ['../gradlew', "-Pversion=${version}", 'publishToMavenLocal']
+  commandLine = ['../gradlew'] + gradleArgs + ['publishToMavenLocal']
+  outputs.upToDateWhen { false }
+}
+
+// --- plugins group ----------------------------------------------------------
+
+tasks.register('pluginsAssemble', Exec) {
+  group = 'build'
+  description = 'Assemble DSL plugin artifacts (dsl-gradle-plugin, dsl-idea-plugin, dsl-builder). Requires platform on Maven Local.'
+  dependsOn 'platformPublishToMavenLocal'
+  workingDir = file('dsl-plugins')
+  commandLine = ['../gradlew'] + gradleArgs + ['assemble']
   outputs.upToDateWhen { false }
 }
 
 tasks.register('pluginsPublishToMavenLocal', Exec) {
-  group = 'build'
-  description = 'Publish DSL plugin artifacts (dsl-gradle-plugin, dsl-idea-plugin) to Maven Local'
-  dependsOn 'platformPublishToMavenLocal'
+  group = 'publishing'
+  description = 'Publish DSL plugin artifacts to Maven Local.'
+  dependsOn 'pluginsAssemble'
   workingDir = file('dsl-plugins')
-  commandLine = ['../gradlew', "-Pversion=${version}", 'publishToMavenLocal']
+  commandLine = ['../gradlew'] + gradleArgs + ['publishToMavenLocal']
+  outputs.upToDateWhen { false }
+}
+
+// --- starter group ----------------------------------------------------------
+
+tasks.register('starterAssemble', Exec) {
+  group = 'build'
+  description = 'Assemble starter group (dsl-examples, starter, starter-launcher). Requires plugins on Maven Local.'
+  dependsOn 'pluginsPublishToMavenLocal'
+  workingDir = file('dsl-starter')
+  commandLine = ['../gradlew'] + gradleArgs + ['assemble']
   outputs.upToDateWhen { false }
 }
 
 tasks.register('starterPublishToMavenLocal', Exec) {
-  group = 'build'
-  description = 'Publish starter + examples artifacts to Maven Local'
-  dependsOn 'pluginsPublishToMavenLocal'
-  workingDir = file('dsl-starter')
-  commandLine = ['../gradlew', "-Pversion=${version}", 'publishToMavenLocal', '-x', 'test']
-  outputs.upToDateWhen { false }
-}
-
-tasks.register('publishToMavenLocal', Exec) {
   group = 'publishing'
-  description = 'Publish all backend groups to Maven Local in the correct order'
-  dependsOn 'platformPublishToMavenLocal', 'pluginsPublishToMavenLocal', 'starterPublishToMavenLocal'
-  commandLine = ['echo', "All groups published to Maven Local as ${version}"]
-}
-
-// Build
-
-tasks.register('platformBuild', Exec) {
-  group = 'build'
-  description = 'Build the DSL platform group'
-  workingDir = file('dsl-platform')
-  commandLine = ['../gradlew', "-Pversion=${version}", 'build']
-  outputs.upToDateWhen { false }
-}
-
-tasks.register('pluginsBuild', Exec) {
-  group = 'build'
-  description = 'Build the DSL plugins group'
-  dependsOn 'platformPublishToMavenLocal'
-  workingDir = file('dsl-plugins')
-  commandLine = ['../gradlew', "-Pversion=${version}", 'build']
-  outputs.upToDateWhen { false }
-}
-
-tasks.register('starterBuild', Exec) {
-  group = 'build'
-  description = 'Build the starter + examples group (excluding tests)'
-  dependsOn 'pluginsPublishToMavenLocal'
+  description = 'Publish starter + examples artifacts to Maven Local.'
+  dependsOn 'starterAssemble'
   workingDir = file('dsl-starter')
-  commandLine = ['../gradlew', "-Pversion=${version}", 'build', '-x', 'test']
+  commandLine = ['../gradlew'] + gradleArgs + ['publishToMavenLocal', '-x', 'test']
   outputs.upToDateWhen { false }
 }
 
-// Test
+// Meta task: publish all groups in chain order.
+tasks.register('publishToMavenLocal') {
+  group = 'publishing'
+  description = 'Publish all backend groups to Maven Local in chain order (platform -> plugins -> starter).'
+  dependsOn 'platformPublishToMavenLocal', 'pluginsPublishToMavenLocal', 'starterPublishToMavenLocal'
+}
+
+// --- Test chain (per-group tests, separate from assemble/publish) ------------
+// platformTest depends on `starterAssemble` because misc-codegen's
+// HelperSpiProcessorTest probes the filesystem for starter JARs/classes when
+// the test classpath does not yet carry `cbs.nova:starter` from Maven Local.
+// This keeps the build chain honest: platform compiles first, starter assembles
+// last, and the cross-group test pass happens after the full publish chain.
 
 tasks.register('platformTest', Exec) {
   group = 'verification'
-  description = 'Run tests for the DSL platform group'
+  description = 'Run DSL platform tests. Requires starter artifacts on disk for the misc-codegen SpringHelper fixture.'
+  dependsOn 'starterAssemble'
   workingDir = file('dsl-platform')
-  commandLine = ['../gradlew', "-Pversion=${version}", 'test']
+  commandLine = ['../gradlew'] + gradleArgs + ['test']
   outputs.upToDateWhen { false }
 }
 
 tasks.register('pluginsTest', Exec) {
   group = 'verification'
-  description = 'Run tests for the DSL plugins group'
+  description = 'Run DSL plugins tests. Requires platform artifacts on Maven Local.'
   dependsOn 'platformPublishToMavenLocal'
   workingDir = file('dsl-plugins')
-  commandLine = ['../gradlew', "-Pversion=${version}", 'test']
+  commandLine = ['../gradlew'] + gradleArgs + ['test']
   outputs.upToDateWhen { false }
 }
 
 tasks.register('starterTest', Exec) {
   group = 'verification'
-  description = 'Run tests for the starter group'
+  description = 'Run starter module tests. Requires plugins artifacts on Maven Local.'
   dependsOn 'pluginsPublishToMavenLocal'
   workingDir = file('dsl-starter')
-  commandLine = ['../gradlew', "-Pversion=${version}", ':starter:test']
+  commandLine = ['../gradlew'] + gradleArgs + [':starter:test']
   outputs.upToDateWhen { false }
 }
 
 tasks.register('test') {
   group = 'verification'
-  description = 'Run all backend tests'
+  description = 'Run all backend tests.'
   dependsOn 'platformTest', 'pluginsTest', 'starterTest'
 }
 
-// The `base` plugin already provides `build`; augment it to depend on the three group builds.
+// --- Aggregate lifecycle ----------------------------------------------------
+
 tasks.named('build') {
-  dependsOn 'platformBuild', 'pluginsBuild', 'starterBuild'
+  dependsOn 'platformAssemble', 'pluginsAssemble', 'starterAssemble'
 }
 
-// Ensure starter artifacts exist before misc-codegen tests try to compile against them.
-platformBuild.dependsOn('starterBuild')
-platformTest.dependsOn('starterBuild')
+tasks.register('cleanAll', Exec) {
+  group = 'build'
+  description = 'Clean all three sub-builds.'
+  workingDir = file('.')
+  commandLine = ['sh', '-c',
+      'cd dsl-platform && ../gradlew clean && ' +
+      'cd ../dsl-plugins  && ../gradlew clean && ' +
+      'cd ../dsl-starter  && ../gradlew clean']
+  outputs.upToDateWhen { false }
+}

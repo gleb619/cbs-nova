@@ -145,6 +145,23 @@ describe('SchemaForm', () => {
     expect(wrapper.text()).toContain('Invalid JSON')
   })
 
+  it('clears a jsonError of one field when another field is edited', async () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        payload: { type: 'any' },
+        name: { type: 'string' },
+      },
+    }
+    const wrapper = mountSchemaForm({ schema, modelValue: {} })
+    const textarea = wrapper.find('[data-testid="schema-field-payload"]')
+    await textarea.setValue('not json')
+    expect(wrapper.text()).toContain('Invalid JSON')
+
+    await wrapper.find('[data-testid="schema-field-name"]').setValue('alice')
+    expect(wrapper.text()).not.toContain('Invalid JSON')
+  })
+
   describe('readonly', () => {
     it('disables all inputs when readonly', () => {
       const wrapper = mountSchemaForm({ schema: objectSchema, modelValue: {}, readonly: true })

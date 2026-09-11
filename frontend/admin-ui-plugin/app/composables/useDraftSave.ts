@@ -1,5 +1,5 @@
 import { useDslWorkbench } from '@cbs/admin-ui-plugin/composables/useDslWorkbench'
-import { type Ref, ref, watch } from 'vue'
+import { type Ref, onUnmounted, ref } from 'vue'
 import { useDraftDirty } from './useDraftDirty'
 
 export type DraftSaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
@@ -49,24 +49,23 @@ export function useDraftSave(options: UseDraftSaveOptions = {}): UseDraftSaveRet
     }, SAVED_RECENTLY_MS)
   }
 
-  // Keep the public status in sync with the underlying server dirty flag.
-  // 'error' and the short 'saved' window are managed by save() itself.
-  watch(
-    dirty.isDirty,
-    (isDirty) => {
-      if (isDirty) {
-        if (status.value === 'idle') {
-          status.value = 'dirty'
-        }
-        return
-      }
+  // Keep the public status in sync with the underlying server dirty flag via
+  // explicit events instead of a generic `watch`.
+  if (dirty.isDirty.value && status.value === 'idle') {
+    status.value = 'dirty'
+  }
 
-      if (status.value === 'dirty') {
-        status.value = 'idle'
-      }
-    },
-    { immediate: true },
-  )
+  const stopDirty = dirty.onDirty(() => {
+    if (status.value === 'idle') {
+      status.value = 'dirty'
+    }
+  })
+
+  const stopClean = dirty.onClean(() => {
+    if (status.value === 'dirty') {
+      status.value = 'idle'
+    }
+  })
 
   async function save() {
     if (!dirty.isDirty.value) return
@@ -86,6 +85,12 @@ export function useDraftSave(options: UseDraftSaveOptions = {}): UseDraftSaveRet
       status.value = 'error'
     }
   }
+
+  onUnmounted(() => {
+    clearSavedTimer()
+    stopDirty()
+    stopClean()
+  })
 
   return {
     status,

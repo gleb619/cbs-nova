@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUpdate, ref } from 'vue'
 import {
   type ConstructType,
   generateFakeValue,
@@ -25,9 +25,8 @@ const text = computed({
   set: (v) => emit('update:modelValue', v),
 })
 
-const parseError = ref<string | null>(null)
 const mode = ref<'form' | 'json' | 'schema'>('json')
-const formValue = ref<unknown>(undefined)
+let previousModelValue = props.modelValue
 
 const { schema, inputType, loading, error, hasSchema } = useConstructSchema({
   name: () => props.name,
@@ -38,26 +37,24 @@ const canUseForm = computed(() => {
   return !error.value && hasSchema.value && schema.value != null
 })
 
-function format() {
+const parseError = computed(() => {
+  const v = text.value
+  if (!v.trim()) return null
   try {
-    text.value = `${JSON.stringify(JSON.parse(text.value), null, 2)}\n`
-    parseError.value = null
+    JSON.parse(v)
+    return null
   } catch (e) {
-    parseError.value = (e as Error).message
+    return (e as Error).message
   }
-}
+})
 
-function generate() {
-  if (!schema.value) return
-  const fake = generateFakeValue(schema.value)
-  formValue.value = fake
-  try {
-    text.value = `${JSON.stringify(fake ?? {}, null, 2)}\n`
-    parseError.value = null
-  } catch (e) {
-    parseError.value = (e as Error).message
-  }
-}
+const effectiveMode = computed(() => {
+  if (mode.value === 'form' && !canUseForm.value) return 'json'
+  if (mode.value === 'schema' && !hasSchema.value) return 'json'
+  return mode.value
+})
+
+const formValue = ref<unknown>(undefined)
 
 function parseTextToForm(): unknown {
   if (!text.value.trim()) return {}
@@ -75,10 +72,23 @@ function syncJsonToForm() {
 function syncFormToJson() {
   try {
     text.value = `${JSON.stringify(formValue.value ?? {}, null, 2)}\n`
-    parseError.value = null
-  } catch (e) {
-    parseError.value = (e as Error).message
+  } catch (_e) {
+    // ignore serialization failures from unserializable values
   }
+}
+
+function format() {
+  try {
+    text.value = `${JSON.stringify(JSON.parse(text.value), null, 2)}\n`
+  } catch (_e) {
+    // leave invalid JSON as-is; parseError already reflects the error
+  }
+}
+
+function generate() {
+  if (!schema.value) return
+  formValue.value = generateFakeValue(schema.value)
+  syncFormToJson()
 }
 
 function setMode(next: 'form' | 'json' | 'schema') {
@@ -98,57 +108,20 @@ function setMode(next: 'form' | 'json' | 'schema') {
 
 function onFormUpdate(value: unknown) {
   formValue.value = value
-  try {
-    text.value = `${JSON.stringify(value ?? {}, null, 2)}\n`
-    parseError.value = null
-  } catch (e) {
-    parseError.value = (e as Error).message
-  }
+  syncFormToJson()
 }
 
-watch(
-  text,
-  (v) => {
-    if (!v.trim()) {
-      parseError.value = null
-      return
+onBeforeUpdate(() => {
+  if (props.modelValue !== previousModelValue) {
+    previousModelValue = props.modelValue
+    if (effectiveMode.value === 'form') {
+      syncJsonToForm()
     }
-    try {
-      JSON.parse(v)
-      parseError.value = null
-    } catch (e) {
-      parseError.value = (e as Error).message
-    }
-  },
-  { immediate: true },
-)
-
-watch(
-  () => props.name,
-  () => {
-    mode.value = 'json'
-    formValue.value = undefined
-  },
-)
-
-watch(
-  () => canUseForm.value,
-  (available) => {
-    if (!available && mode.value === 'form') {
-      syncFormToJson()
-      mode.value = 'json'
-    }
-  },
-)
-
-watch(hasSchema, (available) => {
-  if (!available && mode.value === 'schema') {
-    mode.value = 'json'
   }
 })
 
 const hasFormError = computed(() => {
-  if (mode.value === 'json') return !!parseError.value
+  if (effectiveMode.value === 'json') return !!parseError.value
   return false
 })
 
@@ -158,8 +131,8 @@ const footerStatus = computed(() => {
   if (error.value)
     return { text: `Schema unavailable — JSON only: ${error.value}`, type: 'danger' as const }
   if (loading.value) return { text: 'Loading schema…', type: 'muted' as const }
-  if (mode.value === 'form') return { text: 'Form input', type: 'muted' as const }
-  if (mode.value === 'schema') return { text: 'Input schema', type: 'muted' as const }
+  if (effectiveMode.value === 'form') return { text: 'Form input', type: 'muted' as const }
+  if (effectiveMode.value === 'schema') return { text: 'Input schema', type: 'muted' as const }
   return { text: 'Valid JSON', type: 'muted' as const }
 })
 </script>
@@ -189,10 +162,15 @@ const footerStatus = computed(() => {
       <div v-if="loading" class="h-full overflow-auto p-3 space-y-2" data-testid="input-skeleton">
         <div v-for="i in 6" :key="i" class="h-3 bg-gray-200 rounded animate-pulse" />
       </div>
-      <div v-else-if="mode === 'form' && schema" class="h-full overflow-auto p-3">
-        <SchemaForm :schema="schema" :model-value="formValue" @update:model-value="onFormUpdate" />
+      <div v-else-if="effectiveMode === 'form' && schema" class="h-full overflow-auto p-3">
+        <SchemaForm
+          :key="inputType ?? name"
+          :schema="schema"
+          :model-value="formValue"
+          @update:model-value="onFormUpdate"
+        />
       </div>
-      <div v-else-if="mode === 'schema'" class="h-full overflow-auto p-3">
+      <div v-else-if="effectiveMode === 'schema'" class="h-full overflow-auto p-3">
         <pre
           data-testid="schema-view"
           class="w-full h-full min-h-0 overflow-auto font-mono text-xs leading-relaxed text-ink bg-white whitespace-pre-wrap break-words"
@@ -218,7 +196,7 @@ const footerStatus = computed(() => {
           <button
             type="button"
             class="text-xs px-2 py-1"
-            :class="mode === 'form' ? 'bg-accent-500 text-white' : 'hover:bg-surface text-ink'"
+            :class="effectiveMode === 'form' ? 'bg-accent-500 text-white' : 'hover:bg-surface text-ink'"
             data-testid="mode-form"
             @click="setMode('form')"
           >
@@ -227,7 +205,7 @@ const footerStatus = computed(() => {
           <button
             type="button"
             class="text-xs px-2 py-1"
-            :class="mode === 'json' ? 'bg-accent-500 text-white' : 'hover:bg-surface text-ink'"
+            :class="effectiveMode === 'json' ? 'bg-accent-500 text-white' : 'hover:bg-surface text-ink'"
             data-testid="mode-json"
             @click="setMode('json')"
           >
@@ -240,7 +218,7 @@ const footerStatus = computed(() => {
           v-if="hasSchema"
           type="button"
           class="text-xs px-2 py-1 border border-line hover:bg-surface disabled:opacity-50"
-          :class="mode === 'schema' ? 'bg-accent-500 text-white' : 'text-ink'"
+          :class="effectiveMode === 'schema' ? 'bg-accent-500 text-white' : 'text-ink'"
           data-testid="mode-schema"
           @click="setMode('schema')"
         >
@@ -276,7 +254,7 @@ const footerStatus = computed(() => {
           type="button"
           class="text-xs px-2 py-1 border border-line hover:bg-surface disabled:opacity-50"
           data-testid="format-input"
-          :disabled="busy || mode !== 'json'"
+          :disabled="busy || effectiveMode !== 'json'"
           @click="format"
         >
           Format

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 import cbs.nova.dsl.ExecutionMode;
+import cbs.nova.dsl.ExplainSupport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.MathIn;
@@ -198,5 +199,76 @@ class MathHelperTest {
   private Result<MathOut> execute(MathIn input) {
     var ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
     return helper.execute(ctx);
+  }
+
+  @Test
+  void explainPercentileDescribesInterpolationAndArgs() {
+    var ctx = contextFactory.of(
+            new MathIn("percentile", List.<Number>of(10, 20, 30), null, null, null, null, 95.0),
+            ExecutionMode.EXPLAIN);
+
+    var report = helper.explain(ctx, ExplainSupport.DEFAULT_BUDGET_CHARS);
+
+    assertThat(report.name()).isEqualTo("math");
+    assertThat(report.description())
+            .contains("linear interpolation")
+            .contains("Hyndman-Fan type 7")
+            .contains("p=95.0");
+    assertThat(report.mermaid()).contains("graph TD", "percentile");
+  }
+
+  @Test
+  void explainDiffersBetweenModes() {
+    var sumCtx = contextFactory.of(
+            new MathIn("sum", List.<Number>of(1, 2), null, null, null, null, null),
+            ExecutionMode.EXPLAIN);
+    var stddevCtx = contextFactory.of(
+            new MathIn("stddev", List.<Number>of(1, 2), null, null, null, null, null),
+            ExecutionMode.EXPLAIN);
+
+    var sum = helper.explain(sumCtx, ExplainSupport.DEFAULT_BUDGET_CHARS);
+    var stddev = helper.explain(stddevCtx, ExplainSupport.DEFAULT_BUDGET_CHARS);
+
+    assertThat(sum.description()).contains("double sum");
+    assertThat(stddev.description()).contains("sample standard deviation");
+    assertThat(sum.description()).isNotEqualTo(stddev.description());
+    assertThat(sum.mermaid()).contains("sum");
+    assertThat(stddev.mermaid()).contains("stddev");
+  }
+
+  @Test
+  void explainReflectsClampAndRoundArgs() {
+    var clampCtx = contextFactory.of(
+            new MathIn("clamp", null, 5, 0, 10, null, null), ExecutionMode.EXPLAIN);
+    var roundCtx = contextFactory.of(
+            new MathIn("round", null, 3.14159, null, null, 2, null), ExecutionMode.EXPLAIN);
+
+    assertThat(helper.explain(clampCtx, ExplainSupport.DEFAULT_BUDGET_CHARS).description())
+            .contains("min=0", "max=10");
+    assertThat(helper.explain(roundCtx, ExplainSupport.DEFAULT_BUDGET_CHARS).description())
+            .contains("scale=2");
+  }
+
+  @Test
+  void explainUnknownModeMentionsExpectedModes() {
+    var ctx = contextFactory.of(
+            new MathIn("frobnicate", null, null, null, null, null, null), ExecutionMode.EXPLAIN);
+
+    var report = helper.explain(ctx, ExplainSupport.DEFAULT_BUDGET_CHARS);
+
+    assertThat(report.description()).contains("unknown mode `frobnicate`", "sum");
+  }
+
+  @Test
+  void explainTruncatesToBudget() {
+    var ctx = contextFactory.of(
+            new MathIn("percentile", List.<Number>of(1, 2, 3), null, null, null, null, 99.0),
+            ExecutionMode.EXPLAIN);
+
+    var report = helper.explain(ctx, 50);
+
+    assertThat(report.description().length()).isLessThanOrEqualTo(50);
+    assertThat(report.description().length() + report.mermaid().length())
+            .isLessThanOrEqualTo(50);
   }
 }

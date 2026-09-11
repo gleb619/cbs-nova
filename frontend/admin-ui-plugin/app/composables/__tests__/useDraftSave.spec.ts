@@ -1,16 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, nextTick, reactive } from 'vue'
+import { createEmitter } from '../../utils/createEmitter'
 
 const saveError = new Error('save failed')
+
+const dirtyEmitter = createEmitter<{ dirty: void; clean: void }>()
 
 const mockWorkbench = {
   state: reactive({ isDirty: false, isSaving: false }),
   saveConstruct: vi.fn(),
   markDirty: vi.fn(() => {
     mockWorkbench.state.isDirty = true
+    dirtyEmitter.emit('dirty')
   }),
   markClean: vi.fn(() => {
     mockWorkbench.state.isDirty = false
+    dirtyEmitter.emit('clean')
   }),
 }
 
@@ -18,6 +23,8 @@ const mockDirty = {
   isDirty: computed(() => mockWorkbench.state.isDirty),
   markDirty: mockWorkbench.markDirty,
   markClean: mockWorkbench.markClean,
+  onDirty: (handler: () => void) => dirtyEmitter.on('dirty', handler),
+  onClean: (handler: () => void) => dirtyEmitter.on('clean', handler),
 }
 
 vi.mock('@cbs/admin-ui-plugin/composables/useDslWorkbench', () => ({

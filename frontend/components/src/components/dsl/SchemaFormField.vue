@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, inject, onScopeDispose, ref } from 'vue'
 import type { JsonSchema, JsonSchemaType } from '../../types/jsonSchema'
 import SchemaForm from './SchemaForm.vue'
+import { SCHEMA_FIELD_EVENTS_KEY } from './schemaFieldEvents'
 
 const props = defineProps<{
   name: string
@@ -109,13 +110,16 @@ function remove() {
   emit('remove')
 }
 
-watch(
-  () => props.modelValue,
-  () => {
-    jsonError.value = null
-  },
-  { immediate: true },
-)
+const fieldEvents = inject(SCHEMA_FIELD_EVENTS_KEY, null)
+if (fieldEvents) {
+  onScopeDispose(
+    fieldEvents.onClearError((name) => {
+      if (name === '*' || name === props.name) {
+        jsonError.value = null
+      }
+    }),
+  )
+}
 </script>
 
 <template>

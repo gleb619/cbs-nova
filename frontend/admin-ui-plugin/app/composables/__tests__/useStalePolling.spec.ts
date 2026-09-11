@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
+import type { ExecutionStatus } from '~/types'
 import { useStalePolling } from '../useStalePolling'
 
 // The composable under test imports the real useExecutionsApi module, so the

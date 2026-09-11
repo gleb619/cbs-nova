@@ -135,7 +135,7 @@ public final class TransactionBuilder<I, O> {
             retryPolicy,
             heartbeatTimeout,
             rawPreview(),
-            descriptor);
+            descriptor, null);
   }
 
   public @NonNull List<DslObject> buildList() {

@@ -10,6 +10,7 @@ import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.starter.events.DomainEvent;
+import cbs.nova.starter.sse.ExecutionStatusEventPublisher;
 import cbs.nova.starter.service.DslRunCancellationService.Outcome;
 import cbs.nova.starter.webhook.WebhookDispatcher;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -28,6 +29,7 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.ObjectMapper;
@@ -91,6 +93,7 @@ public class TemporalDslProcessService {
   private final OpenTelemetry openTelemetry;
   private final ObjectProvider<DomainEventPublisher> eventPublisherProvider;
   private final ObjectProvider<TransactionTemplate> transactionTemplateProvider;
+  private @Nullable ExecutionStatusEventPublisher statusPublisher;
 
   public TemporalDslProcessService(
           ContextFactory contextFactory,
@@ -219,6 +222,7 @@ public class TemporalDslProcessService {
         runRepository.save(running);
         publishEvent(new DomainEvent.RunStarted(
                 runId, processName, triggeredBy, startedAt, correlationId));
+        publishStatusChanged(runId, DslRunStatus.RUNNING.name());
         return null;
       });
 
@@ -234,6 +238,18 @@ public class TemporalDslProcessService {
       } catch (Exception ignored) {
       }
     }
+  }
+
+  @Autowired(required = false)
+  public void setExecutionStatusEventPublisher(@Nullable ExecutionStatusEventPublisher publisher) {
+    this.statusPublisher = publisher;
+  }
+
+  private void publishStatusChanged(@NonNull String runId, @NonNull String status) {
+    if (statusPublisher == null) {
+      return;
+    }
+    statusPublisher.publish(runId, status);
   }
 
   void ensureHealthcheckForTest() {
@@ -319,6 +335,7 @@ public class TemporalDslProcessService {
                           + " without producing a final status",
                   run.startedAt(), finishedAt,
                   finishedAt, run.correlationId()));
+          publishStatusChanged(runId, DslRunStatus.STALE.name());
         }
         return null;
       });
@@ -464,6 +481,7 @@ public class TemporalDslProcessService {
                 finalError,
                 finishedAt,
                 contextJson);
+        publishStatusChanged(runId, status);
         if (DslRunStatus.COMPLETED.name().equals(status)) {
           publishEvent(new DomainEvent.RunCompleted(
                   runId, processName, DslRunStatus.COMPLETED,

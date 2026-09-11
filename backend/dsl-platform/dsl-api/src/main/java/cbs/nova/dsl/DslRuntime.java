@@ -1,5 +1,7 @@
 package cbs.nova.dsl;
 
+import cbs.nova.dsl.model.ExplainReport;
+import cbs.nova.dsl.model.PreviewReport;
 import org.jspecify.annotations.NonNull;
 
 public interface DslRuntime {

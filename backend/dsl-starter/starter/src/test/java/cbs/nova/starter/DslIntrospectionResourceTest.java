@@ -12,7 +12,6 @@ import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.starter.config.router.DslIntrospectionRouterConfiguration;
@@ -352,6 +351,8 @@ class DslIntrospectionResourceTest {
     GlobalManager.globalManager().registerFunction(new FunctionDslObject(
             "sampleFunction",
             List.of(),
+            null,
+            null,
             ctx -> Result.success("ok"),
             null,
             () -> DslDescriptor.builder()
@@ -368,7 +369,8 @@ class DslIntrospectionResourceTest {
                     .version(null)
                     .startToCloseTimeout(null)
                     .heartbeatTimeout(null)
-                    .build()));
+                    .build(),
+            null));
   }
 
   private static class SampleHelper implements Executable<String, String> {

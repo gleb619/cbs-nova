@@ -80,9 +80,11 @@ public final class FunctionBuilder<I, O> {
     return new FunctionDslObject(
             name,
             parameters,
+            inputType,
+            outputType,
             rawExecute(),
             rawPreview(),
-            descriptor);
+            descriptor, null);
   }
 
   public @NonNull List<DslObject> buildList() {

@@ -1,11 +1,11 @@
 package cbs.nova.starter.core.pipe;
 
 import cbs.nova.dsl.Context;
-import cbs.nova.dsl.ExplainReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.logging.DryRunLoggingContext;
+import cbs.nova.dsl.model.ExplainTraceReport;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
@@ -27,7 +27,7 @@ import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 
 @RequiredArgsConstructor
-public final class ExplainDslPipe implements DslExecutionPipe<ExplainReport> {
+public final class ExplainDslPipe implements DslExecutionPipe<ExplainTraceReport> {
 
   private final ExternalCallRecorder recorder;
   private final ContextFactory contextFactory;
@@ -42,10 +42,10 @@ public final class ExplainDslPipe implements DslExecutionPipe<ExplainReport> {
   private final ExecutorService executor;
 
   @Override
-  public @NonNull Result<ExplainReport> execute(@NonNull String name,
+  public @NonNull Result<ExplainTraceReport> execute(@NonNull String name,
           @NonNull Context<?> ctx) {
     HelperInterceptor fakeInterceptor = new FakeHelperInterceptor(runScopedFakeConfig, recorder);
-    return DslExecutionPipeline.<ExplainReport>builder()
+    return DslExecutionPipeline.<ExplainTraceReport>builder()
             .stage(new ExplainReportStage(diagramRenderer))
             .stage(new MetricsStage(meterRegistry))
             .stage(new ExecutionTreeStage(contextFactory,

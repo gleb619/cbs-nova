@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, inject, onMounted, provide } from 'vue'
 import type { JsonSchema } from '../../types/jsonSchema'
 import SchemaFormField from './SchemaFormField.vue'
+import { createSchemaFieldEventBus, SCHEMA_FIELD_EVENTS_KEY } from './schemaFieldEvents'
 
 const props = defineProps<{
   schema: JsonSchema
@@ -32,9 +33,19 @@ const arrayValue = computed(() => {
   return []
 })
 
+const parentFieldEvents = inject(SCHEMA_FIELD_EVENTS_KEY, null)
+const fieldEvents = createSchemaFieldEventBus()
+provide(SCHEMA_FIELD_EVENTS_KEY, fieldEvents)
+
+function clearFieldErrors() {
+  fieldEvents.emitClearError('*')
+  parentFieldEvents?.emitClearError('*')
+}
+
 function setField(name: string, value: unknown) {
   if (props.readonly) return
   const next = { ...objectValue.value, [name]: value }
+  clearFieldErrors()
   emit('update:modelValue', next)
 }
 
@@ -42,6 +53,7 @@ function removeField(name: string) {
   if (props.readonly) return
   const next = { ...objectValue.value }
   delete next[name]
+  clearFieldErrors()
   emit('update:modelValue', next)
 }
 
@@ -50,6 +62,7 @@ function addArrayItem() {
   const itemSchema = props.schema.items
   const defaultItem = itemSchema?.type === 'object' ? {} : undefined
   const next = [...arrayValue.value, defaultItem]
+  clearFieldErrors()
   emit('update:modelValue', next)
 }
 
@@ -57,6 +70,7 @@ function removeArrayItem(index: number) {
   if (props.readonly) return
   const next = [...arrayValue.value]
   next.splice(index, 1)
+  clearFieldErrors()
   emit('update:modelValue', next)
 }
 
@@ -64,6 +78,7 @@ function updateArrayItem(index: number, value: unknown) {
   if (props.readonly) return
   const next = [...arrayValue.value]
   next[index] = value
+  clearFieldErrors()
   emit('update:modelValue', next)
 }
 
@@ -79,11 +94,12 @@ function initializeFromDefaults() {
     }
   }
   if (changed) {
+    clearFieldErrors()
     emit('update:modelValue', next)
   }
 }
 
-watch(() => props.schema, initializeFromDefaults, { immediate: true })
+onMounted(initializeFromDefaults)
 </script>
 
 <template>

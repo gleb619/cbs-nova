@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUpdate, ref } from 'vue'
 import type { ConstructType } from '../../composables/useConstructSchema'
 import { usePreviewHistory } from '../../composables/usePreviewHistory'
 import type { RunnerOutput, RunnerStatus } from '../../types/runner'
@@ -22,15 +22,25 @@ const emit = defineEmits<{
 }>()
 
 const inputJson = ref<string>('{\n  \n}')
-const formValue = ref<unknown>(undefined)
 const output = ref<RunnerOutput | null>(null)
 const status = ref<RunnerStatus>('idle')
+
+let previousName = props.name
+
+onBeforeUpdate(() => {
+  if (props.name !== previousName) {
+    previousName = props.name
+    inputJson.value = '{\n  \n}'
+  }
+})
 
 const history = usePreviewHistory(() => props.name)
 const historyEntries = computed(() => history.entries.value)
 
 function currentPayload(): unknown {
-  return formValue.value !== undefined ? formValue.value : JSON.parse(inputJson.value)
+  const v = inputJson.value.trim()
+  if (!v) return {}
+  return JSON.parse(v)
 }
 
 function normalizeResponse(response: unknown): RunnerOutput {
@@ -107,35 +117,14 @@ async function run() {
 
 function rerun(payload: unknown) {
   inputJson.value = `${JSON.stringify(payload ?? {}, null, 2)}\n`
-  formValue.value = payload
   void run()
 }
-
-watch(
-  () => props.name,
-  () => {
-    inputJson.value = '{\n  \n}'
-    formValue.value = undefined
-  },
-)
 
 const inputPanelModel = computed({
   get: () => inputJson.value,
   set: (v: string) => {
     inputJson.value = v
   },
-})
-
-watch(inputJson, (v) => {
-  try {
-    if (v.trim()) {
-      formValue.value = JSON.parse(v)
-    } else {
-      formValue.value = {}
-    }
-  } catch {
-    // leave formValue unchanged while user types invalid JSON
-  }
 })
 </script>
 

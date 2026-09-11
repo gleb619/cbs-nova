@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref } from 'vue'
+import { onSchedulesChanged } from '../../composables/useScheduleListEvents'
 import type { CreateSchedulePayload, ScheduleSummary } from '../../types/dsl'
 
-const props = defineProps<{
+defineProps<{
   schedules: ScheduleSummary[]
   loading?: boolean
   error?: string | null
@@ -20,18 +21,12 @@ const note = ref('')
 const inputJson = ref('')
 const inputError = ref('')
 
-// Inline two-step delete confirmation guard: only one row can be in the pending
-// state at a time. First click arms the row, second (Confirm) actually deletes,
-// Cancel reverts. Reset whenever the `schedules` prop changes.
 const pendingConfirm = ref<string | null>(null)
 const confirmButtonRef = ref<HTMLButtonElement | null>(null)
 
-watch(
-  () => props.schedules,
-  () => {
-    pendingConfirm.value = null
-  },
-)
+onSchedulesChanged(() => {
+  pendingConfirm.value = null
+})
 
 const canCreate = computed(() => definition.value.trim().length > 0 && cron.value.trim().length > 0)
 
@@ -127,7 +122,9 @@ function onPendingKeydown(event: KeyboardEvent) {
       >
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div class="flex flex-col gap-1">
-            <label for="schedule-definition" class="text-xs font-medium text-gray-700">Definition</label>
+            <label for="schedule-definition" class="text-xs font-medium text-gray-700"
+              >Definition</label
+            >
             <input
               id="schedule-definition"
               v-model="definition"
@@ -149,7 +146,9 @@ function onPendingKeydown(event: KeyboardEvent) {
             >
           </div>
           <div class="flex flex-col gap-1">
-            <label for="schedule-timezone" class="text-xs font-medium text-gray-700">Timezone</label>
+            <label for="schedule-timezone" class="text-xs font-medium text-gray-700"
+              >Timezone</label
+            >
             <input
               id="schedule-timezone"
               v-model="timezone"
@@ -170,7 +169,9 @@ function onPendingKeydown(event: KeyboardEvent) {
           </div>
         </div>
         <div class="flex flex-col gap-1">
-          <label for="schedule-input" class="text-xs font-medium text-gray-700">Input JSON (optional)</label>
+          <label for="schedule-input" class="text-xs font-medium text-gray-700"
+            >Input JSON (optional)</label
+          >
           <textarea
             id="schedule-input"
             v-model="inputJson"
@@ -179,7 +180,9 @@ function onPendingKeydown(event: KeyboardEvent) {
             placeholder='{"amount": 100}'
             class="px-3 py-1.5 text-sm rounded border border-gray-300 focus:outline-none focus:border-blue-500 font-mono"
           ></textarea>
-          <span v-if="inputError" data-testid="schedule-input-error" class="text-xs text-red-600">{{ inputError }}</span>
+          <span v-if="inputError" data-testid="schedule-input-error" class="text-xs text-red-600"
+            >{{ inputError }}</span
+          >
         </div>
         <button
           type="submit"
@@ -225,7 +228,8 @@ function onPendingKeydown(event: KeyboardEvent) {
               </span>
             </div>
             <div class="text-xs text-gray-500 mt-0.5">
-              {{ schedule.cron }} · {{ schedule.timezone }}
+              {{ schedule.cron }}
+              · {{ schedule.timezone }}
               <span v-if="schedule.nextRunAt">· next {{ schedule.nextRunAt }}</span>
             </div>
             <div v-if="schedule.note" class="text-xs text-gray-600 mt-0.5 truncate">

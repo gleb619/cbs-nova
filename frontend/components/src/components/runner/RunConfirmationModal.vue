@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onUpdated, ref } from 'vue'
 
 import { useModalDialog } from '../../composables/useModalDialog'
 
@@ -21,19 +21,30 @@ const { open: openDialog, close: closeDialog } = useModalDialog(dialogRef, {
   onClose: onCancel,
 })
 
-watch(
-  () => props.show,
-  (open) => {
-    if (open) {
-      acknowledged.value = false
-      skipPreference.value = readSkipPreference()
-      openDialog()
-    } else {
-      closeDialog()
-    }
-  },
-  { immediate: true },
-)
+let previousShow: boolean | null = null
+
+onMounted(() => {
+  previousShow = props.show
+  if (props.show) {
+    open()
+  }
+})
+
+onUpdated(() => {
+  if (props.show === previousShow) return
+  previousShow = props.show
+  if (props.show) {
+    open()
+  } else {
+    closeDialog()
+  }
+})
+
+function open() {
+  acknowledged.value = false
+  skipPreference.value = readSkipPreference()
+  openDialog()
+}
 
 function readSkipPreference(): boolean {
   if (typeof window === 'undefined') return false
@@ -54,7 +65,13 @@ function writeSkipPreference(value: boolean) {
   }
 }
 
-watch(skipPreference, (value) => writeSkipPreference(value))
+const skipPreferenceModel = computed({
+  get: () => skipPreference.value,
+  set: (value) => {
+    skipPreference.value = value
+    writeSkipPreference(value)
+  },
+})
 
 // biome-ignore lint/correctness/noUnusedVariables: used in the modal template
 const payloadText = computed(() => {
@@ -112,7 +129,7 @@ function onCancel() {
 
           <label class="mt-2 inline-flex items-center gap-2 text-sm text-gray-500">
             <input
-              v-model="skipPreference"
+              v-model="skipPreferenceModel"
               type="checkbox"
               class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             >

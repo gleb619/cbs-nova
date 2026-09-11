@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUpdate, ref } from 'vue'
 import { type ConstructType, useConstructSchema } from '../../composables/useConstructSchema'
 import type { PreviewHistoryEntry, RunnerOutput, RunnerStatus } from '../../types/runner'
 import ResultTab from '../runner/ResultTab.vue'
@@ -24,12 +24,21 @@ const emit = defineEmits<{
   format: [formatted: string]
 }>()
 
+let previousName = props.name
+let previousOutput: RunnerOutput | null = props.output
+
 type PanelMode = 'form' | 'json' | 'schema' | 'history'
 const mode = ref<PanelMode>('json')
+const selectedEntryId = ref<string | null>(null)
 
 const { outputSchema, outputType, loading, error, hasOutputSchema } = useConstructSchema({
   name: () => props.name,
   type: () => props.type,
+})
+
+const effectiveMode = computed(() => {
+  if (mode.value === 'schema' && !hasOutputSchema.value) return 'json'
+  return mode.value
 })
 
 const outputFormValue = computed(() => {
@@ -61,6 +70,11 @@ function setTransient(message: { text: string; type: 'danger' | 'success' }) {
   }, 1500)
 }
 
+function clearTransient() {
+  if (transientTimeout) clearTimeout(transientTimeout)
+  transient.value = null
+}
+
 function formatResult() {
   const raw = props.output?.result
   if (raw === undefined || raw === null) return
@@ -86,10 +100,8 @@ function toggleHistory() {
   setMode(mode.value === 'history' ? 'json' : 'history')
 }
 
-const selectedEntryId = ref<string | null>(null)
-
 // Mirrors the child's effective selection so footer status stays accurate
-// even when the selected entry has been removed from history (no watch needed).
+// even when the selected entry has been removed from history.
 const effectiveSelectedEntry = computed(() => {
   if (!selectedEntryId.value) return undefined
   return props.history.find((entry) => entry.id === selectedEntryId.value)
@@ -105,48 +117,39 @@ const footerStatus = computed(() => {
     return { text: count > 0 ? `Failed — ${count} error(s)` : 'Failed', type: 'danger' as const }
   }
   if (props.status === 'success') return { text: 'Done', type: 'success' as const }
-  if (mode.value === 'history') {
-    if (effectiveSelectedEntry.value) return { text: 'History — stored result', type: 'muted' as const }
+  if (effectiveMode.value === 'history') {
+    if (effectiveSelectedEntry.value)
+      return { text: 'History — stored result', type: 'muted' as const }
     return { text: `History — ${props.history.length} run(s)`, type: 'muted' as const }
   }
-  if (mode.value === 'form') {
+  if (effectiveMode.value === 'form') {
     if (loading.value) return { text: 'Loading schema…', type: 'muted' as const }
     if (error.value) return { text: `Schema unavailable: ${error.value}`, type: 'danger' as const }
     if (!hasOutputSchema.value) return { text: 'Output schema unavailable', type: 'muted' as const }
     return { text: 'Form output', type: 'muted' as const }
   }
-  if (mode.value === 'schema') return { text: 'Output schema', type: 'muted' as const }
+  if (effectiveMode.value === 'schema') return { text: 'Output schema', type: 'muted' as const }
   return { text: 'Result JSON', type: 'muted' as const }
 })
 
 const canFormat = computed(() => {
-  if (mode.value !== 'json') return false
+  if (effectiveMode.value !== 'json') return false
   if (props.status === 'loading') return false
   const raw = props.output?.result
   return raw !== undefined && raw !== null
 })
 
-watch(
-  () => props.name,
-  () => {
+onBeforeUpdate(() => {
+  if (props.name !== previousName) {
+    previousName = props.name
     mode.value = 'json'
     selectedEntryId.value = null
-  },
-)
-
-watch(hasOutputSchema, (available) => {
-  if (!available && mode.value === 'schema') {
-    mode.value = 'json'
+  }
+  if (props.output !== previousOutput) {
+    previousOutput = props.output
+    clearTransient()
   }
 })
-
-watch(
-  () => props.output,
-  () => {
-    transient.value = null
-    if (transientTimeout) clearTimeout(transientTimeout)
-  },
-)
 </script>
 
 <template>
@@ -170,7 +173,7 @@ watch(
     </header>
 
     <div class="flex-1 min-h-0 overflow-hidden">
-      <div v-if="mode === 'json'" class="h-full overflow-auto p-3">
+      <div v-if="effectiveMode === 'json'" class="h-full overflow-auto p-3">
         <div v-if="status === 'loading'" class="space-y-2" data-testid="result-skeleton">
           <div v-for="i in 6" :key="i" class="h-3 bg-gray-200 rounded animate-pulse" />
         </div>
@@ -186,7 +189,7 @@ watch(
         <ResultTab v-else :result="output?.result" />
       </div>
 
-      <div v-else-if="mode === 'form'" class="h-full overflow-auto p-3">
+      <div v-else-if="effectiveMode === 'form'" class="h-full overflow-auto p-3">
         <div v-if="loading" class="space-y-2" data-testid="schema-skeleton">
           <div v-for="i in 6" :key="i" class="h-3 bg-gray-200 rounded animate-pulse" />
         </div>
@@ -199,7 +202,7 @@ watch(
         </div>
       </div>
 
-      <div v-else-if="mode === 'schema'" class="h-full overflow-auto p-3">
+      <div v-else-if="effectiveMode === 'schema'" class="h-full overflow-auto p-3">
         <pre
           data-testid="schema-view"
           class="w-full h-full min-h-0 overflow-auto font-mono text-xs leading-relaxed text-ink bg-white whitespace-pre-wrap break-words"
@@ -222,7 +225,7 @@ watch(
           <button
             type="button"
             class="text-xs px-2 py-1"
-            :class="mode === 'form' ? 'bg-accent-500 text-white' : 'hover:bg-surface text-ink'"
+            :class="effectiveMode === 'form' ? 'bg-accent-500 text-white' : 'hover:bg-surface text-ink'"
             data-testid="mode-form"
             @click="setMode('form')"
           >
@@ -231,7 +234,7 @@ watch(
           <button
             type="button"
             class="text-xs px-2 py-1"
-            :class="mode === 'json' ? 'bg-accent-500 text-white' : 'hover:bg-surface text-ink'"
+            :class="effectiveMode === 'json' ? 'bg-accent-500 text-white' : 'hover:bg-surface text-ink'"
             data-testid="mode-json"
             @click="setMode('json')"
           >
@@ -243,7 +246,7 @@ watch(
           v-if="hasOutputSchema"
           type="button"
           class="text-xs px-2 py-1 border border-line hover:bg-surface disabled:opacity-50"
-          :class="mode === 'schema' ? 'bg-accent-500 text-white' : 'text-ink'"
+          :class="effectiveMode === 'schema' ? 'bg-accent-500 text-white' : 'text-ink'"
           data-testid="mode-schema"
           @click="setMode('schema')"
         >

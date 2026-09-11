@@ -195,7 +195,7 @@ public class DslFileHandler {
 
   private String pathVariable(ServerRequest request) {
     String path = request.pathVariable("path")
-        .replace('\\', '/').replaceAll("^/+", "");
+            .replace('\\', '/').replaceAll("^/+", "");
     if (path.contains("..")) {
       return null;
     }
@@ -204,7 +204,7 @@ public class DslFileHandler {
 
   private String nameVariable(ServerRequest request) {
     String name = request.pathVariable("name")
-        .replace('\\', '/').replaceAll("^/+", "");
+            .replace('\\', '/').replaceAll("^/+", "");
     if (name.contains("..")) {
       return null;
     }

@@ -2,6 +2,7 @@ package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.model.ExplainReport;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -137,19 +138,7 @@ class PreviewReportTest {
 
   @Test
   void previewReportIsNotEqualToExplainReportWithSharedFields() {
-    var explain = new ExplainReport(
-            "n",
-            "d",
-            List.of("step-1"),
-            List.of(),
-            Map.of(),
-            null,
-            null,
-            null,
-            List.of(),
-            null,
-            List.of(),
-            null);
+    var explain = new ExplainReport("n", "d", "");
 
     var preview = new PreviewReport(
             "n",

@@ -119,15 +119,6 @@ class DevDslRuntimeMetricsTest {
   }
 
   @Test
-  void explainReportContainsMetrics() {
-    var ctx = contextFactory.of("input", ExecutionMode.EXPLAIN);
-    var report = runtime.explain("Ping", ctx);
-    assertThat(report.metrics()).isNotNull();
-    assertThat(report.metrics().executionDurationMs()).isNotNegative();
-    assertThat(report.metrics().callCounts()).containsKey(CallKind.PROCESS);
-  }
-
-  @Test
   void runModeMetricsAreNull() {
     var ctx = contextFactory.of("input", ExecutionMode.RUN);
     var result = runtime.run("Ping", ctx);

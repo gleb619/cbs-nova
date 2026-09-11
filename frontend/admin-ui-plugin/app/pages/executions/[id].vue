@@ -10,6 +10,7 @@ import {
   ExecutionsCompensationLane,
   ExecutionsExecutionSummary,
   ExecutionsExecutionTrace,
+  selectTransaction,
 } from '@cbs/components'
 import { navigateTo, useRoute } from 'nuxt/app'
 import { computed, onUnmounted, ref } from 'vue'
@@ -131,10 +132,9 @@ const transactions = ref<TransactionExecutionDto[]>([])
 const transactionsLoading = ref(false)
 const transactionsError = ref<string | null>(null)
 const transactionsLoaded = ref(false)
-const selectedTransaction = ref<TransactionExecutionDto | undefined>(undefined)
 
 function onTimelineSelect(tx: TransactionExecutionDto) {
-  selectedTransaction.value = tx
+  selectTransaction(tx)
 }
 
 async function loadTransactions() {
@@ -295,7 +295,6 @@ onUnmounted(() => {
               :transactions="transactions"
               :loading="transactionsLoading"
               :error="transactionsError"
-              :selected-transaction="selectedTransaction"
             />
           </div>
           <ExecutionsLogsTab v-else-if="visibleTab === 'logs'" :logs="selectedExecution.logs" />

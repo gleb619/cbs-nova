@@ -1,9 +1,16 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { useExecutionsApi } from '@cbs/admin-ui-plugin/composables/useExecutionsApi'
 import { resolveStalePollMs } from '@cbs/admin-ui-plugin/composables/useStalePollInterval'
-import { onUnmounted, ref, watch } from 'vue'
+import { onUnmounted, type Ref, ref } from 'vue'
 import type { ExecutionDetail, ExecutionStatus } from '~/types'
+import { createEmitter } from '../utils/createEmitter'
 import { extractApiError } from '../utils/extractApiError'
+import { useIntervalEmitter } from './useIntervalEmitter'
+
+interface StalePollingEvents {
+  transition: { id: string; status: ExecutionStatus }
+  [key: string]: unknown
+}
 
 /**
  * useStalePolling
@@ -23,49 +30,39 @@ import { extractApiError } from '../utils/extractApiError'
  * visibilitychange listener.
  *
  * Usage:
- *   const status = computed(() => selectedExecution.value?.status)
- *   const id = computed(() => selectedExecution.value?.id ?? '')
- *   const { polling } = useStalePolling({ status, id })
+ *   const { polling, status, onTransition } = useStalePolling({
+ *     status: 'Stale',
+ *     id: computed(() => selectedExecution.value?.id ?? ''),
+ *   })
  *
- *   // in template:
- *   <ExecutionsStatusBadge :status="..." :polling="polling.value" />
+ *   onTransition(({ status }) => { ... })
  */
 export function useStalePolling(options: {
-  status: Ref<ExecutionStatus | null | undefined>
+  status?: Ref<ExecutionStatus | null | undefined> | ExecutionStatus
   id: Ref<string> | string
   intervalMs?: number
 }) {
-  const { status, id } = options
+  const { status: statusOption, id } = options
   const intervalMs = resolveStalePollMs(options.intervalMs)
 
   const api = useExecutionsApi()
   const log = useClientLogger('runtime')
+  const emitter = createEmitter<StalePollingEvents>()
   const polling = ref(false)
 
-  let interval: ReturnType<typeof setInterval> | null = null
-  let visibilityHandler: (() => void) | null = null
-  let stopStatusWatch: (() => void) | null = null
+  // The status is either owned by the caller (a ref) or managed internally.
+  const status: Ref<ExecutionStatus | null | undefined> =
+    typeof statusOption === 'object' && statusOption !== null && 'value' in statusOption
+      ? statusOption
+      : ref<ExecutionStatus | null | undefined>(statusOption ?? null)
+
+  const ticker = useIntervalEmitter({ intervalMs, pauseOnHidden: true })
 
   function readId(): string {
     return typeof id === 'string' ? id : (id.value ?? '')
   }
 
-  function clearTimer(): void {
-    if (interval != null) {
-      clearInterval(interval)
-      interval = null
-    }
-  }
-
-  function detachVisibilityListener(): void {
-    if (visibilityHandler && typeof document !== 'undefined') {
-      document.removeEventListener('visibilitychange', visibilityHandler)
-    }
-    visibilityHandler = null
-  }
-
   async function tick(): Promise<void> {
-    if (typeof document !== 'undefined' && document.hidden) return
     const execId = readId()
     if (!execId) return
 
@@ -81,68 +78,48 @@ export function useStalePolling(options: {
     }
 
     const next = detail?.status
-    if (next && next !== 'Stale') {
+    if (next && next !== 'Stale' && status.value !== next) {
       // Confirmed transition out of Stale. Push the new status into the
       // consumer's ref so the UI re-renders, then stop.
-      if (typeof status !== 'string') {
-        ;(status as Ref<ExecutionStatus | null | undefined>).value = next
-      }
+      status.value = next
       stop()
+      emitter.emit('transition', { id: execId, status: next })
     }
   }
 
+  const stopTick = ticker.onTick(() => {
+    void tick()
+  })
+
   function start(): void {
-    if (interval != null) return
-    if (typeof document === 'undefined') return
-
-    polling.value = true
-
-    interval = setInterval(() => {
-      if (typeof document !== 'undefined' && document.hidden) return
-      void tick()
-    }, intervalMs)
-
-    visibilityHandler = () => {
-      if (!interval) return
-      if (document.hidden) return
-      // Resumed: fire one immediate tick so the user sees fresh data
-      // the moment they come back to the tab.
-      void tick()
+    if (status.value === 'Stale') {
+      polling.value = true
+      ticker.start()
     }
-    document.addEventListener('visibilitychange', visibilityHandler)
   }
 
   function stop(): void {
     polling.value = false
-    clearTimer()
-    detachVisibilityListener()
+    ticker.stop()
   }
 
-  // Drive start/stop from the status ref. Only Stale keeps the interval
-  // alive; every other value (including null/undefined) is a settled
-  // state for the purposes of this composable.
-  if (typeof status !== 'string') {
-    stopStatusWatch = watch(
-      status,
-      (s) => {
-        if (s === 'Stale') {
-          start()
-        } else {
-          stop()
-        }
-      },
-      { immediate: true },
-    )
-  } else if (status === 'Stale') {
-    // Plain string status — caller manages start/stop imperatively.
+  // Start immediately when the initial status is Stale; otherwise the caller
+  // can drive the poller imperatively via `start()` / `stop()`.
+  if (status.value === 'Stale') {
     start()
   }
 
   onUnmounted(() => {
     stop()
-    if (stopStatusWatch) stopStatusWatch()
-    stopStatusWatch = null
+    stopTick()
   })
 
-  return { polling, start, stop }
+  return {
+    polling,
+    status,
+    start,
+    stop,
+    onTransition: (handler: (payload: { id: string; status: ExecutionStatus }) => void) =>
+      emitter.on('transition', handler),
+  }
 }

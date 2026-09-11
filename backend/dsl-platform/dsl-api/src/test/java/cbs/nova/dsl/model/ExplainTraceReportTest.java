@@ -1,13 +1,18 @@
-package cbs.nova.dsl;
+package cbs.nova.dsl.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.CallKind;
+import cbs.nova.dsl.CallNode;
+import cbs.nova.dsl.DslDescriptor;
+import cbs.nova.dsl.DslObject;
+import cbs.nova.dsl.ExecutableDescriptor;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
 
-class ExplainReportTest {
+class ExplainTraceReportTest {
 
   @Test
   void accessorsExposeAllComponents() {
@@ -32,7 +37,7 @@ class ExplainReportTest {
             .build();
     var ast = new CallNode("echo", CallKind.PROCESS, null, null, true, List.of(), List.of());
 
-    var report = new ExplainReport(
+    var report = new ExplainTraceReport(
             "echo",
             "Echoes input",
             List.of("step-1"),
@@ -60,7 +65,7 @@ class ExplainReportTest {
 
   @Test
   void nullableDescriptorsAcceptNull() {
-    var report = new ExplainReport(
+    var report = new ExplainTraceReport(
             "n", "d",
             List.of(), List.of(), Map.of(),
             null, null, null, List.of(), null, List.of(), null);
@@ -77,21 +82,21 @@ class ExplainReportTest {
     var trace = List.of("step-1");
     var calls = List.<Map<String, Object>>of();
     var counts = Map.of("a", 1);
-    var left = new ExplainReport(
+    var left = new ExplainTraceReport(
             "n", "d", trace, calls, counts, null, null, null, List.of(), null, List.of(), null);
-    var right = new ExplainReport(
+    var right = new ExplainTraceReport(
             "n", "d", List.of("step-1"), List.of(), Map.of("a", 1), null, null, null,
             List.of(), null, List.of(), null);
 
     assertThat(left).isEqualTo(right).hasSameHashCodeAs(right);
 
-    var differentDescription = new ExplainReport(
+    var differentDescription = new ExplainTraceReport(
             "n", "other", trace, calls, counts, null, null, null, List.of(), null, List.of(), null);
     assertThat(left).isNotEqualTo(differentDescription);
 
     var executable = new ExecutableDescriptor(
             "e", null, null, null, false, null, List.of());
-    var differentExecutable = new ExplainReport(
+    var differentExecutable = new ExplainTraceReport(
             "n", "d", trace, calls, counts, executable, null, null, List.of(), null, List.of(),
             null);
     assertThat(left).isNotEqualTo(differentExecutable);
@@ -99,7 +104,7 @@ class ExplainReportTest {
 
   @Test
   void toStringContainsComponentNames() {
-    var report = new ExplainReport(
+    var report = new ExplainTraceReport(
             "n", "d", List.of(), List.of(), Map.of(), null, null, null, List.of(), null,
             List.of(), null);
 

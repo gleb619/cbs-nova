@@ -13,13 +13,15 @@ import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.fake.FakeConfig;
 import cbs.nova.dsl.fake.FakeEntry;
+import cbs.nova.dsl.model.ExplainTraceReport;
+import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
+import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
@@ -86,7 +88,7 @@ class InterceptorThreadingTest {
 
     var runPipe = new RunDslPipe(contextFactory, recorder,
             new CbsNovaFakesProperties(false, null), runScopedFakeConfig,
-            new cbs.nova.starter.core.listener.DslExecutionEventBus());
+            new DslExecutionEventBus());
 
     Context<?> ctx = contextFactory.of("payload", ExecutionMode.RUN, "run-fake");
     Result<Object> result = runPipe.execute("httpCall", ctx);
@@ -105,7 +107,7 @@ class InterceptorThreadingTest {
 
     var runPipe = new RunDslPipe(contextFactory, recorder,
             new CbsNovaFakesProperties(false, null), runScopedFakeConfig,
-            new cbs.nova.starter.core.listener.DslExecutionEventBus());
+            new DslExecutionEventBus());
 
     Context<?> ctx = contextFactory.of("payload", ExecutionMode.RUN, "run-nofake");
     Result<Object> result = runPipe.execute("httpCall", ctx);
@@ -136,7 +138,7 @@ class InterceptorThreadingTest {
             new SimpleMeterRegistry(), null);
     var runPipe = new RunDslPipe(contextFactory, runRec,
             new CbsNovaFakesProperties(false, null), runScoped,
-            new cbs.nova.starter.core.listener.DslExecutionEventBus());
+            new DslExecutionEventBus());
 
     Context<?> previewCtx = contextFactory.of("payload", ExecutionMode.PREVIEW, "run-shared");
     Result<PreviewReport> previewResult = previewPipe.execute("httpCall", previewCtx);
@@ -164,7 +166,7 @@ class InterceptorThreadingTest {
             new SimpleMeterRegistry(), new ExplainDiagramRenderer(), null);
 
     Context<?> ctx = contextFactory.of("payload", ExecutionMode.EXPLAIN, "run-explain");
-    Result<cbs.nova.dsl.ExplainReport> result = explainPipe.execute("dbCall", ctx);
+    Result<ExplainTraceReport> result = explainPipe.execute("dbCall", ctx);
 
     assertThat(result.isSuccess()).isTrue();
     verify(recorder).record(eq("helper"), eq("dbCall"), eq("execute"), eq("faked-db"));
@@ -188,7 +190,7 @@ class InterceptorThreadingTest {
 
     var runPipe = new RunDslPipe(contextFactory, recorder,
             new CbsNovaFakesProperties(false, null), runScopedFakeConfig,
-            new cbs.nova.starter.core.listener.DslExecutionEventBus());
+            new DslExecutionEventBus());
 
     Context<?> ctx = contextFactory.of("payload", ExecutionMode.RUN, "run-process");
     Result<Object> result = runPipe.execute("ProcessCallsHelper", ctx);

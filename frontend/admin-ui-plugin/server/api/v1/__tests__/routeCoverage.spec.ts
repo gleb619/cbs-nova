@@ -303,6 +303,11 @@ const expectedProxies: readonly ExpectedProxy[] = [
     bffPath: '/api/v1/executions/{id}/transactions',
   },
   {
+    method: 'GET',
+    backendPath: '/api/executions/{id}/events',
+    bffPath: '/api/v1/executions/{id}/events',
+  },
+  {
     method: 'POST',
     backendPath: '/api/executions/{id}/cancel',
     bffPath: '/api/v1/executions/{id}/cancel',

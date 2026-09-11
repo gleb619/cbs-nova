@@ -1,12 +1,17 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+import { nextTick } from 'vue'
+import { selectTransaction } from '../../../composables/useTransactionSelection'
+import type { TransactionExecutionDto } from '../../../types/execution'
 import TransactionsTab from '../TransactionsTab.vue'
 
-function tx(overrides: Record<string, unknown> = {}) {
+function tx(overrides: Partial<TransactionExecutionDto> = {}): TransactionExecutionDto {
   return {
     transactionName: 'apply',
     input: { amount: 100 },
     executedAt: '2026-01-01T00:00:00Z',
+    status: 'SUCCESS',
+    startedAt: '2026-01-01T00:00:00Z',
     ...overrides,
   }
 }
@@ -105,5 +110,30 @@ describe('TransactionsTab', () => {
     })
 
     expect(wrapper.find('[data-testid="executions-transaction-toggle-input"]').exists()).toBe(false)
+  })
+
+  it('expands the matching row when selectTransaction is emitted', async () => {
+    const second = tx({
+      transactionName: 'second',
+      executedAt: '2026-01-01T13:00:00Z',
+      input: { amount: 200 },
+    })
+    const wrapper = mount(TransactionsTab, {
+      props: {
+        transactions: [tx({ transactionName: 'first' }), second],
+        loading: false,
+        error: null,
+      },
+    })
+
+    selectTransaction(second)
+    await nextTick()
+
+    const inputs = wrapper.findAll('[data-testid="executions-transaction-input"]')
+    expect(inputs).toHaveLength(1)
+    expect(inputs[0].text()).toContain('200')
+    expect(inputs[0].text()).not.toContain('100')
+
+    wrapper.unmount()
   })
 })

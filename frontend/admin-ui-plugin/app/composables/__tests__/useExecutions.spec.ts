@@ -10,6 +10,55 @@ vi.mock('nuxt/app', () => ({
     (globalThis as unknown as { useRuntimeConfig: () => unknown }).useRuntimeConfig(),
 }))
 
+const { executionEventsState, useExecutionEventsMock } = vi.hoisted(() => {
+  const status = { value: 'idle' as 'idle' | 'connecting' | 'open' | 'error' }
+  const state: any = {
+    status,
+    lastIds: null,
+    eventHandlers: [] as ((event: any) => void)[],
+    openHandlers: [] as (() => void)[],
+    errorHandlers: [] as ((err?: Event) => void)[],
+    reset: () => {
+      state.status.value = 'idle'
+      state.lastIds = null
+      state.eventHandlers = []
+      state.openHandlers = []
+      state.errorHandlers = []
+    },
+    simulateEvent: (event: any) => state.eventHandlers.forEach((h: any) => h(event)),
+    simulateOpen: () => {
+      state.status.value = 'open'
+      state.openHandlers.forEach((h) => h())
+    },
+    simulateError: () => {
+      state.status.value = 'error'
+      state.errorHandlers.forEach((h) => h())
+    },
+  }
+  const useExecutionEventsMock = vi.fn((options: { ids: any }) => {
+    state.lastIds = options.ids
+    return {
+      status: state.status,
+      onExecutionEvent: (handler: (event: any) => void) => {
+        state.eventHandlers.push(handler)
+        return () => {}
+      },
+      onOpen: (handler: () => void) => {
+        state.openHandlers.push(handler)
+        return () => {}
+      },
+      onError: (handler: (err?: Event) => void) => {
+        state.errorHandlers.push(handler)
+        if (state.status.value === 'error') handler()
+        return () => {}
+      },
+    }
+  })
+  return { executionEventsState: state, useExecutionEventsMock }
+})
+
+vi.mock('../useExecutionEvents', () => ({ useExecutionEvents: useExecutionEventsMock }))
+
 vi.mock('../useExecutionsApi', () => {
   const list = vi.fn()
   const get = vi.fn()
@@ -38,6 +87,7 @@ const installApiMock = (overrides: Partial<ApiMock> = {}): ApiMock => {
 
 describe('useExecutions', () => {
   beforeEach(() => {
+    executionEventsState.reset()
     const api = (
       executionsApiModule as unknown as { useExecutionsApi: () => ApiMock }
     ).useExecutionsApi()
@@ -640,6 +690,7 @@ describe('useExecutions', () => {
       installApiMock({ list, get: vi.fn() })
 
       const { loadExecutions, inFlightRowCount } = useExecutions()
+      executionEventsState.simulateError()
       expect(inFlightRowCount.value).toBe(0)
 
       await loadExecutions()
@@ -680,6 +731,7 @@ describe('useExecutions', () => {
       installApiMock({ list, get: vi.fn() })
 
       const { loadExecutions } = useExecutions()
+      executionEventsState.simulateError()
       await loadExecutions()
       await flushAll()
       expect(list).toHaveBeenCalledTimes(1)
@@ -718,6 +770,7 @@ describe('useExecutions', () => {
       installApiMock({ list, get: vi.fn() })
 
       const { applyFilters, filters, page, setPage } = useExecutions()
+      executionEventsState.simulateError()
 
       await applyFilters({ status: 'Running', entityName: 'foo' })
       await setPage(2)
@@ -760,6 +813,7 @@ describe('useExecutions', () => {
       installApiMock({ list, get: vi.fn() })
 
       const { loadExecutions, loading } = useExecutions()
+      executionEventsState.simulateError()
 
       await loadExecutions()
       await flushAll()
@@ -780,6 +834,111 @@ describe('useExecutions', () => {
       await userLoad
       expect(list).toHaveBeenCalledTimes(2)
       expect(loading.value).toBe(false)
+    })
+  })
+
+  describe('SSE events', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+      vi.mocked(useRuntimeConfig as never).mockReturnValue({
+        public: { stalePollMs: 1000 },
+      } as ReturnType<typeof useRuntimeConfig>)
+    })
+
+    const flushAll = async () => {
+      for (let i = 0; i < 10; i++) await Promise.resolve()
+    }
+
+    const runningRow = {
+      id: 'run-1',
+      entity: 'ent',
+      entityType: 'Process' as const,
+      mode: 'RUN' as const,
+      status: 'Running' as const,
+      startedAt: '2025-01-01',
+    }
+    const completedRow = {
+      id: 'run-1',
+      entity: 'ent',
+      entityType: 'Process' as const,
+      mode: 'RUN' as const,
+      status: 'Completed' as const,
+      startedAt: '2025-01-01',
+    }
+
+    it('populates SSE subscription ids from in-flight rows only', async () => {
+      const list = vi.fn().mockResolvedValueOnce([runningRow, completedRow])
+      installApiMock({ list, get: vi.fn() })
+
+      const { loadExecutions, inFlightRowCount } = useExecutions()
+      await loadExecutions()
+      await flushAll()
+
+      expect(inFlightRowCount.value).toBe(1)
+      expect(executionEventsState.lastIds?.value.has('run-1')).toBe(true)
+      expect(executionEventsState.lastIds?.value.has('done-1')).toBe(false)
+    })
+
+    it('refreshes the affected row when an SSE status event arrives', async () => {
+      const api = installApiMock({
+        list: vi.fn().mockResolvedValueOnce([runningRow]),
+        get: vi.fn().mockResolvedValueOnce(completedRow),
+      })
+
+      const { loadExecutions, executions } = useExecutions()
+      await loadExecutions()
+      await flushAll()
+
+      executionEventsState.simulateEvent({
+        id: 'run-1',
+        status: 'Completed',
+        timestamp: '2025-01-01T00:00:00Z',
+      })
+      await flushAll()
+
+      expect(api.get).toHaveBeenCalledWith('run-1')
+      expect(executions.value.find((e) => e.id === 'run-1')?.status).toBe('Completed')
+    })
+
+    it('falls back to list polling when SSE errors', async () => {
+      const list = vi.fn().mockResolvedValue([runningRow])
+      installApiMock({ list, get: vi.fn() })
+
+      const { loadExecutions } = useExecutions()
+      await loadExecutions()
+      await flushAll()
+
+      // SSE is active by default, so no list poll timer should be registered.
+      expect(vi.getTimerCount()).toBe(0)
+
+      executionEventsState.simulateError()
+      await flushAll()
+
+      // Fallback path started the list ticker.
+      expect(vi.getTimerCount()).toBe(1)
+
+      await vi.advanceTimersByTimeAsync(1000)
+      await flushAll()
+      expect(list).toHaveBeenCalledTimes(2)
+    })
+
+    it('resumes SSE and stops list polling after a successful open', async () => {
+      const list = vi.fn().mockResolvedValue([runningRow])
+      installApiMock({ list, get: vi.fn() })
+
+      const { loadExecutions } = useExecutions()
+      await loadExecutions()
+      await flushAll()
+
+      // Force fallback first.
+      executionEventsState.simulateError()
+      await flushAll()
+      expect(vi.getTimerCount()).toBe(1)
+
+      // Backend stream reopens.
+      executionEventsState.simulateOpen()
+      await flushAll()
+      expect(vi.getTimerCount()).toBe(0)
     })
   })
 })
