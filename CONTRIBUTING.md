@@ -39,7 +39,8 @@ docs/
 ├── architecture-ui.md        # Frontend/BFF architecture
 ├── dsl/                      # DSL authoring & codegen guides
 ├── kanban.md                 # Task board (source of truth for current state)
-├── loop.md                   # Autonomous development loop prompt
+├── loop.implement.md         # Autonomous implementation loop prompt (executes Ready tasks)
+├── loop.plan.md              # Autonomous planning loop prompt (generates/promotes tasks)
 └── plans/                    # Detailed plan files per task (<ID>-*.md)
 ```
 
@@ -279,12 +280,14 @@ This repo uses a lightweight kanban workflow managed through the coding agent:
    `<ID>-short-title.md` (e.g. `T133-contributing-guide.md`). Plans include
    goal, acceptance criteria, files to modify, and verification commands.
 
-3. **Autonomous execution loop** — [`docs/loop.md`](docs/loop.md) is the prompt
-   for the `/loop` agent. It reads the kanban, picks the next `Ready` task,
-   delegates code writing to subagents, and verifies the result.
+3. **Autonomous implementation loop** — [`docs/loop.implement.md`](docs/loop.implement.md)
+   is the prompt for the `/loop` agent. It reads the kanban, picks the next
+   `Ready` task, delegates code writing to subagents, and verifies the result.
+   It never plans — it only implements tasks already promoted to `Ready`.
 
-4. **Idea factory** — refer to `docs/loop.md#state-next_batch` for how the loop
-   generates new tasks from the architecture roadmaps.
+4. **Idea factory / planning loop** — [`docs/loop.plan.md`](docs/loop.plan.md)
+   generates new tasks from the architecture roadmaps, promotes `Backlog` to
+   `Ready`, and writes the plan files `loop.implement.md` consumes.
 
 ---
 

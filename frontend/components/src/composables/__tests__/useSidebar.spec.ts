@@ -205,7 +205,5 @@ describe('useSidebar', () => {
     const b = createSidebarState()
     a.collapsed.value = true
     expect(b.collapsed.value).toBe(false)
-    a.dispose()
-    b.dispose()
   })
 })

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick } from 'vue'
 import { __setRouteQuery } from '../../../vitest.nuxt-app-stub'
 import { __getBeforeRouteLeaveGuard } from '../../../vitest.vue-router-stub'
+import { createEmitter } from '../../utils/createEmitter'
 import { DSL_TEMPLATES } from '../../utils/dslTemplates'
 import DslWorkbench from '../dsl-workbench.vue'
 
@@ -57,6 +58,8 @@ interface WorkbenchApiShape {
   reloadDefinitions: ReturnType<typeof vi.fn>
   markDirty: ReturnType<typeof vi.fn>
   markClean: ReturnType<typeof vi.fn>
+  onDirty: (handler: () => void) => () => void
+  onClean: (handler: () => void) => () => void
 }
 
 const { dslApi, useDslApiMock, useDslWorkbenchMock } = vi.hoisted(() => {
@@ -117,6 +120,12 @@ const harness: WorkbenchApiShape = (() => {
     }) as T & { value: T }
   }
 
+  const dirtyEmitter = createEmitter<{ dirty: undefined; clean: undefined }>()
+  const setDirty = (value: boolean) => {
+    if (state.isDirty === value) return
+    state.isDirty = value
+    dirtyEmitter.emit(value ? 'dirty' : 'clean')
+  }
   const state = createRefLikeReactive<WorkbenchStateShape>({
     constructs: [],
     selectedName: null,
@@ -144,7 +153,7 @@ const harness: WorkbenchApiShape = (() => {
     selectConstruct: vi.fn((name: string) => {
       state.selectedName = name
       state.validationErrors = []
-      state.isDirty = false
+      setDirty(false)
       selectedConstructRef.value = state.constructs.find((c) => c.name === name) ?? null
     }),
     createConstruct: vi.fn((name: string, type?: string) => {
@@ -156,22 +165,24 @@ const harness: WorkbenchApiShape = (() => {
       state.constructs = [...state.constructs, newConstruct]
       state.selectedName = name
       state.validationErrors = []
-      state.isDirty = false
+      setDirty(false)
       selectedConstructRef.value = newConstruct
     }),
     saveConstruct: vi.fn(async () => {
-      state.isDirty = false
+      setDirty(false)
     }),
     validateConstruct: vi.fn(async () => []),
     publishConstruct: vi.fn(async () => undefined),
     deleteConstruct: vi.fn(async () => undefined),
     reloadDefinitions: vi.fn(async () => undefined),
     markDirty: vi.fn(() => {
-      state.isDirty = true
+      setDirty(true)
     }),
     markClean: vi.fn(() => {
-      state.isDirty = false
+      setDirty(false)
     }),
+    onDirty: (handler: () => void) => dirtyEmitter.on('dirty', handler),
+    onClean: (handler: () => void) => dirtyEmitter.on('clean', handler),
   }
 })()
 

@@ -10,6 +10,7 @@ import type {
   DslConstruct,
   ValidationError,
 } from '~/types'
+import { createEmitter } from '../utils/createEmitter'
 import { extractApiError } from '../utils/extractApiError'
 
 interface WorkbenchState {
@@ -20,6 +21,10 @@ interface WorkbenchState {
   isSaving: boolean
   isLoading: boolean
 }
+
+// Shared across composable instances within one JS runtime. Dirty transitions
+// only originate from user interactions, which never run during SSR rendering.
+const dirtyEmitter = createEmitter<{ dirty: undefined; clean: undefined }>()
 
 const constructTypeMap: Record<string, ConstructType> = {
   process: 'Process',
@@ -80,6 +85,12 @@ export function useDslWorkbench() {
   const api = useDslApi()
   const log = useClientLogger('dsl')
 
+  function setDirty(value: boolean): void {
+    if (state.value.isDirty === value) return
+    state.value.isDirty = value
+    dirtyEmitter.emit(value ? 'dirty' : 'clean')
+  }
+
   const selectedConstruct = computed<DslConstruct | null>(() => {
     if (!state.value.selectedName) return null
     return state.value.constructs.find((c) => c.name === state.value.selectedName) ?? null
@@ -113,7 +124,7 @@ export function useDslWorkbench() {
   function selectConstruct(name: string) {
     state.value.selectedName = name
     state.value.validationErrors = []
-    state.value.isDirty = false
+    setDirty(false)
     log.info('construct selected', { name })
   }
 
@@ -132,7 +143,7 @@ export function useDslWorkbench() {
     state.value.constructs = [...state.value.constructs, newConstruct]
     state.value.selectedName = name
     state.value.validationErrors = []
-    state.value.isDirty = false
+    setDirty(false)
     log.info('construct created', { name, type: normalizedType })
   }
 
@@ -159,7 +170,7 @@ export function useDslWorkbench() {
       const selected = selectedConstruct.value
       if (selected?.filePath && content !== undefined) {
         await api.writeDslFile(state.value.selectedName, content)
-        state.value.isDirty = false
+        setDirty(false)
         log.info('source file saved', { name: state.value.selectedName })
         return
       }
@@ -175,7 +186,7 @@ export function useDslWorkbench() {
       if (selected) {
         selected.status = 'Draft'
       }
-      state.value.isDirty = false
+      setDirty(false)
       log.info('draft saved', { name: state.value.selectedName })
     } catch (err) {
       log.error('failed to save construct', {
@@ -246,11 +257,11 @@ export function useDslWorkbench() {
   }
 
   function markDirty() {
-    state.value.isDirty = true
+    setDirty(true)
   }
 
   function markClean() {
-    state.value.isDirty = false
+    setDirty(false)
     log.info('draft marked clean', { name: state.value.selectedName })
   }
 
@@ -283,6 +294,8 @@ export function useDslWorkbench() {
     deleteConstruct,
     markDirty,
     markClean,
+    onDirty: (handler: () => void) => dirtyEmitter.on('dirty', handler),
+    onClean: (handler: () => void) => dirtyEmitter.on('clean', handler),
     reloadDefinitions,
   }
 }

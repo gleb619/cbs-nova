@@ -14,7 +14,7 @@ const { executionEventsState, useExecutionEventsMock } = vi.hoisted(() => {
   const status = { value: 'idle' as 'idle' | 'connecting' | 'open' | 'error' }
   const state: any = {
     status,
-    lastIds: null,
+    lastIds: null as Set<string> | null,
     eventHandlers: [] as ((event: any) => void)[],
     openHandlers: [] as (() => void)[],
     errorHandlers: [] as ((err?: Event) => void)[],
@@ -25,20 +25,30 @@ const { executionEventsState, useExecutionEventsMock } = vi.hoisted(() => {
       state.openHandlers = []
       state.errorHandlers = []
     },
-    simulateEvent: (event: any) => state.eventHandlers.forEach((h: any) => h(event)),
+    simulateEvent: (event: any) => {
+      state.eventHandlers.forEach((h: any) => {
+        h(event)
+      })
+    },
     simulateOpen: () => {
       state.status.value = 'open'
-      state.openHandlers.forEach((h) => h())
+      state.openHandlers.forEach((h) => {
+        h()
+      })
     },
     simulateError: () => {
       state.status.value = 'error'
-      state.errorHandlers.forEach((h) => h())
+      state.errorHandlers.forEach((h) => {
+        h()
+      })
     },
   }
-  const useExecutionEventsMock = vi.fn((options: { ids: any }) => {
-    state.lastIds = options.ids
+  const useExecutionEventsMock = vi.fn(() => {
     return {
       status: state.status,
+      sync: (ids: Iterable<string>) => {
+        state.lastIds = new Set(ids)
+      },
       onExecutionEvent: (handler: (event: any) => void) => {
         state.eventHandlers.push(handler)
         return () => {}
@@ -875,8 +885,8 @@ describe('useExecutions', () => {
       await flushAll()
 
       expect(inFlightRowCount.value).toBe(1)
-      expect(executionEventsState.lastIds?.value.has('run-1')).toBe(true)
-      expect(executionEventsState.lastIds?.value.has('done-1')).toBe(false)
+      expect(executionEventsState.lastIds?.has('run-1')).toBe(true)
+      expect(executionEventsState.lastIds?.has('done-1')).toBe(false)
     })
 
     it('refreshes the affected row when an SSE status event arrives', async () => {

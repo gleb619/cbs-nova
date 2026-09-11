@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type * as Monaco from 'monaco-editor'
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
 import { useHelperCompletion } from '../../composables/useHelperCompletion'
 import { useMonacoHelperCompletion } from '../../composables/useMonacoHelperCompletion'
 import type { HelperCatalogEntry } from '../../types/dsl'
@@ -122,6 +122,9 @@ onMounted(async () => {
   applyMarkers(props.markers)
 })
 
+// `modelValue` needs its own `watch` with a setValue guard — it is the
+// parent-driven leg of the v-model contract and must not stomp on in-flight
+// edits emitted via `update:modelValue`.
 watch(
   () => props.modelValue,
   (value) => {
@@ -129,24 +132,28 @@ watch(
   },
 )
 
-watch(
-  () => props.readOnly,
-  (readOnly) => editor?.updateOptions({ readOnly }),
-)
-
-watch(
-  () => props.language,
-  (language) => {
-    const model = editor?.getModel()
-    if (model && monaco && language) monaco.editor.setModelLanguage(model, language)
-  },
-)
-
-watch(
-  () => props.markers,
-  (markers) => applyMarkers(markers),
-  { deep: true },
-)
+// Imperative Monaco options (readOnly / language / markers) are pure
+// prop→state syncs with no bidirectional logic. A single `watchEffect`
+// collapses four listeners into one reactive surface — props are the
+// "events", this effect is the listener.
+//
+// Reads happen before the `editor` guard so the effect tracks each prop
+// even on the first run, when the editor is created later inside
+// `onMounted`. Without this, an early-return before any prop access would
+// register zero dependencies and the effect would never re-fire on
+// `setProps`.
+watchEffect(() => {
+  const readOnly = props.readOnly
+  const language = props.language
+  const markers = props.markers
+  if (!editor) return
+  editor.updateOptions({ readOnly })
+  const model = editor.getModel()
+  if (model && monaco && language) {
+    monaco.editor.setModelLanguage(model, language)
+  }
+  applyMarkers(markers)
+})
 
 onBeforeUnmount(() => {
   destroyed = true

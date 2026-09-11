@@ -1,4 +1,4 @@
-import { effectScope, getCurrentInstance, type InjectionKey, inject, type Ref } from 'vue'
+import { getCurrentInstance, type InjectionKey, inject, type Ref } from 'vue'
 import { createNamespacedLocalStorageState, type UseCookieFactory } from './useLocalStorageState'
 
 export const SIDEBAR_STORAGE_NAMESPACE = 'cbs-nova:sidebar'
@@ -22,8 +22,6 @@ export interface SidebarState {
   hidden: Ref<boolean>
   mobileOpen: Ref<boolean>
   breakpoint: number
-  /** Stops the persistence watchers. */
-  dispose: () => void
 }
 
 /**
@@ -39,31 +37,21 @@ const useSidebarStorage = createNamespacedLocalStorageState(SIDEBAR_STORAGE_NAME
  * module-level state would leak between SSR requests.
  */
 export function createSidebarState(options: SidebarStorageOptions = {}): SidebarState {
-  // Detached scope: persistence watchers must outlive whichever component or
-  // plugin happened to create the state.
-  const scope = effectScope(true)
-  let collapsed: Ref<boolean> | undefined
-  let hidden: Ref<boolean> | undefined
-  let mobileOpen: Ref<boolean> | undefined
-
-  scope.run(() => {
-    collapsed = useSidebarStorage<boolean>(SIDEBAR_COLLAPSED_KEY, false, {
-      useCookie: options.useCookie,
-    })
-    hidden = useSidebarStorage<boolean>(SIDEBAR_HIDDEN_KEY, false, {
-      useCookie: options.useCookie,
-    })
-    mobileOpen = useSidebarStorage<boolean>(SIDEBAR_MOBILE_OPEN_KEY, false, {
-      useCookie: options.useCookie,
-    })
+  const collapsed = useSidebarStorage<boolean>(SIDEBAR_COLLAPSED_KEY, false, {
+    useCookie: options.useCookie,
+  })
+  const hidden = useSidebarStorage<boolean>(SIDEBAR_HIDDEN_KEY, false, {
+    useCookie: options.useCookie,
+  })
+  const mobileOpen = useSidebarStorage<boolean>(SIDEBAR_MOBILE_OPEN_KEY, false, {
+    useCookie: options.useCookie,
   })
 
   return {
-    collapsed: collapsed as Ref<boolean>,
-    hidden: hidden as Ref<boolean>,
-    mobileOpen: mobileOpen as Ref<boolean>,
+    collapsed,
+    hidden,
+    mobileOpen,
     breakpoint: options.breakpoint ?? SIDEBAR_MOBILE_BREAKPOINT,
-    dispose: () => scope.stop(),
   }
 }
 
@@ -80,7 +68,6 @@ function resolveState(): SidebarState {
 
 /** Drop the fallback state (tests, HMR). */
 export function resetSidebarState(): void {
-  fallbackState?.dispose()
   fallbackState = undefined
 }
 

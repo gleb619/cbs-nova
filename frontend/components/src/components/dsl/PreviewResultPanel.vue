@@ -25,13 +25,14 @@ const emit = defineEmits<{
 }>()
 
 let previousName = props.name
+let previousType = props.type
 let previousOutput: RunnerOutput | null = props.output
 
 type PanelMode = 'form' | 'json' | 'schema' | 'history'
 const mode = ref<PanelMode>('json')
 const selectedEntryId = ref<string | null>(null)
 
-const { outputSchema, outputType, loading, error, hasOutputSchema } = useConstructSchema({
+const { outputSchema, outputType, loading, error, hasOutputSchema, events } = useConstructSchema({
   name: () => props.name,
   type: () => props.type,
 })
@@ -140,8 +141,10 @@ const canFormat = computed(() => {
 })
 
 onBeforeUpdate(() => {
-  if (props.name !== previousName) {
+  if (props.name !== previousName || props.type !== previousType) {
     previousName = props.name
+    previousType = props.type
+    events.emit('change', { name: props.name, type: props.type })
     mode.value = 'json'
     selectedEntryId.value = null
   }

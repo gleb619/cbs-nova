@@ -1,8 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent, h, ref } from 'vue'
 import { mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { defineComponent, h } from 'vue'
+import type { JsonSchema } from '../../types/jsonSchema'
 import {
   __resetConstructSchemaCache,
+  type ConstructType,
   DSL_SCHEMA_FETCH_KEY,
   generateFakeValue,
   useConstructSchema,
@@ -153,10 +155,9 @@ describe('useConstructSchema', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Other')
   })
 
-  it('reacts to name change', async () => {
+  it('reacts to name change via event', async () => {
     fetchMock.mockResolvedValue({ inputSchema: { type: 'object', properties: {} } })
-    const currentName = ref('Alpha')
-    const { schema } = mountUseConstructSchema({ name: currentName, type: 'Process' })
+    const { schema, events } = mountUseConstructSchema({ name: 'Alpha', type: 'Process' })
     await waitForNextTick()
     await waitForNextTick()
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Alpha')
@@ -165,39 +166,37 @@ describe('useConstructSchema', () => {
     fetchMock.mockResolvedValue({
       inputSchema: { type: 'object', properties: { beta: { type: 'string' } } },
     })
-    currentName.value = 'Beta'
+    events.emit('change', { name: 'Beta', type: 'Process' })
     await waitForNextTick()
     await waitForNextTick()
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Beta')
     expect(schema.value?.properties).toHaveProperty('beta')
   })
 
-  it('reacts to type change', async () => {
+  it('reacts to type change via event', async () => {
     fetchMock.mockResolvedValue({ inputSchema: { type: 'object', properties: {} } })
-    const currentType = ref<'Process' | 'Helper'>('Process')
-    const { schema } = mountUseConstructSchema({ name: 'Demo', type: currentType })
+    const { schema, events } = mountUseConstructSchema({ name: 'Demo', type: 'Process' })
     await waitForNextTick()
     await waitForNextTick()
     expect(schema.value).toBeTruthy()
 
     fetchMock.mockClear()
-    currentType.value = 'Helper'
+    events.emit('change', { name: 'Demo', type: 'Helper' })
     await waitForNextTick()
     await waitForNextTick()
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Demo')
     expect(schema.value).toBeTruthy()
   })
 
-  it('stops fetching when type becomes unsupported', async () => {
+  it('stops fetching when type becomes unsupported via event', async () => {
     fetchMock.mockResolvedValue({ inputSchema: { type: 'object', properties: {} } })
-    const currentType = ref<'Process' | 'Unknown'>('Process')
-    const { schema } = mountUseConstructSchema({ name: 'Demo', type: currentType })
+    const { schema, events } = mountUseConstructSchema({ name: 'Demo', type: 'Process' })
     await waitForNextTick()
     await waitForNextTick()
     expect(schema.value).toBeTruthy()
 
     fetchMock.mockClear()
-    currentType.value = 'Unknown'
+    events.emit('change', { name: 'Demo', type: 'Unknown' as unknown as ConstructType | undefined })
     await waitForNextTick()
     await waitForNextTick()
     expect(fetchMock).not.toHaveBeenCalled()
@@ -312,14 +311,14 @@ describe('generateFakeValue', () => {
           },
         },
       },
-    }
+    } satisfies JsonSchema
     expect(generateFakeValue(schema)).toEqual({
       user: { email: 'test@example.com' },
     })
   })
 
   it('generates array with one fake item', () => {
-    const schema = { type: 'array', items: { type: 'number' } }
+    const schema = { type: 'array', items: { type: 'number' } } satisfies JsonSchema
     expect(generateFakeValue(schema, 'items')).toEqual([42])
   })
 

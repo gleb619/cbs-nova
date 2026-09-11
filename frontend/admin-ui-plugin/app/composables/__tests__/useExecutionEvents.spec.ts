@@ -1,7 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent, h, ref, type Ref } from 'vue'
 import { mount } from '@vue/test-utils'
-import { useExecutionEvents, type UseExecutionEventsReturn } from '../useExecutionEvents'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { defineComponent, h } from 'vue'
+import { type UseExecutionEventsReturn, useExecutionEvents } from '../useExecutionEvents'
 
 const sources = new Map<string, MockEventSource>()
 
@@ -54,16 +54,16 @@ const flush = async () => {
   await Promise.resolve()
 }
 
-function mountEvents(ids: Ref<Set<string>>) {
+function mountEvents() {
   let result: UseExecutionEventsReturn | undefined
   const Comp = defineComponent({
     setup() {
-      result = useExecutionEvents({ ids })
+      result = useExecutionEvents()
       return () => h('div')
     },
   })
   const wrapper = mount(Comp)
-  return { wrapper, result: () => result!, ids }
+  return { wrapper, result: () => result! }
 }
 
 describe('useExecutionEvents', () => {
@@ -90,22 +90,19 @@ describe('useExecutionEvents', () => {
   })
 
   it('opens an EventSource for each in-flight id', async () => {
-    const ids = ref<Set<string>>(new Set(['e1', 'e2']))
-    harness = mountEvents(ids)
+    harness = mountEvents()
+    harness.result().sync(['e1', 'e2'])
     await flush()
 
     expect(sources.size).toBe(2)
     expect(Array.from(sources.values()).map((s) => s.url)).toEqual(
-      expect.arrayContaining([
-        '/api/v1/executions/e1/events',
-        '/api/v1/executions/e2/events',
-      ]),
+      expect.arrayContaining(['/api/v1/executions/e1/events', '/api/v1/executions/e2/events']),
     )
   })
 
   it('emits parsed execution events', async () => {
-    const ids = ref<Set<string>>(new Set(['e1']))
-    harness = mountEvents(ids)
+    harness = mountEvents()
+    harness.result().sync(['e1'])
     const { result } = harness
     const handler = vi.fn()
     result().onExecutionEvent(handler)
@@ -126,14 +123,14 @@ describe('useExecutionEvents', () => {
   })
 
   it('closes and reopens the connection when the id set changes', async () => {
-    const ids = ref<Set<string>>(new Set(['e1']))
-    harness = mountEvents(ids)
+    harness = mountEvents()
+    harness.result().sync(['e1'])
     await flush()
 
     const first = sources.get('/api/v1/executions/e1/events')
     expect(first).toBeDefined()
 
-    ids.value = new Set(['e2'])
+    harness.result().sync(['e2'])
     await flush()
 
     expect(first?.readyState).toBe(MockEventSource.CLOSED)
@@ -142,8 +139,8 @@ describe('useExecutionEvents', () => {
   })
 
   it('schedules a reconnect after an error and emits the error', async () => {
-    const ids = ref<Set<string>>(new Set(['e1']))
-    harness = mountEvents(ids)
+    harness = mountEvents()
+    harness.result().sync(['e1'])
     const { result } = harness
     const errorHandler = vi.fn()
     result().onError(errorHandler)
@@ -173,8 +170,8 @@ describe('useExecutionEvents', () => {
       },
     })
 
-    const ids = ref<Set<string>>(new Set(['e1']))
-    harness = mountEvents(ids)
+    harness = mountEvents()
+    harness.result().sync(['e1'])
     await flush()
 
     const source = sources.get('/api/v1/executions/e1/events')
@@ -195,8 +192,8 @@ describe('useExecutionEvents', () => {
 
   it('does nothing when EventSource is not available', async () => {
     ;(globalThis as unknown as { EventSource?: typeof EventSource }).EventSource = undefined
-    const ids = ref<Set<string>>(new Set(['e1']))
-    harness = mountEvents(ids)
+    harness = mountEvents()
+    harness.result().sync(['e1'])
     const { result } = harness
     const handler = vi.fn()
     result().onError(handler)

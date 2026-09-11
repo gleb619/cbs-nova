@@ -1,4 +1,4 @@
-import { getCurrentInstance, onMounted, type Ref, ref, watch } from 'vue'
+import { customRef, getCurrentInstance, onMounted, type Ref } from 'vue'
 
 export type UseCookieFactory = <T>(name: string, options?: { default?: () => T }) => Ref<T>
 
@@ -12,6 +12,10 @@ export interface UseLocalStorageStateOptions<T> {
 function buildStorageKey(key: string, namespace?: string): string {
   if (!namespace) return key
   return `${namespace}:${key}`
+}
+
+function isObject(value: unknown): value is Record<PropertyKey, unknown> {
+  return typeof value === 'object' && value !== null
 }
 
 export function useLocalStorageState<T>(
@@ -44,37 +48,74 @@ export function useLocalStorageState<T>(
 
   const initialValue = cookieRef ? cookieRef.value : (localValue ?? defaultValue)
 
-  const state = ref<T>(initialValue) as Ref<T>
+  let current: T = initialValue
+  let triggerChange: (() => void) | null = null
+  const proxyCache = new WeakMap<object, unknown>()
 
-  if (typeof window !== 'undefined') {
-    watch(
-      state,
-      (value) => {
-        window.localStorage.setItem(storageKey, writeValue(value))
-        if (cookieRef && cookieRef.value !== value) {
-          cookieRef.value = value
-        }
+  function persist(value: T): void {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(storageKey, writeValue(value))
+    if (cookieRef && cookieRef.value !== value) {
+      cookieRef.value = value
+    }
+  }
+
+  function wrap<V>(value: V): V {
+    if (!isObject(value)) return value
+    const cached = proxyCache.get(value)
+    if (cached !== undefined) return cached as V
+    const proxy = new Proxy(value, {
+      get(target, prop, receiver) {
+        return wrap(Reflect.get(target, prop, receiver))
       },
-      { deep: true },
-    )
+      set(target, prop, next, receiver) {
+        const ok = Reflect.set(target, prop, next, receiver)
+        persist(current)
+        triggerChange?.()
+        return ok
+      },
+      deleteProperty(target, prop) {
+        const ok = Reflect.deleteProperty(target, prop)
+        persist(current)
+        triggerChange?.()
+        return ok
+      },
+    })
+    proxyCache.set(value, proxy)
+    return proxy as V
+  }
 
-    if (cookieRef) {
-      // Re-read localStorage after hydration: it can be newer than the cookie
-      // (cookie expiry, size limits). Only safe inside a component, where the
-      // update lands after hydration — mutating earlier would desync the
-      // server-rendered markup, so outside a component the cookie stays
-      // authoritative.
-      if (getCurrentInstance()) {
-        onMounted(() => {
-          const stored = readValue(window.localStorage.getItem(storageKey))
-          if (stored !== undefined && stored !== state.value) {
-            state.value = stored
-          }
-          if (cookieRef.value !== state.value) {
-            cookieRef.value = state.value
-          }
-        })
-      }
+  const state = customRef<T>((track, trigger) => {
+    triggerChange = trigger
+    return {
+      get() {
+        track()
+        return wrap(current)
+      },
+      set(value) {
+        current = value
+        persist(value)
+        trigger()
+      },
+    }
+  }) as Ref<T>
+
+  if (typeof window !== 'undefined' && cookieRef) {
+    // Re-read localStorage after hydration: it can be newer than the cookie
+    // (cookie expiry, size limits). Only safe inside a component, where the
+    // update lands after hydration — mutating earlier would desync the
+    // server-rendered markup, so outside a component the cookie stays
+    // authoritative.
+    if (getCurrentInstance()) {
+      onMounted(() => {
+        const stored = readValue(window.localStorage.getItem(storageKey))
+        if (stored !== undefined && stored !== state.value) {
+          state.value = stored
+        }
+        if (cookieRef.value !== state.value) {
+          cookieRef.value = state.value
+        }
+      })
     }
   }
 

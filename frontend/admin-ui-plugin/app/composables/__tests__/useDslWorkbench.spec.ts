@@ -486,6 +486,54 @@ describe('normalizeConstruct', () => {
   })
 })
 
+describe('dirty/clean events', () => {
+  it('emits dirty on markDirty and clean on markClean', () => {
+    const wb = useDslWorkbench()
+    const onDirty = vi.fn()
+    const onClean = vi.fn()
+    wb.onDirty(onDirty)
+    wb.onClean(onClean)
+
+    wb.markDirty()
+    expect(onDirty).toHaveBeenCalledTimes(1)
+    expect(onClean).not.toHaveBeenCalled()
+
+    wb.markClean()
+    expect(onClean).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not re-emit when the dirty flag is set to its current value', () => {
+    const wb = useDslWorkbench()
+    const onDirty = vi.fn()
+    wb.onDirty(onDirty)
+
+    wb.markDirty()
+    wb.markDirty()
+    expect(onDirty).toHaveBeenCalledTimes(1)
+  })
+
+  it('emits clean when a construct is selected or saved', async () => {
+    const api = getApi()
+    api.getDefinitions.mockResolvedValueOnce([
+      { name: 'c1', type: 'Process' as const, status: 'Draft' as const },
+    ])
+    api.saveDraft.mockResolvedValueOnce(undefined)
+
+    const wb = useDslWorkbench()
+    await wb.loadConstructs()
+    const onClean = vi.fn()
+    wb.onClean(onClean)
+
+    wb.markDirty()
+    wb.selectConstruct('c1')
+    expect(onClean).toHaveBeenCalledTimes(1)
+
+    wb.markDirty()
+    await wb.saveConstruct()
+    expect(onClean).toHaveBeenCalledTimes(2)
+  })
+})
+
 describe('compileDiagnosticsToValidationErrors', () => {
   it('preserves line/column from the diagnostic on each mapped error', () => {
     expect(

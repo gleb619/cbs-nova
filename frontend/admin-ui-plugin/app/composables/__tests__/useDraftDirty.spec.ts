@@ -1,15 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { nextTick, reactive, ref } from 'vue'
+import { reactive, ref } from 'vue'
+import { createEmitter } from '../../utils/createEmitter'
 
 const innerState = reactive({ isDirty: false })
+const dirtyEmitter = createEmitter<{ dirty: undefined; clean: undefined }>()
 const mockWorkbench = {
   state: ref(innerState),
   markDirty: vi.fn(() => {
     innerState.isDirty = true
+    dirtyEmitter.emit('dirty')
   }),
   markClean: vi.fn(() => {
     innerState.isDirty = false
+    dirtyEmitter.emit('clean')
   }),
+  onDirty: (handler: () => void) => dirtyEmitter.on('dirty', handler),
+  onClean: (handler: () => void) => dirtyEmitter.on('clean', handler),
 }
 
 vi.mock('@cbs/admin-ui-plugin/composables/useDslWorkbench', () => ({
@@ -60,14 +66,38 @@ describe('useDraftDirty', () => {
     expect(isDirty.value).toBe(false)
   })
 
-  it('does not create an independent dirty source', async () => {
-    const { isDirty } = useDraftDirty()
+  it('emits dirty transitions through onDirty', () => {
+    const { onDirty } = useDraftDirty()
+    const handler = vi.fn()
+    onDirty(handler)
 
-    // Mutating the underlying state should immediately be visible through the
-    // wrapper because `isDirty` is derived from the workbench state.
+    expect(handler).not.toHaveBeenCalled()
+
+    mockWorkbench.markDirty()
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  it('emits clean transitions through onClean', () => {
     mockWorkbench.state.value.isDirty = true
-    await nextTick()
+    const { onClean } = useDraftDirty()
+    const handler = vi.fn()
+    onClean(handler)
 
-    expect(isDirty.value).toBe(true)
+    mockWorkbench.markClean()
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops delivering events after the returned unsubscribe runs', () => {
+    const { onDirty } = useDraftDirty()
+    const handler = vi.fn()
+    const stop = onDirty(handler)
+
+    mockWorkbench.markDirty()
+    expect(handler).toHaveBeenCalledTimes(1)
+
+    stop()
+    mockWorkbench.markClean()
+    mockWorkbench.markDirty()
+    expect(handler).toHaveBeenCalledTimes(1)
   })
 })

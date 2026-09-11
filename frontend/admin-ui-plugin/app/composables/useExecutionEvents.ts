@@ -1,4 +1,4 @@
-import { computed, onUnmounted, ref, watch, type Ref } from 'vue'
+import { onUnmounted, type Ref, ref } from 'vue'
 import type { ExecutionStatus } from '~/types'
 import { createEmitter } from '../utils/createEmitter'
 
@@ -8,12 +8,10 @@ export interface ExecutionEvent {
   timestamp: string
 }
 
-export interface UseExecutionEventsOptions {
-  ids: Ref<Set<string>> | Ref<readonly string[]> | Ref<string[]>
-}
-
 export interface UseExecutionEventsReturn {
   status: Ref<'idle' | 'connecting' | 'open' | 'error'>
+  /** Reconcile open connections against the desired execution ids. */
+  sync: (ids: Iterable<string>) => void
   onExecutionEvent: (handler: (event: ExecutionEvent) => void) => () => void
   onOpen: (handler: () => void) => () => void
   onError: (handler: (err?: Event) => void) => () => void
@@ -25,8 +23,7 @@ interface Connection {
   attempts: number
 }
 
-export function useExecutionEvents(options: UseExecutionEventsOptions): UseExecutionEventsReturn {
-  const idsRef = options.ids
+export function useExecutionEvents(): UseExecutionEventsReturn {
   const log = typeof console !== 'undefined' ? console : null
   const emitter = createEmitter<{
     event: ExecutionEvent
@@ -46,14 +43,9 @@ export function useExecutionEvents(options: UseExecutionEventsOptions): UseExecu
   }
 
   const connections = new Map<string, Connection>()
+  let desired = new Set<string>()
   let paused = false
   let visibilityHandler: (() => void) | null = null
-
-  function desiredIds(): Set<string> {
-    const raw = idsRef.value
-    const arr = raw instanceof Set ? Array.from(raw) : Array.from(raw ?? [])
-    return new Set(arr.filter((id): id is string => typeof id === 'string' && id.length > 0))
-  }
 
   function open(id: string, conn: Connection): void {
     if (!supported || paused) return
@@ -129,8 +121,7 @@ export function useExecutionEvents(options: UseExecutionEventsOptions): UseExecu
     open(id, conn)
   }
 
-  function sync(): void {
-    const desired = desiredIds()
+  function reconcile(): void {
     for (const id of Array.from(connections.keys())) {
       if (!desired.has(id)) remove(id)
     }
@@ -142,11 +133,12 @@ export function useExecutionEvents(options: UseExecutionEventsOptions): UseExecu
     }
   }
 
-  const stopWatch = watch(
-    () => Array.from(desiredIds()).sort(),
-    sync,
-    { immediate: true },
-  )
+  function sync(ids: Iterable<string>): void {
+    desired = new Set(
+      Array.from(ids).filter((id): id is string => typeof id === 'string' && id.length > 0),
+    )
+    reconcile()
+  }
 
   function onVisibilityChange(): void {
     if (typeof document === 'undefined') return
@@ -154,7 +146,7 @@ export function useExecutionEvents(options: UseExecutionEventsOptions): UseExecu
     if (paused) {
       for (const id of Array.from(connections.keys())) remove(id)
     } else {
-      sync()
+      reconcile()
     }
   }
 
@@ -164,7 +156,6 @@ export function useExecutionEvents(options: UseExecutionEventsOptions): UseExecu
   }
 
   onUnmounted(() => {
-    stopWatch()
     for (const id of Array.from(connections.keys())) remove(id)
     if (visibilityHandler && typeof document !== 'undefined') {
       document.removeEventListener('visibilitychange', visibilityHandler)
@@ -173,6 +164,7 @@ export function useExecutionEvents(options: UseExecutionEventsOptions): UseExecu
 
   return {
     status,
+    sync,
     onExecutionEvent: (handler) => emitter.on('event', handler),
     onOpen: (handler) => emitter.on('open', handler),
     onError: (handler) => emitter.on('error', handler),

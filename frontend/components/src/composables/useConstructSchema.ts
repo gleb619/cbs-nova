@@ -1,9 +1,17 @@
-import { computed, type InjectionKey, inject, type MaybeRefOrGetter, ref, toValue, watch } from 'vue'
+import { computed, type InjectionKey, inject, type MaybeRefOrGetter, ref, toValue } from 'vue'
 import type { JsonSchema } from '../types/jsonSchema'
+import { createEmitter } from '../utils/createEmitter'
 
 export type ConstructType = 'Process' | 'Transaction' | 'Helper' | 'Function'
 
-const cache = new Map<string, JsonSchema>()
+interface SchemaCacheEntry {
+  inputSchema: JsonSchema | null
+  outputSchema: JsonSchema | null
+  inputType: string | null
+  outputType: string | null
+}
+
+const cache = new Map<string, SchemaCacheEntry>()
 const outputCache = new Map<string, JsonSchema>()
 const inFlight = new Map<string, Promise<void>>()
 
@@ -63,9 +71,18 @@ function fakeString(name: string): string {
   return `fake-${name}`
 }
 
+export interface ConstructSchemaChangeEvent {
+  name: string
+  type: ConstructType | undefined
+}
+
+export interface ConstructSchemaEvents {
+  change: ConstructSchemaChangeEvent
+}
+
 export function useConstructSchema({ name: nameRef, type: typeRef }: UseConstructSchemaOptions) {
-  const name = computed(() => toValue(nameRef) ?? '')
-  const type = computed(() => toValue(typeRef))
+  const name = ref(toValue(nameRef) ?? '')
+  const type = ref(toValue(typeRef))
 
   const inputSchema = ref<JsonSchema | null>(null)
   const outputSchema = ref<JsonSchema | null>(null)
@@ -202,13 +219,14 @@ export function useConstructSchema({ name: nameRef, type: typeRef }: UseConstruc
     outputCache.clear()
   }
 
-  watch(
-    [name, type],
-    () => {
-      load()
-    },
-    { immediate: true },
-  )
+  const events = createEmitter<ConstructSchemaEvents>()
+  events.on('change', ({ name: nextName, type: nextType }) => {
+    name.value = nextName
+    type.value = nextType
+    load()
+  })
+
+  load()
 
   const schema = computed(() => inputSchema.value)
 
@@ -224,6 +242,7 @@ export function useConstructSchema({ name: nameRef, type: typeRef }: UseConstruc
     hasOutputSchema: computed(() => hasUsefulSchema(outputSchema.value)),
     refresh: load,
     invalidate,
+    events,
   }
 }
 
@@ -240,5 +259,5 @@ function hasUsefulSchema(s: JsonSchema | null): boolean {
 
 export interface UseConstructSchemaOptions {
   name: MaybeRefOrGetter<string>
-  type: MaybeRefOrGetter<ConstructType | undefined>
+  type?: MaybeRefOrGetter<ConstructType | undefined>
 }

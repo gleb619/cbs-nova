@@ -1,12 +1,5 @@
-import { computed, type Ref, watch } from 'vue'
 import { useDslWorkbench } from '@cbs/admin-ui-plugin/composables/useDslWorkbench'
-import { createEmitter } from '../utils/createEmitter'
-
-interface DraftDirtyEvents {
-  dirty: undefined
-  clean: undefined
-  [key: string]: unknown
-}
+import { computed, type Ref } from 'vue'
 
 export interface UseDraftDirtyReturn {
   /** True when the current construct has unsaved edits on the server. */
@@ -28,40 +21,19 @@ export interface UseDraftDirtyReturn {
  * (`useDslWorkbench.state.isDirty`), not the localStorage draft dirty flag
  * (`useWorkbenchDraft.dirty`). The server is the source of truth for persisted
  * drafts; the localStorage layer is a recovery-only safety net (T201/T292).
- * This wrapper delegates every call to the existing workbench dirty source and
- * surfaces transitions as explicit events instead of forcing consumers to
- * `watch` the computed flag.
+ * This wrapper delegates every call to the existing workbench dirty source,
+ * whose transitions are emitted as explicit events by the workbench itself.
  */
 export function useDraftDirty(): UseDraftDirtyReturn {
   const workbench = useDslWorkbench()
-  const emitter = createEmitter<DraftDirtyEvents>()
 
   const isDirty = computed(() => workbench.state.value.isDirty)
 
-  // Watch the single source of truth and emit discrete events on transitions.
-  // This keeps `useDraftSave` event-driven while still reacting to any mutation
-  // of the underlying state (including direct harness mutations in tests).
-  watch(isDirty, (next) => {
-    if (next) {
-      emitter.emit('dirty')
-    } else {
-      emitter.emit('clean')
-    }
-  })
-
-  function markDirty() {
-    workbench.markDirty()
-  }
-
-  function markClean() {
-    workbench.markClean()
-  }
-
   return {
     isDirty,
-    markDirty,
-    markClean,
-    onDirty: (handler) => emitter.on('dirty', handler),
-    onClean: (handler) => emitter.on('clean', handler),
+    markDirty: () => workbench.markDirty(),
+    markClean: () => workbench.markClean(),
+    onDirty: (handler) => workbench.onDirty(handler),
+    onClean: (handler) => workbench.onClean(handler),
   }
 }

@@ -27,8 +27,10 @@ const text = computed({
 
 const mode = ref<'form' | 'json' | 'schema'>('json')
 let previousModelValue = props.modelValue
+let previousName = props.name
+let previousType = props.type
 
-const { schema, inputType, loading, error, hasSchema } = useConstructSchema({
+const { schema, inputType, loading, error, hasSchema, events } = useConstructSchema({
   name: () => props.name,
   type: () => props.type,
 })
@@ -112,6 +114,11 @@ function onFormUpdate(value: unknown) {
 }
 
 onBeforeUpdate(() => {
+  if (props.name !== previousName || props.type !== previousType) {
+    previousName = props.name
+    previousType = props.type
+    events.emit('change', { name: props.name, type: props.type })
+  }
   if (props.modelValue !== previousModelValue) {
     previousModelValue = props.modelValue
     if (effectiveMode.value === 'form') {

@@ -1,9 +1,9 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
-import { useExecutionsApi } from '@cbs/admin-ui-plugin/composables/useExecutionsApi'
-import { useStalePolling } from '@cbs/admin-ui-plugin/composables/useStalePolling'
 import { useExecutionEvents } from '@cbs/admin-ui-plugin/composables/useExecutionEvents'
-import { resolveStalePollMs } from '@cbs/admin-ui-plugin/composables/useStalePollInterval'
+import { useExecutionsApi } from '@cbs/admin-ui-plugin/composables/useExecutionsApi'
 import { useIntervalEmitter } from '@cbs/admin-ui-plugin/composables/useIntervalEmitter'
+import { resolveStalePollMs } from '@cbs/admin-ui-plugin/composables/useStalePollInterval'
+import { useStalePolling } from '@cbs/admin-ui-plugin/composables/useStalePolling'
 import { unwrapListWithTotal } from '@cbs/components'
 import { computed, onUnmounted, ref } from 'vue'
 import type { Execution, ExecutionDetail, ExecutionFilters, ExecutionStatus } from '~/types'
@@ -43,7 +43,7 @@ export function useExecutions() {
   const api = useExecutionsApi()
   const stalePollMs = resolveStalePollMs()
 
-  const events = useExecutionEvents({ ids: sseIds })
+  const events = useExecutionEvents()
   events.onExecutionEvent(({ id, status }) => {
     void handleExecutionEvent(id, status)
   })
@@ -55,6 +55,11 @@ export function useExecutions() {
     sseEnabled.value = false
     syncListPolling()
   })
+
+  function setSseIds(next: Set<string>): void {
+    sseIds.value = next
+    events.sync(next)
+  }
 
   // -------------------------------------------------------------------
   // List polling (T269) — event-driven ticker. It keeps refreshing the
@@ -152,7 +157,10 @@ export function useExecutions() {
             selectedExecution.value = fresh
           }
         } catch (err) {
-          log.error('stale polling refresh failed', { id: execId, error: extractApiError(err).message })
+          log.error('stale polling refresh failed', {
+            id: execId,
+            error: extractApiError(err).message,
+          })
         }
         stopStalePolling(execId)
       }
@@ -207,7 +215,7 @@ export function useExecutions() {
     if (!IN_FLIGHT_STATUSES.includes(status)) {
       const next = new Set(sseIds.value)
       next.delete(id)
-      sseIds.value = next
+      setSseIds(next)
     }
     try {
       const fresh = await api.get(id)
@@ -254,13 +262,13 @@ export function useExecutions() {
       total.value = envelope.total ?? 0
       reconcileStalePolling()
       if (sseEnabled.value) {
-        sseIds.value = new Set(
-          executions.value
-            .filter((e) => IN_FLIGHT_STATUSES.includes(e.status))
-            .map((e) => e.id),
+        setSseIds(
+          new Set(
+            executions.value.filter((e) => IN_FLIGHT_STATUSES.includes(e.status)).map((e) => e.id),
+          ),
         )
       } else {
-        sseIds.value = new Set()
+        setSseIds(new Set())
       }
       syncListPolling()
       log.info('executions loaded', {
@@ -284,13 +292,10 @@ export function useExecutions() {
     try {
       selectedExecution.value = await api.get(id)
       log.info('execution detail loaded', { id, status: selectedExecution.value?.status })
-      if (
-        selectedExecution.value &&
-        IN_FLIGHT_STATUSES.includes(selectedExecution.value.status)
-      ) {
+      if (selectedExecution.value && IN_FLIGHT_STATUSES.includes(selectedExecution.value.status)) {
         const next = new Set(sseIds.value)
         next.add(id)
-        sseIds.value = next
+        setSseIds(next)
       }
       syncListPolling()
       // If the detail came back Stale, also drive a stale poller for it
@@ -353,7 +358,7 @@ export function useExecutions() {
       if (fresh.status && !IN_FLIGHT_STATUSES.includes(fresh.status)) {
         const next = new Set(sseIds.value)
         next.delete(id)
-        sseIds.value = next
+        setSseIds(next)
       }
       syncListPolling()
       log.info('execution cancelled', { id, status: fresh.status })

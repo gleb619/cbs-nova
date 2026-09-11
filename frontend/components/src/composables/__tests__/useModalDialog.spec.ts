@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent, h, nextTick, ref, watch } from 'vue'
+import { defineComponent, h, nextTick, onMounted, onUpdated, ref } from 'vue'
 
 import { useModalDialog } from '../useModalDialog'
 
@@ -18,13 +18,23 @@ function mountDialog(options: { closeOnEsc?: boolean; returnFocus?: boolean } = 
         returnFocus: options.returnFocus,
       })
 
-      watch(
-        () => props.show,
-        (visible) => {
-          if (visible) open()
-          else close()
-        },
-      )
+      // Mirrors production modal pattern (e.g. RunConfirmationModal): drive
+      // open/close from lifecycle hooks reacting to the `show` prop, not from
+      // an imperative `watch`. This keeps the component declarative — the
+      // template owns visibility via `v-if`, and lifecycle hooks stay in sync.
+      let previousShow: boolean | null = null
+
+      onMounted(() => {
+        previousShow = props.show
+        if (props.show) open()
+      })
+
+      onUpdated(() => {
+        if (props.show === previousShow) return
+        previousShow = props.show
+        if (props.show) open()
+        else close()
+      })
 
       return () => {
         if (!props.show) return null

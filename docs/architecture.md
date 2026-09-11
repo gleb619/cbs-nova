@@ -83,4 +83,5 @@ See [UI architecture](architecture-ui.md) for the frontend layout, communication
 - [UI architecture](architecture-ui.md) — Vue/Nuxt admin interface details
 - [DSL constructs](dsl/constructs.md), [authoring](dsl/authoring.md), [codegen](dsl/codegen.md), [runtime](dsl/runtime.md)
 - [Colors](colors.md) — brand palette used across the UI
-- [Development loop](loop.md) — how the autonomous build loop picks up backend and frontend tasks
+- [Implementation loop](loop.implement.md) — how the autonomous loop executes `Ready` backend and frontend tasks
+- [Planning loop](loop.plan.md) — how new tasks get generated and promoted to `Ready`

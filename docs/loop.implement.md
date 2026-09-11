@@ -1,7 +1,12 @@
-# Autonomous Development Loop
+# Autonomous Implementation Loop
+
+`/loop 30m docs/loop.implement.md`
 
 This file is the prompt for `/loop`. Each session handles one batch of tasks, keeps context small, then hands off to the
-next session. The loop is the thinking center — it plans and verifies; `at` agents write the code.
+next session. This loop **only implements** — it picks `Backlog` tasks that already have a plan file and delegates,
+verifies, merges. Planning — writing plan files, decomposing new task batches — is `docs/loop.plan.md`'s job. Kanban
+statuses are only `Backlog` / `In Progress` / `Blocked` / `Done` — there is no `Ready`; a `Backlog` task with a plan
+file is implementable. If no `Backlog` task has a plan file, stop and let `loop.plan.md` replenish it; do not plan here.
 
 The loop covers **both backend (Java / Temporal) and frontend (Vue / Nuxt) tasks**. Pick the next ready task regardless
 of tier; only the build, test, and convention checks change between backend and frontend work.
@@ -16,56 +21,49 @@ Invoke before any work:
 
 ## Key Files
 
-| File                   | Purpose                                             |
-|------------------------|-----------------------------------------------------|
-| `docs/architecture.md` | Top-level system goal and tier overview               |
-| `docs/architecture-backend.md` | Java / Temporal backend overview and roadmap          |
-| `docs/architecture-ui.md` | Vue / Nuxt frontend overview and build commands       |
-| `docs/dsl/*.md`        | DSL constructs, authoring rules, codegen, runtime   |
-| `backend/AGENTS.md`    | Backend coding conventions, module map, build commands|
-| `docs/kanban.md`       | Task board — source of truth for current loop state |
-| `docs/plans/`          | Detailed plan files for each task                     |
+| File                           | Purpose                                                       |
+|--------------------------------|---------------------------------------------------------------|
+| `docs/architecture.md`         | Top-level system goal and tier overview                       |
+| `docs/architecture-backend.md` | Java / Temporal backend overview and roadmap                  |
+| `docs/architecture-ui.md`      | Vue / Nuxt frontend overview and build commands               |
+| `docs/dsl/*.md`                | DSL constructs, authoring rules, codegen, runtime             |
+| `backend/AGENTS.md`            | Backend coding conventions, module map, build commands        |
+| `docs/kanban.md`               | Task board — source of truth for current loop state           |
+| `docs/plans/`                  | Detailed plan files for each task (written by `loop.plan.md`) |
+| `docs/loop.plan.md`            | Planning loop — writes plan files for `Backlog` tasks         |
 
 ## Entry Point — Determine Current State
 
 Read `docs/kanban.md`. Map kanban state to loop state:
 
-| Kanban condition                     | Go to state                                    |
-|--------------------------------------|------------------------------------------------|
-| Any task `In Progress`               | VERIFY (session interrupted — resume)          |
-| Any task `Ready`                     | PLAN                                           |
-| Only `Backlog` tasks present         | PLAN (promote lowest-ID task to `Ready` first) |
-| All `Done` / `Blocked`, no `Backlog` | NEXT_BATCH                                     |
+| Kanban condition                                          | Go to state                                       |
+|-------------------------------------------------------------|--------------------------------------------------|
+| Any task `In Progress`                                       | VERIFY (session interrupted — resume)             |
+| Any `Backlog` task has a plan file under `docs/plans/`       | SCAN → SELECT                                     |
+| `Backlog` tasks exist but none have a plan file               | STOP — `loop.plan.md` must write one first        |
+| No `Backlog` tasks (all `Done` / `Blocked`)                   | STOP — backlog empty; `loop.plan.md` must replenish |
 
 ---
 
 ## State: SCAN
 
-Run once per new batch before PLAN:
+Run once per new batch before SELECT:
 
 1. `codegraph_status` — confirm index is healthy.
 2. `codegraph_context` — survey current codebase state.
-3. Read `docs/architecture.md` and the relevant tier roadmap (`architecture-backend.md` or `architecture-ui.md`) —
-   identify which phases are complete.
-4. Transition to PLAN.
+3. Transition to SELECT.
 
 ---
 
-## State: PLAN
+## State: SELECT
 
-1. Pick next `Ready` task from kanban (lowest ID first). If none, promote lowest-ID `Backlog` task to `Ready`.
-2. Use `codegraph_context` + one `codegraph_explore` call to understand affected code areas.
-3. Determine task tier:
+1. Pick next `Backlog` task that has a plan file at `docs/plans/<ID>-short-title.md` (lowest ID first).
+2. Read the plan file (written by `loop.plan.md`). If missing or incomplete
+   (no goal/acceptance criteria/tier/files/build commands), STOP and flag it — do not author the plan here.
+3. Use `codegraph_context` + one `codegraph_explore` call to understand affected code areas from the plan's file list.
+4. Confirm task tier from the plan:
    - **Backend task** — code under `backend/` or `dsl-examples/`, build with Gradle.
    - **Frontend task** — code under `frontend/`, build with pnpm.
-4. Write or update plan file at `docs/plans/<ID>-short-title.md`. Plan must include:
-   - Goal and acceptance criteria
-   - Tier (`backend` or `frontend`)
-   - Files to create or modify (with full paths)
-   - Build and test commands to verify success:
-     - Backend: `./gradlew spotlessApply && ./gradlew build test` from `backend/`
-     - Frontend: `pnpm install && pnpm --filter @cbs/admin-ui-plugin lint && pnpm --filter @cbs/admin-ui-plugin test` from `frontend/`
-   - Relevant constraints from `backend/AGENTS.md` (backend) or `architecture-ui.md` / component library rules (frontend)
 5. Update kanban: set task status to `In Progress`.
 6. Transition to DELEGATE.
 
@@ -102,7 +100,7 @@ Run once per new batch before PLAN:
    git worktree remove ../cbs-nova-<task-id>
    git branch -d feat/<task-id>
    ```
-   Set task status to `Done`. Transition to PLAN (pick next task).
+   Set task status to `Done`. Transition to SCAN (pick next implementable `Backlog` task, if any).
 4. **Fail, attempt < 2** — increment attempt count. Append failure context (error output, stack trace) to the plan file
    under a `## Retry Notes` section. Transition to DELEGATE.
 5. **Fail, attempt = 2** — set task status to `Blocked`. Append failure summary to plan file. Remove worktree:
@@ -110,7 +108,7 @@ Run once per new batch before PLAN:
    git worktree remove --force ../cbs-nova-<task-id>
    git branch -d feat/<task-id>
    ```
-   Transition to PLAN (next task). Do not stop the loop.
+   Transition to SCAN (next implementable `Backlog` task). Do not stop the loop.
 
 ---
 
@@ -123,31 +121,15 @@ Triggered when all tasks in the current batch are `Done` or `Blocked`:
    ```
    feat(kanban): clean completed tasks from batch
    ```
-3. Transition to NEXT_BATCH.
-
----
-
-## State: NEXT_BATCH
-
-1. Read `docs/architecture.md` and both roadmaps (`architecture-backend.md` and `architecture-ui.md`).
-2. Use `codegraph_context` to confirm what is implemented vs. pending in both tiers.
-3. Identify the next logical implementation phase across backend **and** frontend roadmaps. Prefer whichever tier has
-   the lowest-risk, highest-value next step; do not let one tier starve the other.
-4. Decompose into 3–5 concrete, independently executable tasks. For each task:
-   - Add a row to kanban with status `Backlog`
-   - Assign an ID continuing from the highest existing ID
-   - Tag the tier (`backend` or `frontend`)
-   - Create a stub plan file at `docs/plans/<ID>-short-title.md`
-5. Commit kanban + stub plan files:
-   ```
-   feat(kanban): add next batch — <phase name>
-   ```
-6. Transition to SCAN (new session picks up from here).
+3. STOP — no more implementable `Backlog` tasks. `loop.plan.md` decomposes the next batch and writes plan files;
+   this loop resumes at Entry Point once it does.
 
 ---
 
 ## Hard Constraints
 
+- **Implement only — never plan** — no writing/editing plan files, no decomposing new task batches. That's
+  `docs/loop.plan.md`'s job. If no `Backlog` task has a plan file, STOP.
 - **codegraph first** — use `codegraph_*` for all symbol, architecture, and impact questions. No grep loops.
 - **caveman throughout** — drop articles, filler, pleasantries. Fragments OK. Keep responses compressed.
 - **Never edit generated classes** — fix the generator (`dsl-codegen/`) or the DSL source, not the output.
