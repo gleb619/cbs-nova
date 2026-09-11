@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -174,7 +175,7 @@ class RoleResolverTest {
     setAuth(token);
   }
 
-  private static void setAuth(org.springframework.security.core.Authentication auth) {
+  private static void setAuth(Authentication auth) {
     SecurityContextHolder.getContext().setAuthentication(auth);
   }
 
@@ -187,7 +188,7 @@ class RoleResolverTest {
             claims);
   }
 
-  private static org.springframework.security.core.Authentication authenticated(
+  private static Authentication authenticated(
           String name, String role) {
     return new UsernamePasswordAuthenticationToken(
             name, "n/a",

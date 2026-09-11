@@ -6,6 +6,7 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.annotation.Helper;
 import cbs.nova.starter.helper.model.ValidateJsonIn;
 import cbs.nova.starter.helper.model.ValidateJsonOut;
+import cbs.nova.starter.model.ValidationError;
 import cbs.nova.starter.validation.JsonSchemaValidator;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +41,7 @@ public class ValidateJsonHelper implements Executable<ValidateJsonIn, ValidateJs
       Object body = mapper.readValue(input.payload(), Object.class);
       @SuppressWarnings("unchecked")
       Map<String, Object> schema = mapper.readValue(input.schema(), Map.class);
-      List<cbs.nova.starter.model.ValidationError> errors = JsonSchemaValidator
+      List<ValidationError> errors = JsonSchemaValidator
               .validate(body, schema);
       return Result.success(new ValidateJsonOut(errors, errors.isEmpty()));
     } catch (RuntimeException e) {

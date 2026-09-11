@@ -11,7 +11,7 @@ import static org.mockito.Mockito.when;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.PreviewReport;
+import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.model.PreviewModels.PreviewCacheKey;

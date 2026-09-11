@@ -6,7 +6,7 @@ import cbs.nova.dsl.DslErrorCode;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.PreviewErrorDetail;
-import cbs.nova.dsl.PreviewReport;
+import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ErrorResponseContext;

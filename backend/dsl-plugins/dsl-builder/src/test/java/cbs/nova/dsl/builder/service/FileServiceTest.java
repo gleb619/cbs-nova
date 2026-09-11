@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
+import cbs.nova.dsl.builder.model.DslFileModels.FileContentRequest;
 import cbs.nova.dsl.builder.model.DslFileModels.FileContentResponse;
 import cbs.nova.dsl.builder.repository.FileRepository;
 import java.io.IOException;
@@ -132,9 +133,9 @@ class FileServiceTest {
   @Test
   void stageAllSkipsBlankPathsAndFlushes() throws IOException {
     int staged = service.stageAll(List.of(
-            new cbs.nova.dsl.builder.model.DslFileModels.FileContentRequest("dsl/A.java", "a"),
-            new cbs.nova.dsl.builder.model.DslFileModels.FileContentRequest(" ", "skipped"),
-            new cbs.nova.dsl.builder.model.DslFileModels.FileContentRequest("dsl/B.java", null)));
+            new FileContentRequest("dsl/A.java", "a"),
+            new FileContentRequest(" ", "skipped"),
+            new FileContentRequest("dsl/B.java", null)));
 
     assertThat(staged).isEqualTo(2);
     var result = service.flushPending();

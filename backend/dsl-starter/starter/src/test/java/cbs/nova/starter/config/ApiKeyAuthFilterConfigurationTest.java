@@ -18,9 +18,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -163,10 +165,10 @@ class ApiKeyAuthFilterConfigurationTest {
   }
 
   private static void triggerWarningCheck(
-          org.springframework.context.ConfigurableApplicationContext ctx) {
-    org.springframework.beans.factory.SmartInitializingSingleton check = ctx.getBean(
+          ConfigurableApplicationContext ctx) {
+    SmartInitializingSingleton check = ctx.getBean(
             "apiKeyAuthMisconfigurationCheck",
-            org.springframework.beans.factory.SmartInitializingSingleton.class);
+            SmartInitializingSingleton.class);
     check.afterSingletonsInstantiated();
   }
 

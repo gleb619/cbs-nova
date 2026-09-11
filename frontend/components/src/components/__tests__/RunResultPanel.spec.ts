@@ -4,14 +4,14 @@ import {
   __resetConstructSchemaCache,
   DSL_SCHEMA_FETCH_KEY,
 } from '../../composables/useConstructSchema'
-import PreviewResultPanel from '../dsl/PreviewResultPanel.vue'
+import RunResultPanel from '../dsl/RunResultPanel.vue'
 import SchemaFormField from '../dsl/SchemaFormField.vue'
 
 function mountPanel(
   props: Record<string, unknown> = {},
   fetchMock = vi.fn().mockResolvedValue({}),
 ) {
-  return mount(PreviewResultPanel, {
+  return mount(RunResultPanel, {
     props: {
       name: 'demo',
       output: null,
@@ -54,7 +54,7 @@ const schemaResponse = {
   },
 }
 
-describe('PreviewResultPanel', () => {
+describe('RunResultPanel', () => {
   beforeEach(() => {
     __resetConstructSchemaCache()
   })

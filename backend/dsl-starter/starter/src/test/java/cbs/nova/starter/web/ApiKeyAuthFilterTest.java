@@ -12,6 +12,7 @@ import jakarta.servlet.ServletResponse;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -221,7 +222,7 @@ class ApiKeyAuthFilterTest {
   }
 
   /** Test ObjectProvider that delegates to a lambda so the store can resolve itself. */
-  private record SelfProvider(java.util.function.Supplier<ApiKeyStore> supplier)
+  private record SelfProvider(Supplier<ApiKeyStore> supplier)
           implements
             ObjectProvider<ApiKeyStore> {
 

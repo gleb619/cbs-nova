@@ -1,7 +1,7 @@
 package cbs.nova.starter.converter;
 
 import cbs.nova.dsl.PreviewErrorDetail;
-import cbs.nova.dsl.PreviewReport;
+import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.core.pipe.PreviewTimeoutException;
 import cbs.nova.starter.model.ErrorResponse;

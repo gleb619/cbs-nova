@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.starter.model.ErrorResponse;
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
@@ -261,7 +262,7 @@ class RbacAuthorizationFilterTest {
     MockHttpServletRequest request = new MockHttpServletRequest(method, path);
     MockHttpServletResponse response = new MockHttpServletResponse();
     FilterChain chain = (req, res) -> {
-      jakarta.servlet.http.HttpServletResponse http = (jakarta.servlet.http.HttpServletResponse) res;
+      HttpServletResponse http = (HttpServletResponse) res;
       http.setStatus(200);
     };
     filter.doFilter(request, response, chain);

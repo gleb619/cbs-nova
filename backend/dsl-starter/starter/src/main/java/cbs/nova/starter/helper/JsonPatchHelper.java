@@ -6,7 +6,9 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.annotation.Helper;
 import cbs.nova.starter.helper.model.JsonPatchIn;
 import cbs.nova.starter.helper.model.JsonPatchOut;
+import java.util.LinkedHashSet;
 import java.util.Locale;
+import java.util.Map.Entry;
 import org.jspecify.annotations.NonNull;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -93,7 +95,7 @@ public class JsonPatchHelper implements Executable<JsonPatchIn, JsonPatchOut> {
   private static @NonNull ObjectNode applyMerge(@NonNull ObjectNode source,
           @NonNull ObjectNode patch) {
     ObjectNode result = source.deepCopy();
-    for (java.util.Map.Entry<String, JsonNode> entry : patch.properties()) {
+    for (Entry<String, JsonNode> entry : patch.properties()) {
       String name = entry.getKey();
       JsonNode value = entry.getValue();
       if (value.isNull()) {
@@ -113,7 +115,7 @@ public class JsonPatchHelper implements Executable<JsonPatchIn, JsonPatchOut> {
   private static @NonNull ObjectNode computeDiff(@NonNull ObjectNode source,
           @NonNull ObjectNode target) {
     ObjectNode diff = MAPPER.createObjectNode();
-    java.util.LinkedHashSet<String> keys = new java.util.LinkedHashSet<>();
+    LinkedHashSet<String> keys = new LinkedHashSet<>();
     source.propertyNames().forEach(keys::add);
     target.propertyNames().forEach(keys::add);
     for (String name : keys) {

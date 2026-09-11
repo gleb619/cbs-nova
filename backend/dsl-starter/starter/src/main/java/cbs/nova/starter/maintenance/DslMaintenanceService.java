@@ -1,5 +1,6 @@
 package cbs.nova.starter.maintenance;
 
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
@@ -195,7 +196,7 @@ public class DslMaintenanceService {
     // Mirror the existing purge-counter idiom (Counter rather than
     // DistributionSummary) so dashboards that already group by counter see
     // the unified metric without surprise. Micrometer dedupes by (name, tags).
-    io.micrometer.core.instrument.Counter.builder(TASK_PURGED_COUNTER)
+    Counter.builder(TASK_PURGED_COUNTER)
             .tag(TASK_TAG, taskName)
             .register(meterRegistry)
             .increment(purged);

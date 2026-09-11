@@ -34,7 +34,7 @@ const construct: DslConstruct = {
 }
 
 import ExplainTab from '../dsl/ExplainTab.vue'
-import PreviewResultPanel from '../dsl/PreviewResultPanel.vue'
+import RunResultPanel from '../dsl/RunResultPanel.vue'
 import PreviewTab from '../dsl/PreviewTab.vue'
 
 const defaultFetchMock = vi.fn().mockResolvedValue({})
@@ -50,7 +50,7 @@ function mountBodyEditor(props: Record<string, unknown>, fetchMock = defaultFetc
         StructureTab,
         CodeTab,
         PreviewTab,
-        PreviewResultPanel,
+        RunResultPanel,
         ExplainTab,
       },
       provide: { [DSL_SCHEMA_FETCH_KEY as symbol]: fetchMock },
@@ -159,7 +159,7 @@ describe('BodyEditor', () => {
   it('calls the explain callback and displays the description', async () => {
     const explain = vi.fn().mockResolvedValue({
       description: 'Test flow',
-      result: { ok: true },
+      mermaid: 'graph TD',
     })
     const wrapper = mountBodyEditor({ construct, explain })
 
@@ -167,7 +167,7 @@ describe('BodyEditor', () => {
     await explainButton.trigger('click')
     await flushPromises()
 
-    const runButton = wrapper.findAll('button').find((b) => b.text() === 'Run explain')!
+    const runButton = wrapper.findAll('button').find((b) => b.text() === 'Run')!
     await runButton.trigger('click')
     await flushPromises()
 

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.UUID;
 import org.eclipse.jgit.api.Git;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -42,7 +43,7 @@ class GitServiceTest {
   }
 
   private Path createRepositoryWithCommit() throws Exception {
-    var repoDir = tempDir.resolve("repo-" + java.util.UUID.randomUUID());
+    var repoDir = tempDir.resolve("repo-" + UUID.randomUUID());
     try (Git git = Git.init().setDirectory(repoDir.toFile()).setInitialBranch("main").call()) {
       Files.writeString(repoDir.resolve("README.md"), "test");
       git.add().addFilepattern(".").call();

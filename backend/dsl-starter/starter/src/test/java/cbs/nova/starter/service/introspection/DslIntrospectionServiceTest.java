@@ -17,6 +17,7 @@ import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
 import cbs.nova.starter.service.DslDefinitionStatusResolver;
 import cbs.nova.starter.service.DslGitStatusResolver;
 import cbs.nova.starter.service.DslIntrospectionService;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -185,7 +186,7 @@ class DslIntrospectionServiceTest {
                 Integer.class,
                 false,
                 null,
-                java.util.List.of());
+                List.of());
       }
     });
 

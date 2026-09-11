@@ -3,6 +3,11 @@ package cbs.nova.starter.security;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import cbs.nova.starter.config.properties.CbsSecurityOidcProperties;
+import cbs.nova.starter.config.properties.CbsSecurityRateLimitProperties;
+import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.service.ApiKeyStore;
+import cbs.nova.starter.web.ApiKeyAuthFilter;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -15,6 +20,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -30,6 +36,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Verifies the {@code production} Spring profile (T413). Each {@code @Nested} class boots the
@@ -104,13 +111,13 @@ class ProductionSecurityProfileTest {
       // Rate-limit filter bean: always present, but its behaviour is gated by the property.
       // We check the property was bound to true (production yml sets it).
       var rateLimitProps = context.getBean(
-              cbs.nova.starter.config.properties.CbsSecurityRateLimitProperties.class);
+              CbsSecurityRateLimitProperties.class);
       assertThat(rateLimitProps.enabled())
               .as("cbs.security.ratelimit.enabled must be true under the production profile")
               .isTrue();
 
       // API-key filter (gated by cbs.dsl.auth.enabled, true via profile yml).
-      assertThat(context.getBeansOfType(cbs.nova.starter.web.ApiKeyAuthFilter.class))
+      assertThat(context.getBeansOfType(ApiKeyAuthFilter.class))
               .as("production profile must publish the ApiKeyAuthFilter bean")
               .isNotEmpty();
 
@@ -134,7 +141,7 @@ class ProductionSecurityProfileTest {
               .isNotEmpty();
       assertThat(context.getBean("cbsNovaSecurityPostureReporter"))
               .as("SmartInitializingSingleton lambda bean must be registered")
-              .isInstanceOf(org.springframework.beans.factory.SmartInitializingSingleton.class);
+              .isInstanceOf(SmartInitializingSingleton.class);
       assertThat(context.getBeansOfType(ProductionSecurityPostureValidator.class))
               .as("ProductionSecurityPostureValidator bean must be wired")
               .isNotEmpty();
@@ -157,7 +164,7 @@ class ProductionSecurityProfileTest {
 
     @Test
     void apiKeyAuthFilterBeanIsAbsentWhenExplicitlyDisabled() {
-      assertThat(context.getBeansOfType(cbs.nova.starter.web.ApiKeyAuthFilter.class))
+      assertThat(context.getBeansOfType(ApiKeyAuthFilter.class))
               .as("cbs.dsl.auth.enabled=false via @TestPropertySource must suppress the API-key filter")
               .isEmpty();
     }
@@ -287,31 +294,31 @@ class ProductionSecurityProfileTest {
    */
   @TestConfiguration
   @EnableConfigurationProperties({
-      cbs.nova.starter.config.properties.DslProperties.class,
-      cbs.nova.starter.config.properties.CbsSecurityOidcProperties.class,
-      cbs.nova.starter.config.properties.CbsSecurityRateLimitProperties.class})
+      DslProperties.class,
+      CbsSecurityOidcProperties.class,
+      CbsSecurityRateLimitProperties.class})
   static class LightweightTestConfig {
 
     @Bean
-    tools.jackson.databind.ObjectMapper objectMapper() {
-      return new tools.jackson.databind.ObjectMapper();
+    ObjectMapper objectMapper() {
+      return new ObjectMapper();
     }
 
     @Bean
-    ObjectProvider<cbs.nova.starter.service.ApiKeyStore> apiKeyStoreProvider() {
+    ObjectProvider<ApiKeyStore> apiKeyStoreProvider() {
       return new ObjectProvider<>() {
         @Override
-        public cbs.nova.starter.service.ApiKeyStore getIfAvailable() {
+        public ApiKeyStore getIfAvailable() {
           return null;
         }
 
         @Override
-        public cbs.nova.starter.service.ApiKeyStore getIfUnique() {
+        public ApiKeyStore getIfUnique() {
           return null;
         }
 
         @Override
-        public cbs.nova.starter.service.ApiKeyStore getObject() {
+        public ApiKeyStore getObject() {
           throw new IllegalStateException("no ApiKeyStore bean in this test context");
         }
       };

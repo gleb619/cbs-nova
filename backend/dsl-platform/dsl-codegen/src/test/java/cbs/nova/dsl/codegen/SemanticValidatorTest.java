@@ -10,6 +10,7 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.ValidationException;
 import cbs.nova.dsl.ValidationIssue;
 import cbs.nova.dsl.config.DescriptorFactory;
+import cbs.nova.dsl.function.FunctionDescriptor;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
 import cbs.nova.dsl.registry.HelperRegistry;
@@ -77,7 +78,7 @@ class SemanticValidatorTest {
 
   @Test
   void blankFunctionNameEmitsCodeAndMessage() {
-    var f = new cbs.nova.dsl.function.FunctionDescriptor("   ", null, null);
+    var f = new FunctionDescriptor("   ", null, null);
 
     var ex = catchThrowableOfType(
             ValidationException.class,

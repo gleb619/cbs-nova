@@ -11,6 +11,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDiagnosticsHandler;
 import cbs.nova.starter.controller.DslReloadHandler;
+import cbs.nova.starter.model.CompileDiagnostic;
 import cbs.nova.starter.model.CompileDiagnosticSource;
 import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
 import java.io.IOException;
@@ -110,10 +111,10 @@ class CompileDiagnosticPersistenceIntegrationTest {
   @Test
   void diagnosticsHandlerPaginationAndDefinitionFilter() throws Exception {
     repository.insertAll(CompileDiagnosticSource.RELOAD, "filter-a",
-            List.of(new cbs.nova.starter.model.CompileDiagnostic("a.java", 1L, 1L, "msg", "error",
+            List.of(new CompileDiagnostic("a.java", 1L, 1L, "msg", "error",
                     null)));
     repository.insertAll(CompileDiagnosticSource.PUBLISH, "filter-b",
-            List.of(new cbs.nova.starter.model.CompileDiagnostic("b.java", 1L, 1L, "msg", "error",
+            List.of(new CompileDiagnostic("b.java", 1L, 1L, "msg", "error",
                     null)));
 
     DslDiagnosticsHandler handler = new DslDiagnosticsHandler(repository);

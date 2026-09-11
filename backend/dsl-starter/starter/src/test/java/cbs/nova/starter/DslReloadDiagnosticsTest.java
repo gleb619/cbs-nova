@@ -18,6 +18,7 @@ import cbs.nova.starter.model.CompileModels.CompileResult;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -187,7 +188,7 @@ class DslReloadDiagnosticsTest {
   }
 
   private static CompileRequest argThatSourcesContain(String fileName) {
-    return org.mockito.ArgumentMatchers.argThat(
+    return ArgumentMatchers.argThat(
             request -> request != null && request.sources() != null
                     && request.sources().containsKey(fileName));
   }

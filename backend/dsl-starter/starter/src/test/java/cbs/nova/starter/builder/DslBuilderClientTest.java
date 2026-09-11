@@ -12,6 +12,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import cbs.nova.starter.config.BuilderClientConfiguration;
 import cbs.nova.starter.config.properties.DslBuilderClientProperties;
 import cbs.nova.starter.controller.BuilderApiErrorHandler;
+import cbs.nova.starter.service.DslGitStatusResolver.RepoStatus;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import cbs.nova.starter.exception.BuilderApiException;
 import cbs.nova.starter.exception.BuilderClientBusyException;
@@ -147,7 +148,7 @@ class DslBuilderClientTest {
             .andRespond(withSuccess("{\"workTree\":\"/repo\",\"dirtyPaths\":[\"a.java\"]}",
                     MediaType.APPLICATION_JSON));
 
-    Optional<cbs.nova.starter.service.DslGitStatusResolver.RepoStatus> status = client.vcsStatus();
+    Optional<RepoStatus> status = client.vcsStatus();
 
     assertThat(status).isPresent();
     assertThat(status.get().workTree().toString()).isEqualTo("/repo");

@@ -15,6 +15,7 @@ import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -57,7 +58,7 @@ class CompileControllerTest {
   @Autowired
   MockMvc mockMvc;
 
-  @org.springframework.boot.test.context.TestConfiguration
+  @TestConfiguration
   static class Config {
 
     @Bean

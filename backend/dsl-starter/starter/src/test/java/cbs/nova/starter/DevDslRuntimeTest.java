@@ -6,7 +6,7 @@ import cbs.nova.dsl.CallKind;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.PreviewReport;
+import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;

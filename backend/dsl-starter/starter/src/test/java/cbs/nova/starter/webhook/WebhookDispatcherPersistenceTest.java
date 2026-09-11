@@ -7,6 +7,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import cbs.nova.starter.WebhookTestApplication;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.http.Fault;
@@ -25,7 +26,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.jdbc.Sql;
 import tools.jackson.databind.ObjectMapper;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = cbs.nova.starter.WebhookTestApplication.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = WebhookTestApplication.class)
 @Sql(scripts = {"classpath:db/migration/h2/V1__init.sql",
     "classpath:db/migration/h2/V3__dsl_webhook_deliveries.sql",
     "classpath:sql/truncate-dsl-webhook-deliveries.sql"})

@@ -1,6 +1,6 @@
 package cbs.nova.starter.service;
 
-import cbs.nova.dsl.PreviewReport;
+import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.starter.model.PreviewModels.PreviewCacheKey;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;

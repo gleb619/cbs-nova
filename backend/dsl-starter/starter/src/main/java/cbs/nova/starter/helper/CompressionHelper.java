@@ -9,6 +9,7 @@ import cbs.nova.starter.helper.model.CompressionOut;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Locale;
@@ -148,7 +149,7 @@ public class CompressionHelper implements Executable<CompressionIn, CompressionO
     }
   }
 
-  private static byte[] readAllBytes(java.io.InputStream in) throws IOException {
+  private static byte[] readAllBytes(InputStream in) throws IOException {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     byte[] chunk = new byte[8192];
     int read;

@@ -20,6 +20,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -53,7 +54,7 @@ class FileControllerTest {
     }
   }
 
-  @org.springframework.boot.test.context.TestConfiguration
+  @TestConfiguration
   static class Config {
 
     @Bean
@@ -73,7 +74,7 @@ class FileControllerTest {
               null,
               null,
               null,
-              new cbs.nova.dsl.builder.config.DslBuilderProperties.Files(0, 100, 32, 8, 5L),
+              new DslBuilderProperties.Files(0, 100, 32, 8, 5L),
               null,
               null);
     }

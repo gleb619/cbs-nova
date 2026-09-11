@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
 import cbs.nova.dsl.builder.model.CompileModels.CompileRequest;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
@@ -121,8 +122,8 @@ class CompileServiceTest {
             .setInitialBranch("main")
             .call()) {
       var dslDir = repoDir.resolve("dsl");
-      java.nio.file.Files.createDirectories(dslDir);
-      java.nio.file.Files.writeString(dslDir.resolve("SampleDsl.java"), SAMPLE_SOURCE);
+      Files.createDirectories(dslDir);
+      Files.writeString(dslDir.resolve("SampleDsl.java"), SAMPLE_SOURCE);
       git.add().addFilepattern(".").call();
       git.commit()
               .setMessage("initial")

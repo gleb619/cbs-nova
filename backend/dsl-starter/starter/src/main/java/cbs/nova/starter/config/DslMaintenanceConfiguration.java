@@ -11,6 +11,7 @@ import cbs.nova.starter.service.DslRunRetentionPurger;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -114,7 +115,7 @@ public class DslMaintenanceConfiguration {
   DslMaintenanceService dslMaintenanceService(
           List<MaintenanceTask> tasks,
           DslMaintenanceProperties properties,
-          @org.springframework.beans.factory.annotation.Qualifier("cbsNovaDslMaintenanceExecutor") ScheduledExecutorService executor,
+          @Qualifier("cbsNovaDslMaintenanceExecutor") ScheduledExecutorService executor,
           ObjectProvider<MeterRegistry> meterRegistryProvider) {
     Map<String, Boolean> enabled = new LinkedHashMap<>();
     var perTask = properties.tasks();

@@ -7,7 +7,9 @@ import cbs.nova.dsl.builder.config.DslBuilderProperties;
 import cbs.nova.dsl.builder.exception.BuilderBusyException;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -61,7 +63,7 @@ class BuilderWorkQueueTest {
   @Test
   void runsTasksOnWorkerThreads() {
     var queue = queue(10, 1);
-    var threadNames = new java.util.concurrent.ConcurrentLinkedQueue<String>();
+    var threadNames = new ConcurrentLinkedQueue<String>();
 
     queue.submit(() -> {
       threadNames.add(Thread.currentThread().getName());
@@ -102,7 +104,7 @@ class BuilderWorkQueueTest {
     var running = new AtomicInteger();
     var maxRunning = new AtomicInteger();
 
-    var threads = new java.util.ArrayList<Thread>();
+    var threads = new ArrayList<Thread>();
     for (int i = 0; i < 6; i++) {
       var thread = new Thread(() -> queue.submit(() -> {
         int current = running.incrementAndGet();

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.starter.helper.model.HmacSha256SignIn;
 import cbs.nova.starter.helper.model.HmacSha256VerifyIn;
 import cbs.nova.starter.helper.model.HmacSha256VerifyOut;
 import org.junit.jupiter.api.Test;
@@ -121,7 +122,7 @@ class HmacSha256VerifyHelperTest {
   // Verify uses MessageDigest.isEqual on decoded raw bytes to perform constant-time comparison,
   // avoiding timing attacks and normalizing differences such as hex case or Base64 padding.
   private String sign(String message, String secret, String encoding) {
-    var signCtx = contextFactory.of(new cbs.nova.starter.helper.model.HmacSha256SignIn(
+    var signCtx = contextFactory.of(new HmacSha256SignIn(
             message, secret, encoding), ExecutionMode.PREVIEW);
     return signHelper.execute(signCtx).value().signature();
   }

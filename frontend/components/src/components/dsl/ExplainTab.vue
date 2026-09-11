@@ -1,35 +1,160 @@
 <script setup lang="ts">
+import { computed, onBeforeUpdate, ref } from 'vue'
+import type { ConstructType } from '../../composables/useConstructSchema'
+import { useExplainHistory } from '../../composables/usePreviewHistory'
 import type { RunnerOutput, RunnerStatus } from '../../types/runner'
-import ExplainOutput from '../runner/ExplainOutput.vue'
-import ResultTab from '../runner/ResultTab.vue'
+import RunInputPanel from './RunInputPanel.vue'
+import RunResultPanel from './RunResultPanel.vue'
 
-defineProps<{ output: RunnerOutput | null; status: RunnerStatus }>()
+const props = defineProps<{
+  name: string
+  type?: ConstructType
+  explain: (
+    name: string,
+    body: unknown,
+    metadata?: Record<string, unknown>,
+  ) => Promise<RunnerOutput> | RunnerOutput
+}>()
 
-defineEmits<{ run: [] }>()
+const emit = defineEmits<{
+  submit: []
+  format: [formatted: string]
+}>()
+
+const inputJson = ref<string>('{\n  \n}')
+const output = ref<RunnerOutput | null>(null)
+const status = ref<RunnerStatus>('idle')
+
+let previousName = props.name
+
+onBeforeUpdate(() => {
+  if (props.name !== previousName) {
+    previousName = props.name
+    inputJson.value = '{\n  \n}'
+  }
+})
+
+const history = useExplainHistory(() => props.name)
+const historyEntries = computed(() => history.entries.value)
+
+function currentPayload(): unknown {
+  const v = inputJson.value.trim()
+  if (!v) return {}
+  return JSON.parse(v)
+}
+
+function normalizeResponse(response: unknown): RunnerOutput {
+  if (response && typeof response === 'object' && !Array.isArray(response)) {
+    const r = response as Record<string, unknown>
+    const mermaid = (r.mermaid ?? r.mermaidDiagram) as string | undefined
+    return {
+      ...r,
+      description: r.description as string | undefined,
+      mermaidDiagram: mermaid,
+      result: r.result ?? r.body ?? r.output ?? { name: r.name, description: r.description, mermaidDiagram: mermaid },
+    } as RunnerOutput
+  }
+  return { result: response }
+}
+
+async function run() {
+  status.value = 'loading'
+  output.value = null
+  const payload = currentPayload()
+  try {
+    const metadata = { startedFrom: 'workbench' }
+
+    const raw = await props.explain(props.name, payload, metadata)
+
+    output.value = normalizeResponse(raw)
+    status.value = 'success'
+    history.record({
+      name: props.name,
+      type: props.type,
+      payload,
+      output: output.value,
+      status: 'success',
+    })
+  } catch (err) {
+    const e = err as {
+      data?: Partial<RunnerOutput> & {
+        message?: string
+        code?: string
+        details?: unknown
+        diagnostics?: unknown
+      }
+      statusMessage?: string
+      message?: string
+    }
+    const data = e.data
+    if (data && (Array.isArray(data.errors) || data.message)) {
+      output.value = {
+        ...(data as RunnerOutput),
+        errors: Array.isArray(data.errors)
+          ? data.errors
+          : [
+              {
+                message: data.message ?? e.statusMessage ?? e.message ?? 'Request failed',
+                code: data.code,
+              },
+            ],
+      }
+    } else {
+      output.value = {
+        errors: [
+          {
+            message: e.statusMessage ?? e.message ?? 'Request failed',
+            code: undefined,
+          },
+        ],
+      }
+    }
+    status.value = 'failed'
+    history.record({
+      name: props.name,
+      type: props.type,
+      payload,
+      output: output.value ?? undefined,
+      status: 'failed',
+    })
+  }
+}
+
+function rerun(payload: unknown) {
+  inputJson.value = `${JSON.stringify(payload ?? {}, null, 2)}\n`
+  void run()
+}
+
+const inputPanelModel = computed({
+  get: () => inputJson.value,
+  set: (v: string) => {
+    inputJson.value = v
+  },
+})
 </script>
 
 <template>
-  <div class="p-3 h-full overflow-auto">
-    <div class="flex items-center gap-3 mb-3">
-      <button
-        type="button"
-        class="px-3 py-1.5 text-sm font-medium rounded border border-gray-300 hover:bg-gray-50"
-        @click="$emit('run')"
-      >
-        Run explain
-      </button>
-      <span v-if="status === 'loading'" class="text-sm text-gray-500">Loading…</span>
-      <span v-else-if="status === 'success'" class="text-sm text-green-600">Done</span>
-      <span v-else-if="status === 'failed'" class="text-sm text-red-600">Failed</span>
-    </div>
-
-    <div v-if="output?.errors?.length" class="text-sm text-red-600 mb-3">
-      <p v-for="(err, i) in output.errors" :key="i">{{ err.message }}</p>
-    </div>
-
-    <div class="flex flex-col gap-4">
-      <ExplainOutput :description="output?.description" :mermaid-diagram="output?.mermaidDiagram" />
-      <ResultTab :result="output?.result" />
+  <div class="h-full p-3 bg-surface">
+    <div class="grid gap-3 h-full min-h-0 md:grid-cols-2 grid-cols-1">
+      <RunInputPanel
+        v-model="inputPanelModel"
+        :name="name"
+        :type="type"
+        endpoint="explain"
+        :busy="status === 'loading'"
+        @submit="run"
+      />
+      <RunResultPanel
+        :output="output"
+        :status="status"
+        :name="name"
+        :type="type"
+        endpoint="explain"
+        :history="historyEntries"
+        @rerun="rerun"
+        @clear-history="history.clear"
+        @format="emit('format', $event)"
+      />
     </div>
   </div>
 </template>

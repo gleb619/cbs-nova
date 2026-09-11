@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
+import java.util.List;
 import org.eclipse.jgit.api.Git;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -89,7 +90,7 @@ class DslDefinitionStatusResolverTest {
     Files.createDirectories(draft.getParent());
     Files.writeString(draft, "{}", UTF_8);
 
-    Map<String, DefinitionStatus> result = resolver.resolveAll(java.util.List.of("Foo", "Bar"));
+    Map<String, DefinitionStatus> result = resolver.resolveAll(List.of("Foo", "Bar"));
 
     assertThat(result).containsEntry("Foo", DefinitionStatus.PUBLISHED)
             .containsEntry("Bar", DefinitionStatus.DRAFT);

@@ -1,6 +1,6 @@
 package cbs.nova.starter.core.stage;
 
-import cbs.nova.dsl.PreviewReport;
+import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.starter.model.PreviewModels.PreviewCacheKey;
 import cbs.nova.starter.service.PreviewResultCache;

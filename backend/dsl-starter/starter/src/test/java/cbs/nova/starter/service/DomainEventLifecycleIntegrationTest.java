@@ -7,16 +7,30 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.SimpleContext;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.history.DslRun;
+import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
+import cbs.nova.dsl.transaction.TransactionRouting;
 import cbs.nova.starter.events.DomainEvent;
 import cbs.nova.starter.persistence.DslEventRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.opentelemetry.api.OpenTelemetry;
+import io.temporal.client.WorkflowClient;
+import io.temporal.client.WorkflowStub;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,6 +38,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -64,11 +79,11 @@ class DomainEventLifecycleIntegrationTest {
             Long.MAX_VALUE,
             new SimpleMeterRegistry(),
             new RunIdentityResolver(),
-            java.util.Optional.empty(),
-            io.opentelemetry.api.OpenTelemetry.noop(),
+            Optional.empty(),
+            OpenTelemetry.noop(),
             ofPublisher(publisher),
             EmptyObjectProvider
-                    .of(org.springframework.transaction.support.TransactionTemplate.class));
+                    .of(TransactionTemplate.class));
 
     GlobalManager.globalManager().resetForTests();
     GlobalManager.globalManager().registerProcess(
@@ -86,7 +101,7 @@ class DomainEventLifecycleIntegrationTest {
 
   @Test
   void successfulRunEmitsRunStartedAndRunCompleted() {
-    service.runProcess("OkFlow", java.util.Map.of(), (String) null).result().join();
+    service.runProcess("OkFlow", Map.of(), (String) null).result().join();
 
     ArgumentCaptor<DomainEvent> captor = ArgumentCaptor.forClass(DomainEvent.class);
     verify(publisher, atLeastOnce()).publish(captor.capture());
@@ -112,7 +127,7 @@ class DomainEventLifecycleIntegrationTest {
 
   @Test
   void failingRunEmitsRunStartedAndRunFailed() {
-    service.runProcess("FailingFlow", java.util.Map.of(), (String) null).result().join();
+    service.runProcess("FailingFlow", Map.of(), (String) null).result().join();
 
     ArgumentCaptor<DomainEvent> captor = ArgumentCaptor.forClass(DomainEvent.class);
     verify(publisher, atLeastOnce()).publish(captor.capture());
@@ -132,38 +147,38 @@ class DomainEventLifecycleIntegrationTest {
   @Test
   void publishesAtLeastOneRunStartedAndOneTerminalEvent() {
     // Sanity check: a successful run produces two publish calls.
-    service.runProcess("OkFlow", java.util.Map.of(), (String) null).result().join();
+    service.runProcess("OkFlow", Map.of(), (String) null).result().join();
     verify(publisher, atLeastOnce()).publish(any(DomainEvent.RunStarted.class));
     verify(publisher, atLeastOnce()).publish(any(DomainEvent.RunCompleted.class));
   }
 
   @Test
   void cancellationPublishesRunCancelledOnTerminalTransition() {
-    cbs.nova.dsl.history.DslRun running = cbs.nova.dsl.history.DslRun.builder()
+    DslRun running = DslRun.builder()
             .runId("run-cancel-test")
             .processName("CancelFlow")
-            .status(cbs.nova.dsl.history.DslRunStatus.RUNNING.name())
+            .status(DslRunStatus.RUNNING.name())
             .input("{}")
             .output("{}")
             .error(null)
-            .startedAt(java.time.Instant.now())
-            .finishedAt(cbs.nova.starter.service.TemporalDslProcessService.NOT_FINISHED_AT)
+            .startedAt(Instant.now())
+            .finishedAt(TemporalDslProcessService.NOT_FINISHED_AT)
             .executionMode("RUN")
             .triggeredBy("test")
             .correlationId(null)
             .build();
     runRepository.save(running);
 
-    io.temporal.client.WorkflowClient workflowClient = mock(
-            io.temporal.client.WorkflowClient.class);
-    io.temporal.client.WorkflowStub stub = mock(io.temporal.client.WorkflowStub.class);
+    WorkflowClient workflowClient = mock(
+            WorkflowClient.class);
+    WorkflowStub stub = mock(WorkflowStub.class);
     Mockito.when(workflowClient.newUntypedWorkflowStub(Mockito.anyString())).thenReturn(stub);
 
     DslRunCancellationService cancellationService = new DslRunCancellationService(
-            workflowClient, runRepository, java.time.Clock.systemUTC(), null,
+            workflowClient, runRepository, Clock.systemUTC(), null,
             ofPublisher(publisher),
             EmptyObjectProvider
-                    .of(org.springframework.transaction.support.TransactionTemplate.class));
+                    .of(TransactionTemplate.class));
 
     var outcome = cancellationService.cancel("run-cancel-test");
     assertThat(outcome.outcome())
@@ -183,11 +198,11 @@ class DomainEventLifecycleIntegrationTest {
   private static ContextFactory mockContextFactory() {
     ContextFactory contextFactory = mock(ContextFactory.class);
     Mockito.when(contextFactory.generateRunId())
-            .thenAnswer(invocation -> "run-" + java.util.UUID.randomUUID().toString()
+            .thenAnswer(invocation -> "run-" + UUID.randomUUID().toString()
                     .substring(0, 8));
     SimpleContext<Object> ctx = new SimpleContext<>(
-            java.util.Map.of(), java.util.Map.of(), cbs.nova.dsl.ExecutionMode.RUN,
-            "run-x", cbs.nova.dsl.transaction.TransactionRouting.LOCAL, null, null, null, null);
+            Map.of(), Map.of(), ExecutionMode.RUN,
+            "run-x", TransactionRouting.LOCAL, null, null, null, null);
     Mockito.when(contextFactory.of(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
             .thenReturn(ctx);
     return contextFactory;
@@ -220,8 +235,8 @@ class DomainEventLifecycleIntegrationTest {
     return executor;
   }
 
-  private static java.util.concurrent.ScheduledExecutorService disabledScheduledExecutor() {
-    return java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+  private static ScheduledExecutorService disabledScheduledExecutor() {
+    return Executors.newSingleThreadScheduledExecutor(r -> {
       Thread t = new Thread(r, "test-disabled-healthcheck");
       t.setDaemon(true);
       return t;
@@ -231,7 +246,7 @@ class DomainEventLifecycleIntegrationTest {
   // Suppress unused import warning for DslRunStatus used in named type assertions in
   // run-finish path comments.
   @SuppressWarnings("unused")
-  private static final Class<?> DSL_RUN_STATUS_REF = cbs.nova.dsl.history.DslRunStatus.class;
+  private static final Class<?> DSL_RUN_STATUS_REF = DslRunStatus.class;
 
   // Suppress unused import warning for DslEventRepository referenced from the test description.
   @SuppressWarnings("unused")

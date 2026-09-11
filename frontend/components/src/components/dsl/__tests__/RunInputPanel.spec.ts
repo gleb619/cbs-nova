@@ -1,7 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DSL_SCHEMA_FETCH_KEY, __resetConstructSchemaCache } from '../../../composables/useConstructSchema'
-import PreviewInputPanel from '../PreviewInputPanel.vue'
+import RunInputPanel from '../RunInputPanel.vue'
 import SchemaForm from '../SchemaForm.vue'
 import SchemaFormField from '../SchemaFormField.vue'
 
@@ -27,7 +27,7 @@ function mountPanel(
   props: Record<string, unknown> = {},
   fetchMock = vi.fn().mockResolvedValue({}),
 ) {
-  return mount(PreviewInputPanel, {
+  return mount(RunInputPanel, {
     props: { name: 'demo', type: 'Process', modelValue: '', ...props },
     global: {
       components: { SchemaForm, SchemaFormField },
@@ -36,7 +36,7 @@ function mountPanel(
   })
 }
 
-describe('PreviewInputPanel', () => {
+describe('RunInputPanel', () => {
   beforeEach(() => {
     __resetConstructSchemaCache()
   })

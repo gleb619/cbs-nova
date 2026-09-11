@@ -3,6 +3,7 @@ package cbs.nova.starter.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.history.DslRunRepository;
+import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.starter.maintenance.AuditRetentionMaintenanceTask;
 import cbs.nova.starter.maintenance.DslMaintenanceService;
 import cbs.nova.starter.maintenance.DslRunReconciliationMaintenanceTask;
@@ -13,6 +14,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.temporal.client.WorkflowClient;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
@@ -101,12 +103,12 @@ class DslMaintenanceConfigurationTest {
 
     @Bean
     DslRunRepository dslRunRepository() {
-      return new cbs.nova.dsl.repository.InMemoryDslRunRepository();
+      return new InMemoryDslRunRepository();
     }
 
     @Bean
     WorkflowClient workflowClient() {
-      return org.mockito.Mockito.mock(WorkflowClient.class);
+      return Mockito.mock(WorkflowClient.class);
     }
 
     @Bean

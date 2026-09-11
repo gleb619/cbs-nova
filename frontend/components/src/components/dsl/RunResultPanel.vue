@@ -2,6 +2,7 @@
 import { computed, onBeforeUpdate, ref } from 'vue'
 import { type ConstructType, useConstructSchema } from '../../composables/useConstructSchema'
 import type { PreviewHistoryEntry, RunnerOutput, RunnerStatus } from '../../types/runner'
+import ExplainOutput from '../runner/ExplainOutput.vue'
 import ResultTab from '../runner/ResultTab.vue'
 import PreviewHistoryPanel from './PreviewHistoryPanel.vue'
 import SchemaForm from './SchemaForm.vue'
@@ -101,8 +102,6 @@ function toggleHistory() {
   setMode(mode.value === 'history' ? 'json' : 'history')
 }
 
-// Mirrors the child's effective selection so footer status stays accurate
-// even when the selected entry has been removed from history.
 const effectiveSelectedEntry = computed(() => {
   if (!selectedEntryId.value) return undefined
   return props.history.find((entry) => entry.id === selectedEntryId.value)
@@ -189,7 +188,14 @@ onBeforeUpdate(() => {
             {{ err.message }}
           </p>
         </div>
-        <ResultTab v-else :result="output?.result" />
+        <template v-else>
+          <ExplainOutput
+            v-if="output?.description || output?.mermaidDiagram"
+            :description="output.description"
+            :mermaid-diagram="output.mermaidDiagram"
+          />
+          <ResultTab :result="output?.result" />
+        </template>
       </div>
 
       <div v-else-if="effectiveMode === 'form'" class="h-full overflow-auto p-3">

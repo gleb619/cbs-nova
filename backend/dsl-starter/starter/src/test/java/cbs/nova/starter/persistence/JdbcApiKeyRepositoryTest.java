@@ -4,9 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.starter.entity.DslApiKeyEntity;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.assertj.core.api.Assertions;
+import org.assertj.core.data.TemporalUnitWithinOffset;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,7 +65,7 @@ class JdbcApiKeyRepositoryTest {
 
     DslApiKeyEntity duplicate = row("second", "shared-hash-00000000000000000000000000000000",
             Instant.now());
-    org.assertj.core.api.Assertions.assertThatThrownBy(() -> repository.insert(duplicate))
+    Assertions.assertThatThrownBy(() -> repository.insert(duplicate))
             .isInstanceOf(DuplicateKeyException.class);
   }
 
@@ -120,8 +123,8 @@ class JdbcApiKeyRepositoryTest {
     DslApiKeyEntity reloaded = repository.findActiveByHash(row.keyHash()).orElseThrow();
     assertThat(reloaded.lastUsedAt()).isNotNull();
     assertThat(reloaded.lastUsedAt()).isCloseTo(when,
-            new org.assertj.core.data.TemporalUnitWithinOffset(
-                    2_000_000_000L, java.time.temporal.ChronoUnit.NANOS));
+            new TemporalUnitWithinOffset(
+                    2_000_000_000L, ChronoUnit.NANOS));
   }
 
   @Test

@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.CallKind;
 import cbs.nova.dsl.CallNode;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.PreviewReport;
+import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.starter.model.PreviewModels;
 import cbs.nova.starter.service.PreviewResultCache;
 import org.junit.jupiter.api.Test;

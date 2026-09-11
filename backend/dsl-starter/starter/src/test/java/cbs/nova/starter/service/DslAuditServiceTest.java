@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 
 import cbs.nova.starter.entity.DslAuditEntity;
 import cbs.nova.starter.persistence.DslAuditRepository;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -16,12 +17,13 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.servlet.function.ServerRequest;
+import tools.jackson.databind.ObjectMapper;
 
 class DslAuditServiceTest {
 
   private final DslAuditRepository repository = mock(DslAuditRepository.class);
   private final DslAuditService service = new DslAuditService(repository,
-          new tools.jackson.databind.ObjectMapper());
+          new ObjectMapper());
 
   @Test
   void recordPersistsRowWithSerializedDetails() {
@@ -64,7 +66,7 @@ class DslAuditServiceTest {
 
   @Test
   void recordSwallowsSerializationFailure() {
-    Map<String, Object> cyclic = new java.util.HashMap<>();
+    Map<String, Object> cyclic = new HashMap<>();
     cyclic.put("self", cyclic);
 
     assertThatCode(() -> service.record("operator-1", "DEFINITION_RELOAD", "/dsl",

@@ -16,10 +16,11 @@ import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.PreviewErrorDetail;
-import cbs.nova.dsl.PreviewReport;
+import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslException;
+import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dslexamples.v1.BatchModels.BatchIn;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.core.pipe.PreviewTimeoutException;
@@ -307,7 +308,7 @@ class DslRuntimeServiceTest {
     // without dragging in helper-instance resolution.
     GlobalManager.globalManager().resetForTests();
     try {
-      var process = new cbs.nova.dsl.process.ProcessDslObject(
+      var process = new ProcessDslObject(
               "Synthetic",
               "default",
               "v1",
@@ -349,7 +350,7 @@ class DslRuntimeServiceTest {
   void previewLeavesNonMapBodyUntouched() {
     GlobalManager.globalManager().resetForTests();
     try {
-      var process = new cbs.nova.dsl.process.ProcessDslObject(
+      var process = new ProcessDslObject(
               "Synthetic",
               "default",
               "v1",

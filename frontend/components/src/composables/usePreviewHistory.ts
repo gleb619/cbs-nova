@@ -5,6 +5,10 @@ import { useLocalStorageState } from './useLocalStorageState'
 export const PREVIEW_HISTORY_LIMIT = 20
 export const PREVIEW_HISTORY_STORAGE_NAMESPACE = 'cbs-nova:preview'
 export const PREVIEW_HISTORY_STORAGE_KEY = 'history'
+
+export const EXPLAIN_HISTORY_STORAGE_NAMESPACE = 'cbs-nova:explain'
+export const EXPLAIN_HISTORY_STORAGE_KEY = 'history'
+
 const MAX_ENTRIES_PER_NAME = PREVIEW_HISTORY_LIMIT * 20
 
 export interface PreviewHistory {
@@ -14,25 +18,34 @@ export interface PreviewHistory {
   clear: () => void
 }
 
-let sharedEntries: Ref<PreviewHistoryEntry[]> | null = null
+const sharedEntries = new Map<string, Ref<PreviewHistoryEntry[]>>()
 
 export function __resetPreviewHistoryForTests() {
-  sharedEntries = null
+  sharedEntries.delete(PREVIEW_HISTORY_STORAGE_NAMESPACE)
 }
 
-function entriesRef(): Ref<PreviewHistoryEntry[]> {
-  sharedEntries ??= useLocalStorageState<PreviewHistoryEntry[]>(PREVIEW_HISTORY_STORAGE_KEY, [], {
-    namespace: PREVIEW_HISTORY_STORAGE_NAMESPACE,
-  })
-  return sharedEntries
+export function __resetExplainHistoryForTests() {
+  sharedEntries.delete(EXPLAIN_HISTORY_STORAGE_NAMESPACE)
 }
 
-export function usePreviewHistory(
+function entriesRef(namespace: string): Ref<PreviewHistoryEntry[]> {
+  let ref = sharedEntries.get(namespace)
+  if (!ref) {
+    ref = useLocalStorageState<PreviewHistoryEntry[]>(PREVIEW_HISTORY_STORAGE_KEY, [], {
+      namespace,
+    })
+    sharedEntries.set(namespace, ref)
+  }
+  return ref
+}
+
+function useRunnerHistory(
   name: () => string,
+  namespace: string,
   options: { limit?: number } = {},
 ): PreviewHistory {
   const limit = Math.max(1, options.limit ?? PREVIEW_HISTORY_LIMIT)
-  const all = entriesRef()
+  const all = entriesRef(namespace)
 
   const entries = computed(() => all.value.filter((entry) => entry.name === name()))
 
@@ -57,4 +70,18 @@ export function usePreviewHistory(
   }
 
   return { entries, record, remove, clear }
+}
+
+export function usePreviewHistory(
+  name: () => string,
+  options: { limit?: number } = {},
+): PreviewHistory {
+  return useRunnerHistory(name, PREVIEW_HISTORY_STORAGE_NAMESPACE, options)
+}
+
+export function useExplainHistory(
+  name: () => string,
+  options: { limit?: number } = {},
+): PreviewHistory {
+  return useRunnerHistory(name, EXPLAIN_HISTORY_STORAGE_NAMESPACE, options)
 }

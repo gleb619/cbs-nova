@@ -7,6 +7,7 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.JwtIn;
 import cbs.nova.starter.helper.model.JwtOut;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -186,7 +187,7 @@ class JwtHelperTest {
 
   @Test
   void verifyWithNotYetValidTokenFails() {
-    long futureNbf = java.time.Instant.now().getEpochSecond() + 3600;
+    long futureNbf = Instant.now().getEpochSecond() + 3600;
     String headerJson = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";
     String payloadJson = "{\"sub\":\"alice\",\"nbf\":" + futureNbf + "}";
     String headerB64 = Base64.getUrlEncoder().withoutPadding()

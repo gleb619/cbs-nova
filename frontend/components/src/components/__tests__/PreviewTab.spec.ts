@@ -18,8 +18,8 @@ function mountTab(
     props: { name: 'demo', preview, ...props },
     global: {
       stubs: {
-        PreviewResultPanel: {
-          name: 'PreviewResultPanel',
+        RunResultPanel: {
+          name: 'RunResultPanel',
           template: `<section data-testid="runner-result-panel">
               <header>
                 <span data-testid="result-title">Result · {{ endpoint ?? 'preview' }}</span>
@@ -312,7 +312,7 @@ describe('PreviewTab', () => {
     await flushPromises()
     preview.mockClear()
 
-    wrapper.findComponent({ name: 'PreviewResultPanel' }).vm.$emit('rerun', { b: 2 })
+    wrapper.findComponent({ name: 'RunResultPanel' }).vm.$emit('rerun', { b: 2 })
     await flushPromises()
 
     expect(preview).toHaveBeenCalledWith('demo', { b: 2 }, { startedFrom: 'workbench' })

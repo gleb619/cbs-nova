@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.starter.entity.DslEventEntity;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,9 +41,9 @@ class DslEventRepositoryTest {
   void insertThenSearchRoundTripsNewestFirst() {
     Instant now = Instant.now();
     repository.insert(row("RunStarted", "run", "run-1",
-            now.minus(2, java.time.temporal.ChronoUnit.MINUTES), null));
+            now.minus(2, ChronoUnit.MINUTES), null));
     repository.insert(row("RunCompleted", "run", "run-1",
-            now.minus(1, java.time.temporal.ChronoUnit.MINUTES), null));
+            now.minus(1, ChronoUnit.MINUTES), null));
     repository.insert(row("DraftPublished", "definition", "def-A", now, null));
 
     var result = repository.search(null, null, null, null, null, 0, 10);
@@ -104,12 +105,12 @@ class DslEventRepositoryTest {
   @Test
   void sinceFilterIncludesRowsAtAndAfterInstant() {
     Instant now = Instant.now();
-    Instant old = now.minus(2, java.time.temporal.ChronoUnit.HOURS);
-    Instant fresh = now.plus(5, java.time.temporal.ChronoUnit.MINUTES);
+    Instant old = now.minus(2, ChronoUnit.HOURS);
+    Instant fresh = now.plus(5, ChronoUnit.MINUTES);
     repository.insert(row("RunStarted", "run", "old", old, null));
     repository.insert(row("RunStarted", "run", "fresh", fresh, null));
 
-    Instant since = now.minus(1, java.time.temporal.ChronoUnit.HOURS);
+    Instant since = now.minus(1, ChronoUnit.HOURS);
     var result = repository.search(null, null, null, null, since, 0, 10);
 
     assertThat(result.total()).isEqualTo(1);
@@ -122,7 +123,7 @@ class DslEventRepositoryTest {
     Instant now = Instant.now();
     for (int i = 0; i < 5; i++) {
       repository.insert(row("RunStarted", "run", "run-" + i,
-              now.minus(5 - i, java.time.temporal.ChronoUnit.MINUTES), null));
+              now.minus(5 - i, ChronoUnit.MINUTES), null));
     }
 
     var page = repository.search(null, null, null, null, null, 1, 2);

@@ -8,7 +8,7 @@ import cbs.nova.dsl.DslDefinitionLoader;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.LoadResult;
-import cbs.nova.dsl.PreviewReport;
+import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.starter.AuditTestSupport;
 import cbs.nova.starter.config.router.DslReloadRouterConfiguration;

@@ -1,6 +1,6 @@
 package cbs.nova.starter.model;
 
-import cbs.nova.dsl.PreviewReport;
+import cbs.nova.dsl.model.PreviewReport;
 import org.jspecify.annotations.NonNull;
 
 public final class PreviewModels {

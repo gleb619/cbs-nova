@@ -26,6 +26,7 @@ import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslDefinitionTestService;
 import cbs.nova.starter.service.DslRuntimeService;
 import cbs.nova.starter.webhook.WebhookDeliveryRecordRepository;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -177,7 +178,7 @@ public class DslRunRepositoryConfiguration {
   public ApiKeyStore apiKeyStore(
           JdbcApiKeyRepository repository,
           ObjectMapper objectMapper,
-          org.springframework.beans.factory.ObjectProvider<ApiKeyStore> selfProvider) {
+          ObjectProvider<ApiKeyStore> selfProvider) {
     return new ApiKeyStore(repository, objectMapper, selfProvider);
   }
 }

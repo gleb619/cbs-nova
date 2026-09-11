@@ -6,7 +6,7 @@ import {
   type UseCookieFactory,
 } from '../../composables/useLocalStorageState'
 import type { DslConstruct, HelperCatalogEntry, StepDef, ValidationError } from '../../types/dsl'
-import type { RunnerOutput, RunnerStatus } from '../../types/runner'
+import type { RunnerOutput } from '../../types/runner'
 import CodeTab from './CodeTab.vue'
 import ExplainTab from './ExplainTab.vue'
 import type { EditorMarker } from './MonacoEditor.vue'
@@ -84,39 +84,6 @@ const tab = useBodyEditorStorage<BodyEditorTab>('active-tab', 'structure', {
 
 // stub — future: derive from construct introspection
 const steps = ref<StepDef[]>([])
-
-const explainRun = ref<{
-  name: string
-  output: RunnerOutput | null
-  status: RunnerStatus
-} | null>(null)
-const explainOutput = computed<RunnerOutput | null>(() =>
-  explainRun.value && explainRun.value.name === props.construct?.name
-    ? explainRun.value.output
-    : null,
-)
-const explainStatus = computed<RunnerStatus>(() =>
-  explainRun.value && explainRun.value.name === props.construct?.name
-    ? explainRun.value.status
-    : 'idle',
-)
-
-function errorOutput(err: unknown): RunnerOutput {
-  const message = (err instanceof Error ? err.message : undefined) ?? 'Request failed'
-  return { errors: [{ message, code: 'REQUEST_FAILED' }] }
-}
-
-async function runExplain() {
-  if (!props.construct || !props.explain) return
-  const { name } = props.construct
-  explainRun.value = { name, output: null, status: 'loading' }
-  try {
-    const output = await props.explain(name, {}, { startedFrom: 'workbench' })
-    explainRun.value = { name, output, status: output.errors?.length ? 'failed' : 'success' }
-  } catch (err: unknown) {
-    explainRun.value = { name, output: errorOutput(err), status: 'failed' }
-  }
-}
 
 const isControlled = computed(() => props.code !== undefined)
 
@@ -257,13 +224,14 @@ defineExpose({ revealPosition, insertAtCursor, selectProblem })
         :key="construct?.name ?? ''"
         :name="construct?.name ?? ''"
         :type="construct?.type as ConstructType | undefined"
-        :preview="props.preview"
+        :preview="props.preview!"
       />
       <ExplainTab
         v-if="tab === 'explain'"
-        :output="explainOutput"
-        :status="explainStatus"
-        @run="runExplain"
+        :key="construct?.name ?? ''"
+        :name="construct?.name ?? ''"
+        :type="construct?.type as ConstructType | undefined"
+        :explain="props.explain!"
       />
       <ProblemsPanel v-show="tab === 'problems'" :errors="props.errors" @select="selectProblem" />
     </div>

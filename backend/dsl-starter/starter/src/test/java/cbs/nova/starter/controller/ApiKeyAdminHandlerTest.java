@@ -13,7 +13,9 @@ import cbs.nova.starter.persistence.JdbcApiKeyRepository;
 import cbs.nova.starter.service.ApiKeyStore;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Supplier;
 import org.h2.jdbcx.JdbcDataSource;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
@@ -156,7 +158,7 @@ class ApiKeyAdminHandlerTest {
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.code").value("NOT_FOUND"))
             .andExpect(jsonPath("$.message")
-                    .value(org.hamcrest.Matchers.containsString("987654321")));
+                    .value(Matchers.containsString("987654321")));
   }
 
   @Test
@@ -185,7 +187,7 @@ class ApiKeyAdminHandlerTest {
   }
 
   /** Test ObjectProvider that delegates to a lambda so the store can resolve itself. */
-  private record SelfProvider(java.util.function.Supplier<ApiKeyStore> supplier)
+  private record SelfProvider(Supplier<ApiKeyStore> supplier)
           implements
             ObjectProvider<ApiKeyStore> {
 

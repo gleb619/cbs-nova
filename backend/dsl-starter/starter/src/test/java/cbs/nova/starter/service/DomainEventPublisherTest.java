@@ -14,6 +14,7 @@ import cbs.nova.starter.persistence.DslEventRepository;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.dao.DataAccessResourceFailureException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
@@ -204,12 +205,12 @@ class DomainEventPublisherTest {
 
   @Test
   void publishFailurePropagatesNotSwallowed() {
-    doThrow(new org.springframework.dao.DataAccessResourceFailureException("db gone"))
+    doThrow(new DataAccessResourceFailureException("db gone"))
             .when(repository).insert(any());
 
     assertThatThrownBy(() -> publisher.publish(new DomainEvent.RunStarted(
             "r", "p", null, null, null)))
-            .isInstanceOf(org.springframework.dao.DataAccessResourceFailureException.class);
+            .isInstanceOf(DataAccessResourceFailureException.class);
   }
 
   private static JsonNode parse(String json) {

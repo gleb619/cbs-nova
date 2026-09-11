@@ -11,6 +11,7 @@ import java.io.StringReader;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
@@ -57,7 +58,7 @@ public class XmlExtractHelper implements Executable<XmlExtractIn, XmlExtractOut>
       DocumentBuilder builder = dbf.newDocumentBuilder();
       Node document = builder.parse(new InputSource(new StringReader(input.xml())));
 
-      javax.xml.xpath.XPath xpath = XPathFactory.newInstance().newXPath();
+      XPath xpath = XPathFactory.newInstance().newXPath();
       NodeList nodes = (NodeList) xpath.evaluate(input.xpath(), document, XPathConstants.NODESET);
       if (nodes.getLength() == 0) {
         return Result.success(new XmlExtractOut(null, false));

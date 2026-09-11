@@ -10,6 +10,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.MediaType;
@@ -50,7 +51,7 @@ public class DslDefinitionTestHandler {
     Set<String> subset = request.params().get("case").stream()
             .filter(c -> c != null && !c.isBlank())
             .map(String::trim)
-            .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+            .collect(Collectors.toCollection(LinkedHashSet::new));
     Set<String> caseSubset = subset.isEmpty() ? null : subset;
 
     DefinitionTestRunReport report = service.run(name, caseSubset);

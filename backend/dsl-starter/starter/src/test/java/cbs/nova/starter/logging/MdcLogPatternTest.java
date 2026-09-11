@@ -2,6 +2,7 @@ package cbs.nova.starter.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.PatternLayout;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -33,7 +34,7 @@ class MdcLogPatternTest {
     appender.setContext(loggerContext);
     appender.start();
     PatternLayout layout = newPatternLayout();
-    ch.qos.logback.classic.Logger logger = loggerContext
+    Logger logger = loggerContext
             .getLogger(MdcLogPatternTest.class.getName());
     logger.addAppender(appender);
     try {
@@ -56,7 +57,7 @@ class MdcLogPatternTest {
     appender.setContext(loggerContext);
     appender.start();
     PatternLayout layout = newPatternLayout();
-    ch.qos.logback.classic.Logger logger = loggerContext
+    Logger logger = loggerContext
             .getLogger(MdcLogPatternTest.class.getName());
     logger.addAppender(appender);
     try {

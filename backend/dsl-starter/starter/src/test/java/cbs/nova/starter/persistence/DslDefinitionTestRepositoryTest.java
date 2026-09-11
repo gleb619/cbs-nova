@@ -3,6 +3,7 @@ package cbs.nova.starter.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import cbs.nova.starter.WebhookTestApplication;
 import cbs.nova.starter.entity.DslDefinitionTestEntity;
 import java.time.Instant;
 import java.util.List;
@@ -13,7 +14,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.jdbc.Sql;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = cbs.nova.starter.WebhookTestApplication.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = WebhookTestApplication.class)
 @Sql(scripts = {"classpath:db/migration/h2/V5__dsl_definition_tests.sql",
     "classpath:sql/truncate-dsl-definition-tests.sql"})
 @TestPropertySource(properties = {

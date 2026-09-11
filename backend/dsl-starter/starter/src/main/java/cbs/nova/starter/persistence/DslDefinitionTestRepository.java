@@ -1,6 +1,8 @@
 package cbs.nova.starter.persistence;
 
 import cbs.nova.starter.entity.DslDefinitionTestEntity;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -71,7 +73,7 @@ public class DslDefinitionTestRepository {
     Objects.requireNonNull(rows, "rows");
     transactionTemplate.executeWithoutResult(status -> {
       deleteForDefinition(definitionName);
-      var now = java.time.Instant.now();
+      var now = Instant.now();
       for (DslDefinitionTestEntity row : rows) {
         insert(row.id() == null
                 ? new DslDefinitionTestEntity(null, definitionName, row.caseName(),
@@ -93,7 +95,7 @@ public class DslDefinitionTestRepository {
             .addValue("caseName", row.caseName())
             .addValue("input", row.inputJson())
             .addValue("expectedOutput", row.expectedOutputJson())
-            .addValue("createdAt", java.sql.Timestamp.from(row.createdAt()))
-            .addValue("updatedAt", java.sql.Timestamp.from(row.updatedAt()));
+            .addValue("createdAt", Timestamp.from(row.createdAt()))
+            .addValue("updatedAt", Timestamp.from(row.updatedAt()));
   }
 }

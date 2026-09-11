@@ -18,6 +18,7 @@ import org.eclipse.jgit.api.Git;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -49,7 +50,7 @@ class VcsControllerTest {
     }
   }
 
-  @org.springframework.boot.test.context.TestConfiguration
+  @TestConfiguration
   static class Config {
 
     @Bean
@@ -70,7 +71,7 @@ class VcsControllerTest {
               null,
               null,
               null,
-              new cbs.nova.dsl.builder.config.DslBuilderProperties.Git(true, null, null, null, null,
+              new DslBuilderProperties.Git(true, null, null, null, null,
                       null, 0),
               null);
     }

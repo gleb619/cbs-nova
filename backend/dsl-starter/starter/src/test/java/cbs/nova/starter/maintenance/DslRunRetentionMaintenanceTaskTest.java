@@ -13,7 +13,9 @@ import java.time.Instant;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Duration;
@@ -36,8 +38,8 @@ class DslRunRetentionMaintenanceTaskTest {
             runRepository, meterRegistry,
             Duration.ofHours(24), Duration.ofMinutes(30), 100, executor);
     when(runRepository.purgeFinishedBefore(
-            org.mockito.ArgumentMatchers.any(Instant.class), anyInt(),
-            org.mockito.ArgumentMatchers.<Consumer<List<String>>>any()))
+            ArgumentMatchers.any(Instant.class), anyInt(),
+            ArgumentMatchers.<Consumer<List<String>>>any()))
             .thenReturn(4);
 
     MaintenanceTask task = new DslRunRetentionMaintenanceTask(purger);
@@ -47,8 +49,8 @@ class DslRunRetentionMaintenanceTaskTest {
     assertThat(result.purged()).isEqualTo(4);
     assertThat(result.duration()).isNotNull();
 
-    verify(runRepository).purgeFinishedBefore(org.mockito.ArgumentMatchers.any(Instant.class),
-            anyInt(), org.mockito.ArgumentMatchers.<Consumer<List<String>>>any());
+    verify(runRepository).purgeFinishedBefore(ArgumentMatchers.any(Instant.class),
+            anyInt(), ArgumentMatchers.<Consumer<List<String>>>any());
   }
 
   @Test
@@ -65,8 +67,8 @@ class DslRunRetentionMaintenanceTaskTest {
     MaintenanceResult result = task.run();
 
     assertThat(result.purged()).isZero();
-    verify(runRepository, org.mockito.Mockito.never())
-            .purgeFinishedBefore(org.mockito.ArgumentMatchers.any(Instant.class), anyInt(),
-                    org.mockito.ArgumentMatchers.<Consumer<List<String>>>any());
+    verify(runRepository, Mockito.never())
+            .purgeFinishedBefore(ArgumentMatchers.any(Instant.class), anyInt(),
+                    ArgumentMatchers.<Consumer<List<String>>>any());
   }
 }

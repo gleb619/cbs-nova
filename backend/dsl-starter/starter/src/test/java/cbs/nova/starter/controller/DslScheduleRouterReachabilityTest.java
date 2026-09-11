@@ -17,9 +17,11 @@ import cbs.nova.starter.model.ScheduleModels.ScheduleSummary;
 import cbs.nova.starter.service.DslScheduleService;
 import io.temporal.client.schedules.ScheduleClient;
 import java.util.List;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -105,7 +107,7 @@ class DslScheduleRouterReachabilityTest {
 
   @Test
   void postSchedulesReachesHandlerNotFound() throws Exception {
-    when(mockService().create(org.mockito.ArgumentMatchers.any()))
+    when(mockService().create(ArgumentMatchers.any()))
             .thenReturn(new CreateScheduleResponse("sched-A", "A", "0 9 * * *"));
 
     mockMvc.perform(post("/api/dsl/schedules")
@@ -141,7 +143,7 @@ class DslScheduleRouterReachabilityTest {
                     + "RouterFunction is published (Temporal-gated surface)")
             .doesNotContain("dslScheduleRouter");
 
-    org.assertj.core.api.Assertions.assertThatThrownBy(
+    Assertions.assertThatThrownBy(
             () -> context.getBean("dslScheduleRouter", RouterFunction.class))
             .isInstanceOf(NoSuchBeanDefinitionException.class);
   }

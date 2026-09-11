@@ -3,8 +3,8 @@ import { computed, onBeforeUpdate, ref } from 'vue'
 import type { ConstructType } from '../../composables/useConstructSchema'
 import { usePreviewHistory } from '../../composables/usePreviewHistory'
 import type { RunnerOutput, RunnerStatus } from '../../types/runner'
-import PreviewInputPanel from './PreviewInputPanel.vue'
-import PreviewResultPanel from './PreviewResultPanel.vue'
+import RunInputPanel from './RunInputPanel.vue'
+import RunResultPanel from './RunResultPanel.vue'
 
 const props = defineProps<{
   name: string
@@ -131,14 +131,14 @@ const inputPanelModel = computed({
 <template>
   <div class="h-full p-3 bg-surface">
     <div class="grid gap-3 h-full min-h-0 md:grid-cols-2 grid-cols-1">
-      <PreviewInputPanel
+      <RunInputPanel
         v-model="inputPanelModel"
         :name="name"
         :type="type"
         :busy="status === 'loading'"
         @submit="run"
       />
-      <PreviewResultPanel
+      <RunResultPanel
         :output="output"
         :status="status"
         :name="name"

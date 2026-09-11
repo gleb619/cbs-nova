@@ -3,6 +3,7 @@ package cbs.nova.starter.webhook;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import cbs.nova.starter.WebhookTestApplication;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.Test;
@@ -12,7 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.jdbc.Sql;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = cbs.nova.starter.WebhookTestApplication.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = WebhookTestApplication.class)
 @Sql(scripts = {"classpath:db/migration/h2/V1__init.sql",
     "classpath:db/migration/h2/V3__dsl_webhook_deliveries.sql",
     "classpath:sql/truncate-dsl-webhook-deliveries.sql"})
