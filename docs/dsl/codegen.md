@@ -46,7 +46,13 @@ is used in Preview, Explain, and production Run modes.
 The DSL lives in a dedicated Gradle module. The Java plugin is applied so that normal test classes can be compiled, but
 the compact DSL source files are compiled by the custom DSL compiler rather than `javac`.
 
-### `dsl-examples/build.gradle`
+### `dsl-examples/build.gradle` (`backend/dsl-starter/dsl-examples/build.gradle` in this repo)
+
+> Illustrative shape of a DSL-examples Gradle module. The real
+> `backend/dsl-starter/dsl-examples/build.gradle` in this repo applies the `cbs.nova.dsl` plugin, which
+> registers the `compileDsl` task automatically — so the hand-rolled `tasks.register('compileDsl', ...)`
+> below is **not** what the current module does (see [docs/dsl/examples.md](examples.md#building-the-examples)
+> for the canonical invocation). The snippet is kept here only to show the wiring of a `dsl` source set.
 
 ```gradle
 plugins {
