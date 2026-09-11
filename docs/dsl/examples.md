@@ -39,14 +39,13 @@ backend/dsl-platform/gradlew -p backend/dsl-starter :dsl-examples:compileDsl
 After a successful run you will find generated classes such as:
 
 ```
-backend/dsl-starter/dsl-examples/build/generated/cbs/nova/dslexamples/batchprocessing/v1/
+backend/dsl-starter/dsl-examples/build/generated/cbs/nova/dslexamples/v1/
 ├── BatchProcessingProcessWorkflow.java
 └── BatchProcessingProcessDefinition.java
 ```
 
-The generated package is `cbs.nova.dslexamples.<name>.<version>` — `cbs.nova.dslexamples` is the
-module's `dslCompile { dslPackage = '...' }` base, `<name>` is the process/transaction name
-lower-cased, and `<version>` is the version declared in the DSL (default `v1`).
+The generated package is `cbs.nova.dslexamples.<version>` — `cbs.nova.dslexamples` is the
+module's `dslCompile { dslPackage = '...' }` base, and `<version>` is the version declared in the DSL (default `v1`). Generated class names embed the process/transaction name.
 
 ## Running the integration test
 

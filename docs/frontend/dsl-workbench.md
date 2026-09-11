@@ -103,7 +103,7 @@ The workbench distinguishes between local draft state and committed source.
 
 - **Save draft** — persists the current editor state to a local workspace so the author can resume later. Drafts do not affect the DSL module.
 - **Validate** — runs the DSL compiler against the current definition and reports errors.
-- **Publish** — writes the construct to the DSL module source file (`dsl-examples/src/*.java`) only if validation passes.
+- **Publish** — writes the construct to the DSL module source file (`backend/dsl-starter/dsl-examples/src/dsl/*.java`) only if validation passes.
 - **Unpublish** — removes a published construct from source. Unpublish is blocked if another published construct references it.
 
 After publish, the backend rebuilds the DSL module. The workbench polls for build status and updates the construct badge accordingly. If the build fails, the error is shown in the problems panel and the construct remains marked `Invalid`.

@@ -15,9 +15,9 @@ It introduces four constructs that share the same execution contract:
 
 | Construct       | Temporal mapping       | Where it lives                            | Purpose                                                               |
 |-----------------|------------------------|-------------------------------------------|-----------------------------------------------------------------------|
-| **Process**     | Temporal Workflow      | DSL module (`dsl-examples/src/*.java`)      | Orchestrates a sequence of steps; defines the business flow           |
-| **Transaction** | Temporal Activity      | DSL module (`dsl-examples/src/*.java`)      | Executes a single, idempotent, retryable action                       |
-| **Function**    | None (local helper)    | DSL module (`dsl-examples/src/*.java`)      | Lightweight reusable logic; no Temporal code is generated             |
+| **Process**     | Temporal Workflow      | DSL module (`backend/dsl-starter/dsl-examples/src/dsl/*.java`)      | Orchestrates a sequence of steps; defines the business flow           |
+| **Transaction** | Temporal Activity      | DSL module (`backend/dsl-starter/dsl-examples/src/dsl/*.java`)      | Executes a single, idempotent, retryable action                       |
+| **Function**    | None (local helper)    | DSL module (`backend/dsl-starter/dsl-examples/src/dsl/*.java`)      | Lightweight reusable logic; no Temporal code is generated             |
 | **Helper**      | Plain Java class/logic | Normal Java modules (`src/main/java/...`) | Reusable business logic invoked from Processes/Transactions/Functions |
 
 See [DSL Constructs & Execution Contract](dsl/constructs.md), [Authoring DSL Flows](dsl/authoring.md), and
@@ -38,7 +38,7 @@ pipes, `DispatchStage`, `HelperInterceptor` / `FakeHelperInterceptor`, capture `
 
 ```
 ┌─────────────────────────────────────────┐
-│  DSL source files (`dsl-examples/src/`) │
+│  DSL source files (`backend/dsl-starter/dsl-examples/src/dsl/`) │
 │  Compact JEP-512 sources, one define()  │
 └─────────────────┬───────────────────────┘
                   ▼

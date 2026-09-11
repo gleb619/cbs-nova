@@ -64,9 +64,9 @@ The same contract applies to Processes, Transactions, and Functions.
 
 | Construct       | Temporal mapping       | Where it lives                            | Purpose                                                     |
 |-----------------|------------------------|-------------------------------------------|-------------------------------------------------------------|
-| **Process**     | Temporal Workflow      | DSL module (`dsl-examples/src/*.java`)      | Orchestrates a sequence of steps; defines the business flow |
-| **Transaction** | Temporal Activity      | DSL module (`dsl-examples/src/*.java`)      | Executes a single, idempotent, retryable action             |
-| **Function**    | None (local helper)    | DSL module (`dsl-examples/src/*.java`)      | Lightweight reusable logic; no Temporal code is generated   |
+| **Process**     | Temporal Workflow      | DSL module (`backend/dsl-starter/dsl-examples/src/dsl/*.java`)      | Orchestrates a sequence of steps; defines the business flow |
+| **Transaction** | Temporal Activity      | DSL module (`backend/dsl-starter/dsl-examples/src/dsl/*.java`)      | Executes a single, idempotent, retryable action             |
+| **Function**    | None (local helper)    | DSL module (`backend/dsl-starter/dsl-examples/src/dsl/*.java`)      | Lightweight reusable logic; no Temporal code is generated   |
 | **Helper**      | Plain Java class/logic | Normal Java modules (`src/main/java/...`) | Reusable business logic invoked from DSL constructs         |
 
 ### Process

@@ -5,7 +5,7 @@ parameter-based definitions, helper/transaction/function calls, compensation, an
 
 ## DSL source files
 
-Definitions live in a dedicated Gradle module, typically `dsl-examples/src/`. They are authored as **compact
+Definitions live in a dedicated Gradle module, typically `backend/dsl-starter/dsl-examples/src/dsl/`. They are authored as **compact
 source files**:
 
 - no `class` declaration,

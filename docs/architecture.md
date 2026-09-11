@@ -15,7 +15,7 @@ through a server-side BFF.
 
 ## Core backend
 
-- **DSL authoring** — compact Java source files (`dsl-examples/src/`) define `Process`, `Transaction`, `Function`, and
+- **DSL authoring** — compact Java source files (`backend/dsl-starter/dsl-examples/src/dsl/`) define `Process`, `Transaction`, `Function`, and
   `Helper` constructs using a fluent builder API.
 - **Compile-time generation** — a Gradle DSL module scans DSL sources, builds an AST, validates semantics, and
   generates Temporal `@WorkflowInterface` and `@ActivityInterface` classes.
@@ -48,7 +48,7 @@ See [UI architecture](architecture-ui.md) for the frontend layout, communication
                │                                       │
                ▼                                       ▼
 ┌──────────────────────────────────┐      ┌──────────────────────────────────────────┐
-│  DSL Module (`dsl-examples/src/`) │      │  @cbs/admin-ui-plugin (Nuxt module)      │
+│  DSL Module (`backend/dsl-starter/dsl-examples/src/dsl/`) │      │  @cbs/admin-ui-plugin (Nuxt module)      │
 │  compact Java definitions         │      │  • Vue pages / components                 │
 │                                   │      │  • Pinia stores                           │
 └──────────────┬────────────────────┘      │  • Nitro server/ BFF routes               │
