@@ -1,5 +1,7 @@
 package cbs.nova.starter.service;
 
+import static cbs.nova.starter.core.StarterConstants.ANONYMOUS_PRINCIPAL;
+
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.entity.DslAuditEntity;
 import cbs.nova.starter.persistence.DslAuditRepository;
@@ -24,8 +26,6 @@ import tools.jackson.databind.ObjectMapper;
 @Slf4j
 @RequiredArgsConstructor
 public class DslAuditService {
-
-  private static final String ANONYMOUS = StarterConstants.ANONYMOUS_PRINCIPAL;
 
   private final DslAuditRepository repository;
   private final ObjectMapper objectMapper;
@@ -61,7 +61,7 @@ public class DslAuditService {
         return name;
       }
     }
-    return ANONYMOUS;
+    return ANONYMOUS_PRINCIPAL;
   }
 
   /**

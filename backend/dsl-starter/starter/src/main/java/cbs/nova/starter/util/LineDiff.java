@@ -1,5 +1,7 @@
 package cbs.nova.starter.util;
 
+import static cbs.nova.starter.core.StarterConstants.LINE_DIFF_CONTEXT_LINES;
+
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.VcsModels.DiffHunk;
 
@@ -16,8 +18,6 @@ import java.util.List;
 public final class LineDiff {
 
   /** Default maximum number of hunks returned before truncation kicks in. */
-
-  private static final int CONTEXT_LINES = StarterConstants.LINE_DIFF_CONTEXT_LINES;
 
   private LineDiff() {
   }
@@ -139,12 +139,12 @@ public final class LineDiff {
       // enough that their context windows would overlap.
       while (blockEnd < size) {
         int gapEnd = blockEnd;
-        while (gapEnd < size && gapEnd - blockEnd < 2 * CONTEXT_LINES
+        while (gapEnd < size && gapEnd - blockEnd < 2 * LINE_DIFF_CONTEXT_LINES
                 && script.get(gapEnd) instanceof Op.Same) {
           gapEnd++;
         }
         boolean moreChanges = gapEnd < size && !(script.get(gapEnd) instanceof Op.Same);
-        if (moreChanges && gapEnd - blockEnd <= 2 * CONTEXT_LINES) {
+        if (moreChanges && gapEnd - blockEnd <= 2 * LINE_DIFF_CONTEXT_LINES) {
           blockEnd = gapEnd;
           while (blockEnd < size && !(script.get(blockEnd) instanceof Op.Same)) {
             blockEnd++;
@@ -154,8 +154,8 @@ public final class LineDiff {
         }
       }
 
-      int contextBefore = Math.min(CONTEXT_LINES, i);
-      int contextAfter = Math.min(CONTEXT_LINES, size - blockEnd);
+      int contextBefore = Math.min(LINE_DIFF_CONTEXT_LINES, i);
+      int contextAfter = Math.min(LINE_DIFF_CONTEXT_LINES, size - blockEnd);
       int start = i - contextBefore;
       int end = blockEnd + contextAfter;
 

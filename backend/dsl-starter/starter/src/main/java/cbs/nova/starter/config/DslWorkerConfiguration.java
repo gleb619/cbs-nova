@@ -1,5 +1,7 @@
 package cbs.nova.starter.config;
 
+import static cbs.nova.starter.core.StarterConstants.WORKER_TERMINATION_AWAIT_SECONDS;
+
 import cbs.nova.dsl.GeneratedClassProvider;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.core.StarterConstants;
@@ -68,8 +70,6 @@ public class DslWorkerConfiguration {
 
   static final class WorkerFactoryLifecycle implements SmartLifecycle {
 
-    private static final long TERMINATION_AWAIT_SECONDS = StarterConstants.WORKER_TERMINATION_AWAIT_SECONDS;
-
     private final WorkerFactory factory;
     private final AtomicBoolean running = new AtomicBoolean();
 
@@ -86,7 +86,7 @@ public class DslWorkerConfiguration {
     @Override
     public void stop() {
       factory.shutdown();
-      factory.awaitTermination(TERMINATION_AWAIT_SECONDS, TimeUnit.SECONDS);
+      factory.awaitTermination(WORKER_TERMINATION_AWAIT_SECONDS, TimeUnit.SECONDS);
       running.set(false);
     }
 

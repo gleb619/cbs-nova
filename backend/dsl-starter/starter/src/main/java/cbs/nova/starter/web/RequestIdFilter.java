@@ -1,5 +1,8 @@
 package cbs.nova.starter.web;
 
+import static cbs.nova.starter.core.StarterConstants.INVALID_CORRELATION_ID_CODE;
+import static cbs.nova.starter.core.StarterConstants.INVALID_CORRELATION_ID_MESSAGE;
+
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.service.CorrelationId;
@@ -19,9 +22,6 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public final class RequestIdFilter extends OncePerRequestFilter {
-
-  private static final String INVALID_CORRELATION_ID_CODE = StarterConstants.INVALID_CORRELATION_ID_CODE;
-  private static final String INVALID_CORRELATION_ID_MESSAGE = StarterConstants.INVALID_CORRELATION_ID_MESSAGE;
 
   private final ObjectMapper objectMapper;
 

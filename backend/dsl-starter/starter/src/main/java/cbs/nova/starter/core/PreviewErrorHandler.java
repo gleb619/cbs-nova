@@ -1,5 +1,8 @@
 package cbs.nova.starter.core;
 
+import static cbs.nova.starter.core.StarterConstants.HELPER_NOT_FOUND_PREFIX;
+import static cbs.nova.starter.core.StarterConstants.UNKNOWN_ENTITY_PREFIX;
+
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.exception.DslCompensationException;
@@ -18,9 +21,6 @@ import java.util.concurrent.TimeoutException;
 
 @NoArgsConstructor
 public class PreviewErrorHandler {
-
-  private static final String UNKNOWN_ENTITY_PREFIX = StarterConstants.UNKNOWN_ENTITY_PREFIX;
-  private static final String HELPER_NOT_FOUND_PREFIX = StarterConstants.HELPER_NOT_FOUND_PREFIX;
 
   public static @NonNull PreviewErrorDetail from(@Nullable Throwable cause) {
     return from(cause, null);

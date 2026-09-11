@@ -1,5 +1,12 @@
 package cbs.nova.starter.helper;
 
+import static cbs.nova.starter.core.StarterConstants.RANDOM_ALPHA;
+import static cbs.nova.starter.core.StarterConstants.RANDOM_ALPHANUMERIC;
+import static cbs.nova.starter.core.StarterConstants.RANDOM_BASE64URL;
+import static cbs.nova.starter.core.StarterConstants.RANDOM_HEX;
+import static cbs.nova.starter.core.StarterConstants.RANDOM_MAX_STRING_LENGTH;
+import static cbs.nova.starter.core.StarterConstants.RANDOM_NUMERIC;
+
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
@@ -35,14 +42,6 @@ import org.jspecify.annotations.NonNull;
  */
 @Helper(name = "random")
 public class RandomHelper implements Executable<RandomIn, RandomOut> {
-
-  private static final int MAX_STRING_LENGTH = StarterConstants.RANDOM_MAX_STRING_LENGTH;
-
-  private static final String ALPHANUMERIC = StarterConstants.RANDOM_ALPHANUMERIC;
-  private static final String ALPHA = StarterConstants.RANDOM_ALPHA;
-  private static final String NUMERIC = StarterConstants.RANDOM_NUMERIC;
-  private static final String HEX = StarterConstants.RANDOM_HEX;
-  private static final String BASE64URL = StarterConstants.RANDOM_BASE64URL;
 
   @Override
   public @NonNull Result<RandomOut> execute(@NonNull Context<RandomIn> ctx) {
@@ -126,19 +125,19 @@ public class RandomHelper implements Executable<RandomIn, RandomOut> {
     if (length < 0) {
       throw new IllegalArgumentException("random.string.length must be >= 0, was: " + length);
     }
-    if (length > MAX_STRING_LENGTH) {
+    if (length > RANDOM_MAX_STRING_LENGTH) {
       throw new IllegalArgumentException(
-              "random.string.length must be <= " + MAX_STRING_LENGTH + ", was: " + length);
+              "random.string.length must be <= " + RANDOM_MAX_STRING_LENGTH + ", was: " + length);
     }
     String charset = (input.charset() == null)
             ? "alphanumeric"
             : input.charset().toLowerCase(Locale.ROOT);
     String pool = switch (charset) {
-      case "alphanumeric" -> ALPHANUMERIC;
-      case "alpha" -> ALPHA;
-      case "numeric" -> NUMERIC;
-      case "hex" -> HEX;
-      case "base64url" -> BASE64URL;
+      case "alphanumeric" -> RANDOM_ALPHANUMERIC;
+      case "alpha" -> RANDOM_ALPHA;
+      case "numeric" -> RANDOM_NUMERIC;
+      case "hex" -> RANDOM_HEX;
+      case "base64url" -> RANDOM_BASE64URL;
       default -> throw new IllegalArgumentException(
               "random.string.charset must be one of alphanumeric, alpha, numeric, hex, base64url, was: "
                       + input.charset());

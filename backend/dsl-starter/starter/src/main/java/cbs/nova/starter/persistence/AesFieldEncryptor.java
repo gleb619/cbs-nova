@@ -1,5 +1,10 @@
 package cbs.nova.starter.persistence;
 
+import static cbs.nova.starter.core.StarterConstants.AES_ALGORITHM;
+import static cbs.nova.starter.core.StarterConstants.AES_GCM_IV_LENGTH;
+import static cbs.nova.starter.core.StarterConstants.AES_GCM_TAG_LENGTH;
+import static cbs.nova.starter.core.StarterConstants.AES_TRANSFORMATION;
+
 import cbs.nova.starter.core.StarterConstants;
 import org.jspecify.annotations.Nullable;
 
@@ -23,11 +28,6 @@ import java.util.Base64;
  */
 public class AesFieldEncryptor implements FieldEncryptor {
 
-  private static final String ALGORITHM = StarterConstants.AES_ALGORITHM;
-  private static final String TRANSFORMATION = StarterConstants.AES_TRANSFORMATION;
-  private static final int GCM_IV_LENGTH = StarterConstants.AES_GCM_IV_LENGTH;
-  private static final int GCM_TAG_LENGTH = StarterConstants.AES_GCM_TAG_LENGTH;
-
   private final SecretKey secretKey;
   private final SecureRandom secureRandom = new SecureRandom();
 
@@ -38,7 +38,7 @@ public class AesFieldEncryptor implements FieldEncryptor {
     try {
       byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
       byte[] hash = MessageDigest.getInstance("SHA-256").digest(keyBytes);
-      this.secretKey = new SecretKeySpec(hash, ALGORITHM);
+      this.secretKey = new SecretKeySpec(hash, AES_ALGORITHM);
     } catch (Exception e) {
       throw new IllegalStateException("Failed to initialize AES encryptor", e);
     }
@@ -50,10 +50,10 @@ public class AesFieldEncryptor implements FieldEncryptor {
       return null;
     }
     try {
-      byte[] iv = new byte[GCM_IV_LENGTH];
+      byte[] iv = new byte[AES_GCM_IV_LENGTH];
       secureRandom.nextBytes(iv);
-      Cipher cipher = Cipher.getInstance(TRANSFORMATION);
-      cipher.init(Cipher.ENCRYPT_MODE, secretKey, new GCMParameterSpec(GCM_TAG_LENGTH, iv));
+      Cipher cipher = Cipher.getInstance(AES_TRANSFORMATION);
+      cipher.init(Cipher.ENCRYPT_MODE, secretKey, new GCMParameterSpec(AES_GCM_TAG_LENGTH, iv));
       byte[] cipherText = cipher.doFinal(plain.getBytes(StandardCharsets.UTF_8));
       ByteBuffer buffer = ByteBuffer.allocate(iv.length + cipherText.length);
       buffer.put(iv);
@@ -72,12 +72,12 @@ public class AesFieldEncryptor implements FieldEncryptor {
     try {
       byte[] decoded = Base64.getDecoder().decode(cipher);
       ByteBuffer buffer = ByteBuffer.wrap(decoded);
-      byte[] iv = new byte[GCM_IV_LENGTH];
+      byte[] iv = new byte[AES_GCM_IV_LENGTH];
       buffer.get(iv);
       byte[] cipherText = new byte[buffer.remaining()];
       buffer.get(cipherText);
-      Cipher c = Cipher.getInstance(TRANSFORMATION);
-      c.init(Cipher.DECRYPT_MODE, secretKey, new GCMParameterSpec(GCM_TAG_LENGTH, iv));
+      Cipher c = Cipher.getInstance(AES_TRANSFORMATION);
+      c.init(Cipher.DECRYPT_MODE, secretKey, new GCMParameterSpec(AES_GCM_TAG_LENGTH, iv));
       return new String(c.doFinal(cipherText), StandardCharsets.UTF_8);
     } catch (Exception e) {
       throw new IllegalStateException("Failed to decrypt field", e);

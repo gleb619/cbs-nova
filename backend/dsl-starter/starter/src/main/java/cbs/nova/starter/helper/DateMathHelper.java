@@ -1,5 +1,10 @@
 package cbs.nova.starter.helper;
 
+import static cbs.nova.starter.core.StarterConstants.DATE_MATH_ADD_UNITS;
+import static cbs.nova.starter.core.StarterConstants.DATE_MATH_DATE_ONLY_ADD_UNITS;
+import static cbs.nova.starter.core.StarterConstants.DATE_MATH_DATE_ONLY_START_OF_UNITS;
+import static cbs.nova.starter.core.StarterConstants.DATE_MATH_START_OF_UNITS;
+
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
@@ -53,16 +58,6 @@ import org.jspecify.annotations.NonNull;
 @Helper(name = "dateMath")
 public class DateMathHelper implements Executable<DateMathIn, DateMathOut> {
 
-  private static final Set<String> ADD_UNITS = StarterConstants.DATE_MATH_ADD_UNITS;
-
-  private static final Set<String> DIFF_UNITS = ADD_UNITS;
-
-  private static final Set<String> START_OF_UNITS = StarterConstants.DATE_MATH_START_OF_UNITS;
-
-  private static final Set<String> DATE_ONLY_ADD_UNITS = StarterConstants.DATE_MATH_DATE_ONLY_ADD_UNITS;
-
-  private static final Set<String> DATE_ONLY_START_OF_UNITS = StarterConstants.DATE_MATH_DATE_ONLY_START_OF_UNITS;
-
   @Override
   public @NonNull Result<DateMathOut> execute(@NonNull Context<DateMathIn> ctx) {
     try {
@@ -94,13 +89,13 @@ public class DateMathHelper implements Executable<DateMathIn, DateMathOut> {
       return Result.failure(new IllegalArgumentException("dateMath.amount is required"));
     }
     String unit = input.effectiveUnit("days").toLowerCase(Locale.ROOT);
-    if (!ADD_UNITS.contains(unit)) {
+    if (!DATE_MATH_ADD_UNITS.contains(unit)) {
       return Result.failure(
               new IllegalArgumentException(
-                      "dateMath.unit must be one of: " + ADD_UNITS + ", was: " + input.unit()));
+                  "dateMath.unit must be one of: " + DATE_MATH_ADD_UNITS + ", was: " + input.unit()));
     }
     ParsedDate parsed = parseDate(input.date(), zone);
-    if (parsed.isDateOnly() && !DATE_ONLY_ADD_UNITS.contains(unit)) {
+    if (parsed.isDateOnly() && !DATE_MATH_DATE_ONLY_ADD_UNITS.contains(unit)) {
       return Result.failure(
               new IllegalArgumentException(
                       "dateMath.unit " + unit + " is not valid for a date-only value"));
@@ -114,10 +109,10 @@ public class DateMathHelper implements Executable<DateMathIn, DateMathOut> {
       return Result.failure(new IllegalArgumentException("dateMath.end is required"));
     }
     String unit = input.effectiveUnit("millis").toLowerCase(Locale.ROOT);
-    if (!DIFF_UNITS.contains(unit)) {
+    if (!DATE_MATH_ADD_UNITS.contains(unit)) {
       return Result.failure(
               new IllegalArgumentException(
-                      "dateMath.unit must be one of: " + DIFF_UNITS + ", was: " + input.unit()));
+                  "dateMath.unit must be one of: " + DATE_MATH_ADD_UNITS + ", was: " + input.unit()));
     }
     ParsedDate start = parseDate(input.date(), zone);
     ParsedDate end = parseDate(input.end(), zone);
@@ -139,14 +134,14 @@ public class DateMathHelper implements Executable<DateMathIn, DateMathOut> {
 
   private static Result<DateMathOut> opStartOf(DateMathIn input, ZoneId zone) {
     String unit = input.effectiveUnit("day").toLowerCase(Locale.ROOT);
-    if (!START_OF_UNITS.contains(unit)) {
+    if (!DATE_MATH_START_OF_UNITS.contains(unit)) {
       return Result.failure(
               new IllegalArgumentException(
-                      "dateMath.unit must be one of: " + START_OF_UNITS + ", was: "
-                              + input.unit()));
+                  "dateMath.unit must be one of: " + DATE_MATH_START_OF_UNITS + ", was: "
+                  + input.unit()));
     }
     ParsedDate parsed = parseDate(input.date(), zone);
-    if (parsed.isDateOnly() && !DATE_ONLY_START_OF_UNITS.contains(unit)) {
+    if (parsed.isDateOnly() && !DATE_MATH_DATE_ONLY_START_OF_UNITS.contains(unit)) {
       return Result.failure(
               new IllegalArgumentException(
                       "dateMath.unit " + unit + " is not valid for a date-only value"));

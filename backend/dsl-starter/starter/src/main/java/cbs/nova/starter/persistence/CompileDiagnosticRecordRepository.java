@@ -1,5 +1,11 @@
 package cbs.nova.starter.persistence;
 
+import static cbs.nova.starter.core.StarterConstants.COMPILE_DIAGNOSTIC_CODE_MAX_LENGTH;
+import static cbs.nova.starter.core.StarterConstants.COMPILE_DIAGNOSTIC_DEFINITION_MAX_LENGTH;
+import static cbs.nova.starter.core.StarterConstants.COMPILE_DIAGNOSTIC_FILE_MAX_LENGTH;
+import static cbs.nova.starter.core.StarterConstants.COMPILE_DIAGNOSTIC_SEVERITY_MAX_LENGTH;
+import static cbs.nova.starter.core.StarterConstants.COMPILE_DIAGNOSTIC_SOURCE_MAX_LENGTH;
+
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.CompileDiagnostic;
 import cbs.nova.starter.model.CompileDiagnosticRecord;
@@ -27,12 +33,6 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 @RequiredArgsConstructor
 public class CompileDiagnosticRecordRepository {
 
-  private static final int SOURCE_MAX_LENGTH = StarterConstants.COMPILE_DIAGNOSTIC_SOURCE_MAX_LENGTH;
-  private static final int DEFINITION_MAX_LENGTH = StarterConstants.COMPILE_DIAGNOSTIC_DEFINITION_MAX_LENGTH;
-  private static final int FILE_MAX_LENGTH = StarterConstants.COMPILE_DIAGNOSTIC_FILE_MAX_LENGTH;
-  private static final int SEVERITY_MAX_LENGTH = StarterConstants.COMPILE_DIAGNOSTIC_SEVERITY_MAX_LENGTH;
-  private static final int CODE_MAX_LENGTH = StarterConstants.COMPILE_DIAGNOSTIC_CODE_MAX_LENGTH;
-
   private static final String COLUMNS = "id, occurred_at, source, definition, file, line, col_number, severity, code, message";
 
   private static final RowMapper<CompileDiagnosticRecord> ROW_MAPPER = (rs,
@@ -57,13 +57,13 @@ public class CompileDiagnosticRecordRepository {
   public void insert(CompileDiagnosticRecord row) {
     var params = new MapSqlParameterSource()
             .addValue("occurredAt", Timestamp.from(row.occurredAt()))
-            .addValue("source", truncate(row.source(), SOURCE_MAX_LENGTH))
-            .addValue("definition", truncate(row.definition(), DEFINITION_MAX_LENGTH))
-            .addValue("file", truncate(row.file(), FILE_MAX_LENGTH))
+            .addValue("source", truncate(row.source(), COMPILE_DIAGNOSTIC_SOURCE_MAX_LENGTH))
+            .addValue("definition", truncate(row.definition(), COMPILE_DIAGNOSTIC_DEFINITION_MAX_LENGTH))
+            .addValue("file", truncate(row.file(), COMPILE_DIAGNOSTIC_FILE_MAX_LENGTH))
             .addValue("line", row.line() != null ? row.line().intValue() : null)
             .addValue("colNumber", row.column() != null ? row.column().intValue() : null)
-            .addValue("severity", truncate(row.severity(), SEVERITY_MAX_LENGTH))
-            .addValue("code", truncate(row.code(), CODE_MAX_LENGTH))
+            .addValue("severity", truncate(row.severity(), COMPILE_DIAGNOSTIC_SEVERITY_MAX_LENGTH))
+            .addValue("code", truncate(row.code(), COMPILE_DIAGNOSTIC_CODE_MAX_LENGTH))
             .addValue("message", row.message());
     jdbcTemplate.update(
             """

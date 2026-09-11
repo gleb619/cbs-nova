@@ -1,5 +1,7 @@
 package cbs.nova.dsl.jsonschema;
 
+import static cbs.nova.starter.core.StarterConstants.JSON_SCHEMA_DRAFT_URI;
+
 import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.starter.core.StarterConstants;
@@ -41,8 +43,6 @@ import java.util.Map;
  * </p>
  */
 public class JacksonJsonSchemaGenerator implements JsonSchemaGenerator {
-
-  private static final String DRAFT_URI = StarterConstants.JSON_SCHEMA_DRAFT_URI;
 
   private final ObjectMapper objectMapper = JsonMapper.builder()
           .annotationIntrospector(new NullableRecordAnnotationIntrospector())
@@ -97,7 +97,7 @@ public class JacksonJsonSchemaGenerator implements JsonSchemaGenerator {
     }
 
     Map<String, Object> schema = new LinkedHashMap<>();
-    schema.put("$schema", DRAFT_URI);
+    schema.put("$schema", JSON_SCHEMA_DRAFT_URI);
     schema.putAll(generated);
     if (generated.get("properties") instanceof Map<?, ?> properties && properties.isEmpty()) {
       schema.remove("properties");

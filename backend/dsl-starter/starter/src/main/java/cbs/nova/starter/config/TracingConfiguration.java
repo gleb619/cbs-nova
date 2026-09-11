@@ -1,5 +1,8 @@
 package cbs.nova.starter.config;
 
+import static cbs.nova.starter.core.StarterConstants.OTEL_EXPORTER_OTLP_ENDPOINT;
+import static cbs.nova.starter.core.StarterConstants.OTEL_SERVICE_NAME;
+
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.tracing.OpenTelemetryContextPropagator;
 import io.opentelemetry.api.OpenTelemetry;
@@ -31,10 +34,6 @@ import org.springframework.util.StringUtils;
 @Configuration
 public class TracingConfiguration {
 
-  private static final String SERVICE_NAME = StarterConstants.OTEL_SERVICE_NAME;
-
-  private static final String OTLP_ENDPOINT_ENV = StarterConstants.OTEL_EXPORTER_OTLP_ENDPOINT;
-
   @Bean
   @ConditionalOnMissingBean
   OpenTelemetry openTelemetry(
@@ -42,7 +41,8 @@ public class TracingConfiguration {
           @Autowired Environment environment) {
     String endpoint = configuredEndpoint;
     if (!StringUtils.hasText(endpoint)) {
-      endpoint = environment.getProperty(OTLP_ENDPOINT_ENV);
+      //TODO: redo with an app.yml setting instead of env hardcode
+      endpoint = environment.getProperty(OTEL_EXPORTER_OTLP_ENDPOINT);
     }
     if (!StringUtils.hasText(endpoint)) {
       return OpenTelemetry.noop();
@@ -54,7 +54,7 @@ public class TracingConfiguration {
 
     Resource resource = Resource.getDefault()
             .merge(Resource.create(Attributes.of(
-                    AttributeKey.stringKey("service.name"), SERVICE_NAME)));
+                    AttributeKey.stringKey("service.name"), OTEL_SERVICE_NAME)));
 
     SdkTracerProvider tracerProvider = SdkTracerProvider.builder()
             .addSpanProcessor(BatchSpanProcessor.builder(exporter).build())

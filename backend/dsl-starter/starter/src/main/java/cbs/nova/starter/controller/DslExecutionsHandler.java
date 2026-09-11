@@ -1,5 +1,16 @@
 package cbs.nova.starter.controller;
 
+import static cbs.nova.starter.core.StarterConstants.CSV_EXPORT_MAX_ROWS;
+import static cbs.nova.starter.core.StarterConstants.DEFAULT_TOP_PROCESSES;
+import static cbs.nova.starter.core.StarterConstants.MAX_TOP_PROCESSES;
+import static cbs.nova.starter.core.StarterConstants.STATS_WINDOW_HOURS;
+import static cbs.nova.starter.core.StarterConstants.TIMESERIES_DEFAULT_BUCKET_MINUTES;
+import static cbs.nova.starter.core.StarterConstants.TIMESERIES_DEFAULT_WINDOW_HOURS;
+import static cbs.nova.starter.core.StarterConstants.TIMESERIES_MAX_BUCKET_MINUTES;
+import static cbs.nova.starter.core.StarterConstants.TIMESERIES_MAX_WINDOW_HOURS;
+import static cbs.nova.starter.core.StarterConstants.TIMESERIES_MIN_BUCKET_MINUTES;
+import static cbs.nova.starter.core.StarterConstants.TIMESERIES_MIN_WINDOW_HOURS;
+
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunSearchResult;
@@ -62,19 +73,8 @@ import java.util.Map;
 @Tag(name = "DSL Executions", description = "Inspect DSL execution runs")
 public class DslExecutionsHandler {
 
-  public static final int CSV_EXPORT_MAX_ROWS = StarterConstants.CSV_EXPORT_MAX_ROWS;
-  private static final String CSV_FILENAME_PATTERN = StarterConstants.CSV_FILENAME_PATTERN;
   private static final DateTimeFormatter CSV_FILENAME_FORMATTER = DateTimeFormatter
-          .ofPattern(CSV_FILENAME_PATTERN);
-  private static final int STATS_WINDOW_HOURS = StarterConstants.STATS_WINDOW_HOURS;
-  private static final int DEFAULT_TOP_PROCESSES = StarterConstants.DEFAULT_TOP_PROCESSES;
-  private static final int MAX_TOP_PROCESSES = StarterConstants.MAX_TOP_PROCESSES;
-  private static final int TIMESERIES_DEFAULT_WINDOW_HOURS = StarterConstants.TIMESERIES_DEFAULT_WINDOW_HOURS;
-  private static final int TIMESERIES_DEFAULT_BUCKET_MINUTES = StarterConstants.TIMESERIES_DEFAULT_BUCKET_MINUTES;
-  private static final int TIMESERIES_MIN_WINDOW_HOURS = StarterConstants.TIMESERIES_MIN_WINDOW_HOURS;
-  private static final int TIMESERIES_MAX_WINDOW_HOURS = StarterConstants.TIMESERIES_MAX_WINDOW_HOURS;
-  private static final int TIMESERIES_MIN_BUCKET_MINUTES = StarterConstants.TIMESERIES_MIN_BUCKET_MINUTES;
-  private static final int TIMESERIES_MAX_BUCKET_MINUTES = StarterConstants.TIMESERIES_MAX_BUCKET_MINUTES;
+          .ofPattern(StarterConstants.CSV_FILENAME_PATTERN);
 
   public static final String ACTION_RUN_CANCEL = StarterConstants.ACTION_RUN_CANCEL;
 

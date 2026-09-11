@@ -1,5 +1,7 @@
 package cbs.nova.starter.service;
 
+import static cbs.nova.starter.core.StarterConstants.STATUS_TEST_CASE_ERROR;
+
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.starter.core.StarterConstants;
@@ -34,8 +36,6 @@ import tools.jackson.databind.ObjectMapper;
  */
 @RequiredArgsConstructor
 public class DslDefinitionTestService {
-
-  private static final String STATUS_ERROR_CODE = StarterConstants.STATUS_TEST_CASE_ERROR;
 
   private final DslDefinitionTestRepository repository;
   private final DslRuntimeService previewService;
@@ -104,7 +104,7 @@ public class DslDefinitionTestService {
               actual, expected, durationMs, null);
     } catch (Exception e) {
       long durationMs = elapsedMillis(start);
-      ErrorResponse diagnostics = new ErrorResponse(STATUS_ERROR_CODE, e.getMessage(),
+      ErrorResponse diagnostics = new ErrorResponse(STATUS_TEST_CASE_ERROR, e.getMessage(),
               definitionName, null, null, null);
       return new DefinitionTestCaseResult(entity.caseName(), DefinitionTestCaseStatus.ERROR,
               null, expected, durationMs, diagnostics);

@@ -1,5 +1,10 @@
 package cbs.nova.starter.service;
 
+import static cbs.nova.starter.core.StarterConstants.JSON_SUFFIX;
+import static cbs.nova.starter.core.StarterConstants.WORKBENCH_HISTORY_DIR;
+import static cbs.nova.starter.core.StarterConstants.WORKBENCH_HISTORY_TIMESTAMP_PATTERN;
+import static cbs.nova.starter.core.StarterConstants.WORKBENCH_PUBLISHED_DIR;
+
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
@@ -21,11 +26,6 @@ import java.util.stream.Stream;
 @Component
 @RequiredArgsConstructor
 public class DslDefinitionHistoryService {
-
-  private static final String HISTORY_DIR = StarterConstants.WORKBENCH_HISTORY_DIR;
-  private static final String PUBLISHED_DIR = StarterConstants.WORKBENCH_PUBLISHED_DIR;
-  private static final String TIMESTAMP_PATTERN = StarterConstants.WORKBENCH_HISTORY_TIMESTAMP_PATTERN;
-  private static final String JSON_SUFFIX = StarterConstants.JSON_SUFFIX;
 
   private final DslProperties dslProperties;
   private final ObjectMapper objectMapper;
@@ -67,7 +67,7 @@ public class DslDefinitionHistoryService {
   }
 
   public Optional<DraftRequest> readEntry(Path dir, String name, String timestamp) {
-    if (timestamp == null || !timestamp.matches(TIMESTAMP_PATTERN)) {
+    if (timestamp == null || !timestamp.matches(WORKBENCH_HISTORY_TIMESTAMP_PATTERN)) {
       return Optional.empty();
     }
     Path file = safeHistoryFile(dir, name, timestamp);
@@ -130,12 +130,12 @@ public class DslDefinitionHistoryService {
   }
 
   private Path safePublishedFile(Path dir, String name) {
-    Path publishedDir = dir.resolve(PUBLISHED_DIR).normalize();
+    Path publishedDir = dir.resolve(WORKBENCH_PUBLISHED_DIR).normalize();
     return publishedDir.resolve(safeFileName(name) + JSON_SUFFIX).normalize();
   }
 
   private Path safeHistoryDir(Path dir, String name) {
-    Path historyRoot = dir.resolve(HISTORY_DIR).normalize();
+    Path historyRoot = dir.resolve(WORKBENCH_HISTORY_DIR).normalize();
     Path historyDir = historyRoot.resolve(safeFileName(name)).normalize();
     if (!historyDir.startsWith(historyRoot)) {
       throw new IllegalArgumentException("History path escapes root: " + historyDir);

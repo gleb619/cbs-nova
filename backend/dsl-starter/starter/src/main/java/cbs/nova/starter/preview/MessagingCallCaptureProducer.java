@@ -1,5 +1,7 @@
 package cbs.nova.starter.preview;
 
+import static cbs.nova.starter.core.StarterConstants.TYPE_MESSAGING;
+
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +27,6 @@ import java.util.concurrent.Future;
 
 @RequiredArgsConstructor
 public class MessagingCallCaptureProducer<K, V> implements Producer<K, V> {
-
-  private static final String TYPE_MESSAGING = StarterConstants.TYPE_MESSAGING;
 
   private final Producer<K, V> delegate;
   private final ExternalCallRecorder externalCallRecorder;

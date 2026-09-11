@@ -1,5 +1,9 @@
 package cbs.nova.starter.service;
 
+import static cbs.nova.starter.core.StarterConstants.CSV_DELIMITER;
+import static cbs.nova.starter.core.StarterConstants.CSV_LINE_ENDING;
+import static cbs.nova.starter.core.StarterConstants.CSV_QUOTE;
+
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.starter.core.StarterConstants;
 import java.io.IOException;
@@ -9,9 +13,6 @@ import java.util.Locale;
 
 public class ExecutionCsvWriter {
 
-  private static final char DELIMITER = StarterConstants.CSV_DELIMITER;
-  private static final char QUOTE = StarterConstants.CSV_QUOTE;
-  private static final String LINE_ENDING = StarterConstants.CSV_LINE_ENDING;
   private static final String[] HEADER = {
       "runId", "processName", "status", "mode", "triggeredBy", "correlationId",
       "startedAt", "finishedAt", "duration", "error", "input", "output"
@@ -42,39 +43,39 @@ public class ExecutionCsvWriter {
 
   private void writeRun(Appendable out, DslRun run, Config config) throws IOException {
     writeField(out, run.runId());
-    out.append(DELIMITER);
+    out.append(CSV_DELIMITER);
     writeField(out, run.processName());
-    out.append(DELIMITER);
+    out.append(CSV_DELIMITER);
     writeField(out, run.status());
-    out.append(DELIMITER);
+    out.append(CSV_DELIMITER);
     writeField(out, effectiveMode(run.executionMode()));
-    out.append(DELIMITER);
+    out.append(CSV_DELIMITER);
     writeField(out, run.triggeredBy());
-    out.append(DELIMITER);
+    out.append(CSV_DELIMITER);
     writeField(out, run.correlationId());
-    out.append(DELIMITER);
+    out.append(CSV_DELIMITER);
     writeField(out, run.startedAt().toString());
-    out.append(DELIMITER);
+    out.append(CSV_DELIMITER);
     writeField(out, run.finishedAt() != null ? run.finishedAt().toString() : null);
-    out.append(DELIMITER);
+    out.append(CSV_DELIMITER);
     writeField(out, duration(run));
-    out.append(DELIMITER);
+    out.append(CSV_DELIMITER);
     writeField(out, firstLine(run.error()));
-    out.append(DELIMITER);
+    out.append(CSV_DELIMITER);
     writeField(out, truncate(run.input(), config.maxInputOutputChars()));
-    out.append(DELIMITER);
+    out.append(CSV_DELIMITER);
     writeField(out, truncate(run.output(), config.maxInputOutputChars()));
-    out.append(LINE_ENDING);
+    out.append(CSV_LINE_ENDING);
   }
 
   private void writeRow(Appendable out, String[] fields) throws IOException {
     for (int i = 0; i < fields.length; i++) {
       if (i > 0) {
-        out.append(DELIMITER);
+        out.append(CSV_DELIMITER);
       }
       writeField(out, fields[i]);
     }
-    out.append(LINE_ENDING);
+    out.append(CSV_LINE_ENDING);
   }
 
   private void writeField(Appendable out, String value) throws IOException {
@@ -82,15 +83,15 @@ public class ExecutionCsvWriter {
       return;
     }
     if (needsQuoting(value)) {
-      out.append(QUOTE);
+      out.append(CSV_QUOTE);
       for (int i = 0; i < value.length(); i++) {
         char c = value.charAt(i);
-        if (c == QUOTE) {
-          out.append(QUOTE);
+        if (c == CSV_QUOTE) {
+          out.append(CSV_QUOTE);
         }
         out.append(c);
       }
-      out.append(QUOTE);
+      out.append(CSV_QUOTE);
     } else {
       out.append(value);
     }
@@ -99,7 +100,7 @@ public class ExecutionCsvWriter {
   private static boolean needsQuoting(String value) {
     for (int i = 0; i < value.length(); i++) {
       char c = value.charAt(i);
-      if (c == DELIMITER || c == QUOTE || c == '\r' || c == '\n') {
+      if (c == CSV_DELIMITER || c == CSV_QUOTE || c == '\r' || c == '\n') {
         return true;
       }
     }

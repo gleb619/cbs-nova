@@ -1,5 +1,7 @@
 package cbs.nova.starter.helper;
 
+import static cbs.nova.starter.core.StarterConstants.METRIC_TYPES;
+
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
@@ -54,8 +56,6 @@ import org.springframework.beans.factory.ObjectProvider;
  */
 @SpringHelper(name = "metric")
 public class MetricHelper implements Executable<MetricIn, MetricOut> {
-
-  private static final Set<String> TYPES = StarterConstants.METRIC_TYPES;
 
   private final @Nullable MeterRegistry registry;
   private final Map<String, AtomicReference<Double>> gaugeHolders = new ConcurrentHashMap<>();
@@ -123,7 +123,7 @@ public class MetricHelper implements Executable<MetricIn, MetricOut> {
               "metric.type must be one of: counter, gauge, timer, summary");
     }
     String normalized = input.type().toLowerCase(Locale.ROOT);
-    if (!TYPES.contains(normalized)) {
+    if (!METRIC_TYPES.contains(normalized)) {
       throw new IllegalArgumentException(
               "metric.type must be one of: counter, gauge, timer, summary, was: " + input.type());
     }

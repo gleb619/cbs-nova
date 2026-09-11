@@ -1,5 +1,7 @@
 package cbs.nova.starter.helper;
 
+import static cbs.nova.starter.core.StarterConstants.API_KEY_HEADER;
+
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
@@ -41,8 +43,6 @@ import org.jspecify.annotations.NonNull;
  */
 @Helper(name = "httpAuth")
 public class HttpAuthHelper implements Executable<HttpAuthIn, HttpAuthOut> {
-
-  private static final String DEFAULT_API_KEY_HEADER = StarterConstants.API_KEY_HEADER;
 
   @Override
   public @NonNull Result<HttpAuthOut> execute(@NonNull Context<HttpAuthIn> ctx) {
@@ -90,7 +90,7 @@ public class HttpAuthHelper implements Executable<HttpAuthIn, HttpAuthOut> {
     if (key == null || key.isBlank()) {
       throw new IllegalArgumentException("httpAuth.apiKey: key is required");
     }
-    String effectiveHeader = (header == null) ? DEFAULT_API_KEY_HEADER : header;
+    String effectiveHeader = (header == null) ? API_KEY_HEADER : header;
     if (effectiveHeader.isBlank()) {
       throw new IllegalArgumentException("httpAuth.apiKey: header is required");
     }

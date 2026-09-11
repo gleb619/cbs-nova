@@ -1,5 +1,9 @@
 package cbs.nova.starter.service;
 
+import static cbs.nova.starter.core.StarterConstants.JSON_SUFFIX;
+import static cbs.nova.starter.core.StarterConstants.WORKBENCH_DRAFTS_DIR;
+import static cbs.nova.starter.core.StarterConstants.WORKBENCH_PUBLISHED_DIR;
+
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.model.VcsModels.DefinitionBundle;
@@ -34,10 +38,6 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class DslDefinitionBundleService {
 
-  private static final String PUBLISHED_DIR = StarterConstants.WORKBENCH_PUBLISHED_DIR;
-  private static final String DRAFTS_DIR = StarterConstants.WORKBENCH_DRAFTS_DIR;
-  private static final String JSON_SUFFIX = StarterConstants.JSON_SUFFIX;
-
   private final ObjectMapper objectMapper;
   private final Optional<BuildProperties> buildProperties;
   private final DslProperties dslProperties;
@@ -49,9 +49,9 @@ public class DslDefinitionBundleService {
    */
   public DefinitionBundle export(Path dir, boolean includeDrafts) {
     Map<String, DefinitionBundleEntry> entries = new LinkedHashMap<>();
-    readInto(entries, dir.resolve(PUBLISHED_DIR), "published");
+    readInto(entries, dir.resolve(WORKBENCH_PUBLISHED_DIR), "published");
     if (includeDrafts) {
-      readInto(entries, dir.resolve(DRAFTS_DIR), "draft");
+      readInto(entries, dir.resolve(WORKBENCH_DRAFTS_DIR), "draft");
     }
     List<DefinitionBundleEntry> sorted = entries.values().stream()
             .sorted(Comparator.comparing(e -> e.definition().name()))
@@ -112,7 +112,7 @@ public class DslDefinitionBundleService {
    */
   public List<ImportEntryResult> diffForImport(Path dir, DefinitionBundle bundle) {
     List<ImportEntryResult> results = new ArrayList<>();
-    Path publishedDir = dir.resolve(PUBLISHED_DIR);
+    Path publishedDir = dir.resolve(WORKBENCH_PUBLISHED_DIR);
     for (DefinitionBundleEntry entry : bundle.definitions()) {
       if (entry == null || entry.definition() == null
               || entry.definition().name() == null || entry.definition().name().isBlank()) {

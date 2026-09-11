@@ -1,5 +1,7 @@
 package cbs.nova.starter.webhook;
 
+import static cbs.nova.starter.core.StarterConstants.DSL_WEBHOOK_DELIVERY_COLUMNS;
+
 import cbs.nova.starter.core.StarterConstants;
 import java.sql.Timestamp;
 import java.util.List;
@@ -22,8 +24,6 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  */
 @RequiredArgsConstructor
 public class WebhookDeliveryRecordRepository {
-
-  private static final String COLUMNS = StarterConstants.DSL_WEBHOOK_DELIVERY_COLUMNS;
 
   private static final RowMapper<WebhookDeliveryRecord> ROW_MAPPER = (rs,
           rowNum) -> new WebhookDeliveryRecord(
@@ -91,7 +91,7 @@ public class WebhookDeliveryRecordRepository {
             SELECT %s FROM dsl_webhook_deliveries %s
             ORDER BY occurred_at DESC, id DESC
             LIMIT :limit OFFSET :offset
-            """.formatted(COLUMNS, where), params, ROW_MAPPER);
+            """.formatted(DSL_WEBHOOK_DELIVERY_COLUMNS, where), params, ROW_MAPPER);
     return new WebhookDeliverySearchResult(items, total != null ? total : 0L);
   }
 

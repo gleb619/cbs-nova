@@ -60,4 +60,23 @@ public final class AuditTestSupport {
       }
     };
   }
+
+  public static ObjectProvider<DslAuditService> emptyProvider() {
+    return new ObjectProvider<>() {
+      @Override
+      public DslAuditService getObject() {
+        return null;
+      }
+
+      @Override
+      public DslAuditService getIfAvailable() {
+        return null;
+      }
+
+      @Override
+      public DslAuditService getIfUnique() {
+        return null;
+      }
+    };
+  }
 }

@@ -1,5 +1,7 @@
 package cbs.nova.starter.controller;
 
+import static cbs.nova.starter.core.StarterConstants.DSL_RELOAD_TEMP_PREFIX;
+
 import cbs.nova.dsl.DslCompactSource;
 import cbs.nova.dsl.DslDefinitionLoader;
 import cbs.nova.dsl.DslObject;
@@ -85,8 +87,6 @@ import org.springframework.web.servlet.function.ServerResponse;
 @RequiredArgsConstructor
 @Slf4j
 public class DslReloadHandler {
-
-  private static final String RELOAD_TEMP_PREFIX = StarterConstants.DSL_RELOAD_TEMP_PREFIX;
 
   private final DslProperties dslProperties;
   private final DslDefinitionLoader loader;
@@ -182,7 +182,7 @@ public class DslReloadHandler {
 
   private LoadResult doReload(Path sourceDir) throws IOException {
     var parent = Thread.currentThread().getContextClassLoader();
-    Path outputDir = Files.createTempDirectory(RELOAD_TEMP_PREFIX);
+    Path outputDir = Files.createTempDirectory(DSL_RELOAD_TEMP_PREFIX);
     URLClassLoader reloadClassLoader = null;
     try {
       compileSources(sourceDir, outputDir);

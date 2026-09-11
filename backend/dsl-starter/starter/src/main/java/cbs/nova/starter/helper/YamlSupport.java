@@ -1,7 +1,11 @@
 package cbs.nova.starter.helper;
 
+import static cbs.nova.starter.core.StarterConstants.YAML_MAX_CODE_POINTS;
+
 import cbs.nova.starter.core.StarterConstants;
 import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
@@ -33,12 +37,8 @@ import org.yaml.snakeyaml.resolver.Resolver;
  * {@code setIndent(2)} — deterministic, human-readable block style.
  * </ul>
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class YamlSupport {
-
-  private static final int MAX_CODE_POINTS = StarterConstants.YAML_MAX_CODE_POINTS;
-
-  private YamlSupport() {
-  }
 
   /**
    * Returns a {@link Yaml} configured for safe loading. All custom tags are rejected via the
@@ -49,7 +49,7 @@ final class YamlSupport {
     LoaderOptions loaderOptions = new LoaderOptions();
     loaderOptions.setAllowDuplicateKeys(false);
     loaderOptions.setMaxAliasesForCollections(50);
-    loaderOptions.setCodePointLimit(MAX_CODE_POINTS);
+    loaderOptions.setCodePointLimit(YAML_MAX_CODE_POINTS);
     // Reject every global tag. Built-in scalars (!!str/!!int/!!float/!!bool/!!null) and the
     // implicit-tag short forms are handled by SnakeYAML's SafeConstructor without consulting the
     // inspector, so this still permits the natural YAML 1.2 type set.

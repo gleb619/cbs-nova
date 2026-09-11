@@ -32,6 +32,8 @@ import tools.jackson.databind.node.ObjectNode;
 @Helper(name = "jsonPatch")
 public class JsonPatchHelper implements Executable<JsonPatchIn, JsonPatchOut> {
 
+  //TODO: replace with a spring config class intead to not break a DI principle
+  @Deprecated(forRemoval = true)
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
   @Override

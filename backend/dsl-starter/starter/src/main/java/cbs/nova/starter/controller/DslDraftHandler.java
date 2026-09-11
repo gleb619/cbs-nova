@@ -1,5 +1,9 @@
 package cbs.nova.starter.controller;
 
+import static cbs.nova.starter.core.StarterConstants.BUNDLE_MAX_DEFINITIONS;
+import static cbs.nova.starter.core.StarterConstants.WORKBENCH_DRAFTS_DIR;
+import static cbs.nova.starter.core.StarterConstants.WORKBENCH_PUBLISHED_DIR;
+
 import lombok.AllArgsConstructor;
 
 import cbs.nova.dsl.LoadResult;
@@ -60,10 +64,6 @@ import tools.jackson.databind.ObjectMapper;
 @AllArgsConstructor
 public class DslDraftHandler {
 
-  private static final String DRAFTS_DIR = StarterConstants.WORKBENCH_DRAFTS_DIR;
-  private static final String PUBLISHED_DIR = StarterConstants.WORKBENCH_PUBLISHED_DIR;
-  private static final int BUNDLE_MAX_DEFINITIONS = StarterConstants.BUNDLE_MAX_DEFINITIONS;
-
   static final String ACTION_DRAFT_WRITE = "DRAFT_WRITE";
   static final String ACTION_DEFINITION_PUBLISH = "DEFINITION_PUBLISH";
   static final String ACTION_DRAFT_BULK_WRITE = "DRAFT_BULK_WRITE";
@@ -111,7 +111,7 @@ public class DslDraftHandler {
       }
     }
     try {
-      Path file = writePayload(dir.path().resolve(DRAFTS_DIR), payload);
+      Path file = writePayload(dir.path().resolve(WORKBENCH_DRAFTS_DIR), payload);
       audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_SUCCESS,
               Map.of("location", file.toString()));
       publishEventBestEffort(new DomainEvent.DraftSaved(
@@ -176,7 +176,7 @@ public class DslDraftHandler {
     }
     try {
       historyService.snapshotBeforePublish(dir.path(), name);
-      Path file = writePayload(dir.path().resolve(PUBLISHED_DIR), payload);
+      Path file = writePayload(dir.path().resolve(WORKBENCH_PUBLISHED_DIR), payload);
       log.info("[DSL drafts] published {} to {}", name, file);
       DraftResponse response = finishPublish(name, file.toString(), dir.path());
       boolean success = response.reloadError() == null;
@@ -295,7 +295,7 @@ public class DslDraftHandler {
     }
     historyService.snapshotBeforePublish(dir.path(), name);
     var payload = withStatus(entry.get(), "Published");
-    Path file = writePayload(dir.path().resolve(PUBLISHED_DIR), payload);
+    Path file = writePayload(dir.path().resolve(WORKBENCH_PUBLISHED_DIR), payload);
     log.info("[DSL drafts] restored {} to published {} from history {}", name, file, timestamp);
     return ServerResponse.ok()
             .contentType(MediaType.APPLICATION_JSON)
@@ -314,7 +314,7 @@ public class DslDraftHandler {
       log.info("[DSL drafts] deleted {} via DSL builder", name);
       return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(deleted);
     }
-    Path draftsDir = dir.path().resolve(DRAFTS_DIR);
+    Path draftsDir = dir.path().resolve(WORKBENCH_DRAFTS_DIR);
     Path draftFile = draftsDir.resolve(safeFileName(name) + ".json").normalize();
     if (!draftFile.startsWith(draftsDir) || !Files.exists(draftFile)) {
       return error(HttpStatus.NOT_FOUND,
@@ -499,7 +499,7 @@ public class DslDraftHandler {
         DraftRequest payload = withStatus(entry.definition(), "Published");
         String name = payload.name();
         historyService.snapshotBeforePublish(dir.path(), name);
-        Path file = writePayload(dir.path().resolve(PUBLISHED_DIR), payload);
+        Path file = writePayload(dir.path().resolve(WORKBENCH_PUBLISHED_DIR), payload);
         results.add(new ImportEntryResult(name, "published", null));
         log.info("[DSL bundle] imported published marker {} to {}", name, file);
       }
@@ -761,7 +761,7 @@ public class DslDraftHandler {
   }
 
   private static Path draftsDir(Path source) {
-    return source.resolve(DRAFTS_DIR);
+    return source.resolve(WORKBENCH_DRAFTS_DIR);
   }
 
   private void deleteDraftMarker(Path dir, String name) {

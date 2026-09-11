@@ -1,5 +1,7 @@
 package cbs.nova.starter.service;
 
+import static cbs.nova.starter.core.StarterConstants.SERVICE_SHUTDOWN_JOIN;
+
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExecutionTraceCollector;
@@ -122,8 +124,6 @@ public class TemporalDslProcessService {
             EmptyObjectProvider.of(DomainEventPublisher.class),
             EmptyObjectProvider.of(TransactionTemplate.class));
   }
-
-  private static final Duration SHUTDOWN_JOIN = StarterConstants.SERVICE_SHUTDOWN_JOIN;
 
   private final AtomicReference<Clock> clock = new AtomicReference<>(Clock.systemUTC());
 
@@ -263,7 +263,7 @@ public class TemporalDslProcessService {
     }
     current.cancel(false);
     try {
-      current.get(SHUTDOWN_JOIN.toMillis(), TimeUnit.MILLISECONDS);
+      current.get(SERVICE_SHUTDOWN_JOIN.toMillis(), TimeUnit.MILLISECONDS);
     } catch (TimeoutException | CancellationException | ExecutionException _) {
     } catch (InterruptedException ex) {
       Thread.currentThread().interrupt();

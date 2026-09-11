@@ -1,5 +1,8 @@
 package cbs.nova.starter.helper;
 
+import static cbs.nova.starter.core.StarterConstants.JWT_DEFAULT_ALG;
+import static cbs.nova.starter.core.StarterConstants.JWT_DEFAULT_TTL_SECONDS;
+
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
@@ -68,10 +71,9 @@ import tools.jackson.databind.node.ObjectNode;
 @Helper(name = "jwt")
 public class JwtHelper implements Executable<JwtIn, JwtOut> {
 
+  //TODO: replace with a spring config class intead to not break a DI principle
+  @Deprecated(forRemoval = true)
   private static final ObjectMapper MAPPER = new ObjectMapper();
-
-  private static final String DEFAULT_ALG = StarterConstants.JWT_DEFAULT_ALG;
-  private static final long DEFAULT_TTL_SECONDS = StarterConstants.JWT_DEFAULT_TTL_SECONDS;
 
   @Override
   public @NonNull Result<JwtOut> execute(@NonNull Context<JwtIn> ctx) {
@@ -117,7 +119,7 @@ public class JwtHelper implements Executable<JwtIn, JwtOut> {
       throw new IllegalArgumentException("jwt.verify: secret is required");
     }
     String algorithm = (requestedAlgorithm == null || requestedAlgorithm.isBlank())
-            ? DEFAULT_ALG
+            ? JWT_DEFAULT_ALG
             : requestedAlgorithm;
     // Reject "none" and any unsupported algorithm BEFORE doing any cryptographic work.
     // CVE-2015-9235: "alg: none" attacks MUST be rejected unconditionally.
@@ -185,10 +187,10 @@ public class JwtHelper implements Executable<JwtIn, JwtOut> {
     if (payload == null) {
       throw new IllegalArgumentException("jwt.sign: payload is required");
     }
-    String alg = (algorithm == null || algorithm.isBlank()) ? DEFAULT_ALG : algorithm;
+    String alg = (algorithm == null || algorithm.isBlank()) ? JWT_DEFAULT_ALG : algorithm;
     // Reject "none" and any unsupported algorithm at sign time too.
     String macName = macAlgorithmFor(alg);
-    long ttl = (ttlSeconds == null) ? DEFAULT_TTL_SECONDS : ttlSeconds;
+    long ttl = (ttlSeconds == null) ? JWT_DEFAULT_TTL_SECONDS : ttlSeconds;
     if (ttl < 0) {
       throw new IllegalArgumentException("jwt.sign: ttlSeconds must not be negative");
     }

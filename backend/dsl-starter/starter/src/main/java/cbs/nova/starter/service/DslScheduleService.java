@@ -1,5 +1,8 @@
 package cbs.nova.starter.service;
 
+import static cbs.nova.starter.core.StarterConstants.DEFAULT_TIMEZONE;
+import static cbs.nova.starter.core.StarterConstants.SCHEDULE_PREFIX;
+
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.process.DslTemporalProcessRequest;
@@ -56,8 +59,6 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class DslScheduleService {
 
-  private static final String SCHEDULE_PREFIX = StarterConstants.SCHEDULE_PREFIX;
-  private static final String DEFAULT_TIMEZONE = StarterConstants.DEFAULT_TIMEZONE;
   private static final Pattern DEFINITION_NAME_PATTERN = Pattern.compile("^[A-Za-z0-9._-]{1,120}$");
 
   private final ScheduleClient scheduleClient;

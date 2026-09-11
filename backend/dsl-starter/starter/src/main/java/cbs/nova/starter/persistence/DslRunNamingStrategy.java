@@ -1,5 +1,7 @@
 package cbs.nova.starter.persistence;
 
+import static cbs.nova.starter.core.StarterConstants.DSL_RUNS_DEFAULT_TABLE;
+
 import cbs.nova.starter.config.properties.DslRunPersistenceProperties;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.entity.DslRunEntity;
@@ -9,8 +11,6 @@ import org.springframework.data.relational.core.mapping.NamingStrategy;
  * Naming strategy that makes the {@link DslRunEntity} table name and schema configurable.
  */
 public class DslRunNamingStrategy implements NamingStrategy {
-
-  private static final String DEFAULT_TABLE = StarterConstants.DSL_RUNS_DEFAULT_TABLE;
 
   private final DslRunPersistenceProperties properties;
 
@@ -36,7 +36,7 @@ public class DslRunNamingStrategy implements NamingStrategy {
   public String qualifiedTableName() {
     String table = properties.tableName() != null && !properties.tableName().isBlank()
             ? properties.tableName()
-            : DEFAULT_TABLE;
+            : DSL_RUNS_DEFAULT_TABLE;
     String schema = properties.schema();
     return (schema != null && !schema.isBlank()) ? schema + "." + table : table;
   }

@@ -1,5 +1,7 @@
 package cbs.nova.starter.helper;
 
+import static cbs.nova.starter.core.StarterConstants.SEMVER_IDENT_REGEX;
+
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
@@ -46,10 +48,7 @@ public class SemverHelper implements Executable<SemverIn, SemverOut> {
 
   // Official semver.org-recommended regex
   // (https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string).
-  private static final String SEMVER_REGEX = StarterConstants.SEMVER_REGEX;
-  private static final Pattern SEMVER_PATTERN = Pattern.compile(SEMVER_REGEX);
-
-  private static final String IDENT_REGEX = StarterConstants.SEMVER_IDENT_REGEX;
+  private static final Pattern SEMVER_PATTERN = Pattern.compile(StarterConstants.SEMVER_REGEX);
 
   @Override
   public @NonNull Result<SemverOut> execute(@NonNull Context<SemverIn> ctx) {
@@ -371,7 +370,7 @@ public class SemverHelper implements Executable<SemverIn, SemverOut> {
   }
 
   private static void validateIdentifiers(String name, String value, boolean forbidLeadingZeros) {
-    if (!value.matches(IDENT_REGEX)) {
+    if (!value.matches(SEMVER_IDENT_REGEX)) {
       throw new IllegalArgumentException(
               "semver.format: " + name + " has invalid identifier syntax: " + value);
     }

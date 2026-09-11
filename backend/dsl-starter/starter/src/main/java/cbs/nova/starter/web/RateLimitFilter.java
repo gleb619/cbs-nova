@@ -1,5 +1,10 @@
 package cbs.nova.starter.web;
 
+import static cbs.nova.starter.core.StarterConstants.RATE_LIMITED_CODE;
+import static cbs.nova.starter.core.StarterConstants.RATE_LIMITED_MESSAGE;
+import static cbs.nova.starter.core.StarterConstants.RETRY_AFTER_HEADER;
+import static cbs.nova.starter.core.StarterConstants.X_FORWARDED_FOR_HEADER;
+
 import cbs.nova.starter.config.properties.CbsSecurityRateLimitProperties;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.ErrorResponse;
@@ -20,10 +25,6 @@ import tools.jackson.databind.ObjectMapper;
 @RequiredArgsConstructor
 public final class RateLimitFilter extends OncePerRequestFilter {
 
-  private static final String X_FORWARDED_FOR_HEADER = StarterConstants.X_FORWARDED_FOR_HEADER;
-  private static final String RETRY_AFTER_HEADER = StarterConstants.RETRY_AFTER_HEADER;
-  private static final String RATE_LIMITED_CODE = StarterConstants.RATE_LIMITED_CODE;
-  private static final String RATE_LIMITED_MESSAGE = StarterConstants.RATE_LIMITED_MESSAGE;
   private static final long NANOS_PER_SECOND = 1_000_000_000L;
 
   private static final List<RateLimitRule> RULES = List.of(

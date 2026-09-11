@@ -1,5 +1,7 @@
 package cbs.nova.starter.service;
 
+import static cbs.nova.starter.core.StarterConstants.CORRELATION_ID_MAX_LENGTH;
+
 import cbs.nova.starter.core.StarterConstants;
 import java.util.regex.Pattern;
 
@@ -16,7 +18,6 @@ import org.jspecify.annotations.Nullable;
  */
 public final class CorrelationId {
 
-  private static final int MAX_LENGTH = StarterConstants.CORRELATION_ID_MAX_LENGTH;
   private static final Pattern VALID_PATTERN = Pattern.compile(
           StarterConstants.CORRELATION_ID_VALID_PATTERN);
 
@@ -37,7 +38,7 @@ public final class CorrelationId {
       return null;
     }
     String trimmed = value.trim();
-    if (trimmed.isEmpty() || trimmed.length() > MAX_LENGTH) {
+    if (trimmed.isEmpty() || trimmed.length() > CORRELATION_ID_MAX_LENGTH) {
       throw new IllegalArgumentException("Invalid X-Correlation-Id header");
     }
     if (!VALID_PATTERN.matcher(trimmed).matches()) {

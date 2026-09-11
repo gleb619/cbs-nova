@@ -1,5 +1,8 @@
 package cbs.nova.starter.service;
 
+import static cbs.nova.starter.core.StarterConstants.SERVICE_SHUTDOWN_JOIN;
+import static cbs.nova.starter.core.StarterConstants.UNKNOWN_PROCESS;
+
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
@@ -44,9 +47,6 @@ public class DslRunReconciliationService {
   static final String STATUS_TAG = "status";
   static final String EMPTY_OUTPUT_JSON = "{}";
 
-  private static final Duration SHUTDOWN_JOIN = StarterConstants.SERVICE_SHUTDOWN_JOIN;
-  private static final String UNKNOWN_PROCESS = StarterConstants.UNKNOWN_PROCESS;
-
   private final DslRunRepository runRepository;
   private final WorkflowClient workflowClient;
   private final MeterRegistry meterRegistry;
@@ -89,7 +89,7 @@ public class DslRunReconciliationService {
     }
     current.cancel(false);
     try {
-      current.get(SHUTDOWN_JOIN.toMillis(), TimeUnit.MILLISECONDS);
+      current.get(SERVICE_SHUTDOWN_JOIN.toMillis(), TimeUnit.MILLISECONDS);
     } catch (InterruptedException ex) {
       Thread.currentThread().interrupt();
     } catch (Exception expected) {

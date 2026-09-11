@@ -1,5 +1,7 @@
 package cbs.nova.starter.capture;
 
+import static cbs.nova.starter.core.StarterConstants.OPERATION_BATCH;
+
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import org.jspecify.annotations.NonNull;
@@ -18,8 +20,6 @@ import java.sql.Statement;
  * argument SQL otherwise. Batch execution records the {@code BATCH} operation.
  */
 public class RecordingStatement implements Statement {
-
-  private static final String OPERATION_BATCH = StarterConstants.OPERATION_BATCH;
 
   private final Statement delegate;
   private final @Nullable String sql;

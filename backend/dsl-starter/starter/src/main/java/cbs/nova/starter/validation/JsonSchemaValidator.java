@@ -1,11 +1,15 @@
 package cbs.nova.starter.validation;
 
+import static cbs.nova.starter.core.StarterConstants.JSON_POINTER_ROOT;
+
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.ValidationError;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
 /**
  * Validates a deserialized JSON body against the subset of JSON Schema produced by
@@ -16,15 +20,11 @@ import java.util.Map;
  * Field pointers follow a JSONPath-like convention: {@code $} for the root, {@code $.field} for
  * object properties, and {@code $.items[0].field} for array elements.
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class JsonSchemaValidator {
 
-  private static final String ROOT_PATH = StarterConstants.JSON_POINTER_ROOT;
-
-  private JsonSchemaValidator() {
-  }
-
   public static List<ValidationError> validate(Object body, Map<String, Object> schema) {
-    return validateValue(body, schema, ROOT_PATH);
+    return validateValue(body, schema, JSON_POINTER_ROOT);
   }
 
   private static List<ValidationError> validateValue(Object value, Map<String, Object> schema,

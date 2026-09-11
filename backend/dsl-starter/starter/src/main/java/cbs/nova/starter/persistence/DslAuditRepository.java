@@ -1,5 +1,7 @@
 package cbs.nova.starter.persistence;
 
+import static cbs.nova.starter.core.StarterConstants.DSL_AUDIT_COLUMNS;
+
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.entity.DslAuditEntity;
 import java.sql.Timestamp;
@@ -25,8 +27,6 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 @Deprecated
 @RequiredArgsConstructor
 public class DslAuditRepository {
-
-  private static final String COLUMNS = StarterConstants.DSL_AUDIT_COLUMNS;
 
   private static final RowMapper<DslAuditEntity> ROW_MAPPER = (rs, rowNum) -> new DslAuditEntity(
           rs.getLong("id"),
@@ -87,7 +87,7 @@ public class DslAuditRepository {
             SELECT %s FROM dsl_audit %s
             ORDER BY occurred_at DESC, id DESC
             LIMIT :limit OFFSET :offset
-            """.formatted(COLUMNS, where), params, ROW_MAPPER);
+            """.formatted(DSL_AUDIT_COLUMNS, where), params, ROW_MAPPER);
     return new DslAuditSearchResult(items, total != null ? total : 0L);
   }
 }

@@ -1,18 +1,18 @@
 package cbs.nova.starter.helper;
 
+import static cbs.nova.starter.core.StarterConstants.CSV_QUOTE;
+
 import cbs.nova.starter.core.StarterConstants;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
 /**
  * Hand-rolled RFC 4180 CSV parser and formatter. No external dependencies.
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 class CsvSupport {
-
-  private static final char QUOTE = StarterConstants.CSV_QUOTE;
-
-  private CsvSupport() {
-  }
 
   /**
    * Parses RFC 4180 CSV.
@@ -38,7 +38,7 @@ class CsvSupport {
       char c = input.charAt(i);
       switch (state) {
         case START -> {
-          if (c == QUOTE) {
+          if (c == CSV_QUOTE) {
             state = State.QUOTED;
           } else if (c == delimiter) {
             currentRow.add(field.toString());
@@ -64,16 +64,16 @@ class CsvSupport {
             if (c == '\r' && i + 1 < len && input.charAt(i + 1) == '\n') {
               i++;
             }
-          } else if (c == QUOTE) {
+          } else if (c == CSV_QUOTE) {
             throw new IllegalArgumentException("csv: unexpected quote in unquoted field");
           } else {
             field.append(c);
           }
         }
         case QUOTED -> {
-          if (c == QUOTE) {
-            if (i + 1 < len && input.charAt(i + 1) == QUOTE) {
-              field.append(QUOTE);
+          if (c == CSV_QUOTE) {
+            if (i + 1 < len && input.charAt(i + 1) == CSV_QUOTE) {
+              field.append(CSV_QUOTE);
               i++;
             } else {
               state = State.AFTER_QUOTE;
@@ -146,7 +146,7 @@ class CsvSupport {
     boolean needsQuoting = false;
     for (int i = 0; i < value.length(); i++) {
       char c = value.charAt(i);
-      if (c == delimiter || c == QUOTE || c == '\r' || c == '\n') {
+      if (c == delimiter || c == CSV_QUOTE || c == '\r' || c == '\n') {
         needsQuoting = true;
         break;
       }
@@ -155,15 +155,15 @@ class CsvSupport {
       return value;
     }
     StringBuilder quoted = new StringBuilder(value.length() + 2);
-    quoted.append(QUOTE);
+    quoted.append(CSV_QUOTE);
     for (int i = 0; i < value.length(); i++) {
       char c = value.charAt(i);
-      if (c == QUOTE) {
-        quoted.append(QUOTE);
+      if (c == CSV_QUOTE) {
+        quoted.append(CSV_QUOTE);
       }
       quoted.append(c);
     }
-    quoted.append(QUOTE);
+    quoted.append(CSV_QUOTE);
     return quoted.toString();
   }
 

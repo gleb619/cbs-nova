@@ -1,5 +1,8 @@
 package cbs.nova.starter.core.recorder;
 
+import static cbs.nova.starter.core.StarterConstants.EXTERNAL_CALL_MAX_CALLS_PER_RUN;
+import static cbs.nova.starter.core.StarterConstants.EXTERNAL_CALL_RECORDER_CAPACITY;
+
 import cbs.nova.dsl.logging.DryRunLoggingContext;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.event.DslExecutionEvent.DslExternalCallEvent;
@@ -28,18 +31,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * insertion-order capacity bound so an orphaned entry cannot leak memory forever.
  */
 public final class RunIdKeyedExternalCallRecorder implements ExternalCallRecorder {
-
-  /**
-   * Maximum number of distinct runs retained. A manual capacity bound is sufficient at this scale
-   * while avoiding an extra caching dependency.
-   */
-  private static final int CAPACITY = StarterConstants.EXTERNAL_CALL_RECORDER_CAPACITY;
-
-  /**
-   * Maximum number of external calls retained per run; when exceeded the oldest entries are dropped
-   * so a single run cannot grow its history without bound.
-   */
-  private static final int MAX_CALLS_PER_RUN = StarterConstants.EXTERNAL_CALL_MAX_CALLS_PER_RUN;
 
   private final Map<String, List<ExternalCall>> callsByRunId = new ConcurrentHashMap<>();
   private final Deque<String> runOrder = new ConcurrentLinkedDeque<>();
@@ -118,7 +109,7 @@ public final class RunIdKeyedExternalCallRecorder implements ExternalCallRecorde
           firstForRun.set(true);
         }
         updated.add(call);
-        if (updated.size() > MAX_CALLS_PER_RUN) {
+        if (updated.size() > EXTERNAL_CALL_MAX_CALLS_PER_RUN) {
           updated.remove(0);
         }
         return updated;
@@ -156,7 +147,7 @@ public final class RunIdKeyedExternalCallRecorder implements ExternalCallRecorde
   }
 
   private void evictOverflowingRuns() {
-    while (trackedRuns.get() > CAPACITY) {
+    while (trackedRuns.get() > EXTERNAL_CALL_RECORDER_CAPACITY) {
       String oldest = runOrder.pollFirst();
       if (oldest == null) {
         return;

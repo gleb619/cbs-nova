@@ -1,5 +1,9 @@
 package cbs.nova.starter.helper;
 
+import static cbs.nova.starter.core.StarterConstants.OTEL_INSTRUMENTATION_NAME;
+import static cbs.nova.starter.core.StarterConstants.TRACEPARENT_FLAGS_SAMPLED;
+import static cbs.nova.starter.core.StarterConstants.TRACEPARENT_VERSION;
+
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
@@ -69,13 +73,7 @@ import org.jspecify.annotations.NonNull;
 @SpringHelper(name = "otel")
 public class OpenTelemetryHelper implements Executable<OtelIn, OtelOut> {
 
-  private static final String INSTRUMENTATION_NAME = StarterConstants.OTEL_INSTRUMENTATION_NAME;
-  private static final String TRACEPARENT_VERSION = StarterConstants.TRACEPARENT_VERSION;
-  private static final String TRACEPARENT_FLAGS_SAMPLED = StarterConstants.TRACEPARENT_FLAGS_SAMPLED;
   private static final Set<String> STATUS_CODES = Set.of("OK", "ERROR", "UNSET");
-  private static final Set<String> MODES = Set.of(
-          "span", "endspan", "addevent", "setbaggage", "getbaggage",
-          "injectcontext", "extractcontext");
 
   private final Tracer tracer;
   private final TextMapPropagator propagator;
@@ -95,7 +93,7 @@ public class OpenTelemetryHelper implements Executable<OtelIn, OtelOut> {
   private final Map<String, String> baggageStore = new ConcurrentHashMap<>();
 
   public OpenTelemetryHelper(OpenTelemetry openTelemetry) {
-    this.tracer = openTelemetry.getTracer(INSTRUMENTATION_NAME);
+    this.tracer = openTelemetry.getTracer(OTEL_INSTRUMENTATION_NAME);
     this.propagator = openTelemetry.getPropagators().getTextMapPropagator();
   }
 

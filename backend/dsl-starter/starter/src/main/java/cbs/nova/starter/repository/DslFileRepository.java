@@ -1,5 +1,7 @@
 package cbs.nova.starter.repository;
 
+import static cbs.nova.starter.core.StarterConstants.JAVA_FILE_SUFFIX;
+
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.DslFileModels.FileEntry;
 import lombok.extern.slf4j.Slf4j;
@@ -20,8 +22,6 @@ import java.util.stream.Stream;
 @Slf4j
 @Repository
 public class DslFileRepository {
-
-  private static final String JAVA_SUFFIX = StarterConstants.JAVA_FILE_SUFFIX;
 
   public String read(Path root, String relativePath) throws IOException {
     Path file = resolve(root, relativePath);
@@ -68,7 +68,7 @@ public class DslFileRepository {
     try (Stream<Path> stream = Files.walk(root)) {
       stream
               .filter(Files::isRegularFile)
-              .filter(p -> p.getFileName().toString().endsWith(JAVA_SUFFIX))
+              .filter(p -> p.getFileName().toString().endsWith(JAVA_FILE_SUFFIX))
               .filter(p -> prefix == null || prefix.isBlank()
                       || toRelative(root, p).startsWith(prefix))
               .forEach(p -> entries.add(toEntry(root, p)));
