@@ -70,8 +70,8 @@ class WebhookDispatcherTest {
   }
 
   private WebhookDispatcher newDispatcher(WebhookProperties properties) {
-    return new WebhookDispatcher(properties, objectMapper, executor, Optional.empty(),
-            httpClient(properties));
+    return new WebhookDispatcher(properties, objectMapper, executor, httpClient(properties),
+            Optional.empty());
   }
 
   private HttpClient httpClient(WebhookProperties properties) {
@@ -285,8 +285,8 @@ class WebhookDispatcherTest {
 
   private WebhookDispatcher newDispatcher(WebhookProperties properties,
           WebhookDeliveryRecordRepository deliveryRepository) {
-    return new WebhookDispatcher(properties, objectMapper, executor,
-            Optional.ofNullable(deliveryRepository), httpClient(properties));
+    return new WebhookDispatcher(properties, objectMapper, executor, httpClient(properties),
+            Optional.ofNullable(deliveryRepository));
   }
   private WebhookProperties enabledProperties(WebhookSubscription... subscriptions) {
     WebhookProperties properties = new WebhookProperties();

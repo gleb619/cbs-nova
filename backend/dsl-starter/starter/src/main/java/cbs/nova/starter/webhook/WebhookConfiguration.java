@@ -18,10 +18,10 @@ public class WebhookConfiguration {
   @Bean
   WebhookDispatcher webhookDispatcher(WebhookProperties properties, ObjectMapper objectMapper,
           ThreadPoolTaskExecutor cbsNovaWebhookDeliveryExecutor,
-          Optional<WebhookDeliveryRecordRepository> deliveryRecordRepository,
-          HttpClient webhookHttpClient) {
+          HttpClient webhookHttpClient,
+          Optional<WebhookDeliveryRecordRepository> deliveryRecordRepository) {
     return new WebhookDispatcher(properties, objectMapper, cbsNovaWebhookDeliveryExecutor,
-            deliveryRecordRepository, webhookHttpClient);
+            webhookHttpClient, deliveryRecordRepository);
   }
 
   @Bean

@@ -77,8 +77,8 @@ class WebhookDispatcherPersistenceTest {
     HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(properties.getTimeout())
             .build();
-    return new WebhookDispatcher(properties, objectMapper, executor, Optional.of(repository),
-            httpClient);
+    return new WebhookDispatcher(properties, objectMapper, executor, httpClient,
+            Optional.of(repository));
   }
 
   private String baseUrl() {

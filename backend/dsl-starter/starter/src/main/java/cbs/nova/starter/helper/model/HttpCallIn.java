@@ -28,14 +28,43 @@ import java.util.Map;
  * </ul>
  */
 @AllArgsConstructor
-public record HttpCallIn(
-        String url,
-        String method,
-        @Nullable Map<String, String> headers,
-        @Nullable String body,
-        @Nullable Long timeoutMillis,
-        @Nullable RedirectPolicy followRedirects,
-        @Nullable List<Integer> validStatuses) {
+public final class HttpCallIn {
+
+  private final String url;
+  private final String method;
+  private final @Nullable Map<String, String> headers;
+  private final @Nullable String body;
+  private final @Nullable Long timeoutMillis;
+  private final @Nullable RedirectPolicy followRedirects;
+  private final @Nullable List<Integer> validStatuses;
+
+  public String url() {
+    return url;
+  }
+
+  public String method() {
+    return method;
+  }
+
+  public @Nullable Map<String, String> headers() {
+    return headers;
+  }
+
+  public @Nullable String body() {
+    return body;
+  }
+
+  public @Nullable Long timeoutMillis() {
+    return timeoutMillis;
+  }
+
+  public @Nullable RedirectPolicy followRedirects() {
+    return followRedirects;
+  }
+
+  public @Nullable List<Integer> validStatuses() {
+    return validStatuses;
+  }
 
   /** Convenience factory for the common GET case. */
   public static HttpCallIn get(String url) {

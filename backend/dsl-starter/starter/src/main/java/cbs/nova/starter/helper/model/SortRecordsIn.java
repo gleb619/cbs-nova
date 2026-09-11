@@ -7,12 +7,33 @@ import java.util.List;
 import java.util.Map;
 
 @AllArgsConstructor
-public record SortRecordsIn(
-        List<Map<String, Object>> records,
-        String field,
-        boolean ascending,
-        @Nullable String algorithm,
-        @Nullable String direction) {
+public final class SortRecordsIn {
+
+  private final List<Map<String, Object>> records;
+  private final String field;
+  private final boolean ascending;
+  private final @Nullable String algorithm;
+  private final @Nullable String direction;
+
+  public List<Map<String, Object>> records() {
+    return records;
+  }
+
+  public String field() {
+    return field;
+  }
+
+  public boolean ascending() {
+    return ascending;
+  }
+
+  public @Nullable String algorithm() {
+    return algorithm;
+  }
+
+  public @Nullable String direction() {
+    return direction;
+  }
 
   public String effectiveAlgorithm() {
     return algorithm == null || algorithm.isBlank() ? "natural" : algorithm.toLowerCase();

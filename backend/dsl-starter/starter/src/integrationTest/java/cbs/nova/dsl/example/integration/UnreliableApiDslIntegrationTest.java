@@ -182,7 +182,7 @@ class UnreliableApiDslIntegrationTest {
   void resilientTransactionSucceedsAfterTemporalRetries() {
     var service = ServiceUtil.newService(new ContextFactory());
     String runId = "unreliable-success-" + System.currentTimeMillis();
-    var apiCall = new UnreliableApiIn(runId, 3, false, null);
+    var apiCall = new UnreliableApiIn(runId, 3, false, null, null);
     var input = new UnreliableProcessIn("success", apiCall);
 
     Result<?> result = service.runProcess("UnreliableApiSuccess", input).result().join();
@@ -199,7 +199,7 @@ class UnreliableApiDslIntegrationTest {
   void fragileTransactionFailsAndProcessCompensates() {
     var tracker = tracker();
     String runId = "unreliable-compensated-" + System.currentTimeMillis();
-    var apiCall = new UnreliableApiIn(runId, 5, false, null);
+    var apiCall = new UnreliableApiIn(runId, 5, false, null, null);
     var input = new UnreliableProcessIn("compensated", apiCall);
     String markerId = "UnreliableApiCompensated-" + input.scenario();
 
@@ -215,7 +215,7 @@ class UnreliableApiDslIntegrationTest {
     var tracker = tracker();
     String runId = "unreliable-uncaught-" + System.currentTimeMillis();
     String markerId = "UnreliableApiCompensated-" + runId;
-    var apiCall = new UnreliableApiIn(runId, 5, false, null);
+    var apiCall = new UnreliableApiIn(runId, 5, false, null, null);
     var input = new UnreliableProcessIn("uncaught", apiCall);
 
     Result<?> result = ServiceUtil.newService(new ContextFactory())
@@ -254,7 +254,8 @@ class UnreliableApiDslIntegrationTest {
       Object body = ctx.body();
       UnreliableApiIn in;
       if (body instanceof UnreliableApiInDsl dsl) {
-        in = new UnreliableApiIn(dsl.operationId(), dsl.failCount(), dsl.jitter(), dsl.reason());
+        in = new UnreliableApiIn(dsl.operationId(), dsl.failCount(), dsl.jitter(), dsl.reason(),
+                null);
       } else {
         in = (UnreliableApiIn) body;
       }

@@ -727,7 +727,7 @@ class DslDraftResourceTest {
     stubSuccessfulCompile(client);
     when(client.saveDraft(eq("foo"), any())).thenReturn(
             new DraftResponse("foo", "Draft", "/remote/.workbench/drafts/foo.json", false,
-                    LoadResult.empty()));
+                    LoadResult.empty(), null, null));
     handler = builderDraftHandler(client);
 
     ServerResponse response = handler.save(postRequest("/api/dsl/drafts/foo/save"));
@@ -745,7 +745,7 @@ class DslDraftResourceTest {
     stubSuccessfulCompile(client);
     when(client.publishDraft(eq("foo"), any())).thenReturn(
             new DraftResponse("foo", "Published", "/remote/.workbench/published/foo.json", false,
-                    LoadResult.empty()));
+                    LoadResult.empty(), null, null));
     handler = builderDraftHandler(client);
 
     ServerResponse response = handler.publish(postRequest("/api/dsl/drafts/foo/publish"));
@@ -768,7 +768,7 @@ class DslDraftResourceTest {
             List.of(new CompileDiagnostic("Broken.java", 1L, null, "bad syntax", "error", null))));
     when(client.publishDraft(eq("foo"), any())).thenReturn(
             new DraftResponse("foo", "Published", "/remote/.workbench/published/foo.json", false,
-                    LoadResult.empty()));
+                    LoadResult.empty(), null, null));
     handler = builderDraftHandler(client);
 
     ServerResponse response = handler.publish(postRequest("/api/dsl/drafts/foo/publish"));
@@ -784,7 +784,7 @@ class DslDraftResourceTest {
   void deleteDelegatesToBuilderClient() throws Exception {
     DslBuilderClient client = mock(DslBuilderClient.class);
     when(client.deleteDraft("foo")).thenReturn(
-            new DraftResponse("foo", "Deleted", null, false, LoadResult.empty()));
+            new DraftResponse("foo", "Deleted", null, false, LoadResult.empty(), null, null));
     handler = builderDraftHandler(client);
 
     ServerResponse response = handler.delete(deleteRequest("foo", "/api/dsl/drafts/foo"));

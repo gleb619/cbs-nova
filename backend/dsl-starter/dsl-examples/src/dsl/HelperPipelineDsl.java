@@ -26,7 +26,7 @@ List<DslObject> define() {
         List<Number> amounts = matched.stream()
             .map(r -> (Number) r.get("amount"))
             .toList();
-        var summed = ctx.runHelper("sumValues", new SumValuesIn(amounts));
+        var summed = ctx.runHelper("sumValues", new SumValuesIn(amounts, null));
         if (!summed.isSuccess()) {
           return Result.failure(summed.cause());
         }

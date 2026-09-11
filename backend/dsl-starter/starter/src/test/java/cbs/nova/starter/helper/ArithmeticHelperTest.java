@@ -19,7 +19,7 @@ class ArithmeticHelperTest {
 
   @Test
   void addsValues() {
-    var ctx = contextFactory.of(new SumValuesIn(List.of(1.0, 2.0, 3.0)),
+    var ctx = contextFactory.of(new SumValuesIn(List.of(1.0, 2.0, 3.0), null),
             ExecutionMode.PREVIEW);
     Result<SumValuesOut> result = helper.execute(ctx);
     assertThat(result.isSuccess()).isTrue();
@@ -66,13 +66,13 @@ class ArithmeticHelperTest {
 
   @Test
   void returnsZeroForEmpty() {
-    var ctx = contextFactory.of(new SumValuesIn(List.of()), ExecutionMode.PREVIEW);
+    var ctx = contextFactory.of(new SumValuesIn(List.of(), null), ExecutionMode.PREVIEW);
     assertThat(helper.execute(ctx).value().sum()).isEqualByComparingTo(BigDecimal.ZERO);
   }
 
   @Test
   void returnsZeroForNullList() {
-    var ctx = contextFactory.of(new SumValuesIn(null), ExecutionMode.PREVIEW);
+    var ctx = contextFactory.of(new SumValuesIn(null, null), ExecutionMode.PREVIEW);
     assertThat(helper.execute(ctx).value().sum()).isEqualByComparingTo(BigDecimal.ZERO);
   }
 }

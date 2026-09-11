@@ -201,7 +201,7 @@ class DslDefinitionBundleServiceTest {
     DefinitionBundle bundle = new DefinitionBundle(
             StarterConstants.BUNDLE_FORMAT_VERSION, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")));
+                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")), null);
 
     assertThatThrownBy(() -> strict.verifyDigest(bundle))
             .isInstanceOf(IllegalArgumentException.class)
@@ -223,7 +223,8 @@ class DslDefinitionBundleServiceTest {
                     new DefinitionBundleEntry(
                             new DraftRequest("C", "helper", "Published", "v1", "q"), "published"),
                     new DefinitionBundleEntry(
-                            new DraftRequest("", "process", "Published", "v1", "q"), "published")));
+                            new DraftRequest("", "process", "Published", "v1", "q"), "published")),
+            null);
 
     List<ImportEntryResult> results = service.diffForImport(dir, bundle);
 
