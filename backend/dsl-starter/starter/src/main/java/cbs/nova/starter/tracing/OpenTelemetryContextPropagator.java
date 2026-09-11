@@ -1,5 +1,6 @@
 package cbs.nova.starter.tracing;
 
+import cbs.nova.starter.core.StarterConstants;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.propagation.TextMapGetter;
@@ -22,8 +23,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class OpenTelemetryContextPropagator implements ContextPropagator {
 
-  private static final String NAME = "cbs-nova-otel-trace";
-
   private final OpenTelemetry openTelemetry;
 
   private final TextMapSetter<Map<String, String>> setter = Map::put;
@@ -42,7 +41,7 @@ public class OpenTelemetryContextPropagator implements ContextPropagator {
 
   @Override
   public String getName() {
-    return NAME;
+    return StarterConstants.OTEL_PROPAGATOR_NAME;
   }
 
   @Override

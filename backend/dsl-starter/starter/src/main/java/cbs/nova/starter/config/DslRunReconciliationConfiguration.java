@@ -14,6 +14,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.Clock;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -48,7 +49,8 @@ public class DslRunReconciliationConfiguration {
             properties.getScanInterval(),
             properties.getGracePeriod(),
             properties.getBatchSize(),
-            executor);
+            executor,
+            Clock.systemUTC());
   }
 
   @Bean

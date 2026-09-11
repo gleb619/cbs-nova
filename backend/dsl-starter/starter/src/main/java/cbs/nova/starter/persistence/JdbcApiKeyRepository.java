@@ -1,5 +1,6 @@
 package cbs.nova.starter.persistence;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.entity.DslApiKeyEntity;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -23,7 +24,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 @RequiredArgsConstructor
 public class JdbcApiKeyRepository {
 
-  private static final String COLUMNS = "id, label, key_hash, key_prefix, created_at, revoked_at, last_used_at";
+  private static final String COLUMNS = StarterConstants.DSL_API_KEY_COLUMNS;
 
   private static final RowMapper<DslApiKeyEntity> ROW_MAPPER = (rs, rowNum) -> new DslApiKeyEntity(
           rs.getLong("id"),

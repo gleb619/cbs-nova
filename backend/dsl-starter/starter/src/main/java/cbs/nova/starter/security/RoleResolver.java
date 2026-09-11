@@ -1,5 +1,6 @@
 package cbs.nova.starter.security;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.web.ApiKeyAuthFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Collection;
@@ -13,7 +14,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-import org.springframework.stereotype.Component;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Resolves the highest {@link Role} of the caller for a given {@link HttpServletRequest}.
@@ -27,10 +28,12 @@ import org.springframework.stereotype.Component;
  * source of truth for "did the caller present a valid API key?" and the resolver mirrors that by
  * reading the header directly.</li>
  * <li><b>OIDC JWT</b>: when a {@link JwtAuthenticationToken} is present in the
- * {@link SecurityContextHolder}, the configured claim (see {@link #setClaimName(String)}) is read.
- * If the configured claim name is {@code "roles"} we also try {@code "scope"} / {@code "scp"}
- * (OAuth 2.0 standard, space-delimited) and merge the two sources so either convention works out of
- * the box. Values are matched case-insensitively against the {@link Role} names.</li>
+ * {@link SecurityContextHolder}, the configured claim (supplied by
+ * {@link cbs.nova.starter.config.RbacFilterConfiguration}; blank falls back to
+ * {@link StarterConstants#DEFAULT_CLAIM_NAME}) is read. If the configured claim name is
+ * {@code "roles"} we also try {@code "scope"} / {@code "scp"} (OAuth 2.0 standard, space-delimited)
+ * and merge the two sources so either convention works out of the box. Values are matched
+ * case-insensitively against the {@link Role} names.</li>
  * <li><b>No authentication</b>: anonymous or null → {@link Role#VIEWER}.</li>
  * </ol>
  *
@@ -41,24 +44,15 @@ import org.springframework.stereotype.Component;
  * authenticated at the outer security boundary (or the request to be anonymous-but-permitted when
  * RBAC is off).
  */
-@Component
+@RequiredArgsConstructor
 public class RoleResolver {
 
-  public static final String DEFAULT_CLAIM_NAME = "roles";
   /** OAuth 2.0 standard scope claim, space-delimited per RFC 6749 §3.3. */
   private static final String SCOPE_CLAIM = "scope";
   /** Alternative scope claim used by some IdPs (Azure AD, Auth0). */
   private static final String SCP_CLAIM = "scp";
 
   private final String claimName;
-
-  public RoleResolver() {
-    this(DEFAULT_CLAIM_NAME);
-  }
-
-  public RoleResolver(String claimName) {
-    this.claimName = claimName == null || claimName.isBlank() ? DEFAULT_CLAIM_NAME : claimName;
-  }
 
   /**
    * Resolve the caller's role for the given request.
@@ -74,7 +68,7 @@ public class RoleResolver {
     if (request == null) {
       return false;
     }
-    String header = request.getHeader(ApiKeyAuthFilter.API_KEY_HEADER);
+    String header = request.getHeader(StarterConstants.API_KEY_HEADER);
     return header != null && !header.isBlank();
   }
 
@@ -97,9 +91,9 @@ public class RoleResolver {
       // Only fall back to scope-style claims when the configured claim is the default "roles",
       // because a custom claim like "cbs_roles" is intentionally exclusive and shouldn't pick up
       // unrelated "scope" values from an OIDC provider.
-      if (DEFAULT_CLAIM_NAME.equals(claimName)) {
-        addClaim(values, jwt, SCOPE_CLAIM);
-        addClaim(values, jwt, SCP_CLAIM);
+      if (StarterConstants.DEFAULT_CLAIM_NAME.equals(claimName)) {
+        addClaim(values, jwt, StarterConstants.OAUTH_SCOPE_CLAIM);
+        addClaim(values, jwt, StarterConstants.OAUTH_SCP_CLAIM);
       }
     }
     // Also accept Spring Security GrantedAuthority strings so phase-2 mappers (e.g. a

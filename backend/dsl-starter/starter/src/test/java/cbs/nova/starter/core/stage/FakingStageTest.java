@@ -1,5 +1,6 @@
 package cbs.nova.starter.core.stage;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Context;
@@ -25,7 +26,7 @@ class FakingStageTest {
 
   @Test
   void registersConfigByRunIdDuringProceedAndRemovesInFinally() {
-    var registry = new RunScopedFakeConfig();
+    var registry = new RunScopedFakeConfig(Caffeine.newBuilder().build());
     var config = FakeConfig.of(new FakeEntry("helper", "httpCall", "fake"));
     var stage = new FakingStage(new CbsNovaFakesProperties(true, config), registry);
     var pipeContext = newContext("run-1");
@@ -44,7 +45,7 @@ class FakingStageTest {
 
   @Test
   void disabledDoesNotRegisterConfig() {
-    var registry = new RunScopedFakeConfig();
+    var registry = new RunScopedFakeConfig(Caffeine.newBuilder().build());
     var config = FakeConfig.of(new FakeEntry("helper", "httpCall", "fake"));
     var stage = new FakingStage(new CbsNovaFakesProperties(false, config), registry);
     var pipeContext = newContext("run-2");
@@ -63,7 +64,7 @@ class FakingStageTest {
 
   @Test
   void removesConfigEvenWhenProceedThrows() {
-    var registry = new RunScopedFakeConfig();
+    var registry = new RunScopedFakeConfig(Caffeine.newBuilder().build());
     var config = FakeConfig.of(new FakeEntry("helper", "httpCall", "fake"));
     var stage = new FakingStage(new CbsNovaFakesProperties(true, config), registry);
     var pipeContext = newContext("run-3");

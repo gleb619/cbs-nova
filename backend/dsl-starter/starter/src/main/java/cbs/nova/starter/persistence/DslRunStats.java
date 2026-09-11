@@ -1,5 +1,7 @@
 package cbs.nova.starter.persistence;
 
+import cbs.nova.starter.core.StarterConstants;
+
 import java.util.List;
 import java.util.Map;
 
@@ -8,8 +10,8 @@ import java.util.Map;
  *
  * <p>
  * The dashboard reads these instead of counting rows client-side because the executions list
- * endpoint is paginated and clamped by {@code MAX_LIMIT}, so any client-side "total" derived from a
- * list page is wrong by construction.
+ * endpoint is paginated and clamped by {@link StarterConstants#MAX_LIMIT}, so any client-side
+ * "total" derived from a list page is wrong by construction.
  *
  * <p>
  * All counters describe whatever rows currently exist in the store. The retention purge (T276)

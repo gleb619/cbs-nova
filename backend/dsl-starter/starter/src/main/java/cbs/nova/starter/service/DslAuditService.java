@@ -1,5 +1,6 @@
 package cbs.nova.starter.service;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.entity.DslAuditEntity;
 import cbs.nova.starter.persistence.DslAuditRepository;
 import java.time.Instant;
@@ -24,10 +25,7 @@ import tools.jackson.databind.ObjectMapper;
 @RequiredArgsConstructor
 public class DslAuditService {
 
-  public static final String OUTCOME_SUCCESS = "SUCCESS";
-  public static final String OUTCOME_FAILURE = "FAILURE";
-
-  private static final String ANONYMOUS = "anonymous";
+  private static final String ANONYMOUS = StarterConstants.ANONYMOUS_PRINCIPAL;
 
   private final DslAuditRepository repository;
   private final ObjectMapper objectMapper;
@@ -74,7 +72,7 @@ public class DslAuditService {
   public static @Nullable String correlationIdOf(ServerRequest request) {
     try {
       return CorrelationId.validated(
-              request.headers().firstHeader(CorrelationId.CORRELATION_ID_HEADER));
+              request.headers().firstHeader(StarterConstants.CORRELATION_ID_HEADER));
     } catch (IllegalArgumentException e) {
       return null;
     }

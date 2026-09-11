@@ -4,6 +4,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.annotation.Helper;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.helper.model.FileLatchIn;
 import cbs.nova.starter.helper.model.FileLatchOut;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -23,13 +24,9 @@ public class FileLatchHelper implements Executable<FileLatchIn, FileLatchOut> {
 
   // Tunable via system properties because the helper exposes a static API; per-cache
   // configuration through CbsNovaCacheProperties is reserved for Spring-managed instances.
-  private static final long WATCHER_POLL_MILLIS = 50L;
-  private static final Duration MONITORS_TTL = Duration.ofMinutes(10);
-  private static final long MONITORS_MAX_SIZE = 10_000L;
-
   private static final Cache<Path, Object> MONITORS = Caffeine.newBuilder()
-          .expireAfterAccess(MONITORS_TTL)
-          .maximumSize(MONITORS_MAX_SIZE)
+          .expireAfterAccess(StarterConstants.FILE_LATCH_MONITORS_TTL)
+          .maximumSize(StarterConstants.FILE_LATCH_MONITORS_MAX_SIZE)
           .build();
   private static final AtomicReference<Thread> WATCHER = new AtomicReference<>();
 
@@ -69,7 +66,7 @@ public class FileLatchHelper implements Executable<FileLatchIn, FileLatchOut> {
     ensureWatcher();
     synchronized (monitor) {
       if (!Files.exists(release)) {
-        monitor.wait(WATCHER_POLL_MILLIS);
+        monitor.wait(StarterConstants.FILE_LATCH_WATCHER_POLL_MILLIS);
       }
     }
   }
@@ -100,7 +97,7 @@ public class FileLatchHelper implements Executable<FileLatchIn, FileLatchOut> {
         }
       }
       try {
-        Thread.sleep(WATCHER_POLL_MILLIS);
+        Thread.sleep(StarterConstants.FILE_LATCH_WATCHER_POLL_MILLIS);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         return;

@@ -2,6 +2,7 @@ package cbs.nova.starter.maintenance;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.maintenance.MaintenanceTask;
 import cbs.nova.starter.maintenance.MaintenanceResult;
 import cbs.nova.starter.maintenance.DslMaintenanceService;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,21 +54,21 @@ class DslMaintenanceServiceTest {
 
     service.runOnce();
 
-    Timer alphaTimer = meterRegistry.find(DslMaintenanceService.TASK_DURATION_TIMER)
-            .tag(DslMaintenanceService.TASK_TAG, "alpha").timer();
+    Timer alphaTimer = meterRegistry.find(StarterConstants.TASK_DURATION_TIMER)
+            .tag(StarterConstants.TASK_TAG, "alpha").timer();
     assertThat(alphaTimer).isNotNull();
     assertThat(alphaTimer.count()).isEqualTo(1L);
-    Counter alphaPurged = meterRegistry.find(DslMaintenanceService.TASK_PURGED_COUNTER)
-            .tag(DslMaintenanceService.TASK_TAG, "alpha").counter();
+    Counter alphaPurged = meterRegistry.find(StarterConstants.TASK_PURGED_COUNTER)
+            .tag(StarterConstants.TASK_TAG, "alpha").counter();
     assertThat(alphaPurged).isNotNull();
     assertThat(alphaPurged.count()).isEqualTo(7.0);
 
-    Timer zetaTimer = meterRegistry.find(DslMaintenanceService.TASK_DURATION_TIMER)
-            .tag(DslMaintenanceService.TASK_TAG, "zeta").timer();
+    Timer zetaTimer = meterRegistry.find(StarterConstants.TASK_DURATION_TIMER)
+            .tag(StarterConstants.TASK_TAG, "zeta").timer();
     assertThat(zetaTimer).isNotNull();
     assertThat(zetaTimer.count()).isEqualTo(1L);
-    assertThat(meterRegistry.find(DslMaintenanceService.TASK_PURGED_COUNTER)
-            .tag(DslMaintenanceService.TASK_TAG, "zeta").counter()).isNull();
+    assertThat(meterRegistry.find(StarterConstants.TASK_PURGED_COUNTER)
+            .tag(StarterConstants.TASK_TAG, "zeta").counter()).isNull();
   }
 
   @Test
@@ -78,10 +80,10 @@ class DslMaintenanceServiceTest {
 
     service.runOnce();
 
-    assertThat(meterRegistry.find(DslMaintenanceService.TASK_DURATION_TIMER)
-            .tag(DslMaintenanceService.TASK_TAG, "alpha").timer()).isNotNull();
-    assertThat(meterRegistry.find(DslMaintenanceService.TASK_DURATION_TIMER)
-            .tag(DslMaintenanceService.TASK_TAG, "beta").timer()).isNull();
+    assertThat(meterRegistry.find(StarterConstants.TASK_DURATION_TIMER)
+            .tag(StarterConstants.TASK_TAG, "alpha").timer()).isNotNull();
+    assertThat(meterRegistry.find(StarterConstants.TASK_DURATION_TIMER)
+            .tag(StarterConstants.TASK_TAG, "beta").timer()).isNull();
   }
 
   @Test
@@ -113,11 +115,11 @@ class DslMaintenanceServiceTest {
     service.runOnce();
 
     // alpha ran even though thrower failed
-    assertThat(meterRegistry.find(DslMaintenanceService.TASK_DURATION_TIMER)
-            .tag(DslMaintenanceService.TASK_TAG, "alpha").timer()).isNotNull();
+    assertThat(meterRegistry.find(StarterConstants.TASK_DURATION_TIMER)
+            .tag(StarterConstants.TASK_TAG, "alpha").timer()).isNotNull();
     // thrower still recorded its duration (failure path records timing)
-    assertThat(meterRegistry.find(DslMaintenanceService.TASK_DURATION_TIMER)
-            .tag(DslMaintenanceService.TASK_TAG, "thrower").timer()).isNotNull();
+    assertThat(meterRegistry.find(StarterConstants.TASK_DURATION_TIMER)
+            .tag(StarterConstants.TASK_TAG, "thrower").timer()).isNotNull();
   }
 
   @Test
@@ -159,7 +161,10 @@ class DslMaintenanceServiceTest {
           ScheduledExecutorService exec,
           SimpleMeterRegistry registry) {
     Map<String, Boolean> copy = new LinkedHashMap<>(enabled);
-    return new DslMaintenanceService(tasks, copy, Duration.ofMinutes(5), exec, registry);
+    List<MaintenanceTask> sorted = tasks.stream()
+            .sorted(Comparator.comparing(MaintenanceTask::name))
+            .toList();
+    return new DslMaintenanceService(sorted, copy, Duration.ofMinutes(5), exec, registry);
   }
 
   /** A test task that reports a configurable purged count and zero duration. */

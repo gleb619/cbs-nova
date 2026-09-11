@@ -9,6 +9,7 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.PreviewMetricsSnapshot;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import cbs.nova.starter.core.recorder.ExternalCall;
@@ -41,8 +42,8 @@ class MetricsStageTest {
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("downstream");
     assertThat(pipeContext.getAttribute("metrics", PreviewMetricsSnapshot.class)).isNull();
-    assertThat(registry.find(MetricsStage.CALL_COUNTER).counters()).isEmpty();
-    assertThat(registry.find(MetricsStage.DURATION_TIMER).timers()).isEmpty();
+    assertThat(registry.find(StarterConstants.CALL_COUNTER).counters()).isEmpty();
+    assertThat(registry.find(StarterConstants.DURATION_TIMER).timers()).isEmpty();
   }
 
   @Test
@@ -70,15 +71,15 @@ class MetricsStageTest {
     assertThat(snapshot.callCounts()).containsEntry(CallKind.TRANSACTION, 1);
     assertThat(snapshot.callCounts()).containsEntry(CallKind.HELPER, 1);
 
-    Counter process = registry.get(MetricsStage.CALL_COUNTER).tag("kind", "PROCESS").counter();
-    Counter transaction = registry.get(MetricsStage.CALL_COUNTER).tag("kind", "TRANSACTION")
+    Counter process = registry.get(StarterConstants.CALL_COUNTER).tag("kind", "PROCESS").counter();
+    Counter transaction = registry.get(StarterConstants.CALL_COUNTER).tag("kind", "TRANSACTION")
             .counter();
-    Counter helper = registry.get(MetricsStage.CALL_COUNTER).tag("kind", "HELPER").counter();
+    Counter helper = registry.get(StarterConstants.CALL_COUNTER).tag("kind", "HELPER").counter();
     assertThat(process.count()).isEqualTo(1.0);
     assertThat(transaction.count()).isEqualTo(1.0);
     assertThat(helper.count()).isEqualTo(1.0);
 
-    Timer timer = registry.get(MetricsStage.DURATION_TIMER)
+    Timer timer = registry.get(StarterConstants.DURATION_TIMER)
             .tag("mode", "PREVIEW")
             .tag("process", "Ping")
             .timer();
@@ -112,9 +113,9 @@ class MetricsStageTest {
             .containsEntry(ExternalCallRecorder.TYPE_DATABASE, 2)
             .containsEntry(ExternalCallRecorder.TYPE_HTTP, 1);
 
-    Counter database = registry.get(MetricsStage.EXTERNAL_CALL_COUNTER)
+    Counter database = registry.get(StarterConstants.EXTERNAL_CALL_COUNTER)
             .tag("type", ExternalCallRecorder.TYPE_DATABASE).counter();
-    Counter http = registry.get(MetricsStage.EXTERNAL_CALL_COUNTER)
+    Counter http = registry.get(StarterConstants.EXTERNAL_CALL_COUNTER)
             .tag("type", ExternalCallRecorder.TYPE_HTTP).counter();
     assertThat(database.count()).isEqualTo(2.0);
     assertThat(http.count()).isEqualTo(1.0);
@@ -144,7 +145,7 @@ class MetricsStageTest {
     assertThat(snapshot).isNotNull();
     assertThat(snapshot.callCounts()).containsEntry(CallKind.PROCESS, 1);
 
-    Timer timer = registry.get(MetricsStage.DURATION_TIMER)
+    Timer timer = registry.get(StarterConstants.DURATION_TIMER)
             .tag("mode", "PREVIEW")
             .tag("process", "Ping")
             .timer();
@@ -170,9 +171,9 @@ class MetricsStageTest {
     assertThat(snapshot).isNotNull();
     assertThat(snapshot.callCounts()).isEmpty();
     assertThat(snapshot.externalCallCounts()).isEmpty();
-    assertThat(registry.find(MetricsStage.CALL_COUNTER).counters()).isEmpty();
-    assertThat(registry.find(MetricsStage.EXTERNAL_CALL_COUNTER).counters()).isEmpty();
-    assertThat(registry.find(MetricsStage.DURATION_TIMER).timer()).isNotNull();
+    assertThat(registry.find(StarterConstants.CALL_COUNTER).counters()).isEmpty();
+    assertThat(registry.find(StarterConstants.EXTERNAL_CALL_COUNTER).counters()).isEmpty();
+    assertThat(registry.find(StarterConstants.DURATION_TIMER).timer()).isNotNull();
   }
 
   @Test
@@ -195,7 +196,7 @@ class MetricsStageTest {
     assertThat(snapshot).isNotNull();
     assertThat(snapshot.callCounts()).containsEntry(CallKind.PROCESS, 1);
 
-    Timer timer = registry.get(MetricsStage.DURATION_TIMER)
+    Timer timer = registry.get(StarterConstants.DURATION_TIMER)
             .tag("mode", "EXPLAIN")
             .tag("process", "Ping")
             .timer();

@@ -4,7 +4,7 @@ import cbs.nova.dsl.ExecutionListener;
 import cbs.nova.dsl.transaction.TransactionExecution;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
-import cbs.nova.starter.web.RequestIdFilter;
+import cbs.nova.starter.core.StarterConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
@@ -88,11 +88,11 @@ public final class LoggingExecutionListener implements ExecutionListener {
       action.run();
       return;
     }
-    MDC.put(RequestIdFilter.REQUEST_ID_MDC_KEY, runId);
+    MDC.put(StarterConstants.REQUEST_ID_MDC_KEY, runId);
     try {
       action.run();
     } finally {
-      MDC.remove(RequestIdFilter.REQUEST_ID_MDC_KEY);
+      MDC.remove(StarterConstants.REQUEST_ID_MDC_KEY);
     }
   }
 

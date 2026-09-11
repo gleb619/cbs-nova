@@ -1,5 +1,6 @@
 package cbs.nova.starter.persistence;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.entity.DslDefinitionTestEntity;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -22,7 +23,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @RequiredArgsConstructor
 public class DslDefinitionTestRepository {
 
-  private static final String COLUMNS = "id, definition_name, case_name, input, expected_output, created_at, updated_at";
+  private static final String COLUMNS = StarterConstants.DSL_DEFINITION_TEST_COLUMNS;
 
   private static final RowMapper<DslDefinitionTestEntity> ROW_MAPPER = (rs,
           rowNum) -> new DslDefinitionTestEntity(

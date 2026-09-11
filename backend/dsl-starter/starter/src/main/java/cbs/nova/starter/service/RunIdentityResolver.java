@@ -11,8 +11,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 @Component
 public class RunIdentityResolver {
 
-  public static final String SYSTEM = "system";
-
   public @Nullable String resolve() {
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {

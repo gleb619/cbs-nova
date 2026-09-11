@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.service.DslRunReconciliationService;
 import org.junit.jupiter.api.Test;
 
@@ -15,7 +16,7 @@ class DslRunReconciliationMaintenanceTaskTest {
 
     MaintenanceTask task = new DslRunReconciliationMaintenanceTask(service);
 
-    assertThat(task.name()).isEqualTo(DslRunReconciliationMaintenanceTask.NAME);
+    assertThat(task.name()).isEqualTo(StarterConstants.ORPHANS_TASK_NAME);
     MaintenanceResult result = task.run();
     assertThat(result.purged()).isZero();
     assertThat(result.duration()).isNotNull();

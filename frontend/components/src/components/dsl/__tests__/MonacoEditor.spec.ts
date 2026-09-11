@@ -1,36 +1,57 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const changeHandlers: Array<() => void> = []
-const blurHandlers: Array<() => void> = []
+const {
+  changeHandlers,
+  blurHandlers,
+  editorInstance,
+  create,
+  setModelLanguage,
+  setModelMarkers,
+  registerCompletionItemProvider,
+} = vi.hoisted(() => {
+  const changeHandlers: Array<() => void> = []
+  const blurHandlers: Array<() => void> = []
 
-const sharedModel = { dispose: vi.fn() }
+  const sharedModel = { dispose: vi.fn() }
 
-const editorInstance = {
-  getValue: vi.fn(() => 'current'),
-  setValue: vi.fn(),
-  updateOptions: vi.fn(),
-  focus: vi.fn(),
-  dispose: vi.fn(),
-  getModel: vi.fn(() => sharedModel),
-  onDidChangeModelContent: vi.fn((cb: () => void) => changeHandlers.push(cb)),
-  onDidBlurEditorText: vi.fn((cb: () => void) => blurHandlers.push(cb)),
-  revealLineInCenter: vi.fn(),
-  setPosition: vi.fn(),
-  getSelection: vi.fn(() => ({
-    startLineNumber: 2,
-    startColumn: 3,
-    endLineNumber: 2,
-    endColumn: 3,
-  })),
-  getPosition: vi.fn(() => ({ lineNumber: 5, column: 7 })),
-  executeEdits: vi.fn(),
-}
+  const editorInstance = {
+    getValue: vi.fn(() => 'current'),
+    setValue: vi.fn(),
+    updateOptions: vi.fn(),
+    focus: vi.fn(),
+    dispose: vi.fn(),
+    getModel: vi.fn(() => sharedModel),
+    onDidChangeModelContent: vi.fn((cb: () => void) => changeHandlers.push(cb)),
+    onDidBlurEditorText: vi.fn((cb: () => void) => blurHandlers.push(cb)),
+    revealLineInCenter: vi.fn(),
+    setPosition: vi.fn(),
+    getSelection: vi.fn(() => ({
+      startLineNumber: 2,
+      startColumn: 3,
+      endLineNumber: 2,
+      endColumn: 3,
+    })),
+    getPosition: vi.fn(() => ({ lineNumber: 5, column: 7 })),
+    executeEdits: vi.fn(),
+  }
 
-const create = vi.fn(() => editorInstance)
-const setModelLanguage = vi.fn()
-const setModelMarkers = vi.fn()
-const registerCompletionItemProvider = vi.fn(() => ({ dispose: vi.fn() }))
+  const create = vi.fn(() => editorInstance)
+  const setModelLanguage = vi.fn()
+  const setModelMarkers = vi.fn()
+  const registerCompletionItemProvider = vi.fn(() => ({ dispose: vi.fn() }))
+
+  return {
+    changeHandlers,
+    blurHandlers,
+    sharedModel,
+    editorInstance,
+    create,
+    setModelLanguage,
+    setModelMarkers,
+    registerCompletionItemProvider,
+  }
+})
 
 vi.mock('monaco-editor', () => ({
   editor: {
@@ -47,7 +68,11 @@ vi.mock('monaco-editor', () => ({
 
 import MonacoEditor from '../MonacoEditor.vue'
 
-const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
+const flush = async () => {
+  await vi.waitFor(() => {
+    if (create.mock.calls.length === 0) throw new Error('editor not created yet')
+  })
+}
 
 describe('MonacoEditor', () => {
   beforeEach(() => {
@@ -105,6 +130,7 @@ describe('MonacoEditor', () => {
     await flush()
 
     wrapper.unmount()
+    await flush()
 
     expect(editorInstance.dispose).toHaveBeenCalled()
   })

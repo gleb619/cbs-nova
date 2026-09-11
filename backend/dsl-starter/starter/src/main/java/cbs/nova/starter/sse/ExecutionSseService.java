@@ -1,5 +1,6 @@
 package cbs.nova.starter.sse;
 
+import cbs.nova.starter.core.StarterConstants;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Locale;
@@ -17,9 +18,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Service
 public final class ExecutionSseService implements ExecutionStatusEventPublisher {
 
-  private static final long EMITTER_TIMEOUT_MS = 0L;
-  private static final long HEARTBEAT_SECONDS = 30L;
-
   private final Map<String, SseEmitter> emitters = new ConcurrentHashMap<>();
   private final ScheduledExecutorService heartbeatExecutor = Executors
           .newSingleThreadScheduledExecutor(
@@ -30,8 +28,9 @@ public final class ExecutionSseService implements ExecutionStatusEventPublisher 
                   });
 
   public ExecutionSseService() {
-    heartbeatExecutor.scheduleAtFixedRate(this::sendHeartbeats, HEARTBEAT_SECONDS,
-            HEARTBEAT_SECONDS, TimeUnit.SECONDS);
+    heartbeatExecutor.scheduleAtFixedRate(this::sendHeartbeats,
+            StarterConstants.SSE_HEARTBEAT_SECONDS,
+            StarterConstants.SSE_HEARTBEAT_SECONDS, TimeUnit.SECONDS);
   }
 
   @Override
@@ -54,7 +53,7 @@ public final class ExecutionSseService implements ExecutionStatusEventPublisher 
   }
 
   public @NonNull SseEmitter subscribe(@NonNull String id) {
-    SseEmitter emitter = new SseEmitter(EMITTER_TIMEOUT_MS);
+    SseEmitter emitter = new SseEmitter(StarterConstants.SSE_EMITTER_TIMEOUT_MS);
     SseEmitter previous = emitters.put(id, emitter);
     if (previous != null) {
       previous.complete();

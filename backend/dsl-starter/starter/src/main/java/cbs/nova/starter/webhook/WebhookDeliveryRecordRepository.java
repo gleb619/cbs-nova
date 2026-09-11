@@ -1,5 +1,6 @@
 package cbs.nova.starter.webhook;
 
+import cbs.nova.starter.core.StarterConstants;
 import java.sql.Timestamp;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -22,10 +23,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 @RequiredArgsConstructor
 public class WebhookDeliveryRecordRepository {
 
-  private static final int URL_MAX_LENGTH = 2048;
-  private static final int LAST_ERROR_MAX_LENGTH = 1000;
-
-  private static final String COLUMNS = "id, occurred_at, subscription_id, event_type, url, status, attempts, last_error, duration_ms";
+  private static final String COLUMNS = StarterConstants.DSL_WEBHOOK_DELIVERY_COLUMNS;
 
   private static final RowMapper<WebhookDeliveryRecord> ROW_MAPPER = (rs,
           rowNum) -> new WebhookDeliveryRecord(
@@ -50,10 +48,11 @@ public class WebhookDeliveryRecordRepository {
             .addValue("occurredAt", Timestamp.from(row.occurredAt()))
             .addValue("subscriptionId", row.subscriptionId())
             .addValue("eventType", row.eventType())
-            .addValue("url", truncate(row.url(), URL_MAX_LENGTH))
+            .addValue("url", truncate(row.url(), StarterConstants.WEBHOOK_URL_MAX_LENGTH))
             .addValue("status", row.status())
             .addValue("attempts", row.attempts())
-            .addValue("lastError", truncate(row.lastError(), LAST_ERROR_MAX_LENGTH))
+            .addValue("lastError", truncate(row.lastError(),
+                    StarterConstants.WEBHOOK_LAST_ERROR_MAX_LENGTH))
             .addValue("durationMs", row.durationMs());
     jdbcTemplate.update(
             """

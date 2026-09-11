@@ -48,7 +48,8 @@ class DslExceptionMapperConfigurationTest {
         @Override
         public ResponseEntity<ErrorResponse> handle(Exception exception, WebRequest request) {
           return ResponseEntity.ok()
-                  .body(new ErrorResponse("CUSTOM", exception.getMessage(), null, null, null));
+                  .body(new ErrorResponse("CUSTOM", exception.getMessage(), null, null, null,
+                          null));
         }
       };
     }

@@ -1,7 +1,7 @@
 package cbs.nova.starter.service;
 
 import cbs.nova.dsl.history.DslRun;
-
+import cbs.nova.starter.core.StarterConstants;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
@@ -9,11 +9,9 @@ import java.util.Locale;
 
 public class ExecutionCsvWriter {
 
-  public static final int DEFAULT_MAX_INPUT_OUTPUT_CHARS = 2000;
-
-  private static final char DELIMITER = ',';
-  private static final char QUOTE = '"';
-  private static final String LINE_ENDING = "\r\n";
+  private static final char DELIMITER = StarterConstants.CSV_DELIMITER;
+  private static final char QUOTE = StarterConstants.CSV_QUOTE;
+  private static final String LINE_ENDING = StarterConstants.CSV_LINE_ENDING;
   private static final String[] HEADER = {
       "runId", "processName", "status", "mode", "triggeredBy", "correlationId",
       "startedAt", "finishedAt", "duration", "error", "input", "output"
@@ -27,7 +25,7 @@ public class ExecutionCsvWriter {
     }
 
     public static Config defaults() {
-      return new Config(DEFAULT_MAX_INPUT_OUTPUT_CHARS);
+      return new Config(StarterConstants.DEFAULT_MAX_INPUT_OUTPUT_CHARS);
     }
   }
 

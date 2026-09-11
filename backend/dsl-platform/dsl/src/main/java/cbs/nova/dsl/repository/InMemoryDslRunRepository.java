@@ -4,6 +4,7 @@ import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunSearchResult;
 import cbs.nova.dsl.history.DslRunStatus;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -21,23 +22,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+@RequiredArgsConstructor
 public final class InMemoryDslRunRepository implements DslRunRepository {
 
   private static final int CAPACITY = 100;
 
+  public static final Consumer<String> NO_OP_EVICTION = runId -> {
+  };
+
   private final Map<String, DslRun> runs = new ConcurrentHashMap<>();
   private final Deque<String> insertionOrder = new ConcurrentLinkedDeque<>();
   private final Consumer<String> onRunEvicted;
-
-  public InMemoryDslRunRepository() {
-    this(runId -> {
-    });
-  }
-
-  public InMemoryDslRunRepository(Consumer<String> onRunEvicted) {
-    this.onRunEvicted = onRunEvicted == null ? runId -> {
-    } : onRunEvicted;
-  }
 
   @Override
   public @NonNull DslRun save(@NonNull DslRun run) {

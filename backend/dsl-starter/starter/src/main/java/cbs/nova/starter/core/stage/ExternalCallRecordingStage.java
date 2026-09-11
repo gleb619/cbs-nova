@@ -1,7 +1,7 @@
 package cbs.nova.starter.core.stage;
 
 import cbs.nova.dsl.Result;
-import cbs.nova.starter.core.StarterConstant;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import cbs.nova.starter.core.recorder.ExternalCall;
@@ -23,7 +23,7 @@ public final class ExternalCallRecordingStage implements DslPipeStage {
       return next.proceed(context);
     } finally {
       List<ExternalCall> calls = recorder.finishRun(context.runId());
-      context.setAttribute(StarterConstant.EXTERNAL_CALLS_ATTRIBUTE, calls);
+      context.setAttribute(StarterConstants.EXTERNAL_CALLS_ATTRIBUTE, calls);
     }
   }
 }

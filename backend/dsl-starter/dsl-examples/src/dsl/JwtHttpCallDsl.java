@@ -37,7 +37,7 @@ List<DslObject> define() {
             ? in.method().toUpperCase()
             : "GET";
         var call = ctx.runHelper("httpCall",
-            new HttpCallIn(in.url(), method, authOut.headers(), in.body(), null, null));
+            new HttpCallIn(in.url(), method, authOut.headers(), in.body(), null, null, null));
         if (!call.isSuccess()) {
           return Result.failure(call.cause());
         }

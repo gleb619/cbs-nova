@@ -85,6 +85,8 @@ frontend/
 - Use standard Vue APIs (`RouterLink`, `Teleport`, `Transition`)
 - Accept routing via props/slots
 - `vue` and `vue-router` as peer/dev dependencies
+- Browser-only libraries (monaco, charting): never import at module top level — lazy-import
+  inside `onMounted` so Nuxt SSR never evaluates them (see `components/dsl/MonacoEditor.vue`)
 
 ### Reactivity & state
 

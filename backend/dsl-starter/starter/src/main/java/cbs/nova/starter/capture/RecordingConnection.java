@@ -1,5 +1,6 @@
 package cbs.nova.starter.capture;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -28,11 +29,9 @@ import java.util.concurrent.Executor;
  * Typed decorator around a real {@link Connection}. Statement factory methods wrap the returned
  * statements in {@link RecordingStatement} / {@link RecordingPreparedStatement} /
  * {@link RecordingCallableStatement}; every other method delegates directly. The recording target
- * (the JDBC URL, or {@link #FALLBACK_TARGET}) is resolved once per connection.
+ * (the JDBC URL, or {@link StarterConstants#JDBC_FALLBACK_TARGET}) is resolved once per connection.
  */
 public class RecordingConnection implements Connection {
-
-  public static final String FALLBACK_TARGET = "jdbc:datasource";
 
   private final Connection delegate;
   private final ExternalCallRecorder externalCallRecorder;
@@ -159,7 +158,7 @@ public class RecordingConnection implements Connection {
     } catch (SQLException ignored) {
       // fall through to fallback
     }
-    return FALLBACK_TARGET;
+    return StarterConstants.JDBC_FALLBACK_TARGET;
   }
 
   @Override

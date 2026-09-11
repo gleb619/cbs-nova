@@ -1,6 +1,7 @@
 package cbs.nova.starter.config;
 
 import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.security.RbacAuthorizationFilter;
 import cbs.nova.starter.security.Role;
 import cbs.nova.starter.security.RoleResolver;
@@ -54,6 +55,9 @@ public class RbacFilterConfiguration {
   @ConditionalOnMissingBean
   public RoleResolver rbacRoleResolver(DslProperties properties) {
     String claim = properties.auth().rbac().claim();
+    if (claim == null || claim.isBlank()) {
+      claim = StarterConstants.DEFAULT_CLAIM_NAME;
+    }
     log.info("cbs.dsl.auth.rbac.enabled=true — RBAC filter active; claim={}", claim);
     return new RoleResolver(claim);
   }

@@ -1,5 +1,7 @@
 package cbs.nova.starter.cache;
 
+import cbs.nova.starter.cache.PreviewResultCacheTestSupport;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.CallKind;
@@ -34,7 +36,7 @@ class PreviewResultCacheTest {
 
   @Test
   void missOnFirstCallAndHitOnSecond() {
-    var cache = new PreviewResultCache(60_000);
+    var cache = PreviewResultCacheTestSupport.cache(60_000);
     var key = new PreviewModels.PreviewCacheKey("Ping", "dsl-hash", "input-hash");
 
     assertThat(cache.get(key)).isNull();
@@ -50,7 +52,7 @@ class PreviewResultCacheTest {
 
   @Test
   void missAfterTtlExpires() throws InterruptedException {
-    var cache = new PreviewResultCache(10);
+    var cache = PreviewResultCacheTestSupport.cache(10);
     var key = new PreviewModels.PreviewCacheKey("Ping", "dsl-hash", "input-hash");
 
     cache.put(key, report);
@@ -64,7 +66,7 @@ class PreviewResultCacheTest {
 
   @Test
   void invalidateByDslHashRemovesOnlyMatchingEntries() {
-    var cache = new PreviewResultCache(60_000);
+    var cache = PreviewResultCacheTestSupport.cache(60_000);
     var keyA = new PreviewModels.PreviewCacheKey("A", "hash-1", "input-1");
     var keyB = new PreviewModels.PreviewCacheKey("B", "hash-2", "input-2");
     var keyC = new PreviewModels.PreviewCacheKey("C", "hash-1", "input-3");
@@ -82,7 +84,7 @@ class PreviewResultCacheTest {
 
   @Test
   void clearRemovesAllEntries() {
-    var cache = new PreviewResultCache(60_000);
+    var cache = PreviewResultCacheTestSupport.cache(60_000);
     var keyA = new PreviewModels.PreviewCacheKey("A", "hash-1", "input-1");
     var keyB = new PreviewModels.PreviewCacheKey("B", "hash-2", "input-2");
 
@@ -96,7 +98,7 @@ class PreviewResultCacheTest {
 
   @Test
   void concurrentGetPutOperationsAreSafe() throws InterruptedException {
-    var cache = new PreviewResultCache(60_000);
+    var cache = PreviewResultCacheTestSupport.cache(60_000);
     var key = new PreviewModels.PreviewCacheKey("Ping", "dsl-hash", "input-hash");
     var threads = 8;
     var iterations = 100;
@@ -137,7 +139,7 @@ class PreviewResultCacheTest {
 
   @Test
   void statsAreAccurate() {
-    var cache = new PreviewResultCache(60_000);
+    var cache = PreviewResultCacheTestSupport.cache(60_000);
     var key = new PreviewModels.PreviewCacheKey("Ping", "dsl-hash", "input-hash");
 
     cache.get(key);

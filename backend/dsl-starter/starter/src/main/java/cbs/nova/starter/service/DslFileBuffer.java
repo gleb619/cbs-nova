@@ -1,52 +1,23 @@
 package cbs.nova.starter.service;
 
-import cbs.nova.starter.config.properties.DslProperties;
 import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.Ticker;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import org.springframework.stereotype.Component;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Bounded staging area for DSL file writes pending a flush. Entries are evicted automatically once
  * either the configured maximum size or the write-time-to-live is exceeded, so abandoned
  * stage-without-drain flows cannot leak heap indefinitely.
+ *
+ * <p>
+ * The underlying {@link Cache} is built by
+ * {@link cbs.nova.starter.config.DslFileBufferConfiguration}, which owns the sizing/TTL policy.
  */
-@Component
+@RequiredArgsConstructor
 public class DslFileBuffer {
 
   private final Cache<String, String> pending;
-
-  /**
-   * No-arg constructor retained for legacy direct-instantiation callers (tests that build a buffer
-   * without a Spring context). Uses {@link DslProperties} defaults and the system ticker.
-   */
-  public DslFileBuffer() {
-    this(DslProperties.builder().build());
-  }
-
-  /**
-   * Spring-visible constructor. Uses the system ticker for time-based eviction.
-   */
-  public DslFileBuffer(DslProperties properties) {
-    this(properties, Ticker.systemTicker());
-  }
-
-  /**
-   * Package-private constructor that accepts a {@link Ticker}, so tests can advance time
-   * deterministically without sleeping.
-   */
-  DslFileBuffer(DslProperties properties, Ticker ticker) {
-    int maxEntries = Math.max(1, properties.fileBuffer().maxEntries());
-    long ttlSeconds = Math.max(1L, properties.fileBuffer().expireAfterWriteSeconds());
-    this.pending = Caffeine.newBuilder()
-            .maximumSize(maxEntries)
-            .expireAfterWrite(Duration.ofSeconds(ttlSeconds))
-            .ticker(ticker)
-            .build();
-  }
 
   public void stage(String relativePath, String content) {
     pending.put(normalize(relativePath), content);

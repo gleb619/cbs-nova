@@ -62,13 +62,13 @@ class DslDefinitionBundleResourceTest {
 
     DslDefinitionHistoryService historyService = new DslDefinitionHistoryService(props, mapper);
     DslDefinitionBundleService bundleService = new DslDefinitionBundleService(mapper,
-            Optional.empty());
+            Optional.empty(), DslProperties.bundleServiceDefaults());
     DslDraftHandler handler = new DslDraftHandler(
             props,
-            new DslReloadHandler(props, null),
+            new DslReloadHandler(props, null, null, null, null, null, null, null),
             historyService,
             mapper,
-            bundleService);
+            bundleService, null, null, null, null);
     mockMvc = mockMvcFor(handler);
   }
 
@@ -238,10 +238,10 @@ class DslDefinitionBundleResourceTest {
             Optional.empty(), strict);
     DslDraftHandler handler = new DslDraftHandler(
             strict,
-            new DslReloadHandler(strict, null),
+            new DslReloadHandler(strict, null, null, null, null, null, null, null),
             new DslDefinitionHistoryService(strict, mapper),
             mapper,
-            bundleService);
+            bundleService, null, null, null, null);
     mockMvc = mockMvcFor(handler);
 
     String bundle = "{\"formatVersion\":1,\"definitions\":["
@@ -343,10 +343,12 @@ class DslDefinitionBundleResourceTest {
                     List.of(new ImportEntryResult("A", "published", null)), null, null));
     DslDraftHandler handler = new DslDraftHandler(props,
             new DslReloadHandler(props, new DefinitionLoader(), null, null,
-                    BuilderClientTestSupport.providerOf(client)),
+                    BuilderClientTestSupport.providerOf(client), null, null, null),
             new DslDefinitionHistoryService(props, mapper), mapper,
-            new DslDefinitionBundleService(mapper, Optional.empty()), null,
-            BuilderClientTestSupport.providerOf(client));
+            new DslDefinitionBundleService(mapper, Optional.empty(),
+                    DslProperties.bundleServiceDefaults()),
+            null,
+            BuilderClientTestSupport.providerOf(client), null, null);
     MockMvc builderMvc = mockMvcFor(handler);
     String bundle = "{\"formatVersion\":1,\"definitions\":["
             + "{\"definition\":{\"name\":\"A\",\"type\":\"process\",\"status\":\"Published\",\"version\":\"v1\",\"taskQueue\":\"q\"},\"source\":\"published\"}]}";
@@ -390,10 +392,12 @@ class DslDefinitionBundleResourceTest {
     DslProperties blank = DslProperties.builder().sourceDir("").build();
     DslDraftHandler handler = new DslDraftHandler(
             blank,
-            new DslReloadHandler(blank, null),
+            new DslReloadHandler(blank, null, null, null, null, null, null, null),
             new DslDefinitionHistoryService(blank, mapper),
             mapper,
-            new DslDefinitionBundleService(mapper, Optional.empty()));
+            new DslDefinitionBundleService(mapper, Optional.empty(),
+                    DslProperties.bundleServiceDefaults()),
+            null, null, null, null);
     DslDefinitionBundleRouterConfiguration router = new DslDefinitionBundleRouterConfiguration();
 
     AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();

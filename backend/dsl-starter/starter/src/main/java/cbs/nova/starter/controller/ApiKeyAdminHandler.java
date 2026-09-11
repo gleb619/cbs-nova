@@ -2,21 +2,18 @@ package cbs.nova.starter.controller;
 
 import cbs.nova.starter.exception.ApiKeyNotFoundException;
 import cbs.nova.starter.model.CreateApiKeyRequest;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.starter.model.CreatedApiKeyResponse;
 import cbs.nova.starter.service.ApiKeyStore;
 import cbs.nova.starter.service.ApiKeyStore.ApiKeyView;
 import cbs.nova.starter.service.ApiKeyStore.CreatedKey;
 import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
 import tools.jackson.core.JacksonException;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * Functional handler for the admin API-key surface (T410). Thin HTTP shell around
@@ -32,7 +29,6 @@ import tools.jackson.databind.ObjectMapper;
 public class ApiKeyAdminHandler {
 
   private final ApiKeyStore store;
-  private final ObjectMapper objectMapper;
 
   /** Lists every stored key (label + prefix + timestamps). NEVER the hash, NEVER the plaintext. */
   public ServerResponse list(ServerRequest request) {
@@ -43,19 +39,19 @@ public class ApiKeyAdminHandler {
   }
 
   /**
-   * Creates a new key. Body is a JSON object with a single {@code label} field; the plaintext key
-   * is returned exactly once in the response. Subsequent list calls never expose the plaintext.
+   * Creates a new key. Body is a typed {@link CreateApiKeyRequest} with a single {@code label}
+   * field; the plaintext key is returned exactly once in the response.
    */
   public ServerResponse create(ServerRequest request) throws ServletException, IOException {
     String label = extractLabel(request);
     CreatedKey created = store.create(label);
     return ServerResponse.ok()
             .contentType(MediaType.APPLICATION_JSON)
-            .body(Map.of(
-                    "id", created.id(),
-                    "label", created.label(),
-                    "prefix", created.prefix(),
-                    "key", created.plaintext()));
+            .body(new CreatedApiKeyResponse(
+                    created.id(),
+                    created.label(),
+                    created.prefix(),
+                    created.plaintext()));
   }
 
   /**
@@ -73,39 +69,18 @@ public class ApiKeyAdminHandler {
   }
 
   /**
-   * Extracts the {@code label} from the request body. Accepts either a typed
-   * {@link CreateApiKeyRequest} or a generic JSON object so callers can post
-   * {@code {"label":"..."}} without binding to the dedicated type.
+   * Extracts the {@code label} from the request body. Malformed JSON is rejected with a clear
+   * error; blank or missing labels are rejected before the store ever sees them.
    */
   private String extractLabel(ServerRequest request) throws IOException, ServletException {
     try {
-      JsonNode body = request.body(JsonNode.class);
-      if (body == null || body.isNull() || !body.isObject()) {
-        throw new IllegalArgumentException(
-                "request body must be a JSON object with a 'label' field");
+      CreateApiKeyRequest body = request.body(CreateApiKeyRequest.class);
+      if (body == null || body.label() == null || body.label().isBlank()) {
+        throw new IllegalArgumentException("'label' is required and must not be blank");
       }
-      JsonNode labelNode = body.get("label");
-      if (labelNode == null || !labelNode.isString()) {
-        throw new IllegalArgumentException("'label' field is required and must be a string");
-      }
-      String label = labelNode.asString();
-      if (label.isBlank()) {
-        throw new IllegalArgumentException("'label' must not be blank");
-      }
-      return label;
+      return body.label();
     } catch (JacksonException e) {
       throw new IllegalArgumentException("malformed JSON body: " + e.getOriginalMessage(), e);
-    }
-  }
-
-  /** Compile-time guard: keeps the model reference live. */
-  @SuppressWarnings("unused")
-  private static void keepReference(ErrorResponse ref) {
-    // The handler does not throw the envelope directly — it throws ApiKeyNotFoundException and
-    // DslExceptionHandler maps that to ErrorResponse — but the model import is intentional so
-    // a future refactor can return it inline.
-    if (ref == null) {
-      throw new IllegalStateException("unused");
     }
   }
 }

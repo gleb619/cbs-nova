@@ -1,5 +1,6 @@
 package cbs.nova.starter.controller;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.model.WebhookDeliveryDto;
 import cbs.nova.starter.webhook.WebhookDeliveryRecordRepository;
@@ -42,8 +43,8 @@ public class WebhookHandler {
   @Operation(summary = "List persisted webhook delivery outcomes")
   @ApiResponse(responseCode = "200", description = "Paged append-only delivery log, newest first", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))
   public ServerResponse list(ServerRequest request) {
-    int limit = Pagination.intParam(request, "limit", Pagination.DEFAULT_LIMIT);
-    int offset = Pagination.intParam(request, "offset", Pagination.DEFAULT_OFFSET);
+    int limit = Pagination.intParam(request, "limit", StarterConstants.DEFAULT_LIMIT);
+    int offset = Pagination.intParam(request, "offset", StarterConstants.DEFAULT_OFFSET);
     int pageSize = Pagination.clampLimit(limit);
     int skip = Pagination.clampOffset(offset);
     String subscriptionId = request.param("subscriptionId").filter(s -> !s.isBlank()).orElse(null);

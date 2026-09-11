@@ -3,15 +3,16 @@ package cbs.nova.dsl.builder.util;
 import cbs.nova.dsl.builder.model.VcsModels.DiffHunk;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class LineDiff {
 
+  // TODO: replace hardcode with app.yml settings
   public static final int DEFAULT_MAX_HUNKS = 200;
-
   private static final int CONTEXT_LINES = 3;
 
-  private LineDiff() {
-  }
 
   public record Result(List<DiffHunk> hunks, boolean truncated) {
 

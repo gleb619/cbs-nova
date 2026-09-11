@@ -8,6 +8,7 @@ import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.DslBuilderClientProperties;
 import cbs.nova.starter.controller.BuilderApiErrorHandler;
+import cbs.nova.starter.core.StarterConstants;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.net.http.HttpClient;
 import java.time.Duration;
@@ -83,7 +84,7 @@ public class BuilderClientConfiguration {
 
   @Bean
   public BuilderCache builderCache(CbsNovaCacheProperties cacheProperties) {
-    var spec = cacheProperties.specFor(CbsNovaCacheProperties.Names.BUILDER_READS);
+    var spec = cacheProperties.specFor(StarterConstants.BUILDER_READS);
     return new BuilderCache(Caffeine.newBuilder()
             .expireAfterWrite(spec.ttl())
             .maximumSize(spec.maxSize())

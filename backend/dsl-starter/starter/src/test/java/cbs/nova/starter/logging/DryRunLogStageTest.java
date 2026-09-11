@@ -10,6 +10,7 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import cbs.nova.starter.core.stage.DryRunLogStage;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -27,7 +28,8 @@ class DryRunLogStageTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
   private final ThreadLocalDryRunLoggingContext context = new ThreadLocalDryRunLoggingContext();
-  private final DryRunLogBufferRegistry registry = new DryRunLogBufferRegistry();
+  private final DryRunLogBufferRegistry registry = new DryRunLogBufferRegistry(
+          Caffeine.newBuilder().build());
   private final DryRunLogbackAppender appender = new DryRunLogbackAppender(context, registry);
   private final Logger logger = (Logger) LoggerFactory.getLogger(DryRunLogStageTest.class);
   private final org.slf4j.Logger slf4jLogger = LoggerFactory.getLogger(DryRunLogStageTest.class);

@@ -256,7 +256,7 @@ class HttpResilienceDslIntegrationTest {
 
     String runId = "http-resilience-timeout-" + System.currentTimeMillis();
     var input = new HttpResilienceProcessIn(runId,
-            new HttpCallIn(baseUrl() + "/slow", "GET", null, null, 200L, null));
+            new HttpCallIn(baseUrl() + "/slow", "GET", null, null, 200L, null, null));
 
     Result<?> result = ServiceUtil.newService(new ContextFactory())
             .runProcess("HttpResilienceUncaught", input).result().join();

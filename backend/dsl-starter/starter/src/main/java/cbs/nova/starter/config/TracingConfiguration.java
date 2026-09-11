@@ -1,5 +1,6 @@
 package cbs.nova.starter.config;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.tracing.OpenTelemetryContextPropagator;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
@@ -30,9 +31,9 @@ import org.springframework.util.StringUtils;
 @Configuration
 public class TracingConfiguration {
 
-  private static final String SERVICE_NAME = "cbs-nova";
+  private static final String SERVICE_NAME = StarterConstants.OTEL_SERVICE_NAME;
 
-  private static final String OTLP_ENDPOINT_ENV = "OTEL_EXPORTER_OTLP_ENDPOINT";
+  private static final String OTLP_ENDPOINT_ENV = StarterConstants.OTEL_EXPORTER_OTLP_ENDPOINT;
 
   @Bean
   @ConditionalOnMissingBean

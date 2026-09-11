@@ -14,6 +14,7 @@ import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dsl.transaction.TransactionRouting;
+import cbs.nova.starter.core.StarterConstants;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.opentelemetry.api.baggage.Baggage;
 import io.opentelemetry.api.baggage.BaggageBuilder;
@@ -61,7 +62,8 @@ class TemporalDslProcessServiceTest {
 
   private static TemporalDslProcessService newService(ContextFactory contextFactory) {
     return createService(
-            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper());
+            contextFactory, new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
+            new ObjectMapper());
   }
 
   public static TemporalDslProcessService createService(
@@ -135,7 +137,8 @@ class TemporalDslProcessServiceTest {
     GlobalManager.globalManager().registerProcess(
             Dsl.process("Ok").execute(ctx -> Result.success("ok")).build());
 
-    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
+            InMemoryDslRunRepository.NO_OP_EVICTION);
     TemporalDslProcessService service = createService(
             new ContextFactory(), repo, new ObjectMapper(),
             Long.MAX_VALUE, new SimpleMeterRegistry(), fixedResolver("alice"));
@@ -200,7 +203,8 @@ class TemporalDslProcessServiceTest {
   void startProcessReachesGlobalManagerWithCorrectProcessName() {
     String missing = "missing-" + UUID.randomUUID();
     TemporalDslProcessService service = createService(new ContextFactory(),
-            new InMemoryDslRunRepository(), new ObjectMapper());
+            new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
+            new ObjectMapper());
 
     Result<?> result = service.startProcess(missing, Map.of("k", "v"), Map.of("meta", "data"))
             .result()
@@ -246,7 +250,8 @@ class TemporalDslProcessServiceTest {
       });
 
       TemporalDslProcessService service = createService(
-              contextFactory, new InMemoryDslRunRepository(), new ObjectMapper());
+              contextFactory, new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
+              new ObjectMapper());
       service.startProcess(unique(), "payload", Map.of());
 
       assertThat(MDC.get("runId")).isNull();
@@ -259,7 +264,8 @@ class TemporalDslProcessServiceTest {
     ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     try {
       ThreadPoolTaskExecutor exec = synchronousExecutor();
-      InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+      InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
+              InMemoryDslRunRepository.NO_OP_EVICTION);
       longAgoClock fixedClock = new longAgoClock();
 
       ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
@@ -299,23 +305,23 @@ class TemporalDslProcessServiceTest {
 
       assertThat(status).isEqualTo(DslRunStatus.STALE);
       assertThat(meterRegistry.counter(
-              TemporalDslProcessService.RUN_COUNT_COUNTER,
-              TemporalDslProcessService.STATUS_TAG, DslRunStatus.STALE.name(),
-              TemporalDslProcessService.PROCESS_NAME_TAG,
-              TemporalDslProcessService.UNKNOWN_PROCESS).count()).isEqualTo(1.0);
+              StarterConstants.RUN_COUNT_COUNTER,
+              StarterConstants.STATUS_TAG, DslRunStatus.STALE.name(),
+              StarterConstants.PROCESS_NAME_TAG,
+              StarterConstants.UNKNOWN_PROCESS).count()).isEqualTo(1.0);
       assertThat(meterRegistry.timer(
-              TemporalDslProcessService.RUN_DURATION_TIMER,
-              TemporalDslProcessService.STATUS_TAG, DslRunStatus.STALE.name(),
-              TemporalDslProcessService.PROCESS_NAME_TAG,
-              TemporalDslProcessService.UNKNOWN_PROCESS).count()).isEqualTo(1L);
+              StarterConstants.RUN_DURATION_TIMER,
+              StarterConstants.STATUS_TAG, DslRunStatus.STALE.name(),
+              StarterConstants.PROCESS_NAME_TAG,
+              StarterConstants.UNKNOWN_PROCESS).count()).isEqualTo(1L);
       assertThat(meterRegistry.counter(
-              TemporalDslProcessService.SWEEP_STALE_COUNTER,
-              TemporalDslProcessService.PROCESS_NAME_TAG,
-              TemporalDslProcessService.UNKNOWN_PROCESS).count()).isEqualTo(1.0);
+              StarterConstants.SWEEP_STALE_COUNTER,
+              StarterConstants.PROCESS_NAME_TAG,
+              StarterConstants.UNKNOWN_PROCESS).count()).isEqualTo(1.0);
       assertThat(meterRegistry.counter(
-              TemporalDslProcessService.SWEEP_INSPECTED_COUNTER,
-              TemporalDslProcessService.PROCESS_NAME_TAG,
-              TemporalDslProcessService.UNKNOWN_PROCESS).count()).isPositive();
+              StarterConstants.SWEEP_INSPECTED_COUNTER,
+              StarterConstants.PROCESS_NAME_TAG,
+              StarterConstants.UNKNOWN_PROCESS).count()).isPositive();
     } finally {
       scheduler.shutdownNow();
     }
@@ -326,7 +332,8 @@ class TemporalDslProcessServiceTest {
     ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     try {
       ThreadPoolTaskExecutor exec = synchronousExecutor();
-      InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+      InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
+              InMemoryDslRunRepository.NO_OP_EVICTION);
       longAgoClock fixedClock = new longAgoClock();
 
       ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
@@ -370,7 +377,8 @@ class TemporalDslProcessServiceTest {
   void shutdownHealthcheckIsIdempotentAndCancelsRunningSchedule() throws Exception {
     ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     ThreadPoolTaskExecutor exec = synchronousExecutor();
-    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
+            InMemoryDslRunRepository.NO_OP_EVICTION);
     try {
       ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
       TemporalDslProcessService service = TemporalDslProcessService.withDefaults(
@@ -415,7 +423,7 @@ class TemporalDslProcessServiceTest {
                     "ignored", TransactionRouting.LOCAL, null, null, null, null));
     TemporalDslProcessService service = TemporalDslProcessService.withDefaults(
             contextFactory,
-            new InMemoryDslRunRepository(),
+            new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
             new ObjectMapper(),
             sameThreadExecutor(),
             disabledScheduledExecutor(),
@@ -528,7 +536,8 @@ class TemporalDslProcessServiceTest {
                     .execute(ctx -> Result.success("a".repeat(100)))
                     .build());
 
-    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
+            InMemoryDslRunRepository.NO_OP_EVICTION);
     // Serialized output is the JSON string "aaa..." -> 100 chars + 2 quotes = 102 bytes.
     TemporalDslProcessService service = createService(
             new ContextFactory(), repo, new ObjectMapper(), 101L);
@@ -550,7 +559,8 @@ class TemporalDslProcessServiceTest {
                     .execute(ctx -> Result.success("a".repeat(100)))
                     .build());
 
-    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
+            InMemoryDslRunRepository.NO_OP_EVICTION);
     TemporalDslProcessService service = createService(
             new ContextFactory(), repo, new ObjectMapper(), 102L);
 
@@ -571,7 +581,8 @@ class TemporalDslProcessServiceTest {
                     .execute(ctx -> Result.success("a".repeat(1000)))
                     .build());
 
-    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
+            InMemoryDslRunRepository.NO_OP_EVICTION);
     TemporalDslProcessService service = createService(
             new ContextFactory(), repo, new ObjectMapper(), 0L);
 
@@ -592,7 +603,8 @@ class TemporalDslProcessServiceTest {
                     .execute(ctx -> Result.success("a".repeat(1000)))
                     .build());
 
-    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
+            InMemoryDslRunRepository.NO_OP_EVICTION);
     TemporalDslProcessService service = createService(
             new ContextFactory(), repo, new ObjectMapper(), Long.MAX_VALUE);
 
@@ -613,21 +625,23 @@ class TemporalDslProcessServiceTest {
 
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     TemporalDslProcessService service = createService(
-            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
+            new ContextFactory(),
+            new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
+            new ObjectMapper(),
             Long.MAX_VALUE, meterRegistry, nullResolver());
 
     Result<?> result = service.runProcess("Ok", "in").result().join();
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(meterRegistry.counter(
-            TemporalDslProcessService.RUN_COUNT_COUNTER,
-            TemporalDslProcessService.PROCESS_NAME_TAG, "Ok",
-            TemporalDslProcessService.STATUS_TAG, DslRunStatus.COMPLETED.name()).count())
+            StarterConstants.RUN_COUNT_COUNTER,
+            StarterConstants.PROCESS_NAME_TAG, "Ok",
+            StarterConstants.STATUS_TAG, DslRunStatus.COMPLETED.name()).count())
             .isEqualTo(1.0);
     assertThat(meterRegistry.timer(
-            TemporalDslProcessService.RUN_DURATION_TIMER,
-            TemporalDslProcessService.PROCESS_NAME_TAG, "Ok",
-            TemporalDslProcessService.STATUS_TAG, DslRunStatus.COMPLETED.name()).count())
+            StarterConstants.RUN_DURATION_TIMER,
+            StarterConstants.PROCESS_NAME_TAG, "Ok",
+            StarterConstants.STATUS_TAG, DslRunStatus.COMPLETED.name()).count())
             .isEqualTo(1L);
   }
 
@@ -635,21 +649,23 @@ class TemporalDslProcessServiceTest {
   void failedRunBucketsUnknownProcessNameAndIncrementsFailedCount() {
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     TemporalDslProcessService service = createService(
-            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
+            new ContextFactory(),
+            new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
+            new ObjectMapper(),
             Long.MAX_VALUE, meterRegistry, nullResolver());
 
     Result<?> result = service.runProcess("NotThere", "in").result().join();
 
     assertThat(result.isSuccess()).isFalse();
     assertThat(meterRegistry.counter(
-            TemporalDslProcessService.RUN_COUNT_COUNTER,
-            TemporalDslProcessService.PROCESS_NAME_TAG, TemporalDslProcessService.UNKNOWN_PROCESS,
-            TemporalDslProcessService.STATUS_TAG, DslRunStatus.FAILED.name()).count())
+            StarterConstants.RUN_COUNT_COUNTER,
+            StarterConstants.PROCESS_NAME_TAG, StarterConstants.UNKNOWN_PROCESS,
+            StarterConstants.STATUS_TAG, DslRunStatus.FAILED.name()).count())
             .isEqualTo(1.0);
     assertThat(meterRegistry.timer(
-            TemporalDslProcessService.RUN_DURATION_TIMER,
-            TemporalDslProcessService.PROCESS_NAME_TAG, TemporalDslProcessService.UNKNOWN_PROCESS,
-            TemporalDslProcessService.STATUS_TAG, DslRunStatus.FAILED.name()).count())
+            StarterConstants.RUN_DURATION_TIMER,
+            StarterConstants.PROCESS_NAME_TAG, StarterConstants.UNKNOWN_PROCESS,
+            StarterConstants.STATUS_TAG, DslRunStatus.FAILED.name()).count())
             .isEqualTo(1L);
   }
 
@@ -665,7 +681,8 @@ class TemporalDslProcessServiceTest {
                     .execute(ctx -> ctx.runHelper("echo", ctx.body()))
                     .build());
 
-    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
+            InMemoryDslRunRepository.NO_OP_EVICTION);
     TemporalDslProcessService service = createService(
             new ContextFactory(), repo, new ObjectMapper());
 
@@ -688,7 +705,8 @@ class TemporalDslProcessServiceTest {
                     .execute(ctx -> ctx.runTransaction("EchoTx", ctx.body()))
                     .build());
 
-    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
+            InMemoryDslRunRepository.NO_OP_EVICTION);
     TemporalDslProcessService service = createService(
             new ContextFactory(), repo, new ObjectMapper());
 
@@ -706,7 +724,8 @@ class TemporalDslProcessServiceTest {
     GlobalManager.globalManager().registerProcess(
             Dsl.process("Quiet").execute(ctx -> Result.success("ok")).build());
 
-    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
+            InMemoryDslRunRepository.NO_OP_EVICTION);
     TemporalDslProcessService service = createService(
             new ContextFactory(), repo, new ObjectMapper());
 
@@ -725,7 +744,9 @@ class TemporalDslProcessServiceTest {
 
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     TemporalDslProcessService service = createService(
-            new ContextFactory(), new InMemoryDslRunRepository(), new ObjectMapper(),
+            new ContextFactory(),
+            new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
+            new ObjectMapper(),
             Long.MAX_VALUE, meterRegistry, nullResolver());
 
     Instant started = Instant.parse("2026-01-01T00:00:00Z");
@@ -737,26 +758,26 @@ class TemporalDslProcessServiceTest {
     service.recordCancel(null, null, DslRunCancellationService.Outcome.NOT_FOUND, finished);
 
     assertThat(meterRegistry.counter(
-            TemporalDslProcessService.CANCEL_COUNTER,
-            TemporalDslProcessService.STATUS_TAG, "cancelled",
-            TemporalDslProcessService.PROCESS_NAME_TAG, "Loan").count()).isEqualTo(1.0);
+            StarterConstants.CANCEL_COUNTER,
+            StarterConstants.STATUS_TAG, "cancelled",
+            StarterConstants.PROCESS_NAME_TAG, "Loan").count()).isEqualTo(1.0);
     assertThat(meterRegistry.counter(
-            TemporalDslProcessService.CANCEL_COUNTER,
-            TemporalDslProcessService.STATUS_TAG, "rejected",
-            TemporalDslProcessService.PROCESS_NAME_TAG, "Loan").count()).isEqualTo(1.0);
+            StarterConstants.CANCEL_COUNTER,
+            StarterConstants.STATUS_TAG, "rejected",
+            StarterConstants.PROCESS_NAME_TAG, "Loan").count()).isEqualTo(1.0);
     assertThat(meterRegistry.counter(
-            TemporalDslProcessService.CANCEL_COUNTER,
-            TemporalDslProcessService.STATUS_TAG, "notfound",
-            TemporalDslProcessService.PROCESS_NAME_TAG,
-            TemporalDslProcessService.UNKNOWN_PROCESS).count()).isEqualTo(1.0);
+            StarterConstants.CANCEL_COUNTER,
+            StarterConstants.STATUS_TAG, "notfound",
+            StarterConstants.PROCESS_NAME_TAG,
+            StarterConstants.UNKNOWN_PROCESS).count()).isEqualTo(1.0);
     assertThat(meterRegistry.counter(
-            TemporalDslProcessService.RUN_COUNT_COUNTER,
-            TemporalDslProcessService.STATUS_TAG, DslRunStatus.CANCELLED.name(),
-            TemporalDslProcessService.PROCESS_NAME_TAG, "Loan").count()).isEqualTo(1.0);
+            StarterConstants.RUN_COUNT_COUNTER,
+            StarterConstants.STATUS_TAG, DslRunStatus.CANCELLED.name(),
+            StarterConstants.PROCESS_NAME_TAG, "Loan").count()).isEqualTo(1.0);
     assertThat(meterRegistry.timer(
-            TemporalDslProcessService.RUN_DURATION_TIMER,
-            TemporalDslProcessService.STATUS_TAG, DslRunStatus.CANCELLED.name(),
-            TemporalDslProcessService.PROCESS_NAME_TAG, "Loan").count()).isEqualTo(1L);
+            StarterConstants.RUN_DURATION_TIMER,
+            StarterConstants.STATUS_TAG, DslRunStatus.CANCELLED.name(),
+            StarterConstants.PROCESS_NAME_TAG, "Loan").count()).isEqualTo(1L);
   }
 
   @Test
@@ -765,7 +786,8 @@ class TemporalDslProcessServiceTest {
     GlobalManager.globalManager().registerProcess(
             Dsl.process("Ok").execute(ctx -> Result.success("ok")).build());
 
-    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
+            InMemoryDslRunRepository.NO_OP_EVICTION);
     TemporalDslProcessService service = createService(
             new ContextFactory(), repo, new ObjectMapper(),
             Long.MAX_VALUE, new SimpleMeterRegistry(), nullResolver());
@@ -783,7 +805,8 @@ class TemporalDslProcessServiceTest {
     GlobalManager.globalManager().registerProcess(
             Dsl.process("Ok").execute(ctx -> Result.success("ok")).build());
 
-    InMemoryDslRunRepository repo = new InMemoryDslRunRepository();
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
+            InMemoryDslRunRepository.NO_OP_EVICTION);
     TemporalDslProcessService service = createService(
             new ContextFactory(), repo, new ObjectMapper(),
             Long.MAX_VALUE, new SimpleMeterRegistry(), nullResolver());

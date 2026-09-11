@@ -2,6 +2,7 @@ package cbs.nova.starter.config;
 
 import cbs.nova.dsl.GeneratedClassProvider;
 import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.core.StarterConstants;
 import io.temporal.client.WorkflowClient;
 import io.temporal.worker.TypeAlreadyRegisteredException;
 import io.temporal.worker.Worker;
@@ -67,7 +68,7 @@ public class DslWorkerConfiguration {
 
   static final class WorkerFactoryLifecycle implements SmartLifecycle {
 
-    private static final long TERMINATION_AWAIT_SECONDS = 10L;
+    private static final long TERMINATION_AWAIT_SECONDS = StarterConstants.WORKER_TERMINATION_AWAIT_SECONDS;
 
     private final WorkerFactory factory;
     private final AtomicBoolean running = new AtomicBoolean();

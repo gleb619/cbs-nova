@@ -13,6 +13,7 @@ import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
+import cbs.nova.starter.core.StarterConstants;
 import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowNotFoundException;
@@ -23,6 +24,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 class DslRunCancellationServiceTest {
 
@@ -30,9 +32,12 @@ class DslRunCancellationServiceTest {
   private static final Clock FIXED = Clock.fixed(NOW, ZoneOffset.UTC);
 
   private final WorkflowClient workflowClient = mock(WorkflowClient.class);
-  private final InMemoryDslRunRepository repository = new InMemoryDslRunRepository();
+  private final InMemoryDslRunRepository repository = new InMemoryDslRunRepository(
+          InMemoryDslRunRepository.NO_OP_EVICTION);
   private final DslRunCancellationService service = new DslRunCancellationService(workflowClient,
-          repository, FIXED);
+          repository, FIXED, null,
+          EmptyObjectProvider.of(DomainEventPublisher.class),
+          EmptyObjectProvider.of(TransactionTemplate.class));
 
   @Test
   void unknownRunIsReportedAsNotFoundWithoutTouchingTemporal() {
@@ -66,7 +71,7 @@ class DslRunCancellationServiceTest {
     assertThat(result.outcome()).isEqualTo(DslRunCancellationService.Outcome.CANCELLED);
     DslRun stored = repository.findByRunId("run-1").orElseThrow();
     assertThat(stored.status()).isEqualTo(DslRunStatus.CANCELLED.name());
-    assertThat(stored.error()).isEqualTo(DslRunCancellationService.CANCELLED_REASON);
+    assertThat(stored.error()).isEqualTo(StarterConstants.CANCELLED_REASON);
     assertThat(stored.finishedAt()).isEqualTo(NOW);
   }
 
@@ -102,7 +107,9 @@ class DslRunCancellationServiceTest {
             .thenReturn(0);
 
     DslRunCancellationService racingService = new DslRunCancellationService(workflowClient,
-            racingRepository, FIXED);
+            racingRepository, FIXED, null,
+            EmptyObjectProvider.of(DomainEventPublisher.class),
+            EmptyObjectProvider.of(TransactionTemplate.class));
 
     DslRunCancellationService.CancelResult result = racingService.cancel("run-1");
 

@@ -1,5 +1,6 @@
 package cbs.nova.starter.config;
 
+import cbs.nova.starter.core.StarterConstants;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import org.springframework.boot.info.BuildProperties;
@@ -11,7 +12,7 @@ import java.util.Optional;
 @Configuration
 public class OpenApiConfiguration {
 
-  private static final String DEFAULT_VERSION = "0.0.1-SNAPSHOT";
+  private static final String DEFAULT_VERSION = StarterConstants.OPENAPI_DEFAULT_VERSION;
 
   @Bean
   public OpenAPI dslOpenApi(Optional<BuildProperties> buildProperties) {

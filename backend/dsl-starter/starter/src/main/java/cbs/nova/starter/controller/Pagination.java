@@ -1,22 +1,16 @@
 package cbs.nova.starter.controller;
 
+import cbs.nova.starter.core.StarterConstants;
 import org.springframework.web.servlet.function.ServerRequest;
 
-/**
- * Shared pagination parameter parsing and clamping for functional DSL handlers.
- */
 public final class Pagination {
-
-  public static final int DEFAULT_LIMIT = 50;
-  public static final int DEFAULT_OFFSET = 0;
-  public static final int MAX_LIMIT = 500;
 
   private Pagination() {
     // utility class
   }
 
   public static int clampLimit(int limit) {
-    return Math.max(1, Math.min(limit, MAX_LIMIT));
+    return Math.max(1, Math.min(limit, StarterConstants.MAX_LIMIT));
   }
 
   public static int clampOffset(int offset) {

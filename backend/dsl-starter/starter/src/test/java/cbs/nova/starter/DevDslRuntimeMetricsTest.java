@@ -9,6 +9,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
@@ -18,6 +19,7 @@ import cbs.nova.starter.core.pipe.RunDslPipe;
 import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
 import cbs.nova.starter.core.recorder.RunIdKeyedExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;
@@ -37,22 +39,23 @@ class DevDslRuntimeMetricsTest {
   private final RunIdKeyedExternalCallRecorder recorder = new RunIdKeyedExternalCallRecorder(
           dryRunLoggingContext, null);
   private final ContextFactory contextFactory = new ContextFactory();
-  private final DryRunLogBufferRegistry bufferRegistry = new DryRunLogBufferRegistry();
+  private final DryRunLogBufferRegistry bufferRegistry = new DryRunLogBufferRegistry(
+          Caffeine.newBuilder().build());
   private final DryRunLogbackAppender appender = new DryRunLogbackAppender(dryRunLoggingContext,
           bufferRegistry);
   private Appender<ILoggingEvent> originalDryRunAppender;
   private final CbsNovaPreviewProperties previewProperties = new CbsNovaPreviewProperties(null,
           null, null);
   private final PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
-          dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
+          dryRunLoggingContext, bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN,
           null, previewProperties, new CbsNovaFakesProperties(false, null),
-          new RunScopedFakeConfig(), new SimpleMeterRegistry(), null);
+          new RunScopedFakeConfig(Caffeine.newBuilder().build()), new SimpleMeterRegistry(), null);
   private final RunDslPipe runPipe = new RunDslPipe(contextFactory, recorder,
-          new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),
+          new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(Caffeine.newBuilder().build()),
           new DslExecutionEventBus());
   private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
-          dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
-          previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),
+          dryRunLoggingContext, bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN,
+          previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(Caffeine.newBuilder().build()),
           new SimpleMeterRegistry(), new ExplainDiagramRenderer(), null);
   private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
 

@@ -1,5 +1,6 @@
 package cbs.nova.starter.service;
 
+import static cbs.nova.starter.config.DslFileBufferConfiguration.pendingCache;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -17,7 +18,8 @@ import org.junit.jupiter.api.Test;
 
 class DslFileBufferTest {
 
-  private final DslFileBuffer buffer = new DslFileBuffer(DslProperties.builder().build());
+  private final DslFileBuffer buffer = new DslFileBuffer(
+          pendingCache(DslProperties.builder().build()));
 
   @Test
   void stageAndGetRoundTrip() {
@@ -112,7 +114,7 @@ class DslFileBufferTest {
     DslProperties properties = DslProperties.builder()
             .fileBuffer(new DslProperties.FileBuffer(3, null))
             .build();
-    DslFileBuffer bounded = new DslFileBuffer(properties);
+    DslFileBuffer bounded = new DslFileBuffer(pendingCache(properties));
 
     Map<String, String> staged = Map.of(
             "a", "1",
@@ -153,7 +155,7 @@ class DslFileBufferTest {
     DslProperties properties = DslProperties.builder()
             .fileBuffer(new DslProperties.FileBuffer(null, 60L))
             .build();
-    DslFileBuffer bounded = new DslFileBuffer(properties, ticker);
+    DslFileBuffer bounded = new DslFileBuffer(pendingCache(properties, ticker));
 
     bounded.stage("a", "content");
     assertThat(bounded.get("a")).isEqualTo("content");
@@ -173,7 +175,7 @@ class DslFileBufferTest {
     DslProperties properties = DslProperties.builder()
             .fileBuffer(new DslProperties.FileBuffer(null, 60L))
             .build();
-    DslFileBuffer bounded = new DslFileBuffer(properties, ticker);
+    DslFileBuffer bounded = new DslFileBuffer(pendingCache(properties, ticker));
 
     bounded.stage("old", "old-content");
     ticker.advance(Duration.ofSeconds(30));
@@ -189,7 +191,7 @@ class DslFileBufferTest {
     DslProperties properties = DslProperties.builder()
             .fileBuffer(new DslProperties.FileBuffer(1000, null))
             .build();
-    DslFileBuffer bounded = new DslFileBuffer(properties);
+    DslFileBuffer bounded = new DslFileBuffer(pendingCache(properties));
 
     int writers = 4;
     int keysPerWriter = 50;

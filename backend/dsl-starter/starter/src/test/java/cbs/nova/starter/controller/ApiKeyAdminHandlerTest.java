@@ -55,7 +55,7 @@ class ApiKeyAdminHandlerTest {
     JdbcApiKeyRepository repository = new JdbcApiKeyRepository(
             new NamedParameterJdbcTemplate(dataSource));
     store = new ApiKeyStore(repository, objectMapper, new SelfProvider(() -> store));
-    ApiKeyAdminHandler handler = new ApiKeyAdminHandler(store, objectMapper);
+    ApiKeyAdminHandler handler = new ApiKeyAdminHandler(store);
     ApiKeyAdminRouterConfiguration router = new ApiKeyAdminRouterConfiguration();
 
     AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();

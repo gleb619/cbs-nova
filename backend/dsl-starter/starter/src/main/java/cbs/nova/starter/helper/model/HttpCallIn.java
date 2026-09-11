@@ -1,5 +1,8 @@
 package cbs.nova.starter.helper.model;
 
+import cbs.nova.starter.core.StarterConstants;
+
+import lombok.AllArgsConstructor;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
@@ -24,6 +27,7 @@ import java.util.Map;
  * overriding the default 2xx-only behavior</li>
  * </ul>
  */
+@AllArgsConstructor
 public record HttpCallIn(
         String url,
         String method,
@@ -33,33 +37,22 @@ public record HttpCallIn(
         @Nullable RedirectPolicy followRedirects,
         @Nullable List<Integer> validStatuses) {
 
-  /** Convenience constructor for callers that do not need {@code validStatuses}. */
-  public HttpCallIn(
-          String url,
-          String method,
-          @Nullable Map<String, String> headers,
-          @Nullable String body,
-          @Nullable Long timeoutMillis,
-          @Nullable RedirectPolicy followRedirects) {
-    this(url, method, headers, body, timeoutMillis, followRedirects, null);
-  }
-
   /** Convenience factory for the common GET case. */
   public static HttpCallIn get(String url) {
-    return new HttpCallIn(url, "GET", null, null, null, null);
+    return new HttpCallIn(url, "GET", null, null, null, null, null);
   }
 
   /** Convenience factory for a JSON POST. */
   public static HttpCallIn postJson(String url, String json) {
     return new HttpCallIn(url, "POST",
             Map.of("Content-Type", "application/json"),
-            json, null, null);
+            json, null, null, null);
   }
 
   /** Effective request timeout in milliseconds; never zero or negative. */
   public long effectiveTimeoutMillis() {
     if (timeoutMillis == null || timeoutMillis <= 0) {
-      return DEFAULT_TIMEOUT_MILLIS;
+      return StarterConstants.DEFAULT_TIMEOUT_MILLIS;
     }
     return timeoutMillis;
   }
@@ -87,23 +80,8 @@ public record HttpCallIn(
     return validStatuses == null ? List.of() : List.copyOf(validStatuses);
   }
 
-  public static final long DEFAULT_TIMEOUT_MILLIS = 30_000L;
-
   /** Lightweight redirect policy enum (mapped to JDK constants at execution time). */
   public enum RedirectPolicy {
     NEVER, NORMAL, ALWAYS
-  }
-
-  /** Header keys commonly referenced by callers / tests. */
-  public static final class HeaderNames {
-    public static final String CONTENT_TYPE = "Content-Type";
-    public static final String ACCEPT = "Accept";
-    public static final String AUTHORIZATION = "Authorization";
-    public static final String X_REQUEST_ID = "X-Request-Id";
-    public static final List<String> ALL = List.of(CONTENT_TYPE, ACCEPT, AUTHORIZATION,
-            X_REQUEST_ID);
-
-    private HeaderNames() {
-    }
   }
 }

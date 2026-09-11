@@ -1,5 +1,6 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.starter.core.StarterConstants;
 import java.util.regex.Pattern;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.LoaderOptions;
@@ -34,7 +35,7 @@ import org.yaml.snakeyaml.resolver.Resolver;
  */
 final class YamlSupport {
 
-  private static final int MAX_CODE_POINTS = 3 * 1024 * 1024;
+  private static final int MAX_CODE_POINTS = StarterConstants.YAML_MAX_CODE_POINTS;
 
   private YamlSupport() {
   }

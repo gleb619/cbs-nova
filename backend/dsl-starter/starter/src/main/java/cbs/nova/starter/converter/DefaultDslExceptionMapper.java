@@ -14,17 +14,18 @@ public class DefaultDslExceptionMapper implements DslExceptionMapper {
       capture(dsl, dsl.runId());
       return ResponseEntity.unprocessableEntity()
               .body(new ErrorResponse(dsl.code().name(), dsl.getMessage(), null, dsl.runId(),
-                      dsl.exceptionId()));
+                      dsl.exceptionId(), null));
     }
     if (exception instanceof IllegalArgumentException illegalArgument) {
       return ResponseEntity.badRequest()
               .body(new ErrorResponse("BAD_REQUEST", illegalArgument.getMessage(), null, null,
-                      null));
+                      null, null));
     }
     String runId = runIdFrom(request);
     capture(exception, runId);
     return ResponseEntity.internalServerError()
-            .body(new ErrorResponse("INTERNAL_ERROR", exception.getMessage(), null, null, null));
+            .body(new ErrorResponse("INTERNAL_ERROR", exception.getMessage(), null, null, null,
+                    null));
   }
 
   private static String runIdFrom(WebRequest request) {

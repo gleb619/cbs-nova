@@ -4,6 +4,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.annotation.Helper;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.helper.model.RandomIn;
 import cbs.nova.starter.helper.model.RandomOut;
 import java.util.List;
@@ -35,13 +36,13 @@ import org.jspecify.annotations.NonNull;
 @Helper(name = "random")
 public class RandomHelper implements Executable<RandomIn, RandomOut> {
 
-  private static final int MAX_STRING_LENGTH = 100_000;
+  private static final int MAX_STRING_LENGTH = StarterConstants.RANDOM_MAX_STRING_LENGTH;
 
-  private static final String ALPHANUMERIC = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  private static final String ALPHA = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  private static final String NUMERIC = "0123456789";
-  private static final String HEX = "0123456789abcdef";
-  private static final String BASE64URL = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+  private static final String ALPHANUMERIC = StarterConstants.RANDOM_ALPHANUMERIC;
+  private static final String ALPHA = StarterConstants.RANDOM_ALPHA;
+  private static final String NUMERIC = StarterConstants.RANDOM_NUMERIC;
+  private static final String HEX = StarterConstants.RANDOM_HEX;
+  private static final String BASE64URL = StarterConstants.RANDOM_BASE64URL;
 
   @Override
   public @NonNull Result<RandomOut> execute(@NonNull Context<RandomIn> ctx) {

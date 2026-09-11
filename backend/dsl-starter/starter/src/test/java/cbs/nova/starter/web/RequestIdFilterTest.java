@@ -2,6 +2,7 @@ package cbs.nova.starter.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.ErrorResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -58,9 +59,9 @@ class RequestIdFilterTest {
 
     filter.doFilterInternal(request, response, chainThatCapturesMdc());
 
-    assertThat(capturedMdc.get(RequestIdFilter.CORRELATION_ID_MDC_KEY)).isEqualTo("order-4711");
-    assertThat(MDC.get(RequestIdFilter.CORRELATION_ID_MDC_KEY)).isNull();
-    assertThat(MDC.get(RequestIdFilter.REQUEST_ID_MDC_KEY)).isNull();
+    assertThat(capturedMdc.get(StarterConstants.CORRELATION_ID_MDC_KEY)).isEqualTo("order-4711");
+    assertThat(MDC.get(StarterConstants.CORRELATION_ID_MDC_KEY)).isNull();
+    assertThat(MDC.get(StarterConstants.REQUEST_ID_MDC_KEY)).isNull();
   }
 
   @Test
@@ -70,8 +71,8 @@ class RequestIdFilterTest {
 
     filter.doFilterInternal(request, response, chainThatCapturesMdc());
 
-    assertThat(capturedMdc.containsKey(RequestIdFilter.CORRELATION_ID_MDC_KEY)).isFalse();
-    assertThat(MDC.get(RequestIdFilter.CORRELATION_ID_MDC_KEY)).isNull();
+    assertThat(capturedMdc.containsKey(StarterConstants.CORRELATION_ID_MDC_KEY)).isFalse();
+    assertThat(MDC.get(StarterConstants.CORRELATION_ID_MDC_KEY)).isNull();
   }
 
   @Test
@@ -85,7 +86,7 @@ class RequestIdFilterTest {
     assertThat(response.getStatus()).isEqualTo(400);
     assertThat(response.getContentType()).contains("application/json");
     ErrorResponse body = objectMapper.readValue(response.getContentAsString(), ErrorResponse.class);
-    assertThat(body.code()).isEqualTo("INVALID_CORRELATION_ID");
+    assertThat(body.getCode()).isEqualTo("INVALID_CORRELATION_ID");
   }
 
   private final Map<String, String> capturedMdc = new HashMap<>();

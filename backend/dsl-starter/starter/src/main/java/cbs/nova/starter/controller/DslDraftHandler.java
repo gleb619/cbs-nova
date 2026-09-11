@@ -1,5 +1,7 @@
 package cbs.nova.starter.controller;
 
+import lombok.AllArgsConstructor;
+
 import cbs.nova.dsl.LoadResult;
 import cbs.nova.dsl.ValidationException;
 import cbs.nova.starter.builder.DslBuilderClient;
@@ -24,6 +26,7 @@ import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
 import cbs.nova.starter.events.DomainEvent;
 import cbs.nova.starter.service.DomainEventPublisher;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.service.CorrelationId;
 import cbs.nova.starter.service.DslDefinitionBundleService;
 import cbs.nova.starter.service.DslDefinitionHistoryService;
@@ -34,7 +37,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -55,11 +57,12 @@ import tools.jackson.databind.ObjectMapper;
 @Slf4j
 @Component
 @ConditionalOnProperty(prefix = "csb.dsl.drafts", name = "enabled", havingValue = "true", matchIfMissing = true)
+@AllArgsConstructor
 public class DslDraftHandler {
 
-  private static final String DRAFTS_DIR = ".workbench/drafts";
-  private static final String PUBLISHED_DIR = ".workbench/published";
-  private static final int BUNDLE_MAX_DEFINITIONS = 200;
+  private static final String DRAFTS_DIR = StarterConstants.WORKBENCH_DRAFTS_DIR;
+  private static final String PUBLISHED_DIR = StarterConstants.WORKBENCH_PUBLISHED_DIR;
+  private static final int BUNDLE_MAX_DEFINITIONS = StarterConstants.BUNDLE_MAX_DEFINITIONS;
 
   static final String ACTION_DRAFT_WRITE = "DRAFT_WRITE";
   static final String ACTION_DEFINITION_PUBLISH = "DEFINITION_PUBLISH";
@@ -75,65 +78,18 @@ public class DslDraftHandler {
   private final ObjectProvider<CompileDiagnosticRecordRepository> compileDiagnosticRepositoryProvider;
   private final ObjectProvider<DomainEventPublisher> eventPublisherProvider;
 
-  public DslDraftHandler(DslProperties dslProperties, DslReloadHandler reloadHandler,
-          DslDefinitionHistoryService historyService, ObjectMapper objectMapper,
-          DslDefinitionBundleService bundleService) {
-    this(dslProperties, reloadHandler, historyService, objectMapper, bundleService, null, null,
-            null, null);
-  }
-
-  public DslDraftHandler(DslProperties dslProperties, DslReloadHandler reloadHandler,
-          DslDefinitionHistoryService historyService, ObjectMapper objectMapper,
-          DslDefinitionBundleService bundleService,
-          ObjectProvider<DslAuditService> auditServiceProvider) {
-    this(dslProperties, reloadHandler, historyService, objectMapper, bundleService,
-            auditServiceProvider, null, null, null);
-  }
-
-  /**
-   * Constructor for callers that wire audit and builder client but no diagnostic persistence
-   * (tests).
-   */
-  public DslDraftHandler(DslProperties dslProperties, DslReloadHandler reloadHandler,
-          DslDefinitionHistoryService historyService, ObjectMapper objectMapper,
-          DslDefinitionBundleService bundleService,
-          ObjectProvider<DslAuditService> auditServiceProvider,
-          ObjectProvider<DslBuilderClient> builderClientProvider) {
-    this(dslProperties, reloadHandler, historyService, objectMapper, bundleService,
-            auditServiceProvider, builderClientProvider, null, null);
-  }
-
-  @Autowired
-  public DslDraftHandler(DslProperties dslProperties, DslReloadHandler reloadHandler,
-          DslDefinitionHistoryService historyService, ObjectMapper objectMapper,
-          DslDefinitionBundleService bundleService,
-          ObjectProvider<DslAuditService> auditServiceProvider,
-          ObjectProvider<DslBuilderClient> builderClientProvider,
-          ObjectProvider<CompileDiagnosticRecordRepository> compileDiagnosticRepositoryProvider,
-          ObjectProvider<DomainEventPublisher> eventPublisherProvider) {
-    this.dslProperties = dslProperties;
-    this.reloadHandler = reloadHandler;
-    this.historyService = historyService;
-    this.objectMapper = objectMapper;
-    this.bundleService = bundleService;
-    this.auditServiceProvider = auditServiceProvider;
-    this.builderClientProvider = builderClientProvider;
-    this.compileDiagnosticRepositoryProvider = compileDiagnosticRepositoryProvider;
-    this.eventPublisherProvider = eventPublisherProvider;
-  }
-
   public ServerResponse save(ServerRequest request) throws IOException {
     String name = request.pathVariable("name");
     DraftRequest body = parse(request);
     if (body == null || body.name() == null || body.name().isBlank()) {
-      audit(request, ACTION_DRAFT_WRITE, name, DslAuditService.OUTCOME_FAILURE,
+      audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", "name is required"));
       return error(HttpStatus.BAD_REQUEST,
-              new ErrorResponse("INVALID_REQUEST", "name is required", name, null, null));
+              new ErrorResponse("INVALID_REQUEST", "name is required", name, null, null, null));
     }
     var dir = ensureConfigured(name);
     if (dir.isError()) {
-      audit(request, ACTION_DRAFT_WRITE, name, DslAuditService.OUTCOME_FAILURE,
+      audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", "drafts directory not configured"));
       return dir.response();
     }
@@ -142,30 +98,31 @@ public class DslDraftHandler {
     if (builder != null) {
       try {
         DraftResponse saved = builder.saveDraft(name, payload);
-        audit(request, ACTION_DRAFT_WRITE, name, DslAuditService.OUTCOME_SUCCESS,
+        audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_SUCCESS,
                 Map.of("location", String.valueOf(saved.location())));
         publishEventBestEffort(new DomainEvent.DraftSaved(
                 name, payload.version(), payload.taskQueue(), null, correlationIdOf(request)));
         log.info("[DSL drafts] saved {} via DSL builder", name);
         return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(saved);
       } catch (RuntimeException e) {
-        audit(request, ACTION_DRAFT_WRITE, name, DslAuditService.OUTCOME_FAILURE,
+        audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_FAILURE,
                 Map.of("error", String.valueOf(e.getMessage())));
         throw e;
       }
     }
     try {
       Path file = writePayload(dir.path().resolve(DRAFTS_DIR), payload);
-      audit(request, ACTION_DRAFT_WRITE, name, DslAuditService.OUTCOME_SUCCESS,
+      audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_SUCCESS,
               Map.of("location", file.toString()));
       publishEventBestEffort(new DomainEvent.DraftSaved(
               name, payload.version(), payload.taskQueue(), null, correlationIdOf(request)));
       log.info("[DSL drafts] saved {} to {}", name, file);
       return ServerResponse.ok()
               .contentType(MediaType.APPLICATION_JSON)
-              .body(new DraftResponse(name, "Draft", file.toString(), false, LoadResult.empty()));
+              .body(new DraftResponse(name, "Draft", file.toString(), false, LoadResult.empty(),
+                      null, null));
     } catch (IOException | RuntimeException e) {
-      audit(request, ACTION_DRAFT_WRITE, name, DslAuditService.OUTCOME_FAILURE,
+      audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", String.valueOf(e.getMessage())));
       throw e;
     }
@@ -175,14 +132,14 @@ public class DslDraftHandler {
     String name = request.pathVariable("name");
     DraftRequest body = parse(request);
     if (body == null || body.name() == null || body.name().isBlank()) {
-      audit(request, ACTION_DEFINITION_PUBLISH, name, DslAuditService.OUTCOME_FAILURE,
+      audit(request, ACTION_DEFINITION_PUBLISH, name, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", "name is required"));
       return error(HttpStatus.BAD_REQUEST,
-              new ErrorResponse("INVALID_REQUEST", "name is required", name, null, null));
+              new ErrorResponse("INVALID_REQUEST", "name is required", name, null, null, null));
     }
     var dir = ensureConfigured(name);
     if (dir.isError()) {
-      audit(request, ACTION_DEFINITION_PUBLISH, name, DslAuditService.OUTCOME_FAILURE,
+      audit(request, ACTION_DEFINITION_PUBLISH, name, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", "drafts directory not configured"));
       return dir.response();
     }
@@ -195,7 +152,7 @@ public class DslDraftHandler {
         DraftResponse response = finishPublish(name, published.location(), dir.path());
         boolean success = response.reloadError() == null;
         audit(request, ACTION_DEFINITION_PUBLISH, name,
-                success ? DslAuditService.OUTCOME_SUCCESS : DslAuditService.OUTCOME_FAILURE,
+                success ? StarterConstants.OUTCOME_SUCCESS : StarterConstants.OUTCOME_FAILURE,
                 Map.of("location", String.valueOf(published.location()),
                         "reloaded", response.reloaded(),
                         "error", success ? "" : String.valueOf(response.reloadError())));
@@ -208,11 +165,11 @@ public class DslDraftHandler {
                 .body(response);
       } catch (DslCompilationException e) {
         recordDiagnostics(CompileDiagnosticSource.PUBLISH, name, e.diagnostics());
-        audit(request, ACTION_DEFINITION_PUBLISH, name, DslAuditService.OUTCOME_FAILURE,
+        audit(request, ACTION_DEFINITION_PUBLISH, name, StarterConstants.OUTCOME_FAILURE,
                 Map.of("error", String.valueOf(e.getMessage())));
         throw e;
       } catch (IOException | RuntimeException e) {
-        audit(request, ACTION_DEFINITION_PUBLISH, name, DslAuditService.OUTCOME_FAILURE,
+        audit(request, ACTION_DEFINITION_PUBLISH, name, StarterConstants.OUTCOME_FAILURE,
                 Map.of("error", String.valueOf(e.getMessage())));
         throw e;
       }
@@ -224,7 +181,7 @@ public class DslDraftHandler {
       DraftResponse response = finishPublish(name, file.toString(), dir.path());
       boolean success = response.reloadError() == null;
       audit(request, ACTION_DEFINITION_PUBLISH, name,
-              success ? DslAuditService.OUTCOME_SUCCESS : DslAuditService.OUTCOME_FAILURE,
+              success ? StarterConstants.OUTCOME_SUCCESS : StarterConstants.OUTCOME_FAILURE,
               Map.of("location", file.toString(),
                       "reloaded", response.reloaded(),
                       "error", success ? "" : String.valueOf(response.reloadError())));
@@ -236,7 +193,7 @@ public class DslDraftHandler {
               .contentType(MediaType.APPLICATION_JSON)
               .body(response);
     } catch (IOException | RuntimeException e) {
-      audit(request, ACTION_DEFINITION_PUBLISH, name, DslAuditService.OUTCOME_FAILURE,
+      audit(request, ACTION_DEFINITION_PUBLISH, name, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", String.valueOf(e.getMessage())));
       throw e;
     }
@@ -274,7 +231,7 @@ public class DslDraftHandler {
       return error(HttpStatus.NOT_FOUND,
               new ErrorResponse("NOT_FOUND",
                       "No publish history entry " + timestamp + " for " + name,
-                      name, null, null));
+                      name, null, null, null));
     }
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(entry.get());
   }
@@ -296,7 +253,7 @@ public class DslDraftHandler {
       return error(HttpStatus.NOT_FOUND,
               new ErrorResponse("NOT_FOUND",
                       "No publish history entry " + timestamp + " for " + name,
-                      name, null, null));
+                      name, null, null, null));
     }
     String after = pretty(entry.get());
     var published = historyService.readPublished(dir.path(), name);
@@ -334,7 +291,7 @@ public class DslDraftHandler {
       return error(HttpStatus.NOT_FOUND,
               new ErrorResponse("NOT_FOUND",
                       "No publish history entry " + timestamp + " for " + name,
-                      name, null, null));
+                      name, null, null, null));
     }
     historyService.snapshotBeforePublish(dir.path(), name);
     var payload = withStatus(entry.get(), "Published");
@@ -361,18 +318,18 @@ public class DslDraftHandler {
     Path draftFile = draftsDir.resolve(safeFileName(name) + ".json").normalize();
     if (!draftFile.startsWith(draftsDir) || !Files.exists(draftFile)) {
       return error(HttpStatus.NOT_FOUND,
-              new ErrorResponse("NOT_FOUND", "Draft not found: " + name, name, null, null));
+              new ErrorResponse("NOT_FOUND", "Draft not found: " + name, name, null, null, null));
     }
     Files.delete(draftFile);
     log.info("[DSL drafts] deleted {} from {}", name, draftFile);
     return ServerResponse.ok()
             .contentType(MediaType.APPLICATION_JSON)
-            .body(new DraftResponse(name, "Deleted", null, false, LoadResult.empty()));
+            .body(new DraftResponse(name, "Deleted", null, false, LoadResult.empty(), null, null));
   }
 
   public ServerResponse list(ServerRequest request) {
-    int limit = Pagination.intParam(request, "limit", Pagination.DEFAULT_LIMIT);
-    int offset = Pagination.intParam(request, "offset", Pagination.DEFAULT_OFFSET);
+    int limit = Pagination.intParam(request, "limit", StarterConstants.DEFAULT_LIMIT);
+    int offset = Pagination.intParam(request, "offset", StarterConstants.DEFAULT_OFFSET);
     int pageSize = Pagination.clampLimit(limit);
     int skip = Pagination.clampOffset(offset);
 
@@ -444,7 +401,7 @@ public class DslDraftHandler {
     Path draftFile = drafts.resolve(safeFileName(name) + ".json").normalize();
     if (!draftFile.startsWith(drafts) || !Files.exists(draftFile)) {
       return error(HttpStatus.NOT_FOUND,
-              new ErrorResponse("NOT_FOUND", "Draft not found: " + name, name, null, null));
+              new ErrorResponse("NOT_FOUND", "Draft not found: " + name, name, null, null, null));
     }
     DraftRequest payload = objectMapper.readValue(draftFile.toFile(), DraftRequest.class);
     log.info("[DSL drafts] read {} from {}", name, draftFile);
@@ -484,7 +441,8 @@ public class DslDraftHandler {
     } catch (JacksonException e) {
       log.warn("[DSL bundle] failed to parse bundle body: {}", e.getMessage());
       return error(HttpStatus.BAD_REQUEST,
-              new ErrorResponse("INVALID_REQUEST", "malformed bundle JSON", null, null, null));
+              new ErrorResponse("INVALID_REQUEST", "malformed bundle JSON", null, null, null,
+                      null));
     } catch (ServletException e) {
       throw new IOException("Failed to read bundle body", e);
     }
@@ -507,13 +465,13 @@ public class DslDraftHandler {
         }
       }
       log.warn("[DSL bundle] import validation failed: {}", e.getMessage());
-      return error(HttpStatus.BAD_REQUEST, new ErrorResponse(code, detail, null, null, null));
+      return error(HttpStatus.BAD_REQUEST, new ErrorResponse(code, detail, null, null, null, null));
     }
 
     if (bundle.definitions().size() > BUNDLE_MAX_DEFINITIONS) {
       return error(HttpStatus.BAD_REQUEST,
               new ErrorResponse("INVALID_REQUEST", "bundle too large (max " + BUNDLE_MAX_DEFINITIONS
-                      + " definitions)", null, null, null));
+                      + " definitions)", null, null, null, null));
     }
 
     if (dryRun) {
@@ -545,10 +503,10 @@ public class DslDraftHandler {
         results.add(new ImportEntryResult(name, "published", null));
         log.info("[DSL bundle] imported published marker {} to {}", name, file);
       }
-      audit(request, ACTION_DRAFT_BULK_WRITE, bulkTarget, DslAuditService.OUTCOME_SUCCESS,
+      audit(request, ACTION_DRAFT_BULK_WRITE, bulkTarget, StarterConstants.OUTCOME_SUCCESS,
               Map.of("count", results.size()));
     } catch (RuntimeException e) {
-      audit(request, ACTION_DRAFT_BULK_WRITE, bulkTarget, DslAuditService.OUTCOME_FAILURE,
+      audit(request, ACTION_DRAFT_BULK_WRITE, bulkTarget, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", String.valueOf(e.getMessage()),
                       "succeeded", results.size(),
                       "attempted", bundle.definitions().size()));
@@ -567,7 +525,7 @@ public class DslDraftHandler {
   private ServerResponse importBundleViaBuilder(ServerRequest request, DefinitionBundle bundle,
           String bulkTarget) throws IOException {
     ImportBundleResult imported = builderClient().importBundle(bundle, false);
-    audit(request, ACTION_DRAFT_BULK_WRITE, bulkTarget, DslAuditService.OUTCOME_SUCCESS,
+    audit(request, ACTION_DRAFT_BULK_WRITE, bulkTarget, StarterConstants.OUTCOME_SUCCESS,
             Map.of("count", imported.results().size()));
     ReloadOutcome outcome = reloadOutcome(bulkTarget);
     ImportBundleResult result = new ImportBundleResult(false, outcome.reloaded(),
@@ -641,7 +599,7 @@ public class DslDraftHandler {
   private @Nullable String correlationIdOf(@NonNull ServerRequest request) {
     try {
       return CorrelationId.validated(
-              request.headers().firstHeader(CorrelationId.CORRELATION_ID_HEADER));
+              request.headers().firstHeader(StarterConstants.CORRELATION_ID_HEADER));
     } catch (IllegalArgumentException e) {
       return null;
     }
@@ -703,7 +661,7 @@ public class DslDraftHandler {
       return new DraftResponse(name, "Published", location, false, LoadResult.empty(),
               e.getMessage(), null);
     }
-    return new DraftResponse(name, "Published", location, reloaded, loadResult);
+    return new DraftResponse(name, "Published", location, reloaded, loadResult, null, null);
   }
 
   private sealed interface PathResult {
@@ -741,13 +699,13 @@ public class DslDraftHandler {
       return new PathResult.Err(error(HttpStatus.CONFLICT,
               new ErrorResponse("NOT_CONFIGURED", "csb.dsl.source-dir is not configured", name,
                       null,
-                      null)));
+                      null, null)));
     }
     Path dir = Path.of(sourceDirProperty);
     if (!Files.isDirectory(dir)) {
       return new PathResult.Err(error(HttpStatus.CONFLICT,
               new ErrorResponse("NOT_FOUND", "Source directory does not exist: " + dir, name, null,
-                      null)));
+                      null, null)));
     }
     return new PathResult.Ok(dir);
   }

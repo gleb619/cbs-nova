@@ -5,7 +5,7 @@ import cbs.nova.dsl.CallNode;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.PreviewMetricsSnapshot;
 import cbs.nova.dsl.Result;
-import cbs.nova.starter.core.StarterConstant;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import cbs.nova.starter.core.recorder.ExternalCall;
@@ -19,10 +19,6 @@ import java.util.List;
 
 @RequiredArgsConstructor
 public final class MetricsStage implements DslPipeStage {
-
-  public static final String CALL_COUNTER = "dsl.preview.calls";
-  public static final String EXTERNAL_CALL_COUNTER = "dsl.preview.external.calls";
-  public static final String DURATION_TIMER = "dsl.preview.duration";
 
   private final MeterRegistry meterRegistry;
 
@@ -39,18 +35,18 @@ public final class MetricsStage implements DslPipeStage {
       countCallKinds(context, collector);
       countExternalCalls(context, collector);
       PreviewMetricsSnapshot snapshot = collector.stop();
-      sample.stop(Timer.builder(DURATION_TIMER)
+      sample.stop(Timer.builder(StarterConstants.DURATION_TIMER)
               .description("Duration of a preview or explain run")
               .tag("mode", context.mode().name())
               .tag("process", context.name())
               .register(meterRegistry));
-      context.setAttribute(StarterConstant.METRICS_ATTRIBUTE, snapshot);
+      context.setAttribute(StarterConstants.METRICS_ATTRIBUTE, snapshot);
     }
   }
 
   private void countCallKinds(@NonNull DslPipeContext context,
           @NonNull PreviewMetricsCollector collector) {
-    CallNode tree = context.getAttribute(StarterConstant.AST_TREE_ATTRIBUTE, CallNode.class);
+    CallNode tree = context.getAttribute(StarterConstants.AST_TREE_ATTRIBUTE, CallNode.class);
     if (tree != null) {
       countNode(tree, collector);
     }
@@ -59,7 +55,7 @@ public final class MetricsStage implements DslPipeStage {
   private void countNode(@NonNull CallNode node, @NonNull PreviewMetricsCollector collector) {
     CallKind kind = node.kind();
     collector.recordCall(kind);
-    meterRegistry.counter(CALL_COUNTER, "kind", kind.name()).increment();
+    meterRegistry.counter(StarterConstants.CALL_COUNTER, "kind", kind.name()).increment();
     for (CallNode child : node.children()) {
       countNode(child, collector);
     }
@@ -69,11 +65,12 @@ public final class MetricsStage implements DslPipeStage {
   private void countExternalCalls(@NonNull DslPipeContext context,
           @NonNull PreviewMetricsCollector collector) {
     List<ExternalCall> calls = (List<ExternalCall>) context.getAttribute(
-            StarterConstant.EXTERNAL_CALLS_ATTRIBUTE);
+            StarterConstants.EXTERNAL_CALLS_ATTRIBUTE);
     if (calls != null) {
       for (ExternalCall call : calls) {
         collector.recordExternalCall(call.type());
-        meterRegistry.counter(EXTERNAL_CALL_COUNTER, "type", call.type()).increment();
+        meterRegistry.counter(StarterConstants.EXTERNAL_CALL_COUNTER, "type", call.type())
+                .increment();
       }
     }
   }

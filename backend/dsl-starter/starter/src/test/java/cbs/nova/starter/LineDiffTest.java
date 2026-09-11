@@ -2,6 +2,7 @@ package cbs.nova.starter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.VcsModels.DiffHunk;
 import cbs.nova.starter.util.LineDiff;
 import org.junit.jupiter.api.Test;
@@ -74,7 +75,7 @@ class LineDiffTest {
     LineDiff.Result result = LineDiff.diff(String.join("\n", beforeLines),
             String.join("\n", afterLines));
 
-    assertThat(result.hunks()).hasSize(LineDiff.DEFAULT_MAX_HUNKS);
+    assertThat(result.hunks()).hasSize(StarterConstants.DEFAULT_MAX_HUNKS);
     assertThat(result.truncated()).isTrue();
   }
 

@@ -7,6 +7,7 @@ import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.DslRunsProperties;
 import cbs.nova.starter.config.properties.InputValidationProperties;
 import cbs.nova.starter.controller.DslRuntimeHandler;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.ValidationErrorsResponse;
 import cbs.nova.starter.service.DslRuntimeService;
 import cbs.nova.starter.service.InputValidator;
@@ -48,7 +49,7 @@ public class DslRuntimeRouterConfiguration {
           JsonSchemaGenerator schemaGenerator,
           InputValidationProperties properties,
           CbsNovaCacheProperties cacheProperties) {
-    var spec = cacheProperties.specFor(CbsNovaCacheProperties.Names.INPUT_SCHEMA);
+    var spec = cacheProperties.specFor(StarterConstants.INPUT_SCHEMA);
     Cache<String, Map<String, Object>> cache = Caffeine.newBuilder()
             .expireAfterWrite(spec.ttl())
             .maximumSize(spec.maxSize())

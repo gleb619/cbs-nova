@@ -24,7 +24,7 @@ class SortRecordsHelperTest {
             Map.<String, Object>of("a", 2),
             Map.<String, Object>of("a", 1),
             Map.<String, Object>of("a", 3));
-    var ctx = contextFactory.of(new SortRecordsIn(records, "a", true),
+    var ctx = contextFactory.of(new SortRecordsIn(records, "a", true, null, null),
             ExecutionMode.PREVIEW);
     Result<SortRecordsOut> result = helper.execute(ctx);
     assertThat(result.isSuccess()).isTrue();
@@ -39,7 +39,7 @@ class SortRecordsHelperTest {
             Map.<String, Object>of("a", 2),
             Map.<String, Object>of("a", 1),
             Map.<String, Object>of("a", 3));
-    var ctx = contextFactory.of(new SortRecordsIn(records, "a", false),
+    var ctx = contextFactory.of(new SortRecordsIn(records, "a", false, null, null),
             ExecutionMode.PREVIEW);
     Result<SortRecordsOut> result = helper.execute(ctx);
     assertThat(result.isSuccess()).isTrue();
@@ -93,14 +93,14 @@ class SortRecordsHelperTest {
 
   @Test
   void returnsEmptyForNullRecords() {
-    var ctx = contextFactory.of(new SortRecordsIn(null, "a", true),
+    var ctx = contextFactory.of(new SortRecordsIn(null, "a", true, null, null),
             ExecutionMode.PREVIEW);
     assertThat(helper.execute(ctx).value().records()).isEmpty();
   }
 
   @Test
   void returnsEmptyForEmptyRecords() {
-    var ctx = contextFactory.of(new SortRecordsIn(List.of(), "a", true),
+    var ctx = contextFactory.of(new SortRecordsIn(List.of(), "a", true, null, null),
             ExecutionMode.PREVIEW);
     assertThat(helper.execute(ctx).value().records()).isEmpty();
   }
@@ -114,7 +114,7 @@ class SortRecordsHelperTest {
     Map<String, Object> three = new HashMap<>();
     three.put("a", 1);
     var records = List.of(one, two, three);
-    var ctx = contextFactory.of(new SortRecordsIn(records, "a", true),
+    var ctx = contextFactory.of(new SortRecordsIn(records, "a", true, null, null),
             ExecutionMode.PREVIEW);
     Result<SortRecordsOut> result = helper.execute(ctx);
     assertThat(result.isSuccess()).isTrue();
@@ -129,7 +129,7 @@ class SortRecordsHelperTest {
             Map.of("a", 100),
             Map.of("a", "20"),
             Map.of("a", 3));
-    var ctx = contextFactory.of(new SortRecordsIn(records, "a", true),
+    var ctx = contextFactory.of(new SortRecordsIn(records, "a", true, null, null),
             ExecutionMode.PREVIEW);
     Result<SortRecordsOut> result = helper.execute(ctx);
     assertThat(result.isSuccess()).isTrue();

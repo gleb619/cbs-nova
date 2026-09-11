@@ -3,39 +3,17 @@ package cbs.nova.starter.resolver;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
-import java.time.Duration;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 
+@RequiredArgsConstructor
 public final class SpringOrGeneratedHelperInstanceResolver implements HelperInstanceResolver {
-
-  private static final Duration CACHE_TTL = Duration.ofMinutes(1);
-  private static final long CACHE_MAX_SIZE = 1_024L;
 
   private final HelperInstanceResolver springResolver;
   private final @NonNull List<HelperInstanceResolver> generatedFactories;
   private final Cache<Class<?>, Executable<?, ?>> cache;
-
-  public SpringOrGeneratedHelperInstanceResolver(
-          HelperInstanceResolver springResolver,
-          @NonNull List<HelperInstanceResolver> generatedFactories) {
-    this(springResolver, generatedFactories, CACHE_TTL, CACHE_MAX_SIZE);
-  }
-
-  public SpringOrGeneratedHelperInstanceResolver(
-          HelperInstanceResolver springResolver,
-          @NonNull List<HelperInstanceResolver> generatedFactories,
-          Duration ttl,
-          long maxSize) {
-    this.springResolver = springResolver;
-    this.generatedFactories = generatedFactories;
-    this.cache = Caffeine.newBuilder()
-            .expireAfterWrite(ttl)
-            .maximumSize(maxSize)
-            .build();
-  }
 
   @Override
   public @NonNull Executable<?, ?> resolve(@NonNull Class<?> helperClass) {

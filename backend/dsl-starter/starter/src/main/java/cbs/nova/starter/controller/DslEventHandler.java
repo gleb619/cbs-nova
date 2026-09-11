@@ -1,5 +1,6 @@
 package cbs.nova.starter.controller;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.DslEventDto;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.persistence.DslEventRepository;
@@ -20,8 +21,8 @@ public class DslEventHandler {
   private final ObjectMapper objectMapper;
 
   public ServerResponse list(ServerRequest request) {
-    int limit = Pagination.intParam(request, "limit", Pagination.DEFAULT_LIMIT);
-    int offset = Pagination.intParam(request, "offset", Pagination.DEFAULT_OFFSET);
+    int limit = Pagination.intParam(request, "limit", StarterConstants.DEFAULT_LIMIT);
+    int offset = Pagination.intParam(request, "offset", StarterConstants.DEFAULT_OFFSET);
     int pageSize = Pagination.clampLimit(limit);
     int skip = Pagination.clampOffset(offset);
 

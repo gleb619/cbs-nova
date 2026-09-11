@@ -17,7 +17,7 @@ class DefaultModelRegistryTest {
 
   @Test
   void returnsEmptySetWhenNoProviders() {
-    var registry = new DefaultModelRegistry();
+    var registry = DefaultModelRegistry.discover(getClass().getClassLoader());
 
     assertThat(registry.modelTypes()).isEmpty();
     assertThat(registry.isRegistered(String.class)).isFalse();
@@ -32,7 +32,7 @@ class DefaultModelRegistryTest {
     try (var classLoader = new URLClassLoader(
             new URL[]{tempDir.toUri().toURL()},
             getClass().getClassLoader())) {
-      var registry = new DefaultModelRegistry(classLoader);
+      var registry = DefaultModelRegistry.discover(classLoader);
 
       assertThat(registry.modelTypes()).containsExactly(String.class);
       assertThat(registry.isRegistered(String.class)).isTrue();

@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.starter.core.StarterConstants;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
@@ -12,7 +14,7 @@ import java.util.Map;
 class CompensationTrackerHelperTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
-  private final CompensationTrackerHelper helper = new CompensationTrackerHelper();
+  private final CompensationTrackerHelper helper = defaultHelper();
 
   @Test
   void recordsMarker() {
@@ -48,8 +50,7 @@ class CompensationTrackerHelperTest {
 
   @Test
   void markersExpireAfterTtl() throws InterruptedException {
-    CompensationTrackerHelper shortLived = new CompensationTrackerHelper(Duration.ofMillis(30),
-            100);
+    CompensationTrackerHelper shortLived = helperWithTtl(Duration.ofMillis(30), 100);
     shortLived.execute(contextFactory.of(
             Map.<String, Object>of("markerId", "m1"), ExecutionMode.PREVIEW));
     assertThat(shortLived.wasCompensated("m1")).isTrue();
@@ -62,7 +63,7 @@ class CompensationTrackerHelperTest {
 
   @Test
   void maxSizeEvictsLeastRecentlyWritten() {
-    CompensationTrackerHelper bounded = new CompensationTrackerHelper(Duration.ofMinutes(1), 2);
+    CompensationTrackerHelper bounded = helperWithTtl(Duration.ofMinutes(1), 2);
     bounded.execute(contextFactory.of(
             Map.<String, Object>of("markerId", "a"), ExecutionMode.PREVIEW));
     bounded.execute(contextFactory.of(
@@ -74,5 +75,17 @@ class CompensationTrackerHelperTest {
     // LRU at this scale; assert the bound holds and the most recent write always survives.
     assertThat(bounded.markers()).hasSize(2);
     assertThat(bounded.wasCompensated("c")).isTrue();
+  }
+
+  private static CompensationTrackerHelper defaultHelper() {
+    return helperWithTtl(StarterConstants.COMPENSATION_TRACKER_TTL,
+            StarterConstants.COMPENSATION_TRACKER_MAX_SIZE);
+  }
+
+  private static CompensationTrackerHelper helperWithTtl(Duration ttl, long maxSize) {
+    return new CompensationTrackerHelper(Caffeine.newBuilder()
+            .expireAfterWrite(ttl)
+            .maximumSize(maxSize)
+            .build());
   }
 }

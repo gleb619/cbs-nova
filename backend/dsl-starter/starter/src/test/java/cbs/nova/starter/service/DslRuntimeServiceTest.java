@@ -23,12 +23,12 @@ import cbs.nova.dsl.exception.DslException;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dslexamples.v1.BatchModels.BatchIn;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.PreviewTimeoutException;
 import cbs.nova.starter.converter.DslRuntimeMapper;
 import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.model.DslRequest;
 import cbs.nova.starter.model.RuntimeOutcome;
-import cbs.nova.starter.web.RequestIdFilter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.time.Duration;
@@ -69,7 +69,7 @@ class DslRuntimeServiceTest {
     assertThat(outcome.success()).isTrue();
     assertThat(outcome.value()).isSameAs(report);
     assertThat(outcome.error()).isNull();
-    assertThat(MDC.get(RequestIdFilter.REQUEST_ID_MDC_KEY)).isNull();
+    assertThat(MDC.get(StarterConstants.REQUEST_ID_MDC_KEY)).isNull();
   }
 
   @Test
@@ -83,11 +83,11 @@ class DslRuntimeServiceTest {
 
     assertThat(outcome.success()).isFalse();
     assertThat(outcome.value()).isNull();
-    assertThat(outcome.error().code()).isEqualTo("UNKNOWN_ERROR");
-    assertThat(outcome.error().message()).isEqualTo("boom");
-    assertThat(outcome.error().entityName()).isEqualTo("Ping");
-    assertThat(outcome.error().runId()).isEqualTo("req-1");
-    assertThat(outcome.error().exceptionId()).startsWith("req-1:ex:");
+    assertThat(outcome.error().getCode()).isEqualTo("UNKNOWN_ERROR");
+    assertThat(outcome.error().getMessage()).isEqualTo("boom");
+    assertThat(outcome.error().getEntityName()).isEqualTo("Ping");
+    assertThat(outcome.error().getRunId()).isEqualTo("req-1");
+    assertThat(outcome.error().getExceptionId()).startsWith("req-1:ex:");
   }
 
   @Test
@@ -109,9 +109,9 @@ class DslRuntimeServiceTest {
     RuntimeOutcome outcome = service.run("P", new DslRequest("input", null), "req-2");
 
     assertThat(outcome.success()).isFalse();
-    assertThat(outcome.error().code()).isEqualTo("EXECUTION_FAILED");
-    assertThat(outcome.error().message()).isEqualTo("exec error");
-    assertThat(outcome.error().runId()).isEqualTo("req-2");
+    assertThat(outcome.error().getCode()).isEqualTo("EXECUTION_FAILED");
+    assertThat(outcome.error().getMessage()).isEqualTo("exec error");
+    assertThat(outcome.error().getRunId()).isEqualTo("req-2");
   }
 
   @Test
@@ -122,9 +122,9 @@ class DslRuntimeServiceTest {
     RuntimeOutcome outcome = service.run("P", new DslRequest("input", null), "req-3");
 
     assertThat(outcome.success()).isFalse();
-    assertThat(outcome.error().code()).isEqualTo("ENTITY_NOT_FOUND");
-    assertThat(outcome.error().runId()).isEqualTo("run-abc");
-    assertThat(outcome.error().exceptionId()).startsWith("run-abc:ex:");
+    assertThat(outcome.error().getCode()).isEqualTo("ENTITY_NOT_FOUND");
+    assertThat(outcome.error().getRunId()).isEqualTo("run-abc");
+    assertThat(outcome.error().getExceptionId()).startsWith("run-abc:ex:");
   }
 
   @Test
@@ -148,10 +148,10 @@ class DslRuntimeServiceTest {
     assertThat(result.success()).isFalse();
     assertThat(result.value()).isNull();
     assertThat(result.error()).isNotNull();
-    assertThat(result.error().code()).isNotBlank();
-    assertThat(result.error().message()).isEqualTo("boom");
-    assertThat(result.error().runId()).isEqualTo("req-boom");
-    assertThat(result.error().entityName()).isEqualTo("Ghost");
+    assertThat(result.error().getCode()).isNotBlank();
+    assertThat(result.error().getMessage()).isEqualTo("boom");
+    assertThat(result.error().getRunId()).isEqualTo("req-boom");
+    assertThat(result.error().getEntityName()).isEqualTo("Ghost");
   }
 
   @Test
@@ -163,10 +163,10 @@ class DslRuntimeServiceTest {
     assertThat(result.success()).isFalse();
     assertThat(result.value()).isNull();
     assertThat(result.error()).isNotNull();
-    assertThat(result.error().runId()).isEqualTo("req-null");
-    assertThat(result.error().entityName()).isEqualTo("Ghost");
-    assertThat(result.error().message()).contains("Ghost");
-    assertThat(result.error().code()).isNotBlank();
+    assertThat(result.error().getRunId()).isEqualTo("req-null");
+    assertThat(result.error().getEntityName()).isEqualTo("Ghost");
+    assertThat(result.error().getMessage()).contains("Ghost");
+    assertThat(result.error().getCode()).isNotBlank();
   }
 
   @Test
@@ -179,7 +179,7 @@ class DslRuntimeServiceTest {
     assertThat(result.success()).isTrue();
     assertThat(result.value()).isSameAs(report);
     assertThat(result.error()).isNull();
-    assertThat(MDC.get(RequestIdFilter.REQUEST_ID_MDC_KEY)).isNull();
+    assertThat(MDC.get(StarterConstants.REQUEST_ID_MDC_KEY)).isNull();
   }
 
   @Test
@@ -190,10 +190,10 @@ class DslRuntimeServiceTest {
     RuntimeOutcome result = service.explain("Slow", new DslRequest("in", null), "req-5");
 
     assertThat(result.success()).isFalse();
-    assertThat(result.error().code()).isEqualTo("PREVIEW_TIMEOUT");
-    assertThat(result.error().entityName()).isEqualTo("Slow");
-    assertThat(result.error().runId()).isEqualTo("req-5");
-    assertThat(result.error().exceptionId()).startsWith("req-5:ex:");
+    assertThat(result.error().getCode()).isEqualTo("PREVIEW_TIMEOUT");
+    assertThat(result.error().getEntityName()).isEqualTo("Slow");
+    assertThat(result.error().getRunId()).isEqualTo("req-5");
+    assertThat(result.error().getExceptionId()).startsWith("req-5:ex:");
   }
 
   @Test
@@ -204,19 +204,19 @@ class DslRuntimeServiceTest {
     RuntimeOutcome result = service.preview("Slow", new DslRequest("in", null), "req-6");
 
     assertThat(result.success()).isFalse();
-    assertThat(result.error().code()).isEqualTo("PREVIEW_TIMEOUT");
-    assertThat(result.error().entityName()).isEqualTo("Slow");
-    assertThat(result.error().runId()).isEqualTo("req-6");
-    assertThat(result.error().message()).contains("100 ms");
+    assertThat(result.error().getCode()).isEqualTo("PREVIEW_TIMEOUT");
+    assertThat(result.error().getEntityName()).isEqualTo("Slow");
+    assertThat(result.error().getRunId()).isEqualTo("req-6");
+    assertThat(result.error().getMessage()).contains("100 ms");
   }
 
   @Test
   void mdcIsClearedAfterExecution() {
     doReturn(Result.success("output")).when(dslRuntime).run(eq("P"), any());
 
-    assertThat(MDC.get(RequestIdFilter.REQUEST_ID_MDC_KEY)).isNull();
+    assertThat(MDC.get(StarterConstants.REQUEST_ID_MDC_KEY)).isNull();
     service.run("P", new DslRequest("in", null), "rid-9");
-    assertThat(MDC.get(RequestIdFilter.REQUEST_ID_MDC_KEY)).isNull();
+    assertThat(MDC.get(StarterConstants.REQUEST_ID_MDC_KEY)).isNull();
   }
 
   private static PreviewReport previewReport(String name, boolean success,
@@ -259,7 +259,7 @@ class DslRuntimeServiceTest {
             .forClass(Context.class);
     verify(dslRuntime).run(eq("P"), captor.capture());
     assertThat(captor.getValue().metadata())
-            .containsEntry(CorrelationId.CORRELATION_ID_METADATA_KEY, "corr-123");
+            .containsEntry(StarterConstants.CORRELATION_ID_METADATA_KEY, "corr-123");
   }
 
   @Test
@@ -272,7 +272,7 @@ class DslRuntimeServiceTest {
             .forClass(Context.class);
     verify(dslRuntime).run(eq("P"), captor.capture());
     assertThat(captor.getValue().metadata())
-            .doesNotContainKey(CorrelationId.CORRELATION_ID_METADATA_KEY);
+            .doesNotContainKey(StarterConstants.CORRELATION_ID_METADATA_KEY);
   }
 
   @Test

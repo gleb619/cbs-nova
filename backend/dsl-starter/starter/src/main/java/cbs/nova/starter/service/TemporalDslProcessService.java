@@ -9,6 +9,7 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.events.DomainEvent;
 import cbs.nova.starter.sse.ExecutionStatusEventPublisher;
 import cbs.nova.starter.service.DslRunCancellationService.Outcome;
@@ -57,26 +58,6 @@ import java.util.function.Supplier;
 
 @Slf4j
 public class TemporalDslProcessService {
-
-  public static final String EMPTY_OUTPUT_JSON = "{}";
-
-  public static final Instant NOT_FINISHED_AT = Instant.EPOCH;
-
-  public static final String RUN_DURATION_TIMER = "dsl.run.duration";
-
-  public static final String RUN_COUNT_COUNTER = "dsl.run.count";
-
-  public static final String CANCEL_COUNTER = "dsl.run.cancel";
-
-  public static final String SWEEP_STALE_COUNTER = "dsl.run.sweep.stale";
-
-  public static final String SWEEP_INSPECTED_COUNTER = "dsl.run.sweep.inspected";
-
-  public static final String UNKNOWN_PROCESS = "unknown";
-
-  public static final String PROCESS_NAME_TAG = "processName";
-
-  public static final String STATUS_TAG = "status";
 
   private final ContextFactory contextFactory;
   private final DslRunRepository runRepository;
@@ -142,7 +123,7 @@ public class TemporalDslProcessService {
             EmptyObjectProvider.of(TransactionTemplate.class));
   }
 
-  private static final Duration SHUTDOWN_JOIN = Duration.ofSeconds(5);
+  private static final Duration SHUTDOWN_JOIN = StarterConstants.SERVICE_SHUTDOWN_JOIN;
 
   private final AtomicReference<Clock> clock = new AtomicReference<>(Clock.systemUTC());
 
@@ -174,7 +155,7 @@ public class TemporalDslProcessService {
           @Nullable Object input,
           @Nullable String correlationId) {
     Map<String, Object> metadata = correlationId != null && !correlationId.isBlank()
-            ? Map.of(CorrelationId.CORRELATION_ID_METADATA_KEY, correlationId)
+            ? Map.of(StarterConstants.CORRELATION_ID_METADATA_KEY, correlationId)
             : Map.of();
     return startProcess(processName, input, metadata);
   }
@@ -188,7 +169,7 @@ public class TemporalDslProcessService {
           @Nullable Object input,
           @NonNull Map<String, Object> metadata) {
     return startProcess(processName, input, metadata,
-            CorrelationId.fromMetadata(metadata.get(CorrelationId.CORRELATION_ID_METADATA_KEY)));
+            CorrelationId.fromMetadata(metadata.get(StarterConstants.CORRELATION_ID_METADATA_KEY)));
   }
 
   public @NonNull ProcessRun startProcess(
@@ -209,10 +190,10 @@ public class TemporalDslProcessService {
               .processName(processName)
               .status(DslRunStatus.RUNNING.name())
               .input(inputJson)
-              .output(EMPTY_OUTPUT_JSON)
+              .output(StarterConstants.EMPTY_OUTPUT_JSON)
               .error(null)
               .startedAt(startedAt)
-              .finishedAt(NOT_FINISHED_AT)
+              .finishedAt(StarterConstants.NOT_FINISHED_AT)
               .executionMode(ExecutionMode.RUN.name())
               .triggeredBy(triggeredBy)
               .correlationId(correlationId)
@@ -294,8 +275,9 @@ public class TemporalDslProcessService {
     try {
       for (String processName : knownProcessNames()) {
         for (DslRun run : runRepository.findByProcessName(processName)) {
-          meterRegistry.counter(SWEEP_INSPECTED_COUNTER,
-                  PROCESS_NAME_TAG, safeProcessName(run.processName())).increment();
+          meterRegistry.counter(StarterConstants.SWEEP_INSPECTED_COUNTER,
+                  StarterConstants.PROCESS_NAME_TAG, safeProcessName(run.processName()))
+                  .increment();
           if (!DslRunStatus.RUNNING.name().equals(run.status())) {
             continue;
           }
@@ -320,7 +302,7 @@ public class TemporalDslProcessService {
         int affected = runRepository.updateFinishedIfRunning(
                 runId,
                 DslRunStatus.STALE.name(),
-                EMPTY_OUTPUT_JSON,
+                StarterConstants.EMPTY_OUTPUT_JSON,
                 "Run exceeded staleness threshold " + staleThreshold
                         + " without producing a final status",
                 finishedAt,
@@ -340,8 +322,8 @@ public class TemporalDslProcessService {
         return null;
       });
 
-      meterRegistry.counter(SWEEP_STALE_COUNTER,
-              PROCESS_NAME_TAG, safeProcessName(run.processName())).increment();
+      meterRegistry.counter(StarterConstants.SWEEP_STALE_COUNTER,
+              StarterConstants.PROCESS_NAME_TAG, safeProcessName(run.processName())).increment();
       recordRunComplete(run.processName(), DslRunStatus.STALE.name(), run.startedAt(), finishedAt);
 
       Span span = activeSpans.remove(runId);
@@ -366,11 +348,11 @@ public class TemporalDslProcessService {
 
   private @NonNull String safeProcessName(@Nullable String processName) {
     if (processName == null || processName.isBlank()) {
-      return UNKNOWN_PROCESS;
+      return StarterConstants.UNKNOWN_PROCESS;
     }
     return GlobalManager.globalManager().processNames().contains(processName)
             ? processName
-            : UNKNOWN_PROCESS;
+            : StarterConstants.UNKNOWN_PROCESS;
   }
 
   private void recordRunComplete(@Nullable String processName, @NonNull String status,
@@ -380,15 +362,15 @@ public class TemporalDslProcessService {
     if (duration.isNegative()) {
       duration = Duration.ZERO;
     }
-    Timer.builder(RUN_DURATION_TIMER)
+    Timer.builder(StarterConstants.RUN_DURATION_TIMER)
             .description("Duration of a production DSL run")
-            .tag(PROCESS_NAME_TAG, safe)
-            .tag(STATUS_TAG, status)
+            .tag(StarterConstants.PROCESS_NAME_TAG, safe)
+            .tag(StarterConstants.STATUS_TAG, status)
             .register(meterRegistry)
             .record(duration);
-    meterRegistry.counter(RUN_COUNT_COUNTER,
-            PROCESS_NAME_TAG, safe,
-            STATUS_TAG, status).increment();
+    meterRegistry.counter(StarterConstants.RUN_COUNT_COUNTER,
+            StarterConstants.PROCESS_NAME_TAG, safe,
+            StarterConstants.STATUS_TAG, status).increment();
   }
 
   public void recordCancel(@Nullable String processName, @Nullable Instant startedAt,
@@ -399,9 +381,9 @@ public class TemporalDslProcessService {
       case NOT_FOUND -> "notfound";
       case NOT_CANCELLABLE -> "rejected";
     };
-    meterRegistry.counter(CANCEL_COUNTER,
-            STATUS_TAG, status,
-            PROCESS_NAME_TAG, safe).increment();
+    meterRegistry.counter(StarterConstants.CANCEL_COUNTER,
+            StarterConstants.STATUS_TAG, status,
+            StarterConstants.PROCESS_NAME_TAG, safe).increment();
     if (outcome == Outcome.CANCELLED && startedAt != null) {
       recordRunComplete(processName, DslRunStatus.CANCELLED.name(), startedAt, finishedAt);
     }
@@ -414,7 +396,7 @@ public class TemporalDslProcessService {
           @NonNull String runId,
           @NonNull Instant startedAt) {
     return doExecuteAndRecord(processName, body, metadata, runId, startedAt,
-            CorrelationId.fromMetadata(metadata.get(CorrelationId.CORRELATION_ID_METADATA_KEY)));
+            CorrelationId.fromMetadata(metadata.get(StarterConstants.CORRELATION_ID_METADATA_KEY)));
   }
 
   private @NonNull Result<?> doExecuteAndRecord(
@@ -454,7 +436,9 @@ public class TemporalDslProcessService {
       String status = result.isSuccess()
               ? DslRunStatus.COMPLETED.name()
               : DslRunStatus.FAILED.name();
-      String outputJson = result.isSuccess() ? serialize(result.value()) : EMPTY_OUTPUT_JSON;
+      String outputJson = result.isSuccess()
+              ? serialize(result.value())
+              : StarterConstants.EMPTY_OUTPUT_JSON;
       String error = result.isSuccess() ? null : messageOf(result.cause());
 
       if (result.isSuccess()) {

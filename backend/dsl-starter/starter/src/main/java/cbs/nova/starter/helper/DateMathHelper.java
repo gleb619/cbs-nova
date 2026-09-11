@@ -4,6 +4,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.annotation.Helper;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.helper.model.DateMathIn;
 import cbs.nova.starter.helper.model.DateMathOut;
 import java.time.DateTimeException;
@@ -52,17 +53,15 @@ import org.jspecify.annotations.NonNull;
 @Helper(name = "dateMath")
 public class DateMathHelper implements Executable<DateMathIn, DateMathOut> {
 
-  private static final Set<String> ADD_UNITS = Set.of("millis", "seconds", "minutes", "hours",
-          "days", "weeks", "months", "years");
+  private static final Set<String> ADD_UNITS = StarterConstants.DATE_MATH_ADD_UNITS;
 
   private static final Set<String> DIFF_UNITS = ADD_UNITS;
 
-  private static final Set<String> START_OF_UNITS = Set.of("minute", "hour", "day", "month",
-          "year");
+  private static final Set<String> START_OF_UNITS = StarterConstants.DATE_MATH_START_OF_UNITS;
 
-  private static final Set<String> DATE_ONLY_ADD_UNITS = Set.of("days", "weeks", "months", "years");
+  private static final Set<String> DATE_ONLY_ADD_UNITS = StarterConstants.DATE_MATH_DATE_ONLY_ADD_UNITS;
 
-  private static final Set<String> DATE_ONLY_START_OF_UNITS = Set.of("day", "month", "year");
+  private static final Set<String> DATE_ONLY_START_OF_UNITS = StarterConstants.DATE_MATH_DATE_ONLY_START_OF_UNITS;
 
   @Override
   public @NonNull Result<DateMathOut> execute(@NonNull Context<DateMathIn> ctx) {

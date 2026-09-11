@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
+import cbs.nova.starter.core.StarterConstants;
 import com.google.protobuf.Timestamp;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.temporal.api.common.v1.WorkflowExecution;
@@ -44,7 +45,8 @@ class DslRunReconciliationServiceTest {
 
   private final WorkflowClient workflowClient = mock(WorkflowClient.class);
   private final WorkflowStub stub = mock(WorkflowStub.class);
-  private final InMemoryDslRunRepository repository = new InMemoryDslRunRepository();
+  private final InMemoryDslRunRepository repository = new InMemoryDslRunRepository(
+          InMemoryDslRunRepository.NO_OP_EVICTION);
   private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
   private final ScheduledExecutorService executor = mock(ScheduledExecutorService.class);
 
@@ -117,10 +119,10 @@ class DslRunReconciliationServiceTest {
             .isEqualTo(DslRunStatus.RUNNING.name());
     assertThat(repository.findByRunId("run-still-running").orElseThrow().status())
             .isEqualTo(DslRunStatus.RUNNING.name());
-    assertThat(meterRegistry.find(DslRunReconciliationService.RESOLVED_COUNTER)
+    assertThat(meterRegistry.find(StarterConstants.RESOLVED_COUNTER)
             .tag(DslRunReconciliationService.STATUS_TAG, DslRunStatus.RUNNING.name())
             .counter()).isNull();
-    assertThat(meterRegistry.counter(DslRunReconciliationService.INSPECTED_COUNTER,
+    assertThat(meterRegistry.counter(StarterConstants.INSPECTED_COUNTER,
             DslRunReconciliationService.PROCESS_NAME_TAG, "LoanDisbursement").count())
             .isEqualTo(2);
   }
@@ -140,7 +142,7 @@ class DslRunReconciliationServiceTest {
     assertThat(run.status()).isEqualTo(DslRunStatus.STALE.name());
     assertThat(run.finishedAt()).isEqualTo(NOW);
     assertThat(run.error()).contains("not found");
-    assertThat(meterRegistry.counter(DslRunReconciliationService.RESOLVED_COUNTER,
+    assertThat(meterRegistry.counter(StarterConstants.RESOLVED_COUNTER,
             DslRunReconciliationService.PROCESS_NAME_TAG, "LoanDisbursement",
             DslRunReconciliationService.STATUS_TAG, DslRunStatus.STALE.name()).count())
             .isEqualTo(1);
@@ -254,7 +256,7 @@ class DslRunReconciliationServiceTest {
     } else {
       assertThat(run.error()).containsIgnoringCase(errorPart);
     }
-    assertThat(meterRegistry.counter(DslRunReconciliationService.RESOLVED_COUNTER,
+    assertThat(meterRegistry.counter(StarterConstants.RESOLVED_COUNTER,
             DslRunReconciliationService.PROCESS_NAME_TAG, "LoanDisbursement",
             DslRunReconciliationService.STATUS_TAG, dslStatus.name()).count())
             .isEqualTo(1);

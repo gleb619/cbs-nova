@@ -1,5 +1,6 @@
 package cbs.nova.starter.persistence;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.CompileDiagnostic;
 import cbs.nova.starter.model.CompileDiagnosticRecord;
 import cbs.nova.starter.model.CompileDiagnosticSource;
@@ -26,11 +27,11 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 @RequiredArgsConstructor
 public class CompileDiagnosticRecordRepository {
 
-  private static final int SOURCE_MAX_LENGTH = 16;
-  private static final int DEFINITION_MAX_LENGTH = 256;
-  private static final int FILE_MAX_LENGTH = 512;
-  private static final int SEVERITY_MAX_LENGTH = 16;
-  private static final int CODE_MAX_LENGTH = 64;
+  private static final int SOURCE_MAX_LENGTH = StarterConstants.COMPILE_DIAGNOSTIC_SOURCE_MAX_LENGTH;
+  private static final int DEFINITION_MAX_LENGTH = StarterConstants.COMPILE_DIAGNOSTIC_DEFINITION_MAX_LENGTH;
+  private static final int FILE_MAX_LENGTH = StarterConstants.COMPILE_DIAGNOSTIC_FILE_MAX_LENGTH;
+  private static final int SEVERITY_MAX_LENGTH = StarterConstants.COMPILE_DIAGNOSTIC_SEVERITY_MAX_LENGTH;
+  private static final int CODE_MAX_LENGTH = StarterConstants.COMPILE_DIAGNOSTIC_CODE_MAX_LENGTH;
 
   private static final String COLUMNS = "id, occurred_at, source, definition, file, line, col_number, severity, code, message";
 

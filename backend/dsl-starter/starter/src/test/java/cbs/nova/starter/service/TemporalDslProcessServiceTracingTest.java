@@ -67,7 +67,7 @@ class TemporalDslProcessServiceTracingTest {
 
     TemporalDslProcessService service = new TemporalDslProcessService(
             contextFactory,
-            new InMemoryDslRunRepository(),
+            new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
             new ObjectMapper(),
             synchronousExecutor(),
             disabledScheduledExecutor(),
@@ -116,7 +116,7 @@ class TemporalDslProcessServiceTracingTest {
 
     TemporalDslProcessService service = new TemporalDslProcessService(
             contextFactory,
-            new InMemoryDslRunRepository(),
+            new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
             new ObjectMapper(),
             synchronousExecutor(),
             disabledScheduledExecutor(),

@@ -1,5 +1,7 @@
 package cbs.nova.starter.service;
 
+import cbs.nova.starter.core.StarterConstants;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
@@ -64,7 +66,7 @@ class DomainEventLifecycleIntegrationTest {
 
   @BeforeEach
   void setUp() {
-    runRepository = new InMemoryDslRunRepository();
+    runRepository = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
     publisher = mock(DomainEventPublisher.class);
 
     service = new TemporalDslProcessService(
@@ -162,7 +164,7 @@ class DomainEventLifecycleIntegrationTest {
             .output("{}")
             .error(null)
             .startedAt(Instant.now())
-            .finishedAt(TemporalDslProcessService.NOT_FINISHED_AT)
+            .finishedAt(StarterConstants.NOT_FINISHED_AT)
             .executionMode("RUN")
             .triggeredBy("test")
             .correlationId(null)

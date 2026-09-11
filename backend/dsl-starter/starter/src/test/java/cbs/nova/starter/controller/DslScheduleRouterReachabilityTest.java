@@ -14,8 +14,10 @@ import cbs.nova.starter.config.router.DslScheduleRouterConfiguration;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.model.ScheduleModels.CreateScheduleResponse;
 import cbs.nova.starter.model.ScheduleModels.ScheduleSummary;
+import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslScheduleService;
 import io.temporal.client.schedules.ScheduleClient;
+import org.springframework.beans.factory.ObjectProvider;
 import java.util.List;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
@@ -53,6 +55,10 @@ class DslScheduleRouterReachabilityTest {
   private AnnotationConfigApplicationContext context;
   private MockMvc mockMvc;
 
+  private ObjectProvider<DslAuditService> noAuditProvider() {
+    return () -> null;
+  }
+
   @BeforeEach
   void setUp() {
     context = new AnnotationConfigApplicationContext();
@@ -63,7 +69,7 @@ class DslScheduleRouterReachabilityTest {
     DslScheduleService service = mock(DslScheduleService.class);
     context.registerBean(DslScheduleService.class, () -> service);
     context.registerBean("scheduleClient", ScheduleClient.class, () -> mock(ScheduleClient.class));
-    DslScheduleHandler handler = new DslScheduleHandler(service, new ObjectMapper());
+    DslScheduleHandler handler = new DslScheduleHandler(service, new ObjectMapper(), noAuditProvider());
     context.registerBean(DslScheduleHandler.class, () -> handler);
     context.register(DslScheduleRouterConfiguration.class);
     context.refresh();
@@ -133,7 +139,7 @@ class DslScheduleRouterReachabilityTest {
     context.register(StubBeans.class);
     DslScheduleService service = mock(DslScheduleService.class);
     context.registerBean(DslScheduleService.class, () -> service);
-    DslScheduleHandler handler = new DslScheduleHandler(service, new ObjectMapper());
+    DslScheduleHandler handler = new DslScheduleHandler(service, new ObjectMapper(), noAuditProvider());
     context.registerBean(DslScheduleHandler.class, () -> handler);
     context.register(DslScheduleRouterConfiguration.class);
     context.refresh();

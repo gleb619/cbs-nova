@@ -2,6 +2,7 @@ package cbs.nova.dsl.jsonschema;
 
 import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.ParameterDescriptor;
+import cbs.nova.starter.core.StarterConstants;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.jspecify.annotations.Nullable;
@@ -41,7 +42,7 @@ import java.util.Map;
  */
 public class JacksonJsonSchemaGenerator implements JsonSchemaGenerator {
 
-  private static final String DRAFT_URI = "https://json-schema.org/draft/2020-12/schema";
+  private static final String DRAFT_URI = StarterConstants.JSON_SCHEMA_DRAFT_URI;
 
   private final ObjectMapper objectMapper = JsonMapper.builder()
           .annotationIntrospector(new NullableRecordAnnotationIntrospector())

@@ -1,12 +1,13 @@
 package cbs.nova.starter.service;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.model.VcsModels.DefinitionBundle;
 import cbs.nova.starter.model.VcsModels.DefinitionBundleEntry;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.ImportEntryResult;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
@@ -30,33 +31,16 @@ import java.util.stream.Stream;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class DslDefinitionBundleService {
 
-  public static final int BUNDLE_FORMAT_VERSION = 1;
-  private static final String PUBLISHED_DIR = ".workbench/published";
-  private static final String DRAFTS_DIR = ".workbench/drafts";
-  private static final String JSON_SUFFIX = ".json";
+  private static final String PUBLISHED_DIR = StarterConstants.WORKBENCH_PUBLISHED_DIR;
+  private static final String DRAFTS_DIR = StarterConstants.WORKBENCH_DRAFTS_DIR;
+  private static final String JSON_SUFFIX = StarterConstants.JSON_SUFFIX;
 
   private final ObjectMapper objectMapper;
   private final Optional<BuildProperties> buildProperties;
   private final DslProperties dslProperties;
-
-  /**
-   * Test-friendly constructor that uses the default bundle policy (digest not required).
-   */
-  public DslDefinitionBundleService(ObjectMapper objectMapper,
-          Optional<BuildProperties> buildProperties) {
-    this(objectMapper, buildProperties, DslProperties.builder().sourceDir("").build());
-  }
-
-  @Autowired
-  public DslDefinitionBundleService(ObjectMapper objectMapper,
-          Optional<BuildProperties> buildProperties,
-          DslProperties dslProperties) {
-    this.objectMapper = objectMapper;
-    this.buildProperties = buildProperties;
-    this.dslProperties = dslProperties;
-  }
 
   /**
    * Reads the published metadata markers (and optionally drafts) under the given source directory
@@ -73,7 +57,8 @@ public class DslDefinitionBundleService {
             .sorted(Comparator.comparing(e -> e.definition().name()))
             .toList();
     String digest = computeDigest(sorted);
-    return new DefinitionBundle(BUNDLE_FORMAT_VERSION, engineVersion(), Instant.now().toString(),
+    return new DefinitionBundle(StarterConstants.BUNDLE_FORMAT_VERSION, engineVersion(),
+            Instant.now().toString(),
             sorted, digest);
   }
 
@@ -169,10 +154,10 @@ public class DslDefinitionBundleService {
     if (bundle == null || bundle.formatVersion() == 0) {
       throw new IllegalArgumentException("bundle: missing or invalid formatVersion");
     }
-    if (bundle.formatVersion() != BUNDLE_FORMAT_VERSION) {
+    if (bundle.formatVersion() != StarterConstants.BUNDLE_FORMAT_VERSION) {
       throw new IllegalArgumentException(
               "Unsupported bundle formatVersion " + bundle.formatVersion()
-                      + " (expected " + BUNDLE_FORMAT_VERSION + ")");
+                      + " (expected " + StarterConstants.BUNDLE_FORMAT_VERSION + ")");
     }
     if (bundle.definitions() == null || bundle.definitions().isEmpty()) {
       throw new IllegalArgumentException("bundle: no definitions");

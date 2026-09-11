@@ -18,7 +18,8 @@ public class ServiceUtil {
 
   public static TemporalDslProcessService newService(ContextFactory contextFactory) {
     return createService(
-            contextFactory, new InMemoryDslRunRepository(), new ObjectMapper());
+            contextFactory, new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
+            new ObjectMapper());
   }
 
   public static TemporalDslProcessService createService(

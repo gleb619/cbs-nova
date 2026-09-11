@@ -19,6 +19,7 @@ import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import cbs.nova.starter.core.recorder.RunIdKeyedExternalCallRecorder;
@@ -44,6 +45,7 @@ import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
 import io.micrometer.core.instrument.MeterRegistry;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
@@ -137,12 +139,18 @@ public class TemporalConfiguration {
     return WorkflowClient.newInstance(workflowServiceStubs, options);
   }
 
-  @Bean
+  @Bean(destroyMethod = "shutdown")
   @ConditionalOnBean(WorkflowServiceStubs.class)
   TemporalHealthProbe temporalHealthProbe(WorkflowServiceStubs workflowServiceStubs,
           CbsHealthProperties cbsHealthProperties) {
-    return new TemporalHealthProbe(workflowServiceStubs,
-            cbsHealthProperties.temporal().timeout());
+    TemporalHealthProbe probe = new TemporalHealthProbe(workflowServiceStubs,
+            cbsHealthProperties.temporal().timeout(),
+            Executors.newSingleThreadExecutor(r -> {
+              Thread t = new Thread(r, "cbs-nova-temporal-health-probe");
+              t.setDaemon(true);
+              return t;
+            }));
+    return probe;
   }
 
   @Bean
@@ -191,14 +199,17 @@ public class TemporalConfiguration {
   @Bean
   @ConditionalOnMissingBean
   RunScopedFakeConfig runScopedFakeConfig() {
-    return new RunScopedFakeConfig();
+    return new RunScopedFakeConfig(Caffeine.newBuilder()
+            .expireAfterAccess(StarterConstants.RUN_SCOPED_FAKE_TTL)
+            .maximumSize(StarterConstants.RUN_SCOPED_FAKE_MAX_SIZE)
+            .build());
   }
 
   @Bean
   @ConditionalOnMissingBean
   @ConditionalOnMissingClass("cbs.nova.starter.persistence.JdbcDslRunRepository")
   DslRunRepository dslRunRepository() {
-    return new InMemoryDslRunRepository();
+    return new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
   }
 
   @Bean

@@ -7,36 +7,18 @@ import cbs.nova.dsl.annotation.Helper;
 import cbs.nova.starter.helper.model.UnreliableApiIn;
 import cbs.nova.starter.helper.model.UnreliableApiOut;
 import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
 @Helper(name = "unreliableApi")
+@RequiredArgsConstructor
 public class UnreliableApiHelper implements Executable<UnreliableApiIn, UnreliableApiOut> {
 
-  private static final Duration DEFAULT_TTL = Duration.ofMinutes(5);
-  private static final long DEFAULT_MAX_SIZE = 10_000L;
-
-  private final Cache<String, AttemptState> attempts;
-
-  public UnreliableApiHelper() {
-    this(DEFAULT_TTL, DEFAULT_MAX_SIZE);
-  }
-
-  UnreliableApiHelper(Duration ttl) {
-    this(ttl, DEFAULT_MAX_SIZE);
-  }
-
-  UnreliableApiHelper(Duration ttl, long maxSize) {
-    this.attempts = Caffeine.newBuilder()
-            .expireAfterWrite(ttl)
-            .maximumSize(maxSize)
-            .build();
-  }
+  private final @NonNull Cache<String, AttemptState> attempts;
 
   @Override
   public @NonNull Result<UnreliableApiOut> execute(@NonNull Context<UnreliableApiIn> ctx) {

@@ -4,13 +4,14 @@ import cbs.nova.starter.config.router.DslScheduleRouterConfiguration;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.controller.Pagination;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.ScheduleModels.CreateScheduleRequest;
 import cbs.nova.starter.model.ScheduleModels.ScheduleSummary;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslScheduleService;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -32,6 +33,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component
+@AllArgsConstructor
 @ConditionalOnBean(ScheduleClient.class)
 public class DslScheduleHandler {
 
@@ -42,29 +44,17 @@ public class DslScheduleHandler {
   private final ObjectMapper objectMapper;
   private final ObjectProvider<DslAuditService> auditServiceProvider;
 
-  public DslScheduleHandler(DslScheduleService service, ObjectMapper objectMapper) {
-    this(service, objectMapper, null);
-  }
-
-  @Autowired
-  public DslScheduleHandler(DslScheduleService service, ObjectMapper objectMapper,
-          ObjectProvider<DslAuditService> auditServiceProvider) {
-    this.service = service;
-    this.objectMapper = objectMapper;
-    this.auditServiceProvider = auditServiceProvider;
-  }
-
   public ServerResponse create(ServerRequest request) throws IOException {
     CreateScheduleRequest body = parse(request);
     if (body == null) {
-      audit(request, ACTION_SCHEDULE_CREATE, "-", DslAuditService.OUTCOME_FAILURE,
+      audit(request, ACTION_SCHEDULE_CREATE, "-", StarterConstants.OUTCOME_FAILURE,
               Map.of("error", "request body is required"));
       return badRequest("Request body is required");
     }
     try {
       var response = service.create(body);
       audit(request, ACTION_SCHEDULE_CREATE, response.scheduleId(),
-              DslAuditService.OUTCOME_SUCCESS,
+              StarterConstants.OUTCOME_SUCCESS,
               Map.of("definition", String.valueOf(response.definition()),
                       "cron", String.valueOf(response.cron())));
       return ServerResponse.status(HttpStatus.CREATED)
@@ -72,14 +62,14 @@ public class DslScheduleHandler {
               .body(response);
     } catch (RuntimeException e) {
       audit(request, ACTION_SCHEDULE_CREATE, String.valueOf(body.definition()),
-              DslAuditService.OUTCOME_FAILURE, Map.of("error", String.valueOf(e.getMessage())));
+              StarterConstants.OUTCOME_FAILURE, Map.of("error", String.valueOf(e.getMessage())));
       throw e;
     }
   }
 
   public ServerResponse list(ServerRequest request) {
-    int limit = Pagination.intParam(request, "limit", Pagination.DEFAULT_LIMIT);
-    int offset = Pagination.intParam(request, "offset", Pagination.DEFAULT_OFFSET);
+    int limit = Pagination.intParam(request, "limit", StarterConstants.DEFAULT_LIMIT);
+    int offset = Pagination.intParam(request, "offset", StarterConstants.DEFAULT_OFFSET);
     int pageSize = Pagination.clampLimit(limit);
     int skip = Pagination.clampOffset(offset);
 
@@ -98,12 +88,12 @@ public class DslScheduleHandler {
     String definition = request.pathVariable("definition");
     try {
       service.delete(definition);
-      audit(request, ACTION_SCHEDULE_DELETE, definition, DslAuditService.OUTCOME_SUCCESS, null);
+      audit(request, ACTION_SCHEDULE_DELETE, definition, StarterConstants.OUTCOME_SUCCESS, null);
       return ServerResponse.ok()
               .contentType(MediaType.APPLICATION_JSON)
               .body(Map.of("deleted", true));
     } catch (RuntimeException e) {
-      audit(request, ACTION_SCHEDULE_DELETE, definition, DslAuditService.OUTCOME_FAILURE,
+      audit(request, ACTION_SCHEDULE_DELETE, definition, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", String.valueOf(e.getMessage())));
       throw e;
     }
@@ -139,6 +129,6 @@ public class DslScheduleHandler {
 
   private static ServerResponse badRequest(String message) {
     return ServerResponse.status(HttpStatus.BAD_REQUEST)
-            .body(new ErrorResponse("BAD_REQUEST", message, null, null, null));
+            .body(new ErrorResponse("BAD_REQUEST", message, null, null, null, null));
   }
 }

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.maintenance.AuditRetentionMaintenanceTask;
 import cbs.nova.starter.maintenance.DslMaintenanceService;
 import cbs.nova.starter.maintenance.DslRunReconciliationMaintenanceTask;
@@ -87,9 +88,9 @@ class DslMaintenanceConfigurationTest {
               assertThat(service).isNotNull();
               assertThat(service.tasks()).extracting(t -> t.name())
                       .containsExactly(
-                              AuditRetentionMaintenanceTask.NAME,
-                              DslRunReconciliationMaintenanceTask.NAME,
-                              DslRunRetentionMaintenanceTask.NAME);
+                              StarterConstants.AUDIT_RETENTION_TASK_NAME,
+                              StarterConstants.ORPHANS_TASK_NAME,
+                              StarterConstants.RUN_RETENTION_TASK_NAME);
             });
   }
 
@@ -103,7 +104,7 @@ class DslMaintenanceConfigurationTest {
 
     @Bean
     DslRunRepository dslRunRepository() {
-      return new InMemoryDslRunRepository();
+      return new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
     }
 
     @Bean

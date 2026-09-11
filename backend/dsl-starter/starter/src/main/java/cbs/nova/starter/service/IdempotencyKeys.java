@@ -1,5 +1,6 @@
 package cbs.nova.starter.service;
 
+import cbs.nova.starter.core.StarterConstants;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -8,8 +9,6 @@ import java.util.regex.Pattern;
 
 public final class IdempotencyKeys {
 
-  private static final int DERIVED_ID_MAX_LENGTH = 32;
-  private static final int MAX_KEY_LENGTH = 200;
   private static final Pattern VALID_KEY_PATTERN = Pattern.compile("^[A-Za-z0-9_.:-]+$");
 
   private IdempotencyKeys() {
@@ -39,7 +38,7 @@ public final class IdempotencyKeys {
     byte[] input = (processName + ":" + key).getBytes(StandardCharsets.UTF_8);
     byte[] hash = sha256(input);
     String hex = HexFormat.of().formatHex(hash);
-    return "idem-" + hex.substring(0, DERIVED_ID_MAX_LENGTH);
+    return "idem-" + hex.substring(0, StarterConstants.IDEMPOTENCY_DERIVED_ID_MAX_LENGTH);
   }
 
   public static boolean isValid(String key) {
@@ -47,7 +46,7 @@ public final class IdempotencyKeys {
       return false;
     }
     String trimmed = key.trim();
-    if (trimmed.isEmpty() || trimmed.length() > MAX_KEY_LENGTH) {
+    if (trimmed.isEmpty() || trimmed.length() > StarterConstants.IDEMPOTENCY_MAX_KEY_LENGTH) {
       return false;
     }
     return VALID_KEY_PATTERN.matcher(trimmed).matches();

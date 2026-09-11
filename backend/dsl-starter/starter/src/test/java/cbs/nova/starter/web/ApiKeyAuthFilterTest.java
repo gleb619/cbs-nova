@@ -2,6 +2,7 @@ package cbs.nova.starter.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.persistence.JdbcApiKeyRepository;
 import cbs.nova.starter.service.ApiKeyStore;
@@ -56,7 +57,7 @@ class ApiKeyAuthFilterTest {
   void propertyKeyStillAuthenticates() throws ServletException, IOException {
     CallTracker tracker = new CallTracker();
     MockHttpServletRequest request = new MockHttpServletRequest();
-    request.addHeader(ApiKeyAuthFilter.API_KEY_HEADER, "secret-key");
+    request.addHeader(StarterConstants.API_KEY_HEADER, "secret-key");
     MockHttpServletResponse response = new MockHttpServletResponse();
 
     new ApiKeyAuthFilter("secret-key", null, objectMapper)
@@ -69,7 +70,7 @@ class ApiKeyAuthFilterTest {
   @Test
   void propertyKeyStillFailsWithWrongHeader() throws ServletException, IOException {
     MockHttpServletRequest request = new MockHttpServletRequest();
-    request.addHeader(ApiKeyAuthFilter.API_KEY_HEADER, "wrong-key");
+    request.addHeader(StarterConstants.API_KEY_HEADER, "wrong-key");
     MockHttpServletResponse response = new MockHttpServletResponse();
 
     new ApiKeyAuthFilter("secret-key", null, objectMapper)
@@ -77,8 +78,8 @@ class ApiKeyAuthFilterTest {
 
     assertThat(response.getStatus()).isEqualTo(401);
     ErrorResponse body = objectMapper.readValue(response.getContentAsString(), ErrorResponse.class);
-    assertThat(body.code()).isEqualTo("UNAUTHORIZED");
-    assertThat(body.message()).doesNotContain("secret-key");
+    assertThat(body.getCode()).isEqualTo("UNAUTHORIZED");
+    assertThat(body.getMessage()).doesNotContain("secret-key");
   }
 
   @Test
@@ -87,7 +88,7 @@ class ApiKeyAuthFilterTest {
 
     CallTracker tracker = new CallTracker();
     MockHttpServletRequest request = new MockHttpServletRequest();
-    request.addHeader(ApiKeyAuthFilter.API_KEY_HEADER, created.plaintext());
+    request.addHeader(StarterConstants.API_KEY_HEADER, created.plaintext());
     MockHttpServletResponse response = new MockHttpServletResponse();
 
     new ApiKeyAuthFilter(null, store, objectMapper)
@@ -106,7 +107,7 @@ class ApiKeyAuthFilterTest {
     store.revoke(created.id());
 
     MockHttpServletRequest request = new MockHttpServletRequest();
-    request.addHeader(ApiKeyAuthFilter.API_KEY_HEADER, created.plaintext());
+    request.addHeader(StarterConstants.API_KEY_HEADER, created.plaintext());
     MockHttpServletResponse response = new MockHttpServletResponse();
 
     new ApiKeyAuthFilter(null, store, objectMapper)
@@ -114,8 +115,8 @@ class ApiKeyAuthFilterTest {
 
     assertThat(response.getStatus()).isEqualTo(401);
     ErrorResponse body = objectMapper.readValue(response.getContentAsString(), ErrorResponse.class);
-    assertThat(body.code()).isEqualTo("UNAUTHORIZED");
-    assertThat(body.message()).doesNotContain(created.plaintext());
+    assertThat(body.getCode()).isEqualTo("UNAUTHORIZED");
+    assertThat(body.getMessage()).doesNotContain(created.plaintext());
   }
 
   @Test
@@ -123,7 +124,7 @@ class ApiKeyAuthFilterTest {
     store.create("real-key");
 
     MockHttpServletRequest request = new MockHttpServletRequest();
-    request.addHeader(ApiKeyAuthFilter.API_KEY_HEADER, "completely-unknown");
+    request.addHeader(StarterConstants.API_KEY_HEADER, "completely-unknown");
     MockHttpServletResponse response = new MockHttpServletResponse();
 
     new ApiKeyAuthFilter(null, store, objectMapper)
@@ -148,7 +149,7 @@ class ApiKeyAuthFilterTest {
     // Sanity: the property key takes precedence (still logs the deprecation hint the first time).
     ApiKeyStore.CreatedKey stored = store.create("stored");
     MockHttpServletRequest request = new MockHttpServletRequest();
-    request.addHeader(ApiKeyAuthFilter.API_KEY_HEADER, "secret-key");
+    request.addHeader(StarterConstants.API_KEY_HEADER, "secret-key");
     MockHttpServletResponse response = new MockHttpServletResponse();
 
     new ApiKeyAuthFilter("secret-key", store, objectMapper)
@@ -166,7 +167,7 @@ class ApiKeyAuthFilterTest {
     store.revoke(created.id());
 
     MockHttpServletRequest request = new MockHttpServletRequest();
-    request.addHeader(ApiKeyAuthFilter.API_KEY_HEADER, created.plaintext());
+    request.addHeader(StarterConstants.API_KEY_HEADER, created.plaintext());
     MockHttpServletResponse response = new MockHttpServletResponse();
 
     new ApiKeyAuthFilter(null, store, objectMapper)

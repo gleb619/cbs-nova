@@ -1,5 +1,6 @@
 package cbs.nova.starter.persistence;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.entity.DslEventEntity;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -15,7 +16,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 @RequiredArgsConstructor
 public class DslEventRepository {
 
-  private static final String COLUMNS = "id, event_type, aggregate_type, aggregate_id, correlation_id, payload, schema_version, created_at";
+  private static final String COLUMNS = StarterConstants.DSL_EVENT_COLUMNS;
 
   private static final RowMapper<DslEventEntity> ROW_MAPPER = (rs, rowNum) -> new DslEventEntity(
           rs.getLong("id"),

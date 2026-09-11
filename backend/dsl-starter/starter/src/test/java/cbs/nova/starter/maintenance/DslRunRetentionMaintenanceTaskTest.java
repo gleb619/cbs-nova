@@ -7,9 +7,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import cbs.nova.dsl.history.DslRunRepository;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.service.DslRunRetentionPurger;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,10 +22,6 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.time.Duration;
-import java.util.List;
-import java.util.concurrent.ScheduledExecutorService;
 
 @ExtendWith(MockitoExtension.class)
 class DslRunRetentionMaintenanceTaskTest {
@@ -36,7 +37,8 @@ class DslRunRetentionMaintenanceTaskTest {
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     DslRunRetentionPurger purger = new DslRunRetentionPurger(
             runRepository, meterRegistry,
-            Duration.ofHours(24), Duration.ofMinutes(30), 100, executor);
+            Duration.ofHours(24), Duration.ofMinutes(30), 100, executor,
+            null, Clock.systemUTC());
     when(runRepository.purgeFinishedBefore(
             ArgumentMatchers.any(Instant.class), anyInt(),
             ArgumentMatchers.<Consumer<List<String>>>any()))
@@ -44,7 +46,7 @@ class DslRunRetentionMaintenanceTaskTest {
 
     MaintenanceTask task = new DslRunRetentionMaintenanceTask(purger);
 
-    assertThat(task.name()).isEqualTo(DslRunRetentionMaintenanceTask.NAME);
+    assertThat(task.name()).isEqualTo(StarterConstants.RUN_RETENTION_TASK_NAME);
     MaintenanceResult result = task.run();
     assertThat(result.purged()).isEqualTo(4);
     assertThat(result.duration()).isNotNull();
@@ -56,11 +58,10 @@ class DslRunRetentionMaintenanceTaskTest {
   @Test
   void disabledPurgerReturnsZeroPurged() {
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
-    // retention=0 disables the purge in the purger itself; the adapter still
-    // delegates faithfully and reports 0.
     DslRunRetentionPurger purger = new DslRunRetentionPurger(
             runRepository, meterRegistry,
-            Duration.ZERO, Duration.ofMinutes(5), 100, executor);
+            Duration.ZERO, Duration.ofMinutes(5), 100, executor,
+            null, Clock.systemUTC());
 
     MaintenanceTask task = new DslRunRetentionMaintenanceTask(purger);
 

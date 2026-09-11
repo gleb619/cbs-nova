@@ -1,5 +1,6 @@
 package cbs.nova.starter.maintenance;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.service.DslRunRetentionPurger;
 
 import java.time.Duration;
@@ -15,9 +16,6 @@ import java.time.Duration;
  */
 public class DslRunRetentionMaintenanceTask implements MaintenanceTask {
 
-  /** Stable task name used as the {@code task} Micrometer tag. */
-  public static final String NAME = "run-retention";
-
   private final DslRunRetentionPurger purger;
 
   public DslRunRetentionMaintenanceTask(DslRunRetentionPurger purger) {
@@ -26,7 +24,7 @@ public class DslRunRetentionMaintenanceTask implements MaintenanceTask {
 
   @Override
   public String name() {
-    return NAME;
+    return StarterConstants.RUN_RETENTION_TASK_NAME;
   }
 
   @Override

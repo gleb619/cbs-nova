@@ -1,6 +1,7 @@
 package cbs.nova.starter.web;
 
 import cbs.nova.starter.config.properties.CbsSecurityRateLimitProperties;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.ErrorResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -10,20 +11,19 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.LongSupplier;
-import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.ObjectMapper;
 
-@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
+@RequiredArgsConstructor
 public final class RateLimitFilter extends OncePerRequestFilter {
 
-  private static final String X_FORWARDED_FOR_HEADER = "X-Forwarded-For";
-  private static final String RETRY_AFTER_HEADER = "Retry-After";
-  private static final String RATE_LIMITED_CODE = "RATE_LIMITED";
-  private static final String RATE_LIMITED_MESSAGE = "Rate limit exceeded. Retry after the indicated delay.";
+  private static final String X_FORWARDED_FOR_HEADER = StarterConstants.X_FORWARDED_FOR_HEADER;
+  private static final String RETRY_AFTER_HEADER = StarterConstants.RETRY_AFTER_HEADER;
+  private static final String RATE_LIMITED_CODE = StarterConstants.RATE_LIMITED_CODE;
+  private static final String RATE_LIMITED_MESSAGE = StarterConstants.RATE_LIMITED_MESSAGE;
   private static final long NANOS_PER_SECOND = 1_000_000_000L;
 
   private static final List<RateLimitRule> RULES = List.of(
@@ -41,10 +41,6 @@ public final class RateLimitFilter extends OncePerRequestFilter {
   private final LongSupplier nanoTime;
   private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
   private final AntPathMatcher pathMatcher = new AntPathMatcher();
-
-  public RateLimitFilter(CbsSecurityRateLimitProperties properties, ObjectMapper objectMapper) {
-    this(properties, objectMapper, System::nanoTime);
-  }
 
   @Override
   protected void doFilterInternal(
@@ -64,7 +60,7 @@ public final class RateLimitFilter extends OncePerRequestFilter {
     response.setHeader(RETRY_AFTER_HEADER, String.valueOf(consumption.retryAfterSeconds()));
     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
     objectMapper.writeValue(response.getOutputStream(),
-            new ErrorResponse(RATE_LIMITED_CODE, RATE_LIMITED_MESSAGE, null, null, null));
+            new ErrorResponse(RATE_LIMITED_CODE, RATE_LIMITED_MESSAGE, null, null, null, null));
   }
 
   private boolean shouldRateLimit(HttpServletRequest request) {

@@ -2,7 +2,7 @@ package cbs.nova.starter.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.starter.web.ApiKeyAuthFilter;
+import cbs.nova.starter.core.StarterConstants;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.List;
@@ -36,7 +36,7 @@ class RoleResolverTest {
   void apiKeyHeaderResolvesToAdminRegardlessOfSecurityContext() {
     RoleResolver resolver = new RoleResolver("roles");
     MockHttpServletRequest request = new MockHttpServletRequest();
-    request.addHeader(ApiKeyAuthFilter.API_KEY_HEADER, "any-non-blank-value");
+    request.addHeader(StarterConstants.API_KEY_HEADER, "any-non-blank-value");
 
     Role resolved = resolver.resolve(request);
 
@@ -48,7 +48,7 @@ class RoleResolverTest {
     SecurityContextHolder.getContext().setAuthentication(authenticated("alice", "VIEWER"));
     RoleResolver resolver = new RoleResolver("roles");
     MockHttpServletRequest request = new MockHttpServletRequest();
-    request.addHeader(ApiKeyAuthFilter.API_KEY_HEADER, "   ");
+    request.addHeader(StarterConstants.API_KEY_HEADER, "   ");
 
     assertThat(resolver.resolve(request)).isEqualTo(Role.VIEWER);
   }

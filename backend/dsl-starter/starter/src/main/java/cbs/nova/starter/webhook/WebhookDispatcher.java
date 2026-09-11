@@ -24,23 +24,16 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import cbs.nova.starter.core.StarterConstants;
 import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
+@RequiredArgsConstructor
 public class WebhookDispatcher {
-
-  private static final String EVENT = "run.completed";
-
-  private static final String SIGNATURE_HEADER = "X-Cbs-Signature";
-
-  private static final String TIMESTAMP_HEADER = "X-Cbs-Timestamp";
-
-  private static final String EVENT_HEADER = "X-Cbs-Event";
-
-  private static final int URL_MAX_LENGTH = 2048;
 
   private final WebhookProperties properties;
 
@@ -54,24 +47,6 @@ public class WebhookDispatcher {
 
   private final Optional<WebhookDeliveryRecordRepository> deliveryRepository;
 
-  public WebhookDispatcher(WebhookProperties properties, ObjectMapper objectMapper,
-          ThreadPoolTaskExecutor deliveryExecutor) {
-    this(properties, objectMapper, deliveryExecutor, Optional.empty());
-  }
-
-  public WebhookDispatcher(WebhookProperties properties, ObjectMapper objectMapper,
-          ThreadPoolTaskExecutor deliveryExecutor,
-          Optional<WebhookDeliveryRecordRepository> deliveryRepository) {
-    this.properties = properties;
-    this.objectMapper = objectMapper;
-    this.deliveryExecutor = deliveryExecutor;
-    this.deliveryRepository = deliveryRepository;
-    this.httpClient = HttpClient.newBuilder()
-            .followRedirects(HttpClient.Redirect.NEVER)
-            .connectTimeout(properties.getTimeout())
-            .build();
-  }
-
   public void onRunComplete(String runId, String processName, String status,
           Instant startedAt, Instant finishedAt, @Nullable String error) {
     if (!properties.isEnabled() || properties.getSubscriptions().isEmpty()) {
@@ -79,7 +54,7 @@ public class WebhookDispatcher {
     }
 
     WebhookPayload payload = new WebhookPayload(
-            EVENT,
+            StarterConstants.WEBHOOK_EVENT_RUN_COMPLETED,
             runId,
             processName,
             status,
@@ -203,8 +178,10 @@ public class WebhookDispatcher {
     String url = subscription.url();
     HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
             .header("Content-Type", "application/json")
-            .header(TIMESTAMP_HEADER, String.valueOf(Instant.now().getEpochSecond()))
-            .header(EVENT_HEADER, EVENT)
+            .header(StarterConstants.WEBHOOK_TIMESTAMP_HEADER,
+                    String.valueOf(Instant.now().getEpochSecond()))
+            .header(StarterConstants.WEBHOOK_EVENT_HEADER,
+                    StarterConstants.WEBHOOK_EVENT_RUN_COMPLETED)
             .timeout(properties.getTimeout())
             .POST(HttpRequest.BodyPublishers.ofByteArray(body));
 
@@ -212,7 +189,7 @@ public class WebhookDispatcher {
     if (secret != null && !secret.isBlank()) {
       String signature = computeSignature(secret, body);
       if (signature != null) {
-        builder.header(SIGNATURE_HEADER, "sha256=" + signature);
+        builder.header(StarterConstants.WEBHOOK_SIGNATURE_HEADER, "sha256=" + signature);
       }
     }
     return builder.build();
@@ -267,12 +244,13 @@ public class WebhookDispatcher {
       try {
         // URLs longer than the column width are truncated rather than rejected so that the delivery
         // still leaves an audit trace. The same applies to last_error.
-        String url = subscription.url().length() > URL_MAX_LENGTH
-                ? subscription.url().substring(0, URL_MAX_LENGTH)
+        String url = subscription.url().length() > StarterConstants.WEBHOOK_URL_MAX_LENGTH
+                ? subscription.url().substring(0, StarterConstants.WEBHOOK_URL_MAX_LENGTH)
                 : subscription.url();
         repository.insert(
                 new WebhookDeliveryRecord(null, occurredAt, subscription.definitionPattern(),
-                        EVENT, url, status, attempts, error, durationMs));
+                        StarterConstants.WEBHOOK_EVENT_RUN_COMPLETED,
+                        url, status, attempts, error, durationMs));
       } catch (Exception ex) {
         log.warn("Failed to persist webhook delivery outcome", ex);
       }
@@ -284,10 +262,10 @@ public class WebhookDispatcher {
   }
 
   private static String truncate(String value) {
-    if (value.length() <= URL_MAX_LENGTH) {
+    if (value.length() <= StarterConstants.WEBHOOK_URL_MAX_LENGTH) {
       return value;
     }
-    return value.substring(0, URL_MAX_LENGTH);
+    return value.substring(0, StarterConstants.WEBHOOK_URL_MAX_LENGTH);
   }
 
   private record SubscriptionKey(String url, String definitionPattern) {

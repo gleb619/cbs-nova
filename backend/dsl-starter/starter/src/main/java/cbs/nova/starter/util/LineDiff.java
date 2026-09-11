@@ -1,5 +1,6 @@
 package cbs.nova.starter.util;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.VcsModels.DiffHunk;
 
 import java.util.ArrayList;
@@ -15,9 +16,8 @@ import java.util.List;
 public final class LineDiff {
 
   /** Default maximum number of hunks returned before truncation kicks in. */
-  public static final int DEFAULT_MAX_HUNKS = 200;
 
-  private static final int CONTEXT_LINES = 3;
+  private static final int CONTEXT_LINES = StarterConstants.LINE_DIFF_CONTEXT_LINES;
 
   private LineDiff() {
   }
@@ -30,7 +30,7 @@ public final class LineDiff {
   }
 
   public static Result diff(String before, String after) {
-    return diff(before, after, DEFAULT_MAX_HUNKS);
+    return diff(before, after, StarterConstants.DEFAULT_MAX_HUNKS);
   }
 
   public static Result diff(String before, String after, int maxHunks) {

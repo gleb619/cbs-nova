@@ -2,28 +2,14 @@ package cbs.nova.starter.core.pipe;
 
 import cbs.nova.dsl.fake.FakeConfig;
 import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
-import java.time.Duration;
+import lombok.AllArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
+@AllArgsConstructor
 public final class RunScopedFakeConfig {
 
-  private static final Duration DEFAULT_TTL = Duration.ofHours(1);
-  private static final long DEFAULT_MAX_SIZE = 1_024L;
-
   private final Cache<String, FakeConfig> configs;
-
-  public RunScopedFakeConfig() {
-    this(DEFAULT_TTL, DEFAULT_MAX_SIZE);
-  }
-
-  RunScopedFakeConfig(Duration ttl, long maxSize) {
-    this.configs = Caffeine.newBuilder()
-            .expireAfterAccess(ttl)
-            .maximumSize(maxSize)
-            .build();
-  }
 
   public void register(@NonNull String runId, @NonNull FakeConfig config) {
     configs.put(runId, config);

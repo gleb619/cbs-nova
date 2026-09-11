@@ -25,11 +25,6 @@ public final class VcsModels {
           @JsonInclude(JsonInclude.Include.NON_NULL) String reloadError,
           @JsonInclude(JsonInclude.Include.NON_NULL) List<CompileDiagnostic> diagnostics) {
 
-    public DraftResponse(String name, String status, String location, boolean reloaded,
-            LoadResult loadResult) {
-      this(name, status, location, reloaded, loadResult, null, null);
-    }
-
   }
 
   public record DraftSummary(
@@ -80,11 +75,6 @@ public final class VcsModels {
           String exportedAt,
           List<DefinitionBundleEntry> definitions,
           @JsonInclude(JsonInclude.Include.NON_NULL) String digest) {
-
-    public DefinitionBundle(int formatVersion, String engineVersion, String exportedAt,
-            List<DefinitionBundleEntry> definitions) {
-      this(formatVersion, engineVersion, exportedAt, definitions, null);
-    }
 
   }
 

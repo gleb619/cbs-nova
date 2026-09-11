@@ -1,5 +1,6 @@
 package cbs.nova.starter.maintenance;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.service.DslRunReconciliationService;
 
 import java.time.Duration;
@@ -12,16 +13,13 @@ import java.time.Duration;
  * <p>
  * Reconciliation does not delete rows; it only writes terminal status to already-stuck RUNNING
  * rows. The {@code purged} count is therefore reported as {@code 0} — the count of resolved runs is
- * observable via the existing {@link DslRunReconciliationService#RESOLVED_COUNTER} meter.
+ * observable via the existing {@link StarterConstants#RESOLVED_COUNTER} meter.
  *
  * <p>
  * Registered under the task name {@code orphans}, which matches the
  * {@code dsl.maintenance.tasks.orphans.*} configuration key.
  */
 public class DslRunReconciliationMaintenanceTask implements MaintenanceTask {
-
-  /** Stable task name used as the {@code task} Micrometer tag. */
-  public static final String NAME = "orphans";
 
   private final DslRunReconciliationService service;
 
@@ -31,7 +29,7 @@ public class DslRunReconciliationMaintenanceTask implements MaintenanceTask {
 
   @Override
   public String name() {
-    return NAME;
+    return StarterConstants.ORPHANS_TASK_NAME;
   }
 
   @Override

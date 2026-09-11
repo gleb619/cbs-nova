@@ -38,22 +38,6 @@ public record CbsNovaCacheProperties(
     overrides = overrides == null ? Map.of() : Map.copyOf(overrides);
   }
 
-  /** Well-known cache names exposed for callers and for YAML configuration. */
-  public static final class Names {
-    public static final String PREVIEW_RESULT = "previewResult";
-    public static final String COMPENSATION_MARKERS = "compensationMarkers";
-    public static final String UNRELIABLE_API_ATTEMPTS = "unreliableApiAttempts";
-    public static final String DRY_RUN_LOG_BUFFERS = "dryRunLogBuffers";
-    public static final String RUN_SCOPED_FAKE_CONFIGS = "runScopedFakeConfigs";
-    public static final String MAP_INPUT_ADAPTERS = "mapInputAdapters";
-    public static final String HELPER_INSTANCE_RESOLUTION = "helperInstanceResolution";
-    public static final String INPUT_SCHEMA = "inputSchema";
-    public static final String BUILDER_READS = "builderReads";
-
-    private Names() {
-    }
-  }
-
   /**
    * Returns the {@link CacheSpec} that applies to the named cache. Falls back to the configured
    * defaults when no override is present.

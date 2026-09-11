@@ -1,5 +1,7 @@
 package cbs.nova.starter;
 
+import cbs.nova.starter.cache.PreviewResultCacheTestSupport;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.CallKind;
@@ -58,7 +60,8 @@ class DslReloadResourceTest {
   @BeforeEach
   void setUp() {
     GlobalManager.globalManager().resetForTests();
-    resource = new DslReloadHandler(DslProperties.builder().build(), loader);
+    resource = new DslReloadHandler(DslProperties.builder().build(), loader, null, null, null, null,
+            null, null);
   }
 
   @AfterEach
@@ -67,7 +70,8 @@ class DslReloadResourceTest {
   }
 
   private void setSourceDir(String value) {
-    resource = new DslReloadHandler(dslProperties(value), loader);
+    resource = new DslReloadHandler(dslProperties(value), loader, null, null, null, null, null,
+            null);
   }
 
   private static ServerRequest reloadRequest() {
@@ -273,7 +277,7 @@ class DslReloadResourceTest {
     try {
       var audit = AuditTestSupport.h2();
       var handler = new DslReloadHandler(dslProperties(sourceDir.toString()), loader, null,
-              AuditTestSupport.providerOf(audit.service()));
+              AuditTestSupport.providerOf(audit.service()), null, null, null, null);
 
       ServerResponse response = handler.reload(reloadRequest());
 
@@ -295,7 +299,7 @@ class DslReloadResourceTest {
     var audit = AuditTestSupport.h2();
     String missing = "/tmp/cbs-nova-audit-missing-" + System.nanoTime();
     var handler = new DslReloadHandler(dslProperties(missing), loader, null,
-            AuditTestSupport.providerOf(audit.service()));
+            AuditTestSupport.providerOf(audit.service()), null, null, null, null);
 
     ServerResponse response = handler.reload(reloadRequest());
 
@@ -312,14 +316,14 @@ class DslReloadResourceTest {
   void successfulReloadFlushesPreviewCache() throws Exception {
     Path sourceDir = createTemporaryDslSourceDir();
     try {
-      var cache = new PreviewResultCache(60_000);
+      var cache = PreviewResultCacheTestSupport.cache(60_000);
       var key = new PreviewModels.PreviewCacheKey("FlushKey", "old-hash", "input-hash");
       cache.put(key, sampleReport());
 
       var handler = new DslReloadHandler(
               dslProperties(sourceDir.toString()),
               loader,
-              constantProvider(cache));
+              constantProvider(cache), null, null, null, null, null);
 
       ServerResponse response = handler.reload(reloadRequest());
       assertThat(response.statusCode().value()).isEqualTo(200);
@@ -339,7 +343,7 @@ class DslReloadResourceTest {
   void failedReloadLeavesPreviewCacheIntact() throws Exception {
     Path badDir = createTemporaryBrokenDslSourceDir();
     try {
-      var cache = new PreviewResultCache(60_000);
+      var cache = PreviewResultCacheTestSupport.cache(60_000);
       var key = new PreviewModels.PreviewCacheKey("StaleKey", "old-hash", "input-hash");
       var report = sampleReport();
       cache.put(key, report);
@@ -347,7 +351,7 @@ class DslReloadResourceTest {
       var handler = new DslReloadHandler(
               dslProperties(badDir.toString()),
               loader,
-              constantProvider(cache));
+              constantProvider(cache), null, null, null, null, null);
 
       ServerResponse response = handler.reload(reloadRequest());
       assertThat(response.statusCode().value()).isEqualTo(500);
@@ -370,7 +374,7 @@ class DslReloadResourceTest {
       var handler = new DslReloadHandler(
               dslProperties(sourceDir.toString()),
               loader,
-              null);
+              null, null, null, null, null, null);
 
       ServerResponse response = handler.reload(reloadRequest());
       assertThat(response.statusCode().value()).isEqualTo(200);
@@ -438,7 +442,7 @@ class DslReloadResourceTest {
 
       var sharedHandler = new DslReloadHandler(
               dslProperties(sourceDir.toString()),
-              gated);
+              gated, null, null, null, null, null, null);
 
       ExecutorService pool = Executors.newFixedThreadPool(2);
       try {

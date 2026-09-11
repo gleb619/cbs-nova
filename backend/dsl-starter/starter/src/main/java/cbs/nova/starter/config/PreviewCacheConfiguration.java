@@ -1,14 +1,19 @@
 package cbs.nova.starter.config;
-
+import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
+import cbs.nova.starter.core.StarterConstants;
+import cbs.nova.starter.model.PreviewModels.PreviewCacheKey;
 import cbs.nova.starter.service.PreviewResultCache;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.binder.MeterBinder;
-import org.springframework.context.annotation.Configuration;
+import java.time.Duration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @EnableConfigurationProperties({CbsNovaPreviewProperties.class, CbsNovaCacheProperties.class})
@@ -18,8 +23,13 @@ public class PreviewCacheConfiguration {
   @ConditionalOnMissingBean
   PreviewResultCache previewResultCache(
           CbsNovaPreviewProperties properties, CbsNovaCacheProperties cacheProperties) {
-    var spec = cacheProperties.specFor(CbsNovaCacheProperties.Names.PREVIEW_RESULT);
-    return new PreviewResultCache(properties.cache().ttlMs(), spec.maxSize());
+    var spec = cacheProperties.specFor(StarterConstants.PREVIEW_RESULT);
+    Cache<PreviewCacheKey, PreviewReport> cache = Caffeine.newBuilder()
+            .expireAfterWrite(Duration.ofMillis(properties.cache().ttlMs()))
+            .maximumSize(spec.maxSize())
+            .recordStats()
+            .build();
+    return new PreviewResultCache(cache);
   }
 
   @Bean

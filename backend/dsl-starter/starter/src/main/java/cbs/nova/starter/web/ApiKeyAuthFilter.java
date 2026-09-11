@@ -1,5 +1,6 @@
 package cbs.nova.starter.web;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.service.ApiKeyStore;
 import cbs.nova.starter.service.ApiKeyStore.StoredKeyMatch;
@@ -46,8 +47,6 @@ import tools.jackson.databind.ObjectMapper;
 @Slf4j
 public final class ApiKeyAuthFilter extends OncePerRequestFilter {
 
-  public static final String API_KEY_HEADER = "X-Api-Key";
-
   private final @Nullable String configuredApiKey;
   private final @Nullable ApiKeyStore apiKeyStore;
   private final ObjectMapper objectMapper;
@@ -69,7 +68,7 @@ public final class ApiKeyAuthFilter extends OncePerRequestFilter {
           HttpServletRequest request,
           HttpServletResponse response,
           FilterChain filterChain) throws ServletException, IOException {
-    String headerValue = request.getHeader(API_KEY_HEADER);
+    String headerValue = request.getHeader(StarterConstants.API_KEY_HEADER);
 
     if (headerValue == null || headerValue.isBlank()) {
       if (authRequired()) {
@@ -119,6 +118,6 @@ public final class ApiKeyAuthFilter extends OncePerRequestFilter {
     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
     objectMapper.writeValue(response.getOutputStream(),
-            new ErrorResponse("UNAUTHORIZED", message, null, null, null));
+            new ErrorResponse("UNAUTHORIZED", message, null, null, null, null));
   }
 }

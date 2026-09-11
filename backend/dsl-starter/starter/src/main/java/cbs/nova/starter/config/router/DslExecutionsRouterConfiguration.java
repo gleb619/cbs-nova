@@ -11,7 +11,9 @@ import cbs.nova.starter.model.ExecutionStatsResponse;
 import cbs.nova.starter.model.ExecutionTimeseriesResponse;
 import cbs.nova.starter.model.TransactionExecutionDto;
 import cbs.nova.starter.persistence.DslRunStatsRepository;
+import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslRunCancellationService;
+import org.springframework.beans.factory.ObjectProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -37,12 +39,14 @@ public class DslExecutionsRouterConfiguration {
           ObjectMapper objectMapper,
           DslRunCancellationService dslRunCancellationService,
           TransactionExecutionRepository transactionExecutionRepository,
-          RequestQueryConverter requestQueryConverter) {
+          RequestQueryConverter requestQueryConverter,
+          ObjectProvider<DslAuditService> auditServiceProvider) {
     DslRunStatsRepository statsRepository = runRepository instanceof DslRunStatsRepository stats
             ? stats
             : null;
     return new DslExecutionsHandler(runRepository, objectMapper, dslRunCancellationService,
-            statsRepository, transactionExecutionRepository, requestQueryConverter);
+            statsRepository, transactionExecutionRepository, requestQueryConverter,
+            auditServiceProvider);
   }
 
   @Bean

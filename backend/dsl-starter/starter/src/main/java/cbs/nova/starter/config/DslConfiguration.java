@@ -3,6 +3,7 @@ import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.DslProperties;
 
 import cbs.nova.dsl.DslDefinitionLoader;
+import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.DefinitionLoader;
@@ -18,11 +19,14 @@ import cbs.nova.dsl.transaction.TransactionInvoker;
 import cbs.nova.dsl.utils.ExpressionEvaluator;
 import cbs.nova.dsl.utils.MvelExpressionEvaluator;
 import cbs.nova.starter.converter.MapInputConverter;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.resolver.SpringBeanHelperInstanceResolver;
 import cbs.nova.starter.service.DefaultDslWorkspaceResolver;
 import cbs.nova.starter.service.DslFileBulkhead;
 import cbs.nova.starter.service.DslWorkspaceResolver;
 import cbs.nova.starter.resolver.SpringOrGeneratedHelperInstanceResolver;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.avaje.jsonb.Jsonb;
 import java.net.http.HttpClient;
 import java.nio.file.Path;
@@ -34,6 +38,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
@@ -46,6 +52,7 @@ import tools.jackson.databind.ObjectMapper;
 public class DslConfiguration {
 
   @Bean
+  @Order(Ordered.HIGHEST_PRECEDENCE)
   public ApplicationRunner dslApplicationRunner(HelperInstanceResolver helperInstanceResolver,
           ExpressionEvaluator expressionEvaluator,
           TransactionInvoker transactionInvoker,
@@ -73,12 +80,30 @@ public class DslConfiguration {
           ApplicationContext applicationContext, CbsNovaCacheProperties cacheProperties) {
     List<HelperInstanceResolver> generated = new ArrayList<>();
     ServiceLoader.load(HelperInstanceResolver.class).forEach(generated::add);
-    var spec = cacheProperties.specFor(CbsNovaCacheProperties.Names.HELPER_INSTANCE_RESOLUTION);
+    var spec = cacheProperties.specFor(StarterConstants.HELPER_INSTANCE_RESOLUTION);
+    Cache<Class<?>, Executable<?, ?>> cache = Caffeine.newBuilder()
+            .expireAfterWrite(spec.ttl())
+            .maximumSize(spec.maxSize())
+            .build();
     return new SpringOrGeneratedHelperInstanceResolver(
             new SpringBeanHelperInstanceResolver(applicationContext),
             generated,
-            spec.ttl(),
-            spec.maxSize());
+            cache);
+  }
+
+  /**
+   * Resolver with the default cache policy ({@link StarterConstants#HELPER_INSTANCE_CACHE_TTL} /
+   * {@link StarterConstants#HELPER_INSTANCE_CACHE_MAX_SIZE}). Used by tests that build the resolver
+   * without a Spring context.
+   */
+  public static SpringOrGeneratedHelperInstanceResolver withDefaultCache(
+          HelperInstanceResolver springResolver,
+          List<HelperInstanceResolver> generatedFactories) {
+    Cache<Class<?>, Executable<?, ?>> cache = Caffeine.newBuilder()
+            .expireAfterWrite(StarterConstants.HELPER_INSTANCE_CACHE_TTL)
+            .maximumSize(StarterConstants.HELPER_INSTANCE_CACHE_MAX_SIZE)
+            .build();
+    return new SpringOrGeneratedHelperInstanceResolver(springResolver, generatedFactories, cache);
   }
 
   @Bean
@@ -91,7 +116,7 @@ public class DslConfiguration {
     if (transactionExecutionRepository instanceof InMemoryTransactionExecutionRepository inMemory) {
       return new InMemoryDslRunRepository(inMemory::deleteByRunId);
     }
-    return new InMemoryDslRunRepository();
+    return new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
   }
 
   @Bean

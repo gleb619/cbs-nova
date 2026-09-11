@@ -49,7 +49,7 @@ class ExecutionTreeCollectorGuardTest {
 
   @Test
   void cycleDetectsRepeatedNameKind() {
-    var collector = new ExecutionTreeCollector();
+    var collector = new ExecutionTreeCollector(ExecutionTreeCollector.DEFAULT_MAX_DEPTH);
     collector.start();
     collector.onProcessStart("r", "p", null);
     collector.onHelperStart("r", "a", null);
@@ -74,7 +74,7 @@ class ExecutionTreeCollectorGuardTest {
 
   @Test
   void perRunInstancesAreIsolated() {
-    var collector1 = new ExecutionTreeCollector();
+    var collector1 = new ExecutionTreeCollector(ExecutionTreeCollector.DEFAULT_MAX_DEPTH);
     collector1.start();
     collector1.onProcessStart("r1", "p", null);
     collector1.onHelperStart("r1", "a", null);
@@ -86,7 +86,7 @@ class ExecutionTreeCollectorGuardTest {
     collector1.onProcessEnd("r1", "p", null, true);
     collector1.finish();
 
-    var collector2 = new ExecutionTreeCollector();
+    var collector2 = new ExecutionTreeCollector(ExecutionTreeCollector.DEFAULT_MAX_DEPTH);
     collector2.start();
     collector2.onProcessStart("r2", "p", null);
     collector2.onHelperStart("r2", "a", null);
@@ -108,7 +108,7 @@ class ExecutionTreeCollectorGuardTest {
 
   @Test
   void finishClearsCycleSet() {
-    var collector = new ExecutionTreeCollector();
+    var collector = new ExecutionTreeCollector(ExecutionTreeCollector.DEFAULT_MAX_DEPTH);
     collector.start();
     collector.onProcessStart("r1", "p", null);
     collector.onHelperStart("r1", "a", null);

@@ -1,5 +1,6 @@
 package cbs.nova.starter.controller;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.DefinitionTestCase;
 import cbs.nova.starter.model.DefinitionTestRunReport;
 import cbs.nova.starter.service.DslAuditService;
@@ -27,8 +28,6 @@ import org.springframework.web.servlet.function.ServerResponse;
  */
 @RequiredArgsConstructor
 public class DslDefinitionTestHandler {
-
-  public static final String ACTION_TESTS_RUN = "TESTS_RUN";
 
   private final DslDefinitionTestService service;
   private final ObjectProvider<DslAuditService> auditServiceProvider;
@@ -66,9 +65,10 @@ public class DslDefinitionTestHandler {
       return;
     }
     String outcome = report.errored() > 0
-            ? DslAuditService.OUTCOME_FAILURE
-            : DslAuditService.OUTCOME_SUCCESS;
-    auditService.record(DslAuditService.currentActor(), ACTION_TESTS_RUN, definition,
+            ? StarterConstants.OUTCOME_FAILURE
+            : StarterConstants.OUTCOME_SUCCESS;
+    auditService.record(DslAuditService.currentActor(), StarterConstants.ACTION_TESTS_RUN,
+            definition,
             DslAuditService.correlationIdOf(request), outcome,
             Map.of("total", report.total(), "passed", report.passed(),
                     "failed", report.failed(), "errored", report.errored()));

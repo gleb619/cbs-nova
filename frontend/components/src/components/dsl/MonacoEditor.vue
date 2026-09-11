@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type * as Monaco from 'monaco-editor'
-import { onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
+import { type Component, computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useHelperCompletion } from '../../composables/useHelperCompletion'
 import { useMonacoHelperCompletion } from '../../composables/useMonacoHelperCompletion'
 import type { HelperCatalogEntry } from '../../types/dsl'
@@ -35,12 +35,11 @@ const emit = defineEmits<{
   blur: []
 }>()
 
-const container = ref<HTMLElement | null>(null)
-
-let monaco: typeof Monaco | undefined
-let editor: Monaco.editor.IStandaloneCodeEditor | undefined
-let destroyed = false
+const editor = ref<Monaco.editor.IStandaloneCodeEditor | null>(null)
+let monaco: typeof Monaco | null = null
+const codeEditorComponent = shallowRef<Component | null>(null)
 let releaseHelperCompletion: (() => void) | null = null
+let disposed = false
 
 function installWorkerlessEnvironment() {
   const globalScope = self as unknown as { MonacoEnvironment?: unknown }
@@ -54,17 +53,44 @@ function installWorkerlessEnvironment() {
   }
 }
 
-function severityFor(monacoNs: typeof Monaco, kind: EditorMarker['severity']): Monaco.MarkerSeverity {
-  if (kind === 'warning') return monacoNs.MarkerSeverity.Warning
-  return monacoNs.MarkerSeverity.Error
+async function loadEditor() {
+  const monacoApi = await import('monaco-editor')
+  const { CodeEditor } = await import('monaco-editor-vue3')
+  if (disposed) return
+  monaco = monacoApi
+  installWorkerlessEnvironment()
+  codeEditorComponent.value = CodeEditor as Component
 }
 
-function toMonacoMarkers(monacoNs: typeof Monaco, markers: EditorMarker[]): Monaco.editor.IMarkerData[] {
-  return markers.map((m) => {
+onMounted(() => {
+  void loadEditor()
+})
+
+const editorOptions = computed<Monaco.editor.IStandaloneEditorConstructionOptions>(() => ({
+  readOnly: props.readOnly,
+  placeholder: props.placeholder,
+  lineNumbers: 'on',
+  minimap: { enabled: false },
+  automaticLayout: true,
+  scrollBeyondLastLine: false,
+  fontSize: 12,
+  tabSize: 2,
+  wordWrap: 'off',
+  renderWhitespace: 'none',
+  fixedOverflowWidgets: true,
+}))
+
+function applyMarkers(markers: EditorMarker[] | undefined) {
+  const instance = editor.value
+  const api = monaco
+  if (!instance || !api) return
+  const model = instance.getModel()
+  if (!model) return
+  const list = (markers ?? []).map((m) => {
     const startLineNumber = m.line && m.line > 0 ? m.line : 1
     const startColumn = m.column && m.column > 0 ? m.column : 1
     return {
-      severity: severityFor(monacoNs, m.severity),
+      severity: m.severity === 'warning' ? api.MarkerSeverity.Warning : api.MarkerSeverity.Error,
       message: m.message,
       startLineNumber,
       startColumn,
@@ -72,114 +98,68 @@ function toMonacoMarkers(monacoNs: typeof Monaco, markers: EditorMarker[]): Mona
       endColumn: startColumn + 1,
     }
   })
+  api.editor.setModelMarkers(model, MARKER_OWNER, list)
 }
 
-function applyMarkers(markers: EditorMarker[] | undefined) {
-  if (!monaco || !editor) return
-  const model = editor.getModel()
-  if (!model) return
-  const list = markers ? toMonacoMarkers(monaco, markers) : []
-  monaco.editor.setModelMarkers(model, MARKER_OWNER, list)
-}
-
-onMounted(async () => {
-  installWorkerlessEnvironment()
-  monaco = await import('monaco-editor')
-  if (destroyed || !container.value) return
-
-  editor = monaco.editor.create(container.value, {
-    value: props.modelValue,
-    language: props.language,
-    readOnly: props.readOnly,
-    placeholder: props.placeholder,
-    lineNumbers: 'on',
-    minimap: { enabled: false },
-    automaticLayout: true,
-    scrollBeyondLastLine: false,
-    fontSize: 12,
-    tabSize: 2,
-    wordWrap: 'off',
-    renderWhitespace: 'none',
-    fixedOverflowWidgets: true,
-    theme: 'vs',
-  })
-
-  editor.onDidChangeModelContent(() => {
-    const value = editor?.getValue() ?? ''
-    if (value !== props.modelValue) emit('update:modelValue', value)
-  })
-  editor.onDidBlurEditorText(() => emit('blur'))
+function onEditorDidMount(instance: Monaco.editor.IStandaloneCodeEditor) {
+  const api = monaco
+  if (!api) return
+  editor.value = instance
+  instance.onDidBlurEditorText(() => emit('blur'))
 
   if (props.helperCatalogFetch) {
     const { getCatalog } = useHelperCompletion({ fetch: props.helperCatalogFetch })
     releaseHelperCompletion = useMonacoHelperCompletion({
-      monaco,
+      monaco: api,
       getCatalog,
       language: props.language,
     })
   }
 
   applyMarkers(props.markers)
-})
+}
 
-// `modelValue` needs its own `watch` with a setValue guard — it is the
-// parent-driven leg of the v-model contract and must not stomp on in-flight
-// edits emitted via `update:modelValue`.
+// `monaco-editor-vue3` does not react to `language` changes — keep model
+// language in sync here.
 watch(
-  () => props.modelValue,
-  (value) => {
-    if (editor && value !== editor.getValue()) editor.setValue(value ?? '')
+  () => props.language,
+  (language) => {
+    const model = editor.value?.getModel()
+    if (model && language) monaco?.editor.setModelLanguage(model, language)
   },
 )
 
-// Imperative Monaco options (readOnly / language / markers) are pure
-// prop→state syncs with no bidirectional logic. A single `watchEffect`
-// collapses four listeners into one reactive surface — props are the
-// "events", this effect is the listener.
-//
-// Reads happen before the `editor` guard so the effect tracks each prop
-// even on the first run, when the editor is created later inside
-// `onMounted`. Without this, an early-return before any prop access would
-// register zero dependencies and the effect would never re-fire on
-// `setProps`.
-watchEffect(() => {
-  const readOnly = props.readOnly
-  const language = props.language
-  const markers = props.markers
-  if (!editor) return
-  editor.updateOptions({ readOnly })
-  const model = editor.getModel()
-  if (model && monaco && language) {
-    monaco.editor.setModelLanguage(model, language)
-  }
-  applyMarkers(markers)
-})
+watch(
+  () => props.markers,
+  (markers) => applyMarkers(markers),
+)
 
 onBeforeUnmount(() => {
-  destroyed = true
-  // Best-effort marker cleanup so an unmounted model never keeps stale markers.
-  if (monaco && editor) {
-    const model = editor.getModel()
-    if (model) monaco.editor.setModelMarkers(model, MARKER_OWNER, [])
+  disposed = true
+  const model = editor.value?.getModel()
+  if (model) {
+    monaco?.editor.setModelMarkers(model, MARKER_OWNER, [])
+    model.dispose()
   }
-  editor?.getModel()?.dispose()
-  editor?.dispose()
   releaseHelperCompletion?.()
   releaseHelperCompletion = null
+  editor.value = null
 })
 
 function revealPosition(line: number, column = 1): void {
-  if (!editor || !line || line < 1) return
+  const instance = editor.value
+  if (!instance || !line || line < 1) return
   const safeColumn = column && column > 0 ? column : 1
-  editor.revealLineInCenter(line)
-  editor.setPosition({ lineNumber: line, column: safeColumn })
-  editor.focus()
+  instance.revealLineInCenter(line)
+  instance.setPosition({ lineNumber: line, column: safeColumn })
+  instance.focus()
 }
 
 function insertAtCursor(text: string): void {
-  if (!editor || !text) return
-  const selection = editor.getSelection()
-  const position = selection ? null : editor.getPosition()
+  const instance = editor.value
+  if (!instance || !text) return
+  const selection = instance.getSelection()
+  const position = selection ? null : instance.getPosition()
   const range = selection
     ? {
         startLineNumber: selection.startLineNumber,
@@ -193,13 +173,24 @@ function insertAtCursor(text: string): void {
         endLineNumber: position?.lineNumber ?? 1,
         endColumn: position?.column ?? 1,
       }
-  editor.executeEdits('helper-insert', [{ range, text, forceMoveMarkers: true }])
-  editor.focus()
+  instance.executeEdits('helper-insert', [{ range, text, forceMoveMarkers: true }])
+  instance.focus()
 }
 
-defineExpose({ focus: () => editor?.focus(), revealPosition, insertAtCursor })
+defineExpose({ focus: () => editor.value?.focus(), revealPosition, insertAtCursor })
 </script>
 
 <template>
-  <div ref="container" data-testid="monaco-editor" class="h-full w-full min-h-[300px] text-left" />
+  <div data-testid="monaco-editor" class="h-full w-full min-h-[300px] text-left">
+    <component
+      :is="codeEditorComponent"
+      v-if="codeEditorComponent"
+      :value="modelValue"
+      :language="language"
+      :options="editorOptions"
+      theme="vs"
+      @update:value="emit('update:modelValue', $event)"
+      @editor-did-mount="onEditorDidMount"
+    />
+  </div>
 </template>

@@ -69,9 +69,12 @@ class DslDraftResourceTest {
   void setUp() throws IOException {
     sourceDir = Files.createTempDirectory("dsl-draft-test-");
     props = DslProperties.builder().sourceDir(sourceDir.toString()).build();
-    handler = new DslDraftHandler(props, new DslReloadHandler(props, null),
+    handler = new DslDraftHandler(props,
+            new DslReloadHandler(props, null, null, null, null, null, null, null),
             new DslDefinitionHistoryService(props, mapper), mapper,
-            new DslDefinitionBundleService(mapper, Optional.empty()));
+            new DslDefinitionBundleService(mapper, Optional.empty(),
+                    DslProperties.bundleServiceDefaults()),
+            null, null, null, null);
   }
 
   @AfterEach
@@ -163,10 +166,12 @@ class DslDraftResourceTest {
     DslProperties blank = DslProperties.builder().sourceDir("").build();
     handler = new DslDraftHandler(
             blank,
-            new DslReloadHandler(blank, null),
+            new DslReloadHandler(blank, null, null, null, null, null, null, null),
             new DslDefinitionHistoryService(blank, mapper),
             mapper,
-            new DslDefinitionBundleService(mapper, Optional.empty()));
+            new DslDefinitionBundleService(mapper, Optional.empty(),
+                    DslProperties.bundleServiceDefaults()),
+            null, null, null, null);
     ServerResponse response = handler.delete(deleteRequest("foo", "/api/dsl/drafts/foo"));
     assertThat(response.statusCode().value()).isEqualTo(409);
   }
@@ -216,10 +221,12 @@ class DslDraftResourceTest {
     DslProperties blank = DslProperties.builder().sourceDir("").build();
     handler = new DslDraftHandler(
             blank,
-            new DslReloadHandler(blank, null),
+            new DslReloadHandler(blank, null, null, null, null, null, null, null),
             new DslDefinitionHistoryService(blank, mapper),
             mapper,
-            new DslDefinitionBundleService(mapper, Optional.empty()));
+            new DslDefinitionBundleService(mapper, Optional.empty(),
+                    DslProperties.bundleServiceDefaults()),
+            null, null, null, null);
     ServerResponse response = handler.save(postRequest("/api/dsl/drafts/foo/save"));
     assertThat(response.statusCode().value()).isEqualTo(409);
   }
@@ -251,10 +258,12 @@ class DslDraftResourceTest {
     DslProperties blank = DslProperties.builder().sourceDir("").build();
     handler = new DslDraftHandler(
             blank,
-            new DslReloadHandler(blank, null),
+            new DslReloadHandler(blank, null, null, null, null, null, null, null),
             new DslDefinitionHistoryService(blank, mapper),
             mapper,
-            new DslDefinitionBundleService(mapper, Optional.empty()));
+            new DslDefinitionBundleService(mapper, Optional.empty(),
+                    DslProperties.bundleServiceDefaults()),
+            null, null, null, null);
 
     ServerResponse response = handler.list(getRequest("/api/dsl/drafts", null));
 
@@ -405,9 +414,12 @@ class DslDraftResourceTest {
     props = DslProperties.builder().sourceDir(sourceDir.toString())
             .drafts(new DslProperties.Drafts(2))
             .build();
-    handler = new DslDraftHandler(props, new DslReloadHandler(props, null),
+    handler = new DslDraftHandler(props,
+            new DslReloadHandler(props, null, null, null, null, null, null, null),
             new DslDefinitionHistoryService(props, mapper), mapper,
-            new DslDefinitionBundleService(mapper, Optional.empty()));
+            new DslDefinitionBundleService(mapper, Optional.empty(),
+                    DslProperties.bundleServiceDefaults()),
+            null, null, null, null);
     for (int i = 1; i <= 4; i++) {
       handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", String.valueOf(i)));
       Thread.sleep(2);
@@ -533,10 +545,12 @@ class DslDraftResourceTest {
     DslProperties blank = DslProperties.builder().sourceDir("").build();
     handler = new DslDraftHandler(
             blank,
-            new DslReloadHandler(blank, null),
+            new DslReloadHandler(blank, null, null, null, null, null, null, null),
             new DslDefinitionHistoryService(blank, mapper),
             mapper,
-            new DslDefinitionBundleService(mapper, Optional.empty()));
+            new DslDefinitionBundleService(mapper, Optional.empty(),
+                    DslProperties.bundleServiceDefaults()),
+            null, null, null, null);
 
     ServerResponse response = handler.history(getRequest("/api/dsl/drafts/X/history",
             Map.of("name", "X")));
@@ -549,10 +563,12 @@ class DslDraftResourceTest {
     DslProperties blank = DslProperties.builder().sourceDir("").build();
     handler = new DslDraftHandler(
             blank,
-            new DslReloadHandler(blank, null),
+            new DslReloadHandler(blank, null, null, null, null, null, null, null),
             new DslDefinitionHistoryService(blank, mapper),
             mapper,
-            new DslDefinitionBundleService(mapper, Optional.empty()));
+            new DslDefinitionBundleService(mapper, Optional.empty(),
+                    DslProperties.bundleServiceDefaults()),
+            null, null, null, null);
 
     ServerResponse response = handler.restore(getRequest(
             "/api/dsl/drafts/X/history/123/restore",
@@ -796,9 +812,13 @@ class DslDraftResourceTest {
 
   private DslDraftHandler builderDraftHandler(DslBuilderClient client) {
     return new DslDraftHandler(props,
-            new DslReloadHandler(props, new DefinitionLoader(), null, null, providerOf(client)),
+            new DslReloadHandler(props, new DefinitionLoader(), null, null, providerOf(client),
+                    null, null, null),
             new DslDefinitionHistoryService(props, mapper), mapper,
-            new DslDefinitionBundleService(mapper, Optional.empty()), null, providerOf(client));
+            new DslDefinitionBundleService(mapper, Optional.empty(),
+                    DslProperties.bundleServiceDefaults()),
+            null, providerOf(client),
+            null, null);
   }
 
   @Test
@@ -845,10 +865,12 @@ class DslDraftResourceTest {
     try {
       var audit = AuditTestSupport.h2();
       DslDraftHandler audited = new DslDraftHandler(props,
-              new DslReloadHandler(props, new DefinitionLoader()),
+              new DslReloadHandler(props, new DefinitionLoader(), null, null, null, null, null,
+                      null),
               new DslDefinitionHistoryService(props, mapper), mapper,
-              new DslDefinitionBundleService(mapper, Optional.empty()),
-              AuditTestSupport.providerOf(audit.service()));
+              new DslDefinitionBundleService(mapper, Optional.empty(),
+                      DslProperties.bundleServiceDefaults()),
+              AuditTestSupport.providerOf(audit.service()), null, null, null);
 
       ServerResponse response = audited.publish(postRequest("/api/dsl/drafts/foo/publish"));
 
@@ -866,10 +888,12 @@ class DslDraftResourceTest {
 
   private DslDraftHandler auditedDraftHandler(AuditTestSupport.Harness audit,
           DslProperties properties) {
-    return new DslDraftHandler(properties, new DslReloadHandler(properties, null),
+    return new DslDraftHandler(properties,
+            new DslReloadHandler(properties, null, null, null, null, null, null, null),
             new DslDefinitionHistoryService(properties, mapper), mapper,
-            new DslDefinitionBundleService(mapper, Optional.empty()),
-            AuditTestSupport.providerOf(audit.service()));
+            new DslDefinitionBundleService(mapper, Optional.empty(),
+                    DslProperties.bundleServiceDefaults()),
+            AuditTestSupport.providerOf(audit.service()), null, null, null);
   }
 
   private static ServerRequest postRequestWithHeader(String path, String name, String header,
@@ -891,7 +915,7 @@ class DslDraftResourceTest {
 
     @Bean
     DslReloadHandler dslReloadHandler(DslProperties props) {
-      return new DslReloadHandler(props, null);
+      return new DslReloadHandler(props, null, null, null, null, null, null, null);
     }
 
     @Bean
@@ -902,7 +926,8 @@ class DslDraftResourceTest {
 
     @Bean
     DslDefinitionBundleService dslDefinitionBundleService(ObjectMapper mapper) {
-      return new DslDefinitionBundleService(mapper, Optional.empty());
+      return new DslDefinitionBundleService(mapper, Optional.empty(),
+              DslProperties.bundleServiceDefaults());
     }
 
     @Bean

@@ -17,7 +17,9 @@ import cbs.nova.dslexamples.v1.OrderSagaModels.OrderSagaIn;
 import cbs.nova.dslexamples.v1.OrderSagaModels.OrderSagaOut;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.helper.*;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -92,7 +94,10 @@ class AdvancedDslExamplesTest {
         return new ConditionalFailingHelper();
       }
       if (helperClass == CompensationTrackerHelper.class) {
-        return new CompensationTrackerHelper();
+        return new CompensationTrackerHelper(Caffeine.newBuilder()
+                .expireAfterWrite(StarterConstants.COMPENSATION_TRACKER_TTL)
+                .maximumSize(StarterConstants.COMPENSATION_TRACKER_MAX_SIZE)
+                .build());
       }
       if (helperClass == CurrentTimestampHelper.class) {
         return new CurrentTimestampHelper();
@@ -174,7 +179,10 @@ class AdvancedDslExamplesTest {
         return new ArithmeticHelper();
       }
       if (helperClass == UnreliableApiHelper.class) {
-        return new UnreliableApiHelper();
+        return new UnreliableApiHelper(Caffeine.newBuilder()
+                .expireAfterWrite(StarterConstants.UNRELIABLE_API_TTL)
+                .maximumSize(StarterConstants.UNRELIABLE_API_MAX_SIZE)
+                .build());
       }
       if (helperClass == UuidV7Helper.class) {
         return new UuidV7Helper();

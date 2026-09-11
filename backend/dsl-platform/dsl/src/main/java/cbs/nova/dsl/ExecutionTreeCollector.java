@@ -1,11 +1,10 @@
 package cbs.nova.dsl;
 
 import cbs.nova.dsl.transaction.TransactionExecution;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -17,32 +16,18 @@ import java.util.Optional;
 import java.util.Set;
 
 @Slf4j
+@RequiredArgsConstructor
 public final class ExecutionTreeCollector implements ExecutionListener {
+
+  public static final int DEFAULT_MAX_DEPTH = 32;
 
   private final int maxDepth;
 
-  private final Deque<Frame> stack;
+  private final Deque<Frame> stack = new ArrayDeque<>();
+  private final Set<String> cycleSet = new HashSet<>();
   private CallNode root;
-  private final Set<String> cycleSet;
   private int skipCount;
   private boolean active;
-
-  public ExecutionTreeCollector() {
-    this(32);
-  }
-
-  public ExecutionTreeCollector(int maxDepth) {
-    this(maxDepth, new ArrayDeque<>(), new HashSet<>());
-  }
-
-  public ExecutionTreeCollector(int maxDepth, Deque<Frame> stack, Set<String> cycleSet) {
-    this.maxDepth = maxDepth;
-    this.stack = stack;
-    this.cycleSet = cycleSet;
-    this.root = null;
-    this.skipCount = 0;
-    this.active = false;
-  }
 
   public void start() {
     active = true;
@@ -206,22 +191,16 @@ public final class ExecutionTreeCollector implements ExecutionListener {
     cycleSet.remove(cycleKey);
   }
 
+  @RequiredArgsConstructor
   private static final class Frame {
 
     final String name;
     final CallKind kind;
     final Object input;
+    final boolean sentinel;
     Object output;
     boolean success;
-    final boolean sentinel;
     final List<CallNode> children = new ArrayList<>();
     final List<Map<String, Object>> externalCalls = new ArrayList<>();
-
-    Frame(String name, CallKind kind, Object input, boolean sentinel) {
-      this.name = name;
-      this.kind = kind;
-      this.input = input;
-      this.sentinel = sentinel;
-    }
   }
 }

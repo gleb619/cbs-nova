@@ -19,6 +19,7 @@ import cbs.nova.dslexamples.v1.UnreliableApiModels.UnreliableProcessIn;
 import cbs.nova.dslexamples.v1.UnreliableApiModels.UnreliableProcessOut;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.helper.*;
 import cbs.nova.starter.helper.model.UnreliableApiIn;
 import cbs.nova.starter.service.TemporalDslProcessLauncher;
@@ -26,6 +27,7 @@ import cbs.nova.starter.service.TemporalDslProcessService;
 import cbs.nova.starter.service.TemporalTransactionInvoker;
 import cbs.nova.util.ServiceUtil;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowClientOptions;
 import io.temporal.common.converter.ByteArrayPayloadConverter;
@@ -241,7 +243,10 @@ class UnreliableApiDslIntegrationTest {
    */
   private static final class SharedUnreliableApiHelper implements Executable<Object, Object> {
 
-    private final UnreliableApiHelper delegate = new UnreliableApiHelper();
+    private final UnreliableApiHelper delegate = new UnreliableApiHelper(Caffeine.newBuilder()
+            .expireAfterWrite(StarterConstants.UNRELIABLE_API_TTL)
+            .maximumSize(StarterConstants.UNRELIABLE_API_MAX_SIZE)
+            .build());
 
     @Override
     @SuppressWarnings("unchecked")

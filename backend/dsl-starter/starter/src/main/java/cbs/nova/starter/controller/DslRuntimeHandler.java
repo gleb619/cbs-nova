@@ -1,5 +1,6 @@
 package cbs.nova.starter.controller;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.DslRequest;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.RuntimeOutcome;
@@ -10,7 +11,6 @@ import cbs.nova.starter.service.CorrelationId;
 import cbs.nova.starter.service.IdempotencyKeys;
 import cbs.nova.starter.service.InputValidator;
 import cbs.nova.starter.web.DslPayloadSizeValidator;
-import cbs.nova.starter.web.RequestIdFilter;
 import jakarta.servlet.ServletException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -27,9 +27,6 @@ import java.util.List;
  */
 @RequiredArgsConstructor
 public class DslRuntimeHandler {
-
-  public static final String IDEMPOTENCY_KEY_HEADER = "Idempotency-Key";
-  public static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
 
   private final DslRuntimeService service;
   private final DslPayloadSizeValidator payloadSizeValidator;
@@ -50,19 +47,19 @@ public class DslRuntimeHandler {
     String correlationId;
     try {
       correlationId = CorrelationId.validated(
-              request.headers().firstHeader(CORRELATION_ID_HEADER));
+              request.headers().firstHeader(StarterConstants.CORRELATION_ID_HEADER));
     } catch (IllegalArgumentException e) {
       return ServerResponse.status(HttpStatus.BAD_REQUEST)
               .body(new ErrorResponse("INVALID_CORRELATION_ID",
-                      "Invalid X-Correlation-Id header", name, null, null));
+                      "Invalid X-Correlation-Id header", name, null, null, null));
     }
-    String key = request.headers().firstHeader(IDEMPOTENCY_KEY_HEADER);
+    String key = request.headers().firstHeader(StarterConstants.IDEMPOTENCY_KEY_HEADER);
     if (key != null) {
       String trimmed = key.trim();
       if (!IdempotencyKeys.isValid(trimmed)) {
         return ServerResponse.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse("INVALID_IDEMPOTENCY_KEY",
-                        "Invalid Idempotency-Key header", name, null, null));
+                        "Invalid Idempotency-Key header", name, null, null, null));
       }
       String runId = IdempotencyKeys.deriveRunId(name, trimmed);
       return validationOrExecute(name, dslRequest,
@@ -101,7 +98,7 @@ public class DslRuntimeHandler {
       }
       return builder.body(outcome.value());
     }
-    HttpStatus status = "PREVIEW_TIMEOUT".equals(outcome.error().code())
+    HttpStatus status = "PREVIEW_TIMEOUT".equals(outcome.error().getCode())
             ? HttpStatus.GATEWAY_TIMEOUT
             : HttpStatus.UNPROCESSABLE_ENTITY;
     return ServerResponse.status(status).body(outcome.error());
@@ -113,7 +110,7 @@ public class DslRuntimeHandler {
   }
 
   private String requestId(ServerRequest request) {
-    String requestId = request.headers().firstHeader(RequestIdFilter.REQUEST_ID_HEADER);
+    String requestId = request.headers().firstHeader(StarterConstants.REQUEST_ID_HEADER);
     return requestId != null && !requestId.isBlank() ? requestId : null;
   }
 

@@ -20,7 +20,8 @@ class RateLimitFilterTest {
 
   @Test
   void disabledByDefaultPassesThroughWithoutBehaviorChange() throws Exception {
-    RateLimitFilter filter = new RateLimitFilter(disabledProperties(), objectMapper);
+    RateLimitFilter filter = new RateLimitFilter(disabledProperties(), objectMapper,
+            System::nanoTime);
     MockHttpServletRequest request = post("/api/dsl/run/demo");
     MockHttpServletResponse response = new MockHttpServletResponse();
     CallTracker tracker = new CallTracker();
@@ -34,7 +35,8 @@ class RateLimitFilterTest {
 
   @Test
   void exemptGetRequestPassesThrough() throws Exception {
-    RateLimitFilter filter = new RateLimitFilter(enabledProperties(2, 1.0), objectMapper);
+    RateLimitFilter filter = new RateLimitFilter(enabledProperties(2, 1.0), objectMapper,
+            System::nanoTime);
     MockHttpServletRequest request = get("/api/dsl/run/demo");
     MockHttpServletResponse response = new MockHttpServletResponse();
     CallTracker tracker = new CallTracker();
@@ -47,7 +49,8 @@ class RateLimitFilterTest {
 
   @Test
   void exemptActuatorHealthPassesThrough() throws Exception {
-    RateLimitFilter filter = new RateLimitFilter(enabledProperties(2, 1.0), objectMapper);
+    RateLimitFilter filter = new RateLimitFilter(enabledProperties(2, 1.0), objectMapper,
+            System::nanoTime);
     MockHttpServletRequest request = get("/actuator/health");
     MockHttpServletResponse response = new MockHttpServletResponse();
     CallTracker tracker = new CallTracker();
@@ -99,7 +102,8 @@ class RateLimitFilterTest {
 
   @Test
   void rejectedRequestReturns429WithRetryAfterAndErrorBody() throws Exception {
-    RateLimitFilter filter = new RateLimitFilter(enabledProperties(1, 1.0), objectMapper);
+    RateLimitFilter filter = new RateLimitFilter(enabledProperties(1, 1.0), objectMapper,
+            System::nanoTime);
 
     MockHttpServletRequest first = post("/api/dsl/preview/demo");
     MockHttpServletResponse firstResponse = new MockHttpServletResponse();
@@ -115,13 +119,14 @@ class RateLimitFilterTest {
     assertThat(secondResponse.getContentType()).contains("application/json");
     ErrorResponse body = objectMapper.readValue(secondResponse.getContentAsString(),
             ErrorResponse.class);
-    assertThat(body.code()).isEqualTo("RATE_LIMITED");
-    assertThat(body.message()).isNotBlank();
+    assertThat(body.getCode()).isEqualTo("RATE_LIMITED");
+    assertThat(body.getMessage()).isNotBlank();
   }
 
   @Test
   void xForwardedForFirstIpIsUsedAsBucketKey() throws Exception {
-    RateLimitFilter filter = new RateLimitFilter(enabledProperties(1, 1.0), objectMapper);
+    RateLimitFilter filter = new RateLimitFilter(enabledProperties(1, 1.0), objectMapper,
+            System::nanoTime);
 
     MockHttpServletRequest request = post("/api/dsl/run/demo");
     request.addHeader("X-Forwarded-For", "203.0.113.1, 70.41.3.18, 150.172.238.178");

@@ -5,10 +5,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cbs.nova.dsl.builder.config.BuilderServiceConfiguration;
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
 import cbs.nova.dsl.builder.repository.FileRepository;
-import cbs.nova.dsl.builder.service.FileBuffer;
-import cbs.nova.dsl.builder.service.FileBulkhead;
 import cbs.nova.dsl.builder.service.FileService;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -28,7 +27,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(FileController.class)
-@Import({FileService.class, FileRepository.class, FileBuffer.class, FileBulkhead.class,
+@Import({FileService.class, FileRepository.class, BuilderServiceConfiguration.class,
     FileControllerTest.Config.class})
 class FileControllerTest {
 

@@ -4,6 +4,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.annotation.Helper;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.helper.model.SemverIn;
 import cbs.nova.starter.helper.model.SemverOut;
 import java.util.LinkedHashMap;
@@ -45,13 +46,10 @@ public class SemverHelper implements Executable<SemverIn, SemverOut> {
 
   // Official semver.org-recommended regex
   // (https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string).
-  private static final String SEMVER_REGEX = "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)"
-          + "(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)"
-          + "(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
-          + "(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$";
+  private static final String SEMVER_REGEX = StarterConstants.SEMVER_REGEX;
   private static final Pattern SEMVER_PATTERN = Pattern.compile(SEMVER_REGEX);
 
-  private static final String IDENT_REGEX = "[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*";
+  private static final String IDENT_REGEX = StarterConstants.SEMVER_IDENT_REGEX;
 
   @Override
   public @NonNull Result<SemverOut> execute(@NonNull Context<SemverIn> ctx) {

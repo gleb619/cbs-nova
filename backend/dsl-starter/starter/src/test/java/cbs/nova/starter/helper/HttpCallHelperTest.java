@@ -143,7 +143,7 @@ class HttpCallHelperTest {
 
     Result<HttpCallOut> result = execute(new HttpCallIn(
             baseUrl() + "/headers", "GET",
-            Map.of("X-Request-Id", "req-123"), null, null, null));
+            Map.of("X-Request-Id", "req-123"), null, null, null, null));
 
     assertThat(result.isSuccess())
             .as("result cause: %s", result.cause())
@@ -180,7 +180,7 @@ class HttpCallHelperTest {
 
     long start = System.nanoTime();
     Result<HttpCallOut> result = execute(new HttpCallIn(
-            baseUrl() + "/slow", "GET", null, null, 200L, null));
+            baseUrl() + "/slow", "GET", null, null, 200L, null, null));
     long elapsedMs = (System.nanoTime() - start) / 1_000_000;
 
     assertThat(result.isSuccess())
@@ -204,7 +204,7 @@ class HttpCallHelperTest {
 
     Result<HttpCallOut> result = execute(new HttpCallIn(
             baseUrl() + "/redirect-always", "GET",
-            null, null, null, HttpCallIn.RedirectPolicy.ALWAYS));
+            null, null, null, HttpCallIn.RedirectPolicy.ALWAYS, null));
 
     assertThat(result.isSuccess())
             .as("result cause: %s", result.cause())
@@ -226,7 +226,7 @@ class HttpCallHelperTest {
 
     Result<HttpCallOut> result = execute(new HttpCallIn(
             baseUrl() + "/redirect-normal", "GET",
-            null, null, null, HttpCallIn.RedirectPolicy.NORMAL));
+            null, null, null, HttpCallIn.RedirectPolicy.NORMAL, null));
 
     assertThat(result.isSuccess())
             .as("result cause: %s", result.cause())
@@ -248,7 +248,7 @@ class HttpCallHelperTest {
 
     Result<HttpCallOut> result = execute(new HttpCallIn(
             baseUrl() + "/redirect-never", "GET",
-            null, null, null, HttpCallIn.RedirectPolicy.NEVER));
+            null, null, null, HttpCallIn.RedirectPolicy.NEVER, null));
 
     assertThat(result.isSuccess())
             .as("redirect should not be followed when policy is NEVER")
@@ -274,7 +274,7 @@ class HttpCallHelperTest {
     // mirroring the JDK default for the injected shared client.
     Result<HttpCallOut> result = execute(new HttpCallIn(
             baseUrl() + "/redirect-default", "GET",
-            null, null, null, null));
+            null, null, null, null, null));
 
     assertThat(result.isSuccess())
             .as("redirect should not be followed when followRedirects is omitted (default NEVER)")
@@ -289,7 +289,7 @@ class HttpCallHelperTest {
 
   @Test
   void blankUrlProducesFailure() {
-    Result<HttpCallOut> result = execute(new HttpCallIn("", "GET", null, null, null, null));
+    Result<HttpCallOut> result = execute(new HttpCallIn("", "GET", null, null, null, null, null));
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause())
             .isInstanceOf(IllegalArgumentException.class);
@@ -298,7 +298,7 @@ class HttpCallHelperTest {
 
   @Test
   void missingUrlProducesFailure() {
-    Result<HttpCallOut> result = execute(new HttpCallIn(null, "GET", null, null, null, null));
+    Result<HttpCallOut> result = execute(new HttpCallIn(null, "GET", null, null, null, null, null));
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause())
             .isInstanceOf(IllegalArgumentException.class);

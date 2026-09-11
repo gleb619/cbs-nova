@@ -12,10 +12,12 @@ import cbs.nova.dsl.helper.HelperResolver;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.starter.exception.BuilderClientBusyException;
+import cbs.nova.starter.config.GlobalManagerReplacedListener;
 import cbs.nova.starter.exception.BuilderUnavailableException;
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.config.router.DslReloadRouterConfiguration;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.exception.DslCompilationException;
 import cbs.nova.starter.model.CompileDiagnostic;
 import cbs.nova.starter.model.CompileDiagnosticSource;
@@ -46,9 +48,10 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -79,12 +82,11 @@ import org.springframework.web.servlet.function.ServerResponse;
  */
 @Component
 @ConditionalOnProperty(prefix = "csb.dsl.reload", name = "enabled", havingValue = "true", matchIfMissing = true)
+@RequiredArgsConstructor
 @Slf4j
 public class DslReloadHandler {
 
-  public static final String ACTION_DEFINITION_RELOAD = "DEFINITION_RELOAD";
-
-  private static final String RELOAD_TEMP_PREFIX = "dsl-reload-";
+  private static final String RELOAD_TEMP_PREFIX = StarterConstants.DSL_RELOAD_TEMP_PREFIX;
 
   private final DslProperties dslProperties;
   private final DslDefinitionLoader loader;
@@ -93,70 +95,9 @@ public class DslReloadHandler {
   private final ObjectProvider<DslBuilderClient> builderClientProvider;
   private final ObjectProvider<CompileDiagnosticRecordRepository> compileDiagnosticRepositoryProvider;
   private final ObjectProvider<DomainEventPublisher> eventPublisherProvider;
+  private final ObjectProvider<GlobalManagerReplacedListener> globalManagerReplacedListeners;
   private final ReentrantLock reloadLock = new ReentrantLock();
   private final JavaSourceCompiler javaSourceCompiler = new JavaSourceCompiler();
-
-  /**
-   * Spring-injected constructor. The {@link PreviewResultCache} bean is resolved through an
-   * {@link ObjectProvider} so the reload path stays usable when the cache is absent (e.g. in tests
-   * that don't wire the starter preview cache, or when a host disables preview caching). The same
-   * applies to the {@link DslAuditService}: when no {@code DataSource} is configured there is no
-   * audit bean and the reload simply is not audited. The {@link DslBuilderClient} is equally
-   * optional: when absent, compilation falls back to in-process javac.
-   */
-  @Autowired
-  public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader,
-          ObjectProvider<PreviewResultCache> previewCacheProvider,
-          ObjectProvider<DslAuditService> auditServiceProvider,
-          ObjectProvider<DslBuilderClient> builderClientProvider,
-          ObjectProvider<CompileDiagnosticRecordRepository> compileDiagnosticRepositoryProvider,
-          ObjectProvider<DomainEventPublisher> eventPublisherProvider) {
-    this.dslProperties = dslProperties;
-    this.loader = loader;
-    this.previewCacheProvider = previewCacheProvider;
-    this.auditServiceProvider = auditServiceProvider;
-    this.builderClientProvider = builderClientProvider;
-    this.compileDiagnosticRepositoryProvider = compileDiagnosticRepositoryProvider;
-    this.eventPublisherProvider = eventPublisherProvider;
-  }
-
-  /**
-   * Backwards-compatible constructor for tests and direct instantiation: builds a handler with no
-   * preview cache flush and no audit logging wired in. Delegates to the Spring constructor with
-   * {@code null} providers.
-   */
-  public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader) {
-    this(dslProperties, loader, null, null, null, null, null);
-  }
-
-  /**
-   * Constructor for callers that wire a preview cache but no audit service (tests).
-   */
-  public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader,
-          ObjectProvider<PreviewResultCache> previewCacheProvider) {
-    this(dslProperties, loader, previewCacheProvider, null, null, null, null);
-  }
-
-  /**
-   * Constructor for callers that wire audit but keep the default compilation mode (tests).
-   */
-  public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader,
-          ObjectProvider<PreviewResultCache> previewCacheProvider,
-          ObjectProvider<DslAuditService> auditServiceProvider) {
-    this(dslProperties, loader, previewCacheProvider, auditServiceProvider, null, null, null);
-  }
-
-  /**
-   * Constructor for callers that wire audit and builder client but no diagnostic persistence
-   * (tests).
-   */
-  public DslReloadHandler(DslProperties dslProperties, DslDefinitionLoader loader,
-          ObjectProvider<PreviewResultCache> previewCacheProvider,
-          ObjectProvider<DslAuditService> auditServiceProvider,
-          ObjectProvider<DslBuilderClient> builderClientProvider) {
-    this(dslProperties, loader, previewCacheProvider, auditServiceProvider, builderClientProvider,
-            null, null);
-  }
 
   /**
    * Reloads DSL definitions from the configured source directory using a dedicated classloader and
@@ -167,23 +108,23 @@ public class DslReloadHandler {
   public ServerResponse reload(ServerRequest request) throws IOException {
     var sourceDirProperty = dslProperties.sourceDir();
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
-      audit(request, "-", DslAuditService.OUTCOME_FAILURE,
+      audit(request, "-", StarterConstants.OUTCOME_FAILURE,
               Map.of("error", "NOT_CONFIGURED: csb.dsl.source-dir is not configured"));
       return error(HttpStatus.CONFLICT, new ErrorResponse(
-              "NOT_CONFIGURED", "csb.dsl.source-dir is not configured", null, null, null));
+              "NOT_CONFIGURED", "csb.dsl.source-dir is not configured", null, null, null, null));
     }
     var dir = Path.of(sourceDirProperty);
     if (!Files.isDirectory(dir)) {
-      audit(request, dir.toString(), DslAuditService.OUTCOME_FAILURE,
+      audit(request, dir.toString(), StarterConstants.OUTCOME_FAILURE,
               Map.of("error", "NOT_FOUND: Source directory does not exist: " + dir));
       return error(HttpStatus.CONFLICT, new ErrorResponse(
-              "NOT_FOUND", "Source directory does not exist: " + dir, null, null, null));
+              "NOT_FOUND", "Source directory does not exist: " + dir, null, null, null, null));
     }
 
     reloadLock.lock();
     try {
       var load = doReload(dir);
-      audit(request, dir.toString(), DslAuditService.OUTCOME_SUCCESS, Map.of(
+      audit(request, dir.toString(), StarterConstants.OUTCOME_SUCCESS, Map.of(
               "processes", load.processCount(),
               "transactions", load.transactionCount(),
               "functions", load.functionCount(),
@@ -192,7 +133,7 @@ public class DslReloadHandler {
               .contentType(MediaType.APPLICATION_JSON)
               .body(new ReloadResponse(dir.toString(), load));
     } catch (Exception e) {
-      audit(request, dir.toString(), DslAuditService.OUTCOME_FAILURE,
+      audit(request, dir.toString(), StarterConstants.OUTCOME_FAILURE,
               Map.of("error", String.valueOf(e.getMessage())));
       log.error("[DSL reload] Failed to reload DSL definitions from {}", dir, e);
       // T411: best-effort ReloadFailed event. Reload has no DB transaction (the live
@@ -208,7 +149,7 @@ public class DslReloadHandler {
                 "RELOAD_FAILED", dce.getMessage(), null, null, null, responseDiagnostics));
       }
       return error(HttpStatus.INTERNAL_SERVER_ERROR,
-              new ErrorResponse("RELOAD_FAILED", e.getMessage(), null, null, null));
+              new ErrorResponse("RELOAD_FAILED", e.getMessage(), null, null, null, null));
     } finally {
       reloadLock.unlock();
     }
@@ -256,6 +197,7 @@ public class DslReloadHandler {
 
       // Atomic swap — only after every registration above has succeeded.
       GlobalManager.globalManager().replaceGlobalManager(candidate);
+      notifyGlobalManagerReplaced();
       // Preview results cached against the previous registry are now stale; flush after the swap
       // so a failed compile/staging leaves the cache (and the live registry) untouched.
       flushPreviewCache();
@@ -356,6 +298,21 @@ public class DslReloadHandler {
    * swapped registry instead of returning a stale hit. No-op when the cache bean is absent (handler
    * built without a provider) or when the provider yields no bean (cache disabled).
    */
+
+  private void notifyGlobalManagerReplaced() {
+    GlobalManager globalManager = GlobalManager.globalManager();
+    if (globalManagerReplacedListeners == null) {
+      return;
+    }
+    for (GlobalManagerReplacedListener listener : globalManagerReplacedListeners) {
+      try {
+        listener.onGlobalManagerReplaced(globalManager);
+      } catch (Exception e) {
+        log.warn("[DSL reload] GlobalManagerReplacedListener failed: {}", e.getMessage(), e);
+      }
+    }
+  }
+
   private void flushPreviewCache() {
     if (previewCacheProvider == null) {
       return;
@@ -490,7 +447,8 @@ public class DslReloadHandler {
     if (auditService == null) {
       return;
     }
-    auditService.record(DslAuditService.currentActor(), ACTION_DEFINITION_RELOAD, target,
+    auditService.record(DslAuditService.currentActor(), StarterConstants.ACTION_DEFINITION_RELOAD,
+            target,
             DslAuditService.correlationIdOf(request), outcome, details);
   }
 

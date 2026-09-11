@@ -11,6 +11,7 @@ import cbs.nova.starter.WebhookTestApplication;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.http.Fault;
+import java.net.http.HttpClient;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -73,7 +74,11 @@ class WebhookDispatcherPersistenceTest {
   }
 
   private WebhookDispatcher newDispatcher(WebhookProperties properties) {
-    return new WebhookDispatcher(properties, objectMapper, executor, Optional.of(repository));
+    HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(properties.getTimeout())
+            .build();
+    return new WebhookDispatcher(properties, objectMapper, executor, Optional.of(repository),
+            httpClient);
   }
 
   private String baseUrl() {

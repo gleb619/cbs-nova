@@ -1,6 +1,7 @@
 package cbs.nova.starter.config;
 
 import cbs.nova.starter.config.properties.DslMaintenanceProperties;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.maintenance.AuditRetentionMaintenanceTask;
 import cbs.nova.starter.maintenance.DslMaintenanceService;
 import cbs.nova.starter.maintenance.DslRunReconciliationMaintenanceTask;
@@ -21,6 +22,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -119,13 +121,18 @@ public class DslMaintenanceConfiguration {
           ObjectProvider<MeterRegistry> meterRegistryProvider) {
     Map<String, Boolean> enabled = new LinkedHashMap<>();
     var perTask = properties.tasks();
-    enabled.put(DslRunRetentionMaintenanceTask.NAME,
+    enabled.put(StarterConstants.RUN_RETENTION_TASK_NAME,
             perTask.runRetention().enabled());
-    enabled.put(DslRunReconciliationMaintenanceTask.NAME,
+    enabled.put(StarterConstants.ORPHANS_TASK_NAME,
             perTask.orphans().enabled());
-    enabled.put(AuditRetentionMaintenanceTask.NAME,
+    enabled.put(StarterConstants.AUDIT_RETENTION_TASK_NAME,
             perTask.auditRetention().enabled());
-    return new DslMaintenanceService(tasks, enabled, properties.schedule(), executor,
+    // Deterministic ordering: sort by task name so logs and meter tag order
+    // are stable regardless of bean-registration order.
+    List<MaintenanceTask> sorted = tasks.stream()
+            .sorted(Comparator.comparing(MaintenanceTask::name))
+            .toList();
+    return new DslMaintenanceService(sorted, enabled, properties.schedule(), executor,
             meterRegistryProvider.getIfAvailable());
   }
 

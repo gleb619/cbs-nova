@@ -22,13 +22,17 @@ class TemporalHealthProbeTest {
             .setStatus(ServingStatus.SERVING)
             .build();
     WorkflowServiceStubs stubs = stub(serving);
+    ExecutorService executor = newExecutor();
+    try {
+      TemporalHealthProbe probe = new TemporalHealthProbe(stubs, Duration.ofSeconds(1), executor);
+      TemporalHealthProbe.TemporalHealth health = probe.probe();
 
-    TemporalHealthProbe probe = new TemporalHealthProbe(stubs, Duration.ofSeconds(1));
-    TemporalHealthProbe.TemporalHealth health = probe.probe();
-
-    assertThat(health.reachable()).isTrue();
-    assertThat(health.target()).isEqualTo("127.0.0.1:7233");
-    assertThat(health.error()).isNull();
+      assertThat(health.reachable()).isTrue();
+      assertThat(health.target()).isEqualTo("127.0.0.1:7233");
+      assertThat(health.error()).isNull();
+    } finally {
+      executor.shutdownNow();
+    }
   }
 
   @Test
@@ -37,34 +41,38 @@ class TemporalHealthProbeTest {
             .setStatus(ServingStatus.NOT_SERVING)
             .build();
     WorkflowServiceStubs stubs = stub(notServing);
+    ExecutorService executor = newExecutor();
+    try {
+      TemporalHealthProbe probe = new TemporalHealthProbe(stubs, Duration.ofSeconds(1), executor);
+      TemporalHealthProbe.TemporalHealth health = probe.probe();
 
-    TemporalHealthProbe probe = new TemporalHealthProbe(stubs, Duration.ofSeconds(1));
-    TemporalHealthProbe.TemporalHealth health = probe.probe();
-
-    assertThat(health.reachable()).isFalse();
-    assertThat(health.target()).isEqualTo("127.0.0.1:7233");
-    assertThat(health.error()).contains("NOT_SERVING");
+      assertThat(health.reachable()).isFalse();
+      assertThat(health.target()).isEqualTo("127.0.0.1:7233");
+      assertThat(health.error()).contains("NOT_SERVING");
+    } finally {
+      executor.shutdownNow();
+    }
   }
 
   @Test
   void probeReturnsUnreachableWhenHealthCheckThrows() {
     WorkflowServiceStubs stubs = stubThrowing(new IllegalStateException("boom"));
+    ExecutorService executor = newExecutor();
+    try {
+      TemporalHealthProbe probe = new TemporalHealthProbe(stubs, Duration.ofSeconds(1), executor);
+      TemporalHealthProbe.TemporalHealth health = probe.probe();
 
-    TemporalHealthProbe probe = new TemporalHealthProbe(stubs, Duration.ofSeconds(1));
-    TemporalHealthProbe.TemporalHealth health = probe.probe();
-
-    assertThat(health.reachable()).isFalse();
-    assertThat(health.error()).contains("IllegalStateException").contains("boom");
+      assertThat(health.reachable()).isFalse();
+      assertThat(health.error()).contains("IllegalStateException").contains("boom");
+    } finally {
+      executor.shutdownNow();
+    }
   }
 
   @Test
   void probeTimesOutWithoutHangingWhenHealthCheckSleepsTooLong() {
     Duration timeout = Duration.ofMillis(100);
-    ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
-      Thread t = new Thread(r, "temporal-probe-test");
-      t.setDaemon(true);
-      return t;
-    });
+    ExecutorService executor = newExecutor();
     try {
       WorkflowServiceStubs stubs = stubSleeping(timeout.toMillis() * 20);
       TemporalHealthProbe probe = new TemporalHealthProbe(stubs, timeout, executor);
@@ -118,5 +126,13 @@ class TemporalHealthProbeTest {
     return WorkflowServiceStubsOptions.newBuilder()
             .setTarget("127.0.0.1:7233")
             .build();
+  }
+
+  private static ExecutorService newExecutor() {
+    return Executors.newSingleThreadExecutor(r -> {
+      Thread t = new Thread(r, "temporal-probe-test");
+      t.setDaemon(true);
+      return t;
+    });
   }
 }

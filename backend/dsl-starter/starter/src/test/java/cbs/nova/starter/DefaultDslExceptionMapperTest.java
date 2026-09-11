@@ -41,7 +41,7 @@ class DefaultDslExceptionMapperTest {
                     + "\"message\":\"dsl failed\","
                     + "\"entityName\":null,"
                     + "\"runId\":\"run-abc\","
-                    + "\"exceptionId\":\"" + response.getBody().exceptionId() + "\"}");
+                    + "\"exceptionId\":\"" + response.getBody().getExceptionId() + "\"}");
   }
 
   @Test

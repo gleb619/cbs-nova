@@ -65,7 +65,7 @@ class CompileDiagnosticPersistenceIntegrationTest {
     try {
       DslProperties props = DslProperties.builder().sourceDir(badDir.toString()).build();
       DslReloadHandler handler = new DslReloadHandler(props, loader, null, null, null,
-              providerOf(repository), null);
+              providerOf(repository), null, null);
 
       ServerResponse response = handler.reload(reloadRequest());
 
@@ -95,7 +95,7 @@ class CompileDiagnosticPersistenceIntegrationTest {
     try {
       DslProperties props = DslProperties.builder().sourceDir(badDir.toString()).build();
       DslReloadHandler handler = new DslReloadHandler(props, loader, null, null, null,
-              providerOf(throwingRepository), null);
+              providerOf(throwingRepository), null, null);
 
       ServerResponse response = handler.reload(reloadRequest());
 

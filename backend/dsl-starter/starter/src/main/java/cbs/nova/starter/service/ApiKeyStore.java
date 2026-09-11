@@ -1,5 +1,6 @@
 package cbs.nova.starter.service;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.entity.DslApiKeyEntity;
 import cbs.nova.starter.persistence.JdbcApiKeyRepository;
 import java.nio.charset.StandardCharsets;
@@ -50,9 +51,9 @@ import tools.jackson.databind.ObjectMapper;
 public final class ApiKeyStore {
 
   /** Number of random bytes — 32 bytes = 256 bits of entropy. */
-  private static final int RANDOM_BYTES = 32;
+  private static final int RANDOM_BYTES = StarterConstants.API_KEY_RANDOM_BYTES;
   /** Length of the visible identifier stored alongside the hash (and returned by list views). */
-  private static final int PREFIX_LENGTH = 8;
+  private static final int PREFIX_LENGTH = StarterConstants.API_KEY_PREFIX_LENGTH;
 
   private final JdbcApiKeyRepository repository;
   private final ObjectMapper objectMapper;

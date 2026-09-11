@@ -13,6 +13,7 @@ import static org.awaitility.Awaitility.await;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import java.io.IOException;
+import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
@@ -69,7 +70,14 @@ class WebhookDispatcherTest {
   }
 
   private WebhookDispatcher newDispatcher(WebhookProperties properties) {
-    return new WebhookDispatcher(properties, objectMapper, executor);
+    return new WebhookDispatcher(properties, objectMapper, executor, Optional.empty(),
+            httpClient(properties));
+  }
+
+  private HttpClient httpClient(WebhookProperties properties) {
+    return HttpClient.newBuilder()
+            .connectTimeout(properties.getTimeout())
+            .build();
   }
 
   private String baseUrl() {
@@ -278,7 +286,7 @@ class WebhookDispatcherTest {
   private WebhookDispatcher newDispatcher(WebhookProperties properties,
           WebhookDeliveryRecordRepository deliveryRepository) {
     return new WebhookDispatcher(properties, objectMapper, executor,
-            Optional.ofNullable(deliveryRepository));
+            Optional.ofNullable(deliveryRepository), httpClient(properties));
   }
   private WebhookProperties enabledProperties(WebhookSubscription... subscriptions) {
     WebhookProperties properties = new WebhookProperties();

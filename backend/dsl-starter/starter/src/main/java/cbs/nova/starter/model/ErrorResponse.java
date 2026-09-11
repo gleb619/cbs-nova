@@ -1,20 +1,26 @@
 package cbs.nova.starter.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-
 import java.util.List;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
+import lombok.extern.jackson.Jacksonized;
 
-public record ErrorResponse(
-        String code,
-        String message,
-        String entityName,
-        String runId,
-        String exceptionId,
-        @JsonInclude(JsonInclude.Include.NON_NULL) List<CompileDiagnostic> diagnostics) {
+@RequiredArgsConstructor
+@Jacksonized
+@Getter
+@EqualsAndHashCode
+@ToString
+public class ErrorResponse {
 
-  public ErrorResponse(String code, String message, String entityName, String runId,
-          String exceptionId) {
-    this(code, message, entityName, runId, exceptionId, null);
-  }
+  private final String code;
+  private final String message;
+  private final String entityName;
+  private final String runId;
+  private final String exceptionId;
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  private final List<CompileDiagnostic> diagnostics;
 
 }

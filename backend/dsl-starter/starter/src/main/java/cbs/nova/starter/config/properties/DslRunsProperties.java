@@ -1,5 +1,6 @@
 package cbs.nova.starter.config.properties;
 
+import cbs.nova.starter.core.StarterConstants;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -18,11 +19,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "cbs.runs")
 public class DslRunsProperties {
 
-  public static final long DEFAULT_MAX_BYTES = 1024L * 1024L;
-
   /** Maximum allowed size of an incoming run/preview request body in bytes. */
-  private long maxInputBytes = DEFAULT_MAX_BYTES;
+  private long maxInputBytes = StarterConstants.DEFAULT_MAX_BYTES;
 
   /** Maximum allowed size of a persisted run output JSON payload in bytes. */
-  private long maxOutputBytes = DEFAULT_MAX_BYTES;
+  private long maxOutputBytes = StarterConstants.DEFAULT_MAX_BYTES;
 }

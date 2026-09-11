@@ -1,5 +1,6 @@
 package cbs.nova.starter.controller;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.converter.RequestQueryConverter;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
@@ -76,8 +77,8 @@ public class DslIntrospectionHandler {
   }
 
   public ServerResponse definitions(ServerRequest request) {
-    int limit = Pagination.intParam(request, "limit", Pagination.DEFAULT_LIMIT);
-    int offset = Pagination.intParam(request, "offset", Pagination.DEFAULT_OFFSET);
+    int limit = Pagination.intParam(request, "limit", StarterConstants.DEFAULT_LIMIT);
+    int offset = Pagination.intParam(request, "offset", StarterConstants.DEFAULT_OFFSET);
     int pageSize = Pagination.clampLimit(limit);
     int skip = Pagination.clampOffset(offset);
 

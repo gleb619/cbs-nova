@@ -19,8 +19,8 @@ import java.util.concurrent.TimeoutException;
 @NoArgsConstructor
 public class PreviewErrorHandler {
 
-  private static final String UNKNOWN_ENTITY_PREFIX = "No DSL entity registered: ";
-  private static final String HELPER_NOT_FOUND_PREFIX = "Helper not found: ";
+  private static final String UNKNOWN_ENTITY_PREFIX = StarterConstants.UNKNOWN_ENTITY_PREFIX;
+  private static final String HELPER_NOT_FOUND_PREFIX = StarterConstants.HELPER_NOT_FOUND_PREFIX;
 
   public static @NonNull PreviewErrorDetail from(@Nullable Throwable cause) {
     return from(cause, null);

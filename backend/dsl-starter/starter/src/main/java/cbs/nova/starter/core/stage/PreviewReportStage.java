@@ -7,7 +7,7 @@ import cbs.nova.dsl.PreviewMetricsSnapshot;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.starter.core.PreviewErrorHandler;
-import cbs.nova.starter.core.StarterConstant;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.converter.ExternalCallConverter;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
@@ -25,7 +25,7 @@ public final class PreviewReportStage implements DslPipeStage {
   @Override
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
     next.proceed(context);
-    Result<?> dslResult = (Result<?>) context.getAttribute(StarterConstant.DSL_RESULT_ATTRIBUTE);
+    Result<?> dslResult = (Result<?>) context.getAttribute(StarterConstants.DSL_RESULT_ATTRIBUTE);
 
     boolean success = dslResult != null && dslResult.isSuccess();
     Object output = success ? dslResult.value() : null;
@@ -36,7 +36,7 @@ public final class PreviewReportStage implements DslPipeStage {
 
     @SuppressWarnings("unchecked")
     List<ExternalCall> calls = (List<ExternalCall>) context.getAttribute(
-            StarterConstant.EXTERNAL_CALLS_ATTRIBUTE);
+            StarterConstants.EXTERNAL_CALLS_ATTRIBUTE);
     List<Map<String, Object>> externalCalls = calls != null
             ? ExternalCallConverter.toCallJson(calls)
             : List.of();
@@ -49,12 +49,12 @@ public final class PreviewReportStage implements DslPipeStage {
             ExecutionMode.PREVIEW,
             success,
             output,
-            attribute(context, StarterConstant.EXECUTION_TRACE_ATTRIBUTE, List.class, List.of()),
+            attribute(context, StarterConstants.EXECUTION_TRACE_ATTRIBUTE, List.class, List.of()),
             externalCalls,
             callCounts,
-            context.getAttribute(StarterConstant.AST_TREE_ATTRIBUTE, CallNode.class),
-            attribute(context, StarterConstant.DRY_RUN_LOGS_ATTRIBUTE, List.class, List.of()),
-            context.getAttribute(StarterConstant.METRICS_ATTRIBUTE, PreviewMetricsSnapshot.class),
+            context.getAttribute(StarterConstants.AST_TREE_ATTRIBUTE, CallNode.class),
+            attribute(context, StarterConstants.DRY_RUN_LOGS_ATTRIBUTE, List.class, List.of()),
+            context.getAttribute(StarterConstants.METRICS_ATTRIBUTE, PreviewMetricsSnapshot.class),
             errors);
 
     return Result.success(report);

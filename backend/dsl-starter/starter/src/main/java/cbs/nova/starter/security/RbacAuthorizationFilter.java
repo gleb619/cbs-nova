@@ -1,6 +1,7 @@
 package cbs.nova.starter.security;
 
 import cbs.nova.starter.config.RbacFilterConfiguration;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.ErrorResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -46,7 +47,6 @@ import tools.jackson.databind.ObjectMapper;
 @Slf4j
 public final class RbacAuthorizationFilter extends OncePerRequestFilter {
 
-  private static final String FORBIDDEN_CODE = "FORBIDDEN";
   private static final List<RouteRule> RULES = List.of(
           // --- RUNNER: run / preview / explain / cancel ---
           new RouteRule(HttpMethod.POST, "/api/dsl/preview/**", Role.RUNNER),
@@ -95,12 +95,12 @@ public final class RbacAuthorizationFilter extends OncePerRequestFilter {
     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
     objectMapper.writeValue(response.getOutputStream(),
-            new ErrorResponse(FORBIDDEN_CODE,
+            new ErrorResponse(StarterConstants.FORBIDDEN_CODE,
                     "Role " + required.name()
                             + " is required for " + request.getMethod()
                             + " " + request.getRequestURI()
                             + "; caller has role " + principal,
-                    null, null, null));
+                    null, null, null, null));
   }
 
   /**

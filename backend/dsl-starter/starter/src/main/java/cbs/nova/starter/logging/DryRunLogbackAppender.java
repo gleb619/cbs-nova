@@ -8,7 +8,7 @@ import org.jspecify.annotations.NonNull;
 
 public class DryRunLogbackAppender extends AppenderBase<ILoggingEvent> {
 
-  public static final int DEFAULT_MAX_EVENTS_PER_RUN = 1000;
+  // TODO: replace hardcode with app.yml settings
 
   @Getter
   private final DryRunLoggingContext dryRunLoggingContext;

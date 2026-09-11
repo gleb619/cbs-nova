@@ -3,7 +3,10 @@ package cbs.nova.dsl.builder.model;
 import cbs.nova.dsl.LoadResult;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.List;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class VcsModels {
 
   public record DraftRequest(
@@ -97,8 +100,5 @@ public final class VcsModels {
           @JsonInclude(JsonInclude.Include.NON_NULL) String reloadError,
           @JsonInclude(JsonInclude.Include.NON_NULL) List<CompileDiagnostic> diagnostics) {
 
-  }
-
-  private VcsModels() {
   }
 }

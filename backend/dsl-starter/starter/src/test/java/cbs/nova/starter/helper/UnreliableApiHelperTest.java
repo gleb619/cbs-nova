@@ -5,12 +5,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.helper.model.UnreliableApiFailurePattern;
 import cbs.nova.starter.helper.model.UnreliableApiIn;
 import cbs.nova.starter.helper.model.UnreliableApiOut;
-import org.junit.jupiter.api.Test;
-
+import com.github.benmanes.caffeine.cache.Caffeine;
 import java.time.Duration;
+import org.junit.jupiter.api.Test;
 
 class UnreliableApiHelperTest {
 
@@ -18,7 +19,7 @@ class UnreliableApiHelperTest {
 
   @Test
   void consecutivePatternFailsConfiguredNumberOfTimesThenSucceeds() {
-    UnreliableApiHelper helper = new UnreliableApiHelper();
+    UnreliableApiHelper helper = defaultHelper();
     String id = "consecutive";
 
     for (int i = 0; i < 3; i++) {
@@ -32,7 +33,7 @@ class UnreliableApiHelperTest {
 
   @Test
   void randomPatternUsesFailCountAsPercentage() {
-    UnreliableApiHelper helper = new UnreliableApiHelper();
+    UnreliableApiHelper helper = defaultHelper();
     String id = "random";
     int failures = 0;
     for (int i = 0; i < 100; i++) {
@@ -47,7 +48,7 @@ class UnreliableApiHelperTest {
 
   @Test
   void stateIsCleanedUpAfterTtl() throws InterruptedException {
-    UnreliableApiHelper helper = new UnreliableApiHelper(Duration.ofMillis(50));
+    UnreliableApiHelper helper = helperWithTtl(Duration.ofMillis(50));
     String id = "ttl";
     Result<UnreliableApiOut> first = run(helper, id, 0, false);
     assertThat(first.isSuccess()).isTrue();
@@ -61,10 +62,21 @@ class UnreliableApiHelperTest {
 
   @Test
   void resetClearsState() {
-    UnreliableApiHelper helper = new UnreliableApiHelper();
+    UnreliableApiHelper helper = defaultHelper();
     run(helper, "reset", 0, false);
     helper.reset();
     assertThat(helper.attempts()).isEmpty();
+  }
+
+  private static UnreliableApiHelper defaultHelper() {
+    return helperWithTtl(StarterConstants.UNRELIABLE_API_TTL);
+  }
+
+  private static UnreliableApiHelper helperWithTtl(Duration ttl) {
+    return new UnreliableApiHelper(Caffeine.newBuilder()
+            .expireAfterWrite(ttl)
+            .maximumSize(StarterConstants.UNRELIABLE_API_MAX_SIZE)
+            .build());
   }
 
   private Result<UnreliableApiOut> run(UnreliableApiHelper helper, String id, int failCount,

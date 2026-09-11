@@ -1,6 +1,7 @@
 package cbs.nova.starter.core.recorder;
 
 import cbs.nova.dsl.logging.DryRunLoggingContext;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.event.DslExecutionEvent.DslExternalCallEvent;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.core.listener.DslExecutionListener;
@@ -32,13 +33,13 @@ public final class RunIdKeyedExternalCallRecorder implements ExternalCallRecorde
    * Maximum number of distinct runs retained. A manual capacity bound is sufficient at this scale
    * while avoiding an extra caching dependency.
    */
-  private static final int CAPACITY = 100;
+  private static final int CAPACITY = StarterConstants.EXTERNAL_CALL_RECORDER_CAPACITY;
 
   /**
    * Maximum number of external calls retained per run; when exceeded the oldest entries are dropped
    * so a single run cannot grow its history without bound.
    */
-  private static final int MAX_CALLS_PER_RUN = 100;
+  private static final int MAX_CALLS_PER_RUN = StarterConstants.EXTERNAL_CALL_MAX_CALLS_PER_RUN;
 
   private final Map<String, List<ExternalCall>> callsByRunId = new ConcurrentHashMap<>();
   private final Deque<String> runOrder = new ConcurrentLinkedDeque<>();

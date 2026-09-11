@@ -13,6 +13,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
+import cbs.nova.starter.config.DslConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 
@@ -24,7 +25,7 @@ class SpringOrGeneratedHelperInstanceResolverTest {
   void springReturnsBeanIsReturnedAndGeneratedFactoriesNotConsulted() {
     HelperInstanceResolver springResolver = mock(HelperInstanceResolver.class);
     HelperInstanceResolver generated = mock(HelperInstanceResolver.class);
-    var resolver = new SpringOrGeneratedHelperInstanceResolver(springResolver, List.of(generated));
+    var resolver = DslConfiguration.withDefaultCache(springResolver, List.of(generated));
 
     ValidHelper bean = new ValidHelper();
     doReturn(bean).when(springResolver).resolve(ValidHelper.class);
@@ -40,7 +41,7 @@ class SpringOrGeneratedHelperInstanceResolverTest {
   void springThrowsNoSuchBeanFallsBackToGeneratedFactory() {
     HelperInstanceResolver springResolver = mock(HelperInstanceResolver.class);
     HelperInstanceResolver generated = mock(HelperInstanceResolver.class);
-    var resolver = new SpringOrGeneratedHelperInstanceResolver(springResolver, List.of(generated));
+    var resolver = DslConfiguration.withDefaultCache(springResolver, List.of(generated));
 
     NoSuchBeanDefinitionException nsb = new NoSuchBeanDefinitionException("no such bean");
     IllegalStateException wrapped = new IllegalStateException("wrapped", nsb);
@@ -59,7 +60,7 @@ class SpringOrGeneratedHelperInstanceResolverTest {
   void springThrowsNoSuchBeanAndNoGeneratedFactoryMatchesThrowsIllegalState() {
     HelperInstanceResolver springResolver = mock(HelperInstanceResolver.class);
     HelperInstanceResolver generated = mock(HelperInstanceResolver.class);
-    var resolver = new SpringOrGeneratedHelperInstanceResolver(springResolver, List.of(generated));
+    var resolver = DslConfiguration.withDefaultCache(springResolver, List.of(generated));
 
     NoSuchBeanDefinitionException nsb = new NoSuchBeanDefinitionException("no such bean");
     IllegalStateException wrapped = new IllegalStateException("wrapped", nsb);
@@ -80,7 +81,7 @@ class SpringOrGeneratedHelperInstanceResolverTest {
   @Test
   void emptyGeneratedListAndSpringThrowsNoSuchBeanThrowsIllegalState() {
     HelperInstanceResolver springResolver = mock(HelperInstanceResolver.class);
-    var resolver = new SpringOrGeneratedHelperInstanceResolver(springResolver, List.of());
+    var resolver = DslConfiguration.withDefaultCache(springResolver, List.of());
 
     NoSuchBeanDefinitionException nsb = new NoSuchBeanDefinitionException("no such bean");
     IllegalStateException wrapped = new IllegalStateException("wrapped", nsb);
@@ -98,7 +99,7 @@ class SpringOrGeneratedHelperInstanceResolverTest {
   void springThrowsIllegalStateWithoutNoSuchBeanCauseRethrowsSameException() {
     HelperInstanceResolver springResolver = mock(HelperInstanceResolver.class);
     HelperInstanceResolver generated = mock(HelperInstanceResolver.class);
-    var resolver = new SpringOrGeneratedHelperInstanceResolver(springResolver, List.of(generated));
+    var resolver = DslConfiguration.withDefaultCache(springResolver, List.of(generated));
 
     IllegalStateException unrelated = new IllegalStateException("boom");
     when(springResolver.resolve(ValidHelper.class)).thenThrow(unrelated);
@@ -113,7 +114,7 @@ class SpringOrGeneratedHelperInstanceResolverTest {
   void repeatedResolvesHitTheCaffeineCacheAndDoNotReconsultFactories() {
     HelperInstanceResolver springResolver = mock(HelperInstanceResolver.class);
     HelperInstanceResolver generated = mock(HelperInstanceResolver.class);
-    var resolver = new SpringOrGeneratedHelperInstanceResolver(springResolver, List.of(generated));
+    var resolver = DslConfiguration.withDefaultCache(springResolver, List.of(generated));
 
     doReturn(new ValidHelper()).when(springResolver).resolve(ValidHelper.class);
 
@@ -129,7 +130,7 @@ class SpringOrGeneratedHelperInstanceResolverTest {
   void resolutionFailureIsNotCachedSoLaterCallsRetry() {
     HelperInstanceResolver springResolver = mock(HelperInstanceResolver.class);
     HelperInstanceResolver generated = mock(HelperInstanceResolver.class);
-    var resolver = new SpringOrGeneratedHelperInstanceResolver(springResolver, List.of(generated));
+    var resolver = DslConfiguration.withDefaultCache(springResolver, List.of(generated));
 
     NoSuchBeanDefinitionException nsb = new NoSuchBeanDefinitionException("no such bean");
     IllegalStateException wrapped = new IllegalStateException("wrapped", nsb);

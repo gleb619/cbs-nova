@@ -3,6 +3,7 @@ package cbs.nova.starter.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.model.VcsModels.DefinitionBundle;
 import cbs.nova.starter.model.VcsModels.DefinitionBundleEntry;
@@ -23,7 +24,7 @@ class DslDefinitionBundleServiceTest {
 
   private final ObjectMapper mapper = new ObjectMapper();
   private final DslDefinitionBundleService service = new DslDefinitionBundleService(mapper,
-          Optional.empty());
+          Optional.empty(), DslProperties.bundleServiceDefaults());
 
   @Test
   void exportReadsPublishedMarkers(@TempDir Path dir) throws IOException {
@@ -32,7 +33,7 @@ class DslDefinitionBundleServiceTest {
 
     DefinitionBundle bundle = service.export(dir, false);
 
-    assertThat(bundle.formatVersion()).isEqualTo(DslDefinitionBundleService.BUNDLE_FORMAT_VERSION);
+    assertThat(bundle.formatVersion()).isEqualTo(StarterConstants.BUNDLE_FORMAT_VERSION);
     assertThat(bundle.engineVersion()).isNotBlank();
     assertThat(bundle.exportedAt()).isNotBlank();
     assertThat(bundle.definitions()).hasSize(2);
@@ -64,7 +65,7 @@ class DslDefinitionBundleServiceTest {
     DefinitionBundle bundle = service.export(dir, true);
 
     assertThat(bundle.definitions()).isEmpty();
-    assertThat(bundle.formatVersion()).isEqualTo(DslDefinitionBundleService.BUNDLE_FORMAT_VERSION);
+    assertThat(bundle.formatVersion()).isEqualTo(StarterConstants.BUNDLE_FORMAT_VERSION);
   }
 
   @Test
@@ -83,9 +84,9 @@ class DslDefinitionBundleServiceTest {
   @Test
   void validateForImportAcceptsValidBundle() {
     DefinitionBundle bundle = new DefinitionBundle(
-            DslDefinitionBundleService.BUNDLE_FORMAT_VERSION, "1.0", "now",
+            StarterConstants.BUNDLE_FORMAT_VERSION, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")));
+                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")), null);
 
     service.validateForImport(bundle);
   }
@@ -101,7 +102,7 @@ class DslDefinitionBundleServiceTest {
   void validateForImportRejectsZeroFormatVersion() {
     DefinitionBundle bundle = new DefinitionBundle(0, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")));
+                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")), null);
     assertThatThrownBy(() -> service.validateForImport(bundle))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("missing or invalid formatVersion");
@@ -111,7 +112,7 @@ class DslDefinitionBundleServiceTest {
   void validateForImportRejectsUnsupportedFormatVersion() {
     DefinitionBundle bundle = new DefinitionBundle(99, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")));
+                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")), null);
     assertThatThrownBy(() -> service.validateForImport(bundle))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("Unsupported bundle formatVersion 99");
@@ -120,7 +121,7 @@ class DslDefinitionBundleServiceTest {
   @Test
   void validateForImportRejectsEmptyDefinitions() {
     DefinitionBundle bundle = new DefinitionBundle(
-            DslDefinitionBundleService.BUNDLE_FORMAT_VERSION, "1.0", "now", List.of());
+            StarterConstants.BUNDLE_FORMAT_VERSION, "1.0", "now", List.of(), null);
     assertThatThrownBy(() -> service.validateForImport(bundle))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("no definitions");
@@ -129,9 +130,9 @@ class DslDefinitionBundleServiceTest {
   @Test
   void validateForImportRejectsBlankName() {
     DefinitionBundle bundle = new DefinitionBundle(
-            DslDefinitionBundleService.BUNDLE_FORMAT_VERSION, "1.0", "now",
+            StarterConstants.BUNDLE_FORMAT_VERSION, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("", "process", "Published", "v1", "q"), "published")));
+                    new DraftRequest("", "process", "Published", "v1", "q"), "published")), null);
     assertThatThrownBy(() -> service.validateForImport(bundle))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("non-blank name");
@@ -185,9 +186,9 @@ class DslDefinitionBundleServiceTest {
   @Test
   void verifyDigestAcceptsLegacyNullWhenNotRequired() {
     DefinitionBundle bundle = new DefinitionBundle(
-            DslDefinitionBundleService.BUNDLE_FORMAT_VERSION, "1.0", "now",
+            StarterConstants.BUNDLE_FORMAT_VERSION, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")));
+                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")), null);
 
     service.verifyDigest(bundle);
   }
@@ -198,7 +199,7 @@ class DslDefinitionBundleServiceTest {
             DslProperties.builder().sourceDir(dir.toString())
                     .bundles(new DslProperties.Bundles(true)).build());
     DefinitionBundle bundle = new DefinitionBundle(
-            DslDefinitionBundleService.BUNDLE_FORMAT_VERSION, "1.0", "now",
+            StarterConstants.BUNDLE_FORMAT_VERSION, "1.0", "now",
             List.of(new DefinitionBundleEntry(
                     new DraftRequest("A", "process", "Published", "v1", "q"), "published")));
 
@@ -212,7 +213,7 @@ class DslDefinitionBundleServiceTest {
     writePublished(dir, "A", "process", "v1");
     writePublished(dir, "B", "transaction", "v2");
     DefinitionBundle bundle = new DefinitionBundle(
-            DslDefinitionBundleService.BUNDLE_FORMAT_VERSION, "1.0", "now",
+            StarterConstants.BUNDLE_FORMAT_VERSION, "1.0", "now",
             List.of(
                     new DefinitionBundleEntry(
                             new DraftRequest("A", "process", "Published", "v1", "q"), "published"),

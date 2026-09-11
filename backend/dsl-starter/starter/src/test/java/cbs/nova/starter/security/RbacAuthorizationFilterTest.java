@@ -2,6 +2,7 @@ package cbs.nova.starter.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.ErrorResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletResponse;
@@ -40,7 +41,8 @@ class RbacAuthorizationFilterTest {
   @BeforeEach
   void setUp() {
     objectMapper = JsonMapper.builder().build();
-    filter = new RbacAuthorizationFilter(new RoleResolver(), objectMapper);
+    filter = new RbacAuthorizationFilter(new RoleResolver(StarterConstants.DEFAULT_CLAIM_NAME),
+            objectMapper);
   }
 
   @AfterEach
@@ -131,8 +133,8 @@ class RbacAuthorizationFilterTest {
               .as("%s must be denied %s %s", callerRole, method, path)
               .isEqualTo(403);
       ErrorResponse body = decode(response);
-      assertThat(body.code()).isEqualTo("FORBIDDEN");
-      assertThat(body.message())
+      assertThat(body.getCode()).isEqualTo("FORBIDDEN");
+      assertThat(body.getMessage())
               .contains("required")
               .contains(callerRole.name());
     }
@@ -175,8 +177,8 @@ class RbacAuthorizationFilterTest {
 
     assertThat(response.getStatus()).isEqualTo(403);
     ErrorResponse body = decode(response);
-    assertThat(body.code()).isEqualTo("FORBIDDEN");
-    assertThat(body.message()).contains("RUNNER").contains("VIEWER");
+    assertThat(body.getCode()).isEqualTo("FORBIDDEN");
+    assertThat(body.getMessage()).contains("RUNNER").contains("VIEWER");
   }
 
   @Test
@@ -184,7 +186,7 @@ class RbacAuthorizationFilterTest {
     MockHttpServletResponse response = invoke("POST", "/api/dsl/reload");
 
     assertThat(response.getStatus()).isEqualTo(403);
-    assertThat(decode(response).message()).contains("AUTHOR");
+    assertThat(decode(response).getMessage()).contains("AUTHOR");
   }
 
   @Test
@@ -192,7 +194,7 @@ class RbacAuthorizationFilterTest {
     MockHttpServletResponse response = invoke("DELETE", "/api/dsl/schedules/foo");
 
     assertThat(response.getStatus()).isEqualTo(403);
-    assertThat(decode(response).message()).contains("OPERATOR");
+    assertThat(decode(response).getMessage()).contains("OPERATOR");
   }
 
   // --- Unmatched mutating route defaults to OPERATOR (fail-closed) -----------
@@ -205,7 +207,7 @@ class RbacAuthorizationFilterTest {
     assertThat(response.getStatus())
             .as("unmatched mutating route must default to OPERATOR (strict) and reject AUTHOR")
             .isEqualTo(403);
-    assertThat(decode(response).message()).contains("OPERATOR");
+    assertThat(decode(response).getMessage()).contains("OPERATOR");
   }
 
   @Test

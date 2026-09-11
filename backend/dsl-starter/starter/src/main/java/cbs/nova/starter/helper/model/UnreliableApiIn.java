@@ -9,10 +9,6 @@ public record UnreliableApiIn(
         @Nullable String reason,
         @Nullable String pattern) {
 
-  public UnreliableApiIn(String operationId, int failCount, boolean jitter, String reason) {
-    this(operationId, failCount, jitter, reason, null);
-  }
-
   public UnreliableApiFailurePattern effectivePattern() {
     if (pattern == null || pattern.isBlank()) {
       return UnreliableApiFailurePattern.CONSECUTIVE;

@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.RouterFunctions;
 import org.springframework.web.servlet.function.ServerResponse;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * Router for the admin API-key surface (T410). Wires {@link ApiKeyAdminHandler} under
@@ -30,8 +29,8 @@ import tools.jackson.databind.ObjectMapper;
 public class ApiKeyAdminRouterConfiguration {
 
   @Bean
-  ApiKeyAdminHandler apiKeyAdminHandler(ApiKeyStore store, ObjectMapper objectMapper) {
-    return new ApiKeyAdminHandler(store, objectMapper);
+  ApiKeyAdminHandler apiKeyAdminHandler(ApiKeyStore store) {
+    return new ApiKeyAdminHandler(store);
   }
 
   @Bean

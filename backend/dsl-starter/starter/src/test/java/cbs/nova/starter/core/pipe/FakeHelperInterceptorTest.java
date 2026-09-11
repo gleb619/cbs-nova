@@ -1,5 +1,6 @@
 package cbs.nova.starter.core.pipe;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -23,7 +24,7 @@ class FakeHelperInterceptorTest {
 
   @Test
   void shortCircuitsConfiguredHelperWithResponse() {
-    var registry = new RunScopedFakeConfig();
+    var registry = new RunScopedFakeConfig(Caffeine.newBuilder().build());
     var response = "fake-response";
     registry.register("run-1",
             FakeConfig.of(new FakeEntry("helper", "httpCall", response)));
@@ -41,7 +42,7 @@ class FakeHelperInterceptorTest {
 
   @Test
   void passesThroughWhenNoConfigRegistered() {
-    var registry = new RunScopedFakeConfig();
+    var registry = new RunScopedFakeConfig(Caffeine.newBuilder().build());
     var recorder = mock(ExternalCallRecorder.class);
     var interceptor = new FakeHelperInterceptor(registry, recorder);
 
@@ -54,7 +55,7 @@ class FakeHelperInterceptorTest {
 
   @Test
   void passesThroughWhenHelperNotFaked() {
-    var registry = new RunScopedFakeConfig();
+    var registry = new RunScopedFakeConfig(Caffeine.newBuilder().build());
     registry.register("run-2",
             FakeConfig.of(new FakeEntry("helper", "httpCall", "fake")));
     var recorder = mock(ExternalCallRecorder.class);
@@ -69,7 +70,7 @@ class FakeHelperInterceptorTest {
 
   @Test
   void fallsBackToFunctionType() {
-    var registry = new RunScopedFakeConfig();
+    var registry = new RunScopedFakeConfig(Caffeine.newBuilder().build());
     var response = "fn-result";
     registry.register("run-3",
             FakeConfig.of(new FakeEntry("function", "myFn", response)));

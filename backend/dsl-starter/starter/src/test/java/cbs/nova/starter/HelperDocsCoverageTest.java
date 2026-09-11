@@ -7,6 +7,10 @@ import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
+import cbs.nova.starter.core.StarterConstants;
+import cbs.nova.starter.helper.CompensationTrackerHelper;
+import cbs.nova.starter.helper.UnreliableApiHelper;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -91,6 +95,18 @@ class HelperDocsCoverageTest {
 
   private static HelperInstanceResolver instantiatingResolver() {
     return helperClass -> {
+      if (helperClass.equals(UnreliableApiHelper.class)) {
+        return new UnreliableApiHelper(Caffeine.newBuilder()
+                .expireAfterWrite(StarterConstants.UNRELIABLE_API_TTL)
+                .maximumSize(StarterConstants.UNRELIABLE_API_MAX_SIZE)
+                .build());
+      }
+      if (helperClass.equals(CompensationTrackerHelper.class)) {
+        return new CompensationTrackerHelper(Caffeine.newBuilder()
+                .expireAfterWrite(StarterConstants.COMPENSATION_TRACKER_TTL)
+                .maximumSize(StarterConstants.COMPENSATION_TRACKER_MAX_SIZE)
+                .build());
+      }
       try {
         var constructor = helperClass.getDeclaredConstructor();
         if (!constructor.canAccess(null)) {

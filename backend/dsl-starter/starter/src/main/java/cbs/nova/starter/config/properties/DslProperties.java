@@ -53,6 +53,14 @@ public record DslProperties(
     bundles = bundles == null ? new Bundles(false) : bundles;
   }
 
+  /**
+   * Properties for {@link cbs.nova.starter.service.DslDefinitionBundleService} used outside Spring
+   * (tests): default bundle policy (digest not required), blank source dir.
+   */
+  public static DslProperties bundleServiceDefaults() {
+    return builder().sourceDir("").build();
+  }
+
   @Builder
   public record Worker(@DefaultValue("false") Boolean enabled) {
 

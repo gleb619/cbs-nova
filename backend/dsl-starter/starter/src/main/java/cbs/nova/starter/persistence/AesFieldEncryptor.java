@@ -1,5 +1,6 @@
 package cbs.nova.starter.persistence;
 
+import cbs.nova.starter.core.StarterConstants;
 import org.jspecify.annotations.Nullable;
 
 import javax.crypto.Cipher;
@@ -22,10 +23,10 @@ import java.util.Base64;
  */
 public class AesFieldEncryptor implements FieldEncryptor {
 
-  private static final String ALGORITHM = "AES";
-  private static final String TRANSFORMATION = "AES/GCM/NoPadding";
-  private static final int GCM_IV_LENGTH = 12;
-  private static final int GCM_TAG_LENGTH = 128;
+  private static final String ALGORITHM = StarterConstants.AES_ALGORITHM;
+  private static final String TRANSFORMATION = StarterConstants.AES_TRANSFORMATION;
+  private static final int GCM_IV_LENGTH = StarterConstants.AES_GCM_IV_LENGTH;
+  private static final int GCM_TAG_LENGTH = StarterConstants.AES_GCM_TAG_LENGTH;
 
   private final SecretKey secretKey;
   private final SecureRandom secureRandom = new SecureRandom();

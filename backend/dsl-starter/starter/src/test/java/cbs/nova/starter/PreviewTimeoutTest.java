@@ -1,5 +1,7 @@
 package cbs.nova.starter;
 
+import cbs.nova.starter.cache.PreviewResultCacheTestSupport;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
@@ -8,6 +10,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
@@ -15,6 +18,7 @@ import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
 import cbs.nova.starter.core.recorder.RunIdKeyedExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;
@@ -33,7 +37,8 @@ class PreviewTimeoutTest {
   private final RunIdKeyedExternalCallRecorder recorder = new RunIdKeyedExternalCallRecorder(
           dryRunLoggingContext, null);
   private final ContextFactory contextFactory = new ContextFactory();
-  private final DryRunLogBufferRegistry bufferRegistry = new DryRunLogBufferRegistry();
+  private final DryRunLogBufferRegistry bufferRegistry = new DryRunLogBufferRegistry(
+          Caffeine.newBuilder().build());
   private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
   private ExecutorService dispatchExecutor;
 
@@ -112,11 +117,11 @@ class PreviewTimeoutTest {
 
   @Test
   void timedOutPreviewIsNotStoredInCache() {
-    PreviewResultCache cache = new PreviewResultCache(60_000);
+    PreviewResultCache cache = PreviewResultCacheTestSupport.cache(60_000);
     CbsNovaPreviewProperties properties = timeoutProperties(100);
     PreviewDslPipe pipe = new PreviewDslPipe(recorder, contextFactory, dryRunLoggingContext,
-            bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, cache,
-            properties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),
+            bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, cache,
+            properties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(Caffeine.newBuilder().build()),
             meterRegistry, dispatchExecutor);
 
     pipe.execute("Slow", contextFactory.of("in", ExecutionMode.PREVIEW));
@@ -148,16 +153,16 @@ class PreviewTimeoutTest {
   private PreviewDslPipe previewPipe(CbsNovaPreviewProperties properties,
           ExecutorService executor) {
     return new PreviewDslPipe(recorder, contextFactory, dryRunLoggingContext, bufferRegistry,
-            DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, null, properties,
-            new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(), meterRegistry,
+            StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, null, properties,
+            new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(Caffeine.newBuilder().build()), meterRegistry,
             executor);
   }
 
   private ExplainDslPipe explainPipe(CbsNovaPreviewProperties properties,
           ExecutorService executor) {
     return new ExplainDslPipe(recorder, contextFactory, dryRunLoggingContext, bufferRegistry,
-            DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, properties,
-            new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(), meterRegistry,
+            StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, properties,
+            new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(Caffeine.newBuilder().build()), meterRegistry,
             new ExplainDiagramRenderer(), executor);
   }
 }

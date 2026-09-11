@@ -1,24 +1,18 @@
 package cbs.nova.starter.helper.model;
 
+import lombok.AllArgsConstructor;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
 
+@AllArgsConstructor
 public record SortRecordsIn(
         List<Map<String, Object>> records,
         String field,
         boolean ascending,
         @Nullable String algorithm,
         @Nullable String direction) {
-
-  public SortRecordsIn(List<Map<String, Object>> records, String field, boolean ascending) {
-    this(records, field, ascending, null, null);
-  }
-
-  public SortRecordsIn(List<Map<String, Object>> records, String field) {
-    this(records, field, true, null, null);
-  }
 
   public String effectiveAlgorithm() {
     return algorithm == null || algorithm.isBlank() ? "natural" : algorithm.toLowerCase();

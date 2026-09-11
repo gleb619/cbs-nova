@@ -26,7 +26,7 @@ class InMemoryDslRunRepositoryTest {
 
   @Test
   void saveRoundTripsThroughFindByRunId() {
-    var repo = new InMemoryDslRunRepository();
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
     var run = run("run-1", "OrderProcess", DslRunStatus.RUNNING.name());
 
     var saved = repo.save(run);
@@ -37,14 +37,14 @@ class InMemoryDslRunRepositoryTest {
 
   @Test
   void findByRunIdReturnsEmptyForUnknownRunId() {
-    var repo = new InMemoryDslRunRepository();
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
 
     assertThat(repo.findByRunId("missing")).isEmpty();
   }
 
   @Test
   void findByProcessNameReturnsOnlyMatchingRuns() {
-    var repo = new InMemoryDslRunRepository();
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
     repo.save(run("run-1", "OrderProcess", DslRunStatus.RUNNING.name()));
     repo.save(run("run-2", "InvoiceProcess", DslRunStatus.RUNNING.name()));
 
@@ -56,7 +56,7 @@ class InMemoryDslRunRepositoryTest {
 
   @Test
   void findByProcessNameReturnsEmptyWhenNoRunsMatch() {
-    var repo = new InMemoryDslRunRepository();
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
     repo.save(run("run-1", "OrderProcess", DslRunStatus.RUNNING.name()));
 
     assertThat(repo.findByProcessName("UnknownProcess")).isEmpty();
@@ -64,7 +64,7 @@ class InMemoryDslRunRepositoryTest {
 
   @Test
   void findByProcessNameReturnsMultipleRunsForSharedProcessName() {
-    var repo = new InMemoryDslRunRepository();
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
     var runA = run("run-a", "OrderProcess", DslRunStatus.RUNNING.name());
     var runB = run("run-b", "OrderProcess", DslRunStatus.RUNNING.name());
     repo.save(runA);
@@ -76,7 +76,7 @@ class InMemoryDslRunRepositoryTest {
 
   @Test
   void findByProcessNameDoesNotBleedAcrossProcesses() {
-    var repo = new InMemoryDslRunRepository();
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
     repo.save(run("run-1", "OrderProcess", DslRunStatus.RUNNING.name()));
     repo.save(run("run-2", "InvoiceProcess", DslRunStatus.RUNNING.name()));
 
@@ -90,7 +90,7 @@ class InMemoryDslRunRepositoryTest {
 
   @Test
   void saveWithSameRunIdOverwritesPreviousRun() {
-    var repo = new InMemoryDslRunRepository();
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
     var running = run("run-1", "OrderProcess", DslRunStatus.RUNNING.name());
     var completed = run("run-1", "OrderProcess", DslRunStatus.COMPLETED.name());
 
@@ -106,7 +106,7 @@ class InMemoryDslRunRepositoryTest {
 
   @Test
   void findByProcessNameReturnsIsolatedCopy() {
-    var repo = new InMemoryDslRunRepository();
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
     var run = run("run-1", "OrderProcess", DslRunStatus.RUNNING.name());
     repo.save(run);
 
@@ -120,7 +120,7 @@ class InMemoryDslRunRepositoryTest {
 
   @Test
   void retainsOnlyLastOneHundredSavedRuns() {
-    var repo = new InMemoryDslRunRepository();
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
     for (int i = 1; i <= 101; i++) {
       repo.save(run("run-" + i, "OrderProcess", DslRunStatus.RUNNING.name()));
     }
@@ -133,7 +133,7 @@ class InMemoryDslRunRepositoryTest {
 
   @Test
   void updatingExistingRunDoesNotChangeEvictionOrder() {
-    var repo = new InMemoryDslRunRepository();
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
     for (int i = 1; i <= 100; i++) {
       repo.save(run("run-" + i, "OrderProcess", DslRunStatus.RUNNING.name()));
     }
@@ -154,7 +154,7 @@ class InMemoryDslRunRepositoryTest {
 
   @Test
   void updateFinishedIfRunningIsNoOpWhenRunAlreadyTerminal() {
-    var repo = new InMemoryDslRunRepository();
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
     repo.save(run("run-1", "OrderProcess", DslRunStatus.COMPLETED.name()));
 
     int affected = repo.updateFinishedIfRunning(
@@ -174,7 +174,7 @@ class InMemoryDslRunRepositoryTest {
 
   @Test
   void updateFinishedIfRunningTransitionsRunningRun() {
-    var repo = new InMemoryDslRunRepository();
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
     repo.save(run("run-1", "OrderProcess", DslRunStatus.RUNNING.name()));
 
     int affected = repo.updateFinishedIfRunning(
@@ -194,7 +194,7 @@ class InMemoryDslRunRepositoryTest {
 
   @Test
   void updateFinishedIfRunningIsNoOpWhenRunMissing() {
-    var repo = new InMemoryDslRunRepository();
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
 
     int affected = repo.updateFinishedIfRunning(
             "missing",
@@ -209,7 +209,7 @@ class InMemoryDslRunRepositoryTest {
 
   @Test
   void evictedRunsAreRemovedFromKnownProcessNames() {
-    var repo = new InMemoryDslRunRepository();
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
     repo.save(run("old-a", "OrderProcess", DslRunStatus.RUNNING.name()));
     for (int i = 1; i <= 100; i++) {
       repo.save(run("run-" + i, "InvoiceProcess", DslRunStatus.RUNNING.name()));
@@ -244,7 +244,7 @@ class InMemoryDslRunRepositoryTest {
 
   @Test
   void searchWithNoFiltersReturnsAllRunsOrderedByStartedAtDesc() {
-    var repo = new InMemoryDslRunRepository();
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
     Instant t1 = Instant.parse("2026-08-13T10:00:00Z");
     Instant t2 = Instant.parse("2026-08-13T10:01:00Z");
     repo.save(run("run-1", "OrderProcess", DslRunStatus.COMPLETED.name(), t1, "RUN"));
@@ -258,7 +258,7 @@ class InMemoryDslRunRepositoryTest {
 
   @Test
   void searchFiltersByProcessNameCaseSensitively() {
-    var repo = new InMemoryDslRunRepository();
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
     Instant t = Instant.parse("2026-08-13T10:00:00Z");
     repo.save(run("run-1", "OrderProcess", DslRunStatus.COMPLETED.name(), t, "RUN"));
     repo.save(run("run-2", "InvoiceProcess", DslRunStatus.COMPLETED.name(), t, "RUN"));
@@ -271,7 +271,7 @@ class InMemoryDslRunRepositoryTest {
 
   @Test
   void searchFiltersByStatusCaseInsensitively() {
-    var repo = new InMemoryDslRunRepository();
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
     Instant t = Instant.parse("2026-08-13T10:00:00Z");
     repo.save(run("run-1", "OrderProcess", DslRunStatus.COMPLETED.name(), t, "RUN"));
     repo.save(run("run-2", "OrderProcess", DslRunStatus.RUNNING.name(), t, "RUN"));
@@ -284,7 +284,7 @@ class InMemoryDslRunRepositoryTest {
 
   @Test
   void searchFiltersByModeCaseInsensitivelyAndDefaultsNullToRun() {
-    var repo = new InMemoryDslRunRepository();
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
     Instant t = Instant.parse("2026-08-13T10:00:00Z");
     repo.save(run("run-1", "OrderProcess", DslRunStatus.COMPLETED.name(), t, null));
     repo.save(run("run-2", "OrderProcess", DslRunStatus.COMPLETED.name(), t, "PREVIEW"));
@@ -297,7 +297,7 @@ class InMemoryDslRunRepositoryTest {
 
   @Test
   void searchCombinesFiltersAndReportsTotalIndependentOfLimit() {
-    var repo = new InMemoryDslRunRepository();
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
     Instant t = Instant.parse("2026-08-13T10:00:00Z");
     repo.save(run("run-1", "OrderProcess", DslRunStatus.COMPLETED.name(), t, "RUN"));
     repo.save(run("run-2", "OrderProcess", DslRunStatus.COMPLETED.name(), t, "RUN"));
@@ -311,7 +311,7 @@ class InMemoryDslRunRepositoryTest {
 
   @Test
   void searchAppliesOffsetAndLimit() {
-    var repo = new InMemoryDslRunRepository();
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
     Instant t1 = Instant.parse("2026-08-13T10:00:00Z");
     Instant t2 = Instant.parse("2026-08-13T10:01:00Z");
     Instant t3 = Instant.parse("2026-08-13T10:02:00Z");
@@ -327,7 +327,7 @@ class InMemoryDslRunRepositoryTest {
 
   @Test
   void searchOffsetBeyondTotalReturnsEmptyItemsWithTotal() {
-    var repo = new InMemoryDslRunRepository();
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
     Instant t = Instant.parse("2026-08-13T10:00:00Z");
     repo.save(run("run-1", "OrderProcess", DslRunStatus.COMPLETED.name(), t, "RUN"));
 

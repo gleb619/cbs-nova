@@ -8,6 +8,7 @@ import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
@@ -61,17 +62,17 @@ class DslStarterIntegrationTest {
     var dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
     var recorder = new RunIdKeyedExternalCallRecorder(dryRunLoggingContext, null);
     var contextFactory = new ContextFactory();
-    var bufferRegistry = new DryRunLogBufferRegistry();
+    var bufferRegistry = new DryRunLogBufferRegistry(Caffeine.newBuilder().build());
     var previewProperties = new CbsNovaPreviewProperties(null, null, null);
     var previewPipe = new PreviewDslPipe(recorder, contextFactory, dryRunLoggingContext,
-            bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, null,
-            previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),
+            bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, null,
+            previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(Caffeine.newBuilder().build()),
             new SimpleMeterRegistry(), null);
     var runPipe = new RunDslPipe(contextFactory, recorder, new CbsNovaFakesProperties(false, null),
-            new RunScopedFakeConfig(), new DslExecutionEventBus());
+            new RunScopedFakeConfig(Caffeine.newBuilder().build()), new DslExecutionEventBus());
     var explainPipe = new ExplainDslPipe(recorder, contextFactory, dryRunLoggingContext,
-            bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, previewProperties,
-            new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),
+            bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, previewProperties,
+            new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(Caffeine.newBuilder().build()),
             new SimpleMeterRegistry(), new ExplainDiagramRenderer(), null);
     var runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
     var loggingProperties = new CbsNovaLoggingProperties(

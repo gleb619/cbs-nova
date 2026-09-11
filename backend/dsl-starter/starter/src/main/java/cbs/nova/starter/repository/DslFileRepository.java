@@ -1,5 +1,6 @@
 package cbs.nova.starter.repository;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.DslFileModels.FileEntry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -20,7 +21,7 @@ import java.util.stream.Stream;
 @Repository
 public class DslFileRepository {
 
-  private static final String JAVA_SUFFIX = ".java";
+  private static final String JAVA_SUFFIX = StarterConstants.JAVA_FILE_SUFFIX;
 
   public String read(Path root, String relativePath) throws IOException {
     Path file = resolve(root, relativePath);

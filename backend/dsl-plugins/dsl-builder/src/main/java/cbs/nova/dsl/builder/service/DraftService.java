@@ -51,7 +51,7 @@ public class DraftService {
     DraftRequest payload = withStatus(body, "Draft");
     Path file = writePayload(dir.resolve(DRAFTS_DIR), payload);
     log.info("[DSL drafts] saved {} to {}", name, file);
-    return new DraftResponse(name, "Draft", file.toString(), false, LoadResult.empty());
+    return new DraftResponse(name, "Draft", file.toString(), false, LoadResult.empty(), null, null);
   }
 
   public DraftResponse publish(String name, DraftRequest body) throws IOException {
@@ -62,7 +62,8 @@ public class DraftService {
     Path file = writePayload(dir.resolve(PUBLISHED_DIR), payload);
     deleteDraftMarker(dir, name);
     log.info("[DSL drafts] published {} to {}", name, file);
-    return new DraftResponse(name, "Published", file.toString(), false, LoadResult.empty());
+    return new DraftResponse(name, "Published", file.toString(), false, LoadResult.empty(), null,
+            null);
   }
 
   public List<DefinitionHistoryEntry> history(String name) {
@@ -105,7 +106,8 @@ public class DraftService {
     DraftRequest payload = withStatus(entry, "Published");
     Path file = writePayload(dir.resolve(PUBLISHED_DIR), payload);
     log.info("[DSL drafts] restored {} to published {} from history {}", name, file, timestamp);
-    return new DraftResponse(name, "Published", file.toString(), false, LoadResult.empty());
+    return new DraftResponse(name, "Published", file.toString(), false, LoadResult.empty(), null,
+            null);
   }
 
   public DraftResponse delete(String name) throws IOException {
@@ -117,7 +119,7 @@ public class DraftService {
     }
     Files.delete(draftFile);
     log.info("[DSL drafts] deleted {} from {}", name, draftFile);
-    return new DraftResponse(name, "Deleted", null, false, LoadResult.empty());
+    return new DraftResponse(name, "Deleted", null, false, LoadResult.empty(), null, null);
   }
 
   public PageResponse<DraftSummary> list(Integer limit, Integer offset) {

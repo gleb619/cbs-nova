@@ -6,7 +6,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
+import cbs.nova.starter.core.StarterConstants;
+import cbs.nova.starter.service.DomainEventPublisher;
 import cbs.nova.starter.service.DslRunCancellationService;
+import cbs.nova.starter.service.EmptyObjectProvider;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowFailedException;
 import io.temporal.client.WorkflowOptions;
@@ -25,8 +28,10 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.utility.DockerImageName;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -98,7 +103,8 @@ class DslRunCancellationIntegrationTest {
   @Test
   void cancelStopsALiveWorkflowAndRecordsCancelledStatus() {
     String runId = "cancel-it-" + System.currentTimeMillis();
-    InMemoryDslRunRepository repository = new InMemoryDslRunRepository();
+    InMemoryDslRunRepository repository = new InMemoryDslRunRepository(
+            InMemoryDslRunRepository.NO_OP_EVICTION);
     repository.save(DslRun.builder()
             .runId(runId)
             .processName("SleepingProcess")
@@ -115,7 +121,10 @@ class DslRunCancellationIntegrationTest {
                     .build());
     WorkflowClient.start(stub::execute);
 
-    DslRunCancellationService service = new DslRunCancellationService(workflowClient, repository);
+    DslRunCancellationService service = new DslRunCancellationService(workflowClient,
+            repository, Clock.systemUTC(), null,
+            EmptyObjectProvider.of(DomainEventPublisher.class),
+            EmptyObjectProvider.of(TransactionTemplate.class));
 
     DslRunCancellationService.CancelResult result = service.cancel(runId);
 
@@ -123,7 +132,7 @@ class DslRunCancellationIntegrationTest {
 
     DslRun stored = repository.findByRunId(runId).orElseThrow();
     assertThat(stored.status()).isEqualTo(DslRunStatus.CANCELLED.name());
-    assertThat(stored.error()).isEqualTo(DslRunCancellationService.CANCELLED_REASON);
+    assertThat(stored.error()).isEqualTo(StarterConstants.CANCELLED_REASON);
     assertThat(stored.finishedAt()).isNotNull();
 
     assertThatThrownBy(() -> WorkflowStub.fromTyped(stub).getResult(String.class))
@@ -133,7 +142,8 @@ class DslRunCancellationIntegrationTest {
   @Test
   void cancelIsAConflictOnceTheRunIsNoLongerRunning() {
     String runId = "already-done-" + System.currentTimeMillis();
-    InMemoryDslRunRepository repository = new InMemoryDslRunRepository();
+    InMemoryDslRunRepository repository = new InMemoryDslRunRepository(
+            InMemoryDslRunRepository.NO_OP_EVICTION);
     repository.save(DslRun.builder()
             .runId(runId)
             .processName("SleepingProcess")
@@ -143,7 +153,10 @@ class DslRunCancellationIntegrationTest {
             .executionMode("RUN")
             .build());
 
-    DslRunCancellationService service = new DslRunCancellationService(workflowClient, repository);
+    DslRunCancellationService service = new DslRunCancellationService(workflowClient,
+            repository, Clock.systemUTC(), null,
+            EmptyObjectProvider.of(DomainEventPublisher.class),
+            EmptyObjectProvider.of(TransactionTemplate.class));
 
     DslRunCancellationService.CancelResult result = service.cancel(runId);
 

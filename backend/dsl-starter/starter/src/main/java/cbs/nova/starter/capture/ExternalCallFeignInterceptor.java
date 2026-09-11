@@ -1,10 +1,9 @@
 package cbs.nova.starter.capture;
 
-import cbs.nova.starter.core.StarterConstant;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
-import feign.Target;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
@@ -77,9 +76,9 @@ public class ExternalCallFeignInterceptor implements RequestInterceptor {
   private @NonNull Map<String, Object> buildPayload(
           @NonNull String method, @NonNull String url, @Nullable byte[] body) {
     var payload = new HashMap<String, Object>();
-    payload.put(StarterConstant.PAYLOAD_METHOD, method);
-    payload.put(StarterConstant.PAYLOAD_URL, url);
-    payload.put(StarterConstant.PAYLOAD_BODY_LENGTH, body != null ? body.length : 0);
+    payload.put(StarterConstants.PAYLOAD_METHOD, method);
+    payload.put(StarterConstants.PAYLOAD_URL, url);
+    payload.put(StarterConstants.PAYLOAD_BODY_LENGTH, body != null ? body.length : 0);
     return payload;
   }
 }

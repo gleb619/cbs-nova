@@ -3,7 +3,7 @@ package cbs.nova.starter.core.stage;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionTraceCollector;
 import cbs.nova.dsl.Result;
-import cbs.nova.starter.core.StarterConstant;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import org.jspecify.annotations.NonNull;
@@ -25,7 +25,7 @@ public final class ExecutionTraceStage implements DslPipeStage {
     try {
       return next.proceed(wrappedContext);
     } finally {
-      context.setAttribute(StarterConstant.EXECUTION_TRACE_ATTRIBUTE, collector.snapshot());
+      context.setAttribute(StarterConstants.EXECUTION_TRACE_ATTRIBUTE, collector.snapshot());
       collector.stop();
     }
   }

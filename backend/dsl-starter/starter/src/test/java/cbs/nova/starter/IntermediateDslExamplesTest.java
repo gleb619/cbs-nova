@@ -20,6 +20,7 @@ import cbs.nova.dslexamples.v1.InvoiceModels.InvoiceLine;
 import cbs.nova.dslexamples.v1.InvoiceModels.InvoiceOut;
 import cbs.nova.dslexamples.v1.LongWorkModels.LongWorkIn;
 import cbs.nova.dslexamples.v1.LongWorkModels.LongWorkOut;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
@@ -31,10 +32,14 @@ import cbs.nova.starter.core.pipe.RunDslPipe;
 import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
 import cbs.nova.starter.core.recorder.RunIdKeyedExternalCallRecorder;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
-import cbs.nova.starter.helper.*;
+import cbs.nova.starter.helper.CompensationTrackerHelper;
+import cbs.nova.starter.helper.HttpCallHelper;
+import cbs.nova.starter.helper.JsonExtractHelper;
+import cbs.nova.starter.helper.UnreliableApiHelper;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,19 +55,20 @@ class IntermediateDslExamplesTest {
   private final ContextFactory contextFactory = new ContextFactory();
   private final RunIdKeyedExternalCallRecorder recorder = new RunIdKeyedExternalCallRecorder(
           dryRunLoggingContext, null);
-  private final DryRunLogBufferRegistry bufferRegistry = new DryRunLogBufferRegistry();
+  private final DryRunLogBufferRegistry bufferRegistry = new DryRunLogBufferRegistry(
+          Caffeine.newBuilder().build());
   private final CbsNovaPreviewProperties previewProperties = new CbsNovaPreviewProperties(null,
           null, null);
   private final PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
-          dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
+          dryRunLoggingContext, bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN,
           null, previewProperties, new CbsNovaFakesProperties(false, null),
-          new RunScopedFakeConfig(), new SimpleMeterRegistry(), null);
+          new RunScopedFakeConfig(Caffeine.newBuilder().build()), new SimpleMeterRegistry(), null);
   private final RunDslPipe runPipe = new RunDslPipe(contextFactory, recorder,
-          new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),
+          new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(Caffeine.newBuilder().build()),
           new DslExecutionEventBus());
   private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
-          dryRunLoggingContext, bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN,
-          previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(),
+          dryRunLoggingContext, bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN,
+          previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(Caffeine.newBuilder().build()),
           new SimpleMeterRegistry(), new ExplainDiagramRenderer(), null);
   private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
 
@@ -144,6 +150,18 @@ class IntermediateDslExamplesTest {
 
   private static HelperInstanceResolver typedHelperResolver() {
     return helperClass -> {
+      if (helperClass == UnreliableApiHelper.class) {
+        return new UnreliableApiHelper(Caffeine.newBuilder()
+                .expireAfterWrite(StarterConstants.UNRELIABLE_API_TTL)
+                .maximumSize(StarterConstants.UNRELIABLE_API_MAX_SIZE)
+                .build());
+      }
+      if (helperClass == CompensationTrackerHelper.class) {
+        return new CompensationTrackerHelper(Caffeine.newBuilder()
+                .expireAfterWrite(StarterConstants.COMPENSATION_TRACKER_TTL)
+                .maximumSize(StarterConstants.COMPENSATION_TRACKER_MAX_SIZE)
+                .build());
+      }
       if (helperClass == HttpCallHelper.class) {
         return new HttpCallHelper(HttpClient.newHttpClient(),
                 new CbsNovaLoggingProperties(Level.INFO, Level.INFO, true));

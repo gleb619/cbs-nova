@@ -1,5 +1,7 @@
 package cbs.nova.starter.maintenance;
 
+import cbs.nova.starter.core.StarterConstants;
+
 /**
  * Forward-compat stub for audit-log retention.
  *
@@ -15,12 +17,9 @@ package cbs.nova.starter.maintenance;
  */
 public class AuditRetentionMaintenanceTask implements MaintenanceTask {
 
-  /** Stable task name used as the {@code task} Micrometer tag. */
-  public static final String NAME = "audit-retention";
-
   @Override
   public String name() {
-    return NAME;
+    return StarterConstants.AUDIT_RETENTION_TASK_NAME;
   }
 
   @Override

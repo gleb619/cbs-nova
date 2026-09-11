@@ -1,5 +1,7 @@
 package cbs.nova.starter.config;
 
+import cbs.nova.starter.cache.PreviewResultCacheTestSupport;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.starter.service.PreviewResultCache;
@@ -70,7 +72,7 @@ class PreviewCacheConfigurationTest {
 
     @Bean
     PreviewResultCache customPreviewResultCache() {
-      return new PreviewResultCache(60_000L);
+      return PreviewResultCacheTestSupport.cache(60_000L);
     }
   }
 }

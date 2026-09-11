@@ -61,7 +61,7 @@ public class DslConfig implements SingletonSupport {
   }
 
   public @NonNull ModelRegistry modelRegistry() {
-    return singleton(DefaultModelRegistry::new);
+    return singleton(DefaultModelRegistry::discover);
   }
 
   public @NonNull AvajeMapConverter avajeMapConverter() {

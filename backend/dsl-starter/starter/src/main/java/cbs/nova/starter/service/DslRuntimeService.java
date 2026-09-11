@@ -11,12 +11,12 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.converter.DslRuntimeMapper;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.PreviewTimeoutException;
 import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.model.DslRequest;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.RuntimeOutcome;
-import cbs.nova.starter.web.RequestIdFilter;
 import java.util.HashMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -127,7 +127,7 @@ public class DslRuntimeService {
             ? new HashMap<>(request.metadata())
             : new HashMap<>();
     if (correlationId != null && !correlationId.isBlank()) {
-      metadata.put(CorrelationId.CORRELATION_ID_METADATA_KEY, correlationId);
+      metadata.put(StarterConstants.CORRELATION_ID_METADATA_KEY, correlationId);
     }
     Object body = coerceBody(name, runId, request.body());
     Context<?> ctx = contextFactory.of(body, metadata, mode, runId);
@@ -185,13 +185,13 @@ public class DslRuntimeService {
   private <R> R executeWithMdc(String correlationId, Supplier<R> action) {
     boolean put = correlationId != null && !correlationId.isBlank();
     if (put) {
-      MDC.put(RequestIdFilter.REQUEST_ID_MDC_KEY, correlationId);
+      MDC.put(StarterConstants.REQUEST_ID_MDC_KEY, correlationId);
     }
     try {
       return action.get();
     } finally {
       if (put) {
-        MDC.remove(RequestIdFilter.REQUEST_ID_MDC_KEY);
+        MDC.remove(StarterConstants.REQUEST_ID_MDC_KEY);
       }
     }
   }

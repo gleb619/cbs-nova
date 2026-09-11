@@ -1,10 +1,13 @@
 package cbs.nova.starter.service;
 
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.model.PreviewReport;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.entity.DslDefinitionTestEntity;
 import cbs.nova.starter.exception.DefinitionNotFoundException;
 import cbs.nova.starter.model.DefinitionTestCase;
 import cbs.nova.starter.model.DefinitionTestCaseResult;
+import cbs.nova.starter.model.DefinitionTestCaseStatus;
 import cbs.nova.starter.model.DefinitionTestRunReport;
 import cbs.nova.starter.model.DslRequest;
 import cbs.nova.starter.model.ErrorResponse;
@@ -26,11 +29,13 @@ import tools.jackson.databind.ObjectMapper;
  * <p>
  * {@link #run} deliberately executes every case through {@link DslRuntimeService#preview} only — it
  * never calls the run path, never starts a Temporal workflow, and never creates {@code dsl_runs}
- * rows. Reports are produced from the preview outcomes and the deep-comparison in
- * {@link JsonDeepEquals}.
+ * rows. Reports are produced from the preview outcomes and the deep-comparison of the report
+ * outputs in {@link JsonDeepEquals}.
  */
 @RequiredArgsConstructor
 public class DslDefinitionTestService {
+
+  private static final String STATUS_ERROR_CODE = StarterConstants.STATUS_TEST_CASE_ERROR;
 
   private final DslDefinitionTestRepository repository;
   private final DslRuntimeService previewService;
@@ -73,41 +78,43 @@ public class DslDefinitionTestService {
             .map(caseEntity -> execute(definitionName, caseEntity))
             .toList();
     int passed = (int) results.stream()
-            .filter(r -> DefinitionTestCaseResult.STATUS_PASS.equals(r.status())).count();
+            .filter(r -> r.status() == DefinitionTestCaseStatus.PASS).count();
     int failed = (int) results.stream()
-            .filter(r -> DefinitionTestCaseResult.STATUS_FAIL.equals(r.status())).count();
+            .filter(r -> r.status() == DefinitionTestCaseStatus.FAIL).count();
     int errored = (int) results.stream()
-            .filter(r -> DefinitionTestCaseResult.STATUS_ERROR.equals(r.status())).count();
+            .filter(r -> r.status() == DefinitionTestCaseStatus.ERROR).count();
     return new DefinitionTestRunReport(results.size(), passed, failed, errored, results);
   }
 
   private DefinitionTestCaseResult execute(String definitionName, DslDefinitionTestEntity entity) {
-    JsonNode expected = readTree(entity.expectedOutputJson());
+    PreviewReport expected = readReport(entity.expectedOutputJson());
     long start = System.nanoTime();
     try {
-      Object input = objectMapper.readValue(entity.inputJson(), Object.class);
-      RuntimeOutcome outcome = previewService.preview(definitionName,
-              new DslRequest(input, null), null);
+      DslRequest input = readRequest(entity.inputJson());
+      RuntimeOutcome outcome = previewService.preview(definitionName, input, null);
       long durationMs = elapsedMillis(start);
       if (!outcome.success()) {
         return error(entity.caseName(), expected, durationMs, outcome.error());
       }
-      JsonNode actual = objectMapper.valueToTree(outcome.value());
-      boolean match = JsonDeepEquals.deepEquals(actual, expected);
+      PreviewReport actual = (PreviewReport) outcome.value();
+      boolean match = JsonDeepEquals.deepEquals(toJsonNode(actual.output()),
+              toJsonNode(expected.output()));
       return new DefinitionTestCaseResult(entity.caseName(),
-              match ? DefinitionTestCaseResult.STATUS_PASS : DefinitionTestCaseResult.STATUS_FAIL,
+              match ? DefinitionTestCaseStatus.PASS : DefinitionTestCaseStatus.FAIL,
               actual, expected, durationMs, null);
     } catch (Exception e) {
       long durationMs = elapsedMillis(start);
-      return new DefinitionTestCaseResult(entity.caseName(),
-              DefinitionTestCaseResult.STATUS_ERROR,
-              null, expected, durationMs, e.getMessage());
+      ErrorResponse diagnostics = new ErrorResponse(STATUS_ERROR_CODE, e.getMessage(),
+              definitionName, null, null, null);
+      return new DefinitionTestCaseResult(entity.caseName(), DefinitionTestCaseStatus.ERROR,
+              null, expected, durationMs, diagnostics);
     }
   }
 
-  private static DefinitionTestCaseResult error(String name, JsonNode expected, long durationMs,
+  private static DefinitionTestCaseResult error(String name, PreviewReport expected,
+          long durationMs,
           ErrorResponse error) {
-    return new DefinitionTestCaseResult(name, DefinitionTestCaseResult.STATUS_ERROR, null, expected,
+    return new DefinitionTestCaseResult(name, DefinitionTestCaseStatus.ERROR, null, expected,
             durationMs, error);
   }
 
@@ -116,24 +123,36 @@ public class DslDefinitionTestService {
   }
 
   private DefinitionTestCase toDto(DslDefinitionTestEntity entity) {
-    return new DefinitionTestCase(entity.caseName(), readTree(entity.inputJson()),
-            readTree(entity.expectedOutputJson()));
+    return new DefinitionTestCase(entity.caseName(), readRequest(entity.inputJson()),
+            readReport(entity.expectedOutputJson()));
   }
 
-  private String writeJson(JsonNode node) {
+  private String writeJson(Object value) {
     try {
-      return objectMapper.writeValueAsString(node);
+      return objectMapper.writeValueAsString(value);
     } catch (JacksonException e) {
       throw new IllegalArgumentException("Unable to serialize test-case payload", e);
     }
   }
 
-  private JsonNode readTree(String json) {
+  private DslRequest readRequest(String json) {
     try {
-      return objectMapper.readTree(json);
+      return objectMapper.readValue(json, DslRequest.class);
     } catch (JacksonException e) {
       throw new IllegalArgumentException("Unable to parse stored test-case JSON", e);
     }
+  }
+
+  private PreviewReport readReport(String json) {
+    try {
+      return objectMapper.readValue(json, PreviewReport.class);
+    } catch (JacksonException e) {
+      throw new IllegalArgumentException("Unable to parse stored test-case JSON", e);
+    }
+  }
+
+  private JsonNode toJsonNode(Object value) {
+    return value == null ? null : objectMapper.valueToTree(value);
   }
 
   private static void requireDefinition(String definitionName) {

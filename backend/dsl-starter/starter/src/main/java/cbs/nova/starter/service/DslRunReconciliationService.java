@@ -3,6 +3,7 @@ package cbs.nova.starter.service;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.sse.ExecutionStatusEventPublisher;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
@@ -10,6 +11,7 @@ import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowExecutionDescription;
 import io.temporal.client.WorkflowNotFoundException;
 import io.temporal.client.WorkflowStub;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -35,17 +37,15 @@ import java.util.concurrent.atomic.AtomicReference;
  * healthcheck sweep.
  */
 @Slf4j
+@RequiredArgsConstructor
 public class DslRunReconciliationService {
-
-  public static final String INSPECTED_COUNTER = "dsl.run.reconciliation.inspected";
-  public static final String RESOLVED_COUNTER = "dsl.run.reconciliation.resolved";
 
   static final String PROCESS_NAME_TAG = "processName";
   static final String STATUS_TAG = "status";
   static final String EMPTY_OUTPUT_JSON = "{}";
 
-  private static final Duration SHUTDOWN_JOIN = Duration.ofSeconds(5);
-  private static final String UNKNOWN_PROCESS = "unknown";
+  private static final Duration SHUTDOWN_JOIN = StarterConstants.SERVICE_SHUTDOWN_JOIN;
+  private static final String UNKNOWN_PROCESS = StarterConstants.UNKNOWN_PROCESS;
 
   private final DslRunRepository runRepository;
   private final WorkflowClient workflowClient;
@@ -59,37 +59,6 @@ public class DslRunReconciliationService {
 
   private final AtomicReference<ScheduledFuture<?>> handle = new AtomicReference<>();
   private final AtomicBoolean started = new AtomicBoolean(false);
-
-  public DslRunReconciliationService(
-          @NonNull DslRunRepository runRepository,
-          @NonNull WorkflowClient workflowClient,
-          @NonNull MeterRegistry meterRegistry,
-          @NonNull Duration scanInterval,
-          @NonNull Duration gracePeriod,
-          int batchSize,
-          @NonNull ScheduledExecutorService schedulingExecutor) {
-    this(runRepository, workflowClient, meterRegistry, scanInterval, gracePeriod, batchSize,
-            schedulingExecutor, Clock.systemUTC());
-  }
-
-  DslRunReconciliationService(
-          @NonNull DslRunRepository runRepository,
-          @NonNull WorkflowClient workflowClient,
-          @NonNull MeterRegistry meterRegistry,
-          @NonNull Duration scanInterval,
-          @NonNull Duration gracePeriod,
-          int batchSize,
-          @NonNull ScheduledExecutorService schedulingExecutor,
-          @NonNull Clock clock) {
-    this.runRepository = runRepository;
-    this.workflowClient = workflowClient;
-    this.meterRegistry = meterRegistry;
-    this.scanInterval = scanInterval;
-    this.gracePeriod = gracePeriod;
-    this.batchSize = batchSize;
-    this.schedulingExecutor = schedulingExecutor;
-    this.clock = clock;
-  }
 
   public void start() {
     if (!started.compareAndSet(false, true)) {
@@ -153,7 +122,7 @@ public class DslRunReconciliationService {
 
   private void reconcileRun(@NonNull DslRun run) {
     String runId = run.runId();
-    meterRegistry.counter(INSPECTED_COUNTER,
+    meterRegistry.counter(StarterConstants.INSPECTED_COUNTER,
             PROCESS_NAME_TAG, safeProcessName(run.processName())).increment();
     try {
       WorkflowStub stub = workflowClient.newUntypedWorkflowStub(runId);
@@ -224,7 +193,7 @@ public class DslRunReconciliationService {
             finishedAt,
             null);
     if (affected > 0) {
-      meterRegistry.counter(RESOLVED_COUNTER,
+      meterRegistry.counter(StarterConstants.RESOLVED_COUNTER,
               PROCESS_NAME_TAG, safeProcessName(run.processName()),
               STATUS_TAG, status.name()).increment();
       publishStatusChanged(run.runId(), status.name());

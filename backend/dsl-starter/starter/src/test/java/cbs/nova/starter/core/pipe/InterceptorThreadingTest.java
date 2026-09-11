@@ -19,11 +19,13 @@ import cbs.nova.dsl.fake.FakeConfig;
 import cbs.nova.dsl.fake.FakeEntry;
 import cbs.nova.dsl.model.ExplainTraceReport;
 import cbs.nova.dsl.model.PreviewReport;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;
@@ -41,7 +43,8 @@ class InterceptorThreadingTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
   private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
-  private final DryRunLogBufferRegistry bufferRegistry = new DryRunLogBufferRegistry();
+  private final DryRunLogBufferRegistry bufferRegistry = new DryRunLogBufferRegistry(
+          Caffeine.newBuilder().build());
   private final CbsNovaPreviewProperties previewProperties = new CbsNovaPreviewProperties(null,
           null, null);
 
@@ -61,14 +64,14 @@ class InterceptorThreadingTest {
 
   @Test
   void previewPipeFiresInterceptorViaContextWithoutThreadLocal() {
-    var runScopedFakeConfig = new RunScopedFakeConfig();
+    var runScopedFakeConfig = new RunScopedFakeConfig(Caffeine.newBuilder().build());
     var recorder = mock(ExternalCallRecorder.class);
     runScopedFakeConfig.register("run-preview",
             FakeConfig.of(new FakeEntry("helper", "httpCall", "faked-http")));
 
     PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
             dryRunLoggingContext, bufferRegistry,
-            DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, null, previewProperties,
+            StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, null, previewProperties,
             new CbsNovaFakesProperties(false, null), runScopedFakeConfig,
             new SimpleMeterRegistry(), null);
 
@@ -81,7 +84,7 @@ class InterceptorThreadingTest {
 
   @Test
   void runPipeFiresInterceptorViaContextWithoutThreadLocal() {
-    var runScopedFakeConfig = new RunScopedFakeConfig();
+    var runScopedFakeConfig = new RunScopedFakeConfig(Caffeine.newBuilder().build());
     var recorder = mock(ExternalCallRecorder.class);
     runScopedFakeConfig.register("run-fake",
             FakeConfig.of(new FakeEntry("helper", "httpCall", "faked-http")));
@@ -102,7 +105,7 @@ class InterceptorThreadingTest {
   void runPipeRunsRealHelperWhenNoFakeConfigured() {
     // T417 regression: pre-T417 a stale ThreadLocal would have leaked fakes into a fresh
     // run; after T417 the interceptor lives on the per-execution Context only.
-    var runScopedFakeConfig = new RunScopedFakeConfig();
+    var runScopedFakeConfig = new RunScopedFakeConfig(Caffeine.newBuilder().build());
     var recorder = mock(ExternalCallRecorder.class);
 
     var runPipe = new RunDslPipe(contextFactory, recorder,
@@ -126,14 +129,14 @@ class InterceptorThreadingTest {
     // T417 closes.
     var previewRec = mock(ExternalCallRecorder.class);
     var runRec = mock(ExternalCallRecorder.class);
-    var previewScoped = new RunScopedFakeConfig();
-    var runScoped = new RunScopedFakeConfig();
+    var previewScoped = new RunScopedFakeConfig(Caffeine.newBuilder().build());
+    var runScoped = new RunScopedFakeConfig(Caffeine.newBuilder().build());
 
     previewScoped.register("run-shared",
             FakeConfig.of(new FakeEntry("helper", "httpCall", "preview-fake")));
 
     var previewPipe = new PreviewDslPipe(previewRec, contextFactory, dryRunLoggingContext,
-            bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, null,
+            bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, null,
             previewProperties, new CbsNovaFakesProperties(false, null), previewScoped,
             new SimpleMeterRegistry(), null);
     var runPipe = new RunDslPipe(contextFactory, runRec,
@@ -155,13 +158,13 @@ class InterceptorThreadingTest {
 
   @Test
   void explainPipeThreadsInterceptorViaContextWithoutThreadLocal() {
-    var runScopedFakeConfig = new RunScopedFakeConfig();
+    var runScopedFakeConfig = new RunScopedFakeConfig(Caffeine.newBuilder().build());
     var recorder = mock(ExternalCallRecorder.class);
     runScopedFakeConfig.register("run-explain",
             FakeConfig.of(new FakeEntry("helper", "dbCall", "faked-db")));
 
     var explainPipe = new ExplainDslPipe(recorder, contextFactory, dryRunLoggingContext,
-            bufferRegistry, DryRunLogbackAppender.DEFAULT_MAX_EVENTS_PER_RUN, previewProperties,
+            bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, previewProperties,
             new CbsNovaFakesProperties(false, null), runScopedFakeConfig,
             new SimpleMeterRegistry(), new ExplainDiagramRenderer(), null);
 
@@ -183,7 +186,7 @@ class InterceptorThreadingTest {
                     .execute(ctx -> ctx.runHelper("httpCall"))
                     .build());
 
-    var runScopedFakeConfig = new RunScopedFakeConfig();
+    var runScopedFakeConfig = new RunScopedFakeConfig(Caffeine.newBuilder().build());
     var recorder = mock(ExternalCallRecorder.class);
     runScopedFakeConfig.register("run-process",
             FakeConfig.of(new FakeEntry("helper", "httpCall", "faked-http")));

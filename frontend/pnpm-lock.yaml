@@ -90,6 +90,9 @@ importers:
       monaco-editor:
         specifier: ^0.56.0
         version: 0.56.0
+      monaco-editor-vue3:
+        specifier: ^1.0.5
+        version: 1.0.5(monaco-editor@0.56.0)(vue@3.5.39(typescript@5.9.3))
       prismjs:
         specifier: ^1.30.0
         version: 1.30.0
@@ -3025,6 +3028,12 @@ packages:
 
   mocked-exports@0.1.1:
     resolution: {integrity: sha512-aF7yRQr/Q0O2/4pIXm6PZ5G+jAd7QS4Yu8m+WEeEHGnbo+7mE36CbLSDQiXYV8bVL3NfmdeqPJct0tUlnjVSnA==}
+
+  monaco-editor-vue3@1.0.5:
+    resolution: {integrity: sha512-1n4ayGcuYpZcQ6A4PUYZYqXuf6n+A/2pUNdLnb8I39WZV0zkhfvSRNau3hB0qzq6vp6wSNZ7MgcjQRCJCiGHWQ==}
+    peerDependencies:
+      monaco-editor: '>= 0.25.0 < 1'
+      vue: ^3
 
   monaco-editor@0.56.0:
     resolution: {integrity: sha512-sXboRm3BeBeLm938eaiyLMe0OxzfXIlZvbv4ir/jVgQy1zDhWjgmny0WoN45fuDKhCCQsYMbBJrv/A6jd8aCUg==}
@@ -7496,6 +7505,11 @@ snapshots:
       ufo: 1.6.4
 
   mocked-exports@0.1.1: {}
+
+  monaco-editor-vue3@1.0.5(monaco-editor@0.56.0)(vue@3.5.39(typescript@5.9.3)):
+    dependencies:
+      monaco-editor: 0.56.0
+      vue: 3.5.39(typescript@5.9.3)
 
   monaco-editor@0.56.0:
     dependencies:

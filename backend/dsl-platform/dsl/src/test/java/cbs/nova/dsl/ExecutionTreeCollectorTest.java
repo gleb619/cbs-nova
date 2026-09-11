@@ -20,7 +20,7 @@ class ExecutionTreeCollectorTest {
 
   @Test
   void singleLevelProducesLeafRoot() {
-    var collector = new ExecutionTreeCollector();
+    var collector = new ExecutionTreeCollector(ExecutionTreeCollector.DEFAULT_MAX_DEPTH);
     collector.start();
     collector.onProcessStart("r1", "p", "in");
     collector.onProcessEnd("r1", "p", "out", true);
@@ -40,7 +40,7 @@ class ExecutionTreeCollectorTest {
 
   @Test
   void nestedProcessHelperTransactionBuildsTree() {
-    var collector = new ExecutionTreeCollector();
+    var collector = new ExecutionTreeCollector(ExecutionTreeCollector.DEFAULT_MAX_DEPTH);
     collector.start();
     collector.onProcessStart("r2", "p", "in");
     collector.onHelperStart("r2", "h", "hi");
@@ -70,13 +70,13 @@ class ExecutionTreeCollectorTest {
 
   @Test
   void perRunInstancesAreIsolated() {
-    var collectorA = new ExecutionTreeCollector();
+    var collectorA = new ExecutionTreeCollector(ExecutionTreeCollector.DEFAULT_MAX_DEPTH);
     collectorA.start();
     collectorA.onProcessStart("rA", "pA", null);
     collectorA.onProcessEnd("rA", "pA", "outA", true);
     collectorA.finish();
 
-    var collectorB = new ExecutionTreeCollector();
+    var collectorB = new ExecutionTreeCollector(ExecutionTreeCollector.DEFAULT_MAX_DEPTH);
     collectorB.start();
     collectorB.onProcessStart("rB", "pB", null);
     collectorB.onHelperStart("rB", "hB", null);
@@ -96,7 +96,7 @@ class ExecutionTreeCollectorTest {
 
   @Test
   void externalCallsAttachToActiveFrame() {
-    var collector = new ExecutionTreeCollector();
+    var collector = new ExecutionTreeCollector(ExecutionTreeCollector.DEFAULT_MAX_DEPTH);
     collector.start();
     collector.onProcessStart("r3", "p", null);
     collector.onHelperStart("r3", "h", null);
@@ -115,13 +115,13 @@ class ExecutionTreeCollectorTest {
 
   @Test
   void treeForUnusedCollectorIsEmpty() {
-    var collector = new ExecutionTreeCollector();
+    var collector = new ExecutionTreeCollector(ExecutionTreeCollector.DEFAULT_MAX_DEPTH);
     assertThat(collector.tree()).isEmpty();
   }
 
   @Test
   void eventsWithoutStartAreIgnored() {
-    var collector = new ExecutionTreeCollector();
+    var collector = new ExecutionTreeCollector(ExecutionTreeCollector.DEFAULT_MAX_DEPTH);
     collector.onProcessStart("unknown", "p", null);
     collector.onProcessEnd("unknown", "p", null, true);
     assertThat(collector.tree()).isEmpty();
@@ -129,7 +129,7 @@ class ExecutionTreeCollectorTest {
 
   @Test
   void startClearsPriorTree() {
-    var collector = new ExecutionTreeCollector();
+    var collector = new ExecutionTreeCollector(ExecutionTreeCollector.DEFAULT_MAX_DEPTH);
     collector.start();
     collector.onProcessStart("r4", "p1", null);
     collector.onProcessEnd("r4", "p1", null, true);
@@ -146,7 +146,7 @@ class ExecutionTreeCollectorTest {
 
   @Test
   void transactionRunnerForwardsEventsToListener() {
-    var collector = new ExecutionTreeCollector();
+    var collector = new ExecutionTreeCollector(ExecutionTreeCollector.DEFAULT_MAX_DEPTH);
     collector.start();
     var ctx = contextFactory.of("in", ExecutionMode.PREVIEW, "rt").withExecutionListener(collector);
     var tx = Dsl.transaction("T")
@@ -165,7 +165,7 @@ class ExecutionTreeCollectorTest {
 
   @Test
   void helperRunnerForwardsEventsToListener() {
-    var collector = new ExecutionTreeCollector();
+    var collector = new ExecutionTreeCollector(ExecutionTreeCollector.DEFAULT_MAX_DEPTH);
     collector.start();
     var ctx = contextFactory.of("input", ExecutionMode.RUN, "rh").withExecutionListener(collector);
     var registry = new DefaultHelperRegistry();
@@ -183,7 +183,7 @@ class ExecutionTreeCollectorTest {
 
   @Test
   void functionRunnerForwardsEventsToListener() {
-    var collector = new ExecutionTreeCollector();
+    var collector = new ExecutionTreeCollector(ExecutionTreeCollector.DEFAULT_MAX_DEPTH);
     collector.start();
     var ctx = contextFactory.of("input", ExecutionMode.RUN, "rf").withExecutionListener(collector);
     var registry = new DefaultHelperRegistry();

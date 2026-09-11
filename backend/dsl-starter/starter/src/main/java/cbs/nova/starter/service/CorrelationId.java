@@ -1,5 +1,6 @@
 package cbs.nova.starter.service;
 
+import cbs.nova.starter.core.StarterConstants;
 import java.util.regex.Pattern;
 
 import org.jspecify.annotations.Nullable;
@@ -10,15 +11,14 @@ import org.jspecify.annotations.Nullable;
  * <p>
  * The correlation id is entirely caller-supplied: the server never generates one. It is persisted
  * on the dsl_runs row and exposed on the executions list + detail endpoints so operators can trace
- * a business transaction end-to-end.
+ * a business transaction end-to-end. The header name and metadata-map key are owned by
+ * {@link cbs.nova.starter.core.StarterConstants}.
  */
 public final class CorrelationId {
 
-  public static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
-  public static final String CORRELATION_ID_METADATA_KEY = "correlationId";
-
-  private static final int MAX_LENGTH = 200;
-  private static final Pattern VALID_PATTERN = Pattern.compile("^[A-Za-z0-9_.:/-]+$");
+  private static final int MAX_LENGTH = StarterConstants.CORRELATION_ID_MAX_LENGTH;
+  private static final Pattern VALID_PATTERN = Pattern.compile(
+          StarterConstants.CORRELATION_ID_VALID_PATTERN);
 
   private CorrelationId() {
   }

@@ -4,6 +4,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.annotation.Helper;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.helper.model.FormatDateIn;
 import cbs.nova.starter.helper.model.FormatDateOut;
 import java.time.DateTimeException;
@@ -40,7 +41,8 @@ import org.jspecify.annotations.NonNull;
 @Helper(name = "formatDate")
 public class FormatDateHelper implements Executable<FormatDateIn, FormatDateOut> {
 
-  private static final Pattern EPOCH_MILLIS_PATTERN = Pattern.compile("-?\\d+");
+  private static final Pattern EPOCH_MILLIS_PATTERN = Pattern.compile(
+          StarterConstants.EPOCH_MILLIS_REGEX);
 
   @Override
   public @NonNull Result<FormatDateOut> execute(@NonNull Context<FormatDateIn> ctx) {

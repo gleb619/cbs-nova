@@ -14,4 +14,9 @@ public record ExecutableDescriptor(
         @Nullable String previewBehavior,
         @NonNull List<ParameterDescriptor> parameters) {
 
+  public static ExecutableDescriptor empty() {
+    return new ExecutableDescriptor(null, null, null, null, true, "delegates to execute",
+        List.of());
+  }
+
 }

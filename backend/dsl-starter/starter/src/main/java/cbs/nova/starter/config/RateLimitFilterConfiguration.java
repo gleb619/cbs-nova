@@ -18,7 +18,7 @@ public class RateLimitFilterConfiguration {
   @ConditionalOnMissingBean
   public RateLimitFilter rateLimitFilter(CbsSecurityRateLimitProperties properties,
           ObjectMapper objectMapper) {
-    return new RateLimitFilter(properties, objectMapper);
+    return new RateLimitFilter(properties, objectMapper, System::nanoTime);
   }
 
   @Bean

@@ -48,9 +48,6 @@ public record DslMaintenanceProperties(
     tasks = tasks == null ? new Tasks(null, null, null) : tasks;
   }
 
-  /** Convenience for forward-compat key checks in tests/conditions. */
-  public static final String PREFIX = "dsl.maintenance";
-
   @Builder
   public record Tasks(
           @Valid @DefaultValue Task runRetention,

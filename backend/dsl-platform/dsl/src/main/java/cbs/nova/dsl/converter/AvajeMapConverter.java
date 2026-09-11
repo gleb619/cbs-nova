@@ -15,7 +15,7 @@ public final class AvajeMapConverter {
   private final ModelRegistry modelRegistry;
 
   public static AvajeMapConverter create() {
-    return new AvajeMapConverter(Jsonb.builder().build(), new DefaultModelRegistry());
+    return new AvajeMapConverter(Jsonb.builder().build(), DefaultModelRegistry.discover());
   }
 
   @SuppressWarnings("unchecked")

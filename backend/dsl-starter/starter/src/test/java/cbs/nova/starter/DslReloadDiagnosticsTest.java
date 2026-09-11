@@ -41,7 +41,8 @@ class DslReloadDiagnosticsTest {
   @BeforeEach
   void setUp() {
     GlobalManager.globalManager().resetForTests();
-    resource = new DslReloadHandler(DslProperties.builder().build(), loader);
+    resource = new DslReloadHandler(DslProperties.builder().build(), loader, null, null, null, null,
+            null, null);
   }
 
   @AfterEach
@@ -50,7 +51,8 @@ class DslReloadDiagnosticsTest {
   }
 
   private void setSourceDir(String value) {
-    resource = new DslReloadHandler(dslProperties(value), loader);
+    resource = new DslReloadHandler(dslProperties(value), loader, null, null, null, null, null,
+            null);
   }
 
   private static ServerRequest reloadRequest() {
@@ -146,7 +148,7 @@ class DslReloadDiagnosticsTest {
                       List.of(), 7));
       when(client.downloadZip("s-1")).thenReturn(BuilderClientTestSupport.emptyZip());
       resource = new DslReloadHandler(dslProperties(sourceDir.toString()), loader, null, null,
-              BuilderClientTestSupport.providerOf(client));
+              BuilderClientTestSupport.providerOf(client), null, null, null);
 
       ServerResponse response = resource.reload(reloadRequest());
 
@@ -167,7 +169,7 @@ class DslReloadDiagnosticsTest {
       when(client.compile(any(CompileRequest.class)))
               .thenThrow(new BuilderUnavailableException("connection refused"));
       resource = new DslReloadHandler(dslProperties(sourceDir.toString()), loader, null, null,
-              BuilderClientTestSupport.providerOf(client));
+              BuilderClientTestSupport.providerOf(client), null, null, null);
 
       ServerResponse response = resource.reload(reloadRequest());
 

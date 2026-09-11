@@ -1,12 +1,11 @@
 package cbs.nova.starter.core.stage;
 
-import cbs.nova.dsl.CallNode;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExecutionTreeCollector;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
-import cbs.nova.starter.core.StarterConstant;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +38,7 @@ public final class ExecutionTreeStage implements DslPipeStage {
       return next.proceed(wrappedContext);
     } finally {
       collector.finish();
-      context.setAttribute(StarterConstant.AST_TREE_ATTRIBUTE, collector.tree().orElse(null));
+      context.setAttribute(StarterConstants.AST_TREE_ATTRIBUTE, collector.tree().orElse(null));
     }
   }
 }

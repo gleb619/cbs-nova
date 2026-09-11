@@ -6,6 +6,7 @@ import cbs.nova.dsl.logging.DryRunLoggingContext;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,7 +21,8 @@ class DryRunLogbackAppenderTest {
   private static final int MAX_EVENTS = 100;
 
   private final DryRunLoggingContext context = new ThreadLocalDryRunLoggingContext();
-  private final DryRunLogBufferRegistry registry = new DryRunLogBufferRegistry();
+  private final DryRunLogBufferRegistry registry = new DryRunLogBufferRegistry(
+          Caffeine.newBuilder().build());
   private final DryRunLogbackAppender appender = new DryRunLogbackAppender(context, registry);
   private final Logger logger;
 

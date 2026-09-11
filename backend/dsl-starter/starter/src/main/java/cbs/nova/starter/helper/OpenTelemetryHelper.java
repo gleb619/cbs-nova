@@ -4,6 +4,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
 import cbs.nova.starter.annotation.SpringHelper;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.helper.model.OtelIn;
 import cbs.nova.starter.helper.model.OtelOut;
 import io.opentelemetry.api.OpenTelemetry;
@@ -68,9 +69,9 @@ import org.jspecify.annotations.NonNull;
 @SpringHelper(name = "otel")
 public class OpenTelemetryHelper implements Executable<OtelIn, OtelOut> {
 
-  private static final String INSTRUMENTATION_NAME = "cbs-nova-dsl";
-  private static final String TRACEPARENT_VERSION = "00";
-  private static final String TRACEPARENT_FLAGS_SAMPLED = "01";
+  private static final String INSTRUMENTATION_NAME = StarterConstants.OTEL_INSTRUMENTATION_NAME;
+  private static final String TRACEPARENT_VERSION = StarterConstants.TRACEPARENT_VERSION;
+  private static final String TRACEPARENT_FLAGS_SAMPLED = StarterConstants.TRACEPARENT_FLAGS_SAMPLED;
   private static final Set<String> STATUS_CODES = Set.of("OK", "ERROR", "UNSET");
   private static final Set<String> MODES = Set.of(
           "span", "endspan", "addevent", "setbaggage", "getbaggage",

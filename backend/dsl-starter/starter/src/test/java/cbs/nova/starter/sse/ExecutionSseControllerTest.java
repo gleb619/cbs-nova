@@ -17,7 +17,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 class ExecutionSseControllerTest {
 
-  private final InMemoryDslRunRepository repository = new InMemoryDslRunRepository();
+  private final InMemoryDslRunRepository repository = new InMemoryDslRunRepository(
+          InMemoryDslRunRepository.NO_OP_EVICTION);
   private final ExecutionSseService sseService = new ExecutionSseService();
   private MockMvc mockMvc;
 

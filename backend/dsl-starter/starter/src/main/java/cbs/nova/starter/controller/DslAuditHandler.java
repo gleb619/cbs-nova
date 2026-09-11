@@ -1,5 +1,6 @@
 package cbs.nova.starter.controller;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.AuditDto;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.persistence.DslAuditRepository;
@@ -21,8 +22,8 @@ public class DslAuditHandler {
   private final DslAuditRepository repository;
 
   public ServerResponse list(ServerRequest request) {
-    int limit = Pagination.intParam(request, "limit", Pagination.DEFAULT_LIMIT);
-    int offset = Pagination.intParam(request, "offset", Pagination.DEFAULT_OFFSET);
+    int limit = Pagination.intParam(request, "limit", StarterConstants.DEFAULT_LIMIT);
+    int offset = Pagination.intParam(request, "offset", StarterConstants.DEFAULT_OFFSET);
     int pageSize = Pagination.clampLimit(limit);
     int skip = Pagination.clampOffset(offset);
     String action = request.param("action").filter(s -> !s.isBlank()).orElse(null);

@@ -3,11 +3,13 @@ package cbs.nova.starter.config;
 import cbs.nova.dsl.logging.DryRunLoggingContext;
 import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.DryRunProperties;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.MdcDryRunLoggingContext;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import ch.qos.logback.classic.Logger;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Configuration;
@@ -37,8 +39,11 @@ public class DryRunLoggingConfiguration {
   @Bean
   @ConditionalOnMissingBean(DryRunLogBufferRegistry.class)
   public DryRunLogBufferRegistry dryRunLogBufferRegistry(CbsNovaCacheProperties cacheProperties) {
-    var spec = cacheProperties.specFor(CbsNovaCacheProperties.Names.DRY_RUN_LOG_BUFFERS);
-    return new DryRunLogBufferRegistry(spec.ttl(), spec.maxSize());
+    var spec = cacheProperties.specFor(StarterConstants.DRY_RUN_LOG_BUFFERS);
+    return new DryRunLogBufferRegistry(Caffeine.newBuilder()
+            .expireAfterAccess(spec.ttl())
+            .maximumSize(spec.maxSize())
+            .build());
   }
 
   @Bean

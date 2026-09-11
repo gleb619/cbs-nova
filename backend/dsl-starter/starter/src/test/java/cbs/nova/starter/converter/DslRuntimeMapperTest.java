@@ -24,11 +24,11 @@ class DslRuntimeMapperTest {
     ErrorResponse response = mapper.toErrorResponse(
             new ErrorResponseContext("CODE", "msg", "entity", "run-1", "run-1:ex:abc"));
 
-    assertThat(response.code()).isEqualTo("CODE");
-    assertThat(response.message()).isEqualTo("msg");
-    assertThat(response.entityName()).isEqualTo("entity");
-    assertThat(response.runId()).isEqualTo("run-1");
-    assertThat(response.exceptionId()).isEqualTo("run-1:ex:abc");
+    assertThat(response.getCode()).isEqualTo("CODE");
+    assertThat(response.getMessage()).isEqualTo("msg");
+    assertThat(response.getEntityName()).isEqualTo("entity");
+    assertThat(response.getRunId()).isEqualTo("run-1");
+    assertThat(response.getExceptionId()).isEqualTo("run-1:ex:abc");
   }
 
   @Test
@@ -39,11 +39,11 @@ class DslRuntimeMapperTest {
 
     ErrorResponse response = mapper.toErrorResponse(ctx);
 
-    assertThat(response.code()).isEqualTo("ENTITY_NOT_FOUND");
-    assertThat(response.message()).isEqualTo("missing");
-    assertThat(response.entityName()).isEqualTo("OrderFlow");
-    assertThat(response.runId()).isEqualTo("run-7");
-    assertThat(response.exceptionId()).startsWith("run-7:ex:");
+    assertThat(response.getCode()).isEqualTo("ENTITY_NOT_FOUND");
+    assertThat(response.getMessage()).isEqualTo("missing");
+    assertThat(response.getEntityName()).isEqualTo("OrderFlow");
+    assertThat(response.getRunId()).isEqualTo("run-7");
+    assertThat(response.getExceptionId()).startsWith("run-7:ex:");
   }
 
   @Test
@@ -81,11 +81,11 @@ class DslRuntimeMapperTest {
     ErrorResponseContext ctx = mapper.fromPreviewReport("Ping", "run-3", report);
     ErrorResponse response = mapper.toErrorResponse(ctx);
 
-    assertThat(response.code()).isEqualTo("UNKNOWN_ERROR");
-    assertThat(response.message()).isEqualTo("boom");
-    assertThat(response.entityName()).isEqualTo("Ping");
-    assertThat(response.runId()).isEqualTo("run-3");
-    assertThat(response.exceptionId()).startsWith("run-3:ex:");
+    assertThat(response.getCode()).isEqualTo("UNKNOWN_ERROR");
+    assertThat(response.getMessage()).isEqualTo("boom");
+    assertThat(response.getEntityName()).isEqualTo("Ping");
+    assertThat(response.getRunId()).isEqualTo("run-3");
+    assertThat(response.getExceptionId()).startsWith("run-3:ex:");
   }
 
   @Test

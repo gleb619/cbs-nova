@@ -1,5 +1,6 @@
 package cbs.nova.starter.persistence;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.entity.DslAuditEntity;
 import java.sql.Timestamp;
 import java.util.List;
@@ -25,7 +26,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 @RequiredArgsConstructor
 public class DslAuditRepository {
 
-  private static final String COLUMNS = "id, occurred_at, actor, action, target, correlation_id, outcome, details_json";
+  private static final String COLUMNS = StarterConstants.DSL_AUDIT_COLUMNS;
 
   private static final RowMapper<DslAuditEntity> ROW_MAPPER = (rs, rowNum) -> new DslAuditEntity(
           rs.getLong("id"),

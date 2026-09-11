@@ -1,6 +1,7 @@
 package cbs.nova.starter.service;
 
 import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import lombok.RequiredArgsConstructor;
@@ -21,10 +22,10 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class DslDefinitionHistoryService {
 
-  private static final String HISTORY_DIR = ".workbench/history";
-  private static final String PUBLISHED_DIR = ".workbench/published";
-  private static final String TIMESTAMP_PATTERN = "^[0-9]+$";
-  private static final String JSON_SUFFIX = ".json";
+  private static final String HISTORY_DIR = StarterConstants.WORKBENCH_HISTORY_DIR;
+  private static final String PUBLISHED_DIR = StarterConstants.WORKBENCH_PUBLISHED_DIR;
+  private static final String TIMESTAMP_PATTERN = StarterConstants.WORKBENCH_HISTORY_TIMESTAMP_PATTERN;
+  private static final String JSON_SUFFIX = StarterConstants.JSON_SUFFIX;
 
   private final DslProperties dslProperties;
   private final ObjectMapper objectMapper;

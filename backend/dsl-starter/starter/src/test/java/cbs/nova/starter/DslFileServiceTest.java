@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import cbs.nova.starter.builder.DslBuilderClient;
+import cbs.nova.starter.config.DslFileBufferConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.exception.BuilderApiException;
 import cbs.nova.starter.repository.DslFileRepository;
@@ -48,7 +49,7 @@ class DslFileServiceTest {
 
     DslWorkspaceResolver resolver = new DefaultDslWorkspaceResolver(sourceRoot, workspaceRoot);
     DslFileRepository repository = new DslFileRepository();
-    DslFileBuffer buffer = new DslFileBuffer();
+    DslFileBuffer buffer = new DslFileBuffer(DslFileBufferConfiguration.pendingCache(properties));
     DslFileBulkhead bulkhead = new DslFileBulkhead(new Semaphore(1), new Semaphore(1), 5L);
     service = new DslFileService(properties, resolver, repository, buffer, bulkhead, null);
   }
@@ -163,7 +164,8 @@ class DslFileServiceTest {
     @SuppressWarnings("unchecked")
     ObjectProvider<DslBuilderClient> provider = mock(ObjectProvider.class);
     when(provider.getIfAvailable()).thenReturn(builder);
-    return new DslFileService(properties, resolver, new DslFileRepository(), new DslFileBuffer(),
+    return new DslFileService(properties, resolver, new DslFileRepository(),
+            new DslFileBuffer(DslFileBufferConfiguration.pendingCache(properties)),
             new DslFileBulkhead(new Semaphore(1), new Semaphore(1), 5L), provider);
   }
 

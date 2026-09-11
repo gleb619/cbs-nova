@@ -3,14 +3,13 @@ package cbs.nova.starter.helper;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
-import cbs.nova.starter.annotation.SpringHelper;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
 import cbs.nova.starter.helper.model.HttpCallContext;
 import cbs.nova.starter.helper.model.HttpCallIn;
 import cbs.nova.starter.helper.model.HttpCallIn.RedirectPolicy;
 import cbs.nova.starter.helper.model.HttpCallOut;
-import cbs.nova.starter.web.RequestIdFilter;
+import cbs.nova.starter.core.StarterConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.MDC;
@@ -28,13 +27,14 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Slf4j
-@SpringHelper(name = "httpCall")
+
 public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
 
   private final HttpClient client;
   private final CbsNovaLoggingProperties loggingProperties;
   private final Map<RedirectPolicy, HttpClient> clientsByPolicy;
 
+  // TODO: user want to move config part to a spring config class
   public HttpCallHelper(HttpClient client, CbsNovaLoggingProperties loggingProperties) {
     this.client = client;
     this.loggingProperties = loggingProperties;
@@ -117,14 +117,14 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
         continue;
       }
       builder.header(entry.getKey(), entry.getValue());
-      if (RequestIdFilter.REQUEST_ID_HEADER.equalsIgnoreCase(entry.getKey())) {
+      if (StarterConstants.REQUEST_ID_HEADER.equalsIgnoreCase(entry.getKey())) {
         requestIdSet = true;
       }
     }
 
-    String mdcRequestId = MDC.get(RequestIdFilter.REQUEST_ID_MDC_KEY);
+    String mdcRequestId = MDC.get(StarterConstants.REQUEST_ID_MDC_KEY);
     if (!requestIdSet && mdcRequestId != null && !mdcRequestId.isBlank()) {
-      builder.header(RequestIdFilter.REQUEST_ID_HEADER, mdcRequestId);
+      builder.header(StarterConstants.REQUEST_ID_HEADER, mdcRequestId);
     }
 
     HttpRequest.BodyPublisher publisher = call.body() == null

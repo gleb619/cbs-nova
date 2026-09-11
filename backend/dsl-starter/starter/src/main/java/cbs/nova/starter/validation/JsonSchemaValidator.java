@@ -1,5 +1,6 @@
 package cbs.nova.starter.validation;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.ValidationError;
 
 import java.util.ArrayList;
@@ -17,7 +18,7 @@ import java.util.Map;
  */
 public final class JsonSchemaValidator {
 
-  private static final String ROOT_PATH = "$";
+  private static final String ROOT_PATH = StarterConstants.JSON_POINTER_ROOT;
 
   private JsonSchemaValidator() {
   }

@@ -6,6 +6,7 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.helper.ArithmeticHelper;
 import cbs.nova.starter.helper.Base64Helper;
 import cbs.nova.starter.helper.CompensationTrackerHelper;
@@ -34,6 +35,7 @@ import cbs.nova.starter.helper.UrlDecodeHelper;
 import cbs.nova.starter.helper.UuidV7Helper;
 import cbs.nova.starter.helper.model.FileLatchIn;
 import cbs.nova.starter.helper.model.FileLatchOut;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.temporal.workflow.Workflow;
 import java.lang.reflect.InvocationTargetException;
 import java.net.http.HttpClient;
@@ -52,7 +54,10 @@ public class HelperInstanceResolverConfig {
         return new ConditionalFailingHelper();
       }
       if (helperClass == CompensationTrackerHelper.class) {
-        return new CompensationTrackerHelper();
+        return new CompensationTrackerHelper(Caffeine.newBuilder()
+                .expireAfterWrite(StarterConstants.COMPENSATION_TRACKER_TTL)
+                .maximumSize(StarterConstants.COMPENSATION_TRACKER_MAX_SIZE)
+                .build());
       }
       if (helperClass == CurrentTimestampHelper.class) {
         return new CurrentTimestampHelper();
@@ -88,7 +93,10 @@ public class HelperInstanceResolverConfig {
         return new ArithmeticHelper();
       }
       if (helperClass == UnreliableApiHelper.class) {
-        return new UnreliableApiHelper();
+        return new UnreliableApiHelper(Caffeine.newBuilder()
+                .expireAfterWrite(StarterConstants.UNRELIABLE_API_TTL)
+                .maximumSize(StarterConstants.UNRELIABLE_API_MAX_SIZE)
+                .build());
       }
       if (helperClass == Base64Helper.class) {
         return new Base64Helper();

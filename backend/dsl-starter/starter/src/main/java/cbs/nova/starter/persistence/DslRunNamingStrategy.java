@@ -1,6 +1,7 @@
 package cbs.nova.starter.persistence;
 
 import cbs.nova.starter.config.properties.DslRunPersistenceProperties;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.entity.DslRunEntity;
 import org.springframework.data.relational.core.mapping.NamingStrategy;
 
@@ -9,7 +10,7 @@ import org.springframework.data.relational.core.mapping.NamingStrategy;
  */
 public class DslRunNamingStrategy implements NamingStrategy {
 
-  private static final String DEFAULT_TABLE = "dsl_runs";
+  private static final String DEFAULT_TABLE = StarterConstants.DSL_RUNS_DEFAULT_TABLE;
 
   private final DslRunPersistenceProperties properties;
 

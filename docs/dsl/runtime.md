@@ -414,7 +414,7 @@ The BFF exposes the same routes under `/api/v1/dsl/definitions/export` and
 
 ## Helper and Spring integration
 
-Helpers declared with `@Helper` or `@SpringHelper` are wired into the runtime through generated SPI resolvers and
+Helpers declared with `@Helper`, `@SpringHelper`, or `@HelperBean` are wired into the runtime through generated SPI resolvers and
 Spring bean registration rather than reflection.
 
 ### Annotations
@@ -422,6 +422,10 @@ Spring bean registration rather than reflection.
 - `@Helper(name = "...")` — generic helper processed by the `misc-codegen` annotation processor.
 - `@SpringHelper(name = "...")` — Spring-aware meta-annotation of `@Helper`. It forces `componentModel = LAZY` and
   `creationStrategy = STANDARD`, so the helper is registered lazily and the instance is resolved from Spring.
+- `@HelperBean("...")` — method-level Spring factory meta-annotation of `@Bean`. Use it on a `@Configuration` method
+  that returns an `Executable` helper. The method behaves exactly like a regular `@Bean` (autowiring, lifecycle,
+  qualifiers, etc.) and the resulting singleton is also registered in `GlobalManager` under the given name. Helpers
+  registered this way are re-registered automatically after a DSL reload so they survive `GlobalManager` replacement.
 
 ### Code generation (`misc-codegen`)
 

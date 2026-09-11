@@ -3,15 +3,18 @@ package cbs.nova.dsl.builder.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import cbs.nova.dsl.builder.config.BuilderServiceConfiguration;
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
 import cbs.nova.dsl.builder.model.DslFileModels.FileContentRequest;
 import cbs.nova.dsl.builder.model.DslFileModels.FileContentResponse;
 import cbs.nova.dsl.builder.repository.FileRepository;
+import com.github.benmanes.caffeine.cache.Ticker;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -46,8 +49,9 @@ class FileServiceTest {
             new DslBuilderProperties.Files(0, 100, 32, 8, 5L),
             null,
             null);
-    service = new FileService(properties, new FileRepository(), new FileBuffer(properties),
-            new FileBulkhead(properties));
+    service = new FileService(properties, new FileRepository(),
+            new FileBuffer(BuilderServiceConfiguration.pendingCache(properties, Ticker.systemTicker())),
+            new FileBulkhead(new Semaphore(1), new Semaphore(1), 5L));
   }
 
   @Test

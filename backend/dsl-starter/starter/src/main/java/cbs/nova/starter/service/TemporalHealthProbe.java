@@ -7,10 +7,10 @@ import java.time.Duration;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -21,24 +21,15 @@ import org.jspecify.annotations.Nullable;
  * short timeout. Returns a {@link TemporalHealth} value object describing the outcome; never throws
  * out of {@link #probe()}.
  */
+@RequiredArgsConstructor
 public class TemporalHealthProbe {
 
   private final WorkflowServiceStubs stubs;
   private final Duration timeout;
   private final ExecutorService executor;
 
-  public TemporalHealthProbe(WorkflowServiceStubs stubs, Duration timeout) {
-    this(stubs, timeout, Executors.newSingleThreadExecutor(r -> {
-      Thread t = new Thread(r, "cbs-nova-temporal-health-probe");
-      t.setDaemon(true);
-      return t;
-    }));
-  }
-
-  TemporalHealthProbe(WorkflowServiceStubs stubs, Duration timeout, ExecutorService executor) {
-    this.stubs = stubs;
-    this.timeout = timeout;
-    this.executor = executor;
+  public void shutdown() {
+    executor.shutdownNow();
   }
 
   public TemporalHealth probe() {

@@ -1,5 +1,6 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.starter.core.StarterConstants;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,7 +9,7 @@ import java.util.List;
  */
 class CsvSupport {
 
-  private static final char QUOTE = '"';
+  private static final char QUOTE = StarterConstants.CSV_QUOTE;
 
   private CsvSupport() {
   }

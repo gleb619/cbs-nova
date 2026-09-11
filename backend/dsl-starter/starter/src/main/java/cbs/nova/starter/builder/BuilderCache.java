@@ -1,5 +1,6 @@
 package cbs.nova.starter.builder;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.DslFileModels.FileContentResponse;
 import cbs.nova.starter.model.DslFileModels.FileEntry;
 import cbs.nova.starter.model.PageResponse;
@@ -19,17 +20,17 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class BuilderCache {
 
-  private static final String HISTORY_PREFIX = "history:";
-  private static final String HISTORY_ENTRY_PREFIX = "historyEntry:";
-  private static final String HISTORY_DIFF_PREFIX = "historyDiff:";
-  private static final String DRAFT_PREFIX = "draft:";
-  private static final String DRAFTS_PAGE_PREFIX = "draftsPage:";
-  private static final String EXPORT_PREFIX = "export:";
-  private static final String FILES_PREFIX = "files:";
-  private static final String FILE_PREFIX = "file:";
-  private static final String FILE_EXISTS_PREFIX = "fileExists:";
-  private static final String PENDING_COUNT_KEY = "pendingCount";
-  private static final String VCS_STATUS_KEY = "vcsStatus";
+  private static final String HISTORY_PREFIX = StarterConstants.CACHE_HISTORY_PREFIX;
+  private static final String HISTORY_ENTRY_PREFIX = StarterConstants.CACHE_HISTORY_ENTRY_PREFIX;
+  private static final String HISTORY_DIFF_PREFIX = StarterConstants.CACHE_HISTORY_DIFF_PREFIX;
+  private static final String DRAFT_PREFIX = StarterConstants.CACHE_DRAFT_PREFIX;
+  private static final String DRAFTS_PAGE_PREFIX = StarterConstants.CACHE_DRAFTS_PAGE_PREFIX;
+  private static final String EXPORT_PREFIX = StarterConstants.CACHE_EXPORT_PREFIX;
+  private static final String FILES_PREFIX = StarterConstants.CACHE_FILES_PREFIX;
+  private static final String FILE_PREFIX = StarterConstants.CACHE_FILE_PREFIX;
+  private static final String FILE_EXISTS_PREFIX = StarterConstants.CACHE_FILE_EXISTS_PREFIX;
+  private static final String PENDING_COUNT_KEY = StarterConstants.CACHE_PENDING_COUNT_KEY;
+  private static final String VCS_STATUS_KEY = StarterConstants.CACHE_VCS_STATUS_KEY;
 
   private final Cache<String, Object> cache;
 

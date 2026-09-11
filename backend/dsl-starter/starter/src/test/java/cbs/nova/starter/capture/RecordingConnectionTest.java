@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -262,7 +263,7 @@ class RecordingConnectionTest {
     wrapped.executeQuery();
 
     verify(externalCallRecorder).record(ExternalCallRecorder.TYPE_DATABASE,
-            RecordingConnection.FALLBACK_TARGET, "SELECT", SELECT_SQL);
+            StarterConstants.JDBC_FALLBACK_TARGET, "SELECT", SELECT_SQL);
     verifyNoMoreInteractions(externalCallRecorder);
   }
 }

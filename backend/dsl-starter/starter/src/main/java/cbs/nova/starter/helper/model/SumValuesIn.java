@@ -6,10 +6,6 @@ import java.util.List;
 
 public record SumValuesIn(List<Number> values, @Nullable String operation) {
 
-  public SumValuesIn(List<Number> values) {
-    this(values, Operation.ADD.name());
-  }
-
   public Operation effectiveOperation() {
     if (operation == null || operation.isBlank()) {
       return Operation.ADD;

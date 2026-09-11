@@ -4,6 +4,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
 import cbs.nova.starter.annotation.SpringHelper;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.helper.model.MetricIn;
 import cbs.nova.starter.helper.model.MetricOut;
 import io.micrometer.core.instrument.Counter;
@@ -54,7 +55,7 @@ import org.springframework.beans.factory.ObjectProvider;
 @SpringHelper(name = "metric")
 public class MetricHelper implements Executable<MetricIn, MetricOut> {
 
-  private static final Set<String> TYPES = Set.of("counter", "gauge", "timer", "summary");
+  private static final Set<String> TYPES = StarterConstants.METRIC_TYPES;
 
   private final @Nullable MeterRegistry registry;
   private final Map<String, AtomicReference<Double>> gaugeHolders = new ConcurrentHashMap<>();

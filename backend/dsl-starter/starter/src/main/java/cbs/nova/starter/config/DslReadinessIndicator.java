@@ -1,5 +1,7 @@
 package cbs.nova.starter.config;
 
+import lombok.AllArgsConstructor;
+
 import cbs.nova.starter.config.properties.CbsHealthProperties;
 import cbs.nova.starter.service.TemporalHealthProbe;
 import org.jspecify.annotations.Nullable;
@@ -21,20 +23,11 @@ import org.springframework.boot.health.contributor.HealthIndicator;
  * Temporal, the database, or the DSL registry, so an external dependency outage does not cause
  * orchestrators to restart the pod.
  */
+@AllArgsConstructor
 public class DslReadinessIndicator implements HealthIndicator {
 
   private final @Nullable ObjectProvider<TemporalHealthProbe> probeProvider;
   private final @Nullable ObjectProvider<CbsHealthProperties> propsProvider;
-
-  public DslReadinessIndicator() {
-    this(null, null);
-  }
-
-  public DslReadinessIndicator(@Nullable ObjectProvider<TemporalHealthProbe> probeProvider,
-          @Nullable ObjectProvider<CbsHealthProperties> propsProvider) {
-    this.probeProvider = probeProvider;
-    this.propsProvider = propsProvider;
-  }
 
   @Override
   public Health health() {

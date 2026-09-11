@@ -4,6 +4,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.annotation.Helper;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.helper.model.HttpAuthIn;
 import cbs.nova.starter.helper.model.HttpAuthOut;
 import java.nio.charset.StandardCharsets;
@@ -41,7 +42,7 @@ import org.jspecify.annotations.NonNull;
 @Helper(name = "httpAuth")
 public class HttpAuthHelper implements Executable<HttpAuthIn, HttpAuthOut> {
 
-  private static final String DEFAULT_API_KEY_HEADER = "X-Api-Key";
+  private static final String DEFAULT_API_KEY_HEADER = StarterConstants.API_KEY_HEADER;
 
   @Override
   public @NonNull Result<HttpAuthOut> execute(@NonNull Context<HttpAuthIn> ctx) {

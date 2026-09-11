@@ -8,6 +8,7 @@ import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.transaction.TransactionExecution;
 import cbs.nova.starter.config.router.DslExecutionsRouterConfiguration;
 import cbs.nova.starter.converter.RequestQueryConverter;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ExecutionDto;
 import cbs.nova.starter.model.PageResponse;
@@ -29,9 +30,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Comparator;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -56,24 +58,25 @@ import java.util.Map;
  * {@code @RestController}, following the same pattern as DSL reload and introspection.
  */
 @Component
+@RequiredArgsConstructor
 @Tag(name = "DSL Executions", description = "Inspect DSL execution runs")
 public class DslExecutionsHandler {
 
-  static final int CSV_EXPORT_MAX_ROWS = 50_000;
-  private static final String CSV_FILENAME_PATTERN = "yyyyMMdd-HHmmss";
+  public static final int CSV_EXPORT_MAX_ROWS = StarterConstants.CSV_EXPORT_MAX_ROWS;
+  private static final String CSV_FILENAME_PATTERN = StarterConstants.CSV_FILENAME_PATTERN;
   private static final DateTimeFormatter CSV_FILENAME_FORMATTER = DateTimeFormatter
           .ofPattern(CSV_FILENAME_PATTERN);
-  private static final int STATS_WINDOW_HOURS = 24;
-  private static final int DEFAULT_TOP_PROCESSES = 5;
-  private static final int MAX_TOP_PROCESSES = 20;
-  private static final int TIMESERIES_DEFAULT_WINDOW_HOURS = 24;
-  private static final int TIMESERIES_DEFAULT_BUCKET_MINUTES = 60;
-  private static final int TIMESERIES_MIN_WINDOW_HOURS = 1;
-  private static final int TIMESERIES_MAX_WINDOW_HOURS = 24 * 30;
-  private static final int TIMESERIES_MIN_BUCKET_MINUTES = 1;
-  private static final int TIMESERIES_MAX_BUCKET_MINUTES = 60 * 24;
+  private static final int STATS_WINDOW_HOURS = StarterConstants.STATS_WINDOW_HOURS;
+  private static final int DEFAULT_TOP_PROCESSES = StarterConstants.DEFAULT_TOP_PROCESSES;
+  private static final int MAX_TOP_PROCESSES = StarterConstants.MAX_TOP_PROCESSES;
+  private static final int TIMESERIES_DEFAULT_WINDOW_HOURS = StarterConstants.TIMESERIES_DEFAULT_WINDOW_HOURS;
+  private static final int TIMESERIES_DEFAULT_BUCKET_MINUTES = StarterConstants.TIMESERIES_DEFAULT_BUCKET_MINUTES;
+  private static final int TIMESERIES_MIN_WINDOW_HOURS = StarterConstants.TIMESERIES_MIN_WINDOW_HOURS;
+  private static final int TIMESERIES_MAX_WINDOW_HOURS = StarterConstants.TIMESERIES_MAX_WINDOW_HOURS;
+  private static final int TIMESERIES_MIN_BUCKET_MINUTES = StarterConstants.TIMESERIES_MIN_BUCKET_MINUTES;
+  private static final int TIMESERIES_MAX_BUCKET_MINUTES = StarterConstants.TIMESERIES_MAX_BUCKET_MINUTES;
 
-  static final String ACTION_RUN_CANCEL = "RUN_CANCEL";
+  public static final String ACTION_RUN_CANCEL = StarterConstants.ACTION_RUN_CANCEL;
 
   private final DslRunRepository runRepository;
   private final ObjectMapper objectMapper;
@@ -83,39 +86,12 @@ public class DslExecutionsHandler {
   private final RequestQueryConverter queryConverter;
   private final ObjectProvider<DslAuditService> auditServiceProvider;
 
-  public DslExecutionsHandler(DslRunRepository runRepository,
-          ObjectMapper objectMapper,
-          DslRunCancellationService cancellationService,
-          @Nullable DslRunStatsRepository statsRepository,
-          TransactionExecutionRepository transactionExecutionRepository,
-          RequestQueryConverter queryConverter) {
-    this(runRepository, objectMapper, cancellationService, statsRepository,
-            transactionExecutionRepository, queryConverter, null);
-  }
-
-  @Autowired
-  public DslExecutionsHandler(DslRunRepository runRepository,
-          ObjectMapper objectMapper,
-          DslRunCancellationService cancellationService,
-          @Nullable DslRunStatsRepository statsRepository,
-          TransactionExecutionRepository transactionExecutionRepository,
-          RequestQueryConverter queryConverter,
-          ObjectProvider<DslAuditService> auditServiceProvider) {
-    this.runRepository = runRepository;
-    this.objectMapper = objectMapper;
-    this.cancellationService = cancellationService;
-    this.statsRepository = statsRepository;
-    this.transactionExecutionRepository = transactionExecutionRepository;
-    this.queryConverter = queryConverter;
-    this.auditServiceProvider = auditServiceProvider;
-  }
-
   @Operation(summary = "List DSL execution runs")
   @ApiResponse(responseCode = "200", description = "Matching execution runs", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))
   public ServerResponse list(ServerRequest request) throws IOException {
     ExecutionListQuery filters = queryConverter.toExecutionListQuery(request);
-    int limit = Pagination.intParam(request, "limit", Pagination.DEFAULT_LIMIT);
-    int offset = Pagination.intParam(request, "offset", Pagination.DEFAULT_OFFSET);
+    int limit = Pagination.intParam(request, "limit", StarterConstants.DEFAULT_LIMIT);
+    int offset = Pagination.intParam(request, "offset", StarterConstants.DEFAULT_OFFSET);
     int pageSize = Pagination.clampLimit(limit);
     int skip = Pagination.clampOffset(offset);
     DslRunSearchResult result = runRepository.search(filters.processName(), filters.status(),
@@ -153,11 +129,12 @@ public class DslExecutionsHandler {
    * Aggregate statistics for the dashboard.
    *
    * <p>
-   * Unlike {@link #list}, counts are never paginated or clamped by {@code MAX_LIMIT}: when the
-   * repository can aggregate server-side ({@link DslRunStatsRepository}, the JDBC store) the
-   * numbers come from SQL {@code COUNT}/{@code GROUP BY}; otherwise the handler scans the
-   * repository's full (unpaginated) contents, which stays exact for in-memory stores. Either way
-   * the dashboard cannot miscount the way the old client-side approach did over clamped list pages.
+   * Unlike {@link #list}, counts are never paginated or clamped by
+   * {@link StarterConstants#MAX_LIMIT}: when the repository can aggregate server-side
+   * ({@link DslRunStatsRepository}, the JDBC store) the numbers come from SQL
+   * {@code COUNT}/{@code GROUP BY}; otherwise the handler scans the repository's full (unpaginated)
+   * contents, which stays exact for in-memory stores. Either way the dashboard cannot miscount the
+   * way the old client-side approach did over clamped list pages.
    *
    * <p>
    * All counters describe whatever rows currently exist — retention purges (T276) simply shrink
@@ -218,7 +195,7 @@ public class DslExecutionsHandler {
             .map(run -> ServerResponse.ok().body(ExecutionDto.fromDetail(run, objectMapper)))
             .orElse(ServerResponse.status(HttpStatus.NOT_FOUND)
                     .body(new ErrorResponse("NOT_FOUND", "Execution run not found: " + id,
-                            null, id, null)));
+                            null, id, null, null)));
   }
 
   /**
@@ -237,7 +214,7 @@ public class DslExecutionsHandler {
     if (runRepository.findByRunId(id).isEmpty()) {
       return ServerResponse.status(HttpStatus.NOT_FOUND)
               .body(new ErrorResponse("NOT_FOUND", "Execution run not found: " + id,
-                      null, id, null));
+                      null, id, null, null));
     }
     List<TransactionExecutionDto> transactions = transactionExecutionRepository.findByRunId(id)
             .stream()
@@ -287,29 +264,29 @@ public class DslExecutionsHandler {
     try {
       result = cancellationService.cancel(id);
     } catch (RuntimeException e) {
-      audit(request, id, DslAuditService.OUTCOME_FAILURE,
+      audit(request, id, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", String.valueOf(e.getMessage())));
       throw e;
     }
     return switch (result.outcome()) {
       case NOT_FOUND -> {
-        audit(request, id, DslAuditService.OUTCOME_FAILURE, Map.of("reason", "NOT_FOUND"));
+        audit(request, id, StarterConstants.OUTCOME_FAILURE, Map.of("reason", "NOT_FOUND"));
         yield ServerResponse.status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse("NOT_FOUND", "Execution run not found: " + id,
-                        null, id, null));
+                        null, id, null, null));
       }
       case NOT_CANCELLABLE -> {
-        audit(request, id, DslAuditService.OUTCOME_FAILURE,
+        audit(request, id, StarterConstants.OUTCOME_FAILURE,
                 Map.of("reason", "NOT_CANCELLABLE", "status",
                         String.valueOf(result.currentStatus())));
         yield ServerResponse.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse("CONFLICT",
                         "Execution run is not cancellable: " + id + " (status "
                                 + result.currentStatus() + ")",
-                        null, id, null));
+                        null, id, null, null));
       }
       case CANCELLED -> {
-        audit(request, id, DslAuditService.OUTCOME_SUCCESS, null);
+        audit(request, id, StarterConstants.OUTCOME_SUCCESS, null);
         yield ServerResponse.ok()
                 .body(ExecutionDto.fromDetail(requireRun(result, id), objectMapper));
       }
@@ -372,8 +349,8 @@ public class DslExecutionsHandler {
 
   /**
    * Fallback aggregation over the repository's full contents, used when the store cannot aggregate
-   * server-side. Scans every run (unlike {@link #list}, no {@code MAX_LIMIT} clamp), so the counts
-   * are exact for in-memory repositories.
+   * server-side. Scans every run (unlike {@link #list}, no {@link StarterConstants#MAX_LIMIT}
+   * clamp), so the counts are exact for in-memory repositories.
    */
   private DslRunStats scanStats(Instant windowStart, int topProcessesLimit) {
     List<DslRun> allRuns = findRuns(null);
@@ -404,8 +381,9 @@ public class DslExecutionsHandler {
 
   /**
    * Fallback bucketing when the store cannot aggregate server-side. Scans every run (no
-   * {@code MAX_LIMIT} clamp) and folds into the requested bucket width; the store-level query
-   * returns only buckets that have rows, but the handler's response factory zero-fills empties.
+   * {@link StarterConstants#MAX_LIMIT} clamp) and folds into the requested bucket width; the
+   * store-level query returns only buckets that have rows, but the handler's response factory
+   * zero-fills empties.
    */
   private List<RunTimeseriesBucket> scanTimeseries(Instant windowStart, Instant windowEnd,
           Duration bucketSize) {

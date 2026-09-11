@@ -177,7 +177,8 @@ class DslVersioningIntegrationTest {
 
     Path v2Dir = Path.of("src/integrationTest/resources/dsl-versioning-v2");
     var v2Props = DslProperties.builder().sourceDir(v2Dir.toString()).build();
-    new DslReloadHandler(v2Props, new DefinitionLoader()).reloadDefinitions();
+    new DslReloadHandler(v2Props, new DefinitionLoader(), null, null, null, null, null, null)
+            .reloadDefinitions();
 
     assertThat(GlobalManager.globalManager().findProcess("VersionProbe").orElseThrow().version())
             .as("latest registered DSL version should be v2 after reload")

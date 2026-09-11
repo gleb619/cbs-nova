@@ -1,6 +1,6 @@
 package cbs.nova.starter.preview;
 
-import cbs.nova.starter.core.StarterConstant;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.consumer.ConsumerGroupMetadata;
@@ -16,7 +16,6 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.Uuid;
 import org.apache.kafka.common.errors.ProducerFencedException;
 import org.apache.kafka.common.metrics.KafkaMetric;
-import org.jspecify.annotations.NonNull;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -27,7 +26,7 @@ import java.util.concurrent.Future;
 @RequiredArgsConstructor
 public class MessagingCallCaptureProducer<K, V> implements Producer<K, V> {
 
-  private static final String TYPE_MESSAGING = "messaging";
+  private static final String TYPE_MESSAGING = StarterConstants.TYPE_MESSAGING;
 
   private final Producer<K, V> delegate;
   private final ExternalCallRecorder externalCallRecorder;
@@ -119,12 +118,12 @@ public class MessagingCallCaptureProducer<K, V> implements Producer<K, V> {
     }
 
     Map<String, Object> payload = new HashMap<>();
-    payload.put(StarterConstant.PAYLOAD_TOPIC, record.topic());
-    payload.put(StarterConstant.PAYLOAD_KEY, record.key());
-    payload.put(StarterConstant.PAYLOAD_VALUE, record.value());
-    payload.put(StarterConstant.PAYLOAD_PARTITION, record.partition());
-    payload.put(StarterConstant.PAYLOAD_TIMESTAMP, record.timestamp());
-    payload.put(StarterConstant.PAYLOAD_HEADERS,
+    payload.put(StarterConstants.PAYLOAD_TOPIC, record.topic());
+    payload.put(StarterConstants.PAYLOAD_KEY, record.key());
+    payload.put(StarterConstants.PAYLOAD_VALUE, record.value());
+    payload.put(StarterConstants.PAYLOAD_PARTITION, record.partition());
+    payload.put(StarterConstants.PAYLOAD_TIMESTAMP, record.timestamp());
+    payload.put(StarterConstants.PAYLOAD_HEADERS,
             record.headers() != null ? record.headers().toArray().length : 0);
 
     externalCallRecorder.record(TYPE_MESSAGING, record.topic(), "send", payload);

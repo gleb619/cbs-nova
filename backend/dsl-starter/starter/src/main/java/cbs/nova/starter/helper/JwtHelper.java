@@ -4,6 +4,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.annotation.Helper;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.helper.model.JwtIn;
 import cbs.nova.starter.helper.model.JwtOut;
 import java.nio.charset.StandardCharsets;
@@ -69,8 +70,8 @@ public class JwtHelper implements Executable<JwtIn, JwtOut> {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
-  private static final String DEFAULT_ALG = "HS256";
-  private static final long DEFAULT_TTL_SECONDS = 3600L;
+  private static final String DEFAULT_ALG = StarterConstants.JWT_DEFAULT_ALG;
+  private static final long DEFAULT_TTL_SECONDS = StarterConstants.JWT_DEFAULT_TTL_SECONDS;
 
   @Override
   public @NonNull Result<JwtOut> execute(@NonNull Context<JwtIn> ctx) {

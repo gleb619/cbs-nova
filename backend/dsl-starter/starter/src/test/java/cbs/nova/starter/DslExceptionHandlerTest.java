@@ -120,7 +120,7 @@ class DslExceptionHandlerTest {
       public ResponseEntity<ErrorResponse> handle(Exception exception, WebRequest request) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new ErrorResponse("CUSTOM_CODE", "custom msg", "customEntity", "custom-run",
-                        "custom-ex"));
+                        "custom-ex", null));
       }
     };
 

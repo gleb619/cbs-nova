@@ -11,19 +11,21 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.starter.entity.DslDefinitionTestEntity;
 import cbs.nova.starter.exception.DefinitionNotFoundException;
 import cbs.nova.starter.model.DefinitionTestCase;
 import cbs.nova.starter.model.DefinitionTestCaseResult;
+import cbs.nova.starter.model.DefinitionTestCaseStatus;
 import cbs.nova.starter.model.DefinitionTestRunReport;
 import cbs.nova.starter.model.DslRequest;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.RuntimeOutcome;
 import cbs.nova.starter.persistence.DslDefinitionTestRepository;
 import java.time.Instant;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,7 +33,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tools.jackson.core.JacksonException;
-import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 class DslDefinitionTestServiceTest {
@@ -71,17 +72,16 @@ class DslDefinitionTestServiceTest {
   }
 
   @Test
-  void listMapsStoredJsonPayloadsIntoDto() throws Exception {
+  void listMapsStoredJsonPayloadsIntoDto() {
     when(repository.listForDefinition("LoanDisbursement")).thenReturn(List.of(
-            new DslDefinitionTestEntity(1L, "LoanDisbursement", "case-1",
-                    "{\"x\":1}", "{\"y\":2}", Instant.now(), Instant.now())));
+            entity("case-1", Map.of("x", 1), Map.of("y", 2), Instant.now())));
 
     List<DefinitionTestCase> cases = service.list("LoanDisbursement");
 
     assertThat(cases).hasSize(1);
     assertThat(cases.get(0).caseName()).isEqualTo("case-1");
-    assertThat(cases.get(0).input().toString()).contains("\"x\":1");
-    assertThat(cases.get(0).expectedOutput().toString()).contains("\"y\":2");
+    assertThat(cases.get(0).input()).isEqualTo(new DslRequest(Map.of("x", 1), null));
+    assertThat(cases.get(0).expectedOutput().output()).isEqualTo(Map.of("y", 2));
   }
 
   @Test
@@ -93,15 +93,16 @@ class DslDefinitionTestServiceTest {
   }
 
   @Test
-  void replaceAllPersistsRowsAndReturnsStoredSet() throws Exception {
+  void replaceAllPersistsRowsAndReturnsStoredSet() {
     when(repository.listForDefinition("LoanDisbursement")).thenReturn(List.of(
-            new DslDefinitionTestEntity(1L, "LoanDisbursement", "case-1",
-                    "{\"x\":1}", "{\"y\":2}", Instant.now(), Instant.now())));
+            entity("case-1", Map.of("x", 1), Map.of("y", 2), Instant.now())));
 
     List<DefinitionTestCase> result = service.replaceAll("LoanDisbursement", List.of(
-            new DefinitionTestCase("case-1", json("{\"x\":1}"), json("{\"y\":2}"))));
+            new DefinitionTestCase("case-1", new DslRequest(Map.of("x", 1), null),
+                    report(Map.of("y", 2)))));
 
     assertThat(result).hasSize(1);
+    assertThat(result.get(0).input()).isEqualTo(new DslRequest(Map.of("x", 1), null));
     verify(repository, times(1)).replaceAll(anyString(), any());
   }
 
@@ -116,14 +117,14 @@ class DslDefinitionTestServiceTest {
   void runExecutesEachCaseThroughPreviewAndCountsStatuses() {
     Instant now = Instant.now();
     when(repository.listForDefinition("LoanDisbursement")).thenReturn(List.of(
-            entity("pass", "{\"x\":1}", "{\"y\":2}", now),
-            entity("fail", "{\"x\":3}", "{\"y\":9}", now),
-            entity("boom", "{\"x\":4}", "{\"y\":5}", now)));
+            entity("pass", Map.of("x", 1), Map.of("y", 2), now),
+            entity("fail", Map.of("x", 3), Map.of("y", 9), now),
+            entity("boom", Map.of("x", 4), Map.of("y", 5), now)));
     when(previewService.preview(anyString(), any(DslRequest.class), any()))
-            .thenReturn(RuntimeOutcome.ok(payload("{\"y\":2}")))
-            .thenReturn(RuntimeOutcome.ok(payload("{\"y\":3}")))
+            .thenReturn(RuntimeOutcome.ok(report(Map.of("y", 2))))
+            .thenReturn(RuntimeOutcome.ok(report(Map.of("y", 3))))
             .thenReturn(RuntimeOutcome.error(new ErrorResponse("DSL_ERROR",
-                    "boom", "LoanDisbursement", null, null)));
+                    "boom", "LoanDisbursement", null, null, null)));
 
     DefinitionTestRunReport report = service.run("LoanDisbursement", null);
 
@@ -134,21 +135,43 @@ class DslDefinitionTestServiceTest {
     assertThat(report.cases()).extracting(DefinitionTestCaseResult::name)
             .containsExactly("pass", "fail", "boom");
     assertThat(report.cases()).extracting(DefinitionTestCaseResult::status)
-            .containsExactly(DefinitionTestCaseResult.STATUS_PASS,
-                    DefinitionTestCaseResult.STATUS_FAIL,
-                    DefinitionTestCaseResult.STATUS_ERROR);
+            .containsExactly(DefinitionTestCaseStatus.PASS,
+                    DefinitionTestCaseStatus.FAIL,
+                    DefinitionTestCaseStatus.ERROR);
+    assertThat(report.cases().get(0).actual().output()).isEqualTo(Map.of("y", 2));
+    assertThat(report.cases().get(2).actual()).isNull();
+    assertThat(report.cases().get(2).diagnostics().getCode()).isEqualTo("DSL_ERROR");
+    assertThat(report.cases().get(2).diagnostics().getMessage()).isEqualTo("boom");
     verify(previewService, times(3)).preview(anyString(), any(DslRequest.class), any());
+  }
+
+  @Test
+  void runMarksCaseErroredWhenPreviewCallThrows() {
+    Instant now = Instant.now();
+    when(repository.listForDefinition("LoanDisbursement")).thenReturn(List.of(
+            entity("boom", Map.of("x", 1), Map.of("y", 2), now)));
+    when(previewService.preview(anyString(), any(DslRequest.class), any()))
+            .thenThrow(new IllegalStateException("preview blew up"));
+
+    DefinitionTestRunReport report = service.run("LoanDisbursement", null);
+
+    assertThat(report.errored()).isEqualTo(1);
+    DefinitionTestCaseResult result = report.cases().get(0);
+    assertThat(result.status()).isEqualTo(DefinitionTestCaseStatus.ERROR);
+    assertThat(result.actual()).isNull();
+    assertThat(result.diagnostics().getCode()).isEqualTo("TEST_CASE_ERROR");
+    assertThat(result.diagnostics().getMessage()).isEqualTo("preview blew up");
   }
 
   @Test
   void runFiltersByCaseSubset() {
     Instant now = Instant.now();
     when(repository.listForDefinition("LoanDisbursement")).thenReturn(List.of(
-            entity("a", "{}", "{}", now),
-            entity("b", "{}", "{}", now),
-            entity("c", "{}", "{}", now)));
+            entity("a", Map.of(), Map.of(), now),
+            entity("b", Map.of(), Map.of(), now),
+            entity("c", Map.of(), Map.of(), now)));
     when(previewService.preview(anyString(), any(DslRequest.class), any()))
-            .thenReturn(RuntimeOutcome.ok(payload("{}")));
+            .thenReturn(RuntimeOutcome.ok(report(Map.of())));
 
     DefinitionTestRunReport report = service.run("LoanDisbursement",
             Set.of("a", "c", "missing"));
@@ -163,9 +186,9 @@ class DslDefinitionTestServiceTest {
   void runNeverTouchesDslRunsTableBecauseItUsesPreviewOnly() {
     Instant now = Instant.now();
     when(repository.listForDefinition("LoanDisbursement")).thenReturn(List.of(
-            entity("a", "{}", "{}", now)));
+            entity("a", Map.of(), Map.of(), now)));
     when(previewService.preview(anyString(), any(DslRequest.class), any()))
-            .thenReturn(RuntimeOutcome.ok(payload("{}")));
+            .thenReturn(RuntimeOutcome.ok(report(Map.of())));
 
     service.run("LoanDisbursement", null);
 
@@ -180,23 +203,21 @@ class DslDefinitionTestServiceTest {
     verify(previewService, never()).preview(anyString(), any(DslRequest.class), any());
   }
 
-  private static DslDefinitionTestEntity entity(String name, String inputJson,
-          String expectedJson, Instant now) {
+  private static DslDefinitionTestEntity entity(String name, Object inputBody,
+          Object expectedOutput, Instant now) {
     return new DslDefinitionTestEntity(null, "LoanDisbursement", name,
-            inputJson, expectedJson, now, now);
+            writeJson(new DslRequest(inputBody, null)), writeJson(report(expectedOutput)), now,
+            now);
   }
 
-  private static Map<String, Object> payload(String json) {
-    try {
-      return new LinkedHashMap<>(new ObjectMapper().readValue(json, Map.class));
-    } catch (JacksonException e) {
-      throw new IllegalArgumentException(e);
-    }
+  private static PreviewReport report(Object output) {
+    return new PreviewReport("LoanDisbursement", ExecutionMode.PREVIEW, true, output,
+            List.of(), List.of(), Map.of(), null, List.of(), null, null);
   }
 
-  private JsonNode json(String text) {
+  private static String writeJson(Object value) {
     try {
-      return objectMapper.readTree(text);
+      return new ObjectMapper().writeValueAsString(value);
     } catch (JacksonException e) {
       throw new IllegalArgumentException(e);
     }

@@ -3,21 +3,22 @@ package cbs.nova.starter.service;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.events.DomainEvent;
 import cbs.nova.starter.sse.ExecutionStatusEventPublisher;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowNotFoundException;
 import io.temporal.client.WorkflowStub;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.support.TransactionTemplate;
-
-import java.time.Clock;
-import java.time.Instant;
 
 /**
  * User-initiated cancellation of a RUNNING DSL process run.
@@ -37,12 +38,8 @@ import java.time.Instant;
  * answer 409 for that race.
  */
 @Slf4j
+@RequiredArgsConstructor
 public class DslRunCancellationService {
-
-  /** Recorded in {@code dsl_run.error} so the reason a run ended is self-describing. */
-  public static final String CANCELLED_REASON = "Cancelled by user";
-
-  private static final String EMPTY_OUTPUT_JSON = "{}";
 
   private final WorkflowClient workflowClient;
   private final DslRunRepository runRepository;
@@ -51,48 +48,6 @@ public class DslRunCancellationService {
   private final ObjectProvider<DomainEventPublisher> eventPublisherProvider;
   private final ObjectProvider<TransactionTemplate> transactionTemplateProvider;
   private @Nullable ExecutionStatusEventPublisher statusPublisher;
-
-  public DslRunCancellationService(
-          @NonNull WorkflowClient workflowClient,
-          @NonNull DslRunRepository runRepository) {
-    this(workflowClient, runRepository, Clock.systemUTC(), null,
-            EmptyObjectProvider.of(DomainEventPublisher.class),
-            EmptyObjectProvider.of(TransactionTemplate.class));
-  }
-
-  public DslRunCancellationService(
-          @NonNull WorkflowClient workflowClient,
-          @NonNull DslRunRepository runRepository,
-          @NonNull Clock clock) {
-    this(workflowClient, runRepository, clock, null,
-            EmptyObjectProvider.of(DomainEventPublisher.class),
-            EmptyObjectProvider.of(TransactionTemplate.class));
-  }
-
-  public DslRunCancellationService(
-          @NonNull WorkflowClient workflowClient,
-          @NonNull DslRunRepository runRepository,
-          @NonNull Clock clock,
-          @Nullable TemporalDslProcessService metricsRecorder) {
-    this(workflowClient, runRepository, clock, metricsRecorder,
-            EmptyObjectProvider.of(DomainEventPublisher.class),
-            EmptyObjectProvider.of(TransactionTemplate.class));
-  }
-
-  public DslRunCancellationService(
-          @NonNull WorkflowClient workflowClient,
-          @NonNull DslRunRepository runRepository,
-          @NonNull Clock clock,
-          @Nullable TemporalDslProcessService metricsRecorder,
-          @NonNull ObjectProvider<DomainEventPublisher> eventPublisherProvider,
-          @NonNull ObjectProvider<TransactionTemplate> transactionTemplateProvider) {
-    this.workflowClient = workflowClient;
-    this.runRepository = runRepository;
-    this.clock = clock;
-    this.metricsRecorder = metricsRecorder;
-    this.eventPublisherProvider = eventPublisherProvider;
-    this.transactionTemplateProvider = transactionTemplateProvider;
-  }
 
   public enum Outcome {
     CANCELLED, NOT_FOUND, NOT_CANCELLABLE
@@ -125,8 +80,8 @@ public class DslRunCancellationService {
     int affected = runRepository.updateFinishedIfRunning(
             runId,
             DslRunStatus.CANCELLED.name(),
-            EMPTY_OUTPUT_JSON,
-            CANCELLED_REASON,
+            StarterConstants.EMPTY_OUTPUT_JSON,
+            StarterConstants.CANCELLED_REASON,
             finishedAt,
             null);
 
@@ -145,7 +100,7 @@ public class DslRunCancellationService {
     // (best-effort; see the loop note in the plan file).
     DomainEvent.RunCancelled cancelledEvent = new DomainEvent.RunCancelled(
             runId, run.processName(), DslRunStatus.CANCELLED,
-            CANCELLED_REASON, run.startedAt(), finishedAt,
+            StarterConstants.CANCELLED_REASON, run.startedAt(), finishedAt,
             finishedAt, run.correlationId());
     publishEvent(cancelledEvent);
     publishStatusChanged(runId, DslRunStatus.CANCELLED.name());

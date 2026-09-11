@@ -20,9 +20,11 @@ import cbs.nova.starter.exception.DefinitionNotFoundException;
 import cbs.nova.starter.exception.ScheduleConflictException;
 import cbs.nova.starter.model.ScheduleModels.CreateScheduleResponse;
 import cbs.nova.starter.model.ScheduleModels.ScheduleSummary;
+import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslScheduleService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
@@ -39,9 +41,13 @@ class DslScheduleResourceTest {
   private final ObjectMapper objectMapper = new ObjectMapper();
   private MockMvc mockMvc;
 
+  private ObjectProvider<DslAuditService> noAuditProvider() {
+    return () -> null;
+  }
+
   @BeforeEach
   void setUp() {
-    DslScheduleHandler handler = new DslScheduleHandler(service, objectMapper);
+    DslScheduleHandler handler = new DslScheduleHandler(service, objectMapper, noAuditProvider());
     DslScheduleRouterConfiguration router = new DslScheduleRouterConfiguration();
 
     AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();

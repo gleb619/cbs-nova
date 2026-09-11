@@ -15,13 +15,17 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cbs.nova.dsl.ExecutionMode;
+import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.starter.AuditTestSupport;
 import cbs.nova.starter.config.router.DslDefinitionTestRouterConfiguration;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.exception.DefinitionNotFoundException;
 import cbs.nova.starter.model.DefinitionTestCase;
 import cbs.nova.starter.model.DefinitionTestCaseResult;
+import cbs.nova.starter.model.DefinitionTestCaseStatus;
 import cbs.nova.starter.model.DefinitionTestRunReport;
+import cbs.nova.starter.model.DslRequest;
 import cbs.nova.starter.service.DslDefinitionTestService;
 import java.util.List;
 import java.util.Map;
@@ -34,8 +38,6 @@ import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver;
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -90,15 +92,15 @@ class DslDefinitionTestHandlerTest {
   @Test
   void listReturnsCasesWithCaseNameInputExpectedOutput() throws Exception {
     when(service.list("LoanDisbursement")).thenReturn(List.of(
-            new DefinitionTestCase("happy", parse("{\"x\":1}"), parse("{\"y\":2}")),
-            new DefinitionTestCase("edge", parse("{\"x\":3}"), parse("{\"y\":4}"))));
+            new DefinitionTestCase("happy", request(Map.of("x", 1)), report(Map.of("y", 2))),
+            new DefinitionTestCase("edge", request(Map.of("x", 3)), report(Map.of("y", 4)))));
 
     mockMvc.perform(get("/api/dsl/definitions/LoanDisbursement/tests"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(2))
             .andExpect(jsonPath("$[0].caseName").value("happy"))
-            .andExpect(jsonPath("$[0].input.x").value(1))
-            .andExpect(jsonPath("$[0].expectedOutput.y").value(2))
+            .andExpect(jsonPath("$[0].input.body.x").value(1))
+            .andExpect(jsonPath("$[0].expectedOutput.output.y").value(2))
             .andExpect(jsonPath("$[1].caseName").value("edge"));
   }
 
@@ -115,16 +117,30 @@ class DslDefinitionTestHandlerTest {
 
   @Test
   void putReplacesWholeCaseSetAndReturnsStoredSet() throws Exception {
-    List<Map<String, Object>> body = List.of(
-            Map.of("caseName", "happy",
-                    "input", Map.of("x", 1),
-                    "expectedOutput", Map.of("y", 2)));
+    String body = """
+            [{
+              "caseName": "happy",
+              "input": { "body": { "x": 1 }, "metadata": {} },
+              "expectedOutput": {
+                "name": "LoanDisbursement",
+                "mode": "PREVIEW",
+                "success": true,
+                "output": { "y": 2 },
+                "executionTrace": [],
+                "externalCalls": [],
+                "callCounts": {},
+                "dryRunLogs": [],
+                "errors": null,
+                "metrics": null,
+                "astTree": null
+              }
+            }]""";
     when(service.replaceAll(anyString(), any())).thenReturn(List.of(
-            new DefinitionTestCase("happy", parse("{\"x\":1}"), parse("{\"y\":2}"))));
+            new DefinitionTestCase("happy", request(Map.of("x", 1)), report(Map.of("y", 2)))));
 
     mockMvc.perform(put("/api/dsl/definitions/LoanDisbursement/tests")
             .contentType(MediaType.APPLICATION_JSON)
-            .content(jackson3.writeValueAsString(body)))
+            .content(body))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(1))
             .andExpect(jsonPath("$[0].caseName").value("happy"));
@@ -133,10 +149,10 @@ class DslDefinitionTestHandlerTest {
   @Test
   void runReturnsReportShapeWithCasesAndSummary() throws Exception {
     DefinitionTestRunReport report = new DefinitionTestRunReport(2, 1, 1, 0, List.of(
-            new DefinitionTestCaseResult("pass", DefinitionTestCaseResult.STATUS_PASS,
-                    parse("{\"y\":2}"), parse("{\"y\":2}"), 5L, null),
-            new DefinitionTestCaseResult("fail", DefinitionTestCaseResult.STATUS_FAIL,
-                    parse("{\"y\":9}"), parse("{\"y\":2}"), 7L, null)));
+            new DefinitionTestCaseResult("pass", DefinitionTestCaseStatus.PASS,
+                    report(Map.of("y", 2)), report(Map.of("y", 2)), 5L, null),
+            new DefinitionTestCaseResult("fail", DefinitionTestCaseStatus.FAIL,
+                    report(Map.of("y", 9)), report(Map.of("y", 2)), 7L, null)));
     when(service.run(anyString(), any())).thenReturn(report);
 
     mockMvc.perform(post("/api/dsl/definitions/LoanDisbursement/tests/run"))
@@ -207,11 +223,12 @@ class DslDefinitionTestHandlerTest {
     assertThat(audit.repository().search("TESTS_RUN", 0, 10).total()).isEqualTo(0);
   }
 
-  private JsonNode parse(String json) {
-    try {
-      return jackson3.readTree(json);
-    } catch (JacksonException e) {
-      throw new IllegalArgumentException(e);
-    }
+  private DslRequest request(Object body) {
+    return new DslRequest(body, Map.of());
+  }
+
+  private PreviewReport report(Object output) {
+    return new PreviewReport("LoanDisbursement", ExecutionMode.PREVIEW, true, output,
+            List.of(), List.of(), Map.of(), null, List.of(), null, null);
   }
 }

@@ -1,14 +1,15 @@
 package cbs.nova.starter.maintenance;
 
+import cbs.nova.starter.core.StarterConstants;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
@@ -21,9 +22,10 @@ import java.util.concurrent.atomic.AtomicReference;
  * Single scheduled driver for all {@link MaintenanceTask} beans in the application context.
  *
  * <p>
- * Iterates the registered tasks in deterministic order (sorted by {@link MaintenanceTask#name()}),
- * runs each task inside its own try/catch so one failing task does not block the others, and
- * records shared Micrometer meters:
+ * Iterates the registered tasks in the order supplied by the configuration layer (sorted by
+ * {@link MaintenanceTask#name()} for deterministic logs and meter tag order), runs each task inside
+ * its own try/catch so one failing task does not block the others, and records shared Micrometer
+ * meters:
  * <ul>
  * <li>{@code dsl.maintenance.task.duration} — Timer, tagged {@code task=<name>}.</li>
  * <li>{@code dsl.maintenance.task.purged} — Counter, tagged {@code task=<name>}.</li>
@@ -37,54 +39,21 @@ import java.util.concurrent.atomic.AtomicReference;
  * operator hasn't set {@code dsl.maintenance.tasks.<name>.enabled}, it runs.
  */
 @Slf4j
+@RequiredArgsConstructor
 public class DslMaintenanceService {
 
-  /** Micrometer meter name for per-task wall-clock duration. */
-  public static final String TASK_DURATION_TIMER = "dsl.maintenance.task.duration";
-
-  /** Micrometer meter name for per-task purged-count. */
-  public static final String TASK_PURGED_COUNTER = "dsl.maintenance.task.purged";
-
-  /** Micrometer tag key identifying the task. */
-  public static final String TASK_TAG = "task";
-
-  private final List<MaintenanceTask> tasks;
-  private final Map<String, Boolean> taskEnabled;
-  private final Duration scheduleInterval;
-  private final ScheduledExecutorService executor;
+  private final @NonNull List<MaintenanceTask> tasks;
+  private final @NonNull Map<String, Boolean> taskEnabled;
+  private final @NonNull Duration scheduleInterval;
+  private final @NonNull ScheduledExecutorService executor;
   private final @Nullable MeterRegistry meterRegistry;
 
   private final AtomicReference<ScheduledFuture<?>> handle = new AtomicReference<>();
   private final AtomicBoolean started = new AtomicBoolean(false);
 
-  public DslMaintenanceService(
-          @NonNull List<MaintenanceTask> tasks,
-          @NonNull Map<String, Boolean> taskEnabled,
-          @NonNull Duration scheduleInterval,
-          @NonNull ScheduledExecutorService executor) {
-    this(tasks, taskEnabled, scheduleInterval, executor, null);
-  }
-
-  public DslMaintenanceService(
-          @NonNull List<MaintenanceTask> tasks,
-          @NonNull Map<String, Boolean> taskEnabled,
-          @NonNull Duration scheduleInterval,
-          @NonNull ScheduledExecutorService executor,
-          @Nullable MeterRegistry meterRegistry) {
-    // Deterministic ordering: sort by task name so logs and meter tag order
-    // are stable regardless of bean-registration order.
-    this.tasks = tasks.stream()
-            .sorted(Comparator.comparing(MaintenanceTask::name))
-            .toList();
-    this.taskEnabled = taskEnabled;
-    this.scheduleInterval = scheduleInterval;
-    this.executor = executor;
-    this.meterRegistry = meterRegistry;
-  }
-
   /**
-   * Returns an immutable, sorted view of the registered tasks. Used by tests and by the
-   * configuration layer when reconciling legacy settings.
+   * Returns an immutable view of the registered tasks in the order supplied by the configuration
+   * layer. Used by tests and by the configuration layer when reconciling legacy settings.
    */
   public List<MaintenanceTask> tasks() {
     return tasks;
@@ -183,8 +152,8 @@ public class DslMaintenanceService {
     if (meterRegistry == null) {
       return;
     }
-    Timer.builder(TASK_DURATION_TIMER)
-            .tag(TASK_TAG, taskName)
+    Timer.builder(StarterConstants.TASK_DURATION_TIMER)
+            .tag(StarterConstants.TASK_TAG, taskName)
             .register(meterRegistry)
             .record(duration);
   }
@@ -196,8 +165,8 @@ public class DslMaintenanceService {
     // Mirror the existing purge-counter idiom (Counter rather than
     // DistributionSummary) so dashboards that already group by counter see
     // the unified metric without surprise. Micrometer dedupes by (name, tags).
-    Counter.builder(TASK_PURGED_COUNTER)
-            .tag(TASK_TAG, taskName)
+    Counter.builder(StarterConstants.TASK_PURGED_COUNTER)
+            .tag(StarterConstants.TASK_TAG, taskName)
             .register(meterRegistry)
             .increment(purged);
   }

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.entity.DslAuditEntity;
 import cbs.nova.starter.persistence.DslAuditRepository;
 import java.util.HashMap;
@@ -28,7 +29,7 @@ class DslAuditServiceTest {
   @Test
   void recordPersistsRowWithSerializedDetails() {
     service.record("operator-1", "DEFINITION_PUBLISH", "LoanFlow", "corr-42",
-            DslAuditService.OUTCOME_SUCCESS, Map.of("reloaded", true));
+            StarterConstants.OUTCOME_SUCCESS, Map.of("reloaded", true));
 
     var captor = ArgumentCaptor.forClass(DslAuditEntity.class);
     verify(repository).insert(captor.capture());
@@ -46,7 +47,7 @@ class DslAuditServiceTest {
   @Test
   void recordStoresNullDetailsJsonWhenDetailsAbsent() {
     service.record("operator-1", "SCHEDULE_DELETE", "LoanFlow", null,
-            DslAuditService.OUTCOME_SUCCESS, null);
+            StarterConstants.OUTCOME_SUCCESS, null);
 
     var captor = ArgumentCaptor.forClass(DslAuditEntity.class);
     verify(repository).insert(captor.capture());
@@ -60,7 +61,7 @@ class DslAuditServiceTest {
             .when(repository).insert(any());
 
     assertThatCode(() -> service.record("operator-1", "DEFINITION_RELOAD", "/dsl",
-            null, DslAuditService.OUTCOME_FAILURE, Map.of("error", "boom")))
+            null, StarterConstants.OUTCOME_FAILURE, Map.of("error", "boom")))
             .doesNotThrowAnyException();
   }
 
@@ -70,7 +71,7 @@ class DslAuditServiceTest {
     cyclic.put("self", cyclic);
 
     assertThatCode(() -> service.record("operator-1", "DEFINITION_RELOAD", "/dsl",
-            null, DslAuditService.OUTCOME_SUCCESS, cyclic))
+            null, StarterConstants.OUTCOME_SUCCESS, cyclic))
             .doesNotThrowAnyException();
   }
 

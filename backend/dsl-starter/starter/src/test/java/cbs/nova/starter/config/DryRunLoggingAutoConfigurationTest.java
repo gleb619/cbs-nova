@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.logging.DryRunLoggingContext;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.MdcDryRunLoggingContext;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
@@ -150,7 +151,7 @@ class DryRunLoggingConfigurationTest {
 
     @Bean
     DryRunLogBufferRegistry customDryRunLogBufferRegistry() {
-      return new DryRunLogBufferRegistry();
+      return new DryRunLogBufferRegistry(Caffeine.newBuilder().build());
     }
   }
 

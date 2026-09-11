@@ -1,6 +1,7 @@
 package cbs.nova.starter.service;
 
 import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
 import cbs.nova.starter.service.DslGitStatusResolver.RepoStatus;
 import java.nio.file.Files;
@@ -16,10 +17,6 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class DslDefinitionStatusResolver {
-
-  private static final String DRAFTS_DIR = ".workbench/drafts";
-  private static final String PUBLISHED_DIR = ".workbench/published";
-  private static final String JSON_SUFFIX = ".json";
 
   private final DslProperties dslProperties;
   private final DslGitStatusResolver gitResolver;
@@ -46,12 +43,13 @@ public class DslDefinitionStatusResolver {
     Path workTree = git.map(RepoStatus::workTree).orElse(sourceDir);
 
     for (String name : names) {
-      if (Files.exists(safePath(sourceDir.resolve(DRAFTS_DIR), name))) {
+      if (Files.exists(safePath(sourceDir.resolve(StarterConstants.WORKBENCH_DRAFTS_DIR), name))) {
         result.put(name, DefinitionStatus.DRAFT);
         continue;
       }
 
-      Path publishedFile = safePath(sourceDir.resolve(PUBLISHED_DIR), name);
+      Path publishedFile = safePath(sourceDir.resolve(StarterConstants.WORKBENCH_PUBLISHED_DIR),
+              name);
       if (git.isPresent() && isDirty(dirtyPaths, workTree, publishedFile)) {
         result.put(name, DefinitionStatus.MODIFIED);
         continue;
@@ -86,7 +84,7 @@ public class DslDefinitionStatusResolver {
   }
 
   private static Path safePath(Path directory, String name) {
-    Path file = directory.resolve(safeFileName(name) + JSON_SUFFIX).normalize();
+    Path file = directory.resolve(safeFileName(name) + StarterConstants.JSON_SUFFIX).normalize();
     if (!file.startsWith(directory.normalize())) {
       throw new IllegalArgumentException("Illegal definition name: " + name);
     }

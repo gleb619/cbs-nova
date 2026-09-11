@@ -23,9 +23,7 @@ public interface Executable<IN, OUT>
 
   @Override
   default @NonNull ExecutableDescriptor describe() {
-    // TODO: instead add to `ExecutableDescriptor` static method `ExecutableDescriptor.empty()`
-    return new ExecutableDescriptor(null, null, null, null, true, "delegates to execute",
-            List.of());
+    return ExecutableDescriptor.empty();
   }
 
   /**
