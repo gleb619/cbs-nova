@@ -140,7 +140,10 @@ class GradleServiceTest {
             max,
             logLines,
             searchPaths,
-            envVar);
+            envVar,
+            null,
+            false,
+            null);
   }
 
   private Path jdkRoot() throws IOException {

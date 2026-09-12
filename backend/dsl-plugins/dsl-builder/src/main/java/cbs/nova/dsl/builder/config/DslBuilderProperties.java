@@ -29,7 +29,10 @@ public record DslBuilderProperties(
         Integer gradleJavaMax,
         Integer buildLogMaxLines,
         List<Path> jdkSearchPaths,
-        String jdkHomeEnvVar) {
+        String jdkHomeEnvVar,
+        List<String> allowedRepoSchemes,
+        @DefaultValue("false") boolean allowPlainHttpRepo,
+        List<String> allowedRepoHosts) {
 
   public DslBuilderProperties {
     queue = queue == null ? new Queue(100, 4) : queue;
@@ -48,6 +51,10 @@ public record DslBuilderProperties(
     jdkHomeEnvVar = jdkHomeEnvVar == null || jdkHomeEnvVar.isBlank()
             ? "DSL_BUILDER_JAVA_HOME"
             : jdkHomeEnvVar;
+    allowedRepoSchemes = allowedRepoSchemes == null
+            ? List.of("https")
+            : List.copyOf(allowedRepoSchemes);
+    allowedRepoHosts = allowedRepoHosts == null ? List.of() : List.copyOf(allowedRepoHosts);
   }
 
   public record Queue(

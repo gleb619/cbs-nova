@@ -32,6 +32,12 @@ cbs:
         - ${user.home}/.sdkman/candidates/java
         - /usr/lib/jvm
       jdk-home-env-var: DSL_BUILDER_JAVA_HOME
+      # Repo URL validation (SSRF guard) applied to a request-supplied repoUrl before cloning.
+      # The operator-configured cbs.dsl.builder.git.repo-url is trusted and not validated.
+      allowed-repo-schemes:
+        - https
+      allow-plain-http-repo: false
+      allowed-repo-hosts: []
       queue:
         capacity: 100
         workers: 4
