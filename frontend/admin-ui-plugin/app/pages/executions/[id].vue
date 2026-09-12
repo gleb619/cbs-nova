@@ -222,7 +222,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="p-6 space-y-4">
+  <div data-testid="execution-detail" class="p-6 space-y-4">
     <div v-if="error && !selectedExecution" class="text-sm text-gray-500">
       <ErrorBanner :message="error" @retry="() => loadDetail(id)" />
     </div>

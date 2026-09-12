@@ -29,9 +29,13 @@ export async function useAuth() {
     }
   }
 
-  await callOnce('cbs-auth-session', loadSession)
-
+  // Capture the route BEFORE the await below — after `await callOnce` the
+  // active Nuxt instance is gone in the module's virtual root component and
+  // `useRoute()` throws "composable called outside of a setup function",
+  // 500-ing every SSR route (broke the Playwright webServer readiness poll).
   const route = useRoute()
+
+  await callOnce('cbs-auth-session', loadSession)
   function login() {
     const redirect = encodeURIComponent(route.path)
     return navigateTo(`/api/v1/auth/login?redirect=${redirect}`, { external: true })
