@@ -77,4 +77,5 @@ export { default as AppSidebarRestoreHandle } from './components/sidebar/AppSide
 export * from './composables'
 export { DSL_SCHEMA_FETCH_KEY, type ConstructType, useConstructSchema } from './composables/useConstructSchema'
 export * from './types'
+export * from './utils/docsBaseUrl'
 export * from './utils/unwrapList'
