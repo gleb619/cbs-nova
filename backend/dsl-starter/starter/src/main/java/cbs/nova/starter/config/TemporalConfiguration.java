@@ -11,6 +11,7 @@ import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.starter.DevDslRuntime;
 import cbs.nova.starter.config.properties.CbsHealthProperties;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
+import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
 import cbs.nova.starter.config.properties.DryRunProperties;
 import cbs.nova.starter.config.properties.DslRunsProperties;
@@ -82,7 +83,7 @@ import java.util.stream.Collectors;
 
 @Configuration
 @EnableConfigurationProperties({CbsNovaPreviewProperties.class, CbsNovaFakesProperties.class,
-    DslRunsProperties.class})
+    CbsNovaExplainProperties.class, DslRunsProperties.class})
 public class TemporalConfiguration {
 
   @Bean(destroyMethod = "shutdown")
@@ -257,11 +258,12 @@ public class TemporalConfiguration {
           RunScopedFakeConfig runScopedFakeConfig,
           MeterRegistry meterRegistry,
           ExplainDiagramRenderer diagramRenderer,
+          CbsNovaExplainProperties explainProperties,
           @Qualifier("cbsNovaPreviewDispatchExecutor") ExecutorService dispatchExecutor) {
     return new ExplainDslPipe(externalCallRecorder, contextFactory, dryRunLoggingContext,
             bufferRegistry, dryRunProperties.log().maxEventsPerRun(), previewProperties,
             fakesProperties, runScopedFakeConfig, meterRegistry, diagramRenderer,
-            dispatchExecutor);
+            explainProperties, dispatchExecutor);
   }
 
   @Bean

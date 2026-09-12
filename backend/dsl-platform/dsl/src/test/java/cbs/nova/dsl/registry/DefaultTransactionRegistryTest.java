@@ -33,6 +33,7 @@ class DefaultTransactionRegistryTest {
             null,
             null,
             null,
+            null,
             null, null);
   }
 

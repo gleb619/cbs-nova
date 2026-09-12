@@ -92,7 +92,8 @@ public class DateMathHelper implements Executable<DateMathIn, DateMathOut> {
     if (!DATE_MATH_ADD_UNITS.contains(unit)) {
       return Result.failure(
               new IllegalArgumentException(
-                  "dateMath.unit must be one of: " + DATE_MATH_ADD_UNITS + ", was: " + input.unit()));
+                      "dateMath.unit must be one of: " + DATE_MATH_ADD_UNITS + ", was: "
+                              + input.unit()));
     }
     ParsedDate parsed = parseDate(input.date(), zone);
     if (parsed.isDateOnly() && !DATE_MATH_DATE_ONLY_ADD_UNITS.contains(unit)) {
@@ -112,7 +113,8 @@ public class DateMathHelper implements Executable<DateMathIn, DateMathOut> {
     if (!DATE_MATH_ADD_UNITS.contains(unit)) {
       return Result.failure(
               new IllegalArgumentException(
-                  "dateMath.unit must be one of: " + DATE_MATH_ADD_UNITS + ", was: " + input.unit()));
+                      "dateMath.unit must be one of: " + DATE_MATH_ADD_UNITS + ", was: "
+                              + input.unit()));
     }
     ParsedDate start = parseDate(input.date(), zone);
     ParsedDate end = parseDate(input.end(), zone);
@@ -137,8 +139,8 @@ public class DateMathHelper implements Executable<DateMathIn, DateMathOut> {
     if (!DATE_MATH_START_OF_UNITS.contains(unit)) {
       return Result.failure(
               new IllegalArgumentException(
-                  "dateMath.unit must be one of: " + DATE_MATH_START_OF_UNITS + ", was: "
-                  + input.unit()));
+                      "dateMath.unit must be one of: " + DATE_MATH_START_OF_UNITS + ", was: "
+                              + input.unit()));
     }
     ParsedDate parsed = parseDate(input.date(), zone);
     if (parsed.isDateOnly() && !DATE_MATH_DATE_ONLY_START_OF_UNITS.contains(unit)) {

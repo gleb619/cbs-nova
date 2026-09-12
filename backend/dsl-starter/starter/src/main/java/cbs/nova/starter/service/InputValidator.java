@@ -72,7 +72,6 @@ public class InputValidator {
             .outputType(helper.outputType())
             .hasCompensation(false)
             .hasSideEffects(helper.hasSideEffects())
-            .previewBehavior(helper.previewBehavior())
             .parameters(helper.parameters())
             .taskQueue(null)
             .version(null)

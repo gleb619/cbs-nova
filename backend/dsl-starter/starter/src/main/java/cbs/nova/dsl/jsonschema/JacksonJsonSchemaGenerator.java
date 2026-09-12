@@ -128,7 +128,7 @@ public class JacksonJsonSchemaGenerator implements JsonSchemaGenerator {
 
   private Map<String, Object> emptyObjectSchema() {
     Map<String, Object> schema = new LinkedHashMap<>();
-    schema.put("$schema", DRAFT_URI);
+    schema.put("$schema", JSON_SCHEMA_DRAFT_URI);
     schema.put("type", "object");
     return schema;
   }

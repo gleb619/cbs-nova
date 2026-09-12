@@ -22,6 +22,7 @@ import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
+import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
@@ -166,7 +167,8 @@ class InterceptorThreadingTest {
     var explainPipe = new ExplainDslPipe(recorder, contextFactory, dryRunLoggingContext,
             bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, previewProperties,
             new CbsNovaFakesProperties(false, null), runScopedFakeConfig,
-            new SimpleMeterRegistry(), new ExplainDiagramRenderer(), null);
+            new SimpleMeterRegistry(), new ExplainDiagramRenderer(),
+            new CbsNovaExplainProperties(4000), null);
 
     Context<?> ctx = contextFactory.of("payload", ExecutionMode.EXPLAIN, "run-explain");
     Result<ExplainTraceReport> result = explainPipe.execute("dbCall", ctx);

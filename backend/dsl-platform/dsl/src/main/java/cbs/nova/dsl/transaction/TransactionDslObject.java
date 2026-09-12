@@ -27,6 +27,7 @@ public record TransactionDslObject(
         @Nullable RetryPolicy retryPolicy,
         @Nullable Duration heartbeatTimeout,
         @Nullable Function<TransactionContext<?>, Result<?>> previewLogic,
+        @Nullable Function<TransactionContext<?>, Result<?>> explainLogic,
         @Nullable Supplier<DslDescriptor> descriptor,
         @Nullable String description) implements DslObject {
 
@@ -37,6 +38,10 @@ public record TransactionDslObject(
 
   public @NonNull Function<TransactionContext<?>, Result<?>> effectivePreview() {
     return previewLogic != null ? previewLogic : executeLogic;
+  }
+
+  public @NonNull Function<TransactionContext<?>, Result<?>> effectiveExplain() {
+    return explainLogic != null ? explainLogic : executeLogic;
   }
 
   public @NonNull DslDescriptor describe() {
@@ -51,7 +56,6 @@ public record TransactionDslObject(
             .outputType(outputType)
             .hasCompensation(compensationLogic != null)
             .hasSideEffects(true)
-            .previewBehavior("delegates to execute")
             .parameters(parameters != null ? parameters : List.of())
             .taskQueue(taskQueue)
             .version(version)

@@ -71,7 +71,6 @@ class ExplainReportStageTest {
                             .outputType(null)
                             .hasCompensation(false)
                             .hasSideEffects(false)
-                            .previewBehavior("delegates")
                             .parameters(List.of())
                             .taskQueue(null)
                             .version(null)

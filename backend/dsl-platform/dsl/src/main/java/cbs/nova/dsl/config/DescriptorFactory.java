@@ -25,7 +25,7 @@ public final class DescriptorFactory {
             outputType,
             obj.compensationLogic() != null,
             List.of(),
-            obj.transactionRefs() != null ? obj.transactionRefs() : List.of());
+            List.of());
   }
 
   public TransactionDescriptor fromTransaction(@NonNull TransactionDslObject obj) {

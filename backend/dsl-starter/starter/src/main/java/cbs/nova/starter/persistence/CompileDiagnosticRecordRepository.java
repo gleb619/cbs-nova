@@ -58,7 +58,8 @@ public class CompileDiagnosticRecordRepository {
     var params = new MapSqlParameterSource()
             .addValue("occurredAt", Timestamp.from(row.occurredAt()))
             .addValue("source", truncate(row.source(), COMPILE_DIAGNOSTIC_SOURCE_MAX_LENGTH))
-            .addValue("definition", truncate(row.definition(), COMPILE_DIAGNOSTIC_DEFINITION_MAX_LENGTH))
+            .addValue("definition",
+                    truncate(row.definition(), COMPILE_DIAGNOSTIC_DEFINITION_MAX_LENGTH))
             .addValue("file", truncate(row.file(), COMPILE_DIAGNOSTIC_FILE_MAX_LENGTH))
             .addValue("line", row.line() != null ? row.line().intValue() : null)
             .addValue("colNumber", row.column() != null ? row.column().intValue() : null)

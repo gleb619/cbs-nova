@@ -49,16 +49,13 @@ public interface Executable<IN, OUT>
     var name = descriptor.name() != null
             ? descriptor.name()
             : (fallbackName.isEmpty() ? "executable" : fallbackName);
-    return new ExplainReport(
+    var report = new ExplainReport(
             name,
-            ExplainSupport.truncateToBudget(
-                    "<!-- NONE -->".equals(markdown) ? derivedDescription(descriptor) : markdown,
-                    budgetChars),
+            "<!-- NONE -->".equals(markdown) ? derivedDescription(descriptor) : markdown,
             "");
+    return report.truncateTo(budgetChars);
   }
 
-  @Deprecated(forRemoval = true)
-  //TODO: it cant be a static method, it must a part of PipeStage instead
   private static @NonNull String derivedDescription(@NonNull ExecutableDescriptor descriptor) {
     var input = descriptor.inputType() != null ? descriptor.inputType().getSimpleName() : "untyped";
     var output = descriptor.outputType() != null

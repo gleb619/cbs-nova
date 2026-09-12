@@ -33,8 +33,9 @@ public final class ProcessBuilder<I, O> {
   @Nullable
   private Function<ProcessContext<I>, Result<?>> previewLogic;
   @Nullable
+  private Function<ProcessContext<I>, Result<?>> explainLogic;
+  @Nullable
   private BiConsumer<CompensationContext<I>, List<TransactionExecution>> userCompensationHandler;
-  private List<String> transactionRefs = List.of();
   @Nullable
   private Supplier<DslDescriptor> descriptor;
 
@@ -91,13 +92,13 @@ public final class ProcessBuilder<I, O> {
     return this;
   }
 
-  public ProcessBuilder<I, O> transactions(@NonNull List<String> refs) {
-    this.transactionRefs = refs;
+  public ProcessBuilder<I, O> preview(@NonNull Function<ProcessContext<I>, Result<?>> logic) {
+    this.previewLogic = logic;
     return this;
   }
 
-  public ProcessBuilder<I, O> preview(@NonNull Function<ProcessContext<I>, Result<?>> logic) {
-    this.previewLogic = logic;
+  public ProcessBuilder<I, O> explain(@NonNull Function<ProcessContext<I>, Result<?>> logic) {
+    this.explainLogic = logic;
     return this;
   }
 
@@ -124,9 +125,9 @@ public final class ProcessBuilder<I, O> {
             rawExecute(),
             rawCompensation(),
             rawPreview(),
+            rawExplain(),
             descriptor,
-            rawUserCompensationHandler(),
-            transactionRefs, null);
+            rawUserCompensationHandler(), null);
   }
 
   public @NonNull List<DslObject> buildList() {
@@ -150,6 +151,13 @@ public final class ProcessBuilder<I, O> {
     return previewLogic == null
             ? null
             : (Function<ProcessContext<?>, Result<?>>) (Function<?, ?>) previewLogic;
+  }
+
+  @SuppressWarnings("unchecked")
+  private @Nullable Function<ProcessContext<?>, Result<?>> rawExplain() {
+    return explainLogic == null
+            ? null
+            : (Function<ProcessContext<?>, Result<?>>) (Function<?, ?>) explainLogic;
   }
 
   @SuppressWarnings("unchecked")

@@ -38,6 +38,8 @@ public final class TransactionBuilder<I, O> {
   @Nullable
   private Function<TransactionContext<I>, Result<?>> previewLogic;
   @Nullable
+  private Function<TransactionContext<I>, Result<?>> explainLogic;
+  @Nullable
   private Supplier<DslDescriptor> descriptor;
 
   public TransactionBuilder(@NonNull String name) {
@@ -109,6 +111,12 @@ public final class TransactionBuilder<I, O> {
     return this;
   }
 
+  public TransactionBuilder<I, O> explain(
+          @NonNull Function<TransactionContext<I>, Result<?>> logic) {
+    this.explainLogic = logic;
+    return this;
+  }
+
   public TransactionBuilder<I, O> describe(@NonNull Supplier<DslDescriptor> desc) {
     this.descriptor = desc;
     return this;
@@ -135,6 +143,7 @@ public final class TransactionBuilder<I, O> {
             retryPolicy,
             heartbeatTimeout,
             rawPreview(),
+            rawExplain(),
             descriptor, null);
   }
 
@@ -159,5 +168,12 @@ public final class TransactionBuilder<I, O> {
     return previewLogic == null
             ? null
             : (Function<TransactionContext<?>, Result<?>>) (Function<?, ?>) previewLogic;
+  }
+
+  @SuppressWarnings("unchecked")
+  private @Nullable Function<TransactionContext<?>, Result<?>> rawExplain() {
+    return explainLogic == null
+            ? null
+            : (Function<TransactionContext<?>, Result<?>>) (Function<?, ?>) explainLogic;
   }
 }

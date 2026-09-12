@@ -26,6 +26,7 @@ import cbs.nova.dsl.transaction.TransactionExecution;
 import cbs.nova.dsl.transaction.TransactionExecutionStatus;
 import cbs.nova.starter.AuditTestSupport;
 import cbs.nova.starter.config.router.DslExecutionsRouterConfiguration;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.converter.RequestQueryConverter;
 import cbs.nova.starter.persistence.DslRunStats;
@@ -1210,7 +1211,7 @@ class DslExecutionsResourceTest {
             .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler))
             .build();
 
-    int cap = DslExecutionsHandler.CSV_EXPORT_MAX_ROWS;
+    int cap = StarterConstants.CSV_EXPORT_MAX_ROWS;
     Instant startedAt = Instant.parse("2026-08-13T10:00:00Z");
     List<DslRun> runs = IntStream.rangeClosed(1, cap + 1)
             .mapToObj(i -> DslRun.builder()

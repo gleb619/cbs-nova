@@ -3,7 +3,6 @@ package cbs.nova.starter.helper;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.model.ExplainReport;
-import cbs.nova.dsl.ExplainSupport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.annotation.Helper;
 import cbs.nova.starter.helper.model.MathIn;
@@ -82,11 +81,9 @@ public class MathHelper implements Executable<MathIn, MathOut> {
   public @NonNull ExplainReport explain(@NonNull Context<MathIn> ctx, int budgetChars) {
     MathIn input = ctx.body();
     String mode = (input.mode() == null) ? "unknown" : input.mode().toLowerCase(Locale.ROOT);
-    String description = ExplainSupport.truncateToBudget(
-            MathModeExplanation.describe(mode, input), budgetChars);
-    String mermaid = ExplainSupport.truncateToBudget(
-            MathModeExplanation.diagram(mode), budgetChars - description.length());
-    return new ExplainReport("math", description, mermaid);
+    String description = MathModeExplanation.describe(mode, input);
+    String mermaid = MathModeExplanation.diagram(mode);
+    return new ExplainReport("math", description, mermaid).truncateTo(budgetChars);
   }
 
   private static @NonNull Result<MathOut> sum(List<Number> numbers) {

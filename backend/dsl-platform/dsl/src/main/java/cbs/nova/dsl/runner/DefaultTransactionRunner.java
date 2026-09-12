@@ -37,7 +37,7 @@ public final class DefaultTransactionRunner implements TransactionRunner {
     try {
       var richCtx = new TransactionRichContext<>(ctx, contextFactory);
       if (ctx.mode() == ExecutionMode.EXPLAIN) {
-        result = transaction.executeLogic().apply(richCtx);
+        result = transaction.effectiveExplain().apply(richCtx);
       } else if (ctx.mode() == ExecutionMode.PREVIEW) {
         result = transaction.effectivePreview().apply(richCtx);
       } else {

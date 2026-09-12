@@ -20,6 +20,7 @@ public class OpenApiConfiguration {
             .title("cbs-nova DSL API")
             .description("REST contract for the cbs-nova DSL runtime: introspection, "
                     + "preview / run / explain, and reload of DSL definitions.")
-            .version(buildProperties.map(BuildProperties::getVersion).orElse(OPENAPI_DEFAULT_VERSION)));
+            .version(buildProperties.map(BuildProperties::getVersion)
+                    .orElse(OPENAPI_DEFAULT_VERSION)));
   }
 }

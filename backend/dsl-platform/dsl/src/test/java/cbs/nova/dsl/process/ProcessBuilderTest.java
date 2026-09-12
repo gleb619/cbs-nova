@@ -78,23 +78,6 @@ class ProcessBuilderTest {
   }
 
   @Test
-  void transactionsListIsRetainedOnBuiltObject() {
-    var process = Dsl.process("TxProc")
-            .transactions(List.of("TxA", "TxB", "TxC"))
-            .execute(ctx -> Result.success(null))
-            .build();
-    assertThat(process.transactionRefs()).containsExactly("TxA", "TxB", "TxC");
-  }
-
-  @Test
-  void defaultTransactionsListIsEmpty() {
-    var process = Dsl.process("NoTxProc")
-            .execute(ctx -> Result.success(null))
-            .build();
-    assertThat(process.transactionRefs()).isEmpty();
-  }
-
-  @Test
   void functionCompensationOverloadIsRetained() {
     var process = Dsl.process("FuncCompProc")
             .execute(ctx -> Result.success(null))
@@ -174,6 +157,24 @@ class ProcessBuilderTest {
   }
 
   @Test
+  void effectiveExplainFallsBackToExecuteWhenExplainNotSet() {
+    var process = Dsl.process("NoExplainProc")
+            .execute(ctx -> Result.success("exec"))
+            .build();
+    assertThat(process.effectiveExplain()).isSameAs(process.executeLogic());
+  }
+
+  @Test
+  void effectiveExplainReturnsExplainWhenSet() {
+    var process = Dsl.process("WithExplainProc")
+            .execute(ctx -> Result.success("exec"))
+            .explain(ctx -> Result.success("explain"))
+            .build();
+    assertThat(process.effectiveExplain()).isSameAs(process.explainLogic());
+    assertThat(process.effectiveExplain()).isNotSameAs(process.executeLogic());
+  }
+
+  @Test
   void describeBuildsDefaultDescriptorWhenSupplierAbsent() {
     var process = Dsl.process("DefaultDescProc")
             .input(String.class)
@@ -207,7 +208,6 @@ class ProcessBuilderTest {
             .outputType(String.class)
             .hasCompensation(true)
             .hasSideEffects(false)
-            .previewBehavior("custom-preview")
             .parameters(List.of())
             .taskQueue("custom-queue")
             .version("v9")

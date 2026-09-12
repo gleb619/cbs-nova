@@ -6,6 +6,7 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.logging.DryRunLoggingContext;
 import cbs.nova.dsl.model.ExplainTraceReport;
+import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
@@ -13,6 +14,7 @@ import cbs.nova.starter.core.stage.DispatchStage;
 import cbs.nova.starter.core.stage.DryRunLogStage;
 import cbs.nova.starter.core.stage.ExecutionTraceStage;
 import cbs.nova.starter.core.stage.ExecutionTreeStage;
+import cbs.nova.starter.core.stage.ExplainBudgetStage;
 import cbs.nova.starter.core.stage.ExplainReportStage;
 import cbs.nova.starter.core.stage.ExternalCallRecordingStage;
 import cbs.nova.starter.core.stage.FakingStage;
@@ -39,6 +41,7 @@ public final class ExplainDslPipe implements DslExecutionPipe<ExplainTraceReport
   private final RunScopedFakeConfig runScopedFakeConfig;
   private final MeterRegistry meterRegistry;
   private final ExplainDiagramRenderer diagramRenderer;
+  private final CbsNovaExplainProperties explainProperties;
   private final ExecutorService executor;
 
   @Override
@@ -46,6 +49,7 @@ public final class ExplainDslPipe implements DslExecutionPipe<ExplainTraceReport
           @NonNull Context<?> ctx) {
     HelperInterceptor fakeInterceptor = new FakeHelperInterceptor(runScopedFakeConfig, recorder);
     return DslExecutionPipeline.<ExplainTraceReport>builder()
+            .stage(new ExplainBudgetStage(explainProperties.budgetChars()))
             .stage(new ExplainReportStage(diagramRenderer))
             .stage(new MetricsStage(meterRegistry))
             .stage(new ExecutionTreeStage(contextFactory,

@@ -92,6 +92,24 @@ class FunctionBuilderTest {
   }
 
   @Test
+  void effectiveExplainFallsBackToExecuteWhenExplainNotSet() {
+    var fn = Dsl.function("NoExplainFn")
+            .execute(ctx -> Result.success("exec"))
+            .build();
+    assertThat(fn.effectiveExplain()).isSameAs(fn.executeLogic());
+  }
+
+  @Test
+  void effectiveExplainReturnsExplainWhenSet() {
+    var fn = Dsl.function("WithExplainFn")
+            .execute(ctx -> Result.success("exec"))
+            .explain(ctx -> Result.success("explain"))
+            .build();
+    assertThat(fn.effectiveExplain()).isSameAs(fn.explainLogic());
+    assertThat(fn.effectiveExplain()).isNotSameAs(fn.executeLogic());
+  }
+
+  @Test
   void builtObjectReportsFunctionType() {
     var fn = Dsl.function("TypedFn")
             .execute(ctx -> Result.success(null))
@@ -118,7 +136,6 @@ class FunctionBuilderTest {
     var desc = fn.describe();
     assertThat(desc.name()).isEqualTo("DefaultDescFn");
     assertThat(desc.type()).isEqualTo(DslType.FUNCTION);
-    assertThat(desc.previewBehavior()).isEqualTo("delegates to execute");
     assertThat(desc.parameters()).hasSize(1);
     assertThat(desc.parameters().get(0).name()).isEqualTo("k");
   }
@@ -133,7 +150,6 @@ class FunctionBuilderTest {
             .outputType(Integer.class)
             .hasCompensation(false)
             .hasSideEffects(false)
-            .previewBehavior("custom-preview")
             .parameters(List.of())
             .taskQueue(null)
             .version(null)
@@ -145,5 +161,39 @@ class FunctionBuilderTest {
             .describe(() -> custom)
             .build();
     assertThat(fn.describe()).isSameAs(custom);
+  }
+
+  @Test
+  void describeExplainReturnsMarkdown() {
+    var custom = DslDescriptor.builder()
+            .name("GreeterFn")
+            .type(DslType.FUNCTION)
+            .description("Greets the caller.")
+            .inputType(String.class)
+            .outputType(String.class)
+            .hasCompensation(false)
+            .hasSideEffects(true)
+            .parameters(List.of())
+            .taskQueue(null)
+            .version(null)
+            .startToCloseTimeout(null)
+            .heartbeatTimeout(null)
+            .build();
+    var fn = Dsl.function("GreeterFn")
+            .input(String.class)
+            .output(String.class)
+            .execute(ctx -> Result.success("ok"))
+            .describe(() -> custom)
+            .build();
+
+    var markdown = fn.describe().explain();
+
+    assertThat(markdown)
+            .contains("**Function** `GreeterFn`")
+            .contains("Greets the caller.")
+            .contains("- Input: `String`")
+            .contains("- Output: `String`")
+            .contains("- Side effects: yes")
+            .contains("- Compensation: no");
   }
 }

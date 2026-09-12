@@ -92,7 +92,7 @@ public final class DefaultProcessRunner implements ProcessRunner {
     Result<?> result = null;
     try {
       if (listeningCtx.mode() == ExecutionMode.EXPLAIN) {
-        result = process.executeLogic().apply(richCtx);
+        result = process.effectiveExplain().apply(richCtx);
       } else if (listeningCtx.mode() == ExecutionMode.PREVIEW) {
         result = process.effectivePreview().apply(richCtx);
       } else {

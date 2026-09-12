@@ -27,6 +27,8 @@ public final class FunctionBuilder<I, O> {
   @Nullable
   private Function<FunctionContext<I>, Result<?>> previewLogic;
   @Nullable
+  private Function<FunctionContext<I>, Result<?>> explainLogic;
+  @Nullable
   private Supplier<DslDescriptor> descriptor;
 
   public FunctionBuilder(@NonNull String name) {
@@ -64,6 +66,11 @@ public final class FunctionBuilder<I, O> {
     return this;
   }
 
+  public FunctionBuilder<I, O> explain(@NonNull Function<FunctionContext<I>, Result<?>> logic) {
+    this.explainLogic = logic;
+    return this;
+  }
+
   public FunctionBuilder<I, O> describe(@NonNull Supplier<DslDescriptor> desc) {
     this.descriptor = desc;
     return this;
@@ -84,6 +91,7 @@ public final class FunctionBuilder<I, O> {
             outputType,
             rawExecute(),
             rawPreview(),
+            rawExplain(),
             descriptor, null);
   }
 
@@ -101,5 +109,12 @@ public final class FunctionBuilder<I, O> {
     return previewLogic == null
             ? null
             : (Function<FunctionContext<?>, Result<?>>) (Function<?, ?>) previewLogic;
+  }
+
+  @SuppressWarnings("unchecked")
+  private @Nullable Function<FunctionContext<?>, Result<?>> rawExplain() {
+    return explainLogic == null
+            ? null
+            : (Function<FunctionContext<?>, Result<?>>) (Function<?, ?>) explainLogic;
   }
 }

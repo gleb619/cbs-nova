@@ -25,6 +25,7 @@ public record FunctionDslObject(
         @Nullable Class<?> outputType,
         @NonNull Function<FunctionContext<?>, Result<?>> executeLogic,
         @Nullable Function<FunctionContext<?>, Result<?>> previewLogic,
+        @Nullable Function<FunctionContext<?>, Result<?>> explainLogic,
         @Nullable Supplier<DslDescriptor> descriptor,
         @Nullable String description) implements DslObject {
 
@@ -35,6 +36,10 @@ public record FunctionDslObject(
 
   public @NonNull Function<FunctionContext<?>, Result<?>> effectivePreview() {
     return previewLogic != null ? previewLogic : executeLogic;
+  }
+
+  public @NonNull Function<FunctionContext<?>, Result<?>> effectiveExplain() {
+    return explainLogic != null ? explainLogic : executeLogic;
   }
 
   public @NonNull DslDescriptor describe() {
@@ -49,7 +54,6 @@ public record FunctionDslObject(
             .outputType(outputType)
             .hasCompensation(false)
             .hasSideEffects(false)
-            .previewBehavior("delegates to execute")
             .parameters(parameters != null ? parameters : List.of())
             .taskQueue(DEFAULT_TASK_QUEUE)
             .version(DEFAULT_VERSION)

@@ -54,7 +54,6 @@ class DslScheduleRouterReachabilityTest {
   private AnnotationConfigApplicationContext context;
   private MockMvc mockMvc;
 
-
   @BeforeEach
   void setUp() {
     context = new AnnotationConfigApplicationContext();
@@ -65,7 +64,8 @@ class DslScheduleRouterReachabilityTest {
     DslScheduleService service = mock(DslScheduleService.class);
     context.registerBean(DslScheduleService.class, () -> service);
     context.registerBean("scheduleClient", ScheduleClient.class, () -> mock(ScheduleClient.class));
-    DslScheduleHandler handler = new DslScheduleHandler(service, new ObjectMapper(), AuditTestSupport.emptyProvider());
+    DslScheduleHandler handler = new DslScheduleHandler(service, new ObjectMapper(),
+            AuditTestSupport.emptyProvider());
     context.registerBean(DslScheduleHandler.class, () -> handler);
     context.register(DslScheduleRouterConfiguration.class);
     context.refresh();
@@ -135,7 +135,8 @@ class DslScheduleRouterReachabilityTest {
     context.register(StubBeans.class);
     DslScheduleService service = mock(DslScheduleService.class);
     context.registerBean(DslScheduleService.class, () -> service);
-    DslScheduleHandler handler = new DslScheduleHandler(service, new ObjectMapper(), AuditTestSupport.emptyProvider());
+    DslScheduleHandler handler = new DslScheduleHandler(service, new ObjectMapper(),
+            AuditTestSupport.emptyProvider());
     context.registerBean(DslScheduleHandler.class, () -> handler);
     context.register(DslScheduleRouterConfiguration.class);
     context.refresh();

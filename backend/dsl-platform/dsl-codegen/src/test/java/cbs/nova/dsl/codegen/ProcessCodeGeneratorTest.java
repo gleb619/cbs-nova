@@ -232,12 +232,11 @@ class ProcessCodeGeneratorTest {
   }
 
   @Test
-  void withTransactionsPassesTransactionRefsAsList() {
+  void plainProcessDoesNotEmitTransactionCompensationScaffolding() {
     var descriptor = descriptor().fromProcess(
             Dsl.process("LoanDisbursement")
                     .input(String.class)
                     .output(String.class)
-                    .transactions(List.of("ReserveInventory", "ChargePayment"))
                     .execute(ctx -> Result.success("ok"))
                     .build());
 

@@ -121,6 +121,24 @@ class TransactionBuilderTest {
   }
 
   @Test
+  void effectiveExplainFallsBackToExecuteWhenExplainNotSet() {
+    var tx = Dsl.transaction("PayTx")
+            .execute(ctx -> Result.success("exec"))
+            .build();
+    assertThat(tx.effectiveExplain()).isSameAs(tx.executeLogic());
+  }
+
+  @Test
+  void effectiveExplainReturnsExplainWhenSet() {
+    var tx = Dsl.transaction("PayTx")
+            .execute(ctx -> Result.success("exec"))
+            .explain(ctx -> Result.success("explain"))
+            .build();
+    assertThat(tx.effectiveExplain()).isSameAs(tx.explainLogic());
+    assertThat(tx.effectiveExplain()).isNotSameAs(tx.executeLogic());
+  }
+
+  @Test
   void describeUsesCustomDescriptorSupplierWhenProvided() {
     var custom = DslDescriptor.builder()
             .name("PayTx")
@@ -130,7 +148,6 @@ class TransactionBuilderTest {
             .outputType(String.class)
             .hasCompensation(false)
             .hasSideEffects(false)
-            .previewBehavior("custom-preview")
             .parameters(List.of())
             .taskQueue("custom-queue")
             .version("v9")
@@ -166,5 +183,39 @@ class TransactionBuilderTest {
             .execute(ctx -> Result.success(null))
             .build();
     assertThat(tx.describe().hasCompensation()).isFalse();
+  }
+
+  @Test
+  void describeExplainReturnsMarkdown() {
+    var custom = DslDescriptor.builder()
+            .name("PayTx")
+            .type(DslType.TRANSACTION)
+            .description("Processes a payment.")
+            .inputType(String.class)
+            .outputType(String.class)
+            .hasCompensation(false)
+            .hasSideEffects(true)
+            .parameters(List.of())
+            .taskQueue("PayTx-queue")
+            .version("v1")
+            .startToCloseTimeout(Duration.ofSeconds(30))
+            .heartbeatTimeout(null)
+            .build();
+    var tx = Dsl.transaction("PayTx")
+            .input(String.class)
+            .output(String.class)
+            .execute(ctx -> Result.success(null))
+            .describe(() -> custom)
+            .build();
+
+    var markdown = tx.describe().explain();
+
+    assertThat(markdown)
+            .contains("**Transaction** `PayTx`")
+            .contains("Processes a payment.")
+            .contains("- Input: `String`")
+            .contains("- Output: `String`")
+            .contains("- Side effects: yes")
+            .contains("- Compensation: no");
   }
 }

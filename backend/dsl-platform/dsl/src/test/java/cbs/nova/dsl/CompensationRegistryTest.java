@@ -223,6 +223,7 @@ class CompensationRegistryTest {
             null,
             null,
             null,
+            null,
             null, null);
   }
 
