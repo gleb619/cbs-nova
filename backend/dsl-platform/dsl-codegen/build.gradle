@@ -3,6 +3,15 @@ plugins {
   alias(libs.plugins.test.logger)
 }
 
+// Stamp the DSL platform version into the codegen provenance resource so generated
+// sources can record which platform version produced them.
+def dslPlatformVersion = project.version
+processResources {
+  filesMatching('cbs-nova-dsl-codegen.properties') {
+    expand(dslPlatformVersion: dslPlatformVersion)
+  }
+}
+
 dependencies {
   implementation project(":dsl-api")
   implementation project(':dsl')
