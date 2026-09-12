@@ -1,4 +1,4 @@
-import type { H3Event } from 'h3'
+import { setResponseHeader, setResponseStatus, type H3Event, type HTTPMethod } from 'h3'
 import { buildBackendHeaders } from './backendHeaders'
 import { useBackendConfig } from './config'
 import { useAuthConfig } from './config'
@@ -41,28 +41,81 @@ function errorIsUnauthorized(err: unknown): boolean {
   return status === 401 || status === 403
 }
 
+export interface ProxyOptions {
+  method?: string
+  body?: unknown
+  query?: Record<string, unknown>
+  raw?: boolean
+  forwardResponseHeaders?: string[]
+}
+
 export async function proxyToBackend<T>(
   event: H3Event,
   path: string,
-  options: { method?: string; body?: unknown; query?: Record<string, unknown> } = {},
+  options: ProxyOptions = {},
 ): Promise<T> {
   const { baseUrl, timeoutMs } = useBackendConfig()
   const authConfig = useAuthConfig()
   const url = `${baseUrl.replace(/\/$/, '')}${path}`
-  const { headers, requestId, correlationId } = buildBackendHeaders(event, { json: true })
+  const { headers, requestId, correlationId } = buildBackendHeaders(event, { json: !options.raw })
 
   // Attach a Bearer token from the BFF session when OIDC is enabled and the
   // inbound request did not already provide an Authorization header.
   attachAuth(event, headers)
 
-  const method = options.method ?? 'GET'
+  const method = (options.method ?? 'GET') as HTTPMethod | Lowercase<HTTPMethod>
   const startedAt = Date.now()
+  const isRaw = options.raw === true
 
   async function doFetch(extraHeaders?: Record<string, string>): Promise<T> {
+    const fetchHeaders = { ...headers, ...extraHeaders }
+    if (isRaw) {
+      const res = await $fetch.raw<string>(url, {
+        method,
+        headers: fetchHeaders,
+        body: options.body as never,
+        query: options.query,
+        responseType: 'text',
+        timeout: timeoutMs,
+        retry: false,
+        onRequest({ request }) {
+          writeLog('info', `[BFF >] ${method} ${request}`, {
+            requestId,
+            correlationId,
+            headers: Object.keys(fetchHeaders),
+          })
+        },
+        onResponse({ response }) {
+          writeLog(
+            'info',
+            `[BFF <] ${method} ${url} ${response.status} ${Date.now() - startedAt}ms`,
+            {
+              requestId,
+              correlationId,
+            },
+          )
+        },
+        onResponseError({ response, error }) {
+          writeLog('error', `[BFF !] ${method} ${url} ${response?.status ?? 'network'}`, {
+            requestId,
+            correlationId,
+            backendUrl: baseUrl,
+            error: (error as Error | undefined)?.message,
+          })
+        },
+      })
+      setResponseStatus(event, res.status)
+      for (const name of options.forwardResponseHeaders ?? []) {
+        const value = res.headers.get(name)
+        if (value) setResponseHeader(event, name, value)
+      }
+      return res._data as T
+    }
+
     return (await $fetch<T>(url, {
       method,
-      headers: { ...headers, ...extraHeaders },
-      body: options.body,
+      headers: fetchHeaders,
+      body: options.body as never,
       query: options.query,
       timeout: timeoutMs,
       retry: false,
@@ -70,7 +123,7 @@ export async function proxyToBackend<T>(
         writeLog('info', `[BFF >] ${method} ${request}`, {
           requestId,
           correlationId,
-          headers: Object.keys({ ...headers, ...extraHeaders }),
+          headers: Object.keys(fetchHeaders),
         })
       },
       onResponse({ response }) {

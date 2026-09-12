@@ -478,4 +478,133 @@ describe('proxyToBackend', () => {
     // $fetch called: original backend + OIDC discovery
     expect($fetch).toHaveBeenCalledTimes(2)
   })
+  it('raw path returns text body and forwards response headers on success', async () => {
+    const event = makeEvent()
+    const rawResponse = {
+      status: 200,
+      headers: {
+        get: (name: string) =>
+          name === 'content-type'
+            ? 'text/csv; charset=utf-8'
+            : name === 'content-disposition'
+              ? 'attachment; filename="executions-20260101-000000.csv"'
+              : name === 'x-export-truncated'
+                ? 'true'
+                : null,
+      },
+      _data: 'runId,processName,status\r\nrun-1,Loan,Completed\r\n',
+    }
+    ;($fetch.raw as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(rawResponse)
+
+    const result = await proxyToBackend<string>(event, '/api/executions/export.csv', {
+      raw: true,
+      forwardResponseHeaders: ['content-type', 'content-disposition', 'x-export-truncated'],
+    })
+
+    expect(result).toBe(rawResponse._data)
+    expect($fetch.raw).toHaveBeenCalledTimes(1)
+    const [, opts] = ($fetch.raw as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      { method: string; responseType: string; headers: Record<string, string> },
+    ]
+    expect(opts.method).toBe('GET')
+    expect(opts.responseType).toBe('text')
+    expect(opts.headers['Content-Type']).toBeUndefined()
+    expect(responseHeaders['content-type']).toBe('text/csv; charset=utf-8')
+    expect(responseHeaders['content-disposition']).toBe(
+      'attachment; filename="executions-20260101-000000.csv"',
+    )
+    expect(responseHeaders['x-export-truncated']).toBe('true')
+  })
+
+  it('raw path refresh-on-401 retries once and forwards headers on the retried response', async () => {
+    setRuntimeConfig({ authIssuer: 'http://keycloak:8080/realms/cbs-nova' })
+    const event = makeEvent({}, 'cbs_at=old-access; cbs_rt=refresh-123')
+    const err = Object.assign(new Error('unauthorized'), {
+      name: 'FetchError',
+      response: { status: 401 },
+    })
+    const retriedResponse = {
+      status: 200,
+      headers: {
+        get: (name: string) =>
+          name === 'content-type'
+            ? 'text/csv'
+            : name === 'content-disposition'
+              ? 'attachment; filename="retry.csv"'
+              : null,
+      },
+      _data: 'retried,csv',
+    }
+    ;($fetch.raw as unknown as ReturnType<typeof vi.fn>)
+      .mockRejectedValueOnce(err)
+      .mockResolvedValueOnce({
+        _data: {
+          access_token: 'new-access',
+          refresh_token: 'new-refresh',
+          expires_in: 3600,
+        },
+      })
+      .mockResolvedValueOnce(retriedResponse)
+    ;($fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      authorization_endpoint: 'http://keycloak:8080/realms/cbs-nova/protocol/openid-connect/auth',
+      token_endpoint: 'http://keycloak:8080/realms/cbs-nova/protocol/openid-connect/token',
+    })
+
+    const result = await proxyToBackend<string>(event, '/api/executions/export.csv', {
+      raw: true,
+      forwardResponseHeaders: ['content-type', 'content-disposition'],
+    })
+
+    expect(result).toBe('retried,csv')
+    expect($fetch.raw).toHaveBeenCalledTimes(3)
+    const [, retryOpts] = ($fetch.raw as unknown as ReturnType<typeof vi.fn>).mock.calls[2] as [
+      string,
+      { headers: Record<string, string> },
+    ]
+    expect(retryOpts.headers.Authorization).toBe('Bearer new-access')
+    expect(responseHeaders['content-type']).toBe('text/csv')
+    expect(responseHeaders['content-disposition']).toBe('attachment; filename="retry.csv"')
+  })
+
+  it('raw path maps ofetch TimeoutError (cause) to 504 BACKEND_TIMEOUT', async () => {
+    const event = makeEvent()
+    const cause = Object.assign(
+      new Error('[TimeoutError]: The operation was aborted due to timeout'),
+      {
+        name: 'TimeoutError',
+      },
+    )
+    const err = Object.assign(new Error('timeout wrapper'), {
+      name: 'FetchError',
+      cause,
+    })
+    ;($fetch.raw as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(err)
+
+    await expect(
+      proxyToBackend<string>(event, '/api/executions/export.csv', { raw: true }),
+    ).rejects.toMatchObject({
+      statusCode: 504,
+      statusMessage: 'Backend request timed out',
+      data: { code: 'BACKEND_TIMEOUT', message: 'Backend request timed out' },
+    })
+  })
+
+  it('raw path omits Content-Type from request headers', async () => {
+    const event = makeEvent()
+    ;($fetch.raw as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      status: 200,
+      headers: { get: () => null },
+      _data: '',
+    })
+
+    await proxyToBackend<string>(event, '/api/executions/export.csv', { raw: true })
+
+    const [, opts] = ($fetch.raw as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      { headers: Record<string, string> },
+    ]
+    expect(opts.headers['Content-Type']).toBeUndefined()
+  })
+
 })
