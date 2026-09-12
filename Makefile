@@ -72,6 +72,79 @@ logs: ## Tail logs from all docker compose services
 clean: ## Stop the stack AND delete all volumes (DESTRUCTIVE — wipes DB data)
 	$(COMPOSE) down -v
 
+# Backend spotlessCheck/spotlessApply runs across all builds that apply
+# backend/gradle/code-style.gradle (backend/*/build.gradle → subprojects).
+# dsl-plugins has no wrapper of its own; backend/dsl-platform/gradlew (Gradle 9.4.1,
+# Java 25 — never use root ./gradlew) covers all three via -p.
+BACKEND_BUILDS := dsl-platform dsl-starter dsl-plugins
+GRADLEW := backend/dsl-platform/gradlew
+
+.PHONY: lint
+lint: ## Run all lint/format checks (backend Spotless + frontend Biome); non-zero exit on any failure
+	@backend_failed=0; frontend_failed=0; \
+	$(MAKE) --no-print-directory lint-backend || backend_failed=1; \
+	$(MAKE) --no-print-directory lint-frontend || frontend_failed=1; \
+	printf '\n==> Lint summary:\n'; \
+	if [ $$backend_failed -eq 0 ]; then \
+		printf '    \033[32m[ok]\033[0m   backend (spotlessCheck: $(BACKEND_BUILDS))\n'; \
+	else \
+		printf '    \033[31m[fail]\033[0m backend (spotlessCheck: $(BACKEND_BUILDS))\n'; \
+	fi; \
+	if [ $$frontend_failed -eq 0 ]; then \
+		printf '    \033[32m[ok]\033[0m   frontend (biome lint)\n'; \
+	else \
+		printf '    \033[31m[fail]\033[0m frontend (biome lint)\n'; \
+	fi; \
+	if [ $$backend_failed -eq 0 ] && [ $$frontend_failed -eq 0 ]; then \
+		printf '\nAll lint checks passed.\n'; \
+	else \
+		printf '\nLint failed — run `make fmt` to auto-fix formatting.\n'; \
+		exit 1; \
+	fi
+
+.PHONY: lint-backend
+lint-backend: ## Backend format check (spotlessCheck on dsl-platform, dsl-starter, dsl-plugins)
+	@printf '\n==> Running backend spotlessCheck ($(BACKEND_BUILDS))...\n'; \
+	fails=0; \
+	for build in $(BACKEND_BUILDS); do \
+		printf '  -> %s\n' "$$build"; \
+		if $(GRADLEW) -p backend/$$build spotlessCheck --console=plain; then \
+			printf '    \033[32m[ok]\033[0m   %s spotlessCheck\n' "$$build"; \
+		else \
+			printf '    \033[31m[fail]\033[0m %s spotlessCheck\n' "$$build"; \
+			fails=$$((fails+1)); \
+		fi; \
+	done; \
+	if [ $$fails -gt 0 ]; then \
+		printf '\n%d backend build(s) failed spotlessCheck.\n' $$fails; \
+		exit 1; \
+	else \
+		printf '\nBackend spotlessCheck passed.\n'; \
+	fi
+
+.PHONY: lint-frontend
+lint-frontend: ## Frontend lint (cd frontend && pnpm lint — Biome)
+	@printf '\n==> Running frontend lint (biome)...\n'; \
+	if cd frontend && pnpm lint; then \
+		printf '    \033[32m[ok]\033[0m   frontend pnpm lint\n'; \
+	else \
+		printf '    \033[31m[fail]\033[0m frontend pnpm lint\n'; \
+		exit 1; \
+	fi
+
+.PHONY: fmt
+fmt: ## Apply formatting everywhere (spotlessApply + pnpm format); fixes files, always exits 0
+	@printf '\n==> Applying backend formatting (spotlessApply)...\n'; \
+	for build in $(BACKEND_BUILDS); do \
+		printf '  -> %s\n' "$$build"; \
+		$(GRADLEW) -p backend/$$build spotlessApply --console=plain || \
+			printf '    [warn] %s spotlessApply failed (see output above)\n' "$$build"; \
+	done; \
+	printf '\n==> Applying frontend formatting (biome format --write)...\n'; \
+	cd frontend && pnpm format || printf '    [warn] pnpm format failed (see output above)\n'; \
+	printf '\nFormatting applied (exit 0 — re-run `make lint` to verify).\n'; \
+	exit 0
+
 .PHONY: doctor
 doctor: ## Run smoke checks against the running stack and report per-check health
 	@printf '\n==> Running smoke checks...\n\n'; \

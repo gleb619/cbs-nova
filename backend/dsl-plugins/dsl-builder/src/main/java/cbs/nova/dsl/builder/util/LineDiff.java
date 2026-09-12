@@ -13,7 +13,6 @@ public final class LineDiff {
   public static final int DEFAULT_MAX_HUNKS = 200;
   private static final int CONTEXT_LINES = 3;
 
-
   public record Result(List<DiffHunk> hunks, boolean truncated) {
 
   }
