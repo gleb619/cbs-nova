@@ -45,3 +45,4 @@ cbs-nova is a Temporal DSL Orchestration Engine with a Java backend and a Vue/Nu
 - **Java 25 is required.** Root `./gradlew` is Gradle 8.13 and fails under Java 25. Use `backend/dsl-platform/gradlew` (Gradle 9.4.1) for platform/starter builds.
 - **Port mismatch:** backend defaults to 8080, frontend BFF defaults to `http://localhost:8090`. Use `SERVER_PORT=8090` for backend, or override `BACKEND_BASE_URL` for the frontend.
 - **No generic `/api/v1/dsl/*` catch-all.** BFF routes are explicit Nitro files under `frontend/admin-ui-plugin/server/api/v1/`. Add a matching proxy route when exposing a new backend DSL path.
+- **Formatting gates:** `make lint` runs backend Spotless (`spotlessCheck` on dsl-platform/dsl-starter/dsl-plugins) + frontend Biome lint with a non-zero exit on failure; `make fmt` auto-fixes formatting on both tiers.

@@ -50,7 +50,8 @@ class FileServiceTest {
             null,
             null);
     service = new FileService(properties, new FileRepository(),
-            new FileBuffer(BuilderServiceConfiguration.pendingCache(properties, Ticker.systemTicker())),
+            new FileBuffer(
+                    BuilderServiceConfiguration.pendingCache(properties, Ticker.systemTicker())),
             new FileBulkhead(new Semaphore(1), new Semaphore(1), 5L));
   }
 
