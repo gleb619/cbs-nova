@@ -1,4 +1,3 @@
-export * from './useCodeHighlight'
 export * from './useCrc32'
 export * from './useDiffLines'
 export * from './useHelperCompletion'
