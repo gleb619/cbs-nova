@@ -43,7 +43,7 @@ public class DefinitionBundleService {
             .sorted(Comparator.comparing(e -> e.definition().name()))
             .toList();
     return new DefinitionBundle(BUNDLE_FORMAT_VERSION, engineVersion(), Instant.now().toString(),
-            sorted, null);
+            sorted);
   }
 
   public void validateForImport(DefinitionBundle bundle) {

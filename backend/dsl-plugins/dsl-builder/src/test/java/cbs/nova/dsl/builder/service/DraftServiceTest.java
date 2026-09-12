@@ -203,8 +203,7 @@ class DraftServiceTest {
     DefinitionBundle bundle = new DefinitionBundle(
             DefinitionBundleService.BUNDLE_FORMAT_VERSION, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("A", "process", "Draft", "v1", "q"), "published")),
-            null);
+                    new DraftRequest("A", "process", "Draft", "v1", "q"), "published")));
 
     ImportBundleResult result = draftService.importBundle(bundle, false);
 
@@ -221,8 +220,7 @@ class DraftServiceTest {
     DefinitionBundle bundle = new DefinitionBundle(
             DefinitionBundleService.BUNDLE_FORMAT_VERSION, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("A", "process", "Draft", "v1", "q"), "published")),
-            null);
+                    new DraftRequest("A", "process", "Draft", "v1", "q"), "published")));
 
     ImportBundleResult result = draftService.importBundle(bundle, true);
 
@@ -234,7 +232,7 @@ class DraftServiceTest {
   @Test
   void importBundleRejectsInvalidBundle() {
     assertThatThrownBy(() -> draftService.importBundle(
-            new DefinitionBundle(0, "1.0", "now", List.of(), null), false))
+            new DefinitionBundle(0, "1.0", "now", List.of()), false))
             .isInstanceOf(IllegalArgumentException.class);
   }
 }
