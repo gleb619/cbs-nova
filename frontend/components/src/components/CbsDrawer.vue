@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue'
+import { useModalDialog } from '../composables/useModalDialog'
+
 withDefaults(
   defineProps<{
     title: string
@@ -15,6 +18,20 @@ withDefaults(
 )
 
 const open = defineModel<boolean>('open', { default: false })
+
+const drawerRef = ref<HTMLElement | null>(null)
+const { open: openDialog, close: closeDialog } = useModalDialog(drawerRef, {
+  onClose: closeDrawer,
+})
+
+watch(
+  open,
+  (isOpen) => {
+    if (isOpen) openDialog()
+    else closeDialog()
+  },
+  { immediate: true },
+)
 
 function closeDrawer() {
   open.value = false
@@ -35,6 +52,7 @@ function closeDrawer() {
     <Transition name="drawer">
       <aside
         v-if="open"
+        ref="drawerRef"
         :data-testid="testId"
         class="fixed top-0 right-0 z-40 h-full bg-gray-900 text-gray-100 flex flex-col shadow-xl border-l border-gray-800"
         :class="widthClass"
