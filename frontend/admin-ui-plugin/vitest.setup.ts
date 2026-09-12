@@ -17,6 +17,17 @@ g.watch = watch
 
 g.useState = (_key: string, init: () => unknown) => ref(init())
 
+// Stub Nuxt's callOnce so specs observe a single, awaited execution per key.
+const callOnceRegistry = new Map<string, Promise<unknown>>()
+g.callOnce = (key: string, fn: () => unknown) => {
+  let existing = callOnceRegistry.get(key)
+  if (!existing) {
+    existing = Promise.resolve(fn())
+    callOnceRegistry.set(key, existing)
+  }
+  return existing
+}
+
 // Expose a mocked $fetch on globalThis for tests that stub the outgoing backend calls.
 const mockedFetch = vi.fn()
 mockedFetch.raw = vi.fn()
@@ -161,4 +172,5 @@ beforeEach(() => {
   // Reset the vue-router stub's captured guards so handlers from one spec do
   // not leak into the next.
   __resetRouterStub()
+  callOnceRegistry.clear()
 })

@@ -24,7 +24,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleSaveHotkey))
 
 const route = useRoute()
 const { data: info } = useAdminInfo()
-const { enabled: authEnabled, authenticated, user, login, logout } = useAuth()
+const { enabled: authEnabled, authenticated, user, login, logout } = await useAuth()
 
 const dslApi = useDslApi()
 
