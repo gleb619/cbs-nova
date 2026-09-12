@@ -8,6 +8,7 @@ import {
   extendPages,
   resolvePath,
 } from '@nuxt/kit'
+import { resolveRuntimeConfig } from './server/utils/moduleRuntimeConfig'
 
 // ---------------------------------------------------------------------------
 // @cbs/admin-ui-plugin
@@ -180,52 +181,16 @@ export default defineNuxtModule<ModuleOptions>({
     // Runtime config
     // Merged into the host app's runtimeConfig so BFF server utils can read
     // them via useRuntimeConfig() without any extra setup in the host.
+    // Pure nullish-coalescing merge (see server/utils/moduleRuntimeConfig.ts):
+    // only null/undefined fall through, so explicit falsy env/config values
+    // (`0`, `false`, `''`) win over defaults.
     // -----------------------------------------------------------------------
-    nuxt.options.runtimeConfig.backendBaseUrl =
-      nuxt.options.runtimeConfig.backendBaseUrl || options.backendBaseUrl || 'http://localhost:8090'
-    nuxt.options.runtimeConfig.backendApiKey =
-      nuxt.options.runtimeConfig.backendApiKey || options.backendApiKey || ''
-    nuxt.options.runtimeConfig.backendTimeoutMs =
-      nuxt.options.runtimeConfig.backendTimeoutMs || options.backendTimeoutMs || 10000
-
-    const authIssuer = nuxt.options.runtimeConfig.authIssuer || options.authIssuer || ''
-    nuxt.options.runtimeConfig.authIssuer = authIssuer
-    nuxt.options.runtimeConfig.authClientId =
-      nuxt.options.runtimeConfig.authClientId || options.authClientId || 'cbs-nova-bff'
-    nuxt.options.runtimeConfig.authClientSecret =
-      nuxt.options.runtimeConfig.authClientSecret || options.authClientSecret || ''
-    nuxt.options.runtimeConfig.authCallbackUrl =
-      nuxt.options.runtimeConfig.authCallbackUrl ||
-      options.authCallbackUrl ||
-      'http://localhost:3000/api/v1/auth/callback'
-    nuxt.options.runtimeConfig.authPostLogoutRedirect =
-      nuxt.options.runtimeConfig.authPostLogoutRedirect || options.authPostLogoutRedirect || '/'
-    // Session-hardening runtime knobs (T416). All optional — unset values
-    // preserve the pre-hardening behaviour exactly.
-    nuxt.options.runtimeConfig.authSessionIdleTimeoutSeconds =
-      nuxt.options.runtimeConfig.authSessionIdleTimeoutSeconds ||
-      options.authSessionIdleTimeoutSeconds ||
-      0
-    nuxt.options.runtimeConfig.authSessionAbsoluteTimeoutSeconds =
-      nuxt.options.runtimeConfig.authSessionAbsoluteTimeoutSeconds ||
-      options.authSessionAbsoluteTimeoutSeconds ||
-      0
-    nuxt.options.runtimeConfig.authSessionSecureCookies =
-      nuxt.options.runtimeConfig.authSessionSecureCookies || options.authSessionSecureCookies || ''
-    nuxt.options.runtimeConfig.authSessionRotateOnRefresh =
-      nuxt.options.runtimeConfig.authSessionRotateOnRefresh ||
-      options.authSessionRotateOnRefresh ||
-      ''
-    // Public flag so the app can render a Sign-in affordance only when OIDC is configured.
-    nuxt.options.runtimeConfig.public.authEnabled =
-      nuxt.options.runtimeConfig.public.authEnabled || Boolean(authIssuer)
-
-    nuxt.options.runtimeConfig.public.appName =
-      nuxt.options.runtimeConfig.public.appName || options.appName || 'CBS Nova Admin'
-    nuxt.options.runtimeConfig.public.temporalUiBaseUrl =
-      nuxt.options.runtimeConfig.public.temporalUiBaseUrl || options.temporalUiBaseUrl || ''
-    nuxt.options.runtimeConfig.public.temporalNamespace =
-      nuxt.options.runtimeConfig.public.temporalNamespace || options.temporalNamespace || 'default'
+    const { config: runtimeConfig, publicConfig: publicRuntimeConfig } = resolveRuntimeConfig(
+      nuxt.options.runtimeConfig,
+      options,
+    )
+    Object.assign(nuxt.options.runtimeConfig, runtimeConfig)
+    Object.assign(nuxt.options.runtimeConfig.public, publicRuntimeConfig)
 
     // -----------------------------------------------------------------------
     // Global stylesheet (Tailwind base/components/utilities + body tokens)
