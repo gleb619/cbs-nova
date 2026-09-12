@@ -48,6 +48,11 @@ class FileServiceTest {
             null,
             new DslBuilderProperties.Files(0, 100, 32, 8, 5L),
             null,
+            null,
+            null,
+            null,
+            null,
+            null,
             null);
     service = new FileService(properties, new FileRepository(),
             new FileBuffer(

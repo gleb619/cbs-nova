@@ -23,11 +23,6 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class GradleService {
 
-  // TODO: redo, remove hardcode, use app.yml for settings
-  private static final int MAX_GRADLE_JAVA_MAJOR = 25;
-  private static final int MIN_GRADLE_JAVA_MAJOR = 8;
-  private static final int MAX_LOG_LINES = 200;
-
   private final DslBuilderProperties properties;
 
   public record BuildOutcome(boolean success, List<String> logLines) {
@@ -58,8 +53,7 @@ public class GradleService {
     }
   }
 
-  // TODO: redo, remove hardcode, use app.yml for settings
-  private Path resolveBuildJavaHome() {
+  Path resolveBuildJavaHome() {
     if (properties.gradleJavaHome() != null) {
       return properties.gradleJavaHome();
     }
@@ -73,21 +67,20 @@ public class GradleService {
             .orElse(current);
   }
 
-  private boolean isGradleCompatible(Path javaHome) {
+  boolean isGradleCompatible(Path javaHome) {
     var major = javaMajor(javaHome);
-    return major >= MIN_GRADLE_JAVA_MAJOR && major <= MAX_GRADLE_JAVA_MAJOR;
+    return major >= properties.gradleJavaMin() && major <= properties.gradleJavaMax();
   }
 
-  // TODO: redo, remove hardcode, use app.yml for settings
-  private List<Path> installedJdks() {
+  List<Path> installedJdks() {
     var candidates = new ArrayList<Path>();
-    var env = System.getenv("DSL_BUILDER_JAVA_HOME");
+    var env = System.getenv(properties.jdkHomeEnvVar());
     if (env != null && !env.isBlank()) {
       candidates.add(Path.of(env));
     }
-    candidates.addAll(listDirs(Path.of(System.getProperty("user.home"))
-            .resolve(".sdkman/candidates/java")));
-    candidates.addAll(listDirs(Path.of("/usr/lib/jvm")));
+    for (Path root : properties.jdkSearchPaths()) {
+      candidates.addAll(listDirs(root));
+    }
     return candidates;
   }
 
@@ -131,12 +124,13 @@ public class GradleService {
     }
   }
 
-  private List<String> logLines(ByteArrayOutputStream stdout, ByteArrayOutputStream stderr) {
+  List<String> logLines(ByteArrayOutputStream stdout, ByteArrayOutputStream stderr) {
     var combined = stdout.toString(StandardCharsets.UTF_8)
             + stderr.toString(StandardCharsets.UTF_8);
     var lines = combined.lines().filter(line -> !line.isBlank()).toList();
-    return lines.size() <= MAX_LOG_LINES
+    var maxLines = properties.buildLogMaxLines();
+    return lines.size() <= maxLines
             ? lines
-            : lines.subList(lines.size() - MAX_LOG_LINES, lines.size());
+            : lines.subList(lines.size() - maxLines, lines.size());
   }
 }

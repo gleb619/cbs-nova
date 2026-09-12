@@ -64,6 +64,11 @@ class CompileServiceTest {
             null,
             null,
             git,
+            null,
+            null,
+            null,
+            null,
+            null,
             null);
   }
 
