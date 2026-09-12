@@ -1,7 +1,9 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
-import { h } from 'vue'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { h, nextTick } from 'vue'
 import CbsDrawer from '../CbsDrawer.vue'
+
+const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 // The drawer teleports its overlay and aside into <body>; stub Teleport so they
 // render in place and stay queryable through the wrapper itself.
@@ -94,5 +96,128 @@ describe('CbsDrawer', () => {
 
     const aside = wrapper.get('[role="dialog"]')
     expect(aside.find('p').text()).toBe('drawer body')
+  })
+
+  describe('useModalDialog integration', () => {
+    let wrapper: ReturnType<typeof mountDrawer> | null = null
+
+    beforeEach(() => {
+      document.body.innerHTML = ''
+    })
+
+    afterEach(() => {
+      wrapper?.unmount()
+      wrapper = null
+      document.body.innerHTML = ''
+    })
+
+    const mountAttachedDrawer = (
+      props: Record<string, unknown> = {},
+      slots: Record<string, unknown> = {},
+    ) => {
+      wrapper = mount(CbsDrawer, {
+        props: { title: 'Drafts', closeLabel: 'Close drawer', ...props },
+        slots: slots as never,
+        global: { stubs: { teleport: true } },
+        attachTo: document.body,
+      })
+      return wrapper
+    }
+
+    const twoButtonsSlot = {
+      default: () => [
+        h('button', { type: 'button', 'data-testid': 'slot-first' }, 'First'),
+        h('button', { type: 'button', 'data-testid': 'slot-last' }, 'Last'),
+      ],
+    }
+
+    it('emits update:open false when Escape is pressed inside the drawer', async () => {
+      const w = mountAttachedDrawer({ open: true })
+      await nextTick()
+      await flushPromises()
+
+      w.get('[role="dialog"]').element.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+      )
+      await nextTick()
+
+      expect(w.emitted('update:open')!.at(-1)).toEqual([false])
+    })
+
+    it('moves focus to the first tabbable element when opened', async () => {
+      const w = mountAttachedDrawer({ open: true }, twoButtonsSlot)
+      await nextTick()
+      await flushPromises()
+
+      expect(document.activeElement).toBe(w.get('[data-testid="drawer-close-button"]').element)
+    })
+
+    it('traps focus cycling forward with Tab', async () => {
+      const w = mountAttachedDrawer({ open: true }, twoButtonsSlot)
+      await nextTick()
+      await flushPromises()
+
+      const first = w.get('[data-testid="drawer-close-button"]').element as HTMLElement
+      const last = w.get('[data-testid="slot-last"]').element as HTMLElement
+
+      last.focus()
+      document.activeElement?.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }),
+      )
+      await nextTick()
+
+      expect(document.activeElement).toBe(first)
+    })
+
+    it('traps focus cycling backward with Shift+Tab', async () => {
+      const w = mountAttachedDrawer({ open: true }, twoButtonsSlot)
+      await nextTick()
+      await flushPromises()
+
+      const first = w.get('[data-testid="drawer-close-button"]').element as HTMLElement
+      const last = w.get('[data-testid="slot-last"]').element as HTMLElement
+
+      first.focus()
+      document.activeElement?.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }),
+      )
+      await nextTick()
+
+      expect(document.activeElement).toBe(last)
+    })
+
+    it('makes background siblings inert while open and restores them on close', async () => {
+      const sibling = document.createElement('div')
+      document.body.appendChild(sibling)
+
+      const w = mountAttachedDrawer({ open: true })
+      await nextTick()
+      await flushPromises()
+
+      expect(sibling.inert).toBe(true)
+      expect(sibling.getAttribute('aria-hidden')).toBe('true')
+
+      await w.setProps({ open: false })
+      await nextTick()
+
+      expect(sibling.inert).toBe(false)
+      expect(sibling.hasAttribute('aria-hidden')).toBe(false)
+    })
+
+    it('returns focus to the previously focused element when closed', async () => {
+      const trigger = document.createElement('button')
+      document.body.appendChild(trigger)
+      trigger.focus()
+
+      const w = mountAttachedDrawer({ open: true })
+      await nextTick()
+      await flushPromises()
+      expect(document.activeElement).not.toBe(trigger)
+
+      await w.setProps({ open: false })
+      await nextTick()
+
+      expect(document.activeElement).toBe(trigger)
+    })
   })
 })

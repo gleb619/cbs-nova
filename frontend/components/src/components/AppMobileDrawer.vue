@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue'
+import { useModalDialog } from '../composables/useModalDialog'
 import { useSidebar } from '../composables/useSidebar'
 import AppNavItem from './AppNavItem.vue'
 import type { NavItem } from './AppSidebar.vue'
@@ -18,6 +20,20 @@ const props = withDefaults(
 )
 
 const { mobileOpen, closeMobile } = useSidebar()
+
+const drawerRef = ref<HTMLElement | null>(null)
+const { open: openDialog, close: closeDialog } = useModalDialog(drawerRef, {
+  onClose: closeMobile,
+})
+
+watch(
+  mobileOpen,
+  (isOpen) => {
+    if (isOpen) openDialog()
+    else closeDialog()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -33,6 +49,7 @@ const { mobileOpen, closeMobile } = useSidebar()
     <Transition name="slide">
       <aside
         v-if="mobileOpen"
+        ref="drawerRef"
         data-testid="app-mobile-drawer"
         class="fixed top-0 left-0 z-40 h-full w-64 bg-neutral-800 text-neutral-50 flex flex-col md:hidden"
         role="dialog"
