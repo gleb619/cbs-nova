@@ -383,9 +383,12 @@ export function useExecutions() {
 
   let detailPoller: ReturnType<typeof useIntervalEmitter> | null = null
 
-  function startPolling(id: string) {
+  // T461 — the interval defaults to the shared resolved stalePollMs
+  // (useStalePollInterval) instead of a hardcoded 3000 ms; callers pass the
+  // user's persisted choice from the detail page.
+  function startPolling(id: string, intervalMs: number = resolveStalePollMs()) {
     stopPolling()
-    detailPoller = useIntervalEmitter({ intervalMs: 3000, pauseOnHidden: true })
+    detailPoller = useIntervalEmitter({ intervalMs, pauseOnHidden: true })
     detailPoller.onTick(async () => {
       await loadDetail(id)
       if (selectedExecution.value && selectedExecution.value.status !== 'Running') {
