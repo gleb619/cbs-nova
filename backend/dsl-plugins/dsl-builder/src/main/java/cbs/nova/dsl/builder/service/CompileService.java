@@ -67,6 +67,11 @@ public class CompileService {
     if (isBlank(repoUrl) && (request.sources() == null || request.sources().isEmpty())) {
       throw new IllegalArgumentException("Either sources or a git repository must be provided");
     }
+    if (!isBlank(request.repoUrl())) {
+      // SSRF guard: only the request-supplied URL is attacker-controlled; the configured
+      // fallback (properties.git().repoUrl()) is trusted deployment configuration.
+      RepoUrlValidator.validate(request.repoUrl(), properties);
+    }
     var session = createSession();
     try {
       scaffoldProject(session, request);

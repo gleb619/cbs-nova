@@ -69,6 +69,9 @@ class CompileServiceTest {
             null,
             null,
             null,
+            null,
+            null,
+            false,
             null);
   }
 
@@ -85,6 +88,17 @@ class CompileServiceTest {
             .anyMatch(path -> path.endsWith("ProcessWorkflow.java"))
             .anyMatch(path -> path.endsWith("ProcessDefinition.java"));
     assertThat(result.diagnostics()).isEmpty();
+  }
+
+  @Test
+  void rejectsRequestRepoUrlBeforeCloning() {
+    var request = new CompileRequest(
+            "v1", null, null, null, "file:///etc/passwd", null,
+            Map.of("dsl/SampleDsl.java", SAMPLE_SOURCE));
+
+    assertThatThrownBy(() -> service().compile(request))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("repoUrl");
   }
 
   @Test
