@@ -193,6 +193,9 @@ class AdvancedDslExamplesTest {
       if (helperClass == ParseDateHelper.class) {
         return new ParseDateHelper();
       }
+      if (helperClass == ParseDurationHelper.class) {
+        return new ParseDurationHelper();
+      }
       if (helperClass == Base64Helper.class) {
         return new Base64Helper();
       }
