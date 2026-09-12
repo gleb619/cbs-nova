@@ -473,6 +473,35 @@ guards. `dateMath.startOf` truncates to `minute` / `hour` / `day` / `month` / `y
 the safe primitive for building cache keys (`startOf(now, "hour")`) or partition boundaries
 (`startOf(now, "day")`) without hand-formatting.
 
+### Parse a duration string
+
+`parseDuration` (`ParseDurationIn(value)`) turns a human/config duration string into
+total milliseconds, floored seconds, and a normalized ISO-8601 duration string.
+
+| Form | Example | `millis` | `seconds` | `iso` |
+|---|---|---|---|---|
+| ISO-8601 hours + minutes | `PT1H30M` | `5400000` | `5400` | `PT1H30M` |
+| ISO-8601 days + hours | `P2DT3H` | `183600000` | `183600` | `PT51H` |
+| ISO-8601 bare days | `P2D` | `172800000` | `172800` | `PT48H` |
+| ISO-8601 fractional seconds | `PT0.5S` | `500` | `0` | `PT0.5S` |
+| Shorthand single unit | `90m` | `5400000` | `5400` | `PT1H30M` |
+| Shorthand compound | `1h30m` | `5400000` | `5400` | `PT1H30M` |
+| Shorthand milliseconds | `250ms` | `250` | `0` | `PT0.25S` |
+
+```java
+ParseDurationOut delay = ctx.runHelper("parseDuration",
+        new ParseDurationIn("1h30m"))
+        .as(ParseDurationOut.class);
+long delayMillis = delay.millis();   // 5400000
+String delayIso = delay.iso();       // "PT1H30M"
+```
+
+Shorthand units are `d` (days), `h` (hours), `m` (minutes, **never months**), `s`
+(seconds), and `ms` (milliseconds). Compound segments may include whitespace. A bare
+number with no unit is rejected as ambiguous — the helper does **not** assume
+milliseconds. Signed/negative durations are rejected in phase 1. Overflow past
+`Long.MAX_VALUE` milliseconds is rejected cleanly.
+
 ---
 
 ## HTTP integration
