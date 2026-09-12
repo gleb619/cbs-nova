@@ -104,11 +104,7 @@ public class DslIntrospectionService {
       var p = processOpt.get();
       var code = gm.findGeneratedProcess(name).map(GeneratedClassDescriptor::executeJson)
               .orElse(null);
-      var steps = p.transactionRefs() != null
-              ? p.transactionRefs().stream()
-                      .map(ref -> new StepDto(ref, "transaction", ref, null))
-                      .toList()
-              : List.<StepDto>of();
+      var steps = List.<StepDto>of();
       return Optional.of(new ConstructBodyDto(p.name(), "process", code, steps));
     }
     var txOpt = gm.findTransaction(name);

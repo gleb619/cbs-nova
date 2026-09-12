@@ -39,10 +39,10 @@ class DslScheduleResourceTest {
   private final ObjectMapper objectMapper = new ObjectMapper();
   private MockMvc mockMvc;
 
-
   @BeforeEach
   void setUp() {
-    DslScheduleHandler handler = new DslScheduleHandler(service, objectMapper, AuditTestSupport.emptyProvider());
+    DslScheduleHandler handler = new DslScheduleHandler(service, objectMapper,
+            AuditTestSupport.emptyProvider());
     DslScheduleRouterConfiguration router = new DslScheduleRouterConfiguration();
 
     AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();

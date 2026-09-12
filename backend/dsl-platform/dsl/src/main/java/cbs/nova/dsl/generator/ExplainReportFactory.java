@@ -2,7 +2,6 @@ package cbs.nova.dsl.generator;
 
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.model.ExplainReport;
-import cbs.nova.dsl.ExplainSupport;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
@@ -36,11 +35,7 @@ public final class ExplainReportFactory {
     var diagram = report.mermaid().isEmpty()
             ? diagramGenerator.forHelper(name)
             : report.mermaid();
-    return new ExplainReport(
-            report.name(),
-            report.description(),
-            ExplainSupport.truncateToBudget(
-                    diagram, budgetChars - report.description().length()));
+    return new ExplainReport(report.name(), report.description(), diagram).truncateTo(budgetChars);
   }
 
   private static @NonNull ExplainReport report(
@@ -48,9 +43,8 @@ public final class ExplainReportFactory {
     var description = descriptor.description() != null
             ? descriptor.description()
             : "No description available for `" + descriptor.name() + "`.";
-    var boundedDescription = ExplainSupport.truncateToBudget(description, budgetChars);
-    var boundedDiagram = ExplainSupport.truncateToBudget(
-            diagram != null ? diagram : "", budgetChars - boundedDescription.length());
-    return new ExplainReport(descriptor.name(), boundedDescription, boundedDiagram);
+    return new ExplainReport(
+            descriptor.name(), description, diagram != null ? diagram : "")
+            .truncateTo(budgetChars);
   }
 }

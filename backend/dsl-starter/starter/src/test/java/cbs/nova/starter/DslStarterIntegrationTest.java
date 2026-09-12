@@ -32,6 +32,7 @@ import cbs.nova.starter.service.DslRuntimeService;
 import cbs.nova.starter.service.InputValidator;
 import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
 import cbs.nova.starter.config.properties.InputValidationProperties;
+import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
 import tools.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
@@ -66,14 +67,17 @@ class DslStarterIntegrationTest {
     var previewProperties = new CbsNovaPreviewProperties(null, null, null);
     var previewPipe = new PreviewDslPipe(recorder, contextFactory, dryRunLoggingContext,
             bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, null,
-            previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(Caffeine.newBuilder().build()),
+            previewProperties, new CbsNovaFakesProperties(false, null),
+            new RunScopedFakeConfig(Caffeine.newBuilder().build()),
             new SimpleMeterRegistry(), null);
     var runPipe = new RunDslPipe(contextFactory, recorder, new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()), new DslExecutionEventBus());
     var explainPipe = new ExplainDslPipe(recorder, contextFactory, dryRunLoggingContext,
             bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, previewProperties,
-            new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(Caffeine.newBuilder().build()),
-            new SimpleMeterRegistry(), new ExplainDiagramRenderer(), null);
+            new CbsNovaFakesProperties(false, null),
+            new RunScopedFakeConfig(Caffeine.newBuilder().build()),
+            new SimpleMeterRegistry(), new ExplainDiagramRenderer(),
+            new CbsNovaExplainProperties(4000), null);
     var runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
     var loggingProperties = new CbsNovaLoggingProperties(
             CbsNovaLoggingProperties.Level.INFO,

@@ -86,7 +86,8 @@ class DslDefinitionBundleServiceTest {
     DefinitionBundle bundle = new DefinitionBundle(
             StarterConstants.BUNDLE_FORMAT_VERSION, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")), null);
+                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")),
+            null);
 
     service.validateForImport(bundle);
   }
@@ -102,7 +103,8 @@ class DslDefinitionBundleServiceTest {
   void validateForImportRejectsZeroFormatVersion() {
     DefinitionBundle bundle = new DefinitionBundle(0, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")), null);
+                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")),
+            null);
     assertThatThrownBy(() -> service.validateForImport(bundle))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("missing or invalid formatVersion");
@@ -112,7 +114,8 @@ class DslDefinitionBundleServiceTest {
   void validateForImportRejectsUnsupportedFormatVersion() {
     DefinitionBundle bundle = new DefinitionBundle(99, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")), null);
+                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")),
+            null);
     assertThatThrownBy(() -> service.validateForImport(bundle))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("Unsupported bundle formatVersion 99");
@@ -132,7 +135,8 @@ class DslDefinitionBundleServiceTest {
     DefinitionBundle bundle = new DefinitionBundle(
             StarterConstants.BUNDLE_FORMAT_VERSION, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("", "process", "Published", "v1", "q"), "published")), null);
+                    new DraftRequest("", "process", "Published", "v1", "q"), "published")),
+            null);
     assertThatThrownBy(() -> service.validateForImport(bundle))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("non-blank name");
@@ -188,7 +192,8 @@ class DslDefinitionBundleServiceTest {
     DefinitionBundle bundle = new DefinitionBundle(
             StarterConstants.BUNDLE_FORMAT_VERSION, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")), null);
+                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")),
+            null);
 
     service.verifyDigest(bundle);
   }
@@ -201,7 +206,8 @@ class DslDefinitionBundleServiceTest {
     DefinitionBundle bundle = new DefinitionBundle(
             StarterConstants.BUNDLE_FORMAT_VERSION, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")), null);
+                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")),
+            null);
 
     assertThatThrownBy(() -> strict.verifyDigest(bundle))
             .isInstanceOf(IllegalArgumentException.class)

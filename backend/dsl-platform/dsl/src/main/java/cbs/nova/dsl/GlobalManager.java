@@ -42,7 +42,7 @@ public final class GlobalManager {
   private final GeneratedClassRegistry generatedClassRegistry;
   private final ProcessContextFactory processContextFactory;
   private final CompensationRegistry compensationRegistry;
-  //TODO: its break a DI principle, move to a config class inatead
+  // TODO: its break a DI principle, move to a config class inatead
   private final ExplainReportFactory explainReportFactory = new ExplainReportFactory(
           new MermaidDiagramGenerator());
 

@@ -71,7 +71,7 @@ import tools.jackson.databind.node.ObjectNode;
 @Helper(name = "jwt")
 public class JwtHelper implements Executable<JwtIn, JwtOut> {
 
-  //TODO: replace with a spring config class intead to not break a DI principle
+  // TODO: replace with a spring config class intead to not break a DI principle
   @Deprecated(forRemoval = true)
   private static final ObjectMapper MAPPER = new ObjectMapper();
 

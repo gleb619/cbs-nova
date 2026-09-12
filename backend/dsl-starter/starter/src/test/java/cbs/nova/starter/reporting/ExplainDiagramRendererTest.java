@@ -53,7 +53,6 @@ class ExplainDiagramRendererTest {
                     .outputType(String.class)
                     .hasCompensation(false)
                     .hasSideEffects(false)
-                    .previewBehavior(null)
                     .parameters(List.of())
                     .taskQueue(null)
                     .version(null)

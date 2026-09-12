@@ -7,9 +7,8 @@ import cbs.nova.dsl.process.ProcessRunner;
 import cbs.nova.dsl.process.TemporalProcessLauncher;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
-import org.junit.jupiter.api.Test;
-
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.junit.jupiter.api.Test;
 
 class DefaultProcessRunnerExplainTest {
 
@@ -42,6 +41,54 @@ class DefaultProcessRunnerExplainTest {
     assertThat(result).isSameAs(expected);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("ok");
+  }
+
+  @Test
+  void explainModeUsesExplainLogicWhenSet() {
+    var executeCalled = new AtomicBoolean(false);
+    var explainCalled = new AtomicBoolean(false);
+    var process = Dsl.process("P")
+            .input(String.class)
+            .output(String.class)
+            .execute(ctx -> {
+              executeCalled.set(true);
+              return Result.success("execute");
+            })
+            .explain(ctx -> {
+              explainCalled.set(true);
+              assertThat(ctx.mode()).isEqualTo(ExecutionMode.EXPLAIN);
+              return Result.success("explain");
+            })
+            .build();
+    var ctx = contextFactory.of("input", ExecutionMode.EXPLAIN, "run-explain-logic");
+
+    var result = runner.run(process, ctx);
+
+    assertThat(explainCalled.get()).isTrue();
+    assertThat(executeCalled.get()).isFalse();
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value()).isEqualTo("explain");
+  }
+
+  @Test
+  void explainModeFallsBackToExecuteWhenExplainNotSet() {
+    var executeCalled = new AtomicBoolean(false);
+    var process = Dsl.process("P")
+            .input(String.class)
+            .output(String.class)
+            .execute(ctx -> {
+              executeCalled.set(true);
+              assertThat(ctx.mode()).isEqualTo(ExecutionMode.EXPLAIN);
+              return Result.success("fallback");
+            })
+            .build();
+    var ctx = contextFactory.of("input", ExecutionMode.EXPLAIN, "run-explain-fallback");
+
+    var result = runner.run(process, ctx);
+
+    assertThat(executeCalled.get()).isTrue();
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value()).isEqualTo("fallback");
   }
 
   @Test

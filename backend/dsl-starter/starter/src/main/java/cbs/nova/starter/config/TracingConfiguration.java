@@ -41,7 +41,7 @@ public class TracingConfiguration {
           @Autowired Environment environment) {
     String endpoint = configuredEndpoint;
     if (!StringUtils.hasText(endpoint)) {
-      //TODO: redo with an app.yml setting instead of env hardcode
+      // TODO: redo with an app.yml setting instead of env hardcode
       endpoint = environment.getProperty(OTEL_EXPORTER_OTLP_ENDPOINT);
     }
     if (!StringUtils.hasText(endpoint)) {

@@ -11,9 +11,9 @@ import cbs.nova.dsl.transaction.CompensationRegistry;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.dsl.transaction.TransactionExecutionStatus;
 import cbs.nova.dsl.repository.InMemoryTransactionExecutionRepository;
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.junit.jupiter.api.Test;
 
 class DefaultTransactionRunnerTest {
 
@@ -78,13 +78,42 @@ class DefaultTransactionRunnerTest {
   }
 
   @Test
-  void explainModeWithPreviewLogicUsesExecuteLogic() {
+  void explainModeUsesExplainLogicWhenSet() {
+    var executeCalled = new AtomicBoolean(false);
+    var explainCalled = new AtomicBoolean(false);
     var tx = Dsl.transaction("ExplainT")
-            .execute(ctx -> Result.success("execute-result"))
+            .execute(ctx -> {
+              executeCalled.set(true);
+              return Result.success("execute-result");
+            })
+            .explain(ctx -> {
+              explainCalled.set(true);
+              assertThat(ctx.mode()).isEqualTo(ExecutionMode.EXPLAIN);
+              return Result.success("explain-result");
+            })
+            .build();
+    var ctx = contextFactory.of("in", ExecutionMode.EXPLAIN, "r5");
+    var result = runner.run(tx, ctx);
+    assertThat(explainCalled.get()).isTrue();
+    assertThat(executeCalled.get()).isFalse();
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value()).isEqualTo("explain-result");
+  }
+
+  @Test
+  void explainModeFallsBackToExecuteWhenExplainNotSet() {
+    var executeCalled = new AtomicBoolean(false);
+    var tx = Dsl.transaction("ExplainFallbackT")
+            .execute(ctx -> {
+              executeCalled.set(true);
+              assertThat(ctx.mode()).isEqualTo(ExecutionMode.EXPLAIN);
+              return Result.success("execute-result");
+            })
             .preview(ctx -> Result.success("preview-result"))
             .build();
     var ctx = contextFactory.of("in", ExecutionMode.EXPLAIN, "r5");
     var result = runner.run(tx, ctx);
+    assertThat(executeCalled.get()).isTrue();
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("execute-result");
   }

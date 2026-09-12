@@ -16,7 +16,7 @@ public record ExecutableDescriptor(
 
   public static ExecutableDescriptor empty() {
     return new ExecutableDescriptor(null, null, null, null, true, "delegates to execute",
-        List.of());
+            List.of());
   }
 
 }

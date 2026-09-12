@@ -17,6 +17,7 @@ import cbs.nova.starter.service.PreviewResultCache;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
+import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
@@ -69,14 +70,18 @@ class DevDslRuntimeCachingTest {
     PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
             dryRunLoggingContext, bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN,
             cache, previewProperties, new CbsNovaFakesProperties(false, null),
-            new RunScopedFakeConfig(Caffeine.newBuilder().build()), new SimpleMeterRegistry(), null);
+            new RunScopedFakeConfig(Caffeine.newBuilder().build()), new SimpleMeterRegistry(),
+            null);
     RunDslPipe runPipe = new RunDslPipe(contextFactory, recorder,
-            new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(Caffeine.newBuilder().build()),
+            new CbsNovaFakesProperties(false, null),
+            new RunScopedFakeConfig(Caffeine.newBuilder().build()),
             new DslExecutionEventBus());
     ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
             dryRunLoggingContext, bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN,
-            previewProperties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(Caffeine.newBuilder().build()),
-            new SimpleMeterRegistry(), new ExplainDiagramRenderer(), null);
+            previewProperties, new CbsNovaFakesProperties(false, null),
+            new RunScopedFakeConfig(Caffeine.newBuilder().build()),
+            new SimpleMeterRegistry(), new ExplainDiagramRenderer(),
+            new CbsNovaExplainProperties(4000), null);
     runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
 
     Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
@@ -137,7 +142,6 @@ class DevDslRuntimeCachingTest {
                     .outputType(String.class)
                     .hasCompensation(false)
                     .hasSideEffects(true)
-                    .previewBehavior("delegates to execute")
                     .parameters(List.of(ParameterDescriptor.ofString("x")))
                     .taskQueue("Ping-queue")
                     .version("v2")

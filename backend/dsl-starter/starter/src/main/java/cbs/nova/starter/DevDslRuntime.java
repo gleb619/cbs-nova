@@ -3,7 +3,6 @@ package cbs.nova.starter;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.model.ExplainReport;
-import cbs.nova.dsl.ExplainSupport;
 import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.model.ExplainTraceReport;
@@ -49,11 +48,7 @@ public final class DevDslRuntime implements DslRuntime {
   private static @NonNull ExplainReport toExplainReport(@NonNull ExplainTraceReport traceReport) {
     var description = traceReport.description() + traceSummary(traceReport);
     var mermaid = traceReport.mermaidDiagram() != null ? traceReport.mermaidDiagram() : "";
-    return new ExplainReport(
-            traceReport.name(),
-            ExplainSupport.truncateToBudget(
-                    description, ExplainSupport.DEFAULT_BUDGET_CHARS),
-            mermaid);
+    return new ExplainReport(traceReport.name(), description, mermaid);
   }
 
   private static @NonNull String traceSummary(@NonNull ExplainTraceReport traceReport) {

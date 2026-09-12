@@ -320,7 +320,8 @@ class DslRuntimeServiceTest {
               null,
               null,
               null,
-              null, null);
+              null,
+              null);
       GlobalManager.globalManager().registerProcess(process);
 
       PreviewReport report = previewReport("Synthetic", true, List.of());
@@ -362,7 +363,8 @@ class DslRuntimeServiceTest {
               null,
               null,
               null,
-              null, null);
+              null,
+              null);
       GlobalManager.globalManager().registerProcess(process);
 
       PreviewReport report = previewReport("Synthetic", true, List.of());

@@ -355,6 +355,7 @@ class DslIntrospectionResourceTest {
             null,
             ctx -> Result.success("ok"),
             null,
+            null,
             () -> DslDescriptor.builder()
                     .name("sampleFunction")
                     .type(DslType.FUNCTION)
@@ -363,7 +364,6 @@ class DslIntrospectionResourceTest {
                     .outputType(String.class)
                     .hasCompensation(false)
                     .hasSideEffects(false)
-                    .previewBehavior(null)
                     .parameters(List.of())
                     .taskQueue(null)
                     .version(null)

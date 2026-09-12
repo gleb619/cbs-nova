@@ -24,10 +24,9 @@ public record ProcessDslObject(
         @NonNull Function<ProcessContext<?>, Result<?>> executeLogic,
         @Nullable Function<CompensationContext<?>, Result<?>> compensationLogic,
         @Nullable Function<ProcessContext<?>, Result<?>> previewLogic,
+        @Nullable Function<ProcessContext<?>, Result<?>> explainLogic,
         @Nullable Supplier<DslDescriptor> descriptor,
         @Nullable BiConsumer<CompensationContext<?>, List<TransactionExecution>> userCompensationHandler,
-        // TODO: remove, as unused
-        @Deprecated(forRemoval = true) @Nullable List<String> transactionRefs,
         @Nullable String description) implements DslObject {
 
   @Override
@@ -37,6 +36,10 @@ public record ProcessDslObject(
 
   public @NonNull Function<ProcessContext<?>, Result<?>> effectivePreview() {
     return previewLogic != null ? previewLogic : executeLogic;
+  }
+
+  public @NonNull Function<ProcessContext<?>, Result<?>> effectiveExplain() {
+    return explainLogic != null ? explainLogic : executeLogic;
   }
 
   public @NonNull DslDescriptor describe() {
@@ -51,7 +54,6 @@ public record ProcessDslObject(
             .outputType(outputType)
             .hasCompensation(compensationLogic != null)
             .hasSideEffects(true)
-            .previewBehavior("delegates to execute")
             .parameters(parameters != null ? parameters : List.of())
             .taskQueue(taskQueue)
             .version(version)

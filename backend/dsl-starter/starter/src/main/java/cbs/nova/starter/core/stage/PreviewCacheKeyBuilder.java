@@ -31,7 +31,6 @@ final class PreviewCacheKeyBuilder {
                             .outputType(helper.outputType())
                             .hasCompensation(false)
                             .hasSideEffects(helper.hasSideEffects())
-                            .previewBehavior(helper.previewBehavior())
                             .parameters(helper.parameters())
                             .taskQueue(null) // helpers are not Temporal-scheduled; no task queue
                                              // applies (dropped from hash by non_null inclusion)

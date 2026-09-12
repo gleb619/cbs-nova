@@ -20,10 +20,4 @@ public interface ExplainSupport<IN, OUT> {
   default @NonNull OUT explain(@NonNull Context<IN> ctx) {
     return explain(ctx, DEFAULT_BUDGET_CHARS);
   }
-
-  @Deprecated(forRemoval = true)
-  //TODO: it cant be a static method, it must a part of PipeStage instead with some app.yml config
-  static @NonNull String truncateToBudget(@NonNull String text, int budgetChars) {
-    return text.length() <= budgetChars ? text : text.substring(0, Math.max(budgetChars, 0));
-  }
 }

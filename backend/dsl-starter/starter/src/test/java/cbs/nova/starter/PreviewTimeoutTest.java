@@ -13,6 +13,7 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
+import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
@@ -121,7 +122,8 @@ class PreviewTimeoutTest {
     CbsNovaPreviewProperties properties = timeoutProperties(100);
     PreviewDslPipe pipe = new PreviewDslPipe(recorder, contextFactory, dryRunLoggingContext,
             bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, cache,
-            properties, new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(Caffeine.newBuilder().build()),
+            properties, new CbsNovaFakesProperties(false, null),
+            new RunScopedFakeConfig(Caffeine.newBuilder().build()),
             meterRegistry, dispatchExecutor);
 
     pipe.execute("Slow", contextFactory.of("in", ExecutionMode.PREVIEW));
@@ -154,7 +156,8 @@ class PreviewTimeoutTest {
           ExecutorService executor) {
     return new PreviewDslPipe(recorder, contextFactory, dryRunLoggingContext, bufferRegistry,
             StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, null, properties,
-            new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(Caffeine.newBuilder().build()), meterRegistry,
+            new CbsNovaFakesProperties(false, null),
+            new RunScopedFakeConfig(Caffeine.newBuilder().build()), meterRegistry,
             executor);
   }
 
@@ -162,7 +165,8 @@ class PreviewTimeoutTest {
           ExecutorService executor) {
     return new ExplainDslPipe(recorder, contextFactory, dryRunLoggingContext, bufferRegistry,
             StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, properties,
-            new CbsNovaFakesProperties(false, null), new RunScopedFakeConfig(Caffeine.newBuilder().build()), meterRegistry,
-            new ExplainDiagramRenderer(), executor);
+            new CbsNovaFakesProperties(false, null),
+            new RunScopedFakeConfig(Caffeine.newBuilder().build()), meterRegistry,
+            new ExplainDiagramRenderer(), new CbsNovaExplainProperties(4000), executor);
   }
 }

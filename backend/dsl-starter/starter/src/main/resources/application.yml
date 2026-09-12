@@ -107,3 +107,8 @@ logging:
 #   spring.security.oauth2.resourceserver.jwt.issuer-uri: https://idp.example/realms/cbs-nova
 
 # cbs.dsl.auth.* — DSL REST-API authentication & authorization (T408, T410)
+
+cbs:
+  nova:
+    explain:
+      budget-chars: 4000
