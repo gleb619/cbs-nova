@@ -2,6 +2,7 @@
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { useExecutions } from '@cbs/admin-ui-plugin/composables/useExecutions'
 import { useExecutionsApi } from '@cbs/admin-ui-plugin/composables/useExecutionsApi'
+import { resolveStalePollMs } from '@cbs/admin-ui-plugin/composables/useStalePollInterval'
 import { useTemporalLink } from '@cbs/admin-ui-plugin/composables/useTemporalLink'
 import {
   DslExecutionTimeline,
@@ -12,6 +13,7 @@ import {
   ExecutionsExecutionTrace,
   selectTransaction,
 } from '@cbs/components'
+import { useLocalStorageState } from '@cbs/components/composables'
 import { navigateTo, useRoute } from 'nuxt/app'
 import { computed, onUnmounted, ref } from 'vue'
 import type { ExecutionMode, TransactionExecutionDto } from '~/types'
@@ -51,9 +53,36 @@ const visibleTab = computed<DetailTab>(() =>
   availableTabs.value.includes(activeTab.value) ? activeTab.value : 'diagram',
 )
 
+// T461 — live polling on the detail page is user-controllable and persisted
+// (mirrors the T441 list-page pattern). Default stays ON so a user landing
+// on a Running execution still gets live updates, but it is now pausable
+// and remembered. The interval defaults to the shared resolved stalePollMs.
+const defaultPollMs = resolveStalePollMs()
+const isLivePollingEnabled = useLocalStorageState('executions.detail.livePolling.enabled', true)
+const livePollingIntervalMs = useLocalStorageState(
+  'executions.detail.livePolling.intervalMs',
+  defaultPollMs,
+)
+
 await loadDetail(id.value)
-if (selectedExecution.value?.status === 'Running') {
-  startPolling(id.value)
+if (selectedExecution.value?.status === 'Running' && isLivePollingEnabled.value) {
+  startPolling(id.value, livePollingIntervalMs.value)
+}
+
+function onToggleLivePolling(enabled: boolean) {
+  isLivePollingEnabled.value = enabled
+  if (enabled && selectedExecution.value?.status === 'Running') {
+    startPolling(id.value, livePollingIntervalMs.value)
+  } else {
+    stopPolling()
+  }
+}
+
+function onLivePollingIntervalChange() {
+  if (!isLivePollingEnabled.value) return
+  if (selectedExecution.value?.status !== 'Running') return
+  stopPolling()
+  startPolling(id.value, livePollingIntervalMs.value)
 }
 
 // T199: loadDetail already auto-starts stale polling if the backend
@@ -228,6 +257,33 @@ onUnmounted(() => {
 
       <ExecutionsExecutionSummary :execution="selectedExecution">
         <template #actions>
+          <button
+            type="button"
+            data-testid="execution-detail-live-polling-toggle"
+            :aria-pressed="isLivePollingEnabled"
+            class="px-3 py-1.5 text-xs font-medium rounded border transition-colors"
+            :class="
+              isLivePollingEnabled
+                ? 'border-primary-300 bg-white text-primary-700 hover:bg-primary-50'
+                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
+            "
+            @click="onToggleLivePolling(!isLivePollingEnabled)"
+          >
+            {{ isLivePollingEnabled ? 'Pause live updates' : 'Resume live updates' }}
+          </button>
+          <select
+            v-model.number="livePollingIntervalMs"
+            :disabled="!isLivePollingEnabled"
+            data-testid="execution-detail-live-polling-interval"
+            aria-label="Polling interval"
+            class="px-2 py-1.5 rounded border text-xs font-medium border-neutral-300 bg-white text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-300 disabled:bg-neutral-100 disabled:text-neutral-500"
+            @change="onLivePollingIntervalChange"
+          >
+            <option :value="2000">2s</option>
+            <option :value="5000">5s</option>
+            <option :value="10000">10s</option>
+            <option :value="30000">30s</option>
+          </select>
           <button
             v-if="selectedExecution?.entity"
             type="button"

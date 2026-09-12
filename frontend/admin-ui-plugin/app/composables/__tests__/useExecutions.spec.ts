@@ -404,7 +404,7 @@ describe('useExecutions', () => {
       })
 
       const { startPolling, stopPolling } = useExecutions()
-      startPolling('e1')
+      startPolling('e1', 3000)
 
       expect(vi.getTimerCount()).toBe(1)
 
@@ -437,7 +437,7 @@ describe('useExecutions', () => {
       })
 
       const { startPolling } = useExecutions()
-      startPolling('e1')
+      startPolling('e1', 3000)
 
       await vi.advanceTimersByTimeAsync(3000)
       expect(api.get).toHaveBeenCalledTimes(1)
@@ -462,7 +462,7 @@ describe('useExecutions', () => {
       })
 
       const { startPolling, stopPolling } = useExecutions()
-      startPolling('e1')
+      startPolling('e1', 3000)
       expect(vi.getTimerCount()).toBe(1)
 
       stopPolling()
@@ -472,6 +472,60 @@ describe('useExecutions', () => {
       stopPolling()
       expect(vi.getTimerCount()).toBe(0)
       expect(api.get).not.toHaveBeenCalled()
+    })
+
+    it('startPolling honours an explicitly passed interval', async () => {
+      const detail = {
+        id: 'e1',
+        entity: 'ent',
+        entityType: 'Process' as const,
+        mode: 'PREVIEW' as const,
+        status: 'Running' as const,
+        startedAt: '2025-01-01',
+      }
+      const api = installApiMock({
+        get: vi.fn().mockResolvedValue(detail),
+      })
+
+      const { startPolling, stopPolling } = useExecutions()
+      startPolling('e1', 2000)
+
+      await vi.advanceTimersByTimeAsync(2000)
+      expect(api.get).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(2000)
+      expect(api.get).toHaveBeenCalledTimes(2)
+
+      stopPolling()
+    })
+
+    it('startPolling defaults to the resolved stalePollMs, not 3000', async () => {
+      vi.mocked(useRuntimeConfig as never).mockReturnValue({
+        public: { stalePollMs: 7000 },
+      } as ReturnType<typeof useRuntimeConfig>)
+      const detail = {
+        id: 'e1',
+        entity: 'ent',
+        entityType: 'Process' as const,
+        mode: 'PREVIEW' as const,
+        status: 'Running' as const,
+        startedAt: '2025-01-01',
+      }
+      const api = installApiMock({
+        get: vi.fn().mockResolvedValue(detail),
+      })
+
+      const { startPolling, stopPolling } = useExecutions()
+      startPolling('e1')
+
+      // 3000 ms must NOT fire a tick — the default is the resolved 7000 ms.
+      await vi.advanceTimersByTimeAsync(3000)
+      expect(api.get).not.toHaveBeenCalled()
+
+      await vi.advanceTimersByTimeAsync(4000)
+      expect(api.get).toHaveBeenCalledTimes(1)
+
+      stopPolling()
     })
   })
 

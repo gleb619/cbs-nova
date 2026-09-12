@@ -153,6 +153,30 @@ const flush = async () => {
   await nextTick()
   await nextTick()
 }
+
+// T461 — the page persists its live-polling toggle/interval via
+// useLocalStorageState; mirror the list-page spec by installing a fresh
+// controllable localStorage mock before each test.
+let storage: Record<string, string> = {}
+
+function installLocalStorageMock() {
+  storage = {}
+  const target = typeof window !== 'undefined' ? window : globalThis
+  Object.defineProperty(target, 'localStorage', {
+    value: {
+      getItem: vi.fn((key: string) => storage[key] ?? null),
+      setItem: vi.fn((key: string, value: string) => {
+        storage[key] = value
+      }),
+      removeItem: vi.fn((key: string) => {
+        delete storage[key]
+      }),
+    },
+    writable: true,
+    configurable: true,
+  })
+}
+
 describe('executions/[id].vue run-again button', () => {
   beforeEach(() => {
     harness.selectedExecution.value = null
@@ -381,6 +405,156 @@ describe('executions/[id].vue run-again button', () => {
       expect(execApi.getTransactions).toHaveBeenCalledTimes(1)
 
       wrapper.unmount()
+    })
+  })
+
+  describe('executions/[id].vue live polling controls (T461)', () => {
+    beforeEach(() => {
+      installLocalStorageMock()
+      harness.selectedExecution.value = null
+      harness.error.value = null
+      harness.loadDetail.mockClear()
+      harness.startPolling.mockClear()
+      harness.stopPolling.mockClear()
+      dslApi.getProcessDiagram.mockReset()
+      dslApi.getProcessDiagram.mockResolvedValue({ diagram: 'graph TD' })
+    })
+
+    afterEach(() => {
+      document.body.innerHTML = ''
+      vi.useRealTimers()
+    })
+
+    function findToggleButton(wrapper: ReturnType<typeof mountPage>) {
+      return wrapper.find('[data-testid="execution-detail-live-polling-toggle"]')
+    }
+
+    function findIntervalSelectEl(wrapper: ReturnType<typeof mountPage>) {
+      return wrapper.find('[data-testid="execution-detail-live-polling-interval"]')
+        .element as HTMLSelectElement
+    }
+
+    it('starts polling on mount for a Running execution with fresh storage (default on + resolved interval)', async () => {
+      harness.selectedExecution.value = detail({ status: 'Running' })
+
+      const wrapper = mountPage()
+      await flush()
+
+      expect(harness.startPolling).toHaveBeenCalledWith('exec-1', 5000)
+      expect(harness.stopPolling).not.toHaveBeenCalled()
+      expect(findToggleButton(wrapper).attributes('aria-pressed')).toBe('true')
+      expect(findIntervalSelectEl(wrapper).value).toBe('5000')
+
+      wrapper.unmount()
+    })
+
+    it('does not start polling on mount when the execution is not Running', async () => {
+      harness.selectedExecution.value = detail({ status: 'Completed' })
+
+      const wrapper = mountPage()
+      await flush()
+
+      expect(harness.startPolling).not.toHaveBeenCalled()
+
+      wrapper.unmount()
+    })
+
+    it('does not start polling on mount when the persisted toggle is off', async () => {
+      storage['executions.detail.livePolling.enabled'] = 'false'
+      harness.selectedExecution.value = detail({ status: 'Running' })
+
+      const wrapper = mountPage()
+      await flush()
+
+      expect(harness.startPolling).not.toHaveBeenCalled()
+      expect(findToggleButton(wrapper).attributes('aria-pressed')).toBe('false')
+
+      wrapper.unmount()
+    })
+
+    it('stops polling and persists the toggle when switched off', async () => {
+      harness.selectedExecution.value = detail({ status: 'Running' })
+
+      const wrapper = mountPage()
+      await flush()
+
+      harness.stopPolling.mockClear()
+
+      await findToggleButton(wrapper).trigger('click')
+      await flush()
+
+      expect(harness.stopPolling).toHaveBeenCalled()
+      expect(harness.startPolling).toHaveBeenCalledTimes(1) // only the mount call
+      expect(storage['executions.detail.livePolling.enabled']).toBe('false')
+      expect(findToggleButton(wrapper).attributes('aria-pressed')).toBe('false')
+
+      wrapper.unmount()
+    })
+
+    it('starts polling with the persisted interval when switched on', async () => {
+      storage['executions.detail.livePolling.enabled'] = 'false'
+      storage['executions.detail.livePolling.intervalMs'] = '10000'
+      harness.selectedExecution.value = detail({ status: 'Running' })
+
+      const wrapper = mountPage()
+      await flush()
+
+      expect(harness.startPolling).not.toHaveBeenCalled()
+
+      await findToggleButton(wrapper).trigger('click')
+      await flush()
+
+      expect(harness.startPolling).toHaveBeenCalledWith('exec-1', 10000)
+      expect(storage['executions.detail.livePolling.enabled']).toBe('true')
+
+      wrapper.unmount()
+    })
+
+    it('restarts polling with the new interval when changed while polling is on', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      harness.selectedExecution.value = detail({ status: 'Running' })
+
+      const wrapper = mountPage()
+      await flush()
+
+      expect(harness.startPolling).toHaveBeenCalledWith('exec-1', 5000)
+
+      harness.startPolling.mockClear()
+      harness.stopPolling.mockClear()
+
+      const select = findIntervalSelectEl(wrapper)
+      select.value = '10000'
+      await select.dispatchEvent(new Event('change', { bubbles: true }))
+      await flush()
+
+      expect(harness.stopPolling).toHaveBeenCalled()
+      expect(harness.startPolling).toHaveBeenCalledWith('exec-1', 10000)
+      expect(storage['executions.detail.livePolling.intervalMs']).toBe('10000')
+
+      wrapper.unmount()
+    })
+
+    it('persists the interval across reload (unmount + remount)', async () => {
+      harness.selectedExecution.value = detail({ status: 'Running' })
+
+      const wrapper = mountPage()
+      await flush()
+
+      const select = findIntervalSelectEl(wrapper)
+      select.value = '10000'
+      await select.dispatchEvent(new Event('change', { bubbles: true }))
+      await flush()
+
+      wrapper.unmount()
+      harness.startPolling.mockClear()
+
+      const wrapper2 = mountPage()
+      await flush()
+
+      expect(harness.startPolling).toHaveBeenCalledWith('exec-1', 10000)
+      expect(findIntervalSelectEl(wrapper2).value).toBe('10000')
+
+      wrapper2.unmount()
     })
   })
 
