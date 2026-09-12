@@ -24,7 +24,12 @@ public record DslBuilderProperties(
         @DefaultValue Drafts drafts,
         @DefaultValue Files files,
         @DefaultValue Git git,
-        @DefaultValue FileBuffer fileBuffer) {
+        @DefaultValue FileBuffer fileBuffer,
+        Integer gradleJavaMin,
+        Integer gradleJavaMax,
+        Integer buildLogMaxLines,
+        List<Path> jdkSearchPaths,
+        String jdkHomeEnvVar) {
 
   public DslBuilderProperties {
     queue = queue == null ? new Queue(100, 4) : queue;
@@ -32,6 +37,17 @@ public record DslBuilderProperties(
     files = files == null ? new Files(5, 100, 32, 8, 5L) : files;
     git = git == null ? new Git(true, null, null, null, null, null, 5) : git;
     fileBuffer = fileBuffer == null ? new FileBuffer(1000, 3600L) : fileBuffer;
+    gradleJavaMin = gradleJavaMin == null ? 8 : gradleJavaMin;
+    gradleJavaMax = gradleJavaMax == null ? 25 : gradleJavaMax;
+    buildLogMaxLines = buildLogMaxLines == null ? 200 : buildLogMaxLines;
+    jdkSearchPaths = jdkSearchPaths == null
+            ? List.of(
+                    Path.of(System.getProperty("user.home"), ".sdkman/candidates/java"),
+                    Path.of("/usr/lib/jvm"))
+            : List.copyOf(jdkSearchPaths);
+    jdkHomeEnvVar = jdkHomeEnvVar == null || jdkHomeEnvVar.isBlank()
+            ? "DSL_BUILDER_JAVA_HOME"
+            : jdkHomeEnvVar;
   }
 
   public record Queue(

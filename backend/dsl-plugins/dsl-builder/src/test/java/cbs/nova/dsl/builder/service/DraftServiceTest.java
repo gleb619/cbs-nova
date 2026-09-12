@@ -58,6 +58,11 @@ class DraftServiceTest {
             null,
             null,
             null,
+            null,
+            null,
+            null,
+            null,
+            null,
             null);
   }
 

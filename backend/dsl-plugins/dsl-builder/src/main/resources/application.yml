@@ -25,6 +25,13 @@ cbs:
         - dsl
         - models
       templates-dir: project/templates
+      gradle-java-min: 8
+      gradle-java-max: 25
+      build-log-max-lines: 200
+      jdk-search-paths:
+        - ${user.home}/.sdkman/candidates/java
+        - /usr/lib/jvm
+      jdk-home-env-var: DSL_BUILDER_JAVA_HOME
       queue:
         capacity: 100
         workers: 4
