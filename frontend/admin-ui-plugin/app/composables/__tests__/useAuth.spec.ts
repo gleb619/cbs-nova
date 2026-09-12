@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { flushPromises } from '@vue/test-utils'
 import { useAuth } from '../useAuth'
 
 describe('useAuth', () => {
@@ -9,17 +8,17 @@ describe('useAuth', () => {
     } as ReturnType<typeof useRuntimeConfig>)
   })
 
-  it('enabled reflects public.authEnabled', () => {
+  it('enabled reflects public.authEnabled', async () => {
     vi.mocked(useRuntimeConfig as never).mockReturnValue({
       public: { authEnabled: false },
     } as ReturnType<typeof useRuntimeConfig>)
-    const auth = useAuth()
+    const auth = await useAuth()
     expect(auth.enabled).toBe(false)
   })
 
-  it('login navigates to /api/v1/auth/login with current path as redirect', () => {
+  it('login navigates to /api/v1/auth/login with current path as redirect', async () => {
     vi.mocked(useRoute as never).mockReturnValue({ path: '/runner' } as ReturnType<typeof useRoute>)
-    const auth = useAuth()
+    const auth = await useAuth()
     auth.login()
     expect(navigateTo).toHaveBeenCalledWith(
       `/api/v1/auth/login?redirect=${encodeURIComponent('/runner')}`,
@@ -35,8 +34,7 @@ describe('useAuth', () => {
           : { authenticated: false, user: null },
       ),
     )
-    const auth = useAuth()
-    await flushPromises()
+    const auth = await useAuth()
     await auth.logout()
     expect($fetch).toHaveBeenCalledWith(
       '/api/v1/auth/logout',
@@ -54,21 +52,30 @@ describe('useAuth', () => {
         ? Promise.reject(new Error('boom'))
         : Promise.resolve({ authenticated: false, user: null }),
     )
-    const auth = useAuth()
-    await flushPromises()
+    const auth = await useAuth()
     await auth.logout()
     expect(navigateTo).toHaveBeenCalledWith('/', { external: true })
   })
 
-  it('fetches session and populates user/authenticated', async () => {
+  it('fetches session and populates user/authenticated before returning', async () => {
     vi.mocked($fetch as never).mockResolvedValueOnce({
       authenticated: true,
       user: { sub: 'u-1', preferred_username: 'devuser' },
     })
-    const auth = useAuth()
-    await flushPromises()
+    const auth = await useAuth()
 
     expect(auth.authenticated.value).toBe(true)
     expect(auth.user.value).toEqual({ sub: 'u-1', preferred_username: 'devuser' })
+  })
+
+  it('fetches the session exactly once per mount', async () => {
+    vi.mocked($fetch as never).mockResolvedValue({ authenticated: false, user: null })
+
+    await useAuth()
+
+    const sessionCalls = vi.mocked($fetch).mock.calls.filter(
+      ([url]) => url === '/api/v1/auth/session',
+    )
+    expect(sessionCalls).toHaveLength(1)
   })
 })

@@ -1,7 +1,7 @@
 import { resetSavedDraftsState, useSavedDrafts } from '@cbs/components'
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent, h } from 'vue'
+import { defineComponent, h, nextTick, Suspense, type VNode } from 'vue'
 import AdminLayout from '../admin.vue'
 
 const { dslApi } = vi.hoisted(() => ({
@@ -54,6 +54,37 @@ const NuxtLink = defineComponent({
   },
 })
 
+const sharedStubs = {
+  AppShell,
+  AppSidebarToggle,
+  AppFooter,
+  NuxtLink,
+  teleport: true,
+}
+
+function mountAdminLayout(slots: Record<string, unknown> = {}) {
+  const slotFns: Record<string, () => VNode> = {}
+  for (const [key, component] of Object.entries(slots)) {
+    slotFns[key] = () => h(component as ReturnType<typeof defineComponent>)
+  }
+
+  const Wrapper = defineComponent({
+    setup() {
+      return () => h(Suspense, null, { default: () => h(AdminLayout, null, slotFns) })
+    },
+  })
+  return mount(Wrapper, {
+    global: { stubs: sharedStubs },
+    attachTo: document.body,
+  })
+}
+
+const flush = async () => {
+  await flushPromises()
+  await nextTick()
+  await nextTick()
+}
+
 describe('admin.vue auth affordance', () => {
   beforeEach(() => {
     resetSavedDraftsState()
@@ -68,17 +99,8 @@ describe('admin.vue auth affordance', () => {
     } as ReturnType<typeof useRuntimeConfig>)
     vi.mocked($fetch as never).mockResolvedValue({ authenticated: false })
 
-    const wrapper = mount(AdminLayout, {
-      global: {
-        stubs: {
-          AppShell,
-          AppSidebarToggle,
-          AppFooter,
-          NuxtLink,
-        },
-      },
-    })
-    await flushPromises()
+    const wrapper = mountAdminLayout()
+    await flush()
 
     expect(wrapper.find('[data-testid="auth-signin"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="auth-signout"]').exists()).toBe(false)
@@ -91,17 +113,8 @@ describe('admin.vue auth affordance', () => {
     } as ReturnType<typeof useRuntimeConfig>)
     vi.mocked($fetch as never).mockResolvedValue({ authenticated: false })
 
-    const wrapper = mount(AdminLayout, {
-      global: {
-        stubs: {
-          AppShell,
-          AppSidebarToggle,
-          AppFooter,
-          NuxtLink,
-        },
-      },
-    })
-    await flushPromises()
+    const wrapper = mountAdminLayout()
+    await flush()
 
     expect(wrapper.find('[data-testid="auth-signin"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="auth-signout"]').exists()).toBe(false)
@@ -116,17 +129,8 @@ describe('admin.vue auth affordance', () => {
       user: { sub: 'u-1', preferred_username: 'devuser' },
     })
 
-    const wrapper = mount(AdminLayout, {
-      global: {
-        stubs: {
-          AppShell,
-          AppSidebarToggle,
-          AppFooter,
-          NuxtLink,
-        },
-      },
-    })
-    await flushPromises()
+    const wrapper = mountAdminLayout()
+    await flush()
 
     expect(wrapper.find('[data-testid="auth-user"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="auth-user"]').text()).toBe('devuser')
@@ -148,10 +152,7 @@ describe('admin.vue saved drafts widget', () => {
   })
 
   function mountLayout() {
-    return mount(AdminLayout, {
-      // The drawer teleports into <body>; stub Teleport so it renders in place.
-      global: { stubs: { AppShell, AppSidebarToggle, AppFooter, NuxtLink, teleport: true } },
-    })
+    return mountAdminLayout()
   }
 
   it('mounts the widget in the navbar widgets slot and auto-loads drafts', async () => {
@@ -161,7 +162,7 @@ describe('admin.vue saved drafts widget', () => {
     ])
 
     const wrapper = mountLayout()
-    await flushPromises()
+    await flush()
 
     expect(wrapper.find('[data-testid="dsl-saved-drafts-widget"]').exists()).toBe(true)
     expect(dslApi.listDrafts).toHaveBeenCalled()
@@ -174,12 +175,12 @@ describe('admin.vue saved drafts widget', () => {
     ])
 
     const wrapper = mountLayout()
-    await flushPromises()
+    await flush()
 
     expect(wrapper.find('[data-testid="dsl-saved-drafts-drawer"]').exists()).toBe(false)
 
     await wrapper.find('[data-testid="dsl-saved-drafts-widget-details"]').trigger('click')
-    await flushPromises()
+    await flush()
 
     expect(wrapper.find('[data-testid="dsl-saved-drafts-drawer"]').exists()).toBe(true)
     const items = wrapper.findAll('[data-testid="dsl-saved-drafts-item"]')
@@ -193,12 +194,13 @@ describe('admin.vue saved drafts widget', () => {
     ])
 
     const wrapper = mountLayout()
-    await flushPromises()
+    await flush()
+
     await wrapper.find('[data-testid="dsl-saved-drafts-widget-details"]').trigger('click')
-    await flushPromises()
+    await flush()
 
     await wrapper.find('[data-testid="dsl-saved-drafts-item"]').trigger('click')
-    await flushPromises()
+    await flush()
 
     expect(navigateToMock).toHaveBeenCalledWith({
       path: '/dsl-workbench',
@@ -221,18 +223,15 @@ describe('admin.vue saved drafts widget', () => {
       },
     })
 
-    const wrapper = mount(AdminLayout, {
-      global: { stubs: { AppShell, AppSidebarToggle, AppFooter, NuxtLink, teleport: true } },
-      slots: { default: PageStub },
-    })
-    await flushPromises()
+    const wrapper = mountAdminLayout({ default: PageStub })
+    await flush()
 
     expect(wrapper.find('[data-testid="page-stub"]').exists()).toBe(true)
 
     await wrapper.find('[data-testid="dsl-saved-drafts-widget-details"]').trigger('click')
-    await flushPromises()
+    await flush()
     await wrapper.find('[data-testid="dsl-saved-drafts-item"]').trigger('click')
-    await flushPromises()
+    await flush()
 
     expect(onSelect).toHaveBeenCalledWith('alpha')
     expect(navigateToMock).not.toHaveBeenCalled()
@@ -242,12 +241,12 @@ describe('admin.vue saved drafts widget', () => {
     dslApi.listDrafts.mockRejectedValueOnce(new Error('drafts unavailable'))
 
     const wrapper = mountLayout()
-    await flushPromises()
+    await flush()
 
     expect(wrapper.find('[data-testid="dsl-saved-drafts-widget-count"]').text()).toBe('0')
 
     await wrapper.find('[data-testid="dsl-saved-drafts-widget-details"]').trigger('click')
-    await flushPromises()
+    await flush()
 
     expect(wrapper.find('[data-testid="dsl-saved-drafts-drawer-error"]').text()).toContain(
       'drafts unavailable',

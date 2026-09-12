@@ -6,7 +6,7 @@ type AuthState = {
   authenticated: boolean
 }
 
-export function useAuth() {
+export async function useAuth() {
   const config = useRuntimeConfig()
   const enabled = Boolean(config.public.authEnabled)
 
@@ -29,17 +29,7 @@ export function useAuth() {
     }
   }
 
-  onMounted(() => {
-    loadSession()
-  })
-
-  if (process.client) {
-    // Client-side immediate load so navigation changes re-check auth.
-    loadSession()
-  } else {
-    // SSR: run once synchronously so server render has the state if cookies exist.
-    loadSession()
-  }
+  await callOnce('cbs-auth-session', loadSession)
 
   const route = useRoute()
   function login() {
