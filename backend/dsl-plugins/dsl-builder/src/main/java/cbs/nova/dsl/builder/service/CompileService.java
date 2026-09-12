@@ -71,16 +71,10 @@ public class CompileService {
     try {
       scaffoldProject(session, request);
       if (!isBlank(repoUrl)) {
-        var repoDir = ensureRepoClone(repoUrl);
-        var worktreesDir = worktreesDir();
-        Files.createDirectories(worktreesDir);
-        var worktreeDir = gitService.createWorktree(
-                repoDir, worktreesDir.resolve(session.getId()), request.baseBranch());
-        try {
-          copyRepoSources(worktreeDir, session.srcDir());
-        } finally {
-          gitService.removeWorktree(repoDir, worktreeDir);
-        }
+        var repoDir = session.getSessionDir().resolve("repo");
+        gitService.cloneRepository(
+                repoUrl, repoDir, firstNonBlank(request.baseBranch(), properties.git().branch()));
+        copyRepoSources(repoDir, session.srcDir());
       }
       if (request.sources() != null && !request.sources().isEmpty()) {
         writeSources(session, request.sources());
@@ -223,35 +217,6 @@ public class CompileService {
         copyDirectory(source, srcDir.resolve(folder));
       }
     }
-  }
-
-  private Path ensureRepoClone(String repoUrl) {
-    var repoDir = repositoryDir();
-    if (Files.isDirectory(repoDir.resolve(".git"))) {
-      gitService.pull(repoDir, properties.git().branch());
-      return repoDir;
-    }
-    try {
-      Files.createDirectories(repoDir.getParent());
-    } catch (IOException e) {
-      throw new CompileException("Failed to create repository directory: " + e.getMessage(),
-              List.of(e.getMessage()));
-    }
-    return gitService.cloneRepository(repoUrl, repoDir, properties.git().branch());
-  }
-
-  private Path repositoryDir() {
-    var configured = properties.git().repositoryDir();
-    return !isBlank(configured)
-            ? Path.of(configured)
-            : properties.workspaceDir().resolve("repo");
-  }
-
-  private Path worktreesDir() {
-    var configured = properties.git().worktreesDir();
-    return !isBlank(configured)
-            ? Path.of(configured)
-            : properties.workspaceDir().resolve("worktrees");
   }
 
   private void copyDirectory(Path source, Path target) throws IOException {

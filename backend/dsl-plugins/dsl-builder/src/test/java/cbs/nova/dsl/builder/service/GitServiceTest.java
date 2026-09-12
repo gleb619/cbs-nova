@@ -25,23 +25,6 @@ class GitServiceTest {
     assertThat(clone.resolve(".git")).exists();
   }
 
-  @Test
-  void createsListsAndRemovesWorktrees() throws Exception {
-    var repoDir = createRepositoryWithCommit();
-    var service = new GitService();
-    var worktreeDir = tempDir.resolve("worktree");
-
-    service.createWorktree(repoDir, worktreeDir, "main");
-
-    assertThat(service.listWorktrees(repoDir)).contains(worktreeDir.toString());
-    assertThat(worktreeDir.resolve(".git")).exists();
-
-    service.removeWorktree(repoDir, worktreeDir);
-
-    assertThat(service.listWorktrees(repoDir)).doesNotContain(worktreeDir.toString());
-    assertThat(worktreeDir).doesNotExist();
-  }
-
   private Path createRepositoryWithCommit() throws Exception {
     var repoDir = tempDir.resolve("repo-" + UUID.randomUUID());
     try (Git git = Git.init().setDirectory(repoDir.toFile()).setInitialBranch("main").call()) {
