@@ -6,7 +6,7 @@ import cbs.nova.dsl.exception.DslException;
 import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
-import cbs.nova.dsl.runner.DefaultExecutionListener;
+import cbs.nova.dsl.listener.DefaultExecutionListener;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
 import cbs.nova.dsl.transaction.CompensationRegistry;
 import cbs.nova.dsl.transaction.TransactionDslObject;
