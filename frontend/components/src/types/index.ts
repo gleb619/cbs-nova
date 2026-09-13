@@ -1,6 +1,7 @@
 export * from './buildInfo'
 export * from './dashboard'
 export * from './dsl'
+export * from './events'
 export * from './execution'
 export * from './jsonSchema'
 export * from './runner'

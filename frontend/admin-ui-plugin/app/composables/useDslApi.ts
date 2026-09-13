@@ -3,6 +3,8 @@ import {
   type DefinitionTestCase,
   type DefinitionTestRunReport,
   type DiagnosticsPage,
+  type DomainEventPage,
+  type DomainEventQuery,
   unwrapList,
 } from '@cbs/components'
 import { $fetch } from 'ofetch'
@@ -191,6 +193,26 @@ export function useDslApi() {
     }
   }
 
+  async function fetchEvents(params: DomainEventQuery): Promise<DomainEventPage> {
+    log.info('fetchEvents request', { ...params })
+    const query: Record<string, string> = {
+      limit: String(params.limit),
+      offset: String(params.offset),
+    }
+    if (params.type?.trim()) query.type = params.type.trim()
+    if (params.aggregateType?.trim()) query.aggregateType = params.aggregateType.trim()
+    if (params.aggregateId?.trim()) query.aggregateId = params.aggregateId.trim()
+    if (params.correlationId?.trim()) query.correlationId = params.correlationId.trim()
+    if (params.since?.trim()) query.since = params.since.trim()
+    try {
+      return (await $fetch('/api/v1/dsl/events', { query })) as DomainEventPage
+    } catch (err) {
+      const message = extractApiError(err).message
+      log.error('failed to load domain events', { error: message })
+      throw new Error(message)
+    }
+  }
+
   async function fetchDefinitionTests(name: string): Promise<DefinitionTestCase[]> {
     log.info('fetchDefinitionTests request', { name })
     try {
@@ -291,6 +313,7 @@ export function useDslApi() {
     restorePublishHistory,
     getHistoryEntry,
     getHistoryDiff,
+    fetchEvents,
     fetchDefinitionTests,
     saveDefinitionTests,
     runDefinitionTests,
