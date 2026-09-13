@@ -1,4 +1,4 @@
-import cbs.nova.dslexamples.v1.BatchModels.*;
+import cbs.nova.dslexamples.BatchModels.*;
 
 List<DslObject> define() {
   return Dsl.process("BatchProcessing")

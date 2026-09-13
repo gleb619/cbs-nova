@@ -1,4 +1,4 @@
-import cbs.nova.dslexamples.v1.AggregationModels.*;
+import cbs.nova.dslexamples.AggregationModels.*;
 import cbs.nova.starter.helper.model.ListOpsIn;
 import cbs.nova.starter.helper.model.ListOpsOut;
 import cbs.nova.starter.helper.model.MathIn;

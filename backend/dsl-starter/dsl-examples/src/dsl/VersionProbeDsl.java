@@ -1,5 +1,5 @@
-import cbs.nova.dslexamples.v1.VersionProbeModels.VersionProbeIn;
-import cbs.nova.dslexamples.v1.VersionProbeModels.VersionProbeOut;
+import cbs.nova.dslexamples.VersionProbeModels.VersionProbeIn;
+import cbs.nova.dslexamples.VersionProbeModels.VersionProbeOut;
 import cbs.nova.starter.helper.model.FileLatchIn;
 import cbs.nova.starter.helper.model.FileLatchOut;
 

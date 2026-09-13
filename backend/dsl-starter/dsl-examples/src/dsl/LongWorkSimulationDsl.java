@@ -1,4 +1,4 @@
-import cbs.nova.dslexamples.v1.LongWorkModels.*;
+import cbs.nova.dslexamples.LongWorkModels.*;
 
 
 List<DslObject> define() {

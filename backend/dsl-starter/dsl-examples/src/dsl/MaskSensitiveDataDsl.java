@@ -1,4 +1,4 @@
-import cbs.nova.dslexamples.v1.MaskSensitiveDataModels.*;
+import cbs.nova.dslexamples.MaskSensitiveDataModels.*;
 import cbs.nova.starter.helper.model.FormatMessageIn;
 import cbs.nova.starter.helper.model.FormatMessageOut;
 import cbs.nova.starter.helper.model.MaskIn;

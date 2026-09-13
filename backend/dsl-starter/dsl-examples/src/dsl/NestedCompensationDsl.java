@@ -1,4 +1,4 @@
-import cbs.nova.dslexamples.v1.NestedCompensationModels.*;
+import cbs.nova.dslexamples.NestedCompensationModels.*;
 
 
 List<DslObject> define() {
