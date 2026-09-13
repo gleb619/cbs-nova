@@ -301,6 +301,12 @@ export default defineNuxtModule<ModuleOptions>({
           meta: { layout: 'cbs-admin', pad: true },
         },
         {
+          name: 'cbs-admin-webhooks',
+          path: `${prefix}/webhooks`,
+          file: resolve('./app/pages/webhooks.vue'),
+          meta: { layout: 'cbs-admin', pad: true },
+        },
+        {
           name: 'cbs-admin-dsl-workbench',
           path: `${prefix}/dsl-workbench`,
           file: resolve('./app/pages/dsl-workbench.vue'),

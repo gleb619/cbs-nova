@@ -401,6 +401,50 @@ describe('useDslApi', () => {
     )
   })
 
+  it('fetchWebhookDeliveries GETs /api/v1/dsl/webhooks/deliveries with limit and offset', async () => {
+    const envelope = { items: [], total: 0, offset: 25, limit: 25 }
+    fetchMock.mockResolvedValueOnce(envelope)
+    const api = useDslApi()
+    const result = await api.fetchWebhookDeliveries({ limit: 25, offset: 25 })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/webhooks/deliveries', {
+      query: { limit: '25', offset: '25' },
+    })
+    expect(result).toEqual(envelope)
+  })
+
+  it('fetchWebhookDeliveries forwards a non-blank subscriptionId filter', async () => {
+    fetchMock.mockResolvedValueOnce({ items: [], total: 0, offset: 0, limit: 25 })
+    const api = useDslApi()
+    await api.fetchWebhookDeliveries({ subscriptionId: 'OrderProcess', limit: 25, offset: 0 })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/webhooks/deliveries', {
+      query: { limit: '25', offset: '0', subscriptionId: 'OrderProcess' },
+    })
+  })
+
+  it('fetchWebhookDeliveries omits a blank subscriptionId filter from the query', async () => {
+    fetchMock.mockResolvedValueOnce({ items: [], total: 0, offset: 0, limit: 25 })
+    const api = useDslApi()
+    await api.fetchWebhookDeliveries({ subscriptionId: '   ', limit: 25, offset: 0 })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/webhooks/deliveries', {
+      query: { limit: '25', offset: '0' },
+    })
+  })
+
+  it('fetchWebhookDeliveries maps BFF errors to a normalized message', async () => {
+    fetchMock.mockRejectedValueOnce({
+      data: { message: 'delivery store unavailable' },
+      statusCode: 500,
+    })
+    const api = useDslApi()
+
+    await expect(api.fetchWebhookDeliveries({ limit: 25, offset: 0 })).rejects.toThrow(
+      'delivery store unavailable',
+    )
+  })
+
   it('validateConstruct delegates to preview with empty body', async () => {
     fetchMock.mockResolvedValueOnce({})
     const api = useDslApi()

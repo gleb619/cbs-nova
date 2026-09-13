@@ -5,6 +5,8 @@ import {
   type DiagnosticsPage,
   type DomainEventPage,
   type DomainEventQuery,
+  type WebhookDeliveryPage,
+  type WebhookDeliveryQuery,
   unwrapList,
 } from '@cbs/components'
 import { $fetch } from 'ofetch'
@@ -213,6 +215,24 @@ export function useDslApi() {
     }
   }
 
+  async function fetchWebhookDeliveries(
+    params: WebhookDeliveryQuery,
+  ): Promise<WebhookDeliveryPage> {
+    log.info('fetchWebhookDeliveries request', { ...params })
+    const query: Record<string, string> = {
+      limit: String(params.limit),
+      offset: String(params.offset),
+    }
+    if (params.subscriptionId?.trim()) query.subscriptionId = params.subscriptionId.trim()
+    try {
+      return (await $fetch('/api/v1/dsl/webhooks/deliveries', { query })) as WebhookDeliveryPage
+    } catch (err) {
+      const message = extractApiError(err).message
+      log.error('failed to load webhook deliveries', { error: message })
+      throw new Error(message)
+    }
+  }
+
   async function fetchDefinitionTests(name: string): Promise<DefinitionTestCase[]> {
     log.info('fetchDefinitionTests request', { name })
     try {
@@ -318,6 +338,7 @@ export function useDslApi() {
     saveDefinitionTests,
     runDefinitionTests,
     fetchDiagnostics,
+    fetchWebhookDeliveries,
     validateConstruct,
     reload,
     listSchedules,

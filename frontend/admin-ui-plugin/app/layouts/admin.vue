@@ -59,6 +59,7 @@ const navItems = computed(() => [
   { to: '/runner', label: 'Runner', icon: '▶️', isActive: route.path === '/runner' },
   { to: '/schedules', label: 'Schedules', icon: '🕒', isActive: route.path === '/schedules' },
   { to: '/activity', label: 'Activity', icon: '🔔', isActive: route.path === '/activity' },
+  { to: '/webhooks', label: 'Webhooks', icon: '🪝', isActive: route.path === '/webhooks' },
   {
     to: '/executions',
     label: 'Executions',
