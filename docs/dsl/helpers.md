@@ -361,6 +361,39 @@ SortRecordsOut newest = ctx.runHelper("sortRecords",
         .as(SortRecordsOut.class);
 ```
 
+## Object shaping
+
+### Shape an outbound payload with `pick`
+
+`pick` projects a single record down to a key allowlist; `omit` mode inverts it to a
+ denylist. Handy right before an outbound `httpCall`: send only the fields the downstream
+ expects, or strip internal bookkeeping fields.
+
+```java
+// Send only the fields the partner API expects, in that order:
+PickOut payload = ctx.runHelper("pick",
+        new PickIn(order, List.of("id", "amount", "currency"), "pick"))
+        .as(PickOut.class);
+HttpCallOut response = ctx.runHelper("httpCall",
+        new HttpCallIn("https://partner.example/orders", "POST", null, payload.result(), null))
+        .as(HttpCallOut.class);
+
+// Or strip internal fields instead of listing the public ones:
+PickOut publicView = ctx.runHelper("pick",
+        new PickIn(order, List.of("internalNotes", "costBasis"), "omit"))
+        .as(PickOut.class);
+```
+
+`mode` is matched case-insensitively and defaults to `"pick"` when null/blank. In `pick`
+mode the result holds each listed key that is present in `source`, in `keys` order —
+absent keys are silently skipped (not null-filled), while a key present with a `null` value
+is kept (`null` is a value, not absence). In `omit` mode you get a copy of `source`
+(insertion order preserved) minus every listed key. The input map is never mutated, and
+nested values are copied by reference (shallow — deep projection is a follow-up).
+`null` `source` fails (`"pick.source is required"`); `null`/empty `keys` fails
+(`"pick.keys must be non-empty"`). Only flat top-level keys — dotted paths (`"a.b"`) are a
+follow-up.
+
 ## Numeric aggregations
 
 `math` covers numeric aggregations (`sum`, `min`, `max`, `mean`, `median`, `percentile`,
