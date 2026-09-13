@@ -21,6 +21,7 @@ import {
   DslBodyEditor,
   DslConstructExplorer,
   DslDeleteDraftConfirmationModal,
+  DslDefinitionTestsPanel,
   DslDiagnosticsHistoryPanel,
   DslDraftRestoreBanner,
   DslHelperCatalog,
@@ -69,6 +70,7 @@ const helperSearchOpen = useWorkbenchStorage<boolean>('helper-search-open', fals
 const helperCatalogOpen = useWorkbenchStorage<boolean>('helper-catalog-open', false)
 const historyPanelOpen = useWorkbenchStorage<boolean>('history-panel-open', false)
 const diagnosticsPanelOpen = useWorkbenchStorage<boolean>('diagnostics-panel-open', false)
+const testsPanelOpen = useWorkbenchStorage<boolean>('tests-panel-open', false)
 
 function toggleHistoryPanel() {
   historyPanelOpen.value = !historyPanelOpen.value
@@ -76,6 +78,10 @@ function toggleHistoryPanel() {
 
 function toggleDiagnosticsPanel() {
   diagnosticsPanelOpen.value = !diagnosticsPanelOpen.value
+}
+
+function toggleTestsPanel() {
+  testsPanelOpen.value = !testsPanelOpen.value
 }
 
 // Translate `state.value.validationErrors` into Monaco marker records. Scoped to the
@@ -471,6 +477,16 @@ onBeforeUnmount(() => {
       <button
         type="button"
         class="px-3 py-1.5 text-sm rounded border border-line hover:bg-surface"
+        :class="testsPanelOpen ? 'bg-accent-500/10 text-accent-500 border-accent-500' : ''"
+        data-testid="workbench-toggle-tests"
+        :disabled="!selectedConstruct"
+        @click="toggleTestsPanel"
+      >
+        {{ testsPanelOpen ? 'Close Tests' : 'Tests' }}
+      </button>
+      <button
+        type="button"
+        class="px-3 py-1.5 text-sm rounded border border-line hover:bg-surface"
         :class="helperCatalogOpen ? 'bg-accent-500/10 text-accent-500 border-accent-500' : ''"
         data-testid="workbench-toggle-helpers"
         @click="toggleHelperCatalog"
@@ -575,6 +591,22 @@ onBeforeUnmount(() => {
         width-class="w-[34rem]"
       >
         <DslDiagnosticsHistoryPanel :fetch-page="dslApi.fetchDiagnostics" />
+      </CbsDrawer>
+
+      <CbsDrawer
+        v-model:open="testsPanelOpen"
+        title="Test cases"
+        test-id="tests-drawer"
+        close-label="Close definition test cases"
+        width-class="w-[40rem]"
+      >
+        <DslDefinitionTestsPanel
+          :key="selectedConstruct?.name ?? ''"
+          :name="selectedConstruct?.name ?? ''"
+          :fetch-tests="dslApi.fetchDefinitionTests"
+          :save-tests="dslApi.saveDefinitionTests"
+          :run-tests="dslApi.runDefinitionTests"
+        />
       </CbsDrawer>
 
       <DslHelperSearchPanel

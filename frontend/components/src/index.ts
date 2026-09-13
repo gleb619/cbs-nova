@@ -15,6 +15,7 @@ export { type DropdownMenuItem, default as DropdownMenu } from './components/dro
 export { default as DslBodyEditor } from './components/dsl/BodyEditor.vue'
 export { default as DslCodeTab } from './components/dsl/CodeTab.vue'
 export { default as DslConstructExplorer } from './components/dsl/ConstructExplorer.vue'
+export { default as DslDefinitionTestsPanel } from './components/dsl/DefinitionTestsPanel.vue'
 export { default as DslDeleteDraftConfirmationModal } from './components/dsl/DeleteDraftConfirmationModal.vue'
 export { default as DslDiagnosticsHistoryPanel } from './components/dsl/DiagnosticsHistoryPanel.vue'
 export { default as DslDraftRestoreBanner } from './components/dsl/DraftRestoreBanner.vue'
@@ -76,7 +77,11 @@ export { default as AppSidebarHideButton } from './components/sidebar/AppSidebar
 export { default as AppSidebarRestoreHandle } from './components/sidebar/AppSidebarRestoreHandle.vue'
 
 export * from './composables'
-export { DSL_SCHEMA_FETCH_KEY, type ConstructType, useConstructSchema } from './composables/useConstructSchema'
+export {
+  DSL_SCHEMA_FETCH_KEY,
+  type ConstructType,
+  useConstructSchema,
+} from './composables/useConstructSchema'
 export * from './types'
 export * from './utils/docsBaseUrl'
 export * from './utils/unwrapList'

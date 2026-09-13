@@ -87,6 +87,9 @@ const { dslApi, useDslApiMock, useDslWorkbenchMock } = vi.hoisted(() => {
     getHistoryDiff: vi.fn(),
     restorePublishHistory: vi.fn(),
     fetchDiagnostics: vi.fn(),
+    fetchDefinitionTests: vi.fn(),
+    saveDefinitionTests: vi.fn(),
+    runDefinitionTests: vi.fn(),
   }
   const useDslWorkbenchMockFn = vi.fn(() => {
     const harness = (globalThis as unknown as { __dslWorkbenchHarness?: WorkbenchApiShape })
@@ -1146,5 +1149,48 @@ describe('dsl-workbench.vue history panel persistence', () => {
     expect(document.querySelector('[data-testid="history-drawer"]')).not.toBeNull()
 
     wrapper2.unmount()
+  })
+})
+
+describe('dsl-workbench.vue definition tests panel', () => {
+  beforeEach(() => {
+    localStorage.removeItem('cbs-nova:dsl-workbench:tests-panel-open')
+    harness.state.constructs = []
+    harness.state.selectedName = null
+    harness.state.validationErrors = []
+    harness.state.isDirty = false
+    harness.state.isSaving = false
+    harness.state.isLoading = false
+    harness.selectedConstruct.value = null
+    harness.loaders.constructs.value = false
+    useDslWorkbenchMock.mockClear()
+    dslApi.listDrafts.mockReset()
+    dslApi.listDrafts.mockResolvedValue([])
+    dslApi.readDslFile.mockReset()
+    dslApi.readDslFile.mockResolvedValue('class LoanDsl {}')
+    dslApi.fetchDefinitionTests.mockReset()
+    dslApi.fetchDefinitionTests.mockResolvedValue([])
+  })
+
+  it('opens the tests drawer and loads the selected construct cases', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    await wrapper.find('[data-testid="workbench-toggle-tests"]').trigger('click')
+    await flushPromises()
+
+    expect(document.querySelector('[data-testid="tests-drawer"]')).not.toBeNull()
+    expect(dslApi.fetchDefinitionTests).toHaveBeenCalledWith('c1')
+
+    // The panel is keyed by construct name, so switching constructs remounts
+    // it and loads the other construct's test cases.
+    const explorer = wrapper.findComponent({ name: 'ConstructExplorer' })
+    await explorer.vm.$emit('select', 'c2')
+    await flushPromises()
+
+    expect(dslApi.fetchDefinitionTests).toHaveBeenCalledTimes(2)
+    expect(dslApi.fetchDefinitionTests).toHaveBeenLastCalledWith('c2')
+
+    wrapper.unmount()
   })
 })

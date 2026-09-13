@@ -201,6 +201,96 @@ describe('useDslApi', () => {
     expect(result).toEqual({ name: 'draft-1', timestamp: '123', hunks: [] })
   })
 
+  it('fetchDefinitionTests GETs /api/v1/dsl/definitions/{name}/tests and unwraps the envelope', async () => {
+    const cases = [{ caseName: 'happy', input: { body: {} }, expectedOutput: { result: 1 } }]
+    fetchMock.mockResolvedValueOnce({ items: cases, total: 1 })
+    const api = useDslApi()
+
+    const result = await api.fetchDefinitionTests('OrderProcess')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/definitions/OrderProcess/tests')
+    expect(result).toEqual(cases)
+  })
+
+  it('fetchDefinitionTests tolerates a bare array response', async () => {
+    const cases = [{ caseName: 'happy', input: null, expectedOutput: null }]
+    fetchMock.mockResolvedValueOnce(cases)
+    const api = useDslApi()
+
+    const result = await api.fetchDefinitionTests('OrderProcess')
+
+    expect(result).toEqual(cases)
+  })
+
+  it('fetchDefinitionTests maps BFF errors to a normalized message', async () => {
+    fetchMock.mockRejectedValueOnce({
+      data: { message: 'definition not found' },
+      statusCode: 404,
+    })
+    const api = useDslApi()
+
+    await expect(api.fetchDefinitionTests('Nope')).rejects.toThrow('definition not found')
+  })
+
+  it('saveDefinitionTests PUTs the whole case set to /api/v1/dsl/definitions/{name}/tests', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true })
+    const api = useDslApi()
+    const cases = [
+      { caseName: 'a', input: { body: { x: 1 } }, expectedOutput: { result: 1 } },
+      { caseName: 'b', input: { body: { x: 2 } }, expectedOutput: { result: 2 } },
+    ]
+
+    const result = await api.saveDefinitionTests('OrderProcess', cases)
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/definitions/OrderProcess/tests', {
+      method: 'PUT',
+      body: cases,
+    })
+    expect(result).toEqual({ ok: true })
+  })
+
+  it('saveDefinitionTests maps BFF errors to a normalized message', async () => {
+    fetchMock.mockRejectedValueOnce({ data: { message: 'write failed' }, statusCode: 500 })
+    const api = useDslApi()
+
+    await expect(
+      api.saveDefinitionTests('OrderProcess', [{ caseName: 'a', input: {}, expectedOutput: {} }]),
+    ).rejects.toThrow('write failed')
+  })
+
+  it('runDefinitionTests POSTs without case filters by default', async () => {
+    const report = { total: 1, passed: 1, failed: 0, errored: 0, cases: [] }
+    fetchMock.mockResolvedValueOnce(report)
+    const api = useDslApi()
+
+    const result = await api.runDefinitionTests('OrderProcess')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/definitions/OrderProcess/tests/run', {
+      method: 'POST',
+      query: {},
+    })
+    expect(result).toEqual(report)
+  })
+
+  it('runDefinitionTests forwards selected case names as repeated query params', async () => {
+    fetchMock.mockResolvedValueOnce({ total: 0, passed: 0, failed: 0, errored: 0, cases: [] })
+    const api = useDslApi()
+
+    await api.runDefinitionTests('OrderProcess', ['happy path', 'edge case'])
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/definitions/OrderProcess/tests/run', {
+      method: 'POST',
+      query: { case: ['happy path', 'edge case'] },
+    })
+  })
+
+  it('runDefinitionTests maps BFF errors to a normalized message', async () => {
+    fetchMock.mockRejectedValueOnce({ data: { message: 'engine offline' }, statusCode: 503 })
+    const api = useDslApi()
+
+    await expect(api.runDefinitionTests('OrderProcess')).rejects.toThrow('engine offline')
+  })
+
   it('fetchDiagnostics GETs /api/v1/dsl/diagnostics with limit and offset', async () => {
     const envelope = { items: [], total: 0, offset: 25, limit: 25 }
     fetchMock.mockResolvedValueOnce(envelope)

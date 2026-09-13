@@ -75,6 +75,34 @@ export interface DiagnosticsPage {
   limit: number
 }
 
+export type DefinitionTestStatus = 'PASS' | 'FAIL' | 'ERROR'
+
+export interface DefinitionTestCase {
+  caseName: string
+  /** `DslRequest` on the backend — arbitrary JSON on the client. */
+  input: unknown
+  /** `PreviewReport` on the backend — arbitrary JSON on the client. */
+  expectedOutput: unknown
+}
+
+export interface DefinitionTestCaseResult {
+  name: string
+  status: DefinitionTestStatus
+  actual?: unknown | null
+  expected: unknown
+  durationMs: number
+  /** `ErrorResponse` on the backend — present for ERROR results. */
+  diagnostics?: unknown
+}
+
+export interface DefinitionTestRunReport {
+  total: number
+  passed: number
+  failed: number
+  errored: number
+  cases: DefinitionTestCaseResult[]
+}
+
 export interface ScheduleSummary {
   scheduleId: string
   definition: string

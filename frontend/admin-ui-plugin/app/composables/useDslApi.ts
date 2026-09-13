@@ -1,5 +1,10 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
-import { type DiagnosticsPage, unwrapList } from '@cbs/components'
+import {
+  type DefinitionTestCase,
+  type DefinitionTestRunReport,
+  type DiagnosticsPage,
+  unwrapList,
+} from '@cbs/components'
 import { $fetch } from 'ofetch'
 import { extractApiError } from '../utils/extractApiError'
 
@@ -186,6 +191,52 @@ export function useDslApi() {
     }
   }
 
+  async function fetchDefinitionTests(name: string): Promise<DefinitionTestCase[]> {
+    log.info('fetchDefinitionTests request', { name })
+    try {
+      const result = await $fetch(`/api/v1/dsl/definitions/${name}/tests`)
+      return unwrapList(result) as DefinitionTestCase[]
+    } catch (err) {
+      const message = extractApiError(err).message
+      log.error('failed to load definition tests', { error: message })
+      throw new Error(message)
+    }
+  }
+
+  async function saveDefinitionTests(name: string, cases: DefinitionTestCase[]): Promise<unknown> {
+    log.info('saveDefinitionTests request', { name, count: cases.length })
+    try {
+      return await $fetch(`/api/v1/dsl/definitions/${name}/tests`, {
+        method: 'PUT',
+        // ofetch's body union excludes arrays; the backend expects the raw
+        // JSON array of cases, so cast past the request-body typing.
+        body: cases as unknown as Record<string, unknown>,
+      })
+    } catch (err) {
+      const message = extractApiError(err).message
+      log.error('failed to save definition tests', { error: message })
+      throw new Error(message)
+    }
+  }
+
+  async function runDefinitionTests(
+    name: string,
+    caseNames?: string[],
+  ): Promise<DefinitionTestRunReport> {
+    log.info('runDefinitionTests request', { name, cases: caseNames?.length ?? 0 })
+    try {
+      const query = caseNames?.length ? { case: caseNames } : {}
+      return (await $fetch(`/api/v1/dsl/definitions/${name}/tests/run`, {
+        method: 'POST',
+        query,
+      })) as DefinitionTestRunReport
+    } catch (err) {
+      const message = extractApiError(err).message
+      log.error('failed to run definition tests', { error: message })
+      throw new Error(message)
+    }
+  }
+
   async function validateConstruct(name: string) {
     // stub — calls preview to validate
     log.info('validate request', { name })
@@ -240,6 +291,9 @@ export function useDslApi() {
     restorePublishHistory,
     getHistoryEntry,
     getHistoryDiff,
+    fetchDefinitionTests,
+    saveDefinitionTests,
+    runDefinitionTests,
     fetchDiagnostics,
     validateConstruct,
     reload,
