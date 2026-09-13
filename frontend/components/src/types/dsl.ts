@@ -45,13 +45,7 @@ export interface HelpersResponse {
   helpers: HelperCatalogEntry[]
 }
 
-export interface CompileDiagnostic {
-  file: string
-  line?: number | null
-  column?: number | null
-  message: string
-  severity: string
-}
+export type { CompileDiagnostic } from './api'
 
 export type DiagnosticSource = 'RELOAD' | 'PUBLISH' | 'DRAFT'
 

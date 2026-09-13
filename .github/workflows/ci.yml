@@ -55,6 +55,10 @@ jobs:
         working-directory: frontend
         run: pnpm install
 
+      - name: Check generated API types are up to date
+        working-directory: frontend
+        run: pnpm check:api-types
+
       - name: Typecheck frontend
         working-directory: frontend
         run: pnpm typecheck

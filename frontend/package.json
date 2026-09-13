@@ -22,6 +22,8 @@
     "format:check": "biome format .",
     "ci": "biome ci .",
     "sbom": "node scripts/sbom-merge.mjs",
+    "gen:api-types": "node scripts/gen-api-types.mjs",
+    "check:api-types": "node scripts/gen-api-types.mjs --check",
     "audit:prod": "pnpm audit --prod --audit-level high"
   },
   "devDependencies": {
@@ -29,6 +31,7 @@
     "@cyclonedx/cyclonedx-npm": "6.0.0",
     "@playwright/test": "^1.49.0",
     "@types/node": "^26.4.0",
+    "openapi-typescript": "7.13.0",
     "typescript": "^5.4.0"
   }
 }

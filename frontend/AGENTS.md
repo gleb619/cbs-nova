@@ -125,7 +125,20 @@ pnpm test:plugin             # admin-ui-plugin suite only
 pnpm test:components         # component-library suite only
 pnpm check                   # biome lint + format check
 pnpm check:fix               # biome fix
+pnpm gen:api-types           # regenerate backend DTO types from docs/openapi.json
+pnpm check:api-types         # CI drift guard — fails if the generated types are stale
 ```
+
+### Backend API types (generated)
+
+Backend DTOs come from the OpenAPI spec, not hand-written mirrors:
+`components/src/types/api.generated.d.ts` is generated from `docs/openapi.json`
+by `openapi-typescript` (T485). Regenerate with `pnpm gen:api-types` and commit
+the result; CI (`pnpm check:api-types` in the build-frontend job) fails on drift.
+Do not hand-write types that already exist in the spec — alias them in
+`components/src/types/api.ts` (`@cbs/components/types/api`) and adopt them one
+domain at a time. The generated file is excluded from Biome formatting
+(`*.generated.d.ts`).
 
 Package-specific:
 ```bash

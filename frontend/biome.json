@@ -11,6 +11,7 @@
     "includes": [
       "**",
       "!**/node_modules",
+      "!**/*.generated.d.ts",
       "!**/.nuxt",
       "!**/.output",
       "!**/.data",
