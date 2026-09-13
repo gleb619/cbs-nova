@@ -72,6 +72,22 @@ To see traces in Jaeger and logs in Grafana/Loki, ensure the backend has:
 
 and expose `/actuator/prometheus` via `MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE`.
 
+## Grafana
+
+Grafana boots fully provisioned — no manual datasource or dashboard setup:
+
+- Datasources (provisioned from `grafana/provisioning/datasources/datasources.yml`):
+  Prometheus (`http://prometheus:9090`, default), Loki (`http://loki:3100`), Jaeger (`http://jaeger:16686`).
+- Dashboards (provisioned from `grafana/provisioning/dashboards/dashboards.yml`):
+  a file provider loads every JSON in `grafana/dashboards/`. Ships with the
+  **CBS Nova — DSL Overview** dashboard (`dsl-overview.json`) at
+  http://localhost:3000/d/cbs-nova-dsl-overview.
+
+To add another dashboard, drop a hand-written or exported dashboard JSON into
+`grafana/dashboards/` and recreate the Grafana container
+(`docker compose up -d --force-recreate grafana`). Panels should reference the
+Prometheus datasource by uid (`cbs-nova-prometheus`), never a numeric id.
+
 ## OIDC / JWT resource-server guard (opt-in)
 
 The Spring Boot starter (`backend/dsl-starter`) ships with an opt-in OIDC
