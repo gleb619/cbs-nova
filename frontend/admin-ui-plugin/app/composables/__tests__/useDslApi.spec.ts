@@ -291,6 +291,72 @@ describe('useDslApi', () => {
     await expect(api.runDefinitionTests('OrderProcess')).rejects.toThrow('engine offline')
   })
 
+  it('fetchEvents GETs /api/v1/dsl/events with limit and offset', async () => {
+    const envelope = { items: [], total: 0, offset: 0, limit: 25 }
+    fetchMock.mockResolvedValueOnce(envelope)
+    const api = useDslApi()
+    const result = await api.fetchEvents({ limit: 25, offset: 0 })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/events', {
+      query: { limit: '25', offset: '0' },
+    })
+    expect(result).toEqual(envelope)
+  })
+
+  it('fetchEvents forwards all supported filters', async () => {
+    fetchMock.mockResolvedValueOnce({ items: [], total: 0, offset: 0, limit: 25 })
+    const api = useDslApi()
+    await api.fetchEvents({
+      type: 'RunCompleted',
+      aggregateType: 'run',
+      aggregateId: 'run-abc',
+      correlationId: 'corr-1',
+      since: '2026-09-13T00:00:00Z',
+      limit: 25,
+      offset: 25,
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/events', {
+      query: {
+        limit: '25',
+        offset: '25',
+        type: 'RunCompleted',
+        aggregateType: 'run',
+        aggregateId: 'run-abc',
+        correlationId: 'corr-1',
+        since: '2026-09-13T00:00:00Z',
+      },
+    })
+  })
+
+  it('fetchEvents omits blank filters from the query', async () => {
+    fetchMock.mockResolvedValueOnce({ items: [], total: 0, offset: 0, limit: 25 })
+    const api = useDslApi()
+    await api.fetchEvents({
+      type: '   ',
+      aggregateId: '',
+      correlationId: '  ',
+      limit: 25,
+      offset: 0,
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/events', {
+      query: { limit: '25', offset: '0' },
+    })
+  })
+
+  it('fetchEvents maps BFF errors to a normalized message', async () => {
+    fetchMock.mockRejectedValueOnce({
+      data: { message: 'event store unavailable' },
+      statusCode: 500,
+    })
+    const api = useDslApi()
+
+    await expect(api.fetchEvents({ limit: 25, offset: 0 })).rejects.toThrow(
+      'event store unavailable',
+    )
+  })
+
   it('fetchDiagnostics GETs /api/v1/dsl/diagnostics with limit and offset', async () => {
     const envelope = { items: [], total: 0, offset: 25, limit: 25 }
     fetchMock.mockResolvedValueOnce(envelope)

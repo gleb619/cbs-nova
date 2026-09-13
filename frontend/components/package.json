@@ -13,6 +13,7 @@
     "./tailwind.config": "./src/tailwind.config.ts",
     "./types": "./src/types/index.ts",
     "./types/dsl": "./src/types/dsl.ts",
+    "./types/events": "./src/types/events.ts",
     "./types/api": "./src/types/api.ts",
     "./types/execution": "./src/types/execution.ts",
     "./types/runner": "./src/types/runner.ts",

@@ -295,6 +295,12 @@ export default defineNuxtModule<ModuleOptions>({
           meta: { layout: 'cbs-admin' },
         },
         {
+          name: 'cbs-admin-activity',
+          path: `${prefix}/activity`,
+          file: resolve('./app/pages/activity.vue'),
+          meta: { layout: 'cbs-admin', pad: true },
+        },
+        {
           name: 'cbs-admin-dsl-workbench',
           path: `${prefix}/dsl-workbench`,
           file: resolve('./app/pages/dsl-workbench.vue'),
