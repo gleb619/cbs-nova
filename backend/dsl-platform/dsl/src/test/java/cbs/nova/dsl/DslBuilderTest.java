@@ -97,8 +97,8 @@ class DslBuilderTest {
     assertThat(obj.parameters().get(0).type()).isEqualTo(ParameterType.STRING);
     assertThat(obj.parameters().get(1).name()).isEqualTo("amount");
     assertThat(obj.parameters().get(1).type()).isEqualTo(ParameterType.NUMBER);
-    assertThat(obj.inputType()).isNull();
-    assertThat(obj.outputType()).isNull();
+    assertThat(obj.inputType()).isEqualTo(Void.class);
+    assertThat(obj.outputType()).isEqualTo(Void.class);
   }
 
   @Test

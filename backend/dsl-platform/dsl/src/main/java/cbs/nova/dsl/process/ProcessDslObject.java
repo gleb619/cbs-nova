@@ -19,19 +19,18 @@ import static cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN;
 
 @Builder
 public record ProcessDslObject(
-    @NonNull String name,
-    @NonNull String description,
-    @NonNull String taskQueue,
-    @NonNull String version,
-    @NonNull Class<?> inputType,
-    @NonNull Class<?> outputType,
-    @NonNull List<ParameterDescriptor> parameters,
-    @NonNull Function<ProcessContext<?>, Result<?>> executeLogic,
-    @Nullable BiConsumer<CompensationContext<?>, List<TransactionExecution>> compensationLogic,
-    @NonNull Function<ProcessContext<?>, Result<?>> previewLogic,
-    @NonNull Function<ProcessContext<?>, Result<ExplainReport>> explainLogic,
-    @NonNull DslDescriptor descriptor
-) implements DslObject {
+        @NonNull String name,
+        @NonNull String description,
+        @NonNull String taskQueue,
+        @NonNull String version,
+        @NonNull Class<?> inputType,
+        @NonNull Class<?> outputType,
+        @NonNull List<ParameterDescriptor> parameters,
+        @NonNull Function<ProcessContext<?>, Result<?>> executeLogic,
+        @Nullable BiConsumer<CompensationContext<?>, List<TransactionExecution>> compensationLogic,
+        @NonNull Function<ProcessContext<?>, Result<?>> previewLogic,
+        @NonNull Function<ProcessContext<?>, Result<ExplainReport>> explainLogic,
+        @NonNull DslDescriptor descriptor) implements DslObject {
 
   public ProcessDslObject {
     if (description == null || description.isBlank()) {

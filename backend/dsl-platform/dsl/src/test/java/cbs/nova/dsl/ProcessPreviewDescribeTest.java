@@ -3,8 +3,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.explain.DescriptorMarkdown;
+import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
+import cbs.nova.dsl.repository.InMemoryTransactionExecutionRepository;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
+import cbs.nova.dsl.runner.ProcessCompensationHandler;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -13,6 +16,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 class ProcessPreviewDescribeTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
+  private final TransactionExecutionRepository transactionExecutionRepository = new InMemoryTransactionExecutionRepository();
+  private final DefaultCompensationRegistry compensationRegistry = new DefaultCompensationRegistry();
+  private final ProcessCompensationHandler compensationHandler = new ProcessCompensationHandler(
+          contextFactory, compensationRegistry);
 
   @Test
   void processWithPreviewReturnsMockInPreviewMode() {
@@ -28,7 +35,7 @@ class ProcessPreviewDescribeTest {
             .build();
 
     var runner = new DefaultProcessRunner(contextFactory,
-            new DefaultCompensationRegistry());
+            compensationRegistry, transactionExecutionRepository, null, compensationHandler);
     var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
     var result = runner.run(process, ctx);
 
@@ -46,7 +53,7 @@ class ProcessPreviewDescribeTest {
             .build();
 
     var runner = new DefaultProcessRunner(contextFactory,
-            new DefaultCompensationRegistry());
+            compensationRegistry, transactionExecutionRepository, null, compensationHandler);
     var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
     var result = runner.run(process, ctx);
 

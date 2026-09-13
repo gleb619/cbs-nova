@@ -126,7 +126,8 @@ class ProcessCodeGeneratorTest {
                     .input(String.class)
                     .output(String.class)
                     .execute(ctx -> Result.success("ok"))
-                    .compensation(ctx -> Result.success(null))
+                    .compensation((ctx, history) -> {
+                    })
                     .build());
 
     var impl = generator.generate(descriptor, null, null, true).get(1);

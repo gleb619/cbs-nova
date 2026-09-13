@@ -68,21 +68,25 @@ public interface Context<T> {
   }
 
   @Nullable
+  //TODO: make it an @NonNull
   default ExecutionListener executionListener() {
     return null;
   }
 
   @Nullable
+  //TODO: make it an @NonNull
   default DslSaga saga() {
     return null;
   }
 
   @Nullable
+  //TODO: make it an @NonNull
   default ExecutionTraceCollector executionTraceCollector() {
     return null;
   }
 
   @Nullable
+  //TODO: make it an @NonNull
   default HelperInterceptor helperInterceptor() {
     return null;
   }

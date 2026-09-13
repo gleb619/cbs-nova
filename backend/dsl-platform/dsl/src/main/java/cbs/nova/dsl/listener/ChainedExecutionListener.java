@@ -1,16 +1,15 @@
-package cbs.nova.dsl.runner;
+package cbs.nova.dsl.listener;
 
-import cbs.nova.dsl.listener.ExecutionListener;
 import cbs.nova.dsl.transaction.TransactionExecution;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-final class ChainedExecutionListener implements ExecutionListener {
+public final class ChainedExecutionListener implements ExecutionListener {
 
   private final ExecutionListener first;
   private final ExecutionListener second;
 
-  ChainedExecutionListener(@NonNull ExecutionListener first, @NonNull ExecutionListener second) {
+  public ChainedExecutionListener(@NonNull ExecutionListener first, @NonNull ExecutionListener second) {
     this.first = first;
     this.second = second;
   }

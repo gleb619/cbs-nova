@@ -70,7 +70,7 @@ public record TransactionDslObject(
             .inputType(inputType)
             .outputType(outputType)
             .hasSideEffects(true)
-            .parameters(parameters)
+            .parameters(parameters != null ? parameters : List.of())
             .taskQueue(taskQueue)
             .version(version)
             .startToCloseTimeout(startToCloseTimeout)

@@ -69,7 +69,6 @@ class ExplainReportStageTest {
                             .description(null)
                             .inputType(null)
                             .outputType(null)
-                            .hasCompensation(false)
                             .hasSideEffects(false)
                             .parameters(List.of())
                             .taskQueue(null)

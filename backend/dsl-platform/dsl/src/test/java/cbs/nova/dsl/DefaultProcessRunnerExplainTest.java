@@ -4,11 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.process.ProcessRunner;
 import cbs.nova.dsl.process.TemporalProcessLauncher;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
+import cbs.nova.dsl.repository.InMemoryTransactionExecutionRepository;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
+import cbs.nova.dsl.runner.ProcessCompensationHandler;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
@@ -16,9 +19,13 @@ import org.junit.jupiter.api.Test;
 class DefaultProcessRunnerExplainTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
+  private final TransactionExecutionRepository transactionExecutionRepository = new InMemoryTransactionExecutionRepository();
+  private final DefaultCompensationRegistry compensationRegistry = new DefaultCompensationRegistry();
+  private final ProcessCompensationHandler compensationHandler = new ProcessCompensationHandler(
+          contextFactory, compensationRegistry);
 
   private final ProcessRunner runner = new DefaultProcessRunner(contextFactory,
-          new DefaultCompensationRegistry());
+          compensationRegistry, transactionExecutionRepository, null, compensationHandler);
 
   @Test
   void explainModeReturnsDescriptorReportWithoutRunningExecuteWhenExplainNotSet() {

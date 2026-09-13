@@ -18,6 +18,7 @@ import cbs.nova.dsl.process.TemporalProcessLauncher;
 import cbs.nova.dsl.runner.DefaultHelperRunner;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
+import cbs.nova.dsl.runner.ProcessCompensationHandler;
 import cbs.nova.dsl.runner.HelperRunner;
 import cbs.nova.dsl.transaction.CompensationRegistry;
 import cbs.nova.dsl.transaction.TransactionInvoker;
@@ -240,7 +241,10 @@ class DslConfigTest {
 
     DefaultProcessRunner runner = new DefaultProcessRunner(
             dsl.contextFactory(),
-            dsl.compensationRegistry());
+            dsl.compensationRegistry(),
+            dsl.transactionExecutionRepository().get(),
+            stub,
+            new ProcessCompensationHandler(dsl.contextFactory(), dsl.compensationRegistry()));
 
     Result<?> result = runner.run(process, ctx);
 
@@ -273,7 +277,10 @@ class DslConfigTest {
 
     DefaultProcessRunner runner = new DefaultProcessRunner(
             dsl.contextFactory(),
-            dsl.compensationRegistry());
+            dsl.compensationRegistry(),
+            dsl.transactionExecutionRepository().get(),
+            null,
+            new ProcessCompensationHandler(dsl.contextFactory(), dsl.compensationRegistry()));
 
     Result<?> result = runner.run(process, ctx);
 

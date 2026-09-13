@@ -9,7 +9,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import cbs.nova.dsl.Context;
+import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslErrorCode;
+import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.model.ExplainReport;
@@ -18,6 +20,7 @@ import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.dsl.process.ProcessDslObject;
@@ -310,11 +313,25 @@ class DslRuntimeServiceTest {
     try {
       var process = ProcessDslObject.builder()
               .name("Synthetic")
+              .description(Constants.EMPTY_MARKDOWN)
               .taskQueue("default")
               .version("v1")
               .inputType(BatchIn.class)
+              .outputType(Void.class)
+              .parameters(List.of())
               .executeLogic(ctx -> Result.success("ok"))
+              .previewLogic(ctx -> Result.success("ok"))
               .explainLogic(ctx -> Result.success(new ExplainReport("Synthetic", "test", "")))
+              .descriptor(DslDescriptor.builder()
+                      .name("Synthetic")
+                      .type(DslObject.DslType.PROCESS)
+                      .hasSideEffects(false)
+                      .parameters(List.of())
+                      .taskQueue("default")
+                      .version("v1")
+                      .startToCloseTimeout(Duration.ZERO)
+                      .heartbeatTimeout(Duration.ZERO)
+                      .build())
               .build();
       GlobalManager.globalManager().registerProcess(process);
 
@@ -347,11 +364,25 @@ class DslRuntimeServiceTest {
     try {
       var process = ProcessDslObject.builder()
               .name("Synthetic")
+              .description(Constants.EMPTY_MARKDOWN)
               .taskQueue("default")
               .version("v1")
               .inputType(BatchIn.class)
+              .outputType(Void.class)
+              .parameters(List.of())
               .executeLogic(ctx -> Result.success("ok"))
+              .previewLogic(ctx -> Result.success("ok"))
               .explainLogic(ctx -> Result.success(new ExplainReport("Synthetic", "test", "")))
+              .descriptor(DslDescriptor.builder()
+                      .name("Synthetic")
+                      .type(DslObject.DslType.PROCESS)
+                      .hasSideEffects(false)
+                      .parameters(List.of())
+                      .taskQueue("default")
+                      .version("v1")
+                      .startToCloseTimeout(Duration.ZERO)
+                      .heartbeatTimeout(Duration.ZERO)
+                      .build())
               .build();
       GlobalManager.globalManager().registerProcess(process);
 

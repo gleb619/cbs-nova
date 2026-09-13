@@ -134,20 +134,6 @@ class DevDslRuntimeCachingTest {
 
     GlobalManager.globalManager().registerProcess(Dsl.process("Ping")
             .version("v2")
-            .describe(() -> DslDescriptor.builder()
-                    .name("Ping")
-                    .type(DslType.PROCESS)
-                    .description("changed")
-                    .inputType(String.class)
-                    .outputType(String.class)
-                    .hasCompensation(false)
-                    .hasSideEffects(true)
-                    .parameters(List.of(ParameterDescriptor.ofString("x")))
-                    .taskQueue("Ping-queue")
-                    .version("v2")
-                    .startToCloseTimeout(null)
-                    .heartbeatTimeout(null)
-                    .build())
             .execute(ctx2 -> Result.success("pong-" + executions.incrementAndGet())).build());
 
     var second = runtime.preview("Ping", ctx);

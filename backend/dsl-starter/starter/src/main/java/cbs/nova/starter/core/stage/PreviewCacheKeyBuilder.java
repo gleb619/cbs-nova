@@ -29,7 +29,6 @@ final class PreviewCacheKeyBuilder {
                             .description(helper.description())
                             .inputType(helper.inputType())
                             .outputType(helper.outputType())
-                            .hasCompensation(false)
                             .hasSideEffects(helper.hasSideEffects())
                             .parameters(helper.parameters())
                             .taskQueue(null) // helpers are not Temporal-scheduled; no task queue

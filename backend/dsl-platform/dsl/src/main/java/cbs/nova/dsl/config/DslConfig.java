@@ -24,6 +24,7 @@ import cbs.nova.dsl.runner.DefaultHelperRunner;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
 import cbs.nova.dsl.runner.HelperRunner;
+import cbs.nova.dsl.runner.ProcessCompensationHandler;
 import cbs.nova.dsl.transaction.CompensationRegistry;
 import cbs.nova.dsl.transaction.TransactionInvoker;
 import cbs.nova.dsl.transaction.TransactionManager;
@@ -95,7 +96,13 @@ public class DslConfig implements SingletonSupport {
   public @NonNull ProcessRunner processRunner(
           @NonNull ContextFactory contextFactory,
           @NonNull CompensationRegistry compensationRegistry) {
-    return singleton(() -> new DefaultProcessRunner(contextFactory, compensationRegistry));
+    return singleton(() -> {
+      var transactionExecutionRepository = transactionExecutionRepository().get();
+      var temporalProcessLauncher = temporalProcessLauncher().get();
+      var compensationHandler = new ProcessCompensationHandler(contextFactory,
+              compensationRegistry);
+      return new DefaultProcessRunner(contextFactory, transactionExecutionRepository, temporalProcessLauncher, compensationHandler);
+    });
   }
 
   public @NonNull TransactionRunner transactionRunner(

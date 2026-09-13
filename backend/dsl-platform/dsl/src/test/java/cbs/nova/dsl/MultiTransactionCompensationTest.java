@@ -2,10 +2,13 @@ package cbs.nova.dsl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.process.ProcessRunner;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
+import cbs.nova.dsl.repository.InMemoryTransactionExecutionRepository;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
+import cbs.nova.dsl.runner.ProcessCompensationHandler;
 import cbs.nova.dsl.transaction.CompensationRegistry;
 import cbs.nova.dsl.transaction.TransactionRunner;
 import org.junit.jupiter.api.Test;
@@ -15,9 +18,12 @@ import java.util.ArrayList;
 class MultiTransactionCompensationTest {
 
   private final ContextFactory contextFactory = new ContextFactory();
+  private final TransactionExecutionRepository transactionExecutionRepository = new InMemoryTransactionExecutionRepository();
   private final CompensationRegistry compensationRegistry = new DefaultCompensationRegistry();
+  private final ProcessCompensationHandler compensationHandler = new ProcessCompensationHandler(
+          contextFactory, compensationRegistry);
   private final ProcessRunner runner = new DefaultProcessRunner(contextFactory,
-          compensationRegistry);
+          compensationRegistry, transactionExecutionRepository, null, compensationHandler);
 
   @Test
   void compensationsRunInReverseOrderAfterFailure() {

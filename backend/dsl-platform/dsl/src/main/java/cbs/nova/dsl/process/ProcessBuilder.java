@@ -7,6 +7,7 @@ import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.model.ObjectBuilder;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.explain.DescriptorMarkdown;
 import cbs.nova.dsl.explain.ExplainResourceExplainer;
 import cbs.nova.dsl.model.ExplainReport;
@@ -124,10 +125,11 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
     var resolvedPreview = rawPreview() != null ? rawPreview() : resolvedExecute;
     return ProcessDslObject.builder()
             .name(name)
+            .description(Constants.EMPTY_MARKDOWN)
             .taskQueue(taskQueue)
             .version(version)
-            .inputType(inputType)
-            .outputType(outputType)
+            .inputType(inputType != null ? inputType : Void.class)
+            .outputType(outputType != null ? outputType : Void.class)
             .parameters(parameters != null ? parameters : List.of())
             .executeLogic(resolvedExecute)
             .compensationLogic(rawCompensationLogic())
@@ -183,26 +185,26 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
   }
 
   public static @NonNull DslDescriptor defaultDescriptor(
-      @NonNull String name,
-      @NonNull String taskQueue,
-      @NonNull String version,
-      @Nullable Class<?> inputType,
-      @Nullable Class<?> outputType,
-      @NonNull List<ParameterDescriptor> parameters,
-      boolean hasSideEffects,
-      @Nullable String description) {
+          @NonNull String name,
+          @NonNull String taskQueue,
+          @NonNull String version,
+          @Nullable Class<?> inputType,
+          @Nullable Class<?> outputType,
+          @NonNull List<ParameterDescriptor> parameters,
+          boolean hasSideEffects,
+          @Nullable String description) {
     return DslDescriptor.builder()
-        .name(name)
-        .type(DslType.PROCESS)
-        .description(description)
-        .inputType(inputType)
-        .outputType(outputType)
-        .hasSideEffects(hasSideEffects)
-        .parameters(parameters)
-        .taskQueue(taskQueue)
-        .version(version)
-        .startToCloseTimeout(DEFAULT_START_TO_CLOSE_TIMEOUT)
-        .heartbeatTimeout(DEFAULT_HEARTBEAT_TIMEOUT)
-        .build();
+            .name(name)
+            .type(DslType.PROCESS)
+            .description(description)
+            .inputType(inputType)
+            .outputType(outputType)
+            .hasSideEffects(hasSideEffects)
+            .parameters(parameters)
+            .taskQueue(taskQueue)
+            .version(version)
+            .startToCloseTimeout(DEFAULT_START_TO_CLOSE_TIMEOUT)
+            .heartbeatTimeout(DEFAULT_HEARTBEAT_TIMEOUT)
+            .build();
   }
 }

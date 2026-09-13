@@ -5,6 +5,8 @@ import cbs.nova.dsl.ParameterDescriptor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
+//TODO: to remove
+@Deprecated(forRemoval = true)
 public final class DescriptorMarkdown {
 
   private DescriptorMarkdown() {
@@ -12,7 +14,8 @@ public final class DescriptorMarkdown {
 
   public static @NonNull String render(@NonNull DslDescriptor descriptor) {
     var sb = new StringBuilder();
-    sb.append("**").append(capitalize(descriptor.type().name())).append("** `").append(descriptor.name()).append('`');
+    sb.append("**").append(capitalize(descriptor.type().name())).append("** `")
+            .append(descriptor.name()).append('`');
     if (descriptor.description() != null && !descriptor.description().isBlank()) {
       sb.append("\n\n").append(descriptor.description());
     }
@@ -22,7 +25,8 @@ public final class DescriptorMarkdown {
     sb.append("\n- Side effects: ").append(descriptor.hasSideEffects() ? "yes" : "no");
     if (!descriptor.parameters().isEmpty()) {
       sb.append("\n- Parameters: ");
-      sb.append(String.join(", ", descriptor.parameters().stream().map(ParameterDescriptor::name).toList()));
+      sb.append(String.join(", ",
+              descriptor.parameters().stream().map(ParameterDescriptor::name).toList()));
     }
     return sb.toString();
   }

@@ -22,7 +22,8 @@ public interface ExplainSupport<IN, OUT> {
   OUT explain(@NonNull Context<IN> ctx);
 
   default ExplainReport createReport(Context<IN> ctx) {
-    //TODO: made a refactoring in `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/DevDslRuntime.java`
+    // TODO: made a refactoring in
+    // `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/DevDslRuntime.java`
     // pipes, on execution, we have a new context object with a current name of object(e.g.
     // process/helper/transaction, etc, e.g.)
     String currentObjectName = ctx.metadata(CURRENT_OBJECT_NAME);

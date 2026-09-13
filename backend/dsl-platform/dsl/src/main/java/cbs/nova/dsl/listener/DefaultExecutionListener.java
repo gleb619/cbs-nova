@@ -1,6 +1,5 @@
-package cbs.nova.dsl.runner;
+package cbs.nova.dsl.listener;
 
-import cbs.nova.dsl.listener.ExecutionListener;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.transaction.TransactionExecution;
 import lombok.RequiredArgsConstructor;
