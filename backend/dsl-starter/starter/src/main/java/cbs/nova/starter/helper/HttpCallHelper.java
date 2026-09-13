@@ -5,11 +5,13 @@ import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
+import cbs.nova.starter.config.properties.HttpCallProperties;
 import cbs.nova.starter.helper.model.HttpCallContext;
 import cbs.nova.starter.helper.model.HttpCallIn;
 import cbs.nova.starter.helper.model.HttpCallIn.RedirectPolicy;
 import cbs.nova.starter.helper.model.HttpCallOut;
 import cbs.nova.starter.core.StarterConstants;
+import cbs.nova.starter.security.OutboundUrlValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.MDC;
@@ -32,12 +34,24 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
 
   private final HttpClient client;
   private final CbsNovaLoggingProperties loggingProperties;
+  private final HttpCallProperties httpCallProperties;
   private final Map<RedirectPolicy, HttpClient> clientsByPolicy;
 
-  // TODO: user want to move config part to a spring config class
+  /**
+   * Convenience constructor with the legacy permissive guard config (no private-address blocking).
+   * The Spring-managed bean uses the three-argument constructor with the
+   * {@code cbs.dsl.helper.http-call} bound properties instead.
+   */
   public HttpCallHelper(HttpClient client, CbsNovaLoggingProperties loggingProperties) {
+    this(client, loggingProperties, HttpCallProperties.permissive());
+  }
+
+  // TODO: user want to move config part to a spring config class
+  public HttpCallHelper(HttpClient client, CbsNovaLoggingProperties loggingProperties,
+          HttpCallProperties httpCallProperties) {
     this.client = client;
     this.loggingProperties = loggingProperties;
+    this.httpCallProperties = httpCallProperties;
     // JDK HttpClient is configured once at build time and exposes no public config
     // getters (connect timeout, executor, SSL context, etc.), so we cannot derive
     // per-policy variants from the injected client. Instead we pre-build one client
@@ -74,6 +88,10 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
     logRequest(request);
     try {
       HttpResponse<String> response = selectedClient.send(request, BodyHandlers.ofString());
+      Result<HttpCallOut> redirectRejection = validateRedirectTarget(request, response, call);
+      if (redirectRejection != null) {
+        return redirectRejection;
+      }
       int status = response.statusCode();
       Map<String, String> headers = collectHeaders(response);
       String body = response.body();
@@ -100,7 +118,10 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
     }
   }
 
-  private static @NonNull HttpRequest buildRequest(@NonNull HttpCallContext call) {
+  private @NonNull HttpRequest buildRequest(@NonNull HttpCallContext call) {
+    // SSRF guard: scheme allowlist + private-address block + optional host allowlist.
+    // Throws IllegalArgumentException, mapped to Result.failure by execute().
+    OutboundUrlValidator.validate(call.url(), httpCallProperties);
     URI uri;
     try {
       uri = URI.create(call.url());
@@ -138,6 +159,35 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
               "httpCall.method is not a valid HTTP method: " + method, e);
     }
     return builder.build();
+  }
+
+  /**
+   * Re-validates the final URI after a followed redirect.
+   *
+   * <p>
+   * Honest limitation: this is detection, not prevention. The JDK {@link HttpClient} has already
+   * followed the redirect (and received the response body) before we see {@code response.uri()}, so
+   * a redirect to a blocked address is caught only after the fact — the same TOCTOU gap as the
+   * best-effort DNS check. Closing it fully needs a custom redirect-following interceptor inside
+   * the client (follow-up). Until then, use {@link RedirectPolicy#NEVER} for untrusted targets and
+   * validate the {@code Location} yourself. Returns {@code null} when the call is acceptable.
+   */
+  private Result<HttpCallOut> validateRedirectTarget(HttpRequest request,
+          HttpResponse<String> response, HttpCallContext call) {
+    if (call.redirectPolicy() == RedirectPolicy.NEVER
+            || response.uri().equals(request.uri())) {
+      return null;
+    }
+    try {
+      OutboundUrlValidator.validate(response.uri().toString(), httpCallProperties);
+      return null;
+    } catch (IllegalArgumentException e) {
+      return Result.failure(new IllegalArgumentException(
+              "httpCall %s %s followed a redirect to a rejected target: %s"
+                      .formatted(call.method(), OutboundUrlValidator.sanitize(request.uri()),
+                              e.getMessage()),
+              e));
+    }
   }
 
   private void logRequest(HttpRequest request) {

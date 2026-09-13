@@ -558,6 +558,42 @@ HttpCallOut resp = ctx.runHelper("httpCall",
 In **Preview mode** `httpCall` is intercepted and recorded, not sent — see
 [`preview-mode.md`](preview-mode.md).
 
+### Outbound URL validation (SSRF guard)
+
+Before any request is built, `httpCall` validates the URL against the helper-scoped config
+bound at `cbs.dsl.helper.http-call` (record `HttpCallProperties`, validator
+`cbs.nova.starter.security.OutboundUrlValidator`):
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `allowed-schemes` | `["https", "http"]` | Scheme allowlist. Anything else (e.g. `ftp`, `file`) is rejected. `http` stays in the default so existing DSLs keep working; tighten via config. |
+| `block-private-addresses` | `true` | Rejects URLs whose host resolves (via `InetAddress.getAllByName`) to a loopback, link-local, site-local, any-local (wildcard) or multicast address. This blocks cloud-metadata endpoints such as `http://169.254.169.254/...` and internal services such as `http://localhost:8090/actuator/...`. |
+| `allowed-hosts` | `[]` (any non-private host) | Optional host allowlist; exact or `*.suffix` match. Empty means no host restriction beyond the private-address block. |
+
+**This is a behaviour change.** With the defaults, any existing DSL that calls an internal
+host (loopback, RFC 1918, link-local) now fails with an `IllegalArgumentException`-based
+failure. To restore the old behaviour, set:
+
+```yaml
+cbs:
+  dsl:
+    helper:
+      http-call:
+        block-private-addresses: false
+```
+
+To lock a DSL down to known partners instead, leave the private-address block on and set
+`allowed-hosts`, e.g. `["api.partner.example.com", "*.example.com"]`.
+
+Failure messages never echo URL userinfo (credentials); the URL is sanitized before it is
+included in any rejection reason.
+
+**Redirect caveat.** When `redirectPolicy` is `NORMAL` or `ALWAYS`, the final URI after a
+followed redirect is re-validated and the call fails if it is rejected — but the JDK client
+has already followed the redirect by then, so this is detection, not prevention (TOCTOU).
+For untrusted targets use `redirectPolicy: NEVER` and validate the `Location` header
+yourself; full redirect-time enforcement needs a custom redirect interceptor (follow-up).
+
 ## HTTP authentication
 
 `httpAuth` builds the header map you attach to an `httpCall`. The `mode` discriminator

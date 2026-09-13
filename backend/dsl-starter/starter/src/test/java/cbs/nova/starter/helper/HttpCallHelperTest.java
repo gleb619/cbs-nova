@@ -9,16 +9,19 @@ import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.temporaryRedirect;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
+import cbs.nova.starter.config.properties.HttpCallProperties;
 import cbs.nova.starter.helper.HttpCallHelper.HttpCallFailure;
 import cbs.nova.starter.helper.HttpCallHelper.HttpCallTransportException;
 import cbs.nova.starter.helper.model.HttpCallIn;
 import cbs.nova.starter.helper.model.HttpCallOut;
+import cbs.nova.starter.security.OutboundUrlValidator;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import org.junit.jupiter.api.AfterEach;
@@ -56,8 +59,21 @@ class HttpCallHelperTest {
   }
 
   private Result<HttpCallOut> execute(HttpCallIn input) {
+    return execute(helper, input);
+  }
+
+  private Result<HttpCallOut> execute(HttpCallHelper helper, HttpCallIn input) {
     var ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
     return helper.execute(ctx);
+  }
+
+  private HttpCallHelper helperWith(HttpCallProperties properties) {
+    return new HttpCallHelper(HttpClient.newHttpClient(),
+            new CbsNovaLoggingProperties(Level.INFO, Level.INFO, true), properties);
+  }
+
+  private static HttpCallProperties secureProperties() {
+    return new HttpCallProperties(List.of("https", "http"), true, List.of());
   }
 
   @Test
@@ -302,5 +318,165 @@ class HttpCallHelperTest {
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause())
             .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void httpsPublicHostPassesValidation() {
+    // example.com is RFC 2606 documentation space; if DNS is unavailable the validator skips
+    // the best-effort address check, so this assertion holds either way.
+    assertThatCode(() -> OutboundUrlValidator.validate("https://example.com/", secureProperties()))
+            .doesNotThrowAnyException();
+  }
+
+  @Test
+  void loopbackAddressBlockedByDefault() {
+    Result<HttpCallOut> result = execute(helperWith(secureProperties()),
+            HttpCallIn.get("http://127.0.0.1:" + wireMock.port() + "/metadata"));
+
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause()).isInstanceOf(IllegalArgumentException.class);
+    assertThat(result.cause().getMessage()).contains("loopback");
+    wireMock.verify(0, getRequestedFor(urlEqualTo("/metadata")));
+  }
+
+  @Test
+  void linkLocalMetadataAddressBlockedByDefault() {
+    Result<HttpCallOut> result = execute(helperWith(secureProperties()),
+            HttpCallIn.get("http://169.254.169.254/latest/meta-data"));
+
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause().getMessage()).contains("link-local");
+  }
+
+  @Test
+  void ipv6LoopbackAddressBlockedByDefault() {
+    Result<HttpCallOut> result = execute(helperWith(secureProperties()),
+            HttpCallIn.get("http://[::1]:" + wireMock.port() + "/metadata"));
+
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause().getMessage()).contains("loopback");
+  }
+
+  @Test
+  void siteLocalAddressBlockedByDefault() {
+    Result<HttpCallOut> result = execute(helperWith(secureProperties()),
+            HttpCallIn.get("http://10.0.0.5/internal"));
+
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause().getMessage()).contains("site-local");
+  }
+
+  @Test
+  void privateAddressesPassWhenBlockFlagIsOff() {
+    wireMock.stubFor(get("/private-ok")
+            .willReturn(aResponse()
+                    .withStatus(200)
+                    .withBody("ok")));
+
+    // End-to-end against 127.0.0.1 with the legacy permissive helper (flag off).
+    Result<HttpCallOut> result = execute(
+            HttpCallIn.get("http://127.0.0.1:" + wireMock.port() + "/private-ok"));
+    assertThat(result.isSuccess())
+            .as("result cause: %s", result.cause())
+            .isTrue();
+    assertThat(result.value().bodyOrEmpty()).isEqualTo("ok");
+
+    // Validator-level for the categories with no local listener.
+    var permissive = HttpCallProperties.permissive();
+    assertThatCode(() -> OutboundUrlValidator.validate("http://169.254.169.254/latest", permissive))
+            .doesNotThrowAnyException();
+    assertThatCode(() -> OutboundUrlValidator.validate("http://[::1]/x", permissive))
+            .doesNotThrowAnyException();
+    assertThatCode(() -> OutboundUrlValidator.validate("http://10.0.0.5/x", permissive))
+            .doesNotThrowAnyException();
+  }
+
+  @Test
+  void disallowedSchemeIsRejected() {
+    Result<HttpCallOut> result = execute(helperWith(secureProperties()),
+            HttpCallIn.get("ftp://example.com/file"));
+
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause().getMessage()).contains("'ftp'");
+  }
+
+  @Test
+  void allowedHostsMatchPermitsRequest() {
+    wireMock.stubFor(get("/hosts-ok")
+            .willReturn(aResponse()
+                    .withStatus(200)
+                    .withBody("hosts-ok")));
+    var helper = helperWith(
+            new HttpCallProperties(List.of("https", "http"), false, List.of("localhost")));
+
+    Result<HttpCallOut> result = execute(helper, HttpCallIn.get(baseUrl() + "/hosts-ok"));
+
+    assertThat(result.isSuccess())
+            .as("result cause: %s", result.cause())
+            .isTrue();
+    assertThat(result.value().bodyOrEmpty()).isEqualTo("hosts-ok");
+  }
+
+  @Test
+  void allowedHostsSupportsWildcardSuffixMatch() {
+    var properties = new HttpCallProperties(null, false, List.of("*.example.com"));
+
+    assertThatCode(() -> OutboundUrlValidator.validate("https://api.example.com/x", properties))
+            .doesNotThrowAnyException();
+    assertThatCode(() -> OutboundUrlValidator.validate("https://evil-example.com/x", properties))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("host is not allowed");
+  }
+
+  @Test
+  void allowedHostsNoMatchIsRejected() {
+    var helper = helperWith(new HttpCallProperties(
+            List.of("https", "http"), false, List.of("partner.example.com")));
+
+    Result<HttpCallOut> result = execute(helper, HttpCallIn.get(baseUrl() + "/not-allowed"));
+
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause().getMessage()).contains("host is not allowed");
+    wireMock.verify(0, getRequestedFor(urlEqualTo("/not-allowed")));
+  }
+
+  @Test
+  void userInfoIsNeverEchoedInFailureMessage() {
+    Result<HttpCallOut> result = execute(helperWith(secureProperties()),
+            HttpCallIn.get("http://user:pass@127.0.0.1:" + wireMock.port() + "/x"));
+
+    assertThat(result.isSuccess()).isFalse();
+    String message = result.cause().getMessage();
+    assertThat(message).contains("127.0.0.1");
+    assertThat(message)
+            .doesNotContain("user:pass")
+            .doesNotContain("user");
+  }
+
+  @Test
+  void redirectTargetIsRevalidatedAfterFollow() {
+    // blockPrivateAddresses off so the initial request to localhost passes; allowedHosts only
+    // admits "localhost", so the redirect to 127.0.0.1 must be rejected post-hoc.
+    var helper = helperWith(
+            new HttpCallProperties(List.of("https", "http"), false, List.of("localhost")));
+    wireMock.stubFor(get("/redirect-blocked")
+            .willReturn(
+                    temporaryRedirect("http://127.0.0.1:" + wireMock.port() + "/target-blocked")));
+    wireMock.stubFor(get("/target-blocked")
+            .willReturn(aResponse()
+                    .withStatus(200)
+                    .withBody("should not be returned")));
+
+    Result<HttpCallOut> result = execute(helper, new HttpCallIn(
+            baseUrl() + "/redirect-blocked", "GET",
+            null, null, null, HttpCallIn.RedirectPolicy.ALWAYS, null));
+
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause()).isInstanceOf(IllegalArgumentException.class);
+    assertThat(result.cause().getMessage())
+            .contains("redirect")
+            .contains("127.0.0.1");
+    // Detection, not prevention: the JDK client followed the redirect before we could reject it.
+    wireMock.verify(1, getRequestedFor(urlEqualTo("/target-blocked")));
   }
 }
