@@ -81,7 +81,7 @@ class DevDslRuntimeCachingTest {
             previewProperties, new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()),
             new SimpleMeterRegistry(), new ExplainDiagramRenderer(),
-            new CbsNovaExplainProperties(4000), null);
+            new CbsNovaExplainProperties(4000, "explain/"), null);
     runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
 
     Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);

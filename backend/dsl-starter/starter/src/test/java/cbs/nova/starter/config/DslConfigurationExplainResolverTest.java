@@ -82,7 +82,7 @@ class DslConfigurationExplainResolverTest {
 
   @Configuration
   @EnableConfigurationProperties({CbsNovaCacheProperties.class, DslProperties.class,
-          CbsNovaExplainProperties.class})
+      CbsNovaExplainProperties.class})
   static class CollaboratorConfiguration {
 
     @Bean

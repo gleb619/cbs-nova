@@ -14,7 +14,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import tools.jackson.databind.ObjectMapper;
 
-
 @Slf4j
 @Configuration
 @ConditionalOnProperty(prefix = "cbs.dsl.auth.rbac", name = "enabled", havingValue = "true")

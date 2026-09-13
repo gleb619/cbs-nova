@@ -6,7 +6,6 @@ import java.time.Instant;
 import java.util.Set;
 import lombok.NoArgsConstructor;
 
-
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class StarterConstants {
 

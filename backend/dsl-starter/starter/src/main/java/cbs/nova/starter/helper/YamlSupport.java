@@ -14,7 +14,6 @@ import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.representer.Representer;
 import org.yaml.snakeyaml.resolver.Resolver;
 
-
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class YamlSupport {
 

@@ -11,7 +11,6 @@ import java.util.HexFormat;
 import java.util.Locale;
 import org.jspecify.annotations.NonNull;
 
-
 @Helper(name = "hex")
 public class HexHelper implements Executable<HexIn, HexOut> {
 

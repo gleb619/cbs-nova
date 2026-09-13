@@ -3,7 +3,6 @@ package cbs.nova.starter.model;
 import cbs.nova.starter.webhook.WebhookDeliveryRecord;
 import org.jspecify.annotations.Nullable;
 
-
 public record WebhookDeliveryDto(
         long id,
         String occurredAt,

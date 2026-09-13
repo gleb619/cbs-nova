@@ -17,7 +17,6 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import org.jspecify.annotations.NonNull;
 
-
 @Helper(name = "regex")
 public class RegexHelper implements Executable<RegexIn, RegexOut> {
 

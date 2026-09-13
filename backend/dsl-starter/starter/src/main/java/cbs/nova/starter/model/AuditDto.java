@@ -3,7 +3,6 @@ package cbs.nova.starter.model;
 import cbs.nova.starter.entity.DslAuditEntity;
 import org.jspecify.annotations.Nullable;
 
-
 public record AuditDto(
         long id,
         String occurredAt,

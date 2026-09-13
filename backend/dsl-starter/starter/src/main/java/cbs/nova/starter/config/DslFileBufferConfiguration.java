@@ -17,7 +17,6 @@ public class DslFileBufferConfiguration {
     return new DslFileBuffer(pendingCache(properties, Ticker.systemTicker()));
   }
 
-
   public static Cache<String, String> pendingCache(DslProperties properties, Ticker ticker) {
     int maxEntries = Math.max(1, properties.fileBuffer().maxEntries());
     long ttlSeconds = Math.max(1L, properties.fileBuffer().expireAfterWriteSeconds());

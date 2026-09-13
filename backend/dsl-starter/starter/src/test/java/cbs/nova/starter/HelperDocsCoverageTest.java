@@ -23,15 +23,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-
 class HelperDocsCoverageTest {
-
 
   private static final Path HELPERS_DOC = Path.of("").toAbsolutePath()
           .normalize()
           .getParent().getParent().getParent()
           .resolve("docs/dsl/helpers.md");
-
 
   private static final Set<String> ALLOWED_UNDOCUMENTED = Set.of(
           // test fixture: simulates a flaky downstream API for the HttpResilience example/tests

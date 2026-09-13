@@ -9,7 +9,6 @@ import cbs.nova.starter.helper.model.MaskOut;
 import java.util.Locale;
 import org.jspecify.annotations.NonNull;
 
-
 @Helper(name = "mask")
 public class MaskHelper implements Executable<MaskIn, MaskOut> {
 

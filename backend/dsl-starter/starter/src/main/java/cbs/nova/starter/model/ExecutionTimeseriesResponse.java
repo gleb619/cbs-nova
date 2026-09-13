@@ -11,17 +11,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-
 public record ExecutionTimeseriesResponse(
         Instant windowStart,
         Instant windowEnd,
         long bucketMinutes,
         List<BucketRow> buckets) {
 
-
   public record BucketRow(Instant bucketStart, Map<String, Long> statusCounts) {
   }
-
 
   public static ExecutionTimeseriesResponse from(List<RunTimeseriesBucket> narrowRows,
           Instant windowStart, Instant windowEnd, Duration bucketSize) {

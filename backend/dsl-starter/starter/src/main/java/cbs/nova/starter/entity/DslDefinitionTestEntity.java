@@ -3,7 +3,6 @@ package cbs.nova.starter.entity;
 import java.time.Instant;
 import org.jspecify.annotations.Nullable;
 
-
 public record DslDefinitionTestEntity(
         @Nullable Long id,
         String definitionName,

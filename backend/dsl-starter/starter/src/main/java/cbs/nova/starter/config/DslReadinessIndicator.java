@@ -9,7 +9,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
 
-
 @AllArgsConstructor
 public class DslReadinessIndicator implements HealthIndicator {
 

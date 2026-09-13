@@ -131,7 +131,6 @@ class DslReloadResourceTest {
     }
   }
 
-
   @Test
   void reloadResponseBodyIncludesLoadResultDrilldown() throws Exception {
     Path sourceDir = createTemporaryDslSourceDir();
@@ -155,7 +154,6 @@ class DslReloadResourceTest {
       deleteRecursively(sourceDir);
     }
   }
-
 
   @Test
   void reloadDefinitionsReturnsLoadResultDrilldown() throws Exception {
@@ -190,7 +188,6 @@ class DslReloadResourceTest {
     return servletResponse.getContentAsString();
   }
 
-
   @Test
   void failedReloadLeavesExistingRegistryIntact() throws Exception {
     // 1. Initial successful reload: registers ReloadTestProcess.
@@ -224,7 +221,6 @@ class DslReloadResourceTest {
     }
   }
 
-
   @Test
   void successfulReloadDeletesTempDir() throws Exception {
     long before = System.currentTimeMillis();
@@ -240,7 +236,6 @@ class DslReloadResourceTest {
     }
   }
 
-
   @Test
   void failedReloadDeletesTempDir() throws Exception {
     long before = System.currentTimeMillis();
@@ -254,7 +249,6 @@ class DslReloadResourceTest {
       deleteRecursively(badDir);
     }
   }
-
 
   @Test
   void reloadWritesAuditRowOnSuccess() throws Exception {
@@ -320,7 +314,6 @@ class DslReloadResourceTest {
     }
   }
 
-
   @Test
   void failedReloadLeavesPreviewCacheIntact() throws Exception {
     Path badDir = createTemporaryBrokenDslSourceDir();
@@ -344,7 +337,6 @@ class DslReloadResourceTest {
       deleteRecursively(badDir);
     }
   }
-
 
   @Test
   void reloadSucceedsWhenPreviewCacheProviderIsNull() throws Exception {
@@ -378,7 +370,6 @@ class DslReloadResourceTest {
             List.of());
   }
 
-
   private static <T> ObjectProvider<T> constantProvider(T bean) {
     return new ObjectProvider<>() {
       @Override
@@ -397,7 +388,6 @@ class DslReloadResourceTest {
       }
     };
   }
-
 
   @Test
   void concurrentReloadsSerialize() throws Exception {
@@ -557,7 +547,6 @@ class DslReloadResourceTest {
       return new DefinitionLoader();
     }
   }
-
 
   static final class PerCallGatedLoader implements DslDefinitionLoader {
 

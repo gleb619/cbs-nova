@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-
 public record ExecutionDto(
         String id,
         String entity,
@@ -93,7 +92,6 @@ public record ExecutionDto(
     return List.of(new ErrorEntry(error, null, null));
   }
 
-
   static final int TRACE_STEP_CAP = 500;
 
   static final String COMPENSATION_PREFIX = "compensation log: ";
@@ -101,7 +99,6 @@ public record ExecutionDto(
   static final String TX_EXECUTED_PREFIX = "executed transaction: ";
   static final String TX_CALLED_PREFIX = "called transaction: ";
   static final String TRUNCATION_NAME_FORMAT = "… trace truncated (%d entries)";
-
 
   static List<TraceStepDto> toTraceSteps(@Nullable String contextJson,
           ObjectMapper objectMapper) {

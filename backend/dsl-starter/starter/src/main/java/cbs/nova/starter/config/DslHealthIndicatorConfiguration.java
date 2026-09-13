@@ -9,7 +9,6 @@ import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnClass(HealthIndicator.class)
 public class DslHealthIndicatorConfiguration {

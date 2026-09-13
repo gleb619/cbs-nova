@@ -8,16 +8,12 @@ import cbs.nova.starter.model.VcsModels.DiffHunk;
 import java.util.ArrayList;
 import java.util.List;
 
-
 // TODO: remove, put to a `dsl-builder` or to `dsl-api` module
 @Deprecated(forRemoval = true)
 public final class LineDiff {
 
-
-
   private LineDiff() {
   }
-
 
   public record Result(List<DiffHunk> hunks, boolean truncated) {
 

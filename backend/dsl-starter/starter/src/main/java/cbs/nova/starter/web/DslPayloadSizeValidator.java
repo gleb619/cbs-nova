@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.servlet.function.ServerRequest;
 import tools.jackson.databind.ObjectMapper;
 
-
 @RequiredArgsConstructor
 public class DslPayloadSizeValidator {
 

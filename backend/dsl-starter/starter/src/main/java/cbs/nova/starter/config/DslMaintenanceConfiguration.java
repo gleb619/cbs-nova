@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
-
 @Slf4j
 @Configuration
 @EnableConfigurationProperties(DslMaintenanceProperties.class)
@@ -57,7 +56,6 @@ public class DslMaintenanceConfiguration {
     return new DslRunReconciliationMaintenanceTask(service);
   }
 
-
   @Bean
   AuditRetentionMaintenanceTask auditRetentionMaintenanceTask() {
     return new AuditRetentionMaintenanceTask();
@@ -67,7 +65,6 @@ public class DslMaintenanceConfiguration {
   // Unified driver + its executor — registered only when the master flag
   // is on.
   // ---------------------------------------------------------------------
-
 
   @Bean(name = "cbsNovaDslMaintenanceExecutor", destroyMethod = "shutdownNow")
   @ConditionalOnMissingBean(name = "cbsNovaDslMaintenanceExecutor")
@@ -79,7 +76,6 @@ public class DslMaintenanceConfiguration {
       return t;
     });
   }
-
 
   @Bean(destroyMethod = "shutdown")
   @ConditionalOnProperty(prefix = "dsl.maintenance", name = "unified-enabled", havingValue = "true")
@@ -104,7 +100,6 @@ public class DslMaintenanceConfiguration {
     return new DslMaintenanceService(sorted, enabled, properties.schedule(), executor,
             meterRegistryProvider.getIfAvailable());
   }
-
 
   @Bean
   @ConditionalOnBean(DslMaintenanceService.class)

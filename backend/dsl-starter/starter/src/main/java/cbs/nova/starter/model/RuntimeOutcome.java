@@ -1,6 +1,5 @@
 package cbs.nova.starter.model;
 
-
 public record RuntimeOutcome(boolean success, Object value, ErrorResponse error, boolean replayed) {
 
   public static RuntimeOutcome ok(Object value) {

@@ -116,7 +116,6 @@ class DslWorkerConfigurationTest {
     }
   }
 
-
   static class TestableDslWorkerConfiguration extends DslWorkerConfiguration {
     static volatile WorkerFactory OVERRIDE_FACTORY;
 

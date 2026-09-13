@@ -8,10 +8,8 @@ import java.util.List;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
-
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 class CsvSupport {
-
 
   static List<List<String>> parse(String input, char delimiter) {
     List<List<String>> rows = new ArrayList<>();
@@ -95,7 +93,6 @@ class CsvSupport {
     }
     return rows;
   }
-
 
   static String format(List<List<String>> rows, char delimiter, String lineSeparator) {
     StringBuilder out = new StringBuilder();

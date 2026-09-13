@@ -35,7 +35,6 @@ public sealed interface DomainEvent permits
   @Nullable
   Instant occurredAt();
 
-
   @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "eventType", include = JsonTypeInfo.As.EXISTING_PROPERTY, visible = true)
   @JsonSubTypes({
       @JsonSubTypes.Type(value = RunStarted.class, name = "RunStarted"),
@@ -61,7 +60,6 @@ public sealed interface DomainEvent permits
       return "run";
     }
   }
-
 
   @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "eventType", include = JsonTypeInfo.As.EXISTING_PROPERTY, visible = true)
   @JsonSubTypes({

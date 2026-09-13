@@ -2,7 +2,6 @@ package cbs.nova.starter.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
-
 public record TraceStepDto(
         String id,
         String stepType,

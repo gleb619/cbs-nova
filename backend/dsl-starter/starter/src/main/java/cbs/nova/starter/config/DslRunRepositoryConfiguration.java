@@ -39,7 +39,6 @@ import tools.jackson.databind.ObjectMapper;
 
 import javax.sql.DataSource;
 
-
 @EnableConfigurationProperties(DslRunPersistenceProperties.class)
 @EnableJdbcRepositories(basePackages = "cbs.nova.starter.persistence")
 public class DslRunRepositoryConfiguration {

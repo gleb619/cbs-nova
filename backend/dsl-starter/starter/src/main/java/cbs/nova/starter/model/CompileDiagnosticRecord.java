@@ -3,7 +3,6 @@ package cbs.nova.starter.model;
 import java.time.Instant;
 import org.jspecify.annotations.Nullable;
 
-
 public record CompileDiagnosticRecord(
         @Nullable Long id,
         Instant occurredAt,

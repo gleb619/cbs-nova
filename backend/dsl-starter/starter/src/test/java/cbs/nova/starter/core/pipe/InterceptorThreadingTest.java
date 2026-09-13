@@ -168,7 +168,7 @@ class InterceptorThreadingTest {
             bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, previewProperties,
             new CbsNovaFakesProperties(false, null), runScopedFakeConfig,
             new SimpleMeterRegistry(), new ExplainDiagramRenderer(),
-            new CbsNovaExplainProperties(4000), null);
+            new CbsNovaExplainProperties(4000, "explain/"), null);
 
     Context<?> ctx = contextFactory.of("payload", ExecutionMode.EXPLAIN, "run-explain");
     Result<ExplainTraceReport> result = explainPipe.execute("dbCall", ctx);

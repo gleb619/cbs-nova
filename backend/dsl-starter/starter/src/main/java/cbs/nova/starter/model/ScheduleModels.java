@@ -2,7 +2,6 @@ package cbs.nova.starter.model;
 
 import org.jspecify.annotations.Nullable;
 
-
 public final class ScheduleModels {
 
   private ScheduleModels() {

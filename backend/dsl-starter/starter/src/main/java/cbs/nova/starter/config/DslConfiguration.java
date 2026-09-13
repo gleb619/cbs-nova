@@ -96,7 +96,6 @@ public class DslConfiguration {
             cache);
   }
 
-
   public static SpringOrGeneratedHelperInstanceResolver withDefaultCache(
           HelperInstanceResolver springResolver,
           List<HelperInstanceResolver> generatedFactories) {

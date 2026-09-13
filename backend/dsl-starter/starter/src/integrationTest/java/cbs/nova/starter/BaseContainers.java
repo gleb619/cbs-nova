@@ -47,7 +47,6 @@ public abstract class BaseContainers {
                     .withStartupTimeout(STARTUP_TIMEOUT));
   }
 
-
   private static <T extends GenericContainer<?>> T startWithRetry(String name,
           Supplier<T> factory) {
     ContainerLaunchException last = null;

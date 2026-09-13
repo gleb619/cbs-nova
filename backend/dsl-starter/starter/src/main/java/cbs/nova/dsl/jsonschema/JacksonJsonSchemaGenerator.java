@@ -32,7 +32,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-
 public class JacksonJsonSchemaGenerator implements JsonSchemaGenerator {
 
   private final ObjectMapper objectMapper = JsonMapper.builder()
@@ -74,7 +73,6 @@ public class JacksonJsonSchemaGenerator implements JsonSchemaGenerator {
     }
     return schemaCache.get(inputType, this::computeSchema);
   }
-
 
   protected Map<String, Object> computeSchema(Class<?> inputType) {
     SchemaBuildingVisitor visitor = new SchemaBuildingVisitor();

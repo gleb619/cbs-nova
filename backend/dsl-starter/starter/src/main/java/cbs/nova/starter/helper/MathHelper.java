@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Locale;
 import org.jspecify.annotations.NonNull;
 
-
 @Helper(name = "math")
 public class MathHelper implements Executable<MathIn, MathOut> {
 

@@ -6,12 +6,10 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import tools.jackson.databind.JsonNode;
 
-
 public final class JsonDeepEquals {
 
   private JsonDeepEquals() {
   }
-
 
   public static boolean deepEquals(JsonNode actual, JsonNode expected) {
     if (actual == null || expected == null) {

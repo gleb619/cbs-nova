@@ -19,13 +19,11 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
-
 @Slf4j
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @EnableConfigurationProperties(CbsSecurityOidcProperties.class)
 public class SecurityConfiguration {
-
 
   @Bean
   @Order(Ordered.LOWEST_PRECEDENCE)

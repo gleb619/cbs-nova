@@ -26,7 +26,6 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
-
 @Helper(name = "jwt")
 public class JwtHelper implements Executable<JwtIn, JwtOut> {
 
@@ -271,7 +270,6 @@ public class JwtHelper implements Executable<JwtIn, JwtOut> {
     }
   }
 
-
   private static @NonNull JsonNode toJsonNode(@NonNull Object value) {
     if (value == null) {
       return MAPPER.nullNode();
@@ -281,7 +279,6 @@ public class JwtHelper implements Executable<JwtIn, JwtOut> {
     }
     return MAPPER.valueToTree(value);
   }
-
 
   private static Long coerceLong(Object value) {
     if (value instanceof Number n) {

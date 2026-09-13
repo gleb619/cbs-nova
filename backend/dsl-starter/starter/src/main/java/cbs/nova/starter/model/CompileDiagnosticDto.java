@@ -3,7 +3,6 @@ package cbs.nova.starter.model;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.jspecify.annotations.Nullable;
 
-
 public record CompileDiagnosticDto(
         long id,
         String occurredAt,

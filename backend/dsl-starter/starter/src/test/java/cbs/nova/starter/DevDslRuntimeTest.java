@@ -63,7 +63,7 @@ class DevDslRuntimeTest {
           previewProperties, new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()),
           new SimpleMeterRegistry(), new ExplainDiagramRenderer(),
-          new CbsNovaExplainProperties(4000), null);
+          new CbsNovaExplainProperties(4000, "explain/"), null);
   private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
 
   @BeforeEach

@@ -10,12 +10,10 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 import tools.jackson.databind.ObjectMapper;
 
-
 public final class AuditTestSupport {
 
   private AuditTestSupport() {
   }
-
 
   public record Harness(DslAuditService service, DslAuditRepository repository) {
   }

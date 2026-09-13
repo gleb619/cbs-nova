@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-
 public record ExecutionStatsResponse(
         long totalRuns,
         Map<String, Long> statusCounts,

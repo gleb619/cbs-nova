@@ -176,6 +176,6 @@ class PreviewTimeoutTest {
             StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, properties,
             new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()), meterRegistry,
-            new ExplainDiagramRenderer(), new CbsNovaExplainProperties(4000), executor);
+            new ExplainDiagramRenderer(), new CbsNovaExplainProperties(4000, "explain/"), executor);
   }
 }

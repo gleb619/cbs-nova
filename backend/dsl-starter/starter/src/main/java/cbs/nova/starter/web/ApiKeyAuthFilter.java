@@ -19,7 +19,6 @@ import org.springframework.http.MediaType;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.ObjectMapper;
 
-
 @Slf4j
 public final class ApiKeyAuthFilter extends OncePerRequestFilter {
 
@@ -79,7 +78,6 @@ public final class ApiKeyAuthFilter extends OncePerRequestFilter {
 
     writeUnauthorized(response, "Invalid X-Api-Key");
   }
-
 
   private boolean authRequired() {
     return configuredApiKey != null || apiKeyStore != null;
