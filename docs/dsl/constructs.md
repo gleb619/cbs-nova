@@ -90,7 +90,8 @@ and executed through the same path as `@Helper` classes. Functions are intended 
 does not require Temporal durability, retries, or task queues.
 
 A Function may only call other Functions and Helpers. It cannot invoke Processes or Transactions, and it does not
-support compensation.
+support compensation. See `PricingFunctionsDsl` for a worked example (shared pricing logic reused by both a Process
+and a Transaction).
 
 ### Helper
 
