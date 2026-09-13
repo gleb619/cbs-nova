@@ -11,21 +11,7 @@ import java.util.HexFormat;
 import java.util.Locale;
 import org.jspecify.annotations.NonNull;
 
-/**
- * Encodes and decodes strings as lowercase hexadecimal.
- *
- * <p>
- * The helper supports two modes:
- * <ul>
- * <li>{@code "encode"}: returns the lowercase hex of the UTF-8 bytes of {@code input}.</li>
- * <li>{@code "decode"}: parses a hex string and returns the UTF-8 string of those bytes.</li>
- * </ul>
- *
- * <p>
- * Empty input is rejected with an {@link IllegalArgumentException} in both modes, as is an
- * odd-length hex string in {@code "decode"} mode or any non-hex character. The {@code "mode"}
- * argument is case-insensitive.
- */
+
 @Helper(name = "hex")
 public class HexHelper implements Executable<HexIn, HexOut> {
 

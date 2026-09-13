@@ -1,5 +1,7 @@
 package cbs.nova.dsl;
 
+import static cbs.nova.dsl.config.Constants.JAVA_FILE_SUFFIX;
+
 import java.util.Optional;
 import org.jspecify.annotations.NonNull;
 
@@ -13,7 +15,7 @@ public interface DslCompactSource {
 
   @NonNull
   default String filename() {
-    return getClass().getSimpleName() + ".java";
+    return getClass().getSimpleName() + JAVA_FILE_SUFFIX;
   }
 
   default Optional<DslObject> byName(String name) {

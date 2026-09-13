@@ -26,48 +26,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
-/**
- * Encodes, decodes, signs, and verifies JSON Web Tokens (RFC 7519) using only the symmetric HMAC
- * family: {@code HS256}, {@code HS384}, and {@code HS512}.
- *
- * <h2>SECURITY WARNING — READ CAREFULLY</h2>
- *
- * <p>
- * The {@code parse} and {@code claim} modes are <b>DECODE ONLY</b>. They inspect the
- * base64url-decoded header and payload of a token without verifying any signature and without
- * checking the {@code exp} or {@code nbf} claims. They MUST NEVER be used to make trust or
- * authorization decisions. Any caller that uses the parsed values to decide "is this caller
- * authenticated?" or "is this request authorized?" has a critical security vulnerability.
- *
- * <p>
- * Only the {@code verify} mode establishes trust: it recomputes the HMAC over the header and
- * payload segments with the supplied secret and rejects the token on signature mismatch, expired
- * {@code exp}, or not-yet-valid {@code nbf}. Use {@code verify} for ALL authentication and
- * authorization flows.
- *
- * <h2>Modes</h2>
- *
- * <ul>
- * <li>{@code "parse"} — decode-only. Returns a map with {@code "header"}, {@code "payload"}, and
- * the raw base64url {@code "signature"} segment (the signature is NOT decoded or verified).</li>
- * <li>{@code "verify"} — cryptographically verify a token's signature (HS256/HS384/HS512) and
- * time-based claims. Only {@code "HS256"}, {@code "HS384"}, and {@code "HS512"} are accepted;
- * {@code "none"} and any other value are rejected unconditionally to defeat JWT "alg: none" and
- * alg-confusion attacks (CVE-2015-9235). The token's own header {@code alg} must match the
- * requested {@code algorithm} exactly.</li>
- * <li>{@code "sign"} — produce a compact JWS {@code "header.payload.signature"} string. The header
- * is fixed to {@code {"alg": <algorithm>, "typ": "JWT"}}. The payload is a copy of the caller's
- * claims with {@code iat} (now, Unix seconds) and {@code exp} (now + ttlSeconds, default 3600)
- * added (overwriting any pre-existing {@code iat}/{@code exp}).</li>
- * <li>{@code "claim"} — decode-only extraction of a single claim from the payload. Returns the
- * claim value without verifying the signature.</li>
- * </ul>
- *
- * <p>
- * The {@code mode} field is matched case-insensitively. The {@code algorithm} parameter is matched
- * case-insensitively but the token header {@code alg} must match the requested {@code algorithm}
- * exactly (case-sensitive) — this is part of the alg-confusion defense.
- */
+
 @Helper(name = "jwt")
 public class JwtHelper implements Executable<JwtIn, JwtOut> {
 
@@ -312,10 +271,7 @@ public class JwtHelper implements Executable<JwtIn, JwtOut> {
     }
   }
 
-  /**
-   * Best-effort conversion of an arbitrary Java value into a Jackson {@link JsonNode} so that the
-   * caller's payload (a {@code Map<String, Object>}) can be round-tripped into JSON cleanly.
-   */
+
   private static @NonNull JsonNode toJsonNode(@NonNull Object value) {
     if (value == null) {
       return MAPPER.nullNode();
@@ -326,11 +282,7 @@ public class JwtHelper implements Executable<JwtIn, JwtOut> {
     return MAPPER.valueToTree(value);
   }
 
-  /**
-   * Coerce a JSON-decoded numeric claim to a {@link Long}. JWT {@code exp} / {@code nbf} are
-   * NumericDate values (RFC 7519 §2): fractional seconds are allowed but in practice seconds-since-
-   * epoch is overwhelmingly common. We accept integer-valued or already-Long values.
-   */
+
   private static Long coerceLong(Object value) {
     if (value instanceof Number n) {
       long asLong = n.longValue();

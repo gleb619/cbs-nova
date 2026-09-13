@@ -19,51 +19,14 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
-/**
- * Opt-in OIDC / JWT resource-server guard for the DSL REST API.
- *
- * <p>
- * The starter ships with a no-op, fully-permissive filter chain (default mode, matches the
- * historical behaviour) and an opt-in JWT-protected chain that activates when
- * {@code cbs.security.oidc.enabled=true}. The two chains are mutually exclusive — exactly one
- * {@link SecurityFilterChain} bean is published at runtime, so the default Spring Boot web security
- * configuration backs off (it is {@code @ConditionalOnDefaultWebSecurity}).
- *
- * <h2>Default mode (OIDC disabled)</h2>
- * <ul>
- * <li>Property {@code cbs.security.oidc.enabled} is missing or {@code false}.</li>
- * <li>A single permissive {@link SecurityFilterChain} is registered; every request is allowed, no
- * {@code Authentication} is required.</li>
- * <li>No OIDC-specific beans ({@code JwtDecoder}, {@code OAuth2ResourceServerConfigurer}) are
- * wired.</li>
- * </ul>
- *
- * <h2>Secured mode (OIDC enabled)</h2>
- * <ul>
- * <li>Property {@code cbs.security.oidc.enabled=true} activates the
- * {@link #oidcSecurityFilterChain(HttpSecurity)} bean.</li>
- * <li>The configured {@code protectedPaths} (default {@code /api/dsl/**} and
- * {@code /api/executions/**}) require a valid Bearer JWT. {@code WWW-Authenticate: Bearer} is
- * returned on 401.</li>
- * <li>Actuator health, springdoc/OpenAPI and any path in {@code permitAllPaths} stay
- * anonymous.</li>
- * <li>The JWT decoder is auto-configured by Spring Boot from
- * {@code spring.security.oauth2.resourceserver.jwt.issuer-uri} (pointing at the compose Keycloak
- * realm, e.g. {@code http://keycloak:8080/realms/cbs-nova}).</li>
- * </ul>
- */
+
 @Slf4j
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @EnableConfigurationProperties(CbsSecurityOidcProperties.class)
 public class SecurityConfiguration {
 
-  /**
-   * Default permissive chain. Always registered (when no OIDC chain is in scope) so that Spring
-   * Boot's default-everything-authenticated chain is suppressed. This bean is the only one present
-   * in the default (OIDC disabled) mode, making behaviour byte-identical to the pre-OIDC starter:
-   * every endpoint remains anonymous, including /actuator/** and /v3/api-docs.
-   */
+
   @Bean
   @Order(Ordered.LOWEST_PRECEDENCE)
   @ConditionalOnProperty(name = "cbs.security.oidc.enabled", havingValue = "false", matchIfMissing = true)

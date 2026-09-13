@@ -3,6 +3,8 @@ package cbs.nova.dsl.gradle;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.tasks.SourceSet;
+import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.testfixtures.ProjectBuilder;
 import org.gradle.testkit.runner.GradleRunner;
 import org.junit.jupiter.api.Test;
@@ -164,6 +166,80 @@ class DslCompilerPluginTest {
     assertThat(output).contains("cbs.nova:dsl-codegen");
     assertThat(output).contains("cbs.nova:dsl");
     assertThat(output).contains("cbs.nova:dsl-api");
+  }
+
+  @Test
+  void mainSourceSetUsesExtensionResourcesDirByDefault() {
+    var project = ProjectBuilder.builder().build();
+    project.getPlugins().apply("java");
+    project.getPlugins().apply(DslCompilerPlugin.class);
+
+    var sourceSets = project.getExtensions().getByType(SourceSetContainer.class);
+    var main = sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME);
+
+    assertThat(main.getResources().getSrcDirs())
+            .containsExactly(new File(project.getProjectDir(), "src/resources"));
+  }
+
+  @Test
+  void mainSourceSetUsesConfiguredResourcesDir(@TempDir Path projectDir) throws Exception {
+    Files.writeString(projectDir.resolve("settings.gradle"),
+            "rootProject.name = 'dsl-plugin-resources-custom'\n");
+    Files.writeString(projectDir.resolve("build.gradle"), """
+            plugins {
+              id 'java'
+              id 'cbs.nova.dsl'
+            }
+
+            dslCompile {
+              resourcesDir = layout.projectDirectory.dir('custom-resources')
+            }
+
+            tasks.register('printResourcesDirs') {
+              doLast {
+                println('RESOURCES=' + sourceSets.main.resources.srcDirs.join(','))
+              }
+            }
+            """);
+
+    var result = GradleRunner.create()
+            .withProjectDir(projectDir.toFile())
+            .withArguments("printResourcesDirs")
+            .withPluginClasspath()
+            .build();
+
+    assertThat(result.getOutput()).contains(
+            "RESOURCES=" + projectDir.resolve("custom-resources").toAbsolutePath());
+    assertThat(result.getOutput()).doesNotContain("src" + File.separator + "main"
+            + File.separator + "resources");
+  }
+
+  @Test
+  void resourcesFromDefaultDirAreProcessedIntoOutput(@TempDir Path projectDir) throws Exception {
+    Files.createDirectories(projectDir.resolve("src/resources/explain"));
+    Files.writeString(projectDir.resolve("src/resources/explain/demo.md"), "# demo");
+    Files.writeString(projectDir.resolve("settings.gradle"),
+            "rootProject.name = 'dsl-plugin-resources-process'\n");
+    Files.writeString(projectDir.resolve("build.gradle"), """
+            plugins {
+              id 'java'
+              id 'cbs.nova.dsl'
+            }
+            version = '0.0.1-SNAPSHOT'
+            repositories { mavenLocal(); mavenCentral() }
+
+            dslCompile {
+              runtimeModule = ''
+            }
+            """);
+
+    var result = GradleRunner.create()
+            .withProjectDir(projectDir.toFile())
+            .withArguments("processResources")
+            .withPluginClasspath()
+            .build();
+
+    assertThat(projectDir.resolve("build/resources/main/explain/demo.md")).exists();
   }
 
   @Test

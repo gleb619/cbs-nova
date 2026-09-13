@@ -29,32 +29,7 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
-/**
- * T412 — folds the recurring purge/reconciliation tasks under one {@link DslMaintenanceService}
- * when {@code dsl.maintenance.unified.enabled=true}, and otherwise leaves the pre-existing per-job
- * schedulers alone.
- *
- * <h2>Rollout flag</h2>
- *
- * <ul>
- * <li>{@code dsl.maintenance.unified.enabled=false} (default) — each existing job keeps its own
- * {@code ApplicationRunner} self-schedule. Zero behaviour change, all pre-existing tests
- * green.</li>
- * <li>{@code dsl.maintenance.unified.enabled=true} — the per-job {@code ApplicationRunner} starters
- * are conditioned {@code @ConditionalOnProperty(..., matchIfMissing=true, havingValue="false")} so
- * they no-op themselves, and {@link DslMaintenanceService} runs each registered
- * {@link MaintenanceTask} on the unified schedule. The default schedule interval is the retention
- * purger's pre-existing cadence ({@code 1h}) so flipping the flag on causes no observable change in
- * purge frequency.</li>
- * </ul>
- *
- * <h2>Cadence preservation</h2>
- *
- * The unified schedule is intentionally a single interval rather than per-task intervals. Choosing
- * the retention purger's existing cadence as the default keeps the most-frequently-purged dataset
- * on its current rhythm; operators who need different cadences can keep
- * {@code unified.enabled=false} and continue using the per-job knobs.
- */
+
 @Slf4j
 @Configuration
 @EnableConfigurationProperties(DslMaintenanceProperties.class)
@@ -82,7 +57,7 @@ public class DslMaintenanceConfiguration {
     return new DslRunReconciliationMaintenanceTask(service);
   }
 
-  /** Forward-compat no-op audit-retention stub. */
+
   @Bean
   AuditRetentionMaintenanceTask auditRetentionMaintenanceTask() {
     return new AuditRetentionMaintenanceTask();
@@ -93,10 +68,7 @@ public class DslMaintenanceConfiguration {
   // is on.
   // ---------------------------------------------------------------------
 
-  /**
-   * Dedicated executor for the unified scheduler. Single-threaded (mirrors the pre-existing per-job
-   * executors) and named so thread dumps remain legible.
-   */
+
   @Bean(name = "cbsNovaDslMaintenanceExecutor", destroyMethod = "shutdownNow")
   @ConditionalOnMissingBean(name = "cbsNovaDslMaintenanceExecutor")
   @ConditionalOnProperty(prefix = "dsl.maintenance", name = "unified-enabled", havingValue = "true")
@@ -108,10 +80,7 @@ public class DslMaintenanceConfiguration {
     });
   }
 
-  /**
-   * Unified driver. Registered only when the master flag is on; absent otherwise (per-job
-   * schedulers remain in charge).
-   */
+
   @Bean(destroyMethod = "shutdown")
   @ConditionalOnProperty(prefix = "dsl.maintenance", name = "unified-enabled", havingValue = "true")
   DslMaintenanceService dslMaintenanceService(
@@ -136,10 +105,7 @@ public class DslMaintenanceConfiguration {
             meterRegistryProvider.getIfAvailable());
   }
 
-  /**
-   * Starter for the unified scheduler. Registered only when the master flag is on, so {@code false}
-   * (the default) leaves the per-job schedulers running untouched.
-   */
+
   @Bean
   @ConditionalOnBean(DslMaintenanceService.class)
   ApplicationRunner dslMaintenanceServiceStarter(DslMaintenanceService service) {

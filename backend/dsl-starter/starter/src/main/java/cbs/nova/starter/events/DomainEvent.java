@@ -35,12 +35,7 @@ public sealed interface DomainEvent permits
   @Nullable
   Instant occurredAt();
 
-  /**
-   * Aggregates RunLifecycleEvent and DefinitionLifecycleEvent for Jackson polymorphic
-   * serialization. The concrete {@link JsonSubTypes} entries below are used by the runtime when
-   * {@code eventType} is one of the eight record names; the static {@code @JsonTypeInfo} on the
-   * sealed sub-interfaces is the source of truth for the per-branch type mapping.
-   */
+
   @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "eventType", include = JsonTypeInfo.As.EXISTING_PROPERTY, visible = true)
   @JsonSubTypes({
       @JsonSubTypes.Type(value = RunStarted.class, name = "RunStarted"),
@@ -67,11 +62,7 @@ public sealed interface DomainEvent permits
     }
   }
 
-  /**
-   * Mirrors the Jackson polymorphism metadata for the definition side. Both sealed interfaces carry
-   * the same {@code @JsonTypeInfo} configuration so the discriminator on the wire
-   * ({@code eventType}) maps to the right concrete record on both branches.
-   */
+
   @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "eventType", include = JsonTypeInfo.As.EXISTING_PROPERTY, visible = true)
   @JsonSubTypes({
       @JsonSubTypes.Type(value = DraftSaved.class, name = "DraftSaved"),

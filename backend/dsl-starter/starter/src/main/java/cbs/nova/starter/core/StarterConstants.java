@@ -6,11 +6,7 @@ import java.time.Instant;
 import java.util.Set;
 import lombok.NoArgsConstructor;
 
-/**
- * Central home for magic string constants shared across pipeline stages, capture interceptors, and
- * converters. Grouped by role: DSL context-attribute keys and external-call / dry-run-log payload
- * map keys.
- */
+
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class StarterConstants {
 

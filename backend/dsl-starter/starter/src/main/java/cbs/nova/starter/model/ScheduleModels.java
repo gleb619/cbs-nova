@@ -2,9 +2,7 @@ package cbs.nova.starter.model;
 
 import org.jspecify.annotations.Nullable;
 
-/**
- * Request/response records for Temporal Schedule CRUD on published DSL definitions.
- */
+
 public final class ScheduleModels {
 
   private ScheduleModels() {

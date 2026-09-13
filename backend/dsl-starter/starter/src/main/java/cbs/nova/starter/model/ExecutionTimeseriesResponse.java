@@ -11,54 +11,18 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/**
- * Wire shape of {@code GET /api/executions/stats/timeseries}.
- *
- * <p>
- * The endpoint returns a uniform grid of (bucket, status) rows. Buckets run from
- * {@code windowStart} to {@code windowEnd} at {@code bucketMinutes} spacing, with every (bucket,
- * status) pair represented — zero-fill is the handler's responsibility so the dashboard can plot a
- * stable x-axis without sparse rows.
- *
- * <p>
- * Status keys use the same display casing as {@link ExecutionDto} (e.g. {@code Running},
- * {@code Completed}) so the frontend can reuse the existing status badge palette without a second
- * mapping layer.
- */
+
 public record ExecutionTimeseriesResponse(
         Instant windowStart,
         Instant windowEnd,
         long bucketMinutes,
         List<BucketRow> buckets) {
 
-  /**
-   * One bucket's counts. {@code statusCounts} keys are display-cased status names; statuses with
-   * zero runs in this bucket are absent from the map.
-   */
+
   public record BucketRow(Instant bucketStart, Map<String, Long> statusCounts) {
   }
 
-  /**
-   * Zero-fill a list of narrow {@link RunTimeseriesBucket} rows into the wide {@link BucketRow}
-   * shape the dashboard renders. The handler calls this after the store returns one row per
-   * (bucket, status) pair that has at least one run; empty buckets are filled with the same status
-   * set the populated buckets use so the axis stays consistent.
-   *
-   * <p>
-   * The store emits minute-granularity buckets; this method folds adjacent minutes into the
-   * requested {@code bucketSize} so the response always shows
-   * {@code (windowEnd - windowStart) / bucketSize} rows aligned on {@code windowStart}. Rows that
-   * fall outside the window are ignored.
-   *
-   * @param narrowRows
-   *          rows returned by the store
-   * @param windowStart
-   *          inclusive window start
-   * @param windowEnd
-   *          exclusive window end
-   * @param bucketSize
-   *          bucket width; must be positive and divide evenly into {@code windowEnd - windowStart}
-   */
+
   public static ExecutionTimeseriesResponse from(List<RunTimeseriesBucket> narrowRows,
           Instant windowStart, Instant windowEnd, Duration bucketSize) {
     long bucketSeconds = bucketSize.getSeconds();

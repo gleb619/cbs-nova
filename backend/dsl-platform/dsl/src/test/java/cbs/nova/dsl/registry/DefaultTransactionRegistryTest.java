@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import cbs.nova.dsl.Result;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,8 +34,9 @@ class DefaultTransactionRegistryTest {
             null,
             null,
             null,
+            ctx -> Result.success(null),
             null,
-            null, null);
+            null);
   }
 
   @Test

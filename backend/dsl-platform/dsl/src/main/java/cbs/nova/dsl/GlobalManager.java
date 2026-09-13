@@ -1,5 +1,7 @@
 package cbs.nova.dsl;
 
+import static cbs.nova.dsl.config.Constants.DEFAULT_BUDGET_CHARS;
+
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.config.ProcessContextFactory;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
@@ -428,18 +430,18 @@ public final class GlobalManager {
 
   public @NonNull Optional<ExplainReport> explainHelper(
           @NonNull String name, @NonNull Context<?> ctx) {
-    return explainHelper(name, ctx, ExplainSupport.DEFAULT_BUDGET_CHARS);
+    return explainHelper(name, ctx, DEFAULT_BUDGET_CHARS);
   }
 
   public @NonNull Optional<ExplainReport> explainHelper(
           @NonNull String name, @NonNull Context<?> ctx, int budgetChars) {
     return helperManager.findHelper(name)
             .map(helper -> explainReportFactory.forHelper(
-                    name, invokeExplain(helper, ctx, budgetChars), budgetChars));
+                    name, invokeExplain(helper, ctx), budgetChars));
   }
 
   public @NonNull Optional<ExplainReport> explain(@NonNull String name, @NonNull Context<?> ctx) {
-    return explain(name, ctx, ExplainSupport.DEFAULT_BUDGET_CHARS);
+    return explain(name, ctx, DEFAULT_BUDGET_CHARS);
   }
 
   public @NonNull Optional<ExplainReport> explain(
@@ -454,9 +456,11 @@ public final class GlobalManager {
   }
 
   @SuppressWarnings("unchecked")
+  //TODO: explain must work in same way for all objects
+  @Deprecated(forRemoval = true)
   private static <T> @NonNull ExplainReport invokeExplain(
-          @NonNull Executable<T, ?> helper, @NonNull Context<?> ctx, int budgetChars) {
-    return helper.explain((Context<T>) ctx, budgetChars);
+          @NonNull Executable<T, ?> helper, @NonNull Context<?> ctx) {
+    return helper.explain((Context<T>) ctx);
   }
 
   public void resetForTests() {
@@ -465,14 +469,6 @@ public final class GlobalManager {
     DslConfig.dslConfig().transactionInvoker().replace(null);
   }
 
-  /**
-   * Atomically swaps the singleton GlobalManager with a freshly-built candidate.
-   * <p>
-   * Production code uses this to install a newly-reloaded DSL set without ever exposing an empty
-   * registry: build the candidate against a throwaway GlobalManager first, and only call this on
-   * the success path. Unlike {@link #resetForTests()} this never sets the singleton to
-   * {@code null}.
-   */
   public void replaceGlobalManager(@NonNull GlobalManager replacement) {
     INSTANCE.set(replacement);
   }

@@ -5,11 +5,14 @@ import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.explain.ExplainResourceExplainer;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.model.MapOutput;
 import cbs.nova.dsl.model.RetryPolicy;
 import cbs.nova.dsl.registry.DefaultParameterRegistry;
 import cbs.nova.dsl.registry.ParameterRegistry;
+import cbs.nova.dsl.explain.ExplainBudget;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -38,7 +41,7 @@ public final class TransactionBuilder<I, O> {
   @Nullable
   private Function<TransactionContext<I>, Result<?>> previewLogic;
   @Nullable
-  private Function<TransactionContext<I>, Result<?>> explainLogic;
+  private Function<TransactionContext<I>, Result<ExplainReport>> explainLogic;
   @Nullable
   private Supplier<DslDescriptor> descriptor;
 
@@ -112,8 +115,13 @@ public final class TransactionBuilder<I, O> {
   }
 
   public TransactionBuilder<I, O> explain(
-          @NonNull Function<TransactionContext<I>, Result<?>> logic) {
+          @NonNull Function<TransactionContext<I>, Result<ExplainReport>> logic) {
     this.explainLogic = logic;
+    return this;
+  }
+
+  public TransactionBuilder<I, O> explainVia(@NonNull String resourcePath) {
+    this.explainLogic = resourceExplain(resourcePath);
     return this;
   }
 
@@ -130,6 +138,11 @@ public final class TransactionBuilder<I, O> {
       throw new IllegalStateException(
               "transaction '" + name + "' cannot have both .parameters() and .input()/.output()");
     }
+    var effectiveDescriptor = effectiveDescriptor();
+    var customExplain = rawExplain();
+    var explain = customExplain != null
+            ? customExplain
+            : defaultExplain(effectiveDescriptor);
     return new TransactionDslObject(
             name,
             taskQueue,
@@ -143,12 +156,35 @@ public final class TransactionBuilder<I, O> {
             retryPolicy,
             heartbeatTimeout,
             rawPreview(),
-            rawExplain(),
-            descriptor, null);
+            explain,
+            effectiveDescriptor, null);
   }
 
   public @NonNull List<DslObject> buildList() {
     return List.of(build());
+  }
+
+  private @NonNull Supplier<DslDescriptor> effectiveDescriptor() {
+    return descriptor != null
+            ? descriptor
+            : () -> TransactionDslObject.defaultDescriptor(
+                    name, taskQueue, version, inputType, outputType, parameters,
+                    compensationLogic != null, startToCloseTimeout, retryPolicy,
+                    heartbeatTimeout, null);
+  }
+
+  private @NonNull Function<TransactionContext<?>, Result<ExplainReport>> defaultExplain(
+          @NonNull Supplier<DslDescriptor> effectiveDescriptor) {
+    return ctx -> Result.success(
+            new ExplainReport(name, effectiveDescriptor.get().explain(), "")
+                    .truncateTo(ExplainBudget.of(ctx)));
+  }
+
+  @SuppressWarnings("unchecked")
+  private @NonNull Function<TransactionContext<I>, Result<ExplainReport>> resourceExplain(
+          @NonNull String resourcePath) {
+    return (Function<TransactionContext<I>, Result<ExplainReport>>) (Function<?, ?>) ExplainResourceExplainer
+            .viaResource(name, resourcePath);
   }
 
   @SuppressWarnings("unchecked")
@@ -171,9 +207,9 @@ public final class TransactionBuilder<I, O> {
   }
 
   @SuppressWarnings("unchecked")
-  private @Nullable Function<TransactionContext<?>, Result<?>> rawExplain() {
+  private @Nullable Function<TransactionContext<?>, Result<ExplainReport>> rawExplain() {
     return explainLogic == null
             ? null
-            : (Function<TransactionContext<?>, Result<?>>) (Function<?, ?>) explainLogic;
+            : (Function<TransactionContext<?>, Result<ExplainReport>>) (Function<?, ?>) explainLogic;
   }
 }

@@ -47,10 +47,7 @@ public abstract class BaseContainers {
                     .withStartupTimeout(STARTUP_TIMEOUT));
   }
 
-  /**
-   * Start a container with retry on port-allocation races across parallel JVM forks. Each attempt
-   * builds a fresh container so testcontainers re-rolls a random host port.
-   */
+
   private static <T extends GenericContainer<?>> T startWithRetry(String name,
           Supplier<T> factory) {
     ContainerLaunchException last = null;

@@ -1,12 +1,15 @@
 package cbs.nova.dsl;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.process.ProcessRunner;
 import cbs.nova.dsl.process.TemporalProcessLauncher;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 
@@ -18,16 +21,14 @@ class DefaultProcessRunnerExplainTest {
           new DefaultCompensationRegistry());
 
   @Test
-  void explainModeExecutesProcessLogicAndReturnsItsResult() {
+  void explainModeReturnsDescriptorReportWithoutRunningExecuteWhenExplainNotSet() {
     var executed = new AtomicBoolean(false);
-    var expected = Result.success("ok");
     var process = Dsl.process("P")
             .input(String.class)
             .output(String.class)
             .execute(ctx -> {
               executed.set(true);
-              assertThat(ctx.mode()).isEqualTo(ExecutionMode.EXPLAIN);
-              return expected;
+              return Result.success("ok");
             })
             .preview(ctx -> {
               throw new AssertionError("preview logic should not run in explain mode");
@@ -37,10 +38,12 @@ class DefaultProcessRunnerExplainTest {
 
     var result = runner.run(process, ctx);
 
-    assertThat(executed.get()).isTrue();
-    assertThat(result).isSameAs(expected);
+    assertThat(executed.get()).isFalse();
     assertThat(result.isSuccess()).isTrue();
-    assertThat(result.value()).isEqualTo("ok");
+    assertThat(result.value()).isInstanceOf(ExplainReport.class);
+    var report = (ExplainReport) result.value();
+    assertThat(report.name()).isEqualTo("P");
+    assertThat(report.description()).contains("**Process** `P`");
   }
 
   @Test
@@ -57,7 +60,7 @@ class DefaultProcessRunnerExplainTest {
             .explain(ctx -> {
               explainCalled.set(true);
               assertThat(ctx.mode()).isEqualTo(ExecutionMode.EXPLAIN);
-              return Result.success("explain");
+              return Result.success(new ExplainReport("P", "explain", ""));
             })
             .build();
     var ctx = contextFactory.of("input", ExecutionMode.EXPLAIN, "run-explain-logic");
@@ -67,28 +70,26 @@ class DefaultProcessRunnerExplainTest {
     assertThat(explainCalled.get()).isTrue();
     assertThat(executeCalled.get()).isFalse();
     assertThat(result.isSuccess()).isTrue();
-    assertThat(result.value()).isEqualTo("explain");
+    assertThat(result.value()).isEqualTo(new ExplainReport("P", "explain", ""));
   }
 
   @Test
-  void explainModeFallsBackToExecuteWhenExplainNotSet() {
-    var executeCalled = new AtomicBoolean(false);
-    var process = Dsl.process("P")
+  void explainModeFallbackReportRespectsMetadataBudget() {
+    var process = Dsl.process("BudgetP")
             .input(String.class)
             .output(String.class)
-            .execute(ctx -> {
-              executeCalled.set(true);
-              assertThat(ctx.mode()).isEqualTo(ExecutionMode.EXPLAIN);
-              return Result.success("fallback");
-            })
+            .execute(ctx -> Result.success("ok"))
             .build();
-    var ctx = contextFactory.of("input", ExecutionMode.EXPLAIN, "run-explain-fallback");
+    var ctx = contextFactory.of("input",
+            Map.of(Constants.EXPLAIN_BUDGET_CHARS_KEY, 20),
+            ExecutionMode.EXPLAIN, "run-explain-budget");
 
     var result = runner.run(process, ctx);
 
-    assertThat(executeCalled.get()).isTrue();
     assertThat(result.isSuccess()).isTrue();
-    assertThat(result.value()).isEqualTo("fallback");
+    var report = (ExplainReport) result.value();
+    assertThat(report.description()).hasSizeLessThanOrEqualTo(20);
+    assertThat(report.mermaid()).isEmpty();
   }
 
   @Test

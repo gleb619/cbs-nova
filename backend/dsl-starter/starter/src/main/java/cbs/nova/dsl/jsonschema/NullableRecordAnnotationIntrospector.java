@@ -11,18 +11,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 
-/**
- * Marks record components as required unless they carry a jspecify {@link Nullable} type
- * annotation, so {@code BeanPropertyWriter.depositSchemaProperty} routes them through
- * {@code property(...)} instead of {@code optionalProperty(...)}.
- *
- * <p>
- * jspecify {@code @Nullable} is a TYPE_USE-only annotation: javac propagates it from the record
- * component to the annotated type of the field, accessor and constructor parameter, but not to
- * their declaration annotations. It is therefore read from the member's annotated type via the
- * Jackson introspected member, replacing the former raw {@code java.lang.reflect.Field} check.
- * </p>
- */
+
 final class NullableRecordAnnotationIntrospector extends JacksonAnnotationIntrospector {
 
   @Override

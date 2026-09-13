@@ -10,6 +10,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
@@ -58,6 +59,14 @@ class PreviewTimeoutTest {
                 Thread.currentThread().interrupt();
               }
               return Result.success("completed");
+            })
+            .explain(ctx -> {
+              try {
+                Thread.sleep(5_000);
+              } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+              }
+              return Result.success(new ExplainReport("Slow", "slow explanation", ""));
             })
             .build());
   }

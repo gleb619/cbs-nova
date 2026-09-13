@@ -5,10 +5,13 @@ import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.FunctionContext;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.explain.ExplainResourceExplainer;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.model.MapOutput;
 import cbs.nova.dsl.registry.DefaultParameterRegistry;
 import cbs.nova.dsl.registry.ParameterRegistry;
+import cbs.nova.dsl.explain.ExplainBudget;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -27,7 +30,7 @@ public final class FunctionBuilder<I, O> {
   @Nullable
   private Function<FunctionContext<I>, Result<?>> previewLogic;
   @Nullable
-  private Function<FunctionContext<I>, Result<?>> explainLogic;
+  private Function<FunctionContext<I>, Result<ExplainReport>> explainLogic;
   @Nullable
   private Supplier<DslDescriptor> descriptor;
 
@@ -66,8 +69,14 @@ public final class FunctionBuilder<I, O> {
     return this;
   }
 
-  public FunctionBuilder<I, O> explain(@NonNull Function<FunctionContext<I>, Result<?>> logic) {
+  public FunctionBuilder<I, O> explain(
+          @NonNull Function<FunctionContext<I>, Result<ExplainReport>> logic) {
     this.explainLogic = logic;
+    return this;
+  }
+
+  public FunctionBuilder<I, O> explainVia(@NonNull String resourcePath) {
+    this.explainLogic = resourceExplain(resourcePath);
     return this;
   }
 
@@ -84,6 +93,11 @@ public final class FunctionBuilder<I, O> {
       throw new IllegalStateException(
               "function '" + name + "' cannot have both .parameters() and .input()/.output()");
     }
+    var effectiveDescriptor = effectiveDescriptor();
+    var customExplain = rawExplain();
+    var explain = customExplain != null
+            ? customExplain
+            : defaultExplain(effectiveDescriptor);
     return new FunctionDslObject(
             name,
             parameters,
@@ -91,12 +105,33 @@ public final class FunctionBuilder<I, O> {
             outputType,
             rawExecute(),
             rawPreview(),
-            rawExplain(),
-            descriptor, null);
+            explain,
+            effectiveDescriptor, null);
   }
 
   public @NonNull List<DslObject> buildList() {
     return List.of(build());
+  }
+
+  private @NonNull Supplier<DslDescriptor> effectiveDescriptor() {
+    return descriptor != null
+            ? descriptor
+            : () -> FunctionDslObject.defaultDescriptor(
+                    name, parameters, inputType, outputType, null);
+  }
+
+  private @NonNull Function<FunctionContext<?>, Result<ExplainReport>> defaultExplain(
+          @NonNull Supplier<DslDescriptor> effectiveDescriptor) {
+    return ctx -> Result.success(
+            new ExplainReport(name, effectiveDescriptor.get().explain(), "")
+                    .truncateTo(ExplainBudget.of(ctx)));
+  }
+
+  @SuppressWarnings("unchecked")
+  private @NonNull Function<FunctionContext<I>, Result<ExplainReport>> resourceExplain(
+          @NonNull String resourcePath) {
+    return (Function<FunctionContext<I>, Result<ExplainReport>>) (Function<?, ?>) ExplainResourceExplainer
+            .viaResource(name, resourcePath);
   }
 
   @SuppressWarnings("unchecked")
@@ -112,9 +147,9 @@ public final class FunctionBuilder<I, O> {
   }
 
   @SuppressWarnings("unchecked")
-  private @Nullable Function<FunctionContext<?>, Result<?>> rawExplain() {
+  private @Nullable Function<FunctionContext<?>, Result<ExplainReport>> rawExplain() {
     return explainLogic == null
             ? null
-            : (Function<FunctionContext<?>, Result<?>>) (Function<?, ?>) explainLogic;
+            : (Function<FunctionContext<?>, Result<ExplainReport>>) (Function<?, ?>) explainLogic;
   }
 }

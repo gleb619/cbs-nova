@@ -318,7 +318,7 @@ class DslRuntimeServiceTest {
               ctx -> Result.success("ok"),
               null,
               null,
-              null,
+              ctx -> Result.success(new ExplainReport("Synthetic", "test", "")),
               null,
               null,
               null);
@@ -361,7 +361,7 @@ class DslRuntimeServiceTest {
               ctx -> Result.success("ok"),
               null,
               null,
-              null,
+              ctx -> Result.success(new ExplainReport("Synthetic", "test", "")),
               null,
               null,
               null);

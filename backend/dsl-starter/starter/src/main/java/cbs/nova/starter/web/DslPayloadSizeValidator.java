@@ -7,13 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.servlet.function.ServerRequest;
 import tools.jackson.databind.ObjectMapper;
 
-/**
- * Validates incoming run/preview request bodies against {@code cbs.runs.max-input-bytes}.
- *
- * <p>
- * The cheap {@code Content-Length} check runs first; the deserialized body is then re-serialized
- * and measured because Content-Length can lie or be absent under chunked encoding.
- */
+
 @RequiredArgsConstructor
 public class DslPayloadSizeValidator {
 

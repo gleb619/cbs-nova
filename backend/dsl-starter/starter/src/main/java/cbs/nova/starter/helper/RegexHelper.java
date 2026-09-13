@@ -17,27 +17,7 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import org.jspecify.annotations.NonNull;
 
-/**
- * Performs regular-expression operations against a string input.
- *
- * <p>
- * The helper supports four {@code op} values (case-insensitive):
- * <ul>
- * <li>{@code "match"}: returns whether the input contains at least one match. This uses
- * {@link Matcher#find()}, so a match anywhere in the input is sufficient; it does not require the
- * entire input to match (which would be {@link Matcher#matches()}).</li>
- * <li>{@code "extract"}: returns the first match, or a specific capturing group of the first match.
- * A missing match is reported as {@code matched=false} with {@code value=null}, not as an
- * error.</li>
- * <li>{@code "replace"}: replaces all matches with the supplied replacement, treated as a literal
- * string so {@code $} and back-reference escapes are not interpreted.</li>
- * <li>{@code "split"}: splits the input around the pattern, preserving trailing empty strings.</li>
- * </ul>
- *
- * <p>
- * Compiled {@link Pattern} instances are cached in a bounded LRU cache (capacity 64) that is shared
- * across invocations.
- */
+
 @Helper(name = "regex")
 public class RegexHelper implements Executable<RegexIn, RegexOut> {
 

@@ -16,17 +16,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-/**
- * Resolves the Java package where each DSL compact source and model source should be placed.
- *
- * <p>
- * DSL sources are placed in a versioned sub-package derived from the file name
- * ({@code basePackage.<fileNameSegment>.<versionSegment>}).
- *
- * <p>
- * Model sources are associated with the DSL file that imports them and placed in the same versioned
- * package. Models that are not imported by any DSL remain in the base package.
- */
 @RequiredArgsConstructor
 public final class SourcePackageResolver {
 

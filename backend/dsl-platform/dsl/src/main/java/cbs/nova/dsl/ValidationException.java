@@ -22,23 +22,14 @@ public final class ValidationException extends RuntimeException {
     this.issues = List.copyOf(issues);
   }
 
-  /**
-   * Creates a structured exception from coded validation issues.
-   */
   public static ValidationException of(@NonNull List<ValidationIssue> issues) {
     return new ValidationException(List.copyOf(issues), true);
   }
 
-  /**
-   * Returns the structured validation issues, each with a stable code.
-   */
   public @NonNull List<ValidationIssue> issues() {
     return issues;
   }
 
-  /**
-   * Backwards-compatible view of the validation messages.
-   */
   public @NonNull List<String> errors() {
     return issues.stream().map(ValidationIssue::message).toList();
   }

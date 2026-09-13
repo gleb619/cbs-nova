@@ -10,7 +10,7 @@ import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.FunctionContext;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
-import java.time.Duration;
+import cbs.nova.dsl.model.ExplainReport;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -25,7 +25,7 @@ public record FunctionDslObject(
         @Nullable Class<?> outputType,
         @NonNull Function<FunctionContext<?>, Result<?>> executeLogic,
         @Nullable Function<FunctionContext<?>, Result<?>> previewLogic,
-        @Nullable Function<FunctionContext<?>, Result<?>> explainLogic,
+        @NonNull Function<FunctionContext<?>, Result<ExplainReport>> explainLogic,
         @Nullable Supplier<DslDescriptor> descriptor,
         @Nullable String description) implements DslObject {
 
@@ -38,14 +38,23 @@ public record FunctionDslObject(
     return previewLogic != null ? previewLogic : executeLogic;
   }
 
-  public @NonNull Function<FunctionContext<?>, Result<?>> effectiveExplain() {
-    return explainLogic != null ? explainLogic : executeLogic;
+  public @NonNull Function<FunctionContext<?>, Result<ExplainReport>> effectiveExplain() {
+    return explainLogic;
   }
 
   public @NonNull DslDescriptor describe() {
     if (descriptor != null) {
       return descriptor.get();
     }
+    return defaultDescriptor(name, parameters, inputType, outputType, description);
+  }
+
+  public static @NonNull DslDescriptor defaultDescriptor(
+          @NonNull String name,
+          @Nullable List<ParameterDescriptor> parameters,
+          @Nullable Class<?> inputType,
+          @Nullable Class<?> outputType,
+          @Nullable String description) {
     return DslDescriptor.builder()
             .name(name)
             .type(DslType.FUNCTION)

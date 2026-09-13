@@ -11,15 +11,6 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * {@link ExpressionEvaluator} backed by MVEL.
- *
- * <p>
- * Supports the same interpolation patterns as the previous platform default: plain variable
- * placeholders ({@code {name}}) and MVEL expressions ({@code ${a + b}}). A missing variable
- * referenced as a simple top-level identifier ({@code ${missing}}) renders as an empty string,
- * matching the platform default behavior.
- */
 // TODO: Move `MvelExpressionEvaluator` to
 // `./backend/dsl-starter/starter/src/main/java/cbs/nova/dsl/utils/` with tests
 @Deprecated

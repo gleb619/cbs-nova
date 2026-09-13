@@ -1,9 +1,10 @@
 package cbs.nova.dsl;
 
+import static cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN;
+
+import cbs.nova.dsl.explain.ExplainBudget;
 import cbs.nova.dsl.model.ExplainReport;
 import org.jspecify.annotations.NonNull;
-
-import java.util.List;
 
 @FunctionalInterface
 public interface Executable<IN, OUT>
@@ -38,22 +39,27 @@ public interface Executable<IN, OUT>
   @NonNull
   @Override
   default String description() {
-    return "<!-- NONE -->";
+    return EMPTY_MARKDOWN;
   }
 
   @Override
-  default @NonNull ExplainReport explain(@NonNull Context<IN> ctx, int budgetChars) {
-    var descriptor = describe();
-    var markdown = description();
-    var fallbackName = getClass().getSimpleName();
+  default @NonNull ExplainReport explain(@NonNull Context<IN> ctx) {
+    return defaultReport(this, ctx);
+  }
+
+  private static @NonNull ExplainReport defaultReport(
+          @NonNull Executable<?, ?> executable, @NonNull Context<?> ctx) {
+    var descriptor = executable.describe();
+    var markdown = executable.description();
+    var fallbackName = executable.getClass().getSimpleName();
     var name = descriptor.name() != null
             ? descriptor.name()
             : (fallbackName.isEmpty() ? "executable" : fallbackName);
     var report = new ExplainReport(
             name,
-            "<!-- NONE -->".equals(markdown) ? derivedDescription(descriptor) : markdown,
+            EMPTY_MARKDOWN.equals(markdown) ? derivedDescription(descriptor) : markdown,
             "");
-    return report.truncateTo(budgetChars);
+    return report.truncateTo(ExplainBudget.of(ctx));
   }
 
   private static @NonNull String derivedDescription(@NonNull ExecutableDescriptor descriptor) {
@@ -68,5 +74,4 @@ public interface Executable<IN, OUT>
     return "Executable that maps `" + input + "` to `" + output + "`, " + sideEffects + " and "
             + parameters + ".";
   }
-
 }

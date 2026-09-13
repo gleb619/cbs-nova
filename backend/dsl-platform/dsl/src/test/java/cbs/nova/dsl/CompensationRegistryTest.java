@@ -223,8 +223,9 @@ class CompensationRegistryTest {
             null,
             null,
             null,
+            c -> Result.success(null),
             null,
-            null, null);
+            null);
   }
 
   private Function<CompensationContext<?>, Result<?>> marker(String marker, List<String> order) {

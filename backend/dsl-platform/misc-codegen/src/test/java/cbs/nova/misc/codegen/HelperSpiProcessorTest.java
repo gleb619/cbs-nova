@@ -329,11 +329,6 @@ class HelperSpiProcessorTest {
     }
   }
 
-  /**
-   * Tries to compile the given source using the system java.class.path first. If the compile fails
-   * because SpringHelper is missing, retries with the starter build directory appended to the
-   * classpath. Returns the classpath that produced a successful compile.
-   */
   private String compileWithStarterFallback(Path source, Path outputDir) throws Exception {
     String base = System.getProperty("java.class.path");
     if (tryCompile(source, outputDir, base)) {

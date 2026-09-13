@@ -1,10 +1,10 @@
 import cbs.nova.dslexamples.BatchModels.*;
 
-
 List<DslObject> define() {
   return Dsl.process("BatchProcessing")
       .input(BatchIn.class)
       .output(BatchOut.class)
+      .explainVia("batch-processing.md")
       .execute(ctx -> {
         BatchIn in = ctx.body();
         int total = 0;

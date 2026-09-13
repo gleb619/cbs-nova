@@ -617,7 +617,7 @@ class GlobalManagerTest {
       }
 
       @Override
-      public ExplainReport explain(Context<String> ctx, int budgetChars) {
+      public ExplainReport explain(Context<String> ctx) {
         return new ExplainReport("custom", "Custom explanation.", "graph TD\n  C[custom]");
       }
     });

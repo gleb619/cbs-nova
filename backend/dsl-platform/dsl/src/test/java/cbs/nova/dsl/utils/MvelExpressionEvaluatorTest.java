@@ -16,9 +16,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 
-/**
- * Tests for the platform default {@link MvelExpressionEvaluator}.
- */
 @DisplayName("MvelExpressionEvaluator")
 class MvelExpressionEvaluatorTest {
 
@@ -28,10 +25,6 @@ class MvelExpressionEvaluatorTest {
     return evaluator.evaluate(expression, variables);
   }
 
-  /**
-   * Compares results semantically: numbers by numeric value, JsonValue unwrapped, null/empty
-   * equivalent in interpolation contexts.
-   */
   private static boolean equivalent(Object actual, Object expected) {
     Object a = unwrap(actual);
     Object b = unwrap(expected);

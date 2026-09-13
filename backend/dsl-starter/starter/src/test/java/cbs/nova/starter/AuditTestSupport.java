@@ -10,20 +10,13 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 import tools.jackson.databind.ObjectMapper;
 
-/**
- * Builds a real {@link DslAuditService} + {@link DslAuditRepository} pair over a private in-memory
- * H2 database (V2 migration applied), so handler unit tests can assert that audit rows actually
- * land for each audited mutation.
- */
+
 public final class AuditTestSupport {
 
   private AuditTestSupport() {
   }
 
-  /**
-   * Live audit stack: {@code service} is what handlers record through, {@code repository} is what
-   * tests assert against.
-   */
+
   public record Harness(DslAuditService service, DslAuditRepository repository) {
   }
 

@@ -1,234 +1,157 @@
 # Agent Guide: cbs-nova Backend
 
-This document guides coding agents on the Java backend for the Temporal DSL Orchestration Engine. Keep it updated.
-Primary architecture docs: `docs/architecture-backend.md` and `docs/dsl/`.
+Guide for coding agents on the Temporal DSL Orchestration Engine Java backend. Architecture: `docs/architecture-backend.md`, `docs/dsl/`.
 
 ---
 
 ## 1. Project Map & Architecture
 
-Operational modes:
-
-- `run`: Executes generated workflows/activities against a Temporal cluster.
-- `preview`: Fast dry-run executing `DslObject`s directly, no Temporal required.
-- `explain`: Dry-run returning execution descriptions and Mermaid diagrams.
-
-Core constructs: **Process** (Temporal Workflow), **Transaction** (Temporal Activity), **Function** (local helper), *
-*Helper** (external class via SPI).
+Operational modes: `run` (Temporal), `preview` (in-process dry-run), `explain` (dry-run + Mermaid).
+Constructs: **Process** (Workflow), **Transaction** (Activity), **Function** (helper), **Helper** (SPI).
 
 ```
-
 backend/
-├── dsl-platform/            # Parent build for the DSL platform
-│   ├── dsl-api/             # Base contracts, registries & context interfaces (zero-dep)
-│   ├── dsl/                 # Runtime: Registries, Runners, Managers, Context, Result
-│   ├── dsl-codegen/         # Annotation processor generating Temporal workflows/activities
-│   └── misc-codegen/        # SPI generator for `@Helper` classes
-├── dsl-plugins/             # Parent build for tooling plugins
-│   ├── dsl-gradle-plugin/   # Standalone Gradle plugin that compiles DSL sources
-│   ├── dsl-idea-plugin/     # IntelliJ IDEA support plugin
-│   └── dsl-builder/         # Spring Boot service: compiles DSL sources via Gradle (Tooling API) + JGit
-└── dsl-starter/             # Parent build for runtime + examples
-    ├── dsl-examples/        # JEP-512 compact DSL source files (no class/package/public)
-    ├── starter/             # Spring Boot starter & REST surface (e.g. POST /api/dsl/reload)
-    └── starter-launcher/    # Example Spring Boot host for the starter(e.g. module launches the service on port 8080)
+├── dsl-platform/    dsl-api (contracts) | dsl (runtime) | dsl-codegen (AP) | misc-codegen (@Helper SPI)
+├── dsl-plugins/     dsl-gradle-plugin | dsl-idea-plugin | dsl-builder (Spring Boot :8091, Tooling API + JGit)
+└── dsl-starter/     dsl-examples (JEP-512 compact) | starter (REST) | starter-launcher (host :8080)
 ```
 
-**Dependency flow**: `dsl-api` (none) <- `dsl` <- `dsl-codegen` / `starter` / `dsl-examples` / `dsl-gradle-plugin`.
-**Execution Layers**: Generated code -> Facade (`GlobalManager.getInstance()`) -> Managers -> Runners -> Registries.
+Dependency: `dsl-api` <- `dsl` <- `dsl-codegen` / `starter` / `dsl-examples` / `dsl-gradle-plugin`.
+Execution: Generated -> `GlobalManager.getInstance()` -> Managers -> Runners -> Registries.
 
 ---
 
 ## 2. Core Rules & Constraints
 
-### DSL Authoring (Compact Sources in `dsl-examples`)
+### DSL Authoring (`dsl-examples`)
+- Compact sources: one `List<DslObject> define()`, no `class`/`package`/`public`.
+- `SourceCompiler` preprocesses into `cbs.nova.dsl.DslCompactSource` implementors, validates, `javac`s.
+- `GeneratedDslDefinitionProvider` aggregates `define()` via `ServiceLoader`. `DefinitionLoader`: dir with `.java`
+  -> preprocessor; else classpath `ServiceLoader`.
+- `dsl-gradle-plugin` (`cbs.nova.dsl`) compacts DSL sources; compiler from Maven Local via `dslVersion`.
+- `dsl-builder` (Spring Boot :8091): stages workspace, renders Gradle build applying `dsl-gradle-plugin`,
+  checks out sources via JGit (`cbs.dsl.builder.git.repo-url` + `git.sub-path` + `git.worktrees-dir`; per-request `repoUrl`),
+  runs Gradle Tooling API, exposes `POST /api/dsl/compile` + `GET /api/dsl/compile/{id}/download`.
+  Compile via bounded `BuilderWorkQueue` (`cbs.dsl.builder.queue.*`; full -> HTTP 429). Hosts draft/file/vcs:
+  `DraftController` (`/api/dsl/drafts/**`), `DefinitionBundleController` (`/api/dsl/definitions/export|import`),
+  `FileController` (`/api/dsl/files/**`, Caffeine + bulkhead `cbs.dsl.builder.files|file-buffer.*`),
+  `VcsController` (`/api/dsl/vcs/status`). Publish/restore/import write files only; registry reload stays in starter.
+- Starter talks to builder via `cbs.nova.starter.builder.DslBuilderClient`
+  (`csb.dsl.builder-client.enabled=true`, `csb.dsl.builder-client.base-url=http://localhost:8091`). Reload
+  compiles remotely (HTTP/2 via JDK `HttpClient`, h2c prior-knowledge) and swaps registry locally;
+  drafts/files/bundles/VCS delegate to builder. Bounded queue (`queue.*`), semaphore bulkhead (`bulkhead.*`),
+  circuit breaker (`breaker.*`): builder 5xx/network -> 503 `BUILDER_UNAVAILABLE`; 429 -> 429 `BUILDER_BUSY`;
+  compile failure -> 422 `DslCompilationException`. `enabled=false` -> in-process javac + local drafts/files.
+- **Call Hierarchy**: **Process** -> Transactions/Helpers/Functions (never Processes).
+  Transaction/Function/Helper/Compensation -> Helpers/Functions (never Processes/Transactions).
+- DTOs/IO: Java `record`s annotated `@Json` (Avaje Jsonb).
+- Helpers: implement `Executable<IN, OUT>`, `@Helper(name="...")` unique.
+- Compensations: only Helpers and Functions.
 
-- Source files are authored without a `class`, `package`, or `public` modifier and declare exactly one
-  `List<DslObject> define()` method.
-- `SourceCompiler` preprocesses each compact source into a normal Java class that implements
-  `cbs.nova.dsl.DslCompactSource`, validates it, and then compiles it through the standard Java compiler.
-- The generated `GeneratedDslDefinitionProvider` (default package) aggregates all `define()` results via
-  `java.util.ServiceLoader` so the runtime can load them.
-- `DefinitionLoader` uses the same preprocessor when a configured source directory contains `.java` files; otherwise it
-  loads definitions from the classpath via `ServiceLoader`.
-- `dsl-gradle-plugin` provides a standalone Gradle plugin (`cbs.nova.dsl`) that compacts DSL sources. It resolves the
-  compiler runtime from Maven Local using configurable `dslVersion`. See `backend/dsl-plugins/dsl-gradle-plugin/README.md`.
-- `dsl-builder` is a Spring Boot service (port 8091) that compiles DSL sources on demand: it stages a session
-  workspace, renders Gradle build templates that apply `dsl-gradle-plugin`, checks out sources from a
-  configurable Git repo (`cbs.dsl.builder.git.repo-url` + `git.sub-path`, JGit-managed worktrees
-  under `git.worktrees-dir`; per-request `repoUrl` overrides), runs the build via the Gradle Tooling API, and exposes
-  `POST /api/dsl/compile` +
-  `GET /api/dsl/compile/{id}/download` (zip of generated sources). Compile runs through a bounded server-side
-  `BuilderWorkQueue` (capacity/workers under `cbs.dsl.builder.queue.*`; queue full → HTTP 429). The service also
-  hosts the draft/file/vcs workbench surface ported from the starter: `DraftController` (`/api/dsl/drafts/**`),
-  `DefinitionBundleController` (`/api/dsl/definitions/export|import`), `FileController` (`/api/dsl/files/**`,
-  Caffeine-staged writes + bulkhead under `cbs.dsl.builder.files|file-buffer.*`), and `VcsController`
-  (`/api/dsl/vcs/status`). Publish/restore/import only write files and return `reloaded=false` — registry reload
-  stays in the starter. See `backend/dsl-plugins/dsl-builder/README.md`.
-- The starter talks to dsl-builder through `cbs.nova.starter.builder.DslBuilderClient` (enabled by default via
-  `csb.dsl.builder-client.enabled`, base URL `csb.dsl.builder-client.base-url` = `http://localhost:8091`). Reload
-  compiles remotely (HTTP/2 via JDK `HttpClient`, h2c prior-knowledge) and swaps the registry locally; drafts,
-  files, bundles, and VCS status delegate to the builder while keeping the starter endpoints as the REST surface.
-  Calls pass through a bounded client queue (`queue.*`), a semaphore bulkhead (`bulkhead.*`), and a hand-rolled
-  circuit breaker (`breaker.*`): builder 5xx/network errors open the breaker → 503 `BUILDER_UNAVAILABLE`, builder
-  429 → 429 `BUILDER_BUSY`, compile failures → 422 diagnostics mapped to `DslCompilationException`. Set
-  `csb.dsl.builder-client.enabled=false` to fall back to in-process javac compilation and local drafts/files.
-- **Call Hierarchy constraints**:
-    - **Process** can call: Transactions, Helpers, Functions (never Processes).
-    - **Transaction / Function / Helper / Compensation** can call: Helpers, Functions (never Processes/Transactions).
-- All DTO inputs/outputs must be Java records annotated with `@Json` (Avaje Jsonb).
-- Helper classes must implement `Executable<IN, OUT>` and be annotated with `@Helper(name = "...")` with a unique name.
-- Compensation blocks may only call Helpers and Functions.
-
-### Coding Practices & Constraints
-
-- **Java**: Default DTOs/payloads to `record`s.
-- **Nullability**: Annotate with `jspecify` annotations (`libs.jspecify`).
-- **Context**: Context is immutable. Modify state using `ctx.withBody(...)` / `ctx.withMetadata(...)`.
-- **GlobalManager**: Never bypass this facade or registries in generated code.
-- **Reflection**: Do not use `java.lang.reflect`, `Constructor.newInstance()`, or runtime reflection to inspect or invoke
-  code. Prefer typed alternatives such as ServiceLoader, generated registries, type-safe records, or explicit
-  interfaces. Build-time annotation processors and test utilities are exempt.
-- **Do Not Edit Generated Code**: `dsl-codegen` outputs `*ProcessWorkflow`, `*ProcessDefinition`,
-  `*TransactionActivity`, `*TransactionDefinition`. Edit the templates/source DSL instead.
-
-### Code Style & Language Rules
-
-#### Self-documenting, simple code
-- Do not add explanatory comments. Code must be self-explanatory through clear names, small methods, and a simple structure.
-- Remove outdated, redundant, or obvious comments when modifying a file.
-- Javadoc is allowed only on public API contracts where it conveys information the signature cannot; otherwise avoid it.
-- Refactor confusing code rather than explaining it with a comment.
-- Prefer the simplest implementation that solves the problem. Avoid clever one-liners, deep nesting, and large lambda bodies.
-- Keep methods small and focused on a single responsibility; extract helper methods liberally.
-- Use descriptive, intention-revealing names for variables, methods, and classes.
-- Avoid magic numbers, abbreviations, and duplicated logic.
-- Readable code is the goal; if a teammate cannot understand it at a glance, simplify it.
-
-
-- **Lombok**: Prefer Lombok annotations to reduce boilerplate. Use `@Getter`, `@Setter`, `@Builder`,
-  `@EqualsAndHashCode`, etc. where appropriate instead of hand-written implementations.
-- **Constructors**: Never write manual constructors for dependency injection or simple field assignment.
-  Use `@RequiredArgsConstructor` (or `@AllArgsConstructor` when needed) from Lombok.
-- **DTO conversions**: Use MapStruct for all mapping/conversion between entities, DTOs, records, and
-  domain objects. Avoid manual mapping code.
-- **Indentation**: 2 spaces, enforced by Spotless via `backend/gradle/code-style.gradle`.
-  See `backend/gradle/eclipse-formatter.xml` for the full formatter configuration.
-- **Functional style**: Prefer a functional, pipe-oriented style using the Stream API and immutable
-  transformations. Favor method chaining (`stream().map(...).filter(...).collect(...)`) over
-  imperative loops and mutable accumulators.
-- **Source size**: Keep source files under 300 lines whenever practical; split
-  large classes into focused collaborators.
-- **Builder over constructor**: Prefer Lombok `@Builder` for constructing objects with multiple fields
-  instead of manual constructors or long parameter lists. Use `@RequiredArgsConstructor` only for simple
-  dependency injection, and never write hand-rolled constructors for DTO/value-object assembly.
-- **Records over classes**: Default DTOs, payloads, and immutable value objects to Java `record`s.
-  Use regular classes only when mutable state, inheritance, or complex behavior is required.
-- **Functional interfaces over monolithic classes**: Use `@FunctionalInterface` for single-method
-  abstractions and provide multiple small implementation classes rather than one large class that hardcodes
-  many responsibilities. Split behavior into focused collaborators.
+### Coding Practices
+- **Java**: default DTOs/payloads to `record`s.
+- **Nullability**: `jspecify` annotations (`libs.jspecify`).
+- **Context**: immutable. Use `ctx.withBody(...)` / `ctx.withMetadata(...)`.
+- **GlobalManager**: never bypass facade or registries in generated code.
+- **No reflection**: forbid `java.lang.reflect`, `Constructor.newInstance()`; prefer typed alternatives
+  (ServiceLoader, generated registries, records, explicit interfaces). Build-time APs and test utilities exempt.
+- **No edit generated code**: `*ProcessWorkflow` / `*ProcessDefinition` / `*TransactionActivity` / `*TransactionDefinition`
+  come from `dsl-codegen` templates. Edit templates/DSL instead.
+- **No `static final` for dynamic values**: magic numbers, paths, durations, retry/queue/breaker tunables, ports,
+  feature flags, bulkhead capacities, breaker thresholds, cache TTLs must come from `application.yml`
+  via `@ConfigurationProperties` or `@Value`. Reserve `static final` for compile-time constants only
+  (regex, charset names, protocol strings, error-code enums). Rationale: hot-tunable, env overrides per profile,
+  testability. See `StarterConstants.java` for the constants surface; new dynamic values get a
+  `@ConfigurationProperties` class under `dsl-starter/.../config/`.
+- **Style**:
+  - Self-documenting code; no explanatory comments. Remove outdated/redundant/obvious comments.
+  - Javadoc only on public API contracts where the signature cannot convey the info.
+  - Simplest implementation; no clever one-liners, deep nesting, or large lambdas.
+  - Small methods, single responsibility, descriptive names. No magic numbers, abbreviations, duplicated logic.
+  - Lombok over boilerplate (`@Getter`/`@Setter`/`@Builder`/`@EqualsAndHashCode`/`@RequiredArgsConstructor`).
+  - MapStruct for DTO/entity/domain mapping. No hand-rolled mappers.
+  - 2-space indent, enforced by Spotless (`backend/gradle/code-style.gradle`).
+  - Functional/stream style; method chains over imperative loops.
+  - Files < 300 lines; split focused classes.
+  - `@Builder` over long ctors; `@RequiredArgsConstructor` only for simple DI.
+  - `@FunctionalInterface` for single-method abstractions; split monolithic classes into focused collaborators.
 
 ---
 
-## 3. CLI Commands (Run from `backend/`)
+## 3. CLI Commands (from `backend/`)
 
-The root `backend/build.gradle` delegates to the three independent sub-builds using Exec tasks.
-Order is handled automatically (platform -> plugins -> starter) when you use the root tasks:
-
-```bash
-# Build everything in order (recommended)
-./gradlew build
-
-# Publish everything to Maven Local in order (recommended)
-./gradlew publishToMavenLocal
-```
-
-You can also run each sub-build directly:
+`backend/build.gradle` delegates via Exec tasks. Order (platform -> plugins -> starter) automatic.
 
 ```bash
-./gradlew -p dsl-platform build     # Build DSL platform modules
-./gradlew -p dsl-platform test      # Run DSL platform tests
-./gradlew -p dsl-plugins build      # Build DSL Gradle + IDEA plugins + builder service
-./gradlew -p dsl-starter build      # Build starter, launcher and DSL examples
-./gradlew -p dsl-platform spotlessCheck
-./gradlew -p dsl-platform spotlessApply
+./gradlew build | publishToMavenLocal                    # all
+./gradlew -p dsl-platform build|test|spotlessCheck|spotlessApply
+./gradlew -p dsl-plugins build
+./gradlew -p dsl-starter build
 ```
 
 ---
 
 ## CodeGraph
 
-> **Prerequisite**: switch to Node v22 before running CodeGraph commands:
-> ```bash
-> source ~/.nvm/nvm.sh && nvm use v22.20.0
-> ```
+> Prereq: Node v22 — `source ~/.nvm/nvm.sh && nvm use v22.20.0`
 
-The backend has its own isolated CodeGraph index under `backend/.codegraph/`.
-Run all CodeGraph commands from `backend/` so only Java/Kotlin sources are indexed:
+Index under `backend/.codegraph/` (frontend has its own). Run from `backend/`:
 
 ```bash
-cd backend
 codegraph status
 codegraph query <SymbolName> --kind class --limit 5 --json
 codegraph index --force   # after mass refactors
 ```
 
-The frontend index (`frontend/.codegraph/`) is a separate database and must not be mixed with this one.
+Prefer `codegraph_*` over grep.
+
+---
 
 ## 4. Key Context & Recent Changes
 
-- **Rich Contexts**: Use sub-interfaces under `dsl-api` (`ProcessContext`, `TransactionContext`, `CompensationContext`,
-  `FunctionContext<T>`).
-- **Fluent APIs**: `ProcessContext.complete(Object)` returns result; `CompensationContext.log()` returns
-  `CompensationContext<T>`.
-- **Result Casts**: Use `Result.as(Class)` and `Result.asMap()` on `Result`.
-- **Parameter DSL**: Support untyped parameters via `.parameters(...)`, `ParameterRegistry`, and `MapInput.of(k, v)`.
-- **Heartbeat**: Configured via `TransactionBuilder.heartbeatTimeout(Duration)`.
-- **SPI Discovery / Helper resolution**: `misc-codegen` generates:
-  - `GeneratedHelperResolver` — registers helpers with `GlobalManager`, honoring `componentModel`
-    (STANDARD / LAZY) and `creationStrategy` (STANDARD / FACTORY).
-  - `GeneratedHelperInstanceResolver` — creates instances via `new X()` for `FACTORY` or delegates to
-    `HelperInstanceResolver.resolve(X.class)` for `STANDARD`.
-  Both are loaded via `META-INF/services/` and `java.util.ServiceLoader`.
-  At runtime `DslAutoConfiguration` exposes a `SpringOrGeneratedHelperInstanceResolver` bean with resolution order:
-  Spring bean first, then generated factory, then `IllegalStateException`. There is **no reflection fallback**.
-  `@SpringHelper` forces `componentModel = LAZY` and `creationStrategy = STANDARD`; it is also registered as a
-  singleton Spring bean by `SpringHelperBeanDefinitionRegistrar`.
-- **CodeGraph**: Prioritize `codegraph_*` tools for fast structural/symbol exploration over slow grep.
-
-- **Expression evaluator swap**: The platform default is `cbs.nova.dsl.utils.MvelExpressionEvaluator`
-  (MVEL-backed). `DslConfig.expressionEvaluator()` returns a `Replaceable<ExpressionEvaluator>`, so
-  callers can swap it at startup or in tests. The starter's `DslAutoConfiguration` publishes an
-  `ExpressionEvaluator` bean via `@ConditionalOnMissingBean` and replaces the default with
-  `DslConfig.dslConfig().expressionEvaluator().replace(...)`. A user-defined `ExpressionEvaluator`
-  bean therefore takes precedence. See `docs/architecture-backend.md` for the supported expression
-  subset.
-
-- **Explain support**: `ExplainSupport<IN, OUT>` (dsl-api) lets any `Executable` produce an
-  `ExplainReport` (simple 3-field record: name, markdown description, mermaid) via
-  `explain(ctx, budgetChars)`; the budget bounds description + diagram and is enforced by truncation
-  (`ExplainSupport.DEFAULT_BUDGET_CHARS` = 4000). `GlobalManager.explain` / `explainHelper` dispatch
-  across process → transaction → helper → function and enrich reports with Mermaid diagrams via
-  `generator.ExplainReportFactory`; helpers override `explain` for mode/argument-specific reports
-  (see `MathHelper`). The starter's explain pipe still builds the full 12-field `ExplainTraceReport`
-  (declared in package `cbs.nova.dsl`, file under `model/`; traces, calls, metrics, AST);
-  `DevDslRuntime` maps it to the simple `ExplainReport` with a one-line trace summary.
+- **Rich contexts** (dsl-api): `ProcessContext`, `TransactionContext`, `CompensationContext`, `FunctionContext<T>`.
+- **Fluent APIs**: `ProcessContext.complete(Object)` returns result; `CompensationContext.log()` returns `CompensationContext<T>`.
+- **Result casts**: `Result.as(Class)`, `Result.asMap()`. **Parameter DSL**: `.parameters(...)`, `ParameterRegistry`, `MapInput.of(k,v)`.
+- **Heartbeat**: `TransactionBuilder.heartbeatTimeout(Duration)`.
+- **SPI / Helper resolution**: `misc-codegen` generates `GeneratedHelperResolver` (registers with `GlobalManager`,
+  honors `componentModel` STANDARD/LAZY + `creationStrategy` STANDARD/FACTORY) and `GeneratedHelperInstanceResolver`
+  (`new X()` for FACTORY, `HelperInstanceResolver.resolve(X.class)` for STANDARD). Loaded via `META-INF/services` +
+  `ServiceLoader`. `DslAutoConfiguration` exposes `SpringOrGeneratedHelperInstanceResolver` (Spring bean first,
+  then generated factory, else `IllegalStateException`). No reflection fallback. `@SpringHelper` forces
+  `componentModel=LAZY`, `creationStrategy=STANDARD`; registered as singleton Spring bean via
+  `SpringHelperBeanDefinitionRegistrar`.
+- **Expression evaluator**: default `cbs.nova.dsl.utils.MvelExpressionEvaluator` (MVEL). `DslConfig.expressionEvaluator()`
+  returns `Replaceable<ExpressionEvaluator>` for swaps. Starter's `DslAutoConfiguration` publishes
+  `ExpressionEvaluator` via `@ConditionalOnMissingBean` and replaces via
+  `DslConfig.dslConfig().expressionEvaluator().replace(...)`; user-defined bean wins. See `docs/architecture-backend.md`.
+- **Explain support**: `ExplainSupport<IN, OUT>` (dsl-api) produces `ExplainReport` (name, markdown, mermaid)
+  via single-arg `explain(ctx)`; the budget is carried by context metadata under
+  `Constants.EXPLAIN_BUDGET_CHARS_KEY` (default `Constants.DEFAULT_BUDGET_CHARS` = 4000). The
+  descriptor-based fallback report lives in `cbs.nova.dsl.stage.ExplainStage`. DslObject explain logic is typed
+  `Function<XContext<?>, Result<ExplainReport>>` (set via builder `.explain(...)` or `.explainVia("file.md")`,
+  which loads markdown eagerly from the classpath `explain/` prefix via `cbs.nova.dsl.explain.ExplainMarkdown`);
+  `effectiveExplain()` falls back to `generator.ExplainDefaults` (descriptor markdown, never executeLogic), and
+  helper classes serve file-based docs via `cbs.nova.dsl.explain.ExplainDocs.viaResource(name, path)`.
+  `GlobalManager.explain` /
+  `explainHelper` dispatch across process -> transaction -> helper -> function and enrich with Mermaid via
+  `generator.ExplainReportFactory`; helpers override `explain` for mode/arg-specific reports (see `MathHelper`). Starter builds full 12-field
+  `ExplainTraceReport` (package `cbs.nova.dsl`, file `model/`; traces, calls, metrics, AST); `DevDslRuntime` maps
+  it to simple `ExplainReport` with one-line trace summary.
 
 ---
 
 ## 5. Agent Workflows
 
-- **Adding a DSL construct**: Update `dsl/` API, `dsl-codegen/` templates/validation, add tests, update docs.
-- **Adding a runtime feature**: Maintain `GlobalManager` facade, add JUnit tests, test all three modes (`run`,
-  `preview`, `explain`).
-- **Adding a Temporal example**: Put under `temporal-example/` and test using `TestWorkflowEnvironment`.
+- **New DSL construct**: update `dsl/` API, `dsl-codegen/` templates/validation, add tests, update docs.
+- **New runtime feature**: maintain `GlobalManager` facade, add JUnit tests, cover all three modes (`run`/`preview`/`explain`).
+- **New Temporal example**: under `temporal-example/`, test with `TestWorkflowEnvironment`.
 
 ---
 
 ## 6. Onboarding Reading List
 
-1. `docs/architecture-backend.md` (overview)
-2. `docs/dsl/constructs.md` (execution contracts)
-3. `docs/dsl/authoring.md` (writing DSL flows)
-4. `docs/dsl/codegen.md` (generated code conventions)
-5. `docs/dsl/runtime.md` (registries, runners, managers)
+1. `docs/architecture-backend.md`
+2. `docs/dsl/constructs.md` — execution contracts
+3. `docs/dsl/authoring.md` — writing DSL flows
+4. `docs/dsl/codegen.md` — generated code conventions
+5. `docs/dsl/runtime.md` — registries, runners, managers

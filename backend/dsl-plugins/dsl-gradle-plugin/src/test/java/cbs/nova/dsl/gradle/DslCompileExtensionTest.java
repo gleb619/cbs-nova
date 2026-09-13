@@ -10,6 +10,17 @@ import java.io.File;
 class DslCompileExtensionTest {
 
   @Test
+  void resourcesDirFollowsSourceDirOverride() {
+    var project = ProjectBuilder.builder().build();
+    var extension = project.getExtensions()
+            .create("dslCompile", DslCompileExtension.class, project);
+    extension.getSourceDir().set(new File(project.getProjectDir(), "custom-src"));
+
+    assertThat(extension.getResourcesDir().get().getAsFile())
+            .isEqualTo(new File(project.getProjectDir(), "custom-src/resources"));
+  }
+
+  @Test
   void defaultSourceOutputDirsAndVersion() {
     var project = ProjectBuilder.builder().build();
     project.setVersion("1.2.3");
@@ -18,6 +29,8 @@ class DslCompileExtensionTest {
 
     assertThat(extension.getSourceDir().get().getAsFile())
             .isEqualTo(new File(project.getProjectDir(), "src"));
+    assertThat(extension.getResourcesDir().get().getAsFile())
+            .isEqualTo(new File(project.getProjectDir(), "src/resources"));
     assertThat(extension.getOutputDir().get().getAsFile())
             .isEqualTo(project.getLayout().getBuildDirectory().dir("generated").get().getAsFile());
     assertThat(extension.getDslVersion().get()).isEqualTo("1.2.3");

@@ -32,16 +32,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Builds JSON schemas from Jackson 3 serialization metadata via
- * {@link ObjectMapper#acceptJsonFormatVisitor}, without inspecting Java fields by hand.
- *
- * <p>
- * Property order follows the order Jackson's serializers emit properties in (record component
- * declaration order), and required-ness comes from {@link NullableRecordAnnotationIntrospector}
- * which routes nullable record components to {@code optionalProperty(...)}.
- * </p>
- */
+
 public class JacksonJsonSchemaGenerator implements JsonSchemaGenerator {
 
   private final ObjectMapper objectMapper = JsonMapper.builder()
@@ -84,10 +75,7 @@ public class JacksonJsonSchemaGenerator implements JsonSchemaGenerator {
     return schemaCache.get(inputType, this::computeSchema);
   }
 
-  /**
-   * Compute the schema for a record class on cache miss. Visible for test subclasses that want to
-   * count or instrument invocations; production callers go through {@link #generateSchema}.
-   */
+
   protected Map<String, Object> computeSchema(Class<?> inputType) {
     SchemaBuildingVisitor visitor = new SchemaBuildingVisitor();
     objectMapper.acceptJsonFormatVisitor(inputType, visitor);

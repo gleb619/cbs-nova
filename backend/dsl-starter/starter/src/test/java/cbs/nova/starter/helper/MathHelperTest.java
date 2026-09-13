@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import static cbs.nova.dsl.config.Constants.EXPLAIN_BUDGET_CHARS_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.ExplainSupport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.MathIn;
@@ -207,7 +207,7 @@ class MathHelperTest {
             new MathIn("percentile", List.<Number>of(10, 20, 30), null, null, null, null, 95.0),
             ExecutionMode.EXPLAIN);
 
-    var report = helper.explain(ctx, ExplainSupport.DEFAULT_BUDGET_CHARS);
+    var report = helper.explain(ctx);
 
     assertThat(report.name()).isEqualTo("math");
     assertThat(report.description())
@@ -226,8 +226,8 @@ class MathHelperTest {
             new MathIn("stddev", List.<Number>of(1, 2), null, null, null, null, null),
             ExecutionMode.EXPLAIN);
 
-    var sum = helper.explain(sumCtx, ExplainSupport.DEFAULT_BUDGET_CHARS);
-    var stddev = helper.explain(stddevCtx, ExplainSupport.DEFAULT_BUDGET_CHARS);
+    var sum = helper.explain(sumCtx);
+    var stddev = helper.explain(stddevCtx);
 
     assertThat(sum.description()).contains("double sum");
     assertThat(stddev.description()).contains("sample standard deviation");
@@ -243,9 +243,9 @@ class MathHelperTest {
     var roundCtx = contextFactory.of(
             new MathIn("round", null, 3.14159, null, null, 2, null), ExecutionMode.EXPLAIN);
 
-    assertThat(helper.explain(clampCtx, ExplainSupport.DEFAULT_BUDGET_CHARS).description())
+    assertThat(helper.explain(clampCtx).description())
             .contains("min=0", "max=10");
-    assertThat(helper.explain(roundCtx, ExplainSupport.DEFAULT_BUDGET_CHARS).description())
+    assertThat(helper.explain(roundCtx).description())
             .contains("scale=2");
   }
 
@@ -254,7 +254,7 @@ class MathHelperTest {
     var ctx = contextFactory.of(
             new MathIn("frobnicate", null, null, null, null, null, null), ExecutionMode.EXPLAIN);
 
-    var report = helper.explain(ctx, ExplainSupport.DEFAULT_BUDGET_CHARS);
+    var report = helper.explain(ctx);
 
     assertThat(report.description()).contains("unknown mode `frobnicate`", "sum");
   }
@@ -263,9 +263,9 @@ class MathHelperTest {
   void explainTruncatesToBudget() {
     var ctx = contextFactory.of(
             new MathIn("percentile", List.<Number>of(1, 2, 3), null, null, null, null, 99.0),
-            ExecutionMode.EXPLAIN);
+            ExecutionMode.EXPLAIN).withMetadata(EXPLAIN_BUDGET_CHARS_KEY, 50);
 
-    var report = helper.explain(ctx, 50);
+    var report = helper.explain(ctx);
 
     assertThat(report.description().length()).isLessThanOrEqualTo(50);
     assertThat(report.description().length() + report.mermaid().length())

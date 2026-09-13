@@ -12,12 +12,6 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
-/**
- * Characterization specs for the happy paths of {@link DefaultProcessRunner} that the existing
- * Explain / Compensation / Runner tests do not pin down: the RUN-mode direct execution path, the
- * process-lifecycle listener events emitted to a user-provided listener, and the value/runnable
- * propagation from {@code executeLogic} through to the result.
- */
 class DefaultProcessRunnerHappyPathTest {
 
   private final ContextFactory contextFactory = new ContextFactory();

@@ -20,26 +20,6 @@ public interface DslRunRepository {
   @NonNull
   List<DslRun> findByProcessName(@NonNull String processName);
 
-  /**
-   * Search execution runs with optional filters and server-side pagination.
-   *
-   * <p>
-   * All filters are optional and applied case-insensitively where noted. Results are ordered by
-   * {@code started_at} descending. The returned {@link DslRunSearchResult} contains both the page
-   * items and the total number of rows matching the filters.
-   *
-   * @param processName
-   *          exact process name to match; {@code null} means all processes
-   * @param status
-   *          status value compared case-insensitively; {@code null} means any status
-   * @param mode
-   *          execution mode compared case-insensitively, treating {@code null}/blank stored modes
-   *          as {@code RUN}; {@code null} means any mode
-   * @param offset
-   *          number of matching rows to skip (must be non-negative)
-   * @param limit
-   *          maximum number of rows to return (must be positive)
-   */
   @NonNull
   DslRunSearchResult search(
           @Nullable String processName,
@@ -62,15 +42,6 @@ public interface DslRunRepository {
           @NonNull Instant finishedAt,
           @Nullable String contextJson);
 
-  /**
-   * Compute-and-set finish update that only applies while the run is still {@code RUNNING}.
-   *
-   * <p>
-   * Used by the healthcheck staleness sweep so a stale-marking write cannot overwrite a concurrent
-   * terminal transition (COMPLETED/FAILED). Returns the number of affected rows: {@code 1} when the
-   * run was still RUNNING and was updated, {@code 0} when the run was missing or had already left
-   * the RUNNING state (a benign race, not an error).
-   */
   int updateFinishedIfRunning(
           @NonNull String runId,
           @NonNull String status,
@@ -79,27 +50,6 @@ public interface DslRunRepository {
           @NonNull Instant finishedAt,
           @Nullable String contextJson);
 
-  /**
-   * Deletes finished runs whose {@code finished_at} is strictly before {@code cutoff}.
-   *
-   * <p>
-   * Rows still in the {@code RUNNING} state never match this predicate — a run is only eligible
-   * once it has reached a terminal status (COMPLETED/FAILED/STALE/CANCELLED) with a set
-   * {@code finished_at}, which makes the delete naturally safe against a row mid-transition out of
-   * {@code RUNNING}. Deletion is executed in bounded batches of {@code batchSize} so a first purge
-   * of a huge table does not hold row locks for a long stretch; this call loops until a single pass
-   * deletes fewer than {@code batchSize} rows.
-   *
-   * <p>
-   * The default implementation is a no-op so in-memory/alternative stores are not forced to
-   * implement retention; store-backed repositories override it.
-   *
-   * @param cutoff
-   *          eligibility threshold; only rows with {@code finished_at < cutoff} are purged
-   * @param batchSize
-   *          max rows removed per batch pass (must be positive)
-   * @return the total number of rows deleted
-   */
   default int purgeFinishedBefore(@NonNull Instant cutoff, int batchSize) {
     return purgeFinishedBefore(cutoff, batchSize, ids -> {
     });

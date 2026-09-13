@@ -1,0 +1,20 @@
+package cbs.nova.dsl.config;
+
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+public class Constants {
+
+  public static final String FALLBACK_CODE = "BUILDER_ERROR";
+  public static final String FALLBACK_MESSAGE = "builder request failed";
+
+  public static final String JAVA_FILE_SUFFIX = ".java";
+
+  public static final String EMPTY_MARKDOWN = "<!-- NONE -->";
+
+  public static final int DEFAULT_BUDGET_CHARS = 4_000;
+
+  public static final String EXPLAIN_BUDGET_CHARS_KEY = "explain.budgetChars";
+
+}

@@ -1,5 +1,7 @@
 package cbs.nova.dsl.model;
 
+import static cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN;
+
 import org.jspecify.annotations.NonNull;
 
 public record ExplainReport(
@@ -35,10 +37,10 @@ public record ExplainReport(
     if (first.isEmpty()) {
       return second;
     }
-    if (second.isEmpty() || "<!-- NONE -->".equals(second)) {
+    if (second.isEmpty() || EMPTY_MARKDOWN.equals(second)) {
       return first;
     }
-    if ("<!-- NONE -->".equals(first)) {
+    if (EMPTY_MARKDOWN.equals(first)) {
       return second;
     }
     return first + "\n\n" + second;

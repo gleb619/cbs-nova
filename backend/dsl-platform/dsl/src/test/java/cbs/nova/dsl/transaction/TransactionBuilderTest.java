@@ -6,9 +6,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject.DslType;
+import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.Constants;
+import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.model.ExplainReport;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class TransactionBuilderTest {
@@ -121,21 +126,85 @@ class TransactionBuilderTest {
   }
 
   @Test
-  void effectiveExplainFallsBackToExecuteWhenExplainNotSet() {
-    var tx = Dsl.transaction("PayTx")
+  void effectiveExplainFallsBackToDescriptorReportWhenExplainNotSet() {
+    var tx = Dsl.transaction("NoExplainTx")
             .execute(ctx -> Result.success("exec"))
             .build();
-    assertThat(tx.effectiveExplain()).isSameAs(tx.executeLogic());
+    var contextFactory = new ContextFactory();
+    var ctx = new TransactionRichContext<>(
+            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-explain"), contextFactory);
+
+    var result = tx.effectiveExplain().apply(ctx);
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value()).isNotNull();
+    assertThat(result.value().name()).isEqualTo("NoExplainTx");
+    assertThat(result.value().description()).contains("**Transaction** `NoExplainTx`");
+    assertThat(result.value().mermaid()).isEmpty();
   }
 
   @Test
   void effectiveExplainReturnsExplainWhenSet() {
-    var tx = Dsl.transaction("PayTx")
+    var report = new ExplainReport("WithExplainTx", "explain", "");
+    var tx = Dsl.transaction("WithExplainTx")
             .execute(ctx -> Result.success("exec"))
-            .explain(ctx -> Result.success("explain"))
+            .explain(ctx -> Result.success(report))
             .build();
     assertThat(tx.effectiveExplain()).isSameAs(tx.explainLogic());
     assertThat(tx.effectiveExplain()).isNotSameAs(tx.executeLogic());
+  }
+
+  @Test
+  void explainViaLoadsResourceMarkdown() {
+    var tx = Dsl.transaction("DocTx")
+            .execute(ctx -> Result.success("exec"))
+            .explainVia("builder-sample.md")
+            .build();
+    var contextFactory = new ContextFactory();
+    var ctx = new TransactionRichContext<>(
+            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc"), contextFactory);
+
+    var result = tx.effectiveExplain().apply(ctx);
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().name()).isEqualTo("DocTx");
+    assertThat(result.value().description()).contains("# Builder Sample");
+  }
+
+  @Test
+  void explainViaTruncatesMarkdownToMetadataBudget() {
+    var tx = Dsl.transaction("DocTxBudget")
+            .execute(ctx -> Result.success("exec"))
+            .explainVia("builder-sample.md")
+            .build();
+    var contextFactory = new ContextFactory();
+    var ctx = new TransactionRichContext<>(
+            contextFactory.of("body",
+                    Map.of(Constants.EXPLAIN_BUDGET_CHARS_KEY, 5),
+                    ExecutionMode.EXPLAIN, "run-doc-budget"),
+            contextFactory);
+
+    var result = tx.effectiveExplain().apply(ctx);
+
+    assertThat(result.value().description()).hasSizeLessThanOrEqualTo(5);
+  }
+
+  @Test
+  void explainViaIsLazyWhenResourceMissing() {
+    var tx = Dsl.transaction("DocTxMissing")
+            .execute(ctx -> Result.success("exec"))
+            .explainVia("missing.md")
+            .build();
+    var contextFactory = new ContextFactory();
+    var ctx = new TransactionRichContext<>(
+            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc-missing"), contextFactory);
+
+    var result = tx.effectiveExplain().apply(ctx);
+
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause())
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("classpath: explain/missing.md");
   }
 
   @Test

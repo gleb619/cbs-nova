@@ -16,18 +16,7 @@ import org.springframework.test.context.TestPropertySource;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-/**
- * End-to-end regression tests for the liveness/readiness split.
- *
- * <p>
- * The {@code dslReadiness} indicator is wired into the readiness group; the liveness group only
- * includes Spring Boot's built-in {@code livenessState}. Therefore a Temporal outage must drop
- * readiness but must never make liveness go DOWN.
- *
- * <p>
- * The probe target is pointed at a closed port so the Temporal reachability check returns
- * {@code unreachable} without needing a real Temporal server.
- */
+
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = HealthProbeEndpointsTest.TestApplication.class, properties = "csb.dsl.worker.enabled=false")
 @TestPropertySource(properties = {
     "cbs.health.temporal.fail-status=DOWN",

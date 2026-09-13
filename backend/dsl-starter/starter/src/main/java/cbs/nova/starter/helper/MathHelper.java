@@ -5,6 +5,7 @@ import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.annotation.Helper;
+import cbs.nova.dsl.explain.ExplainBudget;
 import cbs.nova.starter.helper.model.MathIn;
 import cbs.nova.starter.helper.model.MathOut;
 import java.math.BigDecimal;
@@ -14,37 +15,7 @@ import java.util.List;
 import java.util.Locale;
 import org.jspecify.annotations.NonNull;
 
-/**
- * Performs common numeric aggregations and scalar transforms.
- *
- * <p>
- * The helper supports twelve modes (case-insensitive):
- * <ul>
- * <li>{@code "sum"}: double sum of {@code numbers}.</li>
- * <li>{@code "min"}: numerically smallest value of {@code numbers}.</li>
- * <li>{@code "max"}: numerically largest value of {@code numbers}.</li>
- * <li>{@code "mean"}: arithmetic average of {@code numbers}.</li>
- * <li>{@code "median"}: middle value of the sorted {@code numbers} (average of the two middle
- * values for even-length input).</li>
- * <li>{@code "percentile"}: {@code p}-th percentile of {@code numbers} using linear interpolation
- * between adjacent sorted values (NumPy {@code "linear"} / Hyndman-Fan type 7). {@code p} must be
- * between 0 and 100 inclusive.</li>
- * <li>{@code "stddev"}: sample standard deviation (Bessel-corrected, divided by {@code N-1}); at
- * least two elements are required.</li>
- * <li>{@code "clamp"}: clamps {@code value} into the inclusive [{@code min}, {@code max}]
- * range.</li>
- * <li>{@code "round"}: rounds {@code value} to {@code scale} decimal places with
- * {@link RoundingMode#HALF_UP} semantics via {@link BigDecimal}.</li>
- * <li>{@code "abs"}: absolute value of {@code value}.</li>
- * <li>{@code "floor"}: largest {@code long} value not exceeding {@code value}.</li>
- * <li>{@code "ceil"}: smallest {@code long} value greater than or equal to {@code value}.</li>
- * </ul>
- *
- * <p>
- * Null/empty {@code numbers} for aggregations, a non-numeric element anywhere in {@code numbers}
- * (reported with its index), missing required scalar arguments, or an unknown {@code mode} all
- * yield an {@link IllegalArgumentException}.
- */
+
 @Helper(name = "math")
 public class MathHelper implements Executable<MathIn, MathOut> {
 
@@ -78,12 +49,13 @@ public class MathHelper implements Executable<MathIn, MathOut> {
   }
 
   @Override
-  public @NonNull ExplainReport explain(@NonNull Context<MathIn> ctx, int budgetChars) {
+  public @NonNull ExplainReport explain(@NonNull Context<MathIn> ctx) {
     MathIn input = ctx.body();
     String mode = (input.mode() == null) ? "unknown" : input.mode().toLowerCase(Locale.ROOT);
     String description = MathModeExplanation.describe(mode, input);
     String mermaid = MathModeExplanation.diagram(mode);
-    return new ExplainReport("math", description, mermaid).truncateTo(budgetChars);
+    return new ExplainReport("math", description, mermaid)
+            .truncateTo(ExplainBudget.of(ctx));
   }
 
   private static @NonNull Result<MathOut> sum(List<Number> numbers) {
@@ -226,10 +198,7 @@ public class MathHelper implements Executable<MathIn, MathOut> {
     }
     return Result.success(new MathOut((long) Math.ceil(value.doubleValue())));
   }
-  /**
-   * Validates and converts {@code numbers} into a {@code double[]}. Null or empty input, and any
-   * non-numeric element (reported by its index), yield an {@link IllegalArgumentException}.
-   */
+
   private static double[] requireNumbers(List<Number> numbers, String op) {
     if (numbers == null || numbers.isEmpty()) {
       throw new IllegalArgumentException("math." + op + ": numbers is required");

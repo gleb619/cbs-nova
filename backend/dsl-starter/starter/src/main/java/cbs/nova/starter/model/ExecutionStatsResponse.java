@@ -8,14 +8,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/**
- * Wire shape of {@code GET /api/executions/stats}.
- *
- * <p>
- * Status keys use the same display casing as {@link ExecutionDto} (e.g. {@code Running},
- * {@code Completed}) so the frontend renders them through the same status components without a
- * second mapping layer.
- */
+
 public record ExecutionStatsResponse(
         long totalRuns,
         Map<String, Long> statusCounts,

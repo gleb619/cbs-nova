@@ -10,6 +10,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.SingletonSupport.Replaceable;
 import cbs.nova.dsl.config.SingletonSupport.SingletonScope;
+import cbs.nova.dsl.explain.ClasspathExplainResourceResolver;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.model.RetryPolicy;
 import cbs.nova.dsl.process.ProcessRunner;
@@ -64,6 +65,12 @@ class DslConfigTest {
   @Test
   void helperInstanceResolverIsNullByDefault() {
     assertThat(dsl.helperInstanceResolver().get()).isNull();
+  }
+
+  @Test
+  void explainResourceResolverDefaultsToClasspathImpl() {
+    assertThat(dsl.explainResourceResolver().get())
+            .isInstanceOf(ClasspathExplainResourceResolver.class);
   }
 
   @Test

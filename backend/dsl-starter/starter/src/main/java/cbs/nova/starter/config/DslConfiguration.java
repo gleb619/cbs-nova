@@ -1,5 +1,6 @@
 package cbs.nova.starter.config;
 import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
+import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
 import cbs.nova.starter.config.properties.DslProperties;
 
 import cbs.nova.dsl.DslDefinitionLoader;
@@ -8,6 +9,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.DefinitionLoader;
 import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.dsl.explain.ExplainResourceResolver;
 import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.history.DslRunRepository;
@@ -21,6 +23,7 @@ import cbs.nova.dsl.utils.MvelExpressionEvaluator;
 import cbs.nova.starter.converter.MapInputConverter;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.resolver.SpringBeanHelperInstanceResolver;
+import cbs.nova.starter.resolver.SpringExplainResourceResolver;
 import cbs.nova.starter.service.DefaultDslWorkspaceResolver;
 import cbs.nova.starter.service.DslFileBulkhead;
 import cbs.nova.starter.service.DslWorkspaceResolver;
@@ -58,6 +61,7 @@ public class DslConfiguration {
           TransactionInvoker transactionInvoker,
           TemporalProcessLauncher temporalProcessLauncher,
           JsonSchemaGenerator jsonSchemaGenerator,
+          ExplainResourceResolver explainResourceResolver,
           DslDefinitionLoader loader) {
     return _ -> {
       GlobalManager.globalManager().resetForTests();
@@ -71,6 +75,7 @@ public class DslConfiguration {
       registerHelperInstanceResolver(helperInstanceResolver);
       registerHelperResolvers();
       registerJsonSchemaGenerator(jsonSchemaGenerator);
+      registerExplainResourceResolver(explainResourceResolver);
     };
   }
 
@@ -91,11 +96,7 @@ public class DslConfiguration {
             cache);
   }
 
-  /**
-   * Resolver with the default cache policy ({@link StarterConstants#HELPER_INSTANCE_CACHE_TTL} /
-   * {@link StarterConstants#HELPER_INSTANCE_CACHE_MAX_SIZE}). Used by tests that build the resolver
-   * without a Spring context.
-   */
+
   public static SpringOrGeneratedHelperInstanceResolver withDefaultCache(
           HelperInstanceResolver springResolver,
           List<HelperInstanceResolver> generatedFactories) {
@@ -136,6 +137,13 @@ public class DslConfiguration {
   @ConditionalOnMissingBean(ExpressionEvaluator.class)
   public ExpressionEvaluator expressionEvaluator() {
     return new MvelExpressionEvaluator();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(ExplainResourceResolver.class)
+  public ExplainResourceResolver explainResourceResolver(
+          CbsNovaExplainProperties explainProperties) {
+    return new SpringExplainResourceResolver(explainProperties.resourcesPrefix());
   }
 
   @Bean
@@ -226,6 +234,10 @@ public class DslConfiguration {
 
   private void registerJsonSchemaGenerator(JsonSchemaGenerator jsonSchemaGenerator) {
     DslConfig.dslConfig().jsonSchemaGenerator().replace(jsonSchemaGenerator);
+  }
+
+  private void registerExplainResourceResolver(ExplainResourceResolver explainResourceResolver) {
+    DslConfig.dslConfig().explainResourceResolver().replace(explainResourceResolver);
   }
 
 }

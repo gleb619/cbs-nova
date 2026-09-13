@@ -131,10 +131,7 @@ class DslReloadResourceTest {
     }
   }
 
-  /**
-   * The reload response body must carry the {@link LoadResult} drilldown: source dir, totals and
-   * the per-type counts/names, so operators see WHAT a reload loaded.
-   */
+
   @Test
   void reloadResponseBodyIncludesLoadResultDrilldown() throws Exception {
     Path sourceDir = createTemporaryDslSourceDir();
@@ -159,7 +156,7 @@ class DslReloadResourceTest {
     }
   }
 
-  /** The programmatic reload path (draft publish) must hand back the same drilldown. */
+
   @Test
   void reloadDefinitionsReturnsLoadResultDrilldown() throws Exception {
     Path sourceDir = createTemporaryDslSourceDir("PublishTestProcess");
@@ -193,10 +190,7 @@ class DslReloadResourceTest {
     return servletResponse.getContentAsString();
   }
 
-  /**
-   * Failure-safety regression: a compile error during reload must NOT wipe the live registry. The
-   * runtime must keep serving definitions that were registered by a previous successful reload.
-   */
+
   @Test
   void failedReloadLeavesExistingRegistryIntact() throws Exception {
     // 1. Initial successful reload: registers ReloadTestProcess.
@@ -230,10 +224,7 @@ class DslReloadResourceTest {
     }
   }
 
-  /**
-   * The temp working directory created for compilation must be removed on the success path too (it
-   * used to be leaked on every reload).
-   */
+
   @Test
   void successfulReloadDeletesTempDir() throws Exception {
     long before = System.currentTimeMillis();
@@ -249,10 +240,7 @@ class DslReloadResourceTest {
     }
   }
 
-  /**
-   * Same as the success path, but for the failure path: the temp dir must be cleaned up even when
-   * the compile throws.
-   */
+
   @Test
   void failedReloadDeletesTempDir() throws Exception {
     long before = System.currentTimeMillis();
@@ -267,10 +255,7 @@ class DslReloadResourceTest {
     }
   }
 
-  /**
-   * After a successful registry swap the preview cache must be flushed end-to-end, so the next
-   * preview call cannot return a stale result computed against the previous registry.
-   */
+
   @Test
   void reloadWritesAuditRowOnSuccess() throws Exception {
     Path sourceDir = Files.createTempDirectory("dsl-reload-audit-");
@@ -335,10 +320,7 @@ class DslReloadResourceTest {
     }
   }
 
-  /**
-   * A failed reload (compile error) must NOT clear the cache: the previous registry is still live,
-   * so cached previews computed against it are still valid.
-   */
+
   @Test
   void failedReloadLeavesPreviewCacheIntact() throws Exception {
     Path badDir = createTemporaryBrokenDslSourceDir();
@@ -363,10 +345,7 @@ class DslReloadResourceTest {
     }
   }
 
-  /**
-   * The handler must be tolerant of a missing preview cache (e.g. tests that don't wire the bean,
-   * or hosts that disable preview caching via configuration). A null provider must not NPE.
-   */
+
   @Test
   void reloadSucceedsWhenPreviewCacheProviderIsNull() throws Exception {
     Path sourceDir = createTemporaryDslSourceDir();
@@ -399,11 +378,7 @@ class DslReloadResourceTest {
             List.of());
   }
 
-  /**
-   * Minimal {@link ObjectProvider} stub for tests: returns the supplied bean from
-   * {@link ObjectProvider#getIfAvailable()}, {@code null} otherwise. Avoids pulling in Mockito for
-   * three call sites.
-   */
+
   private static <T> ObjectProvider<T> constantProvider(T bean) {
     return new ObjectProvider<>() {
       @Override
@@ -423,13 +398,7 @@ class DslReloadResourceTest {
     };
   }
 
-  /**
-   * Two overlapping reload calls must serialize, not interleave. We arrange for one reload to be
-   * in-flight (a gated thread has already entered the loader) and then a second caller starts. The
-   * second caller must NOT enter the loader while the first is still in flight — the lock must
-   * serialize them. Both must end up with a real response, and the final registry must be the same
-   * source dir's contents (no torn state from interleaved partial registrations).
-   */
+
   @Test
   void concurrentReloadsSerialize() throws Exception {
     Path sourceDir = createTemporaryDslSourceDir("ConcurrentProcess");
@@ -589,15 +558,7 @@ class DslReloadResourceTest {
     }
   }
 
-  /**
-   * Test-only loader that delegates to a real {@link DslDefinitionLoader} but blocks inside
-   * {@code load()} until a per-call release latch is counted down. The test uses this to observe
-   * when each call enters the loader and to assert the handler's lock keeps the second caller out
-   * of the loader while the first is in flight.
-   * <p>
-   * State is held in static fields so the test can interact with it from the main thread without
-   * needing to pass references around. {@link #reset()} must be called between tests.
-   */
+
   static final class PerCallGatedLoader implements DslDefinitionLoader {
 
     private static final AtomicInteger COUNTER = new AtomicInteger();

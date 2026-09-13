@@ -19,31 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.ObjectMapper;
 
-/**
- * Authenticates {@code /api/**} requests via the {@code X-Api-Key} header (T410).
- *
- * <p>
- * A request is accepted when ANY of the following holds:
- * <ul>
- * <li>The presented key matches the legacy bootstrap property {@code cbs.dsl.auth.api-key} (kept
- * for back-compat; a one-time deprecation hint is logged the first time it authenticates a
- * request).</li>
- * <li>The presented key matches the SHA-256 hash of an active row in the {@code dsl_api_keys} table
- * — see {@link ApiKeyStore#matches(String)}.</li>
- * </ul>
- *
- * <p>
- * When neither a property key nor any stored key is configured the filter is a no-op (mirrors the
- * pre-T410 "no key configured → no enforcement" misconfig tolerance). When either source is
- * configured, an absent or non-matching header produces a {@code 401} with the standard
- * {@link ErrorResponse} envelope.
- *
- * <p>
- * <b>Security.</b> Equality against the property key uses {@link MessageDigest#isEqual} so the
- * comparison runs in constant time. Equality against stored keys is inherent in the unique-index
- * hash lookup ({@link JdbcApiKeyRepository} is the only place that ever sees a hash). The plaintext
- * key never appears in a log line or in the response body.
- */
+
 @Slf4j
 public final class ApiKeyAuthFilter extends OncePerRequestFilter {
 
@@ -104,12 +80,7 @@ public final class ApiKeyAuthFilter extends OncePerRequestFilter {
     writeUnauthorized(response, "Invalid X-Api-Key");
   }
 
-  /**
-   * Auth is required when EITHER a property key is configured OR a {@link ApiKeyStore} bean is
-   * present in the context. The store bean is registered by {@code DslRunRepositoryConfiguration}
-   * when a {@code DataSource} exists, so this also signals "DataSource is present and we have a
-   * place to look up stored keys".
-   */
+
   private boolean authRequired() {
     return configuredApiKey != null || apiKeyStore != null;
   }

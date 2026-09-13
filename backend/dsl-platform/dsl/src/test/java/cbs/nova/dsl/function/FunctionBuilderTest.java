@@ -6,8 +6,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject.DslType;
+import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.Constants;
+import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.model.ExplainReport;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class FunctionBuilderTest {
@@ -92,21 +97,119 @@ class FunctionBuilderTest {
   }
 
   @Test
-  void effectiveExplainFallsBackToExecuteWhenExplainNotSet() {
+  void effectiveExplainFallsBackToDescriptorReportWhenExplainNotSet() {
     var fn = Dsl.function("NoExplainFn")
             .execute(ctx -> Result.success("exec"))
             .build();
-    assertThat(fn.effectiveExplain()).isSameAs(fn.executeLogic());
+    var contextFactory = new ContextFactory();
+    var ctx = new FunctionRichContext<>(
+            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-explain"), contextFactory);
+
+    var result = fn.effectiveExplain().apply(ctx);
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value()).isNotNull();
+    assertThat(result.value().name()).isEqualTo("NoExplainFn");
+    assertThat(result.value().description()).contains("**Function** `NoExplainFn`");
+    assertThat(result.value().mermaid()).isEmpty();
   }
 
   @Test
   void effectiveExplainReturnsExplainWhenSet() {
+    var report = new ExplainReport("WithExplainFn", "explain", "");
     var fn = Dsl.function("WithExplainFn")
             .execute(ctx -> Result.success("exec"))
-            .explain(ctx -> Result.success("explain"))
+            .explain(ctx -> Result.success(report))
             .build();
     assertThat(fn.effectiveExplain()).isSameAs(fn.explainLogic());
     assertThat(fn.effectiveExplain()).isNotSameAs(fn.executeLogic());
+  }
+
+  @Test
+  void explainViaLoadsResourceMarkdown() {
+    var fn = Dsl.function("DocFn")
+            .execute(ctx -> Result.success("exec"))
+            .explainVia("builder-sample.md")
+            .build();
+    var contextFactory = new ContextFactory();
+    var ctx = new FunctionRichContext<>(
+            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc"), contextFactory);
+
+    var result = fn.effectiveExplain().apply(ctx);
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().name()).isEqualTo("DocFn");
+    assertThat(result.value().description()).contains("# Builder Sample");
+  }
+
+  @Test
+  void explainViaAcceptsPrefixedResourcePath() {
+    var fn = Dsl.function("DocFnPrefixed")
+            .execute(ctx -> Result.success("exec"))
+            .explainVia("explain/builder-sample.md")
+            .build();
+    var contextFactory = new ContextFactory();
+    var ctx = new FunctionRichContext<>(
+            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc-prefixed"), contextFactory);
+
+    var result = fn.effectiveExplain().apply(ctx);
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().description()).contains("# Builder Sample");
+  }
+
+  @Test
+  void explainViaTruncatesMarkdownToMetadataBudget() {
+    var fn = Dsl.function("DocFnBudget")
+            .execute(ctx -> Result.success("exec"))
+            .explainVia("builder-sample.md")
+            .build();
+    var contextFactory = new ContextFactory();
+    var ctx = new FunctionRichContext<>(
+            contextFactory.of("body",
+                    Map.of(Constants.EXPLAIN_BUDGET_CHARS_KEY, 10),
+                    ExecutionMode.EXPLAIN, "run-doc-budget"),
+            contextFactory);
+
+    var result = fn.effectiveExplain().apply(ctx);
+
+    assertThat(result.value().description()).hasSizeLessThanOrEqualTo(10);
+    assertThat(result.value().mermaid()).isEmpty();
+  }
+
+  @Test
+  void explainViaIsLazyWhenResourceMissing() {
+    var fn = Dsl.function("DocFnMissing")
+            .execute(ctx -> Result.success("exec"))
+            .explainVia("does-not-exist.md")
+            .build();
+    var contextFactory = new ContextFactory();
+    var ctx = new FunctionRichContext<>(
+            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc-missing"), contextFactory);
+
+    var result = fn.effectiveExplain().apply(ctx);
+
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause())
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("classpath: explain/does-not-exist.md");
+  }
+
+  @Test
+  void explainOverridesExplainVia() {
+    var fn = Dsl.function("DocFnCleared")
+            .execute(ctx -> Result.success("exec"))
+            .explainVia("builder-sample.md")
+            .explain(ctx -> Result.success(new ExplainReport("DocFnCleared", "code", "")))
+            .build();
+    var contextFactory = new ContextFactory();
+    var ctx = new FunctionRichContext<>(
+            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc-cleared"), contextFactory);
+
+    var result = fn.effectiveExplain().apply(ctx);
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().description()).isEqualTo("code");
   }
 
   @Test

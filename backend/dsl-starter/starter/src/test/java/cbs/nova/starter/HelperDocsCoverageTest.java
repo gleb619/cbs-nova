@@ -23,31 +23,16 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-/**
- * Doc-drift guard (T380): fails if any helper name the runtime registry serves is not documented in
- * {@code docs/dsl/helpers.md}. Prevents a recurrence of the T350-T358 drift where nine helpers
- * shipped with zero documentation (fixed by T378).
- *
- * <p>
- * Boot pattern mirrors {@link IntermediateDslExamplesTest}: a plain {@link GlobalManager} with the
- * generated SPI resolver — no Spring context. Test-support helpers that intentionally have no
- * user-facing docs are listed in {@link #ALLOWED_UNDOCUMENTED} with a justification each.
- */
+
 class HelperDocsCoverageTest {
 
-  /**
-   * Module test working dir is {@code backend/dsl-starter/starter}; repo root is three levels up
-   * ({@code dsl-starter} → {@code backend} → repo root).
-   */
+
   private static final Path HELPERS_DOC = Path.of("").toAbsolutePath()
           .normalize()
           .getParent().getParent().getParent()
           .resolve("docs/dsl/helpers.md");
 
-  /**
-   * Test-support helpers that genuinely register at runtime but exist only as fixtures for example
-   * DSLs / tests, so they are intentionally absent from the user-facing cookbook.
-   */
+
   private static final Set<String> ALLOWED_UNDOCUMENTED = Set.of(
           // test fixture: simulates a flaky downstream API for the HttpResilience example/tests
           "unreliableApi",

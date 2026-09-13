@@ -1,19 +1,6 @@
 package cbs.nova.dsl;
 
-/**
- * Stable diagnostic codes emitted by the DSL semantic validator.
- *
- * <p>
- * Codes are bare {@code SCREAMING_SNAKE_CASE} strings. They identify the error kind so callers can
- * branch programmatically; the human message may change independently. Codes are preserved across
- * releases but the exact wording of {@code message} is not part of the compatibility contract.
- * </p>
- *
- * <p>
- * javac codes (e.g. {@code compiler.err.cannot.find.symbol}) are passed through verbatim on syntax
- * errors and are JDK-versioned.
- * </p>
- */
+//TODO: good start for a 'Problems' tab in UI
 public final class DiagnosticCodes {
 
   private DiagnosticCodes() {

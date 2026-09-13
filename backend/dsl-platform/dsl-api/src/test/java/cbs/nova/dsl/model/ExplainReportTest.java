@@ -1,5 +1,6 @@
 package cbs.nova.dsl.model;
 
+import static cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
@@ -19,7 +20,7 @@ class ExplainReportTest {
   @Test
   void mergeIgnoresNonePlaceholderDescription() {
     var left = new ExplainReport("n", "left-desc", "left-diagram");
-    var right = new ExplainReport("n", "<!-- NONE -->", "right-diagram");
+    var right = new ExplainReport("n", EMPTY_MARKDOWN, "right-diagram");
     var merged = left.merge(right);
     assertThat(merged.description()).isEqualTo("left-desc");
     assertThat(merged.mermaid()).contains("left-diagram").contains("right-diagram");
@@ -27,7 +28,7 @@ class ExplainReportTest {
 
   @Test
   void mergeKeepsSecondDescriptionWhenFirstIsNone() {
-    var left = new ExplainReport("n", "<!-- NONE -->", "left-diagram");
+    var left = new ExplainReport("n", EMPTY_MARKDOWN, "left-diagram");
     var right = new ExplainReport("n", "right-desc", "right-diagram");
     var merged = left.merge(right);
     assertThat(merged.description()).isEqualTo("right-desc");

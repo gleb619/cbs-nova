@@ -116,11 +116,7 @@ class DslWorkerConfigurationTest {
     }
   }
 
-  /**
-   * Substitutes the production {@link WorkerFactory} with whatever {@link #OVERRIDE_FACTORY} points
-   * at, so tests can drive {@code SmartLifecycle.start()/stop()} against a Mockito mock rather than
-   * a factory that requires a live Temporal server.
-   */
+
   static class TestableDslWorkerConfiguration extends DslWorkerConfiguration {
     static volatile WorkerFactory OVERRIDE_FACTORY;
 

@@ -13,6 +13,7 @@ import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry;
 
 import javax.inject.Inject;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -80,6 +81,8 @@ public class DslCompilerPlugin implements Plugin<Project> {
       main.getJava().exclude("**/*.class");
       main.setCompileClasspath(
               main.getCompileClasspath().plus(project.files(extension.getOutputDir())));
+      main.getResources().setSrcDirs(List.of());
+      main.getResources().srcDir(extension.getResourcesDir());
 
       project.getTasks().named("processResources", ProcessResources.class, processResources -> {
         processResources.from(extension.getOutputDir(), spec -> spec.include("META-INF/**"));

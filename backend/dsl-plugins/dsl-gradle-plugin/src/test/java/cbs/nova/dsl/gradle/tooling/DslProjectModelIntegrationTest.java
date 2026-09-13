@@ -74,11 +74,6 @@ class DslProjectModelIntegrationTest {
     assertThat(model.getOutputDir()).isEqualTo(projectDir.resolve("build/generated").toFile());
   }
 
-  /**
-   * Reads the {@code implementation-classpath} entries written by the {@code java-gradle-plugin}
-   * "pluginUnderTestMetadata" task, so the probe project's buildscript can see the plugin classes
-   * (and its dependencies) exactly as the real published plugin would.
-   */
   private List<String> readPluginUnderTestClasspath() throws IOException {
     File metadataFile = new File(
             "build/pluginUnderTestMetadata/plugin-under-test-metadata.properties");

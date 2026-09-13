@@ -1,5 +1,7 @@
 package cbs.nova.dsl;
 
+import static cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN;
+
 import org.jspecify.annotations.NonNull;
 
 public interface DslObject {
@@ -11,7 +13,7 @@ public interface DslObject {
   DslType type();
 
   default String description() {
-    return "<!-- NONE -->";
+    return EMPTY_MARKDOWN;
   }
 
   enum DslType {

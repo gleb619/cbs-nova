@@ -8,6 +8,8 @@ public abstract class DslCompileExtension {
 
   public abstract DirectoryProperty getSourceDir();
 
+  public abstract DirectoryProperty getResourcesDir();
+
   public abstract DirectoryProperty getOutputDir();
 
   public abstract Property<String> getDslVersion();
@@ -26,6 +28,7 @@ public abstract class DslCompileExtension {
 
   public DslCompileExtension(Project project) {
     getSourceDir().convention(project.getLayout().getProjectDirectory().dir("src"));
+    getResourcesDir().convention(getSourceDir().dir("resources"));
     getOutputDir().convention(project.getLayout().getBuildDirectory().dir("generated"));
     getDslVersion().convention(project.provider(() -> project.getVersion().toString()));
     getDslPackage().convention("");

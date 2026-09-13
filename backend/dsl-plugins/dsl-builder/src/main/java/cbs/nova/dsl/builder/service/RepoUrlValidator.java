@@ -7,20 +7,7 @@ import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.Locale;
 
-/**
- * Validates a request-supplied {@code repoUrl} before it is handed to JGit for cloning.
- *
- * <p>
- * Guards against SSRF (cloud metadata endpoints, internal networks), local filesystem disclosure
- * ({@code file://}) and unexpected protocols. The operator-configured fallback URL
- * ({@code cbs.dsl.builder.git.repo-url}) is trusted deployment configuration and is not validated
- * here.
- *
- * <p>
- * The DNS-based address check is best-effort: there is an unavoidable TOCTOU window between this
- * check and JGit's own name resolution. A full fix would require a custom resolver or proxying
- * clone traffic.
- */
+
 final class RepoUrlValidator {
 
   private RepoUrlValidator() {
@@ -87,7 +74,7 @@ final class RepoUrlValidator {
     return new IllegalArgumentException("repoUrl '" + sanitize(uri) + "' rejected: " + reason);
   }
 
-  /** Rebuilds the URL without userinfo so credentials never leak into messages or logs. */
+
   private static String sanitize(URI uri) {
     var sanitized = new StringBuilder();
     if (uri.getScheme() != null) {

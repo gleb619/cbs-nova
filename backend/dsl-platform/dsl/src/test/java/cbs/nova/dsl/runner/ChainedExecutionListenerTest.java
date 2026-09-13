@@ -79,10 +79,6 @@ class ChainedExecutionListenerTest {
     }
   }
 
-  /**
-   * A listener that records everything normally but throws on a configurable hook. Used to pin down
-   * how {@link ChainedExecutionListener} behaves when a delegate throws on a fan-out event.
-   */
   static final class ThrowingListener extends RecordingListener {
 
     private final String throwingHook;

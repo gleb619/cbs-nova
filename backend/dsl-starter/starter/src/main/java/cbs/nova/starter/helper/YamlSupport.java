@@ -14,29 +14,7 @@ import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.representer.Representer;
 import org.yaml.snakeyaml.resolver.Resolver;
 
-/**
- * Shared YAML factory for {@link ParseYamlHelper} and {@link FormatYamlHelper}.
- *
- * <p>
- * Locked security options (see plan T344, "Locked Decisions" 2026-09-04):
- *
- * <ul>
- * <li>{@code LoaderOptions.setAllowDuplicateKeys(false)} — duplicate keys are rejected, matching
- * strict YAML 1.2 parsers.
- * <li>{@code LoaderOptions.setMaxAliasesForCollections(50)} — bounds the well-known billion-laughs
- * style alias expansion.
- * <li>{@code LoaderOptions.setCodePointLimit(3 * 1024 * 1024)} — caps a single document at 3 MiB of
- * Unicode code points (Temporal default activity payload limit).
- * <li>{@code LoaderOptions.setTagInspector(tag -> false)} — every global tag is rejected. Only
- * built-in types (strings, integers, floats, booleans, null, sequences, maps) are permitted. This
- * is the snakeyaml CVE-2017-18640 mitigation: a payload like
- * {@code !!javax.scripting.ScriptEngineManager {}} is refused before any class is instantiated.
- * <li>{@link Yaml12Resolver} — only {@code true}/{@code false} (any case) parse as boolean. The
- * YAML 1.1 aliases {@code yes}/{@code no}/{@code on}/{@code off} stay as plain strings.
- * <li>{@code DumperOptions.setDefaultFlowStyle(BLOCK)} with {@code setPrettyFlow(true)} and
- * {@code setIndent(2)} — deterministic, human-readable block style.
- * </ul>
- */
+
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class YamlSupport {
 

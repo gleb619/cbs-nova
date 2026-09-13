@@ -67,15 +67,14 @@ public final class DefaultHelperRunner implements HelperRunner {
     Result<?> result = null;
     try {
       var richCtx = new FunctionRichContext<>(ctx, contextFactory);
-      Function<FunctionContext<?>, Result<?>> logic;
       if (ctx.mode() == ExecutionMode.EXPLAIN) {
-        logic = fn.get().effectiveExplain();
-      } else if (ctx.mode() == ExecutionMode.PREVIEW) {
-        logic = fn.get().effectivePreview();
+        result = fn.get().effectiveExplain().apply(richCtx);
       } else {
-        logic = fn.get().executeLogic();
+        Function<FunctionContext<?>, Result<?>> logic = ctx.mode() == ExecutionMode.PREVIEW
+                ? fn.get().effectivePreview()
+                : fn.get().executeLogic();
+        result = logic.apply(richCtx);
       }
-      result = logic.apply(richCtx);
       return result;
     } catch (Exception ex) {
       String message = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();

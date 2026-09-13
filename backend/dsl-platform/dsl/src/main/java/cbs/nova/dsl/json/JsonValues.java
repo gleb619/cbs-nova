@@ -22,19 +22,6 @@ public final class JsonValues {
     return new JacksonJsonValue(node);
   }
 
-  /**
-   * Converts a Java value into a {@link JsonValue} using the supplied mapper.
-   *
-   * <p>
-   * Accepts:
-   * <ul>
-   * <li>{@code null} -> missing value</li>
-   * <li>{@link JsonValue} -> returned as-is</li>
-   * <li>{@link JsonNode} -> wrapped directly</li>
-   * <li>{@link String} -> parsed as JSON</li>
-   * <li>{@link java.util.Map} / {@link java.util.List} / records -> converted to JSON tree</li>
-   * </ul>
-   */
   public static @NonNull JsonValue of(@Nullable Object value, @NonNull ObjectMapper mapper) {
     if (value == null) {
       return missing();

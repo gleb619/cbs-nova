@@ -5,33 +5,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.model.ExplainReport;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Test;
 
 class ExplainSupportTest {
 
-  private final Context<String> ctx = new StubContext("body");
-
-  @Test
-  void defaultBudgetIsFourThousand() {
-    assertThat(ExplainSupport.DEFAULT_BUDGET_CHARS).isEqualTo(4_000);
-  }
-
-  @Test
-  void defaultOverloadDelegatesWithDefaultBudget() {
-    var budgetSeen = new AtomicInteger(-1);
-    ExplainSupport<String, String> support = new ExplainSupport<>() {
-      @Override
-      public String explain(Context<String> ctx, int budgetChars) {
-        budgetSeen.set(budgetChars);
-        return "ok";
-      }
-    };
-
-    assertThat(support.explain(ctx)).isEqualTo("ok");
-    assertThat(budgetSeen).hasValue(ExplainSupport.DEFAULT_BUDGET_CHARS);
-  }
+  private final Context<String> ctx = new StubContext("body", Map.of());
 
   @Test
   void executableExplainUsesDescriptionWhenPresent() {
@@ -47,7 +26,7 @@ class ExplainSupportTest {
       }
     };
 
-    var report = executable.explain(ctx, ExplainSupport.DEFAULT_BUDGET_CHARS);
+    var report = executable.explain(ctx);
 
     assertThat(report.description()).isEqualTo("Greets the caller.");
     assertThat(report.mermaid()).isEmpty();
@@ -69,7 +48,7 @@ class ExplainSupportTest {
       }
     };
 
-    var report = executable.explain(ctx, ExplainSupport.DEFAULT_BUDGET_CHARS);
+    var report = executable.explain(ctx);
 
     assertThat(report.name()).isEqualTo("lengthOf");
     assertThat(report.description())
@@ -82,16 +61,17 @@ class ExplainSupportTest {
   void executableExplainFallsBackToClassNameForMissingDescriptorName() {
     Executable<String, String> executable = new NamedExecutable();
 
-    var report = executable.explain(ctx, ExplainSupport.DEFAULT_BUDGET_CHARS);
+    var report = executable.explain(ctx);
 
     assertThat(report.name()).isEqualTo("NamedExecutable");
   }
 
   @Test
-  void executableExplainTruncatesReportToBudget() {
+  void executableExplainTruncatesReportToMetadataBudget() {
     Executable<String, String> executable = ctx -> Result.success("ok");
+    var bounded = new StubContext("body", Map.of("explain.budgetChars", 50));
 
-    var report = executable.explain(ctx, 50);
+    var report = executable.explain(bounded);
 
     assertThat(report.description().length()).isLessThanOrEqualTo(50);
   }
@@ -137,6 +117,7 @@ class ExplainSupportTest {
   @RequiredArgsConstructor
   private static final class StubContext implements Context<String> {
     private final String body;
+    private final Map<String, Object> metadata;
 
     @Override
     public String body() {
@@ -145,7 +126,7 @@ class ExplainSupportTest {
 
     @Override
     public Map<String, Object> metadata() {
-      return Map.of();
+      return metadata;
     }
 
     @Override
@@ -161,12 +142,12 @@ class ExplainSupportTest {
     @Override
     @SuppressWarnings("unchecked")
     public <U> Context<U> withBody(U body) {
-      return (Context<U>) new StubContext(String.valueOf(body));
+      return (Context<U>) new StubContext(String.valueOf(body), metadata);
     }
 
     @Override
     public Context<String> withMetadata(String key, Object value) {
-      return this;
+      return new StubContext(body, Map.of(key, value));
     }
   }
 }

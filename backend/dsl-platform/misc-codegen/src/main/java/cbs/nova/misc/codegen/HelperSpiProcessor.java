@@ -88,14 +88,6 @@ public class HelperSpiProcessor extends AbstractProcessor {
     return false;
   }
 
-  /**
-   * Reads the effective helper configuration from the element. For {@code @Helper} we use the
-   * annotation directly. For {@code @SpringHelper} we extract the user-supplied {@code name()} from
-   * {@code @SpringHelper} and force {@code componentModel=LAZY} and
-   * {@code creationStrategy=STANDARD}, so the helper becomes a real Spring bean and is created via
-   * the supplied {@code HelperInstanceResolver} (Spring) rather than via a generated
-   * {@code new X()}.
-   */
   private HelperConfig readHelperConfig(TypeElement element, String annotationName) {
     if (SPRING_HELPER_ANNOTATION.equals(annotationName)) {
       String name = readAnnotationStringValue(element, SPRING_HELPER_ANNOTATION, "name");
@@ -314,12 +306,6 @@ public class HelperSpiProcessor extends AbstractProcessor {
 
   }
 
-  /**
-   * A helper without a public no-arg constructor (e.g. requires Spring-injected dependencies like
-   * {@code HttpClient} or {@code ObjectMapper}, or is a {@code @SpringHelper} that should be wired
-   * by Spring) cannot be direct-instantiated by generated code; it is excluded from
-   * {@code GeneratedHelperInstanceResolver} and left to the Spring resolver.
-   */
   private boolean hasNoArgConstructor(TypeElement type) {
     return type.getEnclosedElements().stream()
             .filter(e -> e.getKind() == ElementKind.CONSTRUCTOR)

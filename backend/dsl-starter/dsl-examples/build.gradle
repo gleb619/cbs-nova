@@ -2,6 +2,7 @@ plugins {
   id 'java'
   alias(libs.plugins.spring.dm)
   id 'cbs.nova.dsl' version '0.0.1-SNAPSHOT'
+  id 'idea'
 }
 
 dependencyManagement {
@@ -32,6 +33,13 @@ spotless {
     targetExclude 'src/dsl/**/*.java'
     targetExclude 'src/models/**/*.java'
     targetExclude 'build/generated/**/*.java'
+  }
+}
+
+idea {
+  module {
+    resourceDirs += file('resources')
+    sourceDirs += [file('src/dsl'), file('src/models')]
   }
 }
 

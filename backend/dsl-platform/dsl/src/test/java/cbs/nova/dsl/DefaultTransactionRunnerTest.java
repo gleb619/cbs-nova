@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.dsl.exception.DslExecutionException;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
 import cbs.nova.dsl.runner.DefaultExecutionListener;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
@@ -36,10 +37,22 @@ class DefaultTransactionRunnerTest {
   }
 
   @Test
-  void explainModeExecutesLogicAndReturnsSuccess() {
+  void explainModeReturnsDefaultReportWithoutRunningExecute() {
+    var executeCalled = new AtomicBoolean(false);
+    var tx = Dsl.transaction("T")
+            .execute(ctx -> {
+              executeCalled.set(true);
+              return Result.success("ok-T");
+            })
+            .build();
     var ctx = contextFactory.of("in", ExecutionMode.EXPLAIN, "r2");
-    var result = runner.run(tx("T"), ctx);
+    var result = runner.run(tx, ctx);
+    assertThat(executeCalled.get()).isFalse();
     assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value()).isInstanceOf(ExplainReport.class);
+    var report = (ExplainReport) result.value();
+    assertThat(report.name()).isEqualTo("T");
+    assertThat(report.description()).contains("**Transaction** `T`");
   }
 
   @Test
@@ -89,7 +102,7 @@ class DefaultTransactionRunnerTest {
             .explain(ctx -> {
               explainCalled.set(true);
               assertThat(ctx.mode()).isEqualTo(ExecutionMode.EXPLAIN);
-              return Result.success("explain-result");
+              return Result.success(new ExplainReport("ExplainT", "explain-result", ""));
             })
             .build();
     var ctx = contextFactory.of("in", ExecutionMode.EXPLAIN, "r5");
@@ -97,25 +110,27 @@ class DefaultTransactionRunnerTest {
     assertThat(explainCalled.get()).isTrue();
     assertThat(executeCalled.get()).isFalse();
     assertThat(result.isSuccess()).isTrue();
-    assertThat(result.value()).isEqualTo("explain-result");
+    assertThat(result.value()).isEqualTo(new ExplainReport("ExplainT", "explain-result", ""));
   }
 
   @Test
-  void explainModeFallsBackToExecuteWhenExplainNotSet() {
+  void explainModeReturnsDefaultReportWhenExplainNotSet() {
     var executeCalled = new AtomicBoolean(false);
     var tx = Dsl.transaction("ExplainFallbackT")
             .execute(ctx -> {
               executeCalled.set(true);
-              assertThat(ctx.mode()).isEqualTo(ExecutionMode.EXPLAIN);
               return Result.success("execute-result");
             })
             .preview(ctx -> Result.success("preview-result"))
             .build();
     var ctx = contextFactory.of("in", ExecutionMode.EXPLAIN, "r5");
     var result = runner.run(tx, ctx);
-    assertThat(executeCalled.get()).isTrue();
+    assertThat(executeCalled.get()).isFalse();
     assertThat(result.isSuccess()).isTrue();
-    assertThat(result.value()).isEqualTo("execute-result");
+    assertThat(result.value()).isInstanceOf(ExplainReport.class);
+    var report = (ExplainReport) result.value();
+    assertThat(report.name()).isEqualTo("ExplainFallbackT");
+    assertThat(report.description()).contains("**Transaction** `ExplainFallbackT`");
   }
 
   @Test

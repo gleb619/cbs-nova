@@ -7,9 +7,14 @@ import cbs.nova.dsl.CompensationContext;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject.DslType;
+import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.Constants;
+import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.transaction.TransactionExecution;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
@@ -157,21 +162,101 @@ class ProcessBuilderTest {
   }
 
   @Test
-  void effectiveExplainFallsBackToExecuteWhenExplainNotSet() {
+  void effectiveExplainFallsBackToDescriptorReportWhenExplainNotSet() {
     var process = Dsl.process("NoExplainProc")
             .execute(ctx -> Result.success("exec"))
             .build();
-    assertThat(process.effectiveExplain()).isSameAs(process.executeLogic());
+    var contextFactory = new ContextFactory();
+    var ctx = new ProcessRichContext<>(
+            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-explain"), contextFactory);
+
+    var result = process.effectiveExplain().apply(ctx);
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value()).isNotNull();
+    assertThat(result.value().name()).isEqualTo("NoExplainProc");
+    assertThat(result.value().description()).contains("**Process** `NoExplainProc`");
+    assertThat(result.value().mermaid()).isEmpty();
   }
 
   @Test
   void effectiveExplainReturnsExplainWhenSet() {
+    var report = new ExplainReport("WithExplainProc", "explain", "");
     var process = Dsl.process("WithExplainProc")
             .execute(ctx -> Result.success("exec"))
-            .explain(ctx -> Result.success("explain"))
+            .explain(ctx -> Result.success(report))
             .build();
     assertThat(process.effectiveExplain()).isSameAs(process.explainLogic());
     assertThat(process.effectiveExplain()).isNotSameAs(process.executeLogic());
+  }
+
+  @Test
+  void explainViaLoadsResourceMarkdown() {
+    var process = Dsl.process("DocProc")
+            .execute(ctx -> Result.success("exec"))
+            .explainVia("builder-sample.md")
+            .build();
+    var contextFactory = new ContextFactory();
+    var ctx = new ProcessRichContext<>(
+            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc"), contextFactory);
+
+    var result = process.effectiveExplain().apply(ctx);
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().name()).isEqualTo("DocProc");
+    assertThat(result.value().description()).contains("# Builder Sample");
+  }
+
+  @Test
+  void explainViaAcceptsPrefixedResourcePath() {
+    var process = Dsl.process("DocProcPrefixed")
+            .execute(ctx -> Result.success("exec"))
+            .explainVia("/explain/builder-sample.md")
+            .build();
+    var contextFactory = new ContextFactory();
+    var ctx = new ProcessRichContext<>(
+            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc-prefixed"), contextFactory);
+
+    var result = process.effectiveExplain().apply(ctx);
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().description()).contains("# Builder Sample");
+  }
+
+  @Test
+  void explainViaTruncatesMarkdownToMetadataBudget() {
+    var process = Dsl.process("DocProcBudget")
+            .execute(ctx -> Result.success("exec"))
+            .explainVia("explain/builder-sample.md")
+            .build();
+    var contextFactory = new ContextFactory();
+    var ctx = new ProcessRichContext<>(
+            contextFactory.of("body",
+                    Map.of(Constants.EXPLAIN_BUDGET_CHARS_KEY, 8),
+                    ExecutionMode.EXPLAIN, "run-doc-budget"),
+            contextFactory);
+
+    var result = process.effectiveExplain().apply(ctx);
+
+    assertThat(result.value().description()).hasSizeLessThanOrEqualTo(8);
+  }
+
+  @Test
+  void explainViaIsLazyWhenResourceMissing() {
+    var process = Dsl.process("DocProcMissing")
+            .execute(ctx -> Result.success("exec"))
+            .explainVia("missing.md")
+            .build();
+    var contextFactory = new ContextFactory();
+    var ctx = new ProcessRichContext<>(
+            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc-missing"), contextFactory);
+
+    var result = process.effectiveExplain().apply(ctx);
+
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause())
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("classpath: explain/missing.md");
   }
 
   @Test

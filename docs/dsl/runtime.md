@@ -102,13 +102,15 @@ This structure keeps generated `*Definition` classes free of direct registry/run
     paths.
 - The output is returned as a structured `ExplainReport` containing description, diagram, and execution trace.
 
-Every `Executable` can also explain itself directly via `ExplainSupport.explain(Context, int budgetChars)`
+Every `Executable` can also explain itself directly via `ExplainSupport.explain(Context)`
 (dsl-api), which builds a compact `ExplainReport` from `describe()`/`description()`. `ExplainReport`
 is a simple 3-field record: `name`, markdown `description` (budget-bounded), and `mermaid` diagram.
 `GlobalManager` exposes `explain(name, ctx, budgetChars)` and `explainHelper(...)`, dispatching
 across process → transaction → helper → function and attaching a Mermaid diagram for
-processes/transactions/helpers. `budgetChars` (default `ExplainSupport.DEFAULT_BUDGET_CHARS` = 4000)
-bounds the textual payload (description + diagram); implementations truncate rather than exceed it.
+processes/transactions/helpers. The budget (default `Constants.DEFAULT_BUDGET_CHARS` = 4000) is
+carried by the context metadata under `Constants.EXPLAIN_BUDGET_CHARS_KEY` and bounds the textual
+payload (description + diagram); implementations truncate rather than exceed it. The descriptor-based
+fallback report is assembled by `cbs.nova.dsl.stage.ExplainStage`, not by the `Executable` interface.
 Helpers such as the starter's `MathHelper` override `explain` to produce mode- and
 argument-specific descriptions. The starter's explain pipe still produces the full 12-field
 `ExplainTraceReport` (execution trace, external calls, metrics, AST, dry-run logs; package

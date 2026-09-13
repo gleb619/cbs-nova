@@ -4,6 +4,8 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.HelperManager;
 import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.converter.AvajeMapConverter;
+import cbs.nova.dsl.explain.ClasspathExplainResourceResolver;
+import cbs.nova.dsl.explain.ExplainResourceResolver;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.model.RetryPolicy;
@@ -78,6 +80,12 @@ public class DslConfig implements SingletonSupport {
 
   public @NonNull Replaceable<ExpressionEvaluator> expressionEvaluator() {
     return replaceable("expressionEvaluator", MvelExpressionEvaluator::new);
+  }
+
+  public @NonNull Replaceable<ExplainResourceResolver> explainResourceResolver() {
+    return replaceable("explainResourceResolver",
+            () -> new ClasspathExplainResourceResolver(
+                    ClasspathExplainResourceResolver.DEFAULT_PREFIX));
   }
 
   public @NonNull Replaceable<TemporalProcessLauncher> temporalProcessLauncher() {

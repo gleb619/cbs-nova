@@ -1,5 +1,6 @@
 package cbs.nova.dsl;
 
+import static cbs.nova.dsl.config.Constants.JAVA_FILE_SUFFIX;
 import static cbs.nova.dsl.model.EmptyDslObject.emptyDslObject;
 
 import org.jspecify.annotations.NonNull;
@@ -22,7 +23,7 @@ public interface GeneratedClassProvider {
 
   @NonNull
   default String filename() {
-    return getClass().getSimpleName() + ".java";
+    return getClass().getSimpleName() + JAVA_FILE_SUFFIX;
   }
 
   @NonNull

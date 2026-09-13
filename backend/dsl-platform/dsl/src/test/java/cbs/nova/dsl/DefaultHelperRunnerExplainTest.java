@@ -3,6 +3,7 @@ package cbs.nova.dsl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
 import cbs.nova.dsl.runner.DefaultHelperRunner;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -28,7 +29,7 @@ class DefaultHelperRunnerExplainTest {
             .explain(ctx -> {
               explainCalled.set(true);
               assertThat(ctx.mode()).isEqualTo(ExecutionMode.EXPLAIN);
-              return Result.success("explain");
+              return Result.success(new ExplainReport("explainFn", "explain", ""));
             })
             .build());
 
@@ -36,13 +37,13 @@ class DefaultHelperRunnerExplainTest {
     var result = runner.runFunction("explainFn", ctx, registry);
 
     assertThat(result.isSuccess()).isTrue();
-    assertThat(result.value()).isEqualTo("explain");
+    assertThat(result.value()).isEqualTo(new ExplainReport("explainFn", "explain", ""));
     assertThat(explainCalled.get()).isTrue();
     assertThat(executeCalled.get()).isFalse();
   }
 
   @Test
-  void explainModeFallsBackToExecuteForFunction() {
+  void explainModeFallsBackToDescriptorReportForFunction() {
     var registry = new DefaultHelperRegistry();
     var executeCalled = new AtomicBoolean(false);
     registry.registerFunction(Dsl.function("fallbackFn")
@@ -50,7 +51,6 @@ class DefaultHelperRunnerExplainTest {
             .output(String.class)
             .execute(ctx -> {
               executeCalled.set(true);
-              assertThat(ctx.mode()).isEqualTo(ExecutionMode.EXPLAIN);
               return Result.success("execute");
             })
             .build());
@@ -59,8 +59,11 @@ class DefaultHelperRunnerExplainTest {
     var result = runner.runFunction("fallbackFn", ctx, registry);
 
     assertThat(result.isSuccess()).isTrue();
-    assertThat(result.value()).isEqualTo("execute");
-    assertThat(executeCalled.get()).isTrue();
+    assertThat(executeCalled.get()).isFalse();
+    assertThat(result.value()).isInstanceOf(ExplainReport.class);
+    var report = (ExplainReport) result.value();
+    assertThat(report.name()).isEqualTo("fallbackFn");
+    assertThat(report.description()).contains("**Function** `fallbackFn`");
   }
 
   @Test
@@ -70,7 +73,7 @@ class DefaultHelperRunnerExplainTest {
             .input(String.class)
             .output(String.class)
             .execute(ctx -> Result.success("run"))
-            .explain(ctx -> Result.success("explain"))
+            .explain(ctx -> Result.success(new ExplainReport("runFn", "explain", "")))
             .build());
 
     var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-mode-fn");

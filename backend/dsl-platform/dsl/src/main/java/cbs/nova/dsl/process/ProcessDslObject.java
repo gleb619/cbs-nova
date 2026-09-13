@@ -5,6 +5,7 @@ import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.transaction.TransactionExecution;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -24,7 +25,7 @@ public record ProcessDslObject(
         @NonNull Function<ProcessContext<?>, Result<?>> executeLogic,
         @Nullable Function<CompensationContext<?>, Result<?>> compensationLogic,
         @Nullable Function<ProcessContext<?>, Result<?>> previewLogic,
-        @Nullable Function<ProcessContext<?>, Result<?>> explainLogic,
+        @NonNull Function<ProcessContext<?>, Result<ExplainReport>> explainLogic,
         @Nullable Supplier<DslDescriptor> descriptor,
         @Nullable BiConsumer<CompensationContext<?>, List<TransactionExecution>> userCompensationHandler,
         @Nullable String description) implements DslObject {
@@ -38,21 +39,34 @@ public record ProcessDslObject(
     return previewLogic != null ? previewLogic : executeLogic;
   }
 
-  public @NonNull Function<ProcessContext<?>, Result<?>> effectiveExplain() {
-    return explainLogic != null ? explainLogic : executeLogic;
+  public @NonNull Function<ProcessContext<?>, Result<ExplainReport>> effectiveExplain() {
+    return explainLogic;
   }
 
   public @NonNull DslDescriptor describe() {
     if (descriptor != null) {
       return descriptor.get();
     }
+    return defaultDescriptor(name, taskQueue, version, inputType, outputType, parameters,
+            compensationLogic != null, description);
+  }
+
+  public static @NonNull DslDescriptor defaultDescriptor(
+          @NonNull String name,
+          @NonNull String taskQueue,
+          @NonNull String version,
+          @Nullable Class<?> inputType,
+          @Nullable Class<?> outputType,
+          @Nullable List<ParameterDescriptor> parameters,
+          boolean hasCompensation,
+          @Nullable String description) {
     return DslDescriptor.builder()
             .name(name)
             .type(DslType.PROCESS)
             .description(description)
             .inputType(inputType)
             .outputType(outputType)
-            .hasCompensation(compensationLogic != null)
+            .hasCompensation(hasCompensation)
             .hasSideEffects(true)
             .parameters(parameters != null ? parameters : List.of())
             .taskQueue(taskQueue)

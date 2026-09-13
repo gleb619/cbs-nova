@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
+//TODO: The stupid AI has perverted the very concept, its very wrong, to export data in that way. Everything should be done differently.
+@Deprecated(forRemoval = true)
 @RequiredArgsConstructor
 public final class ExplainReportFactory {
 

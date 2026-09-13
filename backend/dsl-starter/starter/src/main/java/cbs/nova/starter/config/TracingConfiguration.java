@@ -23,14 +23,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.util.StringUtils;
 
-/**
- * Opt-in OpenTelemetry tracing for DSL runs.
- *
- * <p>
- * Tracing is completely disabled (no-op) unless an OTLP endpoint is configured via
- * {@code cbs.nova.tracing.otlp.endpoint} or the standard {@code OTEL_EXPORTER_OTLP_ENDPOINT}
- * environment variable. When disabled, no spans are exported and no network calls are attempted.
- */
+
 @Configuration
 public class TracingConfiguration {
 

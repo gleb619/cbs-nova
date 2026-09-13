@@ -8,25 +8,11 @@ import java.util.List;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
-/**
- * Hand-rolled RFC 4180 CSV parser and formatter. No external dependencies.
- */
+
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 class CsvSupport {
 
-  /**
-   * Parses RFC 4180 CSV.
-   *
-   * <ul>
-   * <li>Rows split on {@code \r\n}, {@code \n}, or {@code \r}.
-   * <li>A trailing newline does not produce a final empty row.
-   * <li>A genuinely empty input yields an empty list.
-   * <li>Quoted fields may contain the delimiter and newlines; {@code ""} inside a quoted field is a
-   * literal {@code "}.
-   * <li>An unterminated quoted field throws {@link IllegalArgumentException} with message
-   * {@code "csv: unterminated quoted field"}.
-   * </ul>
-   */
+
   static List<List<String>> parse(String input, char delimiter) {
     List<List<String>> rows = new ArrayList<>();
     List<String> currentRow = new ArrayList<>();
@@ -110,14 +96,7 @@ class CsvSupport {
     return rows;
   }
 
-  /**
-   * Formats rows as RFC 4180 CSV.
-   *
-   * <p>
-   * A field is quoted iff it contains the delimiter, a double quote, {@code \r}, or {@code \n}.
-   * Double quotes are escaped as {@code ""}. Rows are joined with {@code lineSeparator}, and a
-   * trailing {@code lineSeparator} is emitted after the last row.
-   */
+
   static String format(List<List<String>> rows, char delimiter, String lineSeparator) {
     StringBuilder out = new StringBuilder();
     for (List<String> row : rows) {

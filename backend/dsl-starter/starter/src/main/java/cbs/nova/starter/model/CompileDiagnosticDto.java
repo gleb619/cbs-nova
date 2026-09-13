@@ -3,10 +3,7 @@ package cbs.nova.starter.model;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.jspecify.annotations.Nullable;
 
-/**
- * API view of a {@code dsl_compile_diagnostics} row, exposed by {@code GET /api/dsl/diagnostics}.
- * Timestamps are rendered as ISO-8601 strings, matching the other execution DTOs.
- */
+
 public record CompileDiagnosticDto(
         long id,
         String occurredAt,

@@ -14,6 +14,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
 import cbs.nova.dsl.function.FunctionDslObject;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.starter.config.router.DslIntrospectionRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslIntrospectionHandler;
@@ -355,7 +356,7 @@ class DslIntrospectionResourceTest {
             null,
             ctx -> Result.success("ok"),
             null,
-            null,
+            ctx -> Result.success(new ExplainReport("sampleFunction", "test", "")),
             () -> DslDescriptor.builder()
                     .name("sampleFunction")
                     .type(DslType.FUNCTION)
