@@ -1,5 +1,5 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
-import { unwrapList } from '@cbs/components'
+import { type DiagnosticsPage, unwrapList } from '@cbs/components'
 import { $fetch } from 'ofetch'
 import { extractApiError } from '../utils/extractApiError'
 
@@ -162,6 +162,30 @@ export function useDslApi() {
     return $fetch(`/api/v1/dsl/drafts/${name}/history/${timestamp}/diff`)
   }
 
+  async function fetchDiagnostics(params: {
+    definition?: string
+    limit: number
+    offset: number
+  }): Promise<DiagnosticsPage> {
+    log.info('fetchDiagnostics request', {
+      definition: params.definition,
+      limit: params.limit,
+      offset: params.offset,
+    })
+    const query: Record<string, string> = {
+      limit: String(params.limit),
+      offset: String(params.offset),
+    }
+    if (params.definition?.trim()) query.definition = params.definition.trim()
+    try {
+      return (await $fetch('/api/v1/dsl/diagnostics', { query })) as DiagnosticsPage
+    } catch (err) {
+      const message = extractApiError(err).message
+      log.error('failed to load diagnostics', { error: message })
+      throw new Error(message)
+    }
+  }
+
   async function validateConstruct(name: string) {
     // stub — calls preview to validate
     log.info('validate request', { name })
@@ -216,6 +240,7 @@ export function useDslApi() {
     restorePublishHistory,
     getHistoryEntry,
     getHistoryDiff,
+    fetchDiagnostics,
     validateConstruct,
     reload,
     listSchedules,

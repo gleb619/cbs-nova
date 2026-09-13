@@ -21,6 +21,7 @@ import {
   DslBodyEditor,
   DslConstructExplorer,
   DslDeleteDraftConfirmationModal,
+  DslDiagnosticsHistoryPanel,
   DslDraftRestoreBanner,
   DslHelperCatalog,
   DslHelperSearchPanel,
@@ -67,9 +68,14 @@ const explorerCollapsed = useWorkbenchStorage<boolean>('explorer-collapsed', fal
 const helperSearchOpen = useWorkbenchStorage<boolean>('helper-search-open', false)
 const helperCatalogOpen = useWorkbenchStorage<boolean>('helper-catalog-open', false)
 const historyPanelOpen = useWorkbenchStorage<boolean>('history-panel-open', false)
+const diagnosticsPanelOpen = useWorkbenchStorage<boolean>('diagnostics-panel-open', false)
 
 function toggleHistoryPanel() {
   historyPanelOpen.value = !historyPanelOpen.value
+}
+
+function toggleDiagnosticsPanel() {
+  diagnosticsPanelOpen.value = !diagnosticsPanelOpen.value
 }
 
 // Translate `state.value.validationErrors` into Monaco marker records. Scoped to the
@@ -456,6 +462,15 @@ onBeforeUnmount(() => {
       <button
         type="button"
         class="px-3 py-1.5 text-sm rounded border border-line hover:bg-surface"
+        :class="diagnosticsPanelOpen ? 'bg-accent-500/10 text-accent-500 border-accent-500' : ''"
+        data-testid="workbench-toggle-diagnostics"
+        @click="toggleDiagnosticsPanel"
+      >
+        {{ diagnosticsPanelOpen ? 'Close Diagnostics' : 'Diagnostics' }}
+      </button>
+      <button
+        type="button"
+        class="px-3 py-1.5 text-sm rounded border border-line hover:bg-surface"
         :class="helperCatalogOpen ? 'bg-accent-500/10 text-accent-500 border-accent-500' : ''"
         data-testid="workbench-toggle-helpers"
         @click="toggleHelperCatalog"
@@ -550,6 +565,16 @@ onBeforeUnmount(() => {
           :restore="dslApi.restorePublishHistory"
           @restored="onHistoryRestored"
         />
+      </CbsDrawer>
+
+      <CbsDrawer
+        v-model:open="diagnosticsPanelOpen"
+        title="Diagnostics"
+        test-id="diagnostics-drawer"
+        close-label="Close diagnostics history"
+        width-class="w-[34rem]"
+      >
+        <DslDiagnosticsHistoryPanel :fetch-page="dslApi.fetchDiagnostics" />
       </CbsDrawer>
 
       <DslHelperSearchPanel

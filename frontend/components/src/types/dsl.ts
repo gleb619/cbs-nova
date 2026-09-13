@@ -53,6 +53,28 @@ export interface CompileDiagnostic {
   severity: string
 }
 
+export type DiagnosticSource = 'RELOAD' | 'PUBLISH' | 'DRAFT'
+
+export interface PersistedCompileDiagnostic {
+  id: number
+  occurredAt: string
+  source: DiagnosticSource
+  definition: string
+  file?: string | null
+  line?: number | null
+  column?: number | null
+  severity: string
+  code?: string | null
+  message: string
+}
+
+export interface DiagnosticsPage {
+  items: PersistedCompileDiagnostic[]
+  total: number
+  offset: number
+  limit: number
+}
+
 export interface ScheduleSummary {
   scheduleId: string
   definition: string
