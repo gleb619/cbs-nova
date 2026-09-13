@@ -1,0 +1,287 @@
+{
+  "uid": "cbs-nova-dsl-overview",
+  "title": "CBS Nova — DSL Overview",
+  "description": "Hand-written overview of the cbs-nova DSL runtime: run rates, error ratio, preview latency/throughput and base JVM/HTTP health.",
+  "tags": ["cbs-nova", "dsl"],
+  "timezone": "browser",
+  "schemaVersion": 41,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 1,
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "refresh": "",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "App up (cbs-nova)",
+      "description": "Prometheus scrape health of the cbs-nova job.",
+      "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+          "expr": "up{job=\"cbs-nova\"}",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "DSL run error ratio (5m)",
+      "description": "Share of DSL runs finishing with a non-SUCCESS status. Mirrors the CbsNovaRunErrorRate alert (> 0.10 for 10m).",
+      "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 0.10 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+          "expr": "sum(rate(dsl_run_count_total{status!~\"SUCCESS\"}[5m])) / sum(rate(dsl_run_count_total[5m]))",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "DSL run rate by status",
+      "description": "DSL runs per second, split by run status.",
+      "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+          "expr": "sum by (status) (rate(dsl_run_count_total[5m]))",
+          "range": true,
+          "interval": ""
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Preview latency (avg / max)",
+      "description": "Average and max DSL preview duration (dsl.preview.duration summary). True p95 needs percentile histograms — not enabled on the timer yet (see T403).",
+      "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+          "expr": "sum(rate(dsl_preview_duration_seconds_sum[5m])) / sum(rate(dsl_preview_duration_seconds_count[5m]))",
+          "legendFormat": "avg",
+          "range": true,
+          "interval": ""
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+          "expr": "max(dsl_preview_duration_seconds_max)",
+          "legendFormat": "max",
+          "range": true,
+          "interval": ""
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Preview throughput / timeouts",
+      "description": "Preview invocations per second and preview timeouts per second (dsl.preview.timeout counter).",
+      "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+          "expr": "sum(rate(dsl_preview_calls_total[5m]))",
+          "legendFormat": "previews/s",
+          "range": true,
+          "interval": ""
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+          "expr": "sum(rate(dsl_preview_timeout_total[5m]))",
+          "legendFormat": "timeouts/s",
+          "range": true,
+          "interval": ""
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "JVM heap used",
+      "description": "Used JVM heap memory by area.",
+      "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+          "expr": "sum by (area) (jvm_memory_used_bytes{area=\"heap\"})",
+          "range": true,
+          "interval": ""
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "HTTP server request rate",
+      "description": "Spring HTTP server requests per second by response status.",
+      "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 21 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+          "expr": "sum by (status) (rate(http_server_requests_seconds_count[5m]))",
+          "range": true,
+          "interval": ""
+        }
+      ]
+    }
+  ]
+}

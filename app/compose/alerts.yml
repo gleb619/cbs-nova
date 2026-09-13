@@ -19,11 +19,13 @@ groups:
 
   - name: cbs-nova-preview-latency
     rules:
-      # VERIFY series name against a booted app: curl -s :8090/actuator/prometheus | grep dsl_preview
-      # Threshold (2s) must be tuned to the observed p95 baseline.
+      # VERIFIED against a booted app (T481): dsl.preview.duration is a plain Micrometer Timer — it
+      # exports count/sum/max only (no *_bucket series), so p95 via histogram_quantile is not possible
+      # until percentile histograms are enabled on the timer (T403). Threshold (2s avg) must be tuned
+      # to the observed baseline.
       # A true preview timeout-rate alert needs an outcome-tagged preview counter; that metric does not exist yet.
       - alert: CbsNovaPreviewLatencyP95
-        expr: histogram_quantile(0.95, sum(rate(dsl_preview_duration_seconds_bucket[5m])) by (le)) > 2
+        expr: sum(rate(dsl_preview_duration_seconds_sum[5m])) / sum(rate(dsl_preview_duration_seconds_count[5m])) > 2
         for: 10m
         labels:
           severity: warning
