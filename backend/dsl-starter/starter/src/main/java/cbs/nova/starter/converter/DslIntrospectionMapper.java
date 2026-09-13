@@ -26,21 +26,21 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
   @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
   @Mapping(target = "hasCompensation", expression = "java(source.compensationLogic() != null)")
-  @Mapping(target = "description", expression = "java(source.describe().description())")
+  @Mapping(target = "description", expression = "java(source.description())")
   @Mapping(target = "inputSchema", ignore = true)
   ProcessDetail toProcessDetail(ProcessDslObject source);
 
   @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
   @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
   @Mapping(target = "hasCompensation", expression = "java(source.compensationLogic() != null)")
-  @Mapping(target = "description", expression = "java(source.describe().description())")
+  @Mapping(target = "description", expression = "java(source.description())")
   @Mapping(target = "inputSchema", source = "inputSchema")
   ProcessDetail toProcessDetail(ProcessDslObject source, Map<String, Object> inputSchema);
 
   @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
   @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
   @Mapping(target = "hasCompensation", expression = "java(source.compensationLogic() != null)")
-  @Mapping(target = "description", expression = "java(source.describe().description())")
+  @Mapping(target = "description", expression = "java(source.description())")
   @Mapping(target = "startToCloseTimeoutMs", expression = "java(source.startToCloseTimeout().toMillis())")
   @Mapping(target = "inputSchema", ignore = true)
   TransactionDetail toTransactionDetail(TransactionDslObject source);
@@ -48,7 +48,7 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
   @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
   @Mapping(target = "hasCompensation", expression = "java(source.compensationLogic() != null)")
-  @Mapping(target = "description", expression = "java(source.describe().description())")
+  @Mapping(target = "description", expression = "java(source.description())")
   @Mapping(target = "startToCloseTimeoutMs", expression = "java(source.startToCloseTimeout().toMillis())")
   @Mapping(target = "inputSchema", source = "inputSchema")
   TransactionDetail toTransactionDetail(TransactionDslObject source,
@@ -71,7 +71,7 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
   @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
   @Mapping(target = "hasCompensation", expression = "java(source.compensationLogic() != null)")
-  @Mapping(target = "description", expression = "java(source.describe().description())")
+  @Mapping(target = "description", expression = "java(source.description())")
   @Mapping(target = "inputSchema", ignore = true)
   @Mapping(target = "status", ignore = true)
   DefinitionMetaDto toProcessDefinitionMeta(ProcessDslObject source);
@@ -82,7 +82,7 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
   @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
   @Mapping(target = "hasCompensation", expression = "java(source.compensationLogic() != null)")
-  @Mapping(target = "description", expression = "java(source.describe().description())")
+  @Mapping(target = "description", expression = "java(source.description())")
   @Mapping(target = "inputSchema", source = "inputSchema")
   @Mapping(target = "status", source = "status")
   @Mapping(target = "filePath", source = "filePath")
@@ -95,7 +95,7 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
   @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
   @Mapping(target = "hasCompensation", expression = "java(source.compensationLogic() != null)")
-  @Mapping(target = "description", expression = "java(source.describe().description())")
+  @Mapping(target = "description", expression = "java(source.description())")
   @Mapping(target = "inputSchema", ignore = true)
   @Mapping(target = "status", ignore = true)
   DefinitionMetaDto toTransactionDefinitionMeta(TransactionDslObject source);
@@ -106,7 +106,7 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
   @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
   @Mapping(target = "hasCompensation", expression = "java(source.compensationLogic() != null)")
-  @Mapping(target = "description", expression = "java(source.describe().description())")
+  @Mapping(target = "description", expression = "java(source.description())")
   @Mapping(target = "inputSchema", source = "inputSchema")
   @Mapping(target = "status", source = "status")
   @Mapping(target = "filePath", source = "filePath")
