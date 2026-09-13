@@ -1,4 +1,4 @@
-import cbs.nova.dslexamples.ReleaseWindowModels.*;
+import cbs.nova.dslexamples.v1.ReleaseWindowModels.*;
 import cbs.nova.starter.helper.model.DateMathIn;
 import cbs.nova.starter.helper.model.DateMathOut;
 import cbs.nova.starter.helper.model.SemverIn;

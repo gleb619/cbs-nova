@@ -1,4 +1,4 @@
-import cbs.nova.dslexamples.PaginatedUrlModels.*;
+import cbs.nova.dslexamples.v1.PaginatedUrlModels.*;
 import cbs.nova.starter.helper.model.QueryStringIn;
 import cbs.nova.starter.helper.model.QueryStringOut;
 import cbs.nova.starter.helper.model.UrlEncodeIn;

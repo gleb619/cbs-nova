@@ -1,4 +1,4 @@
-import cbs.nova.dslexamples.InvoiceModels.*;
+import cbs.nova.dslexamples.v1.InvoiceModels.*;
 
 
 List<DslObject> define() {

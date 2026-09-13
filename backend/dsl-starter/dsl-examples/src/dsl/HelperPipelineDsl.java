@@ -1,5 +1,5 @@
 import cbs.nova.dsl.JsonValue;
-import cbs.nova.dslexamples.HelperPipelineModels.*;
+import cbs.nova.dslexamples.v1.HelperPipelineModels.*;
 import cbs.nova.starter.helper.model.FilterRecordsIn;
 import cbs.nova.starter.helper.model.FilterRecordsOut;
 import cbs.nova.starter.helper.model.FormatMessageIn;

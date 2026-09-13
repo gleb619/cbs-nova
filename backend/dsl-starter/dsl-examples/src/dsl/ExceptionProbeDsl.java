@@ -1,4 +1,4 @@
-import cbs.nova.dslexamples.ExceptionProbeModels.*;
+import cbs.nova.dslexamples.v1.ExceptionProbeModels.*;
 import cbs.nova.starter.helper.model.ConditionalFailIn;
 
 

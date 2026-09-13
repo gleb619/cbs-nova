@@ -1,4 +1,4 @@
-import cbs.nova.dslexamples.CsvYamlExportModels.*;
+import cbs.nova.dslexamples.v1.CsvYamlExportModels.*;
 import cbs.nova.starter.helper.model.FormatCsvIn;
 import cbs.nova.starter.helper.model.FormatCsvOut;
 import cbs.nova.starter.helper.model.ParseCsvIn;

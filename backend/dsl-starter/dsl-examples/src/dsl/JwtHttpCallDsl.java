@@ -1,4 +1,4 @@
-import cbs.nova.dslexamples.JwtHttpCallModels.*;
+import cbs.nova.dslexamples.v1.JwtHttpCallModels.*;
 import cbs.nova.starter.helper.model.HttpAuthIn;
 import cbs.nova.starter.helper.model.HttpAuthOut;
 import cbs.nova.starter.helper.model.HttpCallIn;

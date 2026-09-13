@@ -1,4 +1,4 @@
-import cbs.nova.dslexamples.UnreliableApiModels.*;
+import cbs.nova.dslexamples.v1.UnreliableApiModels.*;
 
 
 List<DslObject> define() {

@@ -1,4 +1,4 @@
-import cbs.nova.dslexamples.OrderSagaModels.*;
+import cbs.nova.dslexamples.v1.OrderSagaModels.*;
 
 
 List<DslObject> define() {

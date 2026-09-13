@@ -1,4 +1,4 @@
-import cbs.nova.dslexamples.JsonPatchModels.*;
+import cbs.nova.dslexamples.v1.JsonPatchModels.*;
 import cbs.nova.starter.helper.model.JsonExtractIn;
 import cbs.nova.starter.helper.model.JsonExtractOut;
 import cbs.nova.starter.helper.model.JsonPatchIn;
