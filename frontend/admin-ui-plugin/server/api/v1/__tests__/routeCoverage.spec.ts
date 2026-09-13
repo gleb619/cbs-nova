@@ -39,6 +39,7 @@ type ExpectedProxy = {
 //     - DslReloadRouterConfiguration.java
 //     - DslExecutionsRouterConfiguration.java
 //     - DslDiagnosticsRouterConfiguration.java
+//     - ApiKeyAdminRouterConfiguration.java
 //
 // When a new backend route is added under `/api/dsl/*` or `/api/executions*`,
 // add a matching entry here AND a Nitro proxy file under server/api/v1/.
@@ -271,6 +272,23 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/dsl/files/{*path}',
     bffPath: '/api/v1/dsl/files/{...path}',
   },
+  // ApiKeyAdminRouterConfiguration (T503)
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/auth/keys',
+    bffPath: '/api/v1/dsl/auth/keys',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/auth/keys',
+    bffPath: '/api/v1/dsl/auth/keys',
+  },
+  {
+    method: 'DELETE',
+    backendPath: '/api/dsl/auth/keys/{id}',
+    bffPath: '/api/v1/dsl/auth/keys/{id}',
+  },
+
   // DslExecutionsRouterConfiguration
   {
     method: 'GET',

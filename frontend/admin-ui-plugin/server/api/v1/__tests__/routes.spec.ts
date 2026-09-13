@@ -82,6 +82,9 @@ const processDiagramHandler = (await import('../dsl/processes/[name]/diagram.get
 const schedulesIndexHandler = (await import('../dsl/schedules/index.get')).default
 const schedulesCreateHandler = (await import('../dsl/schedules/index.post')).default
 const schedulesDeleteHandler = (await import('../dsl/schedules/[definition].delete')).default
+const listApiKeysHandler = (await import('../dsl/auth/keys/index.get')).default
+const createApiKeyHandler = (await import('../dsl/auth/keys/index.post')).default
+const revokeApiKeyHandler = (await import('../dsl/auth/keys/[id]/index.delete')).default
 const exportDefinitionsHandler = (await import('../dsl/definitions/export.get')).default
 const importDefinitionsHandler = (await import('../dsl/definitions/import.post')).default
 const listDefinitionTestsHandler = (
@@ -821,6 +824,117 @@ describe('dsl/schedules/[definition].delete', () => {
     expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/schedules/A', {
       method: 'DELETE',
     })
+  })
+})
+
+describe('dsl/auth/keys/index.get', () => {
+  it('GETs /api/dsl/auth/keys with no body', async () => {
+    await listApiKeysHandler(fakeEvent)
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/auth/keys')
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+
+  it('returns the backend key list verbatim (no hash/plaintext fields)', async () => {
+    const payload = [
+      { id: 'k1', label: 'ci', prefix: 'ak_ci', createdAt: '2026-09-01T00:00:00Z' },
+    ]
+    proxyToBackendMock.mockResolvedValueOnce(payload)
+
+    const result = await listApiKeysHandler(fakeEvent)
+
+    expect(result).toEqual(payload)
+  })
+
+  it('propagates a backend 401/403 rejection so unauthenticated requests stay unauthorized', async () => {
+    const err = Object.assign(new Error('Unauthorized'), { statusCode: 401 })
+    proxyToBackendMock.mockRejectedValueOnce(err)
+
+    await expect(listApiKeysHandler(fakeEvent)).rejects.toBe(err)
+  })
+})
+
+describe('dsl/auth/keys/index.post', () => {
+  it('POSTs readBody() to /api/dsl/auth/keys', async () => {
+    bodyValue = { label: 'ci' }
+
+    await createApiKeyHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/auth/keys', {
+      method: 'POST',
+      body: { label: 'ci' },
+    })
+  })
+
+  it('sets cache-control: no-store on the response (plaintext key is returned exactly once)', async () => {
+    const event = {
+      node: { res: { headers: {} } },
+    } as Parameters<typeof proxyToBackendMock>[0]
+
+    await createApiKeyHandler(event)
+
+    expect(event.node.res.headers['cache-control']).toBe('no-store')
+  })
+
+  it('returns the created key verbatim and never logs the plaintext', async () => {
+    const created = { id: 'k1', label: 'ci', apiKey: 'ak_live_super_secret_plaintext' }
+    proxyToBackendMock.mockResolvedValueOnce(created)
+    const spies = (['log', 'info', 'debug', 'warn', 'error'] as const).map((level) =>
+      vi.spyOn(console, level).mockImplementation(() => {}),
+    )
+
+    try {
+      const result = await createApiKeyHandler(fakeEvent)
+
+      expect(result).toEqual(created)
+      const logged = spies
+        .flatMap((spy) => spy.mock.calls)
+        .flat()
+        .join(' ')
+      expect(logged).not.toContain('ak_live_super_secret_plaintext')
+    } finally {
+      for (const spy of spies) spy.mockRestore()
+    }
+  })
+
+  it('propagates a backend 401/403 rejection so unauthenticated requests stay unauthorized', async () => {
+    const err = Object.assign(new Error('Forbidden'), { statusCode: 403 })
+    proxyToBackendMock.mockRejectedValueOnce(err)
+
+    await expect(createApiKeyHandler(fakeEvent)).rejects.toBe(err)
+  })
+})
+
+describe('dsl/auth/keys/[id]/index.delete', () => {
+  it('interpolates the :id router param and DELETEs to /api/dsl/auth/keys/{id}', async () => {
+    routerParams = { id: 'k1' }
+
+    await revokeApiKeyHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/auth/keys/k1', {
+      method: 'DELETE',
+    })
+  })
+
+  it('maps the backend 204 (revoked) and 404 (unknown id) statuses verbatim', async () => {
+    // Status mapping is proxyToBackend's job (h3 returns the handler result
+    // with the backend status); the route must not reshape it.
+    routerParams = { id: 'k1' }
+    proxyToBackendMock.mockResolvedValueOnce(null)
+
+    const result = await revokeApiKeyHandler(fakeEvent)
+
+    expect(result).toBeNull()
+  })
+
+  it('propagates a backend 401/403 rejection so unauthenticated requests stay unauthorized', async () => {
+    routerParams = { id: 'k1' }
+    const err = Object.assign(new Error('Unauthorized'), { statusCode: 401 })
+    proxyToBackendMock.mockRejectedValueOnce(err)
+
+    await expect(revokeApiKeyHandler(fakeEvent)).rejects.toBe(err)
   })
 })
 
