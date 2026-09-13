@@ -49,7 +49,7 @@ class DslIntrospectionMapperTest {
   void mapsProcessDslObjectWithCompensation() {
     ProcessDslObject process = Dsl.process("P")
             .execute(ctx -> Result.success("ok"))
-            .compensation(ctx -> Result.success("ok"))
+            .compensation((ctx, history) -> ctx.log("ok"))
             .build();
 
     ProcessDetail detail = mapper.toProcessDetail(process);
@@ -151,7 +151,7 @@ class DslIntrospectionMapperTest {
   void mapsProcessDslObjectWithCompensationToDefinitionMetaDto() {
     ProcessDslObject process = Dsl.process("P")
             .execute(ctx -> Result.success("ok"))
-            .compensation(ctx -> Result.success("ok"))
+            .compensation((ctx, history) -> ctx.log("ok"))
             .build();
 
     DefinitionMetaDto dto = mapper.toProcessDefinitionMeta(process);

@@ -101,7 +101,8 @@ public class DslConfig implements SingletonSupport {
       var temporalProcessLauncher = temporalProcessLauncher().get();
       var compensationHandler = new ProcessCompensationHandler(contextFactory,
               compensationRegistry);
-      return new DefaultProcessRunner(contextFactory, transactionExecutionRepository, temporalProcessLauncher, compensationHandler);
+      return new DefaultProcessRunner(contextFactory, transactionExecutionRepository,
+              temporalProcessLauncher, compensationHandler);
     });
   }
 

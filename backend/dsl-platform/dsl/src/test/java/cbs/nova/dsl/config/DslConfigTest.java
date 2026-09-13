@@ -241,7 +241,6 @@ class DslConfigTest {
 
     DefaultProcessRunner runner = new DefaultProcessRunner(
             dsl.contextFactory(),
-            dsl.compensationRegistry(),
             dsl.transactionExecutionRepository().get(),
             stub,
             new ProcessCompensationHandler(dsl.contextFactory(), dsl.compensationRegistry()));
@@ -277,7 +276,6 @@ class DslConfigTest {
 
     DefaultProcessRunner runner = new DefaultProcessRunner(
             dsl.contextFactory(),
-            dsl.compensationRegistry(),
             dsl.transactionExecutionRepository().get(),
             null,
             new ProcessCompensationHandler(dsl.contextFactory(), dsl.compensationRegistry()));

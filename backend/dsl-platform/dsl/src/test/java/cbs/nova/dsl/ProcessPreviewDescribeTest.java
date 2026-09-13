@@ -35,7 +35,7 @@ class ProcessPreviewDescribeTest {
             .build();
 
     var runner = new DefaultProcessRunner(contextFactory,
-            compensationRegistry, transactionExecutionRepository, null, compensationHandler);
+            transactionExecutionRepository, null, compensationHandler);
     var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
     var result = runner.run(process, ctx);
 
@@ -53,7 +53,7 @@ class ProcessPreviewDescribeTest {
             .build();
 
     var runner = new DefaultProcessRunner(contextFactory,
-            compensationRegistry, transactionExecutionRepository, null, compensationHandler);
+            transactionExecutionRepository, null, compensationHandler);
     var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
     var result = runner.run(process, ctx);
 

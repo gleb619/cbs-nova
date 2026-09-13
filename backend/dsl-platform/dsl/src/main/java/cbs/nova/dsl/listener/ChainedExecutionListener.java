@@ -9,7 +9,8 @@ public final class ChainedExecutionListener implements ExecutionListener {
   private final ExecutionListener first;
   private final ExecutionListener second;
 
-  public ChainedExecutionListener(@NonNull ExecutionListener first, @NonNull ExecutionListener second) {
+  public ChainedExecutionListener(@NonNull ExecutionListener first,
+          @NonNull ExecutionListener second) {
     this.first = first;
     this.second = second;
   }

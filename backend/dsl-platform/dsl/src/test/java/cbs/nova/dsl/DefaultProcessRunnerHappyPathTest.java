@@ -25,7 +25,7 @@ class DefaultProcessRunnerHappyPathTest {
           contextFactory, compensationRegistry);
 
   private final ProcessRunner runner = new DefaultProcessRunner(contextFactory,
-          compensationRegistry, transactionExecutionRepository, null, compensationHandler);
+          transactionExecutionRepository, null, compensationHandler);
 
   @Test
   void runModeExecutesLogicAndReturnsItsResult() {

@@ -20,7 +20,7 @@ public interface DslIntrospectionMapper {
 
   @Named("typeName")
   default String typeName(Class<?> type) {
-    return type == null ? null : type.getSimpleName();
+    return type == null || type == Void.class ? null : type.getSimpleName();
   }
 
   @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")

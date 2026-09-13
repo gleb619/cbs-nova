@@ -197,7 +197,7 @@ public class DslIntrospectionService {
 
   private ConstructSchemaDto toSchemaDto(String name, String type, String description,
           Class<?> inputType, Class<?> outputType, List<ParameterDescriptor> parameters) {
-    Map<String, Object> inputSchema = inputType != null
+    Map<String, Object> inputSchema = inputType != null && inputType != Void.class
             ? jsonSchemaGenerator.generateSchema(inputType)
             : jsonSchemaGenerator.generateSchema(parameters);
     Map<String, Object> outputSchema = jsonSchemaGenerator.generateSchema(outputType);
@@ -212,7 +212,7 @@ public class DslIntrospectionService {
   }
 
   private Map<String, Object> schemaForInput(Class<?> type, List<ParameterDescriptor> parameters) {
-    return type != null
+    return type != null && type != Void.class
             ? jsonSchemaGenerator.generateSchema(type)
             : jsonSchemaGenerator.generateSchema(parameters);
   }

@@ -26,7 +26,7 @@ class RunnerTest {
   private final ProcessCompensationHandler compensationHandler = new ProcessCompensationHandler(
           contextFactory, compensationRegistry);
   private final ProcessRunner processRunner = new DefaultProcessRunner(contextFactory,
-          compensationRegistry, transactionExecutionRepository, null, compensationHandler);
+          transactionExecutionRepository, null, compensationHandler);
   private final TransactionRunner txRunner = new DefaultTransactionRunner(contextFactory,
           compensationRegistry);
   private final HelperRunner helperRunner = new DefaultHelperRunner(contextFactory);
