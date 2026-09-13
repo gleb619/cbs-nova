@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.DescriptorFactory;
 import cbs.nova.dsl.config.RetryPolicyFactory;
+import cbs.nova.dsl.model.MapInput;
+import cbs.nova.dsl.model.MapOutput;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -20,7 +22,8 @@ class DescriptorFactoryTest {
             .version("v2")
             .taskQueue("my-queue")
             .execute(ctx -> Result.success(1))
-            .compensation(ctx -> Result.success(null))
+            .compensation((ctx, history) -> {
+            })
             .build();
     var desc = new DescriptorFactory().fromProcess(obj);
     assertThat(desc.name()).isEqualTo("P1");
@@ -30,6 +33,27 @@ class DescriptorFactoryTest {
     assertThat(desc.outputType()).isEqualTo(Integer.class);
     assertThat(desc.hasCompensation()).isTrue();
     assertThat(desc.helperRefs()).isEmpty();
+  }
+
+  @Test
+  void processDescriptorFallsBackToMapTypesForParameterBasedProcess() {
+    var obj = Dsl.process("MappedP")
+            .parameters(reg -> reg.string("k"))
+            .execute(ctx -> Result.success(MapOutput.of("k", "v")))
+            .build();
+    var desc = new DescriptorFactory().fromProcess(obj);
+    assertThat(desc.inputType()).isEqualTo(MapInput.class);
+    assertThat(desc.outputType()).isEqualTo(MapOutput.class);
+  }
+
+  @Test
+  void processDescriptorKeepsVoidForUntypedProcess() {
+    var obj = Dsl.process("BareP")
+            .execute(ctx -> Result.success(null))
+            .build();
+    var desc = new DescriptorFactory().fromProcess(obj);
+    assertThat(desc.inputType()).isNull();
+    assertThat(desc.outputType()).isNull();
   }
 
   @Test

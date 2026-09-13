@@ -2,6 +2,7 @@ package cbs.nova.dsl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.explain.DescriptorMarkdown;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
 import java.util.List;
@@ -61,63 +62,48 @@ class ProcessPreviewDescribeTest {
             .execute(ctx -> Result.success("ok"))
             .build();
 
-    DslDescriptor desc = process.describe();
+    DslDescriptor desc = process.descriptor();
 
     assertThat(desc.name()).isEqualTo("P");
     assertThat(desc.type()).isEqualTo(DslObject.DslType.PROCESS);
     assertThat(desc.inputType()).isEqualTo(String.class);
     assertThat(desc.outputType()).isEqualTo(String.class);
-    assertThat(desc.hasCompensation()).isFalse();
-    assertThat(desc.hasSideEffects()).isTrue();
+    assertThat(desc.hasSideEffects()).isFalse();
     assertThat(desc.taskQueue()).isEqualTo("P-queue");
     assertThat(desc.version()).isEqualTo("v1");
     assertThat(desc.parameters()).isEmpty();
   }
 
   @Test
-  void describeReportsCompensationWhenPresent() {
+  void describeReportsSideEffectsWhenCompensationPresent() {
     var process = Dsl.process("P")
             .input(String.class)
             .output(String.class)
             .execute(ctx -> Result.success("ok"))
-            .compensation(ctx -> Result.success(null))
+            .compensation((ctx, history) -> {
+            })
             .build();
 
-    DslDescriptor desc = process.describe();
-    assertThat(desc.hasCompensation()).isTrue();
+    DslDescriptor desc = process.descriptor();
+    assertThat(process.compensationLogic()).isNotNull();
+    assertThat(desc.hasSideEffects()).isTrue();
   }
 
   @Test
   void describeExplainReturnsMarkdown() {
-    var custom = DslDescriptor.builder()
-            .name("OrderProc")
-            .type(DslObject.DslType.PROCESS)
-            .description("Describes an order flow.")
-            .inputType(String.class)
-            .outputType(String.class)
-            .hasCompensation(false)
-            .hasSideEffects(true)
-            .parameters(List.of())
-            .taskQueue("OrderProc-queue")
-            .version("v1")
-            .startToCloseTimeout(null)
-            .heartbeatTimeout(null)
-            .build();
     var process = Dsl.process("OrderProc")
             .input(String.class)
             .output(String.class)
             .execute(ctx -> Result.success("ok"))
-            .describe(() -> custom)
             .build();
 
-    var markdown = process.describe().explain();
+    var markdown = DescriptorMarkdown.render(process.descriptor());
 
     assertThat(markdown)
             .contains("**Process** `OrderProc`")
-            .contains("Describes an order flow.")
             .contains("- Input: `String`")
             .contains("- Output: `String`")
-            .contains("- Side effects: yes")
-            .contains("- Compensation: no");
+            .contains("- Side effects: no")
+            .doesNotContain("Compensation");
   }
 }

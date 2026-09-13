@@ -10,6 +10,7 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.explain.DescriptorMarkdown;
 import cbs.nova.dsl.model.ExplainReport;
 import java.util.List;
 import java.util.Map;
@@ -60,7 +61,7 @@ class FunctionBuilderTest {
             .execute(ctx -> Result.success(42))
             .build();
     assertThat(fn.name()).isEqualTo("EchoFn");
-    assertThat(fn.parameters()).isNull();
+    assertThat(fn.parameters()).isEmpty();
   }
 
   @Test
@@ -83,7 +84,7 @@ class FunctionBuilderTest {
             .execute(ctx -> Result.success("exec"))
             .build();
     assertThat(fn.effectivePreview()).isSameAs(fn.executeLogic());
-    assertThat(fn.previewLogic()).isNull();
+    assertThat(fn.previewLogic()).isSameAs(fn.executeLogic());
   }
 
   @Test
@@ -251,7 +252,6 @@ class FunctionBuilderTest {
             .description("custom-desc")
             .inputType(String.class)
             .outputType(Integer.class)
-            .hasCompensation(false)
             .hasSideEffects(false)
             .parameters(List.of())
             .taskQueue(null)
@@ -274,7 +274,6 @@ class FunctionBuilderTest {
             .description("Greets the caller.")
             .inputType(String.class)
             .outputType(String.class)
-            .hasCompensation(false)
             .hasSideEffects(true)
             .parameters(List.of())
             .taskQueue(null)
@@ -289,7 +288,7 @@ class FunctionBuilderTest {
             .describe(() -> custom)
             .build();
 
-    var markdown = fn.describe().explain();
+    var markdown = DescriptorMarkdown.render(fn.describe());
 
     assertThat(markdown)
             .contains("**Function** `GreeterFn`")
@@ -297,6 +296,6 @@ class FunctionBuilderTest {
             .contains("- Input: `String`")
             .contains("- Output: `String`")
             .contains("- Side effects: yes")
-            .contains("- Compensation: no");
+            .doesNotContain("Compensation");
   }
 }

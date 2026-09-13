@@ -5,7 +5,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.config.HelperInstanceResolverConfig;
 import cbs.nova.dsl.Result;

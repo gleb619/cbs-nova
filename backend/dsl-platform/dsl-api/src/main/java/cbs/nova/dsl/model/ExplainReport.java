@@ -9,6 +9,10 @@ public record ExplainReport(
         @NonNull String description,
         @NonNull String mermaid) {
 
+  public static ExplainReport empty(String name) {
+    return new ExplainReport(name, "", "");
+  }
+
   public @NonNull ExplainReport merge(@NonNull ExplainReport other) {
     return new ExplainReport(
             this.name,

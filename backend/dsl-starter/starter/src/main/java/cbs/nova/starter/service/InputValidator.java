@@ -4,7 +4,7 @@ import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.JsonSchemaGenerator;
+import cbs.nova.dsl.jsonschema.JsonSchemaGenerator;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.starter.config.properties.InputValidationProperties;
 import cbs.nova.starter.model.ValidationError;
@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.jspecify.annotations.NonNull;
 import tools.jackson.databind.json.JsonMapper;
 
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;

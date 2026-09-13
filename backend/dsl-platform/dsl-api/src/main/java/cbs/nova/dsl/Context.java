@@ -1,6 +1,8 @@
 package cbs.nova.dsl;
 
 import cbs.nova.dsl.helper.HelperInterceptor;
+import cbs.nova.dsl.listener.ExecutionListener;
+import cbs.nova.dsl.listener.ExecutionTraceCollector;
 import cbs.nova.dsl.transaction.TransactionRouting;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -109,5 +111,9 @@ public interface Context<T> {
   @NonNull
   default Context<T> withHelperInterceptor(@Nullable HelperInterceptor helperInterceptor) {
     return this;
+  }
+
+  default <U> U metadata(String key) {
+    return (U) metadata().get(key);
   }
 }

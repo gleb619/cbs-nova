@@ -1,8 +1,8 @@
 package cbs.nova.dsl.codegen;
 
-import cbs.nova.dsl.DiagnosticCodes;
-import cbs.nova.dsl.ValidationException;
-import cbs.nova.dsl.ValidationIssue;
+import cbs.nova.dsl.model.DiagnosticCodes;
+import cbs.nova.dsl.exception.ValidationException;
+import cbs.nova.dsl.model.ValidationIssue;
 import cbs.nova.dsl.function.FunctionDescriptor;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.registry.HelperRegistry;

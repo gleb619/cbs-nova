@@ -2,6 +2,9 @@ package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.exception.ValidationException;
+import cbs.nova.dsl.model.DiagnosticCodes;
+import cbs.nova.dsl.model.ValidationIssue;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

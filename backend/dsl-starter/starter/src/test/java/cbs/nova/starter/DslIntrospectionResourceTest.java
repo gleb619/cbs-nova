@@ -349,15 +349,11 @@ class DslIntrospectionResourceTest {
             Dsl.transaction("SampleTransaction")
                     .execute(ctx -> Result.success("ok")).build());
     GlobalManager.globalManager().registerHelper("sampleHelper", new SampleHelper());
-    GlobalManager.globalManager().registerFunction(new FunctionDslObject(
-            "sampleFunction",
-            List.of(),
-            null,
-            null,
-            ctx -> Result.success("ok"),
-            null,
-            ctx -> Result.success(new ExplainReport("sampleFunction", "test", "")),
-            () -> DslDescriptor.builder()
+    var sampleFunction = FunctionDslObject.builder()
+            .name("sampleFunction")
+            .executeLogic(ctx -> Result.success("ok"))
+            .explainLogic(ctx -> Result.success(new ExplainReport("sampleFunction", "test", "")))
+            .descriptor(() -> DslDescriptor.builder()
                     .name("sampleFunction")
                     .type(DslType.FUNCTION)
                     .description("A greeting function")
@@ -370,8 +366,9 @@ class DslIntrospectionResourceTest {
                     .version(null)
                     .startToCloseTimeout(null)
                     .heartbeatTimeout(null)
-                    .build(),
-            null));
+                    .build())
+            .build();
+    GlobalManager.globalManager().registerFunction(sampleFunction);
   }
 
   private static class SampleHelper implements Executable<String, String> {

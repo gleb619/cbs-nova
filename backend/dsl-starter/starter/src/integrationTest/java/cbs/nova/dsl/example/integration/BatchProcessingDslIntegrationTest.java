@@ -2,18 +2,16 @@ package cbs.nova.dsl.example.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.dsl.GeneratedClassProvider;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
-import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dslexamples.v1.BatchModels.BatchIn;
 import cbs.nova.dslexamples.v1.BatchModels.BatchItem;
 import cbs.nova.dslexamples.v1.BatchModels.BatchOut;
 import cbs.nova.starter.service.TemporalDslProcessLauncher;
-import cbs.nova.starter.service.TemporalDslProcessService;
 import cbs.nova.starter.service.TemporalTransactionInvoker;
 import cbs.nova.util.ServiceUtil;
 import io.temporal.client.WorkflowClient;
@@ -32,7 +30,6 @@ import org.testcontainers.containers.wait.strategy.WaitAllStrategy;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Duration;

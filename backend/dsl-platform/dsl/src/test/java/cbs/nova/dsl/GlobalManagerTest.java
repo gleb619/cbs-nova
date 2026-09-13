@@ -329,10 +329,7 @@ class GlobalManagerTest {
             .input(String.class)
             .output(String.class)
             .execute(ctx -> Result.failure(new RuntimeException("boom")))
-            .compensation(ctx -> {
-              order.add("process-comp");
-              return Result.success(null);
-            })
+            .compensation((ctx, history) -> order.add("process-comp"))
             .build());
 
     assertThatThrownBy(() -> gm.runProcessWithCompensation(
@@ -448,10 +445,7 @@ class GlobalManagerTest {
     var process = Dsl.process("DirectComp")
             .input(String.class)
             .execute(ctx -> Result.success("ok"))
-            .compensation(ctx -> {
-              order.add("comp:" + ctx.body());
-              return Result.success(null);
-            })
+            .compensation((ctx, history) -> order.add("comp:" + ctx.body()))
             .build();
 
     var ctx = contextFactory.of("direct-payload", ExecutionMode.COMPENSATION, "run-direct");
@@ -495,10 +489,7 @@ class GlobalManagerTest {
     var process = Dsl.process("PwcFail")
             .input(String.class)
             .execute(ctx -> Result.failure(new RuntimeException("boom")))
-            .compensation(ctx -> {
-              order.add("comp:" + ctx.body());
-              return Result.success(null);
-            })
+            .compensation((ctx, history) -> order.add("comp:" + ctx.body()))
             .build();
 
     assertThatThrownBy(() -> gm.runProcessWithCompensation("run-1", "body", process))
@@ -514,24 +505,10 @@ class GlobalManagerTest {
     var gm = GlobalManager.globalManager();
     gm.registerProcess(
             Dsl.process("DescribedP")
-                    .describe(() -> DslDescriptor.builder()
-                            .name("DescribedP")
-                            .type(DslObject.DslType.PROCESS)
-                            .description("A process that greets")
-                            .inputType(String.class)
-                            .outputType(String.class)
-                            .hasCompensation(false)
-                            .hasSideEffects(false)
-                            .parameters(List.of())
-                            .taskQueue(null)
-                            .version(null)
-                            .startToCloseTimeout(null)
-                            .heartbeatTimeout(null)
-                            .build())
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    assertThat(gm.description("DescribedP")).contains("A process that greets");
+    assertThat(gm.description("DescribedP")).isEmpty();
   }
 
   @Test
@@ -545,7 +522,6 @@ class GlobalManagerTest {
                             .description("A transaction that pays")
                             .inputType(String.class)
                             .outputType(String.class)
-                            .hasCompensation(false)
                             .hasSideEffects(false)
                             .parameters(List.of())
                             .taskQueue(null)
@@ -634,20 +610,8 @@ class GlobalManagerTest {
   void explainDispatchesToProcess() {
     var gm = GlobalManager.globalManager();
     gm.registerProcess(Dsl.process("ExplainP")
-            .describe(() -> DslDescriptor.builder()
-                    .name("ExplainP")
-                    .type(DslObject.DslType.PROCESS)
-                    .description("A process to explain")
-                    .inputType(String.class)
-                    .outputType(String.class)
-                    .hasCompensation(false)
-                    .hasSideEffects(false)
-                    .parameters(List.of())
-                    .taskQueue(null)
-                    .version(null)
-                    .startToCloseTimeout(null)
-                    .heartbeatTimeout(null)
-                    .build())
+            .input(String.class)
+            .output(String.class)
             .execute(ctx -> Result.success("ok"))
             .build());
     var ctx = contextFactory.of("body", ExecutionMode.EXPLAIN);
@@ -656,7 +620,6 @@ class GlobalManagerTest {
 
     assertThat(report).isPresent();
     assertThat(report.get().name()).isEqualTo("ExplainP");
-    assertThat(report.get().description()).isEqualTo("A process to explain");
     assertThat(report.get().mermaid()).contains("graph TD", "ExplainP");
   }
 
@@ -670,7 +633,6 @@ class GlobalManagerTest {
                     .description("A transaction to explain")
                     .inputType(String.class)
                     .outputType(String.class)
-                    .hasCompensation(false)
                     .hasSideEffects(false)
                     .parameters(List.of())
                     .taskQueue(null)
@@ -711,7 +673,6 @@ class GlobalManagerTest {
                     .description("A function to explain")
                     .inputType(Void.class)
                     .outputType(Void.class)
-                    .hasCompensation(false)
                     .hasSideEffects(false)
                     .parameters(List.of())
                     .taskQueue(null)

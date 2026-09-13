@@ -3,12 +3,11 @@ package cbs.nova.starter.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.SimpleContext;
+import cbs.nova.dsl.model.SimpleContext;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dsl.transaction.TransactionRouting;
-import cbs.nova.starter.service.EmptyObjectProvider;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
@@ -35,7 +34,6 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 class TemporalDslProcessServiceTracingTest {
 

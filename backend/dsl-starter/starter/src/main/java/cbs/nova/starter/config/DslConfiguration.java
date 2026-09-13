@@ -3,11 +3,11 @@ import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
 import cbs.nova.starter.config.properties.DslProperties;
 
-import cbs.nova.dsl.DslDefinitionLoader;
+import cbs.nova.dsl.utils.DslDefinitionLoader;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.JsonSchemaGenerator;
-import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.dsl.jsonschema.JsonSchemaGenerator;
+import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.explain.ExplainResourceResolver;
 import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;

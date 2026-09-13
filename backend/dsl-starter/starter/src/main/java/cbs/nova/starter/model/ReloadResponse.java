@@ -1,6 +1,6 @@
 package cbs.nova.starter.model;
 
-import cbs.nova.dsl.LoadResult;
+import cbs.nova.dsl.model.LoadResult;
 import org.jspecify.annotations.NonNull;
 
 public record ReloadResponse(

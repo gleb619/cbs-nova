@@ -21,22 +21,16 @@ class DefaultTransactionRegistryTest {
   }
 
   private static TransactionDslObject transaction(String name) {
-    return new TransactionDslObject(
-            name,
-            "default",
-            "v1",
-            String.class,
-            String.class,
-            null,
-            ctx -> null,
-            null,
-            Duration.ofMinutes(1),
-            null,
-            null,
-            null,
-            ctx -> Result.success(null),
-            null,
-            null);
+    return TransactionDslObject.builder()
+            .name(name)
+            .taskQueue("default")
+            .version("v1")
+            .inputType(String.class)
+            .outputType(String.class)
+            .executeLogic(ctx -> null)
+            .startToCloseTimeout(Duration.ofMinutes(1))
+            .explainLogic(ctx -> Result.success(null))
+            .build();
   }
 
   @Test

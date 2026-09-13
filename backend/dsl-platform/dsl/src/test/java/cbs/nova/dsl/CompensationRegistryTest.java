@@ -210,22 +210,15 @@ class CompensationRegistryTest {
 
   private TransactionDslObject tx(String name,
           Function<CompensationContext<?>, Result<?>> compensationLogic) {
-    return new TransactionDslObject(
-            name,
-            "test-queue",
-            "v1",
-            null,
-            null,
-            null,
-            c -> Result.success(null),
-            compensationLogic,
-            Duration.ofSeconds(10),
-            null,
-            null,
-            null,
-            c -> Result.success(null),
-            null,
-            null);
+    return TransactionDslObject.builder()
+            .name(name)
+            .taskQueue("test-queue")
+            .version("v1")
+            .executeLogic(c -> Result.success(null))
+            .compensationLogic(compensationLogic)
+            .startToCloseTimeout(Duration.ofSeconds(10))
+            .explainLogic(c -> Result.success(null))
+            .build();
   }
 
   private Function<CompensationContext<?>, Result<?>> marker(String marker, List<String> order) {

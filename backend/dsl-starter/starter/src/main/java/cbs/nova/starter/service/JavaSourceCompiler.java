@@ -19,6 +19,7 @@ import javax.tools.ToolProvider;
 @Deprecated(forRemoval = true)
 public class JavaSourceCompiler {
 
+  @Deprecated(forRemoval = true)
   public void compile(Path sourceDir, Path outputDir) throws IOException {
     List<Path> javaFiles;
     try (Stream<Path> stream = Files.walk(sourceDir)) {
@@ -56,6 +57,7 @@ public class JavaSourceCompiler {
     }
   }
 
+  @Deprecated(forRemoval = true)
   private static CompileDiagnostic toCompileDiagnostic(Diagnostic<? extends JavaFileObject> d,
           Path file) {
     var source = d.getSource();

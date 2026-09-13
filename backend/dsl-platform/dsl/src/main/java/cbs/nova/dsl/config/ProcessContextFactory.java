@@ -2,7 +2,7 @@ package cbs.nova.dsl.config;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.SimpleContext;
+import cbs.nova.dsl.model.SimpleContext;
 import cbs.nova.dsl.transaction.TransactionRouting;
 import org.jspecify.annotations.NonNull;
 

@@ -22,10 +22,7 @@ class CompensationExecutionModeTest {
             .input(String.class)
             .output(String.class)
             .execute(ctx -> Result.failure(new RuntimeException("fail")))
-            .compensation(ctx -> {
-              mode.set(ctx.mode());
-              return Result.success(null);
-            })
+            .compensation((ctx, history) -> mode.set(ctx.mode()))
             .build();
     var ctx = contextFactory.of("in", ExecutionMode.RUN, "run-mode");
     runner.run(process, ctx);

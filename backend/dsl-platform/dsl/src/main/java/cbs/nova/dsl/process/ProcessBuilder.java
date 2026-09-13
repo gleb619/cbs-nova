@@ -3,8 +3,11 @@ package cbs.nova.dsl.process;
 import cbs.nova.dsl.CompensationContext;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
+import cbs.nova.dsl.DslObject.DslType;
+import cbs.nova.dsl.model.ObjectBuilder;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.explain.DescriptorMarkdown;
 import cbs.nova.dsl.explain.ExplainResourceExplainer;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.model.MapInput;
@@ -20,9 +23,11 @@ import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
-public final class ProcessBuilder<I, O> {
+import static cbs.nova.dsl.config.DslConstants.DEFAULT_HEARTBEAT_TIMEOUT;
+import static cbs.nova.dsl.config.DslConstants.DEFAULT_START_TO_CLOSE_TIMEOUT;
+
+public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObject> {
 
   private final String name;
   private String taskQueue;
@@ -32,15 +37,11 @@ public final class ProcessBuilder<I, O> {
   private List<ParameterDescriptor> parameters;
   private Function<ProcessContext<I>, Result<?>> executeLogic;
   @Nullable
-  private Function<CompensationContext<I>, Result<?>> compensationLogic;
+  private BiConsumer<CompensationContext<I>, List<TransactionExecution>> compensationLogic;
   @Nullable
   private Function<ProcessContext<I>, Result<?>> previewLogic;
   @Nullable
   private Function<ProcessContext<I>, Result<ExplainReport>> explainLogic;
-  @Nullable
-  private BiConsumer<CompensationContext<I>, List<TransactionExecution>> userCompensationHandler;
-  @Nullable
-  private Supplier<DslDescriptor> descriptor;
 
   public ProcessBuilder(@NonNull String name) {
     this.name = name;
@@ -84,14 +85,8 @@ public final class ProcessBuilder<I, O> {
   }
 
   public ProcessBuilder<I, O> compensation(
-          @NonNull Function<CompensationContext<I>, Result<?>> logic) {
-    this.compensationLogic = logic;
-    return this;
-  }
-
-  public ProcessBuilder<I, O> compensation(
           @NonNull BiConsumer<CompensationContext<I>, List<TransactionExecution>> handler) {
-    this.userCompensationHandler = handler;
+    this.compensationLogic = handler;
     return this;
   }
 
@@ -111,11 +106,7 @@ public final class ProcessBuilder<I, O> {
     return this;
   }
 
-  public ProcessBuilder<I, O> describe(@NonNull Supplier<DslDescriptor> desc) {
-    this.descriptor = desc;
-    return this;
-  }
-
+  @Override
   public @NonNull ProcessDslObject build() {
     if (executeLogic == null) {
       throw new IllegalStateException("execute() is required for process: " + name);
@@ -124,42 +115,37 @@ public final class ProcessBuilder<I, O> {
       throw new IllegalStateException(
               "process '" + name + "' cannot have both .parameters() and .input()/.output()");
     }
-    var effectiveDescriptor = effectiveDescriptor();
-    var customExplain = rawExplain();
-    var explain = customExplain != null
-            ? customExplain
-            : defaultExplain(effectiveDescriptor);
-    return new ProcessDslObject(
-            name,
-            taskQueue,
-            version,
-            inputType,
-            outputType,
-            parameters,
-            rawExecute(),
-            rawCompensation(),
-            rawPreview(),
-            explain,
-            effectiveDescriptor,
-            rawUserCompensationHandler(), null);
+    var descriptor = defaultDescriptor(
+            name, taskQueue, version, inputType, outputType,
+            parameters != null ? parameters : List.of(),
+            compensationLogic != null, null);
+    var resolvedExecute = rawExecute();
+    var explain = rawExplain() != null ? rawExplain() : defaultExplain(descriptor);
+    var resolvedPreview = rawPreview() != null ? rawPreview() : resolvedExecute;
+    return ProcessDslObject.builder()
+            .name(name)
+            .taskQueue(taskQueue)
+            .version(version)
+            .inputType(inputType)
+            .outputType(outputType)
+            .parameters(parameters != null ? parameters : List.of())
+            .executeLogic(resolvedExecute)
+            .compensationLogic(rawCompensationLogic())
+            .previewLogic(resolvedPreview)
+            .explainLogic(explain)
+            .descriptor(descriptor)
+            .build();
   }
 
+  @Override
   public @NonNull List<DslObject> buildList() {
     return List.of(build());
   }
 
-  private @NonNull Supplier<DslDescriptor> effectiveDescriptor() {
-    return descriptor != null
-            ? descriptor
-            : () -> ProcessDslObject.defaultDescriptor(
-                    name, taskQueue, version, inputType, outputType, parameters,
-                    compensationLogic != null, null);
-  }
-
   private @NonNull Function<ProcessContext<?>, Result<ExplainReport>> defaultExplain(
-          @NonNull Supplier<DslDescriptor> effectiveDescriptor) {
+          @NonNull DslDescriptor descriptor) {
     return ctx -> Result.success(
-            new ExplainReport(name, effectiveDescriptor.get().explain(), "")
+            new ExplainReport(name, DescriptorMarkdown.render(descriptor), "")
                     .truncateTo(ExplainBudget.of(ctx)));
   }
 
@@ -176,10 +162,10 @@ public final class ProcessBuilder<I, O> {
   }
 
   @SuppressWarnings("unchecked")
-  private @Nullable Function<CompensationContext<?>, Result<?>> rawCompensation() {
+  private @Nullable BiConsumer<CompensationContext<?>, List<TransactionExecution>> rawCompensationLogic() {
     return compensationLogic == null
             ? null
-            : (Function<CompensationContext<?>, Result<?>>) (Function<?, ?>) compensationLogic;
+            : (BiConsumer<CompensationContext<?>, List<TransactionExecution>>) (BiConsumer<?, ?>) compensationLogic;
   }
 
   @SuppressWarnings("unchecked")
@@ -196,10 +182,27 @@ public final class ProcessBuilder<I, O> {
             : (Function<ProcessContext<?>, Result<ExplainReport>>) (Function<?, ?>) explainLogic;
   }
 
-  @SuppressWarnings("unchecked")
-  private @Nullable BiConsumer<CompensationContext<?>, List<TransactionExecution>> rawUserCompensationHandler() {
-    return userCompensationHandler == null
-            ? null
-            : (BiConsumer<CompensationContext<?>, List<TransactionExecution>>) (BiConsumer<?, ?>) userCompensationHandler;
+  public static @NonNull DslDescriptor defaultDescriptor(
+      @NonNull String name,
+      @NonNull String taskQueue,
+      @NonNull String version,
+      @Nullable Class<?> inputType,
+      @Nullable Class<?> outputType,
+      @NonNull List<ParameterDescriptor> parameters,
+      boolean hasSideEffects,
+      @Nullable String description) {
+    return DslDescriptor.builder()
+        .name(name)
+        .type(DslType.PROCESS)
+        .description(description)
+        .inputType(inputType)
+        .outputType(outputType)
+        .hasSideEffects(hasSideEffects)
+        .parameters(parameters)
+        .taskQueue(taskQueue)
+        .version(version)
+        .startToCloseTimeout(DEFAULT_START_TO_CLOSE_TIMEOUT)
+        .heartbeatTimeout(DEFAULT_HEARTBEAT_TIMEOUT)
+        .build();
   }
 }

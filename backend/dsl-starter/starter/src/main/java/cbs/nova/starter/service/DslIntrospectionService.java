@@ -6,7 +6,7 @@ import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.ParameterDescriptor;
-import cbs.nova.dsl.JsonSchemaGenerator;
+import cbs.nova.dsl.jsonschema.JsonSchemaGenerator;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
@@ -154,7 +154,7 @@ public class DslIntrospectionService {
   }
 
   private ConstructSchemaDto toSchemaDto(ProcessDslObject process) {
-    var descriptor = process.describe();
+    var descriptor = process.descriptor();
     return toSchemaDto(
             descriptor.name(),
             descriptor.type().name().toLowerCase(Locale.ROOT),

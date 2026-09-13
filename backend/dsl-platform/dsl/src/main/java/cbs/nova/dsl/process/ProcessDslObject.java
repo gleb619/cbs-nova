@@ -7,72 +7,47 @@ import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.transaction.TransactionExecution;
+import lombok.Builder;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
+import static cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN;
+
+@Builder
 public record ProcessDslObject(
-        @NonNull String name,
-        @NonNull String taskQueue,
-        @NonNull String version,
-        @Nullable Class<?> inputType,
-        @Nullable Class<?> outputType,
-        @Nullable List<ParameterDescriptor> parameters,
-        @NonNull Function<ProcessContext<?>, Result<?>> executeLogic,
-        @Nullable Function<CompensationContext<?>, Result<?>> compensationLogic,
-        @Nullable Function<ProcessContext<?>, Result<?>> previewLogic,
-        @NonNull Function<ProcessContext<?>, Result<ExplainReport>> explainLogic,
-        @Nullable Supplier<DslDescriptor> descriptor,
-        @Nullable BiConsumer<CompensationContext<?>, List<TransactionExecution>> userCompensationHandler,
-        @Nullable String description) implements DslObject {
+    @NonNull String name,
+    @NonNull String description,
+    @NonNull String taskQueue,
+    @NonNull String version,
+    @NonNull Class<?> inputType,
+    @NonNull Class<?> outputType,
+    @NonNull List<ParameterDescriptor> parameters,
+    @NonNull Function<ProcessContext<?>, Result<?>> executeLogic,
+    @Nullable BiConsumer<CompensationContext<?>, List<TransactionExecution>> compensationLogic,
+    @NonNull Function<ProcessContext<?>, Result<?>> previewLogic,
+    @NonNull Function<ProcessContext<?>, Result<ExplainReport>> explainLogic,
+    @NonNull DslDescriptor descriptor
+) implements DslObject {
+
+  public ProcessDslObject {
+    if (description == null || description.isBlank()) {
+      description = EMPTY_MARKDOWN;
+    }
+    if (inputType == null) {
+      inputType = Void.class;
+    }
+    if (outputType == null) {
+      outputType = Void.class;
+    }
+  }
 
   @Override
   public @NonNull DslType type() {
     return DslType.PROCESS;
   }
 
-  public @NonNull Function<ProcessContext<?>, Result<?>> effectivePreview() {
-    return previewLogic != null ? previewLogic : executeLogic;
-  }
-
-  public @NonNull Function<ProcessContext<?>, Result<ExplainReport>> effectiveExplain() {
-    return explainLogic;
-  }
-
-  public @NonNull DslDescriptor describe() {
-    if (descriptor != null) {
-      return descriptor.get();
-    }
-    return defaultDescriptor(name, taskQueue, version, inputType, outputType, parameters,
-            compensationLogic != null, description);
-  }
-
-  public static @NonNull DslDescriptor defaultDescriptor(
-          @NonNull String name,
-          @NonNull String taskQueue,
-          @NonNull String version,
-          @Nullable Class<?> inputType,
-          @Nullable Class<?> outputType,
-          @Nullable List<ParameterDescriptor> parameters,
-          boolean hasCompensation,
-          @Nullable String description) {
-    return DslDescriptor.builder()
-            .name(name)
-            .type(DslType.PROCESS)
-            .description(description)
-            .inputType(inputType)
-            .outputType(outputType)
-            .hasCompensation(hasCompensation)
-            .hasSideEffects(true)
-            .parameters(parameters != null ? parameters : List.of())
-            .taskQueue(taskQueue)
-            .version(version)
-            .startToCloseTimeout(null)
-            .heartbeatTimeout(null)
-            .build();
-  }
 }

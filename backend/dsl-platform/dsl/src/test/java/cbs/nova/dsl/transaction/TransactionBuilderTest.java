@@ -10,6 +10,7 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.explain.DescriptorMarkdown;
 import cbs.nova.dsl.model.ExplainReport;
 import java.time.Duration;
 import java.util.List;
@@ -215,7 +216,6 @@ class TransactionBuilderTest {
             .description("custom-desc")
             .inputType(String.class)
             .outputType(String.class)
-            .hasCompensation(false)
             .hasSideEffects(false)
             .parameters(List.of())
             .taskQueue("custom-queue")
@@ -240,18 +240,18 @@ class TransactionBuilderTest {
     var desc = tx.describe();
     assertThat(desc.name()).isEqualTo("PayTx");
     assertThat(desc.type()).isEqualTo(DslType.TRANSACTION);
-    assertThat(desc.hasCompensation()).isTrue();
+    assertThat(desc.hasSideEffects()).isTrue();
     assertThat(desc.inputType()).isEqualTo(String.class);
     assertThat(desc.taskQueue()).isEqualTo("PayTx-queue");
     assertThat(desc.version()).isEqualTo("v1");
   }
 
   @Test
-  void describeReportsNoCompensationWhenAbsent() {
+  void describeReportsSideEffectsByDefault() {
     var tx = Dsl.transaction("PayTx")
             .execute(ctx -> Result.success(null))
             .build();
-    assertThat(tx.describe().hasCompensation()).isFalse();
+    assertThat(tx.describe().hasSideEffects()).isTrue();
   }
 
   @Test
@@ -262,7 +262,6 @@ class TransactionBuilderTest {
             .description("Processes a payment.")
             .inputType(String.class)
             .outputType(String.class)
-            .hasCompensation(false)
             .hasSideEffects(true)
             .parameters(List.of())
             .taskQueue("PayTx-queue")
@@ -277,7 +276,7 @@ class TransactionBuilderTest {
             .describe(() -> custom)
             .build();
 
-    var markdown = tx.describe().explain();
+    var markdown = DescriptorMarkdown.render(tx.describe());
 
     assertThat(markdown)
             .contains("**Transaction** `PayTx`")
@@ -285,6 +284,6 @@ class TransactionBuilderTest {
             .contains("- Input: `String`")
             .contains("- Output: `String`")
             .contains("- Side effects: yes")
-            .contains("- Compensation: no");
+            .doesNotContain("Compensation");
   }
 }

@@ -1,12 +1,14 @@
 package cbs.nova.dsl.transaction;
 
 import cbs.nova.dsl.model.RetryPolicy;
+import lombok.Builder;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.List;
 
+@Builder
 public record TransactionDescriptor(
         @NonNull String name,
         @NonNull String version,

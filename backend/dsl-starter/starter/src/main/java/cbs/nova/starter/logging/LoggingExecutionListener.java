@@ -1,6 +1,6 @@
 package cbs.nova.starter.logging;
 
-import cbs.nova.dsl.ExecutionListener;
+import cbs.nova.dsl.listener.ExecutionListener;
 import cbs.nova.dsl.transaction.TransactionExecution;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
@@ -10,8 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
-
-import java.util.function.Supplier;
 
 @Slf4j
 @RequiredArgsConstructor

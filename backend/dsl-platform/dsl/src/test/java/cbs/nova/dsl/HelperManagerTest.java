@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.helper.HelperInterceptor;
+import cbs.nova.dsl.helper.HelperManager;
 import cbs.nova.dsl.registry.HelperRegistry;
 import cbs.nova.dsl.runner.HelperRunner;
 import org.jspecify.annotations.NonNull;

@@ -1,6 +1,6 @@
 package cbs.nova.starter.model;
 
-import cbs.nova.dsl.LoadResult;
+import cbs.nova.dsl.model.LoadResult;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.util.List;

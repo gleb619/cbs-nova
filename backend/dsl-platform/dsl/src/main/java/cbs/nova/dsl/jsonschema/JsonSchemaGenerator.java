@@ -1,5 +1,6 @@
-package cbs.nova.dsl;
+package cbs.nova.dsl.jsonschema;
 
+import cbs.nova.dsl.ParameterDescriptor;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;

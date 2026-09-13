@@ -4,11 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 
-import cbs.nova.dsl.DiagnosticCodes;
+import cbs.nova.dsl.model.DiagnosticCodes;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.ValidationException;
-import cbs.nova.dsl.ValidationIssue;
+import cbs.nova.dsl.exception.ValidationException;
+import cbs.nova.dsl.model.ValidationIssue;
 import cbs.nova.dsl.config.DescriptorFactory;
 import cbs.nova.dsl.function.FunctionDescriptor;
 import cbs.nova.dsl.process.ProcessDescriptor;
@@ -48,8 +48,15 @@ class SemanticValidatorTest {
 
   @Test
   void blankProcessNameEmitsCodeAndMessage() {
-    var p = new ProcessDescriptor(
-            "  ", "v1", "q", String.class, String.class, false, List.of(), List.of());
+    var p = ProcessDescriptor.builder()
+            .name("  ")
+            .version("v1")
+            .taskQueue("q")
+            .inputType(String.class)
+            .outputType(String.class)
+            .helperRefs(List.of())
+            .transactionRefs(List.of())
+            .build();
 
     var ex = catchThrowableOfType(
             ValidationException.class,
@@ -63,8 +70,14 @@ class SemanticValidatorTest {
 
   @Test
   void blankTransactionNameEmitsCodeAndMessage() {
-    var t = new TransactionDescriptor(
-            "", "v1", "q", String.class, String.class, false, List.of(), null, null, null);
+    var t = TransactionDescriptor.builder()
+            .name("")
+            .version("v1")
+            .taskQueue("q")
+            .inputType(String.class)
+            .outputType(String.class)
+            .helperRefs(List.of())
+            .build();
 
     var ex = catchThrowableOfType(
             ValidationException.class,
@@ -78,7 +91,7 @@ class SemanticValidatorTest {
 
   @Test
   void blankFunctionNameEmitsCodeAndMessage() {
-    var f = new FunctionDescriptor("   ", null, null);
+    var f = FunctionDescriptor.builder().name("   ").build();
 
     var ex = catchThrowableOfType(
             ValidationException.class,
@@ -120,9 +133,15 @@ class SemanticValidatorTest {
 
   @Test
   void unknownHelperRefThrowsWithCodeAndUnchangedMessage() {
-    var p = new ProcessDescriptor(
-            "P", "v1", "P-queue", String.class, String.class, false, List.of("unknownHelper"),
-            List.of());
+    var p = ProcessDescriptor.builder()
+            .name("P")
+            .version("v1")
+            .taskQueue("P-queue")
+            .inputType(String.class)
+            .outputType(String.class)
+            .helperRefs(List.of("unknownHelper"))
+            .transactionRefs(List.of())
+            .build();
 
     var ex = catchThrowableOfType(
             ValidationException.class,
@@ -138,9 +157,14 @@ class SemanticValidatorTest {
 
   @Test
   void unknownTransactionHelperRefThrowsWithSameCode() {
-    var t = new TransactionDescriptor(
-            "T", "v1", "T-queue", String.class, String.class, false,
-            List.of("missingHelper"), null, null, null);
+    var t = TransactionDescriptor.builder()
+            .name("T")
+            .version("v1")
+            .taskQueue("T-queue")
+            .inputType(String.class)
+            .outputType(String.class)
+            .helperRefs(List.of("missingHelper"))
+            .build();
 
     var ex = catchThrowableOfType(
             ValidationException.class,
@@ -154,11 +178,24 @@ class SemanticValidatorTest {
 
   @Test
   void structuredIssuesExposeCodesIndependentlyOfMessages() {
-    var p = new ProcessDescriptor(
-            "Bad Name", "v1", "q", String.class, String.class, false,
-            List.of("h1", "h2"), List.of());
-    var p2 = new ProcessDescriptor(
-            "Bad Name", "v1", "q", String.class, String.class, false, List.of(), List.of());
+    var p = ProcessDescriptor.builder()
+            .name("Bad Name")
+            .version("v1")
+            .taskQueue("q")
+            .inputType(String.class)
+            .outputType(String.class)
+            .helperRefs(List.of("h1", "h2"))
+            .transactionRefs(List.of())
+            .build();
+    var p2 = ProcessDescriptor.builder()
+            .name("Bad Name")
+            .version("v1")
+            .taskQueue("q")
+            .inputType(String.class)
+            .outputType(String.class)
+            .helperRefs(List.of())
+            .transactionRefs(List.of())
+            .build();
 
     var ex = catchThrowableOfType(
             ValidationException.class,
@@ -178,9 +215,15 @@ class SemanticValidatorTest {
     var registry = new DefaultHelperRegistry();
     registry.registerHelper("myHelper", ctx -> Result.success("x"));
 
-    var p = new ProcessDescriptor(
-            "P", "v1", "P-queue", String.class, String.class, false, List.of("myHelper"),
-            List.of());
+    var p = ProcessDescriptor.builder()
+            .name("P")
+            .version("v1")
+            .taskQueue("P-queue")
+            .inputType(String.class)
+            .outputType(String.class)
+            .helperRefs(List.of("myHelper"))
+            .transactionRefs(List.of())
+            .build();
 
     assertThatCode(
             () -> new SemanticValidator().validate(List.of(p), List.of(), List.of(), registry))

@@ -140,7 +140,7 @@ class DslBuilderTest {
             .input(String.class).output(String.class)
             .execute(ctx -> Result.success("ok"))
             .build();
-    assertThat(obj.parameters()).isNull();
+    assertThat(obj.parameters()).isEmpty();
   }
 
   @Test

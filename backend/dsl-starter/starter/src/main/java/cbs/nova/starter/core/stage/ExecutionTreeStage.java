@@ -2,7 +2,7 @@ package cbs.nova.starter.core.stage;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.ExecutionTreeCollector;
+import cbs.nova.dsl.listener.ExecutionTreeCollector;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.core.StarterConstants;

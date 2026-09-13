@@ -10,7 +10,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutableDescriptor;
-import cbs.nova.dsl.JsonSchemaGenerator;
+import cbs.nova.dsl.jsonschema.JsonSchemaGenerator;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;

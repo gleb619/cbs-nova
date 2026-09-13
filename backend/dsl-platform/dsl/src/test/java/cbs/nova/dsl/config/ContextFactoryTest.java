@@ -3,7 +3,7 @@ package cbs.nova.dsl.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.SimpleContext;
+import cbs.nova.dsl.model.SimpleContext;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;

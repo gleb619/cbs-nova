@@ -1,4 +1,4 @@
-package cbs.nova.dsl;
+package cbs.nova.dsl.model;
 
 import cbs.nova.dsl.DslObject.DslType;
 import org.jspecify.annotations.NonNull;

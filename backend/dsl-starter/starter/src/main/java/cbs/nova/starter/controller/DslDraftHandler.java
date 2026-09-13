@@ -6,8 +6,8 @@ import static cbs.nova.starter.core.StarterConstants.WORKBENCH_PUBLISHED_DIR;
 
 import lombok.AllArgsConstructor;
 
-import cbs.nova.dsl.LoadResult;
-import cbs.nova.dsl.ValidationException;
+import cbs.nova.dsl.model.LoadResult;
+import cbs.nova.dsl.exception.ValidationException;
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.exception.DslCompilationException;
@@ -24,7 +24,6 @@ import cbs.nova.starter.model.VcsModels.ImportEntryResult;
 import cbs.nova.starter.model.CompileDiagnostic;
 import cbs.nova.starter.model.CompileDiagnosticSource;
 import cbs.nova.starter.model.PageResponse;
-import cbs.nova.starter.controller.Pagination;
 import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;

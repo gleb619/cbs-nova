@@ -3,7 +3,6 @@ package cbs.nova.dsl.jsonschema;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.ParameterType;
 import org.jspecify.annotations.Nullable;

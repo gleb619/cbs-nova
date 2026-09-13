@@ -45,11 +45,7 @@ class RunnerTest {
             .input(String.class)
             .output(String.class)
             .execute(ctx -> Result.failure(new RuntimeException("fail")))
-            .compensation(
-                    ctx -> {
-                      compensated.set(true);
-                      return Result.success(null);
-                    })
+            .compensation((ctx, history) -> compensated.set(true))
             .build();
     var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
     processRunner.run(process, ctx);

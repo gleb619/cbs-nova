@@ -308,20 +308,14 @@ class DslRuntimeServiceTest {
     // without dragging in helper-instance resolution.
     GlobalManager.globalManager().resetForTests();
     try {
-      var process = new ProcessDslObject(
-              "Synthetic",
-              "default",
-              "v1",
-              BatchIn.class,
-              null,
-              null,
-              ctx -> Result.success("ok"),
-              null,
-              null,
-              ctx -> Result.success(new ExplainReport("Synthetic", "test", "")),
-              null,
-              null,
-              null);
+      var process = ProcessDslObject.builder()
+              .name("Synthetic")
+              .taskQueue("default")
+              .version("v1")
+              .inputType(BatchIn.class)
+              .executeLogic(ctx -> Result.success("ok"))
+              .explainLogic(ctx -> Result.success(new ExplainReport("Synthetic", "test", "")))
+              .build();
       GlobalManager.globalManager().registerProcess(process);
 
       PreviewReport report = previewReport("Synthetic", true, List.of());
@@ -351,20 +345,14 @@ class DslRuntimeServiceTest {
   void previewLeavesNonMapBodyUntouched() {
     GlobalManager.globalManager().resetForTests();
     try {
-      var process = new ProcessDslObject(
-              "Synthetic",
-              "default",
-              "v1",
-              BatchIn.class,
-              null,
-              null,
-              ctx -> Result.success("ok"),
-              null,
-              null,
-              ctx -> Result.success(new ExplainReport("Synthetic", "test", "")),
-              null,
-              null,
-              null);
+      var process = ProcessDslObject.builder()
+              .name("Synthetic")
+              .taskQueue("default")
+              .version("v1")
+              .inputType(BatchIn.class)
+              .executeLogic(ctx -> Result.success("ok"))
+              .explainLogic(ctx -> Result.success(new ExplainReport("Synthetic", "test", "")))
+              .build();
       GlobalManager.globalManager().registerProcess(process);
 
       PreviewReport report = previewReport("Synthetic", true, List.of());

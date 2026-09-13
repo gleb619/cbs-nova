@@ -1,6 +1,6 @@
 package cbs.nova.dsl.builder.service;
 
-import cbs.nova.dsl.LoadResult;
+import cbs.nova.dsl.model.LoadResult;
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
 import cbs.nova.dsl.builder.exception.BuilderApiException;
 import cbs.nova.dsl.builder.model.PageResponse;

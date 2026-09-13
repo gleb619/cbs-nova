@@ -33,7 +33,7 @@ class PlantUmlDiagramGeneratorTest {
             .input(String.class)
             .output(String.class)
             .execute(ctx -> Result.success("ok"))
-            .compensation(ctx -> Result.success("rolled back"))
+            .compensation((ctx, history) -> ctx.log("rolled back"))
             .build();
     String diagram = generator.forProcess(process);
     assertThat(diagram).contains("if (success?) then (yes)");

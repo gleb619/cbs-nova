@@ -3,7 +3,7 @@ package cbs.nova.dsl.runner;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import cbs.nova.dsl.ExecutionListener;
+import cbs.nova.dsl.listener.ExecutionListener;
 import cbs.nova.dsl.transaction.TransactionExecution;
 import cbs.nova.dsl.transaction.TransactionExecutionStatus;
 import java.time.Instant;

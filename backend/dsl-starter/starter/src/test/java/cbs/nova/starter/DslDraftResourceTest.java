@@ -10,10 +10,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import cbs.nova.starter.AuditTestSupport;
-import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.LoadResult;
+import cbs.nova.dsl.model.LoadResult;
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.router.DslDraftRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;

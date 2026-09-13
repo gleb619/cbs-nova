@@ -1,8 +1,8 @@
 package cbs.nova.dsl.config;
 
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.HelperManager;
-import cbs.nova.dsl.JsonSchemaGenerator;
+import cbs.nova.dsl.helper.HelperManager;
+import cbs.nova.dsl.jsonschema.JsonSchemaGenerator;
 import cbs.nova.dsl.converter.AvajeMapConverter;
 import cbs.nova.dsl.explain.ClasspathExplainResourceResolver;
 import cbs.nova.dsl.explain.ExplainResourceResolver;

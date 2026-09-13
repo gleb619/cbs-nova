@@ -11,6 +11,7 @@ import cbs.nova.dsl.FunctionContext;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.model.ExplainReport;
+import lombok.Builder;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -18,15 +19,16 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+@Builder
 public record FunctionDslObject(
         @NonNull String name,
-        @Nullable List<ParameterDescriptor> parameters,
+        @NonNull List<ParameterDescriptor> parameters,
         @Nullable Class<?> inputType,
         @Nullable Class<?> outputType,
         @NonNull Function<FunctionContext<?>, Result<?>> executeLogic,
-        @Nullable Function<FunctionContext<?>, Result<?>> previewLogic,
+        @NonNull Function<FunctionContext<?>, Result<?>> previewLogic,
         @NonNull Function<FunctionContext<?>, Result<ExplainReport>> explainLogic,
-        @Nullable Supplier<DslDescriptor> descriptor,
+        @NonNull Supplier<DslDescriptor> descriptor,
         @Nullable String description) implements DslObject {
 
   @Override
@@ -35,7 +37,7 @@ public record FunctionDslObject(
   }
 
   public @NonNull Function<FunctionContext<?>, Result<?>> effectivePreview() {
-    return previewLogic != null ? previewLogic : executeLogic;
+    return previewLogic;
   }
 
   public @NonNull Function<FunctionContext<?>, Result<ExplainReport>> effectiveExplain() {
@@ -43,15 +45,12 @@ public record FunctionDslObject(
   }
 
   public @NonNull DslDescriptor describe() {
-    if (descriptor != null) {
-      return descriptor.get();
-    }
-    return defaultDescriptor(name, parameters, inputType, outputType, description);
+    return descriptor.get();
   }
 
   public static @NonNull DslDescriptor defaultDescriptor(
           @NonNull String name,
-          @Nullable List<ParameterDescriptor> parameters,
+          @NonNull List<ParameterDescriptor> parameters,
           @Nullable Class<?> inputType,
           @Nullable Class<?> outputType,
           @Nullable String description) {
@@ -61,9 +60,8 @@ public record FunctionDslObject(
             .description(description)
             .inputType(inputType)
             .outputType(outputType)
-            .hasCompensation(false)
             .hasSideEffects(false)
-            .parameters(parameters != null ? parameters : List.of())
+            .parameters(parameters)
             .taskQueue(DEFAULT_TASK_QUEUE)
             .version(DEFAULT_VERSION)
             .startToCloseTimeout(DEFAULT_START_TO_CLOSE_TIMEOUT)

@@ -1,4 +1,4 @@
-package cbs.nova.dsl;
+package cbs.nova.dsl.model;
 
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;

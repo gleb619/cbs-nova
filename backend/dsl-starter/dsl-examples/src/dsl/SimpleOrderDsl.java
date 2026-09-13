@@ -7,9 +7,7 @@ List<DslObject> define() {
             "orderId", params.values().get("orderId"),
             "message", "Order " + params.values().get("orderId") + " confirmed (runId=" + ctx.runId() + ")"));
       })
-      .compensation(ctx -> {
-        ctx.log("compensating SimpleOrder: " + ctx.error().getMessage());
-        return Result.success(MapOutput.of("status", "COMPENSATED"));
-      })
+      .compensation((ctx, history) ->
+          ctx.log("compensating SimpleOrder: " + ctx.error().getMessage()))
       .buildList();
 }

@@ -5,12 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.CompensationContext;
 import cbs.nova.dsl.Dsl;
-import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.config.DslConstants;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.transaction.TransactionExecution;
 import java.util.List;
@@ -83,17 +83,7 @@ class ProcessBuilderTest {
   }
 
   @Test
-  void functionCompensationOverloadIsRetained() {
-    var process = Dsl.process("FuncCompProc")
-            .execute(ctx -> Result.success(null))
-            .compensation((CompensationContext<Object> ctx) -> Result.success(null))
-            .build();
-    assertThat(process.compensationLogic()).isNotNull();
-    assertThat(process.userCompensationHandler()).isNull();
-  }
-
-  @Test
-  void biConsumerCompensationOverloadIsRetained() {
+  void compensationIsRetainedAsBiConsumer() {
     var captured = new AtomicReference<List<TransactionExecution>>();
     var process = Dsl.process("BiCompProc")
             .execute(ctx -> Result.success(null))
@@ -101,10 +91,9 @@ class ProcessBuilderTest {
               captured.set(history);
             })
             .build();
-    assertThat(process.userCompensationHandler()).isNotNull();
-    assertThat(process.compensationLogic()).isNull();
+    assertThat(process.compensationLogic()).isNotNull();
     // Invoke the captured BiConsumer to confirm it runs and accepts a null-safe history list.
-    process.userCompensationHandler().accept(null, List.of());
+    process.compensationLogic().accept(null, List.of());
     assertThat(captured.get()).isEmpty();
   }
 
@@ -118,6 +107,16 @@ class ProcessBuilderTest {
   }
 
   @Test
+  void builtObjectDefaultsToVoidTypesAndEmptyMarkdownDescription() {
+    var process = Dsl.process("BareProc")
+            .execute(ctx -> Result.success(null))
+            .build();
+    assertThat(process.inputType()).isEqualTo(Void.class);
+    assertThat(process.outputType()).isEqualTo(Void.class);
+    assertThat(process.description()).isEqualTo(Constants.EMPTY_MARKDOWN);
+  }
+
+  @Test
   void fluentInputOutputRetainedOnBuiltObject() {
     var process = Dsl.process("EchoProc")
             .input(String.class)
@@ -126,7 +125,7 @@ class ProcessBuilderTest {
             .build();
     assertThat(process.inputType()).isEqualTo(String.class);
     assertThat(process.outputType()).isEqualTo(Integer.class);
-    assertThat(process.parameters()).isNull();
+    assertThat(process.parameters()).isEmpty();
   }
 
   @Test
@@ -148,7 +147,7 @@ class ProcessBuilderTest {
     var process = Dsl.process("NoPrevProc")
             .execute(ctx -> Result.success("exec"))
             .build();
-    assertThat(process.effectivePreview()).isSameAs(process.executeLogic());
+    assertThat(process.previewLogic()).isSameAs(process.executeLogic());
   }
 
   @Test
@@ -157,8 +156,8 @@ class ProcessBuilderTest {
             .execute(ctx -> Result.success("exec"))
             .preview(ctx -> Result.success("prev"))
             .build();
-    assertThat(process.effectivePreview()).isSameAs(process.previewLogic());
-    assertThat(process.effectivePreview()).isNotSameAs(process.executeLogic());
+    assertThat(process.previewLogic()).isSameAs(process.previewLogic());
+    assertThat(process.previewLogic()).isNotSameAs(process.executeLogic());
   }
 
   @Test
@@ -170,7 +169,7 @@ class ProcessBuilderTest {
     var ctx = new ProcessRichContext<>(
             contextFactory.of("body", ExecutionMode.EXPLAIN, "run-explain"), contextFactory);
 
-    var result = process.effectiveExplain().apply(ctx);
+    var result = process.explainLogic().apply(ctx);
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isNotNull();
@@ -186,8 +185,8 @@ class ProcessBuilderTest {
             .execute(ctx -> Result.success("exec"))
             .explain(ctx -> Result.success(report))
             .build();
-    assertThat(process.effectiveExplain()).isSameAs(process.explainLogic());
-    assertThat(process.effectiveExplain()).isNotSameAs(process.executeLogic());
+    assertThat(process.explainLogic()).isSameAs(process.explainLogic());
+    assertThat(process.explainLogic()).isNotSameAs(process.executeLogic());
   }
 
   @Test
@@ -200,7 +199,7 @@ class ProcessBuilderTest {
     var ctx = new ProcessRichContext<>(
             contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc"), contextFactory);
 
-    var result = process.effectiveExplain().apply(ctx);
+    var result = process.explainLogic().apply(ctx);
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().name()).isEqualTo("DocProc");
@@ -217,7 +216,7 @@ class ProcessBuilderTest {
     var ctx = new ProcessRichContext<>(
             contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc-prefixed"), contextFactory);
 
-    var result = process.effectiveExplain().apply(ctx);
+    var result = process.explainLogic().apply(ctx);
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().description()).contains("# Builder Sample");
@@ -236,7 +235,7 @@ class ProcessBuilderTest {
                     ExecutionMode.EXPLAIN, "run-doc-budget"),
             contextFactory);
 
-    var result = process.effectiveExplain().apply(ctx);
+    var result = process.explainLogic().apply(ctx);
 
     assertThat(result.value().description()).hasSizeLessThanOrEqualTo(8);
   }
@@ -251,7 +250,7 @@ class ProcessBuilderTest {
     var ctx = new ProcessRichContext<>(
             contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc-missing"), contextFactory);
 
-    var result = process.effectiveExplain().apply(ctx);
+    var result = process.explainLogic().apply(ctx);
 
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause())
@@ -260,50 +259,31 @@ class ProcessBuilderTest {
   }
 
   @Test
-  void describeBuildsDefaultDescriptorWhenSupplierAbsent() {
+  void describeBuildsDefaultDescriptorWhenCompensationPresent() {
     var process = Dsl.process("DefaultDescProc")
             .input(String.class)
             .execute(ctx -> Result.success(null))
-            .compensation(ctx -> Result.success(null))
+            .compensation((ctx, history) -> {
+            })
             .build();
-    var desc = process.describe();
+    var desc = process.descriptor();
     assertThat(desc.name()).isEqualTo("DefaultDescProc");
     assertThat(desc.type()).isEqualTo(DslType.PROCESS);
-    assertThat(desc.hasCompensation()).isTrue();
+    assertThat(desc.hasSideEffects()).isTrue();
     assertThat(desc.inputType()).isEqualTo(String.class);
     assertThat(desc.taskQueue()).isEqualTo("DefaultDescProc-queue");
     assertThat(desc.version()).isEqualTo("v1");
+    assertThat(desc.startToCloseTimeout()).isEqualTo(DslConstants.DEFAULT_START_TO_CLOSE_TIMEOUT);
+    assertThat(desc.heartbeatTimeout()).isEqualTo(DslConstants.DEFAULT_HEARTBEAT_TIMEOUT);
   }
 
   @Test
-  void describeReportsNoCompensationWhenAbsent() {
+  void describeReportsNoSideEffectsWhenNoCompensation() {
     var process = Dsl.process("NoCompProc")
             .execute(ctx -> Result.success(null))
             .build();
-    assertThat(process.describe().hasCompensation()).isFalse();
-  }
-
-  @Test
-  void describeUsesCustomDescriptorSupplierWhenProvided() {
-    var custom = DslDescriptor.builder()
-            .name("CustomProc")
-            .type(DslType.PROCESS)
-            .description("custom-desc")
-            .inputType(String.class)
-            .outputType(String.class)
-            .hasCompensation(true)
-            .hasSideEffects(false)
-            .parameters(List.of())
-            .taskQueue("custom-queue")
-            .version("v9")
-            .startToCloseTimeout(null)
-            .heartbeatTimeout(null)
-            .build();
-    var process = Dsl.process("CustomProc")
-            .execute(ctx -> Result.success(null))
-            .describe(() -> custom)
-            .build();
-    assertThat(process.describe()).isSameAs(custom);
+    assertThat(process.compensationLogic()).isNull();
+    assertThat(process.descriptor().hasSideEffects()).isFalse();
   }
 
   @Test

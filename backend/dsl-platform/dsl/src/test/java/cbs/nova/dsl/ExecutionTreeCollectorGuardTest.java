@@ -2,6 +2,7 @@ package cbs.nova.dsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.listener.ExecutionTreeCollector;
 import org.junit.jupiter.api.Test;
 
 class ExecutionTreeCollectorGuardTest {

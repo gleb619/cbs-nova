@@ -1,7 +1,7 @@
 package cbs.nova.starter.config.router;
 
 import cbs.nova.dsl.model.ExplainReport;
-import cbs.nova.dsl.JsonSchemaGenerator;
+import cbs.nova.dsl.jsonschema.JsonSchemaGenerator;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.DslRunsProperties;

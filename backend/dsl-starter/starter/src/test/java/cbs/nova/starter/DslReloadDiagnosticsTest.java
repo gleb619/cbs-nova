@@ -6,9 +6,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import cbs.nova.dsl.DslDefinitionLoader;
+import cbs.nova.dsl.utils.DslDefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.starter.exception.BuilderUnavailableException;
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;

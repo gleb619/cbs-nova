@@ -1,5 +1,7 @@
-package cbs.nova.dsl;
+package cbs.nova.dsl.utils;
 
+import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.model.LoadResult;
 import org.jspecify.annotations.NonNull;
 
 public interface DslDefinitionLoader {

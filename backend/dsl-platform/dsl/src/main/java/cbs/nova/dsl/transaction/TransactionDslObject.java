@@ -7,6 +7,7 @@ import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.model.RetryPolicy;
+import lombok.Builder;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -15,21 +16,22 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+@Builder
 public record TransactionDslObject(
         @NonNull String name,
         @NonNull String taskQueue,
         @NonNull String version,
         @Nullable Class<?> inputType,
         @Nullable Class<?> outputType,
-        @Nullable List<ParameterDescriptor> parameters,
+        @NonNull List<ParameterDescriptor> parameters,
         @NonNull Function<TransactionContext<?>, Result<?>> executeLogic,
         @Nullable Function<CompensationContext<?>, Result<?>> compensationLogic,
         @NonNull Duration startToCloseTimeout,
         @Nullable RetryPolicy retryPolicy,
         @Nullable Duration heartbeatTimeout,
-        @Nullable Function<TransactionContext<?>, Result<?>> previewLogic,
+        @NonNull Function<TransactionContext<?>, Result<?>> previewLogic,
         @NonNull Function<TransactionContext<?>, Result<ExplainReport>> explainLogic,
-        @Nullable Supplier<DslDescriptor> descriptor,
+        @NonNull Supplier<DslDescriptor> descriptor,
         @Nullable String description) implements DslObject {
 
   @Override
@@ -38,7 +40,7 @@ public record TransactionDslObject(
   }
 
   public @NonNull Function<TransactionContext<?>, Result<?>> effectivePreview() {
-    return previewLogic != null ? previewLogic : executeLogic;
+    return previewLogic;
   }
 
   public @NonNull Function<TransactionContext<?>, Result<ExplainReport>> effectiveExplain() {
@@ -46,12 +48,7 @@ public record TransactionDslObject(
   }
 
   public @NonNull DslDescriptor describe() {
-    if (descriptor != null) {
-      return descriptor.get();
-    }
-    return defaultDescriptor(name, taskQueue, version, inputType, outputType, parameters,
-            compensationLogic != null, startToCloseTimeout, retryPolicy, heartbeatTimeout,
-            description);
+    return descriptor.get();
   }
 
   public static @NonNull DslDescriptor defaultDescriptor(
@@ -60,7 +57,7 @@ public record TransactionDslObject(
           @NonNull String version,
           @Nullable Class<?> inputType,
           @Nullable Class<?> outputType,
-          @Nullable List<ParameterDescriptor> parameters,
+          @NonNull List<ParameterDescriptor> parameters,
           boolean hasCompensation,
           @NonNull Duration startToCloseTimeout,
           @Nullable RetryPolicy retryPolicy,
@@ -72,9 +69,8 @@ public record TransactionDslObject(
             .description(description)
             .inputType(inputType)
             .outputType(outputType)
-            .hasCompensation(hasCompensation)
             .hasSideEffects(true)
-            .parameters(parameters != null ? parameters : List.of())
+            .parameters(parameters)
             .taskQueue(taskQueue)
             .version(version)
             .startToCloseTimeout(startToCloseTimeout)

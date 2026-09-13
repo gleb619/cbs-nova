@@ -38,7 +38,7 @@ class BpmnDiagramGeneratorTest {
             .input(String.class)
             .output(String.class)
             .execute(ctx -> Result.success("ok"))
-            .compensation(ctx -> Result.success("rolled back"))
+            .compensation((ctx, history) -> ctx.log("rolled back"))
             .build();
     String xml = generator.forProcess(process);
     assertThat(xml).contains("<bpmn:exclusiveGateway id=\"Gateway_1\" name=\"Success?\"");

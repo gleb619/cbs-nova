@@ -1,5 +1,6 @@
-package cbs.nova.dsl;
+package cbs.nova.dsl.exception;
 
+import cbs.nova.dsl.model.ValidationIssue;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;

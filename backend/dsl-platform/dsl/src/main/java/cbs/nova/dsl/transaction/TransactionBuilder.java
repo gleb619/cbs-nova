@@ -5,6 +5,7 @@ import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.explain.DescriptorMarkdown;
 import cbs.nova.dsl.explain.ExplainResourceExplainer;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.model.MapInput;
@@ -139,25 +140,25 @@ public final class TransactionBuilder<I, O> {
               "transaction '" + name + "' cannot have both .parameters() and .input()/.output()");
     }
     var effectiveDescriptor = effectiveDescriptor();
-    var customExplain = rawExplain();
-    var explain = customExplain != null
-            ? customExplain
-            : defaultExplain(effectiveDescriptor);
-    return new TransactionDslObject(
-            name,
-            taskQueue,
-            version,
-            inputType,
-            outputType,
-            parameters,
-            rawExecute(),
-            rawCompensation(),
-            startToCloseTimeout,
-            retryPolicy,
-            heartbeatTimeout,
-            rawPreview(),
-            explain,
-            effectiveDescriptor, null);
+    var resolvedExecute = rawExecute();
+    var explain = rawExplain() != null ? rawExplain() : defaultExplain(effectiveDescriptor);
+    var resolvedPreview = rawPreview() != null ? rawPreview() : resolvedExecute;
+    return TransactionDslObject.builder()
+            .name(name)
+            .taskQueue(taskQueue)
+            .version(version)
+            .inputType(inputType)
+            .outputType(outputType)
+            .parameters(parameters != null ? parameters : List.of())
+            .executeLogic(resolvedExecute)
+            .compensationLogic(rawCompensation())
+            .startToCloseTimeout(startToCloseTimeout)
+            .retryPolicy(retryPolicy)
+            .heartbeatTimeout(heartbeatTimeout)
+            .previewLogic(resolvedPreview)
+            .explainLogic(explain)
+            .descriptor(effectiveDescriptor)
+            .build();
   }
 
   public @NonNull List<DslObject> buildList() {
@@ -176,7 +177,7 @@ public final class TransactionBuilder<I, O> {
   private @NonNull Function<TransactionContext<?>, Result<ExplainReport>> defaultExplain(
           @NonNull Supplier<DslDescriptor> effectiveDescriptor) {
     return ctx -> Result.success(
-            new ExplainReport(name, effectiveDescriptor.get().explain(), "")
+            new ExplainReport(name, DescriptorMarkdown.render(effectiveDescriptor.get()), "")
                     .truncateTo(ExplainBudget.of(ctx)));
   }
 

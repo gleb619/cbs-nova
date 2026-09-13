@@ -1,7 +1,7 @@
 package cbs.nova.starter.core.stage;
 
 import cbs.nova.dsl.Context;
-import cbs.nova.dsl.ExecutionTraceCollector;
+import cbs.nova.dsl.listener.ExecutionTraceCollector;
 import cbs.nova.dsl.Result;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.DslPipeContext;

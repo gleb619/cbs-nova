@@ -13,7 +13,7 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.SimpleContext;
+import cbs.nova.dsl.model.SimpleContext;
 import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.process.DslTemporalProcess;
 import cbs.nova.dsl.process.DslTemporalProcessFailure;

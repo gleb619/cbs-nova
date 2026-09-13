@@ -2,9 +2,7 @@ package cbs.nova.dsl.jsonschema;
 
 import static cbs.nova.starter.core.StarterConstants.JSON_SCHEMA_DRAFT_URI;
 
-import cbs.nova.dsl.JsonSchemaGenerator;
 import cbs.nova.dsl.ParameterDescriptor;
-import cbs.nova.starter.core.StarterConstants;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.jspecify.annotations.Nullable;

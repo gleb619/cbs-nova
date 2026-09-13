@@ -45,10 +45,8 @@ List<DslObject> define() {
         }
         return Result.success(new OrderSagaOut(in.orderId(), "COMPLETED", "Order processed"));
       })
-      .compensation(ctx -> {
-        ctx.log("OrderSaga failed: " + ctx.error().getMessage());
-        return Result.success("OrderSaga compensated");
-      })
+      .compensation((ctx, history) ->
+          ctx.log("OrderSaga failed: " + ctx.error().getMessage()))
       .build();
 
   return List.of(inventoryTx, paymentTx, process);

@@ -4,7 +4,7 @@ import static cbs.nova.starter.core.StarterConstants.SERVICE_SHUTDOWN_JOIN;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.ExecutionTraceCollector;
+import cbs.nova.dsl.listener.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
@@ -26,7 +26,6 @@ import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
 import io.sentry.Sentry;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;

@@ -55,10 +55,8 @@ List<DslObject> define() {
         return Result.success(new UnreliableProcessOut(in.scenario(), "SUCCESS",
             List.of("retries healed failure")));
       })
-      .compensation(ctx -> {
-        ctx.log("UnreliableApiSuccess compensated: " + ctx.error().getMessage());
-        return Result.success("compensated");
-      })
+      .compensation((ctx, history) ->
+          ctx.log("UnreliableApiSuccess compensated: " + ctx.error().getMessage()))
       .build();
 
   var compensatedProcess = Dsl.process("UnreliableApiCompensated")
@@ -73,12 +71,11 @@ List<DslObject> define() {
         }
         return Result.success(new UnreliableProcessOut(in.scenario(), "SUCCESS", List.of()));
       })
-      .compensation(ctx -> {
+      .compensation((ctx, history) -> {
         UnreliableProcessIn in = ctx.body();
         ctx.log("UnreliableApiCompensated compensated: " + ctx.error().getMessage());
         ctx.runHelper("compensationTracker",
             Map.of("markerId", "UnreliableApiCompensated-" + in.scenario()));
-        return Result.success("compensated");
       })
       .build();
 

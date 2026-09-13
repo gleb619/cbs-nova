@@ -70,9 +70,7 @@ List<DslObject> define() {
             extracted.isPresent() ? extracted.asString() : null,
             extracted.isPresent()));
       })
-      .compensation(ctx -> {
-        ctx.log("HelperPipeline compensated: " + ctx.error().getMessage());
-        return Result.success("pipeline compensated");
-      })
+      .compensation((ctx, history) ->
+          ctx.log("HelperPipeline compensated: " + ctx.error().getMessage()))
       .buildList();
 }

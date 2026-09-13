@@ -15,9 +15,7 @@ List<DslObject> define() {
         }
         return Result.success(new ExceptionProbeOut("SUCCESS"));
       })
-      .compensation(ctx -> {
-        ctx.log("ExceptionProbe failed: " + ctx.error().getMessage());
-        return Result.success("compensated");
-      })
+      .compensation((ctx, history) ->
+          ctx.log("ExceptionProbe failed: " + ctx.error().getMessage()))
       .buildList();
 }

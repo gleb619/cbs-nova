@@ -1,4 +1,4 @@
-package cbs.nova.dsl;
+package cbs.nova.dsl.listener;
 
 import org.jspecify.annotations.NonNull;
 

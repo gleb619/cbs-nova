@@ -3,10 +3,10 @@ package cbs.nova.starter.controller;
 import static cbs.nova.starter.core.StarterConstants.DSL_RELOAD_TEMP_PREFIX;
 
 import cbs.nova.dsl.DslCompactSource;
-import cbs.nova.dsl.DslDefinitionLoader;
+import cbs.nova.dsl.utils.DslDefinitionLoader;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.LoadResult;
+import cbs.nova.dsl.model.LoadResult;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.helper.HelperInstanceResolver;

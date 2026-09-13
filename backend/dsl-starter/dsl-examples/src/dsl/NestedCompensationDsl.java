@@ -45,10 +45,8 @@ List<DslObject> define() {
         }
         return Result.success(new NestedCompensationOut(in.jobId(), "COMPLETED", List.of()));
       })
-      .compensation(ctx -> {
-        ctx.log("NestedCompensation compensated");
-        return Result.success("ok");
-      })
+      .compensation((ctx, history) ->
+          ctx.log("NestedCompensation compensated"))
       .build();
   return List.of(step1, step2, step3, process);
 }

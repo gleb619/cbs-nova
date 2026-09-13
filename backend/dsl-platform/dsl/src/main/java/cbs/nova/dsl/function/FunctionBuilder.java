@@ -5,6 +5,7 @@ import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.FunctionContext;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.explain.DescriptorMarkdown;
 import cbs.nova.dsl.explain.ExplainResourceExplainer;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.model.MapInput;
@@ -93,27 +94,31 @@ public final class FunctionBuilder<I, O> {
       throw new IllegalStateException(
               "function '" + name + "' cannot have both .parameters() and .input()/.output()");
     }
-    var effectiveDescriptor = effectiveDescriptor();
-    var customExplain = rawExplain();
-    var explain = customExplain != null
-            ? customExplain
-            : defaultExplain(effectiveDescriptor);
-    return new FunctionDslObject(
-            name,
-            parameters,
-            inputType,
-            outputType,
-            rawExecute(),
-            rawPreview(),
-            explain,
-            effectiveDescriptor, null);
+    var effectiveParameters = parameters != null
+            ? parameters
+            : List.<ParameterDescriptor>of();
+    var effectiveDescriptor = effectiveDescriptor(effectiveParameters);
+    var resolvedExecute = rawExecute();
+    var explain = rawExplain() != null ? rawExplain() : defaultExplain(effectiveDescriptor);
+    var resolvedPreview = rawPreview() != null ? rawPreview() : resolvedExecute;
+    return FunctionDslObject.builder()
+            .name(name)
+            .parameters(effectiveParameters)
+            .inputType(inputType)
+            .outputType(outputType)
+            .executeLogic(resolvedExecute)
+            .previewLogic(resolvedPreview)
+            .explainLogic(explain)
+            .descriptor(effectiveDescriptor)
+            .build();
   }
 
   public @NonNull List<DslObject> buildList() {
     return List.of(build());
   }
 
-  private @NonNull Supplier<DslDescriptor> effectiveDescriptor() {
+  private @NonNull Supplier<DslDescriptor> effectiveDescriptor(
+          @NonNull List<ParameterDescriptor> parameters) {
     return descriptor != null
             ? descriptor
             : () -> FunctionDslObject.defaultDescriptor(
@@ -123,7 +128,7 @@ public final class FunctionBuilder<I, O> {
   private @NonNull Function<FunctionContext<?>, Result<ExplainReport>> defaultExplain(
           @NonNull Supplier<DslDescriptor> effectiveDescriptor) {
     return ctx -> Result.success(
-            new ExplainReport(name, effectiveDescriptor.get().explain(), "")
+            new ExplainReport(name, DescriptorMarkdown.render(effectiveDescriptor.get()), "")
                     .truncateTo(ExplainBudget.of(ctx)));
   }
 

@@ -6,7 +6,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDiagnosticsHandler;

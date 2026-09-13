@@ -24,10 +24,7 @@ class DefaultProcessRunnerCompensationTest {
             .input(String.class)
             .output(String.class)
             .execute(ctx -> Result.failure(new RuntimeException("execute failed")))
-            .compensation(ctx -> {
-              compensated.set(true);
-              return Result.success("compensated");
-            })
+            .compensation((ctx, history) -> compensated.set(true))
             .build();
     var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-1");
     var result = runner.run(process, ctx);
@@ -42,7 +39,7 @@ class DefaultProcessRunnerCompensationTest {
             .input(String.class)
             .output(String.class)
             .execute(ctx -> Result.failure(new RuntimeException("execute failed")))
-            .compensation(ctx -> {
+            .compensation((ctx, history) -> {
               throw new RuntimeException("compensation also failed");
             })
             .build();
@@ -60,10 +57,7 @@ class DefaultProcessRunnerCompensationTest {
             .input(String.class)
             .output(String.class)
             .execute(ctx -> Result.success("ok"))
-            .compensation(ctx -> {
-              compensated.set(true);
-              return Result.success("should not run");
-            })
+            .compensation((ctx, history) -> compensated.set(true))
             .build();
     var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-3");
     var result = runner.run(process, ctx);

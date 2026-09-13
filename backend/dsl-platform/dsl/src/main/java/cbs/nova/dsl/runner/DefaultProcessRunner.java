@@ -27,18 +27,25 @@ public final class DefaultProcessRunner implements ProcessRunner {
   private final ContextFactory contextFactory;
   private final CompensationRegistry compensationRegistry;
 
-  private record ExecutionOutcome(Result<?> result, boolean launchedByTemporal, Throwable failure) {
-  }
-
   @Override
   public @NonNull Result<?> run(@NonNull ProcessDslObject process, @NonNull Context<?> ctx) {
+    //TODO: instead change it to a class field, and pass on DI step in spring config class
+    @Deprecated
     var repository = DslConfig.dslConfig().transactionExecutionRepository().get();
+    //TODO: instead change it to a class field, and pass on DI step in spring config class
+    @Deprecated
     var historyListener = new DefaultExecutionListener(ctx.runId(), repository);
+    //TODO: instead change it to a class field, and pass on DI step in spring config class, only one listener
+    @Deprecated
     var existingListener = ctx.executionListener();
     var listener = existingListener == null
             ? historyListener
             : new ChainedExecutionListener(existingListener, historyListener);
+    //TODO: we always work with a `ExecutionListener`, redo
+    @Deprecated
     var listeningCtx = ctx.withExecutionListener(listener);
+    //TODO: extract a decorator, for a temporal execution
+    @Deprecated
     var outcome = execute(process, listeningCtx);
     if (outcome.launchedByTemporal()) {
       return outcome.result();
@@ -48,6 +55,8 @@ public final class DefaultProcessRunner implements ProcessRunner {
 
   private ExecutionOutcome execute(ProcessDslObject process, Context<?> listeningCtx) {
     try {
+      //TODO: extract a decorator, for a temporal execution, it better to have some var in a metadata of context for that
+      @Deprecated
       var launcher = resolveTemporalLauncher(listeningCtx);
       if (launcher != null) {
         return launchWithTemporal(process, launcher, listeningCtx);
@@ -87,19 +96,22 @@ public final class DefaultProcessRunner implements ProcessRunner {
     var listener = listeningCtx.executionListener();
     var richCtx = new ProcessRichContext<>(listeningCtx, contextFactory);
     if (listener != null) {
+      //TODO: listener must be nonnull, remove useless if
       listener.onProcessStart(listeningCtx.runId(), process.name(), listeningCtx.body());
     }
     Result<?> result = null;
     try {
+      //TODO: redo to a switch case, and redo a 3 different private methods
       if (listeningCtx.mode() == ExecutionMode.EXPLAIN) {
-        result = process.effectiveExplain().apply(richCtx);
+        result = process.explainLogic().apply(richCtx);
       } else if (listeningCtx.mode() == ExecutionMode.PREVIEW) {
-        result = process.effectivePreview().apply(richCtx);
+        result = process.previewLogic().apply(richCtx);
       } else {
         result = process.executeLogic().apply(richCtx);
       }
     } finally {
       if (listener != null) {
+        //TODO: listener must be nonnull, remove useless if
         listener.onProcessEnd(listeningCtx.runId(), process.name(),
                 result != null ? result.value() : null, result != null && result.isSuccess());
       }
@@ -115,22 +127,26 @@ public final class DefaultProcessRunner implements ProcessRunner {
     if (outcome.result().isSuccess()) {
       return outcome.result();
     }
+    //TODO: is better to set a Compensation as nonnull on dslObject step, and on builder step pass some NoOp lambda
     if (!hasCompensationConfigured(process, ctx, history)) {
       return outcome.result();
     }
     return runCompensation(process, ctx, outcome, history);
   }
 
+  //TODO: from now, we always need a Compensation, by default it a NoOp
+  @Deprecated
   private boolean hasCompensationConfigured(
           ProcessDslObject process, Context<?> ctx, List<TransactionExecution> history) {
     DslSaga saga = ctx.saga();
     return process.compensationLogic() != null
-            || process.userCompensationHandler() != null
             || (saga != null && saga.hasCompensations())
             || compensationRegistry.hasCompensation(ctx.runId())
             || (saga == null && !history.isEmpty());
   }
 
+  //TODO: extract another Class for a Compensation run
+  @Deprecated
   private Result<?> runCompensation(
           ProcessDslObject process,
           Context<?> ctx,
@@ -145,8 +161,7 @@ public final class DefaultProcessRunner implements ProcessRunner {
         compensationRegistry.compensateAll(ctx.runId(), compensationError, contextFactory);
       } else {
         compensateTransactions(history, compensationError);
-        compensateProcessLogic(process, ctx, compensationError);
-        compensateUserHandler(process, ctx, compensationError, history);
+        compensateProcessHandler(process, ctx, compensationError, history);
       }
       return outcome.result();
     } catch (Exception compEx) {
@@ -174,32 +189,25 @@ public final class DefaultProcessRunner implements ProcessRunner {
     }
   }
 
-  private void compensateProcessLogic(
-          ProcessDslObject process, Context<?> ctx, Throwable compensationError) {
-    if (process.compensationLogic() == null) {
-      return;
-    }
-    var processCompCtxBase = contextFactory.of(ctx.body(), ExecutionMode.COMPENSATION, ctx.runId());
-    var compCtx = GlobalManager.globalManager().createCompensationContext(processCompCtxBase,
-            compensationError);
-    process.compensationLogic().apply(compCtx);
-  }
-
-  private void compensateUserHandler(
+  private void compensateProcessHandler(
           ProcessDslObject process,
           Context<?> ctx,
           Throwable compensationError,
           List<TransactionExecution> history) {
-    if (process.userCompensationHandler() == null) {
+    if (process.compensationLogic() == null) {
       return;
     }
-    var userCompCtxBase = contextFactory.of(ctx.body(), ExecutionMode.COMPENSATION, ctx.runId());
-    var userCompCtx = GlobalManager.globalManager().createCompensationContext(userCompCtxBase,
+    var compCtxBase = contextFactory.of(ctx.body(), ExecutionMode.COMPENSATION, ctx.runId());
+    var compCtx = GlobalManager.globalManager().createCompensationContext(compCtxBase,
             compensationError);
-    process.userCompensationHandler().accept(userCompCtx, history);
+    process.compensationLogic().accept(compCtx, history);
   }
 
   private static String messageOf(Throwable ex) {
     return ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
   }
+
+  private record ExecutionOutcome(Result<?> result, boolean launchedByTemporal, Throwable failure) {
+  }
+
 }

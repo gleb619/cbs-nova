@@ -26,7 +26,6 @@ class ExplainTraceReportTest {
             .description("Echoes")
             .inputType(String.class)
             .outputType(String.class)
-            .hasCompensation(false)
             .hasSideEffects(false)
             .parameters(List.of())
             .taskQueue(null)

@@ -17,46 +17,50 @@ public final class DescriptorFactory {
   public ProcessDescriptor fromProcess(@NonNull ProcessDslObject obj) {
     var inputType = resolveInputType(obj.inputType(), obj.parameters());
     var outputType = resolveOutputType(obj.outputType(), obj.parameters());
-    return new ProcessDescriptor(
-            obj.name(),
-            obj.version(),
-            obj.taskQueue(),
-            inputType,
-            outputType,
-            obj.compensationLogic() != null,
-            List.of(),
-            List.of());
+    return ProcessDescriptor.builder()
+            .name(obj.name())
+            .version(obj.version())
+            .taskQueue(obj.taskQueue())
+            .inputType(inputType)
+            .outputType(outputType)
+            .hasCompensation(obj.compensationLogic() != null)
+            .helperRefs(List.of())
+            .transactionRefs(List.of())
+            .build();
   }
 
   public TransactionDescriptor fromTransaction(@NonNull TransactionDslObject obj) {
     var inputType = resolveInputType(obj.inputType(), obj.parameters());
     var outputType = resolveOutputType(obj.outputType(), obj.parameters());
-    return new TransactionDescriptor(
-            obj.name(),
-            obj.version(),
-            obj.taskQueue(),
-            inputType,
-            outputType,
-            obj.compensationLogic() != null,
-            List.of(),
-            obj.startToCloseTimeout(),
-            obj.retryPolicy(),
-            obj.heartbeatTimeout());
+    return TransactionDescriptor.builder()
+            .name(obj.name())
+            .version(obj.version())
+            .taskQueue(obj.taskQueue())
+            .inputType(inputType)
+            .outputType(outputType)
+            .hasCompensation(obj.compensationLogic() != null)
+            .helperRefs(List.of())
+            .startToCloseTimeout(obj.startToCloseTimeout())
+            .retryPolicy(obj.retryPolicy())
+            .heartbeatTimeout(obj.heartbeatTimeout())
+            .build();
   }
 
   public FunctionDescriptor fromFunction(@NonNull FunctionDslObject obj) {
-    return new FunctionDescriptor(obj.name(), null, null);
+    return FunctionDescriptor.builder()
+            .name(obj.name())
+            .build();
   }
 
   private Class<?> resolveInputType(Class<?> declaredType, List<?> parameters) {
-    if (declaredType != null) {
+    if (declaredType != null && declaredType != Void.class) {
       return declaredType;
     }
     return parameters != null && !parameters.isEmpty() ? MapInput.class : null;
   }
 
   private Class<?> resolveOutputType(Class<?> declaredType, List<?> parameters) {
-    if (declaredType != null) {
+    if (declaredType != null && declaredType != Void.class) {
       return declaredType;
     }
     return parameters != null && !parameters.isEmpty() ? MapOutput.class : null;

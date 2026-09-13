@@ -18,7 +18,7 @@ public final class ExplainReportFactory {
 
   public @NonNull ExplainReport forProcess(
           @NonNull ProcessDslObject process, int budgetChars) {
-    return report(process.describe(), diagramGenerator.forProcess(process), budgetChars);
+    return report(process.descriptor(), diagramGenerator.forProcess(process), budgetChars);
   }
 
   public @NonNull ExplainReport forTransaction(

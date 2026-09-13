@@ -9,6 +9,7 @@ import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.generator.ExplainReportFactory;
 import cbs.nova.dsl.generator.MermaidDiagramGenerator;
+import cbs.nova.dsl.helper.HelperManager;
 import cbs.nova.dsl.helper.HelperResolver;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.process.ProcessCompensation;
@@ -252,7 +253,7 @@ public final class GlobalManager {
   }
 
   public @NonNull Optional<DslDescriptor> describeProcess(@NonNull String name) {
-    return findProcess(name).map(ProcessDslObject::describe);
+    return findProcess(name).map(ProcessDslObject::descriptor);
   }
 
   public @NonNull Optional<DslDescriptor> describeTransaction(@NonNull String name) {
@@ -363,7 +364,7 @@ public final class GlobalManager {
     if (process.compensationLogic() == null) {
       return;
     }
-    process.compensationLogic().apply(createCompensationContext(ctx, error));
+    process.compensationLogic().accept(createCompensationContext(ctx, error), List.of());
   }
 
   public void compensateProcess(

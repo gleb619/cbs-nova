@@ -54,10 +54,8 @@ List<DslObject> define() {
         }
         return Result.success(new HttpResilienceProcessOut(in.scenario(), "SUCCESS", List.of("retries healed failure")));
       })
-      .compensation(ctx -> {
-        ctx.log("HttpResilienceSuccess compensated: " + ctx.error().getMessage());
-        return Result.success("compensated");
-      })
+      .compensation((ctx, history) ->
+          ctx.log("HttpResilienceSuccess compensated: " + ctx.error().getMessage()))
       .build();
 
   var compensatedProcess = Dsl.process("HttpResilienceCompensated")
@@ -72,12 +70,11 @@ List<DslObject> define() {
         }
         return Result.success(new HttpResilienceProcessOut(in.scenario(), "SUCCESS", List.of()));
       })
-      .compensation(ctx -> {
+      .compensation((ctx, history) -> {
         HttpResilienceProcessIn in = ctx.body();
         ctx.log("HttpResilienceCompensated compensated: " + ctx.error().getMessage());
         ctx.runHelper("compensationTracker",
             Map.of("markerId", "HttpResilienceCompensated-" + in.scenario()));
-        return Result.success("compensated");
       })
       .build();
 

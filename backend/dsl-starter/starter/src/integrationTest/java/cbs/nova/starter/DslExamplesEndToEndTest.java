@@ -4,21 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.dsl.config.ContextFactory;
-import cbs.nova.dsl.history.DslRunRepository;
-import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dslexamples.v1.BatchModels.BatchIn;
 import cbs.nova.dslexamples.v1.BatchModels.BatchItem;
 import cbs.nova.dslexamples.v1.BatchModels.BatchOut;
-import cbs.nova.starter.service.TemporalDslProcessService;
 import cbs.nova.util.ServiceUtil;
 import io.restassured.RestAssured;
-import java.time.Duration;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
-import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,8 +19,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 
