@@ -201,6 +201,50 @@ describe('useDslApi', () => {
     expect(result).toEqual({ name: 'draft-1', timestamp: '123', hunks: [] })
   })
 
+  it('fetchDiagnostics GETs /api/v1/dsl/diagnostics with limit and offset', async () => {
+    const envelope = { items: [], total: 0, offset: 25, limit: 25 }
+    fetchMock.mockResolvedValueOnce(envelope)
+    const api = useDslApi()
+    const result = await api.fetchDiagnostics({ limit: 25, offset: 25 })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/diagnostics', {
+      query: { limit: '25', offset: '25' },
+    })
+    expect(result).toEqual(envelope)
+  })
+
+  it('fetchDiagnostics forwards a non-blank definition filter', async () => {
+    fetchMock.mockResolvedValueOnce({ items: [], total: 0, offset: 0, limit: 25 })
+    const api = useDslApi()
+    await api.fetchDiagnostics({ definition: 'OrderProcess', limit: 25, offset: 0 })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/diagnostics', {
+      query: { limit: '25', offset: '0', definition: 'OrderProcess' },
+    })
+  })
+
+  it('fetchDiagnostics omits a blank definition filter from the query', async () => {
+    fetchMock.mockResolvedValueOnce({ items: [], total: 0, offset: 0, limit: 25 })
+    const api = useDslApi()
+    await api.fetchDiagnostics({ definition: '   ', limit: 25, offset: 0 })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/diagnostics', {
+      query: { limit: '25', offset: '0' },
+    })
+  })
+
+  it('fetchDiagnostics maps BFF errors to a normalized message', async () => {
+    fetchMock.mockRejectedValueOnce({
+      data: { message: 'diagnostics store unavailable' },
+      statusCode: 500,
+    })
+    const api = useDslApi()
+
+    await expect(api.fetchDiagnostics({ limit: 25, offset: 0 })).rejects.toThrow(
+      'diagnostics store unavailable',
+    )
+  })
+
   it('validateConstruct delegates to preview with empty body', async () => {
     fetchMock.mockResolvedValueOnce({})
     const api = useDslApi()

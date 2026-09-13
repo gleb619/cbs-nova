@@ -86,6 +86,7 @@ const { dslApi, useDslApiMock, useDslWorkbenchMock } = vi.hoisted(() => {
     getHistoryEntry: vi.fn(),
     getHistoryDiff: vi.fn(),
     restorePublishHistory: vi.fn(),
+    fetchDiagnostics: vi.fn(),
   }
   const useDslWorkbenchMockFn = vi.fn(() => {
     const harness = (globalThis as unknown as { __dslWorkbenchHarness?: WorkbenchApiShape })
