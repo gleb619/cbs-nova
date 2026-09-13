@@ -126,17 +126,23 @@ Prefer `codegraph_*` over grep.
   `DslConfig.dslConfig().expressionEvaluator().replace(...)`; user-defined bean wins. See `docs/architecture-backend.md`.
 - **Explain support**: `ExplainSupport<IN, OUT>` (dsl-api) produces `ExplainReport` (name, markdown, mermaid)
   via single-arg `explain(ctx)`; the budget is carried by context metadata under
-  `Constants.EXPLAIN_BUDGET_CHARS_KEY` (default `Constants.DEFAULT_BUDGET_CHARS` = 4000). The
-  descriptor-based fallback report lives in `cbs.nova.dsl.stage.ExplainStage`. DslObject explain logic is typed
-  `Function<XContext<?>, Result<ExplainReport>>` (set via builder `.explain(...)` or `.explainVia("file.md")`,
-  which loads markdown eagerly from the classpath `explain/` prefix via `cbs.nova.dsl.explain.ExplainMarkdown`);
-  `effectiveExplain()` falls back to `generator.ExplainDefaults` (descriptor markdown, never executeLogic), and
-  helper classes serve file-based docs via `cbs.nova.dsl.explain.ExplainDocs.viaResource(name, path)`.
-  `GlobalManager.explain` /
-  `explainHelper` dispatch across process -> transaction -> helper -> function and enrich with Mermaid via
-  `generator.ExplainReportFactory`; helpers override `explain` for mode/arg-specific reports (see `MathHelper`). Starter builds full 12-field
-  `ExplainTraceReport` (package `cbs.nova.dsl`, file `model/`; traces, calls, metrics, AST); `DevDslRuntime` maps
-  it to simple `ExplainReport` with one-line trace summary.
+  `Constants.EXPLAIN_BUDGET_CHARS_KEY` (default `Constants.DEFAULT_BUDGET_CHARS` = 4000), read via
+  `cbs.nova.dsl.explain.ExplainBudget.of(ctx)`. DslObject explain logic is a ready, typed
+  `Function<XContext<?>, Result<ExplainReport>>` (builder `.explain(...)`); with no explicit explain,
+  `Executable.default explain()` composes a descriptor-based markdown report (never executeLogic).
+  `.explainVia("file.md")` is lazy: markdown resolves at invocation through the injectable
+  `cbs.nova.dsl.explain.ExplainResourceResolver` (`DslConfig.explainResourceResolver()` Replaceable,
+  default `ClasspathExplainResourceResolver` with prefix `explain/`). Starter publishes
+  `SpringExplainResourceResolver` via `@Bean @ConditionalOnMissingBean(ExplainResourceResolver.class)`
+  from `CbsNovaExplainProperties.resourcesPrefix()` (`cbs.nova.explain.resources-prefix`, default
+  `explain/`; same record carries `budgetChars`) and registers it into `DslConfig` in
+  `dslApplicationRunner`; a user-defined `ExplainResourceResolver` bean wins. The pipe/stage explain
+  chain lives in the starter (`core/pipe/ExplainDslPipe`, stages in `core/stage` such as
+  `ExplainBudgetStage`/`ExplainReportStage`). `GlobalManager.explain` / `explainHelper` dispatch
+  across process -> transaction -> helper -> function and enrich with Mermaid via
+  `generator.ExplainReportFactory`; helpers override `explain` for mode/arg-specific reports (see
+  `MathHelper`). Starter builds full 12-field `ExplainTraceReport` (package `cbs.nova.dsl.model/`);
+  `DevDslRuntime` maps it to simple `ExplainReport` with one-line trace summary.
 
 ---
 

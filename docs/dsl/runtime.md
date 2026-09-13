@@ -109,12 +109,19 @@ is a simple 3-field record: `name`, markdown `description` (budget-bounded), and
 across process → transaction → helper → function and attaching a Mermaid diagram for
 processes/transactions/helpers. The budget (default `Constants.DEFAULT_BUDGET_CHARS` = 4000) is
 carried by the context metadata under `Constants.EXPLAIN_BUDGET_CHARS_KEY` and bounds the textual
-payload (description + diagram); implementations truncate rather than exceed it. The descriptor-based
-fallback report is assembled by `cbs.nova.dsl.stage.ExplainStage`, not by the `Executable` interface.
+payload (description + diagram); implementations truncate rather than exceed it (read it via
+`cbs.nova.dsl.explain.ExplainBudget.of(ctx)`). The descriptor-based fallback report is composed by
+`Executable.default explain()` (dsl-api), which builds the ready typed
+`Function<XContext<?>, Result<ExplainReport>>` default at build time; builder `.explain(...)` replaces
+it and `.explainVia("file.md")` loads markdown lazily through the injectable
+`cbs.nova.dsl.explain.ExplainResourceResolver` (`DslConfig.explainResourceResolver()` Replaceable,
+default `ClasspathExplainResourceResolver` prefix `explain/`; the starter publishes a
+`@ConditionalOnMissingBean` `SpringExplainResourceResolver` driven by
+`cbs.nova.explain.resources-prefix`).
 Helpers such as the starter's `MathHelper` override `explain` to produce mode- and
 argument-specific descriptions. The starter's explain pipe still produces the full 12-field
 `ExplainTraceReport` (execution trace, external calls, metrics, AST, dry-run logs; package
-`cbs.nova.dsl`, file under `model/`) for internal pipeline use; `DevDslRuntime` maps it to the
+`cbs.nova.dsl.model`) for internal pipeline use; `DevDslRuntime` maps it to the
 simple `ExplainReport`, appending a one-line trace summary to the description.
 
 

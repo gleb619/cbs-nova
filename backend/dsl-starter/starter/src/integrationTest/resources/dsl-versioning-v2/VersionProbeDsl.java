@@ -1,6 +1,12 @@
-import cbs.nova.dsl.*;
-import cbs.nova.dslexamples.versionprobe.v1.VersionProbeModels.*;
+import cbs.nova.dsl.Dsl;
+import cbs.nova.dsl.DslCompactSource;
+import cbs.nova.dsl.DslObject;
+import cbs.nova.dsl.Result;
+import cbs.nova.dslexamples.v1.VersionProbeModels.VersionProbeIn;
+import cbs.nova.dslexamples.v1.VersionProbeModels.VersionProbeOut;
 import java.util.List;
+
+//TODO: instead of use a compiler from source files, add a testcontainer for a `dsl-builder` module
 
 List<DslObject> define() {
   return Dsl.process("VersionProbe")

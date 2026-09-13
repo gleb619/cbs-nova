@@ -108,6 +108,8 @@ class UnreliableApiDslIntegrationTest {
 
     var globalManager = GlobalManager.globalManager();
     new DefinitionLoader().load(globalManager);
+    DslConfig.dslConfig().generatedClassRegistry()
+            .init(globalManager.defaultClassLoader());
     DslConfig.dslConfig().helperInstanceResolver().replace(typedHelperResolver());
     globalManager.registerHelperResolvers();
 
@@ -233,7 +235,10 @@ class UnreliableApiDslIntegrationTest {
   }
 
   private static HelperInstanceResolver typedHelperResolver() {
-    return new HelperInstanceResolverConfig().helperInstanceResolver();
+    var delegate = new HelperInstanceResolverConfig().helperInstanceResolver();
+    return helperClass -> helperClass == UnreliableApiHelper.class
+            ? new SharedUnreliableApiHelper()
+            : delegate.resolve(helperClass);
   }
 
   /**

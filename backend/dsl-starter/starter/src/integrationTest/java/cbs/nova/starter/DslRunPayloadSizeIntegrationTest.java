@@ -80,7 +80,13 @@ class DslRunPayloadSizeIntegrationTest {
   @BeforeAll
   static void applyMigrations() throws SQLException {
     ResourceDatabasePopulator populator = new ResourceDatabasePopulator(
-            new ClassPathResource("db/migration/postgres/V1__init.sql"));
+            new ClassPathResource("db/migration/postgres/V1__init.sql"),
+            new ClassPathResource("db/migration/postgres/V2__dsl_audit.sql"),
+            new ClassPathResource("db/migration/postgres/V3__dsl_webhook_deliveries.sql"),
+            new ClassPathResource("db/migration/postgres/V4__dsl_compile_diagnostics.sql"),
+            new ClassPathResource("db/migration/postgres/V5__dsl_definition_tests.sql"),
+            new ClassPathResource("db/migration/postgres/V6__dsl_api_keys.sql"),
+            new ClassPathResource("db/migration/postgres/V7__dsl_events.sql"));
     populator.setContinueOnError(false);
     try (Connection connection = DriverManager.getConnection(
             postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())) {

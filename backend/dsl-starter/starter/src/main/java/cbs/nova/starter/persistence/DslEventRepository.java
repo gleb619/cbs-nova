@@ -45,7 +45,7 @@ public class DslEventRepository {
                     (event_type, aggregate_type, aggregate_id, correlation_id,
                      payload, schema_version, created_at)
             VALUES (:eventType, :aggregateType, :aggregateId, :correlationId,
-                    :payload, :schemaVersion, :createdAt)
+                    :payload::jsonb, :schemaVersion, :createdAt)
             """, params);
   }
 

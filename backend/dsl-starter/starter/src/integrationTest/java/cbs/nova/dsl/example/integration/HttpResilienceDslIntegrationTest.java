@@ -6,23 +6,18 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.DefinitionLoader;
-import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.config.HelperInstanceResolverConfig;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
-import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dslexamples.v1.HttpResilienceModels.HttpResilienceProcessIn;
 import cbs.nova.dslexamples.v1.HttpResilienceModels.HttpResilienceProcessOut;
-import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
-import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
 import cbs.nova.starter.helper.CompensationTrackerHelper;
 import cbs.nova.starter.helper.HttpCallHelper;
-import cbs.nova.starter.helper.JsonExtractHelper;
 import cbs.nova.starter.helper.model.HttpCallIn;
 import cbs.nova.starter.service.TemporalDslProcessLauncher;
-import cbs.nova.starter.service.TemporalDslProcessService;
 import cbs.nova.starter.service.TemporalTransactionInvoker;
 import cbs.nova.util.ServiceUtil;
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -47,7 +42,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 import tools.jackson.databind.ObjectMapper;
 
-import java.net.http.HttpClient;
 import java.time.Duration;
 
 /**
@@ -106,6 +100,15 @@ class HttpResilienceDslIntegrationTest {
             .init(globalManager.defaultClassLoader());
     DslConfig.dslConfig().helperInstanceResolver().replace(typedHelperResolver());
     globalManager.registerHelperResolvers();
+    // httpCall is @HelperBean-registered in Spring, not @Helper-scanned, so the
+    // generated resolver does not pick it up. Register explicitly so the worker
+    // activity can resolve it.
+    globalManager.registerHelper("httpCall",
+            () -> new HttpCallHelper(java.net.http.HttpClient.newHttpClient(),
+                    new cbs.nova.starter.config.properties.CbsNovaLoggingProperties(
+                            cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level.INFO,
+                            cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level.INFO,
+                            true)));
 
     assertThat(globalManager.hasProcess("HttpResilienceSuccess")).isTrue();
     assertThat(globalManager.hasProcess("HttpResilienceCompensated")).isTrue();
@@ -272,20 +275,6 @@ class HttpResilienceDslIntegrationTest {
   }
 
   private static HelperInstanceResolver typedHelperResolver() {
-    return helperClass -> {
-      if (helperClass == HttpCallHelper.class) {
-        return new HttpCallHelper(HttpClient.newHttpClient(),
-                new CbsNovaLoggingProperties(Level.INFO, Level.INFO,
-                        true));
-      }
-      if (helperClass == JsonExtractHelper.class) {
-        return new JsonExtractHelper(new ObjectMapper());
-      }
-      try {
-        return (Executable<?, ?>) helperClass.getDeclaredConstructor().newInstance();
-      } catch (ReflectiveOperationException e) {
-        throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName(), e);
-      }
-    };
+    return new HelperInstanceResolverConfig().helperInstanceResolver();
   }
 }

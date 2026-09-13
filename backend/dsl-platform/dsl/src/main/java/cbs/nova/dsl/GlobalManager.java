@@ -456,7 +456,7 @@ public final class GlobalManager {
   }
 
   @SuppressWarnings("unchecked")
-  //TODO: explain must work in same way for all objects
+  // TODO: explain must work in same way for all objects
   @Deprecated(forRemoval = true)
   private static <T> @NonNull ExplainReport invokeExplain(
           @NonNull Executable<T, ?> helper, @NonNull Context<?> ctx) {

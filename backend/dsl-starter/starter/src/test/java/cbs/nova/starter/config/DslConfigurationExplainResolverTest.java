@@ -10,6 +10,7 @@ import cbs.nova.dsl.process.TemporalProcessLauncher;
 import cbs.nova.dsl.transaction.TransactionInvoker;
 import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
+import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.resolver.SpringExplainResourceResolver;
 import org.junit.jupiter.api.AfterEach;
@@ -19,6 +20,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import tools.jackson.databind.ObjectMapper;
 
 class DslConfigurationExplainResolverTest {
@@ -53,6 +55,15 @@ class DslConfigurationExplainResolverTest {
   }
 
   @Test
+  void explainResolverBeanUsesConfiguredPrefix() {
+    var resolver = new DslConfiguration()
+            .explainResourceResolver(new CbsNovaExplainProperties(4000, "explain/"));
+
+    assertThat(resolver).isInstanceOf(SpringExplainResourceResolver.class);
+    assertThat(resolver.load("batch-processing.md")).contains("#");
+  }
+
+  @Test
   void applicationRunnerRegistersResolverOnDslConfig() {
     withSourceDir().run(ctx -> ctx.getBean(ApplicationRunner.class).run(null));
 
@@ -62,31 +73,32 @@ class DslConfigurationExplainResolverTest {
 
   @Test
   void userDefinedResolverBeanWinsOverAutoConfiguration() {
-    withSourceDir().withUserConfiguration(UserResolverConfiguration.class)
+    new ApplicationContextRunner()
+            .withUserConfiguration(UserResolverConfiguration.class, DslConfiguration.class,
+                    CollaboratorConfiguration.class)
             .run(ctx -> {
               assertThat(ctx).hasSingleBean(ExplainResourceResolver.class);
               assertThat(ctx.getBean(ExplainResourceResolver.class))
                       .isSameAs(UserResolverConfiguration.USER_RESOLVER);
 
-              ctx.getBean(ApplicationRunner.class).run(null);
+              ctx.getBean("dslApplicationRunner", ApplicationRunner.class).run(null);
 
               assertThat(DslConfig.dslConfig().explainResourceResolver().get())
                       .isSameAs(UserResolverConfiguration.USER_RESOLVER);
             });
   }
 
-  @Test
-  void autoConfiguredResolverHonorsConfiguredPrefix() {
-    withSourceDir().withPropertyValues("cbs.nova.explain.resources-prefix=explain/")
-            .run(ctx -> assertThat(ctx.getBean(ExplainResourceResolver.class)
-                    .load("batch-processing.md"))
-                    .contains("#"));
-  }
-
   @Configuration
-  @EnableConfigurationProperties({CbsNovaCacheProperties.class, DslProperties.class,
-      CbsNovaExplainProperties.class})
+  @EnableConfigurationProperties({CbsNovaCacheProperties.class, CbsNovaExplainProperties.class,
+      CbsNovaLoggingProperties.class})
+  @Import(SpringHelperConfiguration.class)
   static class CollaboratorConfiguration {
+
+    @Bean
+    DslProperties dslProperties() {
+      return new DslProperties("target/test-dsl", null, null, null, null, null, null, null, null,
+              null, null);
+    }
 
     @Bean
     TemporalProcessLauncher temporalProcessLauncher() {

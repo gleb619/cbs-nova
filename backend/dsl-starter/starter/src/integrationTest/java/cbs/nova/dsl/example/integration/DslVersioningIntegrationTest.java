@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.config.HelperInstanceResolverConfig;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.dsl.GeneratedClassProvider;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslReloadHandler;
 import cbs.nova.dsl.DslObject;
@@ -51,7 +52,7 @@ import java.net.http.HttpClient;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.concurrent.CountDownLatch;
+import java.util.ServiceLoader;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -66,7 +67,6 @@ class DslVersioningIntegrationTest {
   private static final String TASK_QUEUE = "VersionProbe-queue";
   private static final Path LATCH_DIR = Path
           .of(System.getProperty("java.io.tmpdir"), "cbs-nova-versioning-latch");
-  private static final CountDownLatch LATCH_ENTERED = new CountDownLatch(1);
   private static final DockerImageName TEMPORAL_IMAGE = DockerImageName
           .parse("temporalio/auto-setup:1.25.2");
   private static final DockerImageName POSTGRES_IMAGE = DockerImageName.parse("postgres:16");
@@ -109,6 +109,12 @@ class DslVersioningIntegrationTest {
 
     var globalManager = GlobalManager.globalManager();
     new DefinitionLoader().load(globalManager);
+    ServiceLoader.load(GeneratedClassProvider.class,
+            Thread.currentThread().getContextClassLoader())
+            .stream()
+            .map(ServiceLoader.Provider::get)
+            .filter(provider -> provider.descriptor().name().equals("VersionProbe"))
+            .forEach(globalManager::registerGeneratedClass);
     DslConfig.dslConfig().helperInstanceResolver().replace(typedHelperResolver());
     globalManager.registerHelperResolvers();
 
@@ -171,7 +177,7 @@ class DslVersioningIntegrationTest {
     var service = ServiceUtil.newService(new ContextFactory());
 
     var firstRun = service.startProcess("VersionProbe", new VersionProbeIn("first"));
-    assertThat(LATCH_ENTERED.await(10, TimeUnit.SECONDS))
+    assertThat(HelperInstanceResolverConfig.LATCH_ENTERED.await(10, TimeUnit.SECONDS))
             .as("fileLatch helper should be entered")
             .isTrue();
 
