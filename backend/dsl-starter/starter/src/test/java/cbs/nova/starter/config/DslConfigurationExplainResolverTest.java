@@ -24,8 +24,11 @@ import tools.jackson.databind.ObjectMapper;
 class DslConfigurationExplainResolverTest {
 
   private final ApplicationContextRunner runner = new ApplicationContextRunner()
-          .withUserConfiguration(DslConfiguration.class, CollaboratorConfiguration.class)
-          .withPropertyValues("csb.dsl.source-dir=target/test-dsl");
+          .withUserConfiguration(DslConfiguration.class, CollaboratorConfiguration.class);
+
+  private ApplicationContextRunner withSourceDir() {
+    return runner.withPropertyValues("csb.dsl.source-dir=target/test-dsl");
+  }
 
   @AfterEach
   void clearDslConfigOverrides() {
@@ -40,7 +43,7 @@ class DslConfigurationExplainResolverTest {
 
   @Test
   void autoConfigurationProvidesClasspathResolverByDefault() {
-    runner.run(ctx -> {
+    withSourceDir().run(ctx -> {
       assertThat(ctx).hasSingleBean(ExplainResourceResolver.class);
       assertThat(ctx.getBean(ExplainResourceResolver.class))
               .isInstanceOf(SpringExplainResourceResolver.class);
@@ -51,7 +54,7 @@ class DslConfigurationExplainResolverTest {
 
   @Test
   void applicationRunnerRegistersResolverOnDslConfig() {
-    runner.run(ctx -> ctx.getBean(ApplicationRunner.class).run(null));
+    withSourceDir().run(ctx -> ctx.getBean(ApplicationRunner.class).run(null));
 
     assertThat(DslConfig.dslConfig().explainResourceResolver().get())
             .isInstanceOf(SpringExplainResourceResolver.class);
@@ -59,7 +62,7 @@ class DslConfigurationExplainResolverTest {
 
   @Test
   void userDefinedResolverBeanWinsOverAutoConfiguration() {
-    runner.withUserConfiguration(UserResolverConfiguration.class)
+    withSourceDir().withUserConfiguration(UserResolverConfiguration.class)
             .run(ctx -> {
               assertThat(ctx).hasSingleBean(ExplainResourceResolver.class);
               assertThat(ctx.getBean(ExplainResourceResolver.class))
@@ -74,7 +77,7 @@ class DslConfigurationExplainResolverTest {
 
   @Test
   void autoConfiguredResolverHonorsConfiguredPrefix() {
-    runner.withPropertyValues("cbs.nova.explain.resources-prefix=explain/")
+    withSourceDir().withPropertyValues("cbs.nova.explain.resources-prefix=explain/")
             .run(ctx -> assertThat(ctx.getBean(ExplainResourceResolver.class)
                     .load("batch-processing.md"))
                     .contains("#"));
