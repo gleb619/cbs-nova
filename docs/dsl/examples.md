@@ -16,9 +16,10 @@ backend/dsl-starter/dsl-examples/src/
 │   ├── ExceptionProbeDsl.java
 │   ├── InvoiceGenerationDsl.java
 │   ├── LongWorkSimulationDsl.java
+│   ├── PricingFunctionsDsl.java
 │   ├── SimpleGreetingDsl.java
 │   ├── SimpleValidationDsl.java
-│   └── ... (run `ls backend/dsl-starter/dsl-examples/src/dsl/` for the current set — 21 files)
+│   └── ... (run `ls backend/dsl-starter/dsl-examples/src/dsl/` for the current set — 22 files)
 └── models/                   # Typed records (@Json / Avaje Jsonb) shared by the DSL sources
     └── ... (one `*Models.java` per process/transaction that declares typed I/O)
 ```
@@ -520,3 +521,29 @@ With `in.payerReference()` = `IBAN-DE8937` the result is `IB#######37`. If `keep
 reaches the value length, the keeps are clamped so at least one code point always stays masked —
 the helper never returns the value unmasked. Use `mode="fixed"` (with an optional `width`,
 default 8) when the output length must not depend on the input at all.
+
+## Sharing pure pricing logic across a Process and a Transaction with `Function`
+
+A `Function` is a DSL-declared helper that generates no Temporal code — it is registered in the
+shared helper registry and runs locally. Use it to extract multi-step pure computation that more
+than one Process/Transaction needs, without Activity overhead. A Function may call other Functions
+and Helpers, but not Processes or Transactions.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/PricingFunctionsDsl.java` (input/output models in
+`backend/dsl-starter/dsl-examples/src/models/PricingModels.java`).
+
+The example declares two Functions and two consumers:
+
+- `lineTotalFn` — multiplies each order line's `quantity * unitPrice` and sums the results with
+  the built-in `math` helper (Function → Helper).
+- `orderPricingFn` — chains `lineTotalFn` (Function → Function), applies a 10% discount for
+  `VIP` tier customers, adds 20% tax, and rounds each amount to two decimals with the `math`
+  helper's `round` mode.
+- `CheckoutProcess` (Process) and `QuoteTransaction` (Transaction) — both price an order through
+  the same `orderPricingFn`, demonstrating "extract shared pure logic once".
+
+Because Functions are dispatched through `GlobalManager.runFunction` and typed helper input
+requires a typed context body, the example routes calls through small class-level dispatch
+helpers (`callFunction` / `callHelper`) instead of the Map-based `ctx.runHelper` overloads.
+A preview-mode test pinning the exact numbers lives in
+`backend/dsl-starter/starter/src/test/java/cbs/nova/starter/PricingFunctionsDslTest.java`.
