@@ -7,6 +7,7 @@ compiler turns them into production-ready Temporal classes at build time.
 This document is the high-level backend companion to [architecture.md](architecture.md) and
 [architecture-ui.md](architecture-ui.md). Implementation details live in [docs/dsl/](dsl/). The
 rationale behind foundational calls (Temporal, the helper SPI) is recorded in [docs/adr/](adr/).
+The platform baseline (Spring Boot 4 / Jackson 3 / Java 25) is recorded in [ADR 0005](adr/0005-platform-baseline-spring-boot-4-jackson-3.md).
 
 ## What the DSL is for
 
