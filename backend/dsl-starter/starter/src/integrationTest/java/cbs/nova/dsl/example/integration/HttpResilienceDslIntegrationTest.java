@@ -11,10 +11,11 @@ import cbs.nova.config.HelperInstanceResolverConfig;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
-import cbs.nova.dsl.transaction.DslTemporalTransactionRequest;
+import cbs.nova.dsl.config.SingletonSupport;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dslexamples.v1.HttpResilienceModels.HttpResilienceProcessIn;
 import cbs.nova.dslexamples.v1.HttpResilienceModels.HttpResilienceProcessOut;
+import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.helper.CompensationTrackerHelper;
 import cbs.nova.starter.helper.HttpCallHelper;
 import cbs.nova.starter.helper.model.HttpCallIn;
@@ -23,11 +24,24 @@ import cbs.nova.starter.service.TemporalTransactionInvoker;
 import cbs.nova.util.ServiceUtil;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import io.temporal.common.converter.ByteArrayPayloadConverter;
+import io.temporal.common.converter.DataConverter;
+import io.temporal.common.converter.DefaultDataConverter;
+import io.temporal.common.converter.JacksonJsonPayloadConverter;
+import io.temporal.common.converter.NullPayloadConverter;
+import io.temporal.common.converter.ProtobufJsonPayloadConverter;
+import io.temporal.common.converter.ProtobufPayloadConverter;
+import io.temporal.client.WorkflowClientOptions;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
+import java.net.http.HttpClient;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -93,23 +107,10 @@ class HttpResilienceDslIntegrationTest {
   @BeforeAll
   static void setUp() {
     GlobalManager.globalManager().resetForTests();
-    DslConfig.dslConfig().temporalProcessLauncher().replace(null);
+    var dslConfig = DslConfig.dslConfig(SingletonSupport.SingletonScope.of());
 
-    var globalManager = GlobalManager.globalManager();
-    new DefinitionLoader().load(globalManager);
-    DslConfig.dslConfig().generatedClassRegistry()
-            .init(globalManager.defaultClassLoader());
-    DslConfig.dslConfig().helperInstanceResolver().replace(typedHelperResolver());
-    globalManager.registerHelperResolvers();
-    // httpCall is @HelperBean-registered in Spring, not @Helper-scanned, so the
-    // generated resolver does not pick it up. Register explicitly so the worker
-    // activity can resolve it.
-    globalManager.registerHelper("httpCall",
-            () -> new HttpCallHelper(java.net.http.HttpClient.newHttpClient(),
-                    new cbs.nova.starter.config.properties.CbsNovaLoggingProperties(
-                            cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level.INFO,
-                            cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level.INFO,
-                            true)));
+    workflowClient = configureWorkflowClient();
+    var globalManager = configureGlobalManager(dslConfig);
 
     assertThat(globalManager.hasProcess("HttpResilienceSuccess")).isTrue();
     assertThat(globalManager.hasProcess("HttpResilienceCompensated")).isTrue();
@@ -117,37 +118,66 @@ class HttpResilienceDslIntegrationTest {
     assertThat(globalManager.hasTransaction("httpCallTxResilient")).isTrue();
     assertThat(globalManager.hasTransaction("httpCallTxFragile")).isTrue();
 
-    var serviceStubs = WorkflowServiceStubs.newServiceStubs(
-            WorkflowServiceStubsOptions.newBuilder()
-                    .setTarget(
-                            TEMPORAL.getHost() + ":" + TEMPORAL.getMappedPort(7233))
-                    .build());
-    workflowClient = WorkflowClient.newInstance(serviceStubs);
-
-    var launcher = new TemporalDslProcessLauncher(workflowClient, new ObjectMapper(),
-            Duration.ofSeconds(30), Duration.ofSeconds(5));
-    DslConfig.dslConfig().temporalProcessLauncher().replace(launcher);
-    DslConfig.dslConfig().transactionInvoker().replace(new cbs.nova.dsl.transaction.TransactionInvoker() {
-      private final cbs.nova.dsl.transaction.TransactionInvoker delegate = new TemporalTransactionInvoker();
-      @Override
-      public cbs.nova.dsl.Result<?> invoke(String name, Object input, cbs.nova.dsl.Context<?> ctx) {
-        try {
-          java.nio.file.Files.writeString(java.nio.file.Paths.get("/tmp/httpresilience.log"),
-                  "invoker called name=" + name + " input=" + input + "\n",
-                  java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
-        } catch (Exception ignored) {}
-        return delegate.invoke(name, input, ctx);
-      }
-    });
-
     workerFactory = WorkerFactory.newInstance(workflowClient);
     Worker worker = workerFactory.newWorker(TASK_QUEUE);
     registerProcess(worker, "HttpResilienceSuccess");
     registerProcess(worker, "HttpResilienceCompensated");
     registerProcess(worker, "HttpResilienceUncaught");
-    // registerTransaction(worker, "httpCallTxResilient");
-    // registerTransaction(worker, "httpCallTxFragile");
+    registerTransaction(worker, "httpCallTxResilient");
+    registerTransaction(worker, "httpCallTxFragile");
     workerFactory.start();
+  }
+
+  private static @NotNull GlobalManager configureGlobalManager(DslConfig dslConfig) {
+    var launcher = new TemporalDslProcessLauncher(workflowClient, new ObjectMapper(),
+            Duration.ofSeconds(30), Duration.ofSeconds(5));
+    var transactionInvoker = new TemporalTransactionInvoker();
+
+    DslConfig.dslConfig().temporalProcessLauncher().replace(launcher);
+    DslConfig.dslConfig().transactionInvoker().replace(transactionInvoker);
+    DslConfig.dslConfig().helperInstanceResolver().replace(typedHelperResolver());
+
+    dslConfig.temporalProcessLauncher().replace(launcher);
+    dslConfig.transactionInvoker().replace(transactionInvoker);
+    dslConfig.helperInstanceResolver().replace(typedHelperResolver());
+
+    var globalManager = dslConfig.globalManager();
+    globalManager.replaceGlobalManager(globalManager);
+
+    new DefinitionLoader().load(globalManager);
+    dslConfig.generatedClassRegistry()
+            .init(globalManager.defaultClassLoader());
+    globalManager.registerHelperResolvers();
+    // httpCall is @HelperBean-registered in Spring, not @Helper-scanned, so the
+    // generated resolver does not pick it up. Register explicitly so the worker
+    // activity can resolve it.
+    globalManager.registerHelper("httpCall",
+            () -> new HttpCallHelper(HttpClient.newHttpClient(),
+                    new CbsNovaLoggingProperties(
+                            CbsNovaLoggingProperties.Level.INFO,
+                            CbsNovaLoggingProperties.Level.INFO,
+                            true)));
+    return globalManager;
+  }
+
+  private static WorkflowClient configureWorkflowClient() {
+    var serviceStubs = WorkflowServiceStubs.newServiceStubs(
+            WorkflowServiceStubsOptions.newBuilder()
+                    .setTarget(
+                            TEMPORAL.getHost() + ":" + TEMPORAL.getMappedPort(7233))
+                    .build());
+
+    var temporalObjectMapper = JacksonJsonPayloadConverter.newDefaultObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .addMixIn(HttpCallIn.class, HttpCallInMixin.class);
+    DataConverter dataConverter = new DefaultDataConverter(
+            new NullPayloadConverter(),
+            new ByteArrayPayloadConverter(),
+            new ProtobufJsonPayloadConverter(),
+            new ProtobufPayloadConverter(),
+            new JacksonJsonPayloadConverter(temporalObjectMapper));
+    return WorkflowClient.newInstance(serviceStubs,
+            WorkflowClientOptions.newBuilder().setDataConverter(dataConverter).build());
   }
 
   private static void registerProcess(Worker worker, String name) {
@@ -163,13 +193,7 @@ class HttpResilienceDslIntegrationTest {
     } catch (Exception e) {
       throw new RuntimeException("Failed to instantiate activity " + name, e);
     }
-    Object wrapper = asRetryingActivity(descriptor.temporalInterface(), instance);
-    try {
-      java.nio.file.Files.writeString(java.nio.file.Paths.get("/tmp/httpresilience.log"),
-              "registering " + descriptor.name() + " wrapper class=" + wrapper.getClass().getName() + "\n",
-              java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
-    } catch (Exception ignored) {}
-    worker.registerActivitiesImplementations(wrapper);
+    worker.registerActivitiesImplementations(instance);
 
   }
 
@@ -286,14 +310,6 @@ class HttpResilienceDslIntegrationTest {
     assertThat(result.isSuccess()).isFalse();
   }
 
-  private static Object asRetryingActivity(Class<?> activityInterface, Object delegate) {
-    return java.lang.reflect.Proxy.newProxyInstance(
-            activityInterface.getClassLoader(),
-            new Class<?>[]{activityInterface},
-            (proxy, method, args) -> {
-              throw new RuntimeException("PROXY WAS CALLED: " + method.getName());
-            });
-  }
   private static CompensationTrackerHelper tracker() {
     return GlobalManager.globalManager().findHelper("compensationTracker")
             .map(CompensationTrackerHelper.class::cast)
@@ -303,5 +319,22 @@ class HttpResilienceDslIntegrationTest {
 
   private static HelperInstanceResolver typedHelperResolver() {
     return new HelperInstanceResolverConfig().helperInstanceResolver();
+  }
+
+  /**
+   * Jackson mixin so the all-args {@link HttpCallIn} constructor can be used during Temporal
+   * payload deserialization.
+   */
+  private static abstract class HttpCallInMixin {
+    @JsonCreator
+    HttpCallInMixin(
+            @JsonProperty("url") String url,
+            @JsonProperty("method") String method,
+            @JsonProperty("headers") java.util.Map<String, String> headers,
+            @JsonProperty("body") String body,
+            @JsonProperty("timeoutMillis") Long timeoutMillis,
+            @JsonProperty("followRedirects") HttpCallIn.RedirectPolicy followRedirects,
+            @JsonProperty("validStatuses") java.util.List<Integer> validStatuses) {
+    }
   }
 }

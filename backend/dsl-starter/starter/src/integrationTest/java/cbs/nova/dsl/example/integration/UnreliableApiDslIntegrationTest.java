@@ -12,6 +12,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.dsl.config.SingletonSupport;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dslexamples.v1.UnreliableApiModels.UnreliableApiInDsl;
 import cbs.nova.dslexamples.v1.UnreliableApiModels.UnreliableProcessIn;
@@ -37,6 +38,7 @@ import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
+import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -99,14 +101,10 @@ class UnreliableApiDslIntegrationTest {
   @BeforeAll
   static void setUp() {
     GlobalManager.globalManager().resetForTests();
-    DslConfig.dslConfig().temporalProcessLauncher().replace(null);
+    var dslConfig = DslConfig.dslConfig(SingletonSupport.SingletonScope.of());
 
-    var globalManager = GlobalManager.globalManager();
-    new DefinitionLoader().load(globalManager);
-    DslConfig.dslConfig().generatedClassRegistry()
-            .init(globalManager.defaultClassLoader());
-    DslConfig.dslConfig().helperInstanceResolver().replace(typedHelperResolver());
-    globalManager.registerHelperResolvers();
+    workflowClient = configureWorkflowClient();
+    var globalManager = configureGlobalManager(dslConfig);
 
     assertThat(globalManager.hasProcess("UnreliableApiSuccess")).isTrue();
     assertThat(globalManager.hasProcess("UnreliableApiCompensated")).isTrue();
@@ -114,6 +112,17 @@ class UnreliableApiDslIntegrationTest {
     assertThat(globalManager.hasTransaction("unreliableApiTxResilient")).isTrue();
     assertThat(globalManager.hasTransaction("unreliableApiTxFragile")).isTrue();
 
+    workerFactory = WorkerFactory.newInstance(workflowClient);
+    Worker worker = workerFactory.newWorker(TASK_QUEUE);
+    registerProcess(worker, "UnreliableApiSuccess");
+    registerProcess(worker, "UnreliableApiCompensated");
+    registerProcess(worker, "UnreliableApiUncaught");
+    registerTransaction(worker, "unreliableApiTxResilient");
+    registerTransaction(worker, "unreliableApiTxFragile");
+    workerFactory.start();
+  }
+
+  private static WorkflowClient configureWorkflowClient() {
     var serviceStubs = WorkflowServiceStubs.newServiceStubs(
             WorkflowServiceStubsOptions.newBuilder()
                     .setTarget(
@@ -129,22 +138,31 @@ class UnreliableApiDslIntegrationTest {
             new ProtobufJsonPayloadConverter(),
             new ProtobufPayloadConverter(),
             new JacksonJsonPayloadConverter(temporalObjectMapper));
-    workflowClient = WorkflowClient.newInstance(serviceStubs,
+    return WorkflowClient.newInstance(serviceStubs,
             WorkflowClientOptions.newBuilder().setDataConverter(dataConverter).build());
+  }
 
+  private static @NotNull GlobalManager configureGlobalManager(DslConfig dslConfig) {
     var launcher = new TemporalDslProcessLauncher(workflowClient, new ObjectMapper(),
             Duration.ofSeconds(30), Duration.ofSeconds(5));
-    DslConfig.dslConfig().temporalProcessLauncher().replace(launcher);
-    DslConfig.dslConfig().transactionInvoker().replace(new TemporalTransactionInvoker());
+    var transactionInvoker = new TemporalTransactionInvoker();
 
-    workerFactory = WorkerFactory.newInstance(workflowClient);
-    Worker worker = workerFactory.newWorker(TASK_QUEUE);
-    registerProcess(worker, "UnreliableApiSuccess");
-    registerProcess(worker, "UnreliableApiCompensated");
-    registerProcess(worker, "UnreliableApiUncaught");
-    registerTransaction(worker, "unreliableApiTxResilient");
-    registerTransaction(worker, "unreliableApiTxFragile");
-    workerFactory.start();
+    DslConfig.dslConfig().temporalProcessLauncher().replace(launcher);
+    DslConfig.dslConfig().transactionInvoker().replace(transactionInvoker);
+    DslConfig.dslConfig().helperInstanceResolver().replace(typedHelperResolver());
+
+    dslConfig.temporalProcessLauncher().replace(launcher);
+    dslConfig.transactionInvoker().replace(transactionInvoker);
+    dslConfig.helperInstanceResolver().replace(typedHelperResolver());
+
+    var globalManager = dslConfig.globalManager();
+    globalManager.replaceGlobalManager(globalManager);
+
+    new DefinitionLoader().load(globalManager);
+    dslConfig.generatedClassRegistry()
+            .init(globalManager.defaultClassLoader());
+    globalManager.registerHelperResolvers();
+    return globalManager;
   }
 
   private static void registerProcess(Worker worker, String name) {
