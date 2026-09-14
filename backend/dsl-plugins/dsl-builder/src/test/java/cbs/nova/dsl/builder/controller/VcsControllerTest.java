@@ -80,6 +80,7 @@ class VcsControllerTest {
               null,
               null,
               null,
+              null,
               false,
               null);
     }

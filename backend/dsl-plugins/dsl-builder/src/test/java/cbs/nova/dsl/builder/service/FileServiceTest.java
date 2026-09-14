@@ -55,6 +55,7 @@ class FileServiceTest {
             null,
             null,
             null,
+            null,
             false,
             null);
     service = new FileService(properties, new FileRepository(),

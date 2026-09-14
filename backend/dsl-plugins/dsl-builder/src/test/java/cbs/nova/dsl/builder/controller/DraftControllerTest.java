@@ -87,6 +87,7 @@ class DraftControllerTest {
               null,
               null,
               null,
+              null,
               false,
               null);
     }

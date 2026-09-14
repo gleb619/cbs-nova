@@ -36,11 +36,15 @@ class DraftServiceTest {
   void setUp() {
     var properties = properties();
     historyService = new DefinitionHistoryService(properties, objectMapper);
-    var bundleService = new DefinitionBundleService(objectMapper, Optional.empty());
+    var bundleService = new DefinitionBundleService(properties, objectMapper, Optional.empty());
     draftService = new DraftService(properties, objectMapper, historyService, bundleService);
   }
 
   private DslBuilderProperties properties() {
+    return properties(null);
+  }
+
+  private DslBuilderProperties properties(DslBuilderProperties.Workbench workbench) {
     return new DslBuilderProperties(
             workspace,
             Duration.ofMinutes(10),
@@ -59,6 +63,7 @@ class DraftServiceTest {
             null,
             null,
             null,
+            workbench,
             null,
             null,
             null,
@@ -200,7 +205,7 @@ class DraftServiceTest {
 
     DefinitionBundle bundle = draftService.exportBundle(false);
 
-    assertThat(bundle.formatVersion()).isEqualTo(DefinitionBundleService.BUNDLE_FORMAT_VERSION);
+    assertThat(bundle.formatVersion()).isEqualTo(1);
     assertThat(bundle.definitions()).extracting(e -> e.definition().name()).containsExactly("A");
     assertThat(bundle.definitions()).extracting(DefinitionBundleEntry::source)
             .containsOnly("published");
@@ -209,7 +214,7 @@ class DraftServiceTest {
   @Test
   void importBundlePublishesEntriesWithoutReloading() throws IOException {
     DefinitionBundle bundle = new DefinitionBundle(
-            DefinitionBundleService.BUNDLE_FORMAT_VERSION, "1.0", "now",
+            1, "1.0", "now",
             List.of(new DefinitionBundleEntry(
                     new DraftRequest("A", "process", "Draft", "v1", "q"), "published")));
 
@@ -226,7 +231,7 @@ class DraftServiceTest {
   @Test
   void importBundleDryRunSkipsWrites() throws IOException {
     DefinitionBundle bundle = new DefinitionBundle(
-            DefinitionBundleService.BUNDLE_FORMAT_VERSION, "1.0", "now",
+            1, "1.0", "now",
             List.of(new DefinitionBundleEntry(
                     new DraftRequest("A", "process", "Draft", "v1", "q"), "published")));
 
@@ -242,5 +247,46 @@ class DraftServiceTest {
     assertThatThrownBy(() -> draftService.importBundle(
             new DefinitionBundle(0, "1.0", "now", List.of()), false))
             .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void honorsCustomWorkbenchConfig() throws IOException {
+    var workbench = new DslBuilderProperties.Workbench(
+            "custom/drafts", "custom/published", "custom/history", 2, 1, 7);
+    var customProperties = properties(workbench);
+    var customHistory = new DefinitionHistoryService(customProperties, objectMapper);
+    var customBundle = new DefinitionBundleService(customProperties, objectMapper,
+            Optional.empty());
+    var customDrafts = new DraftService(customProperties, objectMapper, customHistory,
+            customBundle);
+
+    customDrafts.save("A", new DraftRequest("A", "process", "Draft", "v1", "q"));
+    assertThat(Files.exists(workspace.resolve("custom/drafts/A.json"))).isTrue();
+
+    customDrafts.publish("A", new DraftRequest("A", "process", "Published", "v1", "q"));
+    // publish() removes the draft marker and writes the published file.
+    assertThat(Files.exists(workspace.resolve("custom/drafts/A.json"))).isFalse();
+    assertThat(Files.exists(workspace.resolve("custom/published/A.json"))).isTrue();
+
+    // Second publish triggers snapshotBeforePublish against the previously published file.
+    customDrafts.publish("A", new DraftRequest("A", "process", "Published", "v2", "q"));
+    assertThat(Files.isDirectory(workspace.resolve("custom/history/A"))).isTrue();
+    assertThat(customDrafts.history("A")).hasSize(1);
+
+    // bundleFormatVersion=2 is honored by export.
+    assertThat(customDrafts.exportBundle(false).formatVersion()).isEqualTo(2);
+
+    // bundleMaxDefinitions=1 rejects bundles larger than 1 entry.
+    DefinitionBundle oversized = new DefinitionBundle(2, "1.0", "now", List.of(
+            new DefinitionBundleEntry(new DraftRequest("A", "process", "Published", "v1", "q"),
+                    "published"),
+            new DefinitionBundleEntry(new DraftRequest("B", "process", "Published", "v1", "q"),
+                    "published")));
+    assertThatThrownBy(() -> customDrafts.importBundle(oversized, false))
+            .isInstanceOf(BuilderApiException.class)
+            .hasMessageContaining("bundle too large (max 1");
+
+    // draftsDefaultLimit=7 sets the default page size when caller passes null.
+    assertThat(customDrafts.list(null, 0).limit()).isEqualTo(7);
   }
 }

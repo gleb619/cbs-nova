@@ -20,9 +20,6 @@ import tools.jackson.databind.ObjectMapper;
 @RequiredArgsConstructor
 public class DefinitionHistoryService {
 
-  // TODO: replace hardcode with app.yml settings
-  private static final String HISTORY_DIR = ".workbench/history";
-  private static final String PUBLISHED_DIR = ".workbench/published";
   private static final String TIMESTAMP_PATTERN = "^[0-9]+$";
   private static final String JSON_SUFFIX = ".json";
 
@@ -129,12 +126,12 @@ public class DefinitionHistoryService {
   }
 
   private Path safePublishedFile(Path dir, String name) {
-    Path publishedDir = dir.resolve(PUBLISHED_DIR).normalize();
+    Path publishedDir = dir.resolve(properties.workbench().publishedDir()).normalize();
     return publishedDir.resolve(safeFileName(name) + JSON_SUFFIX).normalize();
   }
 
   private Path safeHistoryDir(Path dir, String name) {
-    Path historyRoot = dir.resolve(HISTORY_DIR).normalize();
+    Path historyRoot = dir.resolve(properties.workbench().historyDir()).normalize();
     Path historyDir = historyRoot.resolve(safeFileName(name)).normalize();
     if (!historyDir.startsWith(historyRoot)) {
       throw new IllegalArgumentException("History path escapes root: " + historyDir);

@@ -25,6 +25,7 @@ public record DslBuilderProperties(
         @DefaultValue Files files,
         @DefaultValue Git git,
         @DefaultValue FileBuffer fileBuffer,
+        @DefaultValue Workbench workbench,
         Integer gradleJavaMin,
         Integer gradleJavaMax,
         Integer buildLogMaxLines,
@@ -40,6 +41,10 @@ public record DslBuilderProperties(
     files = files == null ? new Files(5, 100, 32, 8, 5L) : files;
     git = git == null ? new Git(true, null, null, null, null, null, 5) : git;
     fileBuffer = fileBuffer == null ? new FileBuffer(1000, 3600L) : fileBuffer;
+    workbench = workbench == null
+            ? new Workbench(".workbench/drafts", ".workbench/published", ".workbench/history",
+                    1, 200, 50)
+            : workbench;
     gradleJavaMin = gradleJavaMin == null ? 8 : gradleJavaMin;
     gradleJavaMax = gradleJavaMax == null ? 25 : gradleJavaMax;
     buildLogMaxLines = buildLogMaxLines == null ? 200 : buildLogMaxLines;
@@ -87,5 +92,14 @@ public record DslBuilderProperties(
   public record FileBuffer(
           @DefaultValue("1000") int maxEntries,
           @DefaultValue("3600") long expireAfterWriteSeconds) {
+  }
+
+  public record Workbench(
+          @DefaultValue(".workbench/drafts") String draftsDir,
+          @DefaultValue(".workbench/published") String publishedDir,
+          @DefaultValue(".workbench/history") String historyDir,
+          @DefaultValue("1") int bundleFormatVersion,
+          @DefaultValue("200") int bundleMaxDefinitions,
+          @DefaultValue("50") int draftsDefaultLimit) {
   }
 }

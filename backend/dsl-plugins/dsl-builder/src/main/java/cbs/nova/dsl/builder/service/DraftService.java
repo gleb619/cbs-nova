@@ -33,11 +33,6 @@ import tools.jackson.databind.ObjectMapper;
 @RequiredArgsConstructor
 public class DraftService {
 
-  // TODO: replace hardcode with app.yml settings
-  private static final String DRAFTS_DIR = ".workbench/drafts";
-  private static final String PUBLISHED_DIR = ".workbench/published";
-  private static final int BUNDLE_MAX_DEFINITIONS = 200;
-  private static final int DEFAULT_LIMIT = 50;
   private static final int MAX_LIMIT = 500;
 
   private final DslBuilderProperties properties;
@@ -49,7 +44,7 @@ public class DraftService {
     requireName(name, body);
     Path dir = workspaceRoot();
     DraftRequest payload = withStatus(body, "Draft");
-    Path file = writePayload(dir.resolve(DRAFTS_DIR), payload);
+    Path file = writePayload(dir.resolve(workbench().draftsDir()), payload);
     log.info("[DSL drafts] saved {} to {}", name, file);
     return new DraftResponse(name, "Draft", file.toString(), false, LoadResult.empty(), null, null);
   }
@@ -59,7 +54,7 @@ public class DraftService {
     Path dir = workspaceRoot();
     DraftRequest payload = withStatus(body, "Published");
     historyService.snapshotBeforePublish(dir, name);
-    Path file = writePayload(dir.resolve(PUBLISHED_DIR), payload);
+    Path file = writePayload(dir.resolve(workbench().publishedDir()), payload);
     deleteDraftMarker(dir, name);
     log.info("[DSL drafts] published {} to {}", name, file);
     return new DraftResponse(name, "Published", file.toString(), false, LoadResult.empty(), null,
@@ -104,7 +99,7 @@ public class DraftService {
                     "No publish history entry " + timestamp + " for " + name));
     historyService.snapshotBeforePublish(dir, name);
     DraftRequest payload = withStatus(entry, "Published");
-    Path file = writePayload(dir.resolve(PUBLISHED_DIR), payload);
+    Path file = writePayload(dir.resolve(workbench().publishedDir()), payload);
     log.info("[DSL drafts] restored {} to published {} from history {}", name, file, timestamp);
     return new DraftResponse(name, "Published", file.toString(), false, LoadResult.empty(), null,
             null);
@@ -112,7 +107,7 @@ public class DraftService {
 
   public DraftResponse delete(String name) throws IOException {
     Path dir = workspaceRoot();
-    Path draftsDir = dir.resolve(DRAFTS_DIR);
+    Path draftsDir = dir.resolve(workbench().draftsDir());
     Path draftFile = draftsDir.resolve(safeFileName(name) + ".json").normalize();
     if (!draftFile.startsWith(draftsDir) || !Files.exists(draftFile)) {
       throw notFound("Draft not found: " + name);
@@ -123,13 +118,13 @@ public class DraftService {
   }
 
   public PageResponse<DraftSummary> list(Integer limit, Integer offset) {
-    int pageSize = clampLimit(limit == null ? DEFAULT_LIMIT : limit);
+    int pageSize = clampLimit(limit == null ? workbench().draftsDefaultLimit() : limit);
     int skip = Math.max(0, offset == null ? 0 : offset);
     Path root = properties.workspaceDir();
     if (root == null) {
       return new PageResponse<>(List.of(), 0L, skip, pageSize);
     }
-    Path drafts = root.resolve(DRAFTS_DIR);
+    Path drafts = root.resolve(workbench().draftsDir());
     if (!Files.isDirectory(drafts)) {
       return new PageResponse<>(List.of(), 0L, skip, pageSize);
     }
@@ -145,7 +140,7 @@ public class DraftService {
 
   public DraftRequest read(String name) throws IOException {
     Path dir = workspaceRoot();
-    Path drafts = dir.resolve(DRAFTS_DIR);
+    Path drafts = dir.resolve(workbench().draftsDir());
     Path draftFile = drafts.resolve(safeFileName(name) + ".json").normalize();
     if (!draftFile.startsWith(drafts) || !Files.exists(draftFile)) {
       throw notFound("Draft not found: " + name);
@@ -167,9 +162,9 @@ public class DraftService {
           throws IOException {
     Path dir = workspaceRoot();
     bundleService.validateForImport(bundle);
-    if (bundle.definitions().size() > BUNDLE_MAX_DEFINITIONS) {
+    if (bundle.definitions().size() > workbench().bundleMaxDefinitions()) {
       throw new BuilderApiException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST",
-              "bundle too large (max " + BUNDLE_MAX_DEFINITIONS + " definitions)");
+              "bundle too large (max " + workbench().bundleMaxDefinitions() + " definitions)");
     }
     if (dryRun) {
       List<ImportEntryResult> results = bundle.definitions().stream()
@@ -184,7 +179,7 @@ public class DraftService {
       DraftRequest payload = withStatus(entry.definition(), "Published");
       String name = payload.name();
       historyService.snapshotBeforePublish(dir, name);
-      Path file = writePayload(dir.resolve(PUBLISHED_DIR), payload);
+      Path file = writePayload(dir.resolve(workbench().publishedDir()), payload);
       results.add(new ImportEntryResult(name, "published", null));
       log.info("[DSL bundle] imported published marker {} to {}", name, file);
     }
@@ -263,14 +258,19 @@ public class DraftService {
 
   private void deleteDraftMarker(Path dir, String name) {
     try {
-      Path draftFile = dir.resolve(DRAFTS_DIR).resolve(safeFileName(name) + ".json").normalize();
-      if (draftFile.startsWith(dir.resolve(DRAFTS_DIR).normalize()) && Files.exists(draftFile)) {
+      Path draftsRoot = dir.resolve(workbench().draftsDir()).normalize();
+      Path draftFile = draftsRoot.resolve(safeFileName(name) + ".json").normalize();
+      if (draftFile.startsWith(draftsRoot) && Files.exists(draftFile)) {
         Files.delete(draftFile);
         log.info("[DSL drafts] deleted draft marker {} after publish", draftFile);
       }
     } catch (Exception e) {
       log.warn("[DSL drafts] failed to delete draft marker for {}: {}", name, e.getMessage());
     }
+  }
+
+  private DslBuilderProperties.Workbench workbench() {
+    return properties.workbench();
   }
 
   private static String safeFileName(String name) {

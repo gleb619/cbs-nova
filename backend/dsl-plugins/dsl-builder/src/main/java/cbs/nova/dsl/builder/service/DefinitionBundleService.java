@@ -1,5 +1,6 @@
 package cbs.nova.dsl.builder.service;
 
+import cbs.nova.dsl.builder.config.DslBuilderProperties;
 import cbs.nova.dsl.builder.model.VcsModels.DefinitionBundle;
 import cbs.nova.dsl.builder.model.VcsModels.DefinitionBundleEntry;
 import cbs.nova.dsl.builder.model.VcsModels.DraftRequest;
@@ -24,36 +25,34 @@ import tools.jackson.databind.ObjectMapper;
 @RequiredArgsConstructor
 public class DefinitionBundleService {
 
-  // TODO: replace hardcode with app.yml settings
-  public static final int BUNDLE_FORMAT_VERSION = 1;
-  private static final String PUBLISHED_DIR = ".workbench/published";
-  private static final String DRAFTS_DIR = ".workbench/drafts";
   private static final String JSON_SUFFIX = ".json";
 
+  private final DslBuilderProperties properties;
   private final ObjectMapper objectMapper;
   private final Optional<BuildProperties> buildProperties;
 
   public DefinitionBundle export(Path dir, boolean includeDrafts) {
     Map<String, DefinitionBundleEntry> entries = new LinkedHashMap<>();
-    readInto(entries, dir.resolve(PUBLISHED_DIR), "published");
+    readInto(entries, dir.resolve(properties.workbench().publishedDir()), "published");
     if (includeDrafts) {
-      readInto(entries, dir.resolve(DRAFTS_DIR), "draft");
+      readInto(entries, dir.resolve(properties.workbench().draftsDir()), "draft");
     }
     List<DefinitionBundleEntry> sorted = entries.values().stream()
             .sorted(Comparator.comparing(e -> e.definition().name()))
             .toList();
-    return new DefinitionBundle(BUNDLE_FORMAT_VERSION, engineVersion(), Instant.now().toString(),
-            sorted);
+    return new DefinitionBundle(properties.workbench().bundleFormatVersion(), engineVersion(),
+            Instant.now().toString(), sorted);
   }
 
   public void validateForImport(DefinitionBundle bundle) {
+    int expected = properties.workbench().bundleFormatVersion();
     if (bundle == null || bundle.formatVersion() == 0) {
       throw new IllegalArgumentException("bundle: missing or invalid formatVersion");
     }
-    if (bundle.formatVersion() != BUNDLE_FORMAT_VERSION) {
+    if (bundle.formatVersion() != expected) {
       throw new IllegalArgumentException(
               "Unsupported bundle formatVersion " + bundle.formatVersion()
-                      + " (expected " + BUNDLE_FORMAT_VERSION + ")");
+                      + " (expected " + expected + ")");
     }
     if (bundle.definitions() == null || bundle.definitions().isEmpty()) {
       throw new IllegalArgumentException("bundle: no definitions");

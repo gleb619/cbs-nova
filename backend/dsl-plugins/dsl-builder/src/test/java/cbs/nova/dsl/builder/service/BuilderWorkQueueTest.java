@@ -42,6 +42,7 @@ class BuilderWorkQueueTest {
             null,
             null,
             null,
+            null,
             false,
             null);
     var queue = new BuilderWorkQueue(properties);

@@ -71,6 +71,7 @@ class CompileServiceTest {
             null,
             null,
             null,
+            null,
             false,
             null);
   }

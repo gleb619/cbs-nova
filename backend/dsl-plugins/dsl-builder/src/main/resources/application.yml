@@ -60,3 +60,10 @@ cbs:
       file-buffer:
         max-entries: 1000
         expire-after-write-seconds: 3600
+      workbench:
+        drafts-dir: .workbench/drafts
+        published-dir: .workbench/published
+        history-dir: .workbench/history
+        bundle-format-version: 1
+        bundle-max-definitions: 200
+        drafts-default-limit: 50

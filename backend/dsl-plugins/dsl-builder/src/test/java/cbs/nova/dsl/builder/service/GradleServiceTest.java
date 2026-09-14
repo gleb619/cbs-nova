@@ -136,6 +136,7 @@ class GradleServiceTest {
             null,
             null,
             null,
+            null,
             min,
             max,
             logLines,
