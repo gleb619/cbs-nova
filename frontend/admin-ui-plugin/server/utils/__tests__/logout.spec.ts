@@ -142,7 +142,9 @@ describe('performLogout', () => {
       token_endpoint: 'http://keycloak/token',
       end_session_endpoint: endSessionEndpoint,
     } as Awaited<ReturnType<typeof discoverOidc>>)
-    ;($fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('logout failed'))
+    ;($fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error('logout failed'),
+    )
 
     await expect(performLogout(fakeEvent)).resolves.toBeUndefined()
 

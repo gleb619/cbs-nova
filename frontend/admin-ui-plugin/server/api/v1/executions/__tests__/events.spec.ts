@@ -5,7 +5,11 @@ const { proxyRequestMock } = vi.hoisted(() => ({
 }))
 
 const { useBackendConfigMock, buildBackendHeadersMock, attachAuthMock } = vi.hoisted(() => ({
-  useBackendConfigMock: vi.fn(() => ({ baseUrl: 'http://localhost:8090', apiKey: '', timeoutMs: 10000 })),
+  useBackendConfigMock: vi.fn(() => ({
+    baseUrl: 'http://localhost:8090',
+    apiKey: '',
+    timeoutMs: 10000,
+  })),
   buildBackendHeadersMock: vi.fn(() => ({
     headers: { 'x-request-id': 'req-1' },
     requestId: 'req-1',
@@ -54,10 +58,14 @@ describe('executions/[id]/events.get', () => {
     expect(buildBackendHeadersMock).toHaveBeenCalledWith(fakeEvent, { json: false })
     expect(attachAuthMock).toHaveBeenCalledWith(fakeEvent, { 'x-request-id': 'req-1' })
     expect(proxyRequestMock).toHaveBeenCalledTimes(1)
-    expect(proxyRequestMock).toHaveBeenCalledWith(fakeEvent, 'http://localhost:8090/api/executions/run-1/events', {
-      fetchOptions: {
-        headers: { 'x-request-id': 'req-1' },
+    expect(proxyRequestMock).toHaveBeenCalledWith(
+      fakeEvent,
+      'http://localhost:8090/api/executions/run-1/events',
+      {
+        fetchOptions: {
+          headers: { 'x-request-id': 'req-1' },
+        },
       },
-    })
+    )
   })
 })

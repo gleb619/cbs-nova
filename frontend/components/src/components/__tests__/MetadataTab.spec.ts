@@ -70,7 +70,9 @@ describe('MetadataTab', () => {
     const wrapper = mount(MetadataTab, { props: { execution, metadata: undefined } })
 
     expect(wrapper.find('[data-testid="metadata-triggered-by"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="executions-metadata-field-Triggered by"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="executions-metadata-field-Triggered by"]').exists()).toBe(
+      false,
+    )
   })
 
   it('flattens allowed metadata keys as additional rows', () => {
@@ -154,11 +156,9 @@ describe('MetadataTab', () => {
         props: { execution: makeExecution(), metadata: undefined, workflowLink: null },
       })
 
-      expect(
-        wrapper
-          .find('[data-testid="executions-metadata-field-Workflow ID"]')
-          .exists(),
-      ).toBe(true)
+      expect(wrapper.find('[data-testid="executions-metadata-field-Workflow ID"]').exists()).toBe(
+        true,
+      )
     })
 
     it('renders a copy-to-clipboard button next to the workflowId', () => {

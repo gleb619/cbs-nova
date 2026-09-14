@@ -1,5 +1,6 @@
 package cbs.nova.dsl.process;
 
+import cbs.nova.dsl.model.ObjectDescriptor;
 import lombok.Builder;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -14,7 +15,10 @@ public record ProcessDescriptor(
         @Nullable Class<?> inputType,
         @Nullable Class<?> outputType,
         boolean hasCompensation,
-        @NonNull List<String> helperRefs,
-        @NonNull List<String> transactionRefs) {
+        // TODO: remove next depricated lists
+        @Deprecated(forRemoval = true) @NonNull List<String> helperRefs,
+        @Deprecated(forRemoval = true) @NonNull List<String> transactionRefs)
+        implements
+          ObjectDescriptor {
 
 }

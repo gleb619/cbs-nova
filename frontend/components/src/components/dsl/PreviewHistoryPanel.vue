@@ -57,11 +57,7 @@ function entryTime(entry: PreviewHistoryEntry): string {
 
 <template>
   <div class="h-full overflow-auto p-3" data-testid="history-panel">
-    <p
-      v-if="history.length === 0"
-      class="text-sm text-gray-500"
-      data-testid="history-empty"
-    >
+    <p v-if="history.length === 0" class="text-sm text-gray-500" data-testid="history-empty">
       No runs yet.
     </p>
 

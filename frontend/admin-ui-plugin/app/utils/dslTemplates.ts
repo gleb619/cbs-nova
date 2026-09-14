@@ -34,10 +34,7 @@ export const DSL_TEMPLATES: DslTemplate[] = [
         status: 'Draft',
         version: '1',
         taskQueue: 'saga',
-        steps: [
-          { helper: 'reserveInventory' },
-          { helper: 'chargePayment' },
-        ],
+        steps: [{ helper: 'reserveInventory' }, { helper: 'chargePayment' }],
         compensation: {
           steps: [{ helper: 'refundPayment' }, { helper: 'releaseInventory' }],
         },

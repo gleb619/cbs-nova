@@ -25,7 +25,15 @@ const statusColors: Record<string, string> = {
   Pending: '#d1d5db',
 }
 
-const statusOrder = ['Running', 'Completed', 'Failed', 'Stale', 'Cancelled', 'Compensated', 'Pending']
+const statusOrder = [
+  'Running',
+  'Completed',
+  'Failed',
+  'Stale',
+  'Cancelled',
+  'Compensated',
+  'Pending',
+]
 
 const buckets = computed(() => props.data?.buckets ?? [])
 

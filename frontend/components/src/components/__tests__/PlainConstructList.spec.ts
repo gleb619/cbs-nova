@@ -124,7 +124,9 @@ describe('PlainConstructList', () => {
       props: { constructs, selectedName: null, deletable: true },
     })
 
-    await wrapper.find('[data-testid="plain-construct-list-item-delete-SendEmail"]').trigger('click')
+    await wrapper
+      .find('[data-testid="plain-construct-list-item-delete-SendEmail"]')
+      .trigger('click')
 
     expect(wrapper.emitted('select')).toBeFalsy()
     expect(wrapper.emitted('delete')).toBeTruthy()

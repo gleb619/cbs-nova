@@ -19,7 +19,7 @@ class CodeWriterTest {
   @Test
   void writesFilesInCorrectDirectoryTree() throws Exception {
     var writer = new CodeWriter();
-    var source = new GeneratedSource("cbs.nova.dsl.generated.loan.v1", "LoanProcessWorkflow",
+    var source = new GeneratedSource("cbs.nova.dsl.generated.v1.loan", "LoanProcessWorkflow",
             "// source");
     writer.write(List.of(source), tempDir);
 
@@ -31,9 +31,9 @@ class CodeWriterTest {
   @Test
   void writesMultipleSourcesToSameDir() throws Exception {
     var writer = new CodeWriter();
-    var s1 = new GeneratedSource("cbs.nova.dsl.generated.loan.v1", "LoanProcessWorkflow",
+    var s1 = new GeneratedSource("cbs.nova.dsl.generated.v1.loan", "LoanProcessWorkflow",
             "// iface");
-    var s2 = new GeneratedSource("cbs.nova.dsl.generated.loan.v1", "LoanProcessDefinition",
+    var s2 = new GeneratedSource("cbs.nova.dsl.generated.v1.loan", "LoanProcessDefinition",
             "// impl");
     writer.write(List.of(s1, s2), tempDir);
 

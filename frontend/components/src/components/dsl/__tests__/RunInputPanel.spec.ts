@@ -1,6 +1,9 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { DSL_SCHEMA_FETCH_KEY, __resetConstructSchemaCache } from '../../../composables/useConstructSchema'
+import {
+  DSL_SCHEMA_FETCH_KEY,
+  __resetConstructSchemaCache,
+} from '../../../composables/useConstructSchema'
 import RunInputPanel from '../RunInputPanel.vue'
 import SchemaForm from '../SchemaForm.vue'
 import SchemaFormField from '../SchemaFormField.vue'

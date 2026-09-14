@@ -115,49 +115,50 @@ describe('DropdownMenu', () => {
     expect(activeElement()).toBe(itemOf(w, 'c').element)
   })
 
-  it.each(['click', 'enter', 'space'] as const)(
-    'emits select exactly once with the item and closes on %s',
-    async (interaction) => {
-      const w = mountMenu()
-      await triggerOf(w).trigger('click')
+  it.each([
+    'click',
+    'enter',
+    'space',
+  ] as const)('emits select exactly once with the item and closes on %s', async (interaction) => {
+    const w = mountMenu()
+    await triggerOf(w).trigger('click')
 
-      const beta = itemOf(w, 'b')
-      if (interaction === 'click') {
-        await beta.trigger('click')
-      } else if (interaction === 'enter') {
-        await beta.trigger('keydown', { key: 'Enter' })
-      } else {
-        await beta.trigger('keydown', { key: ' ' })
-      }
+    const beta = itemOf(w, 'b')
+    if (interaction === 'click') {
+      await beta.trigger('click')
+    } else if (interaction === 'enter') {
+      await beta.trigger('keydown', { key: 'Enter' })
+    } else {
+      await beta.trigger('keydown', { key: ' ' })
+    }
 
-      expect(w.emitted('select')).toEqual([[items[1]]])
-      expect(w.find('[role="menu"]').exists()).toBe(false)
-    },
-  )
+    expect(w.emitted('select')).toEqual([[items[1]]])
+    expect(w.find('[role="menu"]').exists()).toBe(false)
+  })
 
-  it.each(['click', 'enter'] as const)(
-    'emits no select and keeps the menu open when a disabled item gets %s',
-    async (interaction) => {
-      const w = mountMenu({
-        items: [
-          { label: 'Alpha', value: 'a' },
-          { label: 'Beta', value: 'b', disabled: true },
-          { label: 'Gamma', value: 'c' },
-        ],
-      })
-      await triggerOf(w).trigger('click')
+  it.each([
+    'click',
+    'enter',
+  ] as const)('emits no select and keeps the menu open when a disabled item gets %s', async (interaction) => {
+    const w = mountMenu({
+      items: [
+        { label: 'Alpha', value: 'a' },
+        { label: 'Beta', value: 'b', disabled: true },
+        { label: 'Gamma', value: 'c' },
+      ],
+    })
+    await triggerOf(w).trigger('click')
 
-      const beta = itemOf(w, 'b')
-      if (interaction === 'click') {
-        await beta.trigger('click')
-      } else {
-        await beta.trigger('keydown', { key: 'Enter' })
-      }
+    const beta = itemOf(w, 'b')
+    if (interaction === 'click') {
+      await beta.trigger('click')
+    } else {
+      await beta.trigger('keydown', { key: 'Enter' })
+    }
 
-      expect(w.emitted('select')).toBeUndefined()
-      expect(w.find('[role="menu"]').exists()).toBe(true)
-    },
-  )
+    expect(w.emitted('select')).toBeUndefined()
+    expect(w.find('[role="menu"]').exists()).toBe(true)
+  })
 
   it('closes and returns focus to the trigger on Escape on the trigger', async () => {
     const w = mountMenu()

@@ -168,7 +168,11 @@ onMounted(() => {
     </div>
 
     <div class="flex-1 overflow-auto">
-      <div v-if="loading" class="px-4 py-3 text-sm text-gray-500" data-testid="webhook-deliveries-loading">
+      <div
+        v-if="loading"
+        class="px-4 py-3 text-sm text-gray-500"
+        data-testid="webhook-deliveries-loading"
+      >
         Loading webhook deliveries…
       </div>
       <div v-else-if="error" class="px-4 py-3" data-testid="webhook-deliveries-error">
@@ -193,11 +197,19 @@ onMounted(() => {
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
-          <tr v-for="item in rows" :key="item.id" class="align-top" data-testid="webhook-deliveries-row">
+          <tr
+            v-for="item in rows"
+            :key="item.id"
+            class="align-top"
+            data-testid="webhook-deliveries-row"
+          >
             <td class="px-4 py-2 whitespace-nowrap text-gray-500" :title="item.occurredAt">
               {{ formatRelativeTime(item.occurredAt) }}
             </td>
-            <td class="px-2 py-2 font-medium text-gray-900" data-testid="webhook-deliveries-subscription">
+            <td
+              class="px-2 py-2 font-medium text-gray-900"
+              data-testid="webhook-deliveries-subscription"
+            >
               {{ item.subscriptionId }}
             </td>
             <td class="px-2 py-2 text-gray-600 break-all" data-testid="webhook-deliveries-url">

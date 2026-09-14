@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { DSL_TEMPLATES, type DslTemplate } from '../utils/dslTemplates'
 
-const props = withDefaults(defineProps<{
-  templates?: DslTemplate[]
-}>(), {
-  templates: () => DSL_TEMPLATES,
-})
+const props = withDefaults(
+  defineProps<{
+    templates?: DslTemplate[]
+  }>(),
+  {
+    templates: () => DSL_TEMPLATES,
+  },
+)
 
 const emit = defineEmits<{
   select: [template: DslTemplate]

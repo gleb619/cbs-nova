@@ -24,9 +24,7 @@ function parseFreeform(value: string): Record<string, unknown> | null {
   try {
     const parsed = value.trim() ? JSON.parse(value) : {}
     freeformError.value = null
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-      ? parsed
-      : {}
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
   } catch (err) {
     freeformError.value = (err as Error).message
     return null
@@ -93,7 +91,8 @@ function updateField(name: string, value: unknown) {
           @input="onFreeformInput"
         />
         <span v-if="freeformError" class="text-xs text-red-600"
-          >Invalid JSON: {{ freeformError }}</span>
+          >Invalid JSON: {{ freeformError }}</span
+        >
       </label>
     </template>
 

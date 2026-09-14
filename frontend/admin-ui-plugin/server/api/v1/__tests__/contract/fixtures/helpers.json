@@ -1,10 +1,5 @@
 {
-  "names": [
-    "currentTimestamp",
-    "formatDate",
-    "httpCall",
-    "uuidV7"
-  ],
+  "names": ["currentTimestamp", "formatDate", "httpCall", "uuidV7"],
   "helpers": [
     {
       "name": "currentTimestamp",

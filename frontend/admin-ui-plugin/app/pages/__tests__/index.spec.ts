@@ -23,9 +23,8 @@ interface DashboardHarness {
 const { useDashboardStatsMock, navigateTo } = vi.hoisted(() => {
   const navigateToSpy = vi.fn()
   const useDashboardStatsMockFn = vi.fn(() => {
-    const harness = (
-      globalThis as unknown as { __dashboardHarness?: DashboardHarness }
-    ).__dashboardHarness
+    const harness = (globalThis as unknown as { __dashboardHarness?: DashboardHarness })
+      .__dashboardHarness
     if (!harness) throw new Error('dashboard harness not installed yet')
     return harness
   })
@@ -83,11 +82,7 @@ const statCardStub = defineComponent({
   props: ['count', 'label', 'icon', 'to', 'linkComponent'],
   setup(props) {
     return () =>
-      h(
-        'div',
-        { 'data-testid': `dashboard-stat-${props.label as string}` },
-        String(props.count),
-      )
+      h('div', { 'data-testid': `dashboard-stat-${props.label as string}` }, String(props.count))
   },
 })
 
@@ -113,11 +108,7 @@ const errorBannerStub = defineComponent({
     return () =>
       h('div', { 'data-testid': 'error-banner' }, [
         h('span', { 'data-testid': 'error-message' }, props.message as string),
-        h(
-          'button',
-          { 'data-testid': 'retry-button', onClick: () => emit('retry') },
-          'Retry',
-        ),
+        h('button', { 'data-testid': 'retry-button', onClick: () => emit('retry') }, 'Retry'),
       ])
   },
 })
@@ -220,9 +211,7 @@ describe('index.vue dashboard page', () => {
     expect(wrapper.find('[data-testid="dashboard-stat-Stale"]').text()).toBe('1')
 
     // Math.round(0.12345 * 1000) / 10 === 12.3
-    expect(wrapper.find('[data-testid="dashboard-stat-Failure rate (24h, %)"]').text()).toBe(
-      '12.3',
-    )
+    expect(wrapper.find('[data-testid="dashboard-stat-Failure rate (24h, %)"]').text()).toBe('12.3')
 
     expect(wrapper.find('[data-testid="dashboard-top-processes"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="dashboard-top-process-alpha"]').exists()).toBe(true)

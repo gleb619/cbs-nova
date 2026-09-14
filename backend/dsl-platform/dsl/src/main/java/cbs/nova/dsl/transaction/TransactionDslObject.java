@@ -51,30 +51,4 @@ public record TransactionDslObject(
     return descriptor.get();
   }
 
-  public static @NonNull DslDescriptor defaultDescriptor(
-          @NonNull String name,
-          @NonNull String taskQueue,
-          @NonNull String version,
-          @Nullable Class<?> inputType,
-          @Nullable Class<?> outputType,
-          @NonNull List<ParameterDescriptor> parameters,
-          boolean hasCompensation,
-          @NonNull Duration startToCloseTimeout,
-          @Nullable RetryPolicy retryPolicy,
-          @Nullable Duration heartbeatTimeout,
-          @Nullable String description) {
-    return DslDescriptor.builder()
-            .name(name)
-            .type(DslType.TRANSACTION)
-            .description(description)
-            .inputType(inputType)
-            .outputType(outputType)
-            .hasSideEffects(true)
-            .parameters(parameters != null ? parameters : List.of())
-            .taskQueue(taskQueue)
-            .version(version)
-            .startToCloseTimeout(startToCloseTimeout)
-            .heartbeatTimeout(heartbeatTimeout)
-            .build();
-  }
 }

@@ -606,5 +606,4 @@ describe('proxyToBackend', () => {
     ]
     expect(opts.headers['Content-Type']).toBeUndefined()
   })
-
 })

@@ -116,12 +116,9 @@ describe('useRunner', () => {
     const after = r.status.value
 
     expect(before).toBe('idle')
-    expect(getApiMocks().run).toHaveBeenCalledWith(
-      'runDef',
-      r.formData.value,
-      undefined,
-      { 'Idempotency-Key': expect.stringMatching(UUID_REGEX) },
-    )
+    expect(getApiMocks().run).toHaveBeenCalledWith('runDef', r.formData.value, undefined, {
+      'Idempotency-Key': expect.stringMatching(UUID_REGEX),
+    })
     expect(r.output.value).toMatchObject({ result: 'r2', workflowId: 'wf-2' })
     expect(after).toBe('success')
   })

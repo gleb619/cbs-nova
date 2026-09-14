@@ -33,7 +33,8 @@ export function extractApiError(err: unknown, fallback = 'Request failed'): ApiE
     const data = isRecord(record?.data) ? record.data : undefined
 
     const dataMessage = typeof data?.message === 'string' ? data.message : undefined
-    const statusMessage = typeof record?.statusMessage === 'string' ? record.statusMessage : undefined
+    const statusMessage =
+      typeof record?.statusMessage === 'string' ? record.statusMessage : undefined
     const recordMessage = typeof record?.message === 'string' ? record.message : undefined
     const primitiveMessage =
       typeof err === 'string' || typeof err === 'number' || typeof err === 'boolean'

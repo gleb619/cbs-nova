@@ -30,10 +30,7 @@ function formatTime(s: string) {
 </script>
 
 <template>
-  <div
-    data-testid="executions-logs-tab"
-    class="bg-white border border-gray-200 rounded-lg"
-  >
+  <div data-testid="executions-logs-tab" class="bg-white border border-gray-200 rounded-lg">
     <div class="p-3 border-b border-gray-200 flex flex-wrap items-center gap-3">
       <div>
         <label for="log-severity" class="text-xs text-gray-600 mr-1">Severity:</label>

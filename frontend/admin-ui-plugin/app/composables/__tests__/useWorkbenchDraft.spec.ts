@@ -169,14 +169,7 @@ describe('useWorkbenchDraft', () => {
     const savedHandler = vi.fn()
     const clearedHandler = vi.fn()
 
-    const {
-      body,
-      clearDraft,
-      setName,
-      onRestored,
-      onSaved,
-      onCleared,
-    } = useWorkbenchDraft('c1')
+    const { body, clearDraft, setName, onRestored, onSaved, onCleared } = useWorkbenchDraft('c1')
     onRestored(restoredHandler)
     onSaved(savedHandler)
     onCleared(clearedHandler)
@@ -194,9 +187,7 @@ describe('useWorkbenchDraft', () => {
     await flush()
 
     expect(savedHandler).toHaveBeenCalledTimes(1)
-    expect(savedHandler).toHaveBeenLastCalledWith(
-      expect.objectContaining({ body: 'edited' }),
-    )
+    expect(savedHandler).toHaveBeenLastCalledWith(expect.objectContaining({ body: 'edited' }))
 
     clearDraft()
     expect(clearedHandler).toHaveBeenCalledTimes(1)

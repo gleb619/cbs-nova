@@ -65,9 +65,7 @@ describe('useTemporalLink', () => {
   it('strips a trailing slash from the base url', () => {
     config.public.temporalUiBaseUrl = 'http://localhost:8233/'
     const link = useTemporalLink()
-    expect(link.workflowUrl('wf-1')).toBe(
-      'http://localhost:8233/namespaces/default/workflows/wf-1',
-    )
+    expect(link.workflowUrl('wf-1')).toBe('http://localhost:8233/namespaces/default/workflows/wf-1')
   })
 
   it('returns null when workflowId is empty / blank / null / undefined', () => {

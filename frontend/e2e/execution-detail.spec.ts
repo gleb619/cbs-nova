@@ -30,7 +30,10 @@ test('clicking a list row navigates to a rendered execution detail page', async 
   // dead-backend / empty-backend path shows the error banner or the "No
   // executions match current filters" rowless table instead.
   const rows = page.locator('tr[data-testid^="execution-list-row-"]')
-  await rows.first().waitFor({ state: 'visible', timeout: 15_000 }).catch(() => {})
+  await rows
+    .first()
+    .waitFor({ state: 'visible', timeout: 15_000 })
+    .catch(() => {})
 
   if ((await rows.count()) === 0) {
     // Backend is down or has zero executions — nothing to click through to.

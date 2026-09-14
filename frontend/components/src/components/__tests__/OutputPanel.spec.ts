@@ -45,7 +45,7 @@ function mountOutputPanel(props: Record<string, unknown>) {
 }
 
 describe('OutputPanel', () => {
-it('exposes root data-testid', () => {
+  it('exposes root data-testid', () => {
     const wrapper = mountOutputPanel({
       output: makeOutput(),
       mode: 'run',

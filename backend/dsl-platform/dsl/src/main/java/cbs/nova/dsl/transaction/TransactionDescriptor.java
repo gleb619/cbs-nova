@@ -1,5 +1,6 @@
 package cbs.nova.dsl.transaction;
 
+import cbs.nova.dsl.model.ObjectDescriptor;
 import cbs.nova.dsl.model.RetryPolicy;
 import lombok.Builder;
 import org.jspecify.annotations.NonNull;
@@ -19,6 +20,6 @@ public record TransactionDescriptor(
         @NonNull List<String> helperRefs,
         @NonNull Duration startToCloseTimeout,
         @Nullable RetryPolicy retryPolicy,
-        @Nullable Duration heartbeatTimeout) {
+        @Nullable Duration heartbeatTimeout) implements ObjectDescriptor {
 
 }

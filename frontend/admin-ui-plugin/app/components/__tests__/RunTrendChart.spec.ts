@@ -94,9 +94,7 @@ describe('RunTrendChart', () => {
       props: { data: null, error: 'Trend unavailable' },
     })
 
-    expect(wrapper.find('[data-testid="run-trend-chart-error"]').text()).toBe(
-      'Trend unavailable',
-    )
+    expect(wrapper.find('[data-testid="run-trend-chart-error"]').text()).toBe('Trend unavailable')
 
     await wrapper.find('[data-testid="run-trend-chart-retry"]').trigger('click')
     expect(wrapper.emitted('retry')).toHaveLength(1)

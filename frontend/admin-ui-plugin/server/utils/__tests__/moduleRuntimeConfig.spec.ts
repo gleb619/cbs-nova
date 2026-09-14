@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  resolveRuntimeConfig,
-  type ExistingRuntimeConfig,
-} from '../moduleRuntimeConfig'
+import { resolveRuntimeConfig, type ExistingRuntimeConfig } from '../moduleRuntimeConfig'
 import type { ModuleOptions } from '../../../module'
 
 describe('resolveRuntimeConfig', () => {
@@ -94,10 +91,10 @@ describe('resolveRuntimeConfig', () => {
         temporalNamespace: 'env-ns',
       },
     }
-    const { config, publicConfig } = resolveRuntimeConfig(
-      existing,
-      { backendBaseUrl: 'http://options-backend:9090', appName: 'Options Admin' },
-    )
+    const { config, publicConfig } = resolveRuntimeConfig(existing, {
+      backendBaseUrl: 'http://options-backend:9090',
+      appName: 'Options Admin',
+    })
 
     expect(config.backendBaseUrl).toBe('http://env-backend:7070')
     expect(config.backendTimeoutMs).toBe(1234)
@@ -117,19 +114,21 @@ describe('resolveRuntimeConfig', () => {
       authSessionIdleTimeoutSeconds: 0,
       authSessionAbsoluteTimeoutSeconds: 0,
     }
-    const { config } = resolveRuntimeConfig(
-      existing,
-      { authSessionIdleTimeoutSeconds: 900, authSessionAbsoluteTimeoutSeconds: 3600 },
-    )
+    const { config } = resolveRuntimeConfig(existing, {
+      authSessionIdleTimeoutSeconds: 900,
+      authSessionAbsoluteTimeoutSeconds: 3600,
+    })
     expect(config.authSessionIdleTimeoutSeconds).toBe(0)
     expect(config.authSessionAbsoluteTimeoutSeconds).toBe(0)
   })
 
   it('preserves authSessionSecureCookies of false and empty string', () => {
-    expect(resolveRuntimeConfig({ authSessionSecureCookies: false }, {}).config
-      .authSessionSecureCookies).toBe(false)
-    expect(resolveRuntimeConfig({ authSessionSecureCookies: '' }, {}).config
-      .authSessionSecureCookies).toBe('')
+    expect(
+      resolveRuntimeConfig({ authSessionSecureCookies: false }, {}).config.authSessionSecureCookies,
+    ).toBe(false)
+    expect(
+      resolveRuntimeConfig({ authSessionSecureCookies: '' }, {}).config.authSessionSecureCookies,
+    ).toBe('')
   })
 
   it('lets authEnabled = false win even when an issuer is configured', () => {
@@ -141,9 +140,9 @@ describe('resolveRuntimeConfig', () => {
   })
 
   it('defaults authEnabled to Boolean(issuer) when unset', () => {
-    expect(resolveRuntimeConfig({ authIssuer: 'https://issuer' }, {}).publicConfig.authEnabled).toBe(
-      true,
-    )
+    expect(
+      resolveRuntimeConfig({ authIssuer: 'https://issuer' }, {}).publicConfig.authEnabled,
+    ).toBe(true)
     expect(resolveRuntimeConfig({ authIssuer: '' }, {}).publicConfig.authEnabled).toBe(false)
     expect(resolveRuntimeConfig({}, {}).publicConfig.authEnabled).toBe(false)
   })

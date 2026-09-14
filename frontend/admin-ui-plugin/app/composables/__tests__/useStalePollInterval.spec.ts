@@ -19,10 +19,7 @@ vi.mock('nuxt/app', () => ({
   useRuntimeConfig: () => useRuntimeConfigMock(),
 }))
 
-import {
-  DEFAULT_STALE_POLL_MS,
-  resolveStalePollMs,
-} from '../useStalePollInterval'
+import { DEFAULT_STALE_POLL_MS, resolveStalePollMs } from '../useStalePollInterval'
 
 describe('resolveStalePollMs', () => {
   beforeEach(() => {

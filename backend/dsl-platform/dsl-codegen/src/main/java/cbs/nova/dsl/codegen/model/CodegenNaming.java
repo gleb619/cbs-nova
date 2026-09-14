@@ -21,7 +21,7 @@ public final class CodegenNaming {
             ? targetPackage
             : defaultBasePackage;
     String nameSegment = name.toLowerCase().replaceAll("[^a-z0-9]", "");
-    return basePackage + "." + nameSegment + "." + versionSegment(version);
+    return basePackage + "." + versionSegment(version) + "." + nameSegment;
   }
 
   public String versionedBasePackage(
@@ -33,7 +33,7 @@ public final class CodegenNaming {
     return basePackage + "." + versionSegment(version);
   }
 
-  private @NonNull String versionSegment(@NonNull String version) {
+  public @NonNull String versionSegment(@NonNull String version) {
     String versionSegment = version.replaceAll("[^a-z0-9]", "");
     if (!versionSegment.isEmpty() && Character.isDigit(versionSegment.charAt(0))) {
       versionSegment = "v" + versionSegment;

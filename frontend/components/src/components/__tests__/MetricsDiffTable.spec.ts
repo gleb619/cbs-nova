@@ -76,7 +76,16 @@ describe('MetricsDiffTable', () => {
   it('shows an em dash for null baseline or current values', () => {
     const wrapper = mount(MetricsDiffTable, {
       props: {
-        rows: [row({ key: 'nulls', label: 'Nulls', baseline: null, current: null, delta: null, percentChange: null })],
+        rows: [
+          row({
+            key: 'nulls',
+            label: 'Nulls',
+            baseline: null,
+            current: null,
+            delta: null,
+            percentChange: null,
+          }),
+        ],
       },
     })
 
@@ -92,8 +101,22 @@ describe('MetricsDiffTable', () => {
       props: {
         rows: [
           row({ key: 'pos', label: 'Pos', delta: 5, baseline: 10, current: 15, percentChange: 50 }),
-          row({ key: 'neg', label: 'Neg', delta: -3, baseline: 10, current: 7, percentChange: -30 }),
-          row({ key: 'zero', label: 'Zero', delta: 0, baseline: 10, current: 10, percentChange: 0 }),
+          row({
+            key: 'neg',
+            label: 'Neg',
+            delta: -3,
+            baseline: 10,
+            current: 7,
+            percentChange: -30,
+          }),
+          row({
+            key: 'zero',
+            label: 'Zero',
+            delta: 0,
+            baseline: 10,
+            current: 10,
+            percentChange: 0,
+          }),
         ],
       },
     })
@@ -221,5 +244,4 @@ describe('MetricsDiffTable', () => {
     expect(wrapper.text()).toContain('1.00 GB')
     expect(wrapper.text()).toContain('−1.00 GB')
   })
-
 })

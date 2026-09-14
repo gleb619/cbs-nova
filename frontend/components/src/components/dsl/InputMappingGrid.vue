@@ -7,7 +7,10 @@ const entries = computed(() => Object.entries(props.mappings))
 </script>
 
 <template>
-  <div class="border border-gray-200 rounded overflow-hidden bg-white" data-testid="input-mapping-grid">
+  <div
+    class="border border-gray-200 rounded overflow-hidden bg-white"
+    data-testid="input-mapping-grid"
+  >
     <table class="w-full text-sm">
       <thead class="bg-gray-50 text-xs uppercase text-gray-500">
         <tr>

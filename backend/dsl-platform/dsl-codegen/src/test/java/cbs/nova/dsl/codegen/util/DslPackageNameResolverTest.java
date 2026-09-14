@@ -13,7 +13,7 @@ class DslPackageNameResolverTest {
   @Test
   void usesFileNameSubPackageByDefault() {
     assertThat(resolver.resolve("cbs.nova.dslexamples", "v1", "BatchProcessingDsl.java", true))
-            .isEqualTo("cbs.nova.dslexamples.batchprocessing.v1");
+            .isEqualTo("cbs.nova.dslexamples.v1.batchprocessing");
   }
 
   @Test
@@ -37,7 +37,7 @@ class DslPackageNameResolverTest {
   @Test
   void prependsVToDigitOnlyVersion() {
     assertThat(resolver.resolve("cbs.nova.dslexamples", "42", "BatchProcessing.java", true))
-            .isEqualTo("cbs.nova.dslexamples.batchprocessing.v42");
+            .isEqualTo("cbs.nova.dslexamples.v42.batchprocessing");
     assertThat(resolver.resolve("cbs.nova.dslexamples", "42", "BatchProcessing.java", false))
             .isEqualTo("cbs.nova.dslexamples.v42");
   }
@@ -45,7 +45,7 @@ class DslPackageNameResolverTest {
   @Test
   void fallsBackToV1WhenVersionIsNullOrBlank() {
     assertThat(resolver.resolve("cbs.nova.dslexamples", null, "BatchProcessing.java", true))
-            .isEqualTo("cbs.nova.dslexamples.batchprocessing.v1");
+            .isEqualTo("cbs.nova.dslexamples.v1.batchprocessing");
     assertThat(resolver.resolve("cbs.nova.dslexamples", "  ", "BatchProcessing.java", false))
             .isEqualTo("cbs.nova.dslexamples.v1");
   }
@@ -53,7 +53,7 @@ class DslPackageNameResolverTest {
   @Test
   void fallsBackToDefaultBasePackageWhenBasePackageIsNullOrBlank() {
     assertThat(resolver.resolve(null, "v1", "BatchProcessing.java", true))
-            .isEqualTo("cbs.nova.dsl.generated.batchprocessing.v1");
+            .isEqualTo("cbs.nova.dsl.generated.v1.batchprocessing");
     assertThat(resolver.resolve("  ", "v1", "BatchProcessing.java", false))
             .isEqualTo("cbs.nova.dsl.generated.v1");
   }
@@ -61,6 +61,6 @@ class DslPackageNameResolverTest {
   @Test
   void handlesFileNameWithoutDslSuffix() {
     assertThat(resolver.resolve("cbs.nova.dslexamples", "v1", "BatchProcessing.java", true))
-            .isEqualTo("cbs.nova.dslexamples.batchprocessing.v1");
+            .isEqualTo("cbs.nova.dslexamples.v1.batchprocessing");
   }
 }

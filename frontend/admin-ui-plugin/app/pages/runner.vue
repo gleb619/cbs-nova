@@ -243,7 +243,9 @@ onMounted(() => {
         <p class="text-sm text-neutral-600">
           Preview requests no longer accept per-request mocks. To fake an external call's response,
           configure it ahead of time via
-          <code class="text-xs bg-neutral-100 px-1 py-0.5 rounded">cbs.nova.fakes.config.entries</code>
+          <code class="text-xs bg-neutral-100 px-1 py-0.5 rounded"
+            >cbs.nova.fakes.config.entries</code
+          >
           in <code class="text-xs bg-neutral-100 px-1 py-0.5 rounded">application.yml</code>
           (entries shaped
           <code class="text-xs bg-neutral-100 px-1 py-0.5 rounded"

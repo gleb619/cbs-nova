@@ -32,7 +32,11 @@ describe('ExecutionTrace', () => {
     })
 
     expect(wrapper.find('[data-testid="execution-trace-tree"]').exists()).toBe(true)
-    expect(wrapper.findAll('[data-testid="execution-trace-node-a"], [data-testid="execution-trace-node-b"]')).toHaveLength(2)
+    expect(
+      wrapper.findAll(
+        '[data-testid="execution-trace-node-a"], [data-testid="execution-trace-node-b"]',
+      ),
+    ).toHaveLength(2)
     expect(wrapper.find('[data-testid="execution-trace-node-a"]').text()).toContain('A')
     expect(wrapper.find('[data-testid="execution-trace-node-b"]').text()).toContain('B')
   })
@@ -46,13 +50,17 @@ describe('ExecutionTrace', () => {
       ],
     })
 
-    expect(wrapper.findAll('[data-testid="execution-trace-node-root"], [data-testid="execution-trace-node-child"], [data-testid="execution-trace-node-grandchild"]')).toHaveLength(3)
+    expect(
+      wrapper.findAll(
+        '[data-testid="execution-trace-node-root"], [data-testid="execution-trace-node-child"], [data-testid="execution-trace-node-grandchild"]',
+      ),
+    ).toHaveLength(3)
     expect(wrapper.find('[data-testid="execution-trace-node-root"]').attributes('style')).toContain(
       '0rem',
     )
-    expect(wrapper.find('[data-testid="execution-trace-node-child"]').attributes('style')).toContain(
-      '1.25rem',
-    )
+    expect(
+      wrapper.find('[data-testid="execution-trace-node-child"]').attributes('style'),
+    ).toContain('1.25rem')
     expect(
       wrapper.find('[data-testid="execution-trace-node-grandchild"]').attributes('style'),
     ).toContain('2.5rem')
@@ -63,6 +71,10 @@ describe('ExecutionTrace', () => {
       steps: [step({ id: 'a', name: 'A' }), step({ id: 'b', name: 'B', parentId: 'missing' })],
     })
 
-    expect(wrapper.findAll('[data-testid="execution-trace-node-a"], [data-testid="execution-trace-node-b"]')).toHaveLength(2)
+    expect(
+      wrapper.findAll(
+        '[data-testid="execution-trace-node-a"], [data-testid="execution-trace-node-b"]',
+      ),
+    ).toHaveLength(2)
   })
 })

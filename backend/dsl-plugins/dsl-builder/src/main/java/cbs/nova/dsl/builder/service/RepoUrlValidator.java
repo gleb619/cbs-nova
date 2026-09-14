@@ -7,7 +7,6 @@ import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.Locale;
 
-
 final class RepoUrlValidator {
 
   private RepoUrlValidator() {
@@ -73,7 +72,6 @@ final class RepoUrlValidator {
   private static IllegalArgumentException reject(URI uri, String reason) {
     return new IllegalArgumentException("repoUrl '" + sanitize(uri) + "' rejected: " + reason);
   }
-
 
   private static String sanitize(URI uri) {
     var sanitized = new StringBuilder();

@@ -228,8 +228,8 @@ onMounted(() => {
               class="text-xs text-yellow-800 bg-yellow-50 border border-yellow-200 rounded p-2 mb-2"
               data-testid="history-no-published"
             >
-              No published definition exists for this construct. Restoring this entry would
-              publish it outright.
+              No published definition exists for this construct. Restoring this entry would publish
+              it outright.
             </div>
             <div
               v-if="diff.truncated"
@@ -283,7 +283,11 @@ onMounted(() => {
               </button>
             </template>
           </div>
-          <p v-if="restoreError" class="text-xs text-red-600 mt-2" data-testid="history-restore-error">
+          <p
+            v-if="restoreError"
+            class="text-xs text-red-600 mt-2"
+            data-testid="history-restore-error"
+          >
             {{ restoreError }}
           </p>
           <p v-if="!hasDiff && !detailLoading && !detailError" class="text-xs text-gray-500 mt-2">

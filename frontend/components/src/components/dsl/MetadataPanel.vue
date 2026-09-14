@@ -68,10 +68,7 @@ const renderedDescription = computed(() => {
         data-testid="metadata-panel-summary"
         :aria-label="summaryLabel"
       >
-        <h2
-          v-if="!isCollapsed || !construct"
-          class="text-sm font-semibold text-neutral-800"
-        >
+        <h2 v-if="!isCollapsed || !construct" class="text-sm font-semibold text-neutral-800">
           Metadata
         </h2>
         <div v-else class="metadata-panel-summary-collapsed flex items-center gap-2">
@@ -79,16 +76,17 @@ const renderedDescription = computed(() => {
             class="font-semibold truncate"
             :title="construct?.name"
             data-testid="metadata-field-name"
-          >{{ construct?.name }}</span>
+            >{{ construct?.name }}</span
+          >
           <span class="text-neutral-300" aria-hidden="true">|</span>
           <span
             class="text-neutral-600 truncate"
             :title="construct?.type"
             data-testid="metadata-field-type"
-          >{{ construct?.type }}</span>
+            >{{ construct?.type }}</span
+          >
         </div>
       </div>
-
 
       <div class="flex items-center gap-2 shrink-0">
         <CbsSpinner v-if="loading" size="sm" label="" />
@@ -107,7 +105,7 @@ const renderedDescription = computed(() => {
       </div>
     </header>
 
-    <div v-if="!construct"/>
+    <div v-if="!construct" />
 
     <div
       v-else-if="!isCollapsed"

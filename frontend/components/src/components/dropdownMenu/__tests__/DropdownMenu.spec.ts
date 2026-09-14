@@ -10,7 +10,9 @@ const items: DropdownMenuItem[] = [
   { label: 'Save', value: 'save' },
 ]
 
-function mountMenu(extraProps: Partial<{ label: string; items: DropdownMenuItem[]; align: 'left' | 'right' }> = {}) {
+function mountMenu(
+  extraProps: Partial<{ label: string; items: DropdownMenuItem[]; align: 'left' | 'right' }> = {},
+) {
   return mount(DropdownMenu, {
     props: { label: 'Actions', items, ...extraProps },
     attachTo: document.body,

@@ -73,9 +73,9 @@ describe('useAuth', () => {
 
     await useAuth()
 
-    const sessionCalls = vi.mocked($fetch).mock.calls.filter(
-      ([url]) => url === '/api/v1/auth/session',
-    )
+    const sessionCalls = vi
+      .mocked($fetch)
+      .mock.calls.filter(([url]) => url === '/api/v1/auth/session')
     expect(sessionCalls).toHaveLength(1)
   })
 })

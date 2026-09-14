@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { useDashboardStats } from '@cbs/admin-ui-plugin/composables/useDashboardStats'
-import {
-  DashboardRecentRunsTable,
-  DashboardStatCard,
-  ErrorBanner,
-} from '@cbs/components'
+import { DashboardRecentRunsTable, DashboardStatCard, ErrorBanner } from '@cbs/components'
 import { navigateTo } from 'nuxt/app'
 import { computed, resolveComponent } from 'vue'
 
@@ -115,11 +111,7 @@ function onSelectRun(id: string) {
 
     <section class="space-y-2">
       <h2 class="text-lg font-semibold text-neutral-900">Recent runs</h2>
-      <DashboardRecentRunsTable
-        :executions="recentRuns"
-        :loading="loading"
-        @select="onSelectRun"
-      />
+      <DashboardRecentRunsTable :executions="recentRuns" :loading="loading" @select="onSelectRun" />
     </section>
 
     <section v-if="topProcesses.length > 0" class="space-y-2" data-testid="dashboard-top-processes">

@@ -27,7 +27,11 @@ const rows = computed<Row[]>(() => {
   const out: Row[] = [
     { key: 'Correlation ID', value: props.execution.correlationId ?? '—' },
     { key: 'Workflow ID', value: props.execution.workflowId ?? '—' },
-    { key: 'Triggered by', value: props.execution.triggeredBy ?? '—', testId: 'metadata-triggered-by' },
+    {
+      key: 'Triggered by',
+      value: props.execution.triggeredBy ?? '—',
+      testId: 'metadata-triggered-by',
+    },
     { key: 'Mode', value: props.execution.mode },
     { key: 'Entity Type', value: props.execution.entityType },
     { key: 'Retries', value: String(props.execution.retries ?? 0) },
@@ -48,7 +52,9 @@ const copiedCorrelation = ref(false)
 let copyResetHandle: ReturnType<typeof setTimeout> | null = null
 
 async function copyValue(value: string, target: 'workflow' | 'correlation') {
-  const clipboard = (globalThis as { navigator?: { clipboard?: { writeText: (s: string) => Promise<void> } } }).navigator?.clipboard
+  const clipboard = (
+    globalThis as { navigator?: { clipboard?: { writeText: (s: string) => Promise<void> } } }
+  ).navigator?.clipboard
   if (!clipboard || !value) return
   try {
     await clipboard.writeText(value)
@@ -92,10 +98,7 @@ function rowTestId(row: Row): string {
           <th scope="row" class="text-left text-xs uppercase text-gray-500 py-2 pr-4 w-48">
             {{ row.key }}
           </th>
-          <td
-            :data-testid="rowTestId(row)"
-            class="py-2 font-mono text-xs text-gray-800 break-all"
-          >
+          <td :data-testid="rowTestId(row)" class="py-2 font-mono text-xs text-gray-800 break-all">
             <span>{{ row.value }}</span>
             <template v-if="isWorkflowRow(row) && props.execution.workflowId">
               <a

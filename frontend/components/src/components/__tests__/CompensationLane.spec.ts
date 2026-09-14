@@ -35,6 +35,10 @@ describe('CompensationLane', () => {
 
     expect(wrapper.find('[data-testid="compensation-lane"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Compensation')
-    expect(wrapper.findAll('[data-testid="execution-trace-node-a"], [data-testid="execution-trace-node-b"]')).toHaveLength(2)
+    expect(
+      wrapper.findAll(
+        '[data-testid="execution-trace-node-a"], [data-testid="execution-trace-node-b"]',
+      ),
+    ).toHaveLength(2)
   })
 })

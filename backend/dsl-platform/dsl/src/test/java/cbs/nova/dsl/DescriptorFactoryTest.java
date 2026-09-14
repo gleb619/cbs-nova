@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.DescriptorFactory;
 import cbs.nova.dsl.config.RetryPolicyFactory;
+import cbs.nova.dsl.function.FunctionDescriptor;
 import cbs.nova.dsl.model.MapInput;
+import cbs.nova.dsl.model.ObjectDescriptor;
 import cbs.nova.dsl.model.MapOutput;
 import org.junit.jupiter.api.Test;
 
@@ -93,5 +95,69 @@ class DescriptorFactoryTest {
     assertThat(desc.name()).isEqualTo("Fn1");
     assertThat(desc.inputType()).isNull();
     assertThat(desc.outputType()).isNull();
+  }
+
+  @Test
+  void functionDescriptorHasInputAndOutput() {
+    var obj = Dsl.function("FnTyped")
+            .input(String.class)
+            .output(Integer.class)
+            .execute(ctx -> Result.success(1))
+            .build();
+    var desc = new DescriptorFactory().fromFunction(obj);
+    assertThat(desc.name()).isEqualTo("FnTyped");
+    assertThat(desc.inputType()).isEqualTo(String.class);
+    assertThat(desc.outputType()).isEqualTo(Integer.class);
+  }
+
+  @Test
+  void functionDescriptorMapsParameterTypes() {
+    var obj = Dsl.function("FnMapped")
+            .parameters(reg -> reg.string("k"))
+            .execute(ctx -> Result.success(MapOutput.of("k", "v")))
+            .build();
+    var desc = new DescriptorFactory().fromFunction(obj);
+    assertThat(desc.inputType()).isEqualTo(MapInput.class);
+    assertThat(desc.outputType()).isEqualTo(MapOutput.class);
+  }
+
+  @Test
+  void functionDescriptorToDslDescriptorIncludesObjectDescriptor() {
+    var desc = FunctionDescriptor.builder()
+            .name("F")
+            .inputType(String.class)
+            .outputType(Integer.class)
+            .build();
+    var dsl = desc.toDslDescriptor();
+    assertThat(dsl.name()).isEqualTo("F");
+    assertThat(dsl.type()).isEqualTo(DslObject.DslType.FUNCTION);
+    assertThat(dsl.inputType()).isEqualTo(String.class);
+    assertThat(dsl.outputType()).isEqualTo(Integer.class);
+    assertThat(dsl.objectDescriptor()).isSameAs(desc);
+  }
+
+  @Test
+  void objectDescriptorDefaultToDslDescriptorIncludesSelf() {
+    var desc = new ObjectDescriptor() {
+      @Override
+      public String name() {
+        return "O";
+      }
+
+      @Override
+      public Class<?> inputType() {
+        return String.class;
+      }
+
+      @Override
+      public Class<?> outputType() {
+        return Integer.class;
+      }
+    };
+    var dsl = desc.toDslDescriptor();
+    assertThat(dsl.name()).isEqualTo("O");
+    assertThat(dsl.inputType()).isEqualTo(String.class);
+    assertThat(dsl.outputType()).isEqualTo(Integer.class);
+    assertThat(dsl.objectDescriptor()).isSameAs(desc);
   }
 }

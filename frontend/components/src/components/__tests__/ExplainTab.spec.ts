@@ -14,11 +14,18 @@ import type { RunnerOutput } from '../../types/runner'
 
 function mountTab(
   props: Record<string, unknown> = {},
-  explain: (name: string, body: unknown, metadata?: Record<string, unknown>) =>
-    | RunnerOutput
-    | Promise<RunnerOutput> = vi
-      .fn<(name: string, body: unknown, metadata?: Record<string, unknown>) => Promise<RunnerOutput>>()
-      .mockResolvedValue({ description: 'explain ok', mermaid: 'graph TD' } as unknown as RunnerOutput as unknown as RunnerOutput),
+  explain: (
+    name: string,
+    body: unknown,
+    metadata?: Record<string, unknown>,
+  ) => RunnerOutput | Promise<RunnerOutput> = vi
+    .fn<
+      (name: string, body: unknown, metadata?: Record<string, unknown>) => Promise<RunnerOutput>
+    >()
+    .mockResolvedValue({
+      description: 'explain ok',
+      mermaid: 'graph TD',
+    } as unknown as RunnerOutput as unknown as RunnerOutput),
   fetchMock = vi.fn().mockResolvedValue({}),
 ) {
   return mount(ExplainTab, {
@@ -90,7 +97,12 @@ describe('ExplainTab', () => {
   })
 
   it('calls the explain prop and shows done on success', async () => {
-    const explain = vi.fn().mockResolvedValue({ description: 'explain ok', mermaid: 'graph TD' } as unknown as RunnerOutput)
+    const explain = vi
+      .fn()
+      .mockResolvedValue({
+        description: 'explain ok',
+        mermaid: 'graph TD',
+      } as unknown as RunnerOutput)
     const wrapper = mountTab({}, explain)
     await wrapper.find('[data-testid="json-textarea"]').setValue('{"a":1}')
     await wrapper
@@ -107,7 +119,9 @@ describe('ExplainTab', () => {
   })
 
   it('normalizes backend mermaid field to mermaidDiagram', async () => {
-    const explain = vi.fn().mockResolvedValue({ description: 'd', mermaid: 'g' } as unknown as RunnerOutput)
+    const explain = vi
+      .fn()
+      .mockResolvedValue({ description: 'd', mermaid: 'g' } as unknown as RunnerOutput)
     const wrapper = mountTab({}, explain)
     await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
     await wrapper
@@ -232,7 +246,9 @@ describe('ExplainTab', () => {
     await flushPromises()
 
     const stored = JSON.parse(
-      window.localStorage.getItem(`${EXPLAIN_HISTORY_STORAGE_NAMESPACE}:${EXPLAIN_HISTORY_STORAGE_KEY}`) ?? '[]',
+      window.localStorage.getItem(
+        `${EXPLAIN_HISTORY_STORAGE_NAMESPACE}:${EXPLAIN_HISTORY_STORAGE_KEY}`,
+      ) ?? '[]',
     )
     expect(stored).toHaveLength(1)
     expect(stored[0]).toMatchObject({
@@ -259,7 +275,9 @@ describe('ExplainTab', () => {
     await flushPromises()
 
     const stored = JSON.parse(
-      window.localStorage.getItem(`${EXPLAIN_HISTORY_STORAGE_NAMESPACE}:${EXPLAIN_HISTORY_STORAGE_KEY}`) ?? '[]',
+      window.localStorage.getItem(
+        `${EXPLAIN_HISTORY_STORAGE_NAMESPACE}:${EXPLAIN_HISTORY_STORAGE_KEY}`,
+      ) ?? '[]',
     )
     expect(stored).toHaveLength(1)
     expect(stored[0].status).toBe('failed')

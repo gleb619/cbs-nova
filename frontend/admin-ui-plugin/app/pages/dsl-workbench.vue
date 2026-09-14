@@ -172,12 +172,7 @@ function toggleHelperCatalog() {
 }
 
 const workbenchDraft = useWorkbenchDraft(state.value.selectedName ?? '')
-const {
-  body: draftBody,
-  clearDraft,
-  lastSavedAt: draftSavedAt,
-  restoredFromDraft,
-} = workbenchDraft
+const { body: draftBody, clearDraft, lastSavedAt: draftSavedAt, restoredFromDraft } = workbenchDraft
 
 // Source-file-backed constructs load their Java source from the backend.
 const fileCode = ref('')
@@ -209,7 +204,7 @@ async function loadSourceFile(construct: typeof selectedConstruct.value) {
 
 function syncSelectionEffects() {
   mirrorSelectionToDrafts()
-  workbenchDraft.setName(state.value.selectedName ?? "")
+  workbenchDraft.setName(state.value.selectedName ?? '')
   void loadSourceFile(selectedConstruct.value)
 }
 
@@ -521,10 +516,7 @@ onBeforeUnmount(() => {
       </aside>
 
       <main class="flex-1 flex flex-col overflow-hidden">
-        <DslMetadataPanel
-          :construct="selectedConstruct"
-          :loading="fileCodeLoading"
-        />
+        <DslMetadataPanel :construct="selectedConstruct" :loading="fileCodeLoading" />
         <div v-if="restoredFromDraft && !isFileBacked" class="px-3 pt-2">
           <DslDraftRestoreBanner :saved-at="draftSavedAt" @discard="clearDraft" />
         </div>
@@ -642,9 +634,7 @@ onBeforeUnmount(() => {
     >
       <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full flex flex-col max-h-[90vh]">
         <header class="px-6 py-4 border-b border-line">
-          <h2 id="workbench-new-title" class="text-lg font-semibold text-ink">
-            New definition
-          </h2>
+          <h2 id="workbench-new-title" class="text-lg font-semibold text-ink">New definition</h2>
           <p class="text-sm text-ink-muted mt-1">
             Choose a starter template and name for the new DSL definition.
           </p>

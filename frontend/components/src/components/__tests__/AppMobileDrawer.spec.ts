@@ -109,9 +109,7 @@ describe('AppMobileDrawer', () => {
       await nextTick()
       await flushPromises()
 
-      const first = document.querySelector(
-        '[data-testid="app-mobile-drawer-close"]',
-      ) as HTMLElement
+      const first = document.querySelector('[data-testid="app-mobile-drawer-close"]') as HTMLElement
       const last = drawerAnchors().at(-1) as HTMLAnchorElement
 
       last.focus()
@@ -128,9 +126,7 @@ describe('AppMobileDrawer', () => {
       await nextTick()
       await flushPromises()
 
-      const first = document.querySelector(
-        '[data-testid="app-mobile-drawer-close"]',
-      ) as HTMLElement
+      const first = document.querySelector('[data-testid="app-mobile-drawer-close"]') as HTMLElement
       const last = drawerAnchors().at(-1) as HTMLAnchorElement
 
       first.focus()

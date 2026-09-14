@@ -100,18 +100,15 @@ describe('useAuthConfig', () => {
       { value: '300', expected: 300, label: 'numeric string' },
       { value: '0', expected: 0, label: 'zero string' },
       { value: '-5', expected: -5, label: 'negative string' },
-    ])(
-      'coerces $label ($value) to $expected',
-      ({ value, expected }) => {
-        setRuntimeConfig({
-          authSessionIdleTimeoutSeconds: value,
-          authSessionAbsoluteTimeoutSeconds: value,
-        })
-        const cfg = useAuthConfig()
-        expect(cfg.sessionIdleTimeoutSeconds).toBe(expected)
-        expect(cfg.sessionAbsoluteTimeoutSeconds).toBe(expected)
-      },
-    )
+    ])('coerces $label ($value) to $expected', ({ value, expected }) => {
+      setRuntimeConfig({
+        authSessionIdleTimeoutSeconds: value,
+        authSessionAbsoluteTimeoutSeconds: value,
+      })
+      const cfg = useAuthConfig()
+      expect(cfg.sessionIdleTimeoutSeconds).toBe(expected)
+      expect(cfg.sessionAbsoluteTimeoutSeconds).toBe(expected)
+    })
   })
 
   describe('sessionSecureCookies coercion', () => {

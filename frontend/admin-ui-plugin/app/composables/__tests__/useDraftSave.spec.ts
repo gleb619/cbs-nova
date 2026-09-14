@@ -92,9 +92,7 @@ describe('useDraftSave', () => {
   })
 
   it('retry from error re-enters saving', async () => {
-    mockWorkbench.saveConstruct
-      .mockRejectedValueOnce(saveError)
-      .mockResolvedValueOnce(undefined)
+    mockWorkbench.saveConstruct.mockRejectedValueOnce(saveError).mockResolvedValueOnce(undefined)
 
     const { status, save } = useDraftSave()
 

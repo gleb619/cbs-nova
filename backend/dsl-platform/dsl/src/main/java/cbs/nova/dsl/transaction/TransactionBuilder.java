@@ -3,6 +3,7 @@ package cbs.nova.dsl.transaction;
 import cbs.nova.dsl.CompensationContext;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
+import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.explain.DescriptorMarkdown;
@@ -168,7 +169,7 @@ public final class TransactionBuilder<I, O> {
   private @NonNull Supplier<DslDescriptor> effectiveDescriptor() {
     return descriptor != null
             ? descriptor
-            : () -> TransactionDslObject.defaultDescriptor(
+            : () -> defaultDescriptor(
                     name, taskQueue, version, inputType, outputType, parameters,
                     compensationLogic != null, startToCloseTimeout, retryPolicy,
                     heartbeatTimeout, null);
@@ -213,4 +214,32 @@ public final class TransactionBuilder<I, O> {
             ? null
             : (Function<TransactionContext<?>, Result<ExplainReport>>) (Function<?, ?>) explainLogic;
   }
+
+  public static @NonNull DslDescriptor defaultDescriptor(
+          @NonNull String name,
+          @NonNull String taskQueue,
+          @NonNull String version,
+          @Nullable Class<?> inputType,
+          @Nullable Class<?> outputType,
+          @NonNull List<ParameterDescriptor> parameters,
+          boolean hasCompensation,
+          @NonNull Duration startToCloseTimeout,
+          @Nullable RetryPolicy retryPolicy,
+          @Nullable Duration heartbeatTimeout,
+          @Nullable String description) {
+    return DslDescriptor.builder()
+            .name(name)
+            .type(DslType.TRANSACTION)
+            .description(description)
+            .inputType(inputType)
+            .outputType(outputType)
+            .hasSideEffects(true)
+            .parameters(parameters != null ? parameters : List.of())
+            .taskQueue(taskQueue)
+            .version(version)
+            .startToCloseTimeout(startToCloseTimeout)
+            .heartbeatTimeout(heartbeatTimeout)
+            .build();
+  }
+
 }

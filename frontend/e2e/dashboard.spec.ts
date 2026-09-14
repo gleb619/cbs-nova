@@ -23,7 +23,9 @@ test('dashboard renders root plus loaded, loading, or error shell', async ({ pag
   const errorBanner = page.getByTestId('error-banner')
   const errorPage = page.getByTestId('error-page')
 
-  await expect(stats.or(statsSkeleton).or(errorBanner).or(errorPage).first()).toBeVisible({ timeout: 15_000 })
+  await expect(stats.or(statsSkeleton).or(errorBanner).or(errorPage).first()).toBeVisible({
+    timeout: 15_000,
+  })
 
   // The recent runs table renders when data is present; the error banner
   // covers the unreachable-backend case. `.first()` is the same

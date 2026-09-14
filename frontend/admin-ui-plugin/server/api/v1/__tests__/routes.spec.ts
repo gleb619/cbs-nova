@@ -87,15 +87,11 @@ const createApiKeyHandler = (await import('../dsl/auth/keys/index.post')).defaul
 const revokeApiKeyHandler = (await import('../dsl/auth/keys/[id]/index.delete')).default
 const exportDefinitionsHandler = (await import('../dsl/definitions/export.get')).default
 const importDefinitionsHandler = (await import('../dsl/definitions/import.post')).default
-const listDefinitionTestsHandler = (
-  await import('../dsl/definitions/[name]/tests/index.get')
-).default
-const replaceDefinitionTestsHandler = (
-  await import('../dsl/definitions/[name]/tests/index.put')
-).default
-const runDefinitionTestsHandler = (
-  await import('../dsl/definitions/[name]/tests/run.post')
-).default
+const listDefinitionTestsHandler = (await import('../dsl/definitions/[name]/tests/index.get'))
+  .default
+const replaceDefinitionTestsHandler = (await import('../dsl/definitions/[name]/tests/index.put'))
+  .default
+const runDefinitionTestsHandler = (await import('../dsl/definitions/[name]/tests/run.post')).default
 const listDslFilesHandler = (await import('../dsl/files/index.get')).default
 const readDslFileByNameHandler = (await import('../dsl/files/by-name/[name].get')).default
 const writeDslFileByNameHandler = (await import('../dsl/files/by-name/[name].post')).default
@@ -158,8 +154,6 @@ describe('dsl/definitions.get', () => {
     ).toEqual(['function', 'helper', 'process', 'transaction'])
   })
 })
-
-
 
 describe('dsl/reload.post', () => {
   it('POSTs to /api/dsl/reload with method=POST and no body', async () => {
@@ -836,9 +830,7 @@ describe('dsl/auth/keys/index.get', () => {
   })
 
   it('returns the backend key list verbatim (no hash/plaintext fields)', async () => {
-    const payload = [
-      { id: 'k1', label: 'ci', prefix: 'ak_ci', createdAt: '2026-09-01T00:00:00Z' },
-    ]
+    const payload = [{ id: 'k1', label: 'ci', prefix: 'ak_ci', createdAt: '2026-09-01T00:00:00Z' }]
     proxyToBackendMock.mockResolvedValueOnce(payload)
 
     const result = await listApiKeysHandler(fakeEvent)
@@ -1169,9 +1161,7 @@ describe('dsl/definitions/[name]/tests/index.get', () => {
 describe('dsl/definitions/[name]/tests/index.put', () => {
   it('interpolates the :name router param and PUTs the body to the backend tests path', async () => {
     routerParams = { name: 'LoanDisbursement' }
-    bodyValue = [
-      { caseName: 'happy', input: { x: 1 }, expectedOutput: { y: 2 } },
-    ]
+    bodyValue = [{ caseName: 'happy', input: { x: 1 }, expectedOutput: { y: 2 } }]
 
     await replaceDefinitionTestsHandler(fakeEvent)
 

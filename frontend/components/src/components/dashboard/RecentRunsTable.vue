@@ -47,9 +47,7 @@ function formatDate(s?: string) {
         </template>
         <template v-else-if="executions.length === 0">
           <tr>
-            <td colspan="4" class="px-3 py-12 text-center text-gray-500">
-              No recent executions.
-            </td>
+            <td colspan="4" class="px-3 py-12 text-center text-gray-500">No recent executions.</td>
           </tr>
         </template>
         <template v-else>

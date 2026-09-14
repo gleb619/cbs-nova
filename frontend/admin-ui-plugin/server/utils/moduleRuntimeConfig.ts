@@ -90,13 +90,12 @@ export function resolveRuntimeConfig(
       existing.authCallbackUrl ??
       options.authCallbackUrl ??
       'http://localhost:3000/api/v1/auth/callback',
-    authPostLogoutRedirect: existing.authPostLogoutRedirect ?? options.authPostLogoutRedirect ?? '/',
+    authPostLogoutRedirect:
+      existing.authPostLogoutRedirect ?? options.authPostLogoutRedirect ?? '/',
     authSessionIdleTimeoutSeconds:
       existing.authSessionIdleTimeoutSeconds ?? options.authSessionIdleTimeoutSeconds ?? 0,
     authSessionAbsoluteTimeoutSeconds:
-      existing.authSessionAbsoluteTimeoutSeconds ??
-      options.authSessionAbsoluteTimeoutSeconds ??
-      0,
+      existing.authSessionAbsoluteTimeoutSeconds ?? options.authSessionAbsoluteTimeoutSeconds ?? 0,
     authSessionSecureCookies:
       existing.authSessionSecureCookies ?? options.authSessionSecureCookies ?? '',
     authSessionRotateOnRefresh:
@@ -107,8 +106,7 @@ export function resolveRuntimeConfig(
     authEnabled: existing.public?.authEnabled ?? Boolean(config.authIssuer),
     appName: existing.public?.appName ?? options.appName ?? 'CBS Nova Admin',
     temporalUiBaseUrl: existing.public?.temporalUiBaseUrl ?? options.temporalUiBaseUrl ?? '',
-    temporalNamespace:
-      existing.public?.temporalNamespace ?? options.temporalNamespace ?? 'default',
+    temporalNamespace: existing.public?.temporalNamespace ?? options.temporalNamespace ?? 'default',
   }
 
   return { config, publicConfig }

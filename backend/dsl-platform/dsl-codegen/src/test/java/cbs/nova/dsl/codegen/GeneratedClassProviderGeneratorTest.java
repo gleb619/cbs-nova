@@ -41,7 +41,7 @@ class GeneratedClassProviderGeneratorTest {
 
     assertThat(source).isNotNull();
     assertThat(source).isInstanceOf(GeneratedSource.class);
-    assertThat(source.packageName()).isEqualTo("cbs.nova.dsl.generated.loandisbursement.v1");
+    assertThat(source.packageName()).isEqualTo("cbs.nova.dsl.generated.v1.loandisbursement");
     assertThat(source.source()).isNotBlank();
   }
 
@@ -58,7 +58,7 @@ class GeneratedClassProviderGeneratorTest {
 
     assertThat(source).isNotNull();
     assertThat(source).isInstanceOf(GeneratedSource.class);
-    assertThat(source.packageName()).isEqualTo("cbs.nova.dsl.generated.reserveinventory.v1");
+    assertThat(source.packageName()).isEqualTo("cbs.nova.dsl.generated.v1.reserveinventory");
     assertThat(source.source()).isNotBlank();
   }
 
@@ -170,7 +170,7 @@ class GeneratedClassProviderGeneratorTest {
     var source = generator.forProcess(descriptor, List.of(), "9c74a34", null, true);
 
     assertThat(source.packageName())
-            .isEqualTo("cbs.nova.dsl.generated.loandisbursement.v9c74a34");
+            .isEqualTo("cbs.nova.dsl.generated.v9c74a34.loandisbursement");
     assertThat(source.source()).contains("\"9c74a34\"");
   }
 
@@ -185,7 +185,7 @@ class GeneratedClassProviderGeneratorTest {
 
     var source = generator.forTransaction(descriptor, List.of(), null, null, true);
 
-    assertThat(source.packageName()).isEqualTo("cbs.nova.dsl.generated.reserveinventory.v1");
+    assertThat(source.packageName()).isEqualTo("cbs.nova.dsl.generated.v1.reserveinventory");
     assertThat(source.source()).contains("\"v1\"");
   }
 
@@ -201,7 +201,7 @@ class GeneratedClassProviderGeneratorTest {
     var source = generator.forProcess(descriptor, List.of(), null, null, true);
     var body = source.source();
 
-    assertThat(body).contains("package cbs.nova.dsl.generated.loandisbursement.v1;");
+    assertThat(body).contains("package cbs.nova.dsl.generated.v1.loandisbursement;");
     assertThat(body).contains("import cbs.nova.dsl.annotation.DslGenerated;");
     assertThat(body).contains("import cbs.nova.dsl.DslObject;");
     assertThat(body).contains("import cbs.nova.dsl.GeneratedClassDescriptor;");

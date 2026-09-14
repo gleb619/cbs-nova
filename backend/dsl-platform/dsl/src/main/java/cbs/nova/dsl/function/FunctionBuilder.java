@@ -1,7 +1,13 @@
 package cbs.nova.dsl.function;
 
+import static cbs.nova.dsl.config.DslConstants.DEFAULT_HEARTBEAT_TIMEOUT;
+import static cbs.nova.dsl.config.DslConstants.DEFAULT_START_TO_CLOSE_TIMEOUT;
+import static cbs.nova.dsl.config.DslConstants.DEFAULT_TASK_QUEUE;
+import static cbs.nova.dsl.config.DslConstants.DEFAULT_VERSION;
+
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
+import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.FunctionContext;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
@@ -121,7 +127,7 @@ public final class FunctionBuilder<I, O> {
           @NonNull List<ParameterDescriptor> parameters) {
     return descriptor != null
             ? descriptor
-            : () -> FunctionDslObject.defaultDescriptor(
+            : () -> defaultDescriptor(
                     name, parameters, inputType, outputType, null);
   }
 
@@ -156,5 +162,26 @@ public final class FunctionBuilder<I, O> {
     return explainLogic == null
             ? null
             : (Function<FunctionContext<?>, Result<ExplainReport>>) (Function<?, ?>) explainLogic;
+  }
+
+  public static @NonNull DslDescriptor defaultDescriptor(
+          @NonNull String name,
+          @NonNull List<ParameterDescriptor> parameters,
+          @Nullable Class<?> inputType,
+          @Nullable Class<?> outputType,
+          @Nullable String description) {
+    return DslDescriptor.builder()
+            .name(name)
+            .type(DslType.FUNCTION)
+            .description(description)
+            .inputType(inputType)
+            .outputType(outputType)
+            .hasSideEffects(false)
+            .parameters(parameters)
+            .taskQueue(DEFAULT_TASK_QUEUE)
+            .version(DEFAULT_VERSION)
+            .startToCloseTimeout(DEFAULT_START_TO_CLOSE_TIMEOUT)
+            .heartbeatTimeout(DEFAULT_HEARTBEAT_TIMEOUT)
+            .build();
   }
 }

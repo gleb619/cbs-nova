@@ -51,7 +51,9 @@ function normalizeResponse(response: unknown): RunnerOutput {
       ...r,
       description: r.description as string | undefined,
       mermaidDiagram: mermaid,
-      result: r.result ?? r.body ?? r.output ?? { name: r.name, description: r.description, mermaidDiagram: mermaid },
+      result: r.result ??
+        r.body ??
+        r.output ?? { name: r.name, description: r.description, mermaidDiagram: mermaid },
     } as RunnerOutput
   }
   return { result: response }

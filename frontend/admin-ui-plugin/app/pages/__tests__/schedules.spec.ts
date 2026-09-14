@@ -19,9 +19,8 @@ interface SchedulesHarness {
 
 const { useSchedulesMock } = vi.hoisted(() => {
   const useSchedulesMockFn = vi.fn(() => {
-    const harness = (
-      globalThis as unknown as { __schedulesHarness?: SchedulesHarness }
-    ).__schedulesHarness
+    const harness = (globalThis as unknown as { __schedulesHarness?: SchedulesHarness })
+      .__schedulesHarness
     if (!harness) throw new Error('schedules harness not installed yet')
     return harness
   })
@@ -40,8 +39,7 @@ const harness: SchedulesHarness = (() => {
   }
 })()
 
-;(globalThis as unknown as { __schedulesHarness?: SchedulesHarness }).__schedulesHarness =
-  harness
+;(globalThis as unknown as { __schedulesHarness?: SchedulesHarness }).__schedulesHarness = harness
 
 vi.mock('@cbs/admin-ui-plugin/composables/useSchedules', () => ({
   useSchedules: useSchedulesMock,

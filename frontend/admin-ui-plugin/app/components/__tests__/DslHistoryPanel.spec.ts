@@ -111,7 +111,9 @@ describe('DslHistoryPanel', () => {
 
     expect(wrapper.find('[data-testid="history-detail-error"]').exists()).toBe(true)
     // Restore stays disabled — no diff has been shown.
-    expect(wrapper.find('[data-testid="history-restore-button"]').attributes('disabled')).toBeDefined()
+    expect(
+      wrapper.find('[data-testid="history-restore-button"]').attributes('disabled'),
+    ).toBeDefined()
   })
 
   it('cancel disarms the confirm step without restoring', async () => {
@@ -128,14 +130,18 @@ describe('DslHistoryPanel', () => {
   })
 
   it('shows a notice instead of a diff when no published baseline exists', async () => {
-    const { wrapper } = mountPanel({ getDiff: vi.fn().mockResolvedValue(makeDiff({ before: null })) })
+    const { wrapper } = mountPanel({
+      getDiff: vi.fn().mockResolvedValue(makeDiff({ before: null })),
+    })
     await flushPromises()
     await wrapper.find('[data-testid="history-entry-row"][data-timestamp="100"]').trigger('click')
     await flushPromises()
 
     expect(wrapper.find('[data-testid="history-no-published"]').exists()).toBe(true)
     // Restore still possible after the (empty) diff view is shown.
-    expect(wrapper.find('[data-testid="history-restore-button"]').attributes('disabled')).toBeUndefined()
+    expect(
+      wrapper.find('[data-testid="history-restore-button"]').attributes('disabled'),
+    ).toBeUndefined()
   })
 
   it('surfaces a detail error when the diff fetch fails', async () => {

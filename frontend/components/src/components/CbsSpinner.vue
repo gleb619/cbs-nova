@@ -20,7 +20,13 @@ const sizeClass = {
 </script>
 
 <template>
-  <div v-if="loading" class="inline-flex items-center gap-2" role="status" aria-live="polite" data-testid="cbs-spinner">
+  <div
+    v-if="loading"
+    class="inline-flex items-center gap-2"
+    role="status"
+    aria-live="polite"
+    data-testid="cbs-spinner"
+  >
     <div class="rounded-full border-current border-t-transparent animate-spin" :class="sizeClass" />
     <span v-if="label" class="text-sm text-current">{{ label }}</span>
   </div>

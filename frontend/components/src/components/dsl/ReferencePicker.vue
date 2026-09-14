@@ -24,7 +24,10 @@ const compatible = computed(() => {
 </script>
 
 <template>
-  <div class="bg-white border border-gray-200 rounded shadow-lg w-72 max-h-80 flex flex-col" data-testid="reference-picker">
+  <div
+    class="bg-white border border-gray-200 rounded shadow-lg w-72 max-h-80 flex flex-col"
+    data-testid="reference-picker"
+  >
     <div class="p-2 border-b border-gray-200">
       <input
         v-model="search"

@@ -34,7 +34,12 @@ describe('RecentRunsTable', () => {
     const wrapper = mountTable({
       executions: [
         execution({ id: 'run-1', status: 'Completed' }),
-        execution({ id: 'run-2', entity: 'CreditScoring', status: 'Failed', completedAt: undefined }),
+        execution({
+          id: 'run-2',
+          entity: 'CreditScoring',
+          status: 'Failed',
+          completedAt: undefined,
+        }),
       ],
     })
 

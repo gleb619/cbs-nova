@@ -21,7 +21,7 @@ function mountInputForm(props: Record<string, unknown>) {
 }
 
 describe('InputForm', () => {
-it('exposes root data-testid', () => {
+  it('exposes root data-testid', () => {
     const wrapper = mountInputForm({ schema: undefined, modelValue: {} })
     expect(wrapper.find('[data-testid="input-form"]').exists()).toBe(true)
   })

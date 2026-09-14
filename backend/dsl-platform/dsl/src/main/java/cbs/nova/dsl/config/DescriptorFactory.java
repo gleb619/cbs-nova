@@ -8,9 +8,8 @@ import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import cbs.nova.dsl.transaction.TransactionDslObject;
-import org.jspecify.annotations.NonNull;
-
 import java.util.List;
+import org.jspecify.annotations.NonNull;
 
 public final class DescriptorFactory {
 
@@ -47,8 +46,12 @@ public final class DescriptorFactory {
   }
 
   public FunctionDescriptor fromFunction(@NonNull FunctionDslObject obj) {
+    var inputType = resolveInputType(obj.inputType(), obj.parameters());
+    var outputType = resolveOutputType(obj.outputType(), obj.parameters());
     return FunctionDescriptor.builder()
             .name(obj.name())
+            .inputType(inputType)
+            .outputType(outputType)
             .build();
   }
 

@@ -28,9 +28,7 @@ const triggerRef = ref<HTMLButtonElement | null>(null)
 const menuRef = ref<HTMLDivElement | null>(null)
 const itemRefs = ref<HTMLButtonElement[]>([])
 
-const menuPositionClass = computed(() =>
-  props.align === 'right' ? 'right-0' : 'left-0',
-)
+const menuPositionClass = computed(() => (props.align === 'right' ? 'right-0' : 'left-0'))
 
 function setItemRef(el: Element | null, index: number) {
   if (el instanceof HTMLButtonElement) itemRefs.value[index] = el

@@ -44,7 +44,7 @@ const STATUS_CASES: StatusCase[] = [
 ]
 
 describe('StatusIndicator', () => {
-it('exposes root data-testid', () => {
+  it('exposes root data-testid', () => {
     const wrapper = mount(StatusIndicator, { props: { status: 'idle' } })
     expect(wrapper.find('[data-testid="status-indicator"]').exists()).toBe(true)
   })

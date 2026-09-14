@@ -49,9 +49,7 @@ describe('SavedDraftsList', () => {
   it('emits select on Space for keyboard users', async () => {
     const wrapper = mountList()
 
-    await wrapper
-      .findAll('[data-testid="dsl-saved-drafts-item"]')[1]
-      .trigger('keydown.space')
+    await wrapper.findAll('[data-testid="dsl-saved-drafts-item"]')[1].trigger('keydown.space')
 
     expect(wrapper.emitted('select')).toEqual([['beta']])
   })

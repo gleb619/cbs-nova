@@ -12,10 +12,7 @@ function _format(v: unknown): string {
 </script>
 
 <template>
-  <div
-    data-testid="executions-payload-tab"
-    class="grid grid-cols-1 lg:grid-cols-2 gap-4"
-  >
+  <div data-testid="executions-payload-tab" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
     <div class="bg-white border border-gray-200 rounded-lg p-4">
       <h3 class="text-sm font-semibold text-gray-700 mb-2">Initial Input</h3>
       <pre

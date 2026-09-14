@@ -34,9 +34,7 @@ interface RunnerHarness {
 
 const { useRunnerMock, useDslApiMock, dslApi } = vi.hoisted(() => {
   const useRunnerMockFn = vi.fn(() => {
-    const harness = (
-      globalThis as unknown as { __runnerHarness?: RunnerHarness }
-    ).__runnerHarness
+    const harness = (globalThis as unknown as { __runnerHarness?: RunnerHarness }).__runnerHarness
     if (!harness) throw new Error('runner harness not installed yet')
     return harness
   })

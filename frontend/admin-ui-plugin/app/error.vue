@@ -1,5 +1,5 @@
 <script lang="ts">
-export default { name: "CbsErrorPage" }
+export default { name: 'CbsErrorPage' }
 </script>
 
 <script setup lang="ts">

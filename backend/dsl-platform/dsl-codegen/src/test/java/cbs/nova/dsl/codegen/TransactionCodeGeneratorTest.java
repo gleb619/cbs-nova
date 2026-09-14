@@ -76,7 +76,7 @@ class TransactionCodeGeneratorTest {
 
     var sources = generator.generate(descriptor, null, null, true);
     assertThat(sources.get(0).packageName())
-            .isEqualTo("cbs.nova.dsl.generated.loandisbursement.v1");
+            .isEqualTo("cbs.nova.dsl.generated.v1.loandisbursement");
   }
 
   @Test
@@ -118,7 +118,7 @@ class TransactionCodeGeneratorTest {
 
     var sources = generator.generate(descriptor, "9c74a34", null, true);
     assertThat(sources.get(0).packageName())
-            .isEqualTo("cbs.nova.dsl.generated.loandisbursement.v9c74a34");
+            .isEqualTo("cbs.nova.dsl.generated.v9c74a34.loandisbursement");
     assertThat(sources.get(1).source())
             .contains("VERSION = \"9c74a34\"");
   }

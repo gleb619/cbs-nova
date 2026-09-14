@@ -36,11 +36,11 @@ class CodegenNamingTest {
   @Test
   void versionedPackagePrefersExplicitArgOverCustomBaseOverConstant() {
     assertThat(defaultNaming.versionedPackage("Loan", "1", null))
-            .isEqualTo("cbs.nova.dsl.generated.loan.v1");
+            .isEqualTo("cbs.nova.dsl.generated.v1.loan");
     assertThat(customNaming.versionedPackage("Loan", "1", null))
-            .isEqualTo("com.example.workflow.loan.v1");
+            .isEqualTo("com.example.workflow.v1.loan");
     assertThat(customNaming.versionedPackage("Loan", "1", "org.acme.override"))
-            .isEqualTo("org.acme.override.loan.v1");
+            .isEqualTo("org.acme.override.v1.loan");
   }
 
   @Test
@@ -56,14 +56,14 @@ class CodegenNamingTest {
   @Test
   void fallsBackToBasePackageWhenTargetPackageIsBlank() {
     assertThat(defaultNaming.versionedPackage("Loan", "1", ""))
-            .isEqualTo("cbs.nova.dsl.generated.loan.v1");
+            .isEqualTo("cbs.nova.dsl.generated.v1.loan");
     assertThat(defaultNaming.versionedPackage("Loan", "1", "   "))
-            .isEqualTo("cbs.nova.dsl.generated.loan.v1");
+            .isEqualTo("cbs.nova.dsl.generated.v1.loan");
   }
 
   @Test
   void usesTargetPackageWhenProvided() {
     assertThat(defaultNaming.versionedPackage("Loan", "1", "com.example.workflow"))
-            .isEqualTo("com.example.workflow.loan.v1");
+            .isEqualTo("com.example.workflow.v1.loan");
   }
 }

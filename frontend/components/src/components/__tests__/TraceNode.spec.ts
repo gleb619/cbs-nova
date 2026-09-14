@@ -41,9 +41,9 @@ describe('TraceNode', () => {
     expect(root.classes()).toContain('bg-orange-50')
     expect(root.classes()).toContain('border-dashed')
     expect(root.classes()).toContain('border-orange-300')
-    expect(
-      wrapper.find('[data-testid="execution-trace-node-step-type-s1"]').classes(),
-    ).toContain('text-orange-700')
+    expect(wrapper.find('[data-testid="execution-trace-node-step-type-s1"]').classes()).toContain(
+      'text-orange-700',
+    )
   })
 
   it('renders non-compensation styling', () => {

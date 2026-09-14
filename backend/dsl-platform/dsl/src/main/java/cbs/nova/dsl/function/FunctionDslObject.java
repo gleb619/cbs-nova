@@ -48,24 +48,4 @@ public record FunctionDslObject(
     return descriptor.get();
   }
 
-  public static @NonNull DslDescriptor defaultDescriptor(
-          @NonNull String name,
-          @NonNull List<ParameterDescriptor> parameters,
-          @Nullable Class<?> inputType,
-          @Nullable Class<?> outputType,
-          @Nullable String description) {
-    return DslDescriptor.builder()
-            .name(name)
-            .type(DslType.FUNCTION)
-            .description(description)
-            .inputType(inputType)
-            .outputType(outputType)
-            .hasSideEffects(false)
-            .parameters(parameters)
-            .taskQueue(DEFAULT_TASK_QUEUE)
-            .version(DEFAULT_VERSION)
-            .startToCloseTimeout(DEFAULT_START_TO_CLOSE_TIMEOUT)
-            .heartbeatTimeout(DEFAULT_HEARTBEAT_TIMEOUT)
-            .build();
-  }
 }

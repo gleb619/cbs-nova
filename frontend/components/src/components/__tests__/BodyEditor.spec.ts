@@ -1,7 +1,10 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DslConstruct } from '../../types/dsl'
-import { DSL_SCHEMA_FETCH_KEY, __resetConstructSchemaCache } from '../../composables/useConstructSchema'
+import {
+  DSL_SCHEMA_FETCH_KEY,
+  __resetConstructSchemaCache,
+} from '../../composables/useConstructSchema'
 import BodyEditor from '../dsl/BodyEditor.vue'
 import CodeTab from '../dsl/CodeTab.vue'
 import StructureTab from '../dsl/StructureTab.vue'

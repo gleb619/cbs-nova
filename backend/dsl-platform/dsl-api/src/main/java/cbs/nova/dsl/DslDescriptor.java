@@ -1,6 +1,7 @@
 package cbs.nova.dsl;
 
 import cbs.nova.dsl.DslObject.DslType;
+import cbs.nova.dsl.model.ObjectDescriptor;
 import lombok.Builder;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -20,5 +21,7 @@ public record DslDescriptor(
         @Nullable String taskQueue,
         @Nullable String version,
         @Nullable Duration startToCloseTimeout,
-        @Nullable Duration heartbeatTimeout) {
+        @Nullable Duration heartbeatTimeout,
+        @Nullable ObjectDescriptor objectDescriptor) {
+
 }
