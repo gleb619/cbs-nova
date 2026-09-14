@@ -10,7 +10,7 @@ function step(overrides: Partial<TraceStep> = {}): TraceStep {
 
 function mountTraceNode(props: Record<string, unknown>) {
   return mount(TraceNode, {
-    props,
+    props: props as never,
     global: { components: { ExecutionsStatusBadge } },
   })
 }

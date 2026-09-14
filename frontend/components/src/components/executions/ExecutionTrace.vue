@@ -10,6 +10,19 @@ interface TreeNode {
   children: TreeNode[]
 }
 
+interface FlatNode {
+  step: TraceStep
+  depth: number
+}
+
+function flatten(node: TreeNode, depth = 0, out: FlatNode[] = []): FlatNode[] {
+  for (const child of node.children) {
+    out.push({ step: child.step, depth: depth + 1 })
+    flatten(child, depth + 1, out)
+  }
+  return out
+}
+
 const tree = computed<TreeNode[]>(() => {
   const byId = new Map<string, TreeNode>()
   for (const s of props.steps) {
@@ -55,17 +68,3 @@ const tree = computed<TreeNode[]>(() => {
   </div>
 </template>
 
-<script lang="ts">
-interface FlatNode {
-  step: TraceStep
-  depth: number
-}
-
-function flatten(node: TreeNode, depth = 0, out: FlatNode[] = []): FlatNode[] {
-  for (const child of node.children) {
-    out.push({ step: child.step, depth: depth + 1 })
-    flatten(child, depth + 1, out)
-  }
-  return out
-}
-</script>

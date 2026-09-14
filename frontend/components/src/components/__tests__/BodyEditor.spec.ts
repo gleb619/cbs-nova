@@ -47,7 +47,7 @@ function mountBodyEditor(props: Record<string, unknown>, fetchMock = defaultFetc
   // them (they are Nuxt auto-imported in the host app). Register real children here
   // so they resolve under vitest, mirroring how OutputPanel registers its children.
   return mount(BodyEditor, {
-    props,
+    props: props as never,
     global: {
       components: {
         StructureTab,

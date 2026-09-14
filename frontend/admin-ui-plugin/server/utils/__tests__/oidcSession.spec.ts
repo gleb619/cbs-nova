@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {beforeEach, describe, expect, it, vi, type Mock} from 'vitest'
 import {
   AT_COOKIE,
   clearOidcTxn,
@@ -52,7 +52,7 @@ function makeEvent(headers: Record<string, string> = {}) {
 }
 
 function getSetCookie(event: ReturnType<typeof makeEvent>): string | string[] | undefined {
-  return event.node.res.getHeader('set-cookie')
+  return event.node.res.getHeader('set-cookie') as string | string[] | undefined
 }
 
 function firstSetCookie(event: ReturnType<typeof makeEvent>, name: string): string | undefined {
@@ -64,14 +64,14 @@ function firstSetCookie(event: ReturnType<typeof makeEvent>, name: string): stri
 describe('oidcSession', () => {
   beforeEach(() => {
     __resetOidcDiscoveryCache()
-    vi.mocked(useRuntimeConfig as never).mockReturnValue({
+    vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
       authIssuer: 'http://keycloak:8080/realms/cbs-nova',
       authClientId: 'cbs-nova-bff',
       authClientSecret: 'change_me_in_production',
       authCallbackUrl: callbackUrl,
       authPostLogoutRedirect: '/',
       public: { appName: 'CBS Nova Admin', authEnabled: true },
-    } as ReturnType<typeof useRuntimeConfig>)
+    } as unknown as ReturnType<typeof useRuntimeConfig>)
     ;($fetch as unknown as ReturnType<typeof vi.fn>).mockClear()
     ;($fetch.raw as unknown as ReturnType<typeof vi.fn>).mockClear()
   })
@@ -204,12 +204,12 @@ describe('oidcSession', () => {
     })
 
     it('forces secure flag when sessionSecureCookies=true even on http callback', () => {
-      vi.mocked(useRuntimeConfig as never).mockReturnValue({
+      vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
         authIssuer: 'http://keycloak:8080/realms/cbs-nova',
         authCallbackUrl: callbackUrl,
         authSessionSecureCookies: 'true',
         authSessionRotateOnRefresh: 'true',
-      } as ReturnType<typeof useRuntimeConfig>)
+      } as unknown as ReturnType<typeof useRuntimeConfig>)
       const event = makeEvent()
       writeSession(event, { access_token: 'at' }, callbackUrl)
       const cookie = firstSetCookie(event, AT_COOKIE)
@@ -217,12 +217,12 @@ describe('oidcSession', () => {
     })
 
     it('caps AT maxAge at the configured idle timeout', () => {
-      vi.mocked(useRuntimeConfig as never).mockReturnValue({
+      vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
         authIssuer: 'http://keycloak:8080/realms/cbs-nova',
         authCallbackUrl: callbackUrl,
         authSessionIdleTimeoutSeconds: 300,
         authSessionRotateOnRefresh: 'true',
-      } as ReturnType<typeof useRuntimeConfig>)
+      } as unknown as ReturnType<typeof useRuntimeConfig>)
       const event = makeEvent()
       writeSession(event, { access_token: 'at', expires_in: 3600 }, callbackUrl)
       const cookie = firstSetCookie(event, AT_COOKIE)
@@ -230,12 +230,12 @@ describe('oidcSession', () => {
     })
 
     it('uses full expires_in when idle timeout is zero', () => {
-      vi.mocked(useRuntimeConfig as never).mockReturnValue({
+      vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
         authIssuer: 'http://keycloak:8080/realms/cbs-nova',
         authCallbackUrl: callbackUrl,
         authSessionIdleTimeoutSeconds: 0,
         authSessionRotateOnRefresh: 'true',
-      } as ReturnType<typeof useRuntimeConfig>)
+      } as unknown as ReturnType<typeof useRuntimeConfig>)
       const event = makeEvent()
       writeSession(event, { access_token: 'at', expires_in: 3600 }, callbackUrl)
       const cookie = firstSetCookie(event, AT_COOKIE)
@@ -302,32 +302,32 @@ describe('oidcSession', () => {
     }
 
     it('returns false when cbs_sess_start is absent', () => {
-      vi.mocked(useRuntimeConfig as never).mockReturnValue({
+      vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
         authSessionAbsoluteTimeoutSeconds: 60,
-      } as ReturnType<typeof useRuntimeConfig>)
+      } as unknown as ReturnType<typeof useRuntimeConfig>)
       expect(sessionExpiredAbsolute(makeAbsoluteEvent(undefined))).toBe(false)
     })
 
     it('returns false when absolute timeout is 0 (disabled)', () => {
-      vi.mocked(useRuntimeConfig as never).mockReturnValue({
+      vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
         authSessionAbsoluteTimeoutSeconds: 0,
-      } as ReturnType<typeof useRuntimeConfig>)
+      } as unknown as ReturnType<typeof useRuntimeConfig>)
       const longAgo = Math.floor(Date.now() / 1000) - 99999
       expect(sessionExpiredAbsolute(makeAbsoluteEvent(longAgo))).toBe(false)
     })
 
     it('returns true when the session start is older than the absolute timeout', () => {
-      vi.mocked(useRuntimeConfig as never).mockReturnValue({
+      vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
         authSessionAbsoluteTimeoutSeconds: 60,
-      } as ReturnType<typeof useRuntimeConfig>)
+      } as unknown as ReturnType<typeof useRuntimeConfig>)
       const longAgo = Math.floor(Date.now() / 1000) - 120
       expect(sessionExpiredAbsolute(makeAbsoluteEvent(longAgo))).toBe(true)
     })
 
     it('returns false when within the absolute window', () => {
-      vi.mocked(useRuntimeConfig as never).mockReturnValue({
+      vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
         authSessionAbsoluteTimeoutSeconds: 3600,
-      } as ReturnType<typeof useRuntimeConfig>)
+      } as unknown as ReturnType<typeof useRuntimeConfig>)
       const recent = Math.floor(Date.now() / 1000) - 30
       expect(sessionExpiredAbsolute(makeAbsoluteEvent(recent))).toBe(false)
     })

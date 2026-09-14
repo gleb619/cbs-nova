@@ -10,6 +10,10 @@ class MockEventSource implements EventSource {
   static readonly OPEN = 1 as const
   static readonly CLOSED = 2 as const
 
+  readonly CONNECTING = MockEventSource.CONNECTING
+  readonly OPEN = MockEventSource.OPEN
+  readonly CLOSED = MockEventSource.CLOSED
+
   readonly url: string
   readonly withCredentials = false
   readyState: number = MockEventSource.CONNECTING

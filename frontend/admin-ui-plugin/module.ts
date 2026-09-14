@@ -217,11 +217,12 @@ export default defineNuxtModule<ModuleOptions>({
     nuxt.options.features.devLogs = false
 
     nuxt.hook('vite:extendConfig', (config) => {
-      config.plugins = config.plugins || []
-      config.plugins.push({
+      const cfg = config as any
+      cfg.plugins = cfg.plugins || []
+      cfg.plugins.push({
         name: 'cbs-disable-nuxt-hook-debugger',
         enforce: 'pre',
-        load(id) {
+        load(id: string) {
           if (id?.includes('nuxt/dist/app/plugins/debug-hooks')) {
             return 'export default () => {}'
           }

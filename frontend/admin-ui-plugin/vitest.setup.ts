@@ -1,4 +1,4 @@
-import { vi } from 'vitest'
+import { vi, beforeEach, type Mock } from 'vitest'
 import { computed, onUnmounted, readonly, ref, watch } from 'vue'
 import { __resetRouterStub } from './vitest.vue-router-stub'
 
@@ -30,14 +30,14 @@ g.callOnce = (key: string, fn: () => unknown) => {
 
 // Expose a mocked $fetch on globalThis for tests that stub the outgoing backend calls.
 const mockedFetch = vi.fn()
-mockedFetch.raw = vi.fn()
+;(mockedFetch as any).raw = vi.fn()
 g.$fetch = mockedFetch
 
 // Stub of h3's defineEventHandler. The real one returns an EventHandler
 // wrapper object; for unit tests we treat it as identity so route files
 // (`export default defineEventHandler(handler)`) expose the inner handler
 // directly and tests can invoke it as a plain function.
-g.defineEventHandler = <T>(handler: T) => handler
+g.defineEventHandler = <T>(handler: T) => handler as any
 
 // Stub of h3's createError used by proxyToBackend's catch block. Return a
 // plain Error so assertions can match on .statusCode and .data.
@@ -144,15 +144,15 @@ g.useDslApi = vi.fn(defaultDslApi)
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(g.useExecutionsApi as never).mockImplementation(defaultExecutionsApi)
-  vi.mocked(g.useDslApi as never).mockImplementation(defaultDslApi)
-  vi.mocked(g.useRuntimeConfig as never).mockImplementation(() => defaultRuntimeConfig)
-  vi.mocked(g.useBackendConfig as never).mockImplementation(() => ({
+  vi.mocked(g.useExecutionsApi as Mock).mockImplementation(defaultExecutionsApi)
+  vi.mocked(g.useDslApi as Mock).mockImplementation(defaultDslApi)
+  vi.mocked(g.useRuntimeConfig as Mock).mockImplementation(() => defaultRuntimeConfig)
+  vi.mocked(g.useBackendConfig as Mock).mockImplementation(() => ({
     baseUrl: defaultRuntimeConfig.backendBaseUrl,
     apiKey: defaultRuntimeConfig.backendApiKey,
     timeoutMs: defaultRuntimeConfig.backendTimeoutMs,
   }))
-  vi.mocked(g.useAuthConfig as never).mockImplementation(() => ({
+  vi.mocked(g.useAuthConfig as Mock).mockImplementation(() => ({
     issuer: defaultRuntimeConfig.authIssuer,
     clientId: defaultRuntimeConfig.authClientId,
     clientSecret: defaultRuntimeConfig.authClientSecret,
@@ -166,8 +166,8 @@ beforeEach(() => {
       defaultRuntimeConfig.authSessionRotateOnRefresh === '' ||
       defaultRuntimeConfig.authSessionRotateOnRefresh === 'true',
   }))
-  vi.mocked(g.useAdminInfo as never).mockImplementation(() => ({ data: ref({}) }))
-  vi.mocked(g.useFetch as never).mockImplementation(() => ({ data: ref({}) }))
+  vi.mocked(g.useAdminInfo as Mock).mockImplementation(() => ({ data: ref({}) }))
+  vi.mocked(g.useFetch as Mock).mockImplementation(() => ({ data: ref({}) }))
   currentRoutePath = '/'
   // Reset the vue-router stub's captured guards so handlers from one spec do
   // not leak into the next.

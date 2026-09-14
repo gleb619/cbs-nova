@@ -45,15 +45,18 @@ const states = new Map<typeof Monaco, RegisterState>()
 
 export function useMonacoHelperCompletion(options: UseMonacoHelperCompletionOptions): () => void {
   const language = options.language ?? 'java'
-  let state = states.get(options.monaco)
+  let state: RegisterState | undefined = states.get(options.monaco)
   if (!state) {
     state = { refCount: 0, disposable: null }
     states.set(options.monaco, state)
   }
+  if (!state) throw new Error('unreachable: state is defined after init')
+
+  const ownedState: RegisterState = state!
 
   function register(): Monaco.IDisposable {
-    if (state.disposable) return state.disposable
-    state.disposable = options.monaco.languages.registerCompletionItemProvider(language, {
+    if (ownedState.disposable) return ownedState.disposable
+    ownedState.disposable = options.monaco.languages.registerCompletionItemProvider(language, {
       triggerCharacters: TRIGGER_CHARACTERS,
       async provideCompletionItems(model, position) {
         const word = model.getWordUntilPosition(position)
@@ -67,17 +70,17 @@ export function useMonacoHelperCompletion(options: UseMonacoHelperCompletionOpti
         return { suggestions: buildHelperCompletionItems({ wordRange: range, catalog }) }
       },
     })
-    return state.disposable
+    return ownedState.disposable
   }
 
-  state.refCount += 1
+  ownedState.refCount += 1
   register()
 
   return () => {
-    state.refCount -= 1
-    if (state.refCount <= 0 && state.disposable) {
-      state.disposable.dispose()
-      state.disposable = null
+    ownedState.refCount -= 1
+    if (ownedState.refCount <= 0 && ownedState.disposable) {
+      ownedState.disposable.dispose()
+      ownedState.disposable = null
       states.delete(options.monaco)
     }
   }

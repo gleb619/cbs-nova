@@ -16,7 +16,7 @@ const objectSchema = {
 
 function mountSchemaForm(props: Record<string, unknown> = {}) {
   return mount(SchemaForm, {
-    props,
+    props: props as never,
     global: { components: { SchemaFormField } },
   })
 }

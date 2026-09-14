@@ -15,7 +15,7 @@ const schemaFixture = {
 
 function mountInputForm(props: Record<string, unknown>) {
   return mount(InputForm, {
-    props,
+    props: props as never,
     global: { components: { InputField } },
   })
 }

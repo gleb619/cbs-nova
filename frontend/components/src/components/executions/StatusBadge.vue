@@ -13,7 +13,11 @@ const styles: Record<ExecutionStatus, string> = {
   Compensated: 'bg-orange-500 text-white',
   Stale: 'bg-warning-500 text-white',
   Cancelled: 'bg-gray-500 text-white',
+  SUCCESS: 'bg-green-500 text-white',
+  FAILED: 'bg-red-500 text-white',
+  RUNNING: 'bg-blue-500 text-white animate-pulse',
 }
+
 </script>
 
 <template>

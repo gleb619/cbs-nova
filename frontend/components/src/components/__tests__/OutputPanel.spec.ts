@@ -26,7 +26,7 @@ function makeOutput(overrides: Partial<RunnerOutput> = {}): RunnerOutput {
 
 function mountOutputPanel(props: Record<string, unknown>) {
   return mount(OutputPanel, {
-    props,
+    props: props as never,
     global: {
       components: {
         ExplainOutput,
@@ -112,14 +112,14 @@ describe('OutputPanel', () => {
     expect(metadataButton).toBeDefined()
     expect(errorsButton).toBeDefined()
 
-    expect(resultButton.classes()).toContain('border-blue-600')
-    expect(metadataButton.classes()).not.toContain('border-blue-600')
-    expect(errorsButton.classes()).not.toContain('border-blue-600')
+    expect(resultButton!.classes()).toContain('border-blue-600')
+    expect(metadataButton!.classes()).not.toContain('border-blue-600')
+    expect(errorsButton!.classes()).not.toContain('border-blue-600')
 
-    await metadataButton.trigger('click')
-    expect(resultButton.classes()).not.toContain('border-blue-600')
-    expect(metadataButton.classes()).toContain('border-blue-600')
-    expect(errorsButton.classes()).not.toContain('border-blue-600')
+    await metadataButton!.trigger('click')
+    expect(resultButton!.classes()).not.toContain('border-blue-600')
+    expect(metadataButton!.classes()).toContain('border-blue-600')
+    expect(errorsButton!.classes()).not.toContain('border-blue-600')
   })
 
   it('renders ExplainOutput with description and mermaid diagram in explain mode', () => {

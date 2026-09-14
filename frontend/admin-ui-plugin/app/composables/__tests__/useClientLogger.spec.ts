@@ -21,12 +21,12 @@ describe('useClientLogger', () => {
 
   beforeEach(() => {
     originalWindow = globalThis.window
-    globalThis.window = originalWindow
+    globalThis.window = originalWindow as (Window & typeof globalThis)
     useLoggerSpy.mockClear()
   })
 
   afterEach(() => {
-    globalThis.window = originalWindow
+    globalThis.window = originalWindow as (Window & typeof globalThis)
   })
 
   it('returns a noop logger when window is undefined without calling useLogger', () => {

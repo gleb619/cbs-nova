@@ -11,7 +11,7 @@ function step(overrides: Partial<TraceStep> = {}): TraceStep {
 
 function mountExecutionTrace(props: Record<string, unknown>) {
   return mount(ExecutionTrace, {
-    props,
+    props: props as never,
     global: { components: { ExecutionsTraceNode, ExecutionsStatusBadge } },
   })
 }

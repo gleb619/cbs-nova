@@ -31,7 +31,7 @@ function mountPanel(
   fetchMock = vi.fn().mockResolvedValue({}),
 ) {
   return mount(RunInputPanel, {
-    props: { name: 'demo', type: 'Process', modelValue: '', ...props },
+    props: { name: 'demo', type: 'Process', modelValue: '', ...props } as never,
     global: {
       components: { SchemaForm, SchemaFormField },
       provide: { [DSL_SCHEMA_FETCH_KEY as symbol]: fetchMock },
@@ -205,7 +205,7 @@ describe('RunInputPanel', () => {
   })
 
   it('shows schema loading skeleton while the schema is loading', async () => {
-    const wrapper = mountPanel({ type: 'Process' }, () => new Promise(() => {}))
+    const wrapper = mountPanel({ type: 'Process' }, vi.fn(() => new Promise(() => {})))
     await flushPromises()
 
     expect(wrapper.find('[data-testid="input-skeleton"]').exists()).toBe(true)

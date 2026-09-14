@@ -358,7 +358,7 @@ function discoverRoutes(dir: string): DiscoveredRoute[] {
     // Convert "[name]" segments to "{name}" and strip a trailing "index".
     const fileSegments = m.groups.route.split('/').map((s) => {
       const bracket = /^\[(?<name>.+)\]$/.exec(s)
-      return bracket?.groups.name ? `{${bracket.groups.name}}` : s
+      return bracket?.groups?.name ? `{${bracket.groups.name}}` : s
     })
     if (fileSegments[fileSegments.length - 1] === 'index') fileSegments.pop()
     // Combine the directory layout with the filename segments, converting
@@ -368,7 +368,7 @@ function discoverRoutes(dir: string): DiscoveredRoute[] {
       .filter((s) => s.length > 0)
       .map((s) => {
         const bracket = /^\[(?<name>.+)\]$/.exec(s)
-        return bracket?.groups.name ? `{${bracket.groups.name}}` : s
+        return bracket?.groups?.name ? `{${bracket.groups.name}}` : s
       })
     const allSegments = [...parentRel, ...fileSegments]
     const bffPath = `/api/v1/${allSegments.join('/')}`

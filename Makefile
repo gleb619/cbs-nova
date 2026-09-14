@@ -52,6 +52,10 @@ publish: ## Publish the DSL platform to Maven Local
 dev: ## Bring up docker + run backend and frontend together
 	@python3 $(SCRIPT) dev
 
+.PHONY: typecheck
+typecheck: ## Typecheck the frontend packages
+	@cd frontend && pnpm typecheck
+
 .PHONY: lint
 lint: ## Run all lint/format checks (backend Spotless + frontend Biome); non-zero exit on any failure
 	@python3 $(SCRIPT) lint all

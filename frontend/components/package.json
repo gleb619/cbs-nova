@@ -10,16 +10,46 @@
       "import": "./src/index.ts",
       "types": "./src/index.ts"
     },
-    "./tailwind.config": "./src/tailwind.config.ts",
-    "./types": "./src/types/index.ts",
-    "./types/dsl": "./src/types/dsl.ts",
-    "./types/events": "./src/types/events.ts",
-    "./types/api": "./src/types/api.ts",
-    "./types/execution": "./src/types/execution.ts",
-    "./types/runner": "./src/types/runner.ts",
-    "./composables": "./src/composables/index.ts",
-    "./utils/*": "./src/utils/*",
-    "./src/*": "./src/*"
+    "./tailwind.config": {
+      "import": "./src/tailwind.config.ts",
+      "types": "./src/tailwind.config.ts"
+    },
+    "./types": {
+      "import": "./src/types/index.ts",
+      "types": "./src/types/index.ts"
+    },
+    "./types/dsl": {
+      "import": "./src/types/dsl.ts",
+      "types": "./src/types/dsl.ts"
+    },
+    "./types/events": {
+      "import": "./src/types/events.ts",
+      "types": "./src/types/events.ts"
+    },
+    "./types/api": {
+      "import": "./src/types/api.ts",
+      "types": "./src/types/api.ts"
+    },
+    "./types/execution": {
+      "import": "./src/types/execution.ts",
+      "types": "./src/types/execution.ts"
+    },
+    "./types/runner": {
+      "import": "./src/types/runner.ts",
+      "types": "./src/types/runner.ts"
+    },
+    "./composables": {
+      "import": "./src/composables/index.ts",
+      "types": "./src/composables/index.ts"
+    },
+    "./utils/*": {
+      "import": "./src/utils/*",
+      "types": "./src/utils/*"
+    },
+    "./src/*": {
+      "import": "./src/*",
+      "types": "./src/*"
+    }
   },
   "scripts": {
     "build": "vite build",

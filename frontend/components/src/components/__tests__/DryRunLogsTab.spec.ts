@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import DryRunLogsTab from '../runner/DryRunLogsTab.vue'
 
 function mountDryRunLogsTab(props: Record<string, unknown>) {
-  return mount(DryRunLogsTab, { props })
+  return mount(DryRunLogsTab, { props: props as never })
 }
 
 describe('DryRunLogsTab', () => {

@@ -2,7 +2,7 @@ import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogge
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { ref } from 'vue'
 import { extractApiError } from '../utils/extractApiError'
-import type { RunnerMode, RunnerOutput, RunnerStatus } from '~/types'
+import type { CallNode, RunnerMode, RunnerOutput, RunnerStatus } from '~/types'
 
 const selectedDefinition = ref<string | null>(null)
 const mode = ref<RunnerMode>('preview')
@@ -162,7 +162,7 @@ export function useRunner() {
       return undefined
     }
     const children = Array.isArray(node.children)
-      ? (node.children.map((c) => asCallNode(c)).filter(Boolean) as RunnerOutput['astTree'][])
+      ? (node.children.map((c) => asCallNode(c)).filter((c): c is CallNode => Boolean(c)) as CallNode[])
       : []
     const externalCalls = Array.isArray(node.externalCalls)
       ? (node.externalCalls.filter((c) => c && typeof c === 'object') as Array<

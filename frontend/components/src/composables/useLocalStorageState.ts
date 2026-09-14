@@ -1,6 +1,9 @@
 import { customRef, getCurrentInstance, onMounted, type Ref } from 'vue'
 
-export type UseCookieFactory = <T>(name: string, options?: { default?: () => T }) => Ref<T>
+export type UseCookieFactory = <T = unknown>(
+  name: string,
+  options?: { default?: () => T },
+) => Ref<T>
 
 export interface UseLocalStorageStateOptions<T> {
   namespace?: string

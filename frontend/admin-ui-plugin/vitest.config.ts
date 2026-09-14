@@ -5,7 +5,7 @@ import { defineConfig } from 'vitest/config'
 const r = (p: string) => fileURLToPath(new URL(p, import.meta.url))
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue() as any],
   resolve: {
     // Map the `~/` alias used by Nitro server routes (and the Nuxt app) to
     // the package root, matching what Nuxt's `~/` resolves to at runtime.

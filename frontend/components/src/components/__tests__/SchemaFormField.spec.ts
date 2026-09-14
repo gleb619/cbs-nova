@@ -2,10 +2,11 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import { nextTick } from 'vue'
 import SchemaFormField from '../dsl/SchemaFormField.vue'
+import type { JsonSchema } from '../../types/jsonSchema'
 import { createSchemaFieldEventBus, SCHEMA_FIELD_EVENTS_KEY } from '../dsl/schemaFieldEvents'
 
 function mountField(props: Record<string, unknown> = {}) {
-  return mount(SchemaFormField, { props })
+  return mount(SchemaFormField, { props: props as never })
 }
 
 describe('SchemaFormField', () => {
@@ -215,7 +216,7 @@ describe('SchemaFormField', () => {
       properties: {
         city: { type: 'string' },
       },
-    }
+    } satisfies JsonSchema
 
     it('renders the nested SchemaForm (stubbed) and forwards update:modelValue', async () => {
       const wrapper = mount(SchemaFormField, {

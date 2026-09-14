@@ -12,7 +12,7 @@ const props = defineProps<{
   navItems: NavItem[]
   title?: string
   shortTitle?: string
-  linkComponent?: 'a' | unknown
+  linkComponent?: string | object
   activeClass?: string
 }>()
 

@@ -61,13 +61,13 @@ describe('logNuxtLifecycle plugin', () => {
       },
     }
 
-    logNuxtLifecycle(nuxtApp)
+    logNuxtLifecycle(nuxtApp as any)
 
     if (!hooks.beforeEach || !hooks.afterEach) {
       throw new Error('Expected both beforeEach and afterEach hooks to be registered')
     }
 
-    return hooks
+    return hooks as Required<typeof hooks>
   }
 
   it('ignores non-lifecycle names and does not interfere with later matched pairs', () => {

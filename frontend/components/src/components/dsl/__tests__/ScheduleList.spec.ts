@@ -2,7 +2,7 @@ import { mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it } from 'vitest'
 import { nextTick } from 'vue'
 import { notifySchedulesChanged } from '../../../composables/useScheduleListEvents'
-import type { ScheduleSummary } from '../../types/dsl'
+import type { ScheduleSummary } from '../../../types/dsl'
 import ScheduleList from '../ScheduleList.vue'
 
 const schedules: ScheduleSummary[] = [
@@ -27,7 +27,7 @@ const schedules: ScheduleSummary[] = [
 ]
 
 function mountList(props: Record<string, unknown>) {
-  return mount(ScheduleList, { props })
+  return mount(ScheduleList, { props: props as never })
 }
 
 describe('ScheduleList', () => {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {beforeEach, describe, expect, it, vi, type Mock} from 'vitest'
 import { performLogout } from '../logout'
 import { useAuthConfig } from '../config'
 import { clearOidcSession, discoverOidc, readSession } from '../oidcSession'
@@ -41,16 +41,16 @@ const fakeEvent = { node: { req: { headers: {} } } } as Parameters<typeof perfor
 describe('performLogout', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useAuthConfig as never).mockReturnValue(authConfigFixture)
-    vi.mocked(readSession as never).mockReturnValue({
+    vi.mocked(useAuthConfig as Mock).mockReturnValue(authConfigFixture)
+    vi.mocked(readSession as Mock).mockReturnValue({
       accessToken: undefined,
       refreshToken: undefined,
     })
-    vi.mocked(discoverOidc as never).mockResolvedValue({
+    vi.mocked(discoverOidc as Mock).mockResolvedValue({
       authorization_endpoint: 'http://keycloak/auth',
       token_endpoint: 'http://keycloak/token',
     } as Awaited<ReturnType<typeof discoverOidc>>)
-    vi.mocked(clearOidcSession as never).mockResolvedValue(undefined)
+    vi.mocked(clearOidcSession as Mock).mockResolvedValue(undefined)
     ;($fetch as unknown as ReturnType<typeof vi.fn>).mockClear()
   })
 
@@ -66,11 +66,11 @@ describe('performLogout', () => {
   it('POSTs to end_session_endpoint then clears session on the happy path', async () => {
     const refreshToken = 'refresh-xyz'
     const endSessionEndpoint = 'http://keycloak/logout'
-    vi.mocked(readSession as never).mockReturnValue({
+    vi.mocked(readSession as Mock).mockReturnValue({
       accessToken: 'access-xyz',
       refreshToken,
     })
-    vi.mocked(discoverOidc as never).mockResolvedValue({
+    vi.mocked(discoverOidc as Mock).mockResolvedValue({
       authorization_endpoint: 'http://keycloak/auth',
       token_endpoint: 'http://keycloak/token',
       end_session_endpoint: endSessionEndpoint,
@@ -104,7 +104,7 @@ describe('performLogout', () => {
   })
 
   it('does not call $fetch and still clears session when discovery lacks end_session_endpoint', async () => {
-    vi.mocked(readSession as never).mockReturnValue({
+    vi.mocked(readSession as Mock).mockReturnValue({
       accessToken: 'access-xyz',
       refreshToken: 'refresh-xyz',
     })
@@ -117,11 +117,11 @@ describe('performLogout', () => {
   })
 
   it('does not throw and still clears session when discoverOidc rejects', async () => {
-    vi.mocked(readSession as never).mockReturnValue({
+    vi.mocked(readSession as Mock).mockReturnValue({
       accessToken: 'access-xyz',
       refreshToken: 'refresh-xyz',
     })
-    vi.mocked(discoverOidc as never).mockRejectedValue(new Error('discovery failed'))
+    vi.mocked(discoverOidc as Mock).mockRejectedValue(new Error('discovery failed'))
 
     await expect(performLogout(fakeEvent)).resolves.toBeUndefined()
 
@@ -133,11 +133,11 @@ describe('performLogout', () => {
   it('does not throw and still clears session when $fetch rejects', async () => {
     const refreshToken = 'refresh-xyz'
     const endSessionEndpoint = 'http://keycloak/logout'
-    vi.mocked(readSession as never).mockReturnValue({
+    vi.mocked(readSession as Mock).mockReturnValue({
       accessToken: 'access-xyz',
       refreshToken,
     })
-    vi.mocked(discoverOidc as never).mockResolvedValue({
+    vi.mocked(discoverOidc as Mock).mockResolvedValue({
       authorization_endpoint: 'http://keycloak/auth',
       token_endpoint: 'http://keycloak/token',
       end_session_endpoint: endSessionEndpoint,

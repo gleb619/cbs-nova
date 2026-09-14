@@ -1,5 +1,5 @@
 import { resetSavedDraftsState, useSavedDrafts } from '@cbs/components'
-import { flushPromises, mount } from '@vue/test-utils'
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick } from 'vue'
 import { __setRouteQuery } from '../../../vitest.nuxt-app-stub'
@@ -10,14 +10,14 @@ import DslWorkbench from '../dsl-workbench.vue'
 
 // Track every mounted page so we can tear down global window listeners
 // (e.g. the Ctrl+S handler from @vueuse/core useEventListener) between tests.
-const mountedWrappers: ReturnType<typeof mountPage>[] = []
+const mountedWrappers: VueWrapper[] = []
 
 afterEach(() => {
   // Unmount in reverse order to avoid stale listeners interfering with later tests.
   while (mountedWrappers.length) {
     const wrapper = mountedWrappers.pop()
     try {
-      wrapper.unmount()
+      wrapper?.unmount()
     } catch {
       /* already unmounted */
     }
@@ -33,6 +33,7 @@ interface ConstructRow {
   name: string
   type: string
   status: string
+  filePath?: string
 }
 
 interface WorkbenchStateShape {
@@ -110,7 +111,7 @@ const harness: WorkbenchApiShape = (() => {
   const vue = require('vue') as typeof import('vue')
 
   function createRefLikeReactive<T extends object>(target: T): T & { value: T } {
-    const reactiveTarget = vue.reactive(target)
+    const reactiveTarget = vue.reactive(target) as any
     return new Proxy(reactiveTarget, {
       get(t, key) {
         if (key === 'value') return t
@@ -319,7 +320,7 @@ async function openHelpersMenuItem(
   const misc = dropdowns.find((node) => node.props('label') === 'Misc')
   expect(misc, 'Misc dropdown').toBeTruthy()
   const items = misc?.props('items') as Array<{ value: string }> | undefined
-  expect(items.some((item) => item.value === value)).toBe(true)
+  expect(items?.some((item) => item.value === value)).toBe(true)
   await misc?.vm.$emit('select', { value })
 }
 
@@ -361,7 +362,7 @@ describe('dsl-workbench.vue unsaved-changes guard', () => {
 
     addSpy = vi.spyOn(window, 'addEventListener')
     removeSpy = vi.spyOn(window, 'removeEventListener')
-    confirmSpy = vi.spyOn(window, 'confirm')
+    confirmSpy = vi.spyOn(window, 'confirm') as any
   })
 
   afterEach(() => {
@@ -821,7 +822,7 @@ describe('dsl-workbench.vue save-status pill and Ctrl+S', () => {
 
     expect(findEditorSaveStatus(wrapper)).toBe('saving')
 
-    resolveSave?.()
+    if (resolveSave) { (resolveSave as any)() }
     await flushPromises()
 
     expect(findEditorSaveStatus(wrapper)).toBe('saved')
@@ -869,7 +870,7 @@ describe('dsl-workbench.vue save-status pill and Ctrl+S', () => {
     expect(findEditorSaveStatus(wrapper)).toBe('saving')
     expect(harness.saveConstruct).toHaveBeenCalledTimes(2)
 
-    resolveRetry?.()
+    if (resolveRetry) { (resolveRetry as any)() }
     await flushPromises()
 
     expect(findEditorSaveStatus(wrapper)).toBe('saved')

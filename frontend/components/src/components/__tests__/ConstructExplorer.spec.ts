@@ -16,7 +16,7 @@ function mountContainer(props: {
   loading?: boolean
 }) {
   return mount(ConstructExplorer, {
-    props,
+    props: props as never,
     slots: {
       default: ({
         constructs,
@@ -104,10 +104,10 @@ describe('ConstructExplorer', () => {
     const wrapper = mountContainer({ constructs, selectedName: null, collapsed: true })
 
     expect(wrapper.find('input[type="text"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="explorer-search"]').element?.style.display).toBe('none')
-    expect(wrapper.get('[aria-label="Expand constructs"]').exists()).toBe(true)
+    expect((wrapper.find('[data-testid="explorer-search"]').element as HTMLElement).style.display).toBe('none')
+    expect(wrapper.find('[aria-label="Expand constructs"]').exists()).toBe(true)
 
-    await wrapper.get('[aria-label="Expand constructs"]').trigger('click')
+    await wrapper.find('[aria-label="Expand constructs"]').trigger('click')
     expect(wrapper.emitted('update:collapsed')).toBeTruthy()
     expect(wrapper.emitted('update:collapsed')?.at(-1)).toEqual([false])
   })

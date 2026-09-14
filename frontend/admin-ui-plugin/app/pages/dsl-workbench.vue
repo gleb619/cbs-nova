@@ -6,6 +6,7 @@ import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { useDslWorkbench } from '@cbs/admin-ui-plugin/composables/useDslWorkbench'
 import { useWorkbenchDraft } from '@cbs/admin-ui-plugin/composables/useWorkbenchDraft'
 import type {
+  DslConstruct,
   EditorMarker,
   HelperCatalogEntry,
   HelperSearchFilters,
@@ -57,6 +58,9 @@ const {
   reloadDefinitions,
   markDirty,
 } = workbench
+
+const displayConstructs = computed(() => state.value.constructs as DslConstruct[])
+const displayValidationErrors = computed(() => state.value.validationErrors as ValidationError[])
 
 const draftDirty = useDraftDirty()
 
@@ -498,7 +502,7 @@ onBeforeUnmount(() => {
       >
         <DslConstructExplorer
           v-model:collapsed="explorerCollapsed"
-          :constructs="state.constructs"
+          :constructs="displayConstructs"
           :selected-name="state.selectedName"
           :loading="loaders.constructs"
           @select="safeSelectConstruct"
@@ -535,7 +539,7 @@ onBeforeUnmount(() => {
             :preview="runPreview"
             :explain="runExplain"
             :markers="editorMarkers"
-            :errors="state.validationErrors"
+            :errors="displayValidationErrors"
             @update:code="onCodeChange"
             @save="handleEditorSave"
             @select="onProblemSelect"
@@ -617,6 +621,7 @@ onBeforeUnmount(() => {
 
     <DslDeleteDraftConfirmationModal
       v-if="showDeleteModal"
+      :show="true"
       :draft-name="pendingDeleteName ?? ''"
       :busy="isDeleting"
       @confirm="confirmDelete"

@@ -15,7 +15,7 @@ function makeNode(overrides: Partial<CallNode> = {}): CallNode {
 }
 
 function mountExternalCallsTab(props: Record<string, unknown>) {
-  return mount(ExternalCallsTab, { props })
+  return mount(ExternalCallsTab, { props: props as never })
 }
 
 describe('ExternalCallsTab', () => {

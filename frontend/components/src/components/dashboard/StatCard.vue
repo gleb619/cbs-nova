@@ -5,10 +5,10 @@ const props = withDefaults(
     count: number
     to: string
     icon?: string
-    linkComponent?: 'a' | unknown
+    linkComponent?: string | object
   }>(),
   {
-    linkComponent: 'a',
+    linkComponent: () => 'a',
   },
 )
 </script>

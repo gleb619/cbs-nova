@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useDashboardStats } from '../useDashboardStats'
 
 describe('useDashboardStats', () => {
-  const fetchMock = vi.mocked($fetch)
+  const fetchMock = vi.mocked($fetch as unknown as import("vitest").Mock)
 
   beforeEach(() => {
     fetchMock.mockReset()

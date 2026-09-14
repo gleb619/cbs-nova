@@ -6,16 +6,21 @@ import {
 } from '../../composables/useConstructSchema'
 import { __resetPreviewHistoryForTests } from '../../composables/usePreviewHistory'
 import PreviewTab from '../dsl/PreviewTab.vue'
+import type { RunnerOutput } from '../../types/runner'
 
 function mountTab(
   props: Record<string, unknown> = {},
-  preview: (name: string, body: unknown, metadata?: Record<string, unknown>) => unknown = vi
+  preview: (
+    name: string,
+    body: unknown,
+    metadata?: Record<string, unknown>,
+  ) => RunnerOutput | Promise<RunnerOutput> = vi
     .fn()
     .mockResolvedValue({ result: { ok: true } }),
   fetchMock = vi.fn().mockResolvedValue({}),
 ) {
   return mount(PreviewTab, {
-    props: { name: 'demo', preview, ...props },
+    props: { name: 'demo', preview, ...props } as never,
     global: {
       stubs: {
         RunResultPanel: {

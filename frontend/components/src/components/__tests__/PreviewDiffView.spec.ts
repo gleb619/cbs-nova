@@ -26,7 +26,7 @@ function makeOutput(overrides: Partial<RunnerOutput> = {}): RunnerOutput {
 
 function mountDiff(props: Record<string, unknown>) {
   return mount(PreviewDiffView, {
-    props,
+    props: props as never,
     global: {
       components: { DiffLine, ASTDiffNode, MetricsDiffTable },
     },

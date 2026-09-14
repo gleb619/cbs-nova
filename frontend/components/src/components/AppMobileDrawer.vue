@@ -9,12 +9,12 @@ const props = withDefaults(
   defineProps<{
     items: NavItem[]
     title?: string
-    linkComponent?: 'a' | unknown
+    linkComponent?: string | object
     activeClass?: string
   }>(),
   {
     title: 'CBS Nova',
-    linkComponent: 'a',
+    linkComponent: () => 'a',
     activeClass: 'bg-primary-500 text-white',
   },
 )

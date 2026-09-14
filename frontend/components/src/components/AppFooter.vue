@@ -22,8 +22,6 @@ const props = withDefaults(
   {
     copyright: 'CBS Nova',
     year: () => new Date().getFullYear(),
-    buildInfo: () => null,
-    gitInfo: () => null,
   },
 )
 
@@ -74,7 +72,7 @@ function formatDate(value?: string): string {
 
       <AppFooterLinks :links="links" :priority="3" />
 
-      <AppFooterGitInfo :git-info="gitInfo" :commit-time="commitTime" :priority="2" />
+      <AppFooterGitInfo :git-info="gitInfo ?? null" :commit-time="commitTime" :priority="2" />
     </div>
   </footer>
 </template>

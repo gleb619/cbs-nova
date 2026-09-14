@@ -10,26 +10,26 @@ export function useExecutionsApi() {
   ): Promise<Execution[] | { items?: Execution[]; total?: number }> {
     log.debug('fetching executions', { params })
     if (params && Object.keys(params).length > 0) {
-      return $fetch('/api/v1/executions', { query: params }) as
+      return await $fetch('/api/v1/executions', { query: params }) as
         | Execution[]
         | { items?: Execution[]; total?: number }
     }
-    return $fetch('/api/v1/executions') as Execution[] | { items?: Execution[]; total?: number }
+    return await $fetch('/api/v1/executions') as Execution[] | { items?: Execution[]; total?: number }
   }
 
   async function get(id: string): Promise<ExecutionDetail> {
     log.debug('fetching execution detail', { id })
-    return $fetch(`/api/v1/executions/${id}`) as ExecutionDetail
+    return await $fetch(`/api/v1/executions/${id}`) as ExecutionDetail
   }
 
   async function cancel(id: string): Promise<ExecutionDetail> {
     log.info('cancelling execution', { id })
-    return $fetch(`/api/v1/executions/${id}/cancel`, { method: 'POST' }) as ExecutionDetail
+    return await $fetch(`/api/v1/executions/${id}/cancel`, { method: 'POST' }) as ExecutionDetail
   }
 
   async function getTransactions(id: string): Promise<TransactionExecutionDto[]> {
     log.debug('fetching execution transactions', { id })
-    return $fetch(`/api/v1/executions/${id}/transactions`) as TransactionExecutionDto[]
+    return await $fetch(`/api/v1/executions/${id}/transactions`) as TransactionExecutionDto[]
   }
 
   return { list, get, cancel, getTransactions }

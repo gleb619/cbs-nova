@@ -47,7 +47,7 @@ describe('extractApiError', () => {
     const data = { message: 'upstream blew up', code: 'UPSTREAM' }
     // ofetch stashes the parsed body on `response._data` at runtime.
     ;(response as unknown as { _data: unknown })._data = data
-    const err = createFetchError({ request: '/api/v1/dsl/run/x', response })
+    const err = createFetchError({ request: '/api/v1/dsl/run/x', response } as any)
 
     const result = extractApiError(err)
     expect(result.message).toBe('upstream blew up')
@@ -57,7 +57,7 @@ describe('extractApiError', () => {
 
   it('handles a FetchError constructed without data', () => {
     const response = new Response('{}', { status: 503, statusText: 'Service Unavailable' })
-    const err = createFetchError({ request: '/api/v1/dsl', response })
+    const err = createFetchError({ request: '/api/v1/dsl', response } as any)
 
     const result = extractApiError(err)
     expect(result.message).toBe('Service Unavailable')

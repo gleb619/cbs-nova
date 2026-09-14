@@ -5,12 +5,12 @@ export interface NavItemProps {
   icon?: string
   isActive?: boolean
   activeClass?: string
-  linkComponent?: 'a' | unknown
+  linkComponent?: string | object
 }
 
 const props = withDefaults(defineProps<NavItemProps>(), {
   activeClass: 'bg-primary-500 text-white',
-  linkComponent: 'a',
+  linkComponent: () => 'a',
 })
 
 const baseClasses =

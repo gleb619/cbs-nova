@@ -1,6 +1,6 @@
 import { resetSavedDraftsState, useSavedDrafts } from '@cbs/components'
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {beforeEach, describe, expect, it, vi, type Mock} from 'vitest'
 import { defineComponent, h, nextTick, Suspense, type VNode } from 'vue'
 import AdminLayout from '../admin.vue'
 
@@ -94,10 +94,10 @@ describe('admin.vue auth affordance', () => {
   })
 
   it('renders nothing when auth is disabled', async () => {
-    vi.mocked(useRuntimeConfig as never).mockReturnValue({
+    vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
       public: { authEnabled: false },
-    } as ReturnType<typeof useRuntimeConfig>)
-    vi.mocked($fetch as never).mockResolvedValue({ authenticated: false })
+    } as unknown as ReturnType<typeof useRuntimeConfig>)
+    vi.mocked($fetch as unknown as Mock).mockResolvedValue({ authenticated: false })
 
     const wrapper = mountAdminLayout()
     await flush()
@@ -108,10 +108,10 @@ describe('admin.vue auth affordance', () => {
   })
 
   it('renders Sign in when auth is enabled but not authenticated', async () => {
-    vi.mocked(useRuntimeConfig as never).mockReturnValue({
+    vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
       public: { authEnabled: true },
-    } as ReturnType<typeof useRuntimeConfig>)
-    vi.mocked($fetch as never).mockResolvedValue({ authenticated: false })
+    } as unknown as ReturnType<typeof useRuntimeConfig>)
+    vi.mocked($fetch as unknown as Mock).mockResolvedValue({ authenticated: false })
 
     const wrapper = mountAdminLayout()
     await flush()
@@ -121,10 +121,10 @@ describe('admin.vue auth affordance', () => {
   })
 
   it('renders user + Sign out when authenticated', async () => {
-    vi.mocked(useRuntimeConfig as never).mockReturnValue({
+    vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
       public: { authEnabled: true },
-    } as ReturnType<typeof useRuntimeConfig>)
-    vi.mocked($fetch as never).mockResolvedValue({
+    } as unknown as ReturnType<typeof useRuntimeConfig>)
+    vi.mocked($fetch as unknown as Mock).mockResolvedValue({
       authenticated: true,
       user: { sub: 'u-1', preferred_username: 'devuser' },
     })
@@ -145,10 +145,10 @@ describe('admin.vue saved drafts widget', () => {
     dslApi.listDrafts.mockReset()
     dslApi.listDrafts.mockResolvedValue([])
     navigateToMock.mockReset()
-    vi.mocked(useRuntimeConfig as never).mockReturnValue({
+    vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
       public: { authEnabled: false },
-    } as ReturnType<typeof useRuntimeConfig>)
-    vi.mocked($fetch as never).mockResolvedValue({ authenticated: false })
+    } as unknown as ReturnType<typeof useRuntimeConfig>)
+    vi.mocked($fetch as unknown as Mock).mockResolvedValue({ authenticated: false })
   })
 
   function mountLayout() {
