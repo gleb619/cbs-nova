@@ -28,7 +28,6 @@ public final class ExplainBudgetStage implements DslPipeStage {
   private final int descriptionMaxTokens;
   private final int mermaidMaxTokens;
 
-
   @Override
   @SuppressWarnings({"unchecked", "deprecation"})
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {

@@ -10,7 +10,9 @@ import static org.mockito.Mockito.when;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.model.ExplainGraphAccumulator;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import cbs.nova.starter.core.recorder.ExternalCall;
@@ -113,6 +115,27 @@ class ExternalCallRecordingStageTest {
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("downstream-value");
+  }
+
+  @Test
+  void recordedCallsGoToAccumulatorWhenPresent() {
+    ExternalCallRecorder recorder = mock(ExternalCallRecorder.class);
+    ExplainGraphAccumulator accumulator = new ExplainGraphAccumulator();
+    Context<?> ctx = contextFactory.of("body", ExecutionMode.EXPLAIN, "run-6")
+            .withMetadata(Constants.EXPLAIN_GRAPH_ACCUMULATOR_KEY, accumulator);
+    DslPipeContext pipeContext = DslPipeContext.of("Ping", ctx, ExecutionMode.EXPLAIN, "run-6");
+    List<ExternalCall> recorded = List.of(
+            new ExternalCall(ExternalCallRecorder.TYPE_DATABASE, "jdbc:db", "select", 0L, Map.of()),
+            new ExternalCall(ExternalCallRecorder.TYPE_DATABASE, "jdbc:db", "insert", 0L,
+                    Map.of()));
+    when(recorder.finishRun("run-6")).thenReturn(recorded);
+
+    new ExternalCallRecordingStage(recorder).execute(pipeContext, c -> Result.success("ok"));
+
+    assertThat(accumulator.externalCalls()).hasSize(2);
+    assertThat(accumulator.callCounts())
+            .containsEntry(ExternalCallRecorder.TYPE_DATABASE, 2);
+    assertThat(pipeContext.getAttribute("externalCalls")).isNull();
   }
 
   private DslPipeContext newPipeContext(String runId) {

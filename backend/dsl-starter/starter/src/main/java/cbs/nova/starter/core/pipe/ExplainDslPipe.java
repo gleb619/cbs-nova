@@ -70,6 +70,6 @@ public final class ExplainDslPipe implements DslExecutionPipe<ExplainGraphReport
                     Duration.ofMillis(previewProperties.execution().timeoutMs()), executor,
                     meterRegistry, dryRunLoggingContext))
             .build()
-            .execute(name, ctx);
+            .execute(name, explainCtx);
   }
 }

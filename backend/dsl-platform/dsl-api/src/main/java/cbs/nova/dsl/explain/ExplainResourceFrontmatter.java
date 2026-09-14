@@ -19,8 +19,9 @@ import org.jspecify.annotations.NonNull;
  * Intentionally not a general YAML parser — markdown metadata stays small and predictable, and
  * avoiding a YAML dependency keeps the API surface tiny.
  */
-//TODO: instead use some `Flexmark-Java` or `CommonMark-Java` libs
-// `implementation 'com.vsch.flexmark:flexmark:0.64.8'` or `implementation 'org.commonmark:commonmark:0.22.0'`
+// TODO: instead use some `Flexmark-Java` or `CommonMark-Java` libs
+// `implementation 'com.vsch.flexmark:flexmark:0.64.8'` or `implementation
+// 'org.commonmark:commonmark:0.22.0'`
 @Deprecated(forRemoval = true)
 public final class ExplainResourceFrontmatter {
 

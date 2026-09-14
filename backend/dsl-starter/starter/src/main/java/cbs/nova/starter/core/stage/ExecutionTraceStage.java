@@ -12,9 +12,9 @@ import org.jspecify.annotations.NonNull;
 
 /**
  * Owns a fresh {@link ExecutionTraceCollector} per run. The collector is created at stage entry,
- * threaded into the DSL {@link Context} so rich contexts append to it, snapshotted into the
- * explain accumulator (or the {@code executionTrace} attribute when no accumulator is present) in
- * a {@code finally} block, and then dropped with the run. One instance == one run, so there is no
+ * threaded into the DSL {@link Context} so rich contexts append to it, snapshotted into the explain
+ * accumulator (or the {@code executionTrace} attribute when no accumulator is present) in a
+ * {@code finally} block, and then dropped with the run. One instance == one run, so there is no
  * runId-keyed map to leak.
  */
 public final class ExecutionTraceStage implements DslPipeStage {

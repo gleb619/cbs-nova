@@ -7,7 +7,9 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.listener.ExecutionTraceCollector;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.model.ExplainGraphAccumulator;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import java.util.List;
@@ -80,6 +82,25 @@ class ExecutionTraceStageTest {
     List<String> trace = (List<String>) pipeContext.getAttribute("executionTrace", List.class);
     assertThat(trace).isNotNull();
     assertThat(trace).isEmpty();
+  }
+
+  @Test
+  void executionTraceGoesToAccumulatorWhenPresent() {
+    ExplainGraphAccumulator accumulator = new ExplainGraphAccumulator();
+    Context<?> originalDsl = contextFactory.of("body", ExecutionMode.EXPLAIN, "run-1")
+            .withMetadata(Constants.EXPLAIN_GRAPH_ACCUMULATOR_KEY, accumulator);
+    DslPipeContext pipeContext = DslPipeContext.of(
+            "Ping", originalDsl, ExecutionMode.EXPLAIN, "run-1");
+
+    DslPipeStage.Next next = c -> {
+      c.dslContext().executionTraceCollector().add("first-step");
+      return Result.success("downstream");
+    };
+
+    new ExecutionTraceStage().execute(pipeContext, next);
+
+    assertThat(accumulator.executionTrace()).containsExactly("first-step");
+    assertThat(pipeContext.getAttribute("executionTrace", List.class)).isNull();
   }
 
   @Test

@@ -68,7 +68,8 @@ public final class ExplainGraphAccumulator {
     return dryRunLogs;
   }
 
-  public @NonNull ExplainGraphAccumulator dryRunLogs(@NonNull List<Map<String, Object>> dryRunLogs) {
+  public @NonNull ExplainGraphAccumulator dryRunLogs(
+          @NonNull List<Map<String, Object>> dryRunLogs) {
     this.dryRunLogs = List.copyOf(dryRunLogs);
     return this;
   }

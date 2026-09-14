@@ -144,7 +144,14 @@ Prefer `codegraph_*` over grep.
   `ExplainBudgetStage`/`ExplainReportStage`); helpers override `explain` for mode/arg-specific reports
   (see `MathHelper`). Starter builds full 14-field `ExplainGraphReport` (package `cbs.nova.dsl.model/` —
   graph-shaped: `children`, `hasCompensation`, self-rendering `toMermaid()`/`toPlantUml()`/`toBpmn()`);
-  `DevDslRuntime` maps it to simple `ExplainReport` with one-line trace summary.
+  `DevDslRuntime` maps it to simple `ExplainReport` with one-line trace summary. Stage contributions
+  (`astTree`, `executionTrace`, `externalCalls`, `callCounts`, `dryRunLogs`, `metrics`, `errors`,
+  `hasCompensation`) are accumulated in a typed `ExplainGraphAccumulator` (dsl-api) threaded via
+  `Context.metadata()` under `Constants.EXPLAIN_GRAPH_ACCUMULATOR_KEY`, created once per run by
+  `ExplainDslPipe` and finished by `ExplainReportStage` via `accumulator.build(...)`; shared stages
+  (`ExecutionTreeStage`, `ExecutionTraceStage`, `MetricsStage`, `DryRunLogStage`,
+  `ExternalCallRecordingStage`) fall back to `DslPipeContext.attributes` when the accumulator is
+  absent (preview/run pipes).
 
 ---
 

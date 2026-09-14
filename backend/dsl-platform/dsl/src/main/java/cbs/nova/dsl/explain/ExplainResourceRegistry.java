@@ -14,7 +14,7 @@ import org.jspecify.annotations.NonNull;
  */
 public final class ExplainResourceRegistry {
 
-  //TODO: Instead add a collection with some memoize via caffeine
+  // TODO: Instead add a collection with some memoize via caffeine
   @Deprecated(forRemoval = true)
   private final Map<String, ExplainResourceProvider> byName = new ConcurrentHashMap<>();
   @Deprecated(forRemoval = true)

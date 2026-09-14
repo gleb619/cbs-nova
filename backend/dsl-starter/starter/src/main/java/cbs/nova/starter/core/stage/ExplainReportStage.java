@@ -1,21 +1,19 @@
 package cbs.nova.starter.core.stage;
 
-import cbs.nova.dsl.CallNode;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorDetail;
-import cbs.nova.dsl.PreviewMetricsSnapshot;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.model.ExplainGraphAccumulator;
 import cbs.nova.dsl.model.ExplainGraphReport;
-import cbs.nova.starter.converter.ExternalCallConverter;
 import cbs.nova.starter.core.PreviewErrorHandler;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
-import cbs.nova.starter.core.recorder.ExternalCall;
+import cbs.nova.starter.core.pipe.ExplainGraphAccumulators;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import org.jspecify.annotations.NonNull;
 
 public final class ExplainReportStage implements DslPipeStage {
@@ -28,8 +26,11 @@ public final class ExplainReportStage implements DslPipeStage {
 
   @Override
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
-    Result<?> inner = next.proceed(context);
-    Result<?> dslResult = (Result<?>) context.getAttribute("dslResult");
+    next.proceed(context);
+    Result<?> dslResult = (Result<?>) context.getAttribute(StarterConstants.DSL_RESULT_ATTRIBUTE);
+    ExplainGraphAccumulator accumulator = ExplainGraphAccumulators.resolve(context)
+            .orElseThrow(() -> new IllegalStateException(
+                    "ExplainGraphAccumulator is not threaded into the context metadata"));
 
     GlobalManager gm = GlobalManager.globalManager();
     DslDescriptor dslDesc = gm.describeProcess(context.name())
@@ -37,37 +38,21 @@ public final class ExplainReportStage implements DslPipeStage {
             .or(() -> gm.describeFunction(context.name()))
             .orElse(null);
     String description = describeEntity(dslDesc, gm, context.name());
-    boolean hasCompensation = resolveCompensation(gm, context.name(), dslDesc);
 
     List<PreviewErrorDetail> errors = new ArrayList<>();
     if (dslResult != null && !dslResult.isSuccess()) {
       errors.add(PreviewErrorHandler.from(dslResult.cause(), context.name()));
     }
 
-    @SuppressWarnings("unchecked")
-    List<ExternalCall> calls = (List<ExternalCall>) context.getAttribute("externalCalls");
-    List<Map<String, Object>> externalCalls = calls != null
-            ? ExternalCallConverter.toCallJson(calls)
-            : List.of();
-    Map<String, Integer> callCounts = calls != null
-            ? ExternalCallConverter.toCallCounts(calls)
-            : Map.of();
+    accumulator
+            .hasCompensation(resolveCompensation(gm, context.name(), dslDesc))
+            .errors(errors);
 
-    ExplainGraphReport baseReport = new ExplainGraphReport(
+    ExplainGraphReport baseReport = accumulator.build(
             context.name(),
             description,
-            attribute(context, "executionTrace", List.class, List.of()),
-            externalCalls,
-            callCounts,
-            hasCompensation,
             gm.describeHelper(context.name()).orElse(null),
-            dslDesc,
-            context.getAttribute("astTree", CallNode.class),
-            attribute(context, "dryRunLogs", List.class, List.of()),
-            context.getAttribute("metrics", PreviewMetricsSnapshot.class),
-            errors,
-            List.of(),
-            null);
+            dslDesc);
 
     String mermaidDiagram = diagramRenderer.mermaidDiagram(baseReport);
 
@@ -90,7 +75,8 @@ public final class ExplainReportStage implements DslPipeStage {
     return Result.success(report);
   }
 
-  //TODO: now objects alwasys have a compensations. Fallback is NoOp impl, so compensation is nonnull from now
+  // TODO: now objects alwasys have a compensations. Fallback is NoOp impl, so compensation is
+  // nonnull from now
   @Deprecated(forRemoval = true)
   private boolean resolveCompensation(@NonNull GlobalManager gm, @NonNull String name,
           DslDescriptor dslDesc) {
@@ -123,12 +109,5 @@ public final class ExplainReportStage implements DslPipeStage {
       return value;
     }
     return Character.toUpperCase(value.charAt(0)) + value.substring(1).toLowerCase();
-  }
-
-  @SuppressWarnings("unchecked")
-  private <T> T attribute(@NonNull DslPipeContext context, @NonNull String key,
-          @NonNull Class<T> type, T defaultValue) {
-    T value = context.getAttribute(key, type);
-    return value != null ? value : defaultValue;
   }
 }

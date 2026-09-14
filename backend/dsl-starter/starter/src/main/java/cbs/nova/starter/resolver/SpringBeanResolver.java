@@ -11,7 +11,8 @@ public final class SpringBeanResolver implements BeanResolver {
 
   private final ApplicationContext applicationContext;
 
-  //TODO: add some guard, to resolve on dsl beans. E.g. add some setting to app.yml with caffeine memoize
+  // TODO: add some guard, to resolve on dsl beans. E.g. add some setting to app.yml with caffeine
+  // memoize
   @Override
   public @NonNull Object resolve(@NonNull Class<?> type) {
     try {

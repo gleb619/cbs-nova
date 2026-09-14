@@ -6,6 +6,7 @@ import cbs.nova.dsl.logging.DryRunLoggingContext;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
+import cbs.nova.starter.core.pipe.ExplainGraphAccumulators;
 import cbs.nova.starter.logging.DryRunLogBuffer;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogEvent;
@@ -44,7 +45,13 @@ public final class DryRunLogStage implements DslPipeStage {
       return next.proceed(context);
     } finally {
       List<DryRunLogEvent> events = buffer.drain();
-      context.setAttribute(StarterConstants.DRY_RUN_LOGS_ATTRIBUTE, toDryRunLogMaps(events));
+      List<Map<String, Object>> logs = toDryRunLogMaps(events);
+      var accumulator = ExplainGraphAccumulators.resolve(context);
+      if (accumulator.isPresent()) {
+        accumulator.get().dryRunLogs(logs);
+      } else {
+        context.setAttribute(StarterConstants.DRY_RUN_LOGS_ATTRIBUTE, logs);
+      }
       bufferRegistry.remove(runId);
       dryRunLoggingContext.clearRunId();
     }

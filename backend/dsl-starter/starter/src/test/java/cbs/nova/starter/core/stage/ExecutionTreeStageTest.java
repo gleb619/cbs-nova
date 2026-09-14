@@ -9,7 +9,9 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.listener.ExecutionListener;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.model.ExplainGraphAccumulator;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import java.util.concurrent.atomic.AtomicReference;
@@ -115,6 +117,28 @@ class ExecutionTreeStageTest {
             .isInstanceOf(IllegalStateException.class)
             .hasMessage("downstream boom");
 
+    assertThat(pipeContext.getAttribute("astTree", CallNode.class)).isNull();
+  }
+
+  @Test
+  void explainModeBuildsTreeIntoAccumulatorWhenPresent() {
+    ExplainGraphAccumulator accumulator = new ExplainGraphAccumulator();
+    Context<?> originalDsl = contextFactory.of("body", ExecutionMode.EXPLAIN, "run-1")
+            .withMetadata(Constants.EXPLAIN_GRAPH_ACCUMULATOR_KEY, accumulator);
+    DslPipeContext pipeContext = DslPipeContext.of(
+            "Ping", originalDsl, ExecutionMode.EXPLAIN, "run-1");
+
+    DslPipeStage.Next next = c -> {
+      ExecutionListener listener = c.dslContext().executionListener();
+      listener.onProcessStart(c.runId(), "Ping", c.dslContext().body());
+      listener.onProcessEnd(c.runId(), "Ping", "done", true);
+      return Result.success("downstream");
+    };
+
+    new ExecutionTreeStage(contextFactory, 32).execute(pipeContext, next);
+
+    assertThat(accumulator.astTree()).isNotNull();
+    assertThat(accumulator.astTree().name()).isEqualTo("Ping");
     assertThat(pipeContext.getAttribute("astTree", CallNode.class)).isNull();
   }
 

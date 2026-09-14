@@ -475,7 +475,7 @@ public final class GlobalManager {
             .orElse(Constants.EMPTY_MARKDOWN);
   }
 
-  //TODO: move to some util class instead
+  // TODO: move to some util class instead
   @Deprecated(forRemoval = true)
   private static @NonNull String toKebabCase(@NonNull String name) {
     var kebab = new StringBuilder(name.length() + 4);

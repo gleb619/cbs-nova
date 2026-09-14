@@ -7,7 +7,7 @@ import org.jspecify.annotations.NonNull;
  * YAML frontmatter, the on-disk {@code filename}, and the {@code content} body with frontmatter
  * stripped.
  */
-//TODO: replace `name`,`description`,`content` to a ExplainReport field
+// TODO: replace `name`,`description`,`content` to a ExplainReport field
 @Deprecated
 public record ExplainResource(
         @NonNull String name,

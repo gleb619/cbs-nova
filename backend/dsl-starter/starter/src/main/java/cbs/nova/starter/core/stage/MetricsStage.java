@@ -5,9 +5,11 @@ import cbs.nova.dsl.CallNode;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.PreviewMetricsSnapshot;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.model.ExplainGraphAccumulator;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
+import cbs.nova.starter.core.pipe.ExplainGraphAccumulators;
 import cbs.nova.starter.core.recorder.ExternalCall;
 import cbs.nova.starter.metric.PreviewMetricsCollector;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -16,6 +18,8 @@ import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @RequiredArgsConstructor
 public final class MetricsStage implements DslPipeStage {
@@ -29,24 +33,32 @@ public final class MetricsStage implements DslPipeStage {
     }
     PreviewMetricsCollector collector = PreviewMetricsCollector.start();
     Timer.Sample sample = Timer.start(meterRegistry);
+    var accumulator = ExplainGraphAccumulators.resolve(context);
     try {
       return next.proceed(context);
     } finally {
-      countCallKinds(context, collector);
-      countExternalCalls(context, collector);
+      countCallKinds(context, accumulator, collector);
+      countExternalCalls(context, accumulator, collector);
       PreviewMetricsSnapshot snapshot = collector.stop();
       sample.stop(Timer.builder(StarterConstants.DURATION_TIMER)
               .description("Duration of a preview or explain run")
               .tag("mode", context.mode().name())
               .tag("process", context.name())
               .register(meterRegistry));
-      context.setAttribute(StarterConstants.METRICS_ATTRIBUTE, snapshot);
+      if (accumulator.isPresent()) {
+        accumulator.get().metrics(snapshot);
+      } else {
+        context.setAttribute(StarterConstants.METRICS_ATTRIBUTE, snapshot);
+      }
     }
   }
 
   private void countCallKinds(@NonNull DslPipeContext context,
+          @NonNull Optional<ExplainGraphAccumulator> accumulator,
           @NonNull PreviewMetricsCollector collector) {
-    CallNode tree = context.getAttribute(StarterConstants.AST_TREE_ATTRIBUTE, CallNode.class);
+    CallNode tree = accumulator.isPresent()
+            ? accumulator.get().astTree()
+            : context.getAttribute(StarterConstants.AST_TREE_ATTRIBUTE, CallNode.class);
     if (tree != null) {
       countNode(tree, collector);
     }
@@ -61,9 +73,19 @@ public final class MetricsStage implements DslPipeStage {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private void countExternalCalls(@NonNull DslPipeContext context,
+          @NonNull Optional<ExplainGraphAccumulator> accumulator,
           @NonNull PreviewMetricsCollector collector) {
+    if (accumulator.isPresent()) {
+      for (Map<String, Object> call : accumulator.get().externalCalls()) {
+        String type = (String) call.get(StarterConstants.PAYLOAD_TYPE);
+        collector.recordExternalCall(type);
+        meterRegistry.counter(StarterConstants.EXTERNAL_CALL_COUNTER, "type", type)
+                .increment();
+      }
+      return;
+    }
+    @SuppressWarnings("unchecked")
     List<ExternalCall> calls = (List<ExternalCall>) context.getAttribute(
             StarterConstants.EXTERNAL_CALLS_ATTRIBUTE);
     if (calls != null) {

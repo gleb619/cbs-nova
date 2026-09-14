@@ -82,7 +82,8 @@ public final class SimpleContext<T> implements Context<T> {
 
   @Override
   public @NonNull BeanResolver beanResolver() {
-    //TODO: we always must work with a `DslConfig.dslConfig().beanResolver()` as a field, so beanResolver cant be null
+    // TODO: we always must work with a `DslConfig.dslConfig().beanResolver()` as a field, so
+    // beanResolver cant be null
     @Deprecated
     BeanResolver resolver = beanResolver != null
             ? beanResolver

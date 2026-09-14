@@ -5,10 +5,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.CallKind;
 import cbs.nova.dsl.CallNode;
+import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.PreviewMetricsSnapshot;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.ContextFactory;
+import cbs.nova.dsl.model.ExplainGraphAccumulator;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
@@ -174,6 +177,30 @@ class MetricsStageTest {
     assertThat(registry.find(StarterConstants.CALL_COUNTER).counters()).isEmpty();
     assertThat(registry.find(StarterConstants.EXTERNAL_CALL_COUNTER).counters()).isEmpty();
     assertThat(registry.find(StarterConstants.DURATION_TIMER).timer()).isNotNull();
+  }
+
+  @Test
+  void explainModeReadsAstTreeAndExternalCallsFromAccumulatorAndWritesMetricsBack() {
+    MeterRegistry registry = new SimpleMeterRegistry();
+    ExplainGraphAccumulator accumulator = new ExplainGraphAccumulator();
+    Context<?> originalDsl = contextFactory.of("body", ExecutionMode.EXPLAIN, "run-1")
+            .withMetadata(Constants.EXPLAIN_GRAPH_ACCUMULATOR_KEY, accumulator);
+    DslPipeContext pipeContext = DslPipeContext.of(
+            "Ping", originalDsl, ExecutionMode.EXPLAIN, "run-1");
+    accumulator.astTree(CallNode.leaf("root", CallKind.PROCESS, null, "ok", true));
+    accumulator.externalCalls(List.of(
+            Map.of("type", ExternalCallRecorder.TYPE_DATABASE),
+            Map.of("type", ExternalCallRecorder.TYPE_HTTP)));
+
+    DslPipeStage.Next next = c -> Result.success("downstream");
+    new MetricsStage(registry).execute(pipeContext, next);
+
+    assertThat(accumulator.metrics()).isNotNull();
+    assertThat(accumulator.metrics().callCounts()).containsEntry(CallKind.PROCESS, 1);
+    assertThat(accumulator.metrics().externalCallCounts())
+            .containsEntry(ExternalCallRecorder.TYPE_DATABASE, 1)
+            .containsEntry(ExternalCallRecorder.TYPE_HTTP, 1);
+    assertThat(pipeContext.getAttribute("metrics", PreviewMetricsSnapshot.class)).isNull();
   }
 
   @Test

@@ -2,6 +2,7 @@ package cbs.nova.starter.core.stage;
 import cbs.nova.dsl.model.ObjectDescriptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.CallNode;
 import cbs.nova.dsl.Context;
@@ -10,15 +11,17 @@ import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutionMode;
+import cbs.nova.dsl.model.ExplainGraphAccumulator;
 import cbs.nova.dsl.model.ExplainGraphReport;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
-import cbs.nova.starter.core.recorder.ExternalCall;
+import cbs.nova.starter.core.pipe.ExplainGraphAccumulators;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;
 import java.util.List;
 import java.util.Map;
@@ -241,7 +244,7 @@ class ExplainReportStageTest {
   }
 
   @Test
-  void externalCallsAndCallCountsDefaultToEmptyWhenAttributeMissing() {
+  void externalCallsAndCallCountsDefaultToEmptyWhenAccumulatorEmpty() {
     DslPipeContext pipeContext = pipeContext("unregistered-" + System.nanoTime(),
             ExecutionMode.PREVIEW);
     DslPipeStage.Next next = c -> Result.success("downstream");
@@ -255,13 +258,16 @@ class ExplainReportStageTest {
   }
 
   @Test
-  void externalCallsAndCallCountsArePopulatedFromAttribute() {
+  void externalCallsAndCallCountsArePopulatedFromAccumulator() {
     DslPipeContext pipeContext = pipeContext("unregistered-" + System.nanoTime(),
             ExecutionMode.PREVIEW);
-    List<ExternalCall> calls = List.of(
-            new ExternalCall("database", "jdbc:db", "select", 0L, Map.of()),
-            new ExternalCall("http", "http://x", "GET", 0L, Map.of()));
-    pipeContext.setAttribute("externalCalls", calls);
+    accumulatorOf(pipeContext)
+            .externalCalls(List.of(
+                    Map.of("type", "database", "target", "jdbc:db", "operation", "select",
+                            "timestamp", 0L, "metadata", Map.of()),
+                    Map.of("type", "http", "target", "http://x", "operation", "GET",
+                            "timestamp", 0L, "metadata", Map.of())))
+            .callCounts(Map.of("database", 1, "http", 1));
     DslPipeStage.Next next = c -> Result.success("downstream");
 
     Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
@@ -272,6 +278,41 @@ class ExplainReportStageTest {
     assertThat(report.callCounts())
             .containsEntry("database", 1)
             .containsEntry("http", 1);
+  }
+
+  @Test
+  void reportAggregatesAccumulatorContributionsFromAllStages() {
+    DslPipeContext pipeContext = pipeContext("Ping", ExecutionMode.PREVIEW);
+    accumulatorOf(pipeContext)
+            .executionTrace(List.of("step-1", "step-2"))
+            .astTree(CallNode.leaf("Ping", cbs.nova.dsl.CallKind.PROCESS, null, "ok", true))
+            .dryRunLogs(List.of(Map.of("level", "INFO", "message", "hello")))
+            .metrics(new cbs.nova.dsl.PreviewMetricsSnapshot(1, 0,
+                    Map.of(cbs.nova.dsl.CallKind.PROCESS, 1), Map.of()));
+    DslPipeStage.Next next = c -> Result.success("downstream");
+
+    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+            next);
+
+    ExplainGraphReport report = (ExplainGraphReport) result.value();
+    assertThat(report.executionTrace()).containsExactly("step-1", "step-2");
+    assertThat(report.dryRunLogs()).hasSize(1);
+    assertThat(report.metrics()).isNotNull();
+    assertThat(report.astTree()).isNotNull();
+    assertThat(report.name()).isEqualTo("Ping");
+  }
+
+  @Test
+  void missingAccumulatorFailsFast() {
+    DslPipeContext pipeContext = DslPipeContext.of("Ping",
+            contextFactory.of("body", ExecutionMode.PREVIEW, "run-1"),
+            ExecutionMode.PREVIEW, "run-1");
+    DslPipeStage.Next next = c -> Result.success("downstream");
+
+    assertThatThrownBy(() -> new ExplainReportStage(new ExplainDiagramRenderer())
+            .execute(pipeContext, next))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("ExplainGraphAccumulator");
   }
 
   @Test
@@ -291,8 +332,14 @@ class ExplainReportStageTest {
   }
 
   private DslPipeContext pipeContext(String name, ExecutionMode mode) {
-    Context<?> ctx = contextFactory.of("body", mode, "run-1");
+    Context<?> ctx = contextFactory.of("body", mode, "run-1")
+            .withMetadata(Constants.EXPLAIN_GRAPH_ACCUMULATOR_KEY,
+                    new ExplainGraphAccumulator());
     return DslPipeContext.of(name, ctx, mode, "run-1");
+  }
+
+  private ExplainGraphAccumulator accumulatorOf(DslPipeContext pipeContext) {
+    return ExplainGraphAccumulators.resolve(pipeContext).orElseThrow();
   }
 
   private static final class EchoHelper implements Executable<Object, Object> {

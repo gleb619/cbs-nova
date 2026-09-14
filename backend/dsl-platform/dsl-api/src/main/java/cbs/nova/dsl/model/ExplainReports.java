@@ -30,7 +30,7 @@ public final class ExplainReports {
             mergeChildren(left.children(), right.children()));
   }
 
-  //TODO: trace usage of method, and remove all links, it must be used only in PipeStage instead
+  // TODO: trace usage of method, and remove all links, it must be used only in PipeStage instead
   @Deprecated
   public static @NonNull ExplainReport truncateTo(@NonNull ExplainReport report, int budgetChars) {
     if (budgetChars < 0) {

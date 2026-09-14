@@ -21,14 +21,14 @@ public final class ContextFactory {
     return "run-" + UUID.randomUUID();
   }
 
-  //TODO: can be used, without proper fields
+  // TODO: can be used, without proper fields
   @Deprecated(forRemoval = true)
   public <U> @NonNull SimpleContext<U> of(@NonNull U body, @NonNull ExecutionMode mode) {
     return new SimpleContext<>(body, Map.of(), mode, generateRunId(), TransactionRouting.LOCAL,
             null, null, null, null, null);
   }
 
-  //TODO: can be used, without proper fields
+  // TODO: can be used, without proper fields
   @Deprecated(forRemoval = true)
   public <U> @NonNull SimpleContext<U> of(
           @NonNull U body, @NonNull ExecutionMode mode, @NonNull String runId) {
@@ -36,7 +36,7 @@ public final class ContextFactory {
             null, null, null, null, null);
   }
 
-  //TODO: can be used, without proper fields
+  // TODO: can be used, without proper fields
   @Deprecated(forRemoval = true)
   public <U> @NonNull SimpleContext<U> of(
           @NonNull U body,
@@ -47,7 +47,7 @@ public final class ContextFactory {
             null, null, null, null, null);
   }
 
-  //TODO: can be used, without proper fields
+  // TODO: can be used, without proper fields
   @Deprecated(forRemoval = true)
   public <U> @NonNull SimpleContext<U> of(
           @NonNull U body,
@@ -59,7 +59,7 @@ public final class ContextFactory {
             null, null, null, null, null);
   }
 
-  //TODO: can be used, without proper fields
+  // TODO: can be used, without proper fields
   @Deprecated(forRemoval = true)
   public <U> @NonNull SimpleContext<U> of(
           @NonNull U body,
@@ -72,7 +72,7 @@ public final class ContextFactory {
             executionListener, null, null, null, null);
   }
 
-  //TODO: can be used, without proper fields
+  // TODO: can be used, without proper fields
   @Deprecated(forRemoval = true)
   public <U> @NonNull SimpleContext<U> of(
           @NonNull U body,
