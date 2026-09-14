@@ -50,3 +50,4 @@ do **not** need an ADR.
 | [0003](0003-bff-nitro-admin-ui-plugin.md) | Ship the admin UI's BFF as a Nitro layer inside the Nuxt module | Accepted |
 | [0004](0004-preview-dry-run-explain-modes.md) | Preview, dry-run, and Explain execution modes | Accepted |
 | [0005](0005-platform-baseline-spring-boot-4-jackson-3.md) | Run the backend platform on Spring Boot 4, Jackson 3, and Java 25 | Accepted |
+| [0006](0006-remove-inprocess-compilation.md) | Retire in-process Java compilation (`JavaSourceCompiler`) | Proposed |
