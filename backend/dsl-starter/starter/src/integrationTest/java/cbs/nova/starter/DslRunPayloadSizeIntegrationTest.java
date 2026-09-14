@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.time.Duration;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = IntegrationTestApplication.class, properties = {
     "csb.dsl.worker.enabled=false",
@@ -50,7 +51,8 @@ import java.sql.SQLException;
 class DslRunPayloadSizeIntegrationTest {
 
   @Container
-  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16");
+  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16")
+          .withStartupTimeout(Duration.ofMinutes(5));
 
   @DynamicPropertySource
   static void datasourceProperties(DynamicPropertyRegistry registry) {
