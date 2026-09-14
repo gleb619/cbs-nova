@@ -5,6 +5,8 @@ from ..frontend import Frontend
 from ..gradle import Gradle
 from ..printer import Printer
 
+from .lint_kanban import LintKanbanCommand
+
 
 class LintCommand:
     def run(self, args: argparse.Namespace) -> int:
@@ -16,6 +18,7 @@ class LintCommand:
         if scope == "all":
             backend_failed = self._backend() != 0
             frontend_failed = self._frontend() != 0
+            kanban_failed = LintKanbanCommand().run_check() != 0
             print("\n==> Lint summary:")
             if not backend_failed:
                 Printer.ok(f"backend (spotlessCheck: {' '.join(Config.BACKEND_BUILDS)})")
@@ -25,7 +28,11 @@ class LintCommand:
                 Printer.ok("frontend (biome lint)")
             else:
                 Printer.fail("frontend (biome lint)")
-            if backend_failed or frontend_failed:
+            if not kanban_failed:
+                Printer.ok("kanban (docs/kanban.md check mode)")
+            else:
+                Printer.fail("kanban (docs/kanban.md check mode)")
+            if backend_failed or frontend_failed or kanban_failed:
                 print("\nLint failed — run `make fmt` to auto-fix formatting.")
                 return 1
             print("\nAll lint checks passed.")

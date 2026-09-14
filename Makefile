@@ -57,7 +57,7 @@ typecheck: ## Typecheck the frontend packages
 	@cd frontend && pnpm typecheck
 
 .PHONY: lint
-lint: ## Run all lint/format checks (backend Spotless + frontend Biome); non-zero exit on any failure
+lint: ## Run all lint/format checks (backend Spotless + frontend Biome + kanban check); non-zero exit on any failure
 	@python3 $(SCRIPT) lint all
 
 .PHONY: lint-backend
@@ -67,6 +67,13 @@ lint-backend: ## Backend format check (spotlessCheck on dsl-platform, dsl-starte
 .PHONY: lint-frontend
 lint-frontend: ## Frontend lint (Biome)
 	@python3 $(SCRIPT) lint-frontend
+
+.PHONY: lint-kanban
+# Append-only guard: `make lint-kanban` runs check mode; `python3 scripts/cbs_cli.py lint-kanban --base <ref>`
+# runs guard mode — it fails if any kanban row ID present at <ref> was dropped since, UNLESS a commit in the
+# range carries the literal `[kanban-rewrite]` trailer (explicit escape hatch for deliberate pruning).
+lint-kanban: ## Check docs/kanban.md (unique IDs, valid Status, resolvable Plan File, column count); --base <ref> = append-only guard
+	@python3 $(SCRIPT) lint-kanban
 
 .PHONY: fmt
 fmt: ## Apply formatting everywhere (spotlessApply + pnpm format); fixes files, always exits 0

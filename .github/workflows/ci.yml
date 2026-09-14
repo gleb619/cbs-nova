@@ -8,7 +8,15 @@ jobs:
   build-backend:
     runs-on: ubuntu-latest
     steps:
+      # fetch-depth 0 so the kanban guard can resolve the PR base / push-before ref.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Kanban append-only guard
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: python3 scripts/cbs_cli.py lint-kanban --base "$BASE"
 
       # backend/ has no settings.gradle — builds are 3 separate Gradle projects
       # (dsl-platform, dsl-plugins, dsl-starter). Root backend/gradlew is Gradle
