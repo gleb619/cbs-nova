@@ -1,6 +1,7 @@
 package cbs.nova.starter.builder;
 
 import cbs.nova.starter.exception.BuilderApiException;
+import cbs.nova.starter.exception.BuilderClientBusyException;
 import cbs.nova.starter.exception.BuilderUnavailableException;
 import cbs.nova.starter.model.CompileModels.CompileRequest;
 import cbs.nova.starter.model.CompileModels.CompileResult;
@@ -20,12 +21,19 @@ import cbs.nova.starter.model.VcsModels.DraftSummary;
 import cbs.nova.starter.model.VcsModels.HistoryDiffResponse;
 import cbs.nova.starter.model.VcsModels.ImportBundleResult;
 import cbs.nova.starter.service.DslGitStatusResolver.RepoStatus;
+import io.github.resilience4j.bulkhead.Bulkhead;
+import io.github.resilience4j.bulkhead.BulkheadFullException;
+import io.github.resilience4j.bulkhead.ThreadPoolBulkhead;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.RejectedExecutionException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.web.client.RestClient;
@@ -41,9 +49,9 @@ public class DslBuilderClient {
   };
 
   private final RestClient restClient;
-  private final BuilderRequestQueue queue;
-  private final BuilderBulkhead bulkhead;
-  private final BuilderCircuitBreaker breaker;
+  private final ThreadPoolBulkhead queue;
+  private final Bulkhead bulkhead;
+  private final CircuitBreaker breaker;
   private final BuilderCache cache;
 
   public CompileResult compile(CompileRequest request) {
@@ -265,7 +273,7 @@ public class DslBuilderClient {
 
   private <T> T execute(Callable<T> call) {
     try {
-      return submit(call).get();
+      return submit(call).toCompletableFuture().get();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new IllegalStateException("interrupted while waiting for builder response", e);
@@ -274,8 +282,30 @@ public class DslBuilderClient {
     }
   }
 
-  private <T> CompletableFuture<T> submit(Callable<T> call) {
-    return queue.submit(() -> bulkhead.execute(() -> breaker.execute(() -> invoke(call))));
+  <T> CompletionStage<T> submit(Callable<T> call) {
+    try {
+      return queue.submit(() -> runWithBulkhead(() -> runWithBreaker(() -> invoke(call))));
+    } catch (BulkheadFullException e) {
+      throw new BuilderClientBusyException("builder request queue is full");
+    } catch (RejectedExecutionException e) {
+      throw new BuilderClientBusyException("builder request queue is full");
+    }
+  }
+
+  private <T> T runWithBulkhead(Callable<T> call) throws Exception {
+    try {
+      return bulkhead.executeCallable(call);
+    } catch (BulkheadFullException e) {
+      throw new IllegalStateException("builder client bulkhead saturated");
+    }
+  }
+
+  private <T> T runWithBreaker(Callable<T> call) throws Exception {
+    try {
+      return breaker.executeCallable(call);
+    } catch (CallNotPermittedException e) {
+      throw new BuilderUnavailableException("DSL builder circuit breaker is open");
+    }
   }
 
   private <T> T invoke(Callable<T> call) throws Exception {

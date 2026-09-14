@@ -20,11 +20,16 @@ import cbs.nova.starter.exception.BuilderUnavailableException;
 import cbs.nova.starter.exception.DslCompilationException;
 import cbs.nova.starter.model.CompileModels.CompileRequest;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
+import io.github.resilience4j.bulkhead.Bulkhead;
+import io.github.resilience4j.bulkhead.BulkheadConfig;
+import io.github.resilience4j.bulkhead.ThreadPoolBulkhead;
+import io.github.resilience4j.bulkhead.ThreadPoolBulkheadConfig;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import java.net.http.HttpClient;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
@@ -36,9 +41,8 @@ import tools.jackson.databind.ObjectMapper;
 
 class DslBuilderClientTest {
 
-  private final AtomicLong now = new AtomicLong(1_000);
   private MockRestServiceServer server;
-  private BuilderRequestQueue queue;
+  private ThreadPoolBulkhead queue;
 
   @AfterEach
   void tearDown() {
@@ -46,13 +50,16 @@ class DslBuilderClientTest {
       server.verify();
     }
     if (queue != null) {
-      queue.shutdown();
+      try {
+        queue.close();
+      } catch (Exception ignored) {
+      }
     }
   }
 
   @Test
   void compilePostsSourcesAndReturnsResult() {
-    var client = client(new BuilderCircuitBreaker(5, 30_000, 3, now::get));
+    var client = client(circuitBreaker(5, 30, 3));
     server.expect(requestTo("http://localhost:8091/api/dsl/compile"))
             .andExpect(method(HttpMethod.POST))
             .andExpect(content().string(containsString("\"sources\"")))
@@ -72,7 +79,7 @@ class DslBuilderClientTest {
 
   @Test
   void downloadZipReturnsBytes() {
-    var client = client(new BuilderCircuitBreaker(5, 30_000, 3, now::get));
+    var client = client(circuitBreaker(5, 30, 3));
     server.expect(requestTo("http://localhost:8091/api/dsl/compile/s-1/download"))
             .andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess("zip-bytes", MediaType.parseMediaType("application/zip")));
@@ -82,7 +89,7 @@ class DslBuilderClientTest {
 
   @Test
   void saveDraftSerializesDraftRequest() {
-    var client = client(new BuilderCircuitBreaker(5, 30_000, 3, now::get));
+    var client = client(circuitBreaker(5, 30, 3));
     server.expect(requestTo("http://localhost:8091/api/dsl/drafts/foo/save"))
             .andExpect(method(HttpMethod.POST))
             .andExpect(content().string(containsString("\"name\":\"foo\"")))
@@ -103,7 +110,7 @@ class DslBuilderClientTest {
 
   @Test
   void listDraftsDeserializesPageResponse() {
-    var client = client(new BuilderCircuitBreaker(5, 30_000, 3, now::get));
+    var client = client(circuitBreaker(5, 30, 3));
     server.expect(requestTo("http://localhost:8091/api/dsl/drafts?limit=50&offset=0"))
             .andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(
@@ -121,7 +128,7 @@ class DslBuilderClientTest {
 
   @Test
   void stageWritePostsRawContentToWildcardPath() {
-    var client = client(new BuilderCircuitBreaker(5, 30_000, 3, now::get));
+    var client = client(circuitBreaker(5, 30, 3));
     server.expect(requestTo("http://localhost:8091/api/dsl/files/dsl/LoanDsl.java"))
             .andExpect(method(HttpMethod.POST))
             .andExpect(content().string("class LoanDsl {}"))
@@ -132,7 +139,7 @@ class DslBuilderClientTest {
 
   @Test
   void pendingCountReadsStatusEndpoint() {
-    var client = client(new BuilderCircuitBreaker(5, 30_000, 3, now::get));
+    var client = client(circuitBreaker(5, 30, 3));
     server.expect(requestTo("http://localhost:8091/api/dsl/files/status"))
             .andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess("{\"pending\":3}", MediaType.APPLICATION_JSON));
@@ -142,7 +149,7 @@ class DslBuilderClientTest {
 
   @Test
   void vcsStatusReturnsRepoStatus() {
-    var client = client(new BuilderCircuitBreaker(5, 30_000, 3, now::get));
+    var client = client(circuitBreaker(5, 30, 3));
     server.expect(requestTo("http://localhost:8091/api/dsl/vcs/status"))
             .andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess("{\"workTree\":\"/repo\",\"dirtyPaths\":[\"a.java\"]}",
@@ -157,7 +164,7 @@ class DslBuilderClientTest {
 
   @Test
   void vcsStatusReturnsEmptyOn404() {
-    var client = client(new BuilderCircuitBreaker(5, 30_000, 3, now::get));
+    var client = client(circuitBreaker(5, 30, 3));
     server.expect(requestTo("http://localhost:8091/api/dsl/vcs/status"))
             .andRespond(withStatus(HttpStatus.NOT_FOUND)
                     .body("{\"code\":\"NOT_FOUND\",\"message\":\"no git repository\"}")
@@ -168,7 +175,7 @@ class DslBuilderClientTest {
 
   @Test
   void missingDraftMapsToBuilderApiException() {
-    var client = client(new BuilderCircuitBreaker(5, 30_000, 3, now::get));
+    var client = client(circuitBreaker(5, 30, 3));
     server.expect(requestTo("http://localhost:8091/api/dsl/drafts/missing"))
             .andRespond(withStatus(HttpStatus.NOT_FOUND)
                     .body("{\"code\":\"NOT_FOUND\",\"message\":\"Draft not found: missing\"}")
@@ -185,7 +192,7 @@ class DslBuilderClientTest {
 
   @Test
   void compileFailureMapsToDslCompilationException() {
-    var client = client(new BuilderCircuitBreaker(5, 30_000, 3, now::get));
+    var client = client(circuitBreaker(5, 30, 3));
     server.expect(requestTo("http://localhost:8091/api/dsl/compile"))
             .andExpect(method(HttpMethod.POST))
             .andRespond(withStatus(HttpStatus.UNPROCESSABLE_ENTITY)
@@ -205,7 +212,7 @@ class DslBuilderClientTest {
 
   @Test
   void builderBusyMapsToBusyExceptionWithoutTrippingBreaker() {
-    var circuit = new BuilderCircuitBreaker(5, 30_000, 3, now::get);
+    var circuit = circuitBreaker(5, 30, 3);
     var client = client(circuit);
     server.expect(requestTo("http://localhost:8091/api/dsl/drafts/foo"))
             .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS)
@@ -214,12 +221,12 @@ class DslBuilderClientTest {
 
     assertThatThrownBy(() -> client.readDraft("foo"))
             .isInstanceOf(BuilderClientBusyException.class);
-    assertThat(circuit.state()).isEqualTo(BuilderCircuitBreaker.State.CLOSED);
+    assertThat(circuit.getState()).isEqualTo(CircuitBreaker.State.CLOSED);
   }
 
   @Test
   void serverErrorTripsBreakerAndShortCircuitsNextCall() {
-    var circuit = new BuilderCircuitBreaker(1, 30_000, 3, now::get);
+    var circuit = circuitBreaker(1, 30, 3);
     var client = client(circuit);
     server.expect(requestTo("http://localhost:8091/api/dsl/drafts/foo"))
             .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE)
@@ -228,7 +235,7 @@ class DslBuilderClientTest {
 
     assertThatThrownBy(() -> client.readDraft("foo"))
             .isInstanceOf(BuilderUnavailableException.class);
-    assertThat(circuit.state()).isEqualTo(BuilderCircuitBreaker.State.OPEN);
+    assertThat(circuit.getState()).isEqualTo(CircuitBreaker.State.OPEN);
 
     assertThatThrownBy(() -> client.readDraft("foo"))
             .isInstanceOf(BuilderUnavailableException.class)
@@ -251,15 +258,38 @@ class DslBuilderClientTest {
     assertThat(httpClient.version()).isEqualTo(HttpClient.Version.HTTP_1_1);
   }
 
-  private DslBuilderClient client(BuilderCircuitBreaker circuit) {
+  private DslBuilderClient client(CircuitBreaker circuitBreaker) {
     var properties = DslBuilderClientProperties.builder().build();
     var errorHandler = new BuilderApiErrorHandler(new ObjectMapper());
     var builder = BuilderClientConfiguration.configureBuilder(RestClient.builder(), properties,
             errorHandler);
     server = MockRestServiceServer.bindTo(builder).build();
-    queue = new BuilderRequestQueue(10, 5000, 2);
-    return new DslBuilderClient(builder.build(), queue, new BuilderBulkhead(new Semaphore(10), 5),
-            circuit, new BuilderCache(Caffeine.newBuilder().build()));
+    queue = ThreadPoolBulkhead.of("dsl-builder-client-test", ThreadPoolBulkheadConfig.custom()
+            .maxThreadPoolSize(2)
+            .coreThreadPoolSize(2)
+            .queueCapacity(10)
+            .build());
+    return new DslBuilderClient(builder.build(), queue,
+            Bulkhead.of("dsl-builder-bulkhead-test", BulkheadConfig.custom()
+                    .maxConcurrentCalls(10)
+                    .maxWaitDuration(Duration.ofSeconds(5))
+                    .build()),
+            circuitBreaker,
+            new BuilderCache(Caffeine.newBuilder().build()));
+  }
+
+  private static CircuitBreaker circuitBreaker(int failureThreshold, long openDurationSeconds,
+          int halfOpenProbes) {
+    return CircuitBreaker.of("test-breaker", CircuitBreakerConfig.custom()
+            .slidingWindowType(CircuitBreakerConfig.SlidingWindowType.COUNT_BASED)
+            .slidingWindowSize(Math.max(1, failureThreshold))
+            .minimumNumberOfCalls(Math.max(1, failureThreshold))
+            .failureRateThreshold(100f)
+            .permittedNumberOfCallsInHalfOpenState(Math.max(1, halfOpenProbes))
+            .waitDurationInOpenState(Duration.ofSeconds(openDurationSeconds))
+            .recordException(e -> e instanceof BuilderUnavailableException)
+            .ignoreException(e -> !(e instanceof BuilderUnavailableException))
+            .build());
   }
 
 }

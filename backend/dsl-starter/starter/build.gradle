@@ -80,6 +80,8 @@ dependencies {
   implementation libs.opentelemetry.sdk
   implementation libs.opentelemetry.exporter.otlp
   implementation libs.caffeine
+  implementation libs.resilience4j.circuitbreaker
+  implementation libs.resilience4j.bulkhead
   implementation libs.jgit
   implementation libs.snakeyaml
 

@@ -6,6 +6,18 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
+/**
+ * Configuration for the DSL builder HTTP client and its resilience primitives.
+ *
+ * <p>
+ * Namespace is {@code csb.dsl.builder-client.*} (preserved for backwards compatibility).
+ *
+ * <p>
+ * T498 migrated the hand-rolled circuit breaker, bulkhead and request queue to Resilience4j core.
+ * The queue's previous {@code offerTimeoutMillis} setting is retained in this record so existing
+ * configuration and direct construction keep compiling, but it is no longer honoured:
+ * Resilience4j's {@code ThreadPoolBulkhead} rejects immediately when its bounded queue is full.
+ */
 @Builder
 @ConfigurationProperties(prefix = "csb.dsl.builder-client")
 @Validated
@@ -31,6 +43,10 @@ public record DslBuilderClientProperties(
   @Builder
   public record Queue(
           @DefaultValue("100") Integer capacity,
+          /**
+           * Kept for backwards compatibility but ignored by the Resilience4j ThreadPoolBulkhead,
+           * which rejects immediately when the bounded queue is full.
+           */
           @DefaultValue("5000") Long offerTimeoutMillis,
           @DefaultValue("4") Integer workers) {
 

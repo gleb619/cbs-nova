@@ -25,6 +25,7 @@ avaje-jsonb = "3.4"
 avaje-jsonb-generator = "3.4"
 h2 = "2.4.240"
 caffeine = "3.1.8"
+resilience4j = "2.3.0"
 squigglesql = "4.2.1"
 
 jgit = "7.1.0.202411261347-r"
@@ -43,6 +44,10 @@ cyclonedx-bom = "3.4.1"
 dependency-check = "12.1.5"
 
 [libraries]
+# -- Resilience4j (T498) --
+resilience4j-circuitbreaker = { module = "io.github.resilience4j:resilience4j-circuitbreaker", version.ref = "resilience4j" }
+resilience4j-bulkhead = { module = "io.github.resilience4j:resilience4j-bulkhead", version.ref = "resilience4j" }
+
 # -- Temporal --
 temporal-sdk = { module = "io.temporal:temporal-sdk", version.ref = "temporal" }
 temporal-testing = { module = "io.temporal:temporal-testing", version.ref = "temporal" }

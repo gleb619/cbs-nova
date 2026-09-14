@@ -1,18 +1,21 @@
 package cbs.nova.starter.config;
 
-import cbs.nova.starter.builder.BuilderBulkhead;
 import cbs.nova.starter.builder.BuilderCache;
-import cbs.nova.starter.builder.BuilderCircuitBreaker;
-import cbs.nova.starter.builder.BuilderRequestQueue;
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.DslBuilderClientProperties;
 import cbs.nova.starter.controller.BuilderApiErrorHandler;
 import cbs.nova.starter.core.StarterConstants;
+import cbs.nova.starter.exception.BuilderUnavailableException;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import io.github.resilience4j.bulkhead.Bulkhead;
+import io.github.resilience4j.bulkhead.BulkheadConfig;
+import io.github.resilience4j.bulkhead.ThreadPoolBulkhead;
+import io.github.resilience4j.bulkhead.ThreadPoolBulkheadConfig;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import java.net.http.HttpClient;
 import java.time.Duration;
-import java.util.concurrent.Semaphore;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -62,24 +65,45 @@ public class BuilderClientConfiguration {
   }
 
   @Bean
-  public BuilderCircuitBreaker builderCircuitBreaker(DslBuilderClientProperties properties) {
+  public CircuitBreaker dslBuilderCircuitBreaker(DslBuilderClientProperties properties) {
     var breaker = properties.breaker();
-    return new BuilderCircuitBreaker(breaker.failureThreshold(),
-            Duration.ofSeconds(breaker.openDurationSeconds()).toMillis(), breaker.halfOpenProbes(),
-            System::currentTimeMillis);
+    return CircuitBreaker.of("dsl-builder-breaker", CircuitBreakerConfig.custom()
+            // Count-based sliding window sized to the configured failure threshold. With a
+            // 100% failure-rate threshold, the breaker opens when the last N calls all failed
+            // with a recorded exception, approximating the previous consecutive-count semantics.
+            .slidingWindowType(CircuitBreakerConfig.SlidingWindowType.COUNT_BASED)
+            .slidingWindowSize(Math.max(1, breaker.failureThreshold()))
+            .minimumNumberOfCalls(Math.max(1, breaker.failureThreshold()))
+            .failureRateThreshold(100f)
+            .permittedNumberOfCallsInHalfOpenState(Math.max(1, breaker.halfOpenProbes()))
+            .waitDurationInOpenState(Duration.ofSeconds(breaker.openDurationSeconds()))
+            // Only BuilderUnavailableException counts as a failure; everything else is ignored so
+            // user errors or HTTP 4xx responses do not trip the breaker.
+            .recordException(e -> e instanceof BuilderUnavailableException)
+            .ignoreException(e -> !(e instanceof BuilderUnavailableException))
+            .build());
   }
 
   @Bean
-  public BuilderBulkhead builderBulkhead(DslBuilderClientProperties properties) {
+  public Bulkhead dslBuilderBulkhead(DslBuilderClientProperties properties) {
     var bulkhead = properties.bulkhead();
-    return new BuilderBulkhead(new Semaphore(Math.max(1, bulkhead.permits())),
-            bulkhead.acquireTimeoutSeconds());
+    return Bulkhead.of("dsl-builder-bulkhead", BulkheadConfig.custom()
+            .maxConcurrentCalls(Math.max(1, bulkhead.permits()))
+            .maxWaitDuration(Duration.ofSeconds(bulkhead.acquireTimeoutSeconds()))
+            .build());
   }
 
-  @Bean
-  public BuilderRequestQueue builderRequestQueue(DslBuilderClientProperties properties) {
+  @Bean(destroyMethod = "close")
+  public ThreadPoolBulkhead dslBuilderQueue(DslBuilderClientProperties properties) {
     var queue = properties.queue();
-    return new BuilderRequestQueue(queue.capacity(), queue.offerTimeoutMillis(), queue.workers());
+    return ThreadPoolBulkhead.of("dsl-builder-queue", ThreadPoolBulkheadConfig.custom()
+            .maxThreadPoolSize(Math.max(1, queue.workers()))
+            .coreThreadPoolSize(Math.max(1, queue.workers()))
+            .queueCapacity(Math.max(1, queue.capacity()))
+            // Resilience4j's ThreadPoolBulkhead rejects immediately when the bounded queue is full;
+            // it does not support an offer timeout like the previous hand-rolled queue. The
+            // offerTimeoutMillis property is retained for backward compatibility but is ignored.
+            .build());
   }
 
   @Bean
@@ -94,10 +118,10 @@ public class BuilderClientConfiguration {
 
   @Bean
   public DslBuilderClient dslBuilderClient(RestClient dslBuilderRestClient,
-          BuilderRequestQueue builderRequestQueue, BuilderBulkhead builderBulkhead,
-          BuilderCircuitBreaker builderCircuitBreaker, BuilderCache builderCache) {
-    return new DslBuilderClient(dslBuilderRestClient, builderRequestQueue, builderBulkhead,
-            builderCircuitBreaker, builderCache);
+          ThreadPoolBulkhead dslBuilderQueue, Bulkhead dslBuilderBulkhead,
+          CircuitBreaker dslBuilderCircuitBreaker, BuilderCache builderCache) {
+    return new DslBuilderClient(dslBuilderRestClient, dslBuilderQueue, dslBuilderBulkhead,
+            dslBuilderCircuitBreaker, builderCache);
   }
 
 }

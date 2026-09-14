@@ -125,3 +125,29 @@ cbs:
       jwt:
         default-algorithm: HS256
         default-ttl-seconds: 3600
+
+# DSL builder HTTP client resilience (T498).
+# Wired from csb.dsl.builder-client.* (namespace preserved for backwards compatibility).
+# The circuit breaker, bulkhead and request queue are Resilience4j core primitives.
+# Note: the request queue's offerTimeoutMillis is kept for backwards compatibility but is
+# ignored — ThreadPoolBulkhead rejects immediately when its bounded queue is full.
+csb:
+  dsl:
+    builder-client:
+      enabled: true
+      base-url: http://localhost:8091
+      http2: true
+      queue:
+        capacity: 100
+        offer-timeout-millis: 5000
+        workers: 4
+      bulkhead:
+        permits: 8
+        acquire-timeout-seconds: 5
+      breaker:
+        failure-threshold: 5
+        open-duration-seconds: 30
+        half-open-probes: 3
+      timeouts:
+        connect-millis: 5000
+        read-millis: 60000
