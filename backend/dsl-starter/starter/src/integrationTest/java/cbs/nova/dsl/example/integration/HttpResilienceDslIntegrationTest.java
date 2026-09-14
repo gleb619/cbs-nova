@@ -11,6 +11,7 @@ import cbs.nova.config.HelperInstanceResolverConfig;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.dsl.transaction.DslTemporalTransactionRequest;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dslexamples.v1.HttpResilienceModels.HttpResilienceProcessIn;
 import cbs.nova.dslexamples.v1.HttpResilienceModels.HttpResilienceProcessOut;
@@ -126,15 +127,26 @@ class HttpResilienceDslIntegrationTest {
     var launcher = new TemporalDslProcessLauncher(workflowClient, new ObjectMapper(),
             Duration.ofSeconds(30), Duration.ofSeconds(5));
     DslConfig.dslConfig().temporalProcessLauncher().replace(launcher);
-    DslConfig.dslConfig().transactionInvoker().replace(new TemporalTransactionInvoker());
+    DslConfig.dslConfig().transactionInvoker().replace(new cbs.nova.dsl.transaction.TransactionInvoker() {
+      private final cbs.nova.dsl.transaction.TransactionInvoker delegate = new TemporalTransactionInvoker();
+      @Override
+      public cbs.nova.dsl.Result<?> invoke(String name, Object input, cbs.nova.dsl.Context<?> ctx) {
+        try {
+          java.nio.file.Files.writeString(java.nio.file.Paths.get("/tmp/httpresilience.log"),
+                  "invoker called name=" + name + " input=" + input + "\n",
+                  java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+        } catch (Exception ignored) {}
+        return delegate.invoke(name, input, ctx);
+      }
+    });
 
     workerFactory = WorkerFactory.newInstance(workflowClient);
     Worker worker = workerFactory.newWorker(TASK_QUEUE);
     registerProcess(worker, "HttpResilienceSuccess");
     registerProcess(worker, "HttpResilienceCompensated");
     registerProcess(worker, "HttpResilienceUncaught");
-    registerTransaction(worker, "httpCallTxResilient");
-    registerTransaction(worker, "httpCallTxFragile");
+    // registerTransaction(worker, "httpCallTxResilient");
+    // registerTransaction(worker, "httpCallTxFragile");
     workerFactory.start();
   }
 
@@ -151,7 +163,14 @@ class HttpResilienceDslIntegrationTest {
     } catch (Exception e) {
       throw new RuntimeException("Failed to instantiate activity " + name, e);
     }
-    worker.registerActivitiesImplementations(instance);
+    Object wrapper = asRetryingActivity(descriptor.temporalInterface(), instance);
+    try {
+      java.nio.file.Files.writeString(java.nio.file.Paths.get("/tmp/httpresilience.log"),
+              "registering " + descriptor.name() + " wrapper class=" + wrapper.getClass().getName() + "\n",
+              java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+    } catch (Exception ignored) {}
+    worker.registerActivitiesImplementations(wrapper);
+
   }
 
   @AfterAll
@@ -267,6 +286,14 @@ class HttpResilienceDslIntegrationTest {
     assertThat(result.isSuccess()).isFalse();
   }
 
+  private static Object asRetryingActivity(Class<?> activityInterface, Object delegate) {
+    return java.lang.reflect.Proxy.newProxyInstance(
+            activityInterface.getClassLoader(),
+            new Class<?>[]{activityInterface},
+            (proxy, method, args) -> {
+              throw new RuntimeException("PROXY WAS CALLED: " + method.getName());
+            });
+  }
   private static CompensationTrackerHelper tracker() {
     return GlobalManager.globalManager().findHelper("compensationTracker")
             .map(CompensationTrackerHelper.class::cast)

@@ -3,6 +3,7 @@ package cbs.nova.starter.persistence;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.entity.DslEventEntity;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.SqlParameterValue;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 @RequiredArgsConstructor
@@ -37,7 +39,7 @@ public class DslEventRepository {
             .addValue("aggregateType", row.aggregateType())
             .addValue("aggregateId", row.aggregateId())
             .addValue("correlationId", row.correlationId())
-            .addValue("payload", row.payloadJson())
+            .addValue("payload", new SqlParameterValue(Types.OTHER, row.payloadJson()))
             .addValue("schemaVersion", row.schemaVersion())
             .addValue("createdAt", Timestamp.from(row.createdAt()));
     jdbcTemplate.update("""
@@ -45,7 +47,7 @@ public class DslEventRepository {
                     (event_type, aggregate_type, aggregate_id, correlation_id,
                      payload, schema_version, created_at)
             VALUES (:eventType, :aggregateType, :aggregateId, :correlationId,
-                    :payload::jsonb, :schemaVersion, :createdAt)
+                    :payload, :schemaVersion, :createdAt)
             """, params);
   }
 

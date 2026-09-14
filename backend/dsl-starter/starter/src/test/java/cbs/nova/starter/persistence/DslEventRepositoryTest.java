@@ -4,36 +4,56 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.starter.entity.DslEventEntity;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.UUID;
-import org.h2.jdbcx.JdbcDataSource;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.postgresql.ds.PGSimpleDataSource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * Live H2 tests for {@link DslEventRepository} against the V7 migration. Pins the contract that the
- * four filter dimensions (event_type, aggregate_type+id, correlation_id) all narrow results
- * correctly, that the created_at index supports newest-first ordering, and that
- * {@code offset}/{@code limit} pagination is bounded by MAX(1) / non-negative rules.
+ * Live Postgres tests for {@link DslEventRepository} against the V7 migration. The Postgres column
+ * is {@code JSONB} while H2 stores payloads as {@code TEXT}, so the {@code JSONB} contract is
+ * pinned using the same Postgres migration the runtime uses. JSONB normalizes formatting, so
+ * payload assertions compare the parsed value rather than the raw string.
  */
+// TODO: move to integrationTest folder
+@Deprecated
+@Testcontainers
 class DslEventRepositoryTest {
 
+  private static final ObjectMapper MAPPER = new ObjectMapper();
+
+  @Container
+  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16");
+
+  private static PGSimpleDataSource dataSource;
   private NamedParameterJdbcTemplate jdbcTemplate;
   private DslEventRepository repository;
 
-  @BeforeEach
-  void setUp() throws Exception {
-    var dataSource = new JdbcDataSource();
-    dataSource.setURL("jdbc:h2:mem:events-" + UUID.randomUUID().toString().replace("-", "")
-            + ";DB_CLOSE_DELAY=-1");
-    dataSource.setUser("sa");
+  @BeforeAll
+  static void setUpDatabase() throws Exception {
+    dataSource = new PGSimpleDataSource();
+    dataSource.setUrl(postgres.getJdbcUrl());
+    dataSource.setUser(postgres.getUsername());
+    dataSource.setPassword(postgres.getPassword());
+
     ScriptUtils.executeSqlScript(dataSource.getConnection(),
-            new ClassPathResource("db/migration/h2/V7__dsl_events.sql"));
+            new ClassPathResource("db/migration/postgres/V7__dsl_events.sql"));
+  }
+
+  @BeforeEach
+  void setUp() {
     jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
+    jdbcTemplate.getJdbcTemplate().execute("TRUNCATE dsl_events RESTART IDENTITY");
     repository = new DslEventRepository(jdbcTemplate);
   }
 
@@ -55,7 +75,7 @@ class DslEventRepositoryTest {
       assertThat(r.id()).isNotNull();
       assertThat(r.schemaVersion()).isEqualTo(1);
       assertThat(r.createdAt()).isNotNull();
-      assertThat(r.payloadJson()).isEqualTo("{\"k\":1}");
+      assertPayloadIsK1(r.payloadJson());
     });
   }
 
@@ -150,7 +170,7 @@ class DslEventRepositoryTest {
   }
 
   @Test
-  void appendedPayloadJsonIsStoredVerbatim() {
+  void appendedPayloadJsonIsStoredVerbatim() throws Exception {
     Instant now = Instant.now();
     String payload = "{\"nested\":{\"x\":42,\"y\":[1,2,3]}}";
     DslEventEntity row = new DslEventEntity(null, "ReloadFailed", "definition",
@@ -160,7 +180,9 @@ class DslEventRepositoryTest {
     var result = repository.search("ReloadFailed", null, null, null, null, 0, 10);
 
     assertThat(result.items()).hasSize(1);
-    assertThat(result.items().get(0).payloadJson()).isEqualTo(payload);
+    JsonNode actual = MAPPER.readTree(result.items().get(0).payloadJson());
+    JsonNode expected = MAPPER.readTree(payload);
+    assertThat(actual).isEqualTo(expected);
     assertThat(result.items().get(0).schemaVersion()).isEqualTo(1);
   }
 
@@ -168,5 +190,13 @@ class DslEventRepositoryTest {
           Instant createdAt, String correlationId) {
     return new DslEventEntity(null, eventType, aggregateType, aggregateId, correlationId,
             "{\"k\":1}", 1, createdAt);
+  }
+
+  private static JsonNode node(String json) throws Exception {
+    return MAPPER.readTree(json);
+  }
+
+  private static void assertPayloadIsK1(String payloadJson) throws Exception {
+    assertThat(node(payloadJson)).isEqualTo(node("{\"k\":1}"));
   }
 }

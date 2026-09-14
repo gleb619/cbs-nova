@@ -20,6 +20,8 @@ import org.jspecify.annotations.Nullable;
 @RequiredArgsConstructor
 public final class ExplainBudgetStage implements DslPipeStage {
 
+  // TODO: measure in CL100K_BASE Encoding is very slow, we need: memoize and some on start async
+  // warmup, to speed up runtime
   private static final Encoding ENCODING = Encodings.newDefaultEncodingRegistry()
           .getEncoding(EncodingType.CL100K_BASE);
 

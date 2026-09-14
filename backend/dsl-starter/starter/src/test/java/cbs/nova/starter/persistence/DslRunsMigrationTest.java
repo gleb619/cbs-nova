@@ -25,6 +25,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+//TODO: move to integrationTest folder
+@Deprecated
 @Testcontainers
 class DslRunsMigrationTest {
 
