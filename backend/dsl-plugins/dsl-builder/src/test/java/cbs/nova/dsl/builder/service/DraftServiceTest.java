@@ -252,7 +252,7 @@ class DraftServiceTest {
   @Test
   void honorsCustomWorkbenchConfig() throws IOException {
     var workbench = new DslBuilderProperties.Workbench(
-            "custom/drafts", "custom/published", "custom/history", 2, 1, 7);
+            "custom/drafts", "custom/published", "custom/history", 2, 1, 7, 200, 3);
     var customProperties = properties(workbench);
     var customHistory = new DefinitionHistoryService(customProperties, objectMapper);
     var customBundle = new DefinitionBundleService(customProperties, objectMapper,

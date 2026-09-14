@@ -67,3 +67,6 @@ cbs:
         bundle-format-version: 1
         bundle-max-definitions: 200
         drafts-default-limit: 50
+        # Line-diff caps for history diffs (cbs.nova.dsl.utils.LineDiff)
+        diff-max-hunks: 200
+        diff-context-lines: 3

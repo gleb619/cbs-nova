@@ -1,5 +1,6 @@
 package cbs.nova.dsl.builder.service;
 
+import cbs.nova.dsl.model.DiffHunk;
 import cbs.nova.dsl.model.LoadResult;
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
 import cbs.nova.dsl.builder.exception.BuilderApiException;
@@ -7,14 +8,13 @@ import cbs.nova.dsl.builder.model.PageResponse;
 import cbs.nova.dsl.builder.model.VcsModels.DefinitionBundle;
 import cbs.nova.dsl.builder.model.VcsModels.DefinitionBundleEntry;
 import cbs.nova.dsl.builder.model.VcsModels.DefinitionHistoryEntry;
-import cbs.nova.dsl.builder.model.VcsModels.DiffHunk;
 import cbs.nova.dsl.builder.model.VcsModels.DraftRequest;
 import cbs.nova.dsl.builder.model.VcsModels.DraftResponse;
 import cbs.nova.dsl.builder.model.VcsModels.DraftSummary;
 import cbs.nova.dsl.builder.model.VcsModels.HistoryDiffResponse;
 import cbs.nova.dsl.builder.model.VcsModels.ImportBundleResult;
 import cbs.nova.dsl.builder.model.VcsModels.ImportEntryResult;
-import cbs.nova.dsl.builder.util.LineDiff;
+import cbs.nova.dsl.utils.LineDiff;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -85,7 +85,8 @@ public class DraftService {
     boolean truncated = false;
     if (published.isPresent()) {
       before = pretty(published.get());
-      LineDiff.Result result = LineDiff.diff(before, after);
+      LineDiff.Result result = LineDiff.diff(before, after, workbench().diffMaxHunks(),
+              workbench().diffContextLines());
       hunks = result.hunks();
       truncated = result.truncated();
     }

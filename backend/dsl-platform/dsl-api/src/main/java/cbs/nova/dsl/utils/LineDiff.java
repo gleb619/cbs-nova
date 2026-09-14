@@ -1,32 +1,31 @@
-package cbs.nova.dsl.builder.util;
+package cbs.nova.dsl.utils;
 
-import cbs.nova.dsl.builder.model.VcsModels.DiffHunk;
+import cbs.nova.dsl.model.DiffHunk;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
 
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+/**
+ * LCS-based line diff producing unified-diff-style hunks.
+ *
+ * <p>
+ * Framework-agnostic: callers pass the hunk cap and the context window size, so this class holds no
+ * configuration defaults of its own.
+ */
 public final class LineDiff {
 
-  // TODO: replace hardcode with app.yml settings
-  public static final int DEFAULT_MAX_HUNKS = 200;
-  private static final int CONTEXT_LINES = 3;
+  private LineDiff() {
+  }
 
   public record Result(List<DiffHunk> hunks, boolean truncated) {
 
   }
 
-  public static Result diff(String before, String after) {
-    return diff(before, after, DEFAULT_MAX_HUNKS);
-  }
-
-  public static Result diff(String before, String after, int maxHunks) {
+  public static Result diff(String before, String after, int maxHunks, int contextLines) {
     String[] beforeLines = splitLines(before);
     String[] afterLines = splitLines(after);
 
     List<Op> script = editScript(beforeLines, afterLines);
-    List<DiffHunk> hunks = toHunks(script, beforeLines, afterLines, maxHunks);
+    List<DiffHunk> hunks = toHunks(script, beforeLines, afterLines, maxHunks, contextLines);
     boolean truncated = countChangeBlocks(script) > hunks.size();
     return new Result(hunks, truncated);
   }
@@ -57,6 +56,7 @@ public final class LineDiff {
   private static List<Op> editScript(String[] before, String[] after) {
     int m = before.length;
     int n = after.length;
+    // dp[i][j] = LCS length of before[i:] and after[j:]
     int[][] dp = new int[m + 1][n + 1];
     for (int i = m - 1; i >= 0; i--) {
       for (int j = n - 1; j >= 0; j--) {
@@ -108,7 +108,7 @@ public final class LineDiff {
   }
 
   private static List<DiffHunk> toHunks(List<Op> script, String[] before, String[] after,
-          int maxHunks) {
+          int maxHunks, int contextLines) {
     List<DiffHunk> hunks = new ArrayList<>();
     int i = 0;
     int size = script.size();
@@ -117,18 +117,21 @@ public final class LineDiff {
         i++;
         continue;
       }
+      // A change block starts at i; extend it, merging nearby change blocks.
       int blockEnd = i;
       while (blockEnd < size && !(script.get(blockEnd) instanceof Op.Same)) {
         blockEnd++;
       }
+      // Greedily merge a following change block when the gap between them is small
+      // enough that their context windows would overlap.
       while (blockEnd < size) {
         int gapEnd = blockEnd;
-        while (gapEnd < size && gapEnd - blockEnd < 2 * CONTEXT_LINES
+        while (gapEnd < size && gapEnd - blockEnd < 2 * contextLines
                 && script.get(gapEnd) instanceof Op.Same) {
           gapEnd++;
         }
         boolean moreChanges = gapEnd < size && !(script.get(gapEnd) instanceof Op.Same);
-        if (moreChanges && gapEnd - blockEnd <= 2 * CONTEXT_LINES) {
+        if (moreChanges && gapEnd - blockEnd <= 2 * contextLines) {
           blockEnd = gapEnd;
           while (blockEnd < size && !(script.get(blockEnd) instanceof Op.Same)) {
             blockEnd++;
@@ -138,8 +141,8 @@ public final class LineDiff {
         }
       }
 
-      int contextBefore = Math.min(CONTEXT_LINES, i);
-      int contextAfter = Math.min(CONTEXT_LINES, size - blockEnd);
+      int contextBefore = Math.min(contextLines, i);
+      int contextAfter = Math.min(contextLines, size - blockEnd);
       int start = i - contextBefore;
       int end = blockEnd + contextAfter;
 

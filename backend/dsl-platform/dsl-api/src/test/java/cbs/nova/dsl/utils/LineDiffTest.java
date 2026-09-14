@@ -1,20 +1,20 @@
-package cbs.nova.starter;
+package cbs.nova.dsl.utils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.starter.core.StarterConstants;
-import cbs.nova.starter.model.VcsModels.DiffHunk;
-import cbs.nova.starter.util.LineDiff;
-import org.junit.jupiter.api.Test;
-
+import cbs.nova.dsl.model.DiffHunk;
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.Test;
 
 class LineDiffTest {
 
+  private static final int MAX_HUNKS = 200;
+  private static final int CONTEXT_LINES = 3;
+
   @Test
   void identicalTextsProduceNoHunks() {
-    LineDiff.Result result = LineDiff.diff("a\nb\nc", "a\nb\nc");
+    LineDiff.Result result = LineDiff.diff("a\nb\nc", "a\nb\nc", MAX_HUNKS, CONTEXT_LINES);
 
     assertThat(result.hunks()).isEmpty();
     assertThat(result.truncated()).isFalse();
@@ -22,7 +22,7 @@ class LineDiffTest {
 
   @Test
   void changedLineProducesSingleHunkWithPrefixes() {
-    LineDiff.Result result = LineDiff.diff("a\nb\nc", "a\nB\nc");
+    LineDiff.Result result = LineDiff.diff("a\nb\nc", "a\nB\nc", MAX_HUNKS, CONTEXT_LINES);
 
     assertThat(result.hunks()).hasSize(1);
     DiffHunk hunk = result.hunks().get(0);
@@ -36,7 +36,7 @@ class LineDiffTest {
 
   @Test
   void appendedLinesProduceAddHunk() {
-    LineDiff.Result result = LineDiff.diff("a", "a\nb\nc");
+    LineDiff.Result result = LineDiff.diff("a", "a\nb\nc", MAX_HUNKS, CONTEXT_LINES);
 
     assertThat(result.hunks()).hasSize(1);
     assertThat(result.hunks().get(0).lines())
@@ -49,7 +49,7 @@ class LineDiffTest {
     String after = String.join("\n", "name", "version", "inserted", "tail-1", "tail-2", "tail-3",
             "tail-4");
 
-    LineDiff.Result result = LineDiff.diff(before, after);
+    LineDiff.Result result = LineDiff.diff(before, after, MAX_HUNKS, CONTEXT_LINES);
 
     assertThat(result.hunks()).hasSize(1);
     assertThat(result.hunks().get(0).lines())
@@ -73,16 +73,16 @@ class LineDiffTest {
     afterLines.add("final");
 
     LineDiff.Result result = LineDiff.diff(String.join("\n", beforeLines),
-            String.join("\n", afterLines));
+            String.join("\n", afterLines), MAX_HUNKS, CONTEXT_LINES);
 
-    assertThat(result.hunks()).hasSize(StarterConstants.DEFAULT_MAX_HUNKS);
+    assertThat(result.hunks()).hasSize(MAX_HUNKS);
     assertThat(result.truncated()).isTrue();
   }
 
   @Test
   void nullAndEmptyInputsAreTreatedAsEmptyText() {
-    assertThat(LineDiff.diff(null, "a").hunks()).hasSize(1);
-    assertThat(LineDiff.diff("", "").hunks()).isEmpty();
-    assertThat(LineDiff.diff("a\n", "a").hunks()).isEmpty();
+    assertThat(LineDiff.diff(null, "a", MAX_HUNKS, CONTEXT_LINES).hunks()).hasSize(1);
+    assertThat(LineDiff.diff("", "", MAX_HUNKS, CONTEXT_LINES).hunks()).isEmpty();
+    assertThat(LineDiff.diff("a\n", "a", MAX_HUNKS, CONTEXT_LINES).hunks()).isEmpty();
   }
 }

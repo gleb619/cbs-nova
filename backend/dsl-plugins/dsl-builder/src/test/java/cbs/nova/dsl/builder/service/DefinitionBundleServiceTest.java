@@ -64,7 +64,7 @@ class DefinitionBundleServiceTest {
   @Test
   void honorsCustomWorkbenchConfig() throws IOException {
     var custom = new DslBuilderProperties.Workbench(
-            "alt/drafts", "alt/published", "alt/history", 7, 200, 50);
+            "alt/drafts", "alt/published", "alt/history", 7, 200, 50, 200, 3);
     var customService = new DefinitionBundleService(properties(custom), objectMapper,
             Optional.empty());
 

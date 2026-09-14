@@ -6,8 +6,10 @@ import static cbs.nova.starter.core.StarterConstants.WORKBENCH_PUBLISHED_DIR;
 
 import lombok.AllArgsConstructor;
 
+import cbs.nova.dsl.model.DiffHunk;
 import cbs.nova.dsl.model.LoadResult;
 import cbs.nova.dsl.exception.ValidationException;
+import cbs.nova.dsl.utils.LineDiff;
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.exception.DslCompilationException;
@@ -18,7 +20,6 @@ import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.model.VcsModels.DraftSummary;
 import cbs.nova.starter.model.VcsModels.HistoryDiffResponse;
-import cbs.nova.starter.model.VcsModels.DiffHunk;
 import cbs.nova.starter.model.VcsModels.ImportBundleResult;
 import cbs.nova.starter.model.VcsModels.ImportEntryResult;
 import cbs.nova.starter.model.CompileDiagnostic;
@@ -33,7 +34,6 @@ import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.service.CorrelationId;
 import cbs.nova.starter.service.DslDefinitionBundleService;
 import cbs.nova.starter.service.DslDefinitionHistoryService;
-import cbs.nova.starter.util.LineDiff;
 import tools.jackson.core.JacksonException;
 import jakarta.servlet.ServletException;
 import lombok.extern.slf4j.Slf4j;
@@ -261,7 +261,8 @@ public class DslDraftHandler {
     boolean truncated = false;
     if (published.isPresent()) {
       before = pretty(published.get());
-      LineDiff.Result result = LineDiff.diff(before, after);
+      LineDiff.Result result = LineDiff.diff(before, after, StarterConstants.DEFAULT_MAX_HUNKS,
+              StarterConstants.LINE_DIFF_CONTEXT_LINES);
       hunks = result.hunks();
       truncated = result.truncated();
     }

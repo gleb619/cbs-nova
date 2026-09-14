@@ -43,7 +43,7 @@ public record DslBuilderProperties(
     fileBuffer = fileBuffer == null ? new FileBuffer(1000, 3600L) : fileBuffer;
     workbench = workbench == null
             ? new Workbench(".workbench/drafts", ".workbench/published", ".workbench/history",
-                    1, 200, 50)
+                    1, 200, 50, 200, 3)
             : workbench;
     gradleJavaMin = gradleJavaMin == null ? 8 : gradleJavaMin;
     gradleJavaMax = gradleJavaMax == null ? 25 : gradleJavaMax;
@@ -100,6 +100,8 @@ public record DslBuilderProperties(
           @DefaultValue(".workbench/history") String historyDir,
           @DefaultValue("1") int bundleFormatVersion,
           @DefaultValue("200") int bundleMaxDefinitions,
-          @DefaultValue("50") int draftsDefaultLimit) {
+          @DefaultValue("50") int draftsDefaultLimit,
+          @DefaultValue("200") int diffMaxHunks,
+          @DefaultValue("3") int diffContextLines) {
   }
 }

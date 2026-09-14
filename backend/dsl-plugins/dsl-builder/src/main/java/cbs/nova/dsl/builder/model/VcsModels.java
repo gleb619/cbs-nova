@@ -1,5 +1,6 @@
 package cbs.nova.dsl.builder.model;
 
+import cbs.nova.dsl.model.DiffHunk;
 import cbs.nova.dsl.model.LoadResult;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.List;
@@ -48,15 +49,6 @@ public final class VcsModels {
           long timestampMillis,
           long sizeBytes,
           long lastModifiedMillis) {
-
-  }
-
-  public record DiffHunk(
-          int beforeStart,
-          int beforeLines,
-          int afterStart,
-          int afterLines,
-          List<String> lines) {
 
   }
 

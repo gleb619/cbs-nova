@@ -60,7 +60,7 @@ class DefinitionHistoryServiceTest {
   @Test
   void honorsCustomHistoryAndPublishedDirs() throws IOException {
     var custom = new DslBuilderProperties.Workbench(
-            ".workbench/drafts", "alt/published", "alt/history", 1, 200, 50);
+            ".workbench/drafts", "alt/published", "alt/history", 1, 200, 50, 200, 3);
     var customService = new DefinitionHistoryService(properties(custom), objectMapper);
 
     // Seed a published file at the custom path so snapshotBeforePublish has something to copy.
