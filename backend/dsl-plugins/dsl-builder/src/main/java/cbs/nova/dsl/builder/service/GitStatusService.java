@@ -3,27 +3,39 @@ package cbs.nova.dsl.builder.service;
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class GitStatusService {
 
   private final DslBuilderProperties properties;
+  private final Clock clock;
   private final ConcurrentHashMap<Path, Snapshot> cache = new ConcurrentHashMap<>();
+
+  @Autowired
+  public GitStatusService(DslBuilderProperties properties) {
+    this(properties, Clock.systemUTC());
+  }
+
+  // Test seam: deterministic clock for TTL cache assertions. Behavior-preserving.
+  GitStatusService(DslBuilderProperties properties, Clock clock) {
+    this.properties = properties;
+    this.clock = clock;
+  }
 
   public Optional<RepoStatus> status(Path candidateDir) {
     if (!gitEnabled() || candidateDir == null) {
@@ -31,12 +43,12 @@ public class GitStatusService {
     }
     Path root = repositoryRoot(candidateDir);
     Snapshot cached = cache.get(root);
-    if (cached != null && !cached.expired()) {
+    if (cached != null && !clock.instant().isAfter(cached.expiresAt())) {
       return Optional.of(cached.repoStatus());
     }
     try {
       RepoStatus repoStatus = loadStatus(root);
-      cache.put(root, new Snapshot(repoStatus, Instant.now().plus(ttl())));
+      cache.put(root, new Snapshot(repoStatus, clock.instant().plus(ttl())));
       return Optional.of(repoStatus);
     } catch (Exception e) {
       log.warn("[DSL git] failed to read status for {}: {}", root, e.getMessage());
@@ -89,9 +101,5 @@ public class GitStatusService {
   }
 
   private record Snapshot(RepoStatus repoStatus, Instant expiresAt) {
-
-    boolean expired() {
-      return Instant.now().isAfter(expiresAt);
-    }
   }
 }
