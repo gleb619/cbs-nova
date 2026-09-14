@@ -6,6 +6,7 @@ from .commands.dev import DevCommand
 from .commands.doctor import DoctorCommand
 from .commands.format import FormatCommand
 from .commands.lint import LintCommand
+from .commands.lint_kanban import LintKanbanCommand
 from .commands.loadtest import LoadtestCommand
 from .commands.openapi_diff import OpenApiDiffCommand
 from .commands.openapi_diff_test import OpenApiDiffTestCommand
@@ -56,6 +57,13 @@ class CLI:
         subparsers.add_parser("lint-frontend", help="Run frontend Biome lint").set_defaults(
             handler=LintCommand, scope="frontend"
         )
+
+        p = subparsers.add_parser(
+            "lint-kanban",
+            help="Check docs/kanban.md integrity (with --base <ref>: append-only guard mode)",
+        )
+        p.add_argument("--base", help="base git ref — switches to guard mode (fail on dropped rows)")
+        p.set_defaults(handler=LintKanbanCommand)
 
         # Format
         subparsers.add_parser("fmt", help="Apply formatting everywhere").set_defaults(handler=FormatCommand)
