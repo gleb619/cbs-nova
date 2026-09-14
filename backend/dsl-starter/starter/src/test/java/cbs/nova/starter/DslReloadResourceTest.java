@@ -259,7 +259,7 @@ class DslReloadResourceTest {
       ServerResponse response = handler.reload(reloadRequest());
 
       assertThat(response.statusCode().value()).isEqualTo(200);
-      var result = audit.repository().search(null, 0, 10);
+      var result = audit.service().search(null, 0, 10);
       assertThat(result.total()).isEqualTo(1);
       var row = result.items().get(0);
       assertThat(row.action()).isEqualTo("DEFINITION_RELOAD");
@@ -281,7 +281,7 @@ class DslReloadResourceTest {
     ServerResponse response = handler.reload(reloadRequest());
 
     assertThat(response.statusCode().value()).isEqualTo(409);
-    var result = audit.repository().search(null, 0, 10);
+    var result = audit.service().search(null, 0, 10);
     assertThat(result.total()).isEqualTo(1);
     var row = result.items().get(0);
     assertThat(row.action()).isEqualTo("DEFINITION_RELOAD");

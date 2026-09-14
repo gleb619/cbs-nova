@@ -8,8 +8,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import cbs.nova.starter.core.StarterConstants;
-import cbs.nova.starter.entity.DslAuditEntity;
-import cbs.nova.starter.persistence.DslAuditRepository;
+import cbs.nova.starter.model.DslAudit;
+import cbs.nova.starter.persistence.DslAuditStore;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,18 +22,17 @@ import tools.jackson.databind.ObjectMapper;
 
 class DslAuditServiceTest {
 
-  private final DslAuditRepository repository = mock(DslAuditRepository.class);
-  private final DslAuditService service = new DslAuditService(repository,
-          new ObjectMapper());
+  private final DslAuditStore store = mock(DslAuditStore.class);
+  private final DslAuditService service = new DslAuditService(store, new ObjectMapper());
 
   @Test
   void recordPersistsRowWithSerializedDetails() {
     service.record("operator-1", "DEFINITION_PUBLISH", "LoanFlow", "corr-42",
             StarterConstants.OUTCOME_SUCCESS, Map.of("reloaded", true));
 
-    var captor = ArgumentCaptor.forClass(DslAuditEntity.class);
-    verify(repository).insert(captor.capture());
-    DslAuditEntity row = captor.getValue();
+    var captor = ArgumentCaptor.forClass(DslAudit.class);
+    verify(store).append(captor.capture());
+    DslAudit row = captor.getValue();
     assertThat(row.id()).isNull();
     assertThat(row.occurredAt()).isNotNull();
     assertThat(row.actor()).isEqualTo("operator-1");
@@ -49,8 +48,8 @@ class DslAuditServiceTest {
     service.record("operator-1", "SCHEDULE_DELETE", "LoanFlow", null,
             StarterConstants.OUTCOME_SUCCESS, null);
 
-    var captor = ArgumentCaptor.forClass(DslAuditEntity.class);
-    verify(repository).insert(captor.capture());
+    var captor = ArgumentCaptor.forClass(DslAudit.class);
+    verify(store).append(captor.capture());
     assertThat(captor.getValue().detailsJson()).isNull();
     assertThat(captor.getValue().correlationId()).isNull();
   }
@@ -58,7 +57,7 @@ class DslAuditServiceTest {
   @Test
   void recordSwallowsRepositoryFailure() {
     doThrow(new DataAccessResourceFailureException("database is gone"))
-            .when(repository).insert(any());
+            .when(store).append(any());
 
     assertThatCode(() -> service.record("operator-1", "DEFINITION_RELOAD", "/dsl",
             null, StarterConstants.OUTCOME_FAILURE, Map.of("error", "boom")))

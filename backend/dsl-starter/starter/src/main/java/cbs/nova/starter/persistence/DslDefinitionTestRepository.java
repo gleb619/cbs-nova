@@ -16,7 +16,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * JDBC access to the {@code dsl_definition_tests} sidecar table (T409).
  *
  * <p>
- * Follows the {@link DslAuditRepository} idioms: constructor injection, named parameters, and an
+ * Follows the {@link DslEventRepository} idioms: constructor injection, named parameters, and an
  * explicit {@link RowMapper}. Reads are keyed by {@code definition_name}; authoring replaces a
  * whole definition's case set in one transaction ({@link #replaceAll}).
  */

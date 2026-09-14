@@ -3,8 +3,9 @@ package cbs.nova.starter.service;
 import static cbs.nova.starter.core.StarterConstants.ANONYMOUS_PRINCIPAL;
 
 import cbs.nova.starter.core.StarterConstants;
-import cbs.nova.starter.entity.DslAuditEntity;
-import cbs.nova.starter.persistence.DslAuditRepository;
+import cbs.nova.starter.model.DslAudit;
+import cbs.nova.starter.persistence.DslAuditSearchResult;
+import cbs.nova.starter.persistence.DslAuditStore;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +28,7 @@ import tools.jackson.databind.ObjectMapper;
 @RequiredArgsConstructor
 public class DslAuditService {
 
-  private final DslAuditRepository repository;
+  private final DslAuditStore store;
   private final ObjectMapper objectMapper;
 
   /**
@@ -38,12 +39,20 @@ public class DslAuditService {
           String outcome, @Nullable Object details) {
     try {
       String detailsJson = details != null ? objectMapper.writeValueAsString(details) : null;
-      repository.insert(new DslAuditEntity(null, Instant.now(), actor, action, target,
+      store.append(new DslAudit(null, Instant.now(), actor, action, target,
               correlationId, outcome, detailsJson));
     } catch (Exception e) {
       log.warn("[DSL audit] failed to record {} on target '{}': {}", action, target,
               e.getMessage());
     }
+  }
+
+  /**
+   * Paged read of the audit log, newest first; {@code action}, when non-blank, narrows the result
+   * set. See {@link DslAuditStore#search}.
+   */
+  public DslAuditSearchResult search(@Nullable String action, int offset, int limit) {
+    return store.search(action, offset, limit);
   }
 
   /**

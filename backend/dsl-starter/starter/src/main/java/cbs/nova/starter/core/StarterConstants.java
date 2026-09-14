@@ -405,10 +405,6 @@ public class StarterConstants {
 
   public static final String DSL_DEFINITION_TEST_COLUMNS = "id, definition_name, case_name, input, expected_output, created_at, updated_at";
 
-  // JDBC dsl_audit columns (DslAuditRepository)
-
-  public static final String DSL_AUDIT_COLUMNS = "id, occurred_at, actor, action, target, correlation_id, outcome, details_json";
-
   // JDBC dsl_events columns (DslEventRepository)
 
   public static final String DSL_EVENT_COLUMNS = "id, event_type, aggregate_type, aggregate_id, correlation_id, payload, schema_version, created_at";

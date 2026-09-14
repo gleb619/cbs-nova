@@ -74,7 +74,7 @@ class DslScheduleResourceTest {
             .content("{\"definition\":\"A\",\"cron\":\"0 9 * * *\"}"))
             .andExpect(status().isCreated());
 
-    var result = audit.repository().search(null, 0, 10);
+    var result = audit.service().search(null, 0, 10);
     assertThat(result.total()).isEqualTo(1);
     var row = result.items().get(0);
     assertThat(row.action()).isEqualTo("SCHEDULE_CREATE");
@@ -95,7 +95,7 @@ class DslScheduleResourceTest {
             .content("{\"definition\":\"ghost\",\"cron\":\"0 9 * * *\"}"))
             .andExpect(status().isNotFound());
 
-    var result = audit.repository().search(null, 0, 10);
+    var result = audit.service().search(null, 0, 10);
     assertThat(result.total()).isEqualTo(1);
     var row = result.items().get(0);
     assertThat(row.action()).isEqualTo("SCHEDULE_CREATE");
@@ -112,7 +112,7 @@ class DslScheduleResourceTest {
     mockMvc.perform(delete("/api/dsl/schedules/A"))
             .andExpect(status().isOk());
 
-    var result = audit.repository().search(null, 0, 10);
+    var result = audit.service().search(null, 0, 10);
     assertThat(result.total()).isEqualTo(1);
     var row = result.items().get(0);
     assertThat(row.action()).isEqualTo("SCHEDULE_DELETE");

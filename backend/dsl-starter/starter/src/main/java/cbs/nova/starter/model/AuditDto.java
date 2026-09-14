@@ -1,6 +1,5 @@
 package cbs.nova.starter.model;
 
-import cbs.nova.starter.entity.DslAuditEntity;
 import org.jspecify.annotations.Nullable;
 
 public record AuditDto(
@@ -13,15 +12,15 @@ public record AuditDto(
         String outcome,
         @Nullable String detailsJson) {
 
-  public static AuditDto from(DslAuditEntity entity) {
+  public static AuditDto from(DslAudit audit) {
     return new AuditDto(
-            entity.id() != null ? entity.id() : 0L,
-            entity.occurredAt().toString(),
-            entity.actor(),
-            entity.action(),
-            entity.target(),
-            entity.correlationId(),
-            entity.outcome(),
-            entity.detailsJson());
+            audit.id() != null ? audit.id() : 0L,
+            audit.occurredAt().toString(),
+            audit.actor(),
+            audit.action(),
+            audit.target(),
+            audit.correlationId(),
+            audit.outcome(),
+            audit.detailsJson());
   }
 }
