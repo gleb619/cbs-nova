@@ -2,6 +2,9 @@
 # Loaded by app/compose/prometheus.yml.
 
 groups:
+  # T402 threshold alerts. NOTE (T490): the SLO burn-rate alerts in cbs-nova-slo-burn-rate
+  # supersede CbsNovaRunErrorRate once burn rates are tuned against real traffic — do not
+  # delete this group yet, it stays as the coarser safety net.
   - name: cbs-nova-run-errors
     rules:
       # VERIFY series name against a booted app: curl -s :8090/actuator/prometheus | grep dsl_run
@@ -44,3 +47,66 @@ groups:
         annotations:
           summary: "cbs-nova application is down"
           description: "Prometheus cannot scrape the cbs-nova job at spring-app:8090/actuator/prometheus for 2 minutes."
+
+  # T490 — multi-window multi-burn-rate alerts for the run-success SLO.
+  # Budget/target reference: docs/slo.md (SLO 1). Target = 99.0% placeholder
+  # (<!-- TEAM: confirm target -->), so budget = 1 - 0.99 = 0.01 and the numeric literals
+  # below (0.144 = 14.4 * 0.01, 0.06 = 6 * 0.01) must be recomputed when the target changes.
+  # Success ratio uses terminal statuses only: COMPLETED / (COMPLETED|FAILED|STALE|CANCELLED);
+  # the DslRunStatus enum has no SUCCESS label (successful runs are COMPLETED) and RUNNING
+  # is excluded. Latency SLOs (run p95, preview p95) have no burn-rate alerts in phase 1 —
+  # deferred until percentile histograms are enabled on the timers (T403), see docs/slo.md.
+  - name: cbs-nova-slo-burn-rate
+    rules:
+      # Fast burn (Google SRE workbook): burning 14.4x the 28d error budget, i.e. the whole
+      # budget would be gone in ~2 days. Long window confirms sustained burn, short window
+      # confirms it is still burning right now. Pages.
+      - alert: CbsNovaSloRunSuccessFastBurn
+        expr: |
+          (
+            1 - (
+              sum(rate(dsl_run_count_total{status="COMPLETED"}[1h]))
+              /
+              sum(rate(dsl_run_count_total{status=~"COMPLETED|FAILED|STALE|CANCELLED"}[1h]))
+            )
+          ) > (14.4 * 0.01)
+          and
+          (
+            1 - (
+              sum(rate(dsl_run_count_total{status="COMPLETED"}[5m]))
+              /
+              sum(rate(dsl_run_count_total{status=~"COMPLETED|FAILED|STALE|CANCELLED"}[5m]))
+            )
+          ) > (14.4 * 0.01)
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: "cbs-nova run-success SLO is burning its error budget fast"
+          description: "Over the last 1h and 5m, more than 14.4x the 28d error budget of the run-success SLO (target 99.0%, see docs/slo.md) is being burned — the budget would exhaust in ~2 days at this rate. Page the on-call."
+
+      # Slow burn: burning 6x the 28d error budget (budget gone in ~5 days). Opens a ticket,
+      # does not page.
+      - alert: CbsNovaSloRunSuccessSlowBurn
+        expr: |
+          (
+            1 - (
+              sum(rate(dsl_run_count_total{status="COMPLETED"}[6h]))
+              /
+              sum(rate(dsl_run_count_total{status=~"COMPLETED|FAILED|STALE|CANCELLED"}[6h]))
+            )
+          ) > (6 * 0.01)
+          and
+          (
+            1 - (
+              sum(rate(dsl_run_count_total{status="COMPLETED"}[30m]))
+              /
+              sum(rate(dsl_run_count_total{status=~"COMPLETED|FAILED|STALE|CANCELLED"}[30m]))
+            )
+          ) > (6 * 0.01)
+        for: 1h
+        labels:
+          severity: ticket
+        annotations:
+          summary: "cbs-nova run-success SLO is burning its error budget slowly"
+          description: "Over the last 6h and 30m, more than 6x the 28d error budget of the run-success SLO (target 99.0%, see docs/slo.md) is being burned — the budget would exhaust in ~5 days at this rate. Open a reliability ticket; no page."
