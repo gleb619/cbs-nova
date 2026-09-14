@@ -215,7 +215,7 @@ public class DslReloadHandler {
     }
   }
 
-  //TODO: use a `dsl-builder` instead
+  // TODO: use a `dsl-builder` instead
   @Deprecated(forRemoval = true)
   private void compileSources(Path sourceDir, Path outputDir) throws IOException {
     var builder = builderClient();

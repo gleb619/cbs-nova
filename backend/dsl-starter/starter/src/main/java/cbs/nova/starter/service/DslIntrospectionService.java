@@ -197,9 +197,7 @@ public class DslIntrospectionService {
 
   private ConstructSchemaDto toSchemaDto(String name, String type, String description,
           Class<?> inputType, Class<?> outputType, List<ParameterDescriptor> parameters) {
-    Map<String, Object> inputSchema = inputType != null && inputType != Void.class
-            ? jsonSchemaGenerator.generateSchema(inputType)
-            : jsonSchemaGenerator.generateSchema(parameters);
+    Map<String, Object> inputSchema = schemaForInput(inputType, parameters);
     Map<String, Object> outputSchema = jsonSchemaGenerator.generateSchema(outputType);
     return new ConstructSchemaDto(
             name,
@@ -215,12 +213,6 @@ public class DslIntrospectionService {
     return type != null && type != Void.class
             ? jsonSchemaGenerator.generateSchema(type)
             : jsonSchemaGenerator.generateSchema(parameters);
-  }
-
-  // TODO: remove
-  @Deprecated(forRemoval = true)
-  private Map<String, Object> schemaForOutput(Class<?> type) {
-    return jsonSchemaGenerator.generateSchema(type);
   }
 
   private DefinitionStatus status(String name, Map<String, DefinitionStatus> statuses) {
