@@ -398,6 +398,9 @@ Where they show up:
   one, `correlationId`.
 - **`dsl_runs.correlation_id`** — query it directly to map a cid to its runs, then grep the
   app log by the run ids.
+- **Distributed traces** — Jaeger UI at `http://localhost:16686`, service `spring-app`, one
+  trace per request spanning BFF → backend → DSL dispatch → Temporal activity (compose
+  stack only; no-op outside compose — [Tracing](architecture-backend.md#tracing-in-compose-default-on)).
 
 Trace one correlation id end-to-end:
 
@@ -412,6 +415,23 @@ docker compose -f app/docker-compose.yml logs frontend | grep 'order-4711'
 # 3. Run path: map the cid to run rows, then to the request ids in the app log
 docker exec -i $(docker ps -qf name=postgres) psql -U nova -d nova \
   -c "SELECT run_id, process_name, status, started_at FROM dsl_runs WHERE correlation_id='order-4711';"
+
+# 4. Distributed trace: open Jaeger UI and find the trace for this request
+#    correlation_id is not yet a searchable span attribute, so search by
+#    operation + time window:
+#    - Open http://localhost:16686 → service "spring-app"
+#    - Select the operation (e.g. "dsl.run.<processName>") and set the time
+#      window to cover the request.
+#    - If the client captured the traceparent response header, paste the
+#      trace-id directly into Jaeger's search bar.
+#    The span chain shows BFF → backend → DSL dispatch → Temporal activity.
+#    A gap between two adjacent spans usually means network latency (BFF→backend
+#    or backend→Temporal) rather than processing time — check the span
+#    timestamps to confirm.
+#    Follow-up: adding correlation_id as a span attribute would allow direct
+#    Jaeger tag search (see docs/architecture-backend.md §Tracing).
+#    Is the trace pipeline even up? Run:
+make trace-smoke
 ```
 
 Feed a request a correlation id from the admin UI's API or any client:
@@ -423,6 +443,9 @@ curl -H 'X-Correlation-Id: order-4711' -H 'Content-Type: application/json' \
 
 An `X-Correlation-Id` that violates the charset/length rules (`[A-Za-z0-9_.:/-]`, ≤200 chars)
 is rejected with `400 INVALID_CORRELATION_ID` before any handler runs.
+
+Trace pipeline not producing spans → see the troubleshooting checklist in
+[docs/architecture-backend.md §Tracing](architecture-backend.md#tracing-in-compose-default-on).
 
 ---
 
