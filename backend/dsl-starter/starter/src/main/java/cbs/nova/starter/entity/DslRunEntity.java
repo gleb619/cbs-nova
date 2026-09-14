@@ -51,4 +51,7 @@ public class DslRunEntity {
 
   @Column("correlation_id")
   private String correlationId;
+
+  @Column("definition_hash")
+  private String definitionHash;
 }

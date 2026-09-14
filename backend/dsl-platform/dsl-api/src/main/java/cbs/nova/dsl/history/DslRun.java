@@ -19,5 +19,6 @@ public record DslRun(
         @Nullable Instant finishedAt,
         @Nullable String executionMode,
         @Nullable String triggeredBy,
-        @Nullable String correlationId) {
+        @Nullable String correlationId,
+        @Nullable String definitionHash) {
 }

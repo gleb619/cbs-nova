@@ -131,4 +131,47 @@ class ExecutionDtoTest {
 
     assertThat(dto.correlationId()).isNull();
   }
+
+  @Test
+  void fromPopulatesDefinitionHash() {
+    DslRun run = DslRun.builder()
+            .runId("run-1")
+            .processName("Loan")
+            .status(DslRunStatus.COMPLETED.name())
+            .input(null)
+            .output(null)
+            .error(null)
+            .startedAt(Instant.parse("2026-01-01T00:00:00Z"))
+            .finishedAt(Instant.parse("2026-01-01T00:00:05Z"))
+            .executionMode(ExecutionMode.RUN.name())
+            .definitionHash("ab".repeat(32))
+            .build();
+
+    ExecutionDto dto = ExecutionDto.from(run);
+
+    assertThat(dto.definitionHash()).isEqualTo("ab".repeat(32));
+  }
+
+  @Test
+  void jsonOmitsDefinitionHashWhenNullAndIncludesItWhenSet() {
+    DslRun.DslRunBuilder base = DslRun.builder()
+            .runId("run-1")
+            .processName("Loan")
+            .status(DslRunStatus.COMPLETED.name())
+            .input(null)
+            .output(null)
+            .error(null)
+            .startedAt(Instant.parse("2026-01-01T00:00:00Z"))
+            .finishedAt(Instant.parse("2026-01-01T00:00:05Z"))
+            .executionMode(ExecutionMode.RUN.name());
+    ObjectMapper objectMapper = new ObjectMapper();
+
+    String withHash = objectMapper.writeValueAsString(
+            ExecutionDto.from(base.definitionHash("cd".repeat(32)).build()));
+    String withoutHash = objectMapper.writeValueAsString(
+            ExecutionDto.from(base.definitionHash(null).build()));
+
+    assertThat(withHash).contains("\"definitionHash\":\"" + "cd".repeat(32) + "\"");
+    assertThat(withoutHash).doesNotContain("definitionHash");
+  }
 }
