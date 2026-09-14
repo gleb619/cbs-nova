@@ -6,6 +6,7 @@ import cbs.nova.dsl.codegen.util.CodeWriter;
 import cbs.nova.dsl.codegen.CompilerConstants;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
+import cbs.nova.dsl.codegen.util.ModelImportResolver;
 import cbs.nova.dsl.codegen.util.ModelTypeExtractor;
 import cbs.nova.dsl.codegen.util.SourcePackageResolver;
 import org.junit.jupiter.api.Test;
@@ -26,7 +27,8 @@ class ModelRegistryGeneratorTest {
           new CodegenNaming("cbs.nova.dsl.generated"),
           new ModelTypeExtractor(),
           new SourcePackageResolver(
-                  new DslPackageNameResolver(new CodegenNaming("cbs.nova.dsl.generated"))));
+                  new DslPackageNameResolver(new CodegenNaming("cbs.nova.dsl.generated")),
+                  new ModelImportResolver(new CodegenNaming("cbs.nova.dsl.generated"))));
 
   @Test
   void generatesRegistryInTargetPackageWithModelEntries() throws Exception {
@@ -38,7 +40,7 @@ class ModelRegistryGeneratorTest {
             }
             """);
 
-    var result = generator.generate(srcDir, outDir, "cbs.nova.dsl.codegen.test", true);
+    var result = generator.generate(srcDir, outDir, "cbs.nova.dsl.codegen.test", "v1", true);
 
     assertThat(result.packageName()).isEqualTo("cbs.nova.dsl.codegen.test");
     assertThat(result.className()).isEqualTo("GeneratedModelRegistry");
@@ -61,10 +63,41 @@ class ModelRegistryGeneratorTest {
   }
 
   @Test
+  void registryContentUnchangedWithStyledModelImports() throws Exception {
+    var dslDir = Files.createDirectories(srcDir.resolve(CompilerConstants.DSL_FOLDER));
+    Files.writeString(dslDir.resolve("StyledDsl.java"), """
+            import cbs.nova.dsl.*;
+            import cbs.nova.dsl.codegen.test.v1.StyledModels.*;
+            import java.util.List;
+
+            List<DslObject> define() {
+              return Dsl.process("Styled")
+                  .input(StyledIn.class)
+                  .output(String.class)
+                  .execute(ctx -> Result.success("ok"))
+                  .buildList();
+            }
+            """);
+    var modelsDir = Files.createDirectories(srcDir.resolve(CompilerConstants.MODELS_FOLDER));
+    Files.writeString(modelsDir.resolve("StyledModels.java"), """
+            public class StyledModels {
+              public record StyledIn(String value) {}
+            }
+            """);
+
+    var result = generator.generate(srcDir, outDir, "cbs.nova.dsl.codegen.test", "v1", true);
+
+    var source = Files.readString(outDir.resolve(
+            "cbs/nova/dsl/codegen/test/GeneratedModelRegistry.java"));
+    assertThat(source).contains("StyledModels.class");
+    assertThat(source).contains("StyledModels.StyledIn.class");
+  }
+
+  @Test
   void generatesEmptyRegistryWhenNoModels() throws Exception {
     Files.createDirectories(srcDir.resolve(CompilerConstants.MODELS_FOLDER));
 
-    var result = generator.generate(srcDir, outDir, "cbs.nova.dsl.codegen.empty", true);
+    var result = generator.generate(srcDir, outDir, "cbs.nova.dsl.codegen.empty", "v1", true);
 
     assertThat(result.packageName()).isEqualTo("cbs.nova.dsl.codegen.empty");
 

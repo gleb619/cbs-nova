@@ -1,4 +1,6 @@
 package cbs.nova.starter.service.introspection.mapper;
+import cbs.nova.dsl.DslObject;
+import cbs.nova.dsl.model.ObjectDescriptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -81,13 +83,36 @@ class DslIntrospectionMapperTest {
   }
 
   @Test
+  //TODO: change inline descriptor creation
+  @Deprecated(forRemoval = true)
   void mapsDslDescriptorToHelperSearchResult() {
     DslDescriptor descriptor = DslDescriptor.builder()
-            .name("fn")
-            .type(DslType.FUNCTION)
-            .description("desc")
-            .inputType(String.class)
-            .outputType(Integer.class)
+            .objectDescriptor(new ObjectDescriptor() {
+              @Override
+              public String name() {
+                return "fn";
+              }
+
+              @Override
+              public DslObject.DslType type() {
+                return DslType.FUNCTION;
+              }
+
+              @Override
+              public String description() {
+                return "desc";
+              }
+
+              @Override
+              public Class<?> inputType() {
+                return String.class;
+              }
+
+              @Override
+              public Class<?> outputType() {
+                return Integer.class;
+              }
+            })
             .hasSideEffects(false)
             .parameters(List.of())
             .taskQueue(null)
@@ -182,13 +207,36 @@ class DslIntrospectionMapperTest {
   }
 
   @Test
+  //TODO: change inline descriptor creation
+  @Deprecated(forRemoval = true)
   void mapsDslDescriptorToDefinitionMetaDto() {
     DslDescriptor descriptor = DslDescriptor.builder()
-            .name("fn")
-            .type(DslType.FUNCTION)
-            .description("desc")
-            .inputType(String.class)
-            .outputType(Integer.class)
+            .objectDescriptor(new ObjectDescriptor() {
+              @Override
+              public String name() {
+                return "fn";
+              }
+
+              @Override
+              public DslObject.DslType type() {
+                return DslType.FUNCTION;
+              }
+
+              @Override
+              public String description() {
+                return "desc";
+              }
+
+              @Override
+              public Class<?> inputType() {
+                return String.class;
+              }
+
+              @Override
+              public Class<?> outputType() {
+                return Integer.class;
+              }
+            })
             .hasSideEffects(false)
             .parameters(List.of())
             .taskQueue(null)

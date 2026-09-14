@@ -18,6 +18,7 @@ public final class DescriptorFactory {
     var outputType = resolveOutputType(obj.outputType(), obj.parameters());
     return ProcessDescriptor.builder()
             .name(obj.name())
+            .description(obj.description())
             .version(obj.version())
             .taskQueue(obj.taskQueue())
             .inputType(inputType)
@@ -33,6 +34,7 @@ public final class DescriptorFactory {
     var outputType = resolveOutputType(obj.outputType(), obj.parameters());
     return TransactionDescriptor.builder()
             .name(obj.name())
+            .description(obj.description())
             .version(obj.version())
             .taskQueue(obj.taskQueue())
             .inputType(inputType)
@@ -50,6 +52,7 @@ public final class DescriptorFactory {
     var outputType = resolveOutputType(obj.outputType(), obj.parameters());
     return FunctionDescriptor.builder()
             .name(obj.name())
+            .description(obj.description())
             .inputType(inputType)
             .outputType(outputType)
             .build();

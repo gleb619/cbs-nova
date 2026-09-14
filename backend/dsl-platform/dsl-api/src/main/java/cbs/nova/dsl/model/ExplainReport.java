@@ -1,62 +1,39 @@
 package cbs.nova.dsl.model;
 
-import static cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN;
-
+import java.util.ArrayList;
+import java.util.List;
 import org.jspecify.annotations.NonNull;
 
+/**
+ * One node of an Explain call graph: a name, its own description/diagram, and links ({@code
+ * children}) to the {@link ExplainReport} of every entity it calls. Pure data — merging,
+ * budget-bounded truncation, and whole-graph markdown rendering live in {@link ExplainReports}.
+ */
 public record ExplainReport(
         @NonNull String name,
         @NonNull String description,
-        @NonNull String mermaid) {
+        @NonNull String mermaid,
+        @NonNull List<ExplainReport> children) {
+
+  public ExplainReport(@NonNull String name, @NonNull String description, @NonNull String mermaid) {
+    this(name, description, mermaid, List.of());
+  }
+
+  public ExplainReport {
+    children = List.copyOf(children);
+  }
 
   public static ExplainReport empty(String name) {
-    return new ExplainReport(name, "", "");
+    return new ExplainReport(name, "", "", List.of());
   }
 
-  public @NonNull ExplainReport merge(@NonNull ExplainReport other) {
-    return new ExplainReport(
-            this.name,
-            joinMarkdown(this.description, other.description),
-            joinMermaid(this.mermaid, other.mermaid));
+  public @NonNull ExplainReport withChildren(@NonNull List<ExplainReport> children) {
+    return new ExplainReport(name, description, mermaid, children);
   }
 
-  public @NonNull ExplainReport truncateTo(int budgetChars) {
-    if (budgetChars < 0) {
-      return new ExplainReport(name, "", "");
-    }
-    int totalLength = description.length() + mermaid.length();
-    if (totalLength <= budgetChars) {
-      return this;
-    }
-    int descriptionLimit = Math.min(description.length(), budgetChars);
-    String truncatedDescription = description.substring(0, descriptionLimit);
-    int remaining = budgetChars - descriptionLimit;
-    String truncatedMermaid = remaining <= 0
-            ? ""
-            : mermaid.substring(0, Math.min(mermaid.length(), remaining));
-    return new ExplainReport(name, truncatedDescription, truncatedMermaid);
-  }
-
-  private static @NonNull String joinMarkdown(@NonNull String first, @NonNull String second) {
-    if (first.isEmpty()) {
-      return second;
-    }
-    if (second.isEmpty() || EMPTY_MARKDOWN.equals(second)) {
-      return first;
-    }
-    if (EMPTY_MARKDOWN.equals(first)) {
-      return second;
-    }
-    return first + "\n\n" + second;
-  }
-
-  private static @NonNull String joinMermaid(@NonNull String first, @NonNull String second) {
-    if (first.isEmpty()) {
-      return second;
-    }
-    if (second.isEmpty()) {
-      return first;
-    }
-    return first + "\n" + second;
+  public @NonNull ExplainReport addChild(@NonNull ExplainReport child) {
+    var next = new ArrayList<>(children);
+    next.add(child);
+    return withChildren(next);
   }
 }

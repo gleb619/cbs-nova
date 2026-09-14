@@ -25,6 +25,9 @@ Execution: Generated -> `GlobalManager.getInstance()` -> Managers -> Runners -> 
 
 ### DSL Authoring (`dsl-examples`)
 - Compact sources: one `List<DslObject> define()`, no `class`/`package`/`public`.
+- Model imports are free-style: `<basePackage>.<ModelClass>`, `<basePackage>.<version>.<ModelClass>`,
+  `<version>.<ModelClass>`, or bare `<ModelClass>` all resolve via `ModelImportResolver` (rewritten to the
+  canonical model package before javac). See `docs/dsl/authoring.md` §Model imports.
 - `SourceCompiler` preprocesses into `cbs.nova.dsl.DslCompactSource` implementors, validates, `javac`s.
 - `GeneratedDslDefinitionProvider` aggregates `define()` via `ServiceLoader`. `DefinitionLoader`: dir with `.java`
   -> preprocessor; else classpath `ServiceLoader`.
@@ -138,10 +141,8 @@ Prefer `codegraph_*` over grep.
   `explain/`; same record carries `budgetChars`) and registers it into `DslConfig` in
   `dslApplicationRunner`; a user-defined `ExplainResourceResolver` bean wins. The pipe/stage explain
   chain lives in the starter (`core/pipe/ExplainDslPipe`, stages in `core/stage` such as
-  `ExplainBudgetStage`/`ExplainReportStage`). `GlobalManager.explain` / `explainHelper` dispatch
-  across process -> transaction -> helper -> function and enrich with Mermaid via
-  `generator.ExplainReportFactory`; helpers override `explain` for mode/arg-specific reports (see
-  `MathHelper`). Starter builds full 12-field `ExplainTraceReport` (package `cbs.nova.dsl.model/`);
+  `ExplainBudgetStage`/`ExplainReportStage`); helpers override `explain` for mode/arg-specific reports
+  (see `MathHelper`). Starter builds full 12-field `ExplainTraceReport` (package `cbs.nova.dsl.model/`);
   `DevDslRuntime` maps it to simple `ExplainReport` with one-line trace summary.
 
 ---

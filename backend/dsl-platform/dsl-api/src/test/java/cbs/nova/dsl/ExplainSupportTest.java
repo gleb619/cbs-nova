@@ -3,6 +3,7 @@ package cbs.nova.dsl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.model.ExplainReport;
+import cbs.nova.dsl.model.ExplainReports;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -79,13 +80,13 @@ class ExplainSupportTest {
   @Test
   void explainReportTruncateToLeavesShortReportUnchanged() {
     var report = new ExplainReport("n", "abc", "def");
-    assertThat(report.truncateTo(10)).isSameAs(report);
+    assertThat(ExplainReports.truncateTo(report, 10)).isSameAs(report);
   }
 
   @Test
   void explainReportTruncateToTruncatesDescriptionFirstThenDiagram() {
     var report = new ExplainReport("n", "description", "mermaidDiagram");
-    var truncated = report.truncateTo(15);
+    var truncated = ExplainReports.truncateTo(report, 15);
     assertThat(truncated.description()).isEqualTo("description");
     assertThat(truncated.mermaid()).isEqualTo("merm");
   }
@@ -93,7 +94,7 @@ class ExplainSupportTest {
   @Test
   void explainReportTruncateToHandlesNegativeBudget() {
     var report = new ExplainReport("n", "description", "mermaidDiagram");
-    var truncated = report.truncateTo(-1);
+    var truncated = ExplainReports.truncateTo(report, -1);
     assertThat(truncated.description()).isEmpty();
     assertThat(truncated.mermaid()).isEmpty();
   }
@@ -102,7 +103,7 @@ class ExplainSupportTest {
   void explainReportMergeCombinesDescriptionsAndDiagrams() {
     var left = new ExplainReport("n", "left-desc", "left-diagram");
     var right = new ExplainReport("n", "right-desc", "right-diagram");
-    var merged = left.merge(right);
+    var merged = ExplainReports.merge(left, right);
     assertThat(merged.description()).contains("left-desc").contains("right-desc");
     assertThat(merged.mermaid()).contains("left-diagram").contains("right-diagram");
   }

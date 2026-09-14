@@ -40,7 +40,7 @@ public final class GenerateCodeTask implements CompileTask {
     }
     var chunks = VirtualThreads.runAll(jobs);
     var modelRegistrySource = modelRegistryGenerator.generate(
-            options.srcDir(), options.outputDir(), options.targetPackage(),
+            options.srcDir(), options.outputDir(), options.targetPackage(), options.buildVersion(),
             options.useFileNameSubPackage());
 
     var sources = new ArrayList<GeneratedSource>();

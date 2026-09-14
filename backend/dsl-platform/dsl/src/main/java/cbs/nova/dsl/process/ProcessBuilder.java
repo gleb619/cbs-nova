@@ -11,6 +11,7 @@ import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.explain.DescriptorMarkdown;
 import cbs.nova.dsl.explain.ExplainResourceExplainer;
 import cbs.nova.dsl.model.ExplainReport;
+import cbs.nova.dsl.model.ExplainReports;
 import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.model.MapOutput;
 import cbs.nova.dsl.registry.DefaultParameterRegistry;
@@ -144,11 +145,14 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
     return List.of(build());
   }
 
+  // TODO: it's forbidden to `truncateTo`, without traverse a whole graph
+  @Deprecated(forRemoval = true)
   private @NonNull Function<ProcessContext<?>, Result<ExplainReport>> defaultExplain(
           @NonNull DslDescriptor descriptor) {
     return ctx -> Result.success(
-            new ExplainReport(name, DescriptorMarkdown.render(descriptor), "")
-                    .truncateTo(ExplainBudget.of(ctx)));
+            ExplainReports.truncateTo(
+                    new ExplainReport(name, DescriptorMarkdown.render(descriptor), ""),
+                    ExplainBudget.of(ctx)));
   }
 
   @SuppressWarnings("unchecked")
@@ -193,12 +197,19 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
           @NonNull List<ParameterDescriptor> parameters,
           boolean hasSideEffects,
           @Nullable String description) {
-    return DslDescriptor.builder()
+    var objectDescriptor = ProcessDescriptor.builder()
             .name(name)
-            .type(DslType.PROCESS)
             .description(description)
+            .version(version)
+            .taskQueue(taskQueue)
             .inputType(inputType)
             .outputType(outputType)
+            .hasCompensation(hasSideEffects)
+            .helperRefs(List.of())
+            .transactionRefs(List.of())
+            .build();
+    return DslDescriptor.builder()
+            .objectDescriptor(objectDescriptor)
             .hasSideEffects(hasSideEffects)
             .parameters(parameters)
             .taskQueue(taskQueue)

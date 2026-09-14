@@ -78,11 +78,11 @@ public final class SourceCompiler {
     var dslPackages = packageResolver.resolveDslPackages(
             dslSources, basePackage, version, useFileNameSubPackage);
     var modelPackages = packageResolver.resolveModelPackages(
-            dslSources, modelSources, basePackage, dslPackages);
+            dslSources, modelSources, basePackage, version, dslPackages);
     var modelClassNames = packageResolver.modelClassNames(modelSources);
 
-    var dslResults = preprocessDslSources(dslSources, dslPackages, basePackage, modelPackages,
-            modelClassNames, packageResolver);
+    var dslResults = preprocessDslSources(dslSources, dslPackages, basePackage, version,
+            modelPackages, modelClassNames, packageResolver);
     if (dslResults.isEmpty()) {
       log.atLevel(Level.DEBUG)
               .log(() -> "[SourceCompiler] No valid compact DSL sources found under %s"
@@ -90,7 +90,7 @@ public final class SourceCompiler {
       return List.of();
     }
 
-    var modelResults = preprocessModelSources(modelSources, modelPackages, basePackage,
+    var modelResults = preprocessModelSources(modelSources, modelPackages, basePackage, version,
             modelClassNames, packageResolver);
 
     var preprocessedDsl = writePreprocessedSources(dslResults, outputDir);
@@ -126,6 +126,7 @@ public final class SourceCompiler {
           List<Path> dslSources,
           Map<Path, String> dslPackages,
           String basePackage,
+          String version,
           Map<String, String> modelPackages,
           Set<String> modelClassNames,
           SourcePackageResolver packageResolver) throws IOException {
@@ -137,7 +138,7 @@ public final class SourceCompiler {
           var raw = Files.readString(source);
           var targetPackage = dslPackages.get(source);
           var rewritten = packageResolver.rewriteModelImports(
-                  raw, basePackage, modelPackages, modelClassNames);
+                  raw, basePackage, version, modelPackages, modelClassNames);
           var result = dslPreprocessor.preprocess(fileName, rewritten, targetPackage);
           return new PreprocessResult(
                   result.className(), fileName, result.preprocessedSource(), targetPackage);
@@ -154,6 +155,7 @@ public final class SourceCompiler {
           List<Path> modelSources,
           Map<String, String> modelPackages,
           String basePackage,
+          String version,
           Set<String> modelClassNames,
           SourcePackageResolver packageResolver) throws IOException {
     var tasks = new ArrayList<Callable<PreprocessResult>>();
@@ -165,7 +167,7 @@ public final class SourceCompiler {
           var raw = Files.readString(source);
           var targetPackage = modelPackages.getOrDefault(className, basePackage);
           var rewritten = packageResolver.rewriteModelImports(
-                  raw, basePackage, modelPackages, modelClassNames);
+                  raw, basePackage, version, modelPackages, modelClassNames);
           var result = modelPreprocessor.preprocess(fileName, rewritten, targetPackage);
           return new PreprocessResult(
                   result.className(), fileName, result.preprocessedSource(), targetPackage);

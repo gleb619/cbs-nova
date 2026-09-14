@@ -14,6 +14,7 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.explain.DescriptorMarkdown;
 import cbs.nova.dsl.explain.ExplainResourceExplainer;
 import cbs.nova.dsl.model.ExplainReport;
+import cbs.nova.dsl.model.ExplainReports;
 import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.model.MapOutput;
 import cbs.nova.dsl.registry.DefaultParameterRegistry;
@@ -131,11 +132,15 @@ public final class FunctionBuilder<I, O> {
                     name, parameters, inputType, outputType, null);
   }
 
+  // TODO: it's forbidden to `truncateTo`, without traverse a whole graph
+  @Deprecated(forRemoval = true)
   private @NonNull Function<FunctionContext<?>, Result<ExplainReport>> defaultExplain(
           @NonNull Supplier<DslDescriptor> effectiveDescriptor) {
     return ctx -> Result.success(
-            new ExplainReport(name, DescriptorMarkdown.render(effectiveDescriptor.get()), "")
-                    .truncateTo(ExplainBudget.of(ctx)));
+            ExplainReports.truncateTo(
+                    new ExplainReport(name, DescriptorMarkdown.render(effectiveDescriptor.get()),
+                            ""),
+                    ExplainBudget.of(ctx)));
   }
 
   @SuppressWarnings("unchecked")
@@ -170,12 +175,14 @@ public final class FunctionBuilder<I, O> {
           @Nullable Class<?> inputType,
           @Nullable Class<?> outputType,
           @Nullable String description) {
-    return DslDescriptor.builder()
+    var objectDescriptor = FunctionDescriptor.builder()
             .name(name)
-            .type(DslType.FUNCTION)
             .description(description)
             .inputType(inputType)
             .outputType(outputType)
+            .build();
+    return DslDescriptor.builder()
+            .objectDescriptor(objectDescriptor)
             .hasSideEffects(false)
             .parameters(parameters)
             .taskQueue(DEFAULT_TASK_QUEUE)

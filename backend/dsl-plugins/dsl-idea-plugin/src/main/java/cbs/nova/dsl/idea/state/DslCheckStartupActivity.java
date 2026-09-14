@@ -1,5 +1,6 @@
 package cbs.nova.dsl.idea.state;
 
+import cbs.nova.dsl.idea.sync.DslSourceRootExcluder;
 import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ProjectUtil;
@@ -28,6 +29,9 @@ public final class DslCheckStartupActivity implements ProjectActivity {
     });
 
     DslProjectStateService.getInstance(project).setActiveDslProject(isDslProject.get());
+    if (isDslProject.get()) {
+      new DslSourceRootExcluder().excludeCompactSources(project);
+    }
     return Unit.INSTANCE;
   }
 

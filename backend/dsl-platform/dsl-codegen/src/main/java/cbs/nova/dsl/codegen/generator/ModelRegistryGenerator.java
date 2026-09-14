@@ -63,6 +63,7 @@ public final class ModelRegistryGenerator {
           @NonNull Path srcDir,
           @NonNull Path outputDir,
           String targetPackage,
+          String version,
           boolean useFileNameSubPackage) throws IOException {
     var dslDir = srcDir.resolve(CompilerConstants.DSL_FOLDER);
     var modelDir = srcDir.resolve(CompilerConstants.MODELS_FOLDER);
@@ -71,9 +72,9 @@ public final class ModelRegistryGenerator {
 
     var packageResolver = sourcePackageResolver;
     var dslPackages = packageResolver.resolveDslPackages(
-            dslSources, targetPackage, null, useFileNameSubPackage);
+            dslSources, targetPackage, version, useFileNameSubPackage);
     var modelPackages = packageResolver.resolveModelPackages(
-            dslSources, modelSources, targetPackage, dslPackages);
+            dslSources, modelSources, targetPackage, version, dslPackages);
 
     List<String> typeNames = collectTypeNames(modelSources, modelPackages);
 

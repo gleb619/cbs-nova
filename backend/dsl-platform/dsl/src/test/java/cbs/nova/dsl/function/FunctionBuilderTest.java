@@ -246,12 +246,14 @@ class FunctionBuilderTest {
 
   @Test
   void describeUsesCustomDescriptorSupplierWhenProvided() {
-    var custom = DslDescriptor.builder()
+    var objectDescriptor = FunctionDescriptor.builder()
             .name("CustomDescFn")
-            .type(DslType.FUNCTION)
             .description("custom-desc")
             .inputType(String.class)
             .outputType(Integer.class)
+            .build();
+    var custom = DslDescriptor.builder()
+            .objectDescriptor(objectDescriptor)
             .hasSideEffects(false)
             .parameters(List.of())
             .taskQueue(null)
@@ -268,12 +270,14 @@ class FunctionBuilderTest {
 
   @Test
   void describeExplainReturnsMarkdown() {
-    var custom = DslDescriptor.builder()
+    var greeterDescriptor = FunctionDescriptor.builder()
             .name("GreeterFn")
-            .type(DslType.FUNCTION)
             .description("Greets the caller.")
             .inputType(String.class)
             .outputType(String.class)
+            .build();
+    var custom = DslDescriptor.builder()
+            .objectDescriptor(greeterDescriptor)
             .hasSideEffects(true)
             .parameters(List.of())
             .taskQueue(null)

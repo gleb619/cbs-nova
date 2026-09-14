@@ -40,6 +40,33 @@ List<DslObject> define() {
 
 The module build configuration is described in [Compile-time code generation](codegen.md).
 
+## Model imports
+
+Model classes live under `src/models/` (one model class per file). DSL sources (and other model sources) may import
+them in any of the following styles — all resolve to the same canonical generated package
+`<basePackage>.<version>` (or the DSL-file-specific versioned package when `useFileNameSubPackage=true`):
+
+```java
+import <basePackage>.<ModelClass>.*;            // e.g. cbs.nova.dslexamples.BatchModels.*
+import <basePackage>.<version>.<ModelClass>.*;  // e.g. cbs.nova.dslexamples.v1.BatchModels.*
+import <version>.<ModelClass>.*;                // e.g. v1.BatchModels.*
+import <ModelClass>.*;                          // e.g. BatchModels.*
+```
+
+Member imports work in every style, e.g. `import cbs.nova.dslexamples.v1.BatchModels.BatchIn;` or bare
+`import BatchModels.BatchIn;`. Resolution rules:
+
+- `<basePackage>.<segment>...` is always interpreted as `BASE`/`BASE_VERSION` first: if `<segment>` is a model class
+  name it is treated as `BASE` even when it also equals the version segment.
+- `VERSION`/`BASE_VERSION` styles require a configured (non-blank) `buildVersion`; a numeric version like `1`
+  matches its normalized segment (`v1`).
+- A bare `import <ModelClass>...` fails fast when no `basePackage` is configured and more than one model file
+  exists — qualify the import.
+- Imports that match no known model class are left untouched.
+
+Every matched import is rewritten to the model's canonical resolved package before compilation, so compiled output
+is identical regardless of the authoring style.
+
 ## Builder API
 
 ### Process

@@ -8,9 +8,12 @@ import java.util.Set;
 
 public final class DslSourceRootSyncContributor {
 
+  private final DslSourceRootExcluder excluder = new DslSourceRootExcluder();
+
   public void onSyncFinished(Project project, Set<Path> dirs) {
     if (!dirs.isEmpty()) {
       DslSyncedDirs.getInstance(project).replace(dirs);
+      excluder.excludeDiscovered(project, dirs);
     }
   }
 }

@@ -210,18 +210,23 @@ class TransactionBuilderTest {
 
   @Test
   void describeUsesCustomDescriptorSupplierWhenProvided() {
-    var custom = DslDescriptor.builder()
+    var objectDescriptor = TransactionDescriptor.builder()
             .name("PayTx")
-            .type(DslType.TRANSACTION)
             .description("custom-desc")
+            .version("v9")
+            .taskQueue("custom-queue")
             .inputType(String.class)
             .outputType(String.class)
+            .helperRefs(List.of())
+            .startToCloseTimeout(Duration.ofSeconds(1))
+            .build();
+    var custom = DslDescriptor.builder()
+            .objectDescriptor(objectDescriptor)
             .hasSideEffects(false)
             .parameters(List.of())
             .taskQueue("custom-queue")
             .version("v9")
             .startToCloseTimeout(Duration.ofSeconds(1))
-            .heartbeatTimeout(null)
             .build();
     var tx = Dsl.transaction("PayTx")
             .execute(ctx -> Result.success(null))
@@ -256,18 +261,23 @@ class TransactionBuilderTest {
 
   @Test
   void describeExplainReturnsMarkdown() {
-    var custom = DslDescriptor.builder()
+    var paymentDescriptor = TransactionDescriptor.builder()
             .name("PayTx")
-            .type(DslType.TRANSACTION)
             .description("Processes a payment.")
+            .version("v1")
+            .taskQueue("PayTx-queue")
             .inputType(String.class)
             .outputType(String.class)
+            .helperRefs(List.of())
+            .startToCloseTimeout(Duration.ofSeconds(30))
+            .build();
+    var custom = DslDescriptor.builder()
+            .objectDescriptor(paymentDescriptor)
             .hasSideEffects(true)
             .parameters(List.of())
             .taskQueue("PayTx-queue")
             .version("v1")
             .startToCloseTimeout(Duration.ofSeconds(30))
-            .heartbeatTimeout(null)
             .build();
     var tx = Dsl.transaction("PayTx")
             .input(String.class)

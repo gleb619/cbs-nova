@@ -1,4 +1,6 @@
 package cbs.nova.starter;
+import cbs.nova.dsl.DslObject;
+import cbs.nova.dsl.model.ObjectDescriptor;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -344,6 +346,8 @@ class DslIntrospectionResourceTest {
             .andExpect(jsonPath("$.total").value(1));
   }
 
+  //TODO: change inline descriptor creation
+  @Deprecated(forRemoval = true)
   private void registerSampleEntities() {
     GlobalManager.globalManager().registerTransaction(
             Dsl.transaction("SampleTransaction")
@@ -354,11 +358,32 @@ class DslIntrospectionResourceTest {
             .executeLogic(ctx -> Result.success("ok"))
             .explainLogic(ctx -> Result.success(new ExplainReport("sampleFunction", "test", "")))
             .descriptor(() -> DslDescriptor.builder()
-                    .name("sampleFunction")
-                    .type(DslType.FUNCTION)
-                    .description("A greeting function")
-                    .inputType(String.class)
-                    .outputType(String.class)
+                    .objectDescriptor(new ObjectDescriptor() {
+                      @Override
+                      public String name() {
+                        return "sampleFunction";
+                      }
+
+                      @Override
+                      public DslObject.DslType type() {
+                        return DslType.FUNCTION;
+                      }
+
+                      @Override
+                      public String description() {
+                        return "A greeting function";
+                      }
+
+                      @Override
+                      public Class<?> inputType() {
+                        return String.class;
+                      }
+
+                      @Override
+                      public Class<?> outputType() {
+                        return String.class;
+                      }
+                    })
                     .hasSideEffects(false)
                     .parameters(List.of())
                     .taskQueue(null)

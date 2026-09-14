@@ -9,6 +9,7 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.explain.DescriptorMarkdown;
 import cbs.nova.dsl.explain.ExplainResourceExplainer;
 import cbs.nova.dsl.model.ExplainReport;
+import cbs.nova.dsl.model.ExplainReports;
 import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.model.MapOutput;
 import cbs.nova.dsl.model.RetryPolicy;
@@ -175,11 +176,15 @@ public final class TransactionBuilder<I, O> {
                     heartbeatTimeout, null);
   }
 
+  // TODO: it's forbidden to `truncateTo`, without traverse a whole graph
+  @Deprecated(forRemoval = true)
   private @NonNull Function<TransactionContext<?>, Result<ExplainReport>> defaultExplain(
           @NonNull Supplier<DslDescriptor> effectiveDescriptor) {
     return ctx -> Result.success(
-            new ExplainReport(name, DescriptorMarkdown.render(effectiveDescriptor.get()), "")
-                    .truncateTo(ExplainBudget.of(ctx)));
+            ExplainReports.truncateTo(
+                    new ExplainReport(name, DescriptorMarkdown.render(effectiveDescriptor.get()),
+                            ""),
+                    ExplainBudget.of(ctx)));
   }
 
   @SuppressWarnings("unchecked")
@@ -227,12 +232,21 @@ public final class TransactionBuilder<I, O> {
           @Nullable RetryPolicy retryPolicy,
           @Nullable Duration heartbeatTimeout,
           @Nullable String description) {
-    return DslDescriptor.builder()
+    var objectDescriptor = TransactionDescriptor.builder()
             .name(name)
-            .type(DslType.TRANSACTION)
             .description(description)
+            .version(version)
+            .taskQueue(taskQueue)
             .inputType(inputType)
             .outputType(outputType)
+            .hasCompensation(hasCompensation)
+            .helperRefs(List.of())
+            .startToCloseTimeout(startToCloseTimeout)
+            .retryPolicy(retryPolicy)
+            .heartbeatTimeout(heartbeatTimeout)
+            .build();
+    return DslDescriptor.builder()
+            .objectDescriptor(objectDescriptor)
             .hasSideEffects(true)
             .parameters(parameters != null ? parameters : List.of())
             .taskQueue(taskQueue)

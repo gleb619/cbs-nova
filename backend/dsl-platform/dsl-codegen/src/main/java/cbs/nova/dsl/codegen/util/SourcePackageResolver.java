@@ -6,20 +6,17 @@ import org.jspecify.annotations.NonNull;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 public final class SourcePackageResolver {
 
   private final DslPackageNameResolver packageNameResolver;
+  private final ModelImportResolver modelImportResolver;
 
   public @NonNull Map<Path, String> resolveDslPackages(
           @NonNull List<Path> dslSources,
@@ -39,17 +36,18 @@ public final class SourcePackageResolver {
           @NonNull List<Path> dslSources,
           @NonNull List<Path> modelSources,
           String basePackage,
+          String version,
           @NonNull Map<Path, String> dslPackages) throws IOException {
     var packages = new HashMap<String, String>();
-    if (!hasPackage(basePackage)) {
+    var modelNames = modelClassNames(modelSources);
+    if (modelNames.isEmpty()) {
       return packages;
     }
-    var modelNames = modelClassNames(modelSources);
     for (var dslSource : dslSources) {
       var raw = Files.readString(dslSource);
       var dslPackage = dslPackages.get(dslSource);
-      for (var importedModel : extractImportedModelClasses(raw, basePackage, modelNames)) {
-        packages.putIfAbsent(importedModel, dslPackage);
+      for (var importedModel : modelImportResolver.extract(raw, basePackage, version, modelNames)) {
+        packages.putIfAbsent(importedModel.modelClass(), dslPackage);
       }
     }
     return packages;
@@ -64,53 +62,14 @@ public final class SourcePackageResolver {
   public @NonNull String rewriteModelImports(
           @NonNull String source,
           String basePackage,
+          String version,
           @NonNull Map<String, String> modelPackages,
           @NonNull Set<String> modelClassNames) {
-    if (!hasPackage(basePackage) || modelPackages.isEmpty() || modelClassNames.isEmpty()) {
+    if (modelPackages.isEmpty() || modelClassNames.isEmpty()) {
       return source;
     }
-    var escapedBase = Pattern.quote(basePackage);
-    var classNames = modelClassNames.stream()
-            .sorted(Comparator.comparingInt(String::length).reversed())
-            .map(Pattern::quote)
-            .collect(Collectors.joining("|"));
-    var pattern = Pattern.compile(
-            "(?m)^(\\s*import\\s+)" + escapedBase + "\\.(" + classNames + ")(\\..*;\\s*)$");
-    var matcher = pattern.matcher(source);
-    var sb = new StringBuilder();
-    while (matcher.find()) {
-      var className = matcher.group(2);
-      var newPackage = modelPackages.get(className);
-      if (newPackage == null || newPackage.isBlank()) {
-        matcher.appendReplacement(sb, Matcher.quoteReplacement(matcher.group(0)));
-        continue;
-      }
-      matcher.appendReplacement(sb, Matcher.quoteReplacement(
-              matcher.group(1) + newPackage + "." + className + matcher.group(3)));
-    }
-    matcher.appendTail(sb);
-    return sb.toString();
-  }
-
-  private static Set<String> extractImportedModelClasses(
-          @NonNull String source,
-          String basePackage,
-          Set<String> modelClassNames) {
-    if (!hasPackage(basePackage) || modelClassNames.isEmpty()) {
-      return Set.of();
-    }
-    var escapedBase = Pattern.quote(basePackage);
-    var classNames = modelClassNames.stream()
-            .map(Pattern::quote)
-            .collect(Collectors.joining("|"));
-    var pattern = Pattern.compile(
-            "(?m)^\\s*import\\s+" + escapedBase + "\\.(" + classNames + ")\\..*;\\s*$");
-    var result = new HashSet<String>();
-    var matcher = pattern.matcher(source);
-    while (matcher.find()) {
-      result.add(matcher.group(1));
-    }
-    return result;
+    return modelImportResolver.rewrite(
+            source, basePackage, version, modelPackages, modelClassNames);
   }
 
   private static @NonNull String className(@NonNull String fileName) {
@@ -118,10 +77,6 @@ public final class SourcePackageResolver {
       throw new IllegalArgumentException("Source file must end with .java: " + fileName);
     }
     return fileName.substring(0, fileName.length() - ".java".length());
-  }
-
-  private static boolean hasPackage(String targetPackage) {
-    return targetPackage != null && !targetPackage.isBlank();
   }
 
 }

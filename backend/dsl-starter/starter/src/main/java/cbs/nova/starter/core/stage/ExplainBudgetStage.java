@@ -2,11 +2,14 @@ package cbs.nova.starter.core.stage;
 
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.model.ExplainReport;
+import cbs.nova.dsl.model.ExplainReports;
 import cbs.nova.dsl.model.ExplainTraceReport;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import org.jspecify.annotations.NonNull;
 
+//TODO: class needs to be reworked due to changes in ExplainReport
+@Deprecated(forRemoval = true)
 public final class ExplainBudgetStage implements DslPipeStage {
 
   private final int budgetChars;
@@ -26,11 +29,12 @@ public final class ExplainBudgetStage implements DslPipeStage {
     if (report == null) {
       return result;
     }
-    var bounded = new ExplainReport(
-            report.name(),
-            report.description(),
-            report.mermaidDiagram() != null ? report.mermaidDiagram() : "")
-            .truncateTo(budgetChars);
+    var bounded = ExplainReports.truncateTo(
+            new ExplainReport(
+                    report.name(),
+                    report.description(),
+                    report.mermaidDiagram() != null ? report.mermaidDiagram() : ""),
+            budgetChars);
     var truncated = new ExplainTraceReport(
             report.name(),
             bounded.description(),

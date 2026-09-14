@@ -91,6 +91,38 @@ class CompileServiceTest {
   }
 
   @Test
+  void compilesDslWithVersionedModelImportThroughGradle() {
+    var dsl = """
+            import cbs.nova.dsl.*;
+            import com.example.dslbuild.v1.SampleModels.*;
+            import java.util.List;
+
+            List<DslObject> define() {
+              return Dsl.process("SampleProcess")
+                  .input(SampleIn.class)
+                  .output(String.class)
+                  .execute(ctx -> Result.success("Hello from DSL: " + ctx.body()))
+                  .buildList();
+            }
+            """;
+    var models = """
+            public class SampleModels {
+              public record SampleIn(String value) {}
+            }
+            """;
+    var request = new CompileRequest(
+            "v1", "com.example.dslbuild", null, null, null, null,
+            Map.of("dsl/SampleDsl.java", dsl, "models/SampleModels.java", models));
+
+    var result = service().compile(request);
+
+    assertThat(result.success()).isTrue();
+    assertThat(result.diagnostics()).isEmpty();
+    assertThat(result.generatedFiles())
+            .anyMatch(path -> path.endsWith("SampleModels.java"));
+  }
+
+  @Test
   void rejectsRequestRepoUrlBeforeCloning() {
     var request = new CompileRequest(
             "v1", null, null, null, "file:///etc/passwd", null,

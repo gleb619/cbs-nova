@@ -4,6 +4,7 @@ import static cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN;
 
 import cbs.nova.dsl.explain.ExplainBudget;
 import cbs.nova.dsl.model.ExplainReport;
+import cbs.nova.dsl.model.ExplainReports;
 import org.jspecify.annotations.NonNull;
 
 @FunctionalInterface
@@ -47,6 +48,8 @@ public interface Executable<IN, OUT>
     return defaultReport(this, ctx);
   }
 
+  // TODO: it's forbidden to `truncateTo`, without traverse a whole graph
+  @Deprecated(forRemoval = true)
   private static @NonNull ExplainReport defaultReport(
           @NonNull Executable<?, ?> executable, @NonNull Context<?> ctx) {
     var descriptor = executable.describe();
@@ -59,7 +62,7 @@ public interface Executable<IN, OUT>
             name,
             EMPTY_MARKDOWN.equals(markdown) ? derivedDescription(descriptor) : markdown,
             "");
-    return report.truncateTo(ExplainBudget.of(ctx));
+    return ExplainReports.truncateTo(report, ExplainBudget.of(ctx));
   }
 
   private static @NonNull String derivedDescription(@NonNull ExecutableDescriptor descriptor) {
@@ -67,11 +70,8 @@ public interface Executable<IN, OUT>
     var output = descriptor.outputType() != null
             ? descriptor.outputType().getSimpleName()
             : "untyped";
-    var sideEffects = descriptor.hasSideEffects() ? "has side effects" : "is side-effect free";
-    var parameters = descriptor.parameters().isEmpty()
-            ? "declares no parameters"
-            : "declares " + descriptor.parameters().size() + " parameter(s)";
-    return "Executable that maps `" + input + "` to `" + output + "`, " + sideEffects + " and "
-            + parameters + ".";
+    var sideEffects = descriptor.hasSideEffects() ? "has side effects" : "side-effect free";
+    return "Helper `" + descriptor.name() + "`: input `" + input + "`, output `" + output + "`, "
+            + sideEffects;
   }
 }

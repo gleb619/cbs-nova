@@ -1,4 +1,5 @@
 package cbs.nova.starter.service;
+import cbs.nova.dsl.model.ObjectDescriptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -306,6 +307,8 @@ class DslRuntimeServiceTest {
   }
 
   @Test
+  //TODO: change inline descriptor creation
+  @Deprecated(forRemoval = true)
   void previewCoercesMapBodyIntoTypedInputRecord() {
     // Register a synthetic process directly so GlobalManager lookup resolves its inputType
     // without dragging in helper-instance resolution.
@@ -323,8 +326,32 @@ class DslRuntimeServiceTest {
               .previewLogic(ctx -> Result.success("ok"))
               .explainLogic(ctx -> Result.success(new ExplainReport("Synthetic", "test", "")))
               .descriptor(DslDescriptor.builder()
-                      .name("Synthetic")
-                      .type(DslObject.DslType.PROCESS)
+                      .objectDescriptor(new ObjectDescriptor() {
+                        @Override
+                        public String name() {
+                          return "Synthetic";
+                        }
+
+                        @Override
+                        public DslObject.DslType type() {
+                          return DslObject.DslType.PROCESS;
+                        }
+
+                        @Override
+                        public String description() {
+                          return null;
+                        }
+
+                        @Override
+                        public Class<?> inputType() {
+                          return null;
+                        }
+
+                        @Override
+                        public Class<?> outputType() {
+                          return null;
+                        }
+                      })
                       .hasSideEffects(false)
                       .parameters(List.of())
                       .taskQueue("default")
@@ -359,6 +386,8 @@ class DslRuntimeServiceTest {
   }
 
   @Test
+  //TODO: change inline descriptor creation
+  @Deprecated(forRemoval = true)
   void previewLeavesNonMapBodyUntouched() {
     GlobalManager.globalManager().resetForTests();
     try {
@@ -374,8 +403,32 @@ class DslRuntimeServiceTest {
               .previewLogic(ctx -> Result.success("ok"))
               .explainLogic(ctx -> Result.success(new ExplainReport("Synthetic", "test", "")))
               .descriptor(DslDescriptor.builder()
-                      .name("Synthetic")
-                      .type(DslObject.DslType.PROCESS)
+                      .objectDescriptor(new ObjectDescriptor() {
+                        @Override
+                        public String name() {
+                          return "Synthetic";
+                        }
+
+                        @Override
+                        public DslObject.DslType type() {
+                          return DslObject.DslType.PROCESS;
+                        }
+
+                        @Override
+                        public String description() {
+                          return null;
+                        }
+
+                        @Override
+                        public Class<?> inputType() {
+                          return null;
+                        }
+
+                        @Override
+                        public Class<?> outputType() {
+                          return null;
+                        }
+                      })
                       .hasSideEffects(false)
                       .parameters(List.of())
                       .taskQueue("default")

@@ -145,6 +145,11 @@ class DescriptorFactoryTest {
       }
 
       @Override
+      public DslObject.DslType type() {
+        return DslObject.DslType.OTHER;
+      }
+
+      @Override
       public Class<?> inputType() {
         return String.class;
       }
@@ -156,6 +161,7 @@ class DescriptorFactoryTest {
     };
     var dsl = desc.toDslDescriptor();
     assertThat(dsl.name()).isEqualTo("O");
+    assertThat(dsl.type()).isEqualTo(DslObject.DslType.OTHER);
     assertThat(dsl.inputType()).isEqualTo(String.class);
     assertThat(dsl.outputType()).isEqualTo(Integer.class);
     assertThat(dsl.objectDescriptor()).isSameAs(desc);

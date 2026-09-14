@@ -11,19 +11,21 @@ import org.jspecify.annotations.Nullable;
 @Builder
 public record FunctionDescriptor(
         @NonNull String name,
+        @Nullable String description,
         @Nullable Class<?> inputType,
         @Nullable Class<?> outputType) implements ObjectDescriptor {
 
   @Override
+  public DslType type() {
+    return DslType.FUNCTION;
+  }
+
+  @Override
   public DslDescriptor toDslDescriptor() {
     return DslDescriptor.builder()
-            .name(name)
-            .type(DslType.FUNCTION)
-            .inputType(inputType)
-            .outputType(outputType)
+            .objectDescriptor(this)
             .hasSideEffects(false)
             .parameters(List.of())
-            .objectDescriptor(this)
             .build();
   }
 

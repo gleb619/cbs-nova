@@ -12,6 +12,7 @@ import cbs.nova.dsl.codegen.util.AstExtractor;
 import cbs.nova.dsl.codegen.util.CodeWriter;
 import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
 import cbs.nova.dsl.codegen.util.Json;
+import cbs.nova.dsl.codegen.util.ModelImportResolver;
 import cbs.nova.dsl.codegen.util.ModelTypeExtractor;
 import cbs.nova.dsl.codegen.util.SourcePackageResolver;
 import cbs.nova.dsl.config.DescriptorFactory;
@@ -49,7 +50,9 @@ public final class CompileConfig implements SingletonSupport {
   }
 
   public @NonNull SourcePackageResolver sourcePackageResolver() {
-    return singleton(() -> new SourcePackageResolver(new DslPackageNameResolver(codegenNaming())));
+    return singleton(() -> new SourcePackageResolver(
+            new DslPackageNameResolver(codegenNaming()),
+            new ModelImportResolver(codegenNaming())));
   }
 
   public @NonNull SourceCompiler sourceCompiler() {
@@ -139,7 +142,8 @@ public final class CompileConfig implements SingletonSupport {
     return singleton(() -> {
       var codegenNaming = codegenNaming(defaultBasePackage);
       var packageNameResolver = new DslPackageNameResolver(codegenNaming);
-      var sourcePackageResolver = new SourcePackageResolver(packageNameResolver);
+      var sourcePackageResolver = new SourcePackageResolver(
+              packageNameResolver, new ModelImportResolver(codegenNaming));
       var sourceCompiler = new SourceCompiler(
               definitionProviderGenerator(),
               codeWriter(),
@@ -160,7 +164,8 @@ public final class CompileConfig implements SingletonSupport {
               semanticValidator(),
               helperRegistry(),
               codegenNaming,
-              dslPreprocessor());
+              dslPreprocessor(),
+              sourcePackageResolver);
     });
   }
 

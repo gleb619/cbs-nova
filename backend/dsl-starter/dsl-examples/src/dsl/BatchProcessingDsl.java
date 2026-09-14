@@ -1,7 +1,7 @@
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.Result;
-import cbs.nova.dslexamples.BatchModels.*;
+import cbs.nova.dslexamples.v1.BatchModels.*;
 import java.util.List;
 import java.util.stream.Collectors;
 

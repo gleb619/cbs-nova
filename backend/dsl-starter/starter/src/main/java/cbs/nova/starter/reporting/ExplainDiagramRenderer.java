@@ -21,6 +21,8 @@ import java.util.Map;
  * demand so the runtime does not need to know about diagram formats.
  */
 @Service
+//TODO: class needs to be reworked due to changes in ExplainReport
+@Deprecated(forRemoval = true)
 public class ExplainDiagramRenderer {
 
   private final DiagramGenerator mermaid = new MermaidDiagramGenerator();

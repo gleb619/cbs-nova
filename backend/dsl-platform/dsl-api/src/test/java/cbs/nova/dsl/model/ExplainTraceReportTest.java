@@ -20,12 +20,34 @@ class ExplainTraceReportTest {
     Map<String, Integer> counts = Map.of("log", 2);
     var executable = new ExecutableDescriptor(
             "echo", "Echoes", String.class, String.class, false, null, List.of());
+    var objectDescriptor = new ObjectDescriptor() {
+      @Override
+      public String name() {
+        return "echo";
+      }
+
+      @Override
+      public DslObject.DslType type() {
+        return DslObject.DslType.PROCESS;
+      }
+
+      @Override
+      public String description() {
+        return "Echoes";
+      }
+
+      @Override
+      public Class<?> inputType() {
+        return String.class;
+      }
+
+      @Override
+      public Class<?> outputType() {
+        return String.class;
+      }
+    };
     var dsl = DslDescriptor.builder()
-            .name("echo")
-            .type(DslObject.DslType.PROCESS)
-            .description("Echoes")
-            .inputType(String.class)
-            .outputType(String.class)
+            .objectDescriptor(objectDescriptor)
             .hasSideEffects(false)
             .parameters(List.of())
             .taskQueue(null)

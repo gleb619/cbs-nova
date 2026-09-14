@@ -3,49 +3,71 @@ package cbs.nova.starter.core.stage;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
+import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.model.ObjectDescriptor;
 import cbs.nova.starter.model.PreviewModels.PreviewCacheKey;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.json.JsonMapper;
-
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+import tools.jackson.databind.json.JsonMapper;
+import cbs.nova.starter.json.DslDescriptorMixIn;
 
 final class PreviewCacheKeyBuilder {
 
-  private final JsonMapper jsonMapper = JsonMapper.builder().build();
+  private final JsonMapper jsonMapper = DslDescriptorMixIn.mapper();
 
   PreviewCacheKey build(@NonNull String name, @NonNull Context<?> ctx) {
     GlobalManager gm = GlobalManager.globalManager();
     Optional<DslDescriptor> descriptor = gm.describeProcess(name)
             .or(() -> gm.describeTransaction(name))
-            .or(() -> gm.describeHelper(name)
-                    .map(helper -> DslDescriptor.builder()
-                            .name(name)
-                            .type(DslObject.DslType.FUNCTION)
-                            .description(helper.description())
-                            .inputType(helper.inputType())
-                            .outputType(helper.outputType())
-                            .hasSideEffects(helper.hasSideEffects())
-                            .parameters(helper.parameters())
-                            .taskQueue(null) // helpers are not Temporal-scheduled; no task queue
-                                             // applies (dropped from hash by non_null inclusion)
-                            .version(null) // version is a Temporal workflow/activity concept;
-                                           // helpers carry no version (dropped from hash by
-                                           // non_null inclusion)
-                            .startToCloseTimeout(null) // helpers run in-process; no Temporal
-                                                       // activity start-to-close timeout applies
-                                                       // (dropped from hash by non_null inclusion)
-                            .heartbeatTimeout(null) // helpers run in-process; no Temporal activity
-                                                    // heartbeat applies (dropped from hash by
-                                                    // non_null inclusion)
-                            .build()));
+            .or(() -> gm.describeHelper(name).map(helper -> helperToDescriptor(name, helper)));
     String dslHash = descriptor.map(this::dslDescriptorHash).orElse("");
     String inputHash = inputHash(ctx.body());
     return new PreviewCacheKey(name, dslHash, inputHash);
+  }
+
+  //TODO: find another way for descriptor creation, add to a misc-codegen some new method instead
+  @Deprecated(forRemoval = true)
+  private DslDescriptor helperToDescriptor(String name, ExecutableDescriptor helper) {
+    var objectDescriptor = new ObjectDescriptor() {
+      @Override
+      public String name() {
+        return name;
+      }
+
+      @Override
+      public DslObject.DslType type() {
+        return DslObject.DslType.FUNCTION;
+      }
+
+      @Override
+      public String description() {
+        return helper.description();
+      }
+
+      @Override
+      public Class<?> inputType() {
+        return helper.inputType();
+      }
+
+      @Override
+      public Class<?> outputType() {
+        return helper.outputType();
+      }
+    };
+    return DslDescriptor.builder()
+            .objectDescriptor(objectDescriptor)
+            .hasSideEffects(helper.hasSideEffects())
+            .parameters(helper.parameters())
+            .taskQueue(null)
+            .version(null)
+            .startToCloseTimeout(null)
+            .heartbeatTimeout(null)
+            .build();
   }
 
   private @NonNull String dslDescriptorHash(@NonNull DslDescriptor descriptor) {

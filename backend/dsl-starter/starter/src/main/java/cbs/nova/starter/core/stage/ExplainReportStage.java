@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+//TODO: class needs to be reworked due to changes in ExplainReport
+@Deprecated(forRemoval = true)
 public final class ExplainReportStage implements DslPipeStage {
 
   private final ExplainDiagramRenderer diagramRenderer;

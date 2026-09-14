@@ -6,6 +6,7 @@ import cbs.nova.dsl.codegen.CompilerConstants;
 import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.preprocessor.DslPreprocessor;
 import cbs.nova.dsl.codegen.util.DslPackageNameResolver;
+import cbs.nova.dsl.codegen.util.SourcePackageResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -15,7 +16,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 @Slf4j
@@ -24,6 +27,7 @@ public final class PreprocessSourcesTask implements CompileTask {
 
   private final DslPreprocessor dslPreprocessor;
   private final CodegenNaming codegenNaming;
+  private final SourcePackageResolver sourcePackageResolver;
 
   @Override
   public String name() {
@@ -37,22 +41,44 @@ public final class PreprocessSourcesTask implements CompileTask {
     if (!Files.isDirectory(dslDir)) {
       return context.toBuilder().preprocessedSources(List.of()).build();
     }
-    final var snapshot = context;
-    var resolver = new DslPackageNameResolver(codegenNaming);
     List<Path> files;
     try (var stream = Files.walk(dslDir)) {
       files = stream.filter(file -> file.toString().endsWith(JAVA_FILE_SUFFIX)).toList();
     }
+    var modelsDir = options.srcDir().resolve(CompilerConstants.MODELS_FOLDER);
+    List<Path> modelFiles;
+    if (Files.isDirectory(modelsDir)) {
+      try (var stream = Files.walk(modelsDir)) {
+        modelFiles = stream.filter(file -> file.toString().endsWith(JAVA_FILE_SUFFIX)).toList();
+      }
+    } else {
+      modelFiles = List.of();
+    }
+
+    var dslPackages = sourcePackageResolver.resolveDslPackages(
+            files, options.targetPackage(), options.buildVersion(),
+            options.useFileNameSubPackage());
+    var modelPackages = sourcePackageResolver.resolveModelPackages(
+            files, modelFiles, options.targetPackage(), options.buildVersion(), dslPackages);
+    var modelClassNames = sourcePackageResolver.modelClassNames(modelFiles);
+
+    final var snapshot = context;
+    var resolver = new DslPackageNameResolver(codegenNaming);
     var results = VirtualThreads.runAll(files.stream()
-            .<Callable<@Nullable String>>map(file -> () -> preprocess(file, resolver, snapshot))
+            .<Callable<@Nullable String>>map(file -> () -> preprocess(
+                    file, resolver, snapshot, modelPackages, modelClassNames))
             .toList());
     return context.toBuilder()
             .preprocessedSources(results.stream().filter(Objects::nonNull).toList())
             .build();
   }
 
-  private @Nullable String preprocess(Path file, DslPackageNameResolver resolver,
-          CompileContext context) throws IOException {
+  private @Nullable String preprocess(
+          Path file,
+          DslPackageNameResolver resolver,
+          CompileContext context,
+          Map<String, String> modelPackages,
+          Set<String> modelClassNames) throws IOException {
     var options = context.options();
     try {
       var fileName = file.getFileName().toString();
@@ -62,7 +88,10 @@ public final class PreprocessSourcesTask implements CompileTask {
               options.buildVersion(),
               fileName,
               options.useFileNameSubPackage());
-      var preprocess = dslPreprocessor.preprocess(fileName, rawSource, packageName);
+      var rewritten = sourcePackageResolver.rewriteModelImports(
+              rawSource, options.targetPackage(), options.buildVersion(), modelPackages,
+              modelClassNames);
+      var preprocess = dslPreprocessor.preprocess(fileName, rewritten, packageName);
       return preprocess.preprocessedSource();
     } catch (IllegalArgumentException e) {
       log.atLevel(Level.WARN).log(

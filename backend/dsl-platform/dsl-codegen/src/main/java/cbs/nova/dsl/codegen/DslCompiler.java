@@ -17,6 +17,7 @@ import cbs.nova.dsl.codegen.task.StepTiming;
 import cbs.nova.dsl.codegen.task.ValidateDescriptorsTask;
 import cbs.nova.dsl.codegen.task.WriteOutputTask;
 import cbs.nova.dsl.codegen.util.CodeWriter;
+import cbs.nova.dsl.codegen.util.SourcePackageResolver;
 import cbs.nova.dsl.config.DescriptorFactory;
 import cbs.nova.dsl.registry.HelperRegistry;
 import java.util.concurrent.atomic.AtomicReference;
@@ -48,6 +49,7 @@ public final class DslCompiler {
   private final HelperRegistry helperRegistry;
   private final CodegenNaming codegenNaming;
   private final DslPreprocessor dslPreprocessor;
+  private final SourcePackageResolver sourcePackageResolver;
 
   public static void main(String[] args) throws IOException {
     if (args.length < 1) {
@@ -70,9 +72,10 @@ public final class DslCompiler {
 
   private void compileInternal(@NonNull DslCompilerOptions options) throws IOException {
     var context = new AtomicReference<>(CompileContext.create(options));
+    // TODO: move to a config class instead
     List<CompileTask> tasks = List.of(
             new LoadSourcesTask(dslSourceCompiler),
-            new PreprocessSourcesTask(dslPreprocessor, codegenNaming),
+            new PreprocessSourcesTask(dslPreprocessor, codegenNaming, sourcePackageResolver),
             new DescribeDslObjectsTask(descriptorFactory),
             new ValidateDescriptorsTask(semanticValidator, helperRegistry),
             new GenerateCodeTask(processCodeGenerator, transactionCodeGenerator,

@@ -54,7 +54,9 @@ public interface DslIntrospectionMapper {
   TransactionDetail toTransactionDetail(TransactionDslObject source,
           Map<String, Object> inputSchema);
 
+  @Mapping(target = "name", expression = "java(source.name())")
   @Mapping(target = "type", expression = "java(source.type().name().toLowerCase(java.util.Locale.ROOT))")
+  @Mapping(target = "description", expression = "java(source.description())")
   @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
   @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
   HelperSearchResult toHelperSearchResult(DslDescriptor source);
@@ -66,7 +68,7 @@ public interface DslIntrospectionMapper {
   HelperSearchResult toHelperSearchResult(String name, ExecutableDescriptor descriptor);
 
   @Mapping(target = "type", constant = "process")
-  @Mapping(target = "version", source = "version")
+  @Mapping(target = "version", expression = "java(source.version())")
   @Mapping(target = "taskQueue", source = "taskQueue")
   @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
   @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
@@ -114,25 +116,25 @@ public interface DslIntrospectionMapper {
           Map<String, Object> inputSchema, DefinitionStatus status, String filePath);
 
   @Mapping(target = "type", constant = "function")
-  @Mapping(target = "name", source = "source.name")
-  @Mapping(target = "version", source = "source.version")
+  @Mapping(target = "name", expression = "java(source.objectDescriptor().name())")
+  @Mapping(target = "version", expression = "java(source.version())")
   @Mapping(target = "taskQueue", ignore = true)
   @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
   @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
   @Mapping(target = "hasCompensation", ignore = true)
-  @Mapping(target = "description", source = "source.description")
+  @Mapping(target = "description", expression = "java(source.objectDescriptor().description())")
   @Mapping(target = "inputSchema", ignore = true)
   @Mapping(target = "status", ignore = true)
   DefinitionMetaDto toFunctionDefinitionMeta(DslDescriptor source);
 
   @Mapping(target = "type", constant = "function")
-  @Mapping(target = "name", source = "source.name")
-  @Mapping(target = "version", source = "source.version")
+  @Mapping(target = "name", expression = "java(source.objectDescriptor().name())")
+  @Mapping(target = "version", expression = "java(source.version())")
   @Mapping(target = "taskQueue", ignore = true)
   @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
   @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
   @Mapping(target = "hasCompensation", ignore = true)
-  @Mapping(target = "description", source = "source.description")
+  @Mapping(target = "description", expression = "java(source.objectDescriptor().description())")
   @Mapping(target = "inputSchema", source = "inputSchema")
   @Mapping(target = "status", source = "status")
   @Mapping(target = "filePath", source = "filePath")

@@ -11,6 +11,8 @@ import org.jspecify.annotations.Nullable;
 import java.util.List;
 import java.util.Map;
 
+//TODO: record must ot be a reshaped, due changes in ExplainReport
+@Deprecated(forRemoval = true)
 public record ExplainTraceReport(
         @NonNull String name,
         @NonNull String description,

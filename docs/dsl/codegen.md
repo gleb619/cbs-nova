@@ -128,8 +128,11 @@ configured `fallbackVersion`, depending on `strictVersioning`.
    declares a `List<DslObject> define()` method.
 
 2. **Static validation & preprocessing**: Each file is checked for the compact-source rules (no package, no top-level
-   type, one `define()` method). It is then wrapped in a class that implements `cbs.nova.dsl.DslCompactSource` and
-   compiled with the standard Java compiler.
+   type, one `define()` method). Model imports are canonicalized by `ModelImportResolver` — the single import-resolution
+   point that accepts all authoring styles (`<basePackage>.<ModelClass>`, `<basePackage>.<version>.<ModelClass>`,
+   `<version>.<ModelClass>`, bare `<ModelClass>`) and rewrites them to the resolved model package (see
+   [Authoring DSL Flows](authoring.md#model-imports)). The file is then wrapped in a class that implements
+   `cbs.nova.dsl.DslCompactSource` and compiled with the standard Java compiler.
 
 3. **Parsing**: For each DSL file, the `define()` method is analyzed to extract builder calls. This yields an
    intermediate model:

@@ -5,21 +5,22 @@ import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.jsonschema.JsonSchemaGenerator;
+import cbs.nova.dsl.model.ObjectDescriptor;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.starter.config.properties.InputValidationProperties;
 import cbs.nova.starter.model.ValidationError;
 import cbs.nova.starter.validation.JsonSchemaValidator;
 import com.github.benmanes.caffeine.cache.Cache;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.jspecify.annotations.NonNull;
-import tools.jackson.databind.json.JsonMapper;
-
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
+import org.springframework.stereotype.Service;
+import tools.jackson.databind.json.JsonMapper;
+import cbs.nova.starter.json.DslDescriptorMixIn;
 
 /**
  * Resolves the target construct, generates/caches its input JSON schema, and validates the request
@@ -38,7 +39,7 @@ public class InputValidator {
   private final InputValidationProperties properties;
   private final Cache<String, Map<String, Object>> schemaCache;
 
-  private final JsonMapper descriptorMapper = JsonMapper.builder().build();
+  private final JsonMapper descriptorMapper = DslDescriptorMixIn.mapper();
 
   public List<ValidationError> validate(String constructName, Object body) {
     if (!properties.enabled()) {
@@ -62,13 +63,37 @@ public class InputValidator {
             .or(() -> gm.describeHelper(name).map(this::toDescriptor));
   }
 
+  //TODO: no, we need another way, via misc-codegen new method
+  @Deprecated(forRemoval = true)
   private DslDescriptor toDescriptor(ExecutableDescriptor helper) {
+    var objectDescriptor = new ObjectDescriptor() {
+      @Override
+      public String name() {
+        return helper.name() != null ? helper.name() : "";
+      }
+
+      @Override
+      public DslObject.DslType type() {
+        return DslObject.DslType.FUNCTION;
+      }
+
+      @Override
+      public String description() {
+        return helper.description();
+      }
+
+      @Override
+      public Class<?> inputType() {
+        return helper.inputType();
+      }
+
+      @Override
+      public Class<?> outputType() {
+        return helper.outputType();
+      }
+    };
     return DslDescriptor.builder()
-            .name(helper.name() != null ? helper.name() : "")
-            .type(DslObject.DslType.FUNCTION)
-            .description(helper.description())
-            .inputType(helper.inputType())
-            .outputType(helper.outputType())
+            .objectDescriptor(objectDescriptor)
             .hasSideEffects(helper.hasSideEffects())
             .parameters(helper.parameters())
             .taskQueue(null)
@@ -99,24 +124,21 @@ public class InputValidator {
 
   private @NonNull String descriptorHash(DslDescriptor descriptor) {
     try {
-      byte[] bytes = descriptorMapper.writeValueAsBytes(descriptor);
-      return sha256Hex(bytes);
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      byte[] serialized = descriptorMapper.writeValueAsBytes(descriptor);
+      return bytesToHex(digest.digest(serialized));
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException("SHA-256 algorithm not available", e);
     } catch (Exception e) {
-      throw new IllegalStateException("Failed to serialize DSL descriptor", e);
+      throw new IllegalStateException("Failed to serialize descriptor", e);
     }
   }
 
-  private @NonNull String sha256Hex(byte[] input) {
-    try {
-      MessageDigest digest = MessageDigest.getInstance("SHA-256");
-      byte[] hash = digest.digest(input);
-      StringBuilder sb = new StringBuilder();
-      for (byte b : hash) {
-        sb.append(String.format("%02x", b));
-      }
-      return sb.toString();
-    } catch (NoSuchAlgorithmException e) {
-      throw new IllegalStateException("SHA-256 not available", e);
+  private @NonNull String bytesToHex(byte[] bytes) {
+    StringBuilder sb = new StringBuilder();
+    for (byte b : bytes) {
+      sb.append(String.format("%02x", b));
     }
+    return sb.toString();
   }
 }

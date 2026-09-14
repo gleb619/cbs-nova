@@ -39,7 +39,7 @@ spotless {
 idea {
   module {
     resourceDirs += file('resources')
-    sourceDirs += [file('src/dsl'), file('src/models')]
+    //sourceDirs += [file('src/dsl'), file('src/models')]
   }
 }
 

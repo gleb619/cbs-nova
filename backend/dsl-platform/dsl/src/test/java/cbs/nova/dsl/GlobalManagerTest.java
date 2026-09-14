@@ -5,11 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
-import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.exception.DslExecutionException;
+import cbs.nova.dsl.transaction.TransactionDescriptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -516,19 +517,27 @@ class GlobalManagerTest {
     var gm = GlobalManager.globalManager();
     gm.registerTransaction(
             Dsl.transaction("DescribedT")
-                    .describe(() -> DslDescriptor.builder()
-                            .name("DescribedT")
-                            .type(DslObject.DslType.TRANSACTION)
-                            .description("A transaction that pays")
-                            .inputType(String.class)
-                            .outputType(String.class)
-                            .hasSideEffects(false)
-                            .parameters(List.of())
-                            .taskQueue(null)
-                            .version(null)
-                            .startToCloseTimeout(null)
-                            .heartbeatTimeout(null)
-                            .build())
+                    .describe(() -> {
+                      var od = TransactionDescriptor.builder()
+                              .name("DescribedT")
+                              .description("A transaction that pays")
+                              .version("v1")
+                              .taskQueue("DescribedT-queue")
+                              .inputType(String.class)
+                              .outputType(String.class)
+                              .helperRefs(List.of())
+                              .startToCloseTimeout(Duration.ofSeconds(30))
+                              .build();
+                      return DslDescriptor.builder()
+                              .objectDescriptor(od)
+                              .hasSideEffects(false)
+                              .parameters(List.of())
+                              .taskQueue(null)
+                              .version(null)
+                              .startToCloseTimeout(null)
+                              .heartbeatTimeout(null)
+                              .build();
+                    })
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
@@ -563,152 +572,6 @@ class GlobalManagerTest {
   @Test
   void descriptionReturnsEmptyForUnknown() {
     assertThat(GlobalManager.globalManager().description("Missing")).isEmpty();
-  }
-
-  @Test
-  void explainHelperReturnsReportWithMermaidForRegisteredHelper() {
-    var gm = GlobalManager.globalManager();
-    gm.registerHelper("upper", ctx -> Result.success(ctx.body().toString().toUpperCase()));
-    var ctx = contextFactory.of("hello", ExecutionMode.EXPLAIN);
-
-    var report = gm.explainHelper("upper", ctx);
-
-    assertThat(report).isPresent();
-    assertThat(report.get().mermaid()).contains("graph TD", "upper");
-  }
-
-  @Test
-  void explainHelperIsEmptyForUnknownHelper() {
-    var ctx = contextFactory.of("x", ExecutionMode.EXPLAIN);
-    assertThat(GlobalManager.globalManager().explainHelper("Ghost", ctx)).isEmpty();
-  }
-
-  @Test
-  void explainHelperUsesHelperOwnExplainOverride() {
-    var gm = GlobalManager.globalManager();
-    gm.registerHelper("custom", new Executable<String, String>() {
-      @Override
-      public Result<String> execute(Context<String> ctx) {
-        return Result.success("ok");
-      }
-
-      @Override
-      public ExplainReport explain(Context<String> ctx) {
-        return new ExplainReport("custom", "Custom explanation.", "graph TD\n  C[custom]");
-      }
-    });
-    var ctx = contextFactory.of("body", ExecutionMode.EXPLAIN);
-
-    var report = gm.explainHelper("custom", ctx);
-
-    assertThat(report).isPresent();
-    assertThat(report.get().description()).isEqualTo("Custom explanation.");
-    assertThat(report.get().mermaid()).isEqualTo("graph TD\n  C[custom]");
-  }
-
-  @Test
-  void explainDispatchesToProcess() {
-    var gm = GlobalManager.globalManager();
-    gm.registerProcess(Dsl.process("ExplainP")
-            .input(String.class)
-            .output(String.class)
-            .execute(ctx -> Result.success("ok"))
-            .build());
-    var ctx = contextFactory.of("body", ExecutionMode.EXPLAIN);
-
-    var report = gm.explain("ExplainP", ctx);
-
-    assertThat(report).isPresent();
-    assertThat(report.get().name()).isEqualTo("ExplainP");
-    assertThat(report.get().mermaid()).contains("graph TD", "ExplainP");
-  }
-
-  @Test
-  void explainDispatchesToTransaction() {
-    var gm = GlobalManager.globalManager();
-    gm.registerTransaction(Dsl.transaction("ExplainT")
-            .describe(() -> DslDescriptor.builder()
-                    .name("ExplainT")
-                    .type(DslObject.DslType.TRANSACTION)
-                    .description("A transaction to explain")
-                    .inputType(String.class)
-                    .outputType(String.class)
-                    .hasSideEffects(false)
-                    .parameters(List.of())
-                    .taskQueue(null)
-                    .version(null)
-                    .startToCloseTimeout(null)
-                    .heartbeatTimeout(null)
-                    .build())
-            .execute(ctx -> Result.success("ok"))
-            .build());
-    var ctx = contextFactory.of("body", ExecutionMode.EXPLAIN);
-
-    var report = gm.explain("ExplainT", ctx);
-
-    assertThat(report).isPresent();
-    assertThat(report.get().name()).isEqualTo("ExplainT");
-    assertThat(report.get().mermaid()).contains("graph TD", "ExplainT");
-  }
-
-  @Test
-  void explainDispatchesToHelperWhenNoProcessOrTransactionMatches() {
-    var gm = GlobalManager.globalManager();
-    gm.registerHelper("ExplainH", ctx -> Result.success("ok"));
-    var ctx = contextFactory.of("body", ExecutionMode.EXPLAIN);
-
-    var report = gm.explain("ExplainH", ctx);
-
-    assertThat(report).isPresent();
-    assertThat(report.get().mermaid()).contains("graph TD", "ExplainH");
-  }
-
-  @Test
-  void explainDispatchesToFunction() {
-    var gm = GlobalManager.globalManager();
-    gm.registerFunction(Dsl.function("ExplainF")
-            .describe(() -> DslDescriptor.builder()
-                    .name("ExplainF")
-                    .type(DslObject.DslType.FUNCTION)
-                    .description("A function to explain")
-                    .inputType(Void.class)
-                    .outputType(Void.class)
-                    .hasSideEffects(false)
-                    .parameters(List.of())
-                    .taskQueue(null)
-                    .version(null)
-                    .startToCloseTimeout(null)
-                    .heartbeatTimeout(null)
-                    .build())
-            .execute(ctx -> Result.success("ok"))
-            .build());
-    var ctx = contextFactory.of("body", ExecutionMode.EXPLAIN);
-
-    var report = gm.explain("ExplainF", ctx);
-
-    assertThat(report).isPresent();
-    assertThat(report.get().name()).isEqualTo("ExplainF");
-    assertThat(report.get().description()).isEqualTo("A function to explain");
-  }
-
-  @Test
-  void explainIsEmptyForUnknownName() {
-    var ctx = contextFactory.of("x", ExecutionMode.EXPLAIN);
-    assertThat(GlobalManager.globalManager().explain("Missing", ctx)).isEmpty();
-  }
-
-  @Test
-  void explainRespectsBudget() {
-    var gm = GlobalManager.globalManager();
-    gm.registerHelper("BudgetedH", ctx -> Result.success("ok"));
-    var ctx = contextFactory.of("body", ExecutionMode.EXPLAIN);
-
-    var report = gm.explainHelper("BudgetedH", ctx, 50);
-
-    assertThat(report).isPresent();
-    assertThat(report.get().description().length()).isLessThanOrEqualTo(50);
-    assertThat(report.get().description().length()
-            + report.get().mermaid().length()).isLessThanOrEqualTo(50);
   }
 
 }

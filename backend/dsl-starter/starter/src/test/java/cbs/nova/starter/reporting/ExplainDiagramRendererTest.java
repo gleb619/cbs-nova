@@ -1,4 +1,6 @@
 package cbs.nova.starter.reporting;
+import cbs.nova.dsl.DslObject;
+import cbs.nova.dsl.model.ObjectDescriptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -30,6 +32,8 @@ class ExplainDiagramRendererTest {
   }
 
   @Test
+  //TODO: change inline descriptor creation
+  @Deprecated(forRemoval = true)
   void mermaidDiagramForProcessReportIsNonBlank() {
     String processName = "SampleProcess-" + System.nanoTime();
     GlobalManager.globalManager()
@@ -46,11 +50,32 @@ class ExplainDiagramRendererTest {
             new ExecutableDescriptor(processName, null, String.class, String.class, false, null,
                     List.of()),
             DslDescriptor.builder()
-                    .name(processName)
-                    .type(DslType.PROCESS)
-                    .description(null)
-                    .inputType(String.class)
-                    .outputType(String.class)
+                    .objectDescriptor(new ObjectDescriptor() {
+                      @Override
+                      public String name() {
+                        return processName;
+                      }
+
+                      @Override
+                      public DslObject.DslType type() {
+                        return DslType.PROCESS;
+                      }
+
+                      @Override
+                      public String description() {
+                        return null;
+                      }
+
+                      @Override
+                      public Class<?> inputType() {
+                        return String.class;
+                      }
+
+                      @Override
+                      public Class<?> outputType() {
+                        return String.class;
+                      }
+                    })
                     .hasSideEffects(false)
                     .parameters(List.of())
                     .taskQueue(null)

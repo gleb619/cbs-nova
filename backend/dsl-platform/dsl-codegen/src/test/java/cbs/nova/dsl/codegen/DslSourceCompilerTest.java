@@ -157,6 +157,83 @@ class DslSourceCompilerTest {
     }
   }
 
+  @Test
+  void compilesDslWithVersionedModelImport(@TempDir Path srcDir) throws Exception {
+    var dslDir = Files.createDirectories(srcDir.resolve(CompilerConstants.DSL_FOLDER));
+    Files.writeString(
+            dslDir.resolve("BatchProcessing.java"),
+            """
+                    import cbs.nova.dsl.*;
+                    import cbs.nova.dsl.generated.demo.BatchModels.*;
+                    import java.util.List;
+
+                    void main() {}
+
+                    List<DslObject> define() {
+                      return Dsl.process("BatchProcessing")
+                          .input(BatchIn.class)
+                          .output(String.class)
+                          .execute(ctx -> Result.success("ok"))
+                          .buildList();
+                    }
+                    """);
+    var modelsDir = Files.createDirectories(srcDir.resolve(CompilerConstants.MODELS_FOLDER));
+    Files.writeString(
+            modelsDir.resolve("BatchModels.java"),
+            """
+                    public class BatchModels {
+                      public record BatchIn(String value) {}
+                    }
+                    """);
+
+    var outDir = Files.createTempDirectory("dsl-codegen-test-");
+    var objects = compiler().compileAndLoad(srcDir, outDir,
+            new SourceCompiler.CompileOptions("demo", "cbs.nova.dsl.generated", Level.INFO, null));
+
+    assertThat(objects).hasSize(1);
+    var expectedModel = outDir.resolve(
+            "cbs/nova/dsl/generated/demo/batchprocessing/BatchModels.java");
+    assertThat(expectedModel).exists();
+    assertThat(Files.readString(expectedModel))
+            .contains("package cbs.nova.dsl.generated.demo.batchprocessing;");
+  }
+
+  @Test
+  void compilesDslWithBareModelImport(@TempDir Path srcDir) throws Exception {
+    var dslDir = Files.createDirectories(srcDir.resolve(CompilerConstants.DSL_FOLDER));
+    Files.writeString(
+            dslDir.resolve("BareImport.java"),
+            """
+                    import cbs.nova.dsl.*;
+                    import BatchModels.BatchIn;
+                    import java.util.List;
+
+                    void main() {}
+
+                    List<DslObject> define() {
+                      return Dsl.process("BareImport")
+                          .input(BatchIn.class)
+                          .output(String.class)
+                          .execute(ctx -> Result.success("ok"))
+                          .buildList();
+                    }
+                    """);
+    var modelsDir = Files.createDirectories(srcDir.resolve(CompilerConstants.MODELS_FOLDER));
+    Files.writeString(
+            modelsDir.resolve("BatchModels.java"),
+            """
+                    public class BatchModels {
+                      public record BatchIn(String value) {}
+                    }
+                    """);
+
+    var outDir = Files.createTempDirectory("dsl-codegen-test-");
+    var objects = compiler().compileAndLoad(srcDir, outDir,
+            new SourceCompiler.CompileOptions("demo", "cbs.nova.dsl.generated", Level.INFO, null));
+
+    assertThat(objects).hasSize(1);
+  }
+
   private static String validProcess() {
     return """
             import cbs.nova.dsl.*;

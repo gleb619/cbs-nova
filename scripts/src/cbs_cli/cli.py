@@ -8,6 +8,7 @@ from .commands.format import FormatCommand
 from .commands.lint import LintCommand
 from .commands.loadtest import LoadtestCommand
 from .commands.openapi_diff import OpenApiDiffCommand
+from .commands.openapi_diff_test import OpenApiDiffTestCommand
 from .commands.openapi_fetch import OpenApiFetchCommand
 from .commands.seed import SeedCommand
 from .commands.seed_history import SeedHistoryCommand
@@ -79,6 +80,9 @@ class CLI:
         p.add_argument("old_path", help="older OpenAPI JSON spec")
         p.add_argument("new_path", help="newer OpenAPI JSON spec")
         p.set_defaults(handler=OpenApiDiffCommand)
+
+        p = subparsers.add_parser("openapi-diff-test", help="Run OpenAPI diff classifier self-test")
+        p.set_defaults(handler=OpenApiDiffTestCommand)
 
         p = subparsers.add_parser("openapi-fetch", help="Boot backend and fetch normalized OpenAPI spec")
         p.add_argument("outpath", help="output JSON path")

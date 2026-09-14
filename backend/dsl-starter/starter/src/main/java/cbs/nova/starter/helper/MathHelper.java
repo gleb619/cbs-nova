@@ -3,6 +3,7 @@ package cbs.nova.starter.helper;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.model.ExplainReport;
+import cbs.nova.dsl.model.ExplainReports;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.annotation.Helper;
 import cbs.nova.dsl.explain.ExplainBudget;
@@ -15,6 +16,8 @@ import java.util.List;
 import java.util.Locale;
 import org.jspecify.annotations.NonNull;
 
+//TODO: instead use `ArithmeticHelper`, move logic there
+@Deprecated(forRemoval = true)
 @Helper(name = "math")
 public class MathHelper implements Executable<MathIn, MathOut> {
 
@@ -53,8 +56,8 @@ public class MathHelper implements Executable<MathIn, MathOut> {
     String mode = (input.mode() == null) ? "unknown" : input.mode().toLowerCase(Locale.ROOT);
     String description = MathModeExplanation.describe(mode, input);
     String mermaid = MathModeExplanation.diagram(mode);
-    return new ExplainReport("math", description, mermaid)
-            .truncateTo(ExplainBudget.of(ctx));
+    return ExplainReports.truncateTo(
+            new ExplainReport("math", description, mermaid), ExplainBudget.of(ctx));
   }
 
   private static @NonNull Result<MathOut> sum(List<Number> numbers) {
