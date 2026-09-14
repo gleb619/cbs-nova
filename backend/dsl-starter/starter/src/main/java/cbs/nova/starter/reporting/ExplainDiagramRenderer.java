@@ -1,51 +1,48 @@
 package cbs.nova.starter.reporting;
 
-import cbs.nova.dsl.DslDescriptor;
-import cbs.nova.dsl.model.ExplainTraceReport;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.generator.BpmnDiagramGenerator;
 import cbs.nova.dsl.generator.DiagramGenerator;
 import cbs.nova.dsl.generator.MermaidDiagramGenerator;
 import cbs.nova.dsl.generator.PlantUmlDiagramGenerator;
-import cbs.nova.dsl.generator.BpmnDiagramGenerator;
+import cbs.nova.dsl.model.ExplainGraphReport;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Map;
-
 /**
- * Renders diagram strings from an {@link ExplainTraceReport}. The report carries an AST/tree and
- * metadata; this service converts that tree into mermaid, PlantUML and BPMN representations on
- * demand so the runtime does not need to know about diagram formats.
+ * Renders diagram strings for {@link ExplainGraphReport}s and registered entities. A report renders
+ * itself from its own fields ({@link ExplainGraphReport#toMermaid()} and siblings), so report
+ * rendering works regardless of registry state; only {@link #renderByName(String, String)} consults
+ * the live registry, for the introspection endpoint.
  */
 @Service
-//TODO: class needs to be reworked due to changes in ExplainReport
-@Deprecated(forRemoval = true)
 public class ExplainDiagramRenderer {
 
   private final DiagramGenerator mermaid = new MermaidDiagramGenerator();
   private final DiagramGenerator plantUml = new PlantUmlDiagramGenerator();
   private final DiagramGenerator bpmn = new BpmnDiagramGenerator();
 
-  public @NonNull String mermaidDiagram(@NonNull ExplainTraceReport report) {
-    return render(report, mermaid);
+  public @NonNull String mermaidDiagram(@NonNull ExplainGraphReport report) {
+    return report.toMermaid();
   }
 
-  public @NonNull String plantUmlDiagram(@NonNull ExplainTraceReport report) {
-    return render(report, plantUml);
+  public @NonNull String plantUmlDiagram(@NonNull ExplainGraphReport report) {
+    return report.toPlantUml();
   }
 
-  public @NonNull String bpmnXml(@NonNull ExplainTraceReport report) {
-    return render(report, bpmn);
+  public @NonNull String bpmnXml(@NonNull ExplainGraphReport report) {
+    return report.toBpmn();
   }
 
   /**
-   * Renders a diagram for a known process/transaction/helper by name without requiring a
-   * precomputed {@link ExplainTraceReport}. The {@code format} is one of {@code mermaid},
-   * {@code plantuml}, or {@code bpmn} (case-insensitive); any other value defaults to mermaid.
-   * Returns {@code null} when no matching process/transaction is registered.
+   * Renders a diagram for a known process/transaction by name without requiring a precomputed
+   * {@link ExplainGraphReport}. The {@code format} is one of {@code mermaid}, {@code plantuml}, or
+   * {@code bpmn} (case-insensitive); any other value defaults to mermaid. Returns {@code null} when
+   * no matching process/transaction is registered.
    */
   public @Nullable String renderByName(@NonNull String name,
           @NonNull String format) {
@@ -68,38 +65,5 @@ public class ExplainDiagramRenderer {
       case "bpmn" -> bpmn;
       default -> mermaid;
     };
-  }
-
-  private @NonNull String render(@NonNull ExplainTraceReport report,
-          @NonNull DiagramGenerator generator) {
-    GlobalManager gm = GlobalManager.globalManager();
-    String name = report.name();
-    List<Map<String, Object>> calls = report.externalCalls();
-    Map<String, Integer> counts = report.callCounts();
-    DslDescriptor descriptor = report.dslDescriptor();
-
-    if (descriptor != null) {
-      return switch (descriptor.type()) {
-        case PROCESS -> gm.findProcess(name)
-                .map(p -> generator.forProcess(p, calls, counts))
-                .orElseGet(() -> generator.forHelper(name, calls, counts));
-        case TRANSACTION -> gm.findTransaction(name)
-                .map(t -> generator.forTransaction(t, calls, counts))
-                .orElseGet(() -> generator.forHelper(name, calls, counts));
-        default -> generator.forHelper(name, calls, counts);
-      };
-    }
-
-    if (gm.findProcess(name).isPresent()) {
-      return gm.findProcess(name)
-              .map(p -> generator.forProcess(p, calls, counts))
-              .orElseGet(() -> generator.forHelper(name, calls, counts));
-    }
-    if (gm.findTransaction(name).isPresent()) {
-      return gm.findTransaction(name)
-              .map(t -> generator.forTransaction(t, calls, counts))
-              .orElseGet(() -> generator.forHelper(name, calls, counts));
-    }
-    return generator.forHelper(name, calls, counts);
   }
 }

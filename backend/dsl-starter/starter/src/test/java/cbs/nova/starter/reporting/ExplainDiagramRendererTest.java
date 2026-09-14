@@ -10,7 +10,7 @@ import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.model.ExplainTraceReport;
+import cbs.nova.dsl.model.ExplainGraphReport;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
@@ -32,8 +32,6 @@ class ExplainDiagramRendererTest {
   }
 
   @Test
-  //TODO: change inline descriptor creation
-  @Deprecated(forRemoval = true)
   void mermaidDiagramForProcessReportIsNonBlank() {
     String processName = "SampleProcess-" + System.nanoTime();
     GlobalManager.globalManager()
@@ -41,12 +39,13 @@ class ExplainDiagramRendererTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    ExplainTraceReport report = new ExplainTraceReport(
+    ExplainGraphReport report = new ExplainGraphReport(
             processName,
             "Process: " + processName,
             List.of(),
             List.of(),
             Map.of(),
+            false,
             new ExecutableDescriptor(processName, null, String.class, String.class, false, null,
                     List.of()),
             DslDescriptor.builder()
@@ -87,12 +86,70 @@ class ExplainDiagramRendererTest {
             List.of(),
             null,
             null,
+            List.of(),
             null);
 
     String mermaid = renderer.mermaidDiagram(report);
 
     assertThat(mermaid).isNotBlank();
     assertThat(mermaid).contains("Execute[" + processName + "]");
+  }
+
+  @Test
+  void reportRenderingDoesNotDependOnRegistryState() {
+    String processName = "GoneProcess-" + System.nanoTime();
+    ExplainGraphReport report = new ExplainGraphReport(
+            processName,
+            "Process: " + processName,
+            List.of(),
+            List.of(),
+            Map.of(),
+            false,
+            null,
+            DslDescriptor.builder()
+                    .objectDescriptor(new ObjectDescriptor() {
+                      @Override
+                      public String name() {
+                        return processName;
+                      }
+
+                      @Override
+                      public DslObject.DslType type() {
+                        return DslType.PROCESS;
+                      }
+
+                      @Override
+                      public String description() {
+                        return null;
+                      }
+
+                      @Override
+                      public Class<?> inputType() {
+                        return String.class;
+                      }
+
+                      @Override
+                      public Class<?> outputType() {
+                        return String.class;
+                      }
+                    })
+                    .hasSideEffects(false)
+                    .parameters(List.of())
+                    .taskQueue(null)
+                    .version(null)
+                    .startToCloseTimeout(null)
+                    .heartbeatTimeout(null)
+                    .build(),
+            null,
+            List.of(),
+            null,
+            List.of(),
+            List.of(),
+            null);
+
+    assertThat(renderer.mermaidDiagram(report)).contains("Execute[" + processName + "]");
+    assertThat(renderer.plantUmlDiagram(report)).contains(":" + processName + ";");
+    assertThat(renderer.bpmnXml(report)).contains("name=\"" + processName + "\"");
   }
 
   @Test

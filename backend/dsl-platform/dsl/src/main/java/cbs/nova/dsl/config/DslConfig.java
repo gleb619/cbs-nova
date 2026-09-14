@@ -1,10 +1,12 @@
 package cbs.nova.dsl.config;
 
+import cbs.nova.dsl.BeanResolver;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.helper.HelperManager;
 import cbs.nova.dsl.jsonschema.JsonSchemaGenerator;
 import cbs.nova.dsl.converter.AvajeMapConverter;
 import cbs.nova.dsl.explain.ClasspathExplainResourceResolver;
+import cbs.nova.dsl.explain.ExplainResourceRegistry;
 import cbs.nova.dsl.explain.ExplainResourceResolver;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
@@ -89,6 +91,15 @@ public class DslConfig implements SingletonSupport {
                     ClasspathExplainResourceResolver.DEFAULT_PREFIX));
   }
 
+  public @NonNull ExplainResourceRegistry explainResourceRegistry() {
+    return singleton(() -> new ExplainResourceRegistry().init(
+            Thread.currentThread().getContextClassLoader()));
+  }
+
+  public @NonNull Replaceable<BeanResolver> beanResolver() {
+    return replaceable("beanResolver", () -> new DslConfigBeanResolver(this));
+  }
+
   public @NonNull Replaceable<TemporalProcessLauncher> temporalProcessLauncher() {
     return replaceable("temporalProcessLauncher");
   }
@@ -149,7 +160,8 @@ public class DslConfig implements SingletonSupport {
                     helperRunner(contextFactory)),
             generatedClassRegistry(),
             new ProcessContextFactory(),
-            compensationRegistry);
+            compensationRegistry,
+            explainResourceRegistry());
   }
 
   public @NonNull CompensationRegistry compensationRegistry() {

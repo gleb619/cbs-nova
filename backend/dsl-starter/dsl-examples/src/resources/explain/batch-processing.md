@@ -1,3 +1,8 @@
+---
+name: BatchProcessing
+description: Sums the `value` of every `BatchItem` in the input batch and returns a `BatchOut` with the running total plus a comma-separated `id=value` summary of all items.
+---
+
 # BatchProcessing
 
 Sums the `value` of every `BatchItem` in the input batch and returns a `BatchOut`

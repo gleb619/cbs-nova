@@ -2,10 +2,12 @@ package cbs.nova.starter.core.pipe;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.logging.DryRunLoggingContext;
-import cbs.nova.dsl.model.ExplainTraceReport;
+import cbs.nova.dsl.model.ExplainGraphAccumulator;
+import cbs.nova.dsl.model.ExplainGraphReport;
 import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
@@ -29,7 +31,7 @@ import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 
 @RequiredArgsConstructor
-public final class ExplainDslPipe implements DslExecutionPipe<ExplainTraceReport> {
+public final class ExplainDslPipe implements DslExecutionPipe<ExplainGraphReport> {
 
   private final ExternalCallRecorder recorder;
   private final ContextFactory contextFactory;
@@ -45,11 +47,17 @@ public final class ExplainDslPipe implements DslExecutionPipe<ExplainTraceReport
   private final ExecutorService executor;
 
   @Override
-  public @NonNull Result<ExplainTraceReport> execute(@NonNull String name,
+  public @NonNull Result<ExplainGraphReport> execute(@NonNull String name,
           @NonNull Context<?> ctx) {
     HelperInterceptor fakeInterceptor = new FakeHelperInterceptor(runScopedFakeConfig, recorder);
-    return DslExecutionPipeline.<ExplainTraceReport>builder()
-            .stage(new ExplainBudgetStage(explainProperties.budgetChars()))
+    Context<?> explainCtx = ctx.withMetadata(
+            Constants.EXPLAIN_GRAPH_ACCUMULATOR_KEY, new ExplainGraphAccumulator());
+    return DslExecutionPipeline.<ExplainGraphReport>builder()
+            .stage(new ExplainBudgetStage(
+                    explainProperties.budgetChars(),
+                    explainProperties.nameMaxTokens(),
+                    explainProperties.descriptionMaxTokens(),
+                    explainProperties.mermaidMaxTokens()))
             .stage(new ExplainReportStage(diagramRenderer))
             .stage(new MetricsStage(meterRegistry))
             .stage(new ExecutionTreeStage(contextFactory,

@@ -2,6 +2,7 @@ package cbs.nova.dsl.explain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.dsl.BeanResolver;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.config.Constants;
@@ -17,7 +18,7 @@ class ExplainResourceExplainerTest {
 
   @AfterEach
   void resetResolverOverride() {
-    DslConfig.dslConfig().explainResourceResolver().replace(null);
+    DslConfig.dslConfig().beanResolver().replace(null);
   }
 
   @Test
@@ -29,8 +30,8 @@ class ExplainResourceExplainerTest {
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().name()).isEqualTo("DocSample");
-    assertThat(result.value().description()).contains("# Builder Sample");
-    assertThat(result.value().mermaid()).isEmpty();
+    assertThat(result.value().mermaid()).contains("# Builder Sample");
+    assertThat(result.value().description()).isEmpty();
   }
 
   @Test
@@ -40,7 +41,7 @@ class ExplainResourceExplainerTest {
     var result = explain.apply(explainContext(Map.of()));
 
     assertThat(result.isSuccess()).isTrue();
-    assertThat(result.value().description()).contains("# Builder Sample");
+    assertThat(result.value().mermaid()).contains("# Builder Sample");
   }
 
   @Test
@@ -62,17 +63,40 @@ class ExplainResourceExplainerTest {
 
     var result = explain.apply(bounded);
 
-    assertThat(result.value().description()).hasSizeLessThanOrEqualTo(10);
+    assertThat(result.value().mermaid()).hasSizeLessThanOrEqualTo(10);
   }
 
   @Test
   void invocationResolvesReplacableResolverLazily() {
     var explain = ExplainResourceExplainer.viaResource("DocSample", "anything.md");
-    DslConfig.dslConfig().explainResourceResolver().replace(_path -> "REPLACED-CONTENT");
+    BeanResolver resolver = type -> {
+      if (type == ExplainResourceResolver.class) {
+        return (ExplainResourceResolver) _path -> "REPLACED-CONTENT";
+      }
+      throw new IllegalStateException("Unexpected bean type: " + type);
+    };
+    DslConfig.dslConfig().beanResolver().replace(resolver);
 
     var result = explain.apply(explainContext(Map.of()));
 
-    assertThat(result.value().description()).isEqualTo("REPLACED-CONTENT");
+    assertThat(result.value().mermaid()).isEqualTo("REPLACED-CONTENT");
+  }
+
+  @Test
+  void invocationUsesContextLocalBeanResolver() {
+    var explain = ExplainResourceExplainer.viaResource("DocSample", "anything.md");
+    BeanResolver resolver = type -> {
+      if (type == ExplainResourceResolver.class) {
+        return (ExplainResourceResolver) _path -> "CONTEXT-LOCAL-CONTENT";
+      }
+      throw new IllegalStateException("Unexpected bean type: " + type);
+    };
+    var ctx = contextFactory.of("body", ExecutionMode.EXPLAIN, "run-local")
+            .withBeanResolver(resolver);
+
+    var result = explain.apply(ctx);
+
+    assertThat(result.value().mermaid()).isEqualTo("CONTEXT-LOCAL-CONTENT");
   }
 
   private Context<?> explainContext(Map<String, Object> metadata) {

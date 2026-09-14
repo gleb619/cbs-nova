@@ -52,7 +52,8 @@ class DefaultTransactionRunnerTest {
     assertThat(result.value()).isInstanceOf(ExplainReport.class);
     var report = (ExplainReport) result.value();
     assertThat(report.name()).isEqualTo("T");
-    assertThat(report.description()).contains("**Transaction** `T`");
+    assertThat(report.mermaid()).isEqualTo(cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN);
+    assertThat(report.description()).isEmpty();
   }
 
   @Test
@@ -102,7 +103,8 @@ class DefaultTransactionRunnerTest {
             .explain(ctx -> {
               explainCalled.set(true);
               assertThat(ctx.mode()).isEqualTo(ExecutionMode.EXPLAIN);
-              return Result.success(new ExplainReport("ExplainT", "explain-result", ""));
+              return Result.success(ExplainReport.builder().name("ExplainT")
+                      .description("explain-result").mermaid("").build());
             })
             .build();
     var ctx = contextFactory.of("in", ExecutionMode.EXPLAIN, "r5");
@@ -110,7 +112,8 @@ class DefaultTransactionRunnerTest {
     assertThat(explainCalled.get()).isTrue();
     assertThat(executeCalled.get()).isFalse();
     assertThat(result.isSuccess()).isTrue();
-    assertThat(result.value()).isEqualTo(new ExplainReport("ExplainT", "explain-result", ""));
+    assertThat(result.value()).isEqualTo(ExplainReport.builder().name("ExplainT")
+            .description("explain-result").mermaid("").build());
   }
 
   @Test
@@ -130,7 +133,8 @@ class DefaultTransactionRunnerTest {
     assertThat(result.value()).isInstanceOf(ExplainReport.class);
     var report = (ExplainReport) result.value();
     assertThat(report.name()).isEqualTo("ExplainFallbackT");
-    assertThat(report.description()).contains("**Transaction** `ExplainFallbackT`");
+    assertThat(report.mermaid()).isEqualTo(cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN);
+    assertThat(report.description()).isEmpty();
   }
 
   @Test

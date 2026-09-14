@@ -30,7 +30,7 @@ final class PreviewCacheKeyBuilder {
     return new PreviewCacheKey(name, dslHash, inputHash);
   }
 
-  //TODO: find another way for descriptor creation, add to a misc-codegen some new method instead
+  // TODO: find another way for descriptor creation, add to a misc-codegen some new method instead
   @Deprecated(forRemoval = true)
   private DslDescriptor helperToDescriptor(String name, ExecutableDescriptor helper) {
     var objectDescriptor = new ObjectDescriptor() {

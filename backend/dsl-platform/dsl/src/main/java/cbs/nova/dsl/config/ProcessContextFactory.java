@@ -8,6 +8,8 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.Map;
 
+//TODO: remove, create context inline on demand
+@Deprecated(forRemoval = true)
 public final class ProcessContextFactory {
 
   public @NonNull Context<?> create(
@@ -16,7 +18,7 @@ public final class ProcessContextFactory {
           @NonNull ExecutionMode mode,
           @NonNull String runId) {
     return new SimpleContext<>(body, metadata, mode, runId, TransactionRouting.LOCAL,
-            null, null, null, null);
+            null, null, null, null, null);
   }
 
   public @NonNull Context<?> create(
@@ -26,6 +28,6 @@ public final class ProcessContextFactory {
           @NonNull String runId,
           @NonNull TransactionRouting transactionRouting) {
     return new SimpleContext<>(body, metadata, mode, runId, transactionRouting,
-            null, null, null, null);
+            null, null, null, null, null);
   }
 }

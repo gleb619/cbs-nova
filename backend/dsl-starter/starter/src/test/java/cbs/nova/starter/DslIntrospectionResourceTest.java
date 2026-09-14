@@ -346,7 +346,7 @@ class DslIntrospectionResourceTest {
             .andExpect(jsonPath("$.total").value(1));
   }
 
-  //TODO: change inline descriptor creation
+  // TODO: change inline descriptor creation
   @Deprecated(forRemoval = true)
   private void registerSampleEntities() {
     GlobalManager.globalManager().registerTransaction(
@@ -356,7 +356,8 @@ class DslIntrospectionResourceTest {
     var sampleFunction = FunctionDslObject.builder()
             .name("sampleFunction")
             .executeLogic(ctx -> Result.success("ok"))
-            .explainLogic(ctx -> Result.success(new ExplainReport("sampleFunction", "test", "")))
+            .explainLogic(ctx -> Result
+                    .success(new ExplainReport("sampleFunction", "test", "", List.of())))
             .descriptor(() -> DslDescriptor.builder()
                     .objectDescriptor(new ObjectDescriptor() {
                       @Override

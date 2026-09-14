@@ -52,7 +52,7 @@ Generated code does **not** talk to registries or runners directly. It uses a si
   - `<IN, OUT> Context<OUT> runProcessDsl(DslObject dsl, Context<…> ctx)`
   - equivalents for Transactions (`executeTransaction`, `previewTransaction`, `explainTransaction`,
     `compensateTransaction`)
-  - equivalents for Helpers/Functions (`runHelper`, `previewHelper`, `explainHelper`).
+  - equivalents for Helpers/Functions (`runHelper`, `previewHelper`).
 - `GlobalManager` delegates internally to three per-entity managers:
   - `ProcessManager`
   - `TransactionManager`
@@ -105,9 +105,10 @@ This structure keeps generated `*Definition` classes free of direct registry/run
 Every `Executable` can also explain itself directly via `ExplainSupport.explain(Context)`
 (dsl-api), which builds a compact `ExplainReport` from `describe()`/`description()`. `ExplainReport`
 is a simple 3-field record: `name`, markdown `description` (budget-bounded), and `mermaid` diagram.
-`GlobalManager` exposes `explain(name, ctx, budgetChars)` and `explainHelper(...)`, dispatching
-across process → transaction → helper → function and attaching a Mermaid diagram for
-processes/transactions/helpers. The budget (default `Constants.DEFAULT_BUDGET_CHARS` = 4000) is
+`GlobalManager` no longer carries a flat explain entry point; the starter runs explain through
+the pipe/stage pathway (`ExplainDslPipe` → `ExplainReportStage` / `ExplainBudgetStage`), which
+dispatches to the entity's `explainLogic` and assembles a full `ExplainGraphReport`. The budget
+(default `Constants.DEFAULT_BUDGET_CHARS` = 4000) is
 carried by the context metadata under `Constants.EXPLAIN_BUDGET_CHARS_KEY` and bounds the textual
 payload (description + diagram); implementations truncate rather than exceed it (read it via
 `cbs.nova.dsl.explain.ExplainBudget.of(ctx)`). The descriptor-based fallback report is composed by
@@ -119,8 +120,9 @@ default `ClasspathExplainResourceResolver` prefix `explain/`; the starter publis
 `@ConditionalOnMissingBean` `SpringExplainResourceResolver` driven by
 `cbs.nova.explain.resources-prefix`).
 Helpers such as the starter's `MathHelper` override `explain` to produce mode- and
-argument-specific descriptions. The starter's explain pipe still produces the full 12-field
-`ExplainTraceReport` (execution trace, external calls, metrics, AST, dry-run logs; package
+argument-specific descriptions. The starter's explain pipe still produces the full 14-field
+`ExplainGraphReport` (execution trace, external calls, metrics, AST, dry-run logs; graph-shaped with
+`children` and `hasCompensation`, self-rendering mermaid/PlantUML/BPMN diagrams; package
 `cbs.nova.dsl.model`) for internal pipeline use; `DevDslRuntime` maps it to the
 simple `ExplainReport`, appending a one-line trace summary to the description.
 
@@ -175,28 +177,28 @@ always run locally.
 All paths are relative to the application root. The reload and draft routers are gated by
 `dsl.reload.enabled` and `dsl.drafts.enabled` respectively (both default `true`).
 
-| Method | Path | Purpose | Request / Response |
-|--------|------|---------|--------------------|
-| POST | `/api/dsl/preview/{name}` | Dry-run a DSL process | `DslRequest` body → `PreviewReport` |
-| POST | `/api/dsl/run/{name}` | Execute a DSL process with full side effects | `DslRequest` body → result object, or `422 ErrorResponse` |
-| POST | `/api/dsl/explain/{name}` | Static-analysis report for a DSL process | `DslRequest` body → `ExplainReport` |
-| GET | `/api/dsl/processes` | List registered process names | `NamesResponse` |
-| GET | `/api/dsl/processes/{name}` | Metadata for a single process | `ProcessDetail` |
-| GET | `/api/dsl/processes/{name}/diagram` | Render a diagram; optional query `format=mermaid|plantuml|bpmn` | `ProcessDiagramDto` |
-| GET | `/api/dsl/transactions` | List registered transaction names | `NamesResponse` |
-| GET | `/api/dsl/transactions/{name}` | Metadata for a single transaction | `TransactionDetail` |
-| GET | `/api/dsl/objects/search` | Search helpers, processes, transactions, and functions | query params `name`, `type`, `description` → `HelperSearchResult[]` |
-| GET | `/api/dsl/helpers` | List registered helper names | `NamesResponse` |
-| GET | `/api/dsl/constructs/{name}` | Structure and generated code body of a construct | `ConstructBodyDto` |
-| GET | `/api/dsl/definitions` | Paged list of all registered DSL entities | `PageResponse<DefinitionMetaDto>` |
-| GET | `/api/executions` | List execution runs | query params `processName`, `status`, `mode`, `limit`, `offset` → `PageResponse<ExecutionDto>` |
-| GET | `/api/executions/stats` | Aggregate execution statistics | query param `topProcesses` → `ExecutionStatsResponse` |
-| GET | `/api/executions/{id}` | Single execution run | `ExecutionDto` |
-| POST | `/api/executions/{id}/cancel` | Cancel a running execution run | `ExecutionDto` |
-| POST | `/api/dsl/reload` | Reload DSL definitions from `dsl.source-dir` | `ReloadResponse` |
-| POST | `/api/dsl/drafts/{name}/save` | Persist a Workbench draft | `DraftRequest` body → `DraftResponse` |
-| POST | `/api/dsl/drafts/{name}/publish` | Persist as published and reload DSL | `DraftRequest` body → `DraftResponse` |
-| DELETE | `/api/dsl/drafts/{name}` | Delete a Workbench draft | `DraftResponse` |
+| Method | Path                                | Purpose                                                | Request / Response                                                                             |
+|--------|-------------------------------------|--------------------------------------------------------|------------------------------------------------------------------------------------------------|
+| POST   | `/api/dsl/preview/{name}`           | Dry-run a DSL process                                  | `DslRequest` body → `PreviewReport`                                                            |
+| POST   | `/api/dsl/run/{name}`               | Execute a DSL process with full side effects           | `DslRequest` body → result object, or `422 ErrorResponse`                                      |
+| POST   | `/api/dsl/explain/{name}`           | Static-analysis report for a DSL process               | `DslRequest` body → `ExplainReport`                                                            |
+| GET    | `/api/dsl/processes`                | List registered process names                          | `NamesResponse`                                                                                |
+| GET    | `/api/dsl/processes/{name}`         | Metadata for a single process                          | `ProcessDetail`                                                                                |
+| GET    | `/api/dsl/processes/{name}/diagram` | Render a diagram; optional query `format=mermaid       | plantuml                                                                                       |bpmn` | `ProcessDiagramDto` |
+| GET    | `/api/dsl/transactions`             | List registered transaction names                      | `NamesResponse`                                                                                |
+| GET    | `/api/dsl/transactions/{name}`      | Metadata for a single transaction                      | `TransactionDetail`                                                                            |
+| GET    | `/api/dsl/objects/search`           | Search helpers, processes, transactions, and functions | query params `name`, `type`, `description` → `HelperSearchResult[]`                            |
+| GET    | `/api/dsl/helpers`                  | List registered helper names                           | `NamesResponse`                                                                                |
+| GET    | `/api/dsl/constructs/{name}`        | Structure and generated code body of a construct       | `ConstructBodyDto`                                                                             |
+| GET    | `/api/dsl/definitions`              | Paged list of all registered DSL entities              | `PageResponse<DefinitionMetaDto>`                                                              |
+| GET    | `/api/executions`                   | List execution runs                                    | query params `processName`, `status`, `mode`, `limit`, `offset` → `PageResponse<ExecutionDto>` |
+| GET    | `/api/executions/stats`             | Aggregate execution statistics                         | query param `topProcesses` → `ExecutionStatsResponse`                                          |
+| GET    | `/api/executions/{id}`              | Single execution run                                   | `ExecutionDto`                                                                                 |
+| POST   | `/api/executions/{id}/cancel`       | Cancel a running execution run                         | `ExecutionDto`                                                                                 |
+| POST   | `/api/dsl/reload`                   | Reload DSL definitions from `dsl.source-dir`           | `ReloadResponse`                                                                               |
+| POST   | `/api/dsl/drafts/{name}/save`       | Persist a Workbench draft                              | `DraftRequest` body → `DraftResponse`                                                          |
+| POST   | `/api/dsl/drafts/{name}/publish`    | Persist as published and reload DSL                    | `DraftRequest` body → `DraftResponse`                                                          |
+| DELETE | `/api/dsl/drafts/{name}`            | Delete a Workbench draft                               | `DraftResponse`                                                                                |
 
 The runtime request record is `cbs.nova.starter.model.DslRequest`:
 

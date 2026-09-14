@@ -138,10 +138,11 @@ calls, dry-run logs) rather than to describe the flow.
 - The deprecated flat explain pathway (`GlobalManager.explain(name, ctx, budgetChars)` + `ExplainReportFactory`) was
   removed per `docs/plans/T513-retire-deprecated-explain-pathway.md`. The only remaining pathway is the live
   pipe/stage one (`ExplainDslPipe` + `ExplainReportStage`/`ExplainBudgetStage`) which already executes the real
-  `preview`/`explain` lambda and collects an `astTree`, but produces one `ExplainTraceReport` for the top-level call,
-  not a graph node per callee. Note
-  `ExplainTraceReport` is a separate, unrelated record (full execution trace: `astTree`, `externalCalls`, `metrics`,
-  `errors`) and is out of scope for this graph refactor.
+  `preview`/`explain` lambda and collects an `astTree`, but produces one `ExplainGraphReport` for the top-level call,
+  not a graph node per callee. `ExplainGraphReport` (formerly `ExplainTraceReport`) is now graph-shaped — it carries
+  `children` and renders its own mermaid/PlantUML/BPMN diagrams via `toMermaid()`/`toPlantUml()`/`toBpmn()`, with
+  `hasCompensation` captured at report-build time — but wiring a traversal that populates `children` from real callee
+  discovery is still not done.
 - `ExplainReport.merge` still has zero callers in the traversal itself — nothing yet walks `preview`'s `astTree` to
   call `addChild`/`withChildren` and build the graph this doc describes.
 - Whether `ProcessDslObject`/`FunctionDslObject` carry `explainLogic` symmetrically with

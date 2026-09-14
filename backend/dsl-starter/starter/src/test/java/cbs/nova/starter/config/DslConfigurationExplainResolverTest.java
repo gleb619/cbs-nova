@@ -3,9 +3,11 @@ package cbs.nova.starter.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Context;
+import cbs.nova.dsl.BeanResolver;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.explain.ExplainResourceResolver;
+import cbs.nova.starter.resolver.SpringBeanResolver;
 import cbs.nova.dsl.process.TemporalProcessLauncher;
 import cbs.nova.dsl.transaction.TransactionInvoker;
 import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
@@ -41,6 +43,7 @@ class DslConfigurationExplainResolverTest {
     dslConfig.temporalProcessLauncher().replace(null);
     dslConfig.transactionInvoker().replace(null);
     dslConfig.jsonSchemaGenerator().replace(null);
+    dslConfig.beanResolver().replace(null);
   }
 
   @Test
@@ -57,7 +60,8 @@ class DslConfigurationExplainResolverTest {
   @Test
   void explainResolverBeanUsesConfiguredPrefix() {
     var resolver = new DslConfiguration()
-            .explainResourceResolver(new CbsNovaExplainProperties(4000, "explain/"));
+            .explainResourceResolver(
+                    new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096));
 
     assertThat(resolver).isInstanceOf(SpringExplainResourceResolver.class);
     assertThat(resolver.load("batch-processing.md")).contains("#");
@@ -65,7 +69,8 @@ class DslConfigurationExplainResolverTest {
 
   @Test
   void applicationRunnerRegistersResolverOnDslConfig() {
-    withSourceDir().run(ctx -> ctx.getBean(ApplicationRunner.class).run(null));
+    withSourceDir()
+            .run(ctx -> ctx.getBean("dslApplicationRunner", ApplicationRunner.class).run(null));
 
     assertThat(DslConfig.dslConfig().explainResourceResolver().get())
             .isInstanceOf(SpringExplainResourceResolver.class);
@@ -86,6 +91,26 @@ class DslConfigurationExplainResolverTest {
               assertThat(DslConfig.dslConfig().explainResourceResolver().get())
                       .isSameAs(UserResolverConfiguration.USER_RESOLVER);
             });
+  }
+
+  @Test
+  void applicationRunnerRegistersBeanResolverOnDslConfig() {
+    withSourceDir()
+            .run(ctx -> ctx.getBean("dslApplicationRunner", ApplicationRunner.class).run(null));
+
+    assertThat(DslConfig.dslConfig().beanResolver().get())
+            .isInstanceOf(SpringBeanResolver.class);
+  }
+
+  @Test
+  void registeredBeanResolverResolvesSpringBeans() {
+    withSourceDir().run(ctx -> {
+      ctx.getBean("dslApplicationRunner", ApplicationRunner.class).run(null);
+
+      BeanResolver resolver = DslConfig.dslConfig().beanResolver().get();
+      assertThat(resolver.resolve(ExplainResourceResolver.class))
+              .isInstanceOf(SpringExplainResourceResolver.class);
+    });
   }
 
   @Configuration

@@ -1,6 +1,7 @@
 package cbs.nova.dsl.codegen;
 
 import cbs.nova.dsl.codegen.generator.DefinitionProviderGenerator;
+import cbs.nova.dsl.codegen.generator.ExplainResourceGenerator;
 import cbs.nova.dsl.codegen.generator.GeneratedClassProviderGenerator;
 import cbs.nova.dsl.codegen.generator.ModelRegistryGenerator;
 import cbs.nova.dsl.codegen.generator.ProcessCodeGenerator;
@@ -106,6 +107,10 @@ public final class CompileConfig implements SingletonSupport {
                     codeWriter(), codegenNaming(), modelTypeExtractor(), sourcePackageResolver()));
   }
 
+  public @NonNull ExplainResourceGenerator explainResourceGenerator() {
+    return singleton(() -> new ExplainResourceGenerator(codeWriter()));
+  }
+
   public @NonNull DefinitionProviderGenerator definitionProviderGenerator() {
     return singleton(() -> new DefinitionProviderGenerator(codeWriter()));
   }
@@ -165,7 +170,8 @@ public final class CompileConfig implements SingletonSupport {
               helperRegistry(),
               codegenNaming,
               dslPreprocessor(),
-              sourcePackageResolver);
+              sourcePackageResolver,
+              explainResourceGenerator());
     });
   }
 

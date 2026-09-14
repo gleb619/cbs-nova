@@ -1,10 +1,12 @@
 package cbs.nova.dsl.codegen.task;
 
+import cbs.nova.dsl.codegen.generator.ExplainResourceGenerator;
 import cbs.nova.dsl.codegen.generator.GeneratedClassProviderGenerator;
 import cbs.nova.dsl.codegen.generator.ModelRegistryGenerator;
 import cbs.nova.dsl.codegen.generator.ProcessCodeGenerator;
 import cbs.nova.dsl.codegen.generator.TransactionCodeGenerator;
 import cbs.nova.dsl.codegen.model.GeneratedSource;
+import cbs.nova.dsl.explain.ExplainResourceProvider;
 import cbs.nova.dsl.process.ProcessDescriptor;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,7 @@ public final class GenerateCodeTask implements CompileTask {
   private final TransactionCodeGenerator transactionCodeGenerator;
   private final GeneratedClassProviderGenerator generatedClassProviderGenerator;
   private final ModelRegistryGenerator modelRegistryGenerator;
+  private final ExplainResourceGenerator explainResourceGenerator;
 
   @Override
   public String name() {
@@ -42,6 +45,9 @@ public final class GenerateCodeTask implements CompileTask {
     var modelRegistrySource = modelRegistryGenerator.generate(
             options.srcDir(), options.outputDir(), options.targetPackage(), options.buildVersion(),
             options.useFileNameSubPackage());
+    var explainSources = explainResourceGenerator.generate(
+            options.explainResourcesDir(), options.outputDir(),
+            explainPackage(options.targetPackage()));
 
     var sources = new ArrayList<GeneratedSource>();
     var providerFqns = new ArrayList<String>();
@@ -52,11 +58,23 @@ public final class GenerateCodeTask implements CompileTask {
       }
     }
     sources.add(modelRegistrySource);
+    sources.addAll(explainSources);
+    var explainFqns = new ArrayList<String>(explainSources.size());
+    for (var src : explainSources) {
+      explainFqns.add(src.fullyQualifiedName());
+    }
 
     return context.toBuilder()
             .generatedSources(sources)
             .providerFqns(providerFqns)
+            .explainProviderFqns(explainFqns)
             .build();
+  }
+
+  private static String explainPackage(String targetPackage) {
+    return (targetPackage == null || targetPackage.isBlank())
+            ? "cbs.nova.dsl.generated.explain"
+            : targetPackage + ".explain";
   }
 
   private GenerationChunk generateProcess(ProcessDescriptor process, CompileContext context) {

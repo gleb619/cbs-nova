@@ -19,7 +19,8 @@ public record CompileContext(
         List<TransactionDescriptor> transactions,
         List<FunctionDescriptor> functions,
         List<GeneratedSource> generatedSources,
-        List<String> providerFqns) {
+        List<String> providerFqns,
+        List<String> explainProviderFqns) {
 
   public static CompileContext create(DslCompilerOptions options) {
     return CompileContext.builder()
@@ -31,6 +32,7 @@ public record CompileContext(
             .functions(List.of())
             .generatedSources(List.of())
             .providerFqns(List.of())
+            .explainProviderFqns(List.of())
             .build();
   }
 }

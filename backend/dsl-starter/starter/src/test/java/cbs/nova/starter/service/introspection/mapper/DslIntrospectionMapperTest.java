@@ -83,7 +83,7 @@ class DslIntrospectionMapperTest {
   }
 
   @Test
-  //TODO: change inline descriptor creation
+  // TODO: change inline descriptor creation
   @Deprecated(forRemoval = true)
   void mapsDslDescriptorToHelperSearchResult() {
     DslDescriptor descriptor = DslDescriptor.builder()
@@ -207,7 +207,7 @@ class DslIntrospectionMapperTest {
   }
 
   @Test
-  //TODO: change inline descriptor creation
+  // TODO: change inline descriptor creation
   @Deprecated(forRemoval = true)
   void mapsDslDescriptorToDefinitionMetaDto() {
     DslDescriptor descriptor = DslDescriptor.builder()

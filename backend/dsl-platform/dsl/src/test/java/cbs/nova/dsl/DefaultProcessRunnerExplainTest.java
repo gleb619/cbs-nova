@@ -50,7 +50,8 @@ class DefaultProcessRunnerExplainTest {
     assertThat(result.value()).isInstanceOf(ExplainReport.class);
     var report = (ExplainReport) result.value();
     assertThat(report.name()).isEqualTo("P");
-    assertThat(report.description()).contains("**Process** `P`");
+    assertThat(report.mermaid()).isEqualTo(cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN);
+    assertThat(report.description()).isEmpty();
   }
 
   @Test
@@ -67,7 +68,8 @@ class DefaultProcessRunnerExplainTest {
             .explain(ctx -> {
               explainCalled.set(true);
               assertThat(ctx.mode()).isEqualTo(ExecutionMode.EXPLAIN);
-              return Result.success(new ExplainReport("P", "explain", ""));
+              return Result.success(
+                      ExplainReport.builder().name("P").description("explain").mermaid("").build());
             })
             .build();
     var ctx = contextFactory.of("input", ExecutionMode.EXPLAIN, "run-explain-logic");
@@ -77,7 +79,8 @@ class DefaultProcessRunnerExplainTest {
     assertThat(explainCalled.get()).isTrue();
     assertThat(executeCalled.get()).isFalse();
     assertThat(result.isSuccess()).isTrue();
-    assertThat(result.value()).isEqualTo(new ExplainReport("P", "explain", ""));
+    assertThat(result.value()).isEqualTo(
+            ExplainReport.builder().name("P").description("explain").mermaid("").build());
   }
 
   @Test
@@ -95,8 +98,8 @@ class DefaultProcessRunnerExplainTest {
 
     assertThat(result.isSuccess()).isTrue();
     var report = (ExplainReport) result.value();
-    assertThat(report.description()).hasSizeLessThanOrEqualTo(20);
-    assertThat(report.mermaid()).isEmpty();
+    assertThat(report.mermaid()).hasSizeLessThanOrEqualTo(20);
+    assertThat(report.description()).isEmpty();
   }
 
   @Test

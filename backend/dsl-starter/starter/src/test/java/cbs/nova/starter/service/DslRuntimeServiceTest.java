@@ -175,7 +175,7 @@ class DslRuntimeServiceTest {
 
   @Test
   void explainDelegatesToRuntime() {
-    ExplainReport report = new ExplainReport("P", "desc", "graph TD\n  P[P]");
+    ExplainReport report = new ExplainReport("P", "desc", "graph TD\n  P[P]", List.of());
     doReturn(report).when(dslRuntime).explain(eq("P"), any());
 
     RuntimeOutcome result = service.explain("P", new DslRequest("in", null), "req-4");
@@ -307,7 +307,7 @@ class DslRuntimeServiceTest {
   }
 
   @Test
-  //TODO: change inline descriptor creation
+  // TODO: change inline descriptor creation
   @Deprecated(forRemoval = true)
   void previewCoercesMapBodyIntoTypedInputRecord() {
     // Register a synthetic process directly so GlobalManager lookup resolves its inputType
@@ -324,7 +324,8 @@ class DslRuntimeServiceTest {
               .parameters(List.of())
               .executeLogic(ctx -> Result.success("ok"))
               .previewLogic(ctx -> Result.success("ok"))
-              .explainLogic(ctx -> Result.success(new ExplainReport("Synthetic", "test", "")))
+              .explainLogic(
+                      ctx -> Result.success(new ExplainReport("Synthetic", "test", "", List.of())))
               .descriptor(DslDescriptor.builder()
                       .objectDescriptor(new ObjectDescriptor() {
                         @Override
@@ -386,7 +387,7 @@ class DslRuntimeServiceTest {
   }
 
   @Test
-  //TODO: change inline descriptor creation
+  // TODO: change inline descriptor creation
   @Deprecated(forRemoval = true)
   void previewLeavesNonMapBodyUntouched() {
     GlobalManager.globalManager().resetForTests();
@@ -401,7 +402,8 @@ class DslRuntimeServiceTest {
               .parameters(List.of())
               .executeLogic(ctx -> Result.success("ok"))
               .previewLogic(ctx -> Result.success("ok"))
-              .explainLogic(ctx -> Result.success(new ExplainReport("Synthetic", "test", "")))
+              .explainLogic(
+                      ctx -> Result.success(new ExplainReport("Synthetic", "test", "", List.of())))
               .descriptor(DslDescriptor.builder()
                       .objectDescriptor(new ObjectDescriptor() {
                         @Override

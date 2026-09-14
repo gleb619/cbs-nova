@@ -58,10 +58,11 @@ public interface Executable<IN, OUT>
     var name = descriptor.name() != null
             ? descriptor.name()
             : (fallbackName.isEmpty() ? "executable" : fallbackName);
-    var report = new ExplainReport(
-            name,
-            EMPTY_MARKDOWN.equals(markdown) ? derivedDescription(descriptor) : markdown,
-            "");
+    var report = ExplainReport.builder()
+            .name(name)
+            .description(
+                    EMPTY_MARKDOWN.equals(markdown) ? derivedDescription(descriptor) : markdown)
+            .build();
     return ExplainReports.truncateTo(report, ExplainBudget.of(ctx));
   }
 

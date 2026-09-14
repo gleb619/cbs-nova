@@ -6,6 +6,7 @@ import cbs.nova.dsl.GeneratedClassProvider;
 import cbs.nova.dsl.codegen.generator.ModelRegistryGenerator;
 import cbs.nova.dsl.codegen.model.GeneratedSource;
 import cbs.nova.dsl.codegen.util.CodeWriter;
+import cbs.nova.dsl.explain.ExplainResourceProvider;
 import cbs.nova.dsl.registry.ModelRegistry;
 import java.nio.file.Path;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +42,10 @@ public final class WriteOutputTask implements CompileTask {
                     .map(GeneratedSource::fullyQualifiedName)
                     .toList(),
             options.outputDir());
+    if (!context.explainProviderFqns().isEmpty()) {
+      codeWriter.writeServiceFile(ExplainResourceProvider.class.getName(),
+              context.explainProviderFqns(), options.outputDir());
+    }
 
     return context;
   }

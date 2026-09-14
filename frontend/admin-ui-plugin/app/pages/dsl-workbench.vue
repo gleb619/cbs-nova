@@ -339,6 +339,46 @@ async function confirmCreate() {
 }
 
 type ActionValue = 'refresh' | 'validate' | 'save' | 'publish'
+type HelpersMenuValue = 'objects' | 'helpers' | 'history' | 'diagnostics' | 'tests'
+
+const helpersMenuItems = computed<DropdownMenuItem[]>(() => [
+  { label: helperSearchOpen.value ? 'Close Objects' : 'Objects', value: 'objects' },
+  { label: helperCatalogOpen.value ? 'Close Helpers' : 'Helpers', value: 'helpers' },
+  {
+    label: historyPanelOpen.value ? 'Close History' : 'History',
+    value: 'history',
+    disabled: !selectedConstruct.value,
+  },
+  {
+    label: diagnosticsPanelOpen.value ? 'Close Diagnostics' : 'Diagnostics',
+    value: 'diagnostics',
+  },
+  {
+    label: testsPanelOpen.value ? 'Close Tests' : 'Tests',
+    value: 'tests',
+    disabled: !selectedConstruct.value,
+  },
+])
+
+function runHelpersMenu(item: DropdownMenuItem) {
+  switch (item.value as HelpersMenuValue) {
+    case 'objects':
+      toggleHelperSearch()
+      break
+    case 'helpers':
+      toggleHelperCatalog()
+      break
+    case 'history':
+      toggleHistoryPanel()
+      break
+    case 'diagnostics':
+      toggleDiagnosticsPanel()
+      break
+    case 'tests':
+      toggleTestsPanel()
+      break
+  }
+}
 
 const actionItems = computed<DropdownMenuItem[]>(() => [
   { label: 'Refresh', value: 'refresh', disabled: state.value.isLoading },
@@ -441,53 +481,13 @@ onBeforeUnmount(() => {
           New
         </button>
         <DropdownMenu label="Actions" align="right" :items="actionItems" @select="runAction" />
+        <DropdownMenu
+          label="Misc"
+          align="right"
+          :items="helpersMenuItems"
+          @select="runHelpersMenu"
+        />
       </div>
-      <button
-        type="button"
-        class="px-3 py-1.5 text-sm rounded border border-line hover:bg-surface"
-        :class="helperSearchOpen ? 'bg-accent-500/10 text-accent-500 border-accent-500' : ''"
-        @click="toggleHelperSearch"
-      >
-        {{ helperSearchOpen ? 'Close Objects' : 'Objects' }}
-      </button>
-      <button
-        type="button"
-        class="px-3 py-1.5 text-sm rounded border border-line hover:bg-surface"
-        :class="historyPanelOpen ? 'bg-accent-500/10 text-accent-500 border-accent-500' : ''"
-        data-testid="workbench-toggle-history"
-        :disabled="!selectedConstruct"
-        @click="toggleHistoryPanel"
-      >
-        {{ historyPanelOpen ? 'Close History' : 'History' }}
-      </button>
-      <button
-        type="button"
-        class="px-3 py-1.5 text-sm rounded border border-line hover:bg-surface"
-        :class="diagnosticsPanelOpen ? 'bg-accent-500/10 text-accent-500 border-accent-500' : ''"
-        data-testid="workbench-toggle-diagnostics"
-        @click="toggleDiagnosticsPanel"
-      >
-        {{ diagnosticsPanelOpen ? 'Close Diagnostics' : 'Diagnostics' }}
-      </button>
-      <button
-        type="button"
-        class="px-3 py-1.5 text-sm rounded border border-line hover:bg-surface"
-        :class="testsPanelOpen ? 'bg-accent-500/10 text-accent-500 border-accent-500' : ''"
-        data-testid="workbench-toggle-tests"
-        :disabled="!selectedConstruct"
-        @click="toggleTestsPanel"
-      >
-        {{ testsPanelOpen ? 'Close Tests' : 'Tests' }}
-      </button>
-      <button
-        type="button"
-        class="px-3 py-1.5 text-sm rounded border border-line hover:bg-surface"
-        :class="helperCatalogOpen ? 'bg-accent-500/10 text-accent-500 border-accent-500' : ''"
-        data-testid="workbench-toggle-helpers"
-        @click="toggleHelperCatalog"
-      >
-        {{ helperCatalogOpen ? 'Close Helpers' : 'Helpers' }}
-      </button>
     </header>
 
     <div class="flex flex-1 overflow-hidden">

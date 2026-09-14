@@ -1,17 +1,16 @@
 package cbs.nova.dsl;
 
-import static cbs.nova.dsl.config.Constants.DEFAULT_BUDGET_CHARS;
-
+import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.config.ProcessContextFactory;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
 import cbs.nova.dsl.exception.DslExecutionException;
+import cbs.nova.dsl.explain.ExplainResource;
+import cbs.nova.dsl.explain.ExplainResourceProvider;
+import cbs.nova.dsl.explain.ExplainResourceRegistry;
 import cbs.nova.dsl.function.FunctionDslObject;
-import cbs.nova.dsl.generator.ExplainReportFactory;
-import cbs.nova.dsl.generator.MermaidDiagramGenerator;
 import cbs.nova.dsl.helper.HelperManager;
 import cbs.nova.dsl.helper.HelperResolver;
-import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.process.ProcessCompensation;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.process.ProcessMain;
@@ -45,9 +44,7 @@ public final class GlobalManager {
   private final GeneratedClassRegistry generatedClassRegistry;
   private final ProcessContextFactory processContextFactory;
   private final CompensationRegistry compensationRegistry;
-  // TODO: its break a DI principle, move to a config class inatead
-  private final ExplainReportFactory explainReportFactory = new ExplainReportFactory(
-          new MermaidDiagramGenerator());
+  private final ExplainResourceRegistry explainResourceRegistry;
 
   public static @NonNull GlobalManager globalManager() {
     var instance = INSTANCE.get();
@@ -429,41 +426,6 @@ public final class GlobalManager {
             .or(() -> describeFunction(name).map(DslDescriptor::description));
   }
 
-  public @NonNull Optional<ExplainReport> explainHelper(
-          @NonNull String name, @NonNull Context<?> ctx) {
-    return explainHelper(name, ctx, DEFAULT_BUDGET_CHARS);
-  }
-
-  public @NonNull Optional<ExplainReport> explainHelper(
-          @NonNull String name, @NonNull Context<?> ctx, int budgetChars) {
-    return helperManager.findHelper(name)
-            .map(helper -> explainReportFactory.forHelper(
-                    name, invokeExplain(helper, ctx), budgetChars));
-  }
-
-  public @NonNull Optional<ExplainReport> explain(@NonNull String name, @NonNull Context<?> ctx) {
-    return explain(name, ctx, DEFAULT_BUDGET_CHARS);
-  }
-
-  public @NonNull Optional<ExplainReport> explain(
-          @NonNull String name, @NonNull Context<?> ctx, int budgetChars) {
-    return findProcess(name)
-            .map(process -> explainReportFactory.forProcess(process, budgetChars))
-            .or(() -> findTransaction(name)
-                    .map(tx -> explainReportFactory.forTransaction(tx, budgetChars)))
-            .or(() -> explainHelper(name, ctx, budgetChars))
-            .or(() -> helperManager.findFunction(name)
-                    .map(fn -> explainReportFactory.forFunction(fn, budgetChars)));
-  }
-
-  @SuppressWarnings("unchecked")
-  // TODO: explain must work in same way for all objects
-  @Deprecated(forRemoval = true)
-  private static <T> @NonNull ExplainReport invokeExplain(
-          @NonNull Executable<T, ?> helper, @NonNull Context<?> ctx) {
-    return helper.explain((Context<T>) ctx);
-  }
-
   public void resetForTests() {
     INSTANCE.set(null);
     DslConfig.dslConfig().temporalProcessLauncher().replace(null);
@@ -476,5 +438,54 @@ public final class GlobalManager {
 
   public ClassLoader defaultClassLoader() {
     return GlobalManager.class.getClassLoader();
+  }
+
+  /** Registers an explain resource provider at runtime (e.g. a custom HTTP-backed source). */
+  public void registerExplainResource(@NonNull ExplainResourceProvider provider) {
+    explainResourceRegistry.register(provider);
+  }
+
+  /** Loads every SPI-registered provider on the given classloader. */
+  public void registerExplainResources(@NonNull ClassLoader classLoader) {
+    explainResourceRegistry.init(classLoader);
+  }
+
+  /** Resolves an explain resource by its frontmatter {@code name}. */
+  public @NonNull Optional<ExplainResource> describeExplainResource(@NonNull String name) {
+    return explainResourceRegistry.describeByName(name);
+  }
+
+  /** Resolves an explain resource by its {@code filename} (e.g. {@code batch-processing.md}). */
+  public @NonNull Optional<ExplainResource> describeExplainResourceByFilename(
+          @NonNull String filename) {
+    return explainResourceRegistry.describeByFilename(filename);
+  }
+
+  /**
+   * Resolves the markdown content for an explain resource associated with the given DSL object
+   * {@code name}. Lookup order: frontmatter {@code name}, then {@code name + ".md"}, then the
+   * kebab-cased variant (e.g. {@code BatchProcessing -> batch-processing.md}). Falls back to
+   * {@link Constants#EMPTY_MARKDOWN} when nothing matches.
+   */
+  public @NonNull String resolveExplainContent(@NonNull String name) {
+    return explainResourceRegistry.describeByName(name)
+            .or(() -> explainResourceRegistry.describeByFilename(name + ".md"))
+            .or(() -> explainResourceRegistry.describeByFilename(toKebabCase(name) + ".md"))
+            .map(ExplainResource::content)
+            .orElse(Constants.EMPTY_MARKDOWN);
+  }
+
+  //TODO: move to some util class instead
+  @Deprecated(forRemoval = true)
+  private static @NonNull String toKebabCase(@NonNull String name) {
+    var kebab = new StringBuilder(name.length() + 4);
+    for (int i = 0; i < name.length(); i++) {
+      var c = name.charAt(i);
+      if (i > 0 && Character.isUpperCase(c) && Character.isLetter(name.charAt(i - 1))) {
+        kebab.append('-');
+      }
+      kebab.append(Character.toLowerCase(c));
+    }
+    return kebab.toString();
   }
 }

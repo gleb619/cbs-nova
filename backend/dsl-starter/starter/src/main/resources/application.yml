@@ -112,3 +112,6 @@ cbs:
   nova:
     explain:
       budget-chars: 4000
+      name-max-tokens: 128
+      description-max-tokens: 256
+      mermaid-max-tokens: 4096

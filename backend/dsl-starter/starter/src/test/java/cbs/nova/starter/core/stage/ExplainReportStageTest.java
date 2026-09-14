@@ -10,7 +10,7 @@ import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.model.ExplainTraceReport;
+import cbs.nova.dsl.model.ExplainGraphReport;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.PreviewErrorDetail;
@@ -53,13 +53,13 @@ class ExplainReportStageTest {
             next);
 
     assertThat(result.isSuccess()).isTrue();
-    ExplainTraceReport report = (ExplainTraceReport) result.value();
+    ExplainGraphReport report = (ExplainGraphReport) result.value();
     assertThat(report.errors()).hasSize(1);
     assertThat(report.errors().get(0).message()).contains("boom");
   }
 
   @Test
-  //TODO: change inline descriptor creation
+  // TODO: change inline descriptor creation
   @Deprecated(forRemoval = true)
   void descriptionIsBuiltFromDescriptorTypeWhenFound() {
     String fnName = "MyFn-" + System.nanoTime();
@@ -108,10 +108,57 @@ class ExplainReportStageTest {
     Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
             next);
 
-    ExplainTraceReport report = (ExplainTraceReport) result.value();
+    ExplainGraphReport report = (ExplainGraphReport) result.value();
     assertThat(report.description()).isEqualTo("Function: " + fnName);
     assertThat(report.dslDescriptor()).isNotNull();
     assertThat(report.dslDescriptor().type()).isEqualTo(DslObject.DslType.FUNCTION);
+  }
+
+  @Test
+  void hasCompensationIsCapturedAtBuildTimeForProcessWithCompensation() {
+    String processName = "CompProcess-" + System.nanoTime();
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process(processName)
+                    .execute(ctx -> Result.success("ok"))
+                    .compensation((ctx, history) -> ctx.log("rolled back"))
+                    .build());
+
+    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(
+            pipeContext(processName, ExecutionMode.PREVIEW), c -> Result.success("downstream"));
+
+    ExplainGraphReport report = (ExplainGraphReport) result.value();
+    assertThat(report.hasCompensation()).isTrue();
+    assertThat(report.mermaidDiagram()).contains("Compensate[Compensate]");
+  }
+
+  @Test
+  void hasCompensationIsFalseForProcessAndHelperWithoutCompensation() {
+    String processName = "PlainProcess-" + System.nanoTime();
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process(processName).execute(ctx -> Result.success("ok")).build());
+    String helperName = "echo-helper-" + System.nanoTime();
+    GlobalManager.globalManager().registerHelper(helperName, new EchoHelper());
+
+    Result<?> processResult = new ExplainReportStage(new ExplainDiagramRenderer()).execute(
+            pipeContext(processName, ExecutionMode.PREVIEW), c -> Result.success("downstream"));
+    Result<?> helperResult = new ExplainReportStage(new ExplainDiagramRenderer()).execute(
+            pipeContext(helperName, ExecutionMode.PREVIEW), c -> Result.success("downstream"));
+
+    assertThat(((ExplainGraphReport) processResult.value()).hasCompensation()).isFalse();
+    assertThat(((ExplainGraphReport) helperResult.value()).hasCompensation()).isFalse();
+  }
+
+  @Test
+  void reportIsBuiltWithEmptyChildren() {
+    String processName = "SoloProcess-" + System.nanoTime();
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process(processName).execute(ctx -> Result.success("ok")).build());
+
+    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(
+            pipeContext(processName, ExecutionMode.PREVIEW), c -> Result.success("downstream"));
+
+    ExplainGraphReport report = (ExplainGraphReport) result.value();
+    assertThat(report.children()).isEmpty();
   }
 
   @Test
@@ -125,7 +172,7 @@ class ExplainReportStageTest {
     Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
             next);
 
-    ExplainTraceReport report = (ExplainTraceReport) result.value();
+    ExplainGraphReport report = (ExplainGraphReport) result.value();
     assertThat(report.description()).isEqualTo("Helper: " + helperName);
     assertThat(report.dslDescriptor()).isNull();
     assertThat(report.executableDescriptor()).isNotNull();
@@ -140,7 +187,7 @@ class ExplainReportStageTest {
     Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
             next);
 
-    ExplainTraceReport report = (ExplainTraceReport) result.value();
+    ExplainGraphReport report = (ExplainGraphReport) result.value();
     assertThat(report.description()).isEqualTo("Entity: " + orphan);
     assertThat(report.dslDescriptor()).isNull();
     assertThat(report.executableDescriptor()).isNull();
@@ -158,7 +205,7 @@ class ExplainReportStageTest {
     Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
             next);
 
-    ExplainTraceReport report = (ExplainTraceReport) result.value();
+    ExplainGraphReport report = (ExplainGraphReport) result.value();
     assertThat(report.errors()).isEmpty();
   }
 
@@ -171,7 +218,7 @@ class ExplainReportStageTest {
     Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
             next);
 
-    ExplainTraceReport report = (ExplainTraceReport) result.value();
+    ExplainGraphReport report = (ExplainGraphReport) result.value();
     assertThat(report.errors()).isEmpty();
   }
 
@@ -186,7 +233,7 @@ class ExplainReportStageTest {
     Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
             next);
 
-    ExplainTraceReport report = (ExplainTraceReport) result.value();
+    ExplainGraphReport report = (ExplainGraphReport) result.value();
     assertThat(report.errors()).hasSize(1);
     PreviewErrorDetail detail = report.errors().get(0);
     assertThat(detail.code()).isEqualTo(PreviewErrorCode.UNKNOWN_ERROR);
@@ -202,7 +249,7 @@ class ExplainReportStageTest {
     Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
             next);
 
-    ExplainTraceReport report = (ExplainTraceReport) result.value();
+    ExplainGraphReport report = (ExplainGraphReport) result.value();
     assertThat(report.externalCalls()).isEmpty();
     assertThat(report.callCounts()).isEmpty();
   }
@@ -220,7 +267,7 @@ class ExplainReportStageTest {
     Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
             next);
 
-    ExplainTraceReport report = (ExplainTraceReport) result.value();
+    ExplainGraphReport report = (ExplainGraphReport) result.value();
     assertThat(report.externalCalls()).hasSize(2);
     assertThat(report.callCounts())
             .containsEntry("database", 1)
@@ -236,7 +283,7 @@ class ExplainReportStageTest {
     Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
             next);
 
-    ExplainTraceReport report = (ExplainTraceReport) result.value();
+    ExplainGraphReport report = (ExplainGraphReport) result.value();
     assertThat(report.executionTrace()).isEmpty();
     assertThat(report.dryRunLogs()).isEmpty();
     assertThat(report.astTree()).isNull();

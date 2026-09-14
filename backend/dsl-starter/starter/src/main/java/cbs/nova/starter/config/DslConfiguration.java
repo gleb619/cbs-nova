@@ -3,6 +3,7 @@ import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
 import cbs.nova.starter.config.properties.DslProperties;
 
+import cbs.nova.dsl.BeanResolver;
 import cbs.nova.dsl.utils.DslDefinitionLoader;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.GlobalManager;
@@ -23,6 +24,7 @@ import cbs.nova.dsl.utils.MvelExpressionEvaluator;
 import cbs.nova.starter.converter.MapInputConverter;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.resolver.SpringBeanHelperInstanceResolver;
+import cbs.nova.starter.resolver.SpringBeanResolver;
 import cbs.nova.starter.resolver.SpringExplainResourceResolver;
 import cbs.nova.starter.service.DefaultDslWorkspaceResolver;
 import cbs.nova.starter.service.DslFileBulkhead;
@@ -62,6 +64,7 @@ public class DslConfiguration {
           TemporalProcessLauncher temporalProcessLauncher,
           JsonSchemaGenerator jsonSchemaGenerator,
           ExplainResourceResolver explainResourceResolver,
+          BeanResolver beanResolver,
           DslDefinitionLoader loader) {
     return _ -> {
       GlobalManager.globalManager().resetForTests();
@@ -76,6 +79,7 @@ public class DslConfiguration {
       registerHelperResolvers();
       registerJsonSchemaGenerator(jsonSchemaGenerator);
       registerExplainResourceResolver(explainResourceResolver);
+      registerBeanResolver(beanResolver);
     };
   }
 
@@ -143,6 +147,12 @@ public class DslConfiguration {
   public ExplainResourceResolver explainResourceResolver(
           CbsNovaExplainProperties explainProperties) {
     return new SpringExplainResourceResolver(explainProperties.resourcesPrefix());
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(BeanResolver.class)
+  public BeanResolver beanResolver(ApplicationContext applicationContext) {
+    return new SpringBeanResolver(applicationContext);
   }
 
   @Bean
@@ -237,6 +247,10 @@ public class DslConfiguration {
 
   private void registerExplainResourceResolver(ExplainResourceResolver explainResourceResolver) {
     DslConfig.dslConfig().explainResourceResolver().replace(explainResourceResolver);
+  }
+
+  private void registerBeanResolver(BeanResolver beanResolver) {
+    DslConfig.dslConfig().beanResolver().replace(beanResolver);
   }
 
 }

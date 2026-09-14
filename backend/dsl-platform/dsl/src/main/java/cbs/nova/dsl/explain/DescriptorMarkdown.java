@@ -5,7 +5,7 @@ import cbs.nova.dsl.ParameterDescriptor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-//TODO: to remove
+//TODO: to remove, we need other format for a md
 @Deprecated(forRemoval = true)
 public final class DescriptorMarkdown {
 

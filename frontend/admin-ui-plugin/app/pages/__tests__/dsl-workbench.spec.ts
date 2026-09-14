@@ -306,6 +306,23 @@ function mountPage() {
   return wrapper
 }
 
+type WorkbenchWrapper = ReturnType<typeof mountPage>
+
+// The Misc dropdown is the second DropdownMenu on the page (first is Actions).
+// We bypass DOM clicks since DropdownMenu is component-stubbed in tests and
+// drive behaviour through the same `select` event real clicks produce.
+async function openHelpersMenuItem(
+  wrapper: WorkbenchWrapper,
+  value: 'objects' | 'helpers' | 'history' | 'diagnostics' | 'tests',
+) {
+  const dropdowns = wrapper.findAllComponents({ name: 'DropdownMenu' })
+  const misc = dropdowns.find((node) => node.props('label') === 'Misc')
+  expect(misc, 'Misc dropdown').toBeTruthy()
+  const items = misc?.props('items') as Array<{ value: string }> | undefined
+  expect(items.some((item) => item.value === value)).toBe(true)
+  await misc?.vm.$emit('select', { value })
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -529,7 +546,7 @@ describe('dsl-workbench.vue saved drafts store', () => {
     const wrapper = mountPage()
     await flushPromises()
 
-    await wrapper.find('[data-testid="workbench-toggle-history"]').trigger('click')
+    await openHelpersMenuItem(wrapper, 'history')
     await flushPromises()
 
     expect(dslApi.listPublishHistory).toHaveBeenCalledWith('c1')
@@ -1135,7 +1152,7 @@ describe('dsl-workbench.vue history panel persistence', () => {
     const wrapper = mountPage()
     await flushPromises()
 
-    await wrapper.find('[data-testid="workbench-toggle-history"]').trigger('click')
+    await openHelpersMenuItem(wrapper, 'history')
     await nextTick()
 
     expect(document.querySelector('[data-testid="history-drawer"]')).not.toBeNull()
@@ -1176,7 +1193,7 @@ describe('dsl-workbench.vue definition tests panel', () => {
     const wrapper = mountPage()
     await flushPromises()
 
-    await wrapper.find('[data-testid="workbench-toggle-tests"]').trigger('click')
+    await openHelpersMenuItem(wrapper, 'tests')
     await flushPromises()
 
     expect(document.querySelector('[data-testid="tests-drawer"]')).not.toBeNull()

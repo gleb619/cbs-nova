@@ -79,13 +79,14 @@ class ExplainSupportTest {
 
   @Test
   void explainReportTruncateToLeavesShortReportUnchanged() {
-    var report = new ExplainReport("n", "abc", "def");
+    var report = ExplainReport.builder().name("n").description("abc").mermaid("def").build();
     assertThat(ExplainReports.truncateTo(report, 10)).isSameAs(report);
   }
 
   @Test
   void explainReportTruncateToTruncatesDescriptionFirstThenDiagram() {
-    var report = new ExplainReport("n", "description", "mermaidDiagram");
+    var report = ExplainReport.builder().name("n").description("description")
+            .mermaid("mermaidDiagram").build();
     var truncated = ExplainReports.truncateTo(report, 15);
     assertThat(truncated.description()).isEqualTo("description");
     assertThat(truncated.mermaid()).isEqualTo("merm");
@@ -93,7 +94,8 @@ class ExplainSupportTest {
 
   @Test
   void explainReportTruncateToHandlesNegativeBudget() {
-    var report = new ExplainReport("n", "description", "mermaidDiagram");
+    var report = ExplainReport.builder().name("n").description("description")
+            .mermaid("mermaidDiagram").build();
     var truncated = ExplainReports.truncateTo(report, -1);
     assertThat(truncated.description()).isEmpty();
     assertThat(truncated.mermaid()).isEmpty();
@@ -101,8 +103,10 @@ class ExplainSupportTest {
 
   @Test
   void explainReportMergeCombinesDescriptionsAndDiagrams() {
-    var left = new ExplainReport("n", "left-desc", "left-diagram");
-    var right = new ExplainReport("n", "right-desc", "right-diagram");
+    var left = ExplainReport.builder().name("n").description("left-desc").mermaid("left-diagram")
+            .build();
+    var right = ExplainReport.builder().name("n").description("right-desc").mermaid("right-diagram")
+            .build();
     var merged = ExplainReports.merge(left, right);
     assertThat(merged.description()).contains("left-desc").contains("right-desc");
     assertThat(merged.mermaid()).contains("left-diagram").contains("right-diagram");

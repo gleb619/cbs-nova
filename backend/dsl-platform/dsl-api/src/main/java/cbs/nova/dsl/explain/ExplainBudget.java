@@ -11,9 +11,6 @@ public final class ExplainBudget {
   private ExplainBudget() {
   }
 
-  // TODO: instead we need a smart way of truncate, based on markdown structure, like
-  // headers/subheaders etc, e.g.
-  @Deprecated(forRemoval = true)
   public static int of(@NonNull Context<?> ctx) {
     Object value = ctx.metadata().get(EXPLAIN_BUDGET_CHARS_KEY);
     if (value instanceof Number number && number.intValue() >= 0) {

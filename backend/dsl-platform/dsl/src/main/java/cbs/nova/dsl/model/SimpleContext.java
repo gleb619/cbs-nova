@@ -1,6 +1,7 @@
 package cbs.nova.dsl.model;
 
 import cbs.nova.dsl.Context;
+import cbs.nova.dsl.BeanResolver;
 import cbs.nova.dsl.DslSaga;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.JsonValue;
@@ -31,6 +32,7 @@ public final class SimpleContext<T> implements Context<T> {
   private final DslSaga saga;
   private final ExecutionTraceCollector executionTraceCollector;
   private final HelperInterceptor helperInterceptor;
+  private final BeanResolver beanResolver;
 
   @Override
   @SuppressWarnings("unchecked")
@@ -79,6 +81,19 @@ public final class SimpleContext<T> implements Context<T> {
   }
 
   @Override
+  public @NonNull BeanResolver beanResolver() {
+    //TODO: we always must work with a `DslConfig.dslConfig().beanResolver()` as a field, so beanResolver cant be null
+    @Deprecated
+    BeanResolver resolver = beanResolver != null
+            ? beanResolver
+            : DslConfig.dslConfig().beanResolver().get();
+    if (resolver == null) {
+      throw new UnsupportedOperationException("BeanResolver is not configured");
+    }
+    return resolver;
+  }
+
+  @Override
   public @NonNull JsonValue json() {
     return JsonValues.of(body, DslConfig.dslConfig().jsonMapper());
   }
@@ -113,7 +128,7 @@ public final class SimpleContext<T> implements Context<T> {
   @Override
   public <U> @NonNull Context<U> withBody(@NonNull U newBody) {
     return new SimpleContext<>(newBody, metadata, mode, runId, transactionRouting,
-            executionListener, saga, executionTraceCollector, helperInterceptor);
+            executionListener, saga, executionTraceCollector, helperInterceptor, beanResolver);
   }
 
   @Override
@@ -121,37 +136,43 @@ public final class SimpleContext<T> implements Context<T> {
     var updated = new LinkedHashMap<>(metadata);
     updated.put(key, value);
     return new SimpleContext<>(body, Map.copyOf(updated), mode, runId, transactionRouting,
-            executionListener, saga, executionTraceCollector, helperInterceptor);
+            executionListener, saga, executionTraceCollector, helperInterceptor, beanResolver);
   }
 
   @Override
   public @NonNull Context<T> withTransactionRouting(@NonNull TransactionRouting routing) {
     return new SimpleContext<>(body, metadata, mode, runId, routing, executionListener, saga,
-            executionTraceCollector, helperInterceptor);
+            executionTraceCollector, helperInterceptor, beanResolver);
   }
 
   @Override
   public @NonNull Context<T> withExecutionListener(@NonNull ExecutionListener listener) {
     return new SimpleContext<>(body, metadata, mode, runId, transactionRouting, listener, saga,
-            executionTraceCollector, helperInterceptor);
+            executionTraceCollector, helperInterceptor, beanResolver);
   }
 
   @Override
   public @NonNull Context<T> withSaga(@Nullable DslSaga saga) {
     return new SimpleContext<>(body, metadata, mode, runId, transactionRouting,
-            executionListener, saga, executionTraceCollector, helperInterceptor);
+            executionListener, saga, executionTraceCollector, helperInterceptor, beanResolver);
   }
 
   @Override
   public @NonNull Context<T> withExecutionTraceCollector(
           @Nullable ExecutionTraceCollector executionTraceCollector) {
     return new SimpleContext<>(body, metadata, mode, runId, transactionRouting,
-            executionListener, saga, executionTraceCollector, helperInterceptor);
+            executionListener, saga, executionTraceCollector, helperInterceptor, beanResolver);
   }
 
   @Override
   public @NonNull Context<T> withHelperInterceptor(@Nullable HelperInterceptor interceptor) {
     return new SimpleContext<>(body, metadata, mode, runId, transactionRouting,
-            executionListener, saga, executionTraceCollector, interceptor);
+            executionListener, saga, executionTraceCollector, interceptor, beanResolver);
+  }
+
+  @Override
+  public @NonNull Context<T> withBeanResolver(@Nullable BeanResolver beanResolver) {
+    return new SimpleContext<>(body, metadata, mode, runId, transactionRouting,
+            executionListener, saga, executionTraceCollector, helperInterceptor, beanResolver);
   }
 }

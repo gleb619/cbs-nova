@@ -102,11 +102,14 @@ Each module name maps to its directory under `dsl-platform/`, `dsl-plugins/`, or
 >   use `make backend` (which sets it for you). See
 >   [`DEVELOPING.md`](DEVELOPING.md#services-ports-and-default-credentials) for
 >   the canonical ports table.
-> - **Gradle wrapper**: the repo-root `./gradlew` is Gradle 8.13 and fails
->   under JDK 25. The per-sub-build wrappers (`backend/dsl-platform/gradlew`,
->   `backend/dsl-starter/gradlew`) target Gradle 9.4.1 and are what the commands
->   above resolve to. If you see "Unsupported class file major version" or
->   "JAVA_HOME not set" you're hitting the wrong wrapper.
+> - **Gradle wrapper**: every wrapper in the repo (`./gradlew`,
+>   `backend/gradlew`, `backend/dsl-{platform,starter,plugins}/gradlew`,
+>   `app/{server,dsl}/gradlew`) pins Gradle 9.4.1. The root and `backend/gradlew`
+>   wrappers are orchestration shells that Exec-invoke the sub-builds; for
+>   direct per-module work, prefer `backend/dsl-platform/gradlew` (or the
+>   sub-build wrapper that owns the module). If you see "Unsupported class
+>   file major version" or "JAVA_HOME not set", you're hitting a JDK
+>   mismatch — install JDK 25 and export `JAVA_HOME`.
 
 ### Frontend
 
@@ -209,7 +212,7 @@ Real examples:
 ### 4. Verify
 
 ```bash
-./gradlew :starter:test
+cd backend/dsl-starter && ./gradlew :starter:test
 ```
 
 The helper is auto-registered at runtime — no manual SPI wiring needed.
@@ -249,7 +252,7 @@ If the example defines custom In/Out records, place them under
 ### 3. Verify
 
 ```bash
-./gradlew :dsl-examples:build
+cd backend/dsl-starter && ./gradlew :dsl-examples:build
 ```
 
 The `dsl-gradle-plugin` compiles compact sources, aggregates them via

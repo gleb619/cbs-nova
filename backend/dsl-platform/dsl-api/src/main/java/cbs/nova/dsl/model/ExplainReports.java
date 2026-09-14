@@ -2,7 +2,6 @@ package cbs.nova.dsl.model;
 
 import static cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -31,6 +30,8 @@ public final class ExplainReports {
             mergeChildren(left.children(), right.children()));
   }
 
+  //TODO: trace usage of method, and remove all links, it must be used only in PipeStage instead
+  @Deprecated
   public static @NonNull ExplainReport truncateTo(@NonNull ExplainReport report, int budgetChars) {
     if (budgetChars < 0) {
       return new ExplainReport(report.name(), "", "", report.children());
@@ -49,21 +50,14 @@ public final class ExplainReports {
   }
 
   public static @NonNull String toMarkdown(@NonNull ExplainReport root, int budgetChars) {
-    var visited = new LinkedHashMap<String, ExplainReport>();
-    var pending = new ArrayDeque<ExplainReport>();
-    pending.add(root);
-    while (!pending.isEmpty()) {
-      var node = pending.poll();
-      if (visited.putIfAbsent(node.name(), node) == null) {
-        pending.addAll(node.children());
-      }
-    }
+    List<ExplainReport> visited = GraphWalk.breadthFirst(root, ExplainReport::children,
+            ExplainReport::name);
 
     int budget = Math.max(budgetChars, 0);
     var sections = new ArrayList<String>();
     int used = 0;
     int omitted = 0;
-    for (var node : visited.values()) {
+    for (var node : visited) {
       if (omitted > 0) {
         omitted++;
         continue;

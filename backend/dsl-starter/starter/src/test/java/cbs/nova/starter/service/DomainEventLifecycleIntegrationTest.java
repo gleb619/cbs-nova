@@ -204,7 +204,7 @@ class DomainEventLifecycleIntegrationTest {
                     .substring(0, 8));
     SimpleContext<Object> ctx = new SimpleContext<>(
             Map.of(), Map.of(), ExecutionMode.RUN,
-            "run-x", TransactionRouting.LOCAL, null, null, null, null);
+            "run-x", TransactionRouting.LOCAL, null, null, null, null, null);
     Mockito.when(contextFactory.of(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
             .thenReturn(ctx);
     return contextFactory;

@@ -4,11 +4,11 @@ import cbs.nova.dsl.CompensationContext;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.DslObject.DslType;
+import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.model.ObjectBuilder;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
-import cbs.nova.dsl.explain.DescriptorMarkdown;
 import cbs.nova.dsl.explain.ExplainResourceExplainer;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.model.ExplainReports;
@@ -122,7 +122,7 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
             parameters != null ? parameters : List.of(),
             compensationLogic != null, null);
     var resolvedExecute = rawExecute();
-    var explain = rawExplain() != null ? rawExplain() : defaultExplain(descriptor);
+    var explain = rawExplain() != null ? rawExplain() : defaultExplain();
     var resolvedPreview = rawPreview() != null ? rawPreview() : resolvedExecute;
     return ProcessDslObject.builder()
             .name(name)
@@ -147,11 +147,11 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
 
   // TODO: it's forbidden to `truncateTo`, without traverse a whole graph
   @Deprecated(forRemoval = true)
-  private @NonNull Function<ProcessContext<?>, Result<ExplainReport>> defaultExplain(
-          @NonNull DslDescriptor descriptor) {
+  private @NonNull Function<ProcessContext<?>, Result<ExplainReport>> defaultExplain() {
     return ctx -> Result.success(
             ExplainReports.truncateTo(
-                    new ExplainReport(name, DescriptorMarkdown.render(descriptor), ""),
+                    ExplainReport.of(name,
+                            GlobalManager.globalManager().resolveExplainContent(name)),
                     ExplainBudget.of(ctx)));
   }
 

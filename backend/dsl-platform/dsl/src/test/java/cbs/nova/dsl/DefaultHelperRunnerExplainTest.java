@@ -29,7 +29,8 @@ class DefaultHelperRunnerExplainTest {
             .explain(ctx -> {
               explainCalled.set(true);
               assertThat(ctx.mode()).isEqualTo(ExecutionMode.EXPLAIN);
-              return Result.success(new ExplainReport("explainFn", "explain", ""));
+              return Result.success(ExplainReport.builder().name("explainFn").description("explain")
+                      .mermaid("").build());
             })
             .build());
 
@@ -37,7 +38,8 @@ class DefaultHelperRunnerExplainTest {
     var result = runner.runFunction("explainFn", ctx, registry);
 
     assertThat(result.isSuccess()).isTrue();
-    assertThat(result.value()).isEqualTo(new ExplainReport("explainFn", "explain", ""));
+    assertThat(result.value()).isEqualTo(
+            ExplainReport.builder().name("explainFn").description("explain").mermaid("").build());
     assertThat(explainCalled.get()).isTrue();
     assertThat(executeCalled.get()).isFalse();
   }
@@ -63,7 +65,8 @@ class DefaultHelperRunnerExplainTest {
     assertThat(result.value()).isInstanceOf(ExplainReport.class);
     var report = (ExplainReport) result.value();
     assertThat(report.name()).isEqualTo("fallbackFn");
-    assertThat(report.description()).contains("**Function** `fallbackFn`");
+    assertThat(report.mermaid()).isEqualTo(cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN);
+    assertThat(report.description()).isEmpty();
   }
 
   @Test
@@ -73,7 +76,8 @@ class DefaultHelperRunnerExplainTest {
             .input(String.class)
             .output(String.class)
             .execute(ctx -> Result.success("run"))
-            .explain(ctx -> Result.success(new ExplainReport("runFn", "explain", "")))
+            .explain(ctx -> Result.success(ExplainReport.builder().name("runFn")
+                    .description("explain").mermaid("").build()))
             .build());
 
     var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-mode-fn");

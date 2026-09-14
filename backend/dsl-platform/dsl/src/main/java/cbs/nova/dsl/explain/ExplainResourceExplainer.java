@@ -2,17 +2,16 @@ package cbs.nova.dsl.explain;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.model.ExplainReports;
 import cbs.nova.dsl.explain.ExplainBudget;
 import java.util.function.Function;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ExplainResourceExplainer {
-
-  private ExplainResourceExplainer() {
-  }
 
   // TODO: it's forbidden to `truncateTo`, without traverse a whole graph
   @Deprecated(forRemoval = true)
@@ -21,7 +20,7 @@ public final class ExplainResourceExplainer {
     return ctx -> {
       final String markdown;
       try {
-        markdown = DslConfig.dslConfig().explainResourceResolver().get().load(resourcePath);
+        markdown = ctx.bean(ExplainResourceResolver.class).load(resourcePath);
       } catch (RuntimeException ex) {
         return Result.failure(new IllegalStateException(
                 "Unable to load explain resource for '" + name + "' from classpath: "
@@ -29,7 +28,7 @@ public final class ExplainResourceExplainer {
                 ex));
       }
       return Result.success(ExplainReports.truncateTo(
-              new ExplainReport(name, markdown, ""), ExplainBudget.of(ctx)));
+              ExplainReport.of(name, markdown), ExplainBudget.of(ctx)));
     };
   }
 }

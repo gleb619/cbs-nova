@@ -2,15 +2,16 @@ package cbs.nova.starter;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslRuntime;
-import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.model.ExplainTraceReport;
+import cbs.nova.dsl.model.ExplainGraphReport;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.starter.core.PreviewErrorHandler;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
@@ -33,8 +34,8 @@ public final class DevDslRuntime implements DslRuntime {
 
   @Override
   public @NonNull ExplainReport explain(@NonNull String name, @NonNull Context<?> ctx) {
-    Result<ExplainTraceReport> result = explainPipe.execute(name, ctx);
-    ExplainTraceReport traceReport = result.value();
+    Result<ExplainGraphReport> result = explainPipe.execute(name, ctx);
+    ExplainGraphReport traceReport = result.value();
     if (traceReport != null) {
       return toExplainReport(traceReport);
     }
@@ -42,16 +43,17 @@ public final class DevDslRuntime implements DslRuntime {
     return new ExplainReport(
             name,
             "Entity: " + name + " — explain failed: " + error.message(),
-            "");
+            "",
+            List.of());
   }
 
-  private static @NonNull ExplainReport toExplainReport(@NonNull ExplainTraceReport traceReport) {
+  private static @NonNull ExplainReport toExplainReport(@NonNull ExplainGraphReport traceReport) {
     var description = traceReport.description() + traceSummary(traceReport);
     var mermaid = traceReport.mermaidDiagram() != null ? traceReport.mermaidDiagram() : "";
-    return new ExplainReport(traceReport.name(), description, mermaid);
+    return new ExplainReport(traceReport.name(), description, mermaid, List.of());
   }
 
-  private static @NonNull String traceSummary(@NonNull ExplainTraceReport traceReport) {
+  private static @NonNull String traceSummary(@NonNull ExplainGraphReport traceReport) {
     var traceEntries = traceReport.executionTrace().size();
     var errors = traceReport.errors().size();
     if (traceEntries == 0 && errors == 0) {

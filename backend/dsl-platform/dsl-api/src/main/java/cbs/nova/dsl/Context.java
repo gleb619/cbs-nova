@@ -120,4 +120,20 @@ public interface Context<T> {
   default <U> U metadata(String key) {
     return (U) metadata().get(key);
   }
+
+  @NonNull
+  default BeanResolver beanResolver() {
+    throw new UnsupportedOperationException(
+            "Bean resolution is not available for this context implementation");
+  }
+
+  @NonNull
+  default <U> U bean(@NonNull Class<U> type) {
+    return type.cast(beanResolver().resolve(type));
+  }
+
+  @NonNull
+  default Context<T> withBeanResolver(@Nullable BeanResolver beanResolver) {
+    return this;
+  }
 }

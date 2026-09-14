@@ -2,7 +2,7 @@
 
 ## What it is
 
-CBS-Nova: Business Orchestration Engine for core banking operations. Built on Java 25, Spring Boot, and Temporal workflows, with PostgreSQL persistence, Kotlin Script rules engine, and a Vue/Nuxt.js admin UI.
+CBS-Nova: Business Orchestration Engine for core banking operations. Built on Java 25, Spring Boot, and Temporal workflows, with PostgreSQL persistence, MVEL-based expression evaluation, and a Vue/Nuxt.js admin UI.
 
 ## Architecture at a glance
 
@@ -30,22 +30,24 @@ See [`DEVELOPING.md`](DEVELOPING.md) for per-platform install instructions and t
 `docker compose up` starts the full containerized stack today: Postgres / Keycloak / Bugsink / Temporal / 
 `spring-app` (built from [`app/Dockerfile`](app/Dockerfile)), with the backend reachable on host port 8090.
 
-For local development with hot reload, [`Makefile`](Makefile) target `dev` runs [`scripts/dev.sh`](scripts/dev.sh), which starts the backend and frontend in parallel on the host. It assumes the Compose infrastructure is already up. Because the containerized `spring-app` also binds host port 8090, start only the infrastructure services first to avoid the collision, then run `make dev`:
+For local development with hot reload, all orchestration now flows through a single Python CLI at [`scripts/cbs_cli.py`](scripts/cbs_cli.py) (package: [`scripts/src/cbs_cli/`](scripts/src/cbs_cli/)). The [`Makefile`](Makefile) is a thin wrapper exposing every command — `make dev` is equivalent to `python3 scripts/cbs_cli.py dev`. Because the containerized `spring-app` also binds host port 8090, start only the infrastructure services first to avoid the collision, then run dev:
 
 ```bash
 docker compose up -d postgres-keycloak keycloak bugsink-db bugsink temporal-postgres temporal temporal-ui
-make dev
+python3 scripts/cbs_cli.py dev   # or: make dev
 ```
 
 Then open the Spring Boot app on http://localhost:8090 and the Nuxt UI on http://localhost:3000.
 
-**Manual fallback** if you'd rather start the pieces by hand:
+Run `python3 scripts/cbs_cli.py --help` (or `make help`) for the full command list: `up`, `down`, `logs`, `clean`, `backend`, `frontend`, `publish`, `lint`, `lint-backend`, `lint-frontend`, `fmt`, `doctor`, `seed`, `seed-history`, `loadtest`, `cve-gate`, `openapi-fetch`, `openapi-diff`, `openapi-diff-test`.
+
+**Manual fallback** — invoke the pieces by hand (backend needs JDK 25; every wrapper in the repo pins Gradle 9.4.1 — use the one matching the sub-build, e.g. `backend/dsl-platform/gradlew` for platform/starter work):
 
 ```bash
-# from backend/
-./gradlew :starter:bootRun
-# from frontend/
-pnpm dev
+# backend
+SERVER_PORT=8090 backend/dsl-platform/gradlew -p backend/dsl-starter :starter-launcher:bootRun -x test
+# frontend
+cd frontend && pnpm dev
 ```
 
 ## Key ports

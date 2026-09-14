@@ -57,6 +57,33 @@ class DslCompilerOptionsTest {
     assertThat(options.logLevel()).isEqualTo(Level.INFO);
     assertThat(options.classpath()).isNull();
     assertThat(options.useFileNameSubPackage()).isTrue();
+    assertThat(options.explainResourcesDir()).isNull();
+  }
+
+  @Test
+  void parsesExplainResourcesDirWhenPresent() {
+    var src = tempDir.resolve("src");
+    var out = tempDir.resolve("out");
+    var explain = tempDir.resolve("explain");
+    var props = new Properties();
+    props.setProperty("srcDir", src.toString());
+    props.setProperty("outputDir", out.toString());
+    props.setProperty("explainResourcesDir", explain.toString());
+
+    assertThat(DslCompilerOptions.fromProperties(props).explainResourcesDir())
+            .isEqualTo(explain);
+  }
+
+  @Test
+  void treatsBlankExplainResourcesDirAsNull() {
+    var src = tempDir.resolve("src");
+    var out = tempDir.resolve("out");
+    var props = new Properties();
+    props.setProperty("srcDir", src.toString());
+    props.setProperty("outputDir", out.toString());
+    props.setProperty("explainResourcesDir", "   ");
+
+    assertThat(DslCompilerOptions.fromProperties(props).explainResourcesDir()).isNull();
   }
 
   @Test

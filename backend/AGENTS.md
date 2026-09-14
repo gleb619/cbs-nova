@@ -142,7 +142,8 @@ Prefer `codegraph_*` over grep.
   `dslApplicationRunner`; a user-defined `ExplainResourceResolver` bean wins. The pipe/stage explain
   chain lives in the starter (`core/pipe/ExplainDslPipe`, stages in `core/stage` such as
   `ExplainBudgetStage`/`ExplainReportStage`); helpers override `explain` for mode/arg-specific reports
-  (see `MathHelper`). Starter builds full 12-field `ExplainTraceReport` (package `cbs.nova.dsl.model/`);
+  (see `MathHelper`). Starter builds full 14-field `ExplainGraphReport` (package `cbs.nova.dsl.model/` —
+  graph-shaped: `children`, `hasCompensation`, self-rendering `toMermaid()`/`toPlantUml()`/`toBpmn()`);
   `DevDslRuntime` maps it to simple `ExplainReport` with one-line trace summary.
 
 ---

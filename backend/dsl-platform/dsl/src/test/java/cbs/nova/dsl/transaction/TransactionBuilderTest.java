@@ -7,10 +7,12 @@ import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.ExecutionMode;
+import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.explain.DescriptorMarkdown;
+import cbs.nova.dsl.explain.ExplainResourceProvider;
 import cbs.nova.dsl.model.ExplainReport;
 import java.time.Duration;
 import java.util.List;
@@ -127,7 +129,7 @@ class TransactionBuilderTest {
   }
 
   @Test
-  void effectiveExplainFallsBackToDescriptorReportWhenExplainNotSet() {
+  void effectiveExplainFallsBackToEmptyMarkdownWhenNoResourceRegistered() {
     var tx = Dsl.transaction("NoExplainTx")
             .execute(ctx -> Result.success("exec"))
             .build();
@@ -140,13 +142,15 @@ class TransactionBuilderTest {
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isNotNull();
     assertThat(result.value().name()).isEqualTo("NoExplainTx");
-    assertThat(result.value().description()).contains("**Transaction** `NoExplainTx`");
-    assertThat(result.value().mermaid()).isEmpty();
+    assertThat(result.value().mermaid()).isEqualTo(Constants.EMPTY_MARKDOWN);
+    assertThat(result.value().description()).isEmpty();
+
   }
 
   @Test
   void effectiveExplainReturnsExplainWhenSet() {
-    var report = new ExplainReport("WithExplainTx", "explain", "");
+    var report = ExplainReport.builder().name("WithExplainTx").description("explain").mermaid("")
+            .build();
     var tx = Dsl.transaction("WithExplainTx")
             .execute(ctx -> Result.success("exec"))
             .explain(ctx -> Result.success(report))
@@ -169,7 +173,7 @@ class TransactionBuilderTest {
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().name()).isEqualTo("DocTx");
-    assertThat(result.value().description()).contains("# Builder Sample");
+    assertThat(result.value().mermaid()).contains("# Builder Sample");
   }
 
   @Test
@@ -187,7 +191,7 @@ class TransactionBuilderTest {
 
     var result = tx.effectiveExplain().apply(ctx);
 
-    assertThat(result.value().description()).hasSizeLessThanOrEqualTo(5);
+    assertThat(result.value().mermaid()).hasSizeLessThanOrEqualTo(5);
   }
 
   @Test
@@ -295,5 +299,121 @@ class TransactionBuilderTest {
             .contains("- Output: `String`")
             .contains("- Side effects: yes")
             .doesNotContain("Compensation");
+  }
+
+  @Test
+  void implementsObjectBuilderInterface() {
+    assertThat(Dsl.transaction("AnyTx")).isInstanceOf(cbs.nova.dsl.model.ObjectBuilder.class);
+  }
+
+  @Test
+  void defaultExplainUsesExplainResourceByMetadataName() {
+    var gm = GlobalManager.globalManager();
+    gm.registerExplainResource(stubProvider(
+            "LookupTx", "by-name", "lookup-tx.md", "# Tx By Name"));
+    try {
+      var tx = Dsl.transaction("LookupTx")
+              .execute(ctx -> Result.success("exec"))
+              .build();
+      var contextFactory = new ContextFactory();
+      var ctx = new TransactionRichContext<>(
+              contextFactory.of("body", ExecutionMode.EXPLAIN, "run-tx-lookup-name"),
+              contextFactory);
+
+      var result = tx.effectiveExplain().apply(ctx);
+
+      assertThat(result.isSuccess()).isTrue();
+      assertThat(result.value().mermaid()).isEqualTo("# Tx By Name");
+    } finally {
+      gm.resetForTests();
+    }
+  }
+
+  @Test
+  void defaultExplainUsesExplainResourceByFilename() {
+    var gm = GlobalManager.globalManager();
+    gm.registerExplainResource(stubProvider(
+            "BatchPayment", "pays", "batch-payment.md", "# Tx Filename"));
+    try {
+      var tx = Dsl.transaction("BatchPayment")
+              .execute(ctx -> Result.success("exec"))
+              .build();
+      var contextFactory = new ContextFactory();
+      var ctx = new TransactionRichContext<>(
+              contextFactory.of("body", ExecutionMode.EXPLAIN, "run-tx-lookup-file"),
+              contextFactory);
+
+      var result = tx.effectiveExplain().apply(ctx);
+
+      assertThat(result.isSuccess()).isTrue();
+      assertThat(result.value().mermaid()).isEqualTo("# Tx Filename");
+    } finally {
+      gm.resetForTests();
+    }
+  }
+
+  @Test
+  void defaultExplainPrefersMetadataNameOverFilename() {
+    var gm = GlobalManager.globalManager();
+    gm.registerExplainResource(stubProvider(
+            "PreferTx", "by-name", "prefer-tx.md", "# Name Wins"));
+    gm.registerExplainResource(stubProvider(
+            "PreferTxFile", "by-file", "prefertx.md", "# File Loses"));
+    try {
+      var tx = Dsl.transaction("PreferTx")
+              .execute(ctx -> Result.success("exec"))
+              .build();
+      var contextFactory = new ContextFactory();
+      var ctx = new TransactionRichContext<>(
+              contextFactory.of("body", ExecutionMode.EXPLAIN, "run-tx-lookup-prefer"),
+              contextFactory);
+
+      var result = tx.effectiveExplain().apply(ctx);
+
+      assertThat(result.value().mermaid()).isEqualTo("# Name Wins");
+    } finally {
+      gm.resetForTests();
+    }
+  }
+
+  @Test
+  void defaultExplainFallsBackToEmptyMarkdownWhenResourceMissing() {
+    var tx = Dsl.transaction("MissingTx")
+            .execute(ctx -> Result.success("exec"))
+            .build();
+    var contextFactory = new ContextFactory();
+    var ctx = new TransactionRichContext<>(
+            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-tx-fallback"),
+            contextFactory);
+
+    var result = tx.effectiveExplain().apply(ctx);
+
+    assertThat(result.value().mermaid()).isEqualTo(Constants.EMPTY_MARKDOWN);
+    assertThat(result.value().description()).isEmpty();
+  }
+
+  private static ExplainResourceProvider stubProvider(
+          String name, String description, String filename, String content) {
+    return new ExplainResourceProvider() {
+      @Override
+      public String name() {
+        return name;
+      }
+
+      @Override
+      public String description() {
+        return description;
+      }
+
+      @Override
+      public String filename() {
+        return filename;
+      }
+
+      @Override
+      public String content() {
+        return content;
+      }
+    };
   }
 }

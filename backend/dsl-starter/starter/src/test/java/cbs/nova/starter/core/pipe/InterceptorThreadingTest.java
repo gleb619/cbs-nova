@@ -17,7 +17,7 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.fake.FakeConfig;
 import cbs.nova.dsl.fake.FakeEntry;
-import cbs.nova.dsl.model.ExplainTraceReport;
+import cbs.nova.dsl.model.ExplainGraphReport;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
@@ -168,10 +168,10 @@ class InterceptorThreadingTest {
             bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, previewProperties,
             new CbsNovaFakesProperties(false, null), runScopedFakeConfig,
             new SimpleMeterRegistry(), new ExplainDiagramRenderer(),
-            new CbsNovaExplainProperties(4000, "explain/"), null);
+            new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096), null);
 
     Context<?> ctx = contextFactory.of("payload", ExecutionMode.EXPLAIN, "run-explain");
-    Result<ExplainTraceReport> result = explainPipe.execute("dbCall", ctx);
+    Result<ExplainGraphReport> result = explainPipe.execute("dbCall", ctx);
 
     assertThat(result.isSuccess()).isTrue();
     verify(recorder).record(eq("helper"), eq("dbCall"), eq("execute"), eq("faked-db"));

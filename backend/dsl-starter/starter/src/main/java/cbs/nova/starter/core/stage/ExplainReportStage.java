@@ -6,21 +6,18 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorDetail;
 import cbs.nova.dsl.PreviewMetricsSnapshot;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.model.ExplainTraceReport;
-import cbs.nova.starter.core.PreviewErrorHandler;
+import cbs.nova.dsl.model.ExplainGraphReport;
 import cbs.nova.starter.converter.ExternalCallConverter;
+import cbs.nova.starter.core.PreviewErrorHandler;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import cbs.nova.starter.core.recorder.ExternalCall;
 import cbs.nova.starter.reporting.ExplainDiagramRenderer;
-import org.jspecify.annotations.NonNull;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.jspecify.annotations.NonNull;
 
-//TODO: class needs to be reworked due to changes in ExplainReport
-@Deprecated(forRemoval = true)
 public final class ExplainReportStage implements DslPipeStage {
 
   private final ExplainDiagramRenderer diagramRenderer;
@@ -40,6 +37,7 @@ public final class ExplainReportStage implements DslPipeStage {
             .or(() -> gm.describeFunction(context.name()))
             .orElse(null);
     String description = describeEntity(dslDesc, gm, context.name());
+    boolean hasCompensation = resolveCompensation(gm, context.name(), dslDesc);
 
     List<PreviewErrorDetail> errors = new ArrayList<>();
     if (dslResult != null && !dslResult.isSuccess()) {
@@ -55,37 +53,59 @@ public final class ExplainReportStage implements DslPipeStage {
             ? ExternalCallConverter.toCallCounts(calls)
             : Map.of();
 
-    ExplainTraceReport baseReport = new ExplainTraceReport(
+    ExplainGraphReport baseReport = new ExplainGraphReport(
             context.name(),
             description,
             attribute(context, "executionTrace", List.class, List.of()),
             externalCalls,
             callCounts,
+            hasCompensation,
             gm.describeHelper(context.name()).orElse(null),
             dslDesc,
             context.getAttribute("astTree", CallNode.class),
             attribute(context, "dryRunLogs", List.class, List.of()),
             context.getAttribute("metrics", PreviewMetricsSnapshot.class),
             errors,
+            List.of(),
             null);
 
     String mermaidDiagram = diagramRenderer.mermaidDiagram(baseReport);
 
-    ExplainTraceReport report = new ExplainTraceReport(
+    ExplainGraphReport report = new ExplainGraphReport(
             baseReport.name(),
             baseReport.description(),
             baseReport.executionTrace(),
             baseReport.externalCalls(),
             baseReport.callCounts(),
+            baseReport.hasCompensation(),
             baseReport.executableDescriptor(),
             baseReport.dslDescriptor(),
             baseReport.astTree(),
             baseReport.dryRunLogs(),
             baseReport.metrics(),
             baseReport.errors(),
+            baseReport.children(),
             mermaidDiagram);
 
     return Result.success(report);
+  }
+
+  //TODO: now objects alwasys have a compensations. Fallback is NoOp impl, so compensation is nonnull from now
+  @Deprecated(forRemoval = true)
+  private boolean resolveCompensation(@NonNull GlobalManager gm, @NonNull String name,
+          DslDescriptor dslDesc) {
+    if (dslDesc == null) {
+      return false;
+    }
+    return switch (dslDesc.type()) {
+      case PROCESS -> gm.findProcess(name)
+              .map(process -> process.compensationLogic() != null)
+              .orElse(false);
+      case TRANSACTION -> gm.findTransaction(name)
+              .map(tx -> tx.compensationLogic() != null)
+              .orElse(false);
+      default -> false;
+    };
   }
 
   private @NonNull String describeEntity(

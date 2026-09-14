@@ -7,10 +7,12 @@ import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.ExecutionMode;
+import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.explain.DescriptorMarkdown;
+import cbs.nova.dsl.explain.ExplainResourceProvider;
 import cbs.nova.dsl.model.ExplainReport;
 import java.util.List;
 import java.util.Map;
@@ -98,7 +100,7 @@ class FunctionBuilderTest {
   }
 
   @Test
-  void effectiveExplainFallsBackToDescriptorReportWhenExplainNotSet() {
+  void effectiveExplainFallsBackToEmptyMarkdownWhenNoResourceRegistered() {
     var fn = Dsl.function("NoExplainFn")
             .execute(ctx -> Result.success("exec"))
             .build();
@@ -111,13 +113,14 @@ class FunctionBuilderTest {
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isNotNull();
     assertThat(result.value().name()).isEqualTo("NoExplainFn");
-    assertThat(result.value().description()).contains("**Function** `NoExplainFn`");
-    assertThat(result.value().mermaid()).isEmpty();
+    assertThat(result.value().mermaid()).isEqualTo(Constants.EMPTY_MARKDOWN);
+    assertThat(result.value().description()).isEmpty();
   }
 
   @Test
   void effectiveExplainReturnsExplainWhenSet() {
-    var report = new ExplainReport("WithExplainFn", "explain", "");
+    var report = ExplainReport.builder().name("WithExplainFn").description("explain").mermaid("")
+            .build();
     var fn = Dsl.function("WithExplainFn")
             .execute(ctx -> Result.success("exec"))
             .explain(ctx -> Result.success(report))
@@ -140,7 +143,7 @@ class FunctionBuilderTest {
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().name()).isEqualTo("DocFn");
-    assertThat(result.value().description()).contains("# Builder Sample");
+    assertThat(result.value().mermaid()).contains("# Builder Sample");
   }
 
   @Test
@@ -156,7 +159,7 @@ class FunctionBuilderTest {
     var result = fn.effectiveExplain().apply(ctx);
 
     assertThat(result.isSuccess()).isTrue();
-    assertThat(result.value().description()).contains("# Builder Sample");
+    assertThat(result.value().mermaid()).contains("# Builder Sample");
   }
 
   @Test
@@ -174,8 +177,8 @@ class FunctionBuilderTest {
 
     var result = fn.effectiveExplain().apply(ctx);
 
-    assertThat(result.value().description()).hasSizeLessThanOrEqualTo(10);
-    assertThat(result.value().mermaid()).isEmpty();
+    assertThat(result.value().mermaid()).hasSizeLessThanOrEqualTo(10);
+
   }
 
   @Test
@@ -201,7 +204,8 @@ class FunctionBuilderTest {
     var fn = Dsl.function("DocFnCleared")
             .execute(ctx -> Result.success("exec"))
             .explainVia("builder-sample.md")
-            .explain(ctx -> Result.success(new ExplainReport("DocFnCleared", "code", "")))
+            .explain(ctx -> Result.success(ExplainReport.builder().name("DocFnCleared")
+                    .description("code").mermaid("").build()))
             .build();
     var contextFactory = new ContextFactory();
     var ctx = new FunctionRichContext<>(
@@ -301,5 +305,121 @@ class FunctionBuilderTest {
             .contains("- Output: `String`")
             .contains("- Side effects: yes")
             .doesNotContain("Compensation");
+  }
+
+  @Test
+  void implementsObjectBuilderInterface() {
+    assertThat(Dsl.function("AnyFn")).isInstanceOf(cbs.nova.dsl.model.ObjectBuilder.class);
+  }
+
+  @Test
+  void defaultExplainUsesExplainResourceByMetadataName() {
+    var gm = GlobalManager.globalManager();
+    gm.registerExplainResource(stubProvider(
+            "LookupFn", "by-name", "lookup-fn.md", "# By Name Body"));
+    try {
+      var fn = Dsl.function("LookupFn")
+              .execute(ctx -> Result.success("exec"))
+              .build();
+      var contextFactory = new ContextFactory();
+      var ctx = new FunctionRichContext<>(
+              contextFactory.of("body", ExecutionMode.EXPLAIN, "run-lookup-name"),
+              contextFactory);
+
+      var result = fn.effectiveExplain().apply(ctx);
+
+      assertThat(result.isSuccess()).isTrue();
+      assertThat(result.value().mermaid()).isEqualTo("# By Name Body");
+    } finally {
+      gm.resetForTests();
+    }
+  }
+
+  @Test
+  void defaultExplainUsesExplainResourceByFilename() {
+    var gm = GlobalManager.globalManager();
+    gm.registerExplainResource(stubProvider(
+            "BatchProcessing", "sums", "batch-processing.md", "# Filename Body"));
+    try {
+      var fn = Dsl.function("BatchProcessing")
+              .execute(ctx -> Result.success("exec"))
+              .build();
+      var contextFactory = new ContextFactory();
+      var ctx = new FunctionRichContext<>(
+              contextFactory.of("body", ExecutionMode.EXPLAIN, "run-lookup-file"),
+              contextFactory);
+
+      var result = fn.effectiveExplain().apply(ctx);
+
+      assertThat(result.isSuccess()).isTrue();
+      assertThat(result.value().mermaid()).isEqualTo("# Filename Body");
+    } finally {
+      gm.resetForTests();
+    }
+  }
+
+  @Test
+  void defaultExplainPrefersMetadataNameOverFilename() {
+    var gm = GlobalManager.globalManager();
+    gm.registerExplainResource(stubProvider(
+            "PreferFn", "by-name", "prefer-fn.md", "# Name Wins"));
+    gm.registerExplainResource(stubProvider(
+            "PreferFnFile", "by-file", "preferfn.md", "# File Loses"));
+    try {
+      var fn = Dsl.function("PreferFn")
+              .execute(ctx -> Result.success("exec"))
+              .build();
+      var contextFactory = new ContextFactory();
+      var ctx = new FunctionRichContext<>(
+              contextFactory.of("body", ExecutionMode.EXPLAIN, "run-lookup-prefer"),
+              contextFactory);
+
+      var result = fn.effectiveExplain().apply(ctx);
+
+      assertThat(result.value().mermaid()).isEqualTo("# Name Wins");
+    } finally {
+      gm.resetForTests();
+    }
+  }
+
+  @Test
+  void defaultExplainFallsBackToEmptyMarkdownWhenResourceMissing() {
+    var fn = Dsl.function("MissingFn")
+            .execute(ctx -> Result.success("exec"))
+            .build();
+    var contextFactory = new ContextFactory();
+    var ctx = new FunctionRichContext<>(
+            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-fallback"),
+            contextFactory);
+
+    var result = fn.effectiveExplain().apply(ctx);
+
+    assertThat(result.value().mermaid()).isEqualTo(Constants.EMPTY_MARKDOWN);
+    assertThat(result.value().description()).isEmpty();
+  }
+
+  private static ExplainResourceProvider stubProvider(
+          String name, String description, String filename, String content) {
+    return new ExplainResourceProvider() {
+      @Override
+      public String name() {
+        return name;
+      }
+
+      @Override
+      public String description() {
+        return description;
+      }
+
+      @Override
+      public String filename() {
+        return filename;
+      }
+
+      @Override
+      public String content() {
+        return content;
+      }
+    };
   }
 }

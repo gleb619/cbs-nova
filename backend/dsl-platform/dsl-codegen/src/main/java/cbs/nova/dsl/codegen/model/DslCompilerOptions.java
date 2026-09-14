@@ -24,7 +24,8 @@ public record DslCompilerOptions(
         String basePackage,
         @Deprecated(forRemoval = true) @NonNull Level logLevel,
         String classpath,
-        boolean useFileNameSubPackage) {
+        boolean useFileNameSubPackage,
+        Path explainResourcesDir) {
 
   private static final Pattern PACKAGE_PATTERN = Pattern.compile(
           "^[a-zA-Z_$][\\w$]*(\\.[a-zA-Z_$][\\w$]*)*$");
@@ -48,6 +49,8 @@ public record DslCompilerOptions(
     var logLevel = parseLogLevel(properties.getProperty("logLevel"));
     var classpath = blankToNull(properties.getProperty("classpath"));
     var useFileNameSubPackage = parseBooleanFlag(properties.getProperty("useFileNameSubPackage"));
+    var explainResourcesDir = blankToNull(properties.getProperty("explainResourcesDir"));
+    Path explainDir = explainResourcesDir != null ? Path.of(explainResourcesDir) : null;
 
     validatePackageName(targetPackage, "targetPackage");
     validatePackageName(basePackage, "basePackage");
@@ -60,7 +63,8 @@ public record DslCompilerOptions(
             basePackage,
             logLevel,
             classpath,
-            useFileNameSubPackage);
+            useFileNameSubPackage,
+            explainDir);
   }
 
   private static @NonNull Path requirePath(@NonNull Properties properties, @NonNull String key) {

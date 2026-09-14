@@ -65,6 +65,8 @@ dependencies {
   implementation libs.spring.boot.starter.oauth2.resource.server
   implementation libs.jackson.databind3
   implementation libs.mvel2
+  //TODO: redo, move details to a toml file
+  implementation 'com.knuddels:jtokkit:1.1.0'
 
   implementation libs.spring.boot.flyway
   runtimeOnly libs.flyway.database.postgresql

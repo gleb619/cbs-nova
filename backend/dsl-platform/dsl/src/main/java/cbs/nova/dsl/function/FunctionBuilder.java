@@ -9,14 +9,16 @@ import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.FunctionContext;
+import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.explain.DescriptorMarkdown;
+import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.explain.ExplainResourceExplainer;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.model.ExplainReports;
 import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.model.MapOutput;
+import cbs.nova.dsl.model.ObjectBuilder;
 import cbs.nova.dsl.registry.DefaultParameterRegistry;
 import cbs.nova.dsl.registry.ParameterRegistry;
 import cbs.nova.dsl.explain.ExplainBudget;
@@ -28,7 +30,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public final class FunctionBuilder<I, O> {
+public final class FunctionBuilder<I, O> implements ObjectBuilder<FunctionDslObject> {
 
   private final String name;
   private Class<?> inputType;
@@ -106,7 +108,7 @@ public final class FunctionBuilder<I, O> {
             : List.<ParameterDescriptor>of();
     var effectiveDescriptor = effectiveDescriptor(effectiveParameters);
     var resolvedExecute = rawExecute();
-    var explain = rawExplain() != null ? rawExplain() : defaultExplain(effectiveDescriptor);
+    var explain = rawExplain() != null ? rawExplain() : defaultExplain();
     var resolvedPreview = rawPreview() != null ? rawPreview() : resolvedExecute;
     return FunctionDslObject.builder()
             .name(name)
@@ -120,6 +122,7 @@ public final class FunctionBuilder<I, O> {
             .build();
   }
 
+  @Override
   public @NonNull List<DslObject> buildList() {
     return List.of(build());
   }
@@ -134,12 +137,11 @@ public final class FunctionBuilder<I, O> {
 
   // TODO: it's forbidden to `truncateTo`, without traverse a whole graph
   @Deprecated(forRemoval = true)
-  private @NonNull Function<FunctionContext<?>, Result<ExplainReport>> defaultExplain(
-          @NonNull Supplier<DslDescriptor> effectiveDescriptor) {
+  private @NonNull Function<FunctionContext<?>, Result<ExplainReport>> defaultExplain() {
     return ctx -> Result.success(
             ExplainReports.truncateTo(
-                    new ExplainReport(name, DescriptorMarkdown.render(effectiveDescriptor.get()),
-                            ""),
+                    ExplainReport.of(name,
+                            GlobalManager.globalManager().resolveExplainContent(name)),
                     ExplainBudget.of(ctx)));
   }
 

@@ -1,7 +1,9 @@
 package cbs.nova.dsl.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import cbs.nova.dsl.BeanResolver;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.Executable;
@@ -11,6 +13,7 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.SingletonSupport.Replaceable;
 import cbs.nova.dsl.config.SingletonSupport.SingletonScope;
 import cbs.nova.dsl.explain.ClasspathExplainResourceResolver;
+import cbs.nova.dsl.explain.ExplainResourceResolver;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.model.RetryPolicy;
 import cbs.nova.dsl.process.ProcessRunner;
@@ -72,6 +75,28 @@ class DslConfigTest {
   void explainResourceResolverDefaultsToClasspathImpl() {
     assertThat(dsl.explainResourceResolver().get())
             .isInstanceOf(ClasspathExplainResourceResolver.class);
+  }
+
+  @Test
+  void beanResolverDefaultResolvesExplainResourceResolver() {
+    assertThat(dsl.beanResolver().get().resolve(ExplainResourceResolver.class))
+            .isInstanceOf(ClasspathExplainResourceResolver.class);
+  }
+
+  @Test
+  void beanResolverDefaultRejectsUnknownType() {
+    assertThatThrownBy(() -> dsl.beanResolver().get().resolve(Object.class))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("No bean of type");
+  }
+
+  @Test
+  void beanResolverRoundTripsThroughReplace() {
+    BeanResolver resolver = type -> type.cast(new Object());
+
+    dsl.beanResolver().replace(resolver);
+
+    assertThat(dsl.beanResolver().get()).isSameAs(resolver);
   }
 
   @Test

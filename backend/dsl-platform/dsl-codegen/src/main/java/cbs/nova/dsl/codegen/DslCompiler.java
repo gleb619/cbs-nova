@@ -1,5 +1,6 @@
 package cbs.nova.dsl.codegen;
 
+import cbs.nova.dsl.codegen.generator.ExplainResourceGenerator;
 import cbs.nova.dsl.codegen.generator.GeneratedClassProviderGenerator;
 import cbs.nova.dsl.codegen.generator.ModelRegistryGenerator;
 import cbs.nova.dsl.codegen.generator.ProcessCodeGenerator;
@@ -50,6 +51,7 @@ public final class DslCompiler {
   private final CodegenNaming codegenNaming;
   private final DslPreprocessor dslPreprocessor;
   private final SourcePackageResolver sourcePackageResolver;
+  private final ExplainResourceGenerator explainResourceGenerator;
 
   public static void main(String[] args) throws IOException {
     if (args.length < 1) {
@@ -79,7 +81,8 @@ public final class DslCompiler {
             new DescribeDslObjectsTask(descriptorFactory),
             new ValidateDescriptorsTask(semanticValidator, helperRegistry),
             new GenerateCodeTask(processCodeGenerator, transactionCodeGenerator,
-                    generatedClassProviderGenerator, modelRegistryGenerator),
+                    generatedClassProviderGenerator, modelRegistryGenerator,
+                    explainResourceGenerator),
             new WriteOutputTask(codeWriter));
 
     var timings = new ArrayList<StepTiming>();

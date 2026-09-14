@@ -30,6 +30,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 
@@ -66,7 +67,7 @@ class PreviewTimeoutTest {
               } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
               }
-              return Result.success(new ExplainReport("Slow", "slow explanation", ""));
+              return Result.success(new ExplainReport("Slow", "slow explanation", "", List.of()));
             })
             .build());
   }
@@ -176,6 +177,8 @@ class PreviewTimeoutTest {
             StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, properties,
             new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()), meterRegistry,
-            new ExplainDiagramRenderer(), new CbsNovaExplainProperties(4000, "explain/"), executor);
+            new ExplainDiagramRenderer(), new CbsNovaExplainProperties(4000, "explain/", 128, 256,
+                    4096),
+            executor);
   }
 }

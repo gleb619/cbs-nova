@@ -1,5 +1,6 @@
 package cbs.nova.dsl.generator;
 
+import cbs.nova.dsl.model.ExplainGraphReport;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import org.jspecify.annotations.NonNull;
@@ -33,4 +34,7 @@ public interface DiagramGenerator {
   String forHelper(@NonNull String name,
           @Nullable List<Map<String, Object>> externalCalls,
           @Nullable Map<String, Integer> callCounts);
+
+  @NonNull
+  String forReport(@NonNull ExplainGraphReport report);
 }

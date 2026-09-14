@@ -6,7 +6,7 @@ Local development guide for the cbs-nova Temporal DSL orchestration engine.
 
 | Tool | Version | Why |
 |------|---------|-----|
-| **Java JDK** | 25 (or any 21+ supported by Spring Boot) | Spring Boot starter (`backend/starter`) |
+| **Java JDK** | 25 (or any 21+ supported by Spring Boot) | Spring Boot starter (`backend/dsl-starter/starter-launcher`) |
 | **pnpm** | 9.x | Nuxt frontend workspace |
 | **Docker** | 24+ with Compose v2 | Runs Postgres / Keycloak / Bugsink / Temporal |
 | **curl** | any modern version | Used by `make up` healthchecks |
@@ -26,18 +26,24 @@ The whole local stack (database, Keycloak, Bugsink, Temporal, Spring Boot, Nuxt)
 is brought up with one command:
 
 ```bash
-make dev
+make dev    # equivalent to: python3 scripts/cbs_cli.py dev
 ```
 
 Under the hood:
 
 1. `docker compose up -d` is run, then `make up` waits for Keycloak, Bugsink,
    and Temporal to answer HTTP before continuing.
-2. `scripts/dev.sh` starts the Spring Boot backend (`./gradlew :starter:bootRun`)
-   and the Nuxt admin UI (`pnpm dev`) in parallel, merging both logs into your
-   terminal with `[backend]` / `[frontend]` prefixes.
-3. SIGINT (Ctrl+C) and SIGTERM are trapped — child processes are killed
-   cleanly so you don't leak a gradle daemon or a stuck node process.
+2. The Python CLI ([`scripts/cbs_cli.py`](scripts/cbs_cli.py), package
+   [`scripts/src/cbs_cli/`](scripts/src/cbs_cli/)) launches the Spring Boot
+   backend (`backend/dsl-platform/gradlew -p backend/dsl-starter
+   :starter-launcher:bootRun`) and the Nuxt admin UI (`pnpm dev`) as child
+   processes, streaming both logs into your terminal with `[backend]` /
+   `[frontend]` prefixes. All wrappers in the repo pin Gradle 9.4.1 —
+   prefer the per-sub-build wrapper (e.g. `backend/dsl-platform/gradlew`)
+   for direct work.
+3. SIGINT (Ctrl+C) and SIGTERM are trapped by the CLI — child processes are
+   killed via their process group so you don't leak a gradle daemon or a
+   stuck node process.
 
 If you'd rather start the pieces separately:
 
@@ -70,7 +76,7 @@ if you prefer, override with `TEMPORAL_ADDRESS=localhost:7233`.
 
 ## Logs and artifacts
 
-`make dev` and `scripts/dev.sh` write child-process logs to `.dev-logs/` at
+`make dev` (via the Python CLI) writes child-process logs to `.dev-logs/` at
 the repo root. The directory is created on first run and appended to on
 subsequent runs; delete it to start fresh. (You may want to add `.dev-logs/`
 to your local `.gitignore`.)
@@ -91,7 +97,9 @@ to your local `.gitignore`.)
 - **`make up` hangs on Temporal.** Temporal's auto-setup waits for its
   postgres to be ready. Inspect `docker compose logs temporal temporal-postgres`.
 - **`make backend` fails with `JAVA_HOME not set`.** Install JDK 25 and
-  export `JAVA_HOME`. The gradle wrapper (`./gradlew`) will pick it up.
+  export `JAVA_HOME`. Every wrapper in the repo pins Gradle 9.4.1 — pick
+  the one that matches the sub-build you want (e.g.
+  `backend/dsl-platform/gradlew` for platform/starter/plugin work).
 - **`make frontend` fails with `command not found: pnpm`.** Install pnpm
   via `npm i -g pnpm` or `corepack enable`.
 - **Port already in use.** Another process is bound to one of the host ports
@@ -107,7 +115,7 @@ to your local `.gitignore`.)
 - **`make dev` keeps running after Ctrl+C.** If you launched it from a
   terminal multiplexer (tmux/screen) without job control, the signal may
   not propagate to the child processes. Run `make dev` in a regular
-  terminal or use `pkill -f 'gradlew :starter:bootRun'` and
+  terminal or use `pkill -f 'starter-launcher:bootRun'` and
   `pkill -f 'pnpm dev'` to clean up manually.
 
 ## Repo layout
@@ -120,7 +128,8 @@ frontend/                      Nuxt admin UI + reusable Vue components
   components/                  Shared component library
 docker-compose.yml             Postgres / Keycloak / Bugsink / Temporal
 docs/                          Architecture, DSL reference, kanban
-scripts/dev.sh                 Parallel backend + frontend launcher
+scripts/cbs_cli.py            Single Python orchestrator (entry point)
+scripts/src/cbs_cli/          CLI package — one class per command
 Makefile                       `make dev`, `make up`, `make backend`, ...
 .env.example                   Shared env vars (copy to .env)
 ```

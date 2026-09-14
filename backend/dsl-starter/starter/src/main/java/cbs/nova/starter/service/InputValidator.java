@@ -63,7 +63,7 @@ public class InputValidator {
             .or(() -> gm.describeHelper(name).map(this::toDescriptor));
   }
 
-  //TODO: no, we need another way, via misc-codegen new method
+  // TODO: no, we need another way, via misc-codegen new method
   @Deprecated(forRemoval = true)
   private DslDescriptor toDescriptor(ExecutableDescriptor helper) {
     var objectDescriptor = new ObjectDescriptor() {

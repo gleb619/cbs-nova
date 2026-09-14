@@ -4,8 +4,10 @@ The `backend/dsl-starter/dsl-examples` module contains real-world DSL definition
 [JEP-512 compact source files](https://openjdk.org/jeps/512) and compiled into Temporal
 workflows/activities at build time.
 
-> Java 25 is required for building. The root `./gradlew` is Gradle 8.13 and **fails under Java 25**;
-> all Gradle commands below use `backend/dsl-platform/gradlew` (Gradle 9.4.1).
+> Java 25 is required for building. Every Gradle wrapper in the repo pins Gradle 9.4.1
+> (`./gradlew`, `backend/gradlew`, `backend/dsl-{platform,starter,plugins}/gradlew`,
+> `app/{server,dsl}/gradlew`); the examples commands below use
+> `backend/dsl-platform/gradlew`.
 
 ## Where the examples live
 
