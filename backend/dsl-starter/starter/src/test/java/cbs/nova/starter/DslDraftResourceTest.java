@@ -828,7 +828,7 @@ class DslDraftResourceTest {
     ServerResponse response = audited.save(postRequest("/api/dsl/drafts/foo/save"));
 
     assertThat(response.statusCode().value()).isEqualTo(200);
-    var result = audit.repository().search(null, 0, 10);
+    var result = audit.service().search(null, 0, 10);
     assertThat(result.total()).isEqualTo(1);
     var row = result.items().get(0);
     assertThat(row.action()).isEqualTo("DRAFT_WRITE");
@@ -849,7 +849,7 @@ class DslDraftResourceTest {
     ServerResponse response = audited.save(request);
 
     assertThat(response.statusCode().value()).isEqualTo(409);
-    var result = audit.repository().search(null, 0, 10);
+    var result = audit.service().search(null, 0, 10);
     assertThat(result.total()).isEqualTo(1);
     var row = result.items().get(0);
     assertThat(row.action()).isEqualTo("DRAFT_WRITE");
@@ -874,7 +874,7 @@ class DslDraftResourceTest {
       ServerResponse response = audited.publish(postRequest("/api/dsl/drafts/foo/publish"));
 
       assertThat(response.statusCode().value()).isEqualTo(200);
-      var result = audit.repository().search(null, 0, 10);
+      var result = audit.service().search(null, 0, 10);
       assertThat(result.total()).isEqualTo(1);
       var row = result.items().get(0);
       assertThat(row.action()).isEqualTo("DEFINITION_PUBLISH");

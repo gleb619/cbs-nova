@@ -3,13 +3,15 @@ package cbs.nova.starter.config;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.starter.config.properties.DslRunPersistenceProperties;
+import cbs.nova.starter.converter.DslAuditMapper;
 import cbs.nova.starter.converter.DslRunMapper;
 import cbs.nova.starter.converter.TransactionExecutionMapper;
 import cbs.nova.starter.persistence.AesFieldEncryptor;
 import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
-import cbs.nova.starter.persistence.DslAuditRepository;
 import cbs.nova.starter.persistence.DslDefinitionTestRepository;
 import cbs.nova.starter.persistence.DslEventRepository;
+import cbs.nova.starter.persistence.DslAuditCrudRepository;
+import cbs.nova.starter.persistence.DslAuditStore;
 import cbs.nova.starter.persistence.DslRunEncryption;
 import cbs.nova.starter.persistence.DslRunJdbcRepository;
 import cbs.nova.starter.persistence.DslRunNamingStrategy;
@@ -82,17 +84,22 @@ public class DslRunRepositoryConfiguration {
     return new ExtendedSelectQueryExecutor(jdbcTemplate);
   }
 
+  // The Spring Data DslAuditCrudRepository itself is picked up by the @EnableJdbcRepositories
+  // scan of cbs.nova.starter.persistence above; its condition is the DataSource, which the
+  // repository proxies need at instantiation time. (A @ConditionalOnBean on the repository
+  // interface would not match here: registrar-provided bean definitions are registered after
+  // this class's own @Bean methods are processed.)
   @Bean
   @ConditionalOnBean(DataSource.class)
-  public DslAuditRepository dslAuditRepository(NamedParameterJdbcTemplate jdbcTemplate) {
-    return new DslAuditRepository(jdbcTemplate);
+  public DslAuditStore dslAuditStore(DslAuditCrudRepository auditRepository,
+          DslAuditMapper mapper) {
+    return new DslAuditStore(auditRepository, mapper);
   }
 
   @Bean
-  @ConditionalOnBean(DslAuditRepository.class)
-  public DslAuditService dslAuditService(DslAuditRepository auditRepository,
-          ObjectMapper objectMapper) {
-    return new DslAuditService(auditRepository, objectMapper);
+  @ConditionalOnBean(DslAuditStore.class)
+  public DslAuditService dslAuditService(DslAuditStore auditStore, ObjectMapper objectMapper) {
+    return new DslAuditService(auditStore, objectMapper);
   }
 
   @Bean

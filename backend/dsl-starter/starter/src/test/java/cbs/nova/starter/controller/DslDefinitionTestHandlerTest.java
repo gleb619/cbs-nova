@@ -192,7 +192,7 @@ class DslDefinitionTestHandlerTest {
     mockMvc.perform(post("/api/dsl/definitions/LoanDisbursement/tests/run"))
             .andExpect(status().isOk());
 
-    var entries = audit.repository().search("TESTS_RUN", 0, 10);
+    var entries = audit.service().search("TESTS_RUN", 0, 10);
     assertThat(entries.total()).isEqualTo(1);
     assertThat(entries.items().get(0).target()).isEqualTo("LoanDisbursement");
     assertThat(entries.items().get(0).outcome()).isEqualTo("SUCCESS");
@@ -206,7 +206,7 @@ class DslDefinitionTestHandlerTest {
     mockMvc.perform(post("/api/dsl/definitions/LoanDisbursement/tests/run"))
             .andExpect(status().isOk());
 
-    var entries = audit.repository().search("TESTS_RUN", 0, 10);
+    var entries = audit.service().search("TESTS_RUN", 0, 10);
     assertThat(entries.items().get(0).outcome()).isEqualTo("FAILURE");
   }
 
@@ -220,7 +220,7 @@ class DslDefinitionTestHandlerTest {
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.code").value("NOT_FOUND"));
 
-    assertThat(audit.repository().search("TESTS_RUN", 0, 10).total()).isEqualTo(0);
+    assertThat(audit.service().search("TESTS_RUN", 0, 10).total()).isEqualTo(0);
   }
 
   private DslRequest request(Object body) {

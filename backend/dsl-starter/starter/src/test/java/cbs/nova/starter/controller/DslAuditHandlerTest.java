@@ -8,7 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import cbs.nova.starter.AuditTestSupport;
 import cbs.nova.starter.config.router.DslAuditRouterConfiguration;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
-import cbs.nova.starter.entity.DslAuditEntity;
+import cbs.nova.starter.model.DslAudit;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -33,7 +33,7 @@ class DslAuditHandlerTest {
   @BeforeEach
   void setUp() {
     audit = AuditTestSupport.h2();
-    DslAuditHandler handler = new DslAuditHandler(audit.repository());
+    DslAuditHandler handler = new DslAuditHandler(audit.service());
     DslAuditRouterConfiguration router = new DslAuditRouterConfiguration();
 
     AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();
@@ -99,9 +99,9 @@ class DslAuditHandlerTest {
   @Test
   void actionFilterNarrowsResults() throws Exception {
     Instant now = Instant.now();
-    audit.repository().insert(new DslAuditEntity(null, now.minus(1, ChronoUnit.MINUTES),
+    audit.append(new DslAudit(null, now.minus(1, ChronoUnit.MINUTES),
             "operator-1", "DRAFT_WRITE", "target-a", null, "SUCCESS", null));
-    audit.repository().insert(new DslAuditEntity(null, now, "operator-1",
+    audit.append(new DslAudit(null, now, "operator-1",
             "DEFINITION_PUBLISH", "target-b", "corr-1", "FAILURE", "{\"x\":1}"));
 
     mockMvc.perform(get("/api/dsl/audit").param("action", "DEFINITION_PUBLISH"))
@@ -132,7 +132,7 @@ class DslAuditHandlerTest {
   private void seed(int count) {
     Instant now = Instant.now();
     for (int i = 0; i < count; i++) {
-      audit.repository().insert(new DslAuditEntity(null,
+      audit.append(new DslAudit(null,
               now.minus(count - i, ChronoUnit.MINUTES), "operator-1", "DRAFT_WRITE",
               "target-" + i, null, "SUCCESS", null));
     }

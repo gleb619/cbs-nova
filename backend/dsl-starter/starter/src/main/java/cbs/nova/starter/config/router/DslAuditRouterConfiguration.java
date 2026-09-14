@@ -2,7 +2,7 @@ package cbs.nova.starter.config.router;
 
 import cbs.nova.starter.controller.DslAuditHandler;
 import cbs.nova.starter.model.PageResponse;
-import cbs.nova.starter.persistence.DslAuditRepository;
+import cbs.nova.starter.service.DslAuditService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -22,18 +22,18 @@ import org.springframework.web.servlet.function.ServerResponse;
  * Registers the read side of the append-only audit log under {@code GET /api/dsl/audit}.
  *
  * <p>
- * Requires a {@link DslAuditRepository} bean (created when a {@code DataSource} is present), the
- * same implicit requirement as the executions endpoints' handlers. Note: {@code @ConditionalOnBean}
- * does not work here — this class is component-scanned from {@code cbs.nova.starter}, so its
- * conditions evaluate before auto-configuration bean definitions (like {@code DslAuditRepository})
- * are registered.
+ * Requires a {@link DslAuditService} bean (created when a {@code DataSource} is present), the same
+ * implicit requirement as the executions endpoints' handlers. Note: {@code @ConditionalOnBean} does
+ * not work here — this class is component-scanned from {@code cbs.nova.starter}, so its conditions
+ * evaluate before auto-configuration bean definitions (like {@code DslAuditService}) are
+ * registered.
  */
 @Configuration
 public class DslAuditRouterConfiguration {
 
   @Bean
-  DslAuditHandler dslAuditHandler(DslAuditRepository auditRepository) {
-    return new DslAuditHandler(auditRepository);
+  DslAuditHandler dslAuditHandler(DslAuditService auditService) {
+    return new DslAuditHandler(auditService);
   }
 
   @Bean

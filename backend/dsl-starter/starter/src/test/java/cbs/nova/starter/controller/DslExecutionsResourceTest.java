@@ -637,7 +637,7 @@ class DslExecutionsResourceTest {
     mockMvc.perform(post("/api/executions/run-audit-live/cancel"))
             .andExpect(status().isOk());
 
-    var result = audit.repository().search(null, 0, 10);
+    var result = audit.service().search(null, 0, 10);
     assertThat(result.total()).isEqualTo(1);
     var row = result.items().get(0);
     assertThat(row.action()).isEqualTo("RUN_CANCEL");
@@ -656,7 +656,7 @@ class DslExecutionsResourceTest {
     mockMvc.perform(post("/api/executions/run-audit-done/cancel"))
             .andExpect(status().isConflict());
 
-    var result = audit.repository().search(null, 0, 10);
+    var result = audit.service().search(null, 0, 10);
     assertThat(result.total()).isEqualTo(1);
     var row = result.items().get(0);
     assertThat(row.action()).isEqualTo("RUN_CANCEL");
