@@ -46,7 +46,6 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
     this(client, loggingProperties, HttpCallProperties.permissive());
   }
 
-  // TODO: user want to move config part to a spring config class
   public HttpCallHelper(HttpClient client, CbsNovaLoggingProperties loggingProperties,
           HttpCallProperties httpCallProperties) {
     this.client = client;

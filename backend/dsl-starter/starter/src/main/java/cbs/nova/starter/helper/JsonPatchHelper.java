@@ -4,6 +4,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.annotation.Helper;
+import cbs.nova.starter.config.properties.JsonPatchProperties;
 import cbs.nova.starter.helper.model.JsonPatchIn;
 import cbs.nova.starter.helper.model.JsonPatchOut;
 import java.util.LinkedHashSet;
@@ -32,9 +33,17 @@ import tools.jackson.databind.node.ObjectNode;
 @Helper(name = "jsonPatch")
 public class JsonPatchHelper implements Executable<JsonPatchIn, JsonPatchOut> {
 
-  // TODO: replace with a spring config class intead to not break a DI principle
-  @Deprecated(forRemoval = true)
-  private static final ObjectMapper MAPPER = new ObjectMapper();
+  private final ObjectMapper mapper;
+  private final JsonPatchProperties properties;
+
+  public JsonPatchHelper() {
+    this(new ObjectMapper(), new JsonPatchProperties(false));
+  }
+
+  public JsonPatchHelper(ObjectMapper mapper, JsonPatchProperties properties) {
+    this.mapper = mapper;
+    this.properties = properties;
+  }
 
   @Override
   public @NonNull Result<JsonPatchOut> execute(@NonNull Context<JsonPatchIn> ctx) {
@@ -53,7 +62,7 @@ public class JsonPatchHelper implements Executable<JsonPatchIn, JsonPatchOut> {
     }
   }
 
-  private static @NonNull Result<JsonPatchOut> apply(String sourceJson, String patchJson) {
+  private @NonNull Result<JsonPatchOut> apply(String sourceJson, String patchJson) {
     if (sourceJson == null || sourceJson.isBlank()) {
       return Result.failure(new IllegalArgumentException("jsonPatch.source is required"));
     }
@@ -63,10 +72,10 @@ public class JsonPatchHelper implements Executable<JsonPatchIn, JsonPatchOut> {
     ObjectNode source = parseObject(sourceJson, "source");
     ObjectNode patch = parseObject(patchJson, "patch");
     ObjectNode result = applyMerge(source, patch);
-    return Result.success(new JsonPatchOut(writeCompact(result)));
+    return Result.success(new JsonPatchOut(write(result)));
   }
 
-  private static @NonNull Result<JsonPatchOut> diff(String sourceJson, String targetJson) {
+  private @NonNull Result<JsonPatchOut> diff(String sourceJson, String targetJson) {
     if (sourceJson == null || sourceJson.isBlank()) {
       return Result.failure(new IllegalArgumentException("jsonPatch.source is required"));
     }
@@ -76,13 +85,13 @@ public class JsonPatchHelper implements Executable<JsonPatchIn, JsonPatchOut> {
     ObjectNode source = parseObject(sourceJson, "source");
     ObjectNode target = parseObject(targetJson, "target");
     ObjectNode result = computeDiff(source, target);
-    return Result.success(new JsonPatchOut(writeCompact(result)));
+    return Result.success(new JsonPatchOut(write(result)));
   }
 
-  private static @NonNull ObjectNode parseObject(String json, String field) {
+  private @NonNull ObjectNode parseObject(String json, String field) {
     JsonNode node;
     try {
-      node = MAPPER.readTree(json);
+      node = mapper.readTree(json);
     } catch (JacksonException e) {
       throw new IllegalArgumentException(
               "jsonPatch: invalid JSON in " + field + ": " + e.getOriginalMessage(), e);
@@ -94,7 +103,7 @@ public class JsonPatchHelper implements Executable<JsonPatchIn, JsonPatchOut> {
     return (ObjectNode) node;
   }
 
-  private static @NonNull ObjectNode applyMerge(@NonNull ObjectNode source,
+  private @NonNull ObjectNode applyMerge(@NonNull ObjectNode source,
           @NonNull ObjectNode patch) {
     ObjectNode result = source.deepCopy();
     for (Entry<String, JsonNode> entry : patch.properties()) {
@@ -114,9 +123,9 @@ public class JsonPatchHelper implements Executable<JsonPatchIn, JsonPatchOut> {
     return result;
   }
 
-  private static @NonNull ObjectNode computeDiff(@NonNull ObjectNode source,
+  private @NonNull ObjectNode computeDiff(@NonNull ObjectNode source,
           @NonNull ObjectNode target) {
-    ObjectNode diff = MAPPER.createObjectNode();
+    ObjectNode diff = mapper.createObjectNode();
     LinkedHashSet<String> keys = new LinkedHashSet<>();
     source.propertyNames().forEach(keys::add);
     target.propertyNames().forEach(keys::add);
@@ -141,9 +150,12 @@ public class JsonPatchHelper implements Executable<JsonPatchIn, JsonPatchOut> {
     return diff;
   }
 
-  private static @NonNull String writeCompact(@NonNull ObjectNode node) {
+  private @NonNull String write(@NonNull ObjectNode node) {
     try {
-      return MAPPER.writeValueAsString(node);
+      if (properties.prettyPrint()) {
+        return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node);
+      }
+      return mapper.writeValueAsString(node);
     } catch (JacksonException e) {
       throw new IllegalArgumentException(
               "jsonPatch: failed to serialize result: " + e.getOriginalMessage(), e);

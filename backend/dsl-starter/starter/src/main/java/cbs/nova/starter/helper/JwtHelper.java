@@ -1,13 +1,10 @@
 package cbs.nova.starter.helper;
 
-import static cbs.nova.starter.core.StarterConstants.JWT_DEFAULT_ALG;
-import static cbs.nova.starter.core.StarterConstants.JWT_DEFAULT_TTL_SECONDS;
-
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.annotation.Helper;
-import cbs.nova.starter.core.StarterConstants;
+import cbs.nova.starter.config.properties.JwtProperties;
 import cbs.nova.starter.helper.model.JwtIn;
 import cbs.nova.starter.helper.model.JwtOut;
 import java.nio.charset.StandardCharsets;
@@ -29,9 +26,17 @@ import tools.jackson.databind.node.ObjectNode;
 @Helper(name = "jwt")
 public class JwtHelper implements Executable<JwtIn, JwtOut> {
 
-  // TODO: replace with a spring config class intead to not break a DI principle
-  @Deprecated(forRemoval = true)
-  private static final ObjectMapper MAPPER = new ObjectMapper();
+  private final ObjectMapper mapper;
+  private final JwtProperties properties;
+
+  public JwtHelper() {
+    this(new ObjectMapper(), new JwtProperties(null, null));
+  }
+
+  public JwtHelper(ObjectMapper mapper, JwtProperties properties) {
+    this.mapper = mapper;
+    this.properties = properties;
+  }
 
   @Override
   public @NonNull Result<JwtOut> execute(@NonNull Context<JwtIn> ctx) {
@@ -57,7 +62,7 @@ public class JwtHelper implements Executable<JwtIn, JwtOut> {
 
   // ---------------- parse ----------------
 
-  private static @NonNull Map<String, Object> parse(String token) {
+  private @NonNull Map<String, Object> parse(String token) {
     String[] segments = splitToken(token);
     Map<String, Object> header = readJsonObject(segments[0], "header");
     Map<String, Object> payload = readJsonObject(segments[1], "payload");
@@ -71,13 +76,13 @@ public class JwtHelper implements Executable<JwtIn, JwtOut> {
 
   // ---------------- verify ----------------
 
-  private static @NonNull Map<String, Object> verify(String token, String secret,
+  private @NonNull Map<String, Object> verify(String token, String secret,
           String requestedAlgorithm) {
     if (secret == null || secret.isEmpty()) {
       throw new IllegalArgumentException("jwt.verify: secret is required");
     }
     String algorithm = (requestedAlgorithm == null || requestedAlgorithm.isBlank())
-            ? JWT_DEFAULT_ALG
+            ? properties.defaultAlgorithm()
             : requestedAlgorithm;
     // Reject "none" and any unsupported algorithm BEFORE doing any cryptographic work.
     // CVE-2015-9235: "alg: none" attacks MUST be rejected unconditionally.
@@ -137,7 +142,7 @@ public class JwtHelper implements Executable<JwtIn, JwtOut> {
 
   // ---------------- sign ----------------
 
-  private static @NonNull String sign(Map<String, Object> payload, String secret,
+  private @NonNull String sign(Map<String, Object> payload, String secret,
           String algorithm, Long ttlSeconds) {
     if (secret == null || secret.isEmpty()) {
       throw new IllegalArgumentException("jwt.sign: secret must not be empty");
@@ -145,10 +150,12 @@ public class JwtHelper implements Executable<JwtIn, JwtOut> {
     if (payload == null) {
       throw new IllegalArgumentException("jwt.sign: payload is required");
     }
-    String alg = (algorithm == null || algorithm.isBlank()) ? JWT_DEFAULT_ALG : algorithm;
+    String alg = (algorithm == null || algorithm.isBlank())
+            ? properties.defaultAlgorithm()
+            : algorithm;
     // Reject "none" and any unsupported algorithm at sign time too.
     String macName = macAlgorithmFor(alg);
-    long ttl = (ttlSeconds == null) ? JWT_DEFAULT_TTL_SECONDS : ttlSeconds;
+    long ttl = (ttlSeconds == null) ? properties.defaultTtlSeconds() : ttlSeconds;
     if (ttl < 0) {
       throw new IllegalArgumentException("jwt.sign: ttlSeconds must not be negative");
     }
@@ -157,11 +164,11 @@ public class JwtHelper implements Executable<JwtIn, JwtOut> {
 
     // Build a defensive copy of the payload and overwrite iat/exp with the values THIS call
     // computes (RFC 7519 standard claims). Caller's map is not mutated.
-    ObjectNode headerNode = MAPPER.createObjectNode();
+    ObjectNode headerNode = mapper.createObjectNode();
     headerNode.put("alg", alg);
     headerNode.put("typ", "JWT");
 
-    ObjectNode payloadNode = MAPPER.createObjectNode();
+    ObjectNode payloadNode = mapper.createObjectNode();
     for (Map.Entry<String, Object> entry : payload.entrySet()) {
       payloadNode.set(entry.getKey(), toJsonNode(entry.getValue()));
     }
@@ -180,7 +187,7 @@ public class JwtHelper implements Executable<JwtIn, JwtOut> {
 
   // ---------------- claim ----------------
 
-  private static @NonNull Object claim(String token, String claimName) {
+  private @NonNull Object claim(String token, String claimName) {
     if (claimName == null || claimName.isBlank()) {
       throw new IllegalArgumentException("jwt.claim: claimName is required");
     }
@@ -208,7 +215,7 @@ public class JwtHelper implements Executable<JwtIn, JwtOut> {
     return segments;
   }
 
-  private static @NonNull Map<String, Object> readJsonObject(String base64UrlSegment,
+  private @NonNull Map<String, Object> readJsonObject(String base64UrlSegment,
           String label) {
     byte[] bytes;
     try {
@@ -218,7 +225,7 @@ public class JwtHelper implements Executable<JwtIn, JwtOut> {
     }
     JsonNode node;
     try {
-      node = MAPPER.readTree(bytes);
+      node = mapper.readTree(bytes);
     } catch (JacksonException e) {
       throw new IllegalArgumentException("jwt: malformed JSON in " + label + " segment", e);
     }
@@ -227,7 +234,7 @@ public class JwtHelper implements Executable<JwtIn, JwtOut> {
               "jwt: " + label + " segment must be a JSON object");
     }
     @SuppressWarnings("unchecked")
-    Map<String, Object> map = (Map<String, Object>) MAPPER.convertValue(node, Map.class);
+    Map<String, Object> map = (Map<String, Object>) mapper.convertValue(node, Map.class);
     return map;
   }
 
@@ -261,23 +268,23 @@ public class JwtHelper implements Executable<JwtIn, JwtOut> {
     return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
   }
 
-  private static @NonNull String writeCompact(@NonNull ObjectNode node) {
+  private @NonNull String writeCompact(@NonNull ObjectNode node) {
     try {
-      return MAPPER.writeValueAsString(node);
+      return mapper.writeValueAsString(node);
     } catch (JacksonException e) {
       throw new IllegalArgumentException(
               "jwt: failed to serialize JSON: " + e.getOriginalMessage(), e);
     }
   }
 
-  private static @NonNull JsonNode toJsonNode(@NonNull Object value) {
+  private @NonNull JsonNode toJsonNode(@NonNull Object value) {
     if (value == null) {
-      return MAPPER.nullNode();
+      return mapper.nullNode();
     }
     if (value instanceof JsonNode existing) {
       return existing;
     }
-    return MAPPER.valueToTree(value);
+    return mapper.valueToTree(value);
   }
 
   private static Long coerceLong(Object value) {

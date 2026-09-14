@@ -10,36 +10,41 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class BuilderWorkQueue {
 
-  private final LinkedBlockingQueue<Runnable> queue;
-  private final List<Thread> workers;
-
-  // TODO: move to a configuration. replace with lomboks contructor
-  public BuilderWorkQueue(DslBuilderProperties properties) {
-    this.queue = new LinkedBlockingQueue<>(Math.max(1, properties.queue().capacity()));
-    int workerCount = Math.max(1, properties.queue().workers());
-    this.workers = new ArrayList<>(workerCount);
-    for (int i = 0; i < workerCount; i++) {
-      Thread worker = new Thread(this::drain, "dsl-builder-worker-" + i);
-      worker.setDaemon(true);
-      workers.add(worker);
-    }
-  }
+  private final DslBuilderProperties properties;
+  private LinkedBlockingQueue<Runnable> queue;
+  private List<Thread> workers;
 
   @PostConstruct
   void start() {
+    if (queue == null) {
+      queue = new LinkedBlockingQueue<>(Math.max(1, properties.queue().capacity()));
+    }
+    if (workers == null) {
+      int workerCount = Math.max(1, properties.queue().workers());
+      workers = new ArrayList<>(workerCount);
+      for (int i = 0; i < workerCount; i++) {
+        Thread worker = new Thread(this::drain, "dsl-builder-worker-" + i);
+        worker.setDaemon(true);
+        workers.add(worker);
+      }
+    }
     workers.forEach(Thread::start);
   }
 
   @PreDestroy
   void stop() {
-    workers.forEach(Thread::interrupt);
+    if (workers != null) {
+      workers.forEach(Thread::interrupt);
+    }
   }
 
   public <T> T submit(Callable<T> task) {

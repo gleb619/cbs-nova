@@ -115,3 +115,13 @@ cbs:
       name-max-tokens: 128
       description-max-tokens: 256
       mermaid-max-tokens: 4096
+
+# cbs.dsl.helper.* — DSL helper tunables (T494)
+cbs:
+  dsl:
+    helper:
+      json-patch:
+        pretty-print: false
+      jwt:
+        default-algorithm: HS256
+        default-ttl-seconds: 3600
