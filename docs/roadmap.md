@@ -97,7 +97,7 @@ failures self-describing.
 | Shipped dashboards | Grafana dashboards + Prometheus scrape config in `app/compose/` for the existing `dsl.run.*` / `dsl.preview.*` meters. Alert rules for error rate, preview timeout rate, Temporal unreachable. |
 | End-to-end tracing | Default-on tracing in the compose stack (bundled collector). Spans across BFF → backend → DSL dispatch → Temporal activity, correlated with `correlation_id`. |
 | Structured diagnostics | Persist compile diagnostics (not just inline, not just 20). A Workbench "diagnostics history" view. Machine-readable diagnostic codes. |
-| SLOs & health | Define SLOs (run success %, p95 run latency, preview latency). Expand `/actuator/health` detail; readiness vs liveness split. |
+| SLOs & health | Define SLOs (run success %, p95 run latency, preview latency). Expand `/actuator/health` detail; readiness vs liveness split. SLOs + SLIs + error budgets defined in `docs/slo.md`, burn-rate alerts in `app/compose/alerts.yml` (T490). |
 | Unified retention/GC | Fold `DslRunRetentionPurger`, orphan purge, and audit-log retention into one scheduled maintenance service with shared config and metrics. |
 | Log correlation | Ensure `rid` / `correlation_id` is on every log line in backend and BFF; document the query recipe. |
 

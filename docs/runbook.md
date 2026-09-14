@@ -451,7 +451,7 @@ Trace pipeline not producing spans → see the troubleshooting checklist in
 
 ## Monitoring
 
-Prometheus scrapes the Spring Boot actuator at `http://spring-app:8090/actuator/prometheus` (job `cbs-nova`). The exposed DSL metric families include `dsl_run_*`, `dsl_preview_*`, and JVM/process series. The first alert rules live in `app/compose/alerts.yml`.
+Prometheus scrapes the Spring Boot actuator at `http://spring-app:8090/actuator/prometheus` (job `cbs-nova`). The exposed DSL metric families include `dsl_run_*`, `dsl_preview_*`, and JVM/process series. The first alert rules live in `app/compose/alerts.yml`. SLOs (run success rate, run p95, preview p95) with SLI queries, error budgets, and the burn-rate policy are defined in [docs/slo.md](slo.md) (T490).
 
 ### Alert rules
 
@@ -460,6 +460,7 @@ Prometheus scrapes the Spring Boot actuator at `http://spring-app:8090/actuator/
 | `CbsNovaRunErrorRate` | More than 10% of DSL runs finished with a non-`SUCCESS` status over the last 5 minutes, sustained for 10 minutes. | Check Temporal connectivity and recent deployments; grep app logs for the failing `processName` and `status`. |
 | `CbsNovaPreviewLatencyP95` | The 95th percentile of DSL preview durations exceeded 2 seconds for 10 minutes. | Tune the threshold to your observed baseline; investigate if preview compute or helper mocks are slow. A true preview timeout-rate alert needs an outcome-tagged preview counter (follow-up task). |
 | `CbsNovaAppDown` | Prometheus cannot scrape the `cbs-nova` job for 2 minutes. | Verify the app container is running, `SERVER_PORT`, and the `management.endpoints.web.exposure.include` list contains `prometheus`. Temporal-specific reachability alerting rides on the future `dsl_temporal_reachable` gauge (T390). |
+| `CbsNovaSloRunSuccessFastBurn` / `CbsNovaSloRunSuccessSlowBurn` | The run-success SLO (see [docs/slo.md](slo.md)) is burning its 28d error budget at >14.4x (page) or >6x (ticket). | Page (fast burn) or open a reliability ticket (slow burn); check Temporal connectivity and recent deployments. |
 
 ### First-boot verification checklist
 
