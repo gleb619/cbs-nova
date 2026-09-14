@@ -21,7 +21,9 @@ import java.util.List;
 import java.util.Optional;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
-@Sql(scripts = {"classpath:db/migration/h2/V1__init.sql", "classpath:sql/truncate-dsl-tables.sql"})
+@Sql(scripts = {"classpath:db/migration/h2/V1__init.sql",
+    "classpath:db/migration/h2/V8__dsl_runs_definition_hash.sql",
+    "classpath:sql/truncate-dsl-tables.sql"})
 @TestPropertySource(properties = {
     "csb.dsl.worker.enabled=false"
 })
@@ -278,6 +280,70 @@ class JdbcDslRunRepositoryTest {
     assertThat(result.items()).hasSize(1);
     assertThat(result.items().get(0).triggeredBy()).isEqualTo("bob");
   }
+
+  @Test
+  void saveAndFindByRunIdRoundTripsDefinitionHash() {
+    DslRun run = DslRun.builder()
+            .runId("run-hash")
+            .processName("process-1")
+            .status(DslRunStatus.RUNNING.name())
+            .input("{\"input\":true}")
+            .output(null)
+            .error(null)
+            .startedAt(Instant.now())
+            .finishedAt(null)
+            .executionMode(ExecutionMode.RUN.name())
+            .definitionHash("a".repeat(64))
+            .build();
+
+    repository.save(run);
+    DslRun persisted = repository.findByRunId("run-hash").orElseThrow();
+
+    assertThat(persisted.definitionHash()).isEqualTo("a".repeat(64));
+  }
+
+  @Test
+  void saveWithoutDefinitionHashReadsBackNull() {
+    DslRun run = DslRun.builder()
+            .runId("run-no-hash")
+            .processName("process-1")
+            .status(DslRunStatus.RUNNING.name())
+            .input("{\"input\":true}")
+            .output(null)
+            .error(null)
+            .startedAt(Instant.now())
+            .finishedAt(null)
+            .executionMode(ExecutionMode.RUN.name())
+            .build();
+
+    repository.save(run);
+    DslRun persisted = repository.findByRunId("run-no-hash").orElseThrow();
+
+    assertThat(persisted.definitionHash()).isNull();
+  }
+
+  @Test
+  void searchResultsCarryDefinitionHash() {
+    DslRun run = DslRun.builder()
+            .runId("run-search-hash")
+            .processName("hash-search-process")
+            .status(DslRunStatus.COMPLETED.name())
+            .input("{\"input\":true}")
+            .output("{\"output\":true}")
+            .error(null)
+            .startedAt(Instant.now())
+            .finishedAt(Instant.now())
+            .executionMode(ExecutionMode.RUN.name())
+            .definitionHash("b".repeat(64))
+            .build();
+    repository.save(run);
+
+    DslRunSearchResult result = repository.search("hash-search-process", null, null, null, 0, 10);
+
+    assertThat(result.items()).hasSize(1);
+    assertThat(result.items().get(0).definitionHash()).isEqualTo("b".repeat(64));
+  }
+
   private static DslRun run(String runId, DslRunStatus status, String output, String error) {
     return run(runId, status, output, error, "process-1", null);
   }

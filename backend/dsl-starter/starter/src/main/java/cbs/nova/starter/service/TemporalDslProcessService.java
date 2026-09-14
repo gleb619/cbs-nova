@@ -196,6 +196,9 @@ public class TemporalDslProcessService {
               .executionMode(ExecutionMode.RUN.name())
               .triggeredBy(triggeredBy)
               .correlationId(correlationId)
+              // T492: descriptor-identity hash of the definition this run executes; null
+              // (never an exception) when the definition cannot be resolved.
+              .definitionHash(RunDefinitionHash.of(processName))
               .build();
 
       submitDbWrite(() -> {

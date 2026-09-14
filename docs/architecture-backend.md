@@ -202,6 +202,8 @@ Outside compose (e.g. running the backend via `make backend`), set `OTEL_EXPORTE
 
 Run attribution and correlation are stored on the `dsl_runs` table: migrations `V5__dsl_runs_triggered_by.sql` and `V6__dsl_runs_correlation_id.sql` add `triggered_by` and `correlation_id` columns. See [Runtime Engine — Run idempotency](dsl/runtime.md#run-idempotency) and [Correlation id](dsl/runtime.md#correlation-id) for the header semantics.
 
+Definition-version attribution (T492): migration `V8__dsl_runs_definition_hash.sql` adds a nullable `definition_hash` column, stamped at run submission (`RunDefinitionHash`, called from `TemporalDslProcessService.startProcess`) and exposed as `ExecutionDto.definitionHash`. **This is DESCRIPTOR identity, not full logic identity** — it is the same sha256 over the Jackson-serialized `DslDescriptor` (taskQueue / version / timeouts) that the preview cache keys on, so two functionally different definitions with the same descriptor collide. It is null for historical rows and for runs whose descriptor cannot be resolved (never a run failure). A true content hash computed at publish/reload time is a planned Epic 5 follow-up.
+
 See [Starter Configuration Reference](dsl/configuration.md) for the full key tables, and
 [Operator Incident Runbook](runbook.md) for first-response playbooks (Temporal disconnect,
 Keycloak outage, purger/reconciliation, BFF 5xx, helper catalog) keyed to these knobs.

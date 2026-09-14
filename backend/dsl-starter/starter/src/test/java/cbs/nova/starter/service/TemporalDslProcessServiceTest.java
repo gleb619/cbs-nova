@@ -38,6 +38,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Executors;
@@ -149,6 +150,65 @@ class TemporalDslProcessServiceTest {
     DslRun run = repo.findByProcessName("Ok").get(0);
     assertThat(run.status()).isEqualTo(DslRunStatus.COMPLETED.name());
     assertThat(run.triggeredBy()).isEqualTo("alice");
+  }
+
+  @Test
+  void runOfRegisteredProcessStampsNonNullDefinitionHash() {
+    GlobalManager.globalManager().resetForTests();
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("Hashed").execute(ctx -> Result.success("ok")).build());
+
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
+            InMemoryDslRunRepository.NO_OP_EVICTION);
+    TemporalDslProcessService service = createService(new ContextFactory(), repo,
+            new ObjectMapper());
+
+    Result<?> result = service.runProcess("Hashed", "in").result().join();
+
+    assertThat(result.isSuccess()).isTrue();
+    String definitionHash = repo.findByProcessName("Hashed").get(0).definitionHash();
+    assertThat(definitionHash).isNotNull().matches("[0-9a-f]{64}");
+  }
+
+  @Test
+  void definitionHashIsStableAcrossRunsOfSameDefinition() {
+    GlobalManager.globalManager().resetForTests();
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("Stable").execute(ctx -> Result.success("ok")).build());
+
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
+            InMemoryDslRunRepository.NO_OP_EVICTION);
+    TemporalDslProcessService service = createService(new ContextFactory(), repo,
+            new ObjectMapper());
+
+    service.runProcess("Stable", "first").result().join();
+    service.runProcess("Stable", "second").result().join();
+
+    List<DslRun> runs = repo.findByProcessName("Stable");
+    assertThat(runs).hasSize(2);
+    assertThat(runs.get(0).definitionHash())
+            .isNotNull()
+            .isEqualTo(runs.get(1).definitionHash());
+  }
+
+  @Test
+  void unresolvableDefinitionLeavesHashNullAndRunDoesNotThrow() {
+    GlobalManager.globalManager().resetForTests();
+    String missing = "missing-" + UUID.randomUUID();
+
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
+            InMemoryDslRunRepository.NO_OP_EVICTION);
+    TemporalDslProcessService service = createService(new ContextFactory(), repo,
+            new ObjectMapper());
+
+    Result<?> result = service.runProcess(missing, "in").result().join();
+
+    // The run itself still records and completes its lifecycle; only the hash is null.
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause()).isInstanceOf(DslEntityNotFoundException.class);
+    DslRun run = repo.findByProcessName(missing).get(0);
+    assertThat(run.definitionHash()).isNull();
+    assertThat(run.status()).isEqualTo(DslRunStatus.FAILED.name());
   }
 
   @Test

@@ -22,7 +22,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
-@Sql(scripts = {"classpath:db/migration/h2/V1__init.sql", "classpath:sql/truncate-dsl-tables.sql"})
+@Sql(scripts = {"classpath:db/migration/h2/V1__init.sql",
+    "classpath:db/migration/h2/V8__dsl_runs_definition_hash.sql",
+    "classpath:sql/truncate-dsl-tables.sql"})
 @TestPropertySource(properties = {
     "csb.dsl.worker.enabled=false"
 })

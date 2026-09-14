@@ -26,6 +26,7 @@ public class DslRunEntityRowMapper implements RowMapper<DslRunEntity> {
     entity.setExecutionMode(rs.getString("execution_mode"));
     entity.setTriggeredBy(rs.getString("triggered_by"));
     entity.setCorrelationId(rs.getString("correlation_id"));
+    entity.setDefinitionHash(rs.getString("definition_hash"));
     return entity;
   }
 }
